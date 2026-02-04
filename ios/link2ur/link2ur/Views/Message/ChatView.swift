@@ -457,7 +457,7 @@ struct MessageBubble: View {
                                         Image(systemName: "doc.fill")
                                             .font(.system(size: 16))
                                             .foregroundColor(isFromCurrentUser ? .white : AppColors.primary)
-                                        Text("证据文件")
+                                        Text(LocalizationKey.chatEvidenceFile.localized)
                                             .font(AppTypography.caption)
                                             .foregroundColor(isFromCurrentUser ? .white : AppColors.primary)
                                         Image(systemName: "arrow.down.circle")
@@ -510,7 +510,7 @@ struct MessageBubble: View {
                                     let generator = UINotificationFeedbackGenerator()
                                     generator.notificationOccurred(.success)
                                 }) {
-                                    Label("复制", systemImage: "doc.on.doc")
+                                    Label(LocalizationKey.commonCopy.localized, systemImage: "doc.on.doc")
                                 }
                                 
                                 // 翻译选项（仅非当前用户的消息）
@@ -610,10 +610,10 @@ struct MessageBubble: View {
                 checkIfNeedsTranslation(content: content)
             }
         }
-        .alert("翻译失败", isPresented: $showTranslationError) {
-            Button("确定", role: .cancel) { }
+        .alert(LocalizationKey.translationFailed.localized, isPresented: $showTranslationError) {
+            Button(LocalizationKey.commonOk.localized, role: .cancel) { }
         } message: {
-            Text("无法翻译此消息，请检查网络连接后重试")
+            Text(LocalizationKey.translationRetryMessage.localized)
         }
     }
     

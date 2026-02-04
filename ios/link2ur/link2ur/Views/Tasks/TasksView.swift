@@ -894,7 +894,7 @@ struct TaskCard: View {
                 Text(LocalizationKey.commonCancel.localized)
             }
         } message: {
-            Text("确定要将此任务标记为不感兴趣吗？")
+            Text(LocalizationKey.tasksMarkNotInterestedConfirm.localized)
         }
         .overlay(alignment: .topTrailing) {
             // 任务等级标签（VIP/Super）- 右上角

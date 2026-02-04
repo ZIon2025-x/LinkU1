@@ -16,12 +16,12 @@ struct VIPPurchaseView: View {
             VStack(spacing: AppSpacing.lg) {
                 // 标题
                 VStack(spacing: AppSpacing.sm) {
-                    Text("升级VIP会员")
+                    Text(LocalizationKey.vipBecomeVip.localized)
                         .font(AppTypography.title)
                         .fontWeight(.bold)
                         .foregroundColor(AppColors.textPrimary)
                     
-                    Text("选择适合您的会员套餐")
+                    Text(LocalizationKey.vipSelectPackage.localized)
                         .font(AppTypography.subheadline)
                         .foregroundColor(AppColors.textSecondary)
                 }
@@ -38,11 +38,11 @@ struct VIPPurchaseView: View {
                             .font(.system(size: 50))
                             .foregroundColor(.orange)
                         
-                        Text("暂无可用的VIP产品")
+                        Text(LocalizationKey.vipNoProducts.localized)
                             .font(AppTypography.title3)
                             .foregroundColor(AppColors.textPrimary)
                         
-                        Text("请稍后再试或联系客服")
+                        Text(LocalizationKey.vipTryLaterContact.localized)
                             .font(AppTypography.subheadline)
                             .foregroundColor(AppColors.textSecondary)
                     }
@@ -75,7 +75,7 @@ struct VIPPurchaseView: View {
                                     ProgressView()
                                         .progressViewStyle(CircularProgressViewStyle(tint: .white))
                                 } else {
-                                    Text(selectedProduct == nil ? "请选择套餐" : "立即购买")
+                                    Text(selectedProduct == nil ? LocalizationKey.vipPleaseSelectPackage.localized : LocalizationKey.vipBuyNow.localized)
                                         .font(AppTypography.bodyBold)
                                 }
                             }
@@ -96,7 +96,7 @@ struct VIPPurchaseView: View {
                         Button(action: {
                             restorePurchases()
                         }) {
-                            Text("恢复购买")
+                            Text(LocalizationKey.vipRestorePurchase.localized)
                                 .font(AppTypography.body)
                                 .foregroundColor(AppColors.primary)
                         }
@@ -114,19 +114,19 @@ struct VIPPurchaseView: View {
                 
                 // 说明文字
                 VStack(alignment: .leading, spacing: AppSpacing.sm) {
-                    Text("购买说明")
+                    Text(LocalizationKey.vipPurchaseInstructions.localized)
                         .font(AppTypography.bodyBold)
                         .foregroundColor(AppColors.textPrimary)
                     
-                    Text("• 订阅将自动续费，除非在到期前至少24小时取消")
+                    Text(LocalizationKey.vipSubscriptionAutoRenew.localized)
                         .font(AppTypography.subheadline)
                         .foregroundColor(AppColors.textSecondary)
                     
-                    Text("• 可以在App Store账户设置中管理订阅")
+                    Text(LocalizationKey.vipManageSubscription.localized)
                         .font(AppTypography.subheadline)
                         .foregroundColor(AppColors.textSecondary)
                     
-                    Text("• 购买后立即生效，享受所有VIP权益")
+                    Text(LocalizationKey.vipPurchaseEffective.localized)
                         .font(AppTypography.subheadline)
                         .foregroundColor(AppColors.textSecondary)
                 }
@@ -171,19 +171,18 @@ struct VIPPurchaseView: View {
             }
             .padding(.bottom, AppSpacing.xl)
         }
-        .navigationTitle("购买VIP会员")
+        .navigationTitle(LocalizationKey.vipPurchaseTitle.localized)
         .navigationBarTitleDisplayMode(.inline)
         .enableSwipeBack()
         .toolbarBackground(AppColors.background, for: .navigationBar)
         .toolbarBackground(.visible, for: .navigationBar)
-        .alert("购买成功", isPresented: $showSuccessAlert) {
-            Button("确定") {
+        .alert(LocalizationKey.vipPurchaseSuccess.localized, isPresented: $showSuccessAlert) {
+            Button(LocalizationKey.commonConfirm.localized) {
                 dismiss()
-                // 刷新用户信息
                 appState.checkLoginStatus()
             }
         } message: {
-            Text("恭喜您成为VIP会员！现在可以享受所有VIP权益了。")
+            Text(LocalizationKey.vipCongratulations.localized)
         }
         .task {
             await iapService.loadProducts()
@@ -233,7 +232,7 @@ struct VIPPurchaseView: View {
                 }
             } catch {
                 await MainActor.run {
-                    errorMessage = "恢复购买失败: \(error.localizedDescription)"
+                    errorMessage = LocalizationKey.vipRestoreFailed.localized(error.localizedDescription)
                 }
             }
         }
@@ -290,7 +289,7 @@ struct VIPProductRow: View {
                         .foregroundColor(AppColors.primary)
                     
                     if isPurchased {
-                        Text("已购买")
+                        Text(LocalizationKey.vipPurchased.localized)
                             .font(AppTypography.caption)
                             .foregroundColor(.green)
                     }

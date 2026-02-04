@@ -191,7 +191,7 @@ struct ServiceDetailView: View {
                     Image(systemName: "photo.on.rectangle.angled")
                         .font(.system(size: 40))
                         .foregroundColor(AppColors.primary.opacity(0.3))
-                    Text("暂无图片")
+                    Text(LocalizationKey.serviceNoImages.localized)
                         .font(.system(size: 12))
                         .foregroundColor(AppColors.primary.opacity(0.4))
                 }
@@ -242,7 +242,7 @@ struct ServiceDetailView: View {
                 RoundedRectangle(cornerRadius: 2)
                     .fill(AppColors.primary)
                     .frame(width: 4, height: 16)
-                Text("服务详情")
+                Text(LocalizationKey.serviceDetail.localized)
                     .font(.system(size: 16, weight: .semibold))
                     .foregroundColor(AppColors.textPrimary)
             }
@@ -254,7 +254,7 @@ struct ServiceDetailView: View {
                     .lineSpacing(6)
                     .fixedSize(horizontal: false, vertical: true)
             } else {
-                Text("暂无详细描述")
+                Text(LocalizationKey.serviceNoDescription.localized)
                     .font(.system(size: 14))
                     .foregroundColor(AppColors.textTertiary)
                     .italic()
@@ -530,7 +530,7 @@ struct TimeSlotCard: View {
             Spacer()
             
             if slot.isAvailable {
-                Text("可选")
+                Text(LocalizationKey.taskExpertOptional.localized)
                     .font(.system(size: 12, weight: .bold))
                     .foregroundColor(.white)
                     .padding(.horizontal, 12)
@@ -577,7 +577,7 @@ struct ApplyServiceSheet: View {
                 VStack(spacing: 24) {
                     // 留言
                     VStack(alignment: .leading, spacing: 12) {
-                        Text("申请留言")
+                        Text(LocalizationKey.serviceApplyMessage.localized)
                             .font(.system(size: 14, weight: .medium))
                             .foregroundColor(AppColors.textSecondary)
                         
@@ -608,7 +608,7 @@ struct ApplyServiceSheet: View {
                             HStack {
                                 Image(systemName: "dollarsign.circle.fill")
                                     .foregroundColor(.orange)
-                                Text("我想议价")
+                                Text(LocalizationKey.taskApplicationIWantToNegotiatePrice.localized)
                                     .font(.system(size: 15, weight: .medium))
                             }
                         }
@@ -620,7 +620,7 @@ struct ApplyServiceSheet: View {
                                     .font(.system(size: 18, weight: .bold))
                                     .foregroundColor(AppColors.textSecondary)
                                 
-                                TextField("期望价格", value: $counterPrice, format: .number)
+                                TextField(LocalizationKey.serviceExpectedPrice.localized, value: $counterPrice, format: .number)
                                     .keyboardType(.decimalPad)
                                     .font(.system(size: 20, weight: .bold, design: .rounded))
                             }
@@ -642,7 +642,7 @@ struct ApplyServiceSheet: View {
                                 HStack {
                                     Image(systemName: "clock.fill")
                                         .foregroundColor(.blue)
-                                    Text("灵活时间")
+                                    Text(LocalizationKey.serviceFlexibleTime.localized)
                                         .font(.system(size: 15, weight: .medium))
                                 }
                             }
@@ -651,12 +651,12 @@ struct ApplyServiceSheet: View {
                             // 日期选择器（非灵活模式时显示）
                             if !isFlexible {
                                 VStack(alignment: .leading, spacing: 12) {
-                                    Text("期望完成日期")
+                                    Text(LocalizationKey.serviceExpectedDate.localized)
                                         .font(.system(size: 14, weight: .medium))
                                         .foregroundColor(AppColors.textSecondary)
                                     
                                     DatePicker(
-                                        "选择日期",
+                                        LocalizationKey.serviceSelectDate.localized,
                                         selection: Binding(
                                             get: { 
                                                 if let deadline = selectedDeadline {
@@ -691,12 +691,12 @@ struct ApplyServiceSheet: View {
             }
             .scrollDismissesKeyboard(.interactively)
             .background(Color(UIColor.systemBackground))
-            .navigationTitle("申请服务")
+            .navigationTitle(LocalizationKey.serviceApplyTitle.localized)
             .navigationBarTitleDisplayMode(.inline)
             .enableSwipeBack()
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
-                    Button("取消") { dismiss() }
+                    Button(LocalizationKey.commonCancel.localized) { dismiss() }
                 }
                 
                 ToolbarItem(placement: .navigationBarTrailing) {
@@ -708,7 +708,7 @@ struct ApplyServiceSheet: View {
                         isSubmitting = true
                         onApply()
                     }) {
-                        Text("提交")
+                        Text(LocalizationKey.commonSubmit.localized)
                             .font(.system(size: 16, weight: .bold))
                             .foregroundColor(.white)
                             .padding(.horizontal, 16)

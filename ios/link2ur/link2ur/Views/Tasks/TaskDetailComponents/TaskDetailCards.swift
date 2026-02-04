@@ -262,7 +262,7 @@ struct TaskDescriptionCard: View {
             if description.count > 200 {
                 Button(action: { withAnimation { isExpanded.toggle() } }) {
                     HStack(spacing: 4) {
-                        Text(isExpanded ? "收起" : "展开全部")
+                        Text(isExpanded ? LocalizationKey.taskDetailCollapse.localized : LocalizationKey.taskDetailExpandAll.localized)
                         Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
                     }
                     .font(AppTypography.caption)
@@ -326,7 +326,7 @@ struct TaskUserCard: View {
                     }
                     
                     if let completed = completedTasks {
-                        Text("\(completed) 已完成")
+                        Text(LocalizationKey.taskDetailCompletedCount.localized(completed))
                             .font(AppTypography.caption)
                             .foregroundColor(AppColors.textSecondary)
                     }
@@ -336,7 +336,7 @@ struct TaskUserCard: View {
             Spacer()
             
             // 角色标签
-            Text(role == "poster" ? "发布者" : "接单者")
+            Text(role == "poster" ? LocalizationKey.myTasksRolePoster.localized : LocalizationKey.myTasksRoleTaker.localized)
                 .font(AppTypography.caption)
                 .foregroundColor(AppColors.textSecondary)
                 .padding(.horizontal, 8)
@@ -443,7 +443,7 @@ struct TaskDeadlineCountdown: View {
                 .foregroundColor(isUrgent ? .red : AppColors.primary)
             
             VStack(alignment: .leading, spacing: 2) {
-                Text("截止时间")
+                Text(LocalizationKey.taskDetailDeadlineLabel.localized)
                     .font(AppTypography.caption)
                     .foregroundColor(AppColors.textSecondary)
                 Text(timeRemaining)
@@ -460,19 +460,19 @@ struct TaskDeadlineCountdown: View {
         let remaining = deadline.timeIntervalSince(now)
         
         if remaining <= 0 {
-            timeRemaining = "已截止"
+            timeRemaining = LocalizationKey.taskDetailExpired.localized
             isUrgent = true
-        } else if remaining < 3600 { // 1小时内
+        } else if remaining < 3600 {
             let minutes = Int(remaining / 60)
-            timeRemaining = "剩余 \(minutes) 分钟"
+            timeRemaining = LocalizationKey.taskDetailRemainingMinutes.localized(minutes)
             isUrgent = true
-        } else if remaining < 86400 { // 24小时内
+        } else if remaining < 86400 {
             let hours = Int(remaining / 3600)
-            timeRemaining = "剩余 \(hours) 小时"
-            isUrgent = remaining < 7200 // 2小时内紧急
+            timeRemaining = LocalizationKey.taskDetailRemainingHours.localized(hours)
+            isUrgent = remaining < 7200
         } else {
             let days = Int(remaining / 86400)
-            timeRemaining = "剩余 \(days) 天"
+            timeRemaining = LocalizationKey.taskDetailRemainingDays.localized(days)
             isUrgent = false
         }
     }
@@ -491,7 +491,7 @@ struct TaskDetailCards_Previews: PreviewProvider {
                 
                 TaskAmountView(reward: 50, pointsReward: 100)
                 
-                TaskInfoRow(icon: "clock.fill", title: "发布时间", value: "2024-01-15 10:30")
+                TaskInfoRow(icon: "clock.fill", title: LocalizationKey.tasksPublishTime.localized, value: "2024-01-15 10:30")
                 
                 TaskTagView(text: "跑腿", icon: "tag.fill", isPrimary: true)
                 

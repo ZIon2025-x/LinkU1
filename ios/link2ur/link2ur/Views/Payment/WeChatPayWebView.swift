@@ -43,7 +43,7 @@ struct WeChatPayWebView: View {
                     VStack(spacing: 16) {
                         ProgressView()
                             .scaleEffect(1.5)
-                        Text("正在加载支付页面...")
+                        Text(LocalizationKey.wechatPayLoading.localized)
                             .font(.subheadline)
                             .foregroundColor(AppColors.textSecondary)
                     }
@@ -58,7 +58,7 @@ struct WeChatPayWebView: View {
                             .font(.system(size: 48))
                             .foregroundColor(AppColors.error)
                         
-                        Text("加载失败")
+                        Text(LocalizationKey.wechatPayLoadFailed.localized)
                             .font(.headline)
                             .foregroundColor(AppColors.textPrimary)
                         
@@ -75,7 +75,7 @@ struct WeChatPayWebView: View {
                         }) {
                             HStack {
                                 Image(systemName: "arrow.clockwise")
-                                Text("重试")
+                                Text(LocalizationKey.commonRetry.localized)
                             }
                             .font(.headline)
                             .foregroundColor(.white)
@@ -90,7 +90,7 @@ struct WeChatPayWebView: View {
                             onPaymentError(error)
                             dismiss()
                         }) {
-                            Text("返回")
+                            Text(LocalizationKey.commonBack.localized)
                                 .font(.subheadline)
                                 .foregroundColor(AppColors.textSecondary)
                         }
@@ -100,7 +100,7 @@ struct WeChatPayWebView: View {
                     .background(AppColors.background)
                 }
             }
-            .navigationTitle("微信支付")
+            .navigationTitle(LocalizationKey.wechatPayTitle.localized)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
@@ -113,14 +113,14 @@ struct WeChatPayWebView: View {
                     }
                 }
             }
-            .alert("确认取消支付？", isPresented: $showCancelConfirmation) {
-                Button("继续支付", role: .cancel) { }
-                Button("取消支付", role: .destructive) {
+            .alert(LocalizationKey.wechatPayCancelConfirmTitle.localized, isPresented: $showCancelConfirmation) {
+                Button(LocalizationKey.wechatPayContinuePay.localized, role: .cancel) { }
+                Button(LocalizationKey.wechatPayCancelPay.localized, role: .destructive) {
                     onPaymentCancel()
                     dismiss()
                 }
             } message: {
-                Text("取消后需要重新发起支付")
+                Text(LocalizationKey.wechatPayCancelWarning.localized)
             }
         }
     }
@@ -162,7 +162,7 @@ struct WeChatPayWebViewRepresentable: UIViewRepresentable {
         } else {
             Logger.error("微信支付 WebView URL 无效: \(urlString)", category: .api)
             DispatchQueue.main.async {
-                self.loadError = "支付链接无效"
+                self.loadError = LocalizationKey.wechatPayInvalidLink.localized
                 self.isLoading = false
             }
         }

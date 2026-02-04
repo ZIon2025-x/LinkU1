@@ -26,7 +26,7 @@ struct VIPView: View {
                             Image(systemName: "crown.fill")
                                 .font(.system(size: 20))
                             
-                            Text("升级VIP会员")
+                            Text(LocalizationKey.vipBecomeVip.localized)
                                 .font(AppTypography.bodyBold)
                         }
                         .foregroundColor(.white)
@@ -50,12 +50,12 @@ struct VIPView: View {
                             Image(systemName: "checkmark.circle.fill")
                                 .foregroundColor(.green)
                             
-                            Text("您已是VIP会员")
+                            Text(LocalizationKey.vipAlreadyVip.localized)
                                 .font(AppTypography.bodyBold)
                                 .foregroundColor(AppColors.textPrimary)
                         }
                         
-                        Text("感谢您的支持，享受所有VIP权益")
+                        Text(LocalizationKey.vipThankYou.localized)
                             .font(AppTypography.subheadline)
                             .foregroundColor(AppColors.textSecondary)
                             .multilineTextAlignment(.center)
@@ -63,7 +63,7 @@ struct VIPView: View {
                         // 显示订阅到期时间和自动续费状态
                         if let subscription = subscriptionStatus, let expiresDate = subscription.expiresDate {
                             VStack(spacing: AppSpacing.xs) {
-                                Text("到期时间：\(formatSubscriptionExpiry(expiresDate))")
+                                Text(LocalizationKey.vipExpiryTime.localized(formatSubscriptionExpiry(expiresDate)))
                                     .font(AppTypography.caption)
                                     .foregroundColor(AppColors.textSecondary)
                                 
@@ -72,7 +72,7 @@ struct VIPView: View {
                                         HStack(spacing: 4) {
                                             Image(systemName: "arrow.clockwise")
                                                 .font(.system(size: 10))
-                                            Text("将自动续费")
+                                            Text(LocalizationKey.vipWillAutoRenew.localized)
                                                 .font(AppTypography.caption)
                                         }
                                         .foregroundColor(.green)
@@ -80,7 +80,7 @@ struct VIPView: View {
                                         HStack(spacing: 4) {
                                             Image(systemName: "exclamationmark.circle")
                                                 .font(.system(size: 10))
-                                            Text("已取消自动续费")
+                                            Text(LocalizationKey.vipAutoRenewCancelled.localized)
                                                 .font(AppTypography.caption)
                                         }
                                         .foregroundColor(.orange)
@@ -149,7 +149,7 @@ struct VIPView: View {
                     
                     FAQRow(
                         question: LocalizationKey.vipFaqHowToUpgrade.localized,
-                        answer: "您可以在VIP会员页面点击\"升级VIP会员\"按钮，选择适合的套餐进行购买。"
+                        answer: LocalizationKey.vipFaqHowToUpgradeSteps.localized
                     )
                     
                     FAQRow(
@@ -258,7 +258,7 @@ struct VIPView: View {
         let formatter = DateFormatter()
         formatter.dateStyle = .medium
         formatter.timeStyle = .none
-        formatter.locale = Locale(identifier: "zh_CN")
+        formatter.locale = Locale.current
         return formatter.string(from: date)
     }
 }

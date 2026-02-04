@@ -51,22 +51,20 @@ struct ApplePayNativeView: View {
         NavigationView {
             VStack(spacing: 24) {
                 if !ApplePayHelper.isApplePaySupported() {
-                    // 设备不支持 Apple Pay
                     VStack(spacing: 16) {
                         Image(systemName: "exclamationmark.triangle.fill")
                             .font(.system(size: 48))
                             .foregroundColor(.orange)
-                        Text("您的设备不支持 Apple Pay")
+                        Text(LocalizationKey.applePayNotSupported.localized)
                             .font(.headline)
-                        Text("请使用其他支付方式")
+                        Text(LocalizationKey.applePayUseOtherMethod.localized)
                             .font(.subheadline)
                             .foregroundColor(.secondary)
                     }
                     .padding()
                 } else if viewModel.isLoading {
-                    // 加载中
                     VStack(spacing: 16) {
-                        LoadingView(message: "准备支付...")
+                        LoadingView(message: LocalizationKey.paymentPreparing.localized)
                             .foregroundColor(.secondary)
                     }
                 } else if viewModel.paymentSuccess {
@@ -81,11 +79,11 @@ struct ApplePayNativeView: View {
                 }
             }
             .padding()
-            .navigationTitle("Apple Pay 支付")
+            .navigationTitle(LocalizationKey.applePayTitle.localized)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
-                    Button("取消") {
+                    Button(LocalizationKey.commonCancel.localized) {
                         dismiss()
                     }
                 }
@@ -106,15 +104,15 @@ struct ApplePayNativeView: View {
                 .font(.system(size: 64))
                 .foregroundColor(.green)
             
-            Text("支付成功")
+            Text(LocalizationKey.paymentSuccess.localized)
                 .font(.title)
                 .fontWeight(.bold)
             
-            Text("您的支付已成功完成")
+            Text(LocalizationKey.paymentSuccessCompleted.localized)
                 .font(.subheadline)
                 .foregroundColor(.secondary)
             
-            Button("完成") {
+            Button(LocalizationKey.paymentComplete.localized) {
                 onPaymentSuccess?()
                 dismiss()
             }
@@ -133,7 +131,7 @@ struct ApplePayNativeView: View {
                 .font(.system(size: 48))
                 .foregroundColor(.red)
             
-            Text("支付失败")
+            Text(LocalizationKey.paymentFailed.localized)
                 .font(.headline)
             
             Text(error)
@@ -141,7 +139,7 @@ struct ApplePayNativeView: View {
                 .foregroundColor(.secondary)
                 .multilineTextAlignment(.center)
             
-            Button("重试") {
+            Button(LocalizationKey.commonRetry.localized) {
                 viewModel.createPaymentIntent()
             }
             .buttonStyle(.borderedProminent)
@@ -159,12 +157,12 @@ struct ApplePayNativeView: View {
             if let paymentResponse = viewModel.paymentResponse {
                 VStack(alignment: .leading, spacing: 12) {
                     if let title = taskTitle {
-                        Text("任务：\(title)")
+                        Text("\(LocalizationKey.paymentTaskTitle.localized): \(title)")
                             .font(.headline)
                     }
                     
                     if let applicant = applicantName {
-                        Text("申请者：\(applicant)")
+                        Text("\(LocalizationKey.paymentApplicant.localized): \(applicant)")
                             .font(.subheadline)
                             .foregroundColor(.secondary)
                     }
@@ -172,16 +170,15 @@ struct ApplePayNativeView: View {
                     Divider()
                     
                     HStack {
-                        Text("支付金额")
+                        Text(LocalizationKey.paymentAmount.localized)
                         Spacer()
                         Text(paymentResponse.finalAmountDisplay)
                             .fontWeight(.semibold)
                     }
                     
-                    // 优惠券折扣（如果有）
                     if let couponDiscount = paymentResponse.couponDiscount, couponDiscount > 0 {
                         HStack {
-                            Text("优惠券折扣")
+                            Text(LocalizationKey.paymentCouponDiscount.localized)
                             Spacer()
                             Text("-\(paymentResponse.couponDiscountDisplay ?? "0")")
                                 .foregroundColor(.green)
@@ -295,12 +292,12 @@ class ApplePayNativeViewModel: NSObject, ObservableObject, ApplePayContextDelega
     
     func presentApplePay() {
         guard let merchantId = Constants.Stripe.applePayMerchantIdentifier else {
-            errorMessage = "Apple Pay 未配置"
+            errorMessage = LocalizationKey.applePayNotConfigured.localized
             return
         }
         
         guard let paymentResponse = paymentResponse else {
-            errorMessage = "支付信息未准备好"
+            errorMessage = LocalizationKey.applePayPaymentInfoNotReady.localized
             return
         }
         
@@ -315,7 +312,7 @@ class ApplePayNativeViewModel: NSObject, ObservableObject, ApplePayContextDelega
         var summaryItems: [PKPaymentSummaryItem] = []
         
         // note 是 String 类型，不是 Optional，直接检查是否为空
-        let taskTitle = !paymentResponse.note.isEmpty ? paymentResponse.note : "Link²Ur 任务支付"
+        let taskTitle = !paymentResponse.note.isEmpty ? paymentResponse.note : LocalizationKey.applePayTaskPaymentFallback.localized
         let item = PKPaymentSummaryItem(
             label: taskTitle,
             amount: NSDecimalNumber(decimal: amountDecimal)
@@ -339,7 +336,7 @@ class ApplePayNativeViewModel: NSObject, ObservableObject, ApplePayContextDelega
         
         // 创建 Apple Pay Context
         guard let applePayContext = STPApplePayContext(paymentRequest: paymentRequest, delegate: self) else {
-            errorMessage = "无法创建 Apple Pay 支付表单"
+            errorMessage = LocalizationKey.applePayUnableToCreateForm.localized
             return
         }
         
@@ -366,7 +363,7 @@ class ApplePayNativeViewModel: NSObject, ObservableObject, ApplePayContextDelega
             throw NSError(
                 domain: "ApplePayError",
                 code: -1,
-                userInfo: [NSLocalizedDescriptionKey: "无法获取支付信息"]
+                userInfo: [NSLocalizedDescriptionKey: LocalizationKey.applePayUnableToGetPaymentInfo.localized]
             )
         }
         
@@ -387,13 +384,12 @@ class ApplePayNativeViewModel: NSObject, ObservableObject, ApplePayContextDelega
             if let error = error {
                 errorMessage = error.localizedDescription
             } else {
-                errorMessage = "支付失败"
+                errorMessage = LocalizationKey.paymentFailed.localized
             }
         case .userCancellation:
-            // 用户取消，不显示错误
             break
         @unknown default:
-            errorMessage = "未知错误"
+            errorMessage = LocalizationKey.paymentUnknownError.localized
         }
     }
 }

@@ -93,13 +93,13 @@ enum RefundReasonType: String, CaseIterable {
     var displayName: String {
         switch self {
         case .completionTimeUnsatisfactory:
-            return "对完成时间不满意"
+            return LocalizationKey.refundReasonCompletionTime.localized
         case .notCompleted:
-            return "接单者完全未完成"
+            return LocalizationKey.refundReasonNotCompleted.localized
         case .qualityIssue:
-            return "质量问题"
+            return LocalizationKey.refundReasonQualityIssue.localized
         case .other:
-            return "其他"
+            return LocalizationKey.refundReasonOther.localized
         }
     }
 }

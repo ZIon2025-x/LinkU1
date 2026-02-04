@@ -159,6 +159,7 @@
 "tasks.task" = "任务";
 "tasks.tasks" = "任务";
 "tasks.not_interested" = "不感兴趣";
+"tasks.mark_not_interested_confirm" = "确定要将此任务标记为不感兴趣吗？";
 
 // MARK: - Task Experts
 "experts.experts" = "任务达人";
@@ -1299,6 +1300,71 @@
 "vip.faq_can_cancel" = "可以随时取消会员吗？";
 "vip.faq_can_cancel_answer" = "是的，您可以随时联系管理员取消会员服务，取消后将在下个计费周期生效。";
 "vip.coming_soon" = "VIP功能即将推出，敬请期待！";
+"vip.select_package" = "选择适合您的会员套餐";
+"vip.no_products" = "暂无可用的VIP产品";
+"vip.try_later_contact" = "请稍后再试或联系客服";
+"vip.please_select_package" = "请选择套餐";
+"vip.buy_now" = "立即购买";
+"vip.restore_purchase" = "恢复购买";
+"vip.purchase_instructions" = "购买说明";
+"vip.subscription_auto_renew" = "• 订阅将自动续费，除非在到期前至少24小时取消";
+"vip.manage_subscription" = "• 可以在App Store账户设置中管理订阅";
+"vip.purchase_effective" = "• 购买后立即生效，享受所有VIP权益";
+"vip.purchase_title" = "购买VIP会员";
+"vip.purchase_success" = "购买成功";
+"vip.congratulations" = "恭喜您成为VIP会员！现在可以享受所有VIP权益了。";
+"vip.restore_failed" = "恢复购买失败: %@";
+"vip.purchased" = "已购买";
+"vip.already_vip" = "您已是VIP会员";
+"vip.thank_you" = "感谢您的支持，享受所有VIP权益";
+"vip.expiry_time" = "到期时间：%@";
+"vip.will_auto_renew" = "将自动续费";
+"vip.auto_renew_cancelled" = "已取消自动续费";
+"vip.faq_how_to_upgrade_steps" = "您可以在VIP会员页面点击「升级VIP会员」按钮，选择适合的套餐进行购买。";
+
+"service.no_images" = "暂无图片";
+"service.detail" = "服务详情";
+"service.no_description" = "暂无详细描述";
+"service.apply_message" = "申请留言";
+"service.expected_price" = "期望价格";
+"service.flexible_time" = "灵活时间";
+"service.expected_date" = "期望完成日期";
+"service.select_date" = "选择日期";
+"service.apply_title" = "申请服务";
+
+// MARK: - Network
+"network.offline" = "离线";
+"network.disconnected" = "网络连接已断开";
+"network.check_settings" = "请检查您的网络设置";
+"network.restored" = "网络已恢复";
+"network.connected_wifi" = "已连接到 Wi-Fi";
+"network.connected_cellular" = "已连接到蜂窝网络";
+"network.connected_ethernet" = "已连接到以太网";
+"network.connected" = "网络已连接";
+
+// MARK: - Notification (additional)
+"notification.expires_seconds" = "%.0f秒后过期";
+"notification.expires_minutes" = "%d分钟后过期";
+"notification.expires_hours" = "%d小时后过期";
+"notification.view_full" = "查看全文";
+"notification.expiry_time" = "过期时间: %@";
+"notification.unread" = "未读";
+"notification.content" = "通知内容";
+"notification.detail" = "通知详情";
+"notification.get_negotiation_failed" = "无法获取议价信息，请刷新后重试";
+
+// MARK: - Translation
+"translation.failed" = "翻译失败";
+"translation.retry_message" = "无法翻译此消息，请检查网络连接后重试";
+
+// MARK: - Task Detail Cards
+"task_detail.collapse" = "收起";
+"task_detail.expand_all" = "展开全部";
+"task_detail.completed_count" = "%d 已完成";
+"task_detail.expired" = "已截止";
+"task_detail.remaining_minutes" = "剩余 %d 分钟";
+"task_detail.remaining_hours" = "剩余 %d 小时";
+"task_detail.remaining_days" = "剩余 %d 天";
 
 // MARK: - Share
 "share.wechat" = "微信";
@@ -1641,6 +1707,49 @@
 "flea_market.category.other" = "其他";
 "flea_market.partial_upload_failed" = "部分图片上传失败，请重试";
 "flea_market.fill_required_fields" = "请填写所有必填项";
+"flea_market.purchase_requests_count" = "购买申请 (%d)";
+"flea_market.no_purchase_requests" = "暂无购买申请";
+"flea_market.waiting_seller_confirm" = "等待卖家确认";
+"flea_market.negotiate_amount_format" = "议价金额：£%.2f";
+"flea_market.continue_payment" = "继续支付";
+"flea_market.preparing" = "准备中...";
+"flea_market.sending_negotiate_request" = "正在发送议价请求...";
+"flea_market.processing_purchase" = "正在处理购买...";
+"flea_market.negotiate_amount_label" = "议价金额:";
+"flea_market.seller_negotiate_label" = "卖家议价:";
+"flea_market.reject_purchase_confirm_title" = "拒绝购买申请";
+"flea_market.reject_purchase_confirm_message" = "确定要拒绝这个购买申请吗？";
+"flea_market.request_status.pending" = "待处理";
+"flea_market.request_status.seller_negotiating" = "卖家已议价";
+"flea_market.request_status.accepted" = "已接受";
+"flea_market.request_status.rejected" = "已拒绝";
+
+// MARK: - Apple Pay
+"apple_pay.not_supported" = "您的设备不支持 Apple Pay";
+"apple_pay.use_other_method" = "请使用其他支付方式";
+"apple_pay.title" = "Apple Pay 支付";
+"apple_pay.not_configured" = "Apple Pay 未配置";
+"apple_pay.payment_info_not_ready" = "支付信息未准备好";
+"apple_pay.task_payment_fallback" = "Link²Ur 任务支付";
+"apple_pay.unable_to_create_form" = "无法创建 Apple Pay 支付表单";
+"apple_pay.unable_to_get_payment_info" = "无法获取支付信息";
+"chat.evidence_file" = "证据文件";
+"payment.unknown_error" = "未知错误";
+
+// MARK: - Payment (additional)
+"payment.amount" = "支付金额";
+"payment.success_completed" = "您的支付已成功完成";
+"payment.failed" = "支付失败";
+
+// MARK: - WeChat Pay
+"wechat_pay.title" = "微信支付";
+"wechat_pay.loading" = "正在加载支付页面...";
+"wechat_pay.load_failed" = "加载失败";
+"wechat_pay.cancel_confirm_title" = "确认取消支付？";
+"wechat_pay.continue_pay" = "继续支付";
+"wechat_pay.cancel_pay" = "取消支付";
+"wechat_pay.cancel_warning" = "取消后需要重新发起支付";
+"wechat_pay.invalid_link" = "支付链接无效";
 
 // MARK: - Forum Posts Extended
 "forum.my_posts" = "我的帖子";
@@ -1697,3 +1806,124 @@
 "service.applied" = "已申请";
 "service.waiting_expert_response" = "等待达人回应";
 "service.continue_payment" = "继续支付";
+
+// MARK: - Task Detail (Deadline / Evidence / Complete)
+"task_detail.confirm_deadline" = "确认截止时间";
+"task_detail.platform_service_fee" = "支付平台服务费";
+"task_detail.countdown_remaining_days" = "剩余 %d天 %d小时 %d分钟";
+"task_detail.countdown_remaining_hours" = "剩余 %d小时 %d分钟 %d秒";
+"task_detail.countdown_remaining_minutes" = "剩余 %d分钟 %d秒";
+"task_detail.countdown_remaining_seconds" = "剩余 %d秒";
+"task_detail.task_completed_title" = "任务已完成";
+"task_detail.task_completed_upload_hint" = "您已完成此任务。请上传相关证据图片或填写文字说明（可选），以便发布者确认任务完成情况。";
+"task_detail.section_text_optional" = "文字说明（可选）";
+"task_detail.section_evidence_images_optional" = "证据图片（可选）";
+"task_detail.section_evidence_files_optional" = "证据文件（可选）";
+"task_detail.section_completion_evidence_optional" = "完成证据（可选）";
+"task_detail.text_limit_500" = "文字说明不能超过500字";
+"task_detail.image_limit_5mb_5" = "单张图片不超过 5MB，最多上传 5 张";
+"task_detail.add_image" = "添加图片";
+"task_detail.upload_progress" = "上传进度";
+"task_detail.uploading_count" = "上传中 %d/%d...";
+"task_detail.confirm_complete_task_button" = "确认完成任务";
+"task_detail.confirm_task_complete_alert_title" = "确认完成任务";
+"task_detail.confirm_task_complete_alert_message" = "确定任务已完成吗？提交后将等待发布者确认。";
+"task_detail.confirm_task_complete_title" = "确认任务完成";
+"task_detail.confirm_task_complete_hint" = "您已确认此任务完成。可以上传相关证据图片（可选），如完成截图、验收记录等。";
+"task_detail.confirm_complete_button" = "确认完成";
+"task_detail.please_confirm_complete" = "请确认任务完成";
+"task_detail.auto_confirm_soon" = "即将自动确认，请立即确认！";
+"task_detail.confirm_now" = "立即确认";
+"task_detail.waiting_poster_confirm" = "等待发布者确认";
+"task_detail.auto_confirm_on_expiry" = "（到期将自动确认）";
+"task_detail.dispute_detail" = "任务争议详情";
+"task_detail.deadline_label" = "截止时间";
+"task_detail.no_uploadable_images" = "没有可上传的图片";
+"task_detail.image_size_error_format" = "第 %d 张图片压缩后仍过大 (%.1fMB)，请选择较小的图片";
+"task_detail.image_too_large_select_format" = "图片过大 (%.1fMB)，请选择较小的图片";
+"task_detail.max_images_5" = "最多只能上传 5 张图片";
+"task_detail.complete_task_nav_title" = "完成任务";
+"task_detail.task_completion_evidence" = "任务完成证据";
+"task_detail.image_convert_error" = "无法转换图片数据";
+"task_detail.image_process_error_format" = "第 %d 张图片无法处理，请重新选择";
+"task_detail.completed_count_format" = "%d 已完成";
+
+// MARK: - Refund (Extended)
+"refund.submit_rebuttal_evidence" = "提交反驳证据";
+"refund.submit_rebuttal_nav_title" = "提交反驳";
+"refund.view_history" = "查看历史";
+"refund.view_history_records" = "查看历史记录";
+"refund.withdraw_application" = "撤销退款申请";
+"refund.withdraw_application_message" = "确定要撤销此退款申请吗？撤销后将无法恢复。";
+"refund.withdrawing" = "撤销中...";
+"refund.withdraw_apply" = "撤销申请";
+"refund.task_incomplete_apply_refund" = "任务未完成（申请退款）";
+"refund.history" = "📋 退款历史";
+"refund.reason_label" = "退款原因：%@";
+"refund.type_full" = "全额退款";
+"refund.type_partial" = "部分退款";
+"refund.admin_comment_label" = "管理员备注：%@";
+"refund.taker_rebuttal" = "接单者反驳";
+"refund.evidence_files_count" = "已上传 %d 个证据文件";
+"refund.no_history" = "暂无退款申请历史记录";
+"refund.reason_type_label" = "原因类型：";
+"refund.type_label" = "退款类型：";
+"refund.review_time_label" = "审核时间：%@";
+"refund.apply_time_label" = "申请时间：%@";
+"refund.apply_refund" = "申请退款";
+"refund.apply_refund_hint" = "请详细说明退款原因，并上传相关证据（如截图、聊天记录等）。管理员将在3-5个工作日内审核。";
+"refund.reason_type_required" = "退款原因类型 *";
+"refund.reason_type_placeholder" = "请选择退款原因类型";
+"refund.partial_amount_too_high" = "部分退款金额不能大于或等于任务金额，请选择全额退款";
+"refund.amount_exceeds_task" = "退款金额不能超过任务金额（£%.2f）";
+"refund.amount_must_be_positive" = "退款金额必须是大于0的数字";
+"refund.ratio_range" = "退款比例必须在0-100之间";
+"refund.reason_detail_required" = "退款原因详细说明 *";
+"refund.reason_min_length" = "退款原因至少需要10个字符";
+"refund.type_required" = "退款类型 *";
+"refund.amount_or_ratio_required" = "退款金额或比例 *";
+"refund.amount_pound" = "退款金额（£）";
+"refund.ratio_percent" = "退款比例（%）";
+"refund.task_amount_format" = "任务金额: £%.2f";
+"refund.refund_amount_format" = "退款金额: £%.2f";
+"refund.submit_refund_application" = "提交退款申请";
+"refund.no_dispute_records" = "暂无争议记录";
+"refund.rebuttal_description" = "反驳说明";
+"refund.rebuttal_min_length" = "反驳说明至少需要10个字符";
+"refund.upload_limit_5" = "最多上传5张图片或文件，每张不超过5MB";
+"refund.select_image" = "选择图片";
+"refund.status_label" = "状态：%@";
+"refund.rebuttal_hint" = "请详细说明任务完成情况，并上传完成证据（如截图、文件等）。您的反驳将帮助管理员做出公正的裁定。";
+"refund.history_sheet_title" = "退款申请历史记录";
+"dispute.actor_poster" = "发布者";
+"dispute.actor_taker" = "接单者";
+"dispute.actor_admin" = "管理员";
+"refund.reason.completion_time" = "对完成时间不满意";
+"refund.reason.not_completed" = "接单者完全未完成";
+"refund.reason.quality_issue" = "质量问题";
+"refund.reason.other" = "其他";
+"refund.status_pending" = "待审核";
+"refund.status_processing" = "处理中";
+"refund.status_approved" = "已批准";
+"refund.status_rejected" = "已拒绝";
+"refund.status_completed" = "已完成";
+"refund.status_cancelled" = "已撤销";
+"refund.status_unknown" = "未知状态";
+"refund.status_pending_full" = "退款申请待审核";
+"refund.status_processing_full" = "退款处理中";
+"refund.status_approved_full" = "退款申请已批准";
+"refund.status_rejected_full" = "退款申请已拒绝";
+"refund.status_completed_full" = "退款已完成";
+"refund.status_cancelled_full" = "退款申请已取消";
+"refund.desc_pending" = "您的退款申请已提交，管理员将在3-5个工作日内审核";
+"refund.desc_processing" = "退款正在处理中，请耐心等待";
+"refund.desc_approved_amount" = "退款金额：£%.2f%@，退款将在5-10个工作日内退回";
+"refund.desc_approved_generic" = "退款将在5-10个工作日内退回您的原支付方式";
+"refund.desc_rejected_reason" = "拒绝理由：%@";
+"refund.desc_rejected_generic" = "退款申请已被拒绝";
+"refund.desc_completed_amount" = "退款金额：£%.2f%@，已退回您的原支付方式";
+"refund.desc_completed_generic" = "退款已退回您的原支付方式";
+"refund.desc_cancelled" = "退款申请已取消";
+"common.unknown" = "未知";
+
+"common.or" = "或";

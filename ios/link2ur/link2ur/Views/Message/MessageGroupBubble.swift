@@ -375,10 +375,10 @@ struct MessageGroupBubbleView: View {
                 }
             }
         }
-        .alert("翻译失败", isPresented: $showTranslationError) {
-            Button("确定", role: .cancel) { }
+        .alert(LocalizationKey.translationFailed.localized, isPresented: $showTranslationError) {
+            Button(LocalizationKey.commonOk.localized, role: .cancel) { }
         } message: {
-            Text("无法翻译此消息，请检查网络连接后重试")
+            Text(LocalizationKey.translationRetryMessage.localized)
         }
     }
     
@@ -529,7 +529,7 @@ struct GroupMessageBubbleItem: View {
                         let generator = UINotificationFeedbackGenerator()
                         generator.notificationOccurred(.success)
                     }) {
-                        Label("复制", systemImage: "doc.on.doc")
+                        Label(LocalizationKey.commonCopy.localized, systemImage: "doc.on.doc")
                     }
                     
                     // 翻译选项（仅非当前用户的消息）

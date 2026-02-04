@@ -398,7 +398,7 @@ struct TaskDetailView: View {
                     Button {
                         showDisputeTimeline = true
                     } label: {
-                        Label("争议详情", systemImage: "clock.arrow.circlepath")
+                        Label(LocalizationKey.taskDetailDisputeDetail.localized, systemImage: "clock.arrow.circlepath")
                     }
                     
                     Divider()
@@ -1627,7 +1627,7 @@ struct TaskCompletionEvidenceCard: View {
             HStack {
                 IconStyle.icon("photo.on.rectangle.angled", size: 18)
                     .foregroundColor(AppColors.primary)
-                Text(LocalizationHelper.currentLanguage.hasPrefix("zh") ? "任务完成证据" : "Task completion evidence")
+                Text(LocalizationKey.taskDetailTaskCompletionEvidence.localized)
                     .font(AppTypography.title3)
                     .foregroundColor(AppColors.textPrimary)
             }
@@ -1766,7 +1766,7 @@ struct ConfirmationCountdownView: View {
                 )
             
             VStack(alignment: .leading, spacing: 2) {
-                Text("确认截止时间")
+                Text(LocalizationKey.taskDetailConfirmDeadline.localized)
                     .font(AppTypography.caption)
                     .foregroundColor(AppColors.textSecondary)
                 Text(formatCountdown(remainingSeconds))
@@ -1800,7 +1800,7 @@ struct ConfirmationCountdownView: View {
     
     private func formatCountdown(_ seconds: Int) -> String {
         if seconds <= 0 {
-            return "已过期"
+            return LocalizationKey.timeExpired.localized
         }
         
         let days = seconds / 86400
@@ -1809,13 +1809,13 @@ struct ConfirmationCountdownView: View {
         let secs = seconds % 60
         
         if days > 0 {
-            return String(format: "剩余 %d天 %d小时 %d分钟", days, hours, minutes)
+            return LocalizationKey.taskDetailCountdownRemainingDays.localized(days, hours, minutes)
         } else if hours > 0 {
-            return String(format: "剩余 %d小时 %d分钟 %d秒", hours, minutes, secs)
+            return LocalizationKey.taskDetailCountdownRemainingHours.localized(hours, minutes, secs)
         } else if minutes > 0 {
-            return String(format: "剩余 %d分钟 %d秒", minutes, secs)
+            return LocalizationKey.taskDetailCountdownRemainingMinutes.localized(minutes, secs)
         } else {
-            return String(format: "剩余 %d秒", secs)
+            return LocalizationKey.taskDetailCountdownRemainingSeconds.localized(secs)
         }
     }
 }
@@ -2013,7 +2013,7 @@ struct TaskActionButtonsView: View {
                 }) {
                     HStack {
                         Image(systemName: "creditcard.fill")
-                        Text("支付平台服务费")
+                        Text(LocalizationKey.taskDetailPlatformServiceFee.localized)
                     }
                     .frame(maxWidth: .infinity)
                     .frame(height: 50)
@@ -2080,7 +2080,7 @@ struct TaskActionButtonsView: View {
         // 如果申请状态为 pending，在按钮位置显示"等待发布者确认⌛️"的禁用按钮
         if userApp.status == "pending" {
             Button(action: {}) {
-                Label("等待发布者确认⌛️", systemImage: "clock.fill")
+                Label(LocalizationKey.taskDetailWaitingPosterConfirm.localized, systemImage: "clock.fill")
             }
             .buttonStyle(PrimaryButtonStyle())
             .disabled(true)
@@ -2094,7 +2094,7 @@ struct TaskActionButtonsView: View {
     @ViewBuilder
     private var pendingConfirmationButton: some View {
         Button(action: {}) {
-            Label("等待发布者确认⌛️", systemImage: "clock.fill")
+            Label(LocalizationKey.taskDetailWaitingPosterConfirm.localized, systemImage: "clock.fill")
         }
         .buttonStyle(PrimaryButtonStyle())
         .disabled(true)
@@ -2190,7 +2190,7 @@ struct TaskActionButtonsView: View {
             }) {
                 HStack(spacing: AppSpacing.sm) {
                     IconStyle.icon("exclamationmark.bubble.fill", size: 20)
-                    Text("提交反驳证据")
+                    Text(LocalizationKey.refundSubmitRebuttalEvidence.localized)
                 }
             }
             .buttonStyle(PrimaryButtonStyle(useGradient: false))
@@ -2221,7 +2221,7 @@ struct TaskActionButtonsView: View {
                         ProgressView()
                             .scaleEffect(0.8)
                     }
-                    Text(viewModel.isCancellingRefund ? "撤销中..." : "撤销申请")
+                    Text(viewModel.isCancellingRefund ? LocalizationKey.refundWithdrawing.localized : LocalizationKey.refundWithdrawApply.localized)
                         .font(AppTypography.body)
                 }
                 .frame(maxWidth: .infinity)
@@ -2234,7 +2234,7 @@ struct TaskActionButtonsView: View {
                 viewModel.loadRefundHistory(taskId: taskId)
                 showRefundHistorySheet = true
             }) {
-                Text("查看历史")
+                Text(LocalizationKey.refundViewHistory.localized)
                     .font(AppTypography.body)
                     .frame(maxWidth: .infinity)
                     .frame(height: 40)
@@ -2249,7 +2249,7 @@ struct TaskActionButtonsView: View {
             viewModel.loadRefundHistory(taskId: taskId)
             showRefundHistorySheet = true
         }) {
-            Text("查看历史记录")
+            Text(LocalizationKey.refundViewHistoryRecords.localized)
                 .font(AppTypography.body)
                 .frame(maxWidth: .infinity)
                 .frame(height: 40)
@@ -2259,12 +2259,12 @@ struct TaskActionButtonsView: View {
     
     private func showCancelRefundAlert(refundRequest: RefundRequest) {
         let alert = UIAlertController(
-            title: "撤销退款申请",
-            message: "确定要撤销此退款申请吗？撤销后将无法恢复。",
+            title: LocalizationKey.refundWithdrawApplication.localized,
+            message: LocalizationKey.refundWithdrawApplicationMessage.localized,
             preferredStyle: .alert
         )
-        alert.addAction(UIAlertAction(title: "取消", style: .cancel))
-        alert.addAction(UIAlertAction(title: "确定", style: .destructive) { _ in
+        alert.addAction(UIAlertAction(title: LocalizationKey.commonCancel.localized, style: .cancel))
+        alert.addAction(UIAlertAction(title: LocalizationKey.commonConfirm.localized, style: .destructive) { _ in
             viewModel.cancelRefundRequest(taskId: taskId, refundId: refundRequest.id)
         })
         
@@ -2286,7 +2286,7 @@ struct TaskActionButtonsView: View {
             }) {
                 HStack(spacing: AppSpacing.sm) {
                     IconStyle.icon("arrow.uturn.backward.circle.fill", size: 20)
-                    Text("任务未完成（申请退款）")
+                    Text(LocalizationKey.refundTaskIncompleteApplyRefund.localized)
                 }
             }
             .buttonStyle(PrimaryButtonStyle(useGradient: false))
@@ -2298,7 +2298,7 @@ struct TaskActionButtonsView: View {
                     viewModel.loadRefundHistory(taskId: taskId)
                     showRefundHistorySheet = true
                 }) {
-                    Text("📋 退款历史")
+                    Text(LocalizationKey.refundHistory.localized)
                         .font(AppTypography.body)
                         .frame(maxWidth: .infinity)
                         .frame(height: 40)
@@ -2615,55 +2615,48 @@ struct RefundRequestStatusCard: View {
     
     private var statusText: String {
         switch refundRequest.status {
-        case "pending":
-            return "退款申请待审核"
-        case "processing":
-            return "退款处理中"
-        case "approved":
-            return "退款申请已批准"
-        case "rejected":
-            return "退款申请已拒绝"
-        case "completed":
-            return "退款已完成"
-        case "cancelled":
-            return "退款申请已取消"
-        default:
-            return "未知状态"
+        case "pending": return LocalizationKey.refundStatusPendingFull.localized
+        case "processing": return LocalizationKey.refundStatusProcessingFull.localized
+        case "approved": return LocalizationKey.refundStatusApprovedFull.localized
+        case "rejected": return LocalizationKey.refundStatusRejectedFull.localized
+        case "completed": return LocalizationKey.refundStatusCompletedFull.localized
+        case "cancelled": return LocalizationKey.refundStatusCancelledFull.localized
+        default: return LocalizationKey.refundStatusUnknown.localized
         }
     }
     
     private var statusDescription: String {
         switch refundRequest.status {
         case "pending":
-            return "您的退款申请已提交，管理员将在3-5个工作日内审核"
+            return LocalizationKey.refundDescPending.localized
         case "processing":
-            return "退款正在处理中，请耐心等待"
+            return LocalizationKey.refundDescProcessing.localized
         case "approved":
             if let amount = refundRequest.refundAmount {
-                let percentageText = refundRequest.refundPercentage != nil 
+                let percentageText = refundRequest.refundPercentage != nil
                     ? String(format: " (%.1f%%)", refundRequest.refundPercentage!)
                     : ""
-                return String(format: "退款金额：£%.2f%@，退款将在5-10个工作日内退回", amount, percentageText)
+                return LocalizationKey.refundDescApprovedAmount.localized(amount, percentageText)
             } else {
-                return "退款将在5-10个工作日内退回您的原支付方式"
+                return LocalizationKey.refundDescApprovedGeneric.localized
             }
         case "rejected":
             if let comment = refundRequest.adminComment, !comment.isEmpty {
-                return "拒绝理由：\(comment)"
+                return LocalizationKey.refundDescRejectedReason.localized(comment)
             } else {
-                return "退款申请已被拒绝"
+                return LocalizationKey.refundDescRejectedGeneric.localized
             }
         case "completed":
             if let amount = refundRequest.refundAmount {
-                let percentageText = refundRequest.refundPercentage != nil 
+                let percentageText = refundRequest.refundPercentage != nil
                     ? String(format: " (%.1f%%)", refundRequest.refundPercentage!)
                     : ""
-                return String(format: "退款金额：£%.2f%@，已退回您的原支付方式", amount, percentageText)
+                return LocalizationKey.refundDescCompletedAmount.localized(amount, percentageText)
             } else {
-                return "退款已退回您的原支付方式"
+                return LocalizationKey.refundDescCompletedGeneric.localized
             }
         case "cancelled":
-            return "退款申请已取消"
+            return LocalizationKey.refundDescCancelled.localized
         default:
             return ""
         }
@@ -2706,14 +2699,14 @@ struct RefundRequestStatusCard: View {
                 
                 // 显示退款原因类型
                 if let reasonType = refundRequest.reasonType, let reasonTypeEnum = RefundReasonType(rawValue: reasonType) {
-                    Text("退款原因：\(reasonTypeEnum.displayName)")
+                    Text(LocalizationKey.refundReasonLabel.localized(argument: reasonTypeEnum.displayName))
                         .font(.system(size: 12))
                         .foregroundColor(AppColors.textSecondary)
                 }
                 
                 // 显示退款类型
                 if let refundType = refundRequest.refundType {
-                    Text("退款类型：\(refundType == "full" ? "全额退款" : "部分退款")")
+                    Text(LocalizationKey.refundTypeLabel.localized + (refundType == "full" ? LocalizationKey.refundTypeFull.localized : LocalizationKey.refundTypePartial.localized))
                         .font(.system(size: 12))
                         .foregroundColor(AppColors.textSecondary)
                 }
@@ -2725,7 +2718,7 @@ struct RefundRequestStatusCard: View {
                     .fixedSize(horizontal: false, vertical: true)
                 
                 if let comment = refundRequest.adminComment, !comment.isEmpty, refundRequest.status != "rejected" {
-                    Text("管理员备注：\(comment)")
+                    Text(LocalizationKey.refundAdminCommentLabel.localized(argument: comment))
                         .font(.system(size: 11))
                         .foregroundColor(AppColors.textTertiary)
                         .padding(.top, 2)
@@ -2736,7 +2729,7 @@ struct RefundRequestStatusCard: View {
                     VStack(alignment: .leading, spacing: 4) {
                         HStack {
                             IconStyle.icon("exclamationmark.bubble.fill", size: 14)
-                            Text("接单者反驳")
+                            Text(LocalizationKey.refundTakerRebuttal.localized)
                                 .font(.system(size: 12, weight: .semibold))
                         }
                         .foregroundColor(AppColors.warning)
@@ -2749,7 +2742,7 @@ struct RefundRequestStatusCard: View {
                             .fixedSize(horizontal: false, vertical: true)
                         
                         if let evidenceFiles = refundRequest.rebuttalEvidenceFiles, !evidenceFiles.isEmpty {
-                            Text("已上传 \(evidenceFiles.count) 个证据文件")
+                            Text(LocalizationKey.refundEvidenceFilesCount.localized(argument: evidenceFiles.count))
                                 .font(.system(size: 10))
                                 .foregroundColor(AppColors.textTertiary)
                                 .padding(.top, 2)
@@ -2788,7 +2781,7 @@ struct RefundHistorySheet: View {
                         Image(systemName: "doc.text.magnifyingglass")
                             .font(.system(size: 48))
                             .foregroundColor(AppColors.textTertiary)
-                        Text("暂无退款申请历史记录")
+                        Text(LocalizationKey.refundNoHistory.localized)
                             .font(AppTypography.body)
                             .foregroundColor(AppColors.textSecondary)
                     }
@@ -2805,11 +2798,11 @@ struct RefundHistorySheet: View {
                     }
                 }
             }
-            .navigationTitle("退款申请历史记录")
+            .navigationTitle(LocalizationKey.refundHistorySheetTitle.localized)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("关闭") {
+                    Button(LocalizationKey.commonClose.localized) {
                         onClose()
                     }
                 }
@@ -2836,13 +2829,13 @@ struct RefundHistoryItemCard: View {
     
     private var statusText: String {
         switch refund.status {
-        case "pending": return "待审核"
-        case "processing": return "处理中"
-        case "approved": return "已批准"
-        case "rejected": return "已拒绝"
-        case "completed": return "已完成"
-        case "cancelled": return "已撤销"
-        default: return "未知状态"
+        case "pending": return LocalizationKey.refundStatusPending.localized
+        case "processing": return LocalizationKey.refundStatusProcessing.localized
+        case "approved": return LocalizationKey.refundStatusApproved.localized
+        case "rejected": return LocalizationKey.refundStatusRejected.localized
+        case "completed": return LocalizationKey.refundStatusCompleted.localized
+        case "cancelled": return LocalizationKey.refundStatusCancelled.localized
+        default: return LocalizationKey.refundStatusUnknown.localized
         }
     }
     
@@ -2870,7 +2863,7 @@ struct RefundHistoryItemCard: View {
             
             if let reasonType = refund.reasonType, let reasonTypeEnum = RefundReasonType(rawValue: reasonType) {
                 HStack {
-                    Text("原因类型：")
+                    Text(LocalizationKey.refundReasonTypeLabel.localized)
                         .font(AppTypography.caption)
                         .foregroundColor(AppColors.textSecondary)
                     Text(reasonTypeEnum.displayName)
@@ -2882,10 +2875,10 @@ struct RefundHistoryItemCard: View {
             
             if let refundType = refund.refundType {
                 HStack {
-                    Text("退款类型：")
+                    Text(LocalizationKey.refundTypeLabel.localized)
                         .font(AppTypography.caption)
                         .foregroundColor(AppColors.textSecondary)
-                    Text(refundType == "full" ? "全额退款" : "部分退款")
+                    Text(refundType == "full" ? LocalizationKey.refundTypeFull.localized : LocalizationKey.refundTypePartial.localized)
                         .font(AppTypography.caption)
                         .fontWeight(.medium)
                         .foregroundColor(AppColors.textPrimary)
@@ -2899,7 +2892,7 @@ struct RefundHistoryItemCard: View {
             
             if let comment = refund.adminComment, !comment.isEmpty {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("管理员备注：")
+                    Text(LocalizationKey.refundAdminCommentLabel.localized(argument: ""))
                         .font(AppTypography.caption)
                         .foregroundColor(AppColors.textSecondary)
                     Text(comment)
@@ -2910,12 +2903,12 @@ struct RefundHistoryItemCard: View {
             }
             
             if let reviewedAt = refund.reviewedAt {
-                Text("审核时间：\(formatDate(reviewedAt))")
+                Text(LocalizationKey.refundReviewTimeLabel.localized(argument: formatDate(reviewedAt)))
                     .font(.system(size: 11))
                     .foregroundColor(AppColors.textTertiary)
             }
             
-            Text("申请时间：\(formatDate(refund.createdAt))")
+            Text(LocalizationKey.refundApplyTimeLabel.localized(argument: formatDate(refund.createdAt)))
                 .font(.system(size: 11))
                 .foregroundColor(AppColors.textTertiary)
         }
@@ -3855,13 +3848,13 @@ struct CompleteTaskSheet: View {
                             HStack(spacing: AppSpacing.sm) {
                                 IconStyle.icon("checkmark.circle.fill", size: 24)
                                     .foregroundColor(AppColors.success)
-                                Text("任务已完成")
+                                Text(LocalizationKey.taskDetailTaskCompletedTitle.localized)
                                     .font(AppTypography.title3)
                                     .fontWeight(.semibold)
                                     .foregroundColor(AppColors.textPrimary)
                             }
                             
-                            Text("您已完成此任务。请上传相关证据图片或填写文字说明（可选），以便发布者确认任务完成情况。")
+                            Text(LocalizationKey.taskDetailTaskCompletedUploadHint.localized)
                                 .font(AppTypography.body)
                                 .foregroundColor(AppColors.textSecondary)
                                 .fixedSize(horizontal: false, vertical: true)
@@ -3873,7 +3866,7 @@ struct CompleteTaskSheet: View {
                         
                         // 2. 文字证据输入
                         VStack(alignment: .leading, spacing: AppSpacing.sm) {
-                            SectionHeader(title: "文字说明（可选）", icon: "text.bubble")
+                            SectionHeader(title: LocalizationKey.taskDetailSectionTextOptional.localized, icon: "text.bubble")
                             
                             TextEditor(text: $evidenceText)
                                 .frame(minHeight: 100)
@@ -3896,7 +3889,7 @@ struct CompleteTaskSheet: View {
                             if evidenceText.count > 500 {
                                 HStack(spacing: 4) {
                                     IconStyle.icon("exclamationmark.triangle.fill", size: 12)
-                                    Text("文字说明不能超过500字")
+                                    Text(LocalizationKey.taskDetailTextLimit500.localized)
                                         .font(AppTypography.caption)
                                 }
                                 .foregroundColor(AppColors.error)
@@ -3910,7 +3903,7 @@ struct CompleteTaskSheet: View {
                         // 3. 证据图片上传
                         VStack(alignment: .leading, spacing: AppSpacing.md) {
                             HStack {
-                                SectionHeader(title: "证据图片（可选）", icon: "photo.on.rectangle")
+                                SectionHeader(title: LocalizationKey.taskDetailSectionEvidenceImagesOptional.localized, icon: "photo.on.rectangle")
                                 Spacer()
                                 Text("\(selectedImages.count)/5")
                                     .font(AppTypography.caption)
@@ -3922,7 +3915,7 @@ struct CompleteTaskSheet: View {
                                 Image(systemName: "info.circle.fill")
                                     .font(.system(size: 12))
                                     .foregroundColor(AppColors.textTertiary)
-                                Text("单张图片不超过 5MB，最多上传 5 张")
+                                Text(LocalizationKey.taskDetailImageLimit5mb5.localized)
                                     .font(AppTypography.caption)
                                     .foregroundColor(AppColors.textTertiary)
                             }
@@ -3937,7 +3930,7 @@ struct CompleteTaskSheet: View {
                                                 Image(systemName: "plus.viewfinder")
                                                     .font(.system(size: 28))
                                                     .foregroundColor(AppColors.primary)
-                                                Text("添加图片")
+                                                Text(LocalizationKey.taskDetailAddImage.localized)
                                                     .font(.system(size: 11, weight: .medium))
                                                     .foregroundColor(AppColors.textSecondary)
                                             }
@@ -4027,7 +4020,7 @@ struct CompleteTaskSheet: View {
                         if isUploading && uploadProgress.total > 0 {
                             VStack(spacing: AppSpacing.xs) {
                                 HStack {
-                                    Text("上传进度")
+                                    Text(LocalizationKey.taskDetailUploadProgress.localized)
                                         .font(AppTypography.caption)
                                         .foregroundColor(AppColors.textSecondary)
                                     Spacer()
@@ -4058,10 +4051,10 @@ struct CompleteTaskSheet: View {
                                     IconStyle.icon("checkmark.circle.fill", size: 18)
                                 }
                                 if isUploading {
-                                    Text("上传中 \(uploadProgress.current)/\(uploadProgress.total)...")
+                                    Text(LocalizationKey.taskDetailUploadingCount.localized(uploadProgress.current, uploadProgress.total))
                                         .font(AppTypography.bodyBold)
                                 } else {
-                                    Text("确认完成任务")
+                                    Text(LocalizationKey.taskDetailConfirmCompleteTaskButton.localized)
                                         .font(AppTypography.bodyBold)
                                 }
                             }
@@ -4073,11 +4066,11 @@ struct CompleteTaskSheet: View {
                     .padding(AppSpacing.md)
                 }
             }
-            .navigationTitle("完成任务")
+            .navigationTitle(LocalizationKey.taskDetailCompleteTaskNavTitle.localized)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
-                    Button("取消") {
+                    Button(LocalizationKey.commonCancel.localized) {
                         dismiss()
                     }
                     .disabled(isUploading)
@@ -4096,7 +4089,7 @@ struct CompleteTaskSheet: View {
                     // 检查图片大小（压缩前）
                     if data.count > maxImageSize {
                         let sizeInMB = Double(data.count) / (1024 * 1024)
-                        newSizeErrors.append(String(format: "图片过大 (%.1fMB)，请选择较小的图片", sizeInMB))
+                        newSizeErrors.append(LocalizationKey.taskDetailImageTooLargeSelectFormat.localized(sizeInMB))
                         continue
                     }
                     
@@ -4106,7 +4099,7 @@ struct CompleteTaskSheet: View {
                             if selectedImages.count < 5 {
                                 selectedImages.append(image)
                             } else {
-                                newSizeErrors.append("最多只能上传 5 张图片")
+                                newSizeErrors.append(LocalizationKey.taskDetailMaxImages5.localized)
                             }
                         }
                     }
@@ -4127,19 +4120,19 @@ struct CompleteTaskSheet: View {
         // 验证文字长度
         let trimmedText = evidenceText.trimmingCharacters(in: .whitespaces)
         if trimmedText.count > 500 {
-            errorMessage = "文字说明不能超过500字"
+            errorMessage = LocalizationKey.taskDetailTextLimit500.localized
             return
         }
         
         // 如果没有图片也没有文字，显示确认对话框
         if selectedImages.isEmpty && trimmedText.isEmpty {
             let alert = UIAlertController(
-                title: "确认完成任务",
-                message: "确定任务已完成吗？提交后将等待发布者确认。",
-                preferredStyle: .alert
-            )
-            alert.addAction(UIAlertAction(title: "取消", style: .cancel))
-            alert.addAction(UIAlertAction(title: "确认", style: .default) { _ in
+title: LocalizationKey.taskDetailConfirmTaskCompleteAlertTitle.localized,
+            message: LocalizationKey.taskDetailConfirmTaskCompleteAlertMessage.localized,
+            preferredStyle: .alert
+        )
+        alert.addAction(UIAlertAction(title: LocalizationKey.commonCancel.localized, style: .cancel))
+        alert.addAction(UIAlertAction(title: LocalizationKey.commonConfirm.localized, style: .default) { _ in
                 self.onComplete([], nil)
                 self.dismiss()
             })
@@ -4175,12 +4168,12 @@ struct CompleteTaskSheet: View {
             if let imageData = image.jpegData(compressionQuality: 0.7) {
                 if imageData.count > maxImageSize {
                     let sizeInMB = Double(imageData.count) / (1024 * 1024)
-                    sizeErrors.append(String(format: "第 %d 张图片压缩后仍过大 (%.1fMB)，请选择较小的图片", index + 1, sizeInMB))
+                    sizeErrors.append(LocalizationKey.taskDetailImageSizeErrorFormat.localized(index + 1, sizeInMB))
                 } else {
                     validImages.append((image, index + 1))
                 }
             } else {
-                sizeErrors.append("第 \(index + 1) 张图片无法处理，请重新选择")
+                sizeErrors.append(LocalizationKey.taskDetailImageProcessErrorFormat.localized(argument: index + 1))
             }
         }
         
@@ -4190,7 +4183,7 @@ struct CompleteTaskSheet: View {
         }
         
         if validImages.isEmpty {
-            errorMessage = "没有可上传的图片"
+            errorMessage = LocalizationKey.taskDetailNoUploadableImages.localized
             return
         }
         
@@ -4432,13 +4425,13 @@ struct ConfirmCompletionSheet: View {
                             HStack(spacing: AppSpacing.sm) {
                                 IconStyle.icon("checkmark.circle.fill", size: 24)
                                     .foregroundColor(AppColors.success)
-                                Text("确认任务完成")
+                                Text(LocalizationKey.taskDetailConfirmTaskCompleteTitle.localized)
                                     .font(AppTypography.title3)
                                     .fontWeight(.semibold)
                                     .foregroundColor(AppColors.textPrimary)
                             }
                             
-                            Text("您已确认此任务完成。可以上传相关证据图片（可选），如完成截图、验收记录等。")
+                            Text(LocalizationKey.taskDetailConfirmTaskCompleteHint.localized)
                                 .font(AppTypography.body)
                                 .foregroundColor(AppColors.textSecondary)
                                 .fixedSize(horizontal: false, vertical: true)
@@ -4451,7 +4444,7 @@ struct ConfirmCompletionSheet: View {
                         // 2. 证据图片上传
                         VStack(alignment: .leading, spacing: AppSpacing.md) {
                             HStack {
-                                SectionHeader(title: "证据图片（可选）", icon: "photo.on.rectangle")
+                                SectionHeader(title: LocalizationKey.taskDetailSectionEvidenceImagesOptional.localized, icon: "photo.on.rectangle")
                                 Spacer()
                                 Text("\(selectedImages.count)/5")
                                     .font(AppTypography.caption)
@@ -4463,7 +4456,7 @@ struct ConfirmCompletionSheet: View {
                                 Image(systemName: "info.circle.fill")
                                     .font(.system(size: 12))
                                     .foregroundColor(AppColors.textTertiary)
-                                Text("单张图片不超过 5MB，最多上传 5 张")
+                                Text(LocalizationKey.taskDetailImageLimit5mb5.localized)
                                     .font(AppTypography.caption)
                                     .foregroundColor(AppColors.textTertiary)
                             }
@@ -4478,7 +4471,7 @@ struct ConfirmCompletionSheet: View {
                                                 Image(systemName: "plus.viewfinder")
                                                     .font(.system(size: 28))
                                                     .foregroundColor(AppColors.primary)
-                                                Text("添加图片")
+                                                Text(LocalizationKey.taskDetailAddImage.localized)
                                                     .font(.system(size: 11, weight: .medium))
                                                     .foregroundColor(AppColors.textSecondary)
                                             }
@@ -4568,7 +4561,7 @@ struct ConfirmCompletionSheet: View {
                         if isUploading && uploadProgress.total > 0 {
                             VStack(spacing: AppSpacing.xs) {
                                 HStack {
-                                    Text("上传进度")
+                                    Text(LocalizationKey.taskDetailUploadProgress.localized)
                                         .font(AppTypography.caption)
                                         .foregroundColor(AppColors.textSecondary)
                                     Spacer()
@@ -4599,10 +4592,10 @@ struct ConfirmCompletionSheet: View {
                                     IconStyle.icon("checkmark.circle.fill", size: 18)
                                 }
                                 if isUploading {
-                                    Text("上传中 \(uploadProgress.current)/\(uploadProgress.total)...")
+                                    Text(LocalizationKey.taskDetailUploadingCount.localized(uploadProgress.current, uploadProgress.total))
                                         .font(AppTypography.bodyBold)
                                 } else {
-                                    Text("确认完成")
+                                    Text(LocalizationKey.taskDetailConfirmCompleteButton.localized)
                                         .font(AppTypography.bodyBold)
                                 }
                             }
@@ -4614,11 +4607,11 @@ struct ConfirmCompletionSheet: View {
                     .padding(AppSpacing.md)
                 }
             }
-            .navigationTitle("确认任务完成")
+            .navigationTitle(LocalizationKey.taskDetailConfirmTaskCompleteTitle.localized)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
-                    Button("取消") {
+                    Button(LocalizationKey.commonCancel.localized) {
                         dismiss()
                     }
                     .disabled(isUploading)
@@ -4637,7 +4630,7 @@ struct ConfirmCompletionSheet: View {
                     // 检查图片大小（压缩前）
                     if data.count > maxImageSize {
                         let sizeInMB = Double(data.count) / (1024 * 1024)
-                        newSizeErrors.append(String(format: "图片过大 (%.1fMB)，请选择较小的图片", sizeInMB))
+                        newSizeErrors.append(LocalizationKey.taskDetailImageTooLargeSelectFormat.localized(sizeInMB))
                         continue
                     }
                     
@@ -4647,7 +4640,7 @@ struct ConfirmCompletionSheet: View {
                             if selectedImages.count < 5 {
                                 selectedImages.append(image)
                             } else {
-                                newSizeErrors.append("最多只能上传 5 张图片")
+                                newSizeErrors.append(LocalizationKey.taskDetailMaxImages5.localized)
                             }
                         }
                     }
@@ -4684,12 +4677,12 @@ struct ConfirmCompletionSheet: View {
             if let imageData = image.jpegData(compressionQuality: 0.7) {
                 if imageData.count > maxImageSize {
                     let sizeInMB = Double(imageData.count) / (1024 * 1024)
-                    sizeErrors.append(String(format: "第 %d 张图片压缩后仍过大 (%.1fMB)，请选择较小的图片", index + 1, sizeInMB))
+                    sizeErrors.append(LocalizationKey.taskDetailImageSizeErrorFormat.localized(index + 1, sizeInMB))
                 } else {
                     validImages.append((image, index + 1))
                 }
             } else {
-                sizeErrors.append("第 \(index + 1) 张图片无法处理，请重新选择")
+                sizeErrors.append(LocalizationKey.taskDetailImageProcessErrorFormat.localized(argument: index + 1))
             }
         }
         
@@ -4699,7 +4692,7 @@ struct ConfirmCompletionSheet: View {
         }
         
         if validImages.isEmpty {
-            errorMessage = "没有可上传的图片"
+            errorMessage = LocalizationKey.taskDetailNoUploadableImages.localized
             return
         }
         
@@ -4715,7 +4708,7 @@ struct ConfirmCompletionSheet: View {
             uploadGroup.enter()
             // 先压缩图片
             guard let imageData = image.jpegData(compressionQuality: 0.7) else {
-                uploadErrors.append((NSError(domain: "ImageError", code: 0, userInfo: [NSLocalizedDescriptionKey: "无法转换图片数据"]), imageIndex))
+                uploadErrors.append((NSError(domain: "ImageError", code: 0, userInfo: [NSLocalizedDescriptionKey: LocalizationKey.taskDetailImageConvertError.localized]), imageIndex))
                 uploadGroup.leave()
                 continue
             }
@@ -4855,9 +4848,9 @@ struct RefundRequestSheet: View {
         var displayName: String {
             switch self {
             case .full:
-                return "全额退款"
+                return LocalizationKey.refundTypeFull.localized
             case .partial:
-                return "部分退款"
+                return LocalizationKey.refundTypePartial.localized
             }
         }
     }
@@ -4875,13 +4868,13 @@ struct RefundRequestSheet: View {
                             HStack(spacing: AppSpacing.sm) {
                                 IconStyle.icon("arrow.uturn.backward.circle.fill", size: 24)
                                     .foregroundColor(AppColors.error)
-                                Text("申请退款")
+                                Text(LocalizationKey.refundApplyRefund.localized)
                                     .font(AppTypography.title3)
                                     .fontWeight(.semibold)
                                     .foregroundColor(AppColors.textPrimary)
                             }
                             
-                            Text("请详细说明退款原因，并上传相关证据（如截图、聊天记录等）。管理员将在3-5个工作日内审核。")
+                            Text(LocalizationKey.refundApplyRefundHint.localized)
                                 .font(AppTypography.body)
                                 .foregroundColor(AppColors.textSecondary)
                                 .fixedSize(horizontal: false, vertical: true)
@@ -4893,7 +4886,7 @@ struct RefundRequestSheet: View {
                         
                         // 2. 退款原因类型选择
                         VStack(alignment: .leading, spacing: AppSpacing.sm) {
-                            Text("退款原因类型 *")
+                            Text(LocalizationKey.refundReasonTypeRequired.localized)
                                 .font(AppTypography.subheadline)
                                 .fontWeight(.semibold)
                                 .foregroundColor(AppColors.textPrimary)
@@ -4913,7 +4906,7 @@ struct RefundRequestSheet: View {
                                 }
                             } label: {
                                 HStack {
-                                    Text(refundReasonType?.displayName ?? "请选择退款原因类型")
+                                    Text(refundReasonType?.displayName ?? LocalizationKey.refundReasonTypePlaceholder.localized)
                                         .foregroundColor(refundReasonType == nil ? AppColors.textTertiary : AppColors.textPrimary)
                                     Spacer()
                                     Image(systemName: "chevron.down")
@@ -4937,7 +4930,7 @@ struct RefundRequestSheet: View {
                         // 3. 退款原因详细说明
                         VStack(alignment: .leading, spacing: AppSpacing.sm) {
                             HStack {
-                                Text("退款原因详细说明 *")
+                                Text(LocalizationKey.refundReasonDetailRequired.localized)
                                     .font(AppTypography.subheadline)
                                     .fontWeight(.semibold)
                                     .foregroundColor(AppColors.textPrimary)
@@ -4962,7 +4955,7 @@ struct RefundRequestSheet: View {
                                     Image(systemName: "exclamationmark.triangle.fill")
                                         .font(.system(size: 12))
                                         .foregroundColor(AppColors.warning)
-                                    Text("退款原因至少需要10个字符")
+                                    Text(LocalizationKey.refundReasonMinLength.localized)
                                         .font(AppTypography.caption)
                                         .foregroundColor(AppColors.warning)
                                 }
@@ -4975,7 +4968,7 @@ struct RefundRequestSheet: View {
                         
                         // 4. 退款类型选择
                         VStack(alignment: .leading, spacing: AppSpacing.sm) {
-                            Text("退款类型 *")
+                            Text(LocalizationKey.refundTypeRequired.localized)
                                 .font(AppTypography.subheadline)
                                 .fontWeight(.semibold)
                                 .foregroundColor(AppColors.textPrimary)
@@ -4989,7 +4982,7 @@ struct RefundRequestSheet: View {
                                     HStack {
                                         Image(systemName: refundType == .full ? "checkmark.circle.fill" : "circle")
                                             .foregroundColor(refundType == .full ? AppColors.primary : AppColors.textTertiary)
-                                        Text("全额退款")
+                                        Text(LocalizationKey.refundTypeFull.localized)
                                             .font(AppTypography.body)
                                     }
                                     .frame(maxWidth: .infinity)
@@ -5009,7 +5002,7 @@ struct RefundRequestSheet: View {
                                     HStack {
                                         Image(systemName: refundType == .partial ? "checkmark.circle.fill" : "circle")
                                             .foregroundColor(refundType == .partial ? AppColors.primary : AppColors.textTertiary)
-                                        Text("部分退款")
+                                        Text(LocalizationKey.refundTypePartial.localized)
                                             .font(AppTypography.body)
                                     }
                                     .frame(maxWidth: .infinity)
@@ -5032,14 +5025,14 @@ struct RefundRequestSheet: View {
                         // 5. 部分退款金额/比例输入
                         if refundType == .partial {
                             VStack(alignment: .leading, spacing: AppSpacing.sm) {
-                                Text("退款金额或比例 *")
+                                Text(LocalizationKey.refundAmountOrRatioRequired.localized)
                                     .font(AppTypography.subheadline)
                                     .fontWeight(.semibold)
                                     .foregroundColor(AppColors.textPrimary)
                                 
                                 HStack(spacing: AppSpacing.md) {
                                     VStack(alignment: .leading, spacing: 4) {
-                                        Text("退款金额（£）")
+                                        Text(LocalizationKey.refundAmountPound.localized)
                                             .font(AppTypography.caption)
                                             .foregroundColor(AppColors.textSecondary)
                                         
@@ -5069,13 +5062,13 @@ struct RefundRequestSheet: View {
                                         }
                                     }
                                     
-                                    Text("或")
+                                    Text(LocalizationKey.commonOr.localized)
                                         .font(AppTypography.body)
                                         .foregroundColor(AppColors.textTertiary)
                                         .padding(.top, 20)
                                     
                                     VStack(alignment: .leading, spacing: 4) {
-                                        Text("退款比例（%）")
+                                        Text(LocalizationKey.refundRatioPercent.localized)
                                             .font(AppTypography.caption)
                                             .foregroundColor(AppColors.textSecondary)
                                         
@@ -5108,13 +5101,13 @@ struct RefundRequestSheet: View {
                                 
                                 if let taskAmount = task.agreedReward ?? task.baseReward {
                                     HStack {
-                                        Text("任务金额: £\(String(format: "%.2f", taskAmount))")
+                                        Text(LocalizationKey.refundTaskAmountFormat.localized(argument: taskAmount))
                                             .font(AppTypography.caption)
                                             .foregroundColor(AppColors.textTertiary)
                                         
                                         if let amount = Double(refundAmount), amount > 0 {
                                             Spacer()
-                                            Text("退款金额: £\(String(format: "%.2f", amount))")
+                                            Text(LocalizationKey.refundRefundAmountFormat.localized(argument: amount))
                                                 .font(AppTypography.caption)
                                                 .fontWeight(.semibold)
                                                 .foregroundColor(AppColors.error)
@@ -5131,7 +5124,7 @@ struct RefundRequestSheet: View {
                         // 6. 证据文件上传
                         VStack(alignment: .leading, spacing: AppSpacing.md) {
                             HStack {
-                                SectionHeader(title: "证据文件（可选）", icon: "doc.on.doc")
+                                SectionHeader(title: LocalizationKey.taskDetailSectionEvidenceFilesOptional.localized, icon: "doc.on.doc")
                                 Spacer()
                                 Text("\(selectedImages.count)/5")
                                     .font(AppTypography.caption)
@@ -5143,7 +5136,7 @@ struct RefundRequestSheet: View {
                                 Image(systemName: "info.circle.fill")
                                     .font(.system(size: 12))
                                     .foregroundColor(AppColors.textTertiary)
-                                Text("单张图片不超过 5MB，最多上传 5 张")
+                                Text(LocalizationKey.taskDetailImageLimit5mb5.localized)
                                     .font(AppTypography.caption)
                                     .foregroundColor(AppColors.textTertiary)
                             }
@@ -5158,7 +5151,7 @@ struct RefundRequestSheet: View {
                                                 Image(systemName: "plus.viewfinder")
                                                     .font(.system(size: 28))
                                                     .foregroundColor(AppColors.primary)
-                                                Text("添加图片")
+                                                Text(LocalizationKey.taskDetailAddImage.localized)
                                                     .font(.system(size: 11, weight: .medium))
                                                     .foregroundColor(AppColors.textSecondary)
                                             }
@@ -5248,7 +5241,7 @@ struct RefundRequestSheet: View {
                         if isUploading && uploadProgress.total > 0 {
                             VStack(spacing: AppSpacing.xs) {
                                 HStack {
-                                    Text("上传进度")
+                                    Text(LocalizationKey.taskDetailUploadProgress.localized)
                                         .font(AppTypography.caption)
                                         .foregroundColor(AppColors.textSecondary)
                                     Spacer()
@@ -5282,7 +5275,7 @@ struct RefundRequestSheet: View {
                                     Text(isUploading ? "上传中 \(uploadProgress.current)/\(uploadProgress.total)..." : "提交中...")
                                         .font(AppTypography.bodyBold)
                                 } else {
-                                    Text("提交退款申请")
+                                    Text(LocalizationKey.refundSubmitRefundApplication.localized)
                                         .font(AppTypography.bodyBold)
                                 }
                             }
@@ -5294,11 +5287,11 @@ struct RefundRequestSheet: View {
                     .padding(AppSpacing.md)
                 }
             }
-            .navigationTitle("申请退款")
+            .navigationTitle(LocalizationKey.refundApplyRefund.localized)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
-                    Button("取消") {
+                    Button(LocalizationKey.commonCancel.localized) {
                         dismiss()
                     }
                     .disabled(isSubmitting || isUploading)
@@ -5319,7 +5312,7 @@ struct RefundRequestSheet: View {
                     // 检查图片大小（压缩前）
                     if data.count > maxImageSize {
                         let sizeInMB = Double(data.count) / (1024 * 1024)
-                        newSizeErrors.append(String(format: "图片过大 (%.1fMB)，请选择较小的图片", sizeInMB))
+                        newSizeErrors.append(LocalizationKey.taskDetailImageTooLargeSelectFormat.localized(sizeInMB))
                         continue
                     }
                     
@@ -5329,7 +5322,7 @@ struct RefundRequestSheet: View {
                             if selectedImages.count < 5 {
                                 selectedImages.append(image)
                             } else {
-                                newSizeErrors.append("最多只能上传 5 张图片")
+                                newSizeErrors.append(LocalizationKey.taskDetailMaxImages5.localized)
                             }
                         }
                     }
@@ -5349,14 +5342,14 @@ struct RefundRequestSheet: View {
         
         // 验证退款原因类型
         guard refundReasonType != nil else {
-            errorMessage = "请选择退款原因类型"
+            errorMessage = LocalizationKey.refundReasonTypePlaceholder.localized
             return
         }
         
         // 验证退款原因详细说明
         let trimmedReason = refundReason.trimmingCharacters(in: .whitespaces)
         if trimmedReason.count < 10 {
-            errorMessage = "退款原因详细说明至少需要10个字符"
+            errorMessage = LocalizationKey.refundReasonDetailRequired.localized
             return
         }
         
@@ -5366,7 +5359,7 @@ struct RefundRequestSheet: View {
         
         if refundType == .partial {
             if refundAmount.isEmpty && refundPercentage.isEmpty {
-                errorMessage = "部分退款必须提供退款金额或退款比例"
+                errorMessage = LocalizationKey.refundAmountOrRatioRequired.localized
                 return
             }
             
@@ -5375,17 +5368,17 @@ struct RefundRequestSheet: View {
                     // 检查是否超过任务金额
                     if let taskAmount = task.agreedReward ?? task.baseReward {
                         if amount >= taskAmount {
-                            errorMessage = "部分退款金额不能大于或等于任务金额，请选择全额退款"
+                            errorMessage = LocalizationKey.refundPartialAmountTooHigh.localized
                             return
                         }
                         if amount > taskAmount {
-                            errorMessage = String(format: "退款金额不能超过任务金额（£%.2f）", taskAmount)
+                            errorMessage = LocalizationKey.refundAmountExceedsTask.localized(taskAmount)
                             return
                         }
                     }
                     refundAmountValue = amount
                 } else {
-                    errorMessage = "退款金额必须是大于0的数字"
+                    errorMessage = LocalizationKey.refundAmountMustBePositive.localized
                     return
                 }
             }
@@ -5398,7 +5391,7 @@ struct RefundRequestSheet: View {
                         refundAmountValue = (percentage / 100) * taskAmount
                     }
                 } else {
-                    errorMessage = "退款比例必须在0-100之间"
+                    errorMessage = LocalizationKey.refundRatioRange.localized
                     return
                 }
             }
@@ -5423,12 +5416,12 @@ struct RefundRequestSheet: View {
                 if let imageData = image.jpegData(compressionQuality: 0.7) {
                     if imageData.count > maxImageSize {
                         let sizeInMB = Double(imageData.count) / (1024 * 1024)
-                        sizeErrors.append(String(format: "第 %d 张图片压缩后仍过大 (%.1fMB)，请选择较小的图片", index + 1, sizeInMB))
+                        sizeErrors.append(LocalizationKey.taskDetailImageSizeErrorFormat.localized(index + 1, sizeInMB))
                     } else {
                         validImages.append((image, index + 1))
                     }
                 } else {
-                    sizeErrors.append("第 \(index + 1) 张图片无法处理，请重新选择")
+                    sizeErrors.append(LocalizationKey.taskDetailImageProcessErrorFormat.localized(argument: index + 1))
                 }
             }
             
@@ -5448,7 +5441,7 @@ struct RefundRequestSheet: View {
             for (image, imageIndex) in validImages {
                 uploadGroup.enter()
                 guard let imageData = image.jpegData(compressionQuality: 0.7) else {
-                    uploadErrors.append((NSError(domain: "ImageError", code: 0, userInfo: [NSLocalizedDescriptionKey: "无法转换图片数据"]), imageIndex))
+                    uploadErrors.append((NSError(domain: "ImageError", code: 0, userInfo: [NSLocalizedDescriptionKey: LocalizationKey.taskDetailImageConvertError.localized]), imageIndex))
                     uploadGroup.leave()
                     continue
                 }
@@ -5595,7 +5588,7 @@ struct DisputeTimelineView: View {
                         LazyVStack(spacing: AppSpacing.md) {
                             // 任务标题
                             VStack(alignment: .leading, spacing: AppSpacing.sm) {
-                                Text("任务争议详情")
+                                Text(LocalizationKey.taskDetailDisputeDetail.localized)
                                     .font(AppTypography.title2)
                                     .foregroundColor(AppColors.textPrimary)
                                 
@@ -5613,7 +5606,7 @@ struct DisputeTimelineView: View {
                                 VStack(spacing: AppSpacing.md) {
                                     IconStyle.icon("clock", size: 50)
                                         .foregroundColor(AppColors.textTertiary)
-                                    Text("暂无争议记录")
+                                    Text(LocalizationKey.refundNoDisputeRecords.localized)
                                         .font(AppTypography.body)
                                         .foregroundColor(AppColors.textSecondary)
                                 }
@@ -5638,11 +5631,11 @@ struct DisputeTimelineView: View {
                     )
                 }
             }
-            .navigationTitle("争议详情")
+            .navigationTitle(LocalizationKey.taskDetailDisputeDetail.localized)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("关闭") {
+                    Button(LocalizationKey.commonClose.localized) {
                         dismiss()
                     }
                 }
@@ -5675,13 +5668,13 @@ struct TimelineItemView: View {
     private var actorName: String {
         switch item.actor {
         case "poster":
-            return "发布者"
+            return LocalizationKey.disputeActorPoster.localized
         case "taker":
-            return "接单者"
+            return LocalizationKey.disputeActorTaker.localized
         case "admin":
-            return item.reviewerName ?? item.resolverName ?? "管理员"
+            return item.reviewerName ?? item.resolverName ?? LocalizationKey.disputeActorAdmin.localized
         default:
-            return "未知"
+            return LocalizationKey.commonUnknown.localized
         }
     }
     
@@ -5757,7 +5750,7 @@ struct TimelineItemView: View {
                 // 显示状态（如果有）
                 if let status = item.status {
                     HStack {
-                        Text("状态：\(statusText(status))")
+                        Text(LocalizationKey.refundStatusLabel.localized(argument: statusText(status)))
                             .font(AppTypography.caption)
                             .foregroundColor(statusColor(status))
                     }
@@ -5918,13 +5911,13 @@ struct RefundRebuttalSheet: View {
                             HStack(spacing: AppSpacing.sm) {
                                 IconStyle.icon("exclamationmark.bubble.fill", size: 24)
                                     .foregroundColor(AppColors.warning)
-                                Text("提交反驳证据")
+                                Text(LocalizationKey.refundSubmitRebuttalEvidence.localized)
                                     .font(AppTypography.title3)
                                     .fontWeight(.semibold)
                                     .foregroundColor(AppColors.textPrimary)
                             }
                             
-                            Text("请详细说明任务完成情况，并上传完成证据（如截图、文件等）。您的反驳将帮助管理员做出公正的裁定。")
+                            Text(LocalizationKey.refundRebuttalHint.localized)
                                 .font(AppTypography.body)
                                 .foregroundColor(AppColors.textSecondary)
                                 .fixedSize(horizontal: false, vertical: true)
@@ -5937,7 +5930,7 @@ struct RefundRebuttalSheet: View {
                         // 2. 反驳文字说明
                         VStack(alignment: .leading, spacing: AppSpacing.sm) {
                             HStack {
-                                Text("反驳说明")
+                                Text(LocalizationKey.refundRebuttalDescription.localized)
                                     .font(AppTypography.bodyBold)
                                     .foregroundColor(AppColors.textPrimary)
                                 Spacer()
@@ -5957,7 +5950,7 @@ struct RefundRebuttalSheet: View {
                                 )
                             
                             if rebuttalText.count < 10 {
-                                Text("反驳说明至少需要10个字符")
+                                Text(LocalizationKey.refundRebuttalMinLength.localized)
                                     .font(AppTypography.caption)
                                     .foregroundColor(AppColors.error)
                             }
@@ -5970,14 +5963,14 @@ struct RefundRebuttalSheet: View {
                         // 3. 证据图片上传
                         VStack(alignment: .leading, spacing: AppSpacing.md) {
                             HStack {
-                                SectionHeader(title: "完成证据（可选）", icon: "photo.on.rectangle")
+                                SectionHeader(title: LocalizationKey.taskDetailSectionCompletionEvidenceOptional.localized, icon: "photo.on.rectangle")
                                 Spacer()
                                 Text("\(selectedImages.count)/5")
                                     .font(AppTypography.caption)
                                     .foregroundColor(AppColors.textSecondary)
                             }
                             
-                            Text("最多上传5张图片或文件，每张不超过5MB")
+                            Text(LocalizationKey.refundUploadLimit5.localized)
                                 .font(AppTypography.caption)
                                 .foregroundColor(AppColors.textSecondary)
                             
@@ -5989,7 +5982,7 @@ struct RefundRebuttalSheet: View {
                             ) {
                                 HStack {
                                     IconStyle.icon("plus.circle.fill", size: 20)
-                                    Text("选择图片")
+                                    Text(LocalizationKey.refundSelectImage.localized)
                                 }
                                 .font(AppTypography.body)
                                 .foregroundColor(AppColors.primary)
@@ -6059,7 +6052,7 @@ struct RefundRebuttalSheet: View {
                                 } else {
                                     IconStyle.icon("paperplane.fill", size: 20)
                                 }
-                                Text(isSubmitting || isUploading ? "提交中..." : "提交反驳")
+                                Text(isSubmitting || isUploading ? LocalizationKey.commonSubmitting.localized : LocalizationKey.refundSubmitRebuttalNavTitle.localized)
                             }
                             .font(AppTypography.bodyBold)
                             .foregroundColor(.white)
@@ -6089,7 +6082,7 @@ struct RefundRebuttalSheet: View {
                             VStack(spacing: AppSpacing.sm) {
                                 ProgressView(value: Double(uploadProgress.current), total: Double(uploadProgress.total))
                                     .progressViewStyle(LinearProgressViewStyle())
-                                Text("上传中 \(uploadProgress.current)/\(uploadProgress.total)")
+                                Text(LocalizationKey.taskDetailUploadingCount.localized(uploadProgress.current, uploadProgress.total))
                                     .font(AppTypography.caption)
                                     .foregroundColor(AppColors.textSecondary)
                             }
@@ -6099,11 +6092,11 @@ struct RefundRebuttalSheet: View {
                     .padding(.vertical, AppSpacing.md)
                 }
             }
-            .navigationTitle("提交反驳")
+            .navigationTitle(LocalizationKey.refundSubmitRebuttalNavTitle.localized)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
-                    Button("取消") {
+                    Button(LocalizationKey.commonCancel.localized) {
                         dismiss()
                     }
                 }
@@ -6123,7 +6116,7 @@ struct RefundRebuttalSheet: View {
                     // 检查图片大小（压缩前）
                     if data.count > maxImageSize {
                         let sizeInMB = Double(data.count) / (1024 * 1024)
-                        newSizeErrors.append(String(format: "图片过大 (%.1fMB)，请选择较小的图片", sizeInMB))
+                        newSizeErrors.append(LocalizationKey.taskDetailImageTooLargeSelectFormat.localized(sizeInMB))
                         continue
                     }
                     
@@ -6133,7 +6126,7 @@ struct RefundRebuttalSheet: View {
                             if selectedImages.count < 5 {
                                 selectedImages.append(image)
                             } else {
-                                newSizeErrors.append("最多只能上传 5 张图片")
+                                newSizeErrors.append(LocalizationKey.taskDetailMaxImages5.localized)
                             }
                         }
                     }
@@ -6153,7 +6146,7 @@ struct RefundRebuttalSheet: View {
         
         // 验证反驳文字
         guard rebuttalText.trimmingCharacters(in: .whitespaces).count >= 10 else {
-            errorMessage = "反驳说明至少需要10个字符"
+            errorMessage = LocalizationKey.refundRebuttalMinLength.localized
             return
         }
         
@@ -6183,7 +6176,7 @@ struct RefundRebuttalSheet: View {
             uploadGroup.enter()
             // 先压缩图片
             guard let imageData = image.jpegData(compressionQuality: 0.7) else {
-                uploadErrors.append((NSError(domain: "ImageError", code: 0, userInfo: [NSLocalizedDescriptionKey: "无法转换图片数据"]), imageIndex))
+                uploadErrors.append((NSError(domain: "ImageError", code: 0, userInfo: [NSLocalizedDescriptionKey: LocalizationKey.taskDetailImageConvertError.localized]), imageIndex))
                 uploadGroup.leave()
                 continue
             }
@@ -6336,7 +6329,7 @@ struct ConfirmationReminderCard: View {
                     .foregroundColor(remainingSeconds <= 3600 ? AppColors.error : AppColors.warning)
                 
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("请确认任务完成")
+                    Text(LocalizationKey.taskDetailPleaseConfirmComplete.localized)
                         .font(AppTypography.bodyBold)
                         .foregroundColor(remainingSeconds <= 3600 ? AppColors.error : AppColors.textPrimary)
                     
@@ -6345,7 +6338,7 @@ struct ConfirmationReminderCard: View {
                         .foregroundColor(remainingSeconds <= 3600 ? AppColors.error : AppColors.warning)
                     
                     if remainingSeconds <= 3600 {
-                        Text("即将自动确认，请立即确认！")
+                        Text(LocalizationKey.taskDetailAutoConfirmSoon.localized)
                             .font(AppTypography.caption)
                             .foregroundColor(AppColors.error)
                     }
@@ -6354,7 +6347,7 @@ struct ConfirmationReminderCard: View {
                 Spacer()
                 
                 Button(action: onConfirm) {
-                    Text("立即确认")
+                    Text(LocalizationKey.taskDetailConfirmNow.localized)
                         .font(AppTypography.bodyBold)
                         .foregroundColor(.white)
                         .padding(.horizontal, AppSpacing.lg)
@@ -6404,7 +6397,7 @@ struct ConfirmationReminderCard: View {
     
     private func formatCountdown(_ seconds: Int) -> String {
         if seconds <= 0 {
-            return "已过期"
+            return LocalizationKey.timeExpired.localized
         }
         
         let days = seconds / 86400
@@ -6413,13 +6406,13 @@ struct ConfirmationReminderCard: View {
         let secs = seconds % 60
         
         if days > 0 {
-            return String(format: "剩余 %d天 %d小时 %d分钟", days, hours, minutes)
+            return LocalizationKey.taskDetailCountdownRemainingDays.localized(days, hours, minutes)
         } else if hours > 0 {
-            return String(format: "剩余 %d小时 %d分钟 %d秒", hours, minutes, secs)
+            return LocalizationKey.taskDetailCountdownRemainingHours.localized(hours, minutes, secs)
         } else if minutes > 0 {
-            return String(format: "剩余 %d分钟 %d秒", minutes, secs)
+            return LocalizationKey.taskDetailCountdownRemainingMinutes.localized(minutes, secs)
         } else {
-            return String(format: "剩余 %d秒", secs)
+            return LocalizationKey.taskDetailCountdownRemainingSeconds.localized(secs)
         }
     }
 }
@@ -6437,7 +6430,7 @@ struct WaitingConfirmationCard: View {
                 .foregroundColor(AppColors.primary)
             
             VStack(alignment: .leading, spacing: 4) {
-                Text("等待发布者确认")
+                Text(LocalizationKey.taskDetailWaitingPosterConfirm.localized)
                     .font(AppTypography.bodyBold)
                     .foregroundColor(AppColors.textPrimary)
                 
@@ -6446,7 +6439,7 @@ struct WaitingConfirmationCard: View {
                     .foregroundColor(AppColors.textSecondary)
                 
                 if remainingSeconds <= 86400 {
-                    Text("（到期将自动确认）")
+                    Text(LocalizationKey.taskDetailAutoConfirmOnExpiry.localized)
                         .font(AppTypography.caption)
                         .foregroundColor(AppColors.textSecondary)
                 }
@@ -6486,7 +6479,7 @@ struct WaitingConfirmationCard: View {
     
     private func formatCountdown(_ seconds: Int) -> String {
         if seconds <= 0 {
-            return "已过期"
+            return LocalizationKey.timeExpired.localized
         }
         
         let days = seconds / 86400
@@ -6495,13 +6488,13 @@ struct WaitingConfirmationCard: View {
         let secs = seconds % 60
         
         if days > 0 {
-            return String(format: "剩余 %d天 %d小时 %d分钟", days, hours, minutes)
+            return LocalizationKey.taskDetailCountdownRemainingDays.localized(days, hours, minutes)
         } else if hours > 0 {
-            return String(format: "剩余 %d小时 %d分钟 %d秒", hours, minutes, secs)
+            return LocalizationKey.taskDetailCountdownRemainingHours.localized(hours, minutes, secs)
         } else if minutes > 0 {
-            return String(format: "剩余 %d分钟 %d秒", minutes, secs)
+            return LocalizationKey.taskDetailCountdownRemainingMinutes.localized(minutes, secs)
         } else {
-            return String(format: "剩余 %d秒", secs)
+            return LocalizationKey.taskDetailCountdownRemainingSeconds.localized(secs)
         }
     }
 }

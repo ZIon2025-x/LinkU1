@@ -243,7 +243,7 @@ struct FleaMarketDetailView: View {
         } else {
             VStack {
                 ProgressView()
-                Text("正在准备支付...")
+                Text(LocalizationKey.paymentPreparing.localized)
             }
         }
     }
@@ -713,7 +713,7 @@ struct FleaMarketDetailView: View {
             HStack {
                 IconStyle.icon("person.2.fill", size: 18)
                     .foregroundColor(AppColors.primary)
-                Text("购买申请 (\(viewModel.purchaseRequests.count))")
+                Text(LocalizationKey.fleaMarketPurchaseRequestsCount.localized(viewModel.purchaseRequests.count))
                     .font(AppTypography.title3)
                     .foregroundColor(AppColors.textPrimary)
             }
@@ -726,7 +726,7 @@ struct FleaMarketDetailView: View {
                 VStack(spacing: AppSpacing.sm) {
                     IconStyle.icon("tray", size: 40)
                         .foregroundColor(AppColors.textQuaternary)
-                    Text("暂无购买申请")
+                    Text(LocalizationKey.fleaMarketNoPurchaseRequests.localized)
                         .font(AppTypography.body)
                         .foregroundColor(AppColors.textTertiary)
                 }
@@ -932,7 +932,7 @@ struct FleaMarketDetailView: View {
                                     Image(systemName: "creditcard.fill")
                                         .font(.system(size: 16, weight: .semibold))
                                 }
-                                Text(isPreparingPayment ? "准备中..." : "继续支付")
+                                Text(isPreparingPayment ? LocalizationKey.fleaMarketPreparing.localized : LocalizationKey.fleaMarketContinuePayment.localized)
                                     .font(.system(size: 16, weight: .semibold))
                             }
                             .foregroundColor(.white)
@@ -1069,12 +1069,12 @@ struct PurchaseDetailView: View {
                                     .foregroundColor(AppColors.primary)
                                 
                                 VStack(alignment: .leading, spacing: 4) {
-                                    Text("等待卖家确认")
+                                    Text(LocalizationKey.fleaMarketWaitingSellerConfirm.localized)
                                         .font(.system(size: 15, weight: .medium))
                                         .foregroundColor(AppColors.textPrimary)
                                     
                                     if let proposedPrice = item.userPurchaseRequestProposedPrice {
-                                        Text("议价金额：£\(String(format: "%.2f", proposedPrice))")
+                                        Text(LocalizationKey.fleaMarketNegotiateAmountFormat.localized(proposedPrice))
                                             .font(.system(size: 13))
                                             .foregroundColor(AppColors.textSecondary)
                                     }
@@ -1238,7 +1238,7 @@ struct PurchaseDetailView: View {
                         ProgressView()
                             .scaleEffect(1.5)
                             .tint(.white)
-                        Text(wantsNegotiate ? "正在发送议价请求..." : "正在处理购买...")
+                        Text(wantsNegotiate ? LocalizationKey.fleaMarketSendingNegotiateRequest.localized : LocalizationKey.fleaMarketProcessingPurchase.localized)
                             .font(.system(size: 16, weight: .medium))
                             .foregroundColor(.white)
                     }
@@ -1362,7 +1362,7 @@ struct PurchaseRequestCard: View {
             // 议价信息
             if let proposedPrice = request.proposedPrice {
                 HStack(spacing: 4) {
-                    Text("议价金额:")
+                    Text(LocalizationKey.fleaMarketNegotiateAmountLabel.localized)
                         .font(AppTypography.subheadline)
                         .foregroundColor(AppColors.textSecondary)
                     Text("£\(String(format: "%.2f", proposedPrice))")
@@ -1375,7 +1375,7 @@ struct PurchaseRequestCard: View {
             // 卖家议价
             if let sellerCounterPrice = request.sellerCounterPrice {
                 HStack(spacing: 4) {
-                    Text("卖家议价:")
+                    Text(LocalizationKey.fleaMarketSellerNegotiateLabel.localized)
                         .font(AppTypography.subheadline)
                         .foregroundColor(AppColors.textSecondary)
                     Text("£\(String(format: "%.2f", sellerCounterPrice))")
@@ -1452,15 +1452,15 @@ struct PurchaseRequestCard: View {
         .background(AppColors.cardBackground)
         .cornerRadius(AppCornerRadius.medium)
         .shadow(color: Color.black.opacity(0.03), radius: 5, x: 0, y: 2)
-        .alert("拒绝购买申请", isPresented: $showRejectConfirm) {
-            Button("取消", role: .cancel) {
+        .alert(LocalizationKey.fleaMarketRejectPurchaseConfirmTitle.localized, isPresented: $showRejectConfirm) {
+            Button(LocalizationKey.commonCancel.localized, role: .cancel) {
                 showRejectConfirm = false
             }
-            Button("确认", role: .destructive) {
+            Button(LocalizationKey.commonConfirm.localized, role: .destructive) {
                 onReject()
             }
         } message: {
-            Text("确定要拒绝这个购买申请吗？")
+            Text(LocalizationKey.fleaMarketRejectPurchaseConfirmMessage.localized)
         }
     }
     
@@ -1476,10 +1476,10 @@ struct PurchaseRequestCard: View {
     
     private var statusText: String {
         switch request.status {
-        case "pending": return "待处理"
-        case "seller_negotiating": return "卖家已议价"
-        case "accepted": return "已接受"
-        case "rejected": return "已拒绝"
+        case "pending": return LocalizationKey.fleaMarketRequestStatusPending.localized
+        case "seller_negotiating": return LocalizationKey.fleaMarketRequestStatusSellerNegotiating.localized
+        case "accepted": return LocalizationKey.fleaMarketRequestStatusAccepted.localized
+        case "rejected": return LocalizationKey.fleaMarketRequestStatusRejected.localized
         default: return request.status
         }
     }

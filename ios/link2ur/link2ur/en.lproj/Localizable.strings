@@ -152,6 +152,7 @@
 "tasks.task" = "Task";
 "tasks.tasks" = "Tasks";
 "tasks.not_interested" = "Not Interested";
+"tasks.mark_not_interested_confirm" = "Are you sure you want to mark this task as not interested?";
 "tasks.my_tasks" = "My Tasks";
 
 // MARK: - Task Experts
@@ -1194,6 +1195,71 @@
 "vip.faq_can_cancel" = "Can I cancel membership at any time?";
 "vip.faq_can_cancel_answer" = "Yes, you can contact the administrator to cancel membership service at any time. The cancellation will take effect in the next billing cycle.";
 "vip.coming_soon" = "VIP feature coming soon, stay tuned!";
+"vip.select_package" = "Choose the membership plan that suits you";
+"vip.no_products" = "No VIP products available";
+"vip.try_later_contact" = "Please try again later or contact support";
+"vip.please_select_package" = "Please select a plan";
+"vip.buy_now" = "Purchase Now";
+"vip.restore_purchase" = "Restore Purchase";
+"vip.purchase_instructions" = "Purchase Instructions";
+"vip.subscription_auto_renew" = "• Subscription will auto-renew unless cancelled at least 24 hours before expiry";
+"vip.manage_subscription" = "• Manage subscription in App Store account settings";
+"vip.purchase_effective" = "• Benefits take effect immediately after purchase";
+"vip.purchase_title" = "Purchase VIP Membership";
+"vip.purchase_success" = "Purchase Successful";
+"vip.congratulations" = "Congratulations on becoming a VIP member! Enjoy all VIP benefits.";
+"vip.restore_failed" = "Restore failed: %@";
+"vip.purchased" = "Purchased";
+"vip.already_vip" = "You are already a VIP member";
+"vip.thank_you" = "Thank you for your support. Enjoy all VIP benefits.";
+"vip.expiry_time" = "Expires: %@";
+"vip.will_auto_renew" = "Will auto-renew";
+"vip.auto_renew_cancelled" = "Auto-renew cancelled";
+"vip.faq_how_to_upgrade_steps" = "Tap \"Upgrade VIP\" on the VIP page, then select a plan to purchase.";
+
+"service.no_images" = "No images";
+"service.detail" = "Service Details";
+"service.no_description" = "No detailed description";
+"service.apply_message" = "Application Message";
+"service.expected_price" = "Expected price";
+"service.flexible_time" = "Flexible time";
+"service.expected_date" = "Expected completion date";
+"service.select_date" = "Select date";
+"service.apply_title" = "Apply for Service";
+
+// MARK: - Network
+"network.offline" = "Offline";
+"network.disconnected" = "Network disconnected";
+"network.check_settings" = "Please check your network settings";
+"network.restored" = "Network restored";
+"network.connected_wifi" = "Connected to Wi-Fi";
+"network.connected_cellular" = "Connected to cellular";
+"network.connected_ethernet" = "Connected to Ethernet";
+"network.connected" = "Network connected";
+
+// MARK: - Notification (additional)
+"notification.expires_seconds" = "Expires in %.0f seconds";
+"notification.expires_minutes" = "Expires in %d minutes";
+"notification.expires_hours" = "Expires in %d hours";
+"notification.view_full" = "View full";
+"notification.expiry_time" = "Expiry: %@";
+"notification.unread" = "Unread";
+"notification.content" = "Notification content";
+"notification.detail" = "Notification Detail";
+"notification.get_negotiation_failed" = "Unable to load negotiation info. Please refresh and try again.";
+
+// MARK: - Translation
+"translation.failed" = "Translation Failed";
+"translation.retry_message" = "Unable to translate this message. Please check your network and try again.";
+
+// MARK: - Task Detail Cards
+"task_detail.collapse" = "Collapse";
+"task_detail.expand_all" = "Expand all";
+"task_detail.completed_count" = "%d completed";
+"task_detail.expired" = "Expired";
+"task_detail.remaining_minutes" = "%d min remaining";
+"task_detail.remaining_hours" = "%d hrs remaining";
+"task_detail.remaining_days" = "%d days remaining";
 
 // MARK: - Wallet
 "wallet.quick_actions" = "Quick Actions";
@@ -1641,6 +1707,49 @@
 "flea_market.category.other" = "Other";
 "flea_market.partial_upload_failed" = "Some images failed to upload, please try again";
 "flea_market.fill_required_fields" = "Please fill in all required fields";
+"flea_market.purchase_requests_count" = "Purchase Requests (%d)";
+"flea_market.no_purchase_requests" = "No Purchase Requests";
+"flea_market.waiting_seller_confirm" = "Waiting for seller confirmation";
+"flea_market.negotiate_amount_format" = "Negotiated price: £%.2f";
+"flea_market.continue_payment" = "Continue Payment";
+"flea_market.preparing" = "Preparing...";
+"flea_market.sending_negotiate_request" = "Sending negotiation request...";
+"flea_market.processing_purchase" = "Processing purchase...";
+"flea_market.negotiate_amount_label" = "Negotiated price:";
+"flea_market.seller_negotiate_label" = "Seller counter offer:";
+"flea_market.reject_purchase_confirm_title" = "Reject Purchase Request";
+"flea_market.reject_purchase_confirm_message" = "Are you sure you want to reject this purchase request?";
+"flea_market.request_status.pending" = "Pending";
+"flea_market.request_status.seller_negotiating" = "Seller Negotiating";
+"flea_market.request_status.accepted" = "Accepted";
+"flea_market.request_status.rejected" = "Rejected";
+
+// MARK: - Apple Pay
+"apple_pay.not_supported" = "Your device does not support Apple Pay";
+"apple_pay.use_other_method" = "Please use another payment method";
+"apple_pay.title" = "Apple Pay";
+"apple_pay.not_configured" = "Apple Pay is not configured";
+"apple_pay.payment_info_not_ready" = "Payment info not ready";
+"apple_pay.task_payment_fallback" = "Link²Ur Task Payment";
+"apple_pay.unable_to_create_form" = "Unable to create Apple Pay form";
+"apple_pay.unable_to_get_payment_info" = "Unable to get payment info";
+"chat.evidence_file" = "Evidence file";
+"payment.unknown_error" = "Unknown error";
+
+// MARK: - Payment (additional)
+"payment.amount" = "Payment Amount";
+"payment.success_completed" = "Your payment has been successfully completed";
+"payment.failed" = "Payment Failed";
+
+// MARK: - WeChat Pay
+"wechat_pay.title" = "WeChat Pay";
+"wechat_pay.loading" = "Loading payment page...";
+"wechat_pay.load_failed" = "Load Failed";
+"wechat_pay.cancel_confirm_title" = "Cancel Payment?";
+"wechat_pay.continue_pay" = "Continue Payment";
+"wechat_pay.cancel_pay" = "Cancel Payment";
+"wechat_pay.cancel_warning" = "You will need to initiate payment again if you cancel";
+"wechat_pay.invalid_link" = "Invalid payment link";
 
 // MARK: - Forum Posts Extended
 "forum.my_posts" = "My Posts";
@@ -1697,3 +1806,124 @@
 "service.applied" = "Applied";
 "service.waiting_expert_response" = "Waiting for Expert Response";
 "service.continue_payment" = "Continue Payment";
+
+// MARK: - Task Detail (Deadline / Evidence / Complete)
+"task_detail.confirm_deadline" = "Confirm deadline";
+"task_detail.platform_service_fee" = "Platform service fee";
+"task_detail.countdown_remaining_days" = "%d days %d hrs %d min remaining";
+"task_detail.countdown_remaining_hours" = "%d hrs %d min %d sec remaining";
+"task_detail.countdown_remaining_minutes" = "%d min %d sec remaining";
+"task_detail.countdown_remaining_seconds" = "%d sec remaining";
+"task_detail.task_completed_title" = "Task completed";
+"task_detail.task_completed_upload_hint" = "You have completed this task. You may upload evidence images or add a text description (optional) for the poster to confirm.";
+"task_detail.section_text_optional" = "Text description (optional)";
+"task_detail.section_evidence_images_optional" = "Evidence images (optional)";
+"task_detail.section_evidence_files_optional" = "Evidence files (optional)";
+"task_detail.section_completion_evidence_optional" = "Completion evidence (optional)";
+"task_detail.text_limit_500" = "Text description must not exceed 500 characters";
+"task_detail.image_limit_5mb_5" = "Max 5MB per image, up to 5 images";
+"task_detail.add_image" = "Add image";
+"task_detail.upload_progress" = "Upload progress";
+"task_detail.uploading_count" = "Uploading %d/%d...";
+"task_detail.confirm_complete_task_button" = "Confirm task complete";
+"task_detail.confirm_task_complete_alert_title" = "Confirm task complete";
+"task_detail.confirm_task_complete_alert_message" = "Are you sure this task is complete? It will be sent to the poster for confirmation.";
+"task_detail.confirm_task_complete_title" = "Confirm task complete";
+"task_detail.confirm_task_complete_hint" = "You have confirmed this task is complete. You may upload evidence images (optional), e.g. screenshots or acceptance records.";
+"task_detail.confirm_complete_button" = "Confirm complete";
+"task_detail.please_confirm_complete" = "Please confirm task complete";
+"task_detail.auto_confirm_soon" = "Will auto-confirm soon. Please confirm now.";
+"task_detail.confirm_now" = "Confirm now";
+"task_detail.waiting_poster_confirm" = "Waiting for poster to confirm";
+"task_detail.auto_confirm_on_expiry" = "(Will auto-confirm on expiry)";
+"task_detail.dispute_detail" = "Task dispute details";
+"task_detail.deadline_label" = "Deadline";
+"task_detail.no_uploadable_images" = "No images to upload";
+"task_detail.image_size_error_format" = "Image %d is still too large after compression (%.1fMB). Please choose a smaller image.";
+"task_detail.image_too_large_select_format" = "Image too large (%.1fMB). Please choose a smaller image.";
+"task_detail.max_images_5" = "Maximum 5 images allowed";
+"task_detail.complete_task_nav_title" = "Complete Task";
+"task_detail.task_completion_evidence" = "Task completion evidence";
+"task_detail.image_convert_error" = "Unable to convert image data";
+"task_detail.image_process_error_format" = "Image %d could not be processed. Please choose again.";
+"task_detail.completed_count_format" = "%d completed";
+
+// MARK: - Refund (Extended)
+"refund.submit_rebuttal_evidence" = "Submit rebuttal evidence";
+"refund.submit_rebuttal_nav_title" = "Submit rebuttal";
+"refund.view_history" = "View history";
+"refund.view_history_records" = "View history records";
+"refund.withdraw_application" = "Withdraw refund application";
+"refund.withdraw_application_message" = "Are you sure you want to withdraw this refund application? This cannot be undone.";
+"refund.withdrawing" = "Withdrawing...";
+"refund.withdraw_apply" = "Withdraw application";
+"refund.task_incomplete_apply_refund" = "Task incomplete (apply for refund)";
+"refund.history" = "Refund history";
+"refund.reason_label" = "Refund reason: %@";
+"refund.type_full" = "Full refund";
+"refund.type_partial" = "Partial refund";
+"refund.admin_comment_label" = "Admin note: %@";
+"refund.taker_rebuttal" = "Taker rebuttal";
+"refund.evidence_files_count" = "%d evidence file(s) uploaded";
+"refund.no_history" = "No refund history yet";
+"refund.reason_type_label" = "Reason type:";
+"refund.type_label" = "Refund type:";
+"refund.review_time_label" = "Review time: %@";
+"refund.apply_time_label" = "Application time: %@";
+"refund.apply_refund" = "Apply for refund";
+"refund.apply_refund_hint" = "Please describe the refund reason in detail and upload evidence (e.g. screenshots, chat logs). An admin will review within 3-5 business days.";
+"refund.reason_type_required" = "Refund reason type *";
+"refund.reason_type_placeholder" = "Select refund reason type";
+"refund.partial_amount_too_high" = "Partial refund amount cannot be greater than or equal to task amount. Please choose full refund.";
+"refund.amount_exceeds_task" = "Refund amount cannot exceed task amount (£%.2f)";
+"refund.amount_must_be_positive" = "Refund amount must be a number greater than 0";
+"refund.ratio_range" = "Refund percentage must be between 0-100";
+"refund.reason_detail_required" = "Refund reason details *";
+"refund.reason_min_length" = "Refund reason must be at least 10 characters";
+"refund.type_required" = "Refund type *";
+"refund.amount_or_ratio_required" = "Refund amount or ratio *";
+"refund.amount_pound" = "Refund amount (£)";
+"refund.ratio_percent" = "Refund ratio (%)";
+"refund.task_amount_format" = "Task amount: £%.2f";
+"refund.refund_amount_format" = "Refund amount: £%.2f";
+"refund.submit_refund_application" = "Submit refund application";
+"refund.no_dispute_records" = "No dispute records yet";
+"refund.rebuttal_description" = "Rebuttal description";
+"refund.rebuttal_min_length" = "Rebuttal description must be at least 10 characters";
+"refund.upload_limit_5" = "Up to 5 images or files, max 5MB each";
+"refund.select_image" = "Select image";
+"refund.status_label" = "Status: %@";
+"refund.rebuttal_hint" = "Please describe the task completion and upload evidence (e.g. screenshots, files). Your rebuttal will help the admin make a fair decision.";
+"refund.history_sheet_title" = "Refund history";
+"dispute.actor_poster" = "Poster";
+"dispute.actor_taker" = "Taker";
+"dispute.actor_admin" = "Admin";
+"refund.reason.completion_time" = "Unsatisfied with completion time";
+"refund.reason.not_completed" = "Taker did not complete at all";
+"refund.reason.quality_issue" = "Quality issue";
+"refund.reason.other" = "Other";
+"refund.status_pending" = "Pending";
+"refund.status_processing" = "Processing";
+"refund.status_approved" = "Approved";
+"refund.status_rejected" = "Rejected";
+"refund.status_completed" = "Completed";
+"refund.status_cancelled" = "Cancelled";
+"refund.status_unknown" = "Unknown status";
+"refund.status_pending_full" = "Refund pending review";
+"refund.status_processing_full" = "Refund processing";
+"refund.status_approved_full" = "Refund approved";
+"refund.status_rejected_full" = "Refund rejected";
+"refund.status_completed_full" = "Refund completed";
+"refund.status_cancelled_full" = "Refund cancelled";
+"refund.desc_pending" = "Your refund has been submitted. Admin will review within 3-5 business days.";
+"refund.desc_processing" = "Refund is being processed. Please wait.";
+"refund.desc_approved_amount" = "Refund amount: £%.2f%@. Will be returned in 5-10 business days.";
+"refund.desc_approved_generic" = "Will be returned to your original payment method in 5-10 business days.";
+"refund.desc_rejected_reason" = "Rejection reason: %@";
+"refund.desc_rejected_generic" = "Refund has been rejected.";
+"refund.desc_completed_amount" = "Refund amount: £%.2f%@. Returned to your original payment method.";
+"refund.desc_completed_generic" = "Refund returned to your original payment method.";
+"refund.desc_cancelled" = "Refund cancelled.";
+"common.unknown" = "Unknown";
+
+"common.or" = "or";

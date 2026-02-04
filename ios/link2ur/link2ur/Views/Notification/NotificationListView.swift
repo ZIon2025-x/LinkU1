@@ -250,13 +250,13 @@ struct NotificationRow: View {
         }
         let remaining = expiresAt.timeIntervalSince(now)
         if remaining < 60 {
-            return String(format: "%.0f秒后过期", remaining)
+            return String(format: LocalizationKey.notificationExpiresSeconds.localized, remaining)
         } else if remaining < 3600 {
             let minutes = Int(remaining / 60)
-            return "\(minutes)分钟后过期"
+            return LocalizationKey.notificationExpiresMinutes.localized(minutes)
         } else {
             let hours = Int(remaining / 3600)
-            return "\(hours)小时后过期"
+            return LocalizationKey.notificationExpiresHours.localized(hours)
         }
     }
     
@@ -367,7 +367,7 @@ struct NotificationRow: View {
                             showDetail = true
                         }) {
                             HStack(spacing: 4) {
-                                Text("查看全文")
+                                Text(LocalizationKey.notificationViewFull.localized)
                                     .font(.system(size: 12, weight: .medium))
                                 Image(systemName: "chevron.right")
                                     .font(.system(size: 10))
@@ -404,7 +404,7 @@ struct NotificationRow: View {
                         
                         // 优化：显示真实过期时间
                         if let expiresAt = expiresAt {
-                            Text("过期时间: \(formatExpiresAt(expiresAt))")
+                            Text(LocalizationKey.notificationExpiryTime.localized(formatExpiresAt(expiresAt)))
                                 .font(AppTypography.caption2)
                                 .foregroundColor(AppColors.textTertiary)
                         }
@@ -657,7 +657,7 @@ struct NotificationRow: View {
         guard let applicationId = applicationId,
               let taskId = taskId,
               let token = accept ? tokenAccept : tokenReject else {
-            errorMessage = "无法获取议价信息，请刷新后重试"
+            errorMessage = LocalizationKey.notificationGetNegotiationFailed.localized
             showError = true
             return
         }
@@ -731,7 +731,7 @@ struct NotificationDetailView: View {
                                 .foregroundColor(AppColors.textSecondary)
                             
                             if notification.isRead == 0 {
-                                Label("未读", systemImage: "circle.fill")
+                                Label(LocalizationKey.notificationUnread.localized, systemImage: "circle.fill")
                                     .font(.system(size: 14))
                                     .foregroundColor(AppColors.error)
                             }
@@ -745,7 +745,7 @@ struct NotificationDetailView: View {
                     
                     // 内容
                     VStack(alignment: .leading, spacing: AppSpacing.sm) {
-                        Text("通知内容")
+                        Text(LocalizationKey.notificationContent.localized)
                             .font(.system(size: 16, weight: .semibold))
                             .foregroundColor(AppColors.textPrimary)
                         
@@ -760,11 +760,11 @@ struct NotificationDetailView: View {
                 }
             }
             .background(AppColors.background)
-            .navigationTitle("通知详情")
+            .navigationTitle(LocalizationKey.notificationDetail.localized)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("关闭") {
+                    Button(LocalizationKey.commonClose.localized) {
                         dismiss()
                     }
                     .foregroundColor(AppColors.primary)

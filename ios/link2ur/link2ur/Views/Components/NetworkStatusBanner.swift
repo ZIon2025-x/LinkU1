@@ -45,7 +45,7 @@ public struct NetworkStatusBanner: View {
             // 重试按钮（网络恢复后显示）
             if viewModel.showRetryButton {
                 Button(action: viewModel.retryConnection) {
-                    Text("重试")
+                    Text(LocalizationKey.commonRetry.localized)
                         .font(.system(size: 13, weight: .medium))
                         .foregroundColor(.white)
                         .padding(.horizontal, 12)
@@ -127,8 +127,8 @@ final class NetworkStatusBannerViewModel: ObservableObject {
     }
     
     private func showOfflineBanner() {
-        title = "网络连接已断开"
-        subtitle = "请检查您的网络设置"
+        title = LocalizationKey.networkDisconnected.localized
+        subtitle = LocalizationKey.networkCheckSettings.localized
         iconName = "wifi.slash"
         backgroundColor = .red
         showRetryButton = false
@@ -141,7 +141,7 @@ final class NetworkStatusBannerViewModel: ObservableObject {
     }
     
     private func showOnlineBanner() {
-        title = "网络已恢复"
+        title = LocalizationKey.networkRestored.localized
         subtitle = getConnectionTypeDescription()
         iconName = "wifi"
         backgroundColor = .green
@@ -173,13 +173,13 @@ final class NetworkStatusBannerViewModel: ObservableObject {
     private func getConnectionTypeDescription() -> String {
         switch Reachability.shared.connectionType {
         case .wifi:
-            return "已连接到 Wi-Fi"
+            return LocalizationKey.networkConnectedWifi.localized
         case .cellular:
-            return "已连接到蜂窝网络"
+            return LocalizationKey.networkConnectedCellular.localized
         case .ethernet:
-            return "已连接到以太网"
+            return LocalizationKey.networkConnectedEthernet.localized
         default:
-            return "网络已连接"
+            return LocalizationKey.networkConnected.localized
         }
     }
     
@@ -236,7 +236,7 @@ public struct NetworkStatusIndicator: View {
                 .frame(width: 8, height: 8)
             
             if !reachability.isConnected {
-                Text("离线")
+                Text(LocalizationKey.networkOffline.localized)
                     .font(.system(size: 11, weight: .medium))
                     .foregroundColor(.secondary)
             }
