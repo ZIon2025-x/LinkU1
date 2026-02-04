@@ -1617,7 +1617,23 @@ async def create_wechat_checkout_session(
                 limit=1
             )
             if search_result.data:
-                customer_id = search_result.data[0].id
+                existing_customer = search_result.data[0]
+                customer_id = existing_customer.id
+                
+                # 检查并更新 Customer 的 email/name（确保 Checkout 页面能预填用户信息）
+                # 这样用户不需要每次都手动输入邮箱和姓名
+                update_fields = {}
+                if current_user.email and existing_customer.email != current_user.email:
+                    update_fields["email"] = current_user.email
+                if current_user.name and existing_customer.name != current_user.name:
+                    update_fields["name"] = current_user.name
+                
+                if update_fields:
+                    try:
+                        stripe.Customer.modify(customer_id, **update_fields)
+                        logger.info(f"更新 Stripe Customer {customer_id} 信息: {list(update_fields.keys())}")
+                    except Exception as update_err:
+                        logger.warning(f"更新 Stripe Customer 信息失败: {update_err}")
             else:
                 customer = stripe.Customer.create(
                     email=current_user.email or None,

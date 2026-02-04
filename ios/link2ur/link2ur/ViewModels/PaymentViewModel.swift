@@ -357,7 +357,7 @@ class PaymentViewModel: NSObject, ObservableObject, ApplePayContextDelegate, STP
 
     /// 统一的支付方式切换入口（便于扩展更多支付方式）
     /// 优化：立即更新 UI，延迟准备支付方式，避免阻塞
-    /// 注意：支付宝/微信使用直接跳转方式，不再需要预先创建 PaymentIntent
+    /// 注意：微信支付使用 Checkout Session，不需要预先创建 PaymentIntent
     func selectPaymentMethod(_ method: PaymentMethodType) {
         // 如果已经是当前选择的方式，直接返回，避免重复操作
         guard selectedPaymentMethod != method else {
@@ -379,9 +379,13 @@ class PaymentViewModel: NSObject, ObservableObject, ApplePayContextDelegate, STP
                 // 移除批准流程的特殊处理，始终创建新的 PI 以确保只包含 card
                 self.clearPaymentSheetAndSecretForMethodSwitch()
                 self.createPaymentIntent(isMethodSwitch: true)
-            case .wechatPay, .alipayPay:
-                // 支付宝/微信使用直接跳转方式，需要创建包含对应支付方式的 PaymentIntent
-                // 如果已有 PI 但不是当前选择的支付方式，需要重新创建
+            case .wechatPay:
+                // 微信支付使用 Checkout Session，不需要预先创建 PaymentIntent
+                // 直接清除状态，点击支付按钮时会调用 createWeChatCheckoutSession
+                self.isSwitchingPaymentMethod = false
+                Logger.debug("微信支付无需预创建 PaymentIntent，点击支付时创建 Checkout Session", category: .api)
+            case .alipayPay:
+                // 支付宝使用 PaymentSheet，需要创建包含 alipay 的 PaymentIntent
                 self.clearPaymentSheetAndSecretForMethodSwitch()
                 self.createPaymentIntent(isMethodSwitch: true)
             case .applePay:
@@ -1006,7 +1010,16 @@ class PaymentViewModel: NSObject, ObservableObject, ApplePayContextDelegate, STP
     func performPayment() {
         Logger.debug("执行支付 - 支付方式: \(selectedPaymentMethod.rawValue)", category: .api)
         
-        // 必须有 client_secret 才能发起支付；没有则创建支付意图
+        // 微信支付使用 Checkout Session，不需要 clientSecret
+        // 其他支付方式（银行卡、Apple Pay、支付宝）需要 clientSecret
+        if selectedPaymentMethod == .wechatPay {
+            // 微信支付：直接调用创建 Checkout Session，无需 clientSecret
+            Logger.debug("使用微信支付（WebView Checkout），无需 clientSecret", category: .api)
+            confirmWeChatPayment()
+            return
+        }
+        
+        // 非微信支付：必须有 client_secret 才能发起支付
         guard let clientSecret = activeClientSecret else {
             errorMessage = "支付信息未准备好，正在加载..."
             Logger.warning("缺少 client_secret，重新创建支付意图", category: .api)
@@ -1044,9 +1057,8 @@ class PaymentViewModel: NSObject, ObservableObject, ApplePayContextDelegate, STP
             Logger.debug("使用 Apple Pay 原生实现支付", category: .api)
             payWithApplePay()
         case .wechatPay:
-            // 微信支付：使用 PaymentSheet（SDK 未暴露 WeChat 直接 confirm API，后端已建仅含 wechat_pay 的 PI）
-            Logger.debug("使用微信支付（PaymentSheet）", category: .api)
-            confirmWeChatPayment()
+            // 已在上方处理，不应到达此处
+            break
         case .alipayPay:
             // 支付宝：改用 PaymentSheet 统一处理（与微信一致），避免 STPPaymentHandler 直接跳转导致的闪退
             Logger.debug("使用支付宝（PaymentSheet）", category: .api)
