@@ -1,0 +1,14 @@
+{
+  "applinks": {
+    "apps": [],
+    "details": [
+      {
+        "appID": "9BH6D242HU.com.link2ur",
+        "paths": [
+          "/zh/*",
+          "/en/*"
+        ]
+      }
+    ]
+  }
+}
