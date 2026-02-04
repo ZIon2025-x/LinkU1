@@ -16,6 +16,8 @@ struct StripePaymentView: View {
     @Environment(\.dismiss) var dismiss
     @StateObject private var keyboardObserver = KeyboardHeightObserver()
     @State private var showSuccessOverlay = false
+    /// 本会话内是否已因过期设置过 errorMessage，避免关闭弹窗后 onAppear 再次触发导致无限循环
+    @State private var hasSetExpiryErrorThisSession = false
 
     init(taskId: Int, amount: Double, clientSecret: String? = nil, customerId: String? = nil, ephemeralKeySecret: String? = nil, taskTitle: String? = nil, applicantName: String? = nil, paymentExpiresAt: String? = nil, onPaymentSuccess: (() -> Void)? = nil) {
         Logger.debug("StripePaymentView init - taskId: \(taskId), clientSecret: \(clientSecret?.prefix(20) ?? "nil")...", category: .api)
@@ -121,8 +123,9 @@ struct StripePaymentView: View {
                 if newValue { showSuccessOverlay = true }
             }
             .onAppear {
-                // ⚠️ 检查支付是否已过期
-                if let paymentExpiresAt = paymentExpiresAt, !paymentExpiresAt.isEmpty {
+                // ⚠️ 检查支付是否已过期（仅在本会话内设置一次，避免关闭弹窗后 onAppear 再次执行导致「已过期」无限循环）
+                if !hasSetExpiryErrorThisSession,
+                   let paymentExpiresAt = paymentExpiresAt, !paymentExpiresAt.isEmpty {
                     let formatter = ISO8601DateFormatter()
                     formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
                     
@@ -135,8 +138,8 @@ struct StripePaymentView: View {
                     }
                     
                     if let expiryDate = expiryDate, Date() >= expiryDate {
-                        // 支付已过期，显示错误信息
                         viewModel.errorMessage = LocalizationKey.paymentCountdownExpired.localized
+                        hasSetExpiryErrorThisSession = true
                         return
                     }
                 }
@@ -165,9 +168,17 @@ struct StripePaymentView: View {
                     viewModel.loadAvailableCoupons()
                 }
             }
+            .onDisappear {
+                // 离开支付页时重置，下次进入会重新检查过期
+                hasSetExpiryErrorThisSession = false
+            }
             .alert(LocalizationKey.paymentError.localized, isPresented: .constant(viewModel.errorMessage != nil && !viewModel.isLoading)) {
                 Button(LocalizationKey.commonOk.localized, role: .cancel) {
+                    let wasExpiryError = (viewModel.errorMessage == LocalizationKey.paymentCountdownExpired.localized)
                     viewModel.errorMessage = nil
+                    if wasExpiryError {
+                        dismiss()
+                    }
                 }
                 if viewModel.paymentSheet != nil {
                     Button(LocalizationKey.paymentRetry.localized) {

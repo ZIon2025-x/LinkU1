@@ -226,11 +226,11 @@ struct FleaMarketDetailView: View {
     
     @ViewBuilder
     private var paymentViewContent: some View {
-        if let taskId = paymentTaskId, let clientSecret = paymentClientSecret {
+        if let taskId = paymentTaskId {
             StripePaymentView(
                 taskId: taskId,
                 amount: paymentAmount,
-                clientSecret: clientSecret,
+                clientSecret: paymentClientSecret,
                 customerId: paymentCustomerId,
                 ephemeralKeySecret: paymentEphemeralKeySecret,
                 taskTitle: viewModel.item?.title,
@@ -498,7 +498,7 @@ struct FleaMarketDetailView: View {
             // 标签行
             HStack(spacing: 8) {
                 // 分类标签
-                Label(item.category, systemImage: "tag.fill")
+                Label(displayCategory(item.category), systemImage: "tag.fill")
                     .font(.system(size: 12, weight: .medium))
                     .foregroundColor(AppColors.primary)
                     .padding(.horizontal, 10)
@@ -534,6 +534,11 @@ struct FleaMarketDetailView: View {
         .clipShape(RoundedRectangle(cornerRadius: 20))
         .shadow(color: Color.black.opacity(0.04), radius: 10, x: 0, y: 4)
         .padding(.horizontal, 16)
+    }
+
+    private func displayCategory(_ category: String) -> String {
+        let trimmed = category.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty ? LocalizationKey.fleaMarketCategoryOther.localized : trimmed
     }
     
     // MARK: - 商品详情卡片

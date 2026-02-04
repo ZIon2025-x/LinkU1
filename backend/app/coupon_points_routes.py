@@ -1445,7 +1445,7 @@ async def create_wechat_checkout_session(
         raise HTTPException(status_code=404, detail="任务不存在")
     
     # 验证当前用户是任务发布者
-    if task.publisher_id != current_user.id:
+    if task.poster_id != current_user.id:
         raise HTTPException(status_code=403, detail="您不是任务发布者，无权支付")
     
     # 验证任务状态

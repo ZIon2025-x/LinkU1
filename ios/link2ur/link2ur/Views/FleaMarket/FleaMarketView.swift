@@ -165,7 +165,7 @@ struct ItemCard: View {
                 
                 // 分类角标（如果未收藏，放在右上角；如果已收藏，放在左上角）
                 VStack(alignment: isFavorited ? .leading : .trailing, spacing: 4) {
-                    Text(item.category)
+                    Text(displayCategory(item.category))
                         .font(.system(size: 9, weight: .bold))
                         .foregroundColor(.white)
                         .padding(.horizontal, 6)
@@ -273,5 +273,10 @@ struct ItemCard: View {
         .background(Color(UIColor.systemBackground))
         .cornerRadius(16)
         .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 4)
+    }
+
+    private func displayCategory(_ category: String) -> String {
+        let trimmed = category.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty ? LocalizationKey.fleaMarketCategoryOther.localized : trimmed
     }
 }
