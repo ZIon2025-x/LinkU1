@@ -1413,7 +1413,7 @@ def create_task_payment(
 # ==================== 微信支付二维码（iOS 专用）====================
 
 @router.post("/tasks/{task_id}/wechat-checkout")
-@rate_limit(max_requests=10, window_seconds=60)
+@rate_limit("create_payment")
 async def create_wechat_checkout_session(
     task_id: int,
     request: Request,

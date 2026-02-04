@@ -825,8 +825,8 @@ class PaymentViewModel: NSObject, ObservableObject, ApplePayContextDelegate, STP
         
         // 如果有选择的优惠券，传递优惠券信息
         if let coupon = selectedCoupon {
-            if let code = coupon.coupon.code {
-                requestBody["coupon_code"] = code.uppercased()
+            if !coupon.coupon.code.isEmpty {
+                requestBody["coupon_code"] = coupon.coupon.code.uppercased()
             } else {
                 requestBody["user_coupon_id"] = coupon.id
             }
