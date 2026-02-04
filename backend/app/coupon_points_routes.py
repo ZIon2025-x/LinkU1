@@ -1410,6 +1410,299 @@ def create_task_payment(
     raise HTTPException(status_code=400, detail="支付金额计算错误")
 
 
+# ==================== 微信支付二维码（iOS 专用）====================
+
+@router.post("/tasks/{task_id}/wechat-checkout")
+@rate_limit(max_requests=10, window_seconds=60)
+async def create_wechat_checkout_session(
+    task_id: int,
+    request: Request,
+    user_coupon_id: Optional[int] = None,
+    coupon_code: Optional[str] = None,
+    current_user: models.User = Depends(get_current_user_secure_sync_csrf),
+    db: Session = Depends(get_db)
+):
+    """
+    创建微信支付专用的 Stripe Checkout Session（iOS 专用）
+    
+    原因：Stripe iOS PaymentSheet 不支持微信支付（官方文档确认）
+    解决方案：通过 Stripe Checkout Session 生成支付页面 URL，iOS 在 WebView 中加载
+    用户扫描二维码完成支付，与 Web 端体验一致
+    
+    返回：
+        - checkout_url: Stripe Checkout 页面 URL
+        - session_id: Checkout Session ID（用于查询状态）
+    """
+    import os
+    import stripe
+    from sqlalchemy import and_
+    
+    stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
+    
+    # 查找任务
+    task = db.query(models.Task).filter(models.Task.id == task_id).first()
+    if not task:
+        raise HTTPException(status_code=404, detail="任务不存在")
+    
+    # 验证当前用户是任务发布者
+    if task.publisher_id != current_user.id:
+        raise HTTPException(status_code=403, detail="您不是任务发布者，无权支付")
+    
+    # 验证任务状态
+    if task.is_paid:
+        raise HTTPException(status_code=400, detail="任务已支付")
+    
+    # 验证任务必须有接受人
+    if not task.taker_id:
+        raise HTTPException(status_code=400, detail="任务尚未被接受，无法支付")
+    
+    # 计算金额
+    task_amount = float(task.amount)  # 任务金额（镑）
+    task_amount_pence = int(task_amount * 100)  # 转换为便士
+    
+    # 计算平台服务费（8%，最低 0.08 镑 = 8 便士）
+    fee_rate = 0.08
+    min_fee_pence = 8
+    application_fee_pence = max(min_fee_pence, int(task_amount_pence * fee_rate))
+    
+    total_amount = task_amount_pence
+    coupon_discount = 0
+    coupon_info = None
+    coupon_usage_log = None
+    
+    # 处理优惠券
+    if coupon_code or user_coupon_id:
+        user_coupon_id_used = None
+        
+        if coupon_code:
+            coupon = get_coupon_by_code(db, coupon_code.upper())
+            if not coupon:
+                raise HTTPException(status_code=404, detail="优惠券不存在")
+            
+            user_coupon = db.query(models.UserCoupon).filter(
+                and_(
+                    models.UserCoupon.user_id == current_user.id,
+                    models.UserCoupon.coupon_id == coupon.id,
+                    models.UserCoupon.status == "unused"
+                )
+            ).first()
+            
+            if not user_coupon:
+                raise HTTPException(status_code=400, detail="您没有可用的此优惠券")
+            
+            user_coupon_id_used = user_coupon.id
+        else:
+            user_coupon_id_used = user_coupon_id
+        
+        if user_coupon_id_used:
+            user_coupon = db.query(models.UserCoupon).filter(
+                and_(
+                    models.UserCoupon.id == user_coupon_id_used,
+                    models.UserCoupon.user_id == current_user.id
+                )
+            ).first()
+            
+            if not user_coupon:
+                raise HTTPException(status_code=404, detail="用户优惠券不存在")
+            
+            # 验证优惠券
+            is_valid, error_msg, discount_amount = validate_coupon_usage(
+                db,
+                current_user.id,
+                user_coupon.coupon_id,
+                task_amount_pence,
+                task.location,
+                task.task_type,
+                get_utc_time()
+            )
+            
+            if not is_valid:
+                raise HTTPException(status_code=400, detail=error_msg or "优惠券不可用")
+            
+            # 使用优惠券
+            coupon_usage_log, error = use_coupon(
+                db,
+                current_user.id,
+                user_coupon_id_used,
+                task_id,
+                task_amount_pence,
+                task.location,
+                task.task_type,
+                get_utc_time(),
+                idempotency_key=f"wechat_checkout_{task_id}_{current_user.id}"
+            )
+            
+            if error:
+                raise HTTPException(status_code=400, detail=error)
+            
+            coupon_discount = coupon_usage_log.discount_amount
+            total_amount = max(0, total_amount - coupon_discount)
+            
+            coupon = db.query(models.Coupon).filter(models.Coupon.id == user_coupon.coupon_id).first()
+            if coupon:
+                coupon_info = {
+                    "name": coupon.name,
+                    "type": coupon.type,
+                    "description": coupon.description
+                }
+    
+    final_amount = max(0, total_amount)
+    
+    # 如果优惠券全额抵扣，直接返回成功
+    if final_amount == 0 and coupon_discount > 0:
+        # 与 create_task_payment 相同的处理逻辑
+        try:
+            task.is_paid = 1
+            task.payment_intent_id = None
+            taker_amount = task_amount - (application_fee_pence / 100.0)
+            task.escrow_amount = max(0.0, taker_amount)
+            if task.status == "pending_payment":
+                task.status = "in_progress"
+            
+            payment_history = models.PaymentHistory(
+                task_id=task_id,
+                user_id=current_user.id,
+                payment_intent_id=None,
+                payment_method="stripe",
+                total_amount=task_amount_pence,
+                points_used=0,
+                coupon_discount=coupon_discount,
+                stripe_amount=0,
+                final_amount=0,
+                currency="GBP",
+                status="succeeded",
+                application_fee=application_fee_pence,
+                coupon_usage_log_id=coupon_usage_log.id if coupon_usage_log else None,
+                extra_metadata={
+                    "task_title": task.title,
+                    "taker_id": str(task.taker_id),
+                    "payment_type": "wechat_checkout_coupon_full"
+                }
+            )
+            db.add(payment_history)
+            db.commit()
+            
+            return {
+                "checkout_url": None,
+                "session_id": None,
+                "coupon_full_discount": True,
+                "message": "优惠券全额抵扣，支付成功"
+            }
+        except Exception as e:
+            db.rollback()
+            logger.error(f"微信支付优惠券全额抵扣失败: {e}")
+            raise HTTPException(status_code=500, detail="支付处理失败，请稍后重试")
+    
+    # 获取任务接受人信息
+    taker = db.query(models.User).filter(models.User.id == task.taker_id).first()
+    if not taker or not taker.stripe_account_id:
+        raise HTTPException(
+            status_code=400,
+            detail="任务接受人尚未设置 Stripe Connect 收款账户，无法进行支付"
+        )
+    
+    # 构建成功和取消 URL
+    base_url = os.getenv("FRONTEND_URL", "https://www.link2ur.com")
+    success_url = f"{base_url}/payment-success?task_id={task_id}&session_id={{CHECKOUT_SESSION_ID}}"
+    cancel_url = f"{base_url}/payment-cancel?task_id={task_id}"
+    
+    try:
+        # 创建 Stripe Checkout Session（仅微信支付）
+        session = stripe.checkout.Session.create(
+            payment_method_types=['wechat_pay'],
+            payment_method_options={
+                'wechat_pay': {
+                    'client': 'web'  # 微信支付必须是 web 客户端
+                }
+            },
+            line_items=[{
+                'price_data': {
+                    'currency': 'gbp',
+                    'product_data': {
+                        'name': f'任务支付 - {task.title[:50]}' if task.title else f'任务 #{task_id} 支付',
+                        'description': f'Link²Ur 任务金额支付',
+                    },
+                    'unit_amount': final_amount,
+                },
+                'quantity': 1,
+            }],
+            mode='payment',
+            success_url=success_url,
+            cancel_url=cancel_url,
+            metadata={
+                'task_id': str(task_id),
+                'user_id': str(current_user.id),
+                'taker_id': str(task.taker_id),
+                'taker_stripe_account_id': taker.stripe_account_id,
+                'task_amount': str(task_amount_pence),
+                'coupon_usage_log_id': str(coupon_usage_log.id) if coupon_usage_log else '',
+                'coupon_discount': str(coupon_discount) if coupon_discount > 0 else '',
+                'application_fee': str(application_fee_pence),
+                'payment_type': 'wechat_checkout',
+            },
+            expires_at=int((datetime.now(timezone.utc) + timedelta(minutes=30)).timestamp()),
+        )
+        
+        logger.info(f"创建微信支付 Checkout Session: session_id={session.id}, task_id={task_id}")
+        
+        # 创建支付历史记录（待支付状态）
+        payment_history = models.PaymentHistory(
+            task_id=task_id,
+            user_id=current_user.id,
+            payment_intent_id=session.payment_intent if session.payment_intent else session.id,
+            payment_method="stripe",
+            total_amount=task_amount_pence,
+            points_used=0,
+            coupon_discount=coupon_discount,
+            stripe_amount=final_amount,
+            final_amount=final_amount,
+            currency="GBP",
+            status="pending",
+            application_fee=application_fee_pence,
+            coupon_usage_log_id=coupon_usage_log.id if coupon_usage_log else None,
+            extra_metadata={
+                "task_title": task.title,
+                "taker_id": str(task.taker_id),
+                "checkout_session_id": session.id,
+                "payment_type": "wechat_checkout"
+            }
+        )
+        db.add(payment_history)
+        db.commit()
+        
+        return {
+            "checkout_url": session.url,
+            "session_id": session.id,
+            "coupon_full_discount": False,
+            "final_amount": final_amount,
+            "final_amount_display": f"{final_amount / 100:.2f}",
+            "currency": "GBP",
+            "expires_at": session.expires_at,
+        }
+        
+    except stripe.error.StripeError as e:
+        logger.error(f"创建微信支付 Checkout Session 失败: {e}")
+        # 如果创建失败且使用了优惠券，需要回滚优惠券使用
+        if coupon_usage_log:
+            try:
+                coupon_usage_log.status = "cancelled"
+                user_coupon = db.query(models.UserCoupon).filter(
+                    models.UserCoupon.id == coupon_usage_log.user_coupon_id
+                ).first()
+                if user_coupon:
+                    user_coupon.status = "unused"
+                    user_coupon.used_at = None
+                db.commit()
+            except Exception as rollback_error:
+                logger.error(f"回滚优惠券使用失败: {rollback_error}")
+                db.rollback()
+        
+        raise HTTPException(
+            status_code=500,
+            detail=f"创建支付失败: {str(e.user_message) if hasattr(e, 'user_message') else '请稍后重试'}"
+        )
+
+
 @router.get("/payment-history")
 def get_payment_history(
     skip: int = Query(0, ge=0),

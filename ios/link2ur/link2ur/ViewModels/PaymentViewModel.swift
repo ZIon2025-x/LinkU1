@@ -72,6 +72,14 @@ class PaymentViewModel: NSObject, ObservableObject, ApplePayContextDelegate, STP
     /// 支付宝/微信直接支付时为 true，用于显示加载状态
     @Published var isProcessingDirectPayment = false
     
+    // MARK: - 微信支付 WebView 相关（iOS PaymentSheet 不支持微信支付，需要通过 WebView 显示二维码）
+    /// 是否显示微信支付 WebView
+    @Published var showWeChatPayWebView = false
+    /// 微信支付 Checkout Session URL
+    @Published var wechatPayCheckoutURL: String?
+    /// 是否正在创建微信支付 Checkout Session
+    @Published var isCreatingWeChatCheckout = false
+    
     private let apiService: APIService
     private let taskId: Int
     private let amount: Double
@@ -785,23 +793,12 @@ class PaymentViewModel: NSObject, ObservableObject, ApplePayContextDelegate, STP
     
     // MARK: - 微信支付
     
-    /// 使用微信支付（Stripe iOS SDK 未暴露 STPPaymentMethodWeChatPayParams，故通过 PaymentSheet 展示仅含 wechat_pay 的 PI）
+    /// 使用微信支付（通过 WebView 显示 Stripe Checkout 二维码）
+    /// 
+    /// 重要：Stripe iOS PaymentSheet 不支持微信支付（官方文档确认）
+    /// 解决方案：创建 Stripe Checkout Session，在 WebView 中加载支付页面让用户扫码
     func confirmWeChatPayment() {
-        Logger.debug("开始微信支付流程（PaymentSheet）", category: .api)
-        
-        guard let clientSecret = activeClientSecret else {
-            errorMessage = "支付信息未准备好，请稍后再试"
-            Logger.warning("缺少 client_secret，无法使用微信支付", category: .api)
-            createPaymentIntent()
-            return
-        }
-        
-        // 验证 clientSecret 格式
-        guard clientSecret.contains("_secret_") else {
-            errorMessage = "支付信息无效，请刷新页面重试"
-            Logger.error("微信支付 clientSecret 格式无效: \(clientSecret.prefix(30))...", category: .api)
-            return
-        }
+        Logger.debug("开始微信支付流程（WebView Checkout）", category: .api)
         
         guard activeFinalAmountPence > 0 else {
             Logger.info("最终支付金额为 0，无需支付", category: .api)
@@ -809,16 +806,103 @@ class PaymentViewModel: NSObject, ObservableObject, ApplePayContextDelegate, STP
             return
         }
         
-        Logger.debug("微信支付参数 - clientSecret: \(clientSecret.prefix(20))..., 金额: \(activeFinalAmountPence) 便士", category: .api)
-        
-        // 微信支付：使用 PaymentSheet（后端已创建仅含 wechat_pay 的 PI，Sheet 只显示微信支付）
-        if let paymentSheet = paymentSheet {
-            presentPaymentSheet(from: paymentSheet)
-        } else {
-            errorMessage = "支付表单未准备好，请稍后重试"
-            Logger.warning("PaymentSheet 为 nil，尝试重新创建", category: .api)
-            ensurePaymentSheetReady()
+        // 调用后端 API 创建微信支付 Checkout Session
+        createWeChatCheckoutSession()
+    }
+    
+    /// 创建微信支付 Checkout Session
+    private func createWeChatCheckoutSession() {
+        guard !isCreatingWeChatCheckout else {
+            Logger.debug("微信支付 Checkout Session 创建中，跳过重复请求", category: .network)
+            return
         }
+        
+        isCreatingWeChatCheckout = true
+        errorMessage = nil
+        
+        // 构建请求参数
+        var requestBody: [String: Any] = [:]
+        
+        // 如果有选择的优惠券，传递优惠券信息
+        if let coupon = selectedCoupon {
+            if let code = coupon.coupon.code {
+                requestBody["coupon_code"] = code.uppercased()
+            } else {
+                requestBody["user_coupon_id"] = coupon.id
+            }
+        }
+        
+        Logger.debug("创建微信支付 Checkout Session - taskId: \(taskId)", category: .api)
+        
+        // 调用后端 API
+        apiService.request(
+            WeChatCheckoutResponse.self,
+            APIEndpoints.Payment.createWeChatCheckout(taskId),
+            method: "POST",
+            body: requestBody.isEmpty ? nil : requestBody
+        )
+        .receive(on: DispatchQueue.main)
+        .sink(
+            receiveCompletion: { [weak self] completion in
+                self?.isCreatingWeChatCheckout = false
+                if case .failure(let error) = completion {
+                    Logger.error("创建微信支付 Checkout Session 失败: \(error.localizedDescription)", category: .api)
+                    self?.errorMessage = error.userFriendlyMessage
+                }
+            },
+            receiveValue: { [weak self] response in
+                self?.isCreatingWeChatCheckout = false
+                self?.handleWeChatCheckoutResponse(response)
+            }
+        )
+        .store(in: &cancellables)
+    }
+    
+    /// 处理微信支付 Checkout Session 响应
+    private func handleWeChatCheckoutResponse(_ response: WeChatCheckoutResponse) {
+        // 如果优惠券全额抵扣，直接成功
+        if response.couponFullDiscount == true {
+            Logger.info("微信支付：优惠券全额抵扣，支付成功", category: .api)
+            paymentSuccess = true
+            return
+        }
+        
+        // 检查是否有 checkout URL
+        guard let checkoutURL = response.checkoutURL, !checkoutURL.isEmpty else {
+            Logger.error("微信支付 Checkout URL 为空", category: .api)
+            errorMessage = "无法创建微信支付页面，请稍后重试"
+            return
+        }
+        
+        Logger.info("微信支付 Checkout Session 创建成功，URL: \(checkoutURL.prefix(50))...", category: .api)
+        
+        // 保存 URL 并显示 WebView
+        wechatPayCheckoutURL = checkoutURL
+        showWeChatPayWebView = true
+    }
+    
+    /// 微信支付 WebView 成功回调
+    func handleWeChatPaymentSuccess() {
+        Logger.info("微信支付 WebView 回调：支付成功", category: .api)
+        showWeChatPayWebView = false
+        wechatPayCheckoutURL = nil
+        paymentSuccess = true
+    }
+    
+    /// 微信支付 WebView 取消回调
+    func handleWeChatPaymentCancel() {
+        Logger.info("微信支付 WebView 回调：用户取消", category: .api)
+        showWeChatPayWebView = false
+        wechatPayCheckoutURL = nil
+        // 不显示错误消息，用户主动取消
+    }
+    
+    /// 微信支付 WebView 错误回调
+    func handleWeChatPaymentError(_ error: String) {
+        Logger.error("微信支付 WebView 回调：错误 - \(error)", category: .api)
+        showWeChatPayWebView = false
+        wechatPayCheckoutURL = nil
+        errorMessage = error
     }
     
     /// 使用支付宝（通过 PaymentSheet，与微信一致）
@@ -1169,5 +1253,37 @@ struct PaymentResponse: Codable {
         case ephemeralKeySecret = "ephemeral_key_secret"
         case calculationSteps = "calculation_steps"
         case note
+    }
+}
+
+/// 微信支付 Checkout Session 响应
+/// 用于 iOS 微信支付，因为 PaymentSheet 不支持微信支付
+struct WeChatCheckoutResponse: Codable {
+    /// Stripe Checkout Session URL（用户在 WebView 中打开此 URL 扫码支付）
+    let checkoutURL: String?
+    /// Checkout Session ID（用于查询状态）
+    let sessionId: String?
+    /// 是否优惠券全额抵扣（如果是，则不需要支付）
+    let couponFullDiscount: Bool?
+    /// 支付成功消息（优惠券全额抵扣时返回）
+    let message: String?
+    /// 最终支付金额（便士）
+    let finalAmount: Int?
+    /// 最终支付金额显示
+    let finalAmountDisplay: String?
+    /// 货币
+    let currency: String?
+    /// Checkout Session 过期时间（Unix 时间戳）
+    let expiresAt: Int?
+    
+    enum CodingKeys: String, CodingKey {
+        case checkoutURL = "checkout_url"
+        case sessionId = "session_id"
+        case couponFullDiscount = "coupon_full_discount"
+        case message
+        case finalAmount = "final_amount"
+        case finalAmountDisplay = "final_amount_display"
+        case currency
+        case expiresAt = "expires_at"
     }
 }

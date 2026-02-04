@@ -205,6 +205,11 @@ enum APIEndpoints {
             "/api/coupon-points/tasks/\(taskId)/payment-status"
         }
         static let paymentHistory = "/api/coupon-points/payment-history"
+        
+        /// 创建微信支付 Checkout Session（iOS 专用，因为 PaymentSheet 不支持微信支付）
+        static func createWeChatCheckout(_ taskId: Int) -> String {
+            "/api/coupon-points/tasks/\(taskId)/wechat-checkout"
+        }
     }
     
     // MARK: - Check-in (签到)

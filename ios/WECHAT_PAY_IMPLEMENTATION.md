@@ -2,17 +2,22 @@
 
 ## 概述
 
-根据 Stripe 文档，WeChat Pay（微信支付）可以在 iOS 应用中通过 Stripe PaymentSheet 支持。本指南说明如何配置和实现。
+**重要更新**：根据 Stripe 官方文档确认，**iOS PaymentSheet 不支持微信支付**。因此 iOS 端微信支付已改为通过 WebView 加载 Stripe Checkout Session 页面，让用户扫描二维码完成支付。这与 Web 端体验一致。
 
 ## 当前状态
 
-### ✅ 已完成的代码实现
-- ✅ 后端已配置 `payment_method_types=["card", "wechat_pay", "alipay"]`（任务支付、闲鱼、优惠券等）
-- ✅ iOS 已配置 PaymentSheet 的 `returnURL`（`link2ur://stripe-redirect`）
-- ✅ iOS 已注册 URL Scheme（`link2ur://`）
-- ✅ iOS 收到支付重定向 URL 后调用 `StripeAPI.handleURLCallback(with: url)` 转发给 Stripe SDK（`onOpenURL` 与 `application(_:open:options:)` 均已实现），否则微信/支付宝跳转返回后 PaymentSheet 无法完成流程
-- ✅ iOS 支付方式选择卡片中已显示「微信支付」选项
-- ✅ iOS 已显示「使用微信支付」绿色按钮及加载状态
+### ✅ 已完成的代码实现（2024 年更新）
+
+**iOS 端**：
+- ✅ 新建 `WeChatPayWebView.swift` - WebView 组件用于显示微信支付二维码
+- ✅ 修改 `PaymentViewModel.swift` - 添加 WebView 状态管理和微信支付 Checkout Session 获取逻辑
+- ✅ 修改 `StripePaymentView.swift` - 微信支付按钮改为打开 WebView
+- ✅ 添加 `APIEndpoints.Payment.createWeChatCheckout` 端点
+
+**后端**：
+- ✅ 新增 `/api/coupon-points/tasks/{task_id}/wechat-checkout` 端点
+- ✅ 创建 Stripe Checkout Session（仅微信支付）
+- ✅ 更新 Webhook 处理 `checkout.session.completed` 事件
 
 ### 使用前需完成
 - ⚠️ **在 Stripe Dashboard 中启用 WeChat Pay**：Settings → Payment methods → 启用 WeChat Pay，确保状态为 "Active"
@@ -29,14 +34,14 @@
 - **AUD, CAD, EUR, GBP, HKD, JPY, SGD, USD, DKK, NOK, SEK, CHF**（根据业务位置）
 
 ### 产品支持
-- ✅ **PaymentSheet**（iOS 使用）
-- ✅ **Checkout**
-- ✅ **Elements**（但 Express Checkout Element 和 Mobile Payment Element 不支持）
+- ❌ **Mobile Payment Element / PaymentSheet**（iOS 不支持）
+- ✅ **Checkout**（我们使用此方案）
+- ✅ **Payment Element**（Web 端）
 - ✅ **Payment Links**
 - ✅ **Invoicing**
 
 ### 限制
-- ❌ 不支持 Express Checkout Element 和 Mobile Payment Element
+- ❌ **iOS PaymentSheet 不支持微信支付**（官方文档确认）
 - ❌ 不支持经常性付款
 - ❌ 不支持争议处理（因为需要用户在微信中确认）
 - ❌ 不支持手动捕获
@@ -131,21 +136,44 @@ available_payment_methods = payment_intent.payment_method_types
 
 ## 📱 用户体验
 
-### 当前实现（PaymentSheet）
-1. 用户选择"信用卡/借记卡"支付方式
-2. 点击"确认支付"按钮
-3. PaymentSheet 弹出，显示所有可用的支付方式（包括 WeChat Pay）
-4. 用户可以选择 WeChat Pay 完成支付
+### 当前实现（WebView + Stripe Checkout）
 
-### 如果添加独立选项（当前实现）
-1. 用户可以在支付方式选择卡片中选择"微信支付"
-2. 点击"使用微信支付"按钮后，PaymentSheet 弹出
-3. **重要**：PaymentSheet 会显示所有可用的支付方式（包括 WeChat Pay、Card 等）
-4. 用户需要在 PaymentSheet 中**手动选择 WeChat Pay 选项**
-5. 选择 WeChat Pay 后，会跳转到微信应用完成支付
-6. 支付完成后，通过 returnURL 返回到应用
+由于 iOS PaymentSheet 不支持微信支付，我们使用 WebView 方案：
 
-**注意**：PaymentSheet 不会自动选择 WeChat Pay，用户需要手动选择。这是 Stripe PaymentSheet 的设计，它会显示所有可用的支付方式供用户选择。
+1. 用户在支付方式选择卡片中选择「微信支付」
+2. 点击「使用微信支付」按钮
+3. App 调用后端 API 创建 Stripe Checkout Session
+4. 后端返回 Checkout URL
+5. App 打开全屏 WebView 加载 Checkout 页面
+6. 用户看到微信支付二维码
+7. 用户使用微信扫码完成支付
+8. 支付完成后，Stripe 重定向到成功页面
+9. WebView 检测到成功 URL，关闭并显示支付成功
+
+### 支付流程图
+
+```
+用户 → 选择微信支付 → 点击支付按钮
+                        ↓
+iOS App → POST /wechat-checkout → 后端
+                                    ↓
+                        创建 Stripe Checkout Session
+                                    ↓
+返回 checkout_url ← 后端
+        ↓
+打开 WebView 加载 checkout_url
+        ↓
+用户看到二维码 → 微信扫码 → 支付成功
+                              ↓
+        Stripe Webhook → 后端更新任务状态
+                              ↓
+    WebView 检测到成功 URL → 关闭 WebView → 显示支付成功
+```
+
+**优点**：
+- 与 Web 端体验完全一致
+- 使用 Stripe 官方推荐的 Checkout 方式
+- 二维码由 Stripe 托管，安全可靠
 
 ## ⚠️ 注意事项
 

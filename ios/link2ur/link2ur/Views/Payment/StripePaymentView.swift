@@ -192,6 +192,23 @@ struct StripePaymentView: View {
                     Text(error)
                 }
             }
+            // MARK: - 微信支付 WebView（iOS PaymentSheet 不支持微信支付，使用 WebView 显示二维码）
+            .fullScreenCover(isPresented: $viewModel.showWeChatPayWebView) {
+                if let checkoutURL = viewModel.wechatPayCheckoutURL {
+                    WeChatPayWebView(
+                        checkoutURL: checkoutURL,
+                        onPaymentSuccess: {
+                            viewModel.handleWeChatPaymentSuccess()
+                        },
+                        onPaymentCancel: {
+                            viewModel.handleWeChatPaymentCancel()
+                        },
+                        onPaymentError: { error in
+                            viewModel.handleWeChatPaymentError(error)
+                        }
+                    )
+                }
+            }
         }
     }
     
@@ -640,17 +657,10 @@ struct StripePaymentView: View {
                 .padding()
             }
         } else if viewModel.selectedPaymentMethod == .wechatPay {
-            // 微信支付按钮（使用直接跳转方式）
-            if viewModel.isSwitchingPaymentMethod || viewModel.isProcessingDirectPayment {
-                // 准备中或正在处理支付
-                paymentMethodSwitchPlaceholderButton(
-                    gradient: LinearGradient(
-                        gradient: Gradient(colors: [Color(red: 0.2, green: 0.8, blue: 0.2), Color(red: 0.1, green: 0.7, blue: 0.1)]),
-                        startPoint: .leading,
-                        endPoint: .trailing
-                    )
-                ) {
-                    if viewModel.isProcessingDirectPayment {
+            // 微信支付按钮（通过 WebView 显示二维码，因为 iOS PaymentSheet 不支持微信支付）
+            Button(action: { viewModel.performPayment() }) {
+                HStack(spacing: 12) {
+                    if viewModel.isCreatingWeChatCheckout || viewModel.isLoading {
                         ProgressView()
                             .progressViewStyle(CircularProgressViewStyle(tint: .white))
                             .frame(width: 18, height: 18)
@@ -662,47 +672,26 @@ struct StripePaymentView: View {
                             .frame(width: 18, height: 18)
                             .foregroundColor(SwiftUI.Color.white)
                     }
+                    Text(viewModel.isCreatingWeChatCheckout ? LocalizationKey.paymentPreparingPayment.localized : LocalizationKey.paymentPayWithWeChatPay.localized)
+                        .font(AppTypography.title3)
+                        .fontWeight(.semibold)
                 }
-            } else if viewModel.hasActivePaymentClientSecret {
-                // 有 client_secret，可以支付
-                Button(action: { viewModel.performPayment() }) {
-                    HStack(spacing: 12) {
-                        if viewModel.isLoading {
-                            ProgressView()
-                                .progressViewStyle(CircularProgressViewStyle(tint: .white))
-                                .frame(width: 18, height: 18)
-                        } else {
-                            SwiftUI.Image("WeChatPayLogo")
-                                .renderingMode(SwiftUI.Image.TemplateRenderingMode.template)
-                                .resizable()
-                                .aspectRatio(contentMode: .fit)
-                                .frame(width: 18, height: 18)
-                                .foregroundColor(SwiftUI.Color.white)
-                        }
-                        Text(viewModel.isLoading ? LocalizationKey.paymentPreparingPayment.localized : LocalizationKey.paymentPayWithWeChatPay.localized)
-                            .font(AppTypography.title3)
-                            .fontWeight(.semibold)
-                    }
-                    .foregroundColor(.white)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, AppSpacing.md)
-                    .background(
-                        LinearGradient(
-                            gradient: Gradient(colors: [Color(red: 0.2, green: 0.8, blue: 0.2), Color(red: 0.1, green: 0.7, blue: 0.1)]),
-                            startPoint: .leading,
-                            endPoint: .trailing
-                        )
+                .foregroundColor(.white)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, AppSpacing.md)
+                .background(
+                    LinearGradient(
+                        gradient: Gradient(colors: [Color(red: 0.2, green: 0.8, blue: 0.2), Color(red: 0.1, green: 0.7, blue: 0.1)]),
+                        startPoint: .leading,
+                        endPoint: .trailing
                     )
-                    .cornerRadius(AppCornerRadius.large)
-                    .shadow(color: Color.green.opacity(0.3), radius: 8, x: 0, y: 4)
-                }
-                .buttonStyle(PlainButtonStyle())
-                .disabled(viewModel.isLoading)
-                .opacity(viewModel.isLoading ? 0.8 : 1)
-            } else {
-                // 加载 PaymentIntent 中
-                paymentFormLoadingView { viewModel.createPaymentIntent(isMethodSwitch: true) }
+                )
+                .cornerRadius(AppCornerRadius.large)
+                .shadow(color: Color.green.opacity(0.3), radius: 8, x: 0, y: 4)
             }
+            .buttonStyle(PlainButtonStyle())
+            .disabled(viewModel.isCreatingWeChatCheckout || viewModel.isLoading)
+            .opacity((viewModel.isCreatingWeChatCheckout || viewModel.isLoading) ? 0.8 : 1)
         } else if viewModel.selectedPaymentMethod == .alipayPay {
             // 支付宝支付按钮（使用直接跳转方式）
             if viewModel.isSwitchingPaymentMethod || viewModel.isProcessingDirectPayment {

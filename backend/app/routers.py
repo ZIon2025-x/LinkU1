@@ -7788,10 +7788,15 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
         invoice = event_data
         logger.info(f"Invoice finalized: invoice_id={invoice.get('id')}")
     
-    # 保留对 Checkout Session 的兼容性（如果仍有使用）
+    # 保留对 Checkout Session 的兼容性（包括 iOS 微信支付二维码）
     elif event_type == "checkout.session.completed":
         session = event_data
-        task_id = int(session.get("metadata", {}).get("task_id", 0))
+        metadata = session.get("metadata", {})
+        task_id = int(metadata.get("task_id", 0))
+        payment_type = metadata.get("payment_type", "")
+        
+        logger.info(f"[WEBHOOK] Checkout Session 完成: session_id={session.get('id')}, task_id={task_id}, payment_type={payment_type}")
+        
         if task_id:
             task = crud.get_task(db, task_id)
             if task and not task.is_paid:
@@ -7800,7 +7805,6 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
                 task_amount = float(task.agreed_reward) if task.agreed_reward is not None else float(task.base_reward) if task.base_reward is not None else 0.0
                 
                 # 计算平台服务费（从 metadata 获取或重新计算）
-                metadata = session.get("metadata", {})
                 application_fee_pence = int(metadata.get("application_fee", 0))
                 
                 # 如果没有 metadata，重新计算
@@ -7817,8 +7821,30 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
                 # 支付成功后，将任务状态从 pending_payment 更新为 in_progress
                 if task.status == "pending_payment":
                     task.status = "in_progress"
+                
+                # 更新支付历史记录状态
+                try:
+                    checkout_session_id = session.get("id")
+                    if checkout_session_id:
+                        payment_history = db.query(models.PaymentHistory).filter(
+                            models.PaymentHistory.task_id == task_id,
+                            models.PaymentHistory.status == "pending"
+                        ).order_by(models.PaymentHistory.created_at.desc()).first()
+                        
+                        if payment_history:
+                            payment_history.status = "succeeded"
+                            payment_history.payment_intent_id = session.get("payment_intent") or checkout_session_id
+                            logger.info(f"[WEBHOOK] 更新支付历史记录状态为 succeeded: payment_history_id={payment_history.id}")
+                except Exception as e:
+                    logger.warning(f"[WEBHOOK] 更新支付历史记录失败: {e}")
+                
                 db.commit()
-                logger.info(f"Task {task_id} payment completed via Stripe Checkout Session, status updated to in_progress, escrow_amount: {task.escrow_amount}")
+                
+                # 记录微信支付完成（用于调试）
+                if payment_type == "wechat_checkout":
+                    logger.info(f"✅ [WEBHOOK] 微信支付完成 (iOS WebView): task_id={task_id}, escrow_amount={task.escrow_amount}")
+                else:
+                    logger.info(f"Task {task_id} payment completed via Stripe Checkout Session, status updated to in_progress, escrow_amount: {task.escrow_amount}")
     
     # 处理 Transfer 事件（转账给任务接受人）
     elif event_type == "transfer.paid":
