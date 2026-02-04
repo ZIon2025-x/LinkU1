@@ -719,6 +719,11 @@
 "error_code.task_not_paid" = "任務尚未支付，請先完成支付";
 "error_code.task_payment_unavailable" = "任務已不再支付，無法處理退款";
 "error_code.stripe_dispute_frozen" = "任務因 Stripe 爭議已凍結，請等待爭議解決後再試";
+"error_code.stripe_setup_required" = "請先完成收款帳戶設定";
+"error_code.stripe_other_party_not_setup" = "對方尚未完成收款帳戶設定，請聯繫對方完成設定";
+"error_code.stripe_account_not_verified" = "收款帳戶尚未啟用收款功能，請完成帳戶驗證";
+"error_code.stripe_account_invalid" = "收款帳戶無效，請重新設定";
+"error_code.stripe_verification_failed" = "收款帳戶驗證失敗，請檢查網路後重試";
 "error_code.refund_amount_required" = "請填寫退款金額或退款比例";
 "error_code.evidence_files_limit" = "證據檔案數量超出限制";
 "error_code.evidence_text_limit" = "文字證據說明不能超過 500 字";

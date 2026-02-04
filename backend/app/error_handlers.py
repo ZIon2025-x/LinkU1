@@ -113,8 +113,10 @@ SECURITY_ERROR_MESSAGES = {
 
 
 def get_safe_error_message(error_code: str, original_message=None) -> str:
-    """获取安全的错误信息。original_message 可为 str 或 list（FastAPI 校验错误）。"""
-    if isinstance(original_message, list):
+    """获取安全的错误信息。original_message 可为 str、list（FastAPI 校验错误）或 dict（含 message 键）。"""
+    if isinstance(original_message, dict):
+        msg_str = str(original_message.get("message", ""))
+    elif isinstance(original_message, list):
         msg_str = (original_message[0].get("msg", str(original_message[0]))
                    if original_message and isinstance(original_message[0], dict)
                    else str(original_message[0]) if original_message else "")
@@ -163,6 +165,13 @@ def get_safe_error_message(error_code: str, original_message=None) -> str:
     ]):
         return msg_str
 
+    # 收款账户/Stripe Connect 类：保留原文，便于用户完成设置或联系对方
+    if msg_str and any(k in msg_str for k in [
+        "收款账户", "Stripe Connect", "payout account", "payment account",
+        "请通知接受人", "请联系卖家", "请联系任务达人", "请联系申请者",
+    ]):
+        return msg_str
+
     # 账户/密码重置等：保留原文
     if msg_str and any(k in msg_str for k in [
         "临时邮箱", "无法接收密码重置", "无法删除账户", "进行中的任务",
@@ -175,9 +184,14 @@ def get_safe_error_message(error_code: str, original_message=None) -> str:
 
 # 根据异常详情返回稳定 error_code，供客户端做国际化（i18n）展示
 def get_error_code_from_detail(detail) -> str:
-    """从 exc.detail 推断稳定错误码，客户端用此 key 查多语言文案。"""
+    """从 exc.detail 推断稳定错误码，客户端用此 key 查多语言文案。
+    支持 detail 为 dict：{"error_code": "STRIPE_SETUP_REQUIRED", "message": "..."} 显式传递，便于 iOS 等客户端做 i18n。
+    """
     if detail is None:
         return "HTTP_ERROR"
+    # 显式传递的 error_code（适配前端 i18n）
+    if isinstance(detail, dict) and detail.get("error_code"):
+        return str(detail["error_code"])
     if isinstance(detail, list):
         msg = (detail[0].get("msg", "") if detail and isinstance(detail[0], dict) else str(detail[0]) if detail else "")
     else:
@@ -234,6 +248,15 @@ def get_error_code_from_detail(detail) -> str:
         return "ACCOUNT_HAS_ACTIVE_TASKS"
     if "临时邮箱" in msg and "密码重置" in msg:
         return "TEMP_EMAIL_NO_PASSWORD_RESET"
+    # 收款账户/Stripe Connect：区分当前用户需设置 vs 对方（接受人/卖家/达人）需设置
+    if "请通知" in msg or "请联系" in msg:
+        if "stripe" in msg_lower or "收款" in msg:
+            return "STRIPE_OTHER_PARTY_NOT_SETUP"
+    if "任务接受人" in msg or "卖家" in msg or "任务达人" in msg or "申请者" in msg or "申请人" in msg:
+        if ("尚未创建" in msg or "尚未设置" in msg) and ("stripe" in msg_lower or "收款" in msg):
+            return "STRIPE_OTHER_PARTY_NOT_SETUP"
+    if "收款账户" in msg or "stripe connect" in msg_lower or "payout account" in msg_lower:
+        return "STRIPE_SETUP_REQUIRED"
     return "HTTP_ERROR"
 
 
@@ -385,8 +408,12 @@ def raise_business_error(message: str, error_code: str = "BUSINESS_ERROR"):
 
 def raise_http_error(message: str, status_code: int = 400, error_code: str = "HTTP_ERROR"):
     """抛出HTTP错误"""
+    raise HTTPException(status_code=status_code, detail=message)
+
+
+def raise_http_error_with_code(message: str, status_code: int, error_code: str):
+    """抛出带显式 error_code 的 HTTP 错误，便于 iOS 等客户端做国际化（i18n）。"""
     raise HTTPException(
         status_code=status_code,
-        detail=message,
-        error_code=error_code
+        detail={"error_code": error_code, "message": message}
     )

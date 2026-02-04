@@ -851,6 +851,11 @@ case tasksNotInterested = "tasks.not_interested"
     case errorCodeTaskNotPaid = "error_code.task_not_paid"
     case errorCodeTaskPaymentUnavailable = "error_code.task_payment_unavailable"
     case errorCodeStripeDisputeFrozen = "error_code.stripe_dispute_frozen"
+    case errorCodeStripeSetupRequired = "error_code.stripe_setup_required"
+    case errorCodeStripeOtherPartyNotSetup = "error_code.stripe_other_party_not_setup"
+    case errorCodeStripeAccountNotVerified = "error_code.stripe_account_not_verified"
+    case errorCodeStripeAccountInvalid = "error_code.stripe_account_invalid"
+    case errorCodeStripeVerificationFailed = "error_code.stripe_verification_failed"
     case errorCodeRefundAmountRequired = "error_code.refund_amount_required"
     case errorCodeEvidenceFilesLimit = "error_code.evidence_files_limit"
     case errorCodeEvidenceTextLimit = "error_code.evidence_text_limit"
@@ -2011,6 +2016,11 @@ case tasksNotInterested = "tasks.not_interested"
         case "TASK_NOT_PAID": return .errorCodeTaskNotPaid
         case "TASK_PAYMENT_UNAVAILABLE": return .errorCodeTaskPaymentUnavailable
         case "STRIPE_DISPUTE_FROZEN": return .errorCodeStripeDisputeFrozen
+        case "STRIPE_SETUP_REQUIRED": return .errorCodeStripeSetupRequired
+        case "STRIPE_OTHER_PARTY_NOT_SETUP": return .errorCodeStripeOtherPartyNotSetup
+        case "STRIPE_ACCOUNT_NOT_VERIFIED": return .errorCodeStripeAccountNotVerified
+        case "STRIPE_ACCOUNT_INVALID": return .errorCodeStripeAccountInvalid
+        case "STRIPE_VERIFICATION_FAILED": return .errorCodeStripeVerificationFailed
         case "REFUND_AMOUNT_REQUIRED": return .errorCodeRefundAmountRequired
         case "EVIDENCE_FILES_LIMIT": return .errorCodeEvidenceFilesLimit
         case "EVIDENCE_TEXT_LIMIT": return .errorCodeEvidenceTextLimit

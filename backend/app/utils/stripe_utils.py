@@ -8,6 +8,8 @@ import logging
 from typing import Optional
 from fastapi import HTTPException
 
+from app.error_handlers import raise_http_error_with_code
+
 logger = logging.getLogger(__name__)
 
 
@@ -30,9 +32,10 @@ def validate_user_stripe_account_for_receiving(
     # 检查是否有 stripe_account_id
     if not user.stripe_account_id:
         logger.warning(f"用户 {user.id} 尝试{action_description}，但没有收款账户")
-        raise HTTPException(
-            status_code=428,  # 428 Precondition Required
-            detail=f"{action_description}前需要先注册收款账户。请先完成收款账户设置。"
+        raise_http_error_with_code(
+            message=f"{action_description}前需要先注册收款账户。请先完成收款账户设置。",
+            status_code=428,
+            error_code="STRIPE_SETUP_REQUIRED"
         )
     
     # 验证收款账户是否有效且已完成设置
@@ -43,17 +46,19 @@ def validate_user_stripe_account_for_receiving(
         # 检查账户是否已完成设置
         if not account.details_submitted:
             logger.warning(f"用户 {user.id} 的收款账户 {user.stripe_account_id} 未完成设置")
-            raise HTTPException(
+            raise_http_error_with_code(
+                message="您的收款账户尚未完成设置。请先完成收款账户设置。",
                 status_code=428,
-                detail="您的收款账户尚未完成设置。请先完成收款账户设置。"
+                error_code="STRIPE_SETUP_REQUIRED"
             )
             
         # 可选：检查账户是否启用了收款功能
         if not account.charges_enabled:
             logger.warning(f"用户 {user.id} 的收款账户 {user.stripe_account_id} 未启用收款功能")
-            raise HTTPException(
+            raise_http_error_with_code(
+                message="您的收款账户尚未启用收款功能。请完成账户验证。",
                 status_code=428,
-                detail="您的收款账户尚未启用收款功能。请完成账户验证。"
+                error_code="STRIPE_ACCOUNT_NOT_VERIFIED"
             )
             
     except HTTPException:
@@ -61,21 +66,24 @@ def validate_user_stripe_account_for_receiving(
     except stripe.error.InvalidRequestError as e:
         # 账户不存在或无效
         logger.error(f"用户 {user.id} 的收款账户 {user.stripe_account_id} 无效: {e}")
-        raise HTTPException(
+        raise_http_error_with_code(
+            message="收款账户无效。请重新设置收款账户。",
             status_code=428,
-            detail="收款账户无效。请重新设置收款账户。"
+            error_code="STRIPE_ACCOUNT_INVALID"
         )
     except stripe.error.StripeError as e:
         logger.error(f"验证用户 {user.id} 的收款账户失败: {e}")
-        raise HTTPException(
+        raise_http_error_with_code(
+            message="收款账户验证失败。请检查网络后重试，或重新设置收款账户。",
             status_code=428,
-            detail="收款账户验证失败。请检查网络后重试，或重新设置收款账户。"
+            error_code="STRIPE_VERIFICATION_FAILED"
         )
     except Exception as e:
         logger.error(f"验证收款账户时发生未知错误: {e}")
-        raise HTTPException(
+        raise_http_error_with_code(
+            message="收款账户验证失败。请稍后重试。",
             status_code=428,
-            detail="收款账户验证失败。请稍后重试。"
+            error_code="STRIPE_VERIFICATION_FAILED"
         )
 
 

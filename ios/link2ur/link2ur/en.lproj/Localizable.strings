@@ -499,6 +499,11 @@
 "error_code.task_not_paid" = "Task is not paid yet. Please complete payment first";
 "error_code.task_payment_unavailable" = "Payment is no longer available for this task";
 "error_code.stripe_dispute_frozen" = "This task is frozen due to a Stripe dispute. Please wait for it to be resolved";
+"error_code.stripe_setup_required" = "Please complete payout account setup first";
+"error_code.stripe_other_party_not_setup" = "The other party has not set up their payout account. Please ask them to complete setup";
+"error_code.stripe_account_not_verified" = "Payout account is not verified yet. Please complete account verification";
+"error_code.stripe_account_invalid" = "Payout account is invalid. Please set it up again";
+"error_code.stripe_verification_failed" = "Payout account verification failed. Please check your network and try again";
 "error_code.refund_amount_required" = "Please enter refund amount or percentage";
 "error_code.evidence_files_limit" = "Too many evidence files";
 "error_code.evidence_text_limit" = "Evidence text must be 500 characters or less";

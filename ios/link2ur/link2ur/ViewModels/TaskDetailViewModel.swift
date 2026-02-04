@@ -163,7 +163,8 @@ class TaskDetailViewModel: ObservableObject {
         apiService.applyForTask(taskId: taskId, message: message, negotiatedPrice: negotiatedPrice, currency: currency)
             .sink(receiveCompletion: { [weak self] result in
                 if case .failure(let error) = result {
-                    if case .httpError(428) = error {
+                    // 428 可能以 httpError 或 serverError 形式返回（取决于 API 是否解析了 JSON 错误体）
+                    if (error as? APIError)?.isStripeSetupRequired == true {
                         self?.shouldPromptStripeSetup = true
                     } else {
                         ErrorHandler.shared.handle(error, context: "申请任务")
