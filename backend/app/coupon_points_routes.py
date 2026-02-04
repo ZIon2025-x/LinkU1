@@ -1640,13 +1640,13 @@ async def create_wechat_checkout_session(
     try:
         # 创建 Stripe Checkout Session（仅微信支付）
         session_create_kw = {
-            payment_method_types=['wechat_pay'],
-            payment_method_options={
+            "payment_method_types": ["wechat_pay"],
+            "payment_method_options": {
                 'wechat_pay': {
                     'client': 'web'  # 微信支付必须是 web 客户端
                 }
             },
-            line_items=[{
+            "line_items": [{
                 'price_data': {
                     'currency': 'gbp',
                     'product_data': {
@@ -1657,12 +1657,12 @@ async def create_wechat_checkout_session(
                 },
                 'quantity': 1,
             }],
-            mode='payment',
-            success_url=success_url,
-            cancel_url=cancel_url,
+            "mode": "payment",
+            "success_url": success_url,
+            "cancel_url": cancel_url,
             # 尽量减少表单输入
-            customer_creation="if_required",
-            metadata={
+            "customer_creation": "if_required",
+            "metadata": {
                 'task_id': str(task_id),
                 'user_id': str(current_user.id),
                 'taker_id': str(task.taker_id),
@@ -1673,7 +1673,7 @@ async def create_wechat_checkout_session(
                 'application_fee': str(application_fee_pence),
                 'payment_type': 'wechat_checkout',
             },
-            expires_at=int((datetime.now(timezone.utc) + timedelta(minutes=30)).timestamp()),
+            "expires_at": int((datetime.now(timezone.utc) + timedelta(minutes=30)).timestamp()),
         }
         # 传 Customer 可预填姓名/邮箱；否则传 customer_email
         if customer_id:
