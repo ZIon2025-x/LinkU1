@@ -213,15 +213,15 @@ struct SettingsView: View {
             .sink(
                 receiveCompletion: { result in
                     isDeletingAccount = false
-                    if case .failure = result {
-                    } else {
-                        // 删除成功，登出并返回登录页面
-                        appState.logout()
+                    if case .failure(let error) = result {
+                        // 删除失败，显示错误
+                        Logger.error("删除账户失败: \(error)", category: .api)
                     }
+                    // 注意：成功时不在这里调用 logout，由 receiveValue 处理
                 },
-                receiveValue: { _ in
-                    // 删除成功
-                    appState.logout()
+                receiveValue: { [weak appState] _ in
+                    // 删除成功，登出并返回登录页面
+                    appState?.logout()
                 }
             )
             .store(in: &cancellables)

@@ -293,6 +293,7 @@ struct AccountOnboardingControllerWrapper: UIViewControllerRepresentable {
         // 创建容器视图控制器来持有和展示 AccountOnboardingController
         let containerVC = ContainerViewController()
         containerVC.accountOnboardingController = controller
+        containerVC.coordinator = context.coordinator
         
         return containerVC
     }
@@ -308,12 +309,46 @@ struct AccountOnboardingControllerWrapper: UIViewControllerRepresentable {
     /// 容器视图控制器，用于展示 AccountOnboardingController
     class ContainerViewController: UIViewController {
         var accountOnboardingController: AccountOnboardingController?
+        var coordinator: Coordinator?
+        private var hasPresented = false
+        
+        override func viewDidLoad() {
+            super.viewDidLoad()
+            // 设置背景色，避免闪烁
+            view.backgroundColor = UIColor.systemBackground
+        }
         
         override func viewDidAppear(_ animated: Bool) {
             super.viewDidAppear(animated)
             
-            // 在视图出现后展示 AccountOnboardingController
-            if let controller = accountOnboardingController {
+            // 防止重复展示
+            guard !hasPresented else { return }
+            hasPresented = true
+            
+            // 延迟一帧展示，确保视图层级已完全建立
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { [weak self] in
+                guard let self = self,
+                      let controller = self.accountOnboardingController else {
+                    self?.coordinator?.onError("无法初始化收款账户设置")
+                    return
+                }
+                
+                // 检查视图控制器是否在有效的窗口层级中
+                guard self.view.window != nil else {
+                    Logger.warning("ContainerViewController 不在窗口层级中，延迟展示", category: .api)
+                    // 再次延迟尝试
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { [weak self] in
+                        guard let self = self,
+                              let controller = self.accountOnboardingController,
+                              self.view.window != nil else {
+                            self?.coordinator?.onError("收款账户设置界面加载失败，请重试")
+                            return
+                        }
+                        controller.present(from: self)
+                    }
+                    return
+                }
+                
                 controller.present(from: self)
             }
         }
@@ -384,13 +419,14 @@ class StripeConnectOnboardingViewModel: ObservableObject {
         isLoading = true
         error = nil
         
-        // 先检查账户状态
+        // 先检查账户状态（后端会返回 client_secret，如果需要 onboarding）
         struct StatusResponse: Codable {
             let account_id: String?
             let details_submitted: Bool
             let charges_enabled: Bool
             let payouts_enabled: Bool
             let needs_onboarding: Bool
+            let client_secret: String?  // 后端已创建的 onboarding session
         }
         
         apiService.request(StatusResponse.self, "/api/stripe/connect/account/status", method: "GET")
@@ -412,8 +448,15 @@ class StripeConnectOnboardingViewModel: ObservableObject {
                     if statusResponse.account_id != nil, 
                        statusResponse.details_submitted && statusResponse.charges_enabled {
                         self?.loadAccountDetails()
+                    } else if let clientSecret = statusResponse.client_secret, !clientSecret.isEmpty {
+                        // 后端已返回 client_secret（账户已存在但需要继续 onboarding）
+                        self?.isLoading = false
+                        self?.clientSecret = clientSecret
+                    } else if statusResponse.account_id == nil {
+                        // 账户不存在，需要创建
+                        self?.createOnboardingSession()
                     } else {
-                        // 真正没有账户时才创建 onboarding session
+                        // 账户存在但没有 client_secret（异常情况），尝试创建 onboarding session
                         self?.createOnboardingSession()
                     }
                 }

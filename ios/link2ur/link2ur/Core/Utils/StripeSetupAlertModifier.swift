@@ -9,7 +9,8 @@ struct StripeSetupAlertModifier: ViewModifier {
     
     func body(content: Content) -> some View {
         content
-            .onChange(of: shouldPromptStripeSetup) { _, newValue in
+            .onChange(of: shouldPromptStripeSetup) { newValue in
+                // 兼容 iOS 16 及以下版本的 onChange API
                 if newValue {
                     showAlert = true
                 }
@@ -29,7 +30,19 @@ struct StripeSetupAlertModifier: ViewModifier {
                 Text(LocalizationKey.paymentPleaseSetupMessage.localized)
             }
             .sheet(isPresented: $showStripeOnboarding) {
-                StripeConnectOnboardingView()
+                NavigationView {
+                    StripeConnectOnboardingView()
+                        .toolbar {
+                            ToolbarItem(placement: .navigationBarLeading) {
+                                Button(action: {
+                                    showStripeOnboarding = false
+                                }) {
+                                    Image(systemName: "xmark")
+                                        .foregroundColor(AppColors.textPrimary)
+                                }
+                            }
+                        }
+                }
             }
     }
 }

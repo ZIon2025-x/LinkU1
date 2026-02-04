@@ -593,30 +593,10 @@ public class AppState: ObservableObject {
         WebSocketService.shared.disconnectAndClear()
         
         // 登出时注销设备token（防止其他用户登录后收到当前用户的推送）
-        // 重要：必须在删除认证token之前完成API调用，否则认证会失败
-        if let deviceToken = UserDefaults.standard.string(forKey: "device_token") {
-            // 使用 DispatchGroup 确保 API 调用完成后再清除认证信息
-            let logoutGroup = DispatchGroup()
-            logoutGroup.enter()
-            
-            APIService.shared.unregisterDeviceToken(deviceToken) { success in
-                if success {
-                    Logger.debug("设备令牌已注销（登出时）", category: .api)
-                } else {
-                    Logger.warning("设备令牌注销失败（登出时），可能已登出或token不存在", category: .api)
-                }
-                logoutGroup.leave()
-            }
-            
-            // 最多等待 2 秒，避免阻塞主线程太久
-            // 如果超时，仍然继续登出流程
-            let waitResult = logoutGroup.wait(timeout: .now() + 2.0)
-            if waitResult == .timedOut {
-                Logger.warning("设备令牌注销超时，继续登出流程", category: .api)
-            }
-        }
+        // 注意：必须在清除认证信息之前发起 API 请求
+        let deviceToken = UserDefaults.standard.string(forKey: "device_token")
         
-        // 现在安全地删除认证 token
+        // 先清除本地认证信息和状态（让 UI 立即响应）
         _ = KeychainHelper.shared.delete(service: Constants.Keychain.service, account: Constants.Keychain.accessTokenKey)
         _ = KeychainHelper.shared.delete(service: Constants.Keychain.service, account: Constants.Keychain.refreshTokenKey)
         isAuthenticated = false
@@ -626,6 +606,21 @@ public class AppState: ObservableObject {
         
         // 登出时清除应用图标 Badge
         BadgeManager.shared.clearBadge()
+        
+        // 异步注销设备令牌（不阻塞 UI）
+        // 即使认证已清除，服务端可能仍然能处理这个请求（通过设备令牌本身识别）
+        // 即使失败也没关系，服务端会在下次推送失败时自动清理无效的令牌
+        if let token = deviceToken {
+            DispatchQueue.global(qos: .utility).async {
+                APIService.shared.unregisterDeviceToken(token) { success in
+                    if success {
+                        Logger.debug("设备令牌已注销（登出时）", category: .api)
+                    } else {
+                        Logger.debug("设备令牌注销请求已发送（登出时），结果无关紧要", category: .api)
+                    }
+                }
+            }
+        }
     }
     
     /// 更新应用图标 Badge

@@ -5,7 +5,6 @@
 
 import React, { useState, useEffect } from 'react';
 import { message } from 'antd';
-import { useLanguage } from '../contexts/LanguageContext';
 import { useLocalizedNavigation } from '../hooks/useLocalizedNavigation';
 import { getTaskExpertServiceDetail, applyForService, fetchCurrentUser, getServiceTimeSlotsPublic, applyToActivity } from '../api';
 import LoginModal from './LoginModal';
@@ -64,7 +63,6 @@ const ServiceDetailModal: React.FC<ServiceDetailModalProps> = ({
   serviceId,
   onApplySuccess,
 }) => {
-  const { t } = useLanguage();
   const { navigate: navigateLocalized } = useLocalizedNavigation();
   const [service, setService] = useState<ServiceDetail | null>(null);
   const [loading, setLoading] = useState(true);

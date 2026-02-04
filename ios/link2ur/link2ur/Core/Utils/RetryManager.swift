@@ -325,6 +325,9 @@ public final class RetryManager {
         configuration: NetworkRetryConfiguration = .default,
         onRetry: RetryStateCallback? = nil
     ) throws -> T {
+        // 运行时检查：禁止在主线程调用此方法，否则会阻塞 UI
+        assert(!Thread.isMainThread, "executeSync 不应在主线程调用，会导致 UI 卡顿。请使用异步版本 execute() 或在后台线程调用。")
+        
         var lastError: Error?
         
         for attempt in 1...configuration.maxAttempts {

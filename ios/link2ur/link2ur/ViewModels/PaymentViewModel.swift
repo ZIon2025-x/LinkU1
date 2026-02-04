@@ -593,20 +593,19 @@ class PaymentViewModel: NSObject, ObservableObject, ApplePayContextDelegate, STP
     // MARK: - STPAuthenticationContext
     
     /// 返回用于显示支付认证界面的视图控制器
-    nonisolated func authenticationPresentingViewController() -> UIViewController {
-        // 在主线程上同步获取顶层视图控制器
-        return DispatchQueue.main.sync {
-            if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
-               let rootViewController = windowScene.windows.first?.rootViewController {
-                var topViewController = rootViewController
-                while let presented = topViewController.presentedViewController {
-                    topViewController = presented
-                }
-                return topViewController
+    /// 注意：此方法会被 Stripe SDK 调用，需要返回当前的顶层视图控制器
+    func authenticationPresentingViewController() -> UIViewController {
+        // 由于类已标记 @MainActor，此方法会在主线程执行
+        if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+           let rootViewController = windowScene.windows.first?.rootViewController {
+            var topViewController = rootViewController
+            while let presented = topViewController.presentedViewController {
+                topViewController = presented
             }
-            // 如果无法获取，返回一个空的视图控制器（不应该发生）
-            return UIViewController()
+            return topViewController
         }
+        // 如果无法获取，返回一个空的视图控制器（不应该发生）
+        return UIViewController()
     }
     
     // MARK: - Apple Pay 原生实现
