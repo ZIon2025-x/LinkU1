@@ -9,15 +9,9 @@ export const WS_BASE_URL = isProduction
   ? process.env.REACT_APP_WS_URL || 'wss://api.link2ur.com'
   : 'ws://localhost:8000';
 
-/**
- * App Store 链接（用于「在 App 内打开」条中，未安装时跳转的下载页）。
- * 如何查找真实链接：
- * 1. 打开 https://appstoreconnect.apple.com → 我的 App → 选中 Link²Ur → 在「App 信息」里可看到「Apple ID」（一串数字）
- * 2. 或用 iPhone 在 App Store 搜索「Link²Ur」，打开你的 App 页面，点分享 →「拷贝链接」，即 https://apps.apple.com/app/idXXXXXXXX 或 https://apps.apple.com/app/link2ur/idXXXXXXXX
- * 配置方式：设置环境变量 REACT_APP_APP_STORE_URL，或把下面的默认值里的 id000000000 改成你的 Apple ID。
- */
+/** App Store 链接（用于「在 App 内打开」条中，未安装时跳转的下载页）。可通过环境变量 REACT_APP_APP_STORE_URL 覆盖。 */
 export const APP_STORE_URL =
-  process.env.REACT_APP_APP_STORE_URL || 'https://apps.apple.com/app/link2ur/id000000000';
+  process.env.REACT_APP_APP_STORE_URL || 'https://apps.apple.com/app/link-ur/id6758051985';
 
 // 调试信息
 
