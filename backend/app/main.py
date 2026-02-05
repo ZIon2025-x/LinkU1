@@ -792,10 +792,10 @@ async def startup_event():
                     # 检查 Celery Worker 是否在线
                     # 使用 ping() 方法检测 worker，更可靠
                     logger.info("🔍 正在检测 Celery Worker...")
-                    inspect = celery_app.control.inspect(timeout=10.0)
-                    
+                    celery_inspect = celery_app.control.inspect(timeout=10.0)
+
                     # 方法1: 使用 ping() 检测 worker
-                    ping_result = inspect.ping()
+                    ping_result = celery_inspect.ping()
                     if ping_result and isinstance(ping_result, dict) and len(ping_result) > 0:
                         worker_count = len(ping_result)
                         worker_names = list(ping_result.keys())
@@ -805,7 +805,7 @@ async def startup_event():
                     else:
                         # 方法2: 尝试使用 stats() 检测
                         logger.info("⚠️  ping() 未检测到 worker，尝试使用 stats()...")
-                        stats_result = inspect.stats()
+                        stats_result = celery_inspect.stats()
                         if stats_result and isinstance(stats_result, dict) and len(stats_result) > 0:
                             worker_count = len(stats_result)
                             worker_names = list(stats_result.keys())

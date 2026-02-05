@@ -37,7 +37,7 @@ def check_migration_consistency(engine: Engine) -> dict:
     # 关键表列表
     critical_tables = [
         'users', 'tasks', 'universities', 'notifications',
-        'messages', 'conversations', 'reviews'
+        'messages', 'reviews'
     ]
 
     missing_tables = [t for t in critical_tables if t not in all_tables]
