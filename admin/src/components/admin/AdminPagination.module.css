@@ -1,0 +1,131 @@
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  background: white;
+  border-top: 1px solid #e9ecef;
+  border-radius: 0 0 8px 8px;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.info {
+  font-size: 14px;
+  color: #6c757d;
+}
+
+.controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.button {
+  padding: 6px 16px;
+  background: white;
+  border: 1px solid #dee2e6;
+  border-radius: 6px;
+  font-size: 14px;
+  color: #495057;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.button:hover:not(:disabled) {
+  background: #f8f9fa;
+  border-color: #adb5bd;
+}
+
+.button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.pages {
+  display: flex;
+  gap: 4px;
+}
+
+.pageButton {
+  min-width: 36px;
+  height: 36px;
+  padding: 0 8px;
+  background: white;
+  border: 1px solid #dee2e6;
+  border-radius: 6px;
+  font-size: 14px;
+  color: #495057;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.pageButton:hover:not(:disabled):not(.active) {
+  background: #f8f9fa;
+  border-color: #adb5bd;
+}
+
+.pageButton.active {
+  background: #007bff;
+  border-color: #007bff;
+  color: white;
+  font-weight: 600;
+}
+
+.pageButton.ellipsis {
+  border: none;
+  cursor: default;
+  background: transparent;
+}
+
+.pageButton.ellipsis:hover {
+  background: transparent;
+}
+
+.pageSizeSelector {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: #495057;
+}
+
+.select {
+  padding: 6px 12px;
+  border: 1px solid #dee2e6;
+  border-radius: 6px;
+  font-size: 14px;
+  color: #495057;
+  background: white;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.select:hover {
+  border-color: #adb5bd;
+}
+
+.select:focus {
+  outline: none;
+  border-color: #007bff;
+  box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
+}
+
+@media (max-width: 768px) {
+  .pagination {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .info {
+    text-align: center;
+  }
+
+  .controls {
+    justify-content: center;
+  }
+
+  .pageSizeSelector {
+    justify-content: center;
+  }
+}

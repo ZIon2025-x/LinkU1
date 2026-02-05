@@ -1,0 +1,111 @@
+.tableContainer {
+  position: relative;
+  width: 100%;
+  background: white;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.tableWrapper {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.table.bordered {
+  border: 1px solid #e9ecef;
+}
+
+.thead {
+  background: #f8f9fa;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.thead th {
+  padding: 12px 16px;
+  font-weight: 600;
+  color: #495057;
+  border-bottom: 2px solid #dee2e6;
+  white-space: nowrap;
+  text-align: left;
+}
+
+.sorterIcon {
+  margin-left: 4px;
+  color: #adb5bd;
+  cursor: pointer;
+  user-select: none;
+}
+
+.sorterIcon:hover {
+  color: #495057;
+}
+
+.tbody td {
+  padding: 12px 16px;
+  border-bottom: 1px solid #e9ecef;
+  color: #495057;
+}
+
+.striped tbody tr:nth-child(even) {
+  background: #f8f9fa;
+}
+
+.hoverable tbody tr:hover {
+  background: #e9ecef;
+}
+
+.clickable {
+  cursor: pointer;
+}
+
+.emptyCell {
+  padding: 40px 16px !important;
+  text-align: center !important;
+  color: #adb5bd;
+  font-style: italic;
+}
+
+.loadingOverlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(255, 255, 255, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+
+.spinner {
+  padding: 12px 24px;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  font-weight: 500;
+  color: #495057;
+}
+
+.fixed-left {
+  position: sticky;
+  left: 0;
+  background: inherit;
+  z-index: 5;
+}
+
+.fixed-right {
+  position: sticky;
+  right: 0;
+  background: inherit;
+  z-index: 5;
+}
