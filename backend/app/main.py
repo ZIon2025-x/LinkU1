@@ -1001,7 +1001,14 @@ async def startup_event():
     try:
         from app.database import sync_engine
         from app.models import Base
-        
+
+        # 🔧 自动检测并修复迁移状态（如果启用）
+        try:
+            from app.auto_fix_migrations import run_auto_fix_if_needed
+            run_auto_fix_if_needed(sync_engine)
+        except Exception as e:
+            logger.warning(f"自动修复检查失败（继续启动）: {e}")
+
         logger.info("正在创建数据库表...")
         # 使用 checkfirst=True 避免重复创建已存在的对象
         # 注意：对于索引，checkfirst 可能不够完善，如果索引已存在会报错但不影响应用运行
