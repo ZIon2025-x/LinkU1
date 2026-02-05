@@ -103,19 +103,40 @@ export const CouponManagement: React.FC = () => {
 
   // 处理编辑
   const handleEdit = (coupon: Coupon) => {
-    modal.open({
-      ...coupon,
+    const formData: CouponForm = {
+      id: coupon.id,
+      code: coupon.code,
+      name: coupon.name,
+      description: coupon.description || '',
+      type: coupon.type,
+      discount_value: coupon.discount_value,
+      min_amount: coupon.min_amount,
+      max_discount: coupon.max_discount,
+      currency: coupon.currency,
+      total_quantity: coupon.total_quantity,
+      per_user_limit: coupon.per_user_limit,
+      per_device_limit: undefined,
+      per_ip_limit: undefined,
+      can_combine: coupon.can_combine,
+      combine_limit: 1,
+      apply_order: 0,
+      valid_from: coupon.valid_from,
+      valid_until: coupon.valid_until,
+      points_required: coupon.points_required,
+      eligibility_type: '',
+      eligibility_value: '',
+      per_day_limit: undefined,
+      per_user_limit_window: '',
+      per_user_per_window_limit: undefined,
+      vat_category: '',
       applicable_scenarios: coupon.applicable_scenarios || [],
       task_types: coupon.usage_conditions?.task_types || [],
       locations: coupon.usage_conditions?.locations || [],
       excluded_task_types: coupon.usage_conditions?.excluded_task_types || [],
       min_task_amount: coupon.usage_conditions?.min_task_amount,
       max_task_amount: coupon.usage_conditions?.max_task_amount,
-      eligibility_type: '',
-      eligibility_value: '',
-      per_user_limit_window: '',
-      vat_category: '',
-    } as CouponForm);
+    };
+    modal.open(formData);
   };
 
   // 表格列定义
