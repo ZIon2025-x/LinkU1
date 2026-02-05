@@ -1026,119 +1026,39 @@ async def startup_event():
 
         logger.info("正在创建数据库表...")
 
-        # 🔧 在创建表之前，清理可能残留的孤立索引
-        # 这很重要！因为 DROP TABLE CASCADE 可能不会删除所有索引
+        # 创建所有表
         try:
-            from sqlalchemy import text, inspect
-            inspector = inspect(sync_engine)
-            existing_tables = set(inspector.get_table_names())
-
-            if not existing_tables:  # 如果没有表，说明是全新数据库或刚删除了所有表
-                logger.info("检测到空数据库，清理可能残留的孤立索引...")
-
-                # 使用原始psycopg2连接确保autocommit立即生效
-                raw_conn = sync_engine.raw_connection()
+            Base.metadata.create_all(bind=sync_engine, checkfirst=True)
+        except Exception as e:
+            if "already exists" in str(e):
+                # 可能有残留的孤立索引，尝试清理后重试
+                logger.warning(f"表创建遇到已存在对象，尝试清理后重试: {e}")
                 try:
-                    raw_conn.autocommit = True
-                    cursor = raw_conn.cursor()
-
-                    # 使用底层系统表查找所有索引对象（包括孤立的）
-                    cursor.execute("""
-                        SELECT c.relname as index_name
-                        FROM pg_class c
-                        JOIN pg_namespace n ON n.oid = c.relnamespace
-                        WHERE c.relkind = 'i'  -- 'i' = index
-                        AND n.nspname = 'public'
-                        AND c.relname NOT LIKE 'pg_%'  -- 排除系统索引
-                        AND c.relname NOT LIKE '%_pkey'  -- 排除主键索引
-                    """)
-                    orphan_indexes = [row[0] for row in cursor.fetchall()]
-
-                    if orphan_indexes:
-                        logger.info(f"发现 {len(orphan_indexes)} 个索引对象，正在删除...")
-                        deleted_count = 0
-                        for idx_name in orphan_indexes:
+                    raw_conn = sync_engine.raw_connection()
+                    try:
+                        raw_conn.autocommit = True
+                        cursor = raw_conn.cursor()
+                        cursor.execute("""
+                            SELECT c.relname FROM pg_class c
+                            JOIN pg_namespace n ON n.oid = c.relnamespace
+                            WHERE c.relkind = 'i' AND n.nspname = 'public'
+                            AND c.relname NOT LIKE 'pg_%%'
+                        """)
+                        for (idx_name,) in cursor.fetchall():
                             try:
                                 cursor.execute(f'DROP INDEX IF EXISTS "{idx_name}" CASCADE')
-                                deleted_count += 1
-                                logger.info(f"  ✓ 已删除索引: {idx_name}")
-                            except Exception as e:
-                                logger.warning(f"  ✗ 删除索引 {idx_name} 失败: {e}")
-
-                        logger.info(f"✅ 已清理 {deleted_count} 个孤立索引")
-                        # 清空连接池确保后续操作使用新连接
+                                logger.info(f"  ✓ 已删除孤立索引: {idx_name}")
+                            except Exception:
+                                pass
                         cursor.close()
+                    finally:
                         raw_conn.close()
-                        sync_engine.dispose()
-                    else:
-                        logger.info("未发现孤立索引")
-                        cursor.close()
-                        raw_conn.close()
-                except Exception as cleanup_err:
-                    raw_conn.close()
+                    sync_engine.dispose()
+                    Base.metadata.create_all(bind=sync_engine, checkfirst=True)
+                except Exception as retry_err:
+                    logger.error(f"重试创建表仍然失败: {retry_err}")
                     raise
-        except Exception as e:
-            logger.warning(f"清理孤立索引时出错（继续）: {e}")
-
-        # 创建所有表（带重试机制处理孤立对象）
-        max_retries = 3
-        for attempt in range(max_retries):
-            try:
-                Base.metadata.create_all(bind=sync_engine, checkfirst=True)
-                break  # 成功则跳出
-            except Exception as e:
-                error_str = str(e)
-                # 检查是否是"对象已存在"错误
-                if "already exists" in error_str and attempt < max_retries - 1:
-                    # 从错误消息中提取对象名称
-                    import re
-                    match = re.search(r'relation "([^"]+)" already exists', error_str)
-                    if match:
-                        obj_name = match.group(1)
-                        logger.warning(f"⚠️  检测到孤立对象: {obj_name}，尝试删除...")
-
-                        try:
-                            # 使用原始psycopg2连接确保立即提交
-                            raw_conn = sync_engine.raw_connection()
-                            try:
-                                raw_conn.autocommit = True  # 确保立即生效
-                                cursor = raw_conn.cursor()
-
-                                try:
-                                    # 尝试作为索引删除
-                                    cursor.execute(f'DROP INDEX IF EXISTS "{obj_name}" CASCADE')
-                                    logger.info(f"  ✓ 已删除孤立索引: {obj_name}")
-                                    deleted = True
-                                except Exception as idx_err:
-                                    # 尝试作为表删除
-                                    try:
-                                        cursor.execute(f'DROP TABLE IF EXISTS "{obj_name}" CASCADE')
-                                        logger.info(f"  ✓ 已删除孤立表: {obj_name}")
-                                        deleted = True
-                                    except Exception as tbl_err:
-                                        logger.warning(f"  ✗ 删除失败: 索引错误={idx_err}, 表错误={tbl_err}")
-                                        deleted = False
-                                finally:
-                                    cursor.close()
-                            finally:
-                                raw_conn.close()
-
-                            if deleted:
-                                # 清空连接池以确保新连接看到更改
-                                sync_engine.dispose()
-
-                                # 等待一小段时间让数据库完全处理DROP操作
-                                import time
-                                time.sleep(0.5)
-
-                                logger.info(f"🔄 重试创建表（尝试 {attempt + 2}/{max_retries}）...")
-                                continue  # 重试
-                            else:
-                                raise  # 删除失败，不重试
-                        except Exception as cleanup_err:
-                            logger.error(f"清理孤立对象失败: {cleanup_err}")
-
-                # 如果不是"已存在"错误，或者是最后一次尝试，则抛出异常
+            else:
                 raise
 
         # 验证表是否创建成功

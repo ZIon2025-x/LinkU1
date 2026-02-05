@@ -1,15 +1,15 @@
 -- ===========================================
+-- ⚠️  已废弃 - 请勿用于部署！
+-- ===========================================
+-- 此脚本仅供参考，不再维护。
+-- 权威 schema 定义在 app/models.py 中。
+-- 全新部署使用 Base.metadata.create_all() + migrations/*.sql。
+-- 此文件与 models.py 已严重不同步，直接使用可能导致冲突。
+-- ===========================================
+--
+-- (原始说明)
 -- Link²Ur 数据库完整初始化脚本
 -- 用于在 pgAdmin 中执行
--- ===========================================
--- 
--- 使用说明：
--- 1. 在 pgAdmin 中连接到 PostgreSQL 服务器
--- 2. 选择或创建数据库 linku_db
--- 3. 打开 Query Tool (F5)
--- 4. 复制粘贴此脚本并执行
---
--- 注意：此脚本使用 IF NOT EXISTS，可以安全地重复执行
 -- ===========================================
 
 -- 设置时区
@@ -513,7 +513,7 @@ CREATE INDEX IF NOT EXISTS ix_reviews_created_at ON reviews(created_at);
 
 -- 通知表索引
 CREATE INDEX IF NOT EXISTS ix_notifications_user_id ON notifications(user_id);
-CREATE INDEX IF NOT EXISTS ix_notifications_type ON notifications(type);
+-- 注意: ix_notifications_type 在 models.py 中定义为复合索引 (type, related_id)，此处已删除单列版本避免冲突
 CREATE INDEX IF NOT EXISTS ix_notifications_is_read ON notifications(is_read);
 CREATE INDEX IF NOT EXISTS ix_notifications_created_at ON notifications(created_at);
 CREATE INDEX IF NOT EXISTS ix_notifications_user ON notifications(user_id, created_at);

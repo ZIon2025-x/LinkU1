@@ -452,7 +452,16 @@ def run_migrations(engine: Engine, force: bool = False):
     
     # 检查并修复错误标记的迁移（迁移记录存在但实际未执行）
     check_and_fix_broken_migrations(engine)
-    
+
+    # 处理重命名的迁移文件（确保已执行旧名称的环境不会重复执行新名称）
+    RENAMED_MIGRATIONS = {
+        "037_add_activity_favorites.sql": "046_add_activity_favorites.sql",
+    }
+    for old_name, new_name in RENAMED_MIGRATIONS.items():
+        if is_migration_executed(engine, old_name) and not is_migration_executed(engine, new_name):
+            mark_migration_executed(engine, new_name, 0)
+            logger.info(f"迁移记录已迁移: {old_name} -> {new_name}")
+
     # 获取所有 SQL 文件，按文件名排序
     sql_files = sorted(MIGRATIONS_DIR.glob("*.sql"))
     

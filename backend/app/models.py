@@ -285,10 +285,10 @@ class UserTaskInteraction(Base):
     __tablename__ = "user_task_interactions"
     
     id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(String(8), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
-    task_id = Column(Integer, ForeignKey("tasks.id", ondelete="CASCADE"), nullable=False, index=True)
-    interaction_type = Column(String(20), nullable=False, index=True)  # view, click, apply, accept, complete, skip
-    interaction_time = Column(DateTime(timezone=True), default=get_utc_time, index=True)
+    user_id = Column(String(8), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    task_id = Column(Integer, ForeignKey("tasks.id", ondelete="CASCADE"), nullable=False)
+    interaction_type = Column(String(20), nullable=False)  # view, click, apply, accept, complete, skip
+    interaction_time = Column(DateTime(timezone=True), default=get_utc_time)
     duration_seconds = Column(Integer, nullable=True)  # 浏览时长（秒）
     device_type = Column(String(20), nullable=True)  # mobile, desktop, tablet
     interaction_metadata = Column("metadata", JSONB, nullable=True)  # 额外信息（如来源页面、推荐原因等），数据库列名保持为metadata
@@ -306,8 +306,8 @@ class RecommendationFeedback(Base):
     __tablename__ = "recommendation_feedback"
     
     id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(String(8), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
-    task_id = Column(Integer, ForeignKey("tasks.id", ondelete="CASCADE"), nullable=False, index=True)
+    user_id = Column(String(8), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    task_id = Column(Integer, ForeignKey("tasks.id", ondelete="CASCADE"), nullable=False)
     recommendation_id = Column(String(100), nullable=True)  # 推荐批次ID
     feedback_type = Column(String(20), nullable=False)  # like, dislike, not_interested, helpful（索引在__table_args__中定义）
     feedback_time = Column(DateTime(timezone=True), default=get_utc_time)  # 索引在__table_args__中定义
@@ -950,7 +950,7 @@ class Coupon(Base):
     __tablename__ = "coupons"
     
     id = Column(BigInteger, primary_key=True, index=True)
-    code = Column(String(50), nullable=False, index=True)  # 优惠券代码（不区分大小写唯一）
+    code = Column(String(50), nullable=False)  # 优惠券代码（不区分大小写唯一）
     name = Column(String(100), nullable=False)
     description = Column(Text, nullable=True)
     type = Column(String(20), nullable=False)  # fixed_amount, percentage
@@ -1298,15 +1298,15 @@ class VIPSubscription(Base):
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(String(8), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     product_id = Column(String(100), nullable=False)
-    transaction_id = Column(String(255), unique=True, nullable=False, index=True)
-    original_transaction_id = Column(String(255), nullable=True, index=True)
+    transaction_id = Column(String(255), unique=True, nullable=False)
+    original_transaction_id = Column(String(255), nullable=True)
     transaction_jws = Column(Text, nullable=False)
     purchase_date = Column(DateTime(timezone=True), nullable=False)
     expires_date = Column(DateTime(timezone=True), nullable=True)
     is_trial_period = Column(Boolean, default=False)
     is_in_intro_offer_period = Column(Boolean, default=False)
     environment = Column(String(20), default="Production")
-    status = Column(String(20), default="active", index=True)
+    status = Column(String(20), default="active")
     auto_renew_status = Column(Boolean, default=True)
     cancellation_reason = Column(String(50), nullable=True)
     refunded_at = Column(DateTime(timezone=True), nullable=True)
@@ -1348,8 +1348,8 @@ class DeviceToken(Base):
     __tablename__ = "device_tokens"
     
     id = Column(BigInteger, primary_key=True, index=True)
-    user_id = Column(String(8), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
-    device_token = Column(String(255), nullable=False, index=True)  # APNs 设备令牌
+    user_id = Column(String(8), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    device_token = Column(String(255), nullable=False)  # APNs 设备令牌
     platform = Column(String(20), nullable=False, default="ios")  # ios, android
     device_id = Column(String(255), nullable=True)  # 设备唯一标识（可选）
     app_version = Column(String(20), nullable=True)  # 应用版本
@@ -2892,7 +2892,7 @@ class WebhookEvent(Base):
     __tablename__ = "webhook_events"
     
     id = Column(BigInteger, primary_key=True, index=True)
-    event_id = Column(String(255), unique=True, nullable=False, index=True)  # Stripe 事件 ID（唯一索引防止重复处理）
+    event_id = Column(String(255), unique=True, nullable=False)  # Stripe 事件 ID（唯一索引防止重复处理）
     event_type = Column(String(100), nullable=False, index=True)  # 事件类型
     livemode = Column(Boolean, default=False)  # 是否为生产模式
     processed = Column(Boolean, default=False, index=True)  # 是否已处理
@@ -2938,7 +2938,7 @@ class TaskTranslation(Base):
     __tablename__ = "task_translations"
     
     id = Column(Integer, primary_key=True, index=True)
-    task_id = Column(Integer, ForeignKey("tasks.id", ondelete="CASCADE"), nullable=False, index=True)  # 关联的任务ID
+    task_id = Column(Integer, ForeignKey("tasks.id", ondelete="CASCADE"), nullable=False)  # 关联的任务ID
     field_type = Column(String(20), nullable=False)  # 'title' 或 'description'
     original_text = Column(Text, nullable=False)  # 原始文本
     translated_text = Column(Text, nullable=False)  # 翻译后的文本
@@ -2965,7 +2965,7 @@ class FaqSection(Base):
     __tablename__ = "faq_sections"
 
     id = Column(Integer, primary_key=True, index=True)
-    key = Column(String(80), unique=True, nullable=False, index=True)
+    key = Column(String(80), unique=True, nullable=False)
     title_zh = Column(String(200), nullable=False)
     title_en = Column(String(200), nullable=False)
     sort_order = Column(Integer, default=0, nullable=False)
@@ -2982,7 +2982,7 @@ class FaqItem(Base):
     __tablename__ = "faq_items"
 
     id = Column(Integer, primary_key=True, index=True)
-    section_id = Column(Integer, ForeignKey("faq_sections.id", ondelete="CASCADE"), nullable=False, index=True)
+    section_id = Column(Integer, ForeignKey("faq_sections.id", ondelete="CASCADE"), nullable=False)
     question_zh = Column(Text, nullable=False)
     question_en = Column(Text, nullable=False)
     answer_zh = Column(Text, nullable=False)
@@ -3006,8 +3006,8 @@ class LegalDocument(Base):
     __tablename__ = "legal_documents"
 
     id = Column(Integer, primary_key=True, index=True)
-    type = Column(String(20), nullable=False, index=True)  # privacy | terms | cookie
-    lang = Column(String(10), nullable=False, index=True)  # zh | en
+    type = Column(String(20), nullable=False)  # privacy | terms | cookie
+    lang = Column(String(10), nullable=False)  # zh | en
     content_json = Column(JSONB, nullable=False, default={}, server_default="{}")
     version = Column(String(50), nullable=True)
     effective_at = Column(Date, nullable=True)
@@ -3027,7 +3027,7 @@ class OAuthClient(Base):
     __tablename__ = "oauth_client"
 
     id = Column(Integer, primary_key=True, index=True)
-    client_id = Column(String(64), unique=True, nullable=False, index=True)
+    client_id = Column(String(64), unique=True, nullable=False)
     client_secret_hash = Column(String(128), nullable=True)
     client_name = Column(String(255), nullable=False)
     client_uri = Column(String(512), nullable=True)
@@ -3046,7 +3046,7 @@ class OAuthRefreshToken(Base):
     __tablename__ = "oauth_refresh_token"
 
     id = Column(Integer, primary_key=True, index=True)
-    token = Column(String(256), unique=True, nullable=False, index=True)
+    token = Column(String(256), unique=True, nullable=False)
     client_id = Column(String(64), nullable=False, index=True)
     user_id = Column(String(8), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     scope = Column(String(512), nullable=False)

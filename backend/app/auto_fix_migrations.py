@@ -105,104 +105,62 @@ def reset_migration_records(engine: Engine, drop_tables: bool = False):
             if drop_tables:
                 logger.warning("🗑️  开始删除所有数据库对象...")
 
-                # 先删除所有函数和触发器（避免依赖问题）
+                # 使用 DROP SCHEMA CASCADE 一步清空所有对象（表、索引、序列、函数、类型等）
+                # 这比逐表删除更可靠，不会遗漏孤立的索引或其他对象
                 try:
-                    # 获取所有自定义函数
-                    functions_result = conn.execute(text("""
-                        SELECT proname, oidvectortypes(proargtypes) as argtypes
-                        FROM pg_proc INNER JOIN pg_namespace ns ON (pg_proc.pronamespace = ns.oid)
-                        WHERE ns.nspname = 'public' AND prokind = 'f'
-                    """))
-                    functions = functions_result.fetchall()
-
-                    for func_name, arg_types in functions:
-                        try:
-                            # 删除函数（包括所有重载版本）
-                            conn.execute(text(f'DROP FUNCTION IF EXISTS "{func_name}"({arg_types}) CASCADE'))
-                            logger.debug(f"  已删除函数: {func_name}({arg_types})")
-                        except Exception as e:
-                            logger.debug(f"  删除函数失败（可能不存在）: {e}")
-
+                    conn.execute(text("DROP SCHEMA public CASCADE"))
+                    conn.execute(text("CREATE SCHEMA public"))
+                    conn.execute(text("GRANT ALL ON SCHEMA public TO public"))
                     conn.commit()
-                except Exception as e:
-                    logger.warning(f"删除函数时出错（继续）: {e}")
+                    logger.info("✅ 已重置 public schema（所有对象已删除）")
+                except Exception as schema_err:
+                    logger.warning(f"DROP SCHEMA 方式失败，回退到逐对象删除: {schema_err}")
                     conn.rollback()
 
-                # 获取所有表
-                tables_result = conn.execute(text("""
-                    SELECT tablename FROM pg_tables
-                    WHERE schemaname = 'public'
-                """))
-                all_tables = [row[0] for row in tables_result.fetchall()]
+                    # Fallback: 逐表删除
+                    try:
+                        tables_result = conn.execute(text("""
+                            SELECT tablename FROM pg_tables
+                            WHERE schemaname = 'public'
+                        """))
+                        all_tables = [row[0] for row in tables_result.fetchall()]
 
-                if all_tables:
-                    logger.info(f"找到 {len(all_tables)} 个表")
+                        for table in all_tables:
+                            try:
+                                conn.execute(text(f'DROP TABLE IF EXISTS "{table}" CASCADE'))
+                            except Exception as e:
+                                logger.warning(f"  删除表 {table} 失败: {e}")
 
-                    # 使用 CASCADE 删除所有表（包括依赖关系、索引、序列等）
-                    for table in all_tables:
-                        try:
-                            conn.execute(text(f'DROP TABLE IF EXISTS "{table}" CASCADE'))
-                            logger.debug(f"  已删除表: {table}")
-                        except Exception as e:
-                            logger.warning(f"  删除表 {table} 失败: {e}")
-
-                    conn.commit()
-                    logger.info(f"✅ 已删除 {len(all_tables)} 个表及其依赖对象")
-                else:
-                    logger.info("没有找到需要删除的表")
-
-                # 清理剩余的序列
-                try:
-                    sequences_result = conn.execute(text("""
-                        SELECT sequence_name FROM information_schema.sequences
-                        WHERE sequence_schema = 'public'
-                    """))
-                    sequences = [row[0] for row in sequences_result.fetchall()]
-
-                    for seq in sequences:
-                        try:
-                            conn.execute(text(f'DROP SEQUENCE IF EXISTS "{seq}" CASCADE'))
-                            logger.debug(f"  已删除序列: {seq}")
-                        except:
-                            pass
-
-                    if sequences:
-                        conn.commit()
-                        logger.info(f"✅ 已删除 {len(sequences)} 个序列")
-                except Exception as e:
-                    logger.debug(f"清理序列时出错（可能不存在）: {e}")
-                    conn.rollback()
-
-                # 清理所有索引（包括孤立的）- 使用 pg_class 而不是 pg_indexes
-                # pg_indexes 只显示存在表的索引，而 pg_class 显示所有索引对象
-                try:
-                    indexes_result = conn.execute(text("""
-                        SELECT c.relname as index_name
-                        FROM pg_class c
-                        JOIN pg_namespace n ON n.oid = c.relnamespace
-                        WHERE c.relkind = 'i'  -- 'i' = index
-                        AND n.nspname = 'public'
-                        AND c.relname NOT LIKE 'pg_%'  -- 排除系统索引
-                        AND c.relname NOT LIKE '%_pkey'  -- 排除主键索引
-                    """))
-                    indexes = [row[0] for row in indexes_result.fetchall()]
-
-                    if indexes:
-                        logger.info(f"发现 {len(indexes)} 个索引对象，正在删除...")
-                        dropped_count = 0
-                        for idx_name in indexes:
+                        # 清理孤立索引
+                        indexes_result = conn.execute(text("""
+                            SELECT c.relname FROM pg_class c
+                            JOIN pg_namespace n ON n.oid = c.relnamespace
+                            WHERE c.relkind = 'i' AND n.nspname = 'public'
+                            AND c.relname NOT LIKE 'pg_%%'
+                        """))
+                        for (idx_name,) in indexes_result.fetchall():
                             try:
                                 conn.execute(text(f'DROP INDEX IF EXISTS "{idx_name}" CASCADE'))
-                                logger.info(f"  ✓ 已删除索引: {idx_name}")
-                                dropped_count += 1
-                            except Exception as e:
-                                logger.warning(f"  ✗ 删除索引 {idx_name} 失败: {e}")
+                            except Exception:
+                                pass
+
+                        # 清理自定义 ENUM 类型
+                        types_result = conn.execute(text("""
+                            SELECT t.typname FROM pg_type t
+                            JOIN pg_namespace n ON t.typnamespace = n.oid
+                            WHERE n.nspname = 'public' AND t.typtype = 'e'
+                        """))
+                        for (type_name,) in types_result.fetchall():
+                            try:
+                                conn.execute(text(f'DROP TYPE IF EXISTS "{type_name}" CASCADE'))
+                            except Exception:
+                                pass
 
                         conn.commit()
-                        logger.info(f"✅ 已删除 {dropped_count} 个索引对象")
-                except Exception as e:
-                    logger.warning(f"清理索引时出错: {e}")
-                    conn.rollback()
+                        logger.info("✅ 已通过逐对象方式完成清理")
+                    except Exception as fallback_err:
+                        logger.error(f"逐对象清理也失败: {fallback_err}")
+                        conn.rollback()
 
                 return True
 
