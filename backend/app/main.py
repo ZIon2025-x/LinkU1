@@ -1025,34 +1025,52 @@ async def startup_event():
             logger.warning(f"自动修复检查失败（继续启动）: {e}")
 
         logger.info("正在创建数据库表...")
-        # 使用 checkfirst=True 避免重复创建已存在的对象
-        # 注意：对于索引，checkfirst 可能不够完善，如果索引已存在会报错但不影响应用运行
+
+        # 🔧 在创建表之前，清理可能残留的孤立索引
+        # 这很重要！因为 DROP TABLE CASCADE 可能不会删除所有索引
         try:
-            Base.metadata.create_all(bind=sync_engine, checkfirst=True)
-            logger.info("数据库表创建完成！")
+            from sqlalchemy import text, inspect
+            inspector = inspect(sync_engine)
+            existing_tables = set(inspector.get_table_names())
+
+            if not existing_tables:  # 如果没有表，说明是全新数据库或刚删除了所有表
+                logger.info("检测到空数据库，清理可能残留的孤立索引...")
+                with sync_engine.connect() as conn:
+                    # 获取所有索引
+                    result = conn.execute(text("""
+                        SELECT indexname FROM pg_indexes
+                        WHERE schemaname = 'public'
+                    """))
+                    orphan_indexes = [row[0] for row in result.fetchall()]
+
+                    if orphan_indexes:
+                        logger.info(f"发现 {len(orphan_indexes)} 个孤立索引，正在删除...")
+                        for idx_name in orphan_indexes:
+                            try:
+                                conn.execute(text(f'DROP INDEX IF EXISTS "{idx_name}" CASCADE'))
+                            except Exception as e:
+                                logger.debug(f"删除索引 {idx_name} 失败（忽略）: {e}")
+                        conn.commit()
+                        logger.info(f"✅ 已清理 {len(orphan_indexes)} 个孤立索引")
         except Exception as e:
-            # 如果是索引/表重复错误，记录警告但不阻止应用启动
-            error_str = str(e).lower()
-            if any(keyword in error_str for keyword in [
-                "already exists", 
-                "duplicatetable", 
-                "duplicate", 
-                "relation.*already exists"
-            ]):
-                logger.warning(f"数据库表/索引可能已存在（这是正常的，不影响应用运行）: {str(e)[:200]}")
-            else:
-                logger.error(f"数据库初始化失败: {e}")
-                import traceback
-                traceback.print_exc()
-                # 对于非重复错误，仍然抛出异常
-                raise
-        
+            logger.debug(f"清理孤立索引时出错（继续）: {e}")
+
+        # 创建所有表
+        Base.metadata.create_all(bind=sync_engine, checkfirst=True)
+
         # 验证表是否创建成功
-        from sqlalchemy import inspect
         inspector = inspect(sync_engine)
-        tables = inspector.get_table_names()
-        logger.info(f"已创建的表: {tables}")
-        
+        created_tables = inspector.get_table_names()
+        logger.info(f"✅ 数据库表创建完成！已创建 {len(created_tables)} 个表")
+
+        if not created_tables:
+            logger.error("⚠️ 警告：没有创建任何表！请检查模型导入和数据库连接")
+        else:
+            # 列出一些核心表以确认
+            core_tables = ['users', 'tasks', 'universities', 'notifications']
+            existing_core = [t for t in core_tables if t in created_tables]
+            logger.info(f"核心表状态: {len(existing_core)}/{len(core_tables)} 已创建 {existing_core}")
+
         # 自动执行数据库迁移（如果启用）
         auto_migrate = os.getenv("AUTO_MIGRATE", "true").lower() == "true"
         if auto_migrate:
