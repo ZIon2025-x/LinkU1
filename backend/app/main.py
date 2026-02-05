@@ -1003,12 +1003,18 @@ async def startup_event():
         # 必须明确导入所有模型类，确保它们被注册到 Base.metadata
         # 只导入模块不够，必须导入具体的类
         from app.models import (
-            Base, User, Task, Review, Message, Notification, Conversation,
+            Base, User, Task, Review, Message, Notification,
             University, FeaturedTaskExpert, AdminUser, CustomerService,
             TaskHistory, UserTaskInteraction, RecommendationFeedback,
             TaskDispute, RefundRequest, TaskCancelRequest, AdminRequest,
             AdminChatMessage, StaffNotification, SystemSettings,
-            CustomerServiceChat, CustomerServiceMessage
+            CustomerServiceChat, CustomerServiceMessage,
+            # 更多核心表
+            Activity, DeviceToken, TaskTranslation, FleaMarketItem,
+            ServiceTimeSlot, PaymentHistory, PaymentTransfer, WebhookEvent,
+            Banner, ForumCategory, ForumPost, ForumReply, CustomLeaderboard,
+            StudentVerification, VIPSubscription, LegalDocument, FaqSection, FaqItem,
+            OAuthClient, TaskExpert, TaskExpertService, Coupon, PointsAccount
         )
 
         # 🔧 自动检测并修复迁移状态（如果启用）
