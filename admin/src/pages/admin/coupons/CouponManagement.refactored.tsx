@@ -16,7 +16,7 @@ export const CouponManagement: React.FC = () => {
       const response = await getCoupons({
         page,
         limit: pageSize,
-        status: filters.status as 'active' | 'inactive' | 'expired' | undefined,
+        status: filters?.status as 'active' | 'inactive' | 'expired' | undefined,
       });
       return {
         data: response.data || [],
