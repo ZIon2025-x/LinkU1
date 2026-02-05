@@ -1036,43 +1036,47 @@ async def startup_event():
             if not existing_tables:  # 如果没有表，说明是全新数据库或刚删除了所有表
                 logger.info("检测到空数据库，清理可能残留的孤立索引...")
 
-                # 使用现有引擎的连接，确保使用相同的认证信息
-                with sync_engine.connect() as conn:
-                    # 开始独立事务
-                    trans = conn.begin()
-                    try:
-                        # 使用底层系统表查找所有索引对象（包括孤立的）
-                        # pg_indexes 视图可能不显示孤立索引，需要直接查 pg_class
-                        result = conn.execute(text("""
-                            SELECT c.relname as index_name
-                            FROM pg_class c
-                            JOIN pg_namespace n ON n.oid = c.relnamespace
-                            WHERE c.relkind = 'i'  -- 'i' = index
-                            AND n.nspname = 'public'
-                            AND c.relname NOT LIKE 'pg_%'  -- 排除系统索引
-                            AND c.relname NOT LIKE '%_pkey'  -- 排除主键索引
-                        """))
-                        orphan_indexes = [row[0] for row in result.fetchall()]
+                # 使用原始psycopg2连接确保autocommit立即生效
+                raw_conn = sync_engine.raw_connection()
+                try:
+                    raw_conn.autocommit = True
+                    cursor = raw_conn.cursor()
 
-                        if orphan_indexes:
-                            logger.info(f"发现 {len(orphan_indexes)} 个索引对象，正在删除...")
-                            deleted_count = 0
-                            for idx_name in orphan_indexes:
-                                try:
-                                    conn.execute(text(f'DROP INDEX IF EXISTS "{idx_name}" CASCADE'))
-                                    deleted_count += 1
-                                    logger.info(f"  ✓ 已删除索引: {idx_name}")
-                                except Exception as e:
-                                    logger.warning(f"  ✗ 删除索引 {idx_name} 失败: {e}")
+                    # 使用底层系统表查找所有索引对象（包括孤立的）
+                    cursor.execute("""
+                        SELECT c.relname as index_name
+                        FROM pg_class c
+                        JOIN pg_namespace n ON n.oid = c.relnamespace
+                        WHERE c.relkind = 'i'  -- 'i' = index
+                        AND n.nspname = 'public'
+                        AND c.relname NOT LIKE 'pg_%'  -- 排除系统索引
+                        AND c.relname NOT LIKE '%_pkey'  -- 排除主键索引
+                    """)
+                    orphan_indexes = [row[0] for row in cursor.fetchall()]
 
-                            trans.commit()  # 提交事务
-                            logger.info(f"✅ 已清理 {deleted_count} 个孤立索引")
-                        else:
-                            trans.commit()  # 即使没有索引也要提交事务
-                            logger.info("未发现孤立索引")
-                    except Exception as e:
-                        trans.rollback()  # 发生错误时回滚
-                        raise
+                    if orphan_indexes:
+                        logger.info(f"发现 {len(orphan_indexes)} 个索引对象，正在删除...")
+                        deleted_count = 0
+                        for idx_name in orphan_indexes:
+                            try:
+                                cursor.execute(f'DROP INDEX IF EXISTS "{idx_name}" CASCADE')
+                                deleted_count += 1
+                                logger.info(f"  ✓ 已删除索引: {idx_name}")
+                            except Exception as e:
+                                logger.warning(f"  ✗ 删除索引 {idx_name} 失败: {e}")
+
+                        logger.info(f"✅ 已清理 {deleted_count} 个孤立索引")
+                        # 清空连接池确保后续操作使用新连接
+                        cursor.close()
+                        raw_conn.close()
+                        sync_engine.dispose()
+                    else:
+                        logger.info("未发现孤立索引")
+                        cursor.close()
+                        raw_conn.close()
+                except Exception as cleanup_err:
+                    raw_conn.close()
+                    raise
         except Exception as e:
             logger.warning(f"清理孤立索引时出错（继续）: {e}")
 
@@ -1094,27 +1098,38 @@ async def startup_event():
                         logger.warning(f"⚠️  检测到孤立对象: {obj_name}，尝试删除...")
 
                         try:
-                            with sync_engine.connect() as conn:
-                                trans = conn.begin()
+                            # 使用原始psycopg2连接确保立即提交
+                            raw_conn = sync_engine.raw_connection()
+                            try:
+                                raw_conn.autocommit = True  # 确保立即生效
+                                cursor = raw_conn.cursor()
+
                                 try:
                                     # 尝试作为索引删除
-                                    conn.execute(text(f'DROP INDEX IF EXISTS "{obj_name}" CASCADE'))
+                                    cursor.execute(f'DROP INDEX IF EXISTS "{obj_name}" CASCADE')
                                     logger.info(f"  ✓ 已删除孤立索引: {obj_name}")
-                                    trans.commit()
-                                except:
-                                    trans.rollback()
+                                    deleted = True
+                                except Exception as idx_err:
                                     # 尝试作为表删除
-                                    trans = conn.begin()
                                     try:
-                                        conn.execute(text(f'DROP TABLE IF EXISTS "{obj_name}" CASCADE'))
+                                        cursor.execute(f'DROP TABLE IF EXISTS "{obj_name}" CASCADE')
                                         logger.info(f"  ✓ 已删除孤立表: {obj_name}")
-                                        trans.commit()
-                                    except Exception as drop_err:
-                                        trans.rollback()
-                                        logger.warning(f"  ✗ 删除失败: {drop_err}")
+                                        deleted = True
+                                    except Exception as tbl_err:
+                                        logger.warning(f"  ✗ 删除失败: 索引错误={idx_err}, 表错误={tbl_err}")
+                                        deleted = False
+                                finally:
+                                    cursor.close()
+                            finally:
+                                raw_conn.close()
 
-                            logger.info(f"🔄 重试创建表（尝试 {attempt + 2}/{max_retries}）...")
-                            continue  # 重试
+                            if deleted:
+                                # 清空连接池以确保新连接看到更改
+                                sync_engine.dispose()
+                                logger.info(f"🔄 重试创建表（尝试 {attempt + 2}/{max_retries}）...")
+                                continue  # 重试
+                            else:
+                                raise  # 删除失败，不重试
                         except Exception as cleanup_err:
                             logger.error(f"清理孤立对象失败: {cleanup_err}")
 
