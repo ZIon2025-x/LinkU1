@@ -1035,33 +1035,45 @@ async def startup_event():
 
             if not existing_tables:  # 如果没有表，说明是全新数据库或刚删除了所有表
                 logger.info("检测到空数据库，清理可能残留的孤立索引...")
-                with sync_engine.connect() as conn:
-                    # 使用底层系统表查找所有索引对象（包括孤立的）
-                    # pg_indexes 视图可能不显示孤立索引，需要直接查 pg_class
-                    result = conn.execute(text("""
-                        SELECT c.relname as index_name
-                        FROM pg_class c
-                        JOIN pg_namespace n ON n.oid = c.relnamespace
-                        WHERE c.relkind = 'i'  -- 'i' = index
-                        AND n.nspname = 'public'
-                        AND c.relname NOT LIKE 'pg_%'  -- 排除系统索引
-                    """))
-                    orphan_indexes = [row[0] for row in result.fetchall()]
 
-                    if orphan_indexes:
-                        logger.info(f"发现 {len(orphan_indexes)} 个索引对象，正在删除...")
-                        deleted_count = 0
-                        for idx_name in orphan_indexes:
-                            try:
-                                conn.execute(text(f'DROP INDEX IF EXISTS "{idx_name}" CASCADE'))
-                                deleted_count += 1
-                                logger.debug(f"  已删除索引: {idx_name}")
-                            except Exception as e:
-                                logger.debug(f"  删除索引 {idx_name} 失败（忽略）: {e}")
-                        conn.commit()
-                        logger.info(f"✅ 已清理 {deleted_count} 个孤立索引")
-                    else:
-                        logger.info("未发现孤立索引")
+                # 使用独立事务确保索引清理完全生效
+                from sqlalchemy import create_engine
+                cleanup_engine = create_engine(
+                    str(sync_engine.url),
+                    isolation_level="AUTOCOMMIT"  # 使用AUTOCOMMIT模式确保立即生效
+                )
+
+                try:
+                    with cleanup_engine.connect() as conn:
+                        # 使用底层系统表查找所有索引对象（包括孤立的）
+                        # pg_indexes 视图可能不显示孤立索引，需要直接查 pg_class
+                        result = conn.execute(text("""
+                            SELECT c.relname as index_name
+                            FROM pg_class c
+                            JOIN pg_namespace n ON n.oid = c.relnamespace
+                            WHERE c.relkind = 'i'  -- 'i' = index
+                            AND n.nspname = 'public'
+                            AND c.relname NOT LIKE 'pg_%'  -- 排除系统索引
+                            AND c.relname NOT LIKE '%_pkey'  -- 排除主键索引
+                        """))
+                        orphan_indexes = [row[0] for row in result.fetchall()]
+
+                        if orphan_indexes:
+                            logger.info(f"发现 {len(orphan_indexes)} 个索引对象，正在删除...")
+                            deleted_count = 0
+                            for idx_name in orphan_indexes:
+                                try:
+                                    conn.execute(text(f'DROP INDEX IF EXISTS "{idx_name}" CASCADE'))
+                                    deleted_count += 1
+                                    logger.info(f"  ✓ 已删除索引: {idx_name}")
+                                except Exception as e:
+                                    logger.warning(f"  ✗ 删除索引 {idx_name} 失败: {e}")
+                            # AUTOCOMMIT 模式下无需手动提交
+                            logger.info(f"✅ 已清理 {deleted_count} 个孤立索引")
+                        else:
+                            logger.info("未发现孤立索引")
+                finally:
+                    cleanup_engine.dispose()
         except Exception as e:
             logger.warning(f"清理孤立索引时出错（继续）: {e}")
 

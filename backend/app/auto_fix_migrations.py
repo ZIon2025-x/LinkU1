@@ -173,31 +173,35 @@ def reset_migration_records(engine: Engine, drop_tables: bool = False):
                     logger.debug(f"清理序列时出错（可能不存在）: {e}")
                     conn.rollback()
 
-                # 清理孤立的索引（非常重要！）
+                # 清理所有索引（包括孤立的）- 使用 pg_class 而不是 pg_indexes
+                # pg_indexes 只显示存在表的索引，而 pg_class 显示所有索引对象
                 try:
-                    # 获取所有索引（排除主键和唯一约束自动创建的索引）
                     indexes_result = conn.execute(text("""
-                        SELECT indexname, tablename FROM pg_indexes
-                        WHERE schemaname = 'public'
-                        AND indexname NOT LIKE '%_pkey'
+                        SELECT c.relname as index_name
+                        FROM pg_class c
+                        JOIN pg_namespace n ON n.oid = c.relnamespace
+                        WHERE c.relkind = 'i'  -- 'i' = index
+                        AND n.nspname = 'public'
+                        AND c.relname NOT LIKE 'pg_%'  -- 排除系统索引
+                        AND c.relname NOT LIKE '%_pkey'  -- 排除主键索引
                     """))
-                    indexes = indexes_result.fetchall()
+                    indexes = [row[0] for row in indexes_result.fetchall()]
 
-                    dropped_count = 0
-                    for idx_name, table_name in indexes:
-                        try:
-                            # 尝试删除索引（如果表已不存在，索引应该是孤立的）
-                            conn.execute(text(f'DROP INDEX IF EXISTS "{idx_name}" CASCADE'))
-                            logger.debug(f"  已删除索引: {idx_name}")
-                            dropped_count += 1
-                        except Exception as e:
-                            logger.debug(f"  删除索引 {idx_name} 失败: {e}")
+                    if indexes:
+                        logger.info(f"发现 {len(indexes)} 个索引对象，正在删除...")
+                        dropped_count = 0
+                        for idx_name in indexes:
+                            try:
+                                conn.execute(text(f'DROP INDEX IF EXISTS "{idx_name}" CASCADE'))
+                                logger.info(f"  ✓ 已删除索引: {idx_name}")
+                                dropped_count += 1
+                            except Exception as e:
+                                logger.warning(f"  ✗ 删除索引 {idx_name} 失败: {e}")
 
-                    if dropped_count > 0:
                         conn.commit()
-                        logger.info(f"✅ 已删除 {dropped_count} 个孤立索引")
+                        logger.info(f"✅ 已删除 {dropped_count} 个索引对象")
                 except Exception as e:
-                    logger.debug(f"清理索引时出错: {e}")
+                    logger.warning(f"清理索引时出错: {e}")
                     conn.rollback()
 
                 return True
