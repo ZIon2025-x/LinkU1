@@ -173,6 +173,23 @@ def reset_migration_records(engine: Engine, drop_tables: bool = False):
         return False
 
 
+def _is_production_environment() -> bool:
+    """
+    严格的生产环境检测
+
+    只有明确标记为 production 的环境才返回 True
+    staging、testing 等环境返回 False
+
+    Returns:
+        True: 生产环境
+        False: 非生产环境（开发、测试、预发布等）
+    """
+    env = os.getenv("ENVIRONMENT", "").lower()
+    railway_env = os.getenv("RAILWAY_ENVIRONMENT", "").lower()
+
+    return env == "production" or railway_env == "production"
+
+
 def auto_fix_migrations(engine: Engine, force_reset: bool = False):
     """
     自动修复迁移状态
@@ -182,12 +199,28 @@ def auto_fix_migrations(engine: Engine, force_reset: bool = False):
         force_reset: 是否强制重置（清空迁移记录）
     """
     # 检查环境
-    env = os.getenv("RAILWAY_ENVIRONMENT", os.getenv("ENVIRONMENT", "development"))
+    env = os.getenv("RAILWAY_ENVIRONMENT") or os.getenv("ENVIRONMENT") or "development"
+    is_production = _is_production_environment()
 
     logger.info("="*60)
     logger.info("🔍 开始检查迁移状态")
-    logger.info(f"📌 当前环境: {env}")
+    logger.info(f"📌 当前环境: {env} {'[生产环境]' if is_production else '[非生产环境]'}")
     logger.info("="*60)
+
+    # 🔴 生产环境保护：立即拒绝任何自动修复操作
+    if is_production:
+        logger.error("=" * 60)
+        logger.error("🚫 生产环境保护：不允许自动重置迁移或删除表！")
+        logger.error("🚫 检测到环境标识：")
+        logger.error(f"   - ENVIRONMENT={os.getenv('ENVIRONMENT', 'not set')}")
+        logger.error(f"   - RAILWAY_ENVIRONMENT={os.getenv('RAILWAY_ENVIRONMENT', 'not set')}")
+        logger.error("=" * 60)
+        logger.error("如需修复生产环境，请：")
+        logger.error("  1. 先备份数据库")
+        logger.error("  2. 手动执行迁移脚本")
+        logger.error("  3. 验证数据完整性")
+        logger.error("=" * 60)
+        return False
 
     # 检查状态
     status = check_migration_consistency(engine)
@@ -214,12 +247,6 @@ def auto_fix_migrations(engine: Engine, force_reset: bool = False):
 
     # 执行修复
     if should_fix:
-        # 生产环境需要额外确认
-        if env.lower() == "production":
-            logger.error("❌ 生产环境不允许自动重置迁移！")
-            logger.error("请手动检查并修复")
-            return False
-
         logger.info("🔄 开始修复...")
 
         # 检查是否需要删除所有表（完全重置）

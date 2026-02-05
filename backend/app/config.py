@@ -78,11 +78,13 @@ class Config:
 
     # Cookie配置 - 智能环境检测
     ENVIRONMENT = os.getenv("ENVIRONMENT", "development")
-    # 检测是否为生产环境：Railway环境或明确设置为production
+    RAILWAY_ENV = os.getenv("RAILWAY_ENVIRONMENT", "").lower()
+
+    # 检测是否为生产环境：明确的production标识
+    # 注意：只有明确标记为production才视为生产环境，staging等视为非生产
     IS_PRODUCTION = (
-        ENVIRONMENT == "production" or 
-        os.getenv("RAILWAY_ENVIRONMENT") is not None or
-        os.getenv("RAILWAY_PROJECT_ID") is not None
+        ENVIRONMENT == "production" or
+        RAILWAY_ENV == "production"
     )
     
     # 根据环境自动设置Cookie安全配置
@@ -106,8 +108,7 @@ class Config:
     DEBUG = os.getenv("DEBUG", "true").lower() == "true"
 
     # CORS配置 - 安全配置
-    ENVIRONMENT = os.getenv("ENVIRONMENT", "development")
-    IS_PRODUCTION = ENVIRONMENT == "production"
+    # 复用上面已定义的 IS_PRODUCTION（避免重复定义导致不一致）
     
     if IS_PRODUCTION:
         # 生产环境：允许主站、管理后台和客服系统
