@@ -1001,6 +1001,8 @@ async def startup_event():
     try:
         from app.database import sync_engine
         from app.models import Base
+        # 导入所有模型类，确保 create_all() 能够创建所有表
+        from app import models  # noqa: F401 - 必须导入以注册模型
 
         # 🔧 自动检测并修复迁移状态（如果启用）
         try:
