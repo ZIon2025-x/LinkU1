@@ -4,6 +4,9 @@
 在应用启动时自动运行，通过环境变量控制：
 - RESET_MIGRATIONS=true: 清空迁移记录，重新执行所有迁移
 - FIX_MIGRATIONS=true: 智能检测并修复（推荐）
+- DROP_ALL_TABLES=true: 删除所有数据库表并重新创建（⚠️ 危险：会清除所有数据）
+
+注意：DROP_ALL_TABLES 需要与 RESET_MIGRATIONS 或 FIX_MIGRATIONS 一起使用
 """
 
 import os
@@ -67,8 +70,14 @@ def check_migration_consistency(engine: Engine) -> dict:
     return result
 
 
-def reset_migration_records(engine: Engine):
-    """清空迁移记录表"""
+def reset_migration_records(engine: Engine, drop_tables: bool = False):
+    """
+    清空迁移记录表，可选择是否同时删除所有表
+
+    Args:
+        engine: 数据库引擎
+        drop_tables: 是否同时删除所有数据库表（用于完全重置）
+    """
     try:
         with engine.connect() as conn:
             # 检查表是否存在
@@ -89,13 +98,45 @@ def reset_migration_records(engine: Engine):
                 conn.commit()
 
                 logger.info(f"✅ 已清空 schema_migrations 表 ({count} 条记录)")
-                return True
             else:
                 logger.info("ℹ️  schema_migrations 表不存在，无需清空")
-                return False
+
+            # 如果需要删除所有表（完全重置）
+            if drop_tables:
+                logger.warning("🗑️  开始删除所有数据库表...")
+
+                # 获取所有表
+                tables_result = conn.execute(text("""
+                    SELECT tablename FROM pg_tables
+                    WHERE schemaname = 'public'
+                """))
+                all_tables = [row[0] for row in tables_result.fetchall()]
+
+                if all_tables:
+                    logger.info(f"找到 {len(all_tables)} 个表")
+
+                    # 使用 CASCADE 删除所有表（包括依赖关系）
+                    # 先禁用外键约束，然后删除表
+                    for table in all_tables:
+                        try:
+                            conn.execute(text(f'DROP TABLE IF EXISTS "{table}" CASCADE'))
+                            logger.debug(f"  已删除表: {table}")
+                        except Exception as e:
+                            logger.warning(f"  删除表 {table} 失败: {e}")
+
+                    conn.commit()
+                    logger.info(f"✅ 已删除 {len(all_tables)} 个表")
+                else:
+                    logger.info("没有找到需要删除的表")
+
+                return True
+
+            return True
 
     except Exception as e:
         logger.error(f"❌ 清空迁移记录失败: {e}")
+        import traceback
+        traceback.print_exc()
         return False
 
 
@@ -147,10 +188,22 @@ def auto_fix_migrations(engine: Engine, force_reset: bool = False):
             return False
 
         logger.info("🔄 开始修复...")
-        success = reset_migration_records(engine)
+
+        # 检查是否需要删除所有表（完全重置）
+        # DROP_ALL_TABLES=true 将删除所有表并重新创建
+        drop_tables = os.getenv("DROP_ALL_TABLES", "false").lower() == "true"
+
+        if drop_tables:
+            logger.warning("⚠️  DROP_ALL_TABLES=true，将删除所有数据库表！")
+            logger.warning("⚠️  这将清除所有数据，请确保这是您想要的操作！")
+
+        success = reset_migration_records(engine, drop_tables=drop_tables)
 
         if success:
-            logger.info("✅ 修复完成！应用将重新创建表并执行所有迁移")
+            if drop_tables:
+                logger.info("✅ 修复完成！已删除所有表，应用将重新创建表并执行所有迁移")
+            else:
+                logger.info("✅ 修复完成！应用将重新创建缺失的表并执行所有迁移")
             logger.info("="*60)
             return True
         else:
@@ -168,6 +221,7 @@ def run_auto_fix_if_needed(engine: Engine):
     环境变量:
         RESET_MIGRATIONS=true: 强制重置迁移记录
         FIX_MIGRATIONS=true: 智能检测并修复（推荐）
+        DROP_ALL_TABLES=true: 删除所有数据库表并重新创建（⚠️ 危险：会清除所有数据）
     """
     # 检查是否启用自动修复
     reset_migrations = os.getenv("RESET_MIGRATIONS", "false").lower() == "true"

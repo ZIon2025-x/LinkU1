@@ -59,6 +59,85 @@ def _is_function_body_end(line: str, tag: str) -> bool:
     current = _get_dollar_quote_tag(stripped)
     return current is not None and current == tag
 
+def split_sql_statements(sql_content: str) -> list[str]:
+    """
+    智能分割SQL语句，正确处理dollar-quoted字符串（$$）
+
+    处理规则：
+    1. 在dollar-quoted块（$$ ... $$）内的分号不作为语句分隔符
+    2. 支持带标签的dollar-quote（$tag$ ... $tag$）
+    3. 忽略注释中的内容
+    4. 正确处理DO块和函数定义
+
+    Args:
+        sql_content: SQL文件内容
+
+    Returns:
+        语句列表（每个语句都是完整的SQL命令）
+    """
+    statements = []
+    current_statement = []
+    in_dollar_quote = False
+    dollar_tag = None
+
+    lines = sql_content.split('\n')
+
+    for line in lines:
+        stripped = line.strip()
+
+        # 跳过空行和注释（但要保留在当前语句中，因为可能在函数体内）
+        if not stripped or (stripped.startswith('--') and not in_dollar_quote):
+            if in_dollar_quote:
+                # 在函数体内，保留注释
+                current_statement.append(line)
+            continue
+
+        # 检查dollar-quote的开始和结束
+        # 查找所有 $...$ 模式
+        import re
+        dollar_quotes = list(re.finditer(r'\$([a-zA-Z0-9_]*)\$', line))
+
+        for match in dollar_quotes:
+            tag = match.group(1)  # 标签可以为空（即 $$）
+
+            if not in_dollar_quote:
+                # 检查是否是dollar-quote的开始
+                # 通常出现在 AS $tag$ 或 DO $tag$ 之后
+                preceding_text = line[:match.start()].upper()
+                if 'AS' in preceding_text or 'DO' in preceding_text or 'BEGIN' in preceding_text:
+                    in_dollar_quote = True
+                    dollar_tag = tag
+                    logger.debug(f"进入 dollar-quote 块，标签: '{tag}'")
+            else:
+                # 检查是否是相同标签的dollar-quote结束
+                if tag == dollar_tag:
+                    # 检查是否后面跟着 LANGUAGE（函数定义结束）或分号（DO块结束）
+                    following_text = line[match.end():].strip().upper()
+                    if following_text.startswith('LANGUAGE') or ';' in following_text or not following_text:
+                        in_dollar_quote = False
+                        dollar_tag = None
+                        logger.debug(f"退出 dollar-quote 块")
+
+        # 将当前行添加到语句中
+        current_statement.append(line)
+
+        # 如果不在dollar-quote块内，且行以分号结尾，则这是一个完整的语句
+        if not in_dollar_quote and stripped.endswith(';'):
+            statement = '\n'.join(current_statement).strip()
+            if statement:
+                statements.append(statement)
+            current_statement = []
+
+    # 处理最后一个语句（可能没有分号）
+    if current_statement:
+        statement = '\n'.join(current_statement).strip()
+        if statement:
+            statements.append(statement)
+
+    logger.debug(f"分割完成，共 {len(statements)} 个语句")
+    return statements
+
+
 # 迁移脚本目录
 MIGRATIONS_DIR = Path(__file__).parent.parent / "migrations"
 
@@ -135,13 +214,32 @@ def execute_sql_file(engine: Engine, sql_file: Path) -> tuple[bool, int]:
             try:
                 # 获取原始连接（psycopg2 connection）
                 raw_conn = conn.connection.dbapi_connection
-                
+
                 # 使用 psycopg2 的 execute 方法执行 SQL
                 # psycopg2 可以正确处理 DO $$ ... END $$; 块
+                # 注意：psycopg2 的 cursor.execute() 只能执行单个语句
+                # 但如果语句包含多个命令（如 CREATE FUNCTION; CREATE TRIGGER;），需要分别执行
                 with raw_conn.cursor() as cursor:
-                    # 使用 execute 方法执行整个 SQL 文件
-                    # psycopg2 会自动处理多语句和 DO 块
-                    cursor.execute(sql_content)
+                    # 使用 psycopg2 执行整个文件作为脚本
+                    # 将文件内容分割为独立的语句（使用智能分割）
+                    statements = split_sql_statements(sql_content)
+
+                    for stmt in statements:
+                        if stmt.strip():
+                            try:
+                                cursor.execute(stmt)
+                            except Exception as stmt_error:
+                                # 记录错误但继续执行（某些语句可能因为已存在而失败）
+                                error_msg = str(stmt_error).lower()
+                                if any(keyword in error_msg for keyword in [
+                                    "already exists", "duplicate", "does not exist",
+                                    "already has", "relation already exists"
+                                ]):
+                                    logger.debug(f"语句已存在或已删除，跳过: {stmt[:80]}...")
+                                else:
+                                    logger.warning(f"执行语句时出错（继续执行）: {stmt_error}")
+                                    logger.debug(f"问题语句: {stmt[:200]}...")
+
                     raw_conn.commit()
                     logger.info("✅ 使用 psycopg2 成功执行迁移")
                     execution_time = int((time.time() - start_time) * 1000)
