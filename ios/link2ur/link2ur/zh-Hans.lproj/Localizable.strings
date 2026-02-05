@@ -1682,6 +1682,8 @@
 "profile.task_preferences_subtitle" = "个性化定制推荐内容";
 "profile.my_applications_subtitle_text" = "达人/服务商申请状态";
 "profile.settings_subtitle_text" = "个人资料、密码与安全";
+"profile.payment_account" = "收款账户";
+"profile.payment_account_subtitle" = "设置收款账户以接收任务报酬";
 "profile.no_contact_info" = "未绑定联系方式";
 "profile.user_profile" = "用户资料";
 "profile.posted_tasks" = "发布任务";

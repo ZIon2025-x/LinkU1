@@ -1055,6 +1055,8 @@
 "profile.task_preferences_subtitle" = "個性化定制推薦內容";
 "profile.my_applications_subtitle_text" = "達人/服務商申請狀態";
 "profile.settings_subtitle_text" = "個人資料、密碼與安全";
+"profile.payment_account" = "收款帳戶";
+"profile.payment_account_subtitle" = "設定收款帳戶以接收任務報酬";
 "profile.no_contact_info" = "未綁定聯繫方式";
 "profile.user_profile" = "用戶資料";
 "profile.posted_tasks" = "發布任務";

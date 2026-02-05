@@ -1682,6 +1682,8 @@
 "profile.task_preferences_subtitle" = "Personalize recommended content";
 "profile.my_applications_subtitle_text" = "Expert/Service provider application status";
 "profile.settings_subtitle_text" = "Profile, password and security";
+"profile.payment_account" = "Payout Account";
+"profile.payment_account_subtitle" = "Set up payout account to receive task rewards";
 "profile.no_contact_info" = "No contact information";
 "profile.user_profile" = "User Profile";
 "profile.posted_tasks" = "Posted Tasks";

@@ -220,6 +220,11 @@ struct ProfileView: View {
                 }
                 Divider().padding(.leading, 56)
                 
+                NavigationLink(destination: StripeConnectOnboardingView()) {
+                    ProfileRow(icon: "creditcard.fill", title: LocalizationKey.profilePaymentAccount.localized, subtitle: LocalizationKey.profilePaymentAccountSubtitle.localized, color: AppColors.primary)
+                }
+                Divider().padding(.leading, 56)
+                
                 NavigationLink(destination: ActivityListView()) {
                     ProfileRow(icon: "calendar.badge.clock", title: LocalizationKey.profileActivity.localized, subtitle: LocalizationKey.profileActivitySubtitleText.localized, color: Color.orange)
                 }

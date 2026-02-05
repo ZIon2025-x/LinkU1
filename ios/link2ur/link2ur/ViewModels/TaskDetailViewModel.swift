@@ -164,7 +164,7 @@ class TaskDetailViewModel: ObservableObject {
             .sink(receiveCompletion: { [weak self] result in
                 if case .failure(let error) = result {
                     // 428 可能以 httpError 或 serverError 形式返回（取决于 API 是否解析了 JSON 错误体）
-                    if (error as? APIError)?.isStripeSetupRequired == true {
+                    if error.isStripeSetupRequired {
                         self?.shouldPromptStripeSetup = true
                     } else {
                         ErrorHandler.shared.handle(error, context: "申请任务")
