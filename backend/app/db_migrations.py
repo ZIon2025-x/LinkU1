@@ -3,12 +3,61 @@
 自动运行 migrations 目录下的 SQL 脚本
 """
 import os
+import re
 import logging
 from pathlib import Path
 from sqlalchemy import text
 from sqlalchemy.engine import Engine
 
 logger = logging.getLogger(__name__)
+
+# 匹配 PostgreSQL dollar-quote 标签: $tag$ 或 $$（空标签）
+# 用于 DO $body$ / END $body$; 和 AS $func$ / $func$ LANGUAGE
+_DOLLAR_QUOTE_TAG_RE = re.compile(r"\$([a-zA-Z0-9_]*)\$", re.IGNORECASE)
+
+
+def _get_dollar_quote_tag(line: str):
+    """从一行中提取 dollar-quote 标签（若有）。例如 'DO $body$' -> 'body', 'END $$;' -> ''。"""
+    m = _DOLLAR_QUOTE_TAG_RE.search(line)
+    return m.group(1) if m else None
+
+
+def _is_do_block_start(line: str) -> str | None:
+    """若该行是 DO $tag$ 块开始，返回 tag（空串表示 $$），否则返回 None。"""
+    stripped = line.strip()
+    if not re.match(r"DO\s+\$", stripped, re.IGNORECASE):
+        return None
+    tag = _get_dollar_quote_tag(stripped)
+    return tag if tag is not None else ""
+
+
+def _is_do_block_end(line: str, tag: str) -> bool:
+    """判断是否为 END $tag$; 且与当前 tag 一致。"""
+    stripped = line.strip()
+    if not re.search(r"END\s+\$", stripped, re.IGNORECASE) or ";" not in stripped:
+        return False
+    # 允许 END $body$; 或 END $$;
+    current = _get_dollar_quote_tag(stripped)
+    return current is not None and current == tag
+
+
+def _is_function_body_start(line: str) -> str | None:
+    """若该行包含 FUNCTION ... AS $tag$，返回 tag，否则返回 None。"""
+    stripped = line.strip()
+    if "FUNCTION" not in stripped.upper() or "AS" not in stripped.upper():
+        return None
+    tag = _get_dollar_quote_tag(stripped)
+    return tag if tag is not None else ""
+
+
+def _is_function_body_end(line: str, tag: str) -> bool:
+    """判断是否为 $tag$ LANGUAGE ... 且与当前 tag 一致。"""
+    stripped = line.strip()
+    if "LANGUAGE" not in stripped.upper():
+        return False
+    # 行首或行中可能有 $tag$ LANGUAGE plpgsql;
+    current = _get_dollar_quote_tag(stripped)
+    return current is not None and current == tag
 
 # 迁移脚本目录
 MIGRATIONS_DIR = Path(__file__).parent.parent / "migrations"
@@ -100,66 +149,69 @@ def execute_sql_file(engine: Engine, sql_file: Path) -> tuple[bool, int]:
             except (AttributeError, Exception) as e:
                 # 如果 psycopg2 方式失败，记录错误并使用 SQLAlchemy 方式
                 logger.debug(f"psycopg2 执行失败，使用 SQLAlchemy 方式: {e}")
-                # 如果不是 psycopg2 连接，回退到 SQLAlchemy 方式
-                # 改进的 SQL 解析：正确处理 DO $$ ... END $$; 块和函数定义
+                # 回退到 SQLAlchemy 方式：支持 DO $tag$ / END $tag$; 与 FUNCTION ... AS $tag$ / $tag$ LANGUAGE
                 statements = []
                 current_statement = []
                 in_do_block = False
+                do_tag: str | None = None
                 in_function = False
-                
+                func_tag: str | None = None
+
                 for line in sql_content.split('\n'):
                     stripped = line.strip()
-                    
-                    # 跳过空行和注释行
+
+                    # 1) 正在 DO $tag$ 块内
+                    if in_do_block and do_tag is not None:
+                        current_statement.append(line)
+                        if _is_do_block_end(stripped, do_tag):
+                            in_do_block = False
+                            do_tag = None
+                            statement = '\n'.join(current_statement).strip()
+                            if statement:
+                                statements.append(statement)
+                            current_statement = []
+                        continue
+
+                    # 2) 检测 DO $tag$ 块开始（含 $$ 或 $body$ 等）
+                    do_start = _is_do_block_start(stripped)
+                    if do_start is not None:
+                        in_do_block = True
+                        do_tag = do_start
+                        current_statement.append(line)
+                        continue
+
+                    # 3) 正在 FUNCTION ... AS $tag$ 体内
+                    if in_function and func_tag is not None:
+                        current_statement.append(line)
+                        if _is_function_body_end(stripped, func_tag):
+                            in_function = False
+                            func_tag = None
+                            statement = '\n'.join(current_statement).strip()
+                            if statement:
+                                statements.append(statement)
+                            current_statement = []
+                        continue
+
+                    # 4) 检测 CREATE FUNCTION ... AS $tag$ 开始
+                    func_start = _is_function_body_start(stripped)
+                    if func_start is not None:
+                        in_function = True
+                        func_tag = func_start
+                        current_statement.append(line)
+                        continue
+
+                    # 5) 不在特殊块内：跳过仅注释/空行（不加入 current_statement）
                     if not stripped or stripped.startswith('--'):
                         continue
-                    
-                    # 检测函数定义开始 (CREATE ... FUNCTION ... AS $$)
-                    # 函数定义格式：CREATE OR REPLACE FUNCTION ... AS $$
-                    if not in_function and not in_do_block:
-                        stripped_upper = stripped.upper()
-                        # 检查是否包含 FUNCTION 和 AS $$（可能在同一行或不同行）
-                        if 'FUNCTION' in stripped_upper and 'AS $$' in stripped_upper:
-                            in_function = True
-                    
-                    # 检测 DO $$ 块开始
-                    if 'DO $$' in stripped.upper() and not in_do_block and not in_function:
-                        in_do_block = True
-                    
+
                     current_statement.append(line)
-                    
-                    # 检测函数定义结束 ($$ LANGUAGE plpgsql;)
-                    if in_function:
-                        if '$$ LANGUAGE' in stripped.upper() and stripped.endswith(';'):
-                            in_function = False
-                            # 函数定义结束，保存整个函数
-                            statement = '\n'.join(current_statement).strip()
-                            if statement:
-                                statements.append(statement)
-                            current_statement = []
-                        # 在函数定义内，不按分号分割
-                        continue
-                    
-                    # 检测 DO $$ 块结束
-                    if in_do_block:
-                        # 检查是否包含 END $$;
-                        if 'END $$;' in stripped.upper():
-                            in_do_block = False
-                            # DO 块结束，保存整个块
-                            statement = '\n'.join(current_statement).strip()
-                            if statement:
-                                statements.append(statement)
-                            current_statement = []
-                        # 在 DO 块内，不按分号分割
-                        continue
-                    
-                    # 不在特殊块内，按分号分割
+                    # 按分号结尾分割普通语句
                     if stripped.endswith(';'):
                         statement = '\n'.join(current_statement).strip()
                         if statement:
                             statements.append(statement)
                         current_statement = []
-                
+
                 # 处理最后一个语句（可能没有分号）
                 if current_statement:
                     statement = '\n'.join(current_statement).strip()
