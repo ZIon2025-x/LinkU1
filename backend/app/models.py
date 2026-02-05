@@ -976,6 +976,8 @@ class Coupon(Base):
     per_user_per_window_limit = Column(Integer, nullable=True)  # 每个周期内每用户限领次数
     per_day_limit = Column(Integer, nullable=True)  # 每日限用次数
     vat_category = Column(String(20), nullable=True)  # VAT分类
+    points_required = Column(Integer, default=0, nullable=False)  # 积分兑换所需积分（0表示不支持积分兑换）
+    applicable_scenarios = Column(JSONB, nullable=True)  # 适用场景列表（如 ["task", "activity", "service", "flea_market"]）
     created_at = Column(DateTime(timezone=True), default=get_utc_time)
     updated_at = Column(DateTime(timezone=True), default=get_utc_time, onupdate=get_utc_time)
     
@@ -984,7 +986,9 @@ class Coupon(Base):
         Index("ix_coupons_status", status),
         Index("ix_coupons_valid", valid_from, valid_until),
         Index("ix_coupons_conditions", usage_conditions, postgresql_using="gin"),  # GIN索引用于JSONB
+        Index("ix_coupons_scenarios", applicable_scenarios, postgresql_using="gin"),  # GIN索引用于JSONB场景查询
         Index("ix_coupons_combine", can_combine, apply_order),
+        Index("ix_coupons_points", points_required),  # 支持按积分筛选
         CheckConstraint("valid_until > valid_from", name="chk_coupon_dates"),
         CheckConstraint(
             "(type = 'fixed_amount' AND discount_value > 0) OR (type = 'percentage' AND discount_value BETWEEN 1 AND 10000)",

@@ -1298,12 +1298,13 @@ class PointsRedeemProductRequest(BaseModel):
 
 # 优惠券相关 Schemas
 class CouponUsageConditions(BaseModel):
-    locations: Optional[List[str]] = None
-    time_restrictions: Optional[Dict[str, Any]] = None
-    task_types: Optional[List[str]] = None
-    min_task_amount: Optional[int] = None
-    max_task_amount: Optional[int] = None
-    excluded_task_types: Optional[List[str]] = None
+    """优惠券使用条件详细配置（存储在 usage_conditions JSONB 字段中）"""
+    locations: Optional[List[str]] = None  # 地点限制
+    time_restrictions: Optional[Dict[str, Any]] = None  # 时间限制
+    task_types: Optional[List[str]] = None  # 适用的任务类型
+    min_task_amount: Optional[int] = None  # 最低任务金额（便士）
+    max_task_amount: Optional[int] = None  # 最高任务金额（便士）
+    excluded_task_types: Optional[List[str]] = None  # 排除的任务类型
 
 
 # 限领周期允许值（可扩展）
@@ -1336,6 +1337,8 @@ class CouponBase(BaseModel):
     per_user_per_window_limit: Optional[int] = None
     per_day_limit: Optional[int] = None
     vat_category: Optional[str] = None
+    points_required: int = 0  # 积分兑换所需积分（0表示不支持积分兑换）
+    applicable_scenarios: Optional[List[str]] = None  # 适用场景列表
 
     @validator("per_user_limit_window")
     def validate_limit_window(cls, v: Optional[str]) -> Optional[str]:
@@ -1360,6 +1363,8 @@ class CouponUpdate(BaseModel):
     per_user_per_month_limit: Optional[int] = None
     per_user_limit_window: Optional[str] = None
     per_user_per_window_limit: Optional[int] = None
+    points_required: Optional[int] = None
+    applicable_scenarios: Optional[List[str]] = None
 
     @validator("per_user_limit_window")
     def validate_limit_window(cls, v: Optional[str]) -> Optional[str]:

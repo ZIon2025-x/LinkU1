@@ -372,6 +372,15 @@ const AdminDashboard: React.FC = () => {
     max_task_amount: undefined as number | undefined,
   });
   const [couponsLoading, setCouponsLoading] = useState(false);
+  // 优惠券表单分组折叠状态
+  const [couponSectionsCollapsed, setCouponSectionsCollapsed] = useState({
+    basic: false,        // 基本信息
+    discount: false,     // 折扣配置
+    limits: false,       // 使用限制
+    eligibility: false,  // 使用资格
+    scenarios: false,    // 适用场景
+    validity: false      // 有效期
+  });
 
   // 邀请码管理相关状态
   const [invitationCodes, setInvitationCodes] = useState<any[]>([]);
@@ -5488,11 +5497,12 @@ const AdminDashboard: React.FC = () => {
         apply_order: couponForm.apply_order || 0,
         valid_from: couponForm.valid_from,
         valid_until: couponForm.valid_until,
+        // 顶层字段
+        points_required: couponForm.points_required || 0,
+        applicable_scenarios: couponForm.applicable_scenarios.length > 0 ? couponForm.applicable_scenarios : undefined,
+        // 使用条件（详细配置）
         usage_conditions: (() => {
           const conditions: any = {};
-          if (couponForm.points_required > 0) {
-            conditions.points_required = couponForm.points_required;
-          }
           if (couponForm.task_types.length > 0) {
             conditions.task_types = couponForm.task_types;
           }
@@ -5508,9 +5518,6 @@ const AdminDashboard: React.FC = () => {
           if (couponForm.max_task_amount) {
             conditions.max_task_amount = couponForm.max_task_amount;
           }
-          if (couponForm.applicable_scenarios.length > 0) {
-            conditions.applicable_scenarios = couponForm.applicable_scenarios;
-          }
           return Object.keys(conditions).length > 0 ? conditions : undefined;
         })(),
         per_device_limit: couponForm.per_device_limit,
@@ -5520,6 +5527,7 @@ const AdminDashboard: React.FC = () => {
         eligibility_value: couponForm.eligibility_value || undefined,
         per_user_limit_window: couponForm.per_user_limit_window || undefined,
         per_user_per_window_limit: couponForm.per_user_per_window_limit ?? undefined,
+        vat_category: couponForm.vat_category || undefined,
       };
       
       if (couponForm.id) {
@@ -5763,6 +5771,32 @@ const AdminDashboard: React.FC = () => {
               </button>
             </div>
             <div style={{ display: 'grid', gap: '20px' }}>
+
+            {/* 基本信息 */}
+            <div>
+              <div
+                onClick={() => setCouponSectionsCollapsed({...couponSectionsCollapsed, basic: !couponSectionsCollapsed.basic})}
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  padding: '12px 16px',
+                  backgroundColor: '#f8f9fa',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  marginBottom: couponSectionsCollapsed.basic ? '0' : '16px',
+                  border: '1px solid #e9ecef'
+                }}
+              >
+                <h4 style={{ margin: 0, fontSize: '16px', fontWeight: 600, color: '#495057' }}>
+                  📋 基本信息
+                </h4>
+                <span style={{ fontSize: '18px', color: '#6c757d' }}>
+                  {couponSectionsCollapsed.basic ? '▼' : '▲'}
+                </span>
+              </div>
+              {!couponSectionsCollapsed.basic && (
+                <div style={{ display: 'grid', gap: '16px', paddingTop: '16px' }}>
             <div className={styles.formGroup}>
               <label style={{ display: 'block', marginBottom: '8px', fontWeight: 500, color: '#333' }}>
                 优惠券代码
@@ -5827,6 +5861,35 @@ const AdminDashboard: React.FC = () => {
                 }}
               />
             </div>
+                </div>
+              )}
+            </div>
+
+            {/* 折扣配置 */}
+            <div>
+              <div
+                onClick={() => setCouponSectionsCollapsed({...couponSectionsCollapsed, discount: !couponSectionsCollapsed.discount})}
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  padding: '12px 16px',
+                  backgroundColor: '#f8f9fa',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  marginBottom: couponSectionsCollapsed.discount ? '0' : '16px',
+                  border: '1px solid #e9ecef'
+                }}
+              >
+                <h4 style={{ margin: 0, fontSize: '16px', fontWeight: 600, color: '#495057' }}>
+                  💰 折扣配置
+                </h4>
+                <span style={{ fontSize: '18px', color: '#6c757d' }}>
+                  {couponSectionsCollapsed.discount ? '▼' : '▲'}
+                </span>
+              </div>
+              {!couponSectionsCollapsed.discount && (
+                <div style={{ display: 'grid', gap: '16px', paddingTop: '16px' }}>
             <div className={styles.formGroup}>
               <label style={{ display: 'block', marginBottom: '8px', fontWeight: 500, color: '#333' }}>
                 类型
@@ -5942,6 +6005,35 @@ const AdminDashboard: React.FC = () => {
                 <option value="CNY">CNY (¥)</option>
               </select>
             </div>
+                </div>
+              )}
+            </div>
+
+            {/* 使用限制 */}
+            <div>
+              <div
+                onClick={() => setCouponSectionsCollapsed({...couponSectionsCollapsed, limits: !couponSectionsCollapsed.limits})}
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  padding: '12px 16px',
+                  backgroundColor: '#f8f9fa',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  marginBottom: couponSectionsCollapsed.limits ? '0' : '16px',
+                  border: '1px solid #e9ecef'
+                }}
+              >
+                <h4 style={{ margin: 0, fontSize: '16px', fontWeight: 600, color: '#495057' }}>
+                  🔒 使用限制
+                </h4>
+                <span style={{ fontSize: '18px', color: '#6c757d' }}>
+                  {couponSectionsCollapsed.limits ? '▼' : '▲'}
+                </span>
+              </div>
+              {!couponSectionsCollapsed.limits && (
+                <div style={{ display: 'grid', gap: '16px', paddingTop: '16px' }}>
             <div className={styles.formGroup}>
               <label style={{ display: 'block', marginBottom: '8px', fontWeight: 500, color: '#333' }}>
                 总发放数量
@@ -5966,6 +6058,9 @@ const AdminDashboard: React.FC = () => {
             <div className={styles.formGroup}>
               <label style={{ display: 'block', marginBottom: '8px', fontWeight: 500, color: '#333' }}>
                 每个用户限用次数
+                <span style={{ color: '#999', fontSize: '12px', marginLeft: '4px' }}>
+                  （每个用户最多可以使用此优惠券的次数）
+                </span>
               </label>
               <input
                 type="number"
@@ -5978,9 +6073,13 @@ const AdminDashboard: React.FC = () => {
                   padding: '10px',
                   border: '1px solid #ddd',
                   borderRadius: '4px',
-                  fontSize: '14px'
+                  fontSize: '14px',
+                  marginBottom: '4px'
                 }}
               />
+              <small style={{ color: '#666', fontSize: '12px', display: 'block' }}>
+                💡 "限用"指用户实际使用优惠券的次数（如下单时使用）
+              </small>
             </div>
             <div className={styles.formGroup}>
               <label style={{ display: 'block', marginBottom: '8px', fontWeight: 500, color: '#333' }}>
@@ -6052,7 +6151,7 @@ const AdminDashboard: React.FC = () => {
               <label style={{ display: 'block', marginBottom: '8px', fontWeight: 500, color: '#333' }}>
                 每用户限领（按周期）
                 <span style={{ color: '#999', fontSize: '12px', marginLeft: '4px' }}>
-                  （选周期后填写次数，如「每月限领 1 次」）
+                  （限制用户领取优惠券的频率，如「每月限领 1 次」）
                 </span>
               </label>
               <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
@@ -6095,6 +6194,12 @@ const AdminDashboard: React.FC = () => {
                   </>
                 )}
               </div>
+              <small style={{ color: '#666', fontSize: '12px', display: 'block', marginTop: '4px' }}>
+                💡 <strong>关键区别</strong>：<br/>
+                • <strong>限领</strong>：用户从系统领取/兑换优惠券到账户的次数（如通过代码兑换、积分兑换等）<br/>
+                • <strong>限用</strong>：用户实际在下单时使用优惠券的次数<br/>
+                例如：用户可能一次领取多张相同优惠券，但每张只能使用一次
+              </small>
             </div>
             <div className={styles.formGroup}>
               <label style={{ display: 'block', marginBottom: '8px', fontWeight: 500, color: '#333' }}>
@@ -6158,6 +6263,35 @@ const AdminDashboard: React.FC = () => {
                 }}
               />
             </div>
+                </div>
+              )}
+            </div>
+
+            {/* 使用资格 */}
+            <div>
+              <div
+                onClick={() => setCouponSectionsCollapsed({...couponSectionsCollapsed, eligibility: !couponSectionsCollapsed.eligibility})}
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  padding: '12px 16px',
+                  backgroundColor: '#f8f9fa',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  marginBottom: couponSectionsCollapsed.eligibility ? '0' : '16px',
+                  border: '1px solid #e9ecef'
+                }}
+              >
+                <h4 style={{ margin: 0, fontSize: '16px', fontWeight: 600, color: '#495057' }}>
+                  👥 使用资格
+                </h4>
+                <span style={{ fontSize: '18px', color: '#6c757d' }}>
+                  {couponSectionsCollapsed.eligibility ? '▼' : '▲'}
+                </span>
+              </div>
+              {!couponSectionsCollapsed.eligibility && (
+                <div style={{ display: 'grid', gap: '16px', paddingTop: '16px' }}>
             <div className={styles.formGroup}>
               <label style={{ display: 'block', marginBottom: '8px', fontWeight: 500, color: '#333' }}>
                 使用资格类型
@@ -6212,6 +6346,56 @@ const AdminDashboard: React.FC = () => {
                 </select>
               </div>
             )}
+            <div className={styles.formGroup}>
+              <label style={{ display: 'block', marginBottom: '8px', fontWeight: 500, color: '#333' }}>
+                积分兑换所需积分
+                <span style={{ color: '#999', fontSize: '12px', marginLeft: '4px' }}>
+                  （0表示不支持积分兑换）
+                </span>
+              </label>
+              <input
+                type="number"
+                value={couponForm.points_required}
+                onChange={(e) => setCouponForm({...couponForm, points_required: parseInt(e.target.value) || 0})}
+                placeholder="例如：500 积分"
+                style={{
+                  width: '100%',
+                  padding: '10px',
+                  border: '1px solid #ddd',
+                  borderRadius: '4px',
+                  fontSize: '14px'
+                }}
+              />
+            </div>
+                </div>
+              )}
+            </div>
+
+            {/* 适用场景与限制 */}
+            <div>
+              <div
+                onClick={() => setCouponSectionsCollapsed({...couponSectionsCollapsed, scenarios: !couponSectionsCollapsed.scenarios})}
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  padding: '12px 16px',
+                  backgroundColor: '#f8f9fa',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  marginBottom: couponSectionsCollapsed.scenarios ? '0' : '16px',
+                  border: '1px solid #e9ecef'
+                }}
+              >
+                <h4 style={{ margin: 0, fontSize: '16px', fontWeight: 600, color: '#495057' }}>
+                  🎯 适用场景与限制
+                </h4>
+                <span style={{ fontSize: '18px', color: '#6c757d' }}>
+                  {couponSectionsCollapsed.scenarios ? '▼' : '▲'}
+                </span>
+              </div>
+              {!couponSectionsCollapsed.scenarios && (
+                <div style={{ display: 'grid', gap: '16px', paddingTop: '16px' }}>
             <div className={styles.formGroup}>
               <label style={{ display: 'block', marginBottom: '8px', fontWeight: 500, color: '#333' }}>
                 适用场景
@@ -6426,27 +6610,35 @@ const AdminDashboard: React.FC = () => {
                 <option value="exempt">免税</option>
               </select>
             </div>
-            <div className={styles.formGroup}>
-              <label style={{ display: 'block', marginBottom: '8px', fontWeight: 500, color: '#333' }}>
-                积分兑换所需积分
-                <span style={{ color: '#999', fontSize: '12px', marginLeft: '4px' }}>
-                  （0表示不支持积分兑换）
-                </span>
-              </label>
-              <input
-                type="number"
-                value={couponForm.points_required}
-                onChange={(e) => setCouponForm({...couponForm, points_required: parseInt(e.target.value) || 0})}
-                placeholder="例如：500 积分"
-                style={{
-                  width: '100%',
-                  padding: '10px',
-                  border: '1px solid #ddd',
-                  borderRadius: '4px',
-                  fontSize: '14px'
-                }}
-              />
+                </div>
+              )}
             </div>
+
+            {/* 有效期 */}
+            <div>
+              <div
+                onClick={() => setCouponSectionsCollapsed({...couponSectionsCollapsed, validity: !couponSectionsCollapsed.validity})}
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  padding: '12px 16px',
+                  backgroundColor: '#f8f9fa',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  marginBottom: couponSectionsCollapsed.validity ? '0' : '16px',
+                  border: '1px solid #e9ecef'
+                }}
+              >
+                <h4 style={{ margin: 0, fontSize: '16px', fontWeight: 600, color: '#495057' }}>
+                  📅 有效期
+                </h4>
+                <span style={{ fontSize: '18px', color: '#6c757d' }}>
+                  {couponSectionsCollapsed.validity ? '▼' : '▲'}
+                </span>
+              </div>
+              {!couponSectionsCollapsed.validity && (
+                <div style={{ display: 'grid', gap: '16px', paddingTop: '16px' }}>
             <div className={styles.formGroup}>
               <label style={{ display: 'block', marginBottom: '8px', fontWeight: 500, color: '#333' }}>
                 有效期开始 <span style={{ color: 'red' }}>*</span>
@@ -6481,6 +6673,10 @@ const AdminDashboard: React.FC = () => {
                 }}
               />
             </div>
+                </div>
+              )}
+            </div>
+
             </div>
             <div style={{ display: 'flex', gap: '10px', marginTop: '24px', justifyContent: 'flex-end', paddingTop: '20px', borderTop: '1px solid #e9ecef' }}>
               <button 
