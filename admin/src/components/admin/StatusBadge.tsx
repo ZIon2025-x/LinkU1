@@ -47,9 +47,18 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({
 };
 
 /**
+ * 状态配置类型
+ */
+export interface StatusConfig {
+  text: string;
+  variant: BadgeVariant;
+  dot?: boolean;
+}
+
+/**
  * 预定义常用状态映射
  */
-export const statusBadgeMap = {
+export const statusBadgeMap: Record<string, StatusConfig> = {
   // 通用状态
   active: { text: '启用', variant: 'success' as BadgeVariant, dot: false },
   inactive: { text: '禁用', variant: 'secondary' as BadgeVariant, dot: false },
