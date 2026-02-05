@@ -1036,15 +1036,11 @@ async def startup_event():
             if not existing_tables:  # 如果没有表，说明是全新数据库或刚删除了所有表
                 logger.info("检测到空数据库，清理可能残留的孤立索引...")
 
-                # 使用独立事务确保索引清理完全生效
-                from sqlalchemy import create_engine
-                cleanup_engine = create_engine(
-                    str(sync_engine.url),
-                    isolation_level="AUTOCOMMIT"  # 使用AUTOCOMMIT模式确保立即生效
-                )
-
-                try:
-                    with cleanup_engine.connect() as conn:
+                # 使用现有引擎的连接，确保使用相同的认证信息
+                with sync_engine.connect() as conn:
+                    # 开始独立事务
+                    trans = conn.begin()
+                    try:
                         # 使用底层系统表查找所有索引对象（包括孤立的）
                         # pg_indexes 视图可能不显示孤立索引，需要直接查 pg_class
                         result = conn.execute(text("""
@@ -1068,17 +1064,62 @@ async def startup_event():
                                     logger.info(f"  ✓ 已删除索引: {idx_name}")
                                 except Exception as e:
                                     logger.warning(f"  ✗ 删除索引 {idx_name} 失败: {e}")
-                            # AUTOCOMMIT 模式下无需手动提交
+
+                            trans.commit()  # 提交事务
                             logger.info(f"✅ 已清理 {deleted_count} 个孤立索引")
                         else:
+                            trans.commit()  # 即使没有索引也要提交事务
                             logger.info("未发现孤立索引")
-                finally:
-                    cleanup_engine.dispose()
+                    except Exception as e:
+                        trans.rollback()  # 发生错误时回滚
+                        raise
         except Exception as e:
             logger.warning(f"清理孤立索引时出错（继续）: {e}")
 
-        # 创建所有表
-        Base.metadata.create_all(bind=sync_engine, checkfirst=True)
+        # 创建所有表（带重试机制处理孤立对象）
+        max_retries = 3
+        for attempt in range(max_retries):
+            try:
+                Base.metadata.create_all(bind=sync_engine, checkfirst=True)
+                break  # 成功则跳出
+            except Exception as e:
+                error_str = str(e)
+                # 检查是否是"对象已存在"错误
+                if "already exists" in error_str and attempt < max_retries - 1:
+                    # 从错误消息中提取对象名称
+                    import re
+                    match = re.search(r'relation "([^"]+)" already exists', error_str)
+                    if match:
+                        obj_name = match.group(1)
+                        logger.warning(f"⚠️  检测到孤立对象: {obj_name}，尝试删除...")
+
+                        try:
+                            with sync_engine.connect() as conn:
+                                trans = conn.begin()
+                                try:
+                                    # 尝试作为索引删除
+                                    conn.execute(text(f'DROP INDEX IF EXISTS "{obj_name}" CASCADE'))
+                                    logger.info(f"  ✓ 已删除孤立索引: {obj_name}")
+                                    trans.commit()
+                                except:
+                                    trans.rollback()
+                                    # 尝试作为表删除
+                                    trans = conn.begin()
+                                    try:
+                                        conn.execute(text(f'DROP TABLE IF EXISTS "{obj_name}" CASCADE'))
+                                        logger.info(f"  ✓ 已删除孤立表: {obj_name}")
+                                        trans.commit()
+                                    except Exception as drop_err:
+                                        trans.rollback()
+                                        logger.warning(f"  ✗ 删除失败: {drop_err}")
+
+                            logger.info(f"🔄 重试创建表（尝试 {attempt + 2}/{max_retries}）...")
+                            continue  # 重试
+                        except Exception as cleanup_err:
+                            logger.error(f"清理孤立对象失败: {cleanup_err}")
+
+                # 如果不是"已存在"错误，或者是最后一次尝试，则抛出异常
+                raise
 
         # 验证表是否创建成功
         inspector = inspect(sync_engine)
