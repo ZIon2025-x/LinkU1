@@ -5497,26 +5497,17 @@ const AdminDashboard: React.FC = () => {
         apply_order: couponForm.apply_order || 0,
         valid_from: couponForm.valid_from,
         valid_until: couponForm.valid_until,
-        // 顶层字段
-        points_required: couponForm.points_required || 0,
-        applicable_scenarios: couponForm.applicable_scenarios.length > 0 ? couponForm.applicable_scenarios : undefined,
-        // 使用条件（详细配置）
+        // 使用条件（points_required, locations, task_types 在 usage_conditions 内）
         usage_conditions: (() => {
           const conditions: any = {};
+          if (couponForm.points_required) {
+            conditions.points_required = couponForm.points_required;
+          }
           if (couponForm.task_types.length > 0) {
             conditions.task_types = couponForm.task_types;
           }
-          if (couponForm.excluded_task_types.length > 0) {
-            conditions.excluded_task_types = couponForm.excluded_task_types;
-          }
           if (couponForm.locations.length > 0) {
             conditions.locations = couponForm.locations;
-          }
-          if (couponForm.min_task_amount) {
-            conditions.min_task_amount = couponForm.min_task_amount;
-          }
-          if (couponForm.max_task_amount) {
-            conditions.max_task_amount = couponForm.max_task_amount;
           }
           return Object.keys(conditions).length > 0 ? conditions : undefined;
         })(),
@@ -5527,7 +5518,6 @@ const AdminDashboard: React.FC = () => {
         eligibility_value: couponForm.eligibility_value || undefined,
         per_user_limit_window: couponForm.per_user_limit_window || undefined,
         per_user_per_window_limit: couponForm.per_user_per_window_limit ?? undefined,
-        vat_category: couponForm.vat_category || undefined,
       };
       
       if (couponForm.id) {
