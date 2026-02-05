@@ -25,6 +25,7 @@ from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.websockets import WebSocketState
 from fastapi.responses import JSONResponse
+from sqlalchemy import inspect
 from sqlalchemy.orm import Session
 
 from app import crud
