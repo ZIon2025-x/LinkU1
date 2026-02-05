@@ -1126,6 +1126,11 @@ async def startup_event():
                             if deleted:
                                 # 清空连接池以确保新连接看到更改
                                 sync_engine.dispose()
+
+                                # 等待一小段时间让数据库完全处理DROP操作
+                                import time
+                                time.sleep(0.5)
+
                                 logger.info(f"🔄 重试创建表（尝试 {attempt + 2}/{max_retries}）...")
                                 continue  # 重试
                             else:

@@ -654,7 +654,8 @@ Index("ix_reviews_created_at", Review.created_at)
 
 # 通知表索引
 Index("ix_notifications_user_id", Notification.user_id)
-Index("ix_notifications_type", Notification.type)
+# 注意：ix_notifications_type 已在 Notification 类的 __table_args__ 中定义为复合索引 (type, related_id)
+# Index("ix_notifications_type", Notification.type)  # ← 重复定义，已注释掉避免冲突
 Index("ix_notifications_is_read", Notification.is_read)
 Index("ix_notifications_created_at", Notification.created_at)
 
