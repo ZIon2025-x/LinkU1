@@ -34,6 +34,7 @@ export const CouponManagement: React.FC = () => {
   const modal = useModalForm<CouponForm>({
     initialValues: initialCouponForm,
     onSubmit: async (values, isEdit) => {
+      // 构建符合 CouponData 接口的数据
       const data: any = {
         code: values.code && values.code.trim() ? values.code.toUpperCase() : undefined,
         name: values.name,
@@ -50,15 +51,13 @@ export const CouponManagement: React.FC = () => {
         apply_order: values.apply_order || 0,
         valid_from: values.valid_from,
         valid_until: values.valid_until,
-        points_required: values.points_required || 0,
-        applicable_scenarios: values.applicable_scenarios.length > 0 ? values.applicable_scenarios : undefined,
+        // usage_conditions 包含 points_required, locations, task_types
         usage_conditions: (() => {
           const conditions: any = {};
+          if (values.points_required) conditions.points_required = values.points_required;
           if (values.task_types.length > 0) conditions.task_types = values.task_types;
-          if (values.excluded_task_types.length > 0) conditions.excluded_task_types = values.excluded_task_types;
           if (values.locations.length > 0) conditions.locations = values.locations;
-          if (values.min_task_amount) conditions.min_task_amount = values.min_task_amount;
-          if (values.max_task_amount) conditions.max_task_amount = values.max_task_amount;
+          // 注意：CouponData 接口中 usage_conditions 只有这3个字段
           return Object.keys(conditions).length > 0 ? conditions : undefined;
         })(),
         per_device_limit: values.per_device_limit,
@@ -68,7 +67,6 @@ export const CouponManagement: React.FC = () => {
         eligibility_value: values.eligibility_value || undefined,
         per_user_limit_window: values.per_user_limit_window || undefined,
         per_user_per_window_limit: values.per_user_per_window_limit ?? undefined,
-        vat_category: values.vat_category || undefined,
       };
 
       if (isEdit && values.id) {
