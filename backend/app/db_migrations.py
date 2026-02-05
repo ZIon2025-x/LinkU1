@@ -228,7 +228,12 @@ def execute_sql_file(engine: Engine, sql_file: Path) -> tuple[bool, int]:
                         if stmt.strip():
                             try:
                                 cursor.execute(stmt)
+                                # 每个语句执行后立即提交，避免事务中止影响后续语句
+                                raw_conn.commit()
                             except Exception as stmt_error:
+                                # 回滚失败的事务，避免"transaction is aborted"错误
+                                raw_conn.rollback()
+
                                 # 记录错误但继续执行（某些语句可能因为已存在而失败）
                                 error_msg = str(stmt_error).lower()
                                 if any(keyword in error_msg for keyword in [
@@ -240,7 +245,12 @@ def execute_sql_file(engine: Engine, sql_file: Path) -> tuple[bool, int]:
                                     logger.warning(f"执行语句时出错（继续执行）: {stmt_error}")
                                     logger.debug(f"问题语句: {stmt[:200]}...")
 
-                    raw_conn.commit()
+                    # 最后确保提交（如果还有未提交的）
+                    try:
+                        raw_conn.commit()
+                    except:
+                        pass
+
                     logger.info("✅ 使用 psycopg2 成功执行迁移")
                     execution_time = int((time.time() - start_time) * 1000)
                     return True, execution_time

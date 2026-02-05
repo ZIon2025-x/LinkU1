@@ -103,7 +103,30 @@ def reset_migration_records(engine: Engine, drop_tables: bool = False):
 
             # 如果需要删除所有表（完全重置）
             if drop_tables:
-                logger.warning("🗑️  开始删除所有数据库表...")
+                logger.warning("🗑️  开始删除所有数据库对象...")
+
+                # 先删除所有函数和触发器（避免依赖问题）
+                try:
+                    # 获取所有自定义函数
+                    functions_result = conn.execute(text("""
+                        SELECT proname, oidvectortypes(proargtypes) as argtypes
+                        FROM pg_proc INNER JOIN pg_namespace ns ON (pg_proc.pronamespace = ns.oid)
+                        WHERE ns.nspname = 'public' AND prokind = 'f'
+                    """))
+                    functions = functions_result.fetchall()
+
+                    for func_name, arg_types in functions:
+                        try:
+                            # 删除函数（包括所有重载版本）
+                            conn.execute(text(f'DROP FUNCTION IF EXISTS "{func_name}"({arg_types}) CASCADE'))
+                            logger.debug(f"  已删除函数: {func_name}({arg_types})")
+                        except Exception as e:
+                            logger.debug(f"  删除函数失败（可能不存在）: {e}")
+
+                    conn.commit()
+                except Exception as e:
+                    logger.warning(f"删除函数时出错（继续）: {e}")
+                    conn.rollback()
 
                 # 获取所有表
                 tables_result = conn.execute(text("""
@@ -115,8 +138,7 @@ def reset_migration_records(engine: Engine, drop_tables: bool = False):
                 if all_tables:
                     logger.info(f"找到 {len(all_tables)} 个表")
 
-                    # 使用 CASCADE 删除所有表（包括依赖关系）
-                    # 先禁用外键约束，然后删除表
+                    # 使用 CASCADE 删除所有表（包括依赖关系、索引、序列等）
                     for table in all_tables:
                         try:
                             conn.execute(text(f'DROP TABLE IF EXISTS "{table}" CASCADE'))
@@ -125,9 +147,31 @@ def reset_migration_records(engine: Engine, drop_tables: bool = False):
                             logger.warning(f"  删除表 {table} 失败: {e}")
 
                     conn.commit()
-                    logger.info(f"✅ 已删除 {len(all_tables)} 个表")
+                    logger.info(f"✅ 已删除 {len(all_tables)} 个表及其依赖对象")
                 else:
                     logger.info("没有找到需要删除的表")
+
+                # 清理剩余的序列
+                try:
+                    sequences_result = conn.execute(text("""
+                        SELECT sequence_name FROM information_schema.sequences
+                        WHERE sequence_schema = 'public'
+                    """))
+                    sequences = [row[0] for row in sequences_result.fetchall()]
+
+                    for seq in sequences:
+                        try:
+                            conn.execute(text(f'DROP SEQUENCE IF EXISTS "{seq}" CASCADE'))
+                            logger.debug(f"  已删除序列: {seq}")
+                        except:
+                            pass
+
+                    if sequences:
+                        conn.commit()
+                        logger.info(f"✅ 已删除 {len(sequences)} 个序列")
+                except Exception as e:
+                    logger.debug(f"清理序列时出错（可能不存在）: {e}")
+                    conn.rollback()
 
                 return True
 
