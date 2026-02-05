@@ -1000,9 +1000,16 @@ async def startup_event():
     # 初始化数据库表
     try:
         from app.database import sync_engine
-        from app.models import Base
-        # 导入所有模型类，确保 create_all() 能够创建所有表
-        from app import models  # noqa: F401 - 必须导入以注册模型
+        # 必须明确导入所有模型类，确保它们被注册到 Base.metadata
+        # 只导入模块不够，必须导入具体的类
+        from app.models import (
+            Base, User, Task, Review, Message, Notification, Conversation,
+            University, FeaturedTaskExpert, AdminUser, CustomerService,
+            TaskHistory, UserTaskInteraction, RecommendationFeedback,
+            TaskDispute, RefundRequest, TaskCancelRequest, AdminRequest,
+            AdminChatMessage, StaffNotification, SystemSettings,
+            CustomerServiceChat, CustomerServiceMessage
+        )
 
         # 🔧 自动检测并修复迁移状态（如果启用）
         try:
