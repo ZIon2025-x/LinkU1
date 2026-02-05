@@ -99,7 +99,15 @@ export const CouponFormModal: React.FC<CouponFormModalProps> = ({
       <div className={styles.form}>
         {/* 基本信息 */}
         <div className={styles.section}>
-          <div className={styles.sectionHeader} onClick={() => toggleSection('basic')}>
+          <div
+            className={styles.sectionHeader}
+            onClick={(e) => {
+              // 只在点击标题区域时触发折叠，不要在点击输入框时触发
+              if (e.currentTarget === e.target || e.target instanceof HTMLHeadingElement || e.target instanceof HTMLSpanElement) {
+                toggleSection('basic');
+              }
+            }}
+          >
             <h3>基本信息</h3>
             <span className={collapsedSections.basic ? styles.iconCollapsed : styles.iconExpanded}>
               ▼
@@ -150,7 +158,14 @@ export const CouponFormModal: React.FC<CouponFormModalProps> = ({
 
         {/* 折扣设置 */}
         <div className={styles.section}>
-          <div className={styles.sectionHeader} onClick={() => toggleSection('discount')}>
+          <div
+            className={styles.sectionHeader}
+            onClick={(e) => {
+              if (e.currentTarget === e.target || e.target instanceof HTMLHeadingElement || e.target instanceof HTMLSpanElement) {
+                toggleSection('discount');
+              }
+            }}
+          >
             <h3>折扣设置</h3>
             <span className={collapsedSections.discount ? styles.iconCollapsed : styles.iconExpanded}>
               ▼
@@ -235,7 +250,14 @@ export const CouponFormModal: React.FC<CouponFormModalProps> = ({
 
         {/* 使用限制 */}
         <div className={styles.section}>
-          <div className={styles.sectionHeader} onClick={() => toggleSection('limits')}>
+          <div
+            className={styles.sectionHeader}
+            onClick={(e) => {
+              if (e.currentTarget === e.target || e.target instanceof HTMLHeadingElement || e.target instanceof HTMLSpanElement) {
+                toggleSection('limits');
+              }
+            }}
+          >
             <h3>使用限制</h3>
             <span className={collapsedSections.limits ? styles.iconCollapsed : styles.iconExpanded}>
               ▼
@@ -317,7 +339,14 @@ export const CouponFormModal: React.FC<CouponFormModalProps> = ({
 
         {/* 适用场景 */}
         <div className={styles.section}>
-          <div className={styles.sectionHeader} onClick={() => toggleSection('scenarios')}>
+          <div
+            className={styles.sectionHeader}
+            onClick={(e) => {
+              if (e.currentTarget === e.target || e.target instanceof HTMLHeadingElement || e.target instanceof HTMLSpanElement) {
+                toggleSection('scenarios');
+              }
+            }}
+          >
             <h3>适用场景</h3>
             <span className={collapsedSections.scenarios ? styles.iconCollapsed : styles.iconExpanded}>
               ▼
@@ -409,7 +438,14 @@ export const CouponFormModal: React.FC<CouponFormModalProps> = ({
 
         {/* 有效期 */}
         <div className={styles.section}>
-          <div className={styles.sectionHeader} onClick={() => toggleSection('validity')}>
+          <div
+            className={styles.sectionHeader}
+            onClick={(e) => {
+              if (e.currentTarget === e.target || e.target instanceof HTMLHeadingElement || e.target instanceof HTMLSpanElement) {
+                toggleSection('validity');
+              }
+            }}
+          >
             <h3>有效期</h3>
             <span className={collapsedSections.validity ? styles.iconCollapsed : styles.iconExpanded}>
               ▼
