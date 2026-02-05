@@ -51,32 +51,32 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({
  */
 export const statusBadgeMap = {
   // 通用状态
-  active: { text: '启用', variant: 'success' as BadgeVariant },
-  inactive: { text: '禁用', variant: 'secondary' as BadgeVariant },
-  pending: { text: '待处理', variant: 'warning' as BadgeVariant },
-  approved: { text: '已批准', variant: 'success' as BadgeVariant },
-  rejected: { text: '已拒绝', variant: 'danger' as BadgeVariant },
+  active: { text: '启用', variant: 'success' as BadgeVariant, dot: false },
+  inactive: { text: '禁用', variant: 'secondary' as BadgeVariant, dot: false },
+  pending: { text: '待处理', variant: 'warning' as BadgeVariant, dot: false },
+  approved: { text: '已批准', variant: 'success' as BadgeVariant, dot: false },
+  rejected: { text: '已拒绝', variant: 'danger' as BadgeVariant, dot: false },
 
   // 用户状态
   online: { text: '在线', variant: 'success' as BadgeVariant, dot: true },
   offline: { text: '离线', variant: 'secondary' as BadgeVariant, dot: true },
-  banned: { text: '已封禁', variant: 'danger' as BadgeVariant },
-  suspended: { text: '已暂停', variant: 'warning' as BadgeVariant },
+  banned: { text: '已封禁', variant: 'danger' as BadgeVariant, dot: false },
+  suspended: { text: '已暂停', variant: 'warning' as BadgeVariant, dot: false },
 
   // 任务/订单状态
-  open: { text: '进行中', variant: 'primary' as BadgeVariant },
-  completed: { text: '已完成', variant: 'success' as BadgeVariant },
-  cancelled: { text: '已取消', variant: 'secondary' as BadgeVariant },
+  open: { text: '进行中', variant: 'primary' as BadgeVariant, dot: false },
+  completed: { text: '已完成', variant: 'success' as BadgeVariant, dot: false },
+  cancelled: { text: '已取消', variant: 'secondary' as BadgeVariant, dot: false },
 
   // 支付状态
-  paid: { text: '已支付', variant: 'success' as BadgeVariant },
-  unpaid: { text: '未支付', variant: 'warning' as BadgeVariant },
-  refunded: { text: '已退款', variant: 'info' as BadgeVariant },
+  paid: { text: '已支付', variant: 'success' as BadgeVariant, dot: false },
+  unpaid: { text: '未支付', variant: 'warning' as BadgeVariant, dot: false },
+  refunded: { text: '已退款', variant: 'info' as BadgeVariant, dot: false },
 
   // 审核状态
-  reviewing: { text: '审核中', variant: 'warning' as BadgeVariant },
-  passed: { text: '已通过', variant: 'success' as BadgeVariant },
-  failed: { text: '未通过', variant: 'danger' as BadgeVariant },
+  reviewing: { text: '审核中', variant: 'warning' as BadgeVariant, dot: false },
+  passed: { text: '已通过', variant: 'success' as BadgeVariant, dot: false },
+  failed: { text: '未通过', variant: 'danger' as BadgeVariant, dot: false },
 };
 
 /**
@@ -91,6 +91,7 @@ export const StatusBadgeAuto: React.FC<{
   const config = statusBadgeMap[status as keyof typeof statusBadgeMap] || {
     text: status,
     variant: 'default' as BadgeVariant,
+    dot: false,
   };
 
   return (
