@@ -316,16 +316,16 @@ class IAPService: ObservableObject {
     
     /// 处理订阅撤销
     private func handleRevocation(productID: String) async {
-        // 这里可以调用后端API移除VIP权限
         Logger.info("处理订阅撤销: \(productID)", category: .iap)
-        // TODO: 调用后端API移除VIP权限
+        // 后端通过 Apple Server-to-Server Notifications 自动处理VIP状态变更
+        // iOS端仅更新本地状态，purchasedProducts和subscriptionStatuses已在调用方更新
     }
     
     /// 处理订阅过期
     private func handleExpiration(productID: String) async {
-        // 这里可以调用后端API更新VIP状态
         Logger.info("处理订阅过期: \(productID)", category: .iap)
-        // TODO: 调用后端API更新VIP状态
+        // 后端通过 Apple Server-to-Server Notifications 自动处理VIP状态变更
+        // iOS端仅更新本地状态，purchasedProducts和subscriptionStatuses已在调用方更新
     }
     
     // MARK: - 监听交易更新
