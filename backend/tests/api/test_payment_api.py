@@ -393,10 +393,14 @@ class TestStripeIntegration:
             import stripe
             stripe.api_key = STRIPE_TEST_SECRET_KEY
 
-            # 创建测试 PaymentIntent
+            # 创建测试 PaymentIntent（禁用重定向支付方式）
             payment_intent = stripe.PaymentIntent.create(
                 amount=1000,  # £10.00 (以便士为单位)
                 currency="gbp",
+                automatic_payment_methods={
+                    "enabled": True,
+                    "allow_redirects": "never"
+                },
                 metadata={
                     "test": "true",
                     "source": "github_actions_test"
@@ -437,10 +441,15 @@ class TestStripeIntegration:
             import stripe
             stripe.api_key = STRIPE_TEST_SECRET_KEY
 
-            # 1. 创建 PaymentIntent
+            # 1. 创建 PaymentIntent（禁用重定向支付方式，仅支持卡支付）
             payment_intent = stripe.PaymentIntent.create(
                 amount=500,  # £5.00
                 currency="gbp",
+                # 禁用自动支付方式的重定向，避免需要 return_url
+                automatic_payment_methods={
+                    "enabled": True,
+                    "allow_redirects": "never"
+                },
                 metadata={
                     "test": "true",
                     "source": "github_actions_test"
@@ -487,10 +496,14 @@ class TestStripeIntegration:
             import stripe
             stripe.api_key = STRIPE_TEST_SECRET_KEY
 
-            # 1. 创建 PaymentIntent
+            # 1. 创建 PaymentIntent（禁用重定向支付方式）
             payment_intent = stripe.PaymentIntent.create(
                 amount=500,
                 currency="gbp",
+                automatic_payment_methods={
+                    "enabled": True,
+                    "allow_redirects": "never"
+                },
                 metadata={"test": "true"}
             )
 
