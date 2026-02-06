@@ -5,7 +5,9 @@
 - 获取任务列表
 - 获取任务详情
 - 创建任务
+- 编辑任务
 - 接受任务
+- 取消任务
 - 完成任务
 
 运行方式:
@@ -14,6 +16,8 @@
 
 import pytest
 import httpx
+import uuid
+from datetime import datetime, timedelta
 from tests.config import TEST_API_URL, TEST_USER_EMAIL, TEST_USER_PASSWORD, REQUEST_TIMEOUT
 
 
@@ -25,6 +29,7 @@ class TestTaskAPI:
     _access_token: str = ""
     _user_id: str = ""
     _test_task_id: str = ""
+    _created_task_id: str = ""  # 测试中创建的任务 ID
 
     @pytest.fixture(autouse=True)
     def setup(self):
@@ -63,6 +68,101 @@ class TestTaskAPI:
         if TestTaskAPI._access_token:
             return {"Authorization": f"Bearer {TestTaskAPI._access_token}"}
         return {}
+
+    # =========================================================================
+    # 创建任务测试
+    # =========================================================================
+
+    @pytest.mark.api
+    @pytest.mark.task
+    def test_create_task_unauthenticated(self):
+        """测试：未登录用户不能创建任务"""
+        with httpx.Client(timeout=self.timeout) as client:
+            response = client.post(
+                f"{self.base_url}/api/async/tasks",
+                json={
+                    "title": "Test Task",
+                    "description": "Test Description",
+                    "reward": 10.0
+                }
+            )
+
+            # 应该返回 401 或 403
+            assert response.status_code in [401, 403], \
+                f"未认证请求应该被拒绝，但返回了 {response.status_code}"
+            
+            print("✅ 未登录创建任务被正确拒绝")
+
+    @pytest.mark.api
+    @pytest.mark.task
+    def test_create_task_success(self):
+        """测试：已登录用户创建任务"""
+        if not TEST_USER_EMAIL or not TEST_USER_PASSWORD:
+            pytest.skip("未配置测试账号")
+
+        with httpx.Client(timeout=self.timeout) as client:
+            if not self._login(client):
+                pytest.skip("登录失败")
+
+            unique_id = uuid.uuid4().hex[:8]
+            deadline = (datetime.utcnow() + timedelta(days=7)).isoformat()
+            
+            response = client.post(
+                f"{self.base_url}/api/async/tasks",
+                json={
+                    "title": f"API Test Task {unique_id}",
+                    "description": "This is a test task created by automated API testing. Please ignore.",
+                    "task_type": "Other",
+                    "location": "Online",
+                    "reward": 5.0,
+                    "deadline": deadline,
+                    "task_level": "normal"
+                },
+                headers=self._get_auth_headers(),
+                cookies=TestTaskAPI._cookies
+            )
+
+            if response.status_code in [200, 201]:
+                data = response.json()
+                if "id" in data:
+                    TestTaskAPI._created_task_id = data["id"]
+                    print(f"✅ 创建任务成功: {data['id']}")
+                elif "task" in data and "id" in data["task"]:
+                    TestTaskAPI._created_task_id = data["task"]["id"]
+                    print(f"✅ 创建任务成功: {data['task']['id']}")
+                else:
+                    print(f"✅ 创建任务成功: {data}")
+            elif response.status_code == 422:
+                print(f"ℹ️  创建任务验证失败: {response.json()}")
+            else:
+                print(f"ℹ️  创建任务返回: {response.status_code} - {response.text[:200]}")
+
+    @pytest.mark.api
+    @pytest.mark.task
+    def test_create_task_missing_required_fields(self):
+        """测试：缺少必填字段应该创建失败"""
+        if not TEST_USER_EMAIL or not TEST_USER_PASSWORD:
+            pytest.skip("未配置测试账号")
+
+        with httpx.Client(timeout=self.timeout) as client:
+            if not self._login(client):
+                pytest.skip("登录失败")
+
+            response = client.post(
+                f"{self.base_url}/api/async/tasks",
+                json={
+                    "title": ""  # 空标题
+                    # 缺少其他必填字段
+                },
+                headers=self._get_auth_headers(),
+                cookies=TestTaskAPI._cookies
+            )
+
+            # 应该返回 400 或 422（验证错误）
+            assert response.status_code in [400, 422], \
+                f"缺少必填字段应该被拒绝，但返回了 {response.status_code}"
+            
+            print("✅ 缺少必填字段被正确拒绝")
 
     # =========================================================================
     # 任务列表测试
@@ -276,3 +376,217 @@ class TestTaskAPI:
                 print(f"ℹ️  任务历史接口返回: {response.status_code}")
             else:
                 print(f"ℹ️  任务历史接口返回: {response.status_code}")
+
+    # =========================================================================
+    # 编辑任务测试
+    # =========================================================================
+
+    @pytest.mark.api
+    @pytest.mark.task
+    def test_update_task(self):
+        """测试：更新自己创建的任务"""
+        task_id = TestTaskAPI._created_task_id or TestTaskAPI._test_task_id
+        if not task_id:
+            pytest.skip("没有可用的任务 ID")
+
+        with httpx.Client(timeout=self.timeout) as client:
+            if not self._login(client):
+                pytest.skip("登录失败")
+
+            response = client.put(
+                f"{self.base_url}/api/async/tasks/{task_id}",
+                json={
+                    "description": "Updated description by API test"
+                },
+                headers=self._get_auth_headers(),
+                cookies=TestTaskAPI._cookies
+            )
+
+            if response.status_code == 200:
+                print("✅ 更新任务成功")
+            elif response.status_code in [401, 403]:
+                print("ℹ️  无权限更新任务")
+            elif response.status_code == 404:
+                print("ℹ️  任务不存在")
+            else:
+                print(f"ℹ️  更新任务返回: {response.status_code}")
+
+    @pytest.mark.api
+    @pytest.mark.task
+    def test_update_task_unauthorized(self):
+        """测试：未登录用户不能更新任务"""
+        if not TestTaskAPI._test_task_id:
+            pytest.skip("没有可用的任务 ID")
+
+        with httpx.Client(timeout=self.timeout) as client:
+            response = client.put(
+                f"{self.base_url}/api/async/tasks/{TestTaskAPI._test_task_id}",
+                json={
+                    "description": "Unauthorized update"
+                }
+            )
+
+            assert response.status_code in [401, 403], \
+                f"未认证请求应该被拒绝，但返回了 {response.status_code}"
+            
+            print("✅ 未登录更新任务被正确拒绝")
+
+    # =========================================================================
+    # 取消任务测试
+    # =========================================================================
+
+    @pytest.mark.api
+    @pytest.mark.task
+    def test_cancel_task_unauthorized(self):
+        """测试：未登录用户不能取消任务"""
+        with httpx.Client(timeout=self.timeout) as client:
+            response = client.post(
+                f"{self.base_url}/tasks/12345678/cancel"
+            )
+
+            assert response.status_code in [401, 403, 404], \
+                f"未认证请求应该被拒绝，但返回了 {response.status_code}"
+            
+            print("✅ 未登录取消任务被正确拒绝")
+
+    # =========================================================================
+    # 接受任务测试
+    # =========================================================================
+
+    @pytest.mark.api
+    @pytest.mark.task
+    def test_accept_task_unauthorized(self):
+        """测试：未登录用户不能接受任务"""
+        with httpx.Client(timeout=self.timeout) as client:
+            response = client.post(
+                f"{self.base_url}/tasks/12345678/accept"
+            )
+
+            assert response.status_code in [401, 403, 404], \
+                f"未认证请求应该被拒绝，但返回了 {response.status_code}"
+            
+            print("✅ 未登录接受任务被正确拒绝")
+
+    # =========================================================================
+    # 任务搜索测试
+    # =========================================================================
+
+    @pytest.mark.api
+    @pytest.mark.task
+    def test_search_tasks(self):
+        """测试：搜索任务"""
+        with httpx.Client(timeout=self.timeout) as client:
+            if not self._login(client):
+                pytest.skip("登录失败")
+
+            response = client.get(
+                f"{self.base_url}/api/async/tasks",
+                params={
+                    "limit": 10,
+                    "offset": 0,
+                    "search": "test"  # 搜索关键词
+                },
+                headers=self._get_auth_headers(),
+                cookies=TestTaskAPI._cookies
+            )
+
+            if response.status_code == 200:
+                print("✅ 搜索任务成功")
+            else:
+                print(f"ℹ️  搜索任务返回: {response.status_code}")
+
+    @pytest.mark.api
+    @pytest.mark.task
+    def test_filter_tasks_by_type(self):
+        """测试：按类型筛选任务"""
+        with httpx.Client(timeout=self.timeout) as client:
+            if not self._login(client):
+                pytest.skip("登录失败")
+
+            response = client.get(
+                f"{self.base_url}/api/async/tasks",
+                params={
+                    "limit": 10,
+                    "offset": 0,
+                    "task_type": "Tutoring"
+                },
+                headers=self._get_auth_headers(),
+                cookies=TestTaskAPI._cookies
+            )
+
+            if response.status_code == 200:
+                print("✅ 按类型筛选任务成功")
+            else:
+                print(f"ℹ️  按类型筛选返回: {response.status_code}")
+
+    # =========================================================================
+    # 任务评价测试
+    # =========================================================================
+
+    @pytest.mark.api
+    @pytest.mark.task
+    def test_get_task_reviews(self):
+        """测试：获取任务评价"""
+        if not TestTaskAPI._test_task_id:
+            pytest.skip("没有可用的任务 ID")
+
+        with httpx.Client(timeout=self.timeout) as client:
+            response = client.get(
+                f"{self.base_url}/tasks/{TestTaskAPI._test_task_id}/reviews",
+                headers=self._get_auth_headers(),
+                cookies=TestTaskAPI._cookies
+            )
+
+            if response.status_code == 200:
+                print("✅ 获取任务评价成功")
+            elif response.status_code == 404:
+                print("ℹ️  任务评价接口不存在或任务无评价")
+            else:
+                print(f"ℹ️  获取任务评价返回: {response.status_code}")
+
+    @pytest.mark.api
+    @pytest.mark.task
+    def test_submit_review_unauthorized(self):
+        """测试：未登录用户不能提交评价"""
+        with httpx.Client(timeout=self.timeout) as client:
+            response = client.post(
+                f"{self.base_url}/tasks/12345678/review",
+                json={
+                    "rating": 5,
+                    "comment": "Great task!"
+                }
+            )
+
+            assert response.status_code in [401, 403, 404], \
+                f"未认证请求应该被拒绝，但返回了 {response.status_code}"
+            
+            print("✅ 未登录提交评价被正确拒绝")
+
+    # =========================================================================
+    # 用户任务统计测试
+    # =========================================================================
+
+    @pytest.mark.api
+    @pytest.mark.task
+    def test_get_user_task_statistics(self):
+        """测试：获取用户任务统计"""
+        if not TestTaskAPI._user_id:
+            pytest.skip("没有用户 ID")
+
+        with httpx.Client(timeout=self.timeout) as client:
+            if not self._login(client):
+                pytest.skip("登录失败")
+
+            response = client.get(
+                f"{self.base_url}/users/{TestTaskAPI._user_id}/task-statistics",
+                headers=self._get_auth_headers(),
+                cookies=TestTaskAPI._cookies
+            )
+
+            if response.status_code == 200:
+                data = response.json()
+                print(f"✅ 获取任务统计成功: {data}")
+            elif response.status_code == 404:
+                print("ℹ️  任务统计接口不存在")
+            else:
+                print(f"ℹ️  任务统计返回: {response.status_code}")

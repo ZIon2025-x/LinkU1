@@ -1,0 +1,322 @@
+/* DisputeManagement 模块样式 */
+
+.container {
+  padding: 0;
+}
+
+.title {
+  font-size: 24px;
+  font-weight: 600;
+  margin: 0 0 20px 0;
+  color: #333;
+}
+
+/* 筛选和搜索区域 */
+.filterContainer {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+}
+
+.searchInput {
+  padding: 10px 14px;
+  border: 1px solid #d9d9d9;
+  border-radius: 6px;
+  font-size: 14px;
+  flex: 1;
+  min-width: 250px;
+  transition: all 0.2s ease;
+}
+
+.searchInput:focus {
+  outline: none;
+  border-color: #1890ff;
+  box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.2);
+}
+
+.filterSelect {
+  padding: 10px 14px;
+  border: 1px solid #d9d9d9;
+  border-radius: 6px;
+  font-size: 14px;
+  background: white;
+  cursor: pointer;
+}
+
+.filterBtn {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 6px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.filterBtnPrimary {
+  background: #007bff;
+  color: white;
+}
+
+.filterBtnPrimary:hover {
+  background: #0056b3;
+}
+
+.filterBtnClear {
+  background: white;
+  color: #333;
+  border: 1px solid #d9d9d9;
+}
+
+.filterBtnClear:hover {
+  background: #f5f5f5;
+}
+
+/* 表格容器 */
+.tableContainer {
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.tableHeader {
+  background: #fafafa;
+}
+
+.tableHeaderCell {
+  padding: 14px 12px;
+  text-align: left;
+  font-weight: 600;
+  color: #333;
+  border-bottom: 1px solid #e8e8e8;
+}
+
+.tableRow {
+  border-bottom: 1px solid #f0f0f0;
+  transition: background 0.2s ease;
+}
+
+.tableRow:hover {
+  background: #f5f7fa;
+}
+
+.tableCell {
+  padding: 12px;
+}
+
+.tableCellTruncate {
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tableCellReason {
+  max-width: 300px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 状态标签 */
+.statusBadge {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+/* 操作按钮组 */
+.actionGroup {
+  display: flex;
+  gap: 8px;
+}
+
+.actionBtn {
+  padding: 5px 10px;
+  border-radius: 4px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btnView {
+  background: white;
+  color: #007bff;
+  border: 1px solid #007bff;
+}
+
+.btnView:hover {
+  background: #e7f3ff;
+}
+
+.btnResolve {
+  background: #28a745;
+  color: white;
+  border: none;
+}
+
+.btnResolve:hover {
+  background: #218838;
+}
+
+.btnDismiss {
+  background: #dc3545;
+  color: white;
+  border: none;
+}
+
+.btnDismiss:hover {
+  background: #c82333;
+}
+
+/* 空状态和加载状态 */
+.emptyState {
+  padding: 40px;
+  text-align: center;
+  color: #999;
+}
+
+.loadingState {
+  padding: 40px;
+  text-align: center;
+  color: #666;
+}
+
+/* 分页 */
+.pagination {
+  margin-top: 20px;
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  align-items: center;
+}
+
+.pageBtn {
+  padding: 8px 16px;
+  border: 1px solid #d9d9d9;
+  border-radius: 4px;
+  background: white;
+  color: #333;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.pageBtn:hover:not(:disabled) {
+  border-color: #1890ff;
+  color: #1890ff;
+}
+
+.pageBtn:disabled {
+  background: #f5f5f5;
+  color: #999;
+  cursor: not-allowed;
+}
+
+.pageInfo {
+  padding: 8px 16px;
+  line-height: 32px;
+  color: #666;
+}
+
+/* 模态框内容 */
+.modalSection {
+  margin-bottom: 24px;
+}
+
+.modalSectionTitle {
+  margin-bottom: 16px;
+  font-size: 16px;
+  font-weight: 600;
+  border-bottom: 2px solid #e0e0e0;
+  padding-bottom: 8px;
+  color: #333;
+}
+
+.modalField {
+  margin-bottom: 16px;
+}
+
+.modalLabel {
+  font-weight: 600;
+  color: #333;
+}
+
+.modalValue {
+  margin-left: 8px;
+  color: #666;
+}
+
+.modalTextBlock {
+  margin-top: 8px;
+  padding: 12px;
+  background: #f5f5f5;
+  border-radius: 4px;
+  white-space: pre-wrap;
+  max-height: 150px;
+  overflow: auto;
+}
+
+.codeBlock {
+  padding: 4px 8px;
+  background: #f5f5f5;
+  border-radius: 4px;
+  font-size: 12px;
+  font-family: monospace;
+}
+
+/* 处理表单 */
+.actionForm {
+  padding: 20px 0;
+}
+
+.actionFormField {
+  margin-bottom: 20px;
+}
+
+.actionFormLabel {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 600;
+  color: #333;
+}
+
+.actionFormTextarea {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid #d9d9d9;
+  border-radius: 4px;
+  font-size: 14px;
+  resize: vertical;
+  transition: all 0.2s ease;
+}
+
+.actionFormTextarea:focus {
+  outline: none;
+  border-color: #1890ff;
+  box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.2);
+}
+
+/* 响应式 */
+@media (max-width: 768px) {
+  .filterContainer {
+    flex-direction: column;
+  }
+
+  .searchInput {
+    width: 100%;
+    min-width: auto;
+  }
+
+  .pagination {
+    flex-wrap: wrap;
+  }
+}

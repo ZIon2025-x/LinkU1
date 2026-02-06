@@ -6,7 +6,6 @@ import { AdminRoutes } from './routes/adminRoutes';
 
 // 懒加载页面组件
 const AdminLogin = lazy(() => import('./pages/AdminLogin'));
-const AdminDashboard = lazy(() => import('./pages/AdminDashboard'));
 
 // 加载中占位组件
 const LoadingFallback: React.FC = () => (
@@ -29,14 +28,10 @@ const App: React.FC = () => {
           {/* 登录页 */}
           <Route path="/login" element={<AdminLogin />} />
 
-          {/* 管理后台主页（旧的单页应用） - 需要认证 */}
-          <Route path="/" element={
-            <AdminRoute>
-              <AdminDashboard />
-            </AdminRoute>
-          } />
+          {/* 根路径重定向到 /admin */}
+          <Route path="/" element={<Navigate to="/admin" replace />} />
 
-          {/* Admin 子路由（新的模块化系统） - 需要认证 */}
+          {/* Admin 模块化系统 - 需要认证 */}
           <Route path="/admin/*" element={
             <AdminRoute>
               <AdminRoutes />
