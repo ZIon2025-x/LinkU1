@@ -1,0 +1,149 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
+
+import 'core/design/app_theme.dart';
+import 'core/router/app_router.dart';
+import 'features/auth/bloc/auth_bloc.dart';
+import 'data/repositories/auth_repository.dart';
+import 'data/repositories/task_repository.dart';
+import 'data/repositories/user_repository.dart';
+import 'data/repositories/flea_market_repository.dart';
+import 'data/repositories/task_expert_repository.dart';
+import 'data/repositories/forum_repository.dart';
+import 'data/repositories/leaderboard_repository.dart';
+import 'data/repositories/message_repository.dart';
+import 'data/repositories/notification_repository.dart';
+import 'data/repositories/activity_repository.dart';
+import 'data/repositories/coupon_points_repository.dart';
+import 'data/repositories/payment_repository.dart';
+import 'data/repositories/student_verification_repository.dart';
+import 'data/repositories/common_repository.dart';
+import 'data/services/api_service.dart';
+import 'l10n/app_localizations.dart';
+
+class Link2UrApp extends StatefulWidget {
+  const Link2UrApp({super.key});
+
+  @override
+  State<Link2UrApp> createState() => _Link2UrAppState();
+}
+
+class _Link2UrAppState extends State<Link2UrApp> {
+  late final ApiService _apiService;
+  late final AuthRepository _authRepository;
+  late final TaskRepository _taskRepository;
+  late final UserRepository _userRepository;
+  late final FleaMarketRepository _fleaMarketRepository;
+  late final TaskExpertRepository _taskExpertRepository;
+  late final ForumRepository _forumRepository;
+  late final LeaderboardRepository _leaderboardRepository;
+  late final MessageRepository _messageRepository;
+  late final NotificationRepository _notificationRepository;
+  late final ActivityRepository _activityRepository;
+  late final CouponPointsRepository _couponPointsRepository;
+  late final PaymentRepository _paymentRepository;
+  late final StudentVerificationRepository _studentVerificationRepository;
+  late final CommonRepository _commonRepository;
+  late final AppRouter _appRouter;
+
+  @override
+  void initState() {
+    super.initState();
+    _apiService = ApiService();
+    _authRepository = AuthRepository(apiService: _apiService);
+    _taskRepository = TaskRepository(apiService: _apiService);
+    _userRepository = UserRepository(apiService: _apiService);
+    _fleaMarketRepository = FleaMarketRepository(apiService: _apiService);
+    _taskExpertRepository = TaskExpertRepository(apiService: _apiService);
+    _forumRepository = ForumRepository(apiService: _apiService);
+    _leaderboardRepository = LeaderboardRepository(apiService: _apiService);
+    _messageRepository = MessageRepository(apiService: _apiService);
+    _notificationRepository = NotificationRepository(apiService: _apiService);
+    _activityRepository = ActivityRepository(apiService: _apiService);
+    _couponPointsRepository = CouponPointsRepository(apiService: _apiService);
+    _paymentRepository = PaymentRepository(apiService: _apiService);
+    _studentVerificationRepository =
+        StudentVerificationRepository(apiService: _apiService);
+    _commonRepository = CommonRepository(apiService: _apiService);
+    _appRouter = AppRouter();
+  }
+
+  @override
+  void dispose() {
+    _apiService.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return MultiRepositoryProvider(
+      providers: [
+        RepositoryProvider<ApiService>.value(value: _apiService),
+        RepositoryProvider<AuthRepository>.value(value: _authRepository),
+        RepositoryProvider<TaskRepository>.value(value: _taskRepository),
+        RepositoryProvider<UserRepository>.value(value: _userRepository),
+        RepositoryProvider<FleaMarketRepository>.value(
+            value: _fleaMarketRepository),
+        RepositoryProvider<TaskExpertRepository>.value(
+            value: _taskExpertRepository),
+        RepositoryProvider<ForumRepository>.value(value: _forumRepository),
+        RepositoryProvider<LeaderboardRepository>.value(
+            value: _leaderboardRepository),
+        RepositoryProvider<MessageRepository>.value(
+            value: _messageRepository),
+        RepositoryProvider<NotificationRepository>.value(
+            value: _notificationRepository),
+        RepositoryProvider<ActivityRepository>.value(
+            value: _activityRepository),
+        RepositoryProvider<CouponPointsRepository>.value(
+            value: _couponPointsRepository),
+        RepositoryProvider<PaymentRepository>.value(
+            value: _paymentRepository),
+        RepositoryProvider<StudentVerificationRepository>.value(
+            value: _studentVerificationRepository),
+        RepositoryProvider<CommonRepository>.value(
+            value: _commonRepository),
+      ],
+      child: MultiBlocProvider(
+        providers: [
+          BlocProvider<AuthBloc>(
+            create: (context) => AuthBloc(
+              authRepository: _authRepository,
+            )..add(AuthCheckRequested()),
+          ),
+        ],
+        child: BlocBuilder<AuthBloc, AuthState>(
+          builder: (context, authState) {
+            return MaterialApp.router(
+              title: 'Link²Ur',
+              debugShowCheckedModeBanner: false,
+              
+              // 主题配置
+              theme: AppTheme.lightTheme,
+              darkTheme: AppTheme.darkTheme,
+              themeMode: ThemeMode.system,
+              
+              // 路由配置
+              routerConfig: _appRouter.router,
+              
+              // 国际化配置
+              localizationsDelegates: const [
+                AppLocalizations.delegate,
+                GlobalMaterialLocalizations.delegate,
+                GlobalWidgetsLocalizations.delegate,
+                GlobalCupertinoLocalizations.delegate,
+              ],
+              supportedLocales: const [
+                Locale('zh', 'CN'),
+                Locale('zh', 'TW'),
+                Locale('en', 'US'),
+              ],
+              locale: const Locale('zh', 'CN'),
+            );
+          },
+        ),
+      ),
+    );
+  }
+}

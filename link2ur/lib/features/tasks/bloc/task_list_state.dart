@@ -1,0 +1,77 @@
+import 'package:equatable/equatable.dart';
+
+import '../../../data/models/task.dart';
+
+/// 任务列表状态
+enum TaskListStatus { initial, loading, loaded, error }
+
+class TaskListState extends Equatable {
+  const TaskListState({
+    this.status = TaskListStatus.initial,
+    this.tasks = const [],
+    this.total = 0,
+    this.page = 1,
+    this.hasMore = true,
+    this.selectedCategory = 'all',
+    this.searchQuery = '',
+    this.sortBy = 'latest',
+    this.errorMessage,
+    this.isRefreshing = false,
+  });
+
+  final TaskListStatus status;
+  final List<Task> tasks;
+  final int total;
+  final int page;
+  final bool hasMore;
+  final String selectedCategory;
+  final String searchQuery;
+  final String sortBy;
+  final String? errorMessage;
+  final bool isRefreshing;
+
+  bool get isLoading => status == TaskListStatus.loading;
+  bool get isLoaded => status == TaskListStatus.loaded;
+  bool get hasError => status == TaskListStatus.error;
+  bool get isEmpty => tasks.isEmpty && isLoaded;
+
+  TaskListState copyWith({
+    TaskListStatus? status,
+    List<Task>? tasks,
+    int? total,
+    int? page,
+    bool? hasMore,
+    String? selectedCategory,
+    String? searchQuery,
+    String? sortBy,
+    String? errorMessage,
+    bool? isRefreshing,
+  }) {
+    return TaskListState(
+      status: status ?? this.status,
+      tasks: tasks ?? this.tasks,
+      total: total ?? this.total,
+      page: page ?? this.page,
+      hasMore: hasMore ?? this.hasMore,
+      selectedCategory: selectedCategory ?? this.selectedCategory,
+      searchQuery: searchQuery ?? this.searchQuery,
+      sortBy: sortBy ?? this.sortBy,
+      errorMessage: errorMessage ?? this.errorMessage,
+      isRefreshing: isRefreshing ?? this.isRefreshing,
+    );
+  }
+
+  @override
+  List<Object?> get props => [
+        status,
+        tasks,
+        total,
+        page,
+        hasMore,
+        selectedCategory,
+        searchQuery,
+        sortBy,
+        errorMessage,
+        isRefreshing,
+      ];
+}
