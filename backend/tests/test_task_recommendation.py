@@ -11,6 +11,7 @@ from app.task_recommendation import (
     calculate_task_match_score
 )
 from app.user_behavior_tracker import UserBehaviorTracker
+from app.utils.time_utils import get_utc_time
 from datetime import datetime, timedelta
 
 
@@ -50,7 +51,7 @@ def other_poster(db: Session):
 def sample_tasks(db: Session, sample_user: User, other_poster: User):
     """创建测试任务（由其他用户发布，这样推荐算法不会排除它们）"""
     tasks = []
-    now = datetime.utcnow()
+    now = get_utc_time()  # 使用带时区信息的时间
     
     # 创建不同类型的任务
     task_types = ["Tutoring", "Delivery", "Cleaning", "Shopping"]
@@ -126,7 +127,7 @@ def test_collaborative_filtering(db: Session, sample_user: User, sample_tasks: l
             task_id=task.id,
             user_id=other_user.id,
             action="accepted",
-            timestamp=datetime.utcnow()
+            timestamp=get_utc_time()
         )
         db.add(history)
     
@@ -257,7 +258,7 @@ def test_preference_learning(db: Session, sample_user: User, sample_tasks: list)
             task_id=task.id,
             user_id=sample_user.id,
             action="accepted",
-            timestamp=datetime.utcnow()
+            timestamp=get_utc_time()
         )
         db.add(history)
     db.commit()
