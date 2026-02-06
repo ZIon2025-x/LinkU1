@@ -41,12 +41,14 @@ def sample_tasks(db: Session, sample_user: User):
     locations = ["London", "Manchester", "Birmingham", "Online"]
     
     for i, (task_type, location) in enumerate(zip(task_types, locations)):
+        reward_amount = 50.0 + i * 10
         task = Task(
             title=f"Test Task {i+1}",
             description=f"Description for task {i+1}",
             task_type=task_type,
             location=location,
-            reward=50.0 + i * 10,
+            reward=reward_amount,
+            base_reward=reward_amount,  # 添加 base_reward 字段
             deadline=now + timedelta(days=i+1),
             poster_id=sample_user.id,
             status="open",

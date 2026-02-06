@@ -258,12 +258,19 @@ jobs:
       - name: Validate Stripe test key
         if: env.STRIPE_TEST_SECRET_KEY != ''
         run: |
-          if [[ "$STRIPE_TEST_SECRET_KEY" != sk_test_* ]]; then
+          # 去除可能的空格和换行符
+          CLEANED_KEY=$(echo "$STRIPE_TEST_SECRET_KEY" | tr -d '[:space:]')
+          echo "🔑 密钥长度: ${#CLEANED_KEY} 字符"
+          
+          if [[ "$CLEANED_KEY" != sk_test_* ]]; then
             echo "❌ 严重错误: STRIPE_TEST_SECRET_KEY 不是测试密钥!"
             echo "测试必须使用 sk_test_ 开头的测试密钥!"
             exit 1
           fi
           echo "✅ Stripe 测试密钥验证通过"
+          
+          # 导出清理后的密钥供后续步骤使用
+          echo "STRIPE_TEST_SECRET_KEY=$CLEANED_KEY" >> $GITHUB_ENV
 
       - name: Set up Python
         uses: actions/setup-python@v5

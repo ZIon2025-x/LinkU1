@@ -26,14 +26,15 @@ PRODUCTION_URLS = [
 # =============================================================================
 
 # 测试 API URL - 必须是 Railway 测试环境
-TEST_API_URL = os.getenv("TEST_API_URL", "")
+# 注意：使用 .strip() 清理可能的空格和换行符（GitHub Secrets 有时会包含这些）
+TEST_API_URL = os.getenv("TEST_API_URL", "").strip()
 
 # 测试账号
-TEST_USER_EMAIL = os.getenv("TEST_USER_EMAIL", "")
-TEST_USER_PASSWORD = os.getenv("TEST_USER_PASSWORD", "")
+TEST_USER_EMAIL = os.getenv("TEST_USER_EMAIL", "").strip()
+TEST_USER_PASSWORD = os.getenv("TEST_USER_PASSWORD", "").strip()
 
-# Stripe 测试密钥
-STRIPE_TEST_SECRET_KEY = os.getenv("STRIPE_TEST_SECRET_KEY", "")
+# Stripe 测试密钥（清理空格和换行符，防止 API 调用失败）
+STRIPE_TEST_SECRET_KEY = os.getenv("STRIPE_TEST_SECRET_KEY", "").strip()
 
 # 测试超时时间（秒）
 REQUEST_TIMEOUT = int(os.getenv("TEST_REQUEST_TIMEOUT", "30"))

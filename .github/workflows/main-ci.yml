@@ -73,9 +73,17 @@ jobs:
         TEST_API_URL: ${{ secrets.TEST_API_URL }}
         TEST_USER_EMAIL: ${{ secrets.TEST_USER_EMAIL }}
         TEST_USER_PASSWORD: ${{ secrets.TEST_USER_PASSWORD }}
+        STRIPE_TEST_SECRET_KEY: ${{ secrets.STRIPE_TEST_SECRET_KEY }}
       run: |
         echo "🔍 Running pytest..."
         export PYTHONPATH="${PYTHONPATH}:$(pwd)"
+        
+        # 清理 Stripe 密钥中可能的空格和换行符
+        if [ -n "$STRIPE_TEST_SECRET_KEY" ]; then
+          export STRIPE_TEST_SECRET_KEY=$(echo "$STRIPE_TEST_SECRET_KEY" | tr -d '[:space:]')
+          echo "🔑 Stripe 测试密钥已配置"
+        fi
+        
         # 如果 TEST_API_URL 已配置，运行所有测试；否则只运行单元测试（跳过 API 测试）
         if [ -n "$TEST_API_URL" ]; then
           echo "📡 TEST_API_URL 已配置，运行所有测试..."
