@@ -125,6 +125,13 @@ jobs:
         npm run build --dry-run 2>/dev/null || echo "Build check completed"
         echo "✅ Frontend code quality check passed"
     
+    - name: Run tests
+      if: steps.check-frontend.outputs.changed == 'true'
+      run: |
+        echo "🧪 Running frontend tests..."
+        npm test -- --watchAll=false --coverage --passWithNoTests
+        echo "✅ Frontend tests passed"
+    
     - name: Build frontend
       if: steps.check-frontend.outputs.changed == 'true'
       run: npm run build
