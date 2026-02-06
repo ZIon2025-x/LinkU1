@@ -29,22 +29,19 @@ const App: React.FC = () => {
           {/* 登录页 */}
           <Route path="/login" element={<AdminLogin />} />
 
-          {/* Admin 子路由 - 需要认证 */}
-          <Route path="/admin/*" element={
-            <AdminRoute>
-              <AdminRoutes />
-            </AdminRoute>
-          } />
-
-          {/* 旧的管理后台主页保留作为后备（可选） */}
-          <Route path="/legacy" element={
+          {/* 管理后台主页（旧的单页应用） - 需要认证 */}
+          <Route path="/" element={
             <AdminRoute>
               <AdminDashboard />
             </AdminRoute>
           } />
 
-          {/* 根路径重定向到 admin */}
-          <Route path="/" element={<Navigate to="/admin" replace />} />
+          {/* Admin 子路由（新的模块化系统） - 需要认证 */}
+          <Route path="/admin/*" element={
+            <AdminRoute>
+              <AdminRoutes />
+            </AdminRoute>
+          } />
 
           {/* 其他路由重定向到 admin */}
           <Route path="*" element={<Navigate to="/admin" replace />} />
