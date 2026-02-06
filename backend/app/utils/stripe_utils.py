@@ -21,7 +21,9 @@ def _check_account_status_v2(account_id: str) -> Tuple[bool, bool]:
         Tuple[details_submitted, charges_enabled]
     """
     import stripe
-    from stripe import _stripe as stripe_v2
+    
+    # 导入 stripe_connect_routes 中定义的 V2 API 工具
+    from app.stripe_connect_routes import stripe_v2
     
     try:
         account = stripe_v2.core.accounts.retrieve(
