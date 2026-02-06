@@ -32,8 +32,12 @@ class CookieManager:
         return any(keyword in user_agent for keyword in private_mode_keywords)
     
     @staticmethod
-    def _get_samesite_value(user_agent: str = "") -> Literal["lax", "strict", "none"]:
-        """获取有效的SameSite值，考虑隐私模式兼容性"""
+    def _get_samesite_value(user_agent: str = "", origin: str = "") -> Literal["lax", "strict", "none"]:
+        """获取有效的SameSite值，考虑隐私模式兼容性和跨站请求"""
+        # HTTPS localhost 跨站请求需要 SameSite=None
+        if origin and origin.startswith("https://") and ("localhost" in origin or "127.0.0.1" in origin):
+            return "none"
+        
         # 检测移动端
         if CookieManager._is_mobile_user_agent(user_agent):
             return Config.MOBILE_COOKIE_SAMESITE  # type: ignore
@@ -74,7 +78,7 @@ class CookieManager:
         origin: str = ""
     ) -> None:
         """设置认证相关的Cookie（兼容旧系统）"""
-        samesite_value = CookieManager._get_samesite_value(user_agent)
+        samesite_value = CookieManager._get_samesite_value(user_agent, origin)
         secure_value = CookieManager._get_secure_value(user_agent, origin)
         
         # 设置access_token cookie（短期）
@@ -126,7 +130,7 @@ class CookieManager:
         origin: str = ""
     ) -> None:
         """设置会话相关的Cookie（新安全系统）"""
-        samesite_value = CookieManager._get_samesite_value(user_agent)
+        samesite_value = CookieManager._get_samesite_value(user_agent, origin)
         secure_value = CookieManager._get_secure_value(user_agent, origin)
         is_mobile = CookieManager._is_mobile_user_agent(user_agent)
         
@@ -168,10 +172,11 @@ class CookieManager:
             refresh_max_age = Config.REFRESH_TOKEN_EXPIRE_HOURS * 60 * 60
             
             # 桌面端Cookie设置（传递 origin 用于 localhost 检测）
-            samesite_value = CookieManager._get_samesite_value(user_agent)
+            samesite_value = CookieManager._get_samesite_value(user_agent, origin)
             secure_value = CookieManager._get_secure_value(user_agent, origin)
             
             # 强制使用lax以提高跨域兼容性（覆盖环境变量设置）
+            # 但保留 none 值用于跨站请求（如 HTTPS localhost）
             if samesite_value == "strict":
                 samesite_value = "lax"
                 logger.info(f"用户Cookie SameSite从strict改为lax以提高跨域兼容性")
@@ -241,7 +246,7 @@ class CookieManager:
     @staticmethod
     def set_csrf_cookie(response: Response, token: str, user_agent: str = "", origin: str = "") -> None:
         """设置CSRF token Cookie"""
-        samesite_value = CookieManager._get_samesite_value(user_agent)
+        samesite_value = CookieManager._get_samesite_value(user_agent, origin)
         secure_value = CookieManager._get_secure_value(user_agent, origin)
         is_mobile = CookieManager._is_mobile_user_agent(user_agent)
         

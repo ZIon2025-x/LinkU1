@@ -45,8 +45,11 @@ class TestPaymentAPI:
         if not TEST_USER_EMAIL or not TEST_USER_PASSWORD:
             return False
 
-        if TestPaymentAPI._cookies or TestPaymentAPI._access_token:
-            return True
+        # 检查是否已经有有效的认证信息
+        if TestPaymentAPI._access_token:
+            return True  # 已经有 token
+        if TestPaymentAPI._cookies and len(TestPaymentAPI._cookies) > 0:
+            return True  # 已经有 cookies
 
         response = client.post(
             f"{self.base_url}/api/secure-auth/login",
@@ -57,13 +60,23 @@ class TestPaymentAPI:
         )
 
         if response.status_code == 200:
-            TestPaymentAPI._cookies = dict(response.cookies)
+            # 保存 cookies（如果有）
+            cookies = dict(response.cookies)
+            if cookies:
+                TestPaymentAPI._cookies = cookies
+            
+            # 解析响应数据
             data = response.json()
             if "access_token" in data:
                 TestPaymentAPI._access_token = data["access_token"]
             if "user" in data and "id" in data["user"]:
                 TestPaymentAPI._user_id = data["user"]["id"]
-            return True
+            
+            # 确保至少有一种认证方式
+            if TestPaymentAPI._access_token or TestPaymentAPI._cookies:
+                return True
+        
+        print(f"⚠️ 登录失败: {response.status_code} - {response.text[:200]}")
         return False
 
     def _get_auth_headers(self) -> dict:
