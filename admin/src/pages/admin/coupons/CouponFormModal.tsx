@@ -1,7 +1,5 @@
-import React, { useState } from 'react';
-import { AdminModal } from '../../../components/admin';
+import React from 'react';
 import { CouponForm } from './types';
-import styles from './CouponFormModal.module.css';
 
 interface CouponFormModalProps {
   isOpen: boolean;
@@ -42,6 +40,32 @@ const APPLICABLE_SCENARIOS: { value: string; label: string }[] = [
   { value: 'all', label: '全部场景' },
 ];
 
+const inputStyle: React.CSSProperties = {
+  width: '100%',
+  padding: '8px',
+  border: '1px solid #ddd',
+  borderRadius: '4px',
+  marginTop: '5px',
+  boxSizing: 'border-box',
+};
+
+const labelStyle: React.CSSProperties = {
+  display: 'block',
+  marginBottom: '5px',
+  fontWeight: 'bold',
+};
+
+const fieldStyle: React.CSSProperties = {
+  marginBottom: '15px',
+};
+
+const hintStyle: React.CSSProperties = {
+  color: '#666',
+  fontSize: '12px',
+  marginTop: '5px',
+  display: 'block',
+};
+
 export const CouponFormModal: React.FC<CouponFormModalProps> = ({
   isOpen,
   isEdit,
@@ -51,20 +75,7 @@ export const CouponFormModal: React.FC<CouponFormModalProps> = ({
   onSubmit,
   setFormData,
 }) => {
-  const [collapsedSections, setCollapsedSections] = useState({
-    basic: false,
-    discount: false,
-    limits: false,
-    scenarios: false,
-    validity: false,
-  });
-
-  const toggleSection = (section: keyof typeof collapsedSections) => {
-    setCollapsedSections(prev => ({
-      ...prev,
-      [section]: !prev[section],
-    }));
-  };
+  if (!isOpen) return null;
 
   const updateField = <K extends keyof CouponForm>(field: K, value: CouponForm[K]) => {
     setFormData(prev => ({
@@ -74,7 +85,6 @@ export const CouponFormModal: React.FC<CouponFormModalProps> = ({
   };
 
   const handleSubmit = () => {
-    // Validation
     if (!formData.name || !formData.valid_from || !formData.valid_until) {
       alert('请填写优惠券名称和有效期');
       return;
@@ -86,396 +96,333 @@ export const CouponFormModal: React.FC<CouponFormModalProps> = ({
     onSubmit();
   };
 
-  const footer = (
-    <>
-      <button className={styles.btnCancel} onClick={onClose} disabled={loading}>
-        取消
-      </button>
-      <button className={styles.btnSubmit} onClick={handleSubmit} disabled={loading}>
-        {loading ? '提交中...' : isEdit ? '更新优惠券' : '创建优惠券'}
-      </button>
-    </>
-  );
+  const handleClose = () => {
+    onClose();
+  };
 
   return (
-    <AdminModal
-      isOpen={isOpen}
-      onClose={onClose}
-      title={isEdit ? '编辑优惠券' : '创建优惠券'}
-      footer={footer}
-      width="800px"
-      maxHeight="85vh"
-    >
-      <div className={styles.form}>
-        {/* 基本信息 */}
-        <div className={styles.section}>
-          <div
-            className={styles.sectionHeader}
-            onClick={() => toggleSection('basic')}
-          >
-            <h3>基本信息</h3>
-            <span className={collapsedSections.basic ? styles.iconCollapsed : styles.iconExpanded}>
-              ▼
-            </span>
-          </div>
-          {!collapsedSections.basic && (
-            <div className={styles.sectionContent}>
-              <div className={styles.formGroup}>
-                <label>优惠券代码 *</label>
-                <input
-                  type="text"
-                  value={formData.code}
-                  onChange={(e) => updateField('code', e.target.value.toUpperCase())}
-                  placeholder="留空自动生成"
-                  className={styles.input}
-                  disabled={isEdit}
-                />
-                <small className={styles.hint}>
-                  {formData.code ? '用户可以通过输入此代码兑换优惠券' : '留空后只能通过积分兑换，系统会自动生成唯一代码'}
-                </small>
-              </div>
+    <div style={{
+      position: 'fixed',
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      background: 'rgba(0, 0, 0, 0.5)',
+      display: 'flex',
+      justifyContent: 'center',
+      alignItems: 'center',
+      zIndex: 1000,
+    }}>
+      <div style={{
+        background: 'white',
+        padding: '30px',
+        borderRadius: '8px',
+        boxShadow: '0 4px 20px rgba(0, 0, 0, 0.3)',
+        minWidth: '500px',
+        maxWidth: '600px',
+        maxHeight: '90vh',
+        overflowY: 'auto',
+      }}>
+        <h3 style={{ margin: '0 0 20px 0', color: '#333' }}>
+          {isEdit ? '编辑优惠券' : '创建优惠券'}
+        </h3>
 
-              <div className={styles.formGroup}>
-                <label>优惠券名称 *</label>
-                <input
-                  type="text"
-                  value={formData.name}
-                  onChange={(e) => updateField('name', e.target.value)}
-                  placeholder="优惠券名称"
-                  className={styles.input}
-                  required
-                />
-              </div>
-
-              <div className={styles.formGroup}>
-                <label>优惠券描述</label>
-                <textarea
-                  value={formData.description}
-                  onChange={(e) => updateField('description', e.target.value)}
-                  placeholder="优惠券描述（可选）"
-                  className={styles.textarea}
-                  rows={3}
-                />
-              </div>
-            </div>
-          )}
+        {/* 优惠券代码 */}
+        <div style={fieldStyle}>
+          <label style={labelStyle}>优惠券代码</label>
+          <input
+            type="text"
+            value={formData.code}
+            onChange={(e) => updateField('code', e.target.value.toUpperCase())}
+            placeholder="留空自动生成"
+            disabled={isEdit}
+            style={inputStyle}
+          />
+          <small style={hintStyle}>
+            {formData.code ? '用户可以通过输入此代码兑换优惠券' : '留空后只能通过积分兑换，系统会自动生成唯一代码'}
+          </small>
         </div>
 
-        {/* 折扣设置 */}
-        <div className={styles.section}>
-          <div
-            className={styles.sectionHeader}
-            onClick={() => toggleSection('discount')}
-          >
-            <h3>折扣设置</h3>
-            <span className={collapsedSections.discount ? styles.iconCollapsed : styles.iconExpanded}>
-              ▼
-            </span>
-          </div>
-          {!collapsedSections.discount && (
-            <div className={styles.sectionContent}>
-              <div className={styles.formRow}>
-                <div className={styles.formGroup}>
-                  <label>折扣类型 *</label>
-                  <select
-                    value={formData.type}
-                    onChange={(e) => updateField('type', e.target.value as 'fixed_amount' | 'percentage')}
-                    className={styles.select}
-                    disabled={isEdit}
-                  >
-                    <option value="fixed_amount">固定金额</option>
-                    <option value="percentage">百分比折扣</option>
-                  </select>
-                </div>
-
-                <div className={styles.formGroup}>
-                  <label>折扣值 * {formData.type === 'percentage' ? '(基点)' : '(便士)'}</label>
-                  <input
-                    type="number"
-                    value={formData.discount_value}
-                    onChange={(e) => updateField('discount_value', Number(e.target.value))}
-                    placeholder={formData.type === 'percentage' ? '例如: 1000 表示 10%' : '例如: 1000 表示 £10'}
-                    className={styles.input}
-                    min="0"
-                    disabled={isEdit}
-                  />
-                  <small className={styles.hint}>
-                    {formData.type === 'percentage'
-                      ? '基点制：100=1%, 1000=10%, 10000=100%'
-                      : '便士制：100=£1, 1000=£10'}
-                  </small>
-                </div>
-              </div>
-
-              <div className={styles.formRow}>
-                <div className={styles.formGroup}>
-                  <label>最低消费金额 (便士)</label>
-                  <input
-                    type="number"
-                    value={formData.min_amount}
-                    onChange={(e) => updateField('min_amount', Number(e.target.value))}
-                    placeholder="0 表示无限制"
-                    className={styles.input}
-                    min="0"
-                    disabled={isEdit}
-                  />
-                </div>
-
-                {formData.type === 'percentage' && (
-                  <div className={styles.formGroup}>
-                    <label>最大折扣金额 (便士)</label>
-                    <input
-                      type="number"
-                      value={formData.max_discount || ''}
-                      onChange={(e) => updateField('max_discount', Number(e.target.value) || undefined)}
-                      placeholder="留空表示无限制"
-                      className={styles.input}
-                      min="0"
-                      disabled={isEdit}
-                    />
-                  </div>
-                )}
-              </div>
-
-              <div className={styles.formGroup}>
-                <label>货币</label>
-                <select
-                  value={formData.currency}
-                  onChange={(e) => updateField('currency', e.target.value)}
-                  className={styles.select}
-                  disabled={isEdit}
-                >
-                  <option value="GBP">GBP (£)</option>
-                  <option value="USD">USD ($)</option>
-                  <option value="EUR">EUR (€)</option>
-                </select>
-              </div>
-            </div>
-          )}
+        {/* 优惠券名称 */}
+        <div style={fieldStyle}>
+          <label style={labelStyle}>
+            优惠券名称 <span style={{ color: 'red' }}>*</span>
+          </label>
+          <input
+            type="text"
+            value={formData.name}
+            onChange={(e) => updateField('name', e.target.value)}
+            placeholder="请输入优惠券名称"
+            style={inputStyle}
+          />
         </div>
 
-        {/* 使用限制 */}
-        <div className={styles.section}>
-          <div
-            className={styles.sectionHeader}
-            onClick={() => toggleSection('limits')}
+        {/* 优惠券描述 */}
+        <div style={fieldStyle}>
+          <label style={labelStyle}>描述</label>
+          <textarea
+            value={formData.description}
+            onChange={(e) => updateField('description', e.target.value)}
+            placeholder="请输入优惠券描述（可选）"
+            rows={3}
+            style={{ ...inputStyle, resize: 'vertical' }}
+          />
+        </div>
+
+        {/* 折扣类型 */}
+        <div style={fieldStyle}>
+          <label style={labelStyle}>
+            折扣类型 <span style={{ color: 'red' }}>*</span>
+          </label>
+          <select
+            value={formData.type}
+            onChange={(e) => updateField('type', e.target.value as 'fixed_amount' | 'percentage')}
+            disabled={isEdit}
+            style={inputStyle}
           >
-            <h3>使用限制</h3>
-            <span className={collapsedSections.limits ? styles.iconCollapsed : styles.iconExpanded}>
-              ▼
-            </span>
+            <option value="fixed_amount">固定金额</option>
+            <option value="percentage">百分比折扣</option>
+          </select>
+        </div>
+
+        {/* 折扣值 */}
+        <div style={fieldStyle}>
+          <label style={labelStyle}>
+            折扣值 {formData.type === 'percentage' ? '(基点)' : '(便士)'} <span style={{ color: 'red' }}>*</span>
+          </label>
+          <input
+            type="number"
+            value={formData.discount_value}
+            onChange={(e) => updateField('discount_value', Number(e.target.value))}
+            placeholder={formData.type === 'percentage' ? '例如: 1000 表示 10%' : '例如: 1000 表示 £10'}
+            min="0"
+            disabled={isEdit}
+            style={inputStyle}
+          />
+          <small style={hintStyle}>
+            {formData.type === 'percentage'
+              ? '基点制：100=1%, 1000=10%, 10000=100%'
+              : '便士制：100=£1, 1000=£10'}
+          </small>
+        </div>
+
+        {/* 最低消费金额 */}
+        <div style={fieldStyle}>
+          <label style={labelStyle}>最低消费金额 (便士)</label>
+          <input
+            type="number"
+            value={formData.min_amount}
+            onChange={(e) => updateField('min_amount', Number(e.target.value))}
+            placeholder="0 表示无限制"
+            min="0"
+            disabled={isEdit}
+            style={inputStyle}
+          />
+        </div>
+
+        {/* 最大折扣金额（仅百分比类型） */}
+        {formData.type === 'percentage' && (
+          <div style={fieldStyle}>
+            <label style={labelStyle}>最大折扣金额 (便士)</label>
+            <input
+              type="number"
+              value={formData.max_discount || ''}
+              onChange={(e) => updateField('max_discount', Number(e.target.value) || undefined)}
+              placeholder="留空表示无限制"
+              min="0"
+              disabled={isEdit}
+              style={inputStyle}
+            />
           </div>
-          {!collapsedSections.limits && (
-            <div className={styles.sectionContent}>
-              <div className={styles.formRow}>
-                <div className={styles.formGroup}>
-                  <label>总发行量</label>
-                  <input
-                    type="number"
-                    value={formData.total_quantity || ''}
-                    onChange={(e) => updateField('total_quantity', Number(e.target.value) || undefined)}
-                    placeholder="留空表示无限制"
-                    className={styles.input}
-                    min="1"
-                    disabled={isEdit}
-                  />
-                </div>
+        )}
 
-                <div className={styles.formGroup}>
-                  <label>每用户限用次数</label>
-                  <input
-                    type="number"
-                    value={formData.per_user_limit}
-                    onChange={(e) => updateField('per_user_limit', Number(e.target.value))}
-                    className={styles.input}
-                    min="1"
-                  />
-                  <small className={styles.hint}>每个用户最多可以使用此优惠券的次数</small>
-                </div>
-              </div>
+        {/* 总发行量 */}
+        <div style={fieldStyle}>
+          <label style={labelStyle}>总发行量</label>
+          <input
+            type="number"
+            value={formData.total_quantity || ''}
+            onChange={(e) => updateField('total_quantity', Number(e.target.value) || undefined)}
+            placeholder="留空表示无限制"
+            min="1"
+            disabled={isEdit}
+            style={inputStyle}
+          />
+        </div>
 
-              <div className={styles.formRow}>
-                <div className={styles.formGroup}>
-                  <label>限用周期</label>
-                  <select
-                    value={formData.per_user_limit_window}
-                    onChange={(e) => updateField('per_user_limit_window', e.target.value as any)}
-                    className={styles.select}
-                  >
-                    <option value="">无限制</option>
-                    <option value="day">每天</option>
-                    <option value="week">每周</option>
-                    <option value="month">每月</option>
-                    <option value="year">每年</option>
-                  </select>
-                </div>
+        {/* 每用户限用次数 */}
+        <div style={fieldStyle}>
+          <label style={labelStyle}>每用户限用次数</label>
+          <input
+            type="number"
+            value={formData.per_user_limit}
+            onChange={(e) => updateField('per_user_limit', Number(e.target.value))}
+            min="1"
+            style={inputStyle}
+          />
+          <small style={hintStyle}>每个用户最多可以使用此优惠券的次数</small>
+        </div>
 
-                {formData.per_user_limit_window && (
-                  <div className={styles.formGroup}>
-                    <label>周期内限用次数</label>
-                    <input
-                      type="number"
-                      value={formData.per_user_per_window_limit || ''}
-                      onChange={(e) => updateField('per_user_per_window_limit', Number(e.target.value) || undefined)}
-                      className={styles.input}
-                      min="1"
-                    />
-                  </div>
-                )}
-              </div>
-
-              <div className={styles.formGroup}>
-                <label>
-                  <input
-                    type="checkbox"
-                    checked={formData.can_combine}
-                    onChange={(e) => updateField('can_combine', e.target.checked)}
-                    disabled={isEdit}
-                  />
-                  允许与其他优惠券叠加使用
-                </label>
-              </div>
-            </div>
-          )}
+        {/* 积分要求 */}
+        <div style={fieldStyle}>
+          <label style={labelStyle}>积分要求</label>
+          <input
+            type="number"
+            value={formData.points_required}
+            onChange={(e) => updateField('points_required', Number(e.target.value))}
+            placeholder="0 表示不需要积分"
+            min="0"
+            disabled={isEdit}
+            style={inputStyle}
+          />
         </div>
 
         {/* 适用场景 */}
-        <div className={styles.section}>
-          <div
-            className={styles.sectionHeader}
-            onClick={() => toggleSection('scenarios')}
-          >
-            <h3>适用场景</h3>
-            <span className={collapsedSections.scenarios ? styles.iconCollapsed : styles.iconExpanded}>
-              ▼
-            </span>
-          </div>
-          {!collapsedSections.scenarios && (
-            <div className={styles.sectionContent}>
-              <div className={styles.formGroup}>
-                <label>积分要求</label>
+        <div style={fieldStyle}>
+          <label style={labelStyle}>适用场景</label>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', marginTop: '5px' }}>
+            {APPLICABLE_SCENARIOS.map((scenario) => (
+              <label key={scenario.value} style={{ display: 'flex', alignItems: 'center', gap: '5px', cursor: 'pointer' }}>
                 <input
-                  type="number"
-                  value={formData.points_required}
-                  onChange={(e) => updateField('points_required', Number(e.target.value))}
-                  placeholder="0 表示不需要积分"
-                  className={styles.input}
-                  min="0"
-                  disabled={isEdit}
-                />
-              </div>
-
-              <div className={styles.formGroup}>
-                <label>适用场景</label>
-                <div className={styles.checkboxGroup}>
-                  {APPLICABLE_SCENARIOS.map((scenario) => (
-                    <label key={scenario.value} className={styles.checkboxLabel}>
-                      <input
-                        type="checkbox"
-                        checked={formData.applicable_scenarios.includes(scenario.value)}
-                        onChange={(e) => {
-                          if (e.target.checked) {
-                            updateField('applicable_scenarios', [...formData.applicable_scenarios, scenario.value]);
-                          } else {
-                            updateField('applicable_scenarios', formData.applicable_scenarios.filter(s => s !== scenario.value));
-                          }
-                        }}
-                        disabled={isEdit}
-                      />
-                      {scenario.label}
-                    </label>
-                  ))}
-                </div>
-              </div>
-
-              <div className={styles.formGroup}>
-                <label>适用任务类型</label>
-                <div className={styles.checkboxGroup}>
-                  {TASK_TYPES.map((type) => (
-                    <label key={type.value} className={styles.checkboxLabel}>
-                      <input
-                        type="checkbox"
-                        checked={formData.task_types.includes(type.value)}
-                        onChange={(e) => {
-                          if (e.target.checked) {
-                            updateField('task_types', [...formData.task_types, type.value]);
-                          } else {
-                            updateField('task_types', formData.task_types.filter(t => t !== type.value));
-                          }
-                        }}
-                      />
-                      {type.label}
-                    </label>
-                  ))}
-                </div>
-              </div>
-
-              <div className={styles.formGroup}>
-                <label>适用地点</label>
-                <select
-                  multiple
-                  value={formData.locations}
+                  type="checkbox"
+                  checked={formData.applicable_scenarios.includes(scenario.value)}
                   onChange={(e) => {
-                    const selected = Array.from(e.target.selectedOptions, option => option.value);
-                    updateField('locations', selected);
+                    if (e.target.checked) {
+                      updateField('applicable_scenarios', [...formData.applicable_scenarios, scenario.value]);
+                    } else {
+                      updateField('applicable_scenarios', formData.applicable_scenarios.filter(s => s !== scenario.value));
+                    }
                   }}
-                  className={styles.selectMultiple}
-                  size={6}
-                >
-                  {CITIES.map((city) => (
-                    <option key={city} value={city}>
-                      {city}
-                    </option>
-                  ))}
-                </select>
-                <small className={styles.hint}>按住 Ctrl/Cmd 可多选</small>
-              </div>
-            </div>
-          )}
+                  disabled={isEdit}
+                  style={{ width: '16px', height: '16px', cursor: 'pointer' }}
+                />
+                {scenario.label}
+              </label>
+            ))}
+          </div>
         </div>
 
-        {/* 有效期 */}
-        <div className={styles.section}>
-          <div
-            className={styles.sectionHeader}
-            onClick={() => toggleSection('validity')}
-          >
-            <h3>有效期</h3>
-            <span className={collapsedSections.validity ? styles.iconCollapsed : styles.iconExpanded}>
-              ▼
-            </span>
+        {/* 适用任务类型 */}
+        <div style={fieldStyle}>
+          <label style={labelStyle}>适用任务类型</label>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', marginTop: '5px' }}>
+            {TASK_TYPES.map((type) => (
+              <label key={type.value} style={{ display: 'flex', alignItems: 'center', gap: '5px', cursor: 'pointer' }}>
+                <input
+                  type="checkbox"
+                  checked={formData.task_types.includes(type.value)}
+                  onChange={(e) => {
+                    if (e.target.checked) {
+                      updateField('task_types', [...formData.task_types, type.value]);
+                    } else {
+                      updateField('task_types', formData.task_types.filter(t => t !== type.value));
+                    }
+                  }}
+                  style={{ width: '16px', height: '16px', cursor: 'pointer' }}
+                />
+                {type.label}
+              </label>
+            ))}
           </div>
-          {!collapsedSections.validity && (
-            <div className={styles.sectionContent}>
-              <div className={styles.formRow}>
-                <div className={styles.formGroup}>
-                  <label>生效时间 *</label>
-                  <input
-                    type="datetime-local"
-                    value={formData.valid_from}
-                    onChange={(e) => updateField('valid_from', e.target.value)}
-                    className={styles.input}
-                    required
-                    disabled={isEdit}
-                  />
-                </div>
+        </div>
 
-                <div className={styles.formGroup}>
-                  <label>失效时间 *</label>
-                  <input
-                    type="datetime-local"
-                    value={formData.valid_until}
-                    onChange={(e) => updateField('valid_until', e.target.value)}
-                    className={styles.input}
-                    required
-                  />
-                </div>
-              </div>
-            </div>
-          )}
+        {/* 适用地点 */}
+        <div style={fieldStyle}>
+          <label style={labelStyle}>适用地点</label>
+          <select
+            multiple
+            value={formData.locations}
+            onChange={(e) => {
+              const selected = Array.from(e.target.selectedOptions, option => option.value);
+              updateField('locations', selected);
+            }}
+            style={{ ...inputStyle, height: '120px' }}
+          >
+            {CITIES.map((city) => (
+              <option key={city} value={city}>
+                {city}
+              </option>
+            ))}
+          </select>
+          <small style={hintStyle}>按住 Ctrl/Cmd 可多选</small>
+        </div>
+
+        {/* 生效时间 */}
+        <div style={fieldStyle}>
+          <label style={labelStyle}>
+            生效时间 <span style={{ color: 'red' }}>*</span>
+          </label>
+          <input
+            type="datetime-local"
+            value={formData.valid_from}
+            onChange={(e) => updateField('valid_from', e.target.value)}
+            disabled={isEdit}
+            style={inputStyle}
+          />
+        </div>
+
+        {/* 失效时间 */}
+        <div style={fieldStyle}>
+          <label style={labelStyle}>
+            失效时间 <span style={{ color: 'red' }}>*</span>
+          </label>
+          <input
+            type="datetime-local"
+            value={formData.valid_until}
+            onChange={(e) => updateField('valid_until', e.target.value)}
+            style={inputStyle}
+          />
+        </div>
+
+        {/* 允许叠加 */}
+        <div style={{ marginBottom: '20px' }}>
+          <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+            <input
+              type="checkbox"
+              checked={formData.can_combine}
+              onChange={(e) => updateField('can_combine', e.target.checked)}
+              disabled={isEdit}
+              style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+            />
+            <span style={{ fontWeight: 'bold' }}>允许与其他优惠券叠加使用</span>
+          </label>
+        </div>
+
+        {/* 按钮 */}
+        <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+          <button
+            onClick={handleClose}
+            disabled={loading}
+            style={{
+              padding: '10px 20px',
+              border: '1px solid #ddd',
+              background: 'white',
+              color: '#666',
+              borderRadius: '4px',
+              cursor: loading ? 'not-allowed' : 'pointer',
+              opacity: loading ? 0.6 : 1,
+            }}
+          >
+            取消
+          </button>
+          <button
+            onClick={handleSubmit}
+            disabled={loading}
+            style={{
+              padding: '10px 20px',
+              border: 'none',
+              background: '#007bff',
+              color: 'white',
+              borderRadius: '4px',
+              cursor: loading ? 'not-allowed' : 'pointer',
+              opacity: loading ? 0.6 : 1,
+            }}
+          >
+            {loading ? '提交中...' : isEdit ? '更新' : '创建'}
+          </button>
         </div>
       </div>
-    </AdminModal>
+    </div>
   );
 };
 
