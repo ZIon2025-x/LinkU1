@@ -43,47 +43,47 @@ export const AdminRoutes: React.FC = () => {
     <AdminLayout>
       <Suspense fallback={<LoadingFallback />}>
         <Routes>
-          {/* Dashboard */}
-          <Route path="/" element={<Dashboard />} />
+          {/* Dashboard - 使用 index 路由匹配 /admin */}
+          <Route index element={<Dashboard />} />
 
-          {/* Coupon Management */}
-          <Route path="/coupons" element={<CouponManagement />} />
+          {/* Coupon Management - 相对路径，匹配 /admin/coupons */}
+          <Route path="coupons" element={<CouponManagement />} />
 
           {/* User Management */}
-          <Route path="/users" element={<UserManagement />} />
+          <Route path="users" element={<UserManagement />} />
 
           {/* Expert Management */}
-          <Route path="/experts" element={<ExpertManagement />} />
+          <Route path="experts" element={<ExpertManagement />} />
 
           {/* Dispute Management */}
-          <Route path="/disputes" element={<DisputeManagement />} />
+          <Route path="disputes" element={<DisputeManagement />} />
 
           {/* Refund Management */}
-          <Route path="/refunds" element={<RefundManagement />} />
+          <Route path="refunds" element={<RefundManagement />} />
 
           {/* Notification Management */}
-          <Route path="/notifications" element={<NotificationManagement />} />
+          <Route path="notifications" element={<NotificationManagement />} />
 
           {/* Invitation Management */}
-          <Route path="/invitations" element={<InvitationManagement />} />
+          <Route path="invitations" element={<InvitationManagement />} />
 
           {/* Forum Management */}
-          <Route path="/forum" element={<ForumManagement />} />
+          <Route path="forum" element={<ForumManagement />} />
 
           {/* Flea Market Management */}
-          <Route path="/flea-market" element={<FleaMarketManagement />} />
+          <Route path="flea-market" element={<FleaMarketManagement />} />
 
           {/* Leaderboard Management */}
-          <Route path="/leaderboard" element={<LeaderboardManagement />} />
+          <Route path="leaderboard" element={<LeaderboardManagement />} />
 
           {/* Banner Management */}
-          <Route path="/banners" element={<BannerManagement />} />
+          <Route path="banners" element={<BannerManagement />} />
 
           {/* Report Management */}
-          <Route path="/reports" element={<ReportManagement />} />
+          <Route path="reports" element={<ReportManagement />} />
 
           {/* Settings */}
-          <Route path="/settings" element={<Settings />} />
+          <Route path="settings" element={<Settings />} />
 
           {/* Catch all - redirect to dashboard */}
           <Route path="*" element={<Navigate to="/admin" replace />} />
