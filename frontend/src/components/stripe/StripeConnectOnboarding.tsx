@@ -32,8 +32,15 @@ const StripeConnectOnboarding: React.FC<StripeConnectOnboardingProps> = ({
     account_id: string;
     account_status: boolean;
     charges_enabled: boolean;
+    requirements?: {
+      currently_due?: string[];
+      eventually_due?: string[];
+      past_due?: string[];
+      disabled_reason?: string;
+    };
   } | null>(null);
   const [manualStripeConnectInstance, setManualStripeConnectInstance] = useState<any>(null);
+  const [showRequirements, setShowRequirements] = useState(false);
   
   // 对于 onboarding，启用 account_onboarding 组件
   // 如果使用 Custom 账户且平台负责收集信息，可以禁用 Stripe 用户认证
@@ -45,75 +52,9 @@ const StripeConnectOnboarding: React.FC<StripeConnectOnboardingProps> = ({
     false  // disableStripeUserAuthentication - 默认不禁用（如果需要可以改为 true）
   ) || manualStripeConnectInstance;
 
-  // 防止页面跳转到 Stripe 外部页面
-  useEffect(() => {
-    const handleBeforeUnload = (_e: BeforeUnloadEvent) => {
-      // 如果正在 onboarding 过程中，阻止跳转
-      if (stripeConnectInstance || manualStripeConnectInstance) {
-        // 不阻止，让用户正常完成流程
-      }
-    };
-
-    // 监听所有链接点击，防止跳转到 Stripe 外部页面
-    const handleLinkClick = (e: MouseEvent) => {
-      const target = e.target as HTMLElement;
-      const link = target.closest('a');
-      if (link && link.href) {
-        // 阻止所有指向 Stripe Connect 外部页面的链接
-        if (link.href.includes('connect.stripe.com') || 
-            link.href.includes('stripe.com/app/express')) {
-          e.preventDefault();
-          e.stopPropagation();
-          logger.log('Blocked navigation to Stripe external page:', link.href);
-          // 显示提示信息
-          if (onError) {
-            onError(t('wallet.stripe.useEmbeddedComponent'));
-          }
-          return false;
-        }
-      }
-      return;
-    };
-    
-    // 监听 window.location 变化，防止程序化跳转
-    const checkLocation = () => {
-      if (window.location.href.includes('connect.stripe.com') || 
-          window.location.href.includes('stripe.com/app/express')) {
-        logger.log('Detected navigation to Stripe external page, blocking...');
-        // 阻止跳转并返回
-        window.history.back();
-        if (onError) {
-          onError(t('wallet.stripe.blockedExternalNavigation'));
-        }
-      }
-    };
-    
-    // 定期检查 location 变化
-    const locationCheckInterval = setInterval(checkLocation, 100);
-
-    window.addEventListener('beforeunload', handleBeforeUnload);
-    document.addEventListener('click', handleLinkClick, true);
-    
-    // 监听 popstate 事件，防止通过浏览器历史记录跳转
-    const handlePopState = (e: PopStateEvent) => {
-      if (window.location.href.includes('connect.stripe.com') || 
-          window.location.href.includes('stripe.com/app/express')) {
-        e.preventDefault();
-        window.history.pushState(null, '', window.location.pathname);
-        logger.log('Blocked popstate navigation to Stripe external page');
-      }
-    };
-    window.addEventListener('popstate', handlePopState);
-
-    return () => {
-      window.removeEventListener('beforeunload', handleBeforeUnload);
-      document.removeEventListener('click', handleLinkClick, true);
-      window.removeEventListener('popstate', handlePopState);
-      if (locationCheckInterval) {
-        clearInterval(locationCheckInterval);
-      }
-    };
-  }, [stripeConnectInstance, manualStripeConnectInstance]);
+  // 注意：不再阻止 Stripe 外部页面跳转，因为这会影响 Stripe 嵌入式组件的正常功能
+  // 包括服务条款接受、身份验证等关键流程
+  // Stripe 嵌入式组件会在 iframe 中处理大部分流程，不会导致页面跳转
 
   // 检查用户是否已有 Stripe Connect 账户
   useEffect(() => {
@@ -129,7 +70,16 @@ const StripeConnectOnboarding: React.FC<StripeConnectOnboardingProps> = ({
             account_id: data.account_id,
             account_status: data.details_submitted ?? false,
             charges_enabled: data.charges_enabled ?? false,
+            requirements: data.requirements,
           });
+
+          // 如果有未完成的需求，显示需求列表
+          if (data.requirements && (
+            data.requirements.currently_due?.length > 0 ||
+            data.requirements.past_due?.length > 0
+          )) {
+            setShowRequirements(true);
+          }
 
           // 如果账户已完成设置，调用 onComplete
           if (data.charges_enabled && data.details_submitted) {
@@ -237,7 +187,18 @@ const StripeConnectOnboarding: React.FC<StripeConnectOnboardingProps> = ({
             account_id: data.account_id,
             account_status: data.details_submitted ?? false,
             charges_enabled: data.charges_enabled ?? false,
+            requirements: data.requirements,
           });
+
+          // 如果有未完成的需求，显示需求列表
+          if (data.requirements && (
+            data.requirements.currently_due?.length > 0 ||
+            data.requirements.past_due?.length > 0
+          )) {
+            setShowRequirements(true);
+          } else {
+            setShowRequirements(false);
+          }
 
           // 如果账户已完成设置，调用 onComplete
           if (data.charges_enabled && data.details_submitted) {
@@ -270,7 +231,16 @@ const StripeConnectOnboarding: React.FC<StripeConnectOnboardingProps> = ({
           account_id: data.account_id,
           account_status: data.details_submitted ?? false,
           charges_enabled: data.charges_enabled ?? false,
+          requirements: data.requirements,
         });
+
+        // 如果有未完成的需求，显示需求列表
+        if (data.requirements && (
+          data.requirements.currently_due?.length > 0 ||
+          data.requirements.past_due?.length > 0
+        )) {
+          setShowRequirements(true);
+        }
 
         // 如果账户已完成设置，调用 onComplete
         if (data.charges_enabled && data.details_submitted) {
@@ -286,6 +256,66 @@ const StripeConnectOnboarding: React.FC<StripeConnectOnboardingProps> = ({
         logger.log('No Stripe Connect account found');
       }
     }
+  };
+
+  // 将 Stripe 需求代码转换为用户友好的描述
+  const getRequirementDescription = (requirement: string): string => {
+    const requirementMap: Record<string, string> = {
+      // 服务条款
+      'tos_acceptance.date': language === 'zh' ? '接受服务条款' : 'Accept Terms of Service',
+      'tos_acceptance.ip': language === 'zh' ? '接受服务条款' : 'Accept Terms of Service',
+      'tos_acceptance': language === 'zh' ? '接受服务条款' : 'Accept Terms of Service',
+      // 个人信息
+      'individual.first_name': language === 'zh' ? '名字' : 'First Name',
+      'individual.last_name': language === 'zh' ? '姓氏' : 'Last Name',
+      'individual.dob.day': language === 'zh' ? '出生日期' : 'Date of Birth',
+      'individual.dob.month': language === 'zh' ? '出生日期' : 'Date of Birth',
+      'individual.dob.year': language === 'zh' ? '出生日期' : 'Date of Birth',
+      'individual.email': language === 'zh' ? '电子邮箱' : 'Email Address',
+      'individual.phone': language === 'zh' ? '电话号码' : 'Phone Number',
+      // 地址
+      'individual.address.line1': language === 'zh' ? '地址' : 'Address',
+      'individual.address.city': language === 'zh' ? '城市' : 'City',
+      'individual.address.postal_code': language === 'zh' ? '邮政编码' : 'Postal Code',
+      'individual.address.country': language === 'zh' ? '国家' : 'Country',
+      // 身份验证
+      'individual.id_number': language === 'zh' ? '身份证号码' : 'ID Number',
+      'individual.verification.document': language === 'zh' ? '身份证明文件（护照/驾照/身份证）' : 'Identity Document (Passport/Driver License/ID Card)',
+      'individual.verification.additional_document': language === 'zh' ? '额外身份证明文件' : 'Additional Identity Document',
+      // 银行账户
+      'external_account': language === 'zh' ? '银行账户信息' : 'Bank Account Information',
+      'bank_account': language === 'zh' ? '银行账户信息' : 'Bank Account Information',
+      // 业务信息
+      'business_profile.url': language === 'zh' ? '业务网址' : 'Business URL',
+      'business_profile.mcc': language === 'zh' ? '业务类型' : 'Business Type',
+      'business_profile.product_description': language === 'zh' ? '业务描述' : 'Business Description',
+    };
+
+    // 检查是否有匹配的描述
+    for (const [key, value] of Object.entries(requirementMap)) {
+      if (requirement.includes(key)) {
+        return value;
+      }
+    }
+
+    // 默认返回原始需求名称（格式化后）
+    return requirement.replace(/_/g, ' ').replace(/\./g, ' > ');
+  };
+
+  // 获取去重后的需求列表
+  const getUniqueRequirements = (requirements: string[]): string[] => {
+    const seen = new Set<string>();
+    const result: string[] = [];
+    
+    for (const req of requirements) {
+      const desc = getRequirementDescription(req);
+      if (!seen.has(desc)) {
+        seen.add(desc);
+        result.push(desc);
+      }
+    }
+    
+    return result;
   };
 
   // 如果账户已完成设置（有账户ID且已提交详细信息），显示账户详细信息
@@ -333,14 +363,86 @@ const StripeConnectOnboarding: React.FC<StripeConnectOnboardingProps> = ({
           <p style={{ marginBottom: '20px', color: '#666', fontSize: '14px' }}>
             {t('wallet.stripe.setupStripeAccount')}
           </p>
+          
+          {/* 设置步骤说明 */}
+          <div style={{ 
+            marginBottom: '24px', 
+            padding: '16px', 
+            backgroundColor: '#f0f7ff', 
+            borderRadius: '8px',
+            border: '1px solid #d0e3f7'
+          }}>
+            <h3 style={{ fontSize: '15px', fontWeight: '600', color: '#1a56db', marginBottom: '12px' }}>
+              {language === 'zh' ? '设置收款账户需要以下信息：' : 'To set up your payment account, you will need:'}
+            </h3>
+            <ul style={{ margin: 0, paddingLeft: '20px', color: '#4b5563', fontSize: '14px', lineHeight: '1.8' }}>
+              <li>{language === 'zh' ? '个人信息（姓名、出生日期、地址）' : 'Personal information (name, date of birth, address)'}</li>
+              <li>{language === 'zh' ? '身份证明文件（护照、驾照或身份证）' : 'Identity document (passport, driver license, or ID card)'}</li>
+              <li>{language === 'zh' ? '银行账户信息（用于接收付款）' : 'Bank account information (for receiving payments)'}</li>
+              <li>{language === 'zh' ? '同意 Stripe 服务条款' : 'Agreement to Stripe Terms of Service'}</li>
+            </ul>
+          </div>
         </>
+      )}
+      
+      {/* 显示未完成的需求 */}
+      {showRequirements && accountStatus?.requirements && (
+        <div style={{ 
+          marginBottom: '20px', 
+          padding: '16px', 
+          backgroundColor: '#fff8e6', 
+          borderRadius: '8px',
+          border: '1px solid #ffd666'
+        }}>
+          <h3 style={{ fontSize: '15px', fontWeight: '600', color: '#d48806', marginBottom: '12px', display: 'flex', alignItems: 'center' }}>
+            <span style={{ marginRight: '8px' }}>⚠️</span>
+            {language === 'zh' ? '需要完成以下步骤：' : 'Please complete the following:'}
+          </h3>
+          
+          {/* 过期的需求（紧急） */}
+          {accountStatus.requirements.past_due && accountStatus.requirements.past_due.length > 0 && (
+            <div style={{ marginBottom: '12px' }}>
+              <p style={{ fontSize: '13px', color: '#cf1322', fontWeight: '600', marginBottom: '6px' }}>
+                {language === 'zh' ? '已过期（需立即处理）：' : 'Overdue (requires immediate action):'}
+              </p>
+              <ul style={{ margin: 0, paddingLeft: '20px', color: '#cf1322', fontSize: '13px' }}>
+                {getUniqueRequirements(accountStatus.requirements.past_due).map((req, idx) => (
+                  <li key={idx}>{req}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+          
+          {/* 当前需要的 */}
+          {accountStatus.requirements.currently_due && accountStatus.requirements.currently_due.length > 0 && (
+            <div>
+              <p style={{ fontSize: '13px', color: '#d48806', fontWeight: '600', marginBottom: '6px' }}>
+                {language === 'zh' ? '当前需要：' : 'Currently needed:'}
+              </p>
+              <ul style={{ margin: 0, paddingLeft: '20px', color: '#614700', fontSize: '13px' }}>
+                {getUniqueRequirements(accountStatus.requirements.currently_due).map((req, idx) => (
+                  <li key={idx}>{req}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+          
+          {/* 禁用原因 */}
+          {accountStatus.requirements.disabled_reason && (
+            <p style={{ marginTop: '12px', fontSize: '13px', color: '#cf1322', fontStyle: 'italic' }}>
+              {language === 'zh' ? '账户状态：' : 'Account status: '}{accountStatus.requirements.disabled_reason}
+            </p>
+          )}
+        </div>
       )}
       
       {connectedAccountId && !stripeConnectInstance && (
         <>
           <h2 style={{ marginBottom: '10px', color: '#333' }}>{t('wallet.stripe.addInfoToReceive')}</h2>
           <p style={{ marginBottom: '20px', color: '#666', fontSize: '14px' }}>
-            {t('wallet.stripe.initializing')}
+            {language === 'zh' 
+              ? '您的收款账户需要补充一些信息才能完成设置。请点击下方按钮继续。' 
+              : 'Your payment account needs additional information to complete setup. Please click the button below to continue.'}
           </p>
           <div style={{ textAlign: 'center', marginTop: '20px' }}>
             <button
@@ -496,17 +598,9 @@ const StripeConnectOnboarding: React.FC<StripeConnectOnboardingProps> = ({
             width: '100%',
             minHeight: '600px',
             position: 'relative',
-            overflow: 'hidden'
+            overflow: 'visible'  // 改为 visible 以确保 Stripe 组件能正常显示弹窗
           }}
-          // 防止组件内部链接导致页面跳转
-          onClick={(e) => {
-            // 阻止所有链接的默认行为
-            const target = e.target as HTMLElement;
-            if (target.tagName === 'A' || target.closest('a')) {
-              e.preventDefault();
-              e.stopPropagation();
-            }
-          }}
+          // 注意：不要阻止 Stripe 组件内部的链接点击，否则会影响服务条款接受等功能
         >
           <ConnectComponentsProvider connectInstance={stripeConnectInstance}>
             <ConnectAccountOnboarding
@@ -520,10 +614,8 @@ const StripeConnectOnboarding: React.FC<StripeConnectOnboardingProps> = ({
                 fields: 'eventually_due',
                 futureRequirements: 'include',
               }}
-              // 自定义策略链接（可选）
-              // fullTermsOfServiceUrl="https://your-domain.com/terms"
-              // recipientTermsOfServiceUrl="https://your-domain.com/recipient-terms"
-              // privacyPolicyUrl="https://your-domain.com/privacy"
+              // 服务条款配置：确保收集服务条款接受
+              // skipTermsOfServiceCollection 默认为 false，Stripe 会自动显示服务条款接受界面
             />
           </ConnectComponentsProvider>
         </div>

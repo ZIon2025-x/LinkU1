@@ -345,21 +345,21 @@ def _retrieve_existing_connect_account_for_reuse(account_id: str) -> tuple:
             account_id,
             include=["requirements", "configuration.recipient"]
         )
-        requirements = account.get("requirements", {})
-        summary = requirements.get("summary", {})
-        minimum_deadline = summary.get("minimum_deadline", {})
-        deadline_status = minimum_deadline.get("status")
+        requirements = account.get("requirements") or {}
+        summary = requirements.get("summary") or {}
+        minimum_deadline = summary.get("minimum_deadline") or {}
+        deadline_status = minimum_deadline.get("status") if isinstance(minimum_deadline, dict) else None
         details_submitted = not deadline_status or deadline_status == "eventually_due"
         configuration = account.get("configuration") or {}
         recipient_config = configuration.get("recipient") or {}
-        recipient_capabilities = recipient_config.get("capabilities", {})
-        stripe_balance = recipient_capabilities.get("stripe_balance", {})
-        stripe_transfers = stripe_balance.get("stripe_transfers", {})
+        recipient_capabilities = recipient_config.get("capabilities") or {}
+        stripe_balance = recipient_capabilities.get("stripe_balance") or {}
+        stripe_transfers = stripe_balance.get("stripe_transfers") or {}
         charges_enabled = stripe_transfers.get("status") == "active"
         if not charges_enabled:
             merchant_config = configuration.get("merchant") or {}
-            merchant_capabilities = merchant_config.get("capabilities", {})
-            card_payments = merchant_capabilities.get("card_payments", {})
+            merchant_capabilities = merchant_config.get("capabilities") or {}
+            card_payments = merchant_capabilities.get("card_payments") or {}
             charges_enabled = card_payments.get("status") == "active"
         return (details_submitted, charges_enabled)
     except stripe.error.StripeError as v2_err:
@@ -1142,10 +1142,10 @@ def get_account_status(
                 )
             
             # 检查账户状态（参考 sample code）
-            requirements = account.get("requirements", {})
-            summary = requirements.get("summary", {})
-            minimum_deadline = summary.get("minimum_deadline", {})
-            deadline_status = minimum_deadline.get("status")
+            requirements = account.get("requirements") or {}
+            summary = requirements.get("summary") or {}
+            minimum_deadline = summary.get("minimum_deadline") or {}
+            deadline_status = minimum_deadline.get("status") if isinstance(minimum_deadline, dict) else None
             
             # details_submitted 表示没有当前需要提交的要求
             details_submitted = not deadline_status or deadline_status == "eventually_due"
@@ -1153,25 +1153,53 @@ def get_account_status(
             # 检查 recipient 配置中的 capabilities（用于接收支付）
             configuration = account.get("configuration") or {}
             recipient_config = configuration.get("recipient") or {}
-            recipient_capabilities = recipient_config.get("capabilities", {})
-            stripe_balance = recipient_capabilities.get("stripe_balance", {})
-            stripe_transfers = stripe_balance.get("stripe_transfers", {})
+            recipient_capabilities = recipient_config.get("capabilities") or {}
+            stripe_balance = recipient_capabilities.get("stripe_balance") or {}
+            stripe_transfers = stripe_balance.get("stripe_transfers") or {}
             charges_enabled = stripe_transfers.get("status") == "active"
             
             # 检查 payouts 状态
-            payouts = stripe_balance.get("payouts", {})
+            payouts = stripe_balance.get("payouts") or {}
             payouts_enabled = payouts.get("status") == "active"
             
             # 如果 recipient 不可用，回退到 merchant 配置
             if not charges_enabled:
                 merchant_config = configuration.get("merchant") or {}
-                merchant_capabilities = merchant_config.get("capabilities", {})
-                card_payments = merchant_capabilities.get("card_payments", {})
+                merchant_capabilities = merchant_config.get("capabilities") or {}
+                card_payments = merchant_capabilities.get("card_payments") or {}
                 charges_enabled = card_payments.get("status") == "active"
             
             needs_onboarding = not details_submitted
-            requirements_entries = requirements.get("entries", [])
+            requirements_entries = requirements.get("entries") or []
             account_type = "v2"  # V2 API 成功，账户类型为 V2
+            
+            # 提取详细的需求信息（V2 格式）
+            requirements_detail = {
+                "currently_due": [],
+                "past_due": [],
+                "eventually_due": [],
+                "disabled_reason": None
+            }
+            
+            # 解析 V2 requirements entries
+            for entry in requirements_entries:
+                if not isinstance(entry, dict):
+                    continue
+                entry_type = entry.get("type", "")
+                status = entry.get("status") or {}
+                entry_deadline_status = status.get("deadline_status", "") if isinstance(status, dict) else ""
+                
+                if entry_deadline_status == "past_due":
+                    requirements_detail["past_due"].append(entry_type)
+                elif entry_deadline_status == "currently_due":
+                    requirements_detail["currently_due"].append(entry_type)
+                elif entry_deadline_status == "eventually_due":
+                    requirements_detail["eventually_due"].append(entry_type)
+            
+            # 检查是否有禁用原因
+            if deadline_status and deadline_status != "eventually_due":
+                requirements_detail["disabled_reason"] = deadline_status
+            
             logger.info(f"✅ 账户 {current_user.stripe_account_id} 是 V2 账户")
             
         except stripe.error.StripeError as v2_err:
@@ -1199,6 +1227,15 @@ def get_account_status(
             needs_onboarding = not details_submitted
             requirements_entries = []
             account_type = "v1"  # V2 API 失败，回退到 V1 API，账户类型为 V1
+            
+            # 从 V1 API 提取详细的需求信息
+            v1_requirements = account.requirements or {}
+            requirements_detail = {
+                "currently_due": list(v1_requirements.get("currently_due", []) or []),
+                "past_due": list(v1_requirements.get("past_due", []) or []),
+                "eventually_due": list(v1_requirements.get("eventually_due", []) or []),
+                "disabled_reason": v1_requirements.get("disabled_reason")
+            }
         
         # 使用嵌入式组件，不创建跳转链接
         client_secret = None
@@ -1217,7 +1254,7 @@ def get_account_status(
             "payouts_enabled": payouts_enabled,
             "client_secret": client_secret,  # 用于嵌入式组件
             "needs_onboarding": needs_onboarding,
-            "requirements": requirements_entries if requirements_entries else None
+            "requirements": requirements_detail  # 详细的需求信息
         }
         
     except stripe.error.StripeError as e:
