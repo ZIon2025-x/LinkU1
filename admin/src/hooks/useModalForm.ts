@@ -13,7 +13,8 @@ export interface UseModalFormReturn<T> {
   isEdit: boolean;
   formData: T;
   loading: boolean;
-  open: (editData?: T) => void;
+  /** 打开模态框。editData: 编辑数据；forceCreate: 为true时即使有数据也视为创建模式 */
+  open: (editData?: T, forceCreate?: boolean) => void;
   close: () => void;
   setFormData: (data: T | ((prev: T) => T)) => void;
   updateField: <K extends keyof T>(field: K, value: T[K]) => void;
@@ -41,13 +42,15 @@ export function useModalForm<T extends Record<string, any>>(
   const [formData, setFormData] = useState<T>(initialValues);
   const [loading, setLoading] = useState(false);
 
-  const open = useCallback((editData?: T) => {
-    if (editData) {
+  const open = useCallback((editData?: T, forceCreate?: boolean) => {
+    if (editData && !forceCreate) {
+      // 编辑模式：有数据且不是强制创建
       setIsEdit(true);
       setFormData(editData);
     } else {
+      // 创建模式：用传入的数据或默认值
       setIsEdit(false);
-      setFormData(initialValues);
+      setFormData(editData || initialValues);
     }
     setIsOpen(true);
   }, [initialValues]);

@@ -63,6 +63,18 @@ export interface Coupon {
   updated_at: string;
 }
 
+// 获取默认有效期（当前时间 ~ 一个月后）
+export const getDefaultValidFrom = () => {
+  const now = new Date();
+  return now.toISOString().slice(0, 16); // 格式: YYYY-MM-DDTHH:mm
+};
+
+export const getDefaultValidUntil = () => {
+  const date = new Date();
+  date.setMonth(date.getMonth() + 1);
+  return date.toISOString().slice(0, 16);
+};
+
 export const initialCouponForm: CouponForm = {
   code: '',
   name: '',
@@ -87,3 +99,10 @@ export const initialCouponForm: CouponForm = {
   locations: [],
   excluded_task_types: [],
 };
+
+// 创建带有默认日期的表单初始值
+export const createInitialCouponForm = (): CouponForm => ({
+  ...initialCouponForm,
+  valid_from: getDefaultValidFrom(),
+  valid_until: getDefaultValidUntil(),
+});

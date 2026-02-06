@@ -3,7 +3,7 @@ import { message } from 'antd';
 import { useAdminTable, useModalForm } from '../../../hooks';
 import { AdminTable, AdminPagination, StatusBadge, Column } from '../../../components/admin';
 import { getCoupons, createCoupon, updateCoupon, deleteCoupon } from '../../../api';
-import { Coupon, CouponForm, initialCouponForm } from './types';
+import { Coupon, CouponForm, initialCouponForm, createInitialCouponForm } from './types';
 import { CouponFormModal } from './CouponFormModal';
 import styles from './CouponManagement.module.css';
 
@@ -51,15 +51,16 @@ export const CouponManagement: React.FC = () => {
         apply_order: values.apply_order || 0,
         valid_from: values.valid_from,
         valid_until: values.valid_until,
-        // usage_conditions 包含 points_required, locations, task_types
+        // usage_conditions 包含 locations, task_types
         usage_conditions: (() => {
           const conditions: any = {};
-          if (values.points_required) conditions.points_required = values.points_required;
           if (values.task_types.length > 0) conditions.task_types = values.task_types;
           if (values.locations.length > 0) conditions.locations = values.locations;
-          // 注意：CouponData 接口中 usage_conditions 只有这3个字段
           return Object.keys(conditions).length > 0 ? conditions : undefined;
         })(),
+        // points_required 和 applicable_scenarios 是顶级字段
+        points_required: values.points_required || 0,
+        applicable_scenarios: values.applicable_scenarios.length > 0 ? values.applicable_scenarios : undefined,
         per_device_limit: values.per_device_limit,
         per_ip_limit: values.per_ip_limit,
         per_day_limit: values.per_day_limit,
@@ -246,7 +247,7 @@ export const CouponManagement: React.FC = () => {
       {/* Header */}
       <div className={styles.header}>
         <h2 className={styles.title}>优惠券管理</h2>
-        <button className={styles.btnCreate} onClick={() => modal.open()}>
+        <button className={styles.btnCreate} onClick={() => modal.open(createInitialCouponForm(), true)}>
           + 创建优惠券
         </button>
       </div>

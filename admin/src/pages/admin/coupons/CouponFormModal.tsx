@@ -22,13 +22,24 @@ const CITIES = [
   "Warwick", "Cambridge", "Oxford", "Other"
 ];
 
-const TASK_TYPES = [
-  'tutoring', 'pet_care', 'delivery', 'cleaning', 'moving',
-  'tech_support', 'translation', 'design', 'photography', 'other'
+const TASK_TYPES: { value: string; label: string }[] = [
+  { value: 'tutoring', label: '辅导' },
+  { value: 'pet_care', label: '宠物照顾' },
+  { value: 'delivery', label: '配送' },
+  { value: 'cleaning', label: '清洁' },
+  { value: 'moving', label: '搬家' },
+  { value: 'tech_support', label: '技术支持' },
+  { value: 'translation', label: '翻译' },
+  { value: 'design', label: '设计' },
+  { value: 'photography', label: '摄影' },
+  { value: 'other', label: '其他' },
 ];
 
-const APPLICABLE_SCENARIOS = [
-  'task_posting', 'task_accepting', 'expert_service', 'all'
+const APPLICABLE_SCENARIOS: { value: string; label: string }[] = [
+  { value: 'task_posting', label: '发布任务' },
+  { value: 'task_accepting', label: '接受任务' },
+  { value: 'expert_service', label: '专家服务' },
+  { value: 'all', label: '全部场景' },
 ];
 
 export const CouponFormModal: React.FC<CouponFormModalProps> = ({
@@ -178,16 +189,21 @@ export const CouponFormModal: React.FC<CouponFormModalProps> = ({
                 </div>
 
                 <div className={styles.formGroup}>
-                  <label>折扣值 * (便士)</label>
+                  <label>折扣值 * {formData.type === 'percentage' ? '(基点)' : '(便士)'}</label>
                   <input
                     type="number"
                     value={formData.discount_value}
                     onChange={(e) => updateField('discount_value', Number(e.target.value))}
-                    placeholder={formData.type === 'percentage' ? '例如: 10 表示 10%' : '例如: 1000 表示 £10'}
+                    placeholder={formData.type === 'percentage' ? '例如: 1000 表示 10%' : '例如: 1000 表示 £10'}
                     className={styles.input}
                     min="0"
                     disabled={isEdit}
                   />
+                  <small className={styles.hint}>
+                    {formData.type === 'percentage'
+                      ? '基点制：100=1%, 1000=10%, 10000=100%'
+                      : '便士制：100=£1, 1000=£10'}
+                  </small>
                 </div>
               </div>
 
@@ -353,20 +369,20 @@ export const CouponFormModal: React.FC<CouponFormModalProps> = ({
                 <label>适用场景</label>
                 <div className={styles.checkboxGroup}>
                   {APPLICABLE_SCENARIOS.map((scenario) => (
-                    <label key={scenario} className={styles.checkboxLabel}>
+                    <label key={scenario.value} className={styles.checkboxLabel}>
                       <input
                         type="checkbox"
-                        checked={formData.applicable_scenarios.includes(scenario)}
+                        checked={formData.applicable_scenarios.includes(scenario.value)}
                         onChange={(e) => {
                           if (e.target.checked) {
-                            updateField('applicable_scenarios', [...formData.applicable_scenarios, scenario]);
+                            updateField('applicable_scenarios', [...formData.applicable_scenarios, scenario.value]);
                           } else {
-                            updateField('applicable_scenarios', formData.applicable_scenarios.filter(s => s !== scenario));
+                            updateField('applicable_scenarios', formData.applicable_scenarios.filter(s => s !== scenario.value));
                           }
                         }}
                         disabled={isEdit}
                       />
-                      {scenario}
+                      {scenario.label}
                     </label>
                   ))}
                 </div>
@@ -376,19 +392,19 @@ export const CouponFormModal: React.FC<CouponFormModalProps> = ({
                 <label>适用任务类型</label>
                 <div className={styles.checkboxGroup}>
                   {TASK_TYPES.map((type) => (
-                    <label key={type} className={styles.checkboxLabel}>
+                    <label key={type.value} className={styles.checkboxLabel}>
                       <input
                         type="checkbox"
-                        checked={formData.task_types.includes(type)}
+                        checked={formData.task_types.includes(type.value)}
                         onChange={(e) => {
                           if (e.target.checked) {
-                            updateField('task_types', [...formData.task_types, type]);
+                            updateField('task_types', [...formData.task_types, type.value]);
                           } else {
-                            updateField('task_types', formData.task_types.filter(t => t !== type));
+                            updateField('task_types', formData.task_types.filter(t => t !== type.value));
                           }
                         }}
                       />
-                      {type}
+                      {type.label}
                     </label>
                   ))}
                 </div>

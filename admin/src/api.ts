@@ -539,10 +539,13 @@ export interface CouponData {
   valid_from: string;
   valid_until: string;
   usage_conditions?: {
-    points_required?: number;
     locations?: string[];
     task_types?: string[];
   };
+  /** 积分兑换所需积分（0表示不支持积分兑换） */
+  points_required?: number;
+  /** 适用场景列表（如 task_posting, task_accepting, expert_service, all） */
+  applicable_scenarios?: string[];
   eligibility_type?: string;
   eligibility_value?: string;
   per_day_limit?: number;
@@ -579,6 +582,8 @@ export const updateCoupon = async (couponId: number, data: {
   valid_until?: string;
   status?: 'active' | 'inactive';
   usage_conditions?: object;
+  points_required?: number;
+  applicable_scenarios?: string[];
   per_user_per_month_limit?: number;
   per_user_limit_window?: string;
   per_user_per_window_limit?: number;
