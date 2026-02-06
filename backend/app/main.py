@@ -208,26 +208,16 @@ async def add_noindex_header(request: Request, call_next):
 async def custom_cors_middleware(request: Request, call_next):
     """自定义CORS中间件，覆盖Railway默认设置"""
     origin = request.headers.get("origin")
-    allowed_domains = [
-        "https://link-u1", 
-        "http://localhost", 
-        "https://www.link2ur.com", 
-        "https://link2ur.com",
-        "https://admin.link2ur.com",  # 管理后台子域名
-        "https://service.link2ur.com",  # 客服系统子域名
-        "https://api.link2ur.com",
-        "http://localhost:3000",
-        "http://localhost:3001",  # 管理后台开发端口
-        "http://localhost:3002",  # 客服系统开发端口
-        "http://localhost:8080"
-    ]
+    # 使用 Config.ALLOWED_ORIGINS（从环境变量读取）
+    allowed_origins = Config.ALLOWED_ORIGINS
     
     def is_allowed_origin(origin: str) -> bool:
         """检查origin是否在允许列表中"""
         if not origin:
             return False
-        for domain in allowed_domains:
-            if origin == domain or origin.startswith(domain):
+        # 精确匹配或前缀匹配
+        for allowed in allowed_origins:
+            if origin == allowed or origin.startswith(allowed.rstrip('/')):
                 return True
         return False
     
