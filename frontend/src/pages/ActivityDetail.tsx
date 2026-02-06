@@ -536,10 +536,10 @@ const ActivityDetail: React.FC = () => {
                   等待达人回应
                 </button>
               ) : activity.user_task_status === 'pending_payment' && !activity.user_task_is_paid ? (
-                // 待支付且未支付，显示继续支付按钮
+                // 待支付且未支付，在新标签页打开支付页面
                 <button
                   onClick={() => {
-                    navigateLocalized(`/tasks/${activity.user_task_id}/payment`);
+                    window.open(`/${language}/tasks/${activity.user_task_id}/payment`, '_blank');
                   }}
                   className={styles.applyButton}
                 >

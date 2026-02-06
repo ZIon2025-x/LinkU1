@@ -3869,7 +3869,7 @@ const TaskDetail: React.FC = () => {
               </span>
             )}
             <button
-              onClick={() => navigate(`/${language}/tasks/${id}/payment`)}
+              onClick={() => window.open(`/${language}/tasks/${id}/payment`, '_blank')}
               disabled={paymentCountdownExpired}
               style={{
                 background: paymentCountdownExpired ? '#9ca3af' : '#10b981',

@@ -5,7 +5,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { message } from 'antd';
-import { useLocalizedNavigation } from '../hooks/useLocalizedNavigation';
+import { useLanguage } from '../contexts/LanguageContext';
 import { getTaskExpertServiceDetail, applyForService, fetchCurrentUser, getServiceTimeSlotsPublic, applyToActivity } from '../api';
 import LoginModal from './LoginModal';
 import { MODAL_OVERLAY_STYLE } from './TaskDetailModal.styles';
@@ -63,7 +63,7 @@ const ServiceDetailModal: React.FC<ServiceDetailModalProps> = ({
   serviceId,
   onApplySuccess,
 }) => {
-  const { navigate: navigateLocalized } = useLocalizedNavigation();
+  const { language } = useLanguage();
   const [service, setService] = useState<ServiceDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -346,10 +346,10 @@ const ServiceDetailModal: React.FC<ServiceDetailModalProps> = ({
                     等待达人回应
                   </button>
                 ) : service.user_task_status === 'pending_payment' && !service.user_task_is_paid && service.user_task_id ? (
-                  // 待支付且未支付，显示继续支付按钮
+                  // 待支付且未支付，在新标签页打开支付页面
                   <button
                     onClick={() => {
-                      navigateLocalized(`/tasks/${service.user_task_id}/payment`);
+                      window.open(`/${language}/tasks/${service.user_task_id}/payment`, '_blank');
                       onClose();
                     }}
                     style={{

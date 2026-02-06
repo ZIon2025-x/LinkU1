@@ -240,8 +240,8 @@ const FleaMarketItemDetailModal: React.FC<FleaMarketItemDetailModalProps> = ({
             // 设置返回URL，支付完成后返回跳蚤市场
             params.set('return_url', window.location.href);
             params.set('return_type', 'flea_market');
-            // 跳转到支付页面
-            navigate(`/${language}/tasks/${data.task_id}/payment?${params.toString()}`);
+            // 在新标签页打开支付页面
+            window.open(`/${language}/tasks/${data.task_id}/payment?${params.toString()}`, '_blank');
           } else {
             message.success(t('fleaMarket.purchaseSuccess') || '购买成功！任务已创建');
             onClose();
@@ -678,8 +678,8 @@ const FleaMarketItemDetailModal: React.FC<FleaMarketItemDetailModalProps> = ({
                                         if (data.task_status === 'pending_payment' && data.task_id) {
                                           message.success(t('fleaMarket.acceptPurchaseSuccess') || '购买申请已接受，请完成支付');
                                           onClose();
-                                          // 跳转到支付页面
-                                          navigate(`/${language}/tasks/${data.task_id}/payment`);
+                                          // 在新标签页打开支付页面
+                                          window.open(`/${language}/tasks/${data.task_id}/payment`, '_blank');
                                         } else {
                                           message.success(t('fleaMarket.acceptPurchaseSuccess') || '购买申请已接受，任务已创建');
                                           loadPurchaseRequests();

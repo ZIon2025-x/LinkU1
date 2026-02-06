@@ -31,7 +31,7 @@ import timezone from 'dayjs/plugin/timezone';
 import { TimeHandlerV2 } from '../utils/timeUtils';
 import LoginModal from '../components/LoginModal';
 import TaskDetailModal from '../components/TaskDetailModal';
-import PaymentModal from '../components/payment/PaymentModal';
+// PaymentModal 已移除，统一使用 TaskPayment 页面进行支付
 import CompleteTaskModal from '../components/CompleteTaskModal';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useTranslation } from '../hooks/useTranslation';
@@ -522,9 +522,7 @@ const MessagePage: React.FC = () => {
   const [showApplicationModal, setShowApplicationModal] = useState(false);
   const [showApplicationListModal, setShowApplicationListModal] = useState(false);
   const [showTaskDetailModal, setShowTaskDetailModal] = useState(false);
-  const [showPaymentModal, setShowPaymentModal] = useState(false);
-  const [paymentIntentId, setPaymentIntentId] = useState<string | null>(null);
-  const [paymentClientSecret, setPaymentClientSecret] = useState<string | null>(null);
+  // PaymentModal 相关状态已移除，统一使用 TaskPayment 页面
   const [showCompleteTaskModal, setShowCompleteTaskModal] = useState(false);
   const [applicationMessage, setApplicationMessage] = useState('');
   const [negotiatedPrice, setNegotiatedPrice] = useState<number | undefined>();
@@ -2170,6 +2168,33 @@ const MessagePage: React.FC = () => {
       lastLoadedTaskIdRef.current = null;
     }
   }, [activeTaskId, chatMode, user, loadTaskMessages, loadApplications]);
+
+  // 监听跨标签页的支付成功事件（通过 localStorage）
+  useEffect(() => {
+    const handleStorageChange = (event: StorageEvent) => {
+      // 检查是否是支付成功的标记
+      if (event.key?.startsWith('payment_success_') && event.newValue === 'true') {
+        const taskIdFromKey = event.key.replace('payment_success_', '');
+        // 如果当前正在查看这个任务，刷新数据
+        if (activeTaskId && String(activeTaskId) === taskIdFromKey) {
+          message.success(t('messages.notifications.paymentSuccess') || '支付成功！');
+          loadTaskMessages(activeTaskId);
+          loadApplications(activeTaskId);
+          loadTasks();
+        } else {
+          // 即使不是当前任务，也刷新任务列表
+          loadTasks();
+        }
+        // 清除标记
+        localStorage.removeItem(event.key);
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+    };
+  }, [activeTaskId, loadTasks, loadTaskMessages, loadApplications, t]);
 
   // 轮询检查新任务消息（作为WebSocket的备用方案）
   useEffect(() => {
@@ -7564,32 +7589,7 @@ const MessagePage: React.FC = () => {
         </div>
       )}
       
-      {/* 支付弹窗 */}
-      {activeTaskId && (
-        <PaymentModal
-          visible={showPaymentModal}
-          taskId={activeTaskId}
-          taskTitle={activeTask?.title}
-          clientSecret={paymentClientSecret}
-          paymentIntentId={paymentIntentId}
-          onSuccess={() => {
-            setShowPaymentModal(false);
-            setPaymentClientSecret(null);
-            setPaymentIntentId(null);
-            // 重新加载任务信息
-            if (activeTaskId) {
-              loadTaskMessages(activeTaskId);
-              loadApplications(activeTaskId);
-              loadTasks();
-            }
-          }}
-          onCancel={() => {
-            setShowPaymentModal(false);
-            setPaymentClientSecret(null);
-            setPaymentIntentId(null);
-          }}
-        />
-      )}
+      {/* PaymentModal 已移除，统一使用 TaskPayment 页面进行支付 */}
 
       {/* 完成任务弹窗 */}
       {activeTaskId && (

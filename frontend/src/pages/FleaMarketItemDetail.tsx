@@ -181,8 +181,8 @@ const FleaMarketItemDetail: React.FC = () => {
             // 设置返回URL，支付完成后返回跳蚤市场
             params.set('return_url', window.location.href);
             params.set('return_type', 'flea_market');
-            // 跳转到支付页面
-            navigate(`/${language}/tasks/${data.task_id}/payment?${params.toString()}`);
+            // 在新标签页打开支付页面
+            window.open(`/${language}/tasks/${data.task_id}/payment?${params.toString()}`, '_blank');
           } else {
             message.success('购买成功！任务已创建');
             navigate(`/${language}/message`);

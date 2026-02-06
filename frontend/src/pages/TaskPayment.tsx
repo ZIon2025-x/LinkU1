@@ -161,6 +161,93 @@ const TaskPayment: React.FC = () => {
     loadCoupons();
   }, [user]);
 
+  // 自动创建支付（页面加载后自动发起，无需用户点击）
+  const [autoPaymentInitiated, setAutoPaymentInitiated] = useState(false);
+  useEffect(() => {
+    // 只在以下条件满足时自动创建支付：
+    // 1. 用户已登录
+    // 2. 任务信息已加载
+    // 3. 没有来自 URL 参数的支付信息
+    // 4. 不是 Stripe 重定向返回
+    // 5. 还没有自动发起过
+    const hasUrlPaymentInfo = searchParams.get('client_secret') || searchParams.get('payment_intent_id');
+    if (user && !loadingTask && taskInfo && !hasUrlPaymentInfo && !isStripeRedirectReturn && !autoPaymentInitiated && !paymentData) {
+      setAutoPaymentInitiated(true);
+      handleCreatePaymentAuto();
+    }
+  }, [user, loadingTask, taskInfo, isStripeRedirectReturn, autoPaymentInitiated, paymentData]);
+
+  // 自动创建支付（不带优惠券）
+  const handleCreatePaymentAuto = async () => {
+    if (!taskId || !user) return;
+    
+    setLoading(true);
+    try {
+      const response = await api.post(
+        `/api/coupon-points/tasks/${taskId}/payment`,
+        { payment_method: 'stripe' }
+      );
+      setPaymentData(response.data);
+      
+      // 如果使用优惠券全额抵扣，直接成功
+      if (response.data.final_amount === 0) {
+        message.success(language === 'zh' ? '支付成功！' : 'Payment successful!');
+        if (returnUrl && window.opener) {
+          window.opener.postMessage({ type: 'payment_success', taskId: taskId }, '*');
+          setTimeout(() => window.close(), 1500);
+        } else {
+          setTimeout(() => localizedNavigate(`/tasks/${taskId}`), 1500);
+        }
+      }
+    } catch (error: any) {
+      const errorMessage = error.response?.data?.detail || error.message || '创建支付失败';
+      message.error(errorMessage);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 应用优惠券并重新创建支付
+  const handleApplyCoupon = async (userCouponId: number | null) => {
+    setSelectedUserCouponId(userCouponId);
+    
+    if (!taskId || !user) return;
+    
+    setLoading(true);
+    try {
+      const requestData: any = { payment_method: 'stripe' };
+      if (userCouponId) {
+        requestData.user_coupon_id = userCouponId;
+      }
+      
+      const response = await api.post(
+        `/api/coupon-points/tasks/${taskId}/payment`,
+        requestData
+      );
+      setPaymentData(response.data);
+      
+      if (userCouponId) {
+        message.success(language === 'zh' ? '优惠券已应用' : 'Coupon applied');
+      }
+      
+      // 如果使用优惠券全额抵扣，直接成功
+      if (response.data.final_amount === 0) {
+        message.success(language === 'zh' ? '优惠券全额抵扣，支付成功！' : 'Fully paid with coupon!');
+        if (returnUrl && window.opener) {
+          window.opener.postMessage({ type: 'payment_success', taskId: taskId }, '*');
+          setTimeout(() => window.close(), 1500);
+        } else {
+          setTimeout(() => localizedNavigate(`/tasks/${taskId}`), 1500);
+        }
+      }
+    } catch (error: any) {
+      const errorMessage = error.response?.data?.detail || error.message || '应用优惠券失败';
+      message.error(errorMessage);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // 检查 URL 参数中是否有支付信息和返回 URL
   useEffect(() => {
     const clientSecret = searchParams.get('client_secret');
@@ -244,76 +331,13 @@ const TaskPayment: React.FC = () => {
 
   // Stripe 重定向返回后：立即显示「支付完成，正在确认」并启动轮询，不展示优惠券表单
   useEffect(() => {
-    if (!isStripeRedirectReturn || stripeRedirectHandled || !taskId || !paymentData?.payment_intent_id) return;
+    const paymentIntentId = paymentData?.payment_intent_id;
+    if (!isStripeRedirectReturn || stripeRedirectHandled || !taskId || !paymentIntentId) return;
     setStripeRedirectHandled(true);
     message.success(language === 'zh' ? '支付已完成，正在确认...' : 'Payment completed, confirming...');
-    startPaymentStatusPolling();
+    // 直接传入 paymentIntentId 避免闭包问题
+    startPaymentStatusPolling(paymentIntentId);
   }, [isStripeRedirectReturn, stripeRedirectHandled, taskId, paymentData?.payment_intent_id, language]);
-
-  const handleCreatePayment = async () => {
-    if (!taskId) {
-      message.error('任务ID无效');
-      return;
-    }
-
-    if (!user) {
-      setShowLoginModal(true);
-      return;
-    }
-
-    // ⚠️ 检查支付是否已过期
-    if (isExpired) {
-      message.error(language === 'zh' ? '支付已过期，无法继续支付。任务将自动取消。' : 'Payment has expired. The task will be automatically cancelled.');
-      setTimeout(() => {
-        localizedNavigate(`/tasks/${taskId}`);
-      }, 2000);
-      return;
-    }
-
-    setLoading(true);
-    try {
-      const requestData: any = {
-        payment_method: 'stripe', // 只支持 Stripe 支付
-      };
-
-      if (selectedUserCouponId) {
-        requestData.user_coupon_id = selectedUserCouponId;
-      }
-
-      const response = await api.post(
-        `/api/coupon-points/tasks/${taskId}/payment`,
-        requestData
-      );
-
-      setPaymentData(response.data);
-
-      // 如果使用优惠券全额抵扣，直接成功
-      if (response.data.final_amount === 0) {
-        message.success(language === 'zh' ? '支付成功！' : 'Payment successful!');
-        
-        // 如果有返回 URL，通知原页面并关闭支付页面
-        if (returnUrl && window.opener) {
-          window.opener.postMessage({
-            type: 'payment_success',
-            taskId: taskId,
-            message: language === 'zh' ? '申请已批准！' : 'Application approved!'
-          }, '*');
-          setTimeout(() => {
-            window.close();
-          }, 1500);
-        } else {
-          setTimeout(() => {
-            localizedNavigate(`/tasks/${taskId}`);
-          }, 1500);
-        }
-      }
-    } catch (error: any) {
-      const errorMessage = error.response?.data?.detail || error.message || '创建支付失败';
-      message.error(errorMessage);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handlePaymentSuccess = () => {
     logger.log('✅ 前端支付成功回调触发, taskId:', taskId, 'paymentIntentId:', paymentData?.payment_intent_id);
@@ -338,23 +362,31 @@ const TaskPayment: React.FC = () => {
     } else {
       logger.log('🔄 开始轮询支付状态');
       // 没有返回 URL，开始轮询支付状态，确保 webhook 已处理
-      startPaymentStatusPolling();
+      startPaymentStatusPolling(paymentData?.payment_intent_id);
     }
   };
 
   // 支付状态轮询（作为 webhook 的备选方案）
-  const startPaymentStatusPolling = async () => {
-    if (!taskId || !paymentData?.payment_intent_id) {
+  const startPaymentStatusPolling = async (paymentIntentIdParam?: string | null) => {
+    const paymentIntentId = paymentIntentIdParam || paymentData?.payment_intent_id;
+    if (!taskId || !paymentIntentId) {
+      logger.log('⚠️ 无法启动轮询: taskId 或 paymentIntentId 缺失', { taskId, paymentIntentId });
       return;
     }
 
+    logger.log('🚀 启动支付状态轮询', { taskId, paymentIntentId });
+
     let pollCount = 0;
-    const maxPolls = 10; // 最多轮询 10 次
+    const maxPolls = 15; // 最多轮询 15 次
     const pollInterval = 2000; // 每 2 秒轮询一次
 
     const poll = async () => {
       if (pollCount >= maxPolls) {
         // 轮询超时，但支付可能已成功（webhook 延迟）
+        logger.log('⏰ 轮询超时，尝试通知原页面');
+        // 设置 localStorage 标记，确保消息页面能收到通知
+        localStorage.setItem(`payment_success_${taskId}`, 'true');
+        
         if (returnUrl && window.opener) {
           // 通知原页面（即使轮询超时，支付可能已成功）
           window.opener.postMessage({
@@ -366,6 +398,7 @@ const TaskPayment: React.FC = () => {
             window.close();
           }, 1500);
         } else {
+          message.info(language === 'zh' ? '正在跳转到任务详情...' : 'Redirecting to task details...');
           setTimeout(() => {
             localizedNavigate(`/tasks/${taskId}`);
           }, 1500);
@@ -374,7 +407,7 @@ const TaskPayment: React.FC = () => {
       }
 
       try {
-        logger.log(`🔄 轮询支付状态 (${pollCount + 1}/${maxPolls}), taskId: ${taskId}, paymentIntentId: ${paymentData?.payment_intent_id}`);
+        logger.log(`🔄 轮询支付状态 (${pollCount + 1}/${maxPolls}), taskId: ${taskId}, paymentIntentId: ${paymentIntentId}`);
         const response = await api.get(`/api/coupon-points/tasks/${taskId}/payment-status`);
         const { is_paid, payment_details } = response.data;
         
@@ -609,55 +642,13 @@ const TaskPayment: React.FC = () => {
               </div>
               <Spin size="large" />
             </div>
-          ) : !paymentData ? (
-            <div>
-              <h2 style={{ 
-                fontSize: '24px', 
-                fontWeight: 'bold', 
-                marginBottom: '32px',
-                color: '#1a1a1a'
-              }}>
-                {language === 'zh' ? '选择支付方式' : 'Select Payment Method'}
-              </h2>
-
-              {/* 优惠券选择（可选） */}
-              <div style={{ marginBottom: '32px' }}>
-                <label style={{ display: 'block', marginBottom: '12px', fontWeight: '600', fontSize: '16px' }}>
-                  {language === 'zh' ? '使用优惠券（可选）' : 'Use Coupon (Optional)'}
-                </label>
-                <Select
-                  placeholder={language === 'zh' ? '选择优惠券' : 'Select a coupon'}
-                  allowClear
-                  style={{ width: '100%' }}
-                  size="large"
-                  loading={loadingCoupons}
-                  value={selectedUserCouponId ?? undefined}
-                  onChange={(v: number | undefined) => setSelectedUserCouponId(v ?? null)}
-                  options={myCoupons.map((uc: UserCouponItem) => {
-                    const c = uc.coupon;
-                    const discount = (c.type === 'fixed_amount' || c.type === 'fixed') 
-                      ? `£${(c.discount_value / 100).toFixed(2)}`
-                      : `${(c.discount_value / 100).toFixed(0)}% off`;
-                    const min = c.min_amount ? ` (min £${(c.min_amount / 100).toFixed(2)})` : '';
-                    return { value: uc.id, label: `${c.name} - ${discount}${min}` };
-                  })}
-                />
+          ) : loading || !paymentData || (paymentData && !paymentData.client_secret && paymentData.final_amount !== 0) ? (
+            // 正在创建支付，显示加载状态
+            <div style={{ textAlign: 'center', padding: '60px 40px' }}>
+              <Spin size="large" />
+              <div style={{ marginTop: '24px', fontSize: '18px', color: '#666' }}>
+                {language === 'zh' ? '正在准备支付...' : 'Preparing payment...'}
               </div>
-
-              <Button
-                type="primary"
-                onClick={handleCreatePayment}
-                loading={loading}
-                block
-                size="large"
-                style={{
-                  height: '50px',
-                  fontSize: '18px',
-                  fontWeight: 'bold'
-                }}
-              >
-                {loading ? (language === 'zh' ? '创建支付中...' : 'Creating payment...') : (language === 'zh' ? '创建支付' : 'Create Payment')}
-              </Button>
             </div>
           ) : (
             <div>
@@ -669,6 +660,73 @@ const TaskPayment: React.FC = () => {
               }}>
                 {language === 'zh' ? '支付详情' : 'Payment Details'}
               </h2>
+
+              {/* 优惠券选择（自动应用） */}
+              <div style={{ 
+                marginBottom: '24px',
+                padding: '16px 20px',
+                background: paymentData.coupon_discount_display ? '#f0fdf4' : '#f8fff8',
+                borderRadius: '12px',
+                border: `1px solid ${paymentData.coupon_discount_display ? '#22c55e' : '#b7eb8f'}`
+              }}>
+                <div style={{ 
+                  display: 'flex', 
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  flexWrap: 'wrap',
+                  gap: '12px'
+                }}>
+                  <div style={{ 
+                    display: 'flex', 
+                    alignItems: 'center',
+                    gap: '8px',
+                    fontWeight: '600', 
+                    fontSize: '15px',
+                    color: '#389e0d'
+                  }}>
+                    🎁 {language === 'zh' ? '优惠券' : 'Coupon'}
+                    {paymentData.coupon_discount_display && (
+                      <span style={{ 
+                        background: '#22c55e', 
+                        color: '#fff', 
+                        padding: '2px 8px', 
+                        borderRadius: '4px', 
+                        fontSize: '12px' 
+                      }}>
+                        {language === 'zh' ? '已应用' : 'Applied'}
+                      </span>
+                    )}
+                  </div>
+                  {loadingCoupons ? (
+                    <span style={{ color: '#666', fontSize: '14px' }}>
+                      <Spin size="small" style={{ marginRight: '8px' }} />
+                      {language === 'zh' ? '加载中...' : 'Loading...'}
+                    </span>
+                  ) : myCoupons.length > 0 ? (
+                    <Select
+                      placeholder={language === 'zh' ? '选择优惠券' : 'Select coupon'}
+                      allowClear
+                      style={{ minWidth: '200px' }}
+                      size="middle"
+                      disabled={loading}
+                      value={selectedUserCouponId ?? undefined}
+                      onChange={(v: number | undefined) => handleApplyCoupon(v ?? null)}
+                      options={myCoupons.map((uc: UserCouponItem) => {
+                        const c = uc.coupon;
+                        const discount = (c.type === 'fixed_amount' || c.type === 'fixed') 
+                          ? `£${(c.discount_value / 100).toFixed(2)}`
+                          : `${(c.discount_value / 100).toFixed(0)}% off`;
+                        const min = c.min_amount ? ` (min £${(c.min_amount / 100).toFixed(2)})` : '';
+                        return { value: uc.id, label: `${c.name} - ${discount}${min}` };
+                      })}
+                    />
+                  ) : (
+                    <span style={{ color: '#999', fontSize: '14px' }}>
+                      {language === 'zh' ? '暂无可用优惠券' : 'No coupons available'}
+                    </span>
+                  )}
+                </div>
+              </div>
 
               {/* 显示支付信息 */}
               <div style={{ 
@@ -687,7 +745,7 @@ const TaskPayment: React.FC = () => {
                 {paymentData.coupon_discount_display && (
                   <div style={{ marginBottom: '12px', color: '#52c41a', fontSize: '16px' }}>
                     <strong>{language === 'zh' ? '优惠券折扣:' : 'Coupon Discount:'}</strong> 
-                    <span style={{ marginLeft: '8px' }}>£{paymentData.coupon_discount_display}</span>
+                    <span style={{ marginLeft: '8px' }}>-£{paymentData.coupon_discount_display}</span>
                   </div>
                 )}
                 <div style={{ 

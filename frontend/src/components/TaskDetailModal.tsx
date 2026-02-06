@@ -3286,7 +3286,7 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
                 </span>
               )}
               <button
-                onClick={() => navigate(`/${language}/tasks/${taskId}/payment`)}
+                onClick={() => window.open(`/${language}/tasks/${taskId}/payment`, '_blank')}
                 disabled={paymentCountdownExpired}
                 style={{
                   background: paymentCountdownExpired ? '#9ca3af' : '#10b981',
