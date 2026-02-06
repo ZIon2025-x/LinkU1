@@ -212,6 +212,7 @@ class TestNotificationAPI:
         with httpx.Client(timeout=self.timeout) as client:
             response = client.post(f"{self.base_url}/api/notifications/read-all")
 
+            # 应该返回 401 (未认证) 或 403 (禁止访问)
             assert response.status_code in [401, 403], \
                 f"未授权请求应该被拒绝，但返回了 {response.status_code}"
             

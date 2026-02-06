@@ -167,12 +167,13 @@ class TestForumAPI:
             response = client.post(
                 f"{self.base_url}/api/forum/posts",
                 json={
-                    "title": "测试帖子",
-                    "content": "这是测试内容",
+                    "title": "测试帖子标题",
+                    "content": "这是测试内容，需要至少10个字符才能通过验证",  # min_length=10
                     "category_id": 1
                 }
             )
 
+            # 应该返回 401 (未认证) 或 403 (禁止访问)
             assert response.status_code in [401, 403], \
                 f"未授权请求应该被拒绝，但返回了 {response.status_code}"
             
@@ -189,11 +190,12 @@ class TestForumAPI:
             response = client.post(
                 f"{self.base_url}/api/forum/categories/request",
                 json={
-                    "name": "新分类",
-                    "description": "分类描述"
+                    "name": "新分类测试",
+                    "description": "这是新分类的描述，需要足够长以通过验证"
                 }
             )
 
+            # 应该返回 401 (未认证) 或 403 (禁止访问)
             assert response.status_code in [401, 403], \
                 f"未授权请求应该被拒绝，但返回了 {response.status_code}"
             
