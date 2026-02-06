@@ -69,9 +69,9 @@ const ReportManagement: React.FC = () => {
     }
   }, [subTab, loadForumReports, loadFleaReports]);
 
-  const handleProcessForumReport = async (reportId: number, status: ReportStatus, action?: string) => {
+  const handleProcessForumReport = async (reportId: number, status: 'processed' | 'rejected', action?: string) => {
     try {
-      await processForumReport(reportId, { status, action, admin_comment: '' });
+      await processForumReport(reportId, { status, action });
       message.success('举报处理成功');
       loadForumReports();
     } catch (error: any) {
@@ -79,9 +79,9 @@ const ReportManagement: React.FC = () => {
     }
   };
 
-  const handleProcessFleaReport = async (reportId: number, status: ReportStatus, action?: string) => {
+  const handleProcessFleaReport = async (reportId: number, status: 'resolved' | 'rejected') => {
     try {
-      await processFleaMarketReport(reportId, { status, action, admin_comment: '' });
+      await processFleaMarketReport(reportId, { status });
       message.success('举报处理成功');
       loadFleaReports();
     } catch (error: any) {

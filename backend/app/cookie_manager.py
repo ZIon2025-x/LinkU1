@@ -50,8 +50,12 @@ class CookieManager:
         return samesite_value  # type: ignore
     
     @staticmethod
-    def _get_secure_value(user_agent: str = "") -> bool:
-        """获取Secure值，移动端使用特殊配置"""
+    def _get_secure_value(user_agent: str = "", origin: str = "") -> bool:
+        """获取Secure值，移动端使用特殊配置，localhost 使用 False"""
+        # 如果请求来自 localhost，不使用 Secure（因为是 HTTP）
+        if origin and ("localhost" in origin or "127.0.0.1" in origin):
+            return False
+        
         # 检测移动端
         if CookieManager._is_mobile_user_agent(user_agent):
             return Config.MOBILE_COOKIE_SECURE
@@ -65,11 +69,12 @@ class CookieManager:
         access_token: str,
         refresh_token: str,
         user_id: Optional[str] = None,
-        user_agent: str = ""
+        user_agent: str = "",
+        origin: str = ""
     ) -> None:
         """设置认证相关的Cookie（兼容旧系统）"""
         samesite_value = CookieManager._get_samesite_value(user_agent)
-        secure_value = CookieManager._get_secure_value(user_agent)
+        secure_value = CookieManager._get_secure_value(user_agent, origin)
         
         # 设置access_token cookie（短期）
         response.set_cookie(
@@ -116,11 +121,12 @@ class CookieManager:
         session_id: str,
         refresh_token: str,
         user_id: str,
-        user_agent: str = ""
+        user_agent: str = "",
+        origin: str = ""
     ) -> None:
         """设置会话相关的Cookie（新安全系统）"""
         samesite_value = CookieManager._get_samesite_value(user_agent)
-        secure_value = CookieManager._get_secure_value(user_agent)
+        secure_value = CookieManager._get_secure_value(user_agent, origin)
         is_mobile = CookieManager._is_mobile_user_agent(user_agent)
         
         # 检测隐私模式
@@ -228,10 +234,10 @@ class CookieManager:
         logger.info(f"设置会话Cookie - session_id: {session_id[:8]}..., user_id: {user_id}, 移动端: {is_mobile}, 隐私模式: {is_private_mode}, SameSite: {samesite_value}, Secure: {secure_value}, Domain: {cookie_domain}, Path: {cookie_path}")
     
     @staticmethod
-    def set_csrf_cookie(response: Response, token: str, user_agent: str = "") -> None:
+    def set_csrf_cookie(response: Response, token: str, user_agent: str = "", origin: str = "") -> None:
         """设置CSRF token Cookie"""
         samesite_value = CookieManager._get_samesite_value(user_agent)
-        secure_value = CookieManager._get_secure_value(user_agent)
+        secure_value = CookieManager._get_secure_value(user_agent, origin)
         is_mobile = CookieManager._is_mobile_user_agent(user_agent)
         
         # 移动端特殊处理

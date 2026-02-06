@@ -502,19 +502,23 @@ def verify_email(
             is_ios_app=is_ios_app
         )
         
+        # 获取请求来源（用于 localhost 检测）
+        origin = request.headers.get("origin", "")
+        
         # 设置安全Cookie
         CookieManager.set_session_cookies(
             response=response,
             session_id=session.session_id,
             refresh_token=refresh_token,
             user_id=user.id,
-            user_agent=user_agent
+            user_agent=user_agent,
+            origin=origin
         )
         
         # 生成并设置CSRF token
         from app.csrf import CSRFProtection
         csrf_token = CSRFProtection.generate_csrf_token()
-        CookieManager.set_csrf_cookie(response, csrf_token, user_agent)
+        CookieManager.set_csrf_cookie(response, csrf_token, user_agent, origin)
         
         # 检测是否为移动端
         is_mobile = any(keyword in user_agent.lower() for keyword in [

@@ -35,7 +35,8 @@ async def get_csrf_token(
         
         # 设置到Cookie（传递User-Agent用于移动端检测）
         user_agent = request.headers.get("user-agent", "")
-        CSRFProtection.set_csrf_cookie(response, csrf_token, user_agent)
+        origin = request.headers.get("origin", "")
+        CSRFProtection.set_csrf_cookie(response, csrf_token, user_agent, origin)
         
         return {
             "csrf_token": csrf_token,

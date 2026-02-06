@@ -68,7 +68,7 @@ const ForumManagement: React.FC = () => {
         name: form.name,
         description: form.description || undefined,
         sort_order: form.sort_order,
-        is_active: form.is_active
+        is_visible: form.is_active
       });
       message.success('分类创建成功！');
       setShowModal(false);
@@ -87,7 +87,7 @@ const ForumManagement: React.FC = () => {
         name: form.name,
         description: form.description || undefined,
         sort_order: form.sort_order,
-        is_active: form.is_active
+        is_visible: form.is_active
       });
       message.success('分类更新成功！');
       setShowModal(false);

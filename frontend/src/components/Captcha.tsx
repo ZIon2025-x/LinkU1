@@ -61,6 +61,7 @@ const Captcha = forwardRef<CaptchaRef, CaptchaProps>(({
 }, ref) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const [widgetId, setWidgetId] = useState<number | string | null>(null);
+  const isRenderedRef = useRef<boolean>(false);
 
   useEffect(() => {
     if (!siteKey) {
@@ -126,6 +127,7 @@ const Captcha = forwardRef<CaptchaRef, CaptchaProps>(({
 
     return () => {
       // 清理
+      isRenderedRef.current = false;
       if (type === 'hcaptcha' && widgetId && window.hcaptcha) {
         try {
           window.hcaptcha.reset(widgetId as string);
@@ -144,9 +146,16 @@ const Captcha = forwardRef<CaptchaRef, CaptchaProps>(({
 
   const renderRecaptcha = () => {
     if (!window.grecaptcha || !containerRef.current || !siteKey) return;
+    
+    // 防止重复渲染
+    if (isRenderedRef.current) return;
 
     try {
       window.grecaptcha.ready(() => {
+        // 再次检查，防止在 ready 回调期间重复渲染
+        if (isRenderedRef.current || !containerRef.current) return;
+        
+        isRenderedRef.current = true;
         const id = window.grecaptcha!.render(containerRef.current!, {
           sitekey: siteKey,
           callback: (token: string) => {
@@ -176,8 +185,12 @@ const Captcha = forwardRef<CaptchaRef, CaptchaProps>(({
 
   const renderHcaptcha = () => {
     if (!window.hcaptcha || !containerRef.current || !siteKey) return;
+    
+    // 防止重复渲染
+    if (isRenderedRef.current) return;
 
     try {
+      isRenderedRef.current = true;
       const id = window.hcaptcha.render(containerRef.current, {
         sitekey: siteKey,
         callback: (token: string) => {

@@ -42,7 +42,7 @@ const ExpertManagement: React.FC = () => {
   const loadExperts = useCallback(async () => {
     setExpertsLoading(true);
     try {
-      const response = await getTaskExperts({ page: expertsPage, limit: 20 });
+      const response = await getTaskExperts({ page: expertsPage, size: 20 });
       setExperts(response.items || []);
       setExpertsTotal(response.total || 0);
     } catch (error: any) {
@@ -97,12 +97,12 @@ const ExpertManagement: React.FC = () => {
       if (reviewType === 'application') {
         await reviewTaskExpertApplication(reviewItem.id, {
           action: reviewAction,
-          comment: reviewComment || undefined
+          review_comment: reviewComment || undefined
         });
       } else {
         await reviewProfileUpdateRequest(reviewItem.id, {
           action: reviewAction,
-          comment: reviewComment || undefined
+          review_comment: reviewComment || undefined
         });
       }
       message.success(reviewAction === 'approve' ? '已批准' : '已拒绝');

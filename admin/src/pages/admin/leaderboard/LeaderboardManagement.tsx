@@ -61,7 +61,7 @@ const LeaderboardManagement: React.FC = () => {
   const loadVotes = useCallback(async () => {
     setVotesLoading(true);
     try {
-      const response = await getLeaderboardVotesAdmin({ page: votesPage, limit: 50, ...votesFilter });
+      const response = await getLeaderboardVotesAdmin({ offset: (votesPage - 1) * 50, limit: 50, ...votesFilter });
       setVotes(response.items || []);
     } catch (error: any) {
       message.error(getErrorMessage(error));
@@ -73,7 +73,7 @@ const LeaderboardManagement: React.FC = () => {
   const loadItems = useCallback(async () => {
     setItemsLoading(true);
     try {
-      const response = await getLeaderboardItemsAdmin({ page: itemsPage, limit: 20 });
+      const response = await getLeaderboardItemsAdmin({ offset: (itemsPage - 1) * 20, limit: 20 });
       setItems(response.items || []);
       setItemsTotal(response.total || 0);
     } catch (error: any) {

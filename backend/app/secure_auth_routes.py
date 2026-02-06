@@ -152,19 +152,23 @@ def secure_login(
             is_ios_app=is_ios_app
         )
         
+        # 获取请求来源（用于 localhost 检测）
+        origin = request.headers.get("origin", "")
+        
         # 设置安全Cookie（传递User-Agent用于移动端检测）
         CookieManager.set_session_cookies(
             response=response,
             session_id=session.session_id,
             refresh_token=refresh_token,
             user_id=user.id,
-            user_agent=user_agent
+            user_agent=user_agent,
+            origin=origin
         )
         
         # 生成并设置CSRF token
         from app.csrf import CSRFProtection
         csrf_token = CSRFProtection.generate_csrf_token()
-        CookieManager.set_csrf_cookie(response, csrf_token, user_agent)
+        CookieManager.set_csrf_cookie(response, csrf_token, user_agent, origin)
         
         # 记录成功登录
         log_security_event("LOGIN_SUCCESS", user.id, client_ip, "用户安全登录成功")
@@ -287,6 +291,7 @@ def refresh_session(
                     
                     # 创建新会话
                     user_agent = request.headers.get("user-agent", "")
+                    origin = request.headers.get("origin", "")
                     session = SecureAuthManager.create_session(
                         user_id=user.id,
                         device_fingerprint=device_fingerprint,
@@ -302,13 +307,14 @@ def refresh_session(
                         session_id=session.session_id,
                         refresh_token=new_refresh_token,
                         user_id=user.id,
-                        user_agent=user_agent
+                        user_agent=user_agent,
+                        origin=origin
                     )
                     
                     # 生成并设置CSRF token
                     from app.csrf import CSRFProtection
                     csrf_token = CSRFProtection.generate_csrf_token()
-                    CookieManager.set_csrf_cookie(response, csrf_token, user_agent)
+                    CookieManager.set_csrf_cookie(response, csrf_token, user_agent, origin)
                     
                     logger.info(f"通过refresh_token恢复会话成功 - 用户: {user.id}, 会话: {session.session_id[:8]}...")
                     
@@ -360,12 +366,14 @@ def refresh_session(
         refresh_token = create_user_refresh_token(user.id, get_client_ip(request), get_device_fingerprint(request), is_ios_app=is_ios_app)
         
         # 设置新的安全Cookie（复用现有会话）
+        origin = request.headers.get("origin", "")
         CookieManager.set_session_cookies(
             response=response,
             session_id=session.session_id,
             refresh_token=refresh_token,
             user_id=user.id,
-            user_agent=request.headers.get("user-agent", "")
+            user_agent=request.headers.get("user-agent", ""),
+            origin=origin
         )
         
         logger.info(f"会话刷新成功 - 用户: {user.id}, 会话: {session.session_id[:8]}...")
@@ -479,18 +487,20 @@ def refresh_session_with_token(
         )
         
         # 设置新的安全Cookie
+        origin = request.headers.get("origin", "")
         CookieManager.set_session_cookies(
             response=response,
             session_id=session.session_id,
             refresh_token=new_refresh_token,
             user_id=user.id,
-            user_agent=user_agent
+            user_agent=user_agent,
+            origin=origin
         )
         
         # 生成并设置CSRF token
         from app.csrf import CSRFProtection
         csrf_token = CSRFProtection.generate_csrf_token()
-        CookieManager.set_csrf_cookie(response, csrf_token, user_agent)
+        CookieManager.set_csrf_cookie(response, csrf_token, user_agent, origin)
         
         logger.info(f"通过refresh_token刷新会话成功 - 用户: {user.id}, 会话: {session.session_id[:8]}...")
         
@@ -1543,19 +1553,23 @@ def login_with_phone_verification_code(
             is_ios_app=is_ios_app
         )
         
+        # 获取请求来源（用于 localhost 检测）
+        origin = request.headers.get("origin", "")
+        
         # 设置安全Cookie（传递User-Agent用于移动端检测）
         CookieManager.set_session_cookies(
             response=response,
             session_id=session.session_id,
             refresh_token=refresh_token,
             user_id=user.id,
-            user_agent=user_agent
+            user_agent=user_agent,
+            origin=origin
         )
         
         # 生成并设置CSRF token
         from app.csrf import CSRFProtection
         csrf_token = CSRFProtection.generate_csrf_token()
-        CookieManager.set_csrf_cookie(response, csrf_token, user_agent)
+        CookieManager.set_csrf_cookie(response, csrf_token, user_agent, origin)
         
         # 记录成功登录
         log_security_event("LOGIN_SUCCESS", user.id, client_ip, "用户手机验证码登录成功")
@@ -1767,19 +1781,23 @@ def login_with_verification_code(
             is_ios_app=is_ios_app
         )
         
+        # 获取请求来源（用于 localhost 检测）
+        origin = request.headers.get("origin", "")
+        
         # 设置安全Cookie（传递User-Agent用于移动端检测）
         CookieManager.set_session_cookies(
             response=response,
             session_id=session.session_id,
             refresh_token=refresh_token,
             user_id=user.id,
-            user_agent=user_agent
+            user_agent=user_agent,
+            origin=origin
         )
         
         # 生成并设置CSRF token
         from app.csrf import CSRFProtection
         csrf_token = CSRFProtection.generate_csrf_token()
-        CookieManager.set_csrf_cookie(response, csrf_token, user_agent)
+        CookieManager.set_csrf_cookie(response, csrf_token, user_agent, origin)
         
         # 记录成功登录
         log_security_event("LOGIN_SUCCESS", user.id, client_ip, "用户验证码登录成功")

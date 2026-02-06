@@ -54,9 +54,9 @@ const FleaMarketManagement: React.FC = () => {
     try {
       const response = await getFleaMarketItemsAdmin({
         page,
-        limit: 20,
+        page_size: 20,
         keyword: filter.keyword,
-        status: filter.status,
+        status_filter: filter.status,
         category: filter.category
       });
       setItems(response.items || []);
@@ -80,7 +80,7 @@ const FleaMarketManagement: React.FC = () => {
   const handleSave = async () => {
     if (!form.id) return;
     try {
-      await updateFleaMarketItemAdmin(form.id, {
+      await updateFleaMarketItemAdmin(String(form.id), {
         title: form.title,
         description: form.description,
         price: form.price,
@@ -105,7 +105,7 @@ const FleaMarketManagement: React.FC = () => {
       okButtonProps: { danger: true },
       onOk: async () => {
         try {
-          await deleteFleaMarketItemAdmin(id);
+          await deleteFleaMarketItemAdmin(String(id));
           message.success('商品删除成功');
           loadItems();
         } catch (error: any) {

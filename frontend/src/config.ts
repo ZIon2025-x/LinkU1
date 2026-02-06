@@ -1,13 +1,17 @@
 // API配置
 const isProduction = process.env.NODE_ENV === 'production';
 
+// 开发环境使用测试后端
+const DEV_API_URL = 'https://linktest.up.railway.app';
+const DEV_WS_URL = 'wss://linktest.up.railway.app';
+
 export const API_BASE_URL = isProduction 
   ? process.env.REACT_APP_API_URL || 'https://api.link2ur.com'
-  : 'http://localhost:8000';
+  : process.env.REACT_APP_API_URL || DEV_API_URL;
 
 export const WS_BASE_URL = isProduction
   ? process.env.REACT_APP_WS_URL || 'wss://api.link2ur.com'
-  : 'ws://localhost:8000';
+  : process.env.REACT_APP_WS_URL || DEV_WS_URL;
 
 /** App Store 链接（用于「在 App 内打开」条中，未安装时跳转的下载页）。可通过环境变量 REACT_APP_APP_STORE_URL 覆盖。 */
 export const APP_STORE_URL =
