@@ -118,6 +118,7 @@ def test_collaborative_filtering(db: Session, sample_user: User, sample_tasks: l
         hashed_password="hashed"
     )
     db.add(other_user)
+    db.flush()  # 先将用户写入数据库，确保外键约束满足
     
     # 记录其他用户的任务历史
     for task in sample_tasks[:2]:
