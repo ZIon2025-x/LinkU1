@@ -120,26 +120,8 @@ class PasswordValidator:
         char_types = sum([has_upper, has_lower, has_digit, has_special])
         score += char_types * 5
         
-        # 常见密码检查
-        if password.lower() in self.common_passwords:
-            errors.append("密码过于常见，请选择更复杂的密码")
-            score -= 30
-        
-        # 用户名/邮箱相关检查
-        if username and password.lower().find(username.lower()) != -1:
-            errors.append("密码不能包含用户名")
-            score -= 20
-        
-        if email:
-            email_prefix = email.split('@')[0]
-            if password.lower().find(email_prefix.lower()) != -1:
-                errors.append("密码不能包含邮箱前缀")
-                score -= 20
-        
-        # 重复字符检查（放宽限制）
-        if self._has_repeating_chars(password):
-            suggestions.append("避免使用重复的字符序列")
-            score -= 5
+        # 注意：已移除常见密码检查、用户名/邮箱前缀检查和重复字符检查
+        # 只保留基本要求：长度、大小写字母、数字、特殊字符
         
         # 计算最终分数
         score = max(0, min(100, score))

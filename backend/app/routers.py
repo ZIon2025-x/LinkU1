@@ -5657,6 +5657,15 @@ def delete_user_account(
 def mark_all_notifications_read_api(
     current_user=Depends(get_current_user_secure_sync_csrf), db: Session = Depends(get_db)
 ):
+    """
+    标记主通知系统的所有通知为已读
+    
+    注意：此端点仅处理主通知系统（Notification 模型）。
+    论坛通知系统（ForumNotification 模型）有独立的端点：
+    PUT /api/forum/notifications/read-all（定义在 forum_routes.py）
+    
+    两个通知系统是独立设计的，请勿合并。
+    """
     crud.mark_all_notifications_read(db, current_user.id)
     return {"message": "All notifications marked as read"}
 

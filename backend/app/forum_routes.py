@@ -5397,7 +5397,15 @@ async def mark_all_notifications_read(
     current_user: models.User = Depends(get_current_user_secure_async_csrf),
     db: AsyncSession = Depends(get_async_db_dependency),
 ):
-    """标记所有通知为已读"""
+    """
+    标记论坛通知系统的所有通知为已读
+    
+    注意：此端点仅处理论坛通知系统（ForumNotification 模型）。
+    主通知系统（Notification 模型）有独立的端点：
+    POST /api/notifications/read-all（定义在 routers.py）
+    
+    两个通知系统是独立设计的，请勿合并。
+    """
     await db.execute(
         update(models.ForumNotification)
         .where(
