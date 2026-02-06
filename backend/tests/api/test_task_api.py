@@ -408,8 +408,8 @@ class TestTaskAPI:
 
     @pytest.mark.api
     @pytest.mark.task
-    def test_update_task(self):
-        """测试：更新自己创建的任务"""
+    def test_update_task_visibility(self):
+        """测试：更新自己创建的任务可见性"""
         task_id = TestTaskAPI._created_task_id or TestTaskAPI._test_task_id
         if not task_id:
             pytest.skip("没有可用的任务 ID")
@@ -418,43 +418,48 @@ class TestTaskAPI:
             if not self._login(client):
                 pytest.skip("登录失败")
 
-            response = client.put(
-                f"{self.base_url}/api/tasks/{task_id}",
+            # 使用真实的 PATCH /tasks/{task_id}/visibility 端点
+            response = client.patch(
+                f"{self.base_url}/api/tasks/{task_id}/visibility",
                 json={
-                    "description": "Updated description by API test"
+                    "is_visible": True
                 },
                 headers=self._get_auth_headers(),
                 cookies=TestTaskAPI._cookies
             )
 
             if response.status_code == 200:
-                print("✅ 更新任务成功")
+                print("✅ 更新任务可见性成功")
             elif response.status_code in [401, 403]:
-                print("ℹ️  无权限更新任务")
+                print("ℹ️  无权限更新任务（可能不是任务发布者）")
             elif response.status_code == 404:
                 print("ℹ️  任务不存在")
+            elif response.status_code == 400:
+                print("ℹ️  请求参数无效")
             else:
-                print(f"ℹ️  更新任务返回: {response.status_code}")
+                print(f"ℹ️  更新任务可见性返回: {response.status_code}")
 
     @pytest.mark.api
     @pytest.mark.task
-    def test_update_task_unauthorized(self):
-        """测试：未登录用户不能更新任务"""
+    def test_update_task_visibility_unauthorized(self):
+        """测试：未登录用户不能更新任务可见性"""
         if not TestTaskAPI._test_task_id:
             pytest.skip("没有可用的任务 ID")
 
         with httpx.Client(timeout=self.timeout) as client:
-            response = client.put(
-                f"{self.base_url}/api/tasks/{TestTaskAPI._test_task_id}",
+            # 使用真实的 PATCH /tasks/{task_id}/visibility 端点
+            response = client.patch(
+                f"{self.base_url}/api/tasks/{TestTaskAPI._test_task_id}/visibility",
                 json={
-                    "description": "Unauthorized update"
+                    "is_visible": False
                 }
             )
 
+            # 未认证请求应该被拒绝
             assert response.status_code in [401, 403], \
                 f"未认证请求应该被拒绝，但返回了 {response.status_code}"
             
-            print("✅ 未登录更新任务被正确拒绝")
+            print("✅ 未登录更新任务可见性被正确拒绝")
 
     # =========================================================================
     # 取消任务测试
