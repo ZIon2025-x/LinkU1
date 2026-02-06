@@ -4,13 +4,14 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
+  background: rgba(0, 0, 0, 0.6);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 1000;
   padding: 20px;
   animation: fadeIn 0.2s ease-out;
+  backdrop-filter: blur(2px);
 }
 
 @keyframes fadeIn {
@@ -82,10 +83,10 @@
 }
 
 .content {
-  padding: 24px;
+  padding: 0;
   overflow-y: auto;
   flex: 1;
-  background: white;
+  background: #f8f9fa;
 }
 
 .footer {
