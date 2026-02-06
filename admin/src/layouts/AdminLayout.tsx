@@ -111,7 +111,7 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({
     try {
       await adminLogout();
       message.success('已登出');
-      navigate('/admin/login');
+      navigate('/login');
     } catch (error) {
       message.error('登出失败');
       console.error(error);

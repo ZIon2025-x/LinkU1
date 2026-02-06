@@ -28,13 +28,6 @@ const App: React.FC = () => {
         <Routes>
           {/* 登录页 */}
           <Route path="/login" element={<AdminLogin />} />
-          
-          {/* 管理后台主页 - 需要认证 */}
-          <Route path="/" element={
-            <AdminRoute>
-              <AdminDashboard />
-            </AdminRoute>
-          } />
 
           {/* Admin 子路由 - 需要认证 */}
           <Route path="/admin/*" element={
@@ -43,8 +36,18 @@ const App: React.FC = () => {
             </AdminRoute>
           } />
 
-          {/* 其他路由重定向到首页 */}
-          <Route path="*" element={<Navigate to="/" replace />} />
+          {/* 旧的管理后台主页保留作为后备（可选） */}
+          <Route path="/legacy" element={
+            <AdminRoute>
+              <AdminDashboard />
+            </AdminRoute>
+          } />
+
+          {/* 根路径重定向到 admin */}
+          <Route path="/" element={<Navigate to="/admin" replace />} />
+
+          {/* 其他路由重定向到 admin */}
+          <Route path="*" element={<Navigate to="/admin" replace />} />
         </Routes>
       </Suspense>
     </Router>

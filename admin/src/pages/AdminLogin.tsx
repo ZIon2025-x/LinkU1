@@ -92,7 +92,7 @@ const AdminLogin: React.FC = () => {
         }
         
         message.success('登录成功');
-        navigate('/');
+        navigate('/admin');
       }
     } catch (error: any) {
       // 检查是否是 2FA 验证失败
@@ -137,7 +137,7 @@ const AdminLogin: React.FC = () => {
         }
         
         message.success('登录成功');
-        navigate('/');
+        navigate('/admin');
       } else {
         // 邮箱验证码验证
         const response = await api.post('/api/auth/admin/verify-code', {
@@ -153,7 +153,7 @@ const AdminLogin: React.FC = () => {
         }
         
         message.success('验证成功，正在跳转...');
-        navigate('/');
+        navigate('/admin');
       }
     } catch (error: any) {
       let errorMsg = '验证失败';
