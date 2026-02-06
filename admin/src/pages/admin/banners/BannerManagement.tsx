@@ -14,37 +14,34 @@ import LazyImage from '../../../components/LazyImage';
 interface Banner {
   id: number;
   title: string;
-  description?: string;
+  subtitle?: string;
   image_url: string;
   link_url?: string;
-  link_type: 'none' | 'url' | 'page';
-  target_page?: string;
-  sort_order: number;
+  link_type: 'internal' | 'external';
+  order: number;
   is_active: boolean;
-  start_time?: string;
-  end_time?: string;
+  created_at?: string;
+  updated_at?: string;
 }
 
 interface FormData {
   id?: number;
   title: string;
-  description: string;
+  subtitle: string;
   image_url: string;
   link_url: string;
-  link_type: 'none' | 'url' | 'page';
-  target_page: string;
-  sort_order: number;
+  link_type: 'internal' | 'external';
+  order: number;
   is_active: boolean;
 }
 
 const initialForm: FormData = {
   title: '',
-  description: '',
+  subtitle: '',
   image_url: '',
   link_url: '',
-  link_type: 'none',
-  target_page: '',
-  sort_order: 0,
+  link_type: 'internal',
+  order: 0,
   is_active: true
 };
 
@@ -102,12 +99,11 @@ const BannerManagement: React.FC = () => {
     try {
       await createBanner({
         title: form.title,
-        description: form.description || undefined,
+        subtitle: form.subtitle || undefined,
         image_url: form.image_url,
         link_url: form.link_url || undefined,
         link_type: form.link_type,
-        target_page: form.target_page || undefined,
-        sort_order: form.sort_order,
+        order: form.order,
         is_active: form.is_active
       });
       message.success('Banner 创建成功！');
@@ -125,12 +121,11 @@ const BannerManagement: React.FC = () => {
     try {
       await updateBanner(form.id, {
         title: form.title,
-        description: form.description || undefined,
+        subtitle: form.subtitle || undefined,
         image_url: form.image_url,
         link_url: form.link_url || undefined,
         link_type: form.link_type,
-        target_page: form.target_page || undefined,
-        sort_order: form.sort_order,
+        order: form.order,
         is_active: form.is_active
       });
       message.success('Banner 更新成功！');
@@ -146,12 +141,11 @@ const BannerManagement: React.FC = () => {
     setForm({
       id: banner.id,
       title: banner.title,
-      description: banner.description || '',
+      subtitle: banner.subtitle || '',
       image_url: banner.image_url,
       link_url: banner.link_url || '',
       link_type: banner.link_type,
-      target_page: banner.target_page || '',
-      sort_order: banner.sort_order,
+      order: banner.order,
       is_active: banner.is_active
     });
     setShowModal(true);
@@ -250,10 +244,10 @@ const BannerManagement: React.FC = () => {
               <div style={{ padding: '16px' }}>
                 <h3 style={{ margin: '0 0 8px 0', fontSize: '16px' }}>{banner.title}</h3>
                 <p style={{ margin: '0 0 12px 0', color: '#666', fontSize: '14px', minHeight: '20px' }}>
-                  {banner.description || '-'}
+                  {banner.subtitle || '-'}
                 </p>
                 <div style={{ fontSize: '12px', color: '#999', marginBottom: '12px' }}>
-                  排序: {banner.sort_order} | 链接类型: {banner.link_type === 'none' ? '无' : banner.link_type === 'url' ? '外链' : '页面'}
+                  排序: {banner.order} | 链接类型: {banner.link_type === 'external' ? '外部链接' : '内部链接'}
                 </div>
                 <div style={{ display: 'flex', gap: '8px' }}>
                   <button onClick={() => handleEdit(banner)} style={{ flex: 1, padding: '6px', border: '1px solid #007bff', background: 'white', color: '#007bff', borderRadius: '4px', cursor: 'pointer', fontSize: '12px' }}>编辑</button>
@@ -291,8 +285,8 @@ const BannerManagement: React.FC = () => {
             <input type="text" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder="请输入标题" style={{ width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '4px' }} />
           </div>
           <div style={{ marginBottom: '15px' }}>
-            <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>描述</label>
-            <textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="请输入描述" rows={3} style={{ width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '4px', resize: 'vertical' }} />
+            <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>副标题</label>
+            <textarea value={form.subtitle} onChange={(e) => setForm({ ...form, subtitle: e.target.value })} placeholder="请输入副标题" rows={3} style={{ width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '4px', resize: 'vertical' }} />
           </div>
           <div style={{ marginBottom: '15px' }}>
             <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>图片 <span style={{ color: 'red' }}>*</span></label>
@@ -306,21 +300,18 @@ const BannerManagement: React.FC = () => {
           </div>
           <div style={{ marginBottom: '15px' }}>
             <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>链接类型</label>
-            <select value={form.link_type} onChange={(e) => setForm({ ...form, link_type: e.target.value as any })} style={{ width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '4px' }}>
-              <option value="none">无链接</option>
-              <option value="url">外部链接</option>
-              <option value="page">内部页面</option>
+            <select value={form.link_type} onChange={(e) => setForm({ ...form, link_type: e.target.value as 'internal' | 'external' })} style={{ width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '4px' }}>
+              <option value="internal">内部链接</option>
+              <option value="external">外部链接</option>
             </select>
           </div>
-          {form.link_type === 'url' && (
-            <div style={{ marginBottom: '15px' }}>
-              <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>链接 URL</label>
-              <input type="text" value={form.link_url} onChange={(e) => setForm({ ...form, link_url: e.target.value })} placeholder="https://..." style={{ width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '4px' }} />
-            </div>
-          )}
+          <div style={{ marginBottom: '15px' }}>
+            <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>链接 URL</label>
+            <input type="text" value={form.link_url} onChange={(e) => setForm({ ...form, link_url: e.target.value })} placeholder={form.link_type === 'external' ? 'https://...' : '/page/...'} style={{ width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '4px' }} />
+          </div>
           <div style={{ marginBottom: '15px' }}>
             <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>排序（数字越小越靠前）</label>
-            <input type="number" value={form.sort_order} onChange={(e) => setForm({ ...form, sort_order: parseInt(e.target.value) || 0 })} style={{ width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '4px' }} />
+            <input type="number" value={form.order} onChange={(e) => setForm({ ...form, order: parseInt(e.target.value) || 0 })} style={{ width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '4px' }} />
           </div>
           <div style={{ marginBottom: '15px' }}>
             <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
