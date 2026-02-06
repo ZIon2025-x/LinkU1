@@ -1,9 +1,10 @@
 // API配置
 const isProduction = process.env.NODE_ENV === 'production';
 
-// 开发环境使用测试后端
-const DEV_API_URL = 'https://linktest.up.railway.app';
-const DEV_WS_URL = 'wss://linktest.up.railway.app';
+// 开发环境使用代理（通过setupProxy.js），避免跨域Cookie问题
+// 生产环境直接连接API服务器
+const DEV_API_URL = '';  // 空字符串让请求通过代理
+const DEV_WS_URL = '';   // WebSocket也通过代理
 
 export const API_BASE_URL = isProduction 
   ? process.env.REACT_APP_API_URL || 'https://api.link2ur.com'
