@@ -124,6 +124,8 @@ jobs:
           echo "目标环境: $TEST_API_URL"
           echo ""
           
+          # 只运行 API 测试目录
+          # conftest.py 已修改为在 sqlalchemy 不可用时优雅降级
           python -m pytest tests/api/ \
             -v \
             --tb=short \

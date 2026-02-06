@@ -262,6 +262,49 @@ async def custom_cors_middleware(request: Request, call_next):
 # DEBUG 中间件已移除 - 性能优化
 
 app.include_router(user_router, prefix="/api/users", tags=["users"])
+
+# ==================== 管理员子域名路由（优先于 main_router 注册以确保正确匹配） ====================
+# 管理员推荐系统路由
+from app.admin_recommendation_routes import router as admin_recommendation_router
+app.include_router(admin_recommendation_router, tags=["管理员-推荐系统"])
+
+# 管理员任务争议管理路由
+from app.admin_dispute_routes import router as admin_dispute_router
+app.include_router(admin_dispute_router, tags=["管理员-任务争议管理"])
+
+# 管理员退款管理路由
+from app.admin_refund_routes import router as admin_refund_router
+app.include_router(admin_refund_router, tags=["管理员-退款管理"])
+
+# 管理员VIP订阅管理路由
+from app.admin_vip_routes import router as admin_vip_router
+app.include_router(admin_vip_router, tags=["管理员-VIP订阅管理"])
+
+# 管理员用户管理路由
+from app.admin_user_management_routes import router as admin_user_management_router
+app.include_router(admin_user_management_router, tags=["管理员-用户管理"])
+
+# 管理员任务管理路由
+from app.admin_task_management_routes import router as admin_task_management_router
+app.include_router(admin_task_management_router, tags=["管理员-任务管理"])
+
+# 管理员客服管理路由
+from app.admin_customer_service_routes import router as admin_customer_service_router
+app.include_router(admin_customer_service_router, tags=["管理员-客服管理"])
+
+# 管理员支付管理路由
+from app.admin_payment_routes import router as admin_payment_router
+app.include_router(admin_payment_router, tags=["管理员-支付管理"])
+
+# 管理员系统设置路由
+from app.admin_system_routes import router as admin_system_router
+app.include_router(admin_system_router, tags=["管理员-系统设置"])
+
+# 管理员通知管理路由
+from app.admin_notification_routes import router as admin_notification_router
+app.include_router(admin_notification_router, tags=["管理员-通知管理"])
+
+# ==================== 主路由（包含所有未迁移的路由） ====================
 app.include_router(main_router, prefix="/api", tags=["main"])  # 添加主路由，包含图片上传API
 # auth_router 已移除，使用 secure_auth_router 替代
 app.include_router(secure_auth_router, tags=["安全认证"]) # 使用新的安全认证系统
