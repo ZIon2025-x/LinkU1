@@ -3473,6 +3473,14 @@ class LeaderboardItemCreate(LeaderboardItemBase):
     leaderboard_id: int
 
 
+class LeaderboardItemUpdate(BaseModel):
+    """管理员更新竞品"""
+    name: Optional[str] = None
+    description: Optional[str] = None
+    image_url: Optional[str] = None
+    status: Optional[str] = None
+
+
 class LeaderboardItemOut(LeaderboardItemBase):
     id: int
     leaderboard_id: int

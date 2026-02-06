@@ -407,6 +407,11 @@ export const updateSystemSettings = async (settings: {
   return res.data;
 };
 
+export const clearCache = async () => {
+  const res = await api.post('/api/cleanup/cleanup/cache');
+  return res.data;
+};
+
 export const getPointsSettings = async () => {
   const res = await api.get('/api/admin/settings/points');
   return res.data;
@@ -995,6 +1000,26 @@ export const getLeaderboardItemsAdmin = async (params?: {
 
 export const deleteLeaderboardItemAdmin = async (itemId: number) => {
   const res = await api.delete(`/api/custom-leaderboards/admin/items/${itemId}`);
+  return res.data;
+};
+
+export const createLeaderboardItemAdmin = async (data: {
+  name: string;
+  description?: string;
+  image_url?: string;
+  leaderboard_id: number;
+}) => {
+  const res = await api.post('/api/custom-leaderboards/admin/items', data);
+  return res.data;
+};
+
+export const updateLeaderboardItemAdmin = async (itemId: number, data: {
+  name?: string;
+  description?: string;
+  image_url?: string;
+  status?: string;
+}) => {
+  const res = await api.put(`/api/custom-leaderboards/admin/items/${itemId}`, data);
   return res.data;
 };
 

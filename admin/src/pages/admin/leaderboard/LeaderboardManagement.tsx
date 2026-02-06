@@ -1,13 +1,13 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { message, Modal } from 'antd';
 import {
-  getLeaderboardVotes,
-  getLeaderboardItems,
-  createLeaderboardItem,
-  updateLeaderboardItem,
-  deleteLeaderboardItem,
-  getLeaderboardReviews,
-  reviewLeaderboardItem
+  getLeaderboardVotesAdmin,
+  getLeaderboardItemsAdmin,
+  createLeaderboardItemAdmin,
+  updateLeaderboardItemAdmin,
+  deleteLeaderboardItemAdmin,
+  getCustomLeaderboardsAdmin,
+  reviewCustomLeaderboard
 } from '../../../api';
 import { getErrorMessage } from '../../../utils/errorHandler';
 
@@ -61,7 +61,7 @@ const LeaderboardManagement: React.FC = () => {
   const loadVotes = useCallback(async () => {
     setVotesLoading(true);
     try {
-      const response = await getLeaderboardVotes({ page: votesPage, limit: 50, ...votesFilter });
+      const response = await getLeaderboardVotesAdmin({ page: votesPage, limit: 50, ...votesFilter });
       setVotes(response.items || []);
     } catch (error: any) {
       message.error(getErrorMessage(error));
@@ -73,7 +73,7 @@ const LeaderboardManagement: React.FC = () => {
   const loadItems = useCallback(async () => {
     setItemsLoading(true);
     try {
-      const response = await getLeaderboardItems({ page: itemsPage, limit: 20 });
+      const response = await getLeaderboardItemsAdmin({ page: itemsPage, limit: 20 });
       setItems(response.items || []);
       setItemsTotal(response.total || 0);
     } catch (error: any) {
@@ -86,7 +86,7 @@ const LeaderboardManagement: React.FC = () => {
   const loadReviews = useCallback(async () => {
     setReviewsLoading(true);
     try {
-      const response = await getLeaderboardReviews({ status: 'pending' });
+      const response = await getCustomLeaderboardsAdmin({ status: 'pending' });
       setReviews(response.items || []);
     } catch (error: any) {
       message.error(getErrorMessage(error));
@@ -108,10 +108,10 @@ const LeaderboardManagement: React.FC = () => {
     }
     try {
       if (itemForm.id) {
-        await updateLeaderboardItem(itemForm.id, itemForm);
+        await updateLeaderboardItemAdmin(itemForm.id, itemForm);
         message.success('竞品更新成功');
       } else {
-        await createLeaderboardItem(itemForm as any);
+        await createLeaderboardItemAdmin(itemForm as any);
         message.success('竞品创建成功');
       }
       setShowItemModal(false);
@@ -130,7 +130,7 @@ const LeaderboardManagement: React.FC = () => {
       cancelText: '取消',
       onOk: async () => {
         try {
-          await deleteLeaderboardItem(id);
+          await deleteLeaderboardItemAdmin(id);
           message.success('竞品删除成功');
           loadItems();
         } catch (error: any) {
@@ -142,7 +142,7 @@ const LeaderboardManagement: React.FC = () => {
 
   const handleReview = async (id: number, action: 'approve' | 'reject') => {
     try {
-      await reviewLeaderboardItem(id, { action });
+      await reviewCustomLeaderboard(id, action);
       message.success(action === 'approve' ? '已批准' : '已拒绝');
       loadReviews();
     } catch (error: any) {

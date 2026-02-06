@@ -51,7 +51,7 @@ def admin_update_system_setting(
     request: Request = None,
     db: Session = Depends(get_db),
 ):
-    """更新系统设置"""
+    """更新单个系统设置"""
     setting = db.query(models.SystemSetting).filter(
         models.SystemSetting.key == key
     ).first()
@@ -89,6 +89,61 @@ def admin_update_system_setting(
     )
     
     return {"message": f"Setting '{key}' updated successfully"}
+
+
+@router.put("/admin/system-settings")
+def admin_update_system_settings_batch(
+    settings: dict = Body(...),
+    current_admin=Depends(get_current_admin),
+    request: Request = None,
+    db: Session = Depends(get_db),
+):
+    """批量更新系统设置"""
+    ip_address = get_client_ip(request) if request else None
+    updated_count = 0
+    
+    for key, value in settings.items():
+        # 将值转换为字符串（系统设置存储为字符串）
+        str_value = str(value) if not isinstance(value, str) else value
+        
+        setting = db.query(models.SystemSetting).filter(
+            models.SystemSetting.key == key
+        ).first()
+        
+        if not setting:
+            # 创建新设置
+            setting = models.SystemSetting(
+                key=key,
+                value=str_value,
+                created_at=get_utc_time(),
+                updated_at=get_utc_time(),
+            )
+            db.add(setting)
+            old_value = None
+        else:
+            old_value = setting.value
+            setting.value = str_value
+            setting.updated_at = get_utc_time()
+        
+        updated_count += 1
+        
+        # 记录审计日志
+        crud.create_audit_log(
+            db=db,
+            action_type="update_system_setting",
+            entity_type="system_setting",
+            entity_id=key,
+            admin_id=current_admin.id,
+            user_id=None,
+            old_value={"value": old_value},
+            new_value={"value": str_value},
+            reason=f"管理员 {current_admin.id} ({current_admin.name}) 批量更新了系统设置",
+            ip_address=ip_address,
+        )
+    
+    db.commit()
+    
+    return {"message": f"Successfully updated {updated_count} settings"}
 
 
 @router.get("/admin/job-positions")

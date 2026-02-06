@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { message } from 'antd';
-import { updateSystemSettings, clearCache } from '../../../api';
+import { clearCache } from '../../../api';
 import { getErrorMessage } from '../../../utils/errorHandler';
 
 /**

@@ -408,6 +408,88 @@ async def get_items_admin(
     )
 
 
+# ==================== 管理员创建竞品 ====================
+
+@router.post("/admin/items", response_model=schemas.LeaderboardItemOut)
+async def create_item_admin(
+    item_data: schemas.LeaderboardItemCreate,
+    current_admin: models.AdminUser = Depends(get_current_admin_async),
+    db: AsyncSession = Depends(get_async_db_dependency),
+):
+    """管理员创建竞品"""
+    # 验证榜单是否存在
+    leaderboard = await db.get(models.CustomLeaderboard, item_data.leaderboard_id)
+    if not leaderboard:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="榜单不存在"
+        )
+    
+    # 创建竞品
+    new_item = models.LeaderboardItem(
+        leaderboard_id=item_data.leaderboard_id,
+        name=item_data.name.strip(),
+        description=item_data.description.strip() if item_data.description else None,
+        image_url=item_data.image_url,
+        status="approved",  # 管理员创建直接通过
+        created_by=None,  # 管理员创建，不关联用户
+        upvote_count=0,
+        downvote_count=0,
+        created_at=get_utc_time(),
+        updated_at=get_utc_time()
+    )
+    
+    db.add(new_item)
+    
+    # 更新榜单竞品数量
+    leaderboard.item_count = (leaderboard.item_count or 0) + 1
+    leaderboard.updated_at = get_utc_time()
+    
+    await db.commit()
+    await db.refresh(new_item)
+    
+    logger.info(f"管理员 {current_admin.username} 创建竞品: {new_item.id} - {new_item.name}")
+    
+    return new_item
+
+
+# ==================== 管理员更新竞品 ====================
+
+@router.put("/admin/items/{item_id}", response_model=schemas.LeaderboardItemOut)
+async def update_item_admin(
+    item_id: int,
+    item_data: schemas.LeaderboardItemUpdate,
+    current_admin: models.AdminUser = Depends(get_current_admin_async),
+    db: AsyncSession = Depends(get_async_db_dependency),
+):
+    """管理员更新竞品"""
+    item = await db.get(models.LeaderboardItem, item_id)
+    if not item:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="竞品不存在"
+        )
+    
+    # 更新字段
+    if item_data.name is not None:
+        item.name = item_data.name.strip()
+    if item_data.description is not None:
+        item.description = item_data.description.strip() if item_data.description else None
+    if item_data.image_url is not None:
+        item.image_url = item_data.image_url
+    if item_data.status is not None:
+        item.status = item_data.status
+    
+    item.updated_at = get_utc_time()
+    
+    await db.commit()
+    await db.refresh(item)
+    
+    logger.info(f"管理员 {current_admin.username} 更新竞品: {item_id}")
+    
+    return item
+
+
 # ==================== 榜单申请 ====================
 
 @router.post("/apply", response_model=schemas.CustomLeaderboardOut)
