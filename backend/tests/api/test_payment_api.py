@@ -11,12 +11,14 @@
 重要提示:
 - 必须使用 Stripe 测试密钥 (sk_test_xxx)
 - 测试不会产生真实扣款
-- 使用 Stripe 测试卡号进行支付测试
+- 使用 Stripe 测试 PaymentMethod token 进行支付测试
 
-Stripe 测试卡号:
-- 4242424242424242 - 成功支付
-- 4000000000000002 - 卡被拒绝
-- 4000000000009995 - 余额不足
+Stripe 测试 PaymentMethod Token:
+- pm_card_visa - 成功支付
+- pm_card_chargeDeclined - 卡被拒绝
+- pm_card_chargeDeclinedInsufficientFunds - 余额不足
+
+参考文档: https://stripe.com/docs/testing#cards
 
 运行方式:
     pytest tests/api/test_payment_api.py -v
@@ -24,7 +26,6 @@ Stripe 测试卡号:
 
 import pytest
 import httpx
-import os
 from tests.config import (
     TEST_API_URL, 
     TEST_USER_EMAIL, 
@@ -33,10 +34,11 @@ from tests.config import (
     REQUEST_TIMEOUT
 )
 
-# Stripe 测试卡号
-STRIPE_TEST_CARD_SUCCESS = "4242424242424242"
-STRIPE_TEST_CARD_DECLINED = "4000000000000002"
-STRIPE_TEST_CARD_INSUFFICIENT = "4000000000009995"
+# Stripe 测试 PaymentMethod Token（预定义的测试卡）
+# 注意：不能直接发送原始卡号到 Stripe API，必须使用这些预定义 token
+STRIPE_TEST_PM_SUCCESS = "pm_card_visa"
+STRIPE_TEST_PM_DECLINED = "pm_card_chargeDeclined"
+STRIPE_TEST_PM_INSUFFICIENT = "pm_card_chargeDeclinedInsufficientFunds"
 
 
 class TestPaymentAPI:
@@ -427,7 +429,7 @@ class TestStripeIntegration:
     @pytest.mark.api
     @pytest.mark.payment
     def test_confirm_payment_with_test_card(self):
-        """测试：使用测试卡确认支付（Stripe 沙盒测试）"""
+        """测试：使用测试 PaymentMethod 确认支付（Stripe 沙盒测试）"""
         if not STRIPE_TEST_SECRET_KEY:
             pytest.skip("未配置 STRIPE_TEST_SECRET_KEY")
 
@@ -447,23 +449,17 @@ class TestStripeIntegration:
 
             print(f"✅ PaymentIntent 创建: {payment_intent.id}")
 
-            # 2. 创建测试 PaymentMethod（使用测试卡号）
-            payment_method = stripe.PaymentMethod.create(
-                type="card",
-                card={
-                    "number": STRIPE_TEST_CARD_SUCCESS,  # 4242424242424242
-                    "exp_month": 12,
-                    "exp_year": 2030,
-                    "cvc": "123"
-                }
-            )
+            # 2. 使用 Stripe 提供的测试 PaymentMethod token
+            # pm_card_visa 是 Stripe 预定义的成功测试卡
+            # 参考: https://stripe.com/docs/testing#cards
+            test_payment_method = "pm_card_visa"
 
-            print(f"✅ PaymentMethod 创建: {payment_method.id}")
+            print(f"✅ 使用测试 PaymentMethod: {test_payment_method}")
 
             # 3. 确认支付
             confirmed_intent = stripe.PaymentIntent.confirm(
                 payment_intent.id,
-                payment_method=payment_method.id
+                payment_method=test_payment_method
             )
 
             assert confirmed_intent.status == "succeeded", \
@@ -498,22 +494,16 @@ class TestStripeIntegration:
                 metadata={"test": "true"}
             )
 
-            # 2. 创建会被拒绝的测试 PaymentMethod
-            payment_method = stripe.PaymentMethod.create(
-                type="card",
-                card={
-                    "number": STRIPE_TEST_CARD_DECLINED,  # 4000000000000002
-                    "exp_month": 12,
-                    "exp_year": 2030,
-                    "cvc": "123"
-                }
-            )
+            # 2. 使用 Stripe 提供的被拒绝卡的测试 token
+            # pm_card_chargeDeclined 是 Stripe 预定义的被拒绝测试卡
+            # 参考: https://stripe.com/docs/testing#cards
+            declined_payment_method = "pm_card_chargeDeclined"
 
             # 3. 尝试确认支付（应该失败）
             try:
                 stripe.PaymentIntent.confirm(
                     payment_intent.id,
-                    payment_method=payment_method.id
+                    payment_method=declined_payment_method
                 )
                 pytest.fail("被拒绝的卡应该抛出异常")
             except stripe.error.CardError as e:
