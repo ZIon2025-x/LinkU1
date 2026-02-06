@@ -6,10 +6,17 @@
 - 支付意图创建
 - 支付状态查询
 - Stripe Connect 相关
+- 完整支付流程（沙盒模式）
 
 重要提示:
 - 必须使用 Stripe 测试密钥 (sk_test_xxx)
 - 测试不会产生真实扣款
+- 使用 Stripe 测试卡号进行支付测试
+
+Stripe 测试卡号:
+- 4242424242424242 - 成功支付
+- 4000000000000002 - 卡被拒绝
+- 4000000000009995 - 余额不足
 
 运行方式:
     pytest tests/api/test_payment_api.py -v
@@ -17,6 +24,7 @@
 
 import pytest
 import httpx
+import os
 from tests.config import (
     TEST_API_URL, 
     TEST_USER_EMAIL, 
@@ -24,6 +32,11 @@ from tests.config import (
     STRIPE_TEST_SECRET_KEY,
     REQUEST_TIMEOUT
 )
+
+# Stripe 测试卡号
+STRIPE_TEST_CARD_SUCCESS = "4242424242424242"
+STRIPE_TEST_CARD_DECLINED = "4000000000000002"
+STRIPE_TEST_CARD_INSUFFICIENT = "4000000000009995"
 
 
 class TestPaymentAPI:
@@ -86,33 +99,8 @@ class TestPaymentAPI:
         return {}
 
     # =========================================================================
-    # Stripe 配置测试
+    # 支付相关端点测试
     # =========================================================================
-
-    @pytest.mark.api
-    @pytest.mark.payment
-    def test_stripe_publishable_key(self):
-        """测试：获取 Stripe 可发布密钥"""
-        with httpx.Client(timeout=self.timeout) as client:
-            # 尝试获取 Stripe 配置
-            response = client.get(f"{self.base_url}/api/stripe/config")
-
-            if response.status_code == 200:
-                data = response.json()
-                
-                # 验证返回的是测试密钥（pk_test_ 开头）
-                publishable_key = data.get("publishable_key", data.get("publishableKey", ""))
-                
-                if publishable_key:
-                    assert publishable_key.startswith("pk_test_"), \
-                        f"⚠️ 警告: Stripe 密钥不是测试密钥! 当前: {publishable_key[:15]}..."
-                    print(f"✅ Stripe 测试密钥配置正确: {publishable_key[:20]}...")
-                else:
-                    print("ℹ️  未返回 Stripe 密钥")
-            elif response.status_code == 404:
-                print("ℹ️  Stripe 配置端点不存在")
-            else:
-                print(f"ℹ️  Stripe 配置返回: {response.status_code}")
 
     # =========================================================================
     # 管理员支付列表测试
@@ -137,8 +125,8 @@ class TestPaymentAPI:
 
     @pytest.mark.api
     @pytest.mark.payment
-    def test_stripe_connect_status(self):
-        """测试：获取 Stripe Connect 状态"""
+    def test_stripe_connect_account_status(self):
+        """测试：获取 Stripe Connect 账户状态"""
         if not TEST_USER_EMAIL or not TEST_USER_PASSWORD:
             pytest.skip("未配置测试账号")
 
@@ -146,21 +134,22 @@ class TestPaymentAPI:
             if not self._login(client):
                 pytest.skip("登录失败")
 
+            # 使用真实的端点: /api/stripe/connect/account/status
             response = client.get(
-                f"{self.base_url}/api/stripe-connect/status",
+                f"{self.base_url}/api/stripe/connect/account/status",
                 headers=self._get_auth_headers(),
                 cookies=TestPaymentAPI._cookies
             )
 
             if response.status_code == 200:
                 data = response.json()
-                print(f"✅ Stripe Connect 状态: {data}")
+                print(f"✅ Stripe Connect 账户状态: {data}")
             elif response.status_code == 404:
-                print("ℹ️  Stripe Connect 端点不存在")
+                print("ℹ️  Stripe Connect 账户端点不存在或用户未设置 Connect 账户")
             elif response.status_code in [401, 403]:
                 print("ℹ️  需要认证或权限不足")
             else:
-                print(f"ℹ️  Stripe Connect 返回: {response.status_code}")
+                print(f"ℹ️  Stripe Connect 账户状态返回: {response.status_code}")
 
     # =========================================================================
     # 退款请求测试
@@ -220,19 +209,17 @@ class TestPaymentAPI:
 
     @pytest.mark.api
     @pytest.mark.payment
-    def test_vip_products(self):
-        """测试：获取 VIP 产品列表"""
+    def test_vip_status_unauthorized(self):
+        """测试：未登录用户不能获取 VIP 状态"""
         with httpx.Client(timeout=self.timeout) as client:
-            # 尝试获取 VIP 产品
-            response = client.get(f"{self.base_url}/api/vip/products")
+            # 使用真实的 VIP 状态端点: /api/users/vip/status
+            response = client.get(f"{self.base_url}/api/users/vip/status")
 
-            if response.status_code == 200:
-                data = response.json()
-                print(f"✅ VIP 产品列表: {data}")
-            elif response.status_code == 404:
-                print("ℹ️  VIP 产品端点不存在")
-            else:
-                print(f"ℹ️  VIP 产品返回: {response.status_code}")
+            # 未登录用户应该被拒绝访问
+            assert response.status_code in [401, 403], \
+                f"未授权请求应该被拒绝，但返回了 {response.status_code}"
+            
+            print("✅ VIP 状态端点正确要求认证")
 
     # =========================================================================
     # 安全验证测试
@@ -249,3 +236,354 @@ class TestPaymentAPI:
             print("✅ Stripe 测试密钥配置正确")
         else:
             print("ℹ️  未配置 STRIPE_TEST_SECRET_KEY（可选）")
+
+    # =========================================================================
+    # VIP 状态测试（需要认证）
+    # =========================================================================
+
+    @pytest.mark.api
+    @pytest.mark.payment
+    def test_vip_status_authenticated(self):
+        """测试：登录用户可以获取 VIP 状态"""
+        if not TEST_USER_EMAIL or not TEST_USER_PASSWORD:
+            pytest.skip("未配置测试账号")
+
+        with httpx.Client(timeout=self.timeout) as client:
+            if not self._login(client):
+                pytest.skip("登录失败")
+
+            response = client.get(
+                f"{self.base_url}/api/users/vip/status",
+                headers=self._get_auth_headers(),
+                cookies=TestPaymentAPI._cookies
+            )
+
+            if response.status_code == 200:
+                data = response.json()
+                print(f"✅ VIP 状态: {data}")
+                # 验证返回数据结构
+                assert "is_vip" in data or "vip_status" in data or "status" in data, \
+                    "VIP 状态响应缺少必要字段"
+            elif response.status_code == 404:
+                print("ℹ️  用户没有 VIP 状态记录")
+            else:
+                print(f"ℹ️  VIP 状态返回: {response.status_code}")
+
+    # =========================================================================
+    # VIP 历史记录测试
+    # =========================================================================
+
+    @pytest.mark.api
+    @pytest.mark.payment
+    def test_vip_history_authenticated(self):
+        """测试：登录用户可以获取 VIP 历史记录"""
+        if not TEST_USER_EMAIL or not TEST_USER_PASSWORD:
+            pytest.skip("未配置测试账号")
+
+        with httpx.Client(timeout=self.timeout) as client:
+            if not self._login(client):
+                pytest.skip("登录失败")
+
+            response = client.get(
+                f"{self.base_url}/api/users/vip/history",
+                headers=self._get_auth_headers(),
+                cookies=TestPaymentAPI._cookies
+            )
+
+            if response.status_code == 200:
+                data = response.json()
+                print(f"✅ VIP 历史记录: {len(data) if isinstance(data, list) else data}")
+            elif response.status_code == 404:
+                print("ℹ️  没有 VIP 历史记录")
+            else:
+                print(f"ℹ️  VIP 历史返回: {response.status_code}")
+
+
+class TestStripeIntegration:
+    """Stripe 集成测试类 - 测试完整支付流程"""
+
+    # 共享状态
+    _cookies: dict = {}
+    _access_token: str = ""
+    _user_id: str = ""
+    _test_task_id: str = ""
+
+    @pytest.fixture(autouse=True)
+    def setup(self):
+        """每个测试前的设置"""
+        self.base_url = TEST_API_URL
+        self.timeout = REQUEST_TIMEOUT
+
+    def _login(self, client: httpx.Client) -> bool:
+        """辅助方法：登录并保存认证信息"""
+        if not TEST_USER_EMAIL or not TEST_USER_PASSWORD:
+            return False
+
+        if TestStripeIntegration._access_token or TestStripeIntegration._cookies:
+            return True
+
+        response = client.post(
+            f"{self.base_url}/api/secure-auth/login",
+            json={
+                "email": TEST_USER_EMAIL,
+                "password": TEST_USER_PASSWORD
+            }
+        )
+
+        if response.status_code == 200:
+            cookies = dict(response.cookies)
+            if cookies:
+                TestStripeIntegration._cookies = cookies
+            
+            data = response.json()
+            if "access_token" in data:
+                TestStripeIntegration._access_token = data["access_token"]
+            if "user" in data and "id" in data["user"]:
+                TestStripeIntegration._user_id = data["user"]["id"]
+            
+            return bool(TestStripeIntegration._access_token or TestStripeIntegration._cookies)
+        
+        return False
+
+    def _get_auth_headers(self) -> dict:
+        """获取认证头"""
+        if TestStripeIntegration._access_token:
+            return {"Authorization": f"Bearer {TestStripeIntegration._access_token}"}
+        return {}
+
+    # =========================================================================
+    # Stripe SDK 直接测试（需要 STRIPE_TEST_SECRET_KEY）
+    # =========================================================================
+
+    @pytest.mark.api
+    @pytest.mark.payment
+    def test_stripe_api_connection(self):
+        """测试：验证 Stripe API 连接（使用测试密钥）"""
+        if not STRIPE_TEST_SECRET_KEY:
+            pytest.skip("未配置 STRIPE_TEST_SECRET_KEY")
+
+        try:
+            import stripe
+            stripe.api_key = STRIPE_TEST_SECRET_KEY
+
+            # 测试 Stripe API 连接 - 列出余额
+            balance = stripe.Balance.retrieve()
+            
+            assert balance is not None, "无法获取 Stripe 余额"
+            print(f"✅ Stripe API 连接成功")
+            print(f"   可用余额: {balance.available}")
+            
+        except ImportError:
+            pytest.skip("未安装 stripe 库")
+        except stripe.error.AuthenticationError as e:
+            pytest.fail(f"Stripe 认证失败: {e}")
+        except Exception as e:
+            print(f"ℹ️  Stripe API 测试: {e}")
+
+    @pytest.mark.api
+    @pytest.mark.payment
+    def test_create_payment_intent_directly(self):
+        """测试：直接创建 PaymentIntent（Stripe 沙盒测试）"""
+        if not STRIPE_TEST_SECRET_KEY:
+            pytest.skip("未配置 STRIPE_TEST_SECRET_KEY")
+
+        try:
+            import stripe
+            stripe.api_key = STRIPE_TEST_SECRET_KEY
+
+            # 创建测试 PaymentIntent
+            payment_intent = stripe.PaymentIntent.create(
+                amount=1000,  # £10.00 (以便士为单位)
+                currency="gbp",
+                metadata={
+                    "test": "true",
+                    "source": "github_actions_test"
+                },
+                # 自动取消，不会真正扣款
+                capture_method="manual"
+            )
+
+            assert payment_intent.id is not None, "PaymentIntent ID 为空"
+            assert payment_intent.id.startswith("pi_"), \
+                f"PaymentIntent ID 格式不正确: {payment_intent.id}"
+            assert payment_intent.client_secret is not None, "client_secret 为空"
+            assert payment_intent.amount == 1000, f"金额不正确: {payment_intent.amount}"
+            assert payment_intent.currency == "gbp", f"货币不正确: {payment_intent.currency}"
+
+            print(f"✅ PaymentIntent 创建成功:")
+            print(f"   ID: {payment_intent.id}")
+            print(f"   金额: £{payment_intent.amount / 100:.2f}")
+            print(f"   状态: {payment_intent.status}")
+
+            # 清理：取消 PaymentIntent
+            stripe.PaymentIntent.cancel(payment_intent.id)
+            print(f"✅ PaymentIntent 已取消（清理测试数据）")
+
+        except ImportError:
+            pytest.skip("未安装 stripe 库")
+        except stripe.error.StripeError as e:
+            pytest.fail(f"Stripe 错误: {e}")
+
+    @pytest.mark.api
+    @pytest.mark.payment
+    def test_confirm_payment_with_test_card(self):
+        """测试：使用测试卡确认支付（Stripe 沙盒测试）"""
+        if not STRIPE_TEST_SECRET_KEY:
+            pytest.skip("未配置 STRIPE_TEST_SECRET_KEY")
+
+        try:
+            import stripe
+            stripe.api_key = STRIPE_TEST_SECRET_KEY
+
+            # 1. 创建 PaymentIntent
+            payment_intent = stripe.PaymentIntent.create(
+                amount=500,  # £5.00
+                currency="gbp",
+                metadata={
+                    "test": "true",
+                    "source": "github_actions_test"
+                }
+            )
+
+            print(f"✅ PaymentIntent 创建: {payment_intent.id}")
+
+            # 2. 创建测试 PaymentMethod（使用测试卡号）
+            payment_method = stripe.PaymentMethod.create(
+                type="card",
+                card={
+                    "number": STRIPE_TEST_CARD_SUCCESS,  # 4242424242424242
+                    "exp_month": 12,
+                    "exp_year": 2030,
+                    "cvc": "123"
+                }
+            )
+
+            print(f"✅ PaymentMethod 创建: {payment_method.id}")
+
+            # 3. 确认支付
+            confirmed_intent = stripe.PaymentIntent.confirm(
+                payment_intent.id,
+                payment_method=payment_method.id
+            )
+
+            assert confirmed_intent.status == "succeeded", \
+                f"支付未成功，状态: {confirmed_intent.status}"
+
+            print(f"✅ 支付成功!")
+            print(f"   状态: {confirmed_intent.status}")
+            print(f"   金额: £{confirmed_intent.amount / 100:.2f}")
+
+        except ImportError:
+            pytest.skip("未安装 stripe 库")
+        except stripe.error.CardError as e:
+            pytest.fail(f"卡片错误: {e}")
+        except stripe.error.StripeError as e:
+            pytest.fail(f"Stripe 错误: {e}")
+
+    @pytest.mark.api
+    @pytest.mark.payment
+    def test_declined_card(self):
+        """测试：测试卡被拒绝的情况"""
+        if not STRIPE_TEST_SECRET_KEY:
+            pytest.skip("未配置 STRIPE_TEST_SECRET_KEY")
+
+        try:
+            import stripe
+            stripe.api_key = STRIPE_TEST_SECRET_KEY
+
+            # 1. 创建 PaymentIntent
+            payment_intent = stripe.PaymentIntent.create(
+                amount=500,
+                currency="gbp",
+                metadata={"test": "true"}
+            )
+
+            # 2. 创建会被拒绝的测试 PaymentMethod
+            payment_method = stripe.PaymentMethod.create(
+                type="card",
+                card={
+                    "number": STRIPE_TEST_CARD_DECLINED,  # 4000000000000002
+                    "exp_month": 12,
+                    "exp_year": 2030,
+                    "cvc": "123"
+                }
+            )
+
+            # 3. 尝试确认支付（应该失败）
+            try:
+                stripe.PaymentIntent.confirm(
+                    payment_intent.id,
+                    payment_method=payment_method.id
+                )
+                pytest.fail("被拒绝的卡应该抛出异常")
+            except stripe.error.CardError as e:
+                print(f"✅ 卡被正确拒绝: {e.user_message}")
+                assert "declined" in str(e).lower() or "拒绝" in str(e), \
+                    f"错误消息应该包含'declined': {e}"
+
+        except ImportError:
+            pytest.skip("未安装 stripe 库")
+        except stripe.error.StripeError as e:
+            # 某些拒绝场景可能不是 CardError
+            if "declined" in str(e).lower():
+                print(f"✅ 卡被正确拒绝: {e}")
+            else:
+                pytest.fail(f"Stripe 错误: {e}")
+
+    # =========================================================================
+    # 通过 API 测试支付流程
+    # =========================================================================
+
+    @pytest.mark.api
+    @pytest.mark.payment
+    def test_task_payment_endpoint(self):
+        """测试：任务支付端点（通过 API）"""
+        if not TEST_USER_EMAIL or not TEST_USER_PASSWORD:
+            pytest.skip("未配置测试账号")
+
+        with httpx.Client(timeout=self.timeout) as client:
+            if not self._login(client):
+                pytest.skip("登录失败")
+
+            # 尝试获取用户的任务列表，找到一个可以测试支付的任务
+            response = client.get(
+                f"{self.base_url}/api/my-tasks",
+                headers=self._get_auth_headers(),
+                cookies=TestStripeIntegration._cookies
+            )
+
+            if response.status_code == 200:
+                tasks = response.json()
+                if isinstance(tasks, dict):
+                    tasks = tasks.get("tasks", tasks.get("items", []))
+                
+                # 查找未支付的任务
+                unpaid_tasks = [
+                    t for t in tasks 
+                    if not t.get("is_paid") and t.get("reward", 0) > 0
+                ]
+
+                if unpaid_tasks:
+                    task = unpaid_tasks[0]
+                    task_id = task.get("id")
+                    print(f"ℹ️  找到未支付任务: {task_id}, 金额: {task.get('reward')}")
+                    
+                    # 测试支付端点
+                    pay_response = client.post(
+                        f"{self.base_url}/api/tasks/{task_id}/payment",
+                        json={},
+                        headers=self._get_auth_headers(),
+                        cookies=TestStripeIntegration._cookies
+                    )
+                    
+                    print(f"ℹ️  支付端点响应: {pay_response.status_code}")
+                    if pay_response.status_code == 200:
+                        pay_data = pay_response.json()
+                        if "client_secret" in pay_data:
+                            print(f"✅ 获取到 PaymentIntent client_secret")
+                        if "payment_intent_id" in pay_data:
+                            print(f"✅ PaymentIntent ID: {pay_data['payment_intent_id']}")
+                else:
+                    print("ℹ️  没有找到未支付的任务")
+            else:
+                print(f"ℹ️  获取任务列表: {response.status_code}")

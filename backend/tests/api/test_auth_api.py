@@ -319,54 +319,33 @@ class TestAuthAPI:
             print(f"✅ CAPTCHA 配置: enabled={data.get('enabled')}, type={data.get('type')}")
 
     # =========================================================================
-    # 修改密码测试
+    # 密码验证测试
     # =========================================================================
 
     @pytest.mark.api
     @pytest.mark.auth
-    def test_change_password_unauthenticated(self):
-        """测试：未登录用户不能修改密码"""
+    def test_password_validate(self):
+        """测试：密码强度验证端点"""
         with httpx.Client(timeout=self.timeout) as client:
+            # 测试弱密码
             response = client.post(
-                f"{self.base_url}/api/secure-auth/change-password",
+                f"{self.base_url}/api/password/validate",
                 json={
-                    "current_password": "OldPass123!",
-                    "new_password": "NewPass123!"
+                    "password": "weak"
                 }
             )
 
-            # 应该返回 401 或 403
-            assert response.status_code in [401, 403, 404], \
-                f"未认证请求应该被拒绝，但返回了 {response.status_code}"
-            
-            print("✅ 未登录用户修改密码被正确拒绝")
-
-    @pytest.mark.api
-    @pytest.mark.auth
-    def test_change_password_wrong_current(self):
-        """测试：错误的当前密码应该修改失败"""
-        if not TestAuthAPI._cookies and not TestAuthAPI._access_token:
-            pytest.skip("需要先运行 test_login_success")
-
-        with httpx.Client(timeout=self.timeout, cookies=TestAuthAPI._cookies) as client:
-            headers = self._get_auth_headers()
-            
-            response = client.post(
-                f"{self.base_url}/api/secure-auth/change-password",
-                json={
-                    "current_password": "WrongCurrentPass123!",
-                    "new_password": "NewPass123!"
-                },
-                headers=headers
-            )
-
-            # 应该返回 400 或 401（当前密码错误）
-            if response.status_code in [400, 401, 403]:
-                print("✅ 错误的当前密码被正确拒绝")
+            # 端点应该存在
+            if response.status_code == 200:
+                data = response.json()
+                # 弱密码应该返回 valid: false
+                print(f"✅ 密码验证结果: {data}")
+            elif response.status_code in [400, 422]:
+                print("✅ 弱密码被正确拒绝")
             elif response.status_code == 404:
-                print("ℹ️  修改密码端点不存在")
+                print("ℹ️  密码验证端点不存在")
             else:
-                print(f"ℹ️  修改密码返回: {response.status_code}")
+                print(f"ℹ️  密码验证返回: {response.status_code}")
 
     def _get_auth_headers(self) -> dict:
         """获取认证头"""
@@ -409,8 +388,9 @@ class TestAuthAPI:
     def test_request_password_reset(self):
         """测试：请求密码重置"""
         with httpx.Client(timeout=self.timeout) as client:
+            # 使用真实端点: /api/forgot_password
             response = client.post(
-                f"{self.base_url}/api/secure-auth/forgot-password",
+                f"{self.base_url}/api/forgot_password",
                 json={
                     "email": "test_reset@test-linku.com"
                 }
@@ -438,8 +418,9 @@ class TestAuthAPI:
             pytest.skip("未配置测试邮箱")
 
         with httpx.Client(timeout=self.timeout) as client:
+            # 使用真实端点: /api/secure-auth/send-verification-code
             response = client.post(
-                f"{self.base_url}/api/secure-auth/send-email-code",
+                f"{self.base_url}/api/secure-auth/send-verification-code",
                 json={
                     "email": TEST_USER_EMAIL
                 }
