@@ -212,8 +212,8 @@ class TestNotificationAPI:
     def test_mark_all_read_unauthorized(self):
         """测试：未登录用户不能标记全部已读"""
         with httpx.Client(timeout=self.timeout) as client:
-            # API 使用 PUT 方法
-            response = client.put(f"{self.base_url}/api/notifications/read-all")
+            # API 使用 POST 方法
+            response = client.post(f"{self.base_url}/api/notifications/read-all")
 
             # 应该返回 401 (未认证) 或 403 (禁止访问)
             assert response.status_code in [401, 403], \
@@ -231,8 +231,8 @@ class TestNotificationAPI:
             if not self._login(client):
                 pytest.skip("登录失败")
 
-            # API 使用 PUT 方法
-            response = client.put(
+            # API 使用 POST 方法
+            response = client.post(
                 f"{self.base_url}/api/notifications/read-all",
                 headers=self._get_auth_headers(),
                 cookies=TestNotificationAPI._cookies
