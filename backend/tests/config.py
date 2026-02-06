@@ -38,6 +38,10 @@ STRIPE_TEST_SECRET_KEY = os.getenv("STRIPE_TEST_SECRET_KEY", "")
 # 测试超时时间（秒）
 REQUEST_TIMEOUT = int(os.getenv("TEST_REQUEST_TIMEOUT", "30"))
 
+# 配置状态标志
+CONFIG_VALID = True
+CONFIG_ERROR_MESSAGE = ""
+
 # =============================================================================
 # 安全检查 - 防止误操作生产环境
 # =============================================================================
@@ -45,8 +49,9 @@ REQUEST_TIMEOUT = int(os.getenv("TEST_REQUEST_TIMEOUT", "30"))
 def _validate_test_environment():
     """
     验证测试环境配置的安全性
-    如果检测到生产环境配置，立即终止测试
+    如果检测到生产环境配置，立即终止测试（安全问题必须阻止）
     """
+    global CONFIG_VALID, CONFIG_ERROR_MESSAGE
     errors = []
     
     # 检查 1: TEST_API_URL 不能包含生产环境地址
@@ -78,7 +83,7 @@ def _validate_test_environment():
                 "建议使用专用测试邮箱或 example.com 域名"
             )
     
-    # 如果有错误，终止测试
+    # 如果有安全错误，必须终止测试（不能允许对生产环境进行测试）
     if errors:
         print("\n" + "=" * 60)
         print("❌ 安全检查失败 - 测试已终止")
@@ -95,15 +100,19 @@ def _validate_test_environment():
 def _validate_required_config():
     """
     验证必需的配置项
+    不再使用 sys.exit()，而是设置标志让测试跳过
     """
+    global CONFIG_VALID, CONFIG_ERROR_MESSAGE
     missing = []
     
     if not TEST_API_URL:
         missing.append("TEST_API_URL")
     
     if missing:
+        CONFIG_VALID = False
+        CONFIG_ERROR_MESSAGE = f"缺少必需的环境变量: {', '.join(missing)}"
         print("\n" + "=" * 60)
-        print("⚠️  缺少必需的环境变量")
+        print("⚠️  缺少必需的环境变量 - API 测试将被跳过")
         print("=" * 60)
         print("\n请设置以下环境变量:")
         for var in missing:
@@ -113,18 +122,34 @@ def _validate_required_config():
         print("  export TEST_USER_EMAIL='test@example.com'")
         print("  export TEST_USER_PASSWORD='your-test-password'")
         print("=" * 60 + "\n")
-        sys.exit(1)
+        # 不再调用 sys.exit(1)，让测试可以被收集并跳过
+
+
+def require_config(func):
+    """
+    装饰器：如果配置无效，跳过测试
+    """
+    import functools
+    import pytest
+    
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        if not CONFIG_VALID:
+            pytest.skip(CONFIG_ERROR_MESSAGE)
+        return func(*args, **kwargs)
+    return wrapper
 
 
 # 模块加载时执行安全检查
 _validate_test_environment()
 _validate_required_config()
 
-# 打印测试环境信息
-print("\n" + "=" * 60)
-print("✅ 测试环境配置验证通过")
-print("=" * 60)
-print(f"  API URL: {TEST_API_URL}")
-print(f"  测试账号: {TEST_USER_EMAIL or '(未配置)'}")
-print(f"  Stripe: {'已配置' if STRIPE_TEST_SECRET_KEY else '未配置'}")
-print("=" * 60 + "\n")
+# 打印测试环境信息（仅当配置有效时）
+if CONFIG_VALID:
+    print("\n" + "=" * 60)
+    print("✅ 测试环境配置验证通过")
+    print("=" * 60)
+    print(f"  API URL: {TEST_API_URL}")
+    print(f"  测试账号: {TEST_USER_EMAIL or '(未配置)'}")
+    print(f"  Stripe: {'已配置' if STRIPE_TEST_SECRET_KEY else '未配置'}")
+    print("=" * 60 + "\n")

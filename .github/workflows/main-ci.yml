@@ -69,10 +69,22 @@ jobs:
         echo "✅ All Python files have valid syntax"
 
     - name: Run tests
+      env:
+        TEST_API_URL: ${{ secrets.TEST_API_URL }}
+        TEST_USER_EMAIL: ${{ secrets.TEST_USER_EMAIL }}
+        TEST_USER_PASSWORD: ${{ secrets.TEST_USER_PASSWORD }}
       run: |
         echo "🔍 Running pytest..."
         export PYTHONPATH="${PYTHONPATH}:$(pwd)"
-        python -m pytest tests/ -v --tb=short -x
+        # 如果 TEST_API_URL 已配置，运行所有测试；否则只运行单元测试（跳过 API 测试）
+        if [ -n "$TEST_API_URL" ]; then
+          echo "📡 TEST_API_URL 已配置，运行所有测试..."
+          python -m pytest tests/ -v --tb=short -x
+        else
+          echo "⚠️ TEST_API_URL 未配置，跳过 API 集成测试..."
+          # 只运行非 API 测试（排除 tests/api/ 目录）
+          python -m pytest tests/ -v --tb=short -x --ignore=tests/api/
+        fi
         echo "✅ Tests passed"
 
   # 前端验证
