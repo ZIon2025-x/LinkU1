@@ -10,7 +10,20 @@ module.exports = function(app) {
       target: target,
       changeOrigin: true,
       secure: true,
-      cookieDomainRewrite: 'localhost',  // 重写Cookie域名为localhost
+      cookieDomainRewrite: '',  // 移除Cookie的domain属性，让浏览器自动使用当前域
+      cookiePathRewrite: '/',   // 确保path是根路径
+      onProxyRes: function(proxyRes, req, res) {
+        // 处理Set-Cookie头，移除Secure标志（因为localhost是http）
+        const cookies = proxyRes.headers['set-cookie'];
+        if (cookies) {
+          proxyRes.headers['set-cookie'] = cookies.map(cookie => {
+            return cookie
+              .replace(/;\s*Secure/gi, '')  // 移除Secure（localhost没有https）
+              .replace(/;\s*SameSite=None/gi, '; SameSite=Lax')  // 改为Lax
+              .replace(/;\s*Domain=[^;]*/gi, '');  // 移除Domain
+          });
+        }
+      }
     })
   );
   

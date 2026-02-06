@@ -4,7 +4,15 @@ const isProduction = process.env.NODE_ENV === 'production';
 // 开发环境使用代理（通过setupProxy.js），避免跨域Cookie问题
 // 生产环境直接连接API服务器
 const DEV_API_URL = '';  // 空字符串让请求通过代理
-const DEV_WS_URL = '';   // WebSocket也通过代理
+
+// WebSocket需要完整URL，开发环境使用当前页面的host（通过代理）
+const getDevWsUrl = () => {
+  if (typeof window !== 'undefined') {
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    return `${protocol}//${window.location.host}`;
+  }
+  return 'ws://localhost:3000';
+};
 
 export const API_BASE_URL = isProduction 
   ? process.env.REACT_APP_API_URL || 'https://api.link2ur.com'
@@ -12,7 +20,7 @@ export const API_BASE_URL = isProduction
 
 export const WS_BASE_URL = isProduction
   ? process.env.REACT_APP_WS_URL || 'wss://api.link2ur.com'
-  : process.env.REACT_APP_WS_URL || DEV_WS_URL;
+  : process.env.REACT_APP_WS_URL || getDevWsUrl();
 
 /** App Store 链接（用于「在 App 内打开」条中，未安装时跳转的下载页）。可通过环境变量 REACT_APP_APP_STORE_URL 覆盖。 */
 export const APP_STORE_URL =

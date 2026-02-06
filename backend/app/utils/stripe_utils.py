@@ -5,12 +5,64 @@ Stripe 相关工具函数
 
 import os
 import logging
-from typing import Optional
+from typing import Optional, Tuple
 from fastapi import HTTPException
 
 from app.error_handlers import raise_http_error_with_code
 
 logger = logging.getLogger(__name__)
+
+
+def _check_account_status_v2(account_id: str) -> Tuple[bool, bool]:
+    """
+    使用 V2 API 检查账户状态
+    
+    Returns:
+        Tuple[details_submitted, charges_enabled]
+    """
+    import stripe
+    from stripe import _stripe as stripe_v2
+    
+    try:
+        account = stripe_v2.core.accounts.retrieve(
+            account_id,
+            include=["requirements", "configuration.recipient"]
+        )
+        
+        # 从 V2 API 响应中提取状态
+        requirements = account.get("requirements", {})
+        summary = requirements.get("summary", {})
+        minimum_deadline = summary.get("minimum_deadline", {})
+        
+        # 如果没有 minimum_deadline（即没有待完成的必填项），认为 details_submitted
+        details_submitted = minimum_deadline is None or len(minimum_deadline) == 0
+        
+        # 检查 charges_enabled (recipient 配置中的 stripe_transfers)
+        configuration = account.get("configuration", {})
+        recipient_config = configuration.get("recipient") or {}
+        recipient_capabilities = recipient_config.get("capabilities", {})
+        stripe_balance = recipient_capabilities.get("stripe_balance", {})
+        stripe_transfers = stripe_balance.get("stripe_transfers", {})
+        charges_enabled = stripe_transfers.get("status") == "active"
+        
+        # 如果 recipient 没有，检查 merchant (card_payments)
+        if not charges_enabled:
+            merchant_config = configuration.get("merchant") or {}
+            merchant_capabilities = merchant_config.get("capabilities", {})
+            card_payments = merchant_capabilities.get("card_payments", {})
+            charges_enabled = card_payments.get("status") == "active"
+        
+        logger.debug(f"V2 API 账户状态: {account_id}, details_submitted={details_submitted}, charges_enabled={charges_enabled}")
+        return (details_submitted, charges_enabled)
+        
+    except stripe.error.StripeError as e:
+        error_msg = str(e)
+        # 如果是 V1 账户，回退到 V1 API
+        if "v1_account_instead_of_v2_account" in error_msg or "V1 Accounts cannot be used" in error_msg:
+            logger.debug(f"账户 {account_id} 是 V1 账户，使用 V1 API")
+            account = stripe.Account.retrieve(account_id)
+            return (account.details_submitted, account.charges_enabled)
+        raise
 
 
 def validate_user_stripe_account_for_receiving(
@@ -41,10 +93,18 @@ def validate_user_stripe_account_for_receiving(
     # 验证收款账户是否有效且已完成设置
     try:
         stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
-        account = stripe.Account.retrieve(user.stripe_account_id)
+        
+        # 优先使用 V2 API（支持 V2 账户），回退到 V1 API
+        try:
+            details_submitted, charges_enabled = _check_account_status_v2(user.stripe_account_id)
+        except Exception as v2_err:
+            logger.warning(f"V2 API 检查失败，回退到 V1 API: {v2_err}")
+            account = stripe.Account.retrieve(user.stripe_account_id)
+            details_submitted = account.details_submitted
+            charges_enabled = account.charges_enabled
         
         # 检查账户是否已完成设置
-        if not account.details_submitted:
+        if not details_submitted:
             logger.warning(f"用户 {user.id} 的收款账户 {user.stripe_account_id} 未完成设置")
             raise_http_error_with_code(
                 message="您的收款账户尚未完成设置。请先完成收款账户设置。",
@@ -53,7 +113,7 @@ def validate_user_stripe_account_for_receiving(
             )
             
         # 可选：检查账户是否启用了收款功能
-        if not account.charges_enabled:
+        if not charges_enabled:
             logger.warning(f"用户 {user.id} 的收款账户 {user.stripe_account_id} 未启用收款功能")
             raise_http_error_with_code(
                 message="您的收款账户尚未启用收款功能。请完成账户验证。",
@@ -108,15 +168,25 @@ def get_user_stripe_account_status(user) -> dict:
     
     try:
         stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
-        account = stripe.Account.retrieve(user.stripe_account_id)
+        
+        # 优先使用 V2 API，回退到 V1 API
+        try:
+            details_submitted, charges_enabled = _check_account_status_v2(user.stripe_account_id)
+            # V2 API 不直接返回 payouts_enabled，这里假设与 charges_enabled 相同
+            payouts_enabled = charges_enabled
+        except Exception:
+            account = stripe.Account.retrieve(user.stripe_account_id)
+            details_submitted = account.details_submitted
+            charges_enabled = account.charges_enabled
+            payouts_enabled = account.payouts_enabled
         
         return {
             "has_account": True,
             "account_id": user.stripe_account_id,
-            "details_submitted": account.details_submitted,
-            "charges_enabled": account.charges_enabled,
-            "payouts_enabled": account.payouts_enabled,
-            "needs_setup": not account.details_submitted
+            "details_submitted": details_submitted,
+            "charges_enabled": charges_enabled,
+            "payouts_enabled": payouts_enabled,
+            "needs_setup": not details_submitted
         }
     except stripe.error.StripeError as e:
         logger.warning(f"获取用户 {user.id} 的 Stripe 账户状态失败: {e}")
