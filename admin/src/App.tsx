@@ -2,6 +2,7 @@ import React, { Suspense, lazy } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { Spin } from 'antd';
 import AdminRoute from './components/AdminRoute';
+import { AdminRoutes } from './routes/adminRoutes';
 
 // 懒加载页面组件
 const AdminLogin = lazy(() => import('./pages/AdminLogin'));
@@ -34,7 +35,14 @@ const App: React.FC = () => {
               <AdminDashboard />
             </AdminRoute>
           } />
-          
+
+          {/* Admin 子路由 - 需要认证 */}
+          <Route path="/admin/*" element={
+            <AdminRoute>
+              <AdminRoutes />
+            </AdminRoute>
+          } />
+
           {/* 其他路由重定向到首页 */}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
