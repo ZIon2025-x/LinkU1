@@ -16,17 +16,13 @@ logger = logging.getLogger(__name__)
 
 def set_cors_headers(response: Response, request: Request = None):
     """设置CORS响应头"""
+    from app.config import Config
+    
     if request:
         origin = request.headers.get("origin")
-        allowed_domains = [
-            "https://link-u1", 
-            "http://localhost", 
-            "https://www.link2ur.com", 
-            "https://api.link2ur.com",
-            "http://localhost:3000",
-            "http://localhost:8080"
-        ]
-        if origin and any(origin == domain or origin.startswith(domain) for domain in allowed_domains):
+        # 使用 Config.ALLOWED_ORIGINS（从环境变量读取）
+        allowed_origins = Config.ALLOWED_ORIGINS
+        if origin and any(origin == allowed or origin.startswith(allowed.rstrip('/')) for allowed in allowed_origins):
             response.headers["Access-Control-Allow-Origin"] = origin
             response.headers["Access-Control-Allow-Credentials"] = "true"
             response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, PATCH, DELETE, OPTIONS"

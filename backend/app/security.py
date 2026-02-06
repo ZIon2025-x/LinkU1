@@ -86,10 +86,9 @@ class SecurityConfig:
     COOKIE_SAMESITE = Config.COOKIE_SAMESITE
     # COOKIE_DOMAIN 已移除 - 现在只使用当前域名
 
-    # CORS配置
-    ALLOWED_ORIGINS = os.getenv(
-        "ALLOWED_ORIGINS", "http://localhost:3000,http://localhost:8080,https://www.link2ur.com"
-    ).split(",")
+    # CORS配置 - 使用 Config.ALLOWED_ORIGINS 保持一致
+    from app.config import Config as MainConfig
+    ALLOWED_ORIGINS = MainConfig.ALLOWED_ORIGINS
 
     # 安全头配置
     SECURITY_HEADERS = {

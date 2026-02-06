@@ -110,7 +110,7 @@ class TestPaymentAPI:
     def test_admin_payments_unauthorized(self):
         """测试：未授权用户不能访问支付管理"""
         with httpx.Client(timeout=self.timeout) as client:
-            response = client.get(f"{self.base_url}/admin/payments")
+            response = client.get(f"{self.base_url}/api/admin/payments")
 
             # 应该返回 401 或 403
             assert response.status_code in [401, 403], \
@@ -159,7 +159,7 @@ class TestPaymentAPI:
         """测试：未登录用户不能查看退款状态"""
         with httpx.Client(timeout=self.timeout) as client:
             # 使用一个假的任务 ID
-            response = client.get(f"{self.base_url}/tasks/12345678/refund-status")
+            response = client.get(f"{self.base_url}/api/tasks/12345678/refund-status")
 
             # 应该返回 401 或 403
             assert response.status_code in [401, 403, 404], \
@@ -177,7 +177,7 @@ class TestPaymentAPI:
         """测试：创建支付必须登录"""
         with httpx.Client(timeout=self.timeout) as client:
             response = client.post(
-                f"{self.base_url}/tasks/12345678/pay",
+                f"{self.base_url}/api/tasks/12345678/pay",
                 json={}
             )
 
@@ -193,7 +193,7 @@ class TestPaymentAPI:
         """测试：Stripe Webhook 端点存在"""
         with httpx.Client(timeout=self.timeout) as client:
             # Webhook 端点应该只接受 POST
-            response = client.get(f"{self.base_url}/stripe/webhook")
+            response = client.get(f"{self.base_url}/api/stripe/webhook")
 
             # GET 请求应该返回 405 (Method Not Allowed) 或 404
             assert response.status_code in [404, 405, 400], \

@@ -79,7 +79,7 @@ class TestTaskAPI:
         """测试：未登录用户不能创建任务"""
         with httpx.Client(timeout=self.timeout) as client:
             response = client.post(
-                f"{self.base_url}/api/async/tasks",
+                f"{self.base_url}/api/tasks",
                 json={
                     "title": "Test Task",
                     "description": "Test Description",
@@ -108,7 +108,7 @@ class TestTaskAPI:
             deadline = (datetime.utcnow() + timedelta(days=7)).isoformat()
             
             response = client.post(
-                f"{self.base_url}/api/async/tasks",
+                f"{self.base_url}/api/tasks",
                 json={
                     "title": f"API Test Task {unique_id}",
                     "description": "This is a test task created by automated API testing. Please ignore.",
@@ -149,7 +149,7 @@ class TestTaskAPI:
                 pytest.skip("登录失败")
 
             response = client.post(
-                f"{self.base_url}/api/async/tasks",
+                f"{self.base_url}/api/tasks",
                 json={
                     "title": ""  # 空标题
                     # 缺少其他必填字段
@@ -175,7 +175,7 @@ class TestTaskAPI:
         with httpx.Client(timeout=self.timeout) as client:
             # 尝试获取任务列表
             response = client.get(
-                f"{self.base_url}/api/async/tasks",
+                f"{self.base_url}/api/tasks",
                 params={"limit": 10, "offset": 0}
             )
 
@@ -201,7 +201,7 @@ class TestTaskAPI:
                 pytest.skip("登录失败")
 
             response = client.get(
-                f"{self.base_url}/api/async/tasks",
+                f"{self.base_url}/api/tasks",
                 params={"limit": 10, "offset": 0},
                 headers=self._get_auth_headers(),
                 cookies=TestTaskAPI._cookies
@@ -233,7 +233,7 @@ class TestTaskAPI:
 
         with httpx.Client(timeout=self.timeout, cookies=TestTaskAPI._cookies) as client:
             response = client.get(
-                f"{self.base_url}/tasks/{TestTaskAPI._test_task_id}",
+                f"{self.base_url}/api/tasks/{TestTaskAPI._test_task_id}",
                 headers=self._get_auth_headers()
             )
 
@@ -252,7 +252,7 @@ class TestTaskAPI:
         """测试：获取不存在的任务应返回 404"""
         with httpx.Client(timeout=self.timeout, cookies=TestTaskAPI._cookies) as client:
             response = client.get(
-                f"{self.base_url}/tasks/99999999",
+                f"{self.base_url}/api/tasks/99999999",
                 headers=self._get_auth_headers()
             )
 
@@ -277,7 +277,7 @@ class TestTaskAPI:
                 pytest.skip("登录失败")
 
             response = client.get(
-                f"{self.base_url}/my-tasks",
+                f"{self.base_url}/api/my-tasks",
                 headers=self._get_auth_headers(),
                 cookies=TestTaskAPI._cookies
             )
@@ -308,7 +308,7 @@ class TestTaskAPI:
                 pytest.skip("登录失败")
 
             response = client.get(
-                f"{self.base_url}/api/async/recommendations",
+                f"{self.base_url}/api/recommendations",
                 params={"limit": 5},
                 headers=self._get_auth_headers(),
                 cookies=TestTaskAPI._cookies
@@ -338,7 +338,7 @@ class TestTaskAPI:
                 pytest.skip("登录失败")
 
             response = client.get(
-                f"{self.base_url}/tasks/{TestTaskAPI._test_task_id}/match-score",
+                f"{self.base_url}/api/tasks/{TestTaskAPI._test_task_id}/match-score",
                 headers=self._get_auth_headers(),
                 cookies=TestTaskAPI._cookies
             )
@@ -364,7 +364,7 @@ class TestTaskAPI:
 
         with httpx.Client(timeout=self.timeout) as client:
             response = client.get(
-                f"{self.base_url}/tasks/{TestTaskAPI._test_task_id}/history",
+                f"{self.base_url}/api/tasks/{TestTaskAPI._test_task_id}/history",
                 headers=self._get_auth_headers(),
                 cookies=TestTaskAPI._cookies
             )
@@ -394,7 +394,7 @@ class TestTaskAPI:
                 pytest.skip("登录失败")
 
             response = client.put(
-                f"{self.base_url}/api/async/tasks/{task_id}",
+                f"{self.base_url}/api/tasks/{task_id}",
                 json={
                     "description": "Updated description by API test"
                 },
@@ -420,7 +420,7 @@ class TestTaskAPI:
 
         with httpx.Client(timeout=self.timeout) as client:
             response = client.put(
-                f"{self.base_url}/api/async/tasks/{TestTaskAPI._test_task_id}",
+                f"{self.base_url}/api/tasks/{TestTaskAPI._test_task_id}",
                 json={
                     "description": "Unauthorized update"
                 }
@@ -441,7 +441,7 @@ class TestTaskAPI:
         """测试：未登录用户不能取消任务"""
         with httpx.Client(timeout=self.timeout) as client:
             response = client.post(
-                f"{self.base_url}/tasks/12345678/cancel"
+                f"{self.base_url}/api/tasks/12345678/cancel"
             )
 
             assert response.status_code in [401, 403, 404], \
@@ -459,7 +459,7 @@ class TestTaskAPI:
         """测试：未登录用户不能接受任务"""
         with httpx.Client(timeout=self.timeout) as client:
             response = client.post(
-                f"{self.base_url}/tasks/12345678/accept"
+                f"{self.base_url}/api/tasks/12345678/accept"
             )
 
             assert response.status_code in [401, 403, 404], \
@@ -480,7 +480,7 @@ class TestTaskAPI:
                 pytest.skip("登录失败")
 
             response = client.get(
-                f"{self.base_url}/api/async/tasks",
+                f"{self.base_url}/api/tasks",
                 params={
                     "limit": 10,
                     "offset": 0,
@@ -504,7 +504,7 @@ class TestTaskAPI:
                 pytest.skip("登录失败")
 
             response = client.get(
-                f"{self.base_url}/api/async/tasks",
+                f"{self.base_url}/api/tasks",
                 params={
                     "limit": 10,
                     "offset": 0,
@@ -532,7 +532,7 @@ class TestTaskAPI:
 
         with httpx.Client(timeout=self.timeout) as client:
             response = client.get(
-                f"{self.base_url}/tasks/{TestTaskAPI._test_task_id}/reviews",
+                f"{self.base_url}/api/tasks/{TestTaskAPI._test_task_id}/reviews",
                 headers=self._get_auth_headers(),
                 cookies=TestTaskAPI._cookies
             )
@@ -550,7 +550,7 @@ class TestTaskAPI:
         """测试：未登录用户不能提交评价"""
         with httpx.Client(timeout=self.timeout) as client:
             response = client.post(
-                f"{self.base_url}/tasks/12345678/review",
+                f"{self.base_url}/api/tasks/12345678/review",
                 json={
                     "rating": 5,
                     "comment": "Great task!"
@@ -578,7 +578,7 @@ class TestTaskAPI:
                 pytest.skip("登录失败")
 
             response = client.get(
-                f"{self.base_url}/users/{TestTaskAPI._user_id}/task-statistics",
+                f"{self.base_url}/api/users/{TestTaskAPI._user_id}/task-statistics",
                 headers=self._get_auth_headers(),
                 cookies=TestTaskAPI._cookies
             )

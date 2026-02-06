@@ -51,7 +51,7 @@ class TestAuthAPI:
         
         with httpx.Client(timeout=self.timeout) as client:
             response = client.post(
-                f"{self.base_url}/api/secure-auth/register",
+                f"{self.base_url}/api/register",
                 json={
                     "name": f"Test User {unique_id}",
                     "email": TestAuthAPI._temp_email,
@@ -85,7 +85,7 @@ class TestAuthAPI:
 
         with httpx.Client(timeout=self.timeout) as client:
             response = client.post(
-                f"{self.base_url}/api/secure-auth/register",
+                f"{self.base_url}/api/register",
                 json={
                     "name": "Duplicate User",
                     "email": TEST_USER_EMAIL,  # 使用已存在的邮箱
@@ -106,7 +106,7 @@ class TestAuthAPI:
         """测试：无效邮箱格式应该注册失败"""
         with httpx.Client(timeout=self.timeout) as client:
             response = client.post(
-                f"{self.base_url}/api/secure-auth/register",
+                f"{self.base_url}/api/register",
                 json={
                     "name": "Invalid Email User",
                     "email": "not-a-valid-email",
@@ -129,7 +129,7 @@ class TestAuthAPI:
         
         with httpx.Client(timeout=self.timeout) as client:
             response = client.post(
-                f"{self.base_url}/api/secure-auth/register",
+                f"{self.base_url}/api/register",
                 json={
                     "name": "Weak Password User",
                     "email": f"weak_pass_{unique_id}@test-linku.com",
@@ -152,7 +152,7 @@ class TestAuthAPI:
         
         with httpx.Client(timeout=self.timeout) as client:
             response = client.post(
-                f"{self.base_url}/api/secure-auth/register",
+                f"{self.base_url}/api/register",
                 json={
                     "name": "No Terms User",
                     "email": f"no_terms_{unique_id}@test-linku.com",
