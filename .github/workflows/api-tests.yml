@@ -131,7 +131,7 @@ jobs:
     timeout-minutes: 10
     
     env:
-      TEST_API_URL: ${{ needs.pre-check.outputs.test_url }}
+      TEST_API_URL: ${{ github.event.inputs.test_url || secrets.TEST_API_URL }}
       TEST_USER_EMAIL: ${{ secrets.TEST_USER_EMAIL }}
       TEST_USER_PASSWORD: ${{ secrets.TEST_USER_PASSWORD }}
       PYTHONPATH: ${{ github.workspace }}/backend
@@ -188,7 +188,7 @@ jobs:
     timeout-minutes: 10
     
     env:
-      TEST_API_URL: ${{ needs.pre-check.outputs.test_url }}
+      TEST_API_URL: ${{ github.event.inputs.test_url || secrets.TEST_API_URL }}
       TEST_USER_EMAIL: ${{ secrets.TEST_USER_EMAIL }}
       TEST_USER_PASSWORD: ${{ secrets.TEST_USER_PASSWORD }}
       PYTHONPATH: ${{ github.workspace }}/backend
@@ -245,7 +245,7 @@ jobs:
     timeout-minutes: 10
     
     env:
-      TEST_API_URL: ${{ needs.pre-check.outputs.test_url }}
+      TEST_API_URL: ${{ github.event.inputs.test_url || secrets.TEST_API_URL }}
       TEST_USER_EMAIL: ${{ secrets.TEST_USER_EMAIL }}
       TEST_USER_PASSWORD: ${{ secrets.TEST_USER_PASSWORD }}
       STRIPE_TEST_SECRET_KEY: ${{ secrets.STRIPE_TEST_SECRET_KEY }}

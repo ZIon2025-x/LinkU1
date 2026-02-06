@@ -3,6 +3,10 @@
   "version": "0.1.0",
   "private": true,
   "dependencies": {
+    "@stripe/connect-js": "^3.3.5",
+    "@stripe/react-connect-js": "^3.3.7",
+    "@stripe/react-stripe-js": "^2.0.0",
+    "@stripe/stripe-js": "^2.0.0",
     "@tanstack/react-query": "^5.90.7",
     "@testing-library/dom": "^10.4.0",
     "@testing-library/jest-dom": "^6.6.3",
@@ -27,16 +31,12 @@
     "react-router-dom": "^6.30.1",
     "react-scripts": "5.0.1",
     "react-window": "^2.2.3",
-    "@stripe/stripe-js": "^2.0.0",
-    "@stripe/react-stripe-js": "^2.0.0",
-    "@stripe/connect-js": "^3.3.5",
-    "@stripe/react-connect-js": "^3.3.7",
     "styled-components": "^6.1.19",
     "typescript": "^4.9.5",
     "web-vitals": "^2.1.4"
   },
   "scripts": {
-    "start": "react-scripts start",
+    "start": "cross-env HTTPS=true react-scripts start",
     "build": "react-scripts build",
     "build:analyze": "npm run build && npx source-map-explorer 'build/static/js/*.js'",
     "test": "react-scripts test",
@@ -71,5 +71,8 @@
       "react": "$react",
       "react-dom": "$react-dom"
     }
+  },
+  "devDependencies": {
+    "cross-env": "^10.1.0"
   }
 }

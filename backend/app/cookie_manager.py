@@ -51,9 +51,10 @@ class CookieManager:
     
     @staticmethod
     def _get_secure_value(user_agent: str = "", origin: str = "") -> bool:
-        """获取Secure值，移动端使用特殊配置，localhost 使用 False"""
-        # 如果请求来自 localhost，不使用 Secure（因为是 HTTP）
-        if origin and ("localhost" in origin or "127.0.0.1" in origin):
+        """获取Secure值，移动端使用特殊配置，HTTP localhost 使用 False"""
+        # 如果请求来自 HTTP localhost，不使用 Secure（因为是 HTTP）
+        # HTTPS localhost 仍然使用 Secure=True
+        if origin and origin.startswith("http://") and ("localhost" in origin or "127.0.0.1" in origin):
             return False
         
         # 检测移动端
@@ -191,11 +192,11 @@ class CookieManager:
         )
         
         # 设置刷新令牌Cookie（长期，用于刷新会话）
-        # refresh_token 使用 SameSite=None 以支持跨域请求（但 localhost 需要使用 lax）
-        # localhost 下 SameSite=None 需要 Secure=True，但 HTTP 不支持 Secure Cookie
-        is_localhost = origin and ("localhost" in origin or "127.0.0.1" in origin)
-        refresh_samesite = "lax" if is_localhost else "none"
-        refresh_secure = False if is_localhost else True
+        # refresh_token 使用 SameSite=None 以支持跨域请求
+        # 只有 HTTP localhost 需要使用 lax + Secure=False
+        is_http_localhost = origin and origin.startswith("http://") and ("localhost" in origin or "127.0.0.1" in origin)
+        refresh_samesite = "lax" if is_http_localhost else "none"
+        refresh_secure = False if is_http_localhost else True
         response.set_cookie(
             key="refresh_token",
             value=refresh_token,
