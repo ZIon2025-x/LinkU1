@@ -166,9 +166,9 @@ class CookieManager:
             session_max_age = 3600
             refresh_max_age = Config.REFRESH_TOKEN_EXPIRE_HOURS * 60 * 60
             
-            # 桌面端Cookie设置
+            # 桌面端Cookie设置（传递 origin 用于 localhost 检测）
             samesite_value = CookieManager._get_samesite_value(user_agent)
-            secure_value = CookieManager._get_secure_value(user_agent)
+            secure_value = CookieManager._get_secure_value(user_agent, origin)
             
             # 强制使用lax以提高跨域兼容性（覆盖环境变量设置）
             if samesite_value == "strict":
@@ -191,14 +191,18 @@ class CookieManager:
         )
         
         # 设置刷新令牌Cookie（长期，用于刷新会话）
-        # refresh_token 使用 SameSite=None 以支持跨域请求
+        # refresh_token 使用 SameSite=None 以支持跨域请求（但 localhost 需要使用 lax）
+        # localhost 下 SameSite=None 需要 Secure=True，但 HTTP 不支持 Secure Cookie
+        is_localhost = origin and ("localhost" in origin or "127.0.0.1" in origin)
+        refresh_samesite = "lax" if is_localhost else "none"
+        refresh_secure = False if is_localhost else True
         response.set_cookie(
             key="refresh_token",
             value=refresh_token,
             max_age=refresh_max_age,
             httponly=Config.COOKIE_HTTPONLY,
-            secure=True,  # SameSite=None 必须使用 Secure
-            samesite="none",  # 仅 refresh_token 使用 none
+            secure=refresh_secure,
+            samesite=refresh_samesite,
             path=cookie_path,
             domain=cookie_domain
         )
