@@ -31,8 +31,24 @@ def sample_user(db: Session):
 
 
 @pytest.fixture
-def sample_tasks(db: Session, sample_user: User):
-    """创建测试任务"""
+def other_poster(db: Session):
+    """创建另一个用户作为任务发布者（用于推荐测试）"""
+    user = User(
+        id="99999999",
+        name="other_poster",
+        email="poster@example.com",
+        hashed_password="hashed_password",
+        residence_city="Manchester",
+        user_level="normal"
+    )
+    db.add(user)
+    db.commit()
+    return user
+
+
+@pytest.fixture
+def sample_tasks(db: Session, sample_user: User, other_poster: User):
+    """创建测试任务（由其他用户发布，这样推荐算法不会排除它们）"""
     tasks = []
     now = datetime.utcnow()
     
@@ -50,7 +66,8 @@ def sample_tasks(db: Session, sample_user: User):
             reward=reward_amount,
             base_reward=reward_amount,  # 添加 base_reward 字段
             deadline=now + timedelta(days=i+1),
-            poster_id=sample_user.id,
+            # 使用其他用户作为发布者，这样推荐算法不会排除这些任务
+            poster_id=other_poster.id,
             status="open",
             task_level="normal"
         )
