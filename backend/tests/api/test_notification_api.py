@@ -193,11 +193,13 @@ class TestNotificationAPI:
     def test_mark_notification_read_unauthorized(self):
         """测试：未登录用户不能标记通知已读"""
         with httpx.Client(timeout=self.timeout) as client:
-            response = client.post(
+            # API 使用 PUT 方法
+            response = client.put(
                 f"{self.base_url}/api/notifications/12345678/read"
             )
 
-            assert response.status_code in [401, 403, 404, 405], \
+            # 401: 未认证, 403: 禁止访问, 404: 通知不存在
+            assert response.status_code in [401, 403, 404], \
                 f"未授权请求应该被拒绝，但返回了 {response.status_code}"
             
             print("✅ 标记已读正确要求认证")
@@ -210,7 +212,8 @@ class TestNotificationAPI:
     def test_mark_all_read_unauthorized(self):
         """测试：未登录用户不能标记全部已读"""
         with httpx.Client(timeout=self.timeout) as client:
-            response = client.post(f"{self.base_url}/api/notifications/read-all")
+            # API 使用 PUT 方法
+            response = client.put(f"{self.base_url}/api/notifications/read-all")
 
             # 应该返回 401 (未认证) 或 403 (禁止访问)
             assert response.status_code in [401, 403], \
@@ -228,7 +231,8 @@ class TestNotificationAPI:
             if not self._login(client):
                 pytest.skip("登录失败")
 
-            response = client.post(
+            # API 使用 PUT 方法
+            response = client.put(
                 f"{self.base_url}/api/notifications/read-all",
                 headers=self._get_auth_headers(),
                 cookies=TestNotificationAPI._cookies

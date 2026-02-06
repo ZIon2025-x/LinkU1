@@ -180,13 +180,13 @@ class TestPaymentAPI:
     def test_payment_requires_auth(self):
         """测试：创建支付必须登录"""
         with httpx.Client(timeout=self.timeout) as client:
+            # 不发送空 json，直接 POST
             response = client.post(
-                f"{self.base_url}/api/tasks/12345678/pay",
-                json={}
+                f"{self.base_url}/api/tasks/12345678/pay"
             )
 
-            # 应该返回 401 或 403
-            assert response.status_code in [401, 403, 404, 422], \
+            # 应该返回 401 (未认证) 或 403 (禁止访问) 或 404 (任务不存在)
+            assert response.status_code in [401, 403, 404], \
                 f"未授权支付请求应该被拒绝，但返回了 {response.status_code}"
             
             print("✅ 支付接口正确要求认证")

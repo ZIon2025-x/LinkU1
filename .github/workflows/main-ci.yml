@@ -139,6 +139,13 @@ jobs:
         npx tsc --noEmit
         echo "✅ TypeScript compilation successful"
     
+    - name: Run tests
+      if: steps.check-frontend.outputs.changed == 'true'
+      run: |
+        echo "🧪 Running frontend tests..."
+        npm test -- --watchAll=false --coverage --passWithNoTests
+        echo "✅ Frontend tests passed"
+    
     - name: Build test
       if: steps.check-frontend.outputs.changed == 'true'
       run: |
