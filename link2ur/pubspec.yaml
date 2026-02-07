@@ -127,6 +127,12 @@ flutter_launcher_icons:
   adaptive_icon_background: "#ffffff"
   adaptive_icon_foreground: "assets/images/logo.png"
 
+# QQ SDK 配置（tencent_kit 要求）
+# TODO: 替换为真实的腾讯开放平台 App ID
+tencent_kit:
+  app_id: "222222"
+  universal_link: "https://link2ur.com/universal_link/qq_conn/222222/"
+
 flutter:
   uses-material-design: true
   generate: true

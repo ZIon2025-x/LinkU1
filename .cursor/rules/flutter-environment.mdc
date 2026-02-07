@@ -7,10 +7,15 @@ alwaysApply: true
 
 Flutter SDK is installed at `F:\flutter\bin\`.
 
-When running Flutter or Dart commands in the Shell tool, always prepend the PATH first:
+All caches are configured on F: drive to avoid cross-drive path issues:
+- **PUB_CACHE**: `F:\DevCache\.pub-cache`
+- **GRADLE_USER_HOME**: `F:\DevCache\.gradle`
+- **Android SDK**: `F:\DevCache\Android\Sdk`
+
+When running Flutter or Dart commands in the Shell tool, always set the environment first:
 
 ```powershell
-$env:PATH = "F:\flutter\bin;" + $env:PATH; flutter <command>
+$env:PATH = "F:\flutter\bin;" + $env:PATH; $env:PUB_CACHE = "F:\DevCache\.pub-cache"; $env:GRADLE_USER_HOME = "F:\DevCache\.gradle"; flutter <command>
 ```
 
 Or call the full path directly:

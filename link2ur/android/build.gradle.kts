@@ -16,6 +16,15 @@ subprojects {
     project.layout.buildDirectory.value(newSubprojectBuildDir)
 }
 subprojects {
+    // 兼容旧版 Flutter 插件（如 fluwx 4.x）在 Kotlin 2.x 下的 deprecated API 错误
+    // 设置 apiVersion = 1.9 使得 @Deprecated(level=ERROR) 降级为 WARNING
+    pluginManager.withPlugin("org.jetbrains.kotlin.android") {
+        tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach {
+            compilerOptions {
+                apiVersion.set(org.jetbrains.kotlin.gradle.dsl.KotlinVersion.KOTLIN_1_9)
+            }
+        }
+    }
     project.evaluationDependsOn(":app")
 }
 

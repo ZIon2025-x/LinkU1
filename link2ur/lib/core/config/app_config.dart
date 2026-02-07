@@ -13,9 +13,9 @@ class AppConfig {
   String get baseUrl {
     switch (_environment) {
       case AppEnvironment.development:
-        return 'http://localhost:8000';
+        return 'https://linktest.up.railway.app';
       case AppEnvironment.staging:
-        return 'https://staging-api.link2ur.com';
+        return 'https://linktest.up.railway.app';
       case AppEnvironment.production:
         return 'https://api.link2ur.com';
     }
@@ -25,9 +25,9 @@ class AppConfig {
   String get wsUrl {
     switch (_environment) {
       case AppEnvironment.development:
-        return 'ws://localhost:8000';
+        return 'wss://linktest.up.railway.app';
       case AppEnvironment.staging:
-        return 'wss://staging-api.link2ur.com';
+        return 'wss://linktest.up.railway.app';
       case AppEnvironment.production:
         return 'wss://api.link2ur.com';
     }
