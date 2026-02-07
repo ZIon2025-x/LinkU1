@@ -1488,13 +1488,15 @@ def get_unread_messages(db: Session, user_id: str):
     task_ids_set = set()
     
     # 1. 作为发布者或接受者的任务（单人任务）
+    # ⚠️ 排除已取消的任务，与前端过滤逻辑一致
     user_tasks_1 = (
         db.query(Task.id)
         .filter(
             or_(
                 Task.poster_id == user_id,
                 Task.taker_id == user_id
-            )
+            ),
+            Task.status != 'cancelled'
         )
         .all()
     )
@@ -1515,27 +1517,29 @@ def get_unread_messages(db: Session, user_id: str):
     participant_task_id_list = [row[0] for row in participant_task_ids]
     
     if participant_task_id_list:
-        # 查询这些任务中哪些是多人任务
+        # 查询这些任务中哪些是多人任务（排除已取消的任务）
         participant_tasks = (
             db.query(Task.id)
             .filter(
                 and_(
                     Task.id.in_(participant_task_id_list),
-                    Task.is_multi_participant.is_(True)  # 使用 is_() 而不是 ==
+                    Task.is_multi_participant.is_(True),  # 使用 is_() 而不是 ==
+                    Task.status != 'cancelled'
                 )
             )
             .all()
         )
         task_ids_set.update([task.id for task in participant_tasks])
     
-    # 3. 作为多人任务创建者的任务（任务达人创建的活动）
+    # 3. 作为多人任务创建者的任务（任务达人创建的活动，排除已取消的任务）
     expert_creator_tasks = (
         db.query(Task.id)
         .filter(
             and_(
                 Task.is_multi_participant.is_(True),  # 使用 is_() 而不是 ==
                 Task.created_by_expert.is_(True),  # 使用 is_() 而不是 ==
-                Task.expert_creator_id == user_id
+                Task.expert_creator_id == user_id,
+                Task.status != 'cancelled'
             )
         )
         .all()
@@ -1577,7 +1581,8 @@ def get_unread_messages(db: Session, user_id: str):
                     Message.sender_id != user_id,
                     Message.sender_id.notin_(['system', 'SYSTEM']),  # 排除系统消息
                     Message.message_type != 'system',  # 排除系统类型消息
-                    Message.conversation_type == 'task'
+                    Message.conversation_type == 'task',
+                    Task.status != 'cancelled'  # ⚠️ 修复：排除已取消任务的消息，与前端过滤逻辑一致
                 )
                 .all()
             )
@@ -1593,6 +1598,7 @@ def get_unread_messages(db: Session, user_id: str):
                     Message.sender_id.notin_(['system', 'SYSTEM']),  # 排除系统消息
                     Message.message_type != 'system',  # 排除系统类型消息
                     Message.conversation_type == 'task',
+                    Task.status != 'cancelled',  # ⚠️ 修复：排除已取消任务的消息，与前端过滤逻辑一致
                     ~exists(
                         select(1).where(
                             and_(
