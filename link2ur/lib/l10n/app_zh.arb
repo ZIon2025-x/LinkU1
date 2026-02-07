@@ -2809,5 +2809,35 @@
   "notificationForum": "论坛通知",
 
   "infoPrivacyPolicy": "隐私政策",
-  "infoTermsOfService": "服务条款"
+  "infoTermsOfService": "服务条款",
+
+  "errorNetworkTimeout": "网络连接超时",
+  "errorRequestFailed": "请求失败",
+  "errorRequestCancelled": "请求已取消",
+  "errorNetworkConnection": "网络连接失败",
+  "errorUnknown": "发生未知错误",
+  "errorInsufficientFunds": "余额不足，请更换支付方式或充值后重试。",
+  "errorCardDeclined": "银行卡被拒绝，请更换银行卡或联系银行。",
+  "errorExpiredCard": "银行卡已过期，请更换银行卡。",
+
+  "searchTitle": "搜索",
+  "searchHint": "搜索任务、帖子、商品",
+  "searchNoResults": "未找到结果",
+  "searchTryDifferent": "尝试使用不同的关键词搜索",
+  "searchResultCount": "共找到 {count} 个结果",
+  "@searchResultCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+
+  "networkOffline": "网络已断开",
+  "networkOnline": "网络已恢复",
+
+  "notificationPermissionTitle": "开启推送通知",
+  "notificationPermissionDescription": "开启通知后，您可以及时收到：\n\n• 任务状态更新\n• 新消息提醒\n• 任务匹配推荐\n• 优惠活动通知",
+  "notificationPermissionEnable": "开启通知",
+  "notificationPermissionSkip": "暂时跳过"
 }

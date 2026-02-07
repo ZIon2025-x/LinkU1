@@ -22,7 +22,8 @@ class WebSocketService {
   int _reconnectAttempts = 0;
   static const int _maxReconnectAttempts = 5;
   static const Duration _heartbeatInterval = Duration(seconds: 30);
-  static const Duration _reconnectDelay = Duration(seconds: 3);
+  static const Duration _initialReconnectDelay = Duration(seconds: 1);
+  static const Duration _maxReconnectDelay = Duration(seconds: 30);
 
   /// 消息流控制器
   final _messageController = StreamController<WebSocketMessage>.broadcast();
@@ -206,7 +207,7 @@ class WebSocketService {
     _heartbeatTimer = null;
   }
 
-  /// 安排重连
+  /// 安排重连（指数退避）
   void _scheduleReconnect() {
     if (_reconnectAttempts >= _maxReconnectAttempts) {
       AppLogger.warning('Max reconnect attempts reached');
@@ -214,7 +215,21 @@ class WebSocketService {
     }
 
     _reconnectTimer?.cancel();
-    _reconnectTimer = Timer(_reconnectDelay, () {
+
+    // 指数退避：1s, 2s, 4s, 8s, 16s... 最大30s
+    final delaySeconds = _initialReconnectDelay.inSeconds *
+        (1 << _reconnectAttempts); // 2^attempts
+    final clampedDelay = Duration(
+      seconds: delaySeconds.clamp(
+        _initialReconnectDelay.inSeconds,
+        _maxReconnectDelay.inSeconds,
+      ),
+    );
+
+    AppLogger.info(
+        'Scheduling reconnect in ${clampedDelay.inSeconds}s (attempt ${_reconnectAttempts + 1})');
+
+    _reconnectTimer = Timer(clampedDelay, () {
       _reconnectAttempts++;
       AppLogger.info('Reconnecting... (attempt $_reconnectAttempts)');
       connect();

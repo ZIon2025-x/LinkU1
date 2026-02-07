@@ -56,6 +56,7 @@ import '../../features/notification/views/notification_list_view.dart';
 import '../../features/notification/views/task_chat_list_view.dart';
 import '../../features/auth/views/forgot_password_view.dart';
 import '../../features/info/views/vip_view.dart';
+import '../../features/search/views/search_view.dart';
 
 /// 路由路径常量
 class AppRoutes {
@@ -150,6 +151,9 @@ class AppRoutes {
 
   // 积分与优惠券
   static const String couponPoints = '/coupon-points';
+
+  // 搜索
+  static const String search = '/search';
 
   // 信息
   static const String faq = '/faq';
@@ -461,6 +465,13 @@ class AppRouter {
         path: AppRoutes.vipPurchase,
         name: 'vipPurchase',
         builder: (context, state) => const VIPPurchaseView(),
+      ),
+
+      // 全局搜索
+      GoRoute(
+        path: AppRoutes.search,
+        name: 'search',
+        builder: (context, state) => const SearchView(),
       ),
 
       // 任务筛选

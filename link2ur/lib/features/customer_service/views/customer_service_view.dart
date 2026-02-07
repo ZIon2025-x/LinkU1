@@ -1,47 +1,19 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_typography.dart';
 import '../../../core/design/app_radius.dart';
 import '../../../core/utils/l10n_extension.dart';
 import '../../../core/widgets/loading_view.dart';
-
-/// 客服消息模型
-class CustomerServiceMessage {
-  final String id;
-  final String content;
-  final String? senderType; // 'user', 'agent', 'system'
-  final String? messageType;
-  final String? createdAt;
-
-  const CustomerServiceMessage({
-    required this.id,
-    required this.content,
-    this.senderType,
-    this.messageType,
-    this.createdAt,
-  });
-}
-
-/// 客服聊天模型
-class CustomerServiceChat {
-  final String chatId;
-  final int isEnded;
-  final int? totalMessages;
-  final String? createdAt;
-
-  const CustomerServiceChat({
-    required this.chatId,
-    this.isEnded = 0,
-    this.totalMessages,
-    this.createdAt,
-  });
-}
+import '../../../data/models/customer_service.dart';
+import '../../../data/repositories/common_repository.dart';
+import '../bloc/customer_service_bloc.dart';
 
 /// 客服视图
 /// 参考iOS CustomerServiceView.swift
-class CustomerServiceView extends StatefulWidget {
+class CustomerServiceView extends StatelessWidget {
   const CustomerServiceView({
     super.key,
     this.isModal = false,
@@ -50,19 +22,30 @@ class CustomerServiceView extends StatefulWidget {
   final bool isModal;
 
   @override
-  State<CustomerServiceView> createState() => _CustomerServiceViewState();
+  Widget build(BuildContext context) {
+    return BlocProvider(
+      create: (context) => CustomerServiceBloc(
+        commonRepository: context.read<CommonRepository>(),
+      ),
+      child: _CustomerServiceContent(isModal: isModal),
+    );
+  }
 }
 
-class _CustomerServiceViewState extends State<CustomerServiceView> {
+class _CustomerServiceContent extends StatefulWidget {
+  const _CustomerServiceContent({required this.isModal});
+
+  final bool isModal;
+
+  @override
+  State<_CustomerServiceContent> createState() =>
+      _CustomerServiceContentState();
+}
+
+class _CustomerServiceContentState extends State<_CustomerServiceContent> {
   final TextEditingController _messageController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   final FocusNode _focusNode = FocusNode();
-
-  List<CustomerServiceMessage> _messages = [];
-  CustomerServiceChat? _chat;
-  bool _isSending = false;
-  bool _isConnecting = false;
-  String? _errorMessage;
 
   @override
   void dispose() {
@@ -86,7 +69,82 @@ class _CustomerServiceViewState extends State<CustomerServiceView> {
     }
   }
 
+  void _sendMessage() {
+    final text = _messageController.text.trim();
+    if (text.isEmpty) return;
+
+    context.read<CustomerServiceBloc>().add(CustomerServiceSendMessage(text));
+    _messageController.clear();
+    _focusNode.unfocus();
+    _scrollToBottom();
+  }
+
+  void _showRatingDialog() {
+    int selectedRating = 5;
+    final commentController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+          title: const Text('评价客服'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: List.generate(5, (index) {
+                  return IconButton(
+                    onPressed: () =>
+                        setDialogState(() => selectedRating = index + 1),
+                    icon: Icon(
+                      index < selectedRating ? Icons.star : Icons.star_border,
+                      color: AppColors.warning,
+                      size: 32,
+                    ),
+                  );
+                }),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: commentController,
+                maxLines: 3,
+                decoration: const InputDecoration(
+                  hintText: '留下您的评价（可选）',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('取消'),
+            ),
+            TextButton(
+              onPressed: () {
+                context.read<CustomerServiceBloc>().add(
+                      CustomerServiceRateChat(
+                        rating: selectedRating,
+                        comment: commentController.text.trim().isNotEmpty
+                            ? commentController.text.trim()
+                            : null,
+                      ),
+                    );
+                Navigator.pop(ctx);
+              },
+              child: const Text('提交'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   void _showChatHistory() {
+    final messages =
+        context.read<CustomerServiceBloc>().state.messages;
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -119,7 +177,7 @@ class _CustomerServiceViewState extends State<CustomerServiceView> {
                 ),
               ),
               const SizedBox(height: 16),
-              if (_messages.isEmpty)
+              if (messages.isEmpty)
                 Padding(
                   padding: const EdgeInsets.all(40),
                   child: Column(
@@ -145,15 +203,16 @@ class _CustomerServiceViewState extends State<CustomerServiceView> {
                 Flexible(
                   child: ListView.builder(
                     shrinkWrap: true,
-                    itemCount: _messages.length,
+                    itemCount: messages.length,
                     itemBuilder: (_, index) {
-                      final msg = _messages[index];
+                      final msg = messages[index];
                       final isUser = msg.senderType == 'user';
                       return ListTile(
                         dense: true,
                         leading: Icon(
                           isUser ? Icons.person : Icons.support_agent,
-                          color: isUser ? AppColors.primary : AppColors.accent,
+                          color:
+                              isUser ? AppColors.primary : AppColors.accent,
                           size: 20,
                         ),
                         title: Text(
@@ -185,152 +244,184 @@ class _CustomerServiceViewState extends State<CustomerServiceView> {
     );
   }
 
-  void _connectToService() {
-    setState(() {
-      _isConnecting = true;
-      _errorMessage = null;
-    });
-
-    // 模拟连接 - 实际应用中替换为API调用
-    Future.delayed(const Duration(seconds: 2), () {
-      if (mounted) {
-        setState(() {
-          _isConnecting = false;
-          _chat = const CustomerServiceChat(
-            chatId: 'demo-chat',
-            isEnded: 0,
-          );
-          _messages = [
-            const CustomerServiceMessage(
-              id: 'welcome',
-              content: '您好！我是客服小助手，请问有什么可以帮您？',
-              senderType: 'agent',
-              createdAt: '',
-            ),
-          ];
-        });
-        _scrollToBottom();
-      }
-    });
-  }
-
-  void _sendMessage() {
-    final text = _messageController.text.trim();
-    if (text.isEmpty || _isSending || _chat == null) return;
-    if (_chat!.isEnded == 1) return;
-
-    setState(() {
-      _isSending = true;
-      _messages.add(CustomerServiceMessage(
-        id: 'msg_${DateTime.now().millisecondsSinceEpoch}',
-        content: text,
-        senderType: 'user',
-        createdAt: DateTime.now().toIso8601String(),
-      ));
-    });
-    _messageController.clear();
-    _focusNode.unfocus();
-    _scrollToBottom();
-
-    // 模拟回复
-    Future.delayed(const Duration(seconds: 1), () {
-      if (mounted) {
-        setState(() {
-          _isSending = false;
-          _messages.add(CustomerServiceMessage(
-            id: 'reply_${DateTime.now().millisecondsSinceEpoch}',
-            content: '感谢您的反馈，我们会尽快处理。',
-            senderType: 'agent',
-            createdAt: DateTime.now().toIso8601String(),
-          ));
-        });
-        _scrollToBottom();
-      }
-    });
-  }
-
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(context.l10n.customerServiceCustomerService),
-        centerTitle: true,
-        leading: widget.isModal
-            ? null
-            : IconButton(
-                icon: const Icon(Icons.arrow_back),
+    return BlocListener<CustomerServiceBloc, CustomerServiceState>(
+      listenWhen: (prev, curr) =>
+          curr.actionMessage != null ||
+          prev.messages.length != curr.messages.length,
+      listener: (context, state) {
+        if (state.actionMessage != null) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(state.actionMessage!)),
+          );
+        }
+        _scrollToBottom();
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text(context.l10n.customerServiceCustomerService),
+          centerTitle: true,
+          leading: widget.isModal
+              ? null
+              : IconButton(
+                  icon: const Icon(Icons.arrow_back),
+                  onPressed: () => Navigator.of(context).pop(),
+                ),
+          actions: [
+            if (widget.isModal)
+              TextButton(
                 onPressed: () => Navigator.of(context).pop(),
-              ),
-        actions: [
-          if (widget.isModal)
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: Text(
-                '完成',
-                style: TextStyle(color: AppColors.primary),
-              ),
-            ),
-          if (_chat != null)
-            IconButton(
-              icon: const Icon(Icons.history),
-              onPressed: _showChatHistory,
-            ),
-        ],
-      ),
-      body: Stack(
-        children: [
-          Column(
-            children: [
-              // 消息列表
-              Expanded(
-                child: _buildMessageList(isDark),
-              ),
-
-              // 输入区域
-              _buildInputArea(isDark),
-            ],
-          ),
-
-          // 连接中覆盖层
-          if (_isConnecting)
-            Container(
-              color: Colors.black.withValues(alpha: 0.3),
-              child: Center(
-                child: Container(
-                  padding: AppSpacing.allLg,
-                  decoration: BoxDecoration(
-                    color: isDark
-                        ? AppColors.cardBackgroundDark
-                        : AppColors.cardBackgroundLight,
-                    borderRadius: AppRadius.allLarge,
-                  ),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const LoadingIndicator(),
-                      AppSpacing.vMd,
-                      Text(
-                        '正在连接客服...',
-                        style: AppTypography.subheadline.copyWith(
-                          color: isDark
-                              ? AppColors.textSecondaryDark
-                              : AppColors.textSecondaryLight,
-                        ),
-                      ),
-                    ],
-                  ),
+                child: Text(
+                  '完成',
+                  style: TextStyle(color: AppColors.primary),
                 ),
               ),
+            BlocBuilder<CustomerServiceBloc, CustomerServiceState>(
+              builder: (context, state) {
+                return Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (state.isConnected || state.isEnded)
+                      IconButton(
+                        icon: const Icon(Icons.history),
+                        onPressed: _showChatHistory,
+                      ),
+                    if (state.isEnded)
+                      IconButton(
+                        icon: const Icon(Icons.star_outline),
+                        onPressed: _showRatingDialog,
+                      ),
+                    if (state.isConnected)
+                      IconButton(
+                        icon: const Icon(Icons.close),
+                        tooltip: '结束对话',
+                        onPressed: () {
+                          showDialog(
+                            context: context,
+                            builder: (ctx) => AlertDialog(
+                              title: const Text('结束对话'),
+                              content: const Text('确定要结束当前客服对话吗？'),
+                              actions: [
+                                TextButton(
+                                  onPressed: () => Navigator.pop(ctx),
+                                  child: const Text('取消'),
+                                ),
+                                TextButton(
+                                  onPressed: () {
+                                    Navigator.pop(ctx);
+                                    context
+                                        .read<CustomerServiceBloc>()
+                                        .add(const CustomerServiceEndChat());
+                                  },
+                                  child: Text('结束',
+                                      style:
+                                          TextStyle(color: AppColors.error)),
+                                ),
+                              ],
+                            ),
+                          );
+                        },
+                      ),
+                  ],
+                );
+              },
             ),
+          ],
+        ),
+        body: BlocBuilder<CustomerServiceBloc, CustomerServiceState>(
+          builder: (context, state) {
+            return Stack(
+              children: [
+                Column(
+                  children: [
+                    // 排队信息
+                    if (state.queueStatus != null &&
+                        state.queueStatus!.status == 'waiting')
+                      _buildQueueBanner(state.queueStatus!, isDark),
+
+                    // 消息列表
+                    Expanded(
+                      child: _buildMessageList(state, isDark),
+                    ),
+
+                    // 输入区域
+                    _buildInputArea(state, isDark),
+                  ],
+                ),
+
+                // 连接中覆盖层
+                if (state.isConnecting)
+                  Container(
+                    color: Colors.black.withValues(alpha: 0.3),
+                    child: Center(
+                      child: Container(
+                        padding: AppSpacing.allLg,
+                        decoration: BoxDecoration(
+                          color: isDark
+                              ? AppColors.cardBackgroundDark
+                              : AppColors.cardBackgroundLight,
+                          borderRadius: AppRadius.allLarge,
+                        ),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const LoadingIndicator(),
+                            AppSpacing.vMd,
+                            Text(
+                              '正在连接客服...',
+                              style: AppTypography.subheadline.copyWith(
+                                color: isDark
+                                    ? AppColors.textSecondaryDark
+                                    : AppColors.textSecondaryLight,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  Widget _buildQueueBanner(
+      CustomerServiceQueueStatus queueStatus, bool isDark) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      color: AppColors.warning.withValues(alpha: 0.1),
+      child: Row(
+        children: [
+          const Icon(Icons.access_time, size: 16, color: AppColors.warning),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              queueStatus.position != null
+                  ? '排队中，前方还有 ${queueStatus.position} 人'
+                  : '正在等待客服接入...',
+              style: const TextStyle(fontSize: 13, color: AppColors.warning),
+            ),
+          ),
+          TextButton(
+            onPressed: () => context
+                .read<CustomerServiceBloc>()
+                .add(const CustomerServiceCheckQueue()),
+            child: const Text('刷新'),
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildMessageList(bool isDark) {
-    if (_messages.isEmpty && _chat == null) {
+  Widget _buildMessageList(CustomerServiceState state, bool isDark) {
+    if (state.messages.isEmpty &&
+        state.status == CustomerServiceStatus.initial) {
       return _buildWelcomeState(isDark);
     }
 
@@ -342,12 +433,11 @@ class _CustomerServiceViewState extends State<CustomerServiceView> {
           horizontal: AppSpacing.md,
           vertical: AppSpacing.sm,
         ),
-        itemCount: _messages.length,
+        itemCount: state.messages.length,
         itemBuilder: (context, index) {
-          final message = _messages[index];
+          final message = state.messages[index];
           final isFromUser = message.senderType == 'user';
-          final isSystem =
-              message.senderType == 'system' || message.messageType == 'system';
+          final isSystem = message.messageType == 'system';
 
           if (isSystem) {
             return _buildSystemMessage(message, isDark);
@@ -383,7 +473,7 @@ class _CustomerServiceViewState extends State<CustomerServiceView> {
             ),
             AppSpacing.vSm,
             Text(
-              '发送消息开始与客服对话',
+              '点击下方按钮连接客服',
               style: AppTypography.subheadline.copyWith(
                 color: isDark
                     ? AppColors.textSecondaryDark
@@ -392,17 +482,23 @@ class _CustomerServiceViewState extends State<CustomerServiceView> {
               textAlign: TextAlign.center,
             ),
             AppSpacing.vXl,
-            if (_errorMessage != null)
-              Padding(
-                padding: AppSpacing.allMd,
-                child: Text(
-                  _errorMessage!,
-                  style: AppTypography.subheadline.copyWith(
-                    color: AppColors.error,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-              ),
+            BlocBuilder<CustomerServiceBloc, CustomerServiceState>(
+              builder: (context, state) {
+                if (state.errorMessage != null) {
+                  return Padding(
+                    padding: AppSpacing.allMd,
+                    child: Text(
+                      state.errorMessage!,
+                      style: AppTypography.subheadline.copyWith(
+                        color: AppColors.error,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  );
+                }
+                return const SizedBox.shrink();
+              },
+            ),
           ],
         ),
       ),
@@ -431,12 +527,14 @@ class _CustomerServiceViewState extends State<CustomerServiceView> {
                     : AppColors.textTertiaryLight,
               ),
               const SizedBox(width: 4),
-              Text(
-                message.content,
-                style: AppTypography.caption.copyWith(
-                  color: isDark
-                      ? AppColors.textSecondaryDark
-                      : AppColors.textSecondaryLight,
+              Flexible(
+                child: Text(
+                  message.content,
+                  style: AppTypography.caption.copyWith(
+                    color: isDark
+                        ? AppColors.textSecondaryDark
+                        : AppColors.textSecondaryLight,
+                  ),
                 ),
               ),
             ],
@@ -511,10 +609,8 @@ class _CustomerServiceViewState extends State<CustomerServiceView> {
     );
   }
 
-  Widget _buildInputArea(bool isDark) {
-    final chatEnded = _chat?.isEnded == 1;
-
-    if (chatEnded) {
+  Widget _buildInputArea(CustomerServiceState state, bool isDark) {
+    if (state.isEnded) {
       return Container(
         padding: EdgeInsets.symmetric(
           horizontal: AppSpacing.md,
@@ -530,42 +626,52 @@ class _CustomerServiceViewState extends State<CustomerServiceView> {
             ),
           ),
         ),
-        child: Row(
-          children: [
-            Icon(
-              Icons.check_circle,
-              size: 16,
-              color: isDark
-                  ? AppColors.textTertiaryDark
-                  : AppColors.textTertiaryLight,
-            ),
-            AppSpacing.hSm,
-            Expanded(
-              child: Text(
-                '对话已结束',
-                style: AppTypography.body.copyWith(
-                  color: isDark
-                      ? AppColors.textTertiaryDark
-                      : AppColors.textTertiaryLight,
+        child: SafeArea(
+          top: false,
+          child: Row(
+            children: [
+              Icon(
+                Icons.check_circle,
+                size: 16,
+                color: isDark
+                    ? AppColors.textTertiaryDark
+                    : AppColors.textTertiaryLight,
+              ),
+              AppSpacing.hSm,
+              Expanded(
+                child: Text(
+                  '对话已结束',
+                  style: AppTypography.body.copyWith(
+                    color: isDark
+                        ? AppColors.textTertiaryDark
+                        : AppColors.textTertiaryLight,
+                  ),
                 ),
               ),
-            ),
-            TextButton(
-              onPressed: () {
-                setState(() {
-                  _chat = null;
-                  _messages.clear();
-                });
-              },
-              child: Text(
-                '新对话',
-                style: AppTypography.caption.copyWith(
-                  color: AppColors.primary,
-                  fontWeight: FontWeight.w500,
+              TextButton(
+                onPressed: () => _showRatingDialog(),
+                child: Text(
+                  '评价',
+                  style: AppTypography.caption.copyWith(
+                    color: AppColors.accent,
+                    fontWeight: FontWeight.w500,
+                  ),
                 ),
               ),
-            ),
-          ],
+              TextButton(
+                onPressed: () => context
+                    .read<CustomerServiceBloc>()
+                    .add(const CustomerServiceStartNew()),
+                child: Text(
+                  '新对话',
+                  style: AppTypography.caption.copyWith(
+                    color: AppColors.primary,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       );
     }
@@ -590,10 +696,14 @@ class _CustomerServiceViewState extends State<CustomerServiceView> {
         child: Row(
           children: [
             // 连接按钮（仅在未连接时显示）
-            if (_chat == null)
+            if (!state.isConnected)
               IconButton(
-                onPressed: _isConnecting ? null : _connectToService,
-                icon: _isConnecting
+                onPressed: state.isConnecting
+                    ? null
+                    : () => context
+                        .read<CustomerServiceBloc>()
+                        .add(const CustomerServiceConnectRequested()),
+                icon: state.isConnecting
                     ? const LoadingIndicator(size: 20)
                     : const Icon(Icons.phone, color: AppColors.primary),
               ),
@@ -602,9 +712,9 @@ class _CustomerServiceViewState extends State<CustomerServiceView> {
               child: TextField(
                 controller: _messageController,
                 focusNode: _focusNode,
-                enabled: !_isSending && _chat != null,
+                enabled: !state.isSending && state.isConnected,
                 decoration: InputDecoration(
-                  hintText: '输入消息...',
+                  hintText: state.isConnected ? '输入消息...' : '请先连接客服',
                   border: OutlineInputBorder(
                     borderRadius: AppRadius.allSmall,
                     borderSide: BorderSide(
@@ -635,16 +745,14 @@ class _CustomerServiceViewState extends State<CustomerServiceView> {
             ),
             AppSpacing.hSm,
             IconButton(
-              onPressed: _messageController.text.isEmpty ||
-                      _isSending ||
-                      _chat == null
+              onPressed: !state.isConnected || state.isSending
                   ? null
                   : _sendMessage,
-              icon: _isSending
+              icon: state.isSending
                   ? const LoadingIndicator(size: 20)
                   : Icon(
                       Icons.arrow_upward,
-                      color: _messageController.text.isEmpty || _chat == null
+                      color: !state.isConnected
                           ? (isDark
                               ? AppColors.textSecondaryDark
                               : AppColors.textSecondaryLight)

@@ -357,24 +357,29 @@ async def get_task_chat_unread_count(
         from app.task_chat_business_logic import UnreadCountLogic
         
         # 查询用户相关的任务（作为发布者、接受者或多人任务参与者）
+        # ⚠️ 修复：排除已取消的任务，与前端/聊天列表逻辑一致
         task_ids_set = set()
         
-        # 1. 作为发布者或接受者的任务
+        # 1. 作为发布者或接受者的任务（排除已取消的任务）
         tasks_query_1 = select(models.Task.id).where(
-            or_(
-                models.Task.poster_id == current_user.id,
-                models.Task.taker_id == current_user.id
+            and_(
+                or_(
+                    models.Task.poster_id == current_user.id,
+                    models.Task.taker_id == current_user.id
+                ),
+                models.Task.status != 'cancelled'
             )
         )
         result_1 = await db.execute(tasks_query_1)
         task_ids_set.update([row[0] for row in result_1.all()])
         
-        # 1b. 多人任务：作为任务达人创建者（单独查询，避免在 or_() 中使用 and_() 导致的问题）
+        # 1b. 多人任务：作为任务达人创建者（排除已取消的任务）
         expert_creator_query = select(models.Task.id).where(
             and_(
                 models.Task.is_multi_participant.is_(True),
                 models.Task.created_by_expert.is_(True),
-                models.Task.expert_creator_id == current_user.id
+                models.Task.expert_creator_id == current_user.id,
+                models.Task.status != 'cancelled'
             )
         )
         expert_creator_result = await db.execute(expert_creator_query)
@@ -393,11 +398,12 @@ async def get_task_chat_unread_count(
         participant_task_ids = [row[0] for row in participant_result.all()]
         
         if participant_task_ids:
-            # 查询这些任务中哪些是多人任务
+            # 查询这些任务中哪些是多人任务（排除已取消的任务）
             multi_participant_query = select(models.Task.id).where(
                 and_(
                     models.Task.id.in_(participant_task_ids),
-                    models.Task.is_multi_participant.is_(True)
+                    models.Task.is_multi_participant.is_(True),
+                    models.Task.status != 'cancelled'
                 )
             )
             result_2 = await db.execute(multi_participant_query)

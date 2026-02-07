@@ -10,34 +10,38 @@ import '../../../core/widgets/error_state_view.dart';
 import '../../../core/widgets/buttons.dart';
 import '../../../data/repositories/student_verification_repository.dart';
 import '../../../data/models/student_verification.dart';
+import '../bloc/student_verification_bloc.dart';
 
 /// 学生认证视图
 /// 参考iOS StudentVerificationView.swift
-class StudentVerificationView extends StatefulWidget {
+class StudentVerificationView extends StatelessWidget {
   const StudentVerificationView({super.key});
 
   @override
-  State<StudentVerificationView> createState() =>
-      _StudentVerificationViewState();
+  Widget build(BuildContext context) {
+    return BlocProvider(
+      create: (context) => StudentVerificationBloc(
+        verificationRepository:
+            context.read<StudentVerificationRepository>(),
+      )..add(const StudentVerificationLoadRequested()),
+      child: const _StudentVerificationContent(),
+    );
+  }
 }
 
-class _StudentVerificationViewState extends State<StudentVerificationView> {
-  StudentVerification? _verification;
-  List<University> _universities = [];
-  bool _isLoading = false;
-  bool _isSubmitting = false;
-  String? _errorMessage;
+class _StudentVerificationContent extends StatefulWidget {
+  const _StudentVerificationContent();
 
-  // Form fields
+  @override
+  State<_StudentVerificationContent> createState() =>
+      _StudentVerificationContentState();
+}
+
+class _StudentVerificationContentState
+    extends State<_StudentVerificationContent> {
   University? _selectedUniversity;
   final TextEditingController _emailController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
-
-  @override
-  void initState() {
-    super.initState();
-    _loadData();
-  }
 
   @override
   void dispose() {
@@ -45,134 +49,67 @@ class _StudentVerificationViewState extends State<StudentVerificationView> {
     super.dispose();
   }
 
-  Future<void> _loadData() async {
-    setState(() {
-      _isLoading = true;
-      _errorMessage = null;
-    });
-
-    try {
-      final repository = context.read<StudentVerificationRepository>();
-
-      // Load verification status
-      final verification = await repository.getVerificationStatus();
-
-      setState(() {
-        _verification = verification;
-        _isLoading = false;
-
-        // Pre-fill form if email is locked
-        if (_verification!.emailLocked && _verification!.email != null) {
-          _emailController.text = _verification!.email!;
-        }
-      });
-    } catch (e) {
-      setState(() {
-        _errorMessage = e.toString();
-        _isLoading = false;
-      });
-    }
-  }
-
-  Future<void> _submitVerification() async {
-    if (!_formKey.currentState!.validate()) return;
-    if (_selectedUniversity == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('请选择大学'),
-          backgroundColor: AppColors.error,
-        ),
-      );
-      return;
-    }
-
-    setState(() {
-      _isSubmitting = true;
-      _errorMessage = null;
-    });
-
-    try {
-      final repository = context.read<StudentVerificationRepository>();
-      await repository.submitVerification(
-        SubmitStudentVerificationRequest(
-          universityId: _selectedUniversity!.id,
-          email: _emailController.text.trim(),
-        ),
-      );
-
-      setState(() {
-        _isSubmitting = false;
-      });
-
-      // Reload data to get updated status
-      await _loadData();
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('提交成功，请查收邮箱验证'),
-            backgroundColor: AppColors.success,
-          ),
-        );
-      }
-    } catch (e) {
-      setState(() {
-        _isSubmitting = false;
-        _errorMessage = e.toString();
-      });
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('提交失败: ${e.toString()}'),
-            backgroundColor: AppColors.error,
-          ),
-        );
-      }
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(context.l10n.studentVerificationVerification),
-      ),
-      body: _buildBody(),
-    );
-  }
+    return BlocListener<StudentVerificationBloc, StudentVerificationState>(
+      listenWhen: (prev, curr) => curr.actionMessage != null,
+      listener: (context, state) {
+        if (state.actionMessage != null) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(state.actionMessage!),
+              backgroundColor: state.actionMessage!.contains('成功')
+                  ? AppColors.success
+                  : AppColors.error,
+            ),
+          );
+        }
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text(context.l10n.studentVerificationVerification),
+        ),
+        body: BlocBuilder<StudentVerificationBloc, StudentVerificationState>(
+          builder: (context, state) {
+            if (state.isLoading) {
+              return const LoadingView();
+            }
 
-  Widget _buildBody() {
-    if (_isLoading) {
-      return const LoadingView();
-    }
+            if (state.status == StudentVerificationStatus.error &&
+                state.verification == null) {
+              return ErrorStateView.loadFailed(
+                message: state.errorMessage ?? '',
+                onRetry: () => context
+                    .read<StudentVerificationBloc>()
+                    .add(const StudentVerificationLoadRequested()),
+              );
+            }
 
-    if (_errorMessage != null && _verification == null) {
-      return ErrorStateView.loadFailed(
-        message: _errorMessage!,
-        onRetry: _loadData,
-      );
-    }
+            if (state.verification == null) {
+              return ErrorStateView.notFound();
+            }
 
-    if (_verification == null) {
-      return ErrorStateView.notFound();
-    }
+            final verification = state.verification!;
 
-    final verification = _verification!;
+            // Pre-fill email if locked
+            if (verification.emailLocked && verification.email != null) {
+              _emailController.text = verification.email!;
+            }
 
-    return SingleChildScrollView(
-      padding: AppSpacing.allMd,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // 认证状态卡片
-          _buildStatusCard(verification),
-          AppSpacing.vLg,
-
-          // 如果未认证或可以重新提交，显示表单
-          if (!verification.isVerified || verification.canRenew)
-            _buildVerificationForm(verification),
-        ],
+            return SingleChildScrollView(
+              padding: AppSpacing.allMd,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildStatusCard(verification),
+                  AppSpacing.vLg,
+                  if (!verification.isVerified || verification.canRenew)
+                    _buildVerificationForm(verification, state),
+                ],
+              ),
+            );
+          },
+        ),
       ),
     );
   }
@@ -246,7 +183,8 @@ class _StudentVerificationViewState extends State<StudentVerificationView> {
               ),
             ],
           ),
-          if (verification.isVerified && verification.daysRemaining != null) ...[
+          if (verification.isVerified &&
+              verification.daysRemaining != null) ...[
             AppSpacing.vMd,
             Divider(color: AppColors.dividerLight),
             AppSpacing.vMd,
@@ -277,7 +215,8 @@ class _StudentVerificationViewState extends State<StudentVerificationView> {
     );
   }
 
-  Widget _buildVerificationForm(StudentVerification verification) {
+  Widget _buildVerificationForm(
+      StudentVerification verification, StudentVerificationState state) {
     final canSubmit = !verification.emailLocked && !verification.isPending;
 
     return Form(
@@ -287,42 +226,7 @@ class _StudentVerificationViewState extends State<StudentVerificationView> {
         children: [
           const Text(
             '认证信息',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          AppSpacing.vMd,
-
-          // 大学选择
-          DropdownButtonFormField<University>(
-            value: _selectedUniversity,
-            decoration: InputDecoration(
-              labelText: '选择大学',
-              border: OutlineInputBorder(
-                borderRadius: AppRadius.allMedium,
-              ),
-              prefixIcon: const Icon(Icons.school_outlined),
-            ),
-            items: _universities.map((university) {
-              return DropdownMenuItem<University>(
-                value: university,
-                child: Text(university.displayName),
-              );
-            }).toList(),
-            onChanged: canSubmit
-                ? (University? value) {
-                    setState(() {
-                      _selectedUniversity = value;
-                    });
-                  }
-                : null,
-            validator: (value) {
-              if (value == null) {
-                return '请选择大学';
-              }
-              return null;
-            },
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
           ),
           AppSpacing.vMd,
 
@@ -355,8 +259,25 @@ class _StudentVerificationViewState extends State<StudentVerificationView> {
           if (canSubmit)
             PrimaryButton(
               text: verification.canRenew ? '续期认证' : '提交认证',
-              onPressed: _isSubmitting ? null : _submitVerification,
-              isLoading: _isSubmitting,
+              onPressed: state.isSubmitting
+                  ? null
+                  : () {
+                      if (!_formKey.currentState!.validate()) return;
+
+                      if (verification.canRenew) {
+                        context
+                            .read<StudentVerificationBloc>()
+                            .add(const StudentVerificationRenew());
+                      } else {
+                        context
+                            .read<StudentVerificationBloc>()
+                            .add(StudentVerificationSubmit(
+                              universityId: _selectedUniversity?.id ?? 0,
+                              email: _emailController.text.trim(),
+                            ));
+                      }
+                    },
+              isLoading: state.isSubmitting,
             ),
 
           // 提示信息
@@ -370,10 +291,7 @@ class _StudentVerificationViewState extends State<StudentVerificationView> {
               ),
               child: Row(
                 children: [
-                  Icon(
-                    Icons.info_outline,
-                    color: AppColors.warning,
-                  ),
+                  Icon(Icons.info_outline, color: AppColors.warning),
                   AppSpacing.hSm,
                   Expanded(
                     child: Text(
@@ -395,10 +313,7 @@ class _StudentVerificationViewState extends State<StudentVerificationView> {
               ),
               child: Row(
                 children: [
-                  Icon(
-                    Icons.pending_outlined,
-                    color: AppColors.warning,
-                  ),
+                  Icon(Icons.pending_outlined, color: AppColors.warning),
                   AppSpacing.hSm,
                   Expanded(
                     child: Text(

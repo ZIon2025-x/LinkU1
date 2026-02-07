@@ -1302,7 +1302,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String errorRequestFailed(int param1) {
-    return 'Request failed (Error code: $param1)';
+    return 'Request failed';
   }
 
   @override
@@ -1310,7 +1310,7 @@ class AppLocalizationsEn extends AppLocalizations {
       'Data parsing failed, please try again later';
 
   @override
-  String get errorUnknown => 'Unknown error occurred, please try again later';
+  String get errorUnknown => 'An unknown error occurred';
 
   @override
   String get errorFileTooLarge => 'File too large';
@@ -3583,7 +3583,7 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get networkOffline => 'Offline';
+  String get networkOffline => 'Network disconnected';
 
   @override
   String get networkDisconnected => 'Network disconnected';
@@ -5846,4 +5846,54 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get notificationForum => 'Forum Notifications';
+
+  @override
+  String get errorNetworkTimeout => 'Network connection timed out';
+
+  @override
+  String get errorRequestCancelled => 'Request cancelled';
+
+  @override
+  String get errorNetworkConnection => 'Network connection failed';
+
+  @override
+  String get errorInsufficientFunds =>
+      'Insufficient balance. Please change payment method or top up.';
+
+  @override
+  String get errorCardDeclined =>
+      'Card declined. Please change card or contact your bank.';
+
+  @override
+  String get errorExpiredCard => 'Card expired. Please use a different card.';
+
+  @override
+  String get searchTitle => 'Search';
+
+  @override
+  String get searchHint => 'Search tasks, posts, items';
+
+  @override
+  String get searchTryDifferent => 'Try searching with different keywords';
+
+  @override
+  String searchResultCount(int count) {
+    return 'Found $count results';
+  }
+
+  @override
+  String get networkOnline => 'Network restored';
+
+  @override
+  String get notificationPermissionTitle => 'Enable Push Notifications';
+
+  @override
+  String get notificationPermissionDescription =>
+      'Stay updated with:\n\n• Task status updates\n• New message alerts\n• Task matching recommendations\n• Promotional notifications';
+
+  @override
+  String get notificationPermissionEnable => 'Enable Notifications';
+
+  @override
+  String get notificationPermissionSkip => 'Skip for now';
 }

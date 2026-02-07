@@ -36,6 +36,13 @@ class ApiService {
       ),
     );
 
+    // 自动重试拦截器
+    _dio.interceptors.add(_RetryInterceptor(
+      dio: _dio,
+      maxRetries: ApiConfig.maxRetries,
+      retryDelayMs: ApiConfig.retryDelayMs,
+    ));
+
     // 网络监控拦截器（NetworkLogger + PerformanceMonitor）
     _dio.interceptors.add(NetworkMonitorInterceptor());
 
@@ -308,6 +315,7 @@ class ApiService {
   }
 
   /// 处理错误
+  /// 使用错误码标识，由 UI 层通过 l10n 转为本地化文本
   ApiResponse<T> _handleError<T>(DioException error) {
     String message;
     int? statusCode = error.response?.statusCode;
@@ -316,19 +324,19 @@ class ApiService {
       case DioExceptionType.connectionTimeout:
       case DioExceptionType.sendTimeout:
       case DioExceptionType.receiveTimeout:
-        message = '网络连接超时';
+        message = 'error_network_timeout';
         break;
       case DioExceptionType.badResponse:
-        message = _parseErrorMessage(error.response?.data) ?? '请求失败';
+        message = _parseErrorMessage(error.response?.data) ?? 'error_request_failed';
         break;
       case DioExceptionType.cancel:
-        message = '请求已取消';
+        message = 'error_request_cancelled';
         break;
       case DioExceptionType.connectionError:
-        message = '网络连接失败';
+        message = 'error_network_connection';
         break;
       default:
-        message = '未知错误';
+        message = 'error_unknown';
     }
 
     return ApiResponse.error(
@@ -412,4 +420,70 @@ class ApiException implements Exception {
 
   @override
   String toString() => 'ApiException: $message (code: $statusCode)';
+}
+
+/// 自动重试拦截器
+/// 对连接超时、发送超时、接收超时和连接错误自动重试
+class _RetryInterceptor extends Interceptor {
+  _RetryInterceptor({
+    required this.dio,
+    this.maxRetries = 3,
+    this.retryDelayMs = 1000,
+  });
+
+  final Dio dio;
+  final int maxRetries;
+  final int retryDelayMs;
+
+  static const String _retryCountKey = 'retry_count';
+
+  @override
+  void onError(DioException err, ErrorInterceptorHandler handler) async {
+    if (!_shouldRetry(err)) {
+      return handler.next(err);
+    }
+
+    final retryCount =
+        (err.requestOptions.extra[_retryCountKey] as int?) ?? 0;
+
+    if (retryCount >= maxRetries) {
+      AppLogger.warning(
+          'Max retries reached for ${err.requestOptions.uri}');
+      return handler.next(err);
+    }
+
+    final nextRetry = retryCount + 1;
+    // 指数退避：delay * 2^retryCount
+    final delayMs = retryDelayMs * (1 << retryCount);
+
+    AppLogger.info(
+        'Retrying request (${nextRetry}/$maxRetries) in ${delayMs}ms: ${err.requestOptions.uri}');
+
+    await Future.delayed(Duration(milliseconds: delayMs));
+
+    try {
+      err.requestOptions.extra[_retryCountKey] = nextRetry;
+
+      final response = await dio.fetch(err.requestOptions);
+      return handler.resolve(response);
+    } on DioException catch (e) {
+      return handler.next(e);
+    }
+  }
+
+  bool _shouldRetry(DioException err) {
+    switch (err.type) {
+      case DioExceptionType.connectionTimeout:
+      case DioExceptionType.sendTimeout:
+      case DioExceptionType.receiveTimeout:
+      case DioExceptionType.connectionError:
+        return true;
+      case DioExceptionType.badResponse:
+        // 重试 500+ 服务器错误（不含 401/403/404 等客户端错误）
+        final statusCode = err.response?.statusCode;
+        return statusCode != null && statusCode >= 500;
+      default:
+        return false;
+    }
+  }
 }

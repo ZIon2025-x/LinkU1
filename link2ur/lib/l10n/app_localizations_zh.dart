@@ -1185,7 +1185,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get searchResults => '结果';
 
   @override
-  String get searchNoResults => '没有找到相关结果';
+  String get searchNoResults => '未找到结果';
 
   @override
   String get searchTryOtherKeywords => '试试其他关键词';
@@ -1255,14 +1255,14 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String errorRequestFailed(int param1) {
-    return '请求失败 (错误代码: $param1)';
+    return '请求失败';
   }
 
   @override
   String get errorDecodingError => '数据解析失败，请稍后重试';
 
   @override
-  String get errorUnknown => '发生未知错误，请稍后重试';
+  String get errorUnknown => '发生未知错误';
 
   @override
   String get errorFileTooLarge => '文件过大';
@@ -3437,7 +3437,7 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get networkOffline => '离线';
+  String get networkOffline => '网络已断开';
 
   @override
   String get networkDisconnected => '网络连接已断开';
@@ -5600,6 +5600,54 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get notificationForum => '论坛通知';
+
+  @override
+  String get errorNetworkTimeout => '网络连接超时';
+
+  @override
+  String get errorRequestCancelled => '请求已取消';
+
+  @override
+  String get errorNetworkConnection => '网络连接失败';
+
+  @override
+  String get errorInsufficientFunds => '余额不足，请更换支付方式或充值后重试。';
+
+  @override
+  String get errorCardDeclined => '银行卡被拒绝，请更换银行卡或联系银行。';
+
+  @override
+  String get errorExpiredCard => '银行卡已过期，请更换银行卡。';
+
+  @override
+  String get searchTitle => '搜索';
+
+  @override
+  String get searchHint => '搜索任务、帖子、商品';
+
+  @override
+  String get searchTryDifferent => '尝试使用不同的关键词搜索';
+
+  @override
+  String searchResultCount(int count) {
+    return '共找到 $count 个结果';
+  }
+
+  @override
+  String get networkOnline => '网络已恢复';
+
+  @override
+  String get notificationPermissionTitle => '开启推送通知';
+
+  @override
+  String get notificationPermissionDescription =>
+      '开启通知后，您可以及时收到：\n\n• 任务状态更新\n• 新消息提醒\n• 任务匹配推荐\n• 优惠活动通知';
+
+  @override
+  String get notificationPermissionEnable => '开启通知';
+
+  @override
+  String get notificationPermissionSkip => '暂时跳过';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -6780,7 +6828,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get searchResults => '結果';
 
   @override
-  String get searchNoResults => '沒有找到相關結果';
+  String get searchNoResults => '未找到結果';
 
   @override
   String get searchTryOtherKeywords => '試試其他關鍵詞';
@@ -6850,14 +6898,14 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String errorRequestFailed(int param1) {
-    return '請求失敗 (錯誤代碼: $param1)';
+    return '請求失敗';
   }
 
   @override
   String get errorDecodingError => '數據解析失敗，請稍後重試';
 
   @override
-  String get errorUnknown => '發生未知錯誤，請稍後重試';
+  String get errorUnknown => '發生未知錯誤';
 
   @override
   String get errorFileTooLarge => '文件過大';
@@ -9032,7 +9080,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   }
 
   @override
-  String get networkOffline => '離線';
+  String get networkOffline => '網路已斷開';
 
   @override
   String get networkDisconnected => '網絡連接已斷開';
@@ -11192,4 +11240,52 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get notificationForum => '論壇通知';
+
+  @override
+  String get errorNetworkTimeout => '網路連線逾時';
+
+  @override
+  String get errorRequestCancelled => '請求已取消';
+
+  @override
+  String get errorNetworkConnection => '網路連線失敗';
+
+  @override
+  String get errorInsufficientFunds => '餘額不足，請更換支付方式或儲值後重試。';
+
+  @override
+  String get errorCardDeclined => '銀行卡被拒絕，請更換銀行卡或聯繫銀行。';
+
+  @override
+  String get errorExpiredCard => '銀行卡已過期，請更換銀行卡。';
+
+  @override
+  String get searchTitle => '搜尋';
+
+  @override
+  String get searchHint => '搜尋任務、貼文、商品';
+
+  @override
+  String get searchTryDifferent => '嘗試使用不同的關鍵詞搜尋';
+
+  @override
+  String searchResultCount(int count) {
+    return '共找到 $count 個結果';
+  }
+
+  @override
+  String get networkOnline => '網路已恢復';
+
+  @override
+  String get notificationPermissionTitle => '開啟推送通知';
+
+  @override
+  String get notificationPermissionDescription =>
+      '開啟通知後，您可以即時收到：\n\n• 任務狀態更新\n• 新訊息提醒\n• 任務配對推薦\n• 優惠活動通知';
+
+  @override
+  String get notificationPermissionEnable => '開啟通知';
+
+  @override
+  String get notificationPermissionSkip => '暫時跳過';
 }

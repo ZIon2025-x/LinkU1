@@ -2809,5 +2809,35 @@
   "notificationForum": "Forum Notifications",
 
   "infoPrivacyPolicy": "Privacy Policy",
-  "infoTermsOfService": "Terms of Service"
+  "infoTermsOfService": "Terms of Service",
+
+  "errorNetworkTimeout": "Network connection timed out",
+  "errorRequestFailed": "Request failed",
+  "errorRequestCancelled": "Request cancelled",
+  "errorNetworkConnection": "Network connection failed",
+  "errorUnknown": "An unknown error occurred",
+  "errorInsufficientFunds": "Insufficient balance. Please change payment method or top up.",
+  "errorCardDeclined": "Card declined. Please change card or contact your bank.",
+  "errorExpiredCard": "Card expired. Please use a different card.",
+
+  "searchTitle": "Search",
+  "searchHint": "Search tasks, posts, items",
+  "searchNoResults": "No results found",
+  "searchTryDifferent": "Try searching with different keywords",
+  "searchResultCount": "Found {count} results",
+  "@searchResultCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+
+  "networkOffline": "Network disconnected",
+  "networkOnline": "Network restored",
+
+  "notificationPermissionTitle": "Enable Push Notifications",
+  "notificationPermissionDescription": "Stay updated with:\n\n• Task status updates\n• New message alerts\n• Task matching recommendations\n• Promotional notifications",
+  "notificationPermissionEnable": "Enable Notifications",
+  "notificationPermissionSkip": "Skip for now"
 }

@@ -2779,5 +2779,35 @@
   "notificationEmptyMessage": "沒有新通知，已全部處理！",
   "notificationAll": "全部通知",
   "notificationTask": "任務通知",
-  "notificationForum": "論壇通知"
+  "notificationForum": "論壇通知",
+
+  "errorNetworkTimeout": "網路連線逾時",
+  "errorRequestFailed": "請求失敗",
+  "errorRequestCancelled": "請求已取消",
+  "errorNetworkConnection": "網路連線失敗",
+  "errorUnknown": "發生未知錯誤",
+  "errorInsufficientFunds": "餘額不足，請更換支付方式或儲值後重試。",
+  "errorCardDeclined": "銀行卡被拒絕，請更換銀行卡或聯繫銀行。",
+  "errorExpiredCard": "銀行卡已過期，請更換銀行卡。",
+
+  "searchTitle": "搜尋",
+  "searchHint": "搜尋任務、貼文、商品",
+  "searchNoResults": "未找到結果",
+  "searchTryDifferent": "嘗試使用不同的關鍵詞搜尋",
+  "searchResultCount": "共找到 {count} 個結果",
+  "@searchResultCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+
+  "networkOffline": "網路已斷開",
+  "networkOnline": "網路已恢復",
+
+  "notificationPermissionTitle": "開啟推送通知",
+  "notificationPermissionDescription": "開啟通知後，您可以即時收到：\n\n• 任務狀態更新\n• 新訊息提醒\n• 任務配對推薦\n• 優惠活動通知",
+  "notificationPermissionEnable": "開啟通知",
+  "notificationPermissionSkip": "暫時跳過"
 }

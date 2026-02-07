@@ -2538,7 +2538,7 @@ abstract class AppLocalizations {
   /// No description provided for @errorRequestFailed.
   ///
   /// In en, this message translates to:
-  /// **'Request failed (Error code: {param1})'**
+  /// **'Request failed'**
   String errorRequestFailed(int param1);
 
   /// No description provided for @errorDecodingError.
@@ -2550,7 +2550,7 @@ abstract class AppLocalizations {
   /// No description provided for @errorUnknown.
   ///
   /// In en, this message translates to:
-  /// **'Unknown error occurred, please try again later'**
+  /// **'An unknown error occurred'**
   String get errorUnknown;
 
   /// No description provided for @errorFileTooLarge.
@@ -6612,7 +6612,7 @@ abstract class AppLocalizations {
   /// No description provided for @networkOffline.
   ///
   /// In en, this message translates to:
-  /// **'Offline'**
+  /// **'Network disconnected'**
   String get networkOffline;
 
   /// No description provided for @networkDisconnected.
@@ -10693,6 +10693,96 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Forum Notifications'**
   String get notificationForum;
+
+  /// No description provided for @errorNetworkTimeout.
+  ///
+  /// In en, this message translates to:
+  /// **'Network connection timed out'**
+  String get errorNetworkTimeout;
+
+  /// No description provided for @errorRequestCancelled.
+  ///
+  /// In en, this message translates to:
+  /// **'Request cancelled'**
+  String get errorRequestCancelled;
+
+  /// No description provided for @errorNetworkConnection.
+  ///
+  /// In en, this message translates to:
+  /// **'Network connection failed'**
+  String get errorNetworkConnection;
+
+  /// No description provided for @errorInsufficientFunds.
+  ///
+  /// In en, this message translates to:
+  /// **'Insufficient balance. Please change payment method or top up.'**
+  String get errorInsufficientFunds;
+
+  /// No description provided for @errorCardDeclined.
+  ///
+  /// In en, this message translates to:
+  /// **'Card declined. Please change card or contact your bank.'**
+  String get errorCardDeclined;
+
+  /// No description provided for @errorExpiredCard.
+  ///
+  /// In en, this message translates to:
+  /// **'Card expired. Please use a different card.'**
+  String get errorExpiredCard;
+
+  /// No description provided for @searchTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Search'**
+  String get searchTitle;
+
+  /// No description provided for @searchHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Search tasks, posts, items'**
+  String get searchHint;
+
+  /// No description provided for @searchTryDifferent.
+  ///
+  /// In en, this message translates to:
+  /// **'Try searching with different keywords'**
+  String get searchTryDifferent;
+
+  /// No description provided for @searchResultCount.
+  ///
+  /// In en, this message translates to:
+  /// **'Found {count} results'**
+  String searchResultCount(int count);
+
+  /// No description provided for @networkOnline.
+  ///
+  /// In en, this message translates to:
+  /// **'Network restored'**
+  String get networkOnline;
+
+  /// No description provided for @notificationPermissionTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Enable Push Notifications'**
+  String get notificationPermissionTitle;
+
+  /// No description provided for @notificationPermissionDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Stay updated with:\n\n• Task status updates\n• New message alerts\n• Task matching recommendations\n• Promotional notifications'**
+  String get notificationPermissionDescription;
+
+  /// No description provided for @notificationPermissionEnable.
+  ///
+  /// In en, this message translates to:
+  /// **'Enable Notifications'**
+  String get notificationPermissionEnable;
+
+  /// No description provided for @notificationPermissionSkip.
+  ///
+  /// In en, this message translates to:
+  /// **'Skip for now'**
+  String get notificationPermissionSkip;
 }
 
 class _AppLocalizationsDelegate

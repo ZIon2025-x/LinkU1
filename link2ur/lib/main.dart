@@ -6,6 +6,8 @@ import 'package:hive_flutter/hive_flutter.dart';
 import 'app.dart';
 import 'core/config/app_config.dart';
 import 'core/utils/logger.dart';
+import 'data/services/api_service.dart';
+import 'data/services/iap_service.dart';
 import 'data/services/storage_service.dart';
 
 void main() async {
@@ -41,6 +43,10 @@ void main() async {
 
   // 初始化Bloc观察者
   Bloc.observer = AppBlocObserver();
+
+  // 初始化 IAP 内购服务
+  final apiService = ApiService();
+  await IAPService.instance.initialize(apiService: apiService);
 
   runApp(const Link2UrApp());
 }
