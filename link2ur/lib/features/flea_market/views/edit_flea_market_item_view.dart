@@ -122,7 +122,7 @@ class _EditFleaMarketItemViewState extends State<EditFleaMarketItemView> {
       final allImages = [..._existingImageUrls, ...uploadedUrls];
 
       await repo.updateItem(
-        widget.itemId,
+        widget.itemId.toString(),
         title: _titleController.text,
         description: _descriptionController.text,
         price: double.tryParse(_priceController.text) ?? 0,

@@ -623,6 +623,8 @@ const MessagePage: React.FC = () => {
   const [showMobileImageSendModal, setShowMobileImageSendModal] = useState(false);
   const [totalUnreadCount, setTotalUnreadCount] = useState(0);
   const [showDebugPanel, setShowDebugPanel] = useState(false);
+  const [debugInfo, setDebugInfo] = useState<any>(null);
+  const [debugLoading, setDebugLoading] = useState(false);
   
   // 无限滚动相关状态
   const [loadingMoreMessages, setLoadingMoreMessages] = useState(false);
@@ -3723,7 +3725,23 @@ const MessagePage: React.FC = () => {
               </span>
             )}
             <button
-              onClick={(e) => { e.stopPropagation(); setShowDebugPanel(prev => !prev); }}
+              onClick={async (e) => {
+                e.stopPropagation();
+                const newShow = !showDebugPanel;
+                setShowDebugPanel(newShow);
+                if (newShow && !debugInfo) {
+                  // 首次打开时加载调试信息
+                  setDebugLoading(true);
+                  try {
+                    const res = await api.get('/api/users/messages/unread/count', { params: { debug: true } });
+                    setDebugInfo(res.data.debug || null);
+                  } catch (err) {
+                    setDebugInfo({ error: String(err) });
+                  } finally {
+                    setDebugLoading(false);
+                  }
+                }
+              }}
               style={{
                 marginLeft: '8px',
                 padding: '2px 8px',
@@ -3861,6 +3879,123 @@ const MessagePage: React.FC = () => {
                     #{idx + 1} ID:{task.id} | unread:{task.unread_count || 0} | {task.title?.substring(0, 30)} | {task.status}
                   </div>
                 ))}
+              </div>
+
+              {/* 后端 API 返回的详细未读信息 */}
+              <div style={{ marginTop: '10px', borderTop: '1px solid #475569', paddingTop: '8px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+                  <span style={{ color: '#f59e0b', fontWeight: 'bold', fontSize: '12px' }}>
+                    🔍 后端API详细未读信息
+                  </span>
+                  <button
+                    onClick={async () => {
+                      setDebugLoading(true);
+                      try {
+                        const res = await api.get('/api/users/messages/unread/count', { params: { debug: true } });
+                        setDebugInfo(res.data.debug || null);
+                      } catch (err) {
+                        setDebugInfo({ error: String(err) });
+                      } finally {
+                        setDebugLoading(false);
+                      }
+                    }}
+                    style={{
+                      padding: '1px 6px',
+                      fontSize: '10px',
+                      background: '#3b82f6',
+                      color: '#fff',
+                      border: 'none',
+                      borderRadius: '3px',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    {debugLoading ? '加载中...' : '🔄 刷新'}
+                  </button>
+                </div>
+
+                {debugLoading && (
+                  <div style={{ color: '#94a3b8', padding: '8px' }}>⏳ 正在从后端API加载详细未读信息...</div>
+                )}
+
+                {debugInfo && !debugLoading && (
+                  <div>
+                    {debugInfo.error ? (
+                      <div style={{ color: '#ef4444', padding: '4px 6px', background: '#334155', borderRadius: '4px' }}>
+                        ❌ API错误: {debugInfo.error}
+                      </div>
+                    ) : (
+                      <>
+                        <div style={{ padding: '4px 6px', background: '#334155', borderRadius: '4px', marginBottom: '6px' }}>
+                          <span style={{ color: '#94a3b8' }}>用户ID: </span>
+                          <span style={{ color: '#a5f3fc' }}>{debugInfo.user_id}</span>
+                          <span style={{ color: '#94a3b8' }}> | API返回未读总数: </span>
+                          <span style={{ color: '#ef4444', fontWeight: 'bold' }}>{debugInfo.total_unread}</span>
+                        </div>
+
+                        {/* 按任务分组的未读 */}
+                        {debugInfo.by_task && debugInfo.by_task.length > 0 && (
+                          <div style={{ marginBottom: '6px' }}>
+                            <div style={{ color: '#fb923c', fontWeight: 'bold', marginBottom: '4px', fontSize: '11px' }}>
+                              📊 按任务分组的未读消息:
+                            </div>
+                            {debugInfo.by_task.map((item: any) => (
+                              <div key={item.task_id} style={{
+                                padding: '4px 8px',
+                                marginBottom: '3px',
+                                background: '#0f172a',
+                                borderRadius: '4px',
+                                borderLeft: '3px solid #ef4444'
+                              }}>
+                                <span style={{ color: '#94a3b8' }}>任务ID: </span>
+                                <span style={{ color: '#38bdf8', fontWeight: 'bold' }}>{item.task_id}</span>
+                                <span style={{ color: '#94a3b8' }}> | 未读数: </span>
+                                <span style={{ color: '#ef4444', fontWeight: 'bold' }}>{item.count}</span>
+                                {/* 检查该任务是否在前端任务列表中 */}
+                                <span style={{ color: '#94a3b8' }}> | 在列表中: </span>
+                                <span style={{ color: tasks.some((t: any) => t.id === item.task_id) ? '#22c55e' : '#ef4444', fontWeight: 'bold' }}>
+                                  {tasks.some((t: any) => t.id === item.task_id) ? '✅ 是' : '❌ 否 (这就是看不到的原因!)'}
+                                </span>
+                                {item.latest_message && (
+                                  <div style={{ marginTop: '2px', fontSize: '10px', color: '#94a3b8' }}>
+                                    最新未读: [{item.latest_message.sender_id}] {item.latest_message.content}
+                                    <br />时间: {item.latest_message.created_at}
+                                  </div>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        )}
+
+                        {/* 所有未读消息详情 */}
+                        {debugInfo.messages && debugInfo.messages.length > 0 && (
+                          <div>
+                            <div style={{ color: '#94a3b8', fontWeight: 'bold', marginBottom: '4px', fontSize: '11px' }}>
+                              📝 所有未读消息明细 ({debugInfo.messages.length}条):
+                            </div>
+                            {debugInfo.messages.map((msg: any, idx: number) => (
+                              <div key={msg.message_id} style={{
+                                padding: '3px 6px',
+                                fontSize: '10px',
+                                color: '#cbd5e1',
+                                borderBottom: '1px solid #1e293b'
+                              }}>
+                                #{idx + 1} msgID:{msg.message_id} | taskID:{msg.task_id} | from:{msg.sender_id} | type:{msg.message_type} | {msg.created_at}
+                                <br />
+                                <span style={{ color: '#67e8f9' }}>内容: {msg.content}</span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </>
+                    )}
+                  </div>
+                )}
+
+                {!debugInfo && !debugLoading && (
+                  <div style={{ color: '#64748b', padding: '4px 6px' }}>
+                    点击上方"刷新"按钮加载后端API详细未读信息
+                  </div>
+                )}
               </div>
             </div>
           )}

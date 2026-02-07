@@ -103,10 +103,12 @@ async def get_task_chat_list(
         
         # 2. 作为多人任务参与者的任务
         # 先查询参与者任务ID，然后过滤出多人任务（避免在join中使用布尔字段比较）
+        # ⚠️ 修复：状态过滤需与全局未读数(crud.get_unread_messages)一致，包含 "completed"
+        # 否则 completed 参与者的任务不出现在列表，但全局未读数会计入，造成"有未读找不到"
         participant_tasks_query = select(models.TaskParticipant.task_id).where(
             and_(
                 models.TaskParticipant.user_id == current_user.id,
-                models.TaskParticipant.status.in_(["accepted", "in_progress"])
+                models.TaskParticipant.status.in_(["accepted", "in_progress", "completed"])
             )
         )
         participant_result = await db.execute(participant_tasks_query)
@@ -380,10 +382,11 @@ async def get_task_chat_unread_count(
         
         # 2. 作为多人任务参与者的任务
         # 先查询参与者任务ID，然后过滤出多人任务（避免在join中使用布尔字段比较）
+        # ⚠️ 修复：状态过滤需与全局未读数(crud.get_unread_messages)一致，包含 "completed"
         participant_tasks_query = select(models.TaskParticipant.task_id).where(
             and_(
                 models.TaskParticipant.user_id == current_user.id,
-                models.TaskParticipant.status.in_(["accepted", "in_progress"])
+                models.TaskParticipant.status.in_(["accepted", "in_progress", "completed"])
             )
         )
         participant_result = await db.execute(participant_tasks_query)

@@ -5220,9 +5220,49 @@ def get_unread_messages_api(
 
 @router.get("/messages/unread/count")
 def get_unread_count_api(
+    debug: bool = False,
     current_user=Depends(get_current_user_secure_sync_csrf), db: Session = Depends(get_db)
 ):
-    return {"unread_count": len(crud.get_unread_messages(db, current_user.id))}
+    unread_messages = crud.get_unread_messages(db, current_user.id)
+    result = {"unread_count": len(unread_messages)}
+    
+    if debug:
+        # 调试模式：返回每条未读消息的详细信息
+        debug_details = []
+        for msg in unread_messages:
+            debug_details.append({
+                "message_id": msg.id,
+                "task_id": msg.task_id,
+                "sender_id": msg.sender_id,
+                "content": (msg.content[:80] + '...') if msg.content and len(msg.content) > 80 else msg.content,
+                "message_type": msg.message_type,
+                "conversation_type": msg.conversation_type,
+                "created_at": msg.created_at.isoformat() if msg.created_at else None,
+            })
+        
+        # 按 task_id 分组统计
+        task_unread_map = {}
+        for msg in unread_messages:
+            tid = msg.task_id
+            if tid not in task_unread_map:
+                task_unread_map[tid] = {"task_id": tid, "count": 0, "latest_message": None}
+            task_unread_map[tid]["count"] += 1
+            if task_unread_map[tid]["latest_message"] is None:
+                task_unread_map[tid]["latest_message"] = {
+                    "message_id": msg.id,
+                    "sender_id": msg.sender_id,
+                    "content": (msg.content[:50] + '...') if msg.content and len(msg.content) > 50 else msg.content,
+                    "created_at": msg.created_at.isoformat() if msg.created_at else None,
+                }
+        
+        result["debug"] = {
+            "user_id": current_user.id,
+            "total_unread": len(unread_messages),
+            "by_task": list(task_unread_map.values()),
+            "messages": debug_details
+        }
+    
+    return result
 
 
 @router.get("/messages/unread/by-contact")

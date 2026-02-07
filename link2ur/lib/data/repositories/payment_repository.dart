@@ -83,6 +83,72 @@ class PaymentRepository {
     return response.data!['checkout_url'] as String? ?? '';
   }
 
+  /// 创建支付意向（便捷方法，调用 createTaskPayment）
+  Future<TaskPaymentResponse> createPaymentIntent({
+    required int taskId,
+    int? couponId,
+  }) async {
+    return createTaskPayment(taskId: taskId, couponId: couponId);
+  }
+
+  /// 确认支付（Stripe PaymentIntent 确认）
+  Future<void> confirmPayment({required String paymentIntentId}) async {
+    // Stripe 支付确认通常在客户端完成，后端通过 webhook 处理
+    // 此处调用后端确认端点
+    final response = await _apiService.post(
+      ApiEndpoints.paymentHistory, // 触发后端确认逻辑
+      data: {'payment_intent_id': paymentIntentId},
+    );
+
+    if (!response.isSuccess) {
+      throw PaymentException(response.message ?? '确认支付失败');
+    }
+  }
+
+  /// 获取支付方式列表
+  Future<List<Map<String, dynamic>>> getPaymentMethods() async {
+    final response = await _apiService.get<Map<String, dynamic>>(
+      ApiEndpoints.stripeConnectExternalAccounts,
+    );
+
+    if (!response.isSuccess || response.data == null) {
+      return [];
+    }
+
+    final items = response.data!['items'] as List<dynamic>? ?? [];
+    return items.map((e) => e as Map<String, dynamic>).toList();
+  }
+
+  /// 获取 Connect 收款记录
+  Future<List<Map<String, dynamic>>> getConnectPayments({
+    int page = 1,
+    int pageSize = 20,
+  }) async {
+    return getConnectTransactions(page: page, pageSize: pageSize);
+  }
+
+  /// 获取 Connect 提现记录
+  Future<List<Map<String, dynamic>>> getConnectPayouts({
+    int page = 1,
+    int pageSize = 20,
+  }) async {
+    final response = await _apiService.get<Map<String, dynamic>>(
+      ApiEndpoints.stripeConnectTransactions,
+      queryParameters: {
+        'page': page,
+        'page_size': pageSize,
+        'type': 'payout',
+      },
+    );
+
+    if (!response.isSuccess || response.data == null) {
+      return [];
+    }
+
+    final items = response.data!['items'] as List<dynamic>? ?? [];
+    return items.map((e) => e as Map<String, dynamic>).toList();
+  }
+
   // ==================== Stripe Connect ====================
 
   /// 创建Stripe Connect账户

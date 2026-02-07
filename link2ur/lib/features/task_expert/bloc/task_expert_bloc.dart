@@ -214,9 +214,9 @@ class TaskExpertBloc extends Bloc<TaskExpertEvent, TaskExpertState> {
 
     try {
       final expert =
-          await _taskExpertRepository.getExpertById(event.expertId);
+          await _taskExpertRepository.getExpertById(event.expertId.toString());
       final services =
-          await _taskExpertRepository.getExpertServices(event.expertId);
+          await _taskExpertRepository.getExpertServices(event.expertId.toString());
 
       emit(state.copyWith(
         status: TaskExpertStatus.loaded,
