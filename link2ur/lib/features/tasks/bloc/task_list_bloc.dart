@@ -29,8 +29,8 @@ class TaskListBloc extends Bloc<TaskListEvent, TaskListState> {
     try {
       final response = await _taskRepository.getTasks(
         page: 1,
-        category: state.selectedCategory,
-        search: state.searchQuery.isEmpty ? null : state.searchQuery,
+        taskType: state.selectedCategory == 'all' ? null : state.selectedCategory,
+        keyword: state.searchQuery.isEmpty ? null : state.searchQuery,
         sortBy: state.sortBy,
       );
 
@@ -59,8 +59,8 @@ class TaskListBloc extends Bloc<TaskListEvent, TaskListState> {
     try {
       final response = await _taskRepository.getTasks(
         page: 1,
-        category: state.selectedCategory,
-        search: state.searchQuery.isEmpty ? null : state.searchQuery,
+        taskType: state.selectedCategory == 'all' ? null : state.selectedCategory,
+        keyword: state.searchQuery.isEmpty ? null : state.searchQuery,
         sortBy: state.sortBy,
       );
 
@@ -88,8 +88,8 @@ class TaskListBloc extends Bloc<TaskListEvent, TaskListState> {
       final nextPage = state.page + 1;
       final response = await _taskRepository.getTasks(
         page: nextPage,
-        category: state.selectedCategory,
-        search: state.searchQuery.isEmpty ? null : state.searchQuery,
+        taskType: state.selectedCategory == 'all' ? null : state.selectedCategory,
+        keyword: state.searchQuery.isEmpty ? null : state.searchQuery,
         sortBy: state.sortBy,
       );
 
@@ -116,8 +116,8 @@ class TaskListBloc extends Bloc<TaskListEvent, TaskListState> {
     try {
       final response = await _taskRepository.getTasks(
         page: 1,
-        category: state.selectedCategory,
-        search: event.query.isEmpty ? null : event.query,
+        taskType: state.selectedCategory == 'all' ? null : state.selectedCategory,
+        keyword: event.query.isEmpty ? null : event.query,
         sortBy: state.sortBy,
       );
 
@@ -149,8 +149,8 @@ class TaskListBloc extends Bloc<TaskListEvent, TaskListState> {
     try {
       final response = await _taskRepository.getTasks(
         page: 1,
-        category: event.category,
-        search: state.searchQuery.isEmpty ? null : state.searchQuery,
+        taskType: event.category == 'all' ? null : event.category,
+        keyword: state.searchQuery.isEmpty ? null : state.searchQuery,
         sortBy: state.sortBy,
       );
 
@@ -182,8 +182,8 @@ class TaskListBloc extends Bloc<TaskListEvent, TaskListState> {
     try {
       final response = await _taskRepository.getTasks(
         page: 1,
-        category: state.selectedCategory,
-        search: state.searchQuery.isEmpty ? null : state.searchQuery,
+        taskType: state.selectedCategory == 'all' ? null : state.selectedCategory,
+        keyword: state.searchQuery.isEmpty ? null : state.searchQuery,
         sortBy: event.sortBy,
       );
 

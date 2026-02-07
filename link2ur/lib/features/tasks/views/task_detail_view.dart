@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_spacing.dart';
@@ -6,70 +8,94 @@ import '../../../core/design/app_radius.dart';
 import '../../../core/widgets/buttons.dart';
 import '../../../core/widgets/cards.dart';
 import '../../../core/widgets/skeleton_view.dart';
+import '../../../core/widgets/error_state_view.dart';
+import '../../../core/widgets/async_image_view.dart';
+import '../../../data/models/task.dart';
+import '../../../data/repositories/task_repository.dart';
+import '../bloc/task_detail_bloc.dart';
 
 /// 任务详情页
 /// 参考iOS TaskDetailView.swift
-class TaskDetailView extends StatefulWidget {
-  const TaskDetailView({
-    super.key,
-    required this.taskId,
-  });
+class TaskDetailView extends StatelessWidget {
+  const TaskDetailView({super.key, required this.taskId});
 
   final int taskId;
 
   @override
-  State<TaskDetailView> createState() => _TaskDetailViewState();
+  Widget build(BuildContext context) {
+    return BlocProvider(
+      create: (context) => TaskDetailBloc(
+        taskRepository: context.read<TaskRepository>(),
+      )..add(TaskDetailLoadRequested(taskId)),
+      child: const _TaskDetailContent(),
+    );
+  }
 }
 
-class _TaskDetailViewState extends State<TaskDetailView> {
-  bool _isLoading = true;
-
-  @override
-  void initState() {
-    super.initState();
-    _loadTask();
-  }
-
-  Future<void> _loadTask() async {
-    // TODO: 加载任务详情
-    await Future.delayed(const Duration(seconds: 1));
-    setState(() {
-      _isLoading = false;
-    });
-  }
+class _TaskDetailContent extends StatelessWidget {
+  const _TaskDetailContent();
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('任务详情'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.share_outlined),
-            onPressed: () {
-              // TODO: 分享
-            },
+    return BlocConsumer<TaskDetailBloc, TaskDetailState>(
+      listenWhen: (prev, curr) => curr.actionMessage != null && prev.actionMessage != curr.actionMessage,
+      listener: (context, state) {
+        if (state.actionMessage != null) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(state.actionMessage!)),
+          );
+        }
+      },
+      builder: (context, state) {
+        return Scaffold(
+          appBar: AppBar(
+            title: const Text('任务详情'),
+            actions: [
+              IconButton(
+                icon: const Icon(Icons.share_outlined),
+                onPressed: () {},
+              ),
+              IconButton(
+                icon: const Icon(Icons.more_horiz),
+                onPressed: () {},
+              ),
+            ],
           ),
-          IconButton(
-            icon: const Icon(Icons.more_horiz),
-            onPressed: () {
-              // TODO: 更多操作
-            },
-          ),
-        ],
-      ),
-      body: _isLoading ? const SkeletonDetail() : _buildContent(),
-      bottomNavigationBar: _isLoading ? null : _buildBottomBar(),
+          body: _buildBody(context, state),
+          bottomNavigationBar: state.isLoaded && state.task != null
+              ? _buildBottomBar(context, state)
+              : null,
+        );
+      },
     );
   }
 
-  Widget _buildContent() {
+  Widget _buildBody(BuildContext context, TaskDetailState state) {
+    if (state.isLoading) {
+      return const SkeletonDetail();
+    }
+
+    if (state.status == TaskDetailStatus.error) {
+      return ErrorStateView(
+        message: state.errorMessage ?? '加载失败',
+        onRetry: () {
+          final bloc = context.read<TaskDetailBloc>();
+          if (state.task != null) {
+            bloc.add(TaskDetailLoadRequested(state.task!.id));
+          }
+        },
+      );
+    }
+
+    final task = state.task;
+    if (task == null) return const SizedBox.shrink();
+
     return SingleChildScrollView(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // 图片轮播
-          _buildImageCarousel(),
+          if (task.images.isNotEmpty) _buildImageCarousel(task),
 
           Padding(
             padding: AppSpacing.allMd,
@@ -82,7 +108,7 @@ class _TaskDetailViewState extends State<TaskDetailView> {
                   children: [
                     Expanded(
                       child: Text(
-                        '示例任务标题 ${widget.taskId}',
+                        task.displayTitle,
                         style: const TextStyle(
                           fontSize: 20,
                           fontWeight: FontWeight.bold,
@@ -90,14 +116,15 @@ class _TaskDetailViewState extends State<TaskDetailView> {
                       ),
                     ),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 4),
                       decoration: BoxDecoration(
                         color: AppColors.successLight,
                         borderRadius: AppRadius.allTiny,
                       ),
-                      child: const Text(
-                        '招募中',
-                        style: TextStyle(color: AppColors.success),
+                      child: Text(
+                        task.statusText,
+                        style: const TextStyle(color: AppColors.success),
                       ),
                     ),
                   ],
@@ -106,7 +133,7 @@ class _TaskDetailViewState extends State<TaskDetailView> {
 
                 // 价格
                 Text(
-                  '\$${widget.taskId * 20}',
+                  '${task.currency == 'GBP' ? '£' : '\$'}${task.reward.toStringAsFixed(2)}',
                   style: const TextStyle(
                     fontSize: 28,
                     fontWeight: FontWeight.bold,
@@ -116,15 +143,16 @@ class _TaskDetailViewState extends State<TaskDetailView> {
                 AppSpacing.vLg,
 
                 // 任务信息卡片
-                _buildInfoCard(),
+                _buildInfoCard(task),
                 AppSpacing.vMd,
 
                 // 任务描述
-                _buildDescriptionCard(),
-                AppSpacing.vMd,
+                if (task.displayDescription != null)
+                  _buildDescriptionCard(task),
+                if (task.displayDescription != null) AppSpacing.vMd,
 
                 // 发布者信息
-                _buildPosterCard(),
+                _buildPosterCard(context, task),
                 AppSpacing.vXxl,
               ],
             ),
@@ -134,70 +162,71 @@ class _TaskDetailViewState extends State<TaskDetailView> {
     );
   }
 
-  Widget _buildImageCarousel() {
-    return Container(
+  Widget _buildImageCarousel(Task task) {
+    return SizedBox(
       height: 250,
-      color: AppColors.skeletonBase,
       child: PageView.builder(
-        itemCount: 3,
+        itemCount: task.images.length,
         itemBuilder: (context, index) {
-          return Container(
-            color: AppColors.skeletonBase,
-            child: Center(
-              child: Icon(
-                Icons.image,
-                size: 64,
-                color: AppColors.textTertiaryLight,
-              ),
-            ),
+          return AsyncImageView(
+            imageUrl: task.images[index],
+            width: double.infinity,
+            height: 250,
           );
         },
       ),
     );
   }
 
-  Widget _buildInfoCard() {
+  Widget _buildInfoCard(Task task) {
     return AppCard(
       child: Column(
         children: [
           _InfoRow(
             icon: Icons.category_outlined,
             label: '任务类型',
-            value: '代取代送',
+            value: task.taskTypeText,
           ),
           const Divider(height: 24),
           _InfoRow(
             icon: Icons.location_on_outlined,
             label: '任务地点',
-            value: '校园内',
+            value: task.location ?? '线上',
           ),
-          const Divider(height: 24),
-          _InfoRow(
-            icon: Icons.access_time,
-            label: '截止时间',
-            value: '3天后',
-          ),
+          if (task.deadline != null) ...[
+            const Divider(height: 24),
+            _InfoRow(
+              icon: Icons.access_time,
+              label: '截止时间',
+              value:
+                  '${task.deadline!.year}-${task.deadline!.month.toString().padLeft(2, '0')}-${task.deadline!.day.toString().padLeft(2, '0')}',
+            ),
+          ],
+          if (task.isMultiParticipant) ...[
+            const Divider(height: 24),
+            _InfoRow(
+              icon: Icons.people_outline,
+              label: '参与人数',
+              value: '${task.currentParticipants}/${task.maxParticipants}',
+            ),
+          ],
         ],
       ),
     );
   }
 
-  Widget _buildDescriptionCard() {
+  Widget _buildDescriptionCard(Task task) {
     return AppCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text(
             '任务描述',
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-            ),
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
           ),
           AppSpacing.vMd,
           Text(
-            '这是一个示例任务的详细描述。任务发布者会在这里详细说明任务的具体要求、注意事项等信息。'
-            '接单者需要仔细阅读这些信息，确保能够完成任务后再申请接单。',
+            task.displayDescription!,
             style: TextStyle(
               fontSize: 14,
               color: AppColors.textSecondaryLight,
@@ -209,48 +238,55 @@ class _TaskDetailViewState extends State<TaskDetailView> {
     );
   }
 
-  Widget _buildPosterCard() {
+  Widget _buildPosterCard(BuildContext context, Task task) {
     return AppCard(
+      onTap: task.poster != null
+          ? () => context.push('/chat/${task.posterId}')
+          : null,
       child: Row(
         children: [
-          const CircleAvatar(
+          CircleAvatar(
             radius: 24,
             backgroundColor: AppColors.primary,
-            child: Icon(Icons.person, color: Colors.white),
+            child: task.poster?.avatar != null
+                ? ClipOval(
+                    child: Image.network(
+                      task.poster!.avatar!,
+                      width: 48,
+                      height: 48,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) =>
+                          const Icon(Icons.person, color: Colors.white),
+                    ),
+                  )
+                : const Icon(Icons.person, color: Colors.white),
           ),
           AppSpacing.hMd,
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  '发布者名称',
-                  style: TextStyle(
+                Text(
+                  task.poster?.name ?? '发布者',
+                  style: const TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w500,
                   ),
                 ),
-                Row(
-                  children: [
-                    Icon(Icons.star, size: 14, color: AppColors.gold),
-                    const SizedBox(width: 4),
-                    Text(
-                      '4.8',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: AppColors.textSecondaryLight,
+                if (task.poster?.isVerified == true)
+                  Row(
+                    children: [
+                      Icon(Icons.verified, size: 14, color: AppColors.primary),
+                      const SizedBox(width: 4),
+                      Text(
+                        '已认证',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: AppColors.textSecondaryLight,
+                        ),
                       ),
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      '发布12个任务',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: AppColors.textSecondaryLight,
-                      ),
-                    ),
-                  ],
-                ),
+                    ],
+                  ),
               ],
             ),
           ),
@@ -260,7 +296,8 @@ class _TaskDetailViewState extends State<TaskDetailView> {
     );
   }
 
-  Widget _buildBottomBar() {
+  Widget _buildBottomBar(BuildContext context, TaskDetailState state) {
+    final task = state.task!;
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -276,36 +313,81 @@ class _TaskDetailViewState extends State<TaskDetailView> {
       child: SafeArea(
         child: Row(
           children: [
-            // 收藏按钮
-            IconActionButton(
-              icon: Icons.favorite_border,
-              onPressed: () {
-                // TODO: 收藏
-              },
-              backgroundColor: AppColors.skeletonBase,
-            ),
-            AppSpacing.hMd,
-            // 聊天按钮
             IconActionButton(
               icon: Icons.chat_bubble_outline,
               onPressed: () {
-                // TODO: 聊天
+                context.push('/chat/${task.posterId}');
               },
               backgroundColor: AppColors.skeletonBase,
             ),
             AppSpacing.hMd,
-            // 申请按钮
             Expanded(
-              child: PrimaryButton(
-                text: '申请接单',
-                onPressed: () {
-                  // TODO: 申请接单
-                },
-              ),
+              child: _buildActionButton(context, state),
             ),
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildActionButton(BuildContext context, TaskDetailState state) {
+    final task = state.task!;
+
+    if (state.isSubmitting) {
+      return const PrimaryButton(
+        text: '处理中...',
+        onPressed: null,
+        isLoading: true,
+      );
+    }
+
+    if (task.canApply) {
+      return PrimaryButton(
+        text: '申请接单',
+        onPressed: () {
+          context
+              .read<TaskDetailBloc>()
+              .add(const TaskDetailApplyRequested());
+        },
+      );
+    }
+
+    if (task.hasApplied) {
+      return PrimaryButton(
+        text: '取消申请',
+        onPressed: () {
+          context
+              .read<TaskDetailBloc>()
+              .add(const TaskDetailCancelApplicationRequested());
+        },
+      );
+    }
+
+    if (task.status == 'in_progress') {
+      return PrimaryButton(
+        text: '完成任务',
+        onPressed: () {
+          context
+              .read<TaskDetailBloc>()
+              .add(const TaskDetailCompleteRequested());
+        },
+      );
+    }
+
+    if (task.status == 'pending_confirmation') {
+      return PrimaryButton(
+        text: '确认完成',
+        onPressed: () {
+          context
+              .read<TaskDetailBloc>()
+              .add(const TaskDetailConfirmCompletionRequested());
+        },
+      );
+    }
+
+    return PrimaryButton(
+      text: task.statusText,
+      onPressed: null,
     );
   }
 }
@@ -329,9 +411,7 @@ class _InfoRow extends StatelessWidget {
         AppSpacing.hMd,
         Text(
           label,
-          style: TextStyle(
-            color: AppColors.textSecondaryLight,
-          ),
+          style: TextStyle(color: AppColors.textSecondaryLight),
         ),
         const Spacer(),
         Text(

@@ -71,6 +71,48 @@ class ForumFavoritePost extends ForumEvent {
   List<Object?> get props => [postId];
 }
 
+class ForumLoadPostDetail extends ForumEvent {
+  const ForumLoadPostDetail(this.postId);
+
+  final int postId;
+
+  @override
+  List<Object?> get props => [postId];
+}
+
+class ForumLoadReplies extends ForumEvent {
+  const ForumLoadReplies(this.postId);
+
+  final int postId;
+
+  @override
+  List<Object?> get props => [postId];
+}
+
+class ForumCreatePost extends ForumEvent {
+  const ForumCreatePost(this.request);
+
+  final CreatePostRequest request;
+
+  @override
+  List<Object?> get props => [request];
+}
+
+class ForumReplyPost extends ForumEvent {
+  const ForumReplyPost({
+    required this.postId,
+    required this.content,
+    this.parentReplyId,
+  });
+
+  final int postId;
+  final String content;
+  final int? parentReplyId;
+
+  @override
+  List<Object?> get props => [postId, content, parentReplyId];
+}
+
 // ==================== State ====================
 
 enum ForumStatus { initial, loading, loaded, error }
@@ -87,6 +129,10 @@ class ForumState extends Equatable {
     this.searchQuery = '',
     this.errorMessage,
     this.isRefreshing = false,
+    this.selectedPost,
+    this.replies = const [],
+    this.isCreatingPost = false,
+    this.isReplying = false,
   });
 
   final ForumStatus status;
@@ -99,6 +145,10 @@ class ForumState extends Equatable {
   final String searchQuery;
   final String? errorMessage;
   final bool isRefreshing;
+  final ForumPost? selectedPost;
+  final List<ForumReply> replies;
+  final bool isCreatingPost;
+  final bool isReplying;
 
   bool get isLoading => status == ForumStatus.loading;
 
@@ -114,6 +164,10 @@ class ForumState extends Equatable {
     String? searchQuery,
     String? errorMessage,
     bool? isRefreshing,
+    ForumPost? selectedPost,
+    List<ForumReply>? replies,
+    bool? isCreatingPost,
+    bool? isReplying,
   }) {
     return ForumState(
       status: status ?? this.status,
@@ -127,6 +181,10 @@ class ForumState extends Equatable {
       searchQuery: searchQuery ?? this.searchQuery,
       errorMessage: errorMessage,
       isRefreshing: isRefreshing ?? this.isRefreshing,
+      selectedPost: selectedPost ?? this.selectedPost,
+      replies: replies ?? this.replies,
+      isCreatingPost: isCreatingPost ?? this.isCreatingPost,
+      isReplying: isReplying ?? this.isReplying,
     );
   }
 
@@ -142,6 +200,10 @@ class ForumState extends Equatable {
         searchQuery,
         errorMessage,
         isRefreshing,
+        selectedPost,
+        replies,
+        isCreatingPost,
+        isReplying,
       ];
 }
 
@@ -159,6 +221,10 @@ class ForumBloc extends Bloc<ForumEvent, ForumState> {
     on<ForumCategoryChanged>(_onCategoryChanged);
     on<ForumLikePost>(_onLikePost);
     on<ForumFavoritePost>(_onFavoritePost);
+    on<ForumLoadPostDetail>(_onLoadPostDetail);
+    on<ForumLoadReplies>(_onLoadReplies);
+    on<ForumCreatePost>(_onCreatePost);
+    on<ForumReplyPost>(_onReplyPost);
   }
 
   final ForumRepository _forumRepository;
@@ -185,7 +251,7 @@ class ForumBloc extends Bloc<ForumEvent, ForumState> {
       final response = await _forumRepository.getPosts(
         page: 1,
         categoryId: event.categoryId ?? state.selectedCategoryId,
-        search: state.searchQuery.isEmpty ? null : state.searchQuery,
+        keyword: state.searchQuery.isEmpty ? null : state.searchQuery,
       );
 
       emit(state.copyWith(
@@ -215,7 +281,7 @@ class ForumBloc extends Bloc<ForumEvent, ForumState> {
       final response = await _forumRepository.getPosts(
         page: nextPage,
         categoryId: state.selectedCategoryId,
-        search: state.searchQuery.isEmpty ? null : state.searchQuery,
+        keyword: state.searchQuery.isEmpty ? null : state.searchQuery,
       );
 
       emit(state.copyWith(
@@ -266,7 +332,7 @@ class ForumBloc extends Bloc<ForumEvent, ForumState> {
     try {
       final response = await _forumRepository.getPosts(
         page: 1,
-        search: event.query.isEmpty ? null : event.query,
+        keyword: event.query.isEmpty ? null : event.query,
         categoryId: state.selectedCategoryId,
       );
 
@@ -356,9 +422,100 @@ class ForumBloc extends Bloc<ForumEvent, ForumState> {
         return post;
       }).toList();
 
-      emit(state.copyWith(posts: updatedPosts));
+      // Also update selectedPost if it's the same post
+      final updatedSelectedPost = state.selectedPost?.id == event.postId
+          ? state.selectedPost!.copyWith(
+              isFavorited: !state.selectedPost!.isFavorited)
+          : state.selectedPost;
+
+      emit(state.copyWith(
+        posts: updatedPosts,
+        selectedPost: updatedSelectedPost,
+      ));
     } catch (e) {
       AppLogger.error('Failed to favorite post', e);
+    }
+  }
+
+  Future<void> _onLoadPostDetail(
+    ForumLoadPostDetail event,
+    Emitter<ForumState> emit,
+  ) async {
+    emit(state.copyWith(status: ForumStatus.loading));
+
+    try {
+      final post = await _forumRepository.getPostById(event.postId);
+      emit(state.copyWith(
+        status: ForumStatus.loaded,
+        selectedPost: post,
+      ));
+    } catch (e) {
+      AppLogger.error('Failed to load post detail', e);
+      emit(state.copyWith(
+        status: ForumStatus.error,
+        errorMessage: e.toString(),
+      ));
+    }
+  }
+
+  Future<void> _onLoadReplies(
+    ForumLoadReplies event,
+    Emitter<ForumState> emit,
+  ) async {
+    try {
+      final replies = await _forumRepository.getPostReplies(event.postId);
+      emit(state.copyWith(replies: replies));
+    } catch (e) {
+      AppLogger.error('Failed to load replies', e);
+    }
+  }
+
+  Future<void> _onCreatePost(
+    ForumCreatePost event,
+    Emitter<ForumState> emit,
+  ) async {
+    emit(state.copyWith(isCreatingPost: true));
+
+    try {
+      final post = await _forumRepository.createPost(event.request);
+      emit(state.copyWith(
+        isCreatingPost: false,
+        posts: [post, ...state.posts],
+      ));
+    } catch (e) {
+      AppLogger.error('Failed to create post', e);
+      emit(state.copyWith(
+        isCreatingPost: false,
+        errorMessage: e.toString(),
+      ));
+    }
+  }
+
+  Future<void> _onReplyPost(
+    ForumReplyPost event,
+    Emitter<ForumState> emit,
+  ) async {
+    emit(state.copyWith(isReplying: true));
+
+    try {
+      final reply = await _forumRepository.replyPost(
+        event.postId,
+        content: event.content,
+        parentReplyId: event.parentReplyId,
+      );
+      emit(state.copyWith(
+        isReplying: false,
+        replies: [...state.replies, reply],
+        selectedPost: state.selectedPost?.copyWith(
+          replyCount: (state.selectedPost?.replyCount ?? 0) + 1,
+        ),
+      ));
+    } catch (e) {
+      AppLogger.error('Failed to reply post', e);
+      emit(state.copyWith(
+        isReplying: false,
+        errorMessage: e.toString(),
+      ));
     }
   }
 }

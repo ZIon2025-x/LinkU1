@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/design/app_colors.dart';
@@ -6,17 +7,34 @@ import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_radius.dart';
 import '../../../core/widgets/buttons.dart';
 import '../../../core/utils/validators.dart';
+import '../../../data/models/task.dart';
+import '../../../data/repositories/task_repository.dart';
+import '../bloc/create_task_bloc.dart';
 
 /// 创建任务页
 /// 参考iOS CreateTaskView.swift
-class CreateTaskView extends StatefulWidget {
+class CreateTaskView extends StatelessWidget {
   const CreateTaskView({super.key});
 
   @override
-  State<CreateTaskView> createState() => _CreateTaskViewState();
+  Widget build(BuildContext context) {
+    return BlocProvider(
+      create: (context) => CreateTaskBloc(
+        taskRepository: context.read<TaskRepository>(),
+      ),
+      child: const _CreateTaskContent(),
+    );
+  }
 }
 
-class _CreateTaskViewState extends State<CreateTaskView> {
+class _CreateTaskContent extends StatefulWidget {
+  const _CreateTaskContent();
+
+  @override
+  State<_CreateTaskContent> createState() => _CreateTaskContentState();
+}
+
+class _CreateTaskContentState extends State<_CreateTaskContent> {
   final _formKey = GlobalKey<FormState>();
   final _titleController = TextEditingController();
   final _descriptionController = TextEditingController();
@@ -24,9 +42,8 @@ class _CreateTaskViewState extends State<CreateTaskView> {
   final _locationController = TextEditingController();
 
   String _selectedCategory = 'delivery';
-  String _selectedCurrency = 'USD';
+  String _selectedCurrency = 'GBP';
   DateTime? _deadline;
-  bool _isSubmitting = false;
 
   final List<Map<String, String>> _categories = [
     {'key': 'delivery', 'label': '代取代送'},
@@ -63,181 +80,171 @@ class _CreateTaskViewState extends State<CreateTaskView> {
     }
   }
 
-  Future<void> _submitTask() async {
+  void _submitTask() {
     if (!_formKey.currentState!.validate()) return;
 
-    setState(() {
-      _isSubmitting = true;
-    });
+    final reward = double.tryParse(_rewardController.text) ?? 0;
 
-    try {
-      // TODO: 提交任务
-      await Future.delayed(const Duration(seconds: 2));
+    final request = CreateTaskRequest(
+      title: _titleController.text.trim(),
+      description: _descriptionController.text.trim().isNotEmpty
+          ? _descriptionController.text.trim()
+          : null,
+      taskType: _selectedCategory,
+      reward: reward,
+      currency: _selectedCurrency,
+      location: _locationController.text.trim().isNotEmpty
+          ? _locationController.text.trim()
+          : null,
+      deadline: _deadline,
+    );
 
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('任务发布成功')),
-        );
-        context.pop();
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('发布失败: $e'),
-            backgroundColor: AppColors.error,
-          ),
-        );
-      }
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isSubmitting = false;
-        });
-      }
-    }
+    context.read<CreateTaskBloc>().add(CreateTaskSubmitted(request));
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('发布任务'),
-      ),
-      body: Form(
-        key: _formKey,
-        child: ListView(
-          padding: AppSpacing.allMd,
-          children: [
-            // 任务类型
-            _buildSectionTitle('任务类型'),
-            _buildCategorySelector(),
-            AppSpacing.vLg,
-
-            // 任务标题
-            _buildSectionTitle('任务标题'),
-            TextFormField(
-              controller: _titleController,
-              decoration: const InputDecoration(
-                hintText: '请输入任务标题',
-              ),
-              maxLength: 100,
-              validator: Validators.validateTitle,
+    return BlocConsumer<CreateTaskBloc, CreateTaskState>(
+      listener: (context, state) {
+        if (state.isSuccess) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('任务发布成功')),
+          );
+          context.pop();
+        } else if (state.status == CreateTaskStatus.error) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(state.errorMessage ?? '发布失败'),
+              backgroundColor: AppColors.error,
             ),
-            AppSpacing.vMd,
-
-            // 任务描述
-            _buildSectionTitle('任务描述'),
-            TextFormField(
-              controller: _descriptionController,
-              decoration: const InputDecoration(
-                hintText: '请详细描述任务要求...',
-              ),
-              maxLines: 5,
-              maxLength: 2000,
-              validator: (value) => Validators.validateDescription(value),
-            ),
-            AppSpacing.vMd,
-
-            // 任务报酬
-            _buildSectionTitle('任务报酬'),
-            Row(
+          );
+        }
+      },
+      builder: (context, state) {
+        return Scaffold(
+          appBar: AppBar(title: const Text('发布任务')),
+          body: Form(
+            key: _formKey,
+            child: ListView(
+              padding: AppSpacing.allMd,
               children: [
-                Expanded(
-                  child: TextFormField(
-                    controller: _rewardController,
-                    decoration: const InputDecoration(
-                      hintText: '0.00',
-                      prefixText: '\$ ',
-                    ),
-                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                    validator: Validators.validateAmount,
-                  ),
-                ),
-                AppSpacing.hMd,
-                DropdownButton<String>(
-                  value: _selectedCurrency,
-                  items: const [
-                    DropdownMenuItem(value: 'USD', child: Text('USD')),
-                    DropdownMenuItem(value: 'CNY', child: Text('CNY')),
-                    DropdownMenuItem(value: 'EUR', child: Text('EUR')),
-                  ],
-                  onChanged: (value) {
-                    if (value != null) {
-                      setState(() {
-                        _selectedCurrency = value;
-                      });
-                    }
-                  },
-                ),
-              ],
-            ),
-            AppSpacing.vLg,
+                _buildSectionTitle('任务类型'),
+                _buildCategorySelector(),
+                AppSpacing.vLg,
 
-            // 任务地点
-            _buildSectionTitle('任务地点'),
-            TextFormField(
-              controller: _locationController,
-              decoration: InputDecoration(
-                hintText: '请输入任务地点',
-                suffixIcon: IconButton(
-                  icon: const Icon(Icons.my_location),
-                  onPressed: () {
-                    // TODO: 获取当前位置
-                  },
+                _buildSectionTitle('任务标题'),
+                TextFormField(
+                  controller: _titleController,
+                  decoration: const InputDecoration(hintText: '请输入任务标题'),
+                  maxLength: 100,
+                  validator: Validators.validateTitle,
                 ),
-              ),
-            ),
-            AppSpacing.vLg,
+                AppSpacing.vMd,
 
-            // 截止时间
-            _buildSectionTitle('截止时间'),
-            GestureDetector(
-              onTap: _selectDeadline,
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                decoration: BoxDecoration(
-                  color: Theme.of(context).inputDecorationTheme.fillColor,
-                  borderRadius: AppRadius.input,
+                _buildSectionTitle('任务描述'),
+                TextFormField(
+                  controller: _descriptionController,
+                  decoration:
+                      const InputDecoration(hintText: '请详细描述任务要求...'),
+                  maxLines: 5,
+                  maxLength: 2000,
+                  validator: (value) => Validators.validateDescription(value),
                 ),
-                child: Row(
+                AppSpacing.vMd,
+
+                _buildSectionTitle('任务报酬'),
+                Row(
                   children: [
-                    Icon(
-                      Icons.calendar_today_outlined,
-                      color: AppColors.textSecondaryLight,
-                    ),
-                    AppSpacing.hMd,
-                    Text(
-                      _deadline != null
-                          ? '${_deadline!.year}-${_deadline!.month.toString().padLeft(2, '0')}-${_deadline!.day.toString().padLeft(2, '0')}'
-                          : '选择截止日期',
-                      style: TextStyle(
-                        color: _deadline != null
-                            ? null
-                            : AppColors.textPlaceholderLight,
+                    Expanded(
+                      child: TextFormField(
+                        controller: _rewardController,
+                        decoration: const InputDecoration(
+                          hintText: '0.00',
+                          prefixText: '£ ',
+                        ),
+                        keyboardType: const TextInputType.numberWithOptions(
+                            decimal: true),
+                        validator: Validators.validateAmount,
                       ),
                     ),
+                    AppSpacing.hMd,
+                    DropdownButton<String>(
+                      value: _selectedCurrency,
+                      items: const [
+                        DropdownMenuItem(value: 'GBP', child: Text('GBP')),
+                        DropdownMenuItem(value: 'USD', child: Text('USD')),
+                        DropdownMenuItem(value: 'CNY', child: Text('CNY')),
+                      ],
+                      onChanged: (value) {
+                        if (value != null) {
+                          setState(() => _selectedCurrency = value);
+                        }
+                      },
+                    ),
                   ],
                 ),
-              ),
-            ),
-            AppSpacing.vLg,
+                AppSpacing.vLg,
 
-            // 添加图片
-            _buildSectionTitle('添加图片'),
-            _buildImagePicker(),
-            AppSpacing.vXxl,
+                _buildSectionTitle('任务地点'),
+                TextFormField(
+                  controller: _locationController,
+                  decoration: InputDecoration(
+                    hintText: '请输入任务地点',
+                    suffixIcon: IconButton(
+                      icon: const Icon(Icons.my_location),
+                      onPressed: () {},
+                    ),
+                  ),
+                ),
+                AppSpacing.vLg,
 
-            // 提交按钮
-            PrimaryButton(
-              text: '发布任务',
-              onPressed: _submitTask,
-              isLoading: _isSubmitting,
+                _buildSectionTitle('截止时间'),
+                GestureDetector(
+                  onTap: _selectDeadline,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 14),
+                    decoration: BoxDecoration(
+                      color:
+                          Theme.of(context).inputDecorationTheme.fillColor,
+                      borderRadius: AppRadius.input,
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(Icons.calendar_today_outlined,
+                            color: AppColors.textSecondaryLight),
+                        AppSpacing.hMd,
+                        Text(
+                          _deadline != null
+                              ? '${_deadline!.year}-${_deadline!.month.toString().padLeft(2, '0')}-${_deadline!.day.toString().padLeft(2, '0')}'
+                              : '选择截止日期',
+                          style: TextStyle(
+                            color: _deadline != null
+                                ? null
+                                : AppColors.textPlaceholderLight,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                AppSpacing.vLg,
+
+                _buildSectionTitle('添加图片'),
+                _buildImagePicker(),
+                AppSpacing.vXxl,
+
+                PrimaryButton(
+                  text: '发布任务',
+                  onPressed: state.isSubmitting ? null : _submitTask,
+                  isLoading: state.isSubmitting,
+                ),
+                AppSpacing.vXxl,
+              ],
             ),
-            AppSpacing.vXxl,
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     );
   }
 
@@ -246,10 +253,7 @@ class _CreateTaskViewState extends State<CreateTaskView> {
       padding: const EdgeInsets.only(bottom: 8),
       child: Text(
         title,
-        style: const TextStyle(
-          fontSize: 16,
-          fontWeight: FontWeight.w500,
-        ),
+        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
       ),
     );
   }
@@ -261,25 +265,27 @@ class _CreateTaskViewState extends State<CreateTaskView> {
       children: _categories.map((category) {
         final isSelected = _selectedCategory == category['key'];
         return GestureDetector(
-          onTap: () {
-            setState(() {
-              _selectedCategory = category['key']!;
-            });
-          },
+          onTap: () => setState(() => _selectedCategory = category['key']!),
           child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            padding:
+                const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             decoration: BoxDecoration(
               color: isSelected ? AppColors.primary : Colors.transparent,
               borderRadius: AppRadius.allSmall,
               border: Border.all(
-                color: isSelected ? AppColors.primary : AppColors.dividerLight,
+                color: isSelected
+                    ? AppColors.primary
+                    : AppColors.dividerLight,
               ),
             ),
             child: Text(
               category['label']!,
               style: TextStyle(
-                color: isSelected ? Colors.white : AppColors.textSecondaryLight,
-                fontWeight: isSelected ? FontWeight.w500 : FontWeight.normal,
+                color: isSelected
+                    ? Colors.white
+                    : AppColors.textSecondaryLight,
+                fontWeight:
+                    isSelected ? FontWeight.w500 : FontWeight.normal,
               ),
             ),
           ),
@@ -293,11 +299,8 @@ class _CreateTaskViewState extends State<CreateTaskView> {
       spacing: 8,
       runSpacing: 8,
       children: [
-        // 添加按钮
         GestureDetector(
-          onTap: () {
-            // TODO: 选择图片
-          },
+          onTap: () {},
           child: Container(
             width: 80,
             height: 80,
@@ -308,7 +311,7 @@ class _CreateTaskViewState extends State<CreateTaskView> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(Icons.add_photo_alternate_outlined, 
+                Icon(Icons.add_photo_alternate_outlined,
                     color: AppColors.textSecondaryLight),
                 const SizedBox(height: 4),
                 Text(

@@ -1,9 +1,16 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_radius.dart';
+import '../../../core/widgets/loading_view.dart';
+import '../../../core/widgets/error_state_view.dart';
+import '../../../core/widgets/empty_state_view.dart';
+import '../../../data/models/leaderboard.dart';
+import '../../../data/repositories/leaderboard_repository.dart';
+import '../bloc/leaderboard_bloc.dart';
 
 /// 排行榜页
 /// 参考iOS LeaderboardView.swift
@@ -12,32 +19,85 @@ class LeaderboardView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('排行榜'),
-      ),
-      body: ListView.separated(
-        padding: AppSpacing.allMd,
-        itemCount: 10,
-        separatorBuilder: (context, index) => AppSpacing.vMd,
-        itemBuilder: (context, index) {
-          return _LeaderboardCard(index: index);
-        },
+    return BlocProvider(
+      create: (context) => LeaderboardBloc(
+        leaderboardRepository: context.read<LeaderboardRepository>(),
+      )..add(const LeaderboardLoadRequested()),
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('排行榜'),
+        ),
+        body: BlocBuilder<LeaderboardBloc, LeaderboardState>(
+          builder: (context, state) {
+            if (state.status == LeaderboardStatus.loading &&
+                state.leaderboards.isEmpty) {
+              return const LoadingView();
+            }
+
+            if (state.status == LeaderboardStatus.error &&
+                state.leaderboards.isEmpty) {
+              return ErrorStateView.loadFailed(
+                message: state.errorMessage ?? '加载失败',
+                onRetry: () {
+                  context.read<LeaderboardBloc>().add(
+                        const LeaderboardLoadRequested(),
+                      );
+                },
+              );
+            }
+
+            if (state.leaderboards.isEmpty) {
+              return EmptyStateView.noData(
+                title: '暂无排行榜',
+                description: '还没有排行榜',
+              );
+            }
+
+            return RefreshIndicator(
+              onRefresh: () async {
+                context.read<LeaderboardBloc>().add(
+                      const LeaderboardRefreshRequested(),
+                    );
+              },
+              child: ListView.separated(
+                padding: AppSpacing.allMd,
+                itemCount: state.leaderboards.length + (state.hasMore ? 1 : 0),
+                separatorBuilder: (context, index) => AppSpacing.vMd,
+                itemBuilder: (context, index) {
+                  if (index == state.leaderboards.length) {
+                    context.read<LeaderboardBloc>().add(
+                          const LeaderboardLoadMore(),
+                        );
+                    return const Center(
+                      child: Padding(
+                        padding: EdgeInsets.all(16.0),
+                        child: LoadingIndicator(),
+                      ),
+                    );
+                  }
+                  return _LeaderboardCard(
+                    leaderboard: state.leaderboards[index],
+                  );
+                },
+              ),
+            );
+          },
+        ),
       ),
     );
   }
 }
 
 class _LeaderboardCard extends StatelessWidget {
-  const _LeaderboardCard({required this.index});
+  const _LeaderboardCard({required this.leaderboard});
 
-  final int index;
+  final Leaderboard leaderboard;
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: () {
-        context.push('/leaderboard/${index + 1}');
+        context.push('/leaderboard/${leaderboard.id}');
       },
       child: Container(
         padding: AppSpacing.allMd,
@@ -69,13 +129,16 @@ class _LeaderboardCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    '排行榜 ${index + 1}',
+                    leaderboard.displayName,
                     style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    '描述信息...',
-                    style: TextStyle(fontSize: 14, color: AppColors.textSecondaryLight),
+                    leaderboard.displayDescription ?? '描述信息...',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: AppColors.textSecondaryLight,
+                    ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -84,7 +147,10 @@ class _LeaderboardCard extends StatelessWidget {
                     children: [
                       Icon(Icons.how_to_vote_outlined, size: 14, color: AppColors.textTertiaryLight),
                       const SizedBox(width: 4),
-                      Text('${(index + 1) * 100} 票', style: TextStyle(fontSize: 12, color: AppColors.textTertiaryLight)),
+                      Text(
+                        '${leaderboard.voteCount} 票',
+                        style: TextStyle(fontSize: 12, color: AppColors.textTertiaryLight),
+                      ),
                     ],
                   ),
                 ],

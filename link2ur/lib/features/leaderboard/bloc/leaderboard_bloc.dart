@@ -144,7 +144,7 @@ class LeaderboardBloc extends Bloc<LeaderboardEvent, LeaderboardState> {
     try {
       final response = await _leaderboardRepository.getLeaderboards(
         page: 1,
-        category: event.category,
+        keyword: event.category,
       );
 
       emit(state.copyWith(
@@ -173,7 +173,7 @@ class LeaderboardBloc extends Bloc<LeaderboardEvent, LeaderboardState> {
       final nextPage = state.page + 1;
       final response = await _leaderboardRepository.getLeaderboards(
         page: nextPage,
-        category: state.selectedCategory,
+        keyword: state.selectedCategory,
       );
 
       emit(state.copyWith(
@@ -193,7 +193,7 @@ class LeaderboardBloc extends Bloc<LeaderboardEvent, LeaderboardState> {
     try {
       final response = await _leaderboardRepository.getLeaderboards(
         page: 1,
-        category: state.selectedCategory,
+        keyword: state.selectedCategory,
       );
 
       emit(state.copyWith(
@@ -216,7 +216,7 @@ class LeaderboardBloc extends Bloc<LeaderboardEvent, LeaderboardState> {
 
     try {
       final leaderboard = await _leaderboardRepository
-          .getLeaderboardDetail(event.leaderboardId);
+          .getLeaderboardById(event.leaderboardId);
       final items = await _leaderboardRepository
           .getLeaderboardItems(event.leaderboardId);
 
@@ -239,16 +239,16 @@ class LeaderboardBloc extends Bloc<LeaderboardEvent, LeaderboardState> {
     Emitter<LeaderboardState> emit,
   ) async {
     try {
-      await _leaderboardRepository.voteItem(event.itemId);
+      await _leaderboardRepository.voteItem(event.itemId, voteType: 'upvote');
 
       // 更新本地状态
       final updatedItems = state.items.map((item) {
         if (item.id == event.itemId) {
+          final wasVoted = item.hasVoted;
           return item.copyWith(
-            hasVoted: !item.hasVoted,
-            voteCount: item.hasVoted
-                ? item.voteCount - 1
-                : item.voteCount + 1,
+            userVote: wasVoted ? null : 'upvote',
+            upvotes: wasVoted ? item.upvotes - 1 : item.upvotes + 1,
+            netVotes: wasVoted ? item.netVotes - 1 : item.netVotes + 1,
           );
         }
         return item;

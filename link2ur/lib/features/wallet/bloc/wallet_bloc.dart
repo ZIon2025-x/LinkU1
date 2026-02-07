@@ -2,7 +2,6 @@ import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../data/models/payment.dart';
-import '../../../data/models/coupon_points.dart';
 import '../../../data/repositories/user_repository.dart';
 import '../../../core/utils/logger.dart';
 

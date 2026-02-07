@@ -1,8 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_spacing.dart';
+import '../../../core/widgets/loading_view.dart';
+import '../../../core/widgets/error_state_view.dart';
 import '../../../core/widgets/empty_state_view.dart';
+import '../../../data/repositories/notification_repository.dart';
+import '../bloc/notification_bloc.dart';
+import '../../../data/models/notification.dart' as models;
 
 /// 通知中心页
 /// 参考iOS NotificationCenterView.swift
@@ -17,9 +23,19 @@ class NotificationCenterView extends StatelessWidget {
         appBar: AppBar(
           title: const Text('通知'),
           actions: [
-            TextButton(
-              onPressed: () {},
-              child: const Text('全部已读'),
+            BlocBuilder<NotificationBloc, NotificationState>(
+              builder: (context, state) {
+                return TextButton(
+                  onPressed: state.notifications.isEmpty
+                      ? null
+                      : () {
+                          context.read<NotificationBloc>().add(
+                                const NotificationMarkAllAsRead(),
+                              );
+                        },
+                  child: const Text('全部已读'),
+                );
+              },
             ),
           ],
           bottom: const TabBar(
@@ -48,19 +64,64 @@ class _SystemNotificationList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final notifications = List.generate(5, (index) => index);
+    return BlocProvider(
+      create: (context) => NotificationBloc(
+        notificationRepository: context.read<NotificationRepository>(),
+      )..add(const NotificationLoadRequested(type: 'system')),
+      child: BlocBuilder<NotificationBloc, NotificationState>(
+        builder: (context, state) {
+          if (state.status == NotificationStatus.loading &&
+              state.notifications.isEmpty) {
+            return const LoadingView();
+          }
 
-    if (notifications.isEmpty) {
-      return EmptyStateView.noNotifications();
-    }
+          if (state.status == NotificationStatus.error &&
+              state.notifications.isEmpty) {
+            return ErrorStateView.loadFailed(
+              message: state.errorMessage ?? '加载失败',
+              onRetry: () {
+                context.read<NotificationBloc>().add(
+                      const NotificationLoadRequested(type: 'system'),
+                    );
+              },
+            );
+          }
 
-    return ListView.separated(
-      padding: AppSpacing.allMd,
-      itemCount: notifications.length,
-      separatorBuilder: (context, index) => const Divider(),
-      itemBuilder: (context, index) {
-        return _NotificationItem(index: index, isSystem: true);
-      },
+          if (state.notifications.isEmpty) {
+            return EmptyStateView.noNotifications();
+          }
+
+          return RefreshIndicator(
+            onRefresh: () async {
+              context.read<NotificationBloc>().add(
+                    const NotificationLoadRequested(type: 'system'),
+                  );
+            },
+            child: ListView.separated(
+              padding: AppSpacing.allMd,
+              itemCount: state.notifications.length + (state.hasMore ? 1 : 0),
+              separatorBuilder: (context, index) => const Divider(),
+              itemBuilder: (context, index) {
+                if (index == state.notifications.length) {
+                  context.read<NotificationBloc>().add(
+                        const NotificationLoadMore(),
+                      );
+                  return const Center(
+                    child: Padding(
+                      padding: EdgeInsets.all(16.0),
+                      child: LoadingIndicator(),
+                    ),
+                  );
+                }
+                return _NotificationItem(
+                  notification: state.notifications[index],
+                  isSystem: true,
+                );
+              },
+            ),
+          );
+        },
+      ),
     );
   }
 }
@@ -70,97 +131,172 @@ class _InteractionNotificationList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final notifications = List.generate(3, (index) => index);
+    return BlocProvider(
+      create: (context) => NotificationBloc(
+        notificationRepository: context.read<NotificationRepository>(),
+      )..add(const NotificationLoadRequested(type: 'interaction')),
+      child: BlocBuilder<NotificationBloc, NotificationState>(
+        builder: (context, state) {
+          if (state.status == NotificationStatus.loading &&
+              state.notifications.isEmpty) {
+            return const LoadingView();
+          }
 
-    if (notifications.isEmpty) {
-      return EmptyStateView.noNotifications();
-    }
+          if (state.status == NotificationStatus.error &&
+              state.notifications.isEmpty) {
+            return ErrorStateView.loadFailed(
+              message: state.errorMessage ?? '加载失败',
+              onRetry: () {
+                context.read<NotificationBloc>().add(
+                      const NotificationLoadRequested(type: 'interaction'),
+                    );
+              },
+            );
+          }
 
-    return ListView.separated(
-      padding: AppSpacing.allMd,
-      itemCount: notifications.length,
-      separatorBuilder: (context, index) => const Divider(),
-      itemBuilder: (context, index) {
-        return _NotificationItem(index: index, isSystem: false);
-      },
+          if (state.notifications.isEmpty) {
+            return EmptyStateView.noNotifications();
+          }
+
+          return RefreshIndicator(
+            onRefresh: () async {
+              context.read<NotificationBloc>().add(
+                    const NotificationLoadRequested(type: 'interaction'),
+                  );
+            },
+            child: ListView.separated(
+              padding: AppSpacing.allMd,
+              itemCount: state.notifications.length + (state.hasMore ? 1 : 0),
+              separatorBuilder: (context, index) => const Divider(),
+              itemBuilder: (context, index) {
+                if (index == state.notifications.length) {
+                  context.read<NotificationBloc>().add(
+                        const NotificationLoadMore(),
+                      );
+                  return const Center(
+                    child: Padding(
+                      padding: EdgeInsets.all(16.0),
+                      child: LoadingIndicator(),
+                    ),
+                  );
+                }
+                return _NotificationItem(
+                  notification: state.notifications[index],
+                  isSystem: false,
+                );
+              },
+            ),
+          );
+        },
+      ),
     );
   }
 }
 
 class _NotificationItem extends StatelessWidget {
   const _NotificationItem({
-    required this.index,
+    required this.notification,
     required this.isSystem,
   });
 
-  final int index;
+  final models.AppNotification notification;
   final bool isSystem;
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 12),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // 图标
-          Container(
-            width: 44,
-            height: 44,
-            decoration: BoxDecoration(
-              color: (isSystem ? AppColors.primary : AppColors.accentPink).withValues(alpha: 0.1),
-              shape: BoxShape.circle,
-            ),
-            child: Icon(
-              isSystem ? Icons.notifications_outlined : Icons.favorite_outline,
-              color: isSystem ? AppColors.primary : AppColors.accentPink,
-            ),
-          ),
-          AppSpacing.hMd,
-          
-          // 内容
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  isSystem ? '系统通知标题 ${index + 1}' : '用户 ${index + 1} 点赞了你的帖子',
-                  style: const TextStyle(fontWeight: FontWeight.w500),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  '通知内容详情...',
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: AppColors.textSecondaryLight,
-                  ),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  '${index + 1}小时前',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: AppColors.textTertiaryLight,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          
-          // 未读标记
-          if (index == 0)
+    return GestureDetector(
+      onTap: () {
+        if (!notification.isRead) {
+          context.read<NotificationBloc>().add(
+                NotificationMarkAsRead(notification.id),
+              );
+        }
+      },
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // 图标
             Container(
-              width: 8,
-              height: 8,
-              decoration: const BoxDecoration(
-                color: AppColors.error,
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                color: (isSystem ? AppColors.primary : AppColors.accentPink)
+                    .withValues(alpha: 0.1),
                 shape: BoxShape.circle,
               ),
+              child: Icon(
+                isSystem ? Icons.notifications_outlined : Icons.favorite_outline,
+                color: isSystem ? AppColors.primary : AppColors.accentPink,
+              ),
             ),
-        ],
+            AppSpacing.hMd,
+
+            // 内容
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    notification.displayTitle,
+                    style: TextStyle(
+                      fontWeight: notification.isRead
+                          ? FontWeight.normal
+                          : FontWeight.w500,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    notification.displayContent,
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: AppColors.textSecondaryLight,
+                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    _formatTime(notification.createdAt),
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: AppColors.textTertiaryLight,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            // 未读标记
+            if (!notification.isRead)
+              Container(
+                width: 8,
+                height: 8,
+                decoration: const BoxDecoration(
+                  color: AppColors.error,
+                  shape: BoxShape.circle,
+                ),
+              ),
+          ],
+        ),
       ),
     );
+  }
+
+  String _formatTime(DateTime? time) {
+    if (time == null) return '';
+    final now = DateTime.now();
+    final difference = now.difference(time);
+
+    if (difference.inDays > 0) {
+      return '${difference.inDays}天前';
+    } else if (difference.inHours > 0) {
+      return '${difference.inHours}小时前';
+    } else if (difference.inMinutes > 0) {
+      return '${difference.inMinutes}分钟前';
+    } else {
+      return '刚刚';
+    }
   }
 }

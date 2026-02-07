@@ -10,6 +10,7 @@ import '../../features/tasks/views/task_detail_view.dart';
 import '../../features/tasks/views/create_task_view.dart';
 import '../../features/flea_market/views/flea_market_view.dart';
 import '../../features/flea_market/views/flea_market_detail_view.dart';
+import '../../features/flea_market/views/create_flea_market_item_view.dart';
 import '../../features/task_expert/views/task_expert_list_view.dart';
 import '../../features/task_expert/views/task_expert_detail_view.dart';
 import '../../features/forum/views/forum_view.dart';
@@ -182,6 +183,11 @@ class AppRouter {
           final id = int.parse(state.pathParameters['id']!);
           return FleaMarketDetailView(itemId: id);
         },
+      ),
+      GoRoute(
+        path: AppRoutes.createFleaMarketItem,
+        name: 'createFleaMarketItem',
+        builder: (context, state) => const CreateFleaMarketItemView(),
       ),
 
       // 任务达人

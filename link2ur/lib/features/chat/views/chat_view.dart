@@ -1,8 +1,16 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_radius.dart';
+import '../../../core/widgets/loading_view.dart';
+import '../../../core/widgets/error_state_view.dart';
+import '../../../core/utils/date_formatter.dart';
+import '../../../data/repositories/message_repository.dart';
+import '../../../data/models/message.dart';
+import '../../../data/services/storage_service.dart';
+import '../bloc/chat_bloc.dart';
 
 /// 私信聊天页
 /// 参考iOS ChatView.swift
@@ -21,6 +29,13 @@ class ChatView extends StatefulWidget {
 class _ChatViewState extends State<ChatView> {
   final _messageController = TextEditingController();
   final _scrollController = ScrollController();
+  int? _currentUserId;
+
+  @override
+  void initState() {
+    super.initState();
+    _currentUserId = StorageService.instance.getUserId();
+  }
 
   @override
   void dispose() {
@@ -31,46 +46,107 @@ class _ChatViewState extends State<ChatView> {
 
   void _sendMessage() {
     if (_messageController.text.trim().isEmpty) return;
-    // TODO: 发送消息
+    
+    final content = _messageController.text.trim();
+    context.read<ChatBloc>().add(
+      ChatSendMessage(content: content),
+    );
     _messageController.clear();
+  }
+
+  void _scrollToBottom() {
+    if (_scrollController.hasClients) {
+      _scrollController.animateTo(
+        _scrollController.position.maxScrollExtent,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeOut,
+      );
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('用户 ${widget.userId}'),
-        actions: [
-          IconButton(icon: const Icon(Icons.more_vert), onPressed: () {}),
-        ],
-      ),
-      body: Column(
-        children: [
-          // 消息列表
-          Expanded(
-            child: ListView.builder(
-              controller: _scrollController,
-              padding: AppSpacing.allMd,
-              itemCount: 10,
-              itemBuilder: (context, index) {
-                final isMe = index % 2 == 0;
-                return _MessageBubble(
-                  message: '这是一条示例消息 ${index + 1}',
-                  isMe: isMe,
-                  time: '12:${(index * 5).toString().padLeft(2, '0')}',
-                );
-              },
+    final messageRepository = context.read<MessageRepository>();
+
+    return BlocProvider(
+      create: (context) => ChatBloc(messageRepository: messageRepository)
+        ..add(ChatLoadMessages(userId: widget.userId)),
+      child: BlocConsumer<ChatBloc, ChatState>(
+        listener: (context, state) {
+          // 当消息发送成功或收到新消息时，滚动到底部
+          if (state.status == ChatStatus.loaded) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              _scrollToBottom();
+            });
+          }
+        },
+        builder: (context, state) {
+          return Scaffold(
+            appBar: AppBar(
+              title: Text('用户 ${widget.userId}'),
+              actions: [
+                IconButton(icon: const Icon(Icons.more_vert), onPressed: () {}),
+              ],
             ),
-          ),
-          
-          // 输入区域
-          _buildInputArea(),
-        ],
+            body: Column(
+              children: [
+                // 消息列表
+                Expanded(
+                  child: _buildMessageList(state),
+                ),
+                
+                // 输入区域
+                _buildInputArea(state),
+              ],
+            ),
+          );
+        },
       ),
     );
   }
 
-  Widget _buildInputArea() {
+  Widget _buildMessageList(ChatState state) {
+    if (state.status == ChatStatus.loading && state.messages.isEmpty) {
+      return const LoadingView();
+    }
+
+    if (state.status == ChatStatus.error && state.messages.isEmpty) {
+      return ErrorStateView.loadFailed(
+        message: state.errorMessage,
+        onRetry: () {
+          context.read<ChatBloc>().add(ChatLoadMessages(userId: widget.userId));
+        },
+      );
+    }
+
+    if (state.messages.isEmpty) {
+      return const Center(
+        child: Text(
+          '还没有消息，开始对话吧',
+          style: TextStyle(color: AppColors.textSecondaryLight),
+        ),
+      );
+    }
+
+    // 反转消息列表，使最新的在底部
+    final reversedMessages = state.messages.reversed.toList();
+
+    return ListView.builder(
+      controller: _scrollController,
+      padding: AppSpacing.allMd,
+      itemCount: reversedMessages.length,
+      itemBuilder: (context, index) {
+        final message = reversedMessages[index];
+        final isMe = _currentUserId != null && message.senderId == _currentUserId;
+        return _MessageBubble(
+          message: message,
+          isMe: isMe,
+        );
+      },
+    );
+  }
+
+  Widget _buildInputArea(ChatState state) {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -94,6 +170,7 @@ class _ChatViewState extends State<ChatView> {
             Expanded(
               child: TextField(
                 controller: _messageController,
+                enabled: !state.isSending,
                 decoration: InputDecoration(
                   hintText: '输入消息...',
                   filled: true,
@@ -109,11 +186,17 @@ class _ChatViewState extends State<ChatView> {
               ),
             ),
             AppSpacing.hSm,
-            IconButton(
-              icon: const Icon(Icons.send),
-              onPressed: _sendMessage,
-              color: AppColors.primary,
-            ),
+            if (state.isSending)
+              const Padding(
+                padding: EdgeInsets.all(8.0),
+                child: LoadingIndicator(size: 24),
+              )
+            else
+              IconButton(
+                icon: const Icon(Icons.send),
+                onPressed: _sendMessage,
+                color: AppColors.primary,
+              ),
           ],
         ),
       ),
@@ -125,15 +208,17 @@ class _MessageBubble extends StatelessWidget {
   const _MessageBubble({
     required this.message,
     required this.isMe,
-    required this.time,
   });
 
-  final String message;
+  final Message message;
   final bool isMe;
-  final String time;
 
   @override
   Widget build(BuildContext context) {
+    final timeText = message.createdAt != null
+        ? DateFormatter.formatMessageTime(message.createdAt!)
+        : '';
+
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
@@ -164,20 +249,41 @@ class _MessageBubble extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
-                  Text(
-                    message,
-                    style: TextStyle(
-                      color: isMe ? Colors.white : AppColors.textPrimaryLight,
+                  if (message.isImage && message.imageUrl != null)
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: Image.network(
+                        message.imageUrl!,
+                        width: 200,
+                        height: 200,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) {
+                          return Container(
+                            width: 200,
+                            height: 200,
+                            color: AppColors.skeletonBase,
+                            child: const Icon(Icons.broken_image),
+                          );
+                        },
+                      ),
+                    )
+                  else
+                    Text(
+                      message.content,
+                      style: TextStyle(
+                        color: isMe ? Colors.white : AppColors.textPrimaryLight,
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    time,
-                    style: TextStyle(
-                      fontSize: 10,
-                      color: isMe ? Colors.white70 : AppColors.textTertiaryLight,
+                  if (timeText.isNotEmpty) ...[
+                    const SizedBox(height: 2),
+                    Text(
+                      timeText,
+                      style: TextStyle(
+                        fontSize: 10,
+                        color: isMe ? Colors.white70 : AppColors.textTertiaryLight,
+                      ),
                     ),
-                  ),
+                  ],
                 ],
               ),
             ),

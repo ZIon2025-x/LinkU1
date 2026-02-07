@@ -71,7 +71,7 @@ class TaskExpertState extends Equatable {
   final TaskExpertStatus status;
   final List<TaskExpert> experts;
   final TaskExpert? selectedExpert;
-  final List<ExpertService> services;
+  final List<TaskExpertService> services;
   final int total;
   final int page;
   final bool hasMore;
@@ -85,7 +85,7 @@ class TaskExpertState extends Equatable {
     TaskExpertStatus? status,
     List<TaskExpert>? experts,
     TaskExpert? selectedExpert,
-    List<ExpertService>? services,
+    List<TaskExpertService>? services,
     int? total,
     int? page,
     bool? hasMore,
@@ -146,7 +146,7 @@ class TaskExpertBloc extends Bloc<TaskExpertEvent, TaskExpertState> {
     try {
       final response = await _taskExpertRepository.getExperts(
         page: 1,
-        skill: event.skill,
+        keyword: event.skill,
       );
 
       emit(state.copyWith(
@@ -214,7 +214,7 @@ class TaskExpertBloc extends Bloc<TaskExpertEvent, TaskExpertState> {
 
     try {
       final expert =
-          await _taskExpertRepository.getExpertDetail(event.expertId);
+          await _taskExpertRepository.getExpertById(event.expertId);
       final services =
           await _taskExpertRepository.getExpertServices(event.expertId);
 

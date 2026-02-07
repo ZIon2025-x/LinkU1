@@ -5,6 +5,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'core/design/app_theme.dart';
 import 'core/router/app_router.dart';
 import 'features/auth/bloc/auth_bloc.dart';
+import 'features/settings/bloc/settings_bloc.dart';
 import 'data/repositories/auth_repository.dart';
 import 'data/repositories/task_repository.dart';
 import 'data/repositories/user_repository.dart';
@@ -112,38 +113,52 @@ class _Link2UrAppState extends State<Link2UrApp> {
               authRepository: _authRepository,
             )..add(AuthCheckRequested()),
           ),
+          BlocProvider<SettingsBloc>(
+            create: (context) => SettingsBloc()
+              ..add(const SettingsLoadRequested()),
+          ),
         ],
         child: BlocBuilder<AuthBloc, AuthState>(
           builder: (context, authState) {
-            return MaterialApp.router(
-              title: 'Link²Ur',
-              debugShowCheckedModeBanner: false,
-              
-              // 主题配置
-              theme: AppTheme.lightTheme,
-              darkTheme: AppTheme.darkTheme,
-              themeMode: ThemeMode.system,
-              
-              // 路由配置
-              routerConfig: _appRouter.router,
-              
-              // 国际化配置
-              localizationsDelegates: const [
-                AppLocalizations.delegate,
-                GlobalMaterialLocalizations.delegate,
-                GlobalWidgetsLocalizations.delegate,
-                GlobalCupertinoLocalizations.delegate,
-              ],
-              supportedLocales: const [
-                Locale('zh', 'CN'),
-                Locale('zh', 'TW'),
-                Locale('en', 'US'),
-              ],
-              locale: const Locale('zh', 'CN'),
+            return BlocBuilder<SettingsBloc, SettingsState>(
+              builder: (context, settingsState) {
+                return MaterialApp.router(
+                  title: 'Link²Ur',
+                  debugShowCheckedModeBanner: false,
+                  theme: AppTheme.lightTheme,
+                  darkTheme: AppTheme.darkTheme,
+                  themeMode: settingsState.themeMode,
+                  routerConfig: _appRouter.router,
+                  localizationsDelegates: const [
+                    AppLocalizations.delegate,
+                    GlobalMaterialLocalizations.delegate,
+                    GlobalWidgetsLocalizations.delegate,
+                    GlobalCupertinoLocalizations.delegate,
+                  ],
+                  supportedLocales: const [
+                    Locale('zh', 'CN'),
+                    Locale('zh', 'TW'),
+                    Locale('en', 'US'),
+                  ],
+                  locale: _localeFromString(settingsState.locale),
+                );
+              },
             );
           },
         ),
       ),
     );
   }
+}
+
+Locale _localeFromString(String s) {
+  if (s.contains('-')) {
+    final parts = s.split('-');
+    return Locale(parts[0], parts[1]);
+  }
+  if (s.contains('_')) {
+    final parts = s.split('_');
+    return Locale(parts[0], parts[1]);
+  }
+  return Locale(s);
 }

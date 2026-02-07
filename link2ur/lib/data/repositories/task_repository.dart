@@ -1,4 +1,5 @@
 import '../models/task.dart';
+import '../models/review.dart';
 import '../services/api_service.dart';
 import '../../core/constants/api_endpoints.dart';
 
@@ -98,6 +99,9 @@ class TaskRepository {
     return Task.fromJson(response.data!);
   }
 
+  /// 获取任务详情（别名，供 TaskDetailBloc 使用）
+  Future<Task> getTaskDetail(int id) => getTaskById(id);
+
   /// 创建任务
   Future<Task> createTask(CreateTaskRequest request) async {
     final response = await _apiService.post<Map<String, dynamic>>(
@@ -113,9 +117,12 @@ class TaskRepository {
   }
 
   /// 申请任务
-  Future<void> applyTask(int taskId) async {
+  Future<void> applyTask(int taskId, {String? message}) async {
     final response = await _apiService.post(
       ApiEndpoints.applyTask(taskId),
+      data: {
+        if (message != null) 'message': message,
+      },
     );
 
     if (!response.isSuccess) {
@@ -171,9 +178,12 @@ class TaskRepository {
   }
 
   /// 取消任务
-  Future<void> cancelTask(int taskId) async {
+  Future<void> cancelTask(int taskId, {String? reason}) async {
     final response = await _apiService.post(
       ApiEndpoints.cancelTask(taskId),
+      data: {
+        if (reason != null) 'reason': reason,
+      },
     );
 
     if (!response.isSuccess) {
@@ -181,18 +191,11 @@ class TaskRepository {
     }
   }
 
-  /// 评价任务
-  Future<void> reviewTask(
-    int taskId, {
-    required int rating,
-    String? comment,
-  }) async {
+  /// 评价任务（使用 CreateReviewRequest）
+  Future<void> reviewTask(int taskId, CreateReviewRequest review) async {
     final response = await _apiService.post(
       ApiEndpoints.reviewTask(taskId),
-      data: {
-        'rating': rating,
-        if (comment != null) 'comment': comment,
-      },
+      data: review.toJson(),
     );
 
     if (!response.isSuccess) {

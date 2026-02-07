@@ -62,6 +62,15 @@ class FleaMarketPurchaseItem extends FleaMarketEvent {
   List<Object?> get props => [itemId];
 }
 
+class FleaMarketLoadDetailRequested extends FleaMarketEvent {
+  const FleaMarketLoadDetailRequested(this.itemId);
+
+  final int itemId;
+
+  @override
+  List<Object?> get props => [itemId];
+}
+
 // ==================== State ====================
 
 enum FleaMarketStatus { initial, loading, loaded, error }
@@ -79,6 +88,8 @@ class FleaMarketState extends Equatable {
     this.isRefreshing = false,
     this.isSubmitting = false,
     this.actionMessage,
+    this.selectedItem,
+    this.detailStatus = FleaMarketStatus.initial,
   });
 
   final FleaMarketStatus status;
@@ -92,9 +103,13 @@ class FleaMarketState extends Equatable {
   final bool isRefreshing;
   final bool isSubmitting;
   final String? actionMessage;
+  final FleaMarketItem? selectedItem;
+  final FleaMarketStatus detailStatus;
 
   bool get isLoading => status == FleaMarketStatus.loading;
   bool get isEmpty => items.isEmpty && status == FleaMarketStatus.loaded;
+  bool get isDetailLoading => detailStatus == FleaMarketStatus.loading;
+  bool get isDetailLoaded => detailStatus == FleaMarketStatus.loaded && selectedItem != null;
 
   FleaMarketState copyWith({
     FleaMarketStatus? status,
@@ -108,6 +123,8 @@ class FleaMarketState extends Equatable {
     bool? isRefreshing,
     bool? isSubmitting,
     String? actionMessage,
+    FleaMarketItem? selectedItem,
+    FleaMarketStatus? detailStatus,
   }) {
     return FleaMarketState(
       status: status ?? this.status,
@@ -121,6 +138,8 @@ class FleaMarketState extends Equatable {
       isRefreshing: isRefreshing ?? this.isRefreshing,
       isSubmitting: isSubmitting ?? this.isSubmitting,
       actionMessage: actionMessage,
+      selectedItem: selectedItem ?? this.selectedItem,
+      detailStatus: detailStatus ?? this.detailStatus,
     );
   }
 
@@ -137,6 +156,8 @@ class FleaMarketState extends Equatable {
         isRefreshing,
         isSubmitting,
         actionMessage,
+        selectedItem,
+        detailStatus,
       ];
 }
 
@@ -153,6 +174,7 @@ class FleaMarketBloc extends Bloc<FleaMarketEvent, FleaMarketState> {
     on<FleaMarketSearchChanged>(_onSearchChanged);
     on<FleaMarketCreateItem>(_onCreateItem);
     on<FleaMarketPurchaseItem>(_onPurchaseItem);
+    on<FleaMarketLoadDetailRequested>(_onLoadDetailRequested);
   }
 
   final FleaMarketRepository _fleaMarketRepository;
@@ -167,7 +189,7 @@ class FleaMarketBloc extends Bloc<FleaMarketEvent, FleaMarketState> {
       final response = await _fleaMarketRepository.getItems(
         page: 1,
         category: state.selectedCategory,
-        search: state.searchQuery.isEmpty ? null : state.searchQuery,
+        keyword: state.searchQuery.isEmpty ? null : state.searchQuery,
       );
 
       emit(state.copyWith(
@@ -222,7 +244,7 @@ class FleaMarketBloc extends Bloc<FleaMarketEvent, FleaMarketState> {
       final response = await _fleaMarketRepository.getItems(
         page: nextPage,
         category: state.selectedCategory,
-        search: state.searchQuery.isEmpty ? null : state.searchQuery,
+        keyword: state.searchQuery.isEmpty ? null : state.searchQuery,
       );
 
       emit(state.copyWith(
@@ -277,7 +299,7 @@ class FleaMarketBloc extends Bloc<FleaMarketEvent, FleaMarketState> {
     try {
       final response = await _fleaMarketRepository.getItems(
         page: 1,
-        search: event.query.isEmpty ? null : event.query,
+        keyword: event.query.isEmpty ? null : event.query,
         category: state.selectedCategory,
       );
 
@@ -329,7 +351,8 @@ class FleaMarketBloc extends Bloc<FleaMarketEvent, FleaMarketState> {
 
       // 更新本地状态
       final updatedItems = state.items.map((item) {
-        if (item.id == event.itemId) {
+        final itemIdInt = int.tryParse(item.id);
+        if (itemIdInt == event.itemId) {
           return item.copyWith(status: 'sold');
         }
         return item;
@@ -344,6 +367,27 @@ class FleaMarketBloc extends Bloc<FleaMarketEvent, FleaMarketState> {
       emit(state.copyWith(
         isSubmitting: false,
         actionMessage: '购买失败',
+      ));
+    }
+  }
+
+  Future<void> _onLoadDetailRequested(
+    FleaMarketLoadDetailRequested event,
+    Emitter<FleaMarketState> emit,
+  ) async {
+    emit(state.copyWith(detailStatus: FleaMarketStatus.loading));
+
+    try {
+      final item = await _fleaMarketRepository.getItemById(event.itemId);
+      emit(state.copyWith(
+        detailStatus: FleaMarketStatus.loaded,
+        selectedItem: item,
+      ));
+    } catch (e) {
+      AppLogger.error('Failed to load flea market item detail', e);
+      emit(state.copyWith(
+        detailStatus: FleaMarketStatus.error,
+        errorMessage: e.toString(),
       ));
     }
   }

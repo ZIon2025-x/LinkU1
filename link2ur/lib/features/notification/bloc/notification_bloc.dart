@@ -40,8 +40,8 @@ class NotificationMarkAllAsRead extends NotificationEvent {
   const NotificationMarkAllAsRead();
 }
 
-class NotificationLoadUnreadCount extends NotificationEvent {
-  const NotificationLoadUnreadCount();
+class NotificationLoadUnreadNotificationCount extends NotificationEvent {
+  const NotificationLoadUnreadNotificationCount();
 }
 
 // ==================== State ====================
@@ -55,7 +55,7 @@ class NotificationState extends Equatable {
     this.total = 0,
     this.page = 1,
     this.hasMore = true,
-    this.unreadCount = const UnreadCount(),
+    this.unreadCount = const UnreadNotificationCount(count: 0),
     this.errorMessage,
   });
 
@@ -64,11 +64,11 @@ class NotificationState extends Equatable {
   final int total;
   final int page;
   final bool hasMore;
-  final UnreadCount unreadCount;
+  final UnreadNotificationCount unreadCount;
   final String? errorMessage;
 
   bool get isLoading => status == NotificationStatus.loading;
-  bool get hasUnread => unreadCount.total > 0;
+  bool get hasUnread => unreadCount.totalCount > 0;
 
   NotificationState copyWith({
     NotificationStatus? status,
@@ -76,7 +76,7 @@ class NotificationState extends Equatable {
     int? total,
     int? page,
     bool? hasMore,
-    UnreadCount? unreadCount,
+    UnreadNotificationCount? unreadCount,
     String? errorMessage,
   }) {
     return NotificationState(
@@ -106,7 +106,7 @@ class NotificationBloc extends Bloc<NotificationEvent, NotificationState> {
     on<NotificationLoadMore>(_onLoadMore);
     on<NotificationMarkAsRead>(_onMarkAsRead);
     on<NotificationMarkAllAsRead>(_onMarkAllAsRead);
-    on<NotificationLoadUnreadCount>(_onLoadUnreadCount);
+    on<NotificationLoadUnreadNotificationCount>(_onLoadUnreadNotificationCount);
   }
 
   final NotificationRepository _notificationRepository;
@@ -181,7 +181,7 @@ class NotificationBloc extends Bloc<NotificationEvent, NotificationState> {
       emit(state.copyWith(notifications: updatedList));
 
       // 更新未读数
-      add(const NotificationLoadUnreadCount());
+      add(const NotificationLoadUnreadNotificationCount());
     } catch (e) {
       AppLogger.error('Failed to mark notification as read', e);
     }
@@ -200,15 +200,15 @@ class NotificationBloc extends Bloc<NotificationEvent, NotificationState> {
 
       emit(state.copyWith(
         notifications: updatedList,
-        unreadCount: const UnreadCount(),
+        unreadCount: const UnreadNotificationCount(count: 0),
       ));
     } catch (e) {
       AppLogger.error('Failed to mark all as read', e);
     }
   }
 
-  Future<void> _onLoadUnreadCount(
-    NotificationLoadUnreadCount event,
+  Future<void> _onLoadUnreadNotificationCount(
+    NotificationLoadUnreadNotificationCount event,
     Emitter<NotificationState> emit,
   ) async {
     try {

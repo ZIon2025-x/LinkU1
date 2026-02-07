@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/design/app_colors.dart';
@@ -6,17 +7,42 @@ import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_radius.dart';
 import '../../../core/widgets/async_image_view.dart';
 import '../../../core/widgets/cards.dart';
+import '../../../core/widgets/loading_view.dart';
+import '../../../core/widgets/error_state_view.dart';
+import '../../../core/widgets/empty_state_view.dart';
+import '../../../data/models/task.dart';
+import '../../../data/repositories/task_repository.dart';
+import '../../../data/repositories/common_repository.dart';
+import '../../../data/models/banner.dart' as app_banner;
+import '../bloc/home_bloc.dart';
+import '../bloc/home_event.dart';
+import '../bloc/home_state.dart';
 
 /// 首页
 /// 参考iOS HomeView.swift
-class HomeView extends StatefulWidget {
+class HomeView extends StatelessWidget {
   const HomeView({super.key});
 
   @override
-  State<HomeView> createState() => _HomeViewState();
+  Widget build(BuildContext context) {
+    return BlocProvider(
+      create: (context) => HomeBloc(
+        taskRepository: context.read<TaskRepository>(),
+      )..add(const HomeLoadRequested()),
+      child: const _HomeViewContent(),
+    );
+  }
 }
 
-class _HomeViewState extends State<HomeView> with SingleTickerProviderStateMixin {
+class _HomeViewContent extends StatefulWidget {
+  const _HomeViewContent();
+
+  @override
+  State<_HomeViewContent> createState() => _HomeViewContentState();
+}
+
+class _HomeViewContentState extends State<_HomeViewContent>
+    with SingleTickerProviderStateMixin {
   late TabController _tabController;
 
   final List<String> _tabs = ['推荐', '附近', '达人'];
@@ -25,6 +51,11 @@ class _HomeViewState extends State<HomeView> with SingleTickerProviderStateMixin
   void initState() {
     super.initState();
     _tabController = TabController(length: _tabs.length, vsync: this);
+    _tabController.addListener(() {
+      if (!_tabController.indexIsChanging) {
+        context.read<HomeBloc>().add(HomeTabChanged(_tabController.index));
+      }
+    });
   }
 
   @override
@@ -39,7 +70,7 @@ class _HomeViewState extends State<HomeView> with SingleTickerProviderStateMixin
       appBar: _buildAppBar(),
       body: TabBarView(
         controller: _tabController,
-        children: [
+        children: const [
           _RecommendedTab(),
           _NearbyTab(),
           _ExpertsTab(),
@@ -55,7 +86,7 @@ class _HomeViewState extends State<HomeView> with SingleTickerProviderStateMixin
         IconButton(
           icon: const Icon(Icons.search),
           onPressed: () {
-            // TODO: 搜索
+            context.push('/tasks');
           },
         ),
         IconButton(
@@ -79,94 +110,233 @@ class _HomeViewState extends State<HomeView> with SingleTickerProviderStateMixin
 
 /// 推荐Tab
 class _RecommendedTab extends StatelessWidget {
+  const _RecommendedTab();
+
   @override
   Widget build(BuildContext context) {
-    return RefreshIndicator(
-      onRefresh: () async {
-        // TODO: 刷新数据
-        await Future.delayed(const Duration(seconds: 1));
-      },
-      child: CustomScrollView(
-        slivers: [
-          // 横幅轮播
-          SliverToBoxAdapter(
-            child: _BannerCarousel(),
-          ),
-          
-          // 快捷入口
-          SliverToBoxAdapter(
-            child: _QuickActions(),
-          ),
-          
-          // 推荐任务
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: AppSpacing.allMd,
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text(
-                    '推荐任务',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
+    return BlocBuilder<HomeBloc, HomeState>(
+      builder: (context, state) {
+        return RefreshIndicator(
+          onRefresh: () async {
+            context.read<HomeBloc>().add(const HomeRefreshRequested());
+            // 等待刷新完成
+            await Future.delayed(const Duration(milliseconds: 500));
+          },
+          child: CustomScrollView(
+            slivers: [
+              // 横幅轮播
+              const SliverToBoxAdapter(
+                child: _BannerCarousel(),
+              ),
+
+              // 快捷入口
+              SliverToBoxAdapter(
+                child: _QuickActions(),
+              ),
+
+              // 推荐任务标题
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: AppSpacing.allMd,
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        '推荐任务',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      TextButton(
+                        onPressed: () {
+                          context.push('/tasks');
+                        },
+                        child: const Text('查看更多'),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
+              // 内容区域
+              if (state.isLoading && state.recommendedTasks.isEmpty)
+                const SliverFillRemaining(
+                  child: LoadingView(),
+                )
+              else if (state.hasError && state.recommendedTasks.isEmpty)
+                SliverFillRemaining(
+                  child: ErrorStateView(
+                    message: state.errorMessage ?? '加载失败',
+                    onRetry: () {
+                      context
+                          .read<HomeBloc>()
+                          .add(const HomeLoadRequested());
+                    },
+                  ),
+                )
+              else if (state.recommendedTasks.isEmpty)
+                SliverFillRemaining(
+                  child: EmptyStateView.noTasks(
+                    actionText: '发布任务',
+                    onAction: () {
+                      context.push('/tasks/create');
+                    },
+                  ),
+                )
+              else ...[
+                // 任务列表
+                SliverPadding(
+                  padding: AppSpacing.horizontalMd,
+                  sliver: SliverList(
+                    delegate: SliverChildBuilderDelegate(
+                      (context, index) {
+                        if (index >= state.recommendedTasks.length) {
+                          return null;
+                        }
+                        final task = state.recommendedTasks[index];
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 12),
+                          child: _TaskCard(task: task),
+                        );
+                      },
+                      childCount: state.recommendedTasks.length,
                     ),
                   ),
-                  TextButton(
-                    onPressed: () {
-                      context.push('/tasks');
-                    },
-                    child: const Text('查看更多'),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          
-          // 任务列表
-          SliverPadding(
-            padding: AppSpacing.horizontalMd,
-            sliver: SliverList(
-              delegate: SliverChildBuilderDelegate(
-                (context, index) => Padding(
-                  padding: const EdgeInsets.only(bottom: 12),
-                  child: _TaskCard(index: index),
                 ),
-                childCount: 5,
-              ),
-            ),
+
+                // 加载更多
+                if (state.hasMoreRecommended)
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Center(
+                        child: TextButton(
+                          onPressed: () {
+                            context.read<HomeBloc>().add(
+                                  const HomeLoadRecommended(loadMore: true),
+                                );
+                          },
+                          child: const Text('加载更多'),
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+
+              // 底部间距
+              const SliverPadding(padding: EdgeInsets.only(bottom: 20)),
+            ],
           ),
-          
-          // 底部间距
-          const SliverPadding(padding: EdgeInsets.only(bottom: 20)),
-        ],
-      ),
+        );
+      },
     );
   }
 }
 
 /// 附近Tab
 class _NearbyTab extends StatelessWidget {
+  const _NearbyTab();
+
   @override
   Widget build(BuildContext context) {
-    return const Center(
-      child: Text('附近任务'),
+    return BlocBuilder<HomeBloc, HomeState>(
+      builder: (context, state) {
+        if (state.nearbyTasks.isEmpty && !state.isLoading) {
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.location_off_outlined,
+                  size: 64,
+                  color: AppColors.textTertiaryLight,
+                ),
+                AppSpacing.vMd,
+                Text(
+                  '暂无附近任务',
+                  style: TextStyle(color: AppColors.textSecondaryLight),
+                ),
+                AppSpacing.vMd,
+                TextButton.icon(
+                  onPressed: () {
+                    // 使用默认坐标加载附近任务
+                    context.read<HomeBloc>().add(
+                          const HomeLoadNearby(
+                            latitude: 51.5074,
+                            longitude: -0.1278,
+                          ),
+                        );
+                  },
+                  icon: const Icon(Icons.refresh),
+                  label: const Text('加载附近任务'),
+                ),
+              ],
+            ),
+          );
+        }
+
+        return RefreshIndicator(
+          onRefresh: () async {
+            context.read<HomeBloc>().add(
+                  const HomeLoadNearby(
+                    latitude: 51.5074,
+                    longitude: -0.1278,
+                  ),
+                );
+            await Future.delayed(const Duration(milliseconds: 500));
+          },
+          child: ListView.separated(
+            padding: AppSpacing.allMd,
+            itemCount: state.nearbyTasks.length,
+            separatorBuilder: (_, __) => AppSpacing.vMd,
+            itemBuilder: (context, index) {
+              return _TaskCard(task: state.nearbyTasks[index]);
+            },
+          ),
+        );
+      },
     );
   }
 }
 
 /// 达人Tab
 class _ExpertsTab extends StatelessWidget {
+  const _ExpertsTab();
+
   @override
   Widget build(BuildContext context) {
-    return const Center(
-      child: Text('任务达人'),
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.star_outline,
+            size: 64,
+            color: AppColors.textTertiaryLight,
+          ),
+          AppSpacing.vMd,
+          Text(
+            '任务达人',
+            style: TextStyle(color: AppColors.textSecondaryLight),
+          ),
+          AppSpacing.vMd,
+          TextButton(
+            onPressed: () {
+              context.push('/task-experts');
+            },
+            child: const Text('浏览达人'),
+          ),
+        ],
+      ),
     );
   }
 }
 
 /// 横幅轮播
 class _BannerCarousel extends StatelessWidget {
+  const _BannerCarousel();
+
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -208,11 +378,31 @@ class _BannerCarousel extends StatelessWidget {
 /// 快捷入口
 class _QuickActions extends StatelessWidget {
   final List<_QuickAction> actions = const [
-    _QuickAction(icon: Icons.local_shipping, label: '代取代送', color: AppColors.primary),
-    _QuickAction(icon: Icons.shopping_bag, label: '代购', color: AppColors.accent),
-    _QuickAction(icon: Icons.school, label: '辅导', color: AppColors.success),
-    _QuickAction(icon: Icons.translate, label: '翻译', color: AppColors.teal),
-    _QuickAction(icon: Icons.more_horiz, label: '更多', color: AppColors.purple),
+    _QuickAction(
+        icon: Icons.local_shipping,
+        label: '代取代送',
+        color: AppColors.primary,
+        category: 'delivery'),
+    _QuickAction(
+        icon: Icons.shopping_bag,
+        label: '代购',
+        color: AppColors.accent,
+        category: 'shopping'),
+    _QuickAction(
+        icon: Icons.school,
+        label: '辅导',
+        color: AppColors.success,
+        category: 'tutoring'),
+    _QuickAction(
+        icon: Icons.translate,
+        label: '翻译',
+        color: AppColors.teal,
+        category: 'translation'),
+    _QuickAction(
+        icon: Icons.more_horiz,
+        label: '更多',
+        color: AppColors.purple,
+        category: 'all'),
   ];
 
   @override
@@ -224,7 +414,7 @@ class _QuickActions extends StatelessWidget {
         children: actions.map((action) {
           return GestureDetector(
             onTap: () {
-              // TODO: 跳转到对应分类
+              context.push('/tasks');
             },
             child: Column(
               children: [
@@ -260,24 +450,26 @@ class _QuickAction {
     required this.icon,
     required this.label,
     required this.color,
+    required this.category,
   });
 
   final IconData icon;
   final String label;
   final Color color;
+  final String category;
 }
 
-/// 任务卡片
+/// 任务卡片 - 使用真实 Task 数据
 class _TaskCard extends StatelessWidget {
-  const _TaskCard({required this.index});
+  const _TaskCard({required this.task});
 
-  final int index;
+  final Task task;
 
   @override
   Widget build(BuildContext context) {
     return AppCard(
       onTap: () {
-        context.push('/tasks/${index + 1}');
+        context.push('/tasks/${task.id}');
       },
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -289,10 +481,16 @@ class _TaskCard extends StatelessWidget {
               width: 80,
               height: 80,
               color: AppColors.skeletonBase,
-              child: const Icon(
-                Icons.image,
-                color: AppColors.textTertiaryLight,
-              ),
+              child: task.firstImage != null
+                  ? AsyncImageView(
+                      imageUrl: task.firstImage!,
+                      width: 80,
+                      height: 80,
+                    )
+                  : const Icon(
+                      Icons.image,
+                      color: AppColors.textTertiaryLight,
+                    ),
             ),
           ),
           AppSpacing.hMd,
@@ -302,7 +500,7 @@ class _TaskCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  '示例任务标题 ${index + 1}',
+                  task.displayTitle,
                   style: const TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w500,
@@ -311,32 +509,41 @@ class _TaskCard extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                 ),
                 const SizedBox(height: 4),
-                Text(
-                  '任务描述内容...',
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: AppColors.textSecondaryLight,
+                if (task.displayDescription != null)
+                  Text(
+                    task.displayDescription!,
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: AppColors.textSecondaryLight,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
                 const SizedBox(height: 8),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      '\$${(index + 1) * 10}',
+                      '${task.currency == 'GBP' ? '£' : '\$'}${task.reward.toStringAsFixed(0)}',
                       style: const TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
                         color: AppColors.primary,
                       ),
                     ),
-                    Text(
-                      '2小时前',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: AppColors.textTertiaryLight,
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: AppColors.successLight,
+                        borderRadius: AppRadius.allTiny,
+                      ),
+                      child: Text(
+                        task.statusText,
+                        style: const TextStyle(
+                          fontSize: 11,
+                          color: AppColors.success,
+                        ),
                       ),
                     ),
                   ],

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/design/app_colors.dart';
@@ -6,19 +7,40 @@ import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_radius.dart';
 import '../../../core/widgets/cards.dart';
 import '../../../core/widgets/empty_state_view.dart';
+import '../../../core/widgets/loading_view.dart';
+import '../../../core/widgets/error_state_view.dart';
+import '../../../data/models/task.dart';
+import '../../../data/repositories/task_repository.dart';
+import '../bloc/task_list_bloc.dart';
+import '../bloc/task_list_event.dart';
+import '../bloc/task_list_state.dart';
 
 /// 任务列表页
 /// 参考iOS TasksView.swift
-class TasksView extends StatefulWidget {
+class TasksView extends StatelessWidget {
   const TasksView({super.key});
 
   @override
-  State<TasksView> createState() => _TasksViewState();
+  Widget build(BuildContext context) {
+    return BlocProvider(
+      create: (context) => TaskListBloc(
+        taskRepository: context.read<TaskRepository>(),
+      )..add(const TaskListLoadRequested()),
+      child: const _TasksViewContent(),
+    );
+  }
 }
 
-class _TasksViewState extends State<TasksView> {
-  String _selectedCategory = 'all';
+class _TasksViewContent extends StatefulWidget {
+  const _TasksViewContent();
+
+  @override
+  State<_TasksViewContent> createState() => _TasksViewContentState();
+}
+
+class _TasksViewContentState extends State<_TasksViewContent> {
   final TextEditingController _searchController = TextEditingController();
+  final ScrollController _scrollController = ScrollController();
 
   final List<Map<String, dynamic>> _categories = [
     {'key': 'all', 'label': '全部'},
@@ -30,9 +52,23 @@ class _TasksViewState extends State<TasksView> {
   ];
 
   @override
+  void initState() {
+    super.initState();
+    _scrollController.addListener(_onScroll);
+  }
+
+  @override
   void dispose() {
     _searchController.dispose();
+    _scrollController.dispose();
     super.dispose();
+  }
+
+  void _onScroll() {
+    if (_scrollController.position.pixels >=
+        _scrollController.position.maxScrollExtent - 200) {
+      context.read<TaskListBloc>().add(const TaskListLoadMore());
+    }
   }
 
   @override
@@ -44,23 +80,16 @@ class _TasksViewState extends State<TasksView> {
           IconButton(
             icon: const Icon(Icons.filter_list),
             onPressed: () {
-              // TODO: 显示筛选
+              _showSortOptions(context);
             },
           ),
         ],
       ),
       body: Column(
         children: [
-          // 搜索栏
           _buildSearchBar(),
-
-          // 分类标签
           _buildCategoryTabs(),
-
-          // 任务列表
-          Expanded(
-            child: _buildTaskList(),
-          ),
+          Expanded(child: _buildTaskList()),
         ],
       ),
       floatingActionButton: FloatingActionButton(
@@ -86,100 +115,186 @@ class _TasksViewState extends State<TasksView> {
                   icon: const Icon(Icons.clear),
                   onPressed: () {
                     _searchController.clear();
-                    setState(() {});
+                    context
+                        .read<TaskListBloc>()
+                        .add(const TaskListSearchChanged(''));
                   },
                 )
               : null,
         ),
         onChanged: (value) {
-          setState(() {});
+          context.read<TaskListBloc>().add(TaskListSearchChanged(value));
         },
       ),
     );
   }
 
   Widget _buildCategoryTabs() {
-    return SizedBox(
-      height: 40,
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        padding: AppSpacing.horizontalMd,
-        itemCount: _categories.length,
-        separatorBuilder: (context, index) => AppSpacing.hSm,
-        itemBuilder: (context, index) {
-          final category = _categories[index];
-          final isSelected = _selectedCategory == category['key'];
+    return BlocBuilder<TaskListBloc, TaskListState>(
+      buildWhen: (prev, curr) =>
+          prev.selectedCategory != curr.selectedCategory,
+      builder: (context, state) {
+        return SizedBox(
+          height: 40,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            padding: AppSpacing.horizontalMd,
+            itemCount: _categories.length,
+            separatorBuilder: (context, index) => AppSpacing.hSm,
+            itemBuilder: (context, index) {
+              final category = _categories[index];
+              final isSelected =
+                  state.selectedCategory == category['key'];
 
-          return GestureDetector(
-            onTap: () {
-              setState(() {
-                _selectedCategory = category['key'] as String;
-              });
+              return GestureDetector(
+                onTap: () {
+                  context.read<TaskListBloc>().add(
+                        TaskListCategoryChanged(
+                            category['key'] as String),
+                      );
+                },
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  decoration: BoxDecoration(
+                    color: isSelected
+                        ? AppColors.primary
+                        : Colors.transparent,
+                    borderRadius: AppRadius.allPill,
+                    border: Border.all(
+                      color: isSelected
+                          ? AppColors.primary
+                          : AppColors.dividerLight,
+                    ),
+                  ),
+                  alignment: Alignment.center,
+                  child: Text(
+                    category['label'] as String,
+                    style: TextStyle(
+                      color: isSelected
+                          ? Colors.white
+                          : AppColors.textSecondaryLight,
+                      fontWeight:
+                          isSelected ? FontWeight.w500 : FontWeight.normal,
+                    ),
+                  ),
+                ),
+              );
             },
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              decoration: BoxDecoration(
-                color: isSelected ? AppColors.primary : Colors.transparent,
-                borderRadius: AppRadius.allPill,
-                border: Border.all(
-                  color: isSelected ? AppColors.primary : AppColors.dividerLight,
-                ),
-              ),
-              alignment: Alignment.center,
-              child: Text(
-                category['label'] as String,
-                style: TextStyle(
-                  color: isSelected ? Colors.white : AppColors.textSecondaryLight,
-                  fontWeight: isSelected ? FontWeight.w500 : FontWeight.normal,
-                ),
-              ),
-            ),
-          );
-        },
-      ),
+          ),
+        );
+      },
     );
   }
 
   Widget _buildTaskList() {
-    // TODO: 从Bloc获取任务列表
-    final tasks = List.generate(10, (index) => index);
+    return BlocBuilder<TaskListBloc, TaskListState>(
+      builder: (context, state) {
+        if (state.isLoading && state.tasks.isEmpty) {
+          return const LoadingView();
+        }
 
-    if (tasks.isEmpty) {
-      return EmptyStateView.noTasks(
-        actionText: '发布任务',
-        onAction: () {
-          context.push('/tasks/create');
-        },
-      );
-    }
+        if (state.hasError && state.tasks.isEmpty) {
+          return ErrorStateView(
+            message: state.errorMessage ?? '加载失败',
+            onRetry: () {
+              context
+                  .read<TaskListBloc>()
+                  .add(const TaskListLoadRequested());
+            },
+          );
+        }
 
-    return RefreshIndicator(
-      onRefresh: () async {
-        // TODO: 刷新
-        await Future.delayed(const Duration(seconds: 1));
+        if (state.isEmpty) {
+          return EmptyStateView.noTasks(
+            actionText: '发布任务',
+            onAction: () {
+              context.push('/tasks/create');
+            },
+          );
+        }
+
+        return RefreshIndicator(
+          onRefresh: () async {
+            context
+                .read<TaskListBloc>()
+                .add(const TaskListRefreshRequested());
+            await Future.delayed(const Duration(milliseconds: 500));
+          },
+          child: ListView.separated(
+            controller: _scrollController,
+            padding: AppSpacing.allMd,
+            itemCount: state.tasks.length + (state.hasMore ? 1 : 0),
+            separatorBuilder: (context, index) => AppSpacing.vMd,
+            itemBuilder: (context, index) {
+              if (index >= state.tasks.length) {
+                return const Center(
+                  child: Padding(
+                    padding: EdgeInsets.all(16),
+                    child: CircularProgressIndicator(),
+                  ),
+                );
+              }
+              return _TaskListItem(task: state.tasks[index]);
+            },
+          ),
+        );
       },
-      child: ListView.separated(
-        padding: AppSpacing.allMd,
-        itemCount: tasks.length,
-        separatorBuilder: (context, index) => AppSpacing.vMd,
-        itemBuilder: (context, index) {
-          return _TaskListItem(index: index);
-        },
-      ),
+    );
+  }
+
+  void _showSortOptions(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      builder: (ctx) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                title: const Text('最新发布'),
+                onTap: () {
+                  context
+                      .read<TaskListBloc>()
+                      .add(const TaskListSortChanged('latest'));
+                  Navigator.pop(ctx);
+                },
+              ),
+              ListTile(
+                title: const Text('报酬最高'),
+                onTap: () {
+                  context
+                      .read<TaskListBloc>()
+                      .add(const TaskListSortChanged('reward'));
+                  Navigator.pop(ctx);
+                },
+              ),
+              ListTile(
+                title: const Text('即将截止'),
+                onTap: () {
+                  context
+                      .read<TaskListBloc>()
+                      .add(const TaskListSortChanged('deadline'));
+                  Navigator.pop(ctx);
+                },
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 }
 
 class _TaskListItem extends StatelessWidget {
-  const _TaskListItem({required this.index});
+  const _TaskListItem({required this.task});
 
-  final int index;
+  final Task task;
 
   @override
   Widget build(BuildContext context) {
     return AppCard(
       onTap: () {
-        context.push('/tasks/${index + 1}');
+        context.push('/tasks/${task.id}');
       },
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -187,10 +302,24 @@ class _TaskListItem extends StatelessWidget {
           // 头部：用户信息和状态
           Row(
             children: [
-              const CircleAvatar(
+              CircleAvatar(
                 radius: 18,
                 backgroundColor: AppColors.primary,
-                child: Icon(Icons.person, color: Colors.white, size: 20),
+                child: task.poster?.avatar != null
+                    ? ClipOval(
+                        child: Image.network(
+                          task.poster!.avatar!,
+                          width: 36,
+                          height: 36,
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, __, ___) => const Icon(
+                              Icons.person,
+                              color: Colors.white,
+                              size: 20),
+                        ),
+                      )
+                    : const Icon(Icons.person,
+                        color: Colors.white, size: 20),
               ),
               AppSpacing.hSm,
               Expanded(
@@ -198,11 +327,11 @@ class _TaskListItem extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      '用户${index + 1}',
+                      task.poster?.name ?? '匿名用户',
                       style: const TextStyle(fontWeight: FontWeight.w500),
                     ),
                     Text(
-                      '2小时前',
+                      task.taskTypeText,
                       style: TextStyle(
                         fontSize: 12,
                         color: AppColors.textTertiaryLight,
@@ -212,15 +341,16 @@ class _TaskListItem extends StatelessWidget {
                 ),
               ),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
-                  color: AppColors.successLight,
+                  color: _statusColor(task.status).withValues(alpha: 0.1),
                   borderRadius: AppRadius.allTiny,
                 ),
-                child: const Text(
-                  '招募中',
+                child: Text(
+                  task.statusText,
                   style: TextStyle(
-                    color: AppColors.success,
+                    color: _statusColor(task.status),
                     fontSize: 12,
                   ),
                 ),
@@ -231,7 +361,7 @@ class _TaskListItem extends StatelessWidget {
 
           // 标题
           Text(
-            '示例任务标题 ${index + 1}',
+            task.displayTitle,
             style: const TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.w600,
@@ -239,18 +369,18 @@ class _TaskListItem extends StatelessWidget {
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
           ),
-          AppSpacing.vSm,
-
-          // 描述
-          Text(
-            '这是任务的详细描述内容，可能会比较长...',
-            style: TextStyle(
-              fontSize: 14,
-              color: AppColors.textSecondaryLight,
+          if (task.displayDescription != null) ...[
+            AppSpacing.vSm,
+            Text(
+              task.displayDescription!,
+              style: TextStyle(
+                fontSize: 14,
+                color: AppColors.textSecondaryLight,
+              ),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
             ),
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-          ),
+          ],
           AppSpacing.vMd,
 
           // 底部：价格和位置
@@ -258,34 +388,50 @@ class _TaskListItem extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                '\$${(index + 1) * 15}',
+                '${task.currency == 'GBP' ? '£' : '\$'}${task.reward.toStringAsFixed(0)}',
                 style: const TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
                   color: AppColors.primary,
                 ),
               ),
-              Row(
-                children: [
-                  Icon(
-                    Icons.location_on_outlined,
-                    size: 16,
-                    color: AppColors.textTertiaryLight,
-                  ),
-                  const SizedBox(width: 4),
-                  Text(
-                    '校园内',
-                    style: TextStyle(
-                      fontSize: 12,
+              if (task.location != null)
+                Row(
+                  children: [
+                    Icon(
+                      Icons.location_on_outlined,
+                      size: 16,
                       color: AppColors.textTertiaryLight,
                     ),
-                  ),
-                ],
-              ),
+                    const SizedBox(width: 4),
+                    Text(
+                      task.location!,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: AppColors.textTertiaryLight,
+                      ),
+                    ),
+                  ],
+                ),
             ],
           ),
         ],
       ),
     );
+  }
+
+  Color _statusColor(String status) {
+    switch (status) {
+      case 'open':
+        return AppColors.success;
+      case 'in_progress':
+        return AppColors.primary;
+      case 'completed':
+        return AppColors.textSecondaryLight;
+      case 'cancelled':
+        return AppColors.error;
+      default:
+        return AppColors.textSecondaryLight;
+    }
   }
 }

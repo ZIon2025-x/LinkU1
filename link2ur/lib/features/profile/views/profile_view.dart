@@ -6,7 +6,10 @@ import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_radius.dart';
 import '../../../core/widgets/cards.dart';
+import '../../../data/repositories/user_repository.dart';
+import '../../../data/repositories/task_repository.dart';
 import '../../auth/bloc/auth_bloc.dart';
+import '../bloc/profile_bloc.dart';
 
 /// 个人中心页
 /// 参考iOS ProfileView.swift
@@ -16,38 +19,20 @@ class ProfileView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return BlocBuilder<AuthBloc, AuthState>(
-      builder: (context, state) {
-        if (!state.isAuthenticated) {
+      builder: (context, authState) {
+        if (!authState.isAuthenticated) {
           return _buildNotLoggedIn(context);
         }
 
-        return Scaffold(
-          appBar: AppBar(
-            title: const Text('我的'),
-            actions: [
-              IconButton(
-                icon: const Icon(Icons.settings_outlined),
-                onPressed: () => context.push('/settings'),
-              ),
-            ],
-          ),
-          body: SingleChildScrollView(
-            padding: AppSpacing.allMd,
-            child: Column(
-              children: [
-                // 用户信息卡片
-                _buildUserCard(context, state),
-                AppSpacing.vLg,
-
-                // 统计数据
-                _buildStatsRow(context),
-                AppSpacing.vLg,
-
-                // 功能列表
-                _buildMenuSection(context),
-              ],
-            ),
-          ),
+        return BlocProvider(
+          create: (context) => ProfileBloc(
+            userRepository: context.read<UserRepository>(),
+            taskRepository: context.read<TaskRepository>(),
+          )
+            ..add(const ProfileLoadRequested())
+            ..add(const ProfileLoadMyTasks())
+            ..add(const ProfileLoadMyTasks(isPosted: true)),
+          child: _ProfileContent(authState: authState),
         );
       },
     );
@@ -80,23 +65,87 @@ class ProfileView extends StatelessWidget {
       ),
     );
   }
+}
 
-  Widget _buildUserCard(BuildContext context, AuthState state) {
-    final user = state.user!;
+class _ProfileContent extends StatelessWidget {
+  const _ProfileContent({required this.authState});
 
+  final AuthState authState;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('我的'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.settings_outlined),
+            onPressed: () => context.push('/settings'),
+          ),
+        ],
+      ),
+      body: BlocBuilder<ProfileBloc, ProfileState>(
+        builder: (context, profileState) {
+          final user = authState.user!;
+
+          return RefreshIndicator(
+            onRefresh: () async {
+              context.read<ProfileBloc>()
+                ..add(const ProfileLoadRequested())
+                ..add(const ProfileLoadMyTasks())
+                ..add(const ProfileLoadMyTasks(isPosted: true));
+              await Future.delayed(const Duration(milliseconds: 500));
+            },
+            child: SingleChildScrollView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: AppSpacing.allMd,
+              child: Column(
+                children: [
+                  // 用户信息卡片
+                  _buildUserCard(context, user),
+                  AppSpacing.vLg,
+
+                  // 统计数据（来自 ProfileBloc）
+                  _buildStatsRow(context, profileState),
+                  AppSpacing.vLg,
+
+                  // 功能列表
+                  _buildMenuSection(context),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildUserCard(BuildContext context, dynamic user) {
     return GestureDetector(
       onTap: () => context.push('/profile/edit'),
       child: AppCard(
         child: Row(
           children: [
-            // 头像
             CircleAvatar(
               radius: 36,
               backgroundColor: AppColors.primary.withValues(alpha: 0.1),
-              child: const Icon(Icons.person, color: AppColors.primary, size: 36),
+              child: user.avatar != null
+                  ? ClipOval(
+                      child: Image.network(
+                        user.avatar!,
+                        width: 72,
+                        height: 72,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => const Icon(
+                            Icons.person,
+                            color: AppColors.primary,
+                            size: 36),
+                      ),
+                    )
+                  : const Icon(Icons.person,
+                      color: AppColors.primary, size: 36),
             ),
             AppSpacing.hMd,
-            // 用户信息
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -112,55 +161,55 @@ class ProfileView extends StatelessWidget {
                       ),
                       if (user.isVerified) ...[
                         AppSpacing.hSm,
-                        Icon(Icons.verified, color: AppColors.primary, size: 18),
+                        Icon(Icons.verified,
+                            color: AppColors.primary, size: 18),
                       ],
                     ],
                   ),
                   const SizedBox(height: 4),
                   Text(
                     user.email ?? 'ID: ${user.id}',
-                    style: TextStyle(
-                      color: AppColors.textSecondaryLight,
-                    ),
+                    style: TextStyle(color: AppColors.textSecondaryLight),
                   ),
                 ],
               ),
             ),
-            const Icon(Icons.chevron_right, color: AppColors.textTertiaryLight),
+            const Icon(Icons.chevron_right,
+                color: AppColors.textTertiaryLight),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildStatsRow(BuildContext context) {
+  Widget _buildStatsRow(BuildContext context, ProfileState state) {
     return Row(
       children: [
         Expanded(
           child: _StatItem(
-            value: '12',
+            value: '${state.postedTasks.length}',
             label: '发布任务',
             onTap: () => context.push('/profile/my-tasks'),
           ),
         ),
         Expanded(
           child: _StatItem(
-            value: '8',
+            value: '${state.myTasks.length}',
             label: '完成任务',
             onTap: () => context.push('/profile/my-tasks'),
           ),
         ),
         Expanded(
           child: _StatItem(
-            value: '4.9',
+            value: state.user?.avgRating?.toStringAsFixed(1) ?? '-',
             label: '评分',
             onTap: () {},
           ),
         ),
         Expanded(
           child: _StatItem(
-            value: '\$120',
-            label: '余额',
+            value: '${state.user?.userLevel ?? 1}',
+            label: '等级',
             onTap: () => context.push('/wallet'),
           ),
         ),
@@ -186,7 +235,7 @@ class ProfileView extends StatelessWidget {
             _MenuItem(
               icon: Icons.storefront_outlined,
               title: '我的闲置',
-              onTap: () {},
+              onTap: () => context.push('/flea-market'),
             ),
             _MenuItem(
               icon: Icons.favorite_outline,
@@ -211,7 +260,22 @@ class ProfileView extends StatelessWidget {
             _MenuItem(
               icon: Icons.card_giftcard_outlined,
               title: '优惠券',
-              onTap: () {},
+              onTap: () => context.push('/wallet'),
+            ),
+          ],
+        ),
+        AppSpacing.vMd,
+        GroupedCard(
+          children: [
+            _MenuItem(
+              icon: Icons.leaderboard_outlined,
+              title: '排行榜',
+              onTap: () => context.push('/leaderboard'),
+            ),
+            _MenuItem(
+              icon: Icons.local_activity_outlined,
+              title: '活动中心',
+              onTap: () => context.push('/activities'),
             ),
           ],
         ),
@@ -305,7 +369,8 @@ class _MenuItem extends StatelessWidget {
             Expanded(
               child: Text(title, style: const TextStyle(fontSize: 16)),
             ),
-            const Icon(Icons.chevron_right, color: AppColors.textTertiaryLight),
+            const Icon(Icons.chevron_right,
+                color: AppColors.textTertiaryLight),
           ],
         ),
       ),

@@ -165,7 +165,13 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
     emit(state.copyWith(isUpdating: true));
 
     try {
-      final user = await _userRepository.updateProfile(event.data);
+      final data = event.data;
+      final user = await _userRepository.updateProfile(
+        name: data['name'] as String?,
+        bio: data['bio'] as String?,
+        residenceCity: data['residence_city'] as String?,
+        languagePreference: data['language_preference'] as String?,
+      );
       emit(state.copyWith(
         user: user,
         isUpdating: false,
@@ -187,8 +193,7 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
     emit(state.copyWith(isUpdating: true));
 
     try {
-      final avatarUrl = await _userRepository.uploadAvatar(event.filePath);
-      final updatedUser = state.user?.copyWith(avatar: avatarUrl);
+      final updatedUser = await _userRepository.uploadAvatar(event.filePath);
       emit(state.copyWith(
         user: updatedUser,
         isUpdating: false,

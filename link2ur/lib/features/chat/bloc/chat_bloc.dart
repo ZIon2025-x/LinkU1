@@ -156,12 +156,12 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
       List<Message> messages;
       if (event.taskId != null) {
         messages = await _messageRepository.getTaskChatMessages(
-          taskId: event.taskId!,
+          event.taskId!,
           page: 1,
         );
       } else {
-        messages = await _messageRepository.getMessages(
-          userId: event.userId,
+        messages = await _messageRepository.getMessagesWith(
+          event.userId,
           page: 1,
         );
       }
@@ -196,12 +196,12 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
 
       if (state.taskId != null) {
         messages = await _messageRepository.getTaskChatMessages(
-          taskId: state.taskId!,
+          state.taskId!,
           page: nextPage,
         );
       } else {
-        messages = await _messageRepository.getMessages(
-          userId: state.userId,
+        messages = await _messageRepository.getMessagesWith(
+          state.userId,
           page: nextPage,
         );
       }
@@ -240,10 +240,12 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
 
       // 同时通过WebSocket发送
       _messageRepository.sendMessageViaWebSocket(
-        receiverId: state.userId,
-        content: event.content,
-        messageType: event.messageType,
-        taskId: state.taskId,
+        SendMessageRequest(
+          receiverId: state.userId,
+          content: event.content,
+          messageType: event.messageType,
+          taskId: state.taskId,
+        ),
       );
     } catch (e) {
       AppLogger.error('Failed to send message', e);
@@ -269,7 +271,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     Emitter<ChatState> emit,
   ) async {
     try {
-      await _messageRepository.markAsRead(state.userId);
+      await _messageRepository.markMessagesRead(state.userId);
     } catch (e) {
       AppLogger.warning('Failed to mark as read', e);
     }

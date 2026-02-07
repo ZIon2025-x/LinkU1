@@ -5,9 +5,6 @@ import 'package:flutter/material.dart';
 class AppTypography {
   AppTypography._();
 
-  /// 字体家族
-  static const String fontFamily = 'PingFang';
-
   // ==================== 标题样式 ====================
   /// 大标题 - 34pt Bold
   static const TextStyle largeTitle = TextStyle(

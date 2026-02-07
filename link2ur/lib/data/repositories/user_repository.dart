@@ -1,4 +1,5 @@
 import '../models/user.dart';
+import '../models/payment.dart';
 import '../services/api_service.dart';
 import '../services/storage_service.dart';
 import '../../core/constants/api_endpoints.dart';
@@ -97,6 +98,46 @@ class UserRepository {
     if (!response.isSuccess) {
       throw UserException(response.message ?? '更新偏好设置失败');
     }
+  }
+
+  /// 获取钱包信息
+  Future<WalletInfo> getWalletInfo() async {
+    final response = await _apiService.get<Map<String, dynamic>>(
+      ApiEndpoints.walletInfo,
+    );
+
+    if (!response.isSuccess || response.data == null) {
+      throw UserException(response.message ?? '获取钱包信息失败');
+    }
+
+    return WalletInfo.fromJson(response.data!);
+  }
+
+  /// 获取交易记录
+  Future<List<Transaction>> getTransactions({
+    int page = 1,
+    int pageSize = 20,
+    String? type,
+  }) async {
+    final queryParams = <String, dynamic>{
+      'page': page,
+      'page_size': pageSize,
+    };
+    if (type != null) queryParams['type'] = type;
+
+    final response = await _apiService.get<Map<String, dynamic>>(
+      ApiEndpoints.transactions,
+      queryParameters: queryParams,
+    );
+
+    if (!response.isSuccess || response.data == null) {
+      throw UserException(response.message ?? '获取交易记录失败');
+    }
+
+    final items = response.data!['items'] as List<dynamic>? ?? [];
+    return items
+        .map((e) => Transaction.fromJson(e as Map<String, dynamic>))
+        .toList();
   }
 
   /// 上传图片（通用）

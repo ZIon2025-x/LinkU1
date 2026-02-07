@@ -96,6 +96,10 @@ class ApiEndpoints {
   static const String myCoupons = '/api/coupons/my';
   static const String validateInvitationCode = '/api/coupons/validate-invitation';
 
+  // ==================== 钱包相关 ====================
+  static const String walletInfo = '/api/wallet/info';
+  static const String transactions = '/api/wallet/transactions';
+
   // ==================== 支付相关 ====================
   static const String createPaymentIntent = '/api/payments/create-intent';
   static const String confirmPayment = '/api/payments/confirm';
