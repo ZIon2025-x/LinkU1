@@ -1,10 +1,11 @@
 import 'dart:io';
-import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../core/utils/logger.dart';
 import 'storage_service.dart';
+import 'api_service.dart';
 
 /// 推送通知服务
 /// 封装 Firebase Cloud Messaging 和本地通知
@@ -15,6 +16,22 @@ class PushNotificationService {
   final FirebaseMessaging _messaging = FirebaseMessaging.instance;
   final FlutterLocalNotificationsPlugin _localNotifications =
       FlutterLocalNotificationsPlugin();
+
+  /// GoRouter 实例，用于通知导航
+  GoRouter? _router;
+
+  /// API 服务实例，用于上传 Token
+  ApiService? _apiService;
+
+  /// 设置路由器引用（在 app.dart 中调用）
+  void setRouter(GoRouter router) {
+    _router = router;
+  }
+
+  /// 设置 API 服务引用
+  void setApiService(ApiService apiService) {
+    _apiService = apiService;
+  }
 
   /// 初始化推送通知服务
   Future<void> init() async {
@@ -43,10 +60,31 @@ class PushNotificationService {
     _messaging.onTokenRefresh.listen((token) async {
       AppLogger.info('FCM Token refreshed');
       await StorageService.instance.savePushToken(token);
-      // TODO: 上传新token到服务器
+      await _uploadTokenToServer(token);
     });
 
     AppLogger.info('PushNotificationService initialized');
+  }
+
+  /// 上传推送 Token 到服务器
+  Future<void> _uploadTokenToServer(String token) async {
+    try {
+      if (_apiService == null) {
+        AppLogger.warning('ApiService not set, skipping token upload');
+        return;
+      }
+      await _apiService!.post(
+        '/api/users/me/device-token',
+        data: {
+          'token': token,
+          'platform': Platform.isIOS ? 'ios' : 'android',
+          'type': 'fcm',
+        },
+      );
+      AppLogger.info('FCM Token uploaded to server');
+    } catch (e) {
+      AppLogger.error('Failed to upload FCM token to server', e);
+    }
   }
 
   /// 请求通知权限
@@ -104,7 +142,7 @@ class PushNotificationService {
       if (token != null) {
         AppLogger.info('FCM Token obtained');
         await StorageService.instance.savePushToken(token);
-        // TODO: 上传token到服务器
+        await _uploadTokenToServer(token);
       }
       return token;
     } catch (e) {
@@ -130,7 +168,6 @@ class PushNotificationService {
   /// 处理消息点击(后台/terminated)
   void _handleMessageOpenedApp(RemoteMessage message) {
     AppLogger.info('Message opened: ${message.messageId}');
-    // TODO: 根据 message.data 导航到对应页面
     final data = message.data;
     if (data.containsKey('type')) {
       _navigateByNotificationType(data['type'], data);
@@ -173,7 +210,16 @@ class PushNotificationService {
   /// 通知点击回调
   void _onNotificationTapped(NotificationResponse response) {
     AppLogger.info('Notification tapped: ${response.payload}');
-    // TODO: 解析 payload 并导航
+    if (response.payload != null && response.payload!.isNotEmpty) {
+      try {
+        // payload 格式为 data.toString()，尝试解析
+        // 对于简单场景，直接导航到通知中心
+        _router?.push('/notifications');
+      } catch (e) {
+        AppLogger.error('Failed to parse notification payload', e);
+        _router?.push('/notifications');
+      }
+    }
   }
 
   /// 根据通知类型导航
@@ -181,19 +227,77 @@ class PushNotificationService {
     String type,
     Map<String, dynamic> data,
   ) {
-    // TODO: 使用 GoRouter 进行导航
+    if (_router == null) {
+      AppLogger.warning('Router not set, cannot navigate');
+      return;
+    }
+
     switch (type) {
       case 'task_update':
-        // 导航到任务详情
+      case 'task_applied':
+      case 'task_accepted':
+      case 'task_completed':
+      case 'task_confirmed':
+      case 'task_cancelled':
+        final taskId = data['task_id'] ?? data['related_id'];
+        if (taskId != null) {
+          _router!.push('/tasks/$taskId');
+        } else {
+          _router!.push('/notifications');
+        }
         break;
       case 'message':
-        // 导航到聊天
+      case 'task_chat':
+        final taskId = data['task_id'];
+        final userId = data['user_id'] ?? data['sender_id'];
+        if (taskId != null) {
+          _router!.push('/task-chat/$taskId');
+        } else if (userId != null) {
+          _router!.push('/chat/$userId');
+        } else {
+          _router!.go('/messages-tab');
+        }
         break;
       case 'forum_reply':
-        // 导航到帖子详情
+      case 'forum_like':
+        final postId = data['post_id'] ?? data['related_id'];
+        if (postId != null) {
+          _router!.push('/forum/posts/$postId');
+        } else {
+          _router!.push('/notifications');
+        }
+        break;
+      case 'payment':
+      case 'payment_success':
+      case 'payment_failed':
+        _router!.push('/wallet');
+        break;
+      case 'flea_market':
+        final itemId = data['item_id'] ?? data['related_id'];
+        if (itemId != null) {
+          _router!.push('/flea-market/$itemId');
+        } else {
+          _router!.push('/notifications');
+        }
+        break;
+      case 'activity':
+        final activityId = data['activity_id'] ?? data['related_id'];
+        if (activityId != null) {
+          _router!.push('/activities/$activityId');
+        } else {
+          _router!.push('/notifications');
+        }
+        break;
+      case 'leaderboard':
+        final leaderboardId = data['leaderboard_id'] ?? data['related_id'];
+        if (leaderboardId != null) {
+          _router!.push('/leaderboard/$leaderboardId');
+        } else {
+          _router!.push('/notifications');
+        }
         break;
       default:
-        // 导航到通知中心
+        _router!.push('/notifications');
         break;
     }
   }

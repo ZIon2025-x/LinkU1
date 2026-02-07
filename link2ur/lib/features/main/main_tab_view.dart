@@ -4,10 +4,10 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/design/app_colors.dart';
-import '../../core/design/app_typography.dart';
 import '../../core/widgets/badge_view.dart';
 import '../../core/utils/l10n_extension.dart';
 import '../auth/bloc/auth_bloc.dart';
+import '../notification/bloc/notification_bloc.dart';
 
 /// 主页面（底部导航栏）
 /// 参考iOS MainTabView.swift
@@ -152,10 +152,9 @@ class _MainTabViewState extends State<MainTabView> {
           children: [
             // 消息Tab显示未读数
             if (index == 3)
-              BlocBuilder<AuthBloc, AuthState>(
-                builder: (context, state) {
-                  // TODO: 从消息状态获取未读数
-                  const unreadCount = 0;
+              BlocBuilder<NotificationBloc, NotificationState>(
+                builder: (context, notifState) {
+                  final unreadCount = notifState.unreadCount.totalCount;
                   return IconWithBadge(
                     icon: isSelected ? tab.activeIcon : tab.icon,
                     count: unreadCount,

@@ -73,7 +73,7 @@ class _MyForumPostsViewState extends State<MyForumPostsView>
     try {
       final repo = context.read<ForumRepository>();
       final posts = await repo.getMyPosts();
-      if (mounted) setState(() { _myPosts = posts; _isLoadingMy = false; });
+      if (mounted) setState(() { _myPosts = posts.posts; _isLoadingMy = false; });
     } catch (_) {
       if (mounted) setState(() => _isLoadingMy = false);
     }
@@ -83,8 +83,8 @@ class _MyForumPostsViewState extends State<MyForumPostsView>
     setState(() => _isLoadingFavorited = true);
     try {
       final repo = context.read<ForumRepository>();
-      final posts = await repo.getFavoritedPosts();
-      if (mounted) setState(() { _favoritedPosts = posts; _isLoadingFavorited = false; });
+      final posts = await repo.getFavoritePosts();
+      if (mounted) setState(() { _favoritedPosts = posts.posts; _isLoadingFavorited = false; });
     } catch (_) {
       if (mounted) setState(() => _isLoadingFavorited = false);
     }
@@ -95,7 +95,7 @@ class _MyForumPostsViewState extends State<MyForumPostsView>
     try {
       final repo = context.read<ForumRepository>();
       final posts = await repo.getLikedPosts();
-      if (mounted) setState(() { _likedPosts = posts; _isLoadingLiked = false; });
+      if (mounted) setState(() { _likedPosts = posts.posts; _isLoadingLiked = false; });
     } catch (_) {
       if (mounted) setState(() => _isLoadingLiked = false);
     }

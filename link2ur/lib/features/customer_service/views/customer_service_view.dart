@@ -86,6 +86,105 @@ class _CustomerServiceViewState extends State<CustomerServiceView> {
     }
   }
 
+  void _showChatHistory() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) {
+        final isDark = Theme.of(ctx).brightness == Brightness.dark;
+        return Container(
+          constraints: BoxConstraints(
+            maxHeight: MediaQuery.of(ctx).size.height * 0.7,
+          ),
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: AppColors.dividerLight,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                '聊天历史',
+                style: AppTypography.title3.copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 16),
+              if (_messages.isEmpty)
+                Padding(
+                  padding: const EdgeInsets.all(40),
+                  child: Column(
+                    children: [
+                      Icon(Icons.chat_bubble_outline,
+                          size: 48,
+                          color: isDark
+                              ? AppColors.textTertiaryDark
+                              : AppColors.textTertiaryLight),
+                      const SizedBox(height: 12),
+                      Text(
+                        '暂无聊天记录',
+                        style: TextStyle(
+                          color: isDark
+                              ? AppColors.textSecondaryDark
+                              : AppColors.textSecondaryLight,
+                        ),
+                      ),
+                    ],
+                  ),
+                )
+              else
+                Flexible(
+                  child: ListView.builder(
+                    shrinkWrap: true,
+                    itemCount: _messages.length,
+                    itemBuilder: (_, index) {
+                      final msg = _messages[index];
+                      final isUser = msg.senderType == 'user';
+                      return ListTile(
+                        dense: true,
+                        leading: Icon(
+                          isUser ? Icons.person : Icons.support_agent,
+                          color: isUser ? AppColors.primary : AppColors.accent,
+                          size: 20,
+                        ),
+                        title: Text(
+                          msg.content,
+                          style: const TextStyle(fontSize: 14),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        subtitle: msg.createdAt != null &&
+                                msg.createdAt!.isNotEmpty
+                            ? Text(
+                                msg.createdAt!,
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  color: isDark
+                                      ? AppColors.textTertiaryDark
+                                      : AppColors.textTertiaryLight,
+                                ),
+                              )
+                            : null,
+                      );
+                    },
+                  ),
+                ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   void _connectToService() {
     setState(() {
       _isConnecting = true;
@@ -176,9 +275,7 @@ class _CustomerServiceViewState extends State<CustomerServiceView> {
           if (_chat != null)
             IconButton(
               icon: const Icon(Icons.history),
-              onPressed: () {
-                // TODO: 实现聊天历史记录功能
-              },
+              onPressed: _showChatHistory,
             ),
         ],
       ),

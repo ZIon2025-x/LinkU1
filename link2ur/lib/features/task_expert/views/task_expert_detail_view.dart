@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_spacing.dart';
@@ -40,10 +41,20 @@ class TaskExpertDetailView extends StatelessWidget {
             },
           ),
           actions: [
-            IconButton(
-              icon: const Icon(Icons.share_outlined),
-              onPressed: () {
-                // TODO: Implement share
+            BlocBuilder<TaskExpertBloc, TaskExpertState>(
+              builder: (context, state) {
+                return IconButton(
+                  icon: const Icon(Icons.share_outlined),
+                  onPressed: () {
+                    final expert = state.selectedExpert;
+                    if (expert != null) {
+                      Share.share(
+                        '来看看这位任务达人：${expert.displayName}\nhttps://link2ur.com/task-experts/${expert.id}',
+                        subject: '分享任务达人 - ${expert.displayName}',
+                      );
+                    }
+                  },
+                );
               },
             ),
           ],

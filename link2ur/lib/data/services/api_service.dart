@@ -5,6 +5,7 @@ import 'package:dio/dio.dart';
 import '../../core/config/app_config.dart';
 import '../../core/config/api_config.dart';
 import '../../core/utils/logger.dart';
+import '../../core/utils/network_interceptor.dart';
 import 'storage_service.dart';
 
 /// API服务
@@ -34,6 +35,9 @@ class ApiService {
         onError: _onError,
       ),
     );
+
+    // 网络监控拦截器（NetworkLogger + PerformanceMonitor）
+    _dio.interceptors.add(NetworkMonitorInterceptor());
 
     // 日志拦截器
     if (AppConfig.instance.enableDebugLog) {

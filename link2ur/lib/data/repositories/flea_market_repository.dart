@@ -1,3 +1,7 @@
+import 'dart:typed_data';
+
+import 'package:dio/dio.dart';
+
 import '../models/flea_market.dart';
 import '../services/api_service.dart';
 import '../../core/constants/api_endpoints.dart';
@@ -98,6 +102,24 @@ class FleaMarketRepository {
     }
 
     return FleaMarketListResponse.fromJson(response.data!);
+  }
+
+  /// 上传图片
+  Future<String> uploadImage(Uint8List bytes, String filename) async {
+    final formData = FormData.fromMap({
+      'file': MultipartFile.fromBytes(bytes, filename: filename),
+    });
+
+    final response = await _apiService.post<Map<String, dynamic>>(
+      ApiEndpoints.uploadImage,
+      data: formData,
+    );
+
+    if (!response.isSuccess || response.data == null) {
+      throw FleaMarketException(response.message ?? '上传图片失败');
+    }
+
+    return response.data!['url'] as String? ?? '';
   }
 
   /// 更新商品

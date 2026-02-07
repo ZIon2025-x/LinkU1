@@ -12,6 +12,7 @@ class TaskExpert extends Equatable {
     this.rating = 0.0,
     this.totalServices = 0,
     this.completedTasks = 0,
+    this.specialties,
     this.createdAt,
   });
 
@@ -23,10 +24,17 @@ class TaskExpert extends Equatable {
   final double rating;
   final int totalServices;
   final int completedTasks;
+  final List<String>? specialties;
   final DateTime? createdAt;
 
   /// 显示名称
   String get displayName => expertName ?? '达人$id';
+
+  /// name 别名（兼容视图层）
+  String get name => displayName;
+
+  /// 平均评分（可空版本，兼容视图层）
+  double? get avgRating => rating > 0 ? rating : null;
 
   /// 评分显示
   String get ratingDisplay => rating > 0 ? rating.toStringAsFixed(1) : '-';
@@ -41,6 +49,9 @@ class TaskExpert extends Equatable {
       rating: (json['rating'] as num?)?.toDouble() ?? 0.0,
       totalServices: json['total_services'] as int? ?? 0,
       completedTasks: json['completed_tasks'] as int? ?? 0,
+      specialties: (json['specialties'] as List<dynamic>?)
+          ?.map((e) => e as String)
+          .toList(),
       createdAt: json['created_at'] != null
           ? DateTime.parse(json['created_at'])
           : null,
@@ -57,6 +68,7 @@ class TaskExpert extends Equatable {
       'rating': rating,
       'total_services': totalServices,
       'completed_tasks': completedTasks,
+      'specialties': specialties,
       'created_at': createdAt?.toIso8601String(),
     };
   }

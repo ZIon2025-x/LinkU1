@@ -1,8 +1,11 @@
+import 'dart:io';
 import 'package:equatable/equatable.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:path_provider/path_provider.dart';
 
 import '../../../data/services/storage_service.dart';
+import '../../../data/services/api_service.dart';
 import '../../../core/utils/logger.dart';
 
 // ==================== Events ====================
@@ -45,8 +48,25 @@ class SettingsNotificationToggled extends SettingsEvent {
   List<Object?> get props => [enabled];
 }
 
+class SettingsSoundToggled extends SettingsEvent {
+  const SettingsSoundToggled(this.enabled);
+
+  final bool enabled;
+
+  @override
+  List<Object?> get props => [enabled];
+}
+
 class SettingsClearCache extends SettingsEvent {
   const SettingsClearCache();
+}
+
+class SettingsDeleteAccount extends SettingsEvent {
+  const SettingsDeleteAccount();
+}
+
+class SettingsCalculateCacheSize extends SettingsEvent {
+  const SettingsCalculateCacheSize();
 }
 
 // ==================== State ====================
@@ -56,48 +76,78 @@ class SettingsState extends Equatable {
     this.themeMode = ThemeMode.system,
     this.locale = 'zh',
     this.notificationsEnabled = true,
-    this.cacheSize = '0 MB',
+    this.soundEnabled = true,
+    this.cacheSize = '计算中...',
     this.appVersion = '',
+    this.isClearingCache = false,
+    this.isDeletingAccount = false,
+    this.deleteAccountError,
   });
 
   final ThemeMode themeMode;
   final String locale;
   final bool notificationsEnabled;
+  final bool soundEnabled;
   final String cacheSize;
   final String appVersion;
+  final bool isClearingCache;
+  final bool isDeletingAccount;
+  final String? deleteAccountError;
 
   SettingsState copyWith({
     ThemeMode? themeMode,
     String? locale,
     bool? notificationsEnabled,
+    bool? soundEnabled,
     String? cacheSize,
     String? appVersion,
+    bool? isClearingCache,
+    bool? isDeletingAccount,
+    String? deleteAccountError,
   }) {
     return SettingsState(
       themeMode: themeMode ?? this.themeMode,
       locale: locale ?? this.locale,
       notificationsEnabled:
           notificationsEnabled ?? this.notificationsEnabled,
+      soundEnabled: soundEnabled ?? this.soundEnabled,
       cacheSize: cacheSize ?? this.cacheSize,
       appVersion: appVersion ?? this.appVersion,
+      isClearingCache: isClearingCache ?? this.isClearingCache,
+      isDeletingAccount: isDeletingAccount ?? this.isDeletingAccount,
+      deleteAccountError: deleteAccountError,
     );
   }
 
   @override
-  List<Object?> get props =>
-      [themeMode, locale, notificationsEnabled, cacheSize, appVersion];
+  List<Object?> get props => [
+        themeMode,
+        locale,
+        notificationsEnabled,
+        soundEnabled,
+        cacheSize,
+        appVersion,
+        isClearingCache,
+        isDeletingAccount,
+        deleteAccountError,
+      ];
 }
 
 // ==================== Bloc ====================
 
 class SettingsBloc extends Bloc<SettingsEvent, SettingsState> {
-  SettingsBloc() : super(const SettingsState()) {
+  SettingsBloc({this.apiService}) : super(const SettingsState()) {
     on<SettingsLoadRequested>(_onLoadRequested);
     on<SettingsThemeChanged>(_onThemeChanged);
     on<SettingsLanguageChanged>(_onLanguageChanged);
     on<SettingsNotificationToggled>(_onNotificationToggled);
+    on<SettingsSoundToggled>(_onSoundToggled);
     on<SettingsClearCache>(_onClearCache);
+    on<SettingsDeleteAccount>(_onDeleteAccount);
+    on<SettingsCalculateCacheSize>(_onCalculateCacheSize);
   }
+
+  final ApiService? apiService;
 
   Future<void> _onLoadRequested(
     SettingsLoadRequested event,
@@ -109,12 +159,18 @@ class SettingsBloc extends Bloc<SettingsEvent, SettingsState> {
       final locale = StorageService.instance.getLanguage() ?? 'zh';
       final notificationsEnabled =
           StorageService.instance.isNotificationEnabled();
+      final soundEnabled =
+          StorageService.instance.isSoundEnabled();
 
       emit(state.copyWith(
         themeMode: themeMode,
         locale: locale,
         notificationsEnabled: notificationsEnabled,
+        soundEnabled: soundEnabled,
       ));
+
+      // 异步计算缓存大小
+      add(const SettingsCalculateCacheSize());
     } catch (e) {
       AppLogger.error('Failed to load settings', e);
     }
@@ -168,15 +224,110 @@ class SettingsBloc extends Bloc<SettingsEvent, SettingsState> {
     emit(state.copyWith(notificationsEnabled: event.enabled));
   }
 
+  Future<void> _onSoundToggled(
+    SettingsSoundToggled event,
+    Emitter<SettingsState> emit,
+  ) async {
+    await StorageService.instance.saveSoundEnabled(event.enabled);
+    emit(state.copyWith(soundEnabled: event.enabled));
+  }
+
+  Future<void> _onCalculateCacheSize(
+    SettingsCalculateCacheSize event,
+    Emitter<SettingsState> emit,
+  ) async {
+    try {
+      final cacheDir = await getTemporaryDirectory();
+      final size = await _calculateDirectorySize(cacheDir);
+      emit(state.copyWith(cacheSize: _formatFileSize(size)));
+    } catch (e) {
+      emit(state.copyWith(cacheSize: '未知'));
+    }
+  }
+
   Future<void> _onClearCache(
     SettingsClearCache event,
     Emitter<SettingsState> emit,
   ) async {
     try {
-      // TODO: 实现缓存清理逻辑
-      emit(state.copyWith(cacheSize: '0 MB'));
+      emit(state.copyWith(isClearingCache: true));
+
+      // 清理临时目录
+      final cacheDir = await getTemporaryDirectory();
+      if (cacheDir.existsSync()) {
+        await for (final entity in cacheDir.list()) {
+          try {
+            if (entity is File) {
+              await entity.delete();
+            } else if (entity is Directory) {
+              await entity.delete(recursive: true);
+            }
+          } catch (_) {
+            // 跳过无法删除的文件
+          }
+        }
+      }
+
+      // 清理图片缓存
+      // CachedNetworkImage 使用的缓存会在临时目录中
+
+      emit(state.copyWith(
+        cacheSize: '0 MB',
+        isClearingCache: false,
+      ));
     } catch (e) {
       AppLogger.error('Failed to clear cache', e);
+      emit(state.copyWith(isClearingCache: false));
     }
+  }
+
+  Future<void> _onDeleteAccount(
+    SettingsDeleteAccount event,
+    Emitter<SettingsState> emit,
+  ) async {
+    try {
+      emit(state.copyWith(isDeletingAccount: true, deleteAccountError: null));
+
+      if (apiService != null) {
+        await apiService!.delete('/api/users/me');
+      }
+
+      // 清理本地数据
+      await StorageService.instance.clearAll();
+
+      emit(state.copyWith(isDeletingAccount: false));
+    } catch (e) {
+      AppLogger.error('Failed to delete account', e);
+      emit(state.copyWith(
+        isDeletingAccount: false,
+        deleteAccountError: e.toString(),
+      ));
+    }
+  }
+
+  /// 计算目录大小
+  Future<int> _calculateDirectorySize(Directory dir) async {
+    int totalSize = 0;
+    try {
+      if (dir.existsSync()) {
+        await for (final entity
+            in dir.list(recursive: true, followLinks: false)) {
+          if (entity is File) {
+            totalSize += await entity.length();
+          }
+        }
+      }
+    } catch (_) {}
+    return totalSize;
+  }
+
+  /// 格式化文件大小
+  String _formatFileSize(int bytes) {
+    if (bytes < 1024) return '$bytes B';
+    if (bytes < 1024 * 1024) return '${(bytes / 1024).toStringAsFixed(1)} KB';
+    if (bytes < 1024 * 1024 * 1024) {
+      return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
+    }
+    return '${(bytes / (1024 * 1024 * 1024)).toStringAsFixed(1)} GB';
   }
 }

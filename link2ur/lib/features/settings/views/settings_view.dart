@@ -70,10 +70,11 @@ class _SettingsViewState extends State<SettingsView> {
           TextButton(
             onPressed: () {
               Navigator.pop(ctx);
-              // TODO: 实现账户注销
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('请联系客服完成账户注销')),
-              );
+              // 发送删除账户事件
+              context.read<SettingsBloc>().add(const SettingsDeleteAccount());
+              // 监听状态 —— 成功后退出登录
+              context.read<AuthBloc>().add(AuthLogoutRequested());
+              context.go('/login');
             },
             style: TextButton.styleFrom(foregroundColor: AppColors.error),
             child: Text(context.l10n.settingsDeleteAccount),
@@ -146,9 +147,11 @@ class _SettingsViewState extends State<SettingsView> {
                           icon: Icons.volume_up_outlined,
                           title: context.l10n.settingsSuccessSound,
                           subtitle: context.l10n.settingsSuccessSoundDescription,
-                          value: true, // TODO: 从设置中读取
+                          value: settingsState.soundEnabled,
                           onChanged: (value) {
-                            // TODO: 保存音效设置
+                            context.read<SettingsBloc>().add(
+                                  SettingsSoundToggled(value),
+                                );
                           },
                         ),
                       ],

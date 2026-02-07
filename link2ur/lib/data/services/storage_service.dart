@@ -157,6 +157,16 @@ class StorageService {
     return _prefs.getBool(StorageKeys.notificationEnabled) ?? true;
   }
 
+  /// 保存音效设置
+  Future<void> saveSoundEnabled(bool enabled) async {
+    await _prefs.setBool('sound_enabled', enabled);
+  }
+
+  /// 获取音效设置
+  bool isSoundEnabled() {
+    return _prefs.getBool('sound_enabled') ?? true;
+  }
+
   /// 保存推送Token
   Future<void> savePushToken(String token) async {
     await _prefs.setString(StorageKeys.pushToken, token);
@@ -249,5 +259,15 @@ class StorageService {
     await clearUserInfo();
     // 保留语言和主题设置
     AppLogger.info('User data cleared on logout');
+  }
+
+  /// 完全清理所有数据（注销账户使用）
+  Future<void> clearAll() async {
+    await clearTokens();
+    await clearUserInfo();
+    await clearCache();
+    // 清除所有 SharedPreferences
+    await _prefs.clear();
+    AppLogger.info('All user data cleared');
   }
 }

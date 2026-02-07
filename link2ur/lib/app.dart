@@ -5,6 +5,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'core/design/app_theme.dart';
 import 'core/router/app_router.dart';
 import 'features/auth/bloc/auth_bloc.dart';
+import 'features/notification/bloc/notification_bloc.dart';
 import 'features/settings/bloc/settings_bloc.dart';
 import 'data/repositories/auth_repository.dart';
 import 'data/repositories/task_repository.dart';
@@ -116,6 +117,11 @@ class _Link2UrAppState extends State<Link2UrApp> {
           BlocProvider<SettingsBloc>(
             create: (context) => SettingsBloc()
               ..add(const SettingsLoadRequested()),
+          ),
+          BlocProvider<NotificationBloc>(
+            create: (context) => NotificationBloc(
+              notificationRepository: _notificationRepository,
+            )..add(const NotificationLoadUnreadNotificationCount()),
           ),
         ],
         child: BlocBuilder<AuthBloc, AuthState>(

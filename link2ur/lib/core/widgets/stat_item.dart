@@ -10,12 +10,14 @@ class StatItem extends StatelessWidget {
     super.key,
     required this.label,
     required this.value,
+    this.icon,
     this.color,
     this.onTap,
   });
 
   final String label;
   final String value;
+  final IconData? icon;
   final Color? color;
   final VoidCallback? onTap;
 
@@ -27,6 +29,10 @@ class StatItem extends StatelessWidget {
     final content = Column(
       mainAxisSize: MainAxisSize.min,
       children: [
+        if (icon != null) ...[
+          Icon(icon!, size: 20, color: effectiveColor),
+          AppSpacing.vXs,
+        ],
         Text(
           value,
           style: AppTypography.title3.copyWith(

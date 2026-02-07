@@ -8,6 +8,8 @@ import '../design/app_spacing.dart';
 import '../design/app_typography.dart';
 import '../design/app_radius.dart';
 import '../constants/app_assets.dart';
+import '../utils/wechat_share_manager.dart';
+import '../utils/qq_share_manager.dart';
 
 /// 分享平台枚举
 enum SharePlatform {
@@ -307,6 +309,26 @@ class CustomSharePanel extends StatelessWidget {
         onDismiss?.call();
         break;
 
+      case SharePlatform.wechat:
+        onDismiss?.call();
+        await _shareToWeChat(context, toMoments: false);
+        break;
+
+      case SharePlatform.wechatMoments:
+        onDismiss?.call();
+        await _shareToWeChat(context, toMoments: true);
+        break;
+
+      case SharePlatform.qq:
+        onDismiss?.call();
+        await _shareToQQ(context, toQZone: false);
+        break;
+
+      case SharePlatform.qzone:
+        onDismiss?.call();
+        await _shareToQQ(context, toQZone: true);
+        break;
+
       case SharePlatform.more:
         onDismiss?.call();
         // 延迟显示系统分享面板，确保底部Sheet完全关闭
@@ -322,6 +344,84 @@ class CustomSharePanel extends StatelessWidget {
         final defaultShareText = '$title\n$description\n${url ?? ''}';
         await Share.share(defaultShareText);
         break;
+    }
+  }
+
+  /// 分享到微信
+  Future<void> _shareToWeChat(BuildContext context, {required bool toMoments}) async {
+    try {
+      final wechatManager = WeChatShareManager.instance;
+      final installed = await wechatManager.isWeChatInstalled();
+
+      if (!installed) {
+        // 微信未安装，使用系统分享
+        await Future.delayed(const Duration(milliseconds: 300));
+        await Share.share('$title\n$description\n${url ?? ''}');
+        return;
+      }
+
+      bool success;
+      if (toMoments) {
+        success = await wechatManager.shareToMoments(
+          title: title,
+          description: description,
+          url: url ?? '',
+        );
+      } else {
+        success = await wechatManager.shareToFriend(
+          title: title,
+          description: description,
+          url: url ?? '',
+        );
+      }
+
+      if (!success && context.mounted) {
+        // 分享失败，回退到系统分享
+        await Future.delayed(const Duration(milliseconds: 300));
+        await Share.share('$title\n$description\n${url ?? ''}');
+      }
+    } catch (_) {
+      // 出错时回退到系统分享
+      await Future.delayed(const Duration(milliseconds: 300));
+      await Share.share('$title\n$description\n${url ?? ''}');
+    }
+  }
+
+  /// 分享到 QQ
+  Future<void> _shareToQQ(BuildContext context, {required bool toQZone}) async {
+    try {
+      final qqManager = QQShareManager.instance;
+      final installed = await qqManager.isQQInstalled();
+
+      if (!installed) {
+        // QQ 未安装，使用系统分享
+        await Future.delayed(const Duration(milliseconds: 300));
+        await Share.share('$title\n$description\n${url ?? ''}');
+        return;
+      }
+
+      bool success;
+      if (toQZone) {
+        success = await qqManager.shareToQZone(
+          title: title,
+          description: description,
+          url: url ?? '',
+        );
+      } else {
+        success = await qqManager.shareToFriend(
+          title: title,
+          description: description,
+          url: url ?? '',
+        );
+      }
+
+      if (!success && context.mounted) {
+        await Future.delayed(const Duration(milliseconds: 300));
+        await Share.share('$title\n$description\n${url ?? ''}');
+      }
+    } catch (_) {
+      await Future.delayed(const Duration(milliseconds: 300));
+      await Share.share('$title\n$description\n${url ?? ''}');
     }
   }
 }

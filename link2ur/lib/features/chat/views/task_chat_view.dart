@@ -7,6 +7,7 @@ import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_radius.dart';
 import '../../../core/widgets/buttons.dart';
+import '../../../core/widgets/full_screen_image_view.dart';
 import '../../../core/widgets/loading_view.dart';
 import '../../../core/widgets/error_state_view.dart';
 import '../../../data/repositories/message_repository.dart';
@@ -289,7 +290,11 @@ class _TaskChatViewState extends State<TaskChatView> {
             }
           },
           onImageTap: (url) {
-            // TODO: 打开全屏图片查看器
+            FullScreenImageView.show(
+              context,
+              images: [url],
+              initialIndex: 0,
+            );
           },
         );
       },

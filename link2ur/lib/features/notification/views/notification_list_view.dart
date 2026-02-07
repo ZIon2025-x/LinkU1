@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_spacing.dart';
@@ -42,7 +43,7 @@ class _NotificationListViewState extends State<NotificationListView> {
       final notifications = await repo.getNotifications(type: widget.type);
       if (mounted) {
         setState(() {
-          _notifications = notifications;
+          _notifications = notifications.notifications;
           _isLoading = false;
         });
       }
@@ -109,14 +110,81 @@ class _NotificationListViewState extends State<NotificationListView> {
   Future<void> _markAllAsRead() async {
     try {
       final repo = context.read<NotificationRepository>();
-      await repo.markAllAsRead(type: widget.type);
+      await repo.markAllAsRead();
       _loadNotifications();
     } catch (_) {}
   }
 
   void _handleNotificationTap(model.AppNotification notification) {
+    // 标记为已读
+    if (!notification.isRead) {
+      try {
+        final repo = context.read<NotificationRepository>();
+        repo.markAsRead(notification.id);
+        setState(() {
+          final index =
+              _notifications.indexWhere((n) => n.id == notification.id);
+          if (index != -1) {
+            _notifications[index] = notification.copyWith(isRead: true);
+          }
+        });
+      } catch (_) {}
+    }
+
     // 根据通知类型跳转到对应页面
-    // TODO: 实现具体的跳转逻辑
+    switch (notification.type) {
+      case 'task_applied':
+      case 'task_accepted':
+      case 'task_completed':
+      case 'task_confirmed':
+      case 'task_cancelled':
+      case 'task_update':
+        final taskId = notification.taskId ?? notification.relatedId;
+        if (taskId != null) {
+          context.push('/tasks/$taskId');
+        }
+        break;
+      case 'message':
+      case 'task_chat':
+        final taskId = notification.taskId;
+        if (taskId != null) {
+          context.push('/task-chat/$taskId');
+        }
+        break;
+      case 'forum_reply':
+      case 'forum_like':
+        final postId = notification.relatedId;
+        if (postId != null) {
+          context.push('/forum/posts/$postId');
+        }
+        break;
+      case 'payment':
+      case 'payment_success':
+      case 'payment_failed':
+        context.push('/wallet');
+        break;
+      case 'flea_market':
+        final itemId = notification.relatedId;
+        if (itemId != null) {
+          context.push('/flea-market/$itemId');
+        }
+        break;
+      case 'activity':
+        final activityId = notification.relatedId;
+        if (activityId != null) {
+          context.push('/activities/$activityId');
+        }
+        break;
+      case 'leaderboard':
+        final leaderboardId = notification.relatedId;
+        if (leaderboardId != null) {
+          context.push('/leaderboard/$leaderboardId');
+        }
+        break;
+      default:
+        // 系统通知不跳转
+        break;
+    }
   }
 }
 
@@ -187,7 +255,7 @@ class _NotificationCard extends StatelessWidget {
                   ],
                   const SizedBox(height: 6),
                   Text(
-                    notification.createdAt ?? '',
+                    notification.createdAt?.toString().split('.').first ?? '',
                     style: TextStyle(
                         fontSize: 11,
                         color: AppColors.textTertiary),

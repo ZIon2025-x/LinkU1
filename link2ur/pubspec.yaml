@@ -28,6 +28,7 @@ dependencies:
   shared_preferences: ^2.2.3
   flutter_secure_storage: ^9.2.2
   hive_flutter: ^1.1.0
+  path_provider: ^2.1.4
   
   # 国际化
   intl: ^0.20.2
@@ -41,6 +42,9 @@ dependencies:
   
   # Cupertino风格图标
   cupertino_icons: ^1.0.8
+  
+  # WebView
+  webview_flutter: ^4.10.0
   
   # 支付
   flutter_stripe: ^11.0.0
@@ -74,6 +78,25 @@ dependencies:
   package_info_plus: ^8.0.2
   uuid: ^4.4.2
   collection: ^1.18.0
+
+  # IAP 内购
+  in_app_purchase: ^3.2.0
+
+  # 社交分享 SDK
+  fluwx: ^4.6.1
+  tencent_kit: ^6.0.3
+
+  # QR 码生成
+  qr_flutter: ^4.1.0
+
+  # 图片处理
+  image: ^4.2.0
+
+  # App Review
+  in_app_review: ^2.0.9
+
+  # 加密
+  encrypt: ^5.0.3
 
 dev_dependencies:
   flutter_test:

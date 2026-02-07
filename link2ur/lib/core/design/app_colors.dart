@@ -142,24 +142,43 @@ class AppColors {
     }
   }
 
+  // ==================== 便捷颜色（默认浅色模式） ====================
+  /// 主背景色
+  static const Color background = backgroundLight;
+
+  /// 卡片背景色
+  static const Color cardBackground = cardBackgroundLight;
+
+  /// 文字主色
+  static const Color textPrimary = textPrimaryLight;
+
+  /// 文字次色
+  static const Color textSecondary = textSecondaryLight;
+
+  /// 文字三级色
+  static const Color textTertiary = textTertiaryLight;
+
+  /// 分隔线色
+  static const Color separator = separatorLight;
+
   // ==================== 工具方法 ====================
   /// 根据亮度获取背景色
-  static Color background(Brightness brightness) {
+  static Color backgroundFor(Brightness brightness) {
     return brightness == Brightness.light ? backgroundLight : backgroundDark;
   }
 
   /// 根据亮度获取卡片背景色
-  static Color cardBackground(Brightness brightness) {
+  static Color cardBackgroundFor(Brightness brightness) {
     return brightness == Brightness.light ? cardBackgroundLight : cardBackgroundDark;
   }
 
   /// 根据亮度获取文字主色
-  static Color textPrimary(Brightness brightness) {
+  static Color textPrimaryFor(Brightness brightness) {
     return brightness == Brightness.light ? textPrimaryLight : textPrimaryDark;
   }
 
   /// 根据亮度获取文字次色
-  static Color textSecondary(Brightness brightness) {
+  static Color textSecondaryFor(Brightness brightness) {
     return brightness == Brightness.light ? textSecondaryLight : textSecondaryDark;
   }
 }

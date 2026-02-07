@@ -121,6 +121,41 @@ class PaymentRepository {
     return items.map((e) => e as Map<String, dynamic>).toList();
   }
 
+  /// 创建微信支付 Checkout Session
+  Future<String> createWeChatCheckoutSession({
+    required int taskId,
+    int? couponId,
+  }) async {
+    final response = await _apiService.post<Map<String, dynamic>>(
+      ApiEndpoints.wechatCheckout,
+      data: {
+        'task_id': taskId,
+        if (couponId != null) 'coupon_id': couponId,
+      },
+    );
+
+    if (!response.isSuccess || response.data == null) {
+      throw PaymentException(response.message ?? '创建微信支付会话失败');
+    }
+
+    return response.data!['checkout_url'] as String? ?? '';
+  }
+
+  /// 查询支付状态
+  Future<Map<String, dynamic>> checkPaymentStatus({
+    required String paymentIntentId,
+  }) async {
+    final response = await _apiService.get<Map<String, dynamic>>(
+      '/api/payments/status/$paymentIntentId',
+    );
+
+    if (!response.isSuccess || response.data == null) {
+      throw PaymentException(response.message ?? '查询支付状态失败');
+    }
+
+    return response.data!;
+  }
+
   /// 获取Stripe Connect状态
   Future<StripeConnectStatus> getStripeConnectStatus() async {
     final response = await _apiService.get<Map<String, dynamic>>(

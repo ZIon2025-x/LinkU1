@@ -185,6 +185,25 @@ class ForumRepository {
 
     return ForumPostListResponse.fromJson(response.data!);
   }
+  /// 获取我点赞的帖子
+  Future<ForumPostListResponse> getLikedPosts({
+    int page = 1,
+    int pageSize = 20,
+  }) async {
+    final response = await _apiService.get<Map<String, dynamic>>(
+      ApiEndpoints.likedForumPosts,
+      queryParameters: {
+        'page': page,
+        'page_size': pageSize,
+      },
+    );
+
+    if (!response.isSuccess || response.data == null) {
+      throw ForumException(response.message ?? '获取点赞帖子失败');
+    }
+
+    return ForumPostListResponse.fromJson(response.data!);
+  }
 }
 
 /// 论坛异常

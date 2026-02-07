@@ -57,7 +57,7 @@ class _ForumPostListViewState extends State<ForumPostListView> {
       );
       if (mounted) {
         setState(() {
-          _posts = posts;
+          _posts = posts.posts;
           _isLoading = false;
         });
       }

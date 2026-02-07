@@ -122,11 +122,10 @@ class _EditFleaMarketItemViewState extends State<EditFleaMarketItemView> {
       final allImages = [..._existingImageUrls, ...uploadedUrls];
 
       await repo.updateItem(
-        itemId: widget.itemId,
+        widget.itemId,
         title: _titleController.text,
         description: _descriptionController.text,
         price: double.tryParse(_priceController.text) ?? 0,
-        location: _locationController.text,
         category: _selectedCategory,
         images: allImages,
       );
@@ -212,7 +211,7 @@ class _EditFleaMarketItemViewState extends State<EditFleaMarketItemView> {
 
               // 图片
               _buildSection(
-                title: l10n.fleaMarketImages,
+                title: l10n.fleaMarketProductImages,
                 icon: Icons.photo_library,
                 trailing: Text(
                   '$totalImages/5',
@@ -230,7 +229,7 @@ class _EditFleaMarketItemViewState extends State<EditFleaMarketItemView> {
                         // 已有图片
                         ..._existingImageUrls.map((url) => _buildImageTile(
                               child: AsyncImageView(
-                                url: url,
+                                imageUrl: url,
                                 width: 90,
                                 height: 90,
                                 fit: BoxFit.cover,

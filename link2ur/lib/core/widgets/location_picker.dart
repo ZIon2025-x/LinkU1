@@ -1,5 +1,7 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../design/app_colors.dart';
 import '../design/app_spacing.dart';
@@ -317,10 +319,47 @@ class TaskLocationDetailView extends StatelessWidget {
     );
   }
 
-  void _openMaps(BuildContext context, String provider) {
-    // TODO: 使用 url_launcher 打开地图应用
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('打开${provider == 'google' ? 'Google' : 'Apple'} Maps')),
-    );
+  Future<void> _openMaps(BuildContext context, String provider) async {
+    // 获取当前位置作为地图中心
+    Position? position;
+    try {
+      position = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.medium,
+        timeLimit: const Duration(seconds: 5),
+      );
+    } catch (_) {}
+
+    final lat = position?.latitude ?? 51.5074; // 默认伦敦
+    final lng = position?.longitude ?? -0.1278;
+
+    Uri url;
+    if (provider == 'google') {
+      url = Uri.parse(
+        'https://www.google.com/maps/search/?api=1&query=$lat,$lng',
+      );
+    } else {
+      // Apple Maps
+      url = Uri.parse(
+        'https://maps.apple.com/?ll=$lat,$lng&q=当前位置',
+      );
+    }
+
+    try {
+      if (await canLaunchUrl(url)) {
+        await launchUrl(url, mode: LaunchMode.externalApplication);
+      } else {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('无法打开${provider == 'google' ? 'Google' : 'Apple'} Maps')),
+          );
+        }
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('打开地图失败: $e')),
+        );
+      }
+    }
   }
 }

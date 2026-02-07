@@ -1,13 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:in_app_purchase/in_app_purchase.dart';
 
 import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_radius.dart';
 import '../../../core/utils/l10n_extension.dart';
+import '../../../core/utils/logger.dart';
+import '../../../data/services/iap_service.dart';
 
 /// VIP 购买页
 /// 参考iOS VIPPurchaseView.swift
+/// 集成 in_app_purchase 实现真实 IAP 购买
 class VIPPurchaseView extends StatefulWidget {
   const VIPPurchaseView({super.key});
 
@@ -18,35 +22,117 @@ class VIPPurchaseView extends StatefulWidget {
 class _VIPPurchaseViewState extends State<VIPPurchaseView> {
   int? _selectedIndex;
   bool _isPurchasing = false;
+  bool _isLoadingProducts = true;
   String? _errorMessage;
+  List<ProductDetails> _products = [];
 
-  // VIP 产品列表（模拟数据，实际应从 API/IAP 获取）
-  static const _products = [
-    _VIPProduct(
-      id: 'vip_monthly',
-      name: 'VIP Monthly',
-      description: '1 Month VIP Membership',
-      price: '£4.99',
-      priceValue: 4.99,
-    ),
-    _VIPProduct(
-      id: 'vip_quarterly',
-      name: 'VIP Quarterly',
-      description: '3 Months VIP Membership',
-      price: '£12.99',
-      priceValue: 12.99,
-    ),
-    _VIPProduct(
-      id: 'vip_yearly',
-      name: 'VIP Yearly',
-      description: '12 Months VIP Membership',
-      price: '£39.99',
-      priceValue: 39.99,
-    ),
-  ];
+  @override
+  void initState() {
+    super.initState();
+    _loadProducts();
+    // 监听购买完成
+    IAPService.instance.onPurchaseComplete = _onPurchaseComplete;
+  }
+
+  @override
+  void dispose() {
+    IAPService.instance.onPurchaseComplete = null;
+    super.dispose();
+  }
+
+  Future<void> _loadProducts() async {
+    setState(() {
+      _isLoadingProducts = true;
+      _errorMessage = null;
+    });
+
+    final iapService = IAPService.instance;
+
+    // 如果产品尚未加载，重新加载
+    if (iapService.products.isEmpty) {
+      await iapService.loadProducts();
+    }
+
+    if (mounted) {
+      setState(() {
+        _products = iapService.products;
+        _isLoadingProducts = false;
+        if (_products.isEmpty && iapService.errorMessage != null) {
+          _errorMessage = iapService.errorMessage;
+        }
+      });
+    }
+  }
+
+  void _onPurchaseComplete(bool success, String? error) {
+    if (!mounted) return;
+
+    setState(() => _isPurchasing = false);
+
+    if (success) {
+      _showPurchaseSuccessDialog();
+    } else if (error != null) {
+      setState(() => _errorMessage = error);
+    }
+  }
+
+  void _showPurchaseSuccessDialog() {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        title: Column(
+          children: [
+            Container(
+              width: 64,
+              height: 64,
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [Color(0xFFFFD700), Color(0xFFFF9500)],
+                ),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.workspace_premium,
+                color: Colors.white,
+                size: 36,
+              ),
+            ),
+            const SizedBox(height: 12),
+            Text(context.l10n.vipPurchaseSuccess),
+          ],
+        ),
+        content: const Text(
+          '您已成功订阅 VIP，享受专属权益！',
+          textAlign: TextAlign.center,
+        ),
+        actionsAlignment: MainAxisAlignment.center,
+        actions: [
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: () {
+                Navigator.pop(ctx);
+                Navigator.of(context).pop(true);
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: Colors.white,
+              ),
+              child: const Text('确定'),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 
   Future<void> _purchase() async {
-    if (_selectedIndex == null) return;
+    if (_selectedIndex == null || _selectedIndex! >= _products.length) return;
+
+    final product = _products[_selectedIndex!];
 
     setState(() {
       _isPurchasing = true;
@@ -54,19 +140,40 @@ class _VIPPurchaseViewState extends State<VIPPurchaseView> {
     });
 
     try {
-      // TODO: 实际的 IAP 购买逻辑
-      await Future.delayed(const Duration(seconds: 2));
+      await IAPService.instance.purchase(product);
+      // 实际购买结果会通过 onPurchaseComplete 回调
+    } catch (e) {
       if (mounted) {
+        setState(() {
+          _isPurchasing = false;
+          _errorMessage = '购买失败，请稍后重试。';
+        });
+      }
+    }
+  }
+
+  Future<void> _restorePurchases() async {
+    setState(() {
+      _isPurchasing = true;
+      _errorMessage = null;
+    });
+
+    try {
+      await IAPService.instance.restorePurchases();
+      // 等待一下让购买流处理
+      await Future.delayed(const Duration(seconds: 2));
+
+      if (mounted) {
+        setState(() => _isPurchasing = false);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(context.l10n.vipPurchaseSuccess)),
+          const SnackBar(content: Text('已检查购买记录，如有有效订阅将自动恢复。')),
         );
-        Navigator.of(context).pop();
       }
     } catch (e) {
       if (mounted) {
         setState(() {
           _isPurchasing = false;
-          _errorMessage = e.toString();
+          _errorMessage = '恢复购买失败，请稍后重试。';
         });
       }
     }
@@ -100,87 +207,112 @@ class _VIPPurchaseViewState extends State<VIPPurchaseView> {
             ),
             const SizedBox(height: AppSpacing.xl),
 
-            // 产品列表
-            ...List.generate(_products.length, (index) {
-              final product = _products[index];
-              final isSelected = _selectedIndex == index;
-
-              return GestureDetector(
-                onTap: () => setState(() => _selectedIndex = index),
-                child: Container(
-                  margin: const EdgeInsets.only(bottom: AppSpacing.md),
-                  padding: const EdgeInsets.all(AppSpacing.md),
-                  decoration: BoxDecoration(
-                    color: isSelected
-                        ? AppColors.primary.withOpacity(0.1)
-                        : Theme.of(context).cardColor,
-                    borderRadius:
-                        BorderRadius.circular(AppRadius.medium),
-                    border: Border.all(
-                      color: isSelected
-                          ? AppColors.primary
-                          : Colors.transparent,
-                      width: 2,
+            // 加载状态
+            if (_isLoadingProducts)
+              const Padding(
+                padding: EdgeInsets.all(40),
+                child: CircularProgressIndicator(),
+              )
+            else if (_products.isEmpty)
+              Padding(
+                padding: const EdgeInsets.all(40),
+                child: Column(
+                  children: [
+                    Icon(Icons.workspace_premium,
+                        size: 48, color: AppColors.textTertiary),
+                    const SizedBox(height: 12),
+                    const Text('暂无可用的 VIP 套餐',
+                        style: TextStyle(color: AppColors.textSecondary)),
+                    const SizedBox(height: 16),
+                    TextButton(
+                      onPressed: _loadProducts,
+                      child: const Text('重新加载'),
                     ),
-                  ),
-                  child: Row(
-                    children: [
-                      // 选择器
-                      Container(
-                        width: 24,
-                        height: 24,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: isSelected
-                              ? AppColors.primary
-                              : Colors.transparent,
-                          border: Border.all(
+                  ],
+                ),
+              )
+            else
+              // 产品列表 - 使用真实 IAP 产品
+              ...List.generate(_products.length, (index) {
+                final product = _products[index];
+                final isSelected = _selectedIndex == index;
+                final isMonthly = product.id == IAPService.vipMonthlyId;
+
+                return GestureDetector(
+                  onTap: () => setState(() => _selectedIndex = index),
+                  child: Container(
+                    margin: const EdgeInsets.only(bottom: AppSpacing.md),
+                    padding: const EdgeInsets.all(AppSpacing.md),
+                    decoration: BoxDecoration(
+                      color: isSelected
+                          ? AppColors.primary.withValues(alpha: 0.1)
+                          : Theme.of(context).cardColor,
+                      borderRadius:
+                          BorderRadius.circular(AppRadius.medium),
+                      border: Border.all(
+                        color: isSelected
+                            ? AppColors.primary
+                            : Colors.transparent,
+                        width: 2,
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        // 选择器
+                        Container(
+                          width: 24,
+                          height: 24,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
                             color: isSelected
                                 ? AppColors.primary
-                                : AppColors.textTertiary,
-                            width: 2,
+                                : Colors.transparent,
+                            border: Border.all(
+                              color: isSelected
+                                  ? AppColors.primary
+                                  : AppColors.textTertiary,
+                              width: 2,
+                            ),
+                          ),
+                          child: isSelected
+                              ? const Icon(Icons.check,
+                                  color: Colors.white, size: 14)
+                              : null,
+                        ),
+                        const SizedBox(width: AppSpacing.md),
+
+                        // 产品信息
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(product.title,
+                                  style: const TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w600)),
+                              const SizedBox(height: 4),
+                              Text(product.description,
+                                  style: TextStyle(
+                                      fontSize: 13,
+                                      color: AppColors.textSecondary)),
+                            ],
                           ),
                         ),
-                        child: isSelected
-                            ? const Icon(Icons.check,
-                                color: Colors.white, size: 14)
-                            : null,
-                      ),
-                      const SizedBox(width: AppSpacing.md),
 
-                      // 产品信息
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(product.name,
-                                style: const TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w600)),
-                            const SizedBox(height: 4),
-                            Text(product.description,
-                                style: TextStyle(
-                                    fontSize: 13,
-                                    color:
-                                        AppColors.textSecondary)),
-                          ],
+                        // 价格
+                        Text(
+                          product.price,
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.primary,
+                          ),
                         ),
-                      ),
-
-                      // 价格
-                      Text(
-                        product.price,
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.primary,
-                        ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
-                ),
-              );
-            }),
+                );
+              }),
 
             const SizedBox(height: AppSpacing.lg),
 
@@ -189,14 +321,15 @@ class _VIPPurchaseViewState extends State<VIPPurchaseView> {
               width: double.infinity,
               height: 52,
               child: ElevatedButton(
-                onPressed: _selectedIndex == null || _isPurchasing
-                    ? null
-                    : _purchase,
+                onPressed:
+                    _selectedIndex == null || _isPurchasing || _products.isEmpty
+                        ? null
+                        : _purchase,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.primary,
                   foregroundColor: Colors.white,
                   disabledBackgroundColor:
-                      AppColors.primary.withOpacity(0.5),
+                      AppColors.primary.withValues(alpha: 0.5),
                   shape: RoundedRectangleBorder(
                     borderRadius:
                         BorderRadius.circular(AppRadius.large),
@@ -222,9 +355,7 @@ class _VIPPurchaseViewState extends State<VIPPurchaseView> {
 
             // 恢复购买
             TextButton(
-              onPressed: () {
-                // TODO: 恢复购买逻辑
-              },
+              onPressed: _isPurchasing ? null : _restorePurchases,
               child: Text(l10n.vipRestorePurchase,
                   style: TextStyle(color: AppColors.primary)),
             ),
@@ -233,7 +364,7 @@ class _VIPPurchaseViewState extends State<VIPPurchaseView> {
             if (_errorMessage != null) ...[
               const SizedBox(height: AppSpacing.md),
               Text(_errorMessage!,
-                  style: TextStyle(
+                  style: const TextStyle(
                       color: AppColors.error, fontSize: 13)),
             ],
 
@@ -312,20 +443,4 @@ class _VIPPurchaseViewState extends State<VIPPurchaseView> {
       onTap: onTap,
     );
   }
-}
-
-class _VIPProduct {
-  const _VIPProduct({
-    required this.id,
-    required this.name,
-    required this.description,
-    required this.price,
-    required this.priceValue,
-  });
-
-  final String id;
-  final String name;
-  final String description;
-  final String price;
-  final double priceValue;
 }

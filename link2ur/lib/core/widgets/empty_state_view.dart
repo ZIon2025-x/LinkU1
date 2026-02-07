@@ -12,6 +12,7 @@ class EmptyStateView extends StatelessWidget {
     required this.icon,
     required this.title,
     this.description,
+    this.message,
     this.actionText,
     this.onAction,
     this.iconSize = 80,
@@ -21,6 +22,7 @@ class EmptyStateView extends StatelessWidget {
   final IconData icon;
   final String title;
   final String? description;
+  final String? message; // alias for description
   final String? actionText;
   final VoidCallback? onAction;
   final double iconSize;
@@ -125,11 +127,11 @@ class EmptyStateView extends StatelessWidget {
               ),
               textAlign: TextAlign.center,
             ),
-            if (description != null) ...[
+            if (description != null || message != null) ...[
               AppSpacing.vSm,
               // 描述
               Text(
-                description!,
+                description ?? message!,
                 style: AppTypography.subheadline.copyWith(
                   color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
                 ),

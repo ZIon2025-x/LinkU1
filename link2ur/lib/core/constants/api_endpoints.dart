@@ -60,6 +60,7 @@ class ApiEndpoints {
   static String favoritePost(int id) => '/api/forum/posts/$id/favorite';
   static const String myForumPosts = '/api/forum/posts/my';
   static const String favoriteForumPosts = '/api/forum/posts/favorites';
+  static const String likedForumPosts = '/api/forum/posts/liked';
 
   // ==================== 任务达人补充 ====================
   static const String taskExpertServiceDetail = '/api/task-expert-services';
@@ -124,6 +125,19 @@ class ApiEndpoints {
   static const String customerServiceInfo = '/api/customer-service/info';
   static const String customerServiceChats = '/api/customer-service/chats';
   static const String startCustomerServiceChat = '/api/customer-service/start';
+
+  // ==================== 微信支付 ====================
+  static const String wechatCheckout = '/api/payments/wechat-checkout';
+  static String taskPaymentStatus(int taskId) => '/api/payments/tasks/$taskId/status';
+
+  // ==================== IAP / VIP ====================
+  static const String activateVIP = '/api/vip/activate';
+  static const String vipStatus = '/api/vip/status';
+  static const String iapProducts = '/api/iap/products';
+
+  // ==================== 翻译 ====================
+  static const String translate = '/api/translate';
+  static const String translateBatch = '/api/translate/batch';
 
   // ==================== 其他 ====================
   static const String banners = '/api/banners';
