@@ -372,7 +372,7 @@ class FleaMarketBloc extends Bloc<FleaMarketEvent, FleaMarketState> {
     emit(state.copyWith(isSubmitting: true));
 
     try {
-      await _fleaMarketRepository.purchaseItem(event.itemId);
+      await _fleaMarketRepository.directPurchase(event.itemId.toString());
 
       // 更新本地状态
       final updatedItems = state.items.map((item) {
@@ -404,7 +404,7 @@ class FleaMarketBloc extends Bloc<FleaMarketEvent, FleaMarketState> {
 
     try {
       final updatedItem = await _fleaMarketRepository.updateItem(
-        event.itemId,
+        event.itemId.toString(),
         title: event.title,
         description: event.description,
         price: event.price,
@@ -441,7 +441,7 @@ class FleaMarketBloc extends Bloc<FleaMarketEvent, FleaMarketState> {
     emit(state.copyWith(detailStatus: FleaMarketStatus.loading));
 
     try {
-      final item = await _fleaMarketRepository.getItemById(event.itemId);
+      final item = await _fleaMarketRepository.getItemById(event.itemId.toString());
       emit(state.copyWith(
         detailStatus: FleaMarketStatus.loaded,
         selectedItem: item,

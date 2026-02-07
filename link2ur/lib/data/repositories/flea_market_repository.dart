@@ -7,7 +7,7 @@ import '../services/api_service.dart';
 import '../../core/constants/api_endpoints.dart';
 
 /// 跳蚤市场仓库
-/// 参考iOS APIService+Endpoints.swift 跳蚤市场相关
+/// 与iOS FleaMarketViewModel + 后端 flea_market_routes 对齐
 class FleaMarketRepository {
   FleaMarketRepository({
     required ApiService apiService,
@@ -24,7 +24,7 @@ class FleaMarketRepository {
     String? sortBy,
   }) async {
     final response = await _apiService.get<Map<String, dynamic>>(
-      ApiEndpoints.fleaMarket,
+      ApiEndpoints.fleaMarketItems,
       queryParameters: {
         'page': page,
         'page_size': pageSize,
@@ -41,10 +41,23 @@ class FleaMarketRepository {
     return FleaMarketListResponse.fromJson(response.data!);
   }
 
+  /// 获取商品分类
+  Future<List<Map<String, dynamic>>> getCategories() async {
+    final response = await _apiService.get<List<dynamic>>(
+      ApiEndpoints.fleaMarketCategories,
+    );
+
+    if (!response.isSuccess || response.data == null) {
+      throw FleaMarketException(response.message ?? '获取分类失败');
+    }
+
+    return response.data!.map((e) => e as Map<String, dynamic>).toList();
+  }
+
   /// 获取商品详情
-  Future<FleaMarketItem> getItemById(int id) async {
+  Future<FleaMarketItem> getItemById(String id) async {
     final response = await _apiService.get<Map<String, dynamic>>(
-      ApiEndpoints.fleaMarketById(id),
+      ApiEndpoints.fleaMarketItemById(id),
     );
 
     if (!response.isSuccess || response.data == null) {
@@ -57,7 +70,7 @@ class FleaMarketRepository {
   /// 发布商品
   Future<FleaMarketItem> createItem(CreateFleaMarketRequest request) async {
     final response = await _apiService.post<Map<String, dynamic>>(
-      ApiEndpoints.fleaMarket,
+      ApiEndpoints.fleaMarketItems,
       data: request.toJson(),
     );
 
@@ -68,13 +81,10 @@ class FleaMarketRepository {
     return FleaMarketItem.fromJson(response.data!);
   }
 
-  /// 购买商品
-  Future<Map<String, dynamic>> purchaseItem(int id, {double? proposedPrice}) async {
+  /// 直接购买商品
+  Future<Map<String, dynamic>> directPurchase(String id) async {
     final response = await _apiService.post<Map<String, dynamic>>(
-      ApiEndpoints.purchaseFleaMarket(id),
-      data: {
-        if (proposedPrice != null) 'proposed_price': proposedPrice,
-      },
+      ApiEndpoints.fleaMarketDirectPurchase(id),
     );
 
     if (!response.isSuccess || response.data == null) {
@@ -84,13 +94,109 @@ class FleaMarketRepository {
     return response.data!;
   }
 
+  /// 发送购买请求（议价）
+  Future<Map<String, dynamic>> sendPurchaseRequest(
+    String id, {
+    double? proposedPrice,
+    String? message,
+  }) async {
+    final response = await _apiService.post<Map<String, dynamic>>(
+      ApiEndpoints.fleaMarketPurchaseRequest(id),
+      data: {
+        if (proposedPrice != null) 'proposed_price': proposedPrice,
+        if (message != null) 'message': message,
+      },
+    );
+
+    if (!response.isSuccess || response.data == null) {
+      throw FleaMarketException(response.message ?? '发送购买请求失败');
+    }
+
+    return response.data!;
+  }
+
+  /// 收藏/取消收藏商品
+  Future<void> toggleFavorite(String id) async {
+    final response = await _apiService.post(
+      ApiEndpoints.fleaMarketItemFavorite(id),
+    );
+
+    if (!response.isSuccess) {
+      throw FleaMarketException(response.message ?? '操作失败');
+    }
+  }
+
+  /// 刷新商品（重新上架）
+  Future<void> refreshItem(String id) async {
+    final response = await _apiService.post(
+      ApiEndpoints.fleaMarketItemRefresh(id),
+    );
+
+    if (!response.isSuccess) {
+      throw FleaMarketException(response.message ?? '刷新失败');
+    }
+  }
+
+  /// 举报商品
+  Future<void> reportItem(String id, {required String reason}) async {
+    final response = await _apiService.post(
+      ApiEndpoints.fleaMarketItemReport(id),
+      data: {'reason': reason},
+    );
+
+    if (!response.isSuccess) {
+      throw FleaMarketException(response.message ?? '举报失败');
+    }
+  }
+
+  /// 获取购买历史
+  Future<List<Map<String, dynamic>>> getMyPurchases({
+    int page = 1,
+    int pageSize = 20,
+  }) async {
+    final response = await _apiService.get<Map<String, dynamic>>(
+      ApiEndpoints.fleaMarketMyPurchases,
+      queryParameters: {
+        'page': page,
+        'page_size': pageSize,
+      },
+    );
+
+    if (!response.isSuccess || response.data == null) {
+      throw FleaMarketException(response.message ?? '获取购买历史失败');
+    }
+
+    final items = response.data!['items'] as List<dynamic>? ?? [];
+    return items.map((e) => e as Map<String, dynamic>).toList();
+  }
+
+  /// 获取收藏商品列表
+  Future<FleaMarketListResponse> getFavoriteItems({
+    int page = 1,
+    int pageSize = 20,
+  }) async {
+    final response = await _apiService.get<Map<String, dynamic>>(
+      ApiEndpoints.fleaMarketFavorites,
+      queryParameters: {
+        'page': page,
+        'page_size': pageSize,
+      },
+    );
+
+    if (!response.isSuccess || response.data == null) {
+      throw FleaMarketException(response.message ?? '获取收藏列表失败');
+    }
+
+    return FleaMarketListResponse.fromJson(response.data!);
+  }
+
   /// 获取我的商品
   Future<FleaMarketListResponse> getMyItems({
     int page = 1,
     int pageSize = 20,
   }) async {
     final response = await _apiService.get<Map<String, dynamic>>(
-      ApiEndpoints.myFleaMarketItems,
+      ApiEndpoints.fleaMarketMyItems,
       queryParameters: {
         'page': page,
         'page_size': pageSize,
@@ -104,6 +210,62 @@ class FleaMarketRepository {
     return FleaMarketListResponse.fromJson(response.data!);
   }
 
+  /// 获取我的购买请求
+  Future<List<Map<String, dynamic>>> getMyPurchaseRequests({
+    int page = 1,
+    int pageSize = 20,
+  }) async {
+    final response = await _apiService.get<Map<String, dynamic>>(
+      ApiEndpoints.fleaMarketMyPurchaseRequests,
+      queryParameters: {
+        'page': page,
+        'page_size': pageSize,
+      },
+    );
+
+    if (!response.isSuccess || response.data == null) {
+      throw FleaMarketException(response.message ?? '获取购买请求失败');
+    }
+
+    final items = response.data!['items'] as List<dynamic>? ?? [];
+    return items.map((e) => e as Map<String, dynamic>).toList();
+  }
+
+  /// 获取我的销售记录
+  Future<List<Map<String, dynamic>>> getMySales({
+    int page = 1,
+    int pageSize = 20,
+  }) async {
+    final response = await _apiService.get<Map<String, dynamic>>(
+      ApiEndpoints.fleaMarketMySales,
+      queryParameters: {
+        'page': page,
+        'page_size': pageSize,
+      },
+    );
+
+    if (!response.isSuccess || response.data == null) {
+      throw FleaMarketException(response.message ?? '获取销售记录失败');
+    }
+
+    final items = response.data!['items'] as List<dynamic>? ?? [];
+    return items.map((e) => e as Map<String, dynamic>).toList();
+  }
+
+  /// 批准购买请求（卖家操作）
+  Future<Map<String, dynamic>> approvePurchaseRequest(
+      String requestId) async {
+    final response = await _apiService.post<Map<String, dynamic>>(
+      ApiEndpoints.fleaMarketApprovePurchaseRequest(requestId),
+    );
+
+    if (!response.isSuccess || response.data == null) {
+      throw FleaMarketException(response.message ?? '批准请求失败');
+    }
+
+    return response.data!;
+  }
+
   /// 上传图片
   Future<String> uploadImage(Uint8List bytes, String filename) async {
     final formData = FormData.fromMap({
@@ -111,7 +273,7 @@ class FleaMarketRepository {
     });
 
     final response = await _apiService.post<Map<String, dynamic>>(
-      ApiEndpoints.uploadImage,
+      ApiEndpoints.fleaMarketUploadImage,
       data: formData,
     );
 
@@ -124,7 +286,7 @@ class FleaMarketRepository {
 
   /// 更新商品
   Future<FleaMarketItem> updateItem(
-    int id, {
+    String id, {
     String? title,
     String? description,
     double? price,
@@ -139,7 +301,7 @@ class FleaMarketRepository {
     if (category != null) data['category'] = category;
 
     final response = await _apiService.put<Map<String, dynamic>>(
-      ApiEndpoints.fleaMarketById(id),
+      ApiEndpoints.fleaMarketItemById(id),
       data: data,
     );
 
@@ -151,9 +313,9 @@ class FleaMarketRepository {
   }
 
   /// 删除商品
-  Future<void> deleteItem(int id) async {
+  Future<void> deleteItem(String id) async {
     final response = await _apiService.delete(
-      ApiEndpoints.fleaMarketById(id),
+      ApiEndpoints.fleaMarketItemById(id),
     );
 
     if (!response.isSuccess) {

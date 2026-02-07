@@ -240,17 +240,26 @@ class AuthRepository {
     return await StorageService.instance.isLoggedIn();
   }
 
-  /// 重置密码
+  /// 发起忘记密码请求
+  Future<void> forgotPassword({required String email}) async {
+    final response = await _apiService.post(
+      ApiEndpoints.forgotPassword,
+      data: {'email': email},
+    );
+
+    if (!response.isSuccess) {
+      throw AuthException(response.message ?? '发送重置邮件失败');
+    }
+  }
+
+  /// 通过token重置密码（邮件链接中的token）
   Future<void> resetPassword({
-    required String email,
-    required String code,
+    required String token,
     required String newPassword,
   }) async {
     final response = await _apiService.post(
-      ApiEndpoints.resetPassword,
+      ApiEndpoints.resetPassword(token),
       data: {
-        'email': email,
-        'code': code,
         'new_password': newPassword,
       },
     );

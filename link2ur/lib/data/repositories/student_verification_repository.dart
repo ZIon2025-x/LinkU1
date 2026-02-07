@@ -3,7 +3,7 @@ import '../services/api_service.dart';
 import '../../core/constants/api_endpoints.dart';
 
 /// 学生认证仓库
-/// 参考iOS APIService+Endpoints.swift 学生认证相关
+/// 与iOS StudentVerificationViewModel + 后端路由对齐
 class StudentVerificationRepository {
   StudentVerificationRepository({
     required ApiService apiService,
@@ -38,39 +38,27 @@ class StudentVerificationRepository {
     }
   }
 
-  /// 验证学生邮箱
-  Future<void> verifyEmail({
-    required String token,
-  }) async {
+  /// 验证学生邮箱（输入验证码）
+  Future<void> verifyStudentEmail({required String code}) async {
     final response = await _apiService.post(
       ApiEndpoints.verifyStudentEmail,
-      data: {'token': token},
+      data: {'code': code},
     );
 
     if (!response.isSuccess) {
-      throw StudentVerificationException(response.message ?? '邮箱验证失败');
+      throw StudentVerificationException(response.message ?? '验证失败');
     }
   }
 
-  /// 获取大学列表
-  Future<List<University>> getUniversities({
-    String? keyword,
-  }) async {
-    final response = await _apiService.get<List<dynamic>>(
-      ApiEndpoints.universities,
-      queryParameters: {
-        if (keyword != null) 'keyword': keyword,
-      },
+  /// 续期学生认证
+  Future<void> renewVerification() async {
+    final response = await _apiService.post(
+      ApiEndpoints.renewStudentVerification,
     );
 
-    if (!response.isSuccess || response.data == null) {
-      throw StudentVerificationException(
-          response.message ?? '获取大学列表失败');
+    if (!response.isSuccess) {
+      throw StudentVerificationException(response.message ?? '续期失败');
     }
-
-    return response.data!
-        .map((e) => University.fromJson(e as Map<String, dynamic>))
-        .toList();
   }
 }
 

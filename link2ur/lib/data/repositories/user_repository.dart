@@ -5,7 +5,7 @@ import '../services/storage_service.dart';
 import '../../core/constants/api_endpoints.dart';
 
 /// 用户仓库
-/// 参考iOS APIService+Endpoints.swift 用户相关
+/// 与iOS APIService+Users + 后端路由对齐
 class UserRepository {
   UserRepository({
     required ApiService apiService,
@@ -46,7 +46,7 @@ class UserRepository {
     return user;
   }
 
-  /// 获取其他用户公开资料（别名）
+  /// 获取其他用户资料
   Future<User> getUserProfile(int userId) async {
     return getUserPublicProfile(userId);
   }
@@ -54,7 +54,7 @@ class UserRepository {
   /// 获取其他用户公开资料
   Future<User> getUserPublicProfile(int userId) async {
     final response = await _apiService.get<Map<String, dynamic>>(
-      ApiEndpoints.userPublicProfile(userId),
+      ApiEndpoints.userById(userId.toString()),
     );
 
     if (!response.isSuccess || response.data == null) {
@@ -86,7 +86,7 @@ class UserRepository {
     }
     if (avatar != null) data['avatar'] = avatar;
 
-    final response = await _apiService.put<Map<String, dynamic>>(
+    final response = await _apiService.patch<Map<String, dynamic>>(
       ApiEndpoints.updateProfile,
       data: data,
     );
@@ -98,6 +98,41 @@ class UserRepository {
     final user = User.fromJson(response.data!);
     await StorageService.instance.saveUserInfo(user.toJson());
     return user;
+  }
+
+  /// 发送邮箱更新验证码
+  Future<void> sendEmailUpdateCode(String email) async {
+    final response = await _apiService.post(
+      ApiEndpoints.sendEmailUpdateCode,
+      data: {'email': email},
+    );
+
+    if (!response.isSuccess) {
+      throw UserException(response.message ?? '发送验证码失败');
+    }
+  }
+
+  /// 发送手机更新验证码
+  Future<void> sendPhoneUpdateCode(String phone) async {
+    final response = await _apiService.post(
+      ApiEndpoints.sendPhoneUpdateCode,
+      data: {'phone': phone},
+    );
+
+    if (!response.isSuccess) {
+      throw UserException(response.message ?? '发送验证码失败');
+    }
+  }
+
+  /// 删除账号
+  Future<void> deleteAccount() async {
+    final response = await _apiService.delete(
+      ApiEndpoints.deleteAccount,
+    );
+
+    if (!response.isSuccess) {
+      throw UserException(response.message ?? '删除账号失败');
+    }
   }
 
   /// 获取用户偏好设置
@@ -130,10 +165,57 @@ class UserRepository {
     }
   }
 
-  /// 获取钱包信息
+  /// 上传图片（私密）
+  Future<String> uploadImage(String filePath) async {
+    final response = await _apiService.uploadFile<Map<String, dynamic>>(
+      ApiEndpoints.uploadImage,
+      filePath: filePath,
+      fieldName: 'file',
+    );
+
+    if (!response.isSuccess || response.data == null) {
+      throw UserException(response.message ?? '上传图片失败');
+    }
+
+    return response.data!['url'] as String? ?? '';
+  }
+
+  /// 上传公开图片（头像、任务图片等）
+  Future<String> uploadPublicImage(String filePath) async {
+    final response = await _apiService.uploadFile<Map<String, dynamic>>(
+      ApiEndpoints.uploadPublicImage,
+      filePath: filePath,
+      fieldName: 'file',
+    );
+
+    if (!response.isSuccess || response.data == null) {
+      throw UserException(response.message ?? '上传图片失败');
+    }
+
+    return response.data!['url'] as String? ?? '';
+  }
+
+  /// 上传文件
+  Future<String> uploadFile(String filePath) async {
+    final response = await _apiService.uploadFile<Map<String, dynamic>>(
+      ApiEndpoints.uploadFile,
+      filePath: filePath,
+      fieldName: 'file',
+    );
+
+    if (!response.isSuccess || response.data == null) {
+      throw UserException(response.message ?? '上传文件失败');
+    }
+
+    return response.data!['url'] as String? ?? '';
+  }
+
+  // ==================== 钱包相关 ====================
+
+  /// 获取钱包信息（聚合 Stripe Connect 余额）
   Future<WalletInfo> getWalletInfo() async {
     final response = await _apiService.get<Map<String, dynamic>>(
-      ApiEndpoints.walletInfo,
+      ApiEndpoints.stripeConnectAccountBalance,
     );
 
     if (!response.isSuccess || response.data == null) {
@@ -149,15 +231,13 @@ class UserRepository {
     int pageSize = 20,
     String? type,
   }) async {
-    final queryParams = <String, dynamic>{
-      'page': page,
-      'page_size': pageSize,
-    };
-    if (type != null) queryParams['type'] = type;
-
     final response = await _apiService.get<Map<String, dynamic>>(
-      ApiEndpoints.transactions,
-      queryParameters: queryParams,
+      ApiEndpoints.stripeConnectTransactions,
+      queryParameters: {
+        'page': page,
+        'page_size': pageSize,
+        if (type != null) 'type': type,
+      },
     );
 
     if (!response.isSuccess || response.data == null) {
@@ -168,21 +248,6 @@ class UserRepository {
     return items
         .map((e) => Transaction.fromJson(e as Map<String, dynamic>))
         .toList();
-  }
-
-  /// 上传图片（通用）
-  Future<String> uploadImage(String filePath) async {
-    final response = await _apiService.uploadFile<Map<String, dynamic>>(
-      ApiEndpoints.uploadImage,
-      filePath: filePath,
-      fieldName: 'file',
-    );
-
-    if (!response.isSuccess || response.data == null) {
-      throw UserException(response.message ?? '上传图片失败');
-    }
-
-    return response.data!['url'] as String? ?? '';
   }
 }
 

@@ -3,7 +3,7 @@ import '../services/api_service.dart';
 import '../../core/constants/api_endpoints.dart';
 
 /// 通知仓库
-/// 参考iOS APIService+Endpoints.swift 通知相关
+/// 与iOS NotificationViewModel + 后端路由对齐
 class NotificationRepository {
   NotificationRepository({
     required ApiService apiService,
@@ -24,6 +24,21 @@ class NotificationRepository {
         'page_size': pageSize,
         if (type != null) 'type': type,
       },
+    );
+
+    if (!response.isSuccess || response.data == null) {
+      throw NotificationException(response.message ?? '获取通知列表失败');
+    }
+
+    return NotificationListResponse.fromJson(response.data!);
+  }
+
+  /// 获取带最近已读的通知
+  Future<NotificationListResponse> getNotificationsWithRecentRead({
+    int recentReadLimit = 10,
+  }) async {
+    final response = await _apiService.get<Map<String, dynamic>>(
+      ApiEndpoints.notificationsWithRecentRead(limit: recentReadLimit),
     );
 
     if (!response.isSuccess || response.data == null) {
@@ -58,7 +73,7 @@ class NotificationRepository {
   /// 获取未读通知数量
   Future<UnreadNotificationCount> getUnreadCount() async {
     final response = await _apiService.get<Map<String, dynamic>>(
-      ApiEndpoints.unreadCount,
+      ApiEndpoints.unreadNotificationCount,
     );
 
     if (!response.isSuccess || response.data == null) {
@@ -66,6 +81,26 @@ class NotificationRepository {
     }
 
     return UnreadNotificationCount.fromJson(response.data!);
+  }
+
+  /// 获取未读通知列表
+  Future<NotificationListResponse> getUnreadNotifications({
+    int page = 1,
+    int pageSize = 20,
+  }) async {
+    final response = await _apiService.get<Map<String, dynamic>>(
+      ApiEndpoints.unreadNotifications,
+      queryParameters: {
+        'page': page,
+        'page_size': pageSize,
+      },
+    );
+
+    if (!response.isSuccess || response.data == null) {
+      throw NotificationException(response.message ?? '获取未读通知失败');
+    }
+
+    return NotificationListResponse.fromJson(response.data!);
   }
 
   /// 获取论坛通知
@@ -86,6 +121,29 @@ class NotificationRepository {
     }
 
     return NotificationListResponse.fromJson(response.data!);
+  }
+
+  /// 上传设备Token
+  Future<void> registerDeviceToken(String token) async {
+    final response = await _apiService.post(
+      ApiEndpoints.deviceToken,
+      data: {'token': token},
+    );
+
+    if (!response.isSuccess) {
+      throw NotificationException(response.message ?? '注册设备Token失败');
+    }
+  }
+
+  /// 删除设备Token
+  Future<void> deleteDeviceToken() async {
+    final response = await _apiService.delete(
+      ApiEndpoints.deviceToken,
+    );
+
+    if (!response.isSuccess) {
+      throw NotificationException(response.message ?? '删除设备Token失败');
+    }
   }
 }
 

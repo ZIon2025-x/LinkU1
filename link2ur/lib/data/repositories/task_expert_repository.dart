@@ -3,7 +3,7 @@ import '../services/api_service.dart';
 import '../../core/constants/api_endpoints.dart';
 
 /// 任务达人仓库
-/// 参考iOS APIService+Endpoints.swift 任务达人相关
+/// 与iOS TaskExpertViewModel + 后端 task_expert_routes 对齐
 class TaskExpertRepository {
   TaskExpertRepository({
     required ApiService apiService,
@@ -34,7 +34,7 @@ class TaskExpertRepository {
   }
 
   /// 获取达人详情
-  Future<TaskExpert> getExpertById(int id) async {
+  Future<TaskExpert> getExpertById(String id) async {
     final response = await _apiService.get<Map<String, dynamic>>(
       ApiEndpoints.taskExpertById(id),
     );
@@ -47,7 +47,7 @@ class TaskExpertRepository {
   }
 
   /// 获取达人服务列表
-  Future<List<TaskExpertService>> getExpertServices(int expertId) async {
+  Future<List<TaskExpertService>> getExpertServices(String expertId) async {
     final response = await _apiService.get<List<dynamic>>(
       ApiEndpoints.taskExpertServices(expertId),
     );
@@ -57,9 +57,37 @@ class TaskExpertRepository {
     }
 
     return response.data!
-        .map((e) =>
-            TaskExpertService.fromJson(e as Map<String, dynamic>))
+        .map(
+            (e) => TaskExpertService.fromJson(e as Map<String, dynamic>))
         .toList();
+  }
+
+  /// 获取服务详情
+  Future<Map<String, dynamic>> getServiceDetail(int serviceId) async {
+    final response = await _apiService.get<Map<String, dynamic>>(
+      ApiEndpoints.taskExpertServiceDetail(serviceId),
+    );
+
+    if (!response.isSuccess || response.data == null) {
+      throw TaskExpertException(response.message ?? '获取服务详情失败');
+    }
+
+    return response.data!;
+  }
+
+  /// 获取服务评价
+  Future<List<Map<String, dynamic>>> getServiceReviews(
+      int serviceId) async {
+    final response = await _apiService.get<Map<String, dynamic>>(
+      ApiEndpoints.taskExpertServiceReviews(serviceId),
+    );
+
+    if (!response.isSuccess || response.data == null) {
+      throw TaskExpertException(response.message ?? '获取评价失败');
+    }
+
+    final items = response.data!['items'] as List<dynamic>? ?? [];
+    return items.map((e) => e as Map<String, dynamic>).toList();
   }
 
   /// 申请达人服务
@@ -69,7 +97,7 @@ class TaskExpertRepository {
     String? preferredTimeSlot,
   }) async {
     final response = await _apiService.post<Map<String, dynamic>>(
-      ApiEndpoints.applyService(serviceId),
+      ApiEndpoints.applyForService(serviceId),
       data: {
         if (message != null) 'message': message,
         if (preferredTimeSlot != null) 'preferred_time_slot': preferredTimeSlot,
@@ -83,7 +111,23 @@ class TaskExpertRepository {
     return response.data!;
   }
 
-  /// 搜索达人（getExperts 的快捷方法）
+  /// 申请成为达人
+  Future<Map<String, dynamic>> applyToBeExpert({
+    required Map<String, dynamic> applicationData,
+  }) async {
+    final response = await _apiService.post<Map<String, dynamic>>(
+      ApiEndpoints.applyToBeExpert,
+      data: applicationData,
+    );
+
+    if (!response.isSuccess || response.data == null) {
+      throw TaskExpertException(response.message ?? '申请成为达人失败');
+    }
+
+    return response.data!;
+  }
+
+  /// 搜索达人
   Future<List<TaskExpert>> searchExperts({
     required String keyword,
     int page = 1,
@@ -95,19 +139,6 @@ class TaskExpertRepository {
       pageSize: pageSize,
     );
     return result.experts;
-  }
-
-  /// 获取服务详情
-  Future<Map<String, dynamic>> getServiceDetail(int serviceId) async {
-    final response = await _apiService.get<Map<String, dynamic>>(
-      '${ApiEndpoints.taskExpertServiceDetail}/$serviceId',
-    );
-
-    if (!response.isSuccess || response.data == null) {
-      throw TaskExpertException(response.message ?? '获取服务详情失败');
-    }
-
-    return response.data!;
   }
 
   /// 获取我的服务申请

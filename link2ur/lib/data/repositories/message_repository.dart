@@ -4,7 +4,7 @@ import '../services/websocket_service.dart';
 import '../../core/constants/api_endpoints.dart';
 
 /// 消息仓库
-/// 参考iOS APIService+Endpoints.swift 消息相关
+/// 与iOS MessageViewModel + 后端路由对齐
 class MessageRepository {
   MessageRepository({
     required ApiService apiService,
@@ -12,10 +12,12 @@ class MessageRepository {
 
   final ApiService _apiService;
 
+  // ==================== 私信 ====================
+
   /// 获取聊天联系人列表
   Future<List<ChatContact>> getContacts() async {
     final response = await _apiService.get<List<dynamic>>(
-      ApiEndpoints.contacts,
+      ApiEndpoints.messageContacts,
     );
 
     if (!response.isSuccess || response.data == null) {
@@ -27,14 +29,14 @@ class MessageRepository {
         .toList();
   }
 
-  /// 获取与某用户的消息列表
-  Future<List<Message>> getMessagesWith(
-    int userId, {
+  /// 获取与某用户的消息历史
+  Future<List<Message>> getMessageHistory(
+    String userId, {
     int page = 1,
     int pageSize = 50,
   }) async {
     final response = await _apiService.get<Map<String, dynamic>>(
-      ApiEndpoints.messagesWith(userId),
+      ApiEndpoints.messageHistory(userId),
       queryParameters: {
         'page': page,
         'page_size': pageSize,
@@ -51,10 +53,23 @@ class MessageRepository {
         .toList();
   }
 
-  /// 发送消息（HTTP方式）
+  /// 获取与某用户的消息列表（兼容旧调用）
+  Future<List<Message>> getMessagesWith(
+    int userId, {
+    int page = 1,
+    int pageSize = 50,
+  }) async {
+    return getMessageHistory(
+      userId.toString(),
+      page: page,
+      pageSize: pageSize,
+    );
+  }
+
+  /// 发送私信（HTTP方式）
   Future<Message> sendMessage(SendMessageRequest request) async {
     final response = await _apiService.post<Map<String, dynamic>>(
-      ApiEndpoints.messages,
+      ApiEndpoints.sendMessage,
       data: request.toJson(),
     );
 
@@ -75,24 +90,58 @@ class MessageRepository {
     );
   }
 
-  /// 标记消息已读
-  Future<void> markMessagesRead(int contactId) async {
+  /// 标记聊天已读
+  Future<void> markChatRead(String contactId) async {
     final response = await _apiService.post(
-      ApiEndpoints.markMessagesRead(contactId),
+      ApiEndpoints.markChatRead(contactId),
     );
 
     if (!response.isSuccess) {
       throw MessageException(response.message ?? '标记已读失败');
     }
+  }
 
+  /// 标记消息已读（兼容旧调用，int版）
+  Future<void> markMessagesRead(int contactId) async {
+    await markChatRead(contactId.toString());
     // 同时通过WebSocket通知已读
     WebSocketService.instance.sendReadReceipt(senderId: contactId);
   }
 
+  /// 获取未读消息
+  Future<List<Message>> getUnreadMessages() async {
+    final response = await _apiService.get<List<dynamic>>(
+      ApiEndpoints.unreadMessages,
+    );
+
+    if (!response.isSuccess || response.data == null) {
+      throw MessageException(response.message ?? '获取未读消息失败');
+    }
+
+    return response.data!
+        .map((e) => Message.fromJson(e as Map<String, dynamic>))
+        .toList();
+  }
+
+  /// 获取未读消息数量
+  Future<int> getUnreadMessagesCount() async {
+    final response = await _apiService.get<Map<String, dynamic>>(
+      ApiEndpoints.unreadMessagesCount,
+    );
+
+    if (!response.isSuccess || response.data == null) {
+      return 0;
+    }
+
+    return response.data!['count'] as int? ?? 0;
+  }
+
+  // ==================== 任务聊天 ====================
+
   /// 获取任务聊天列表
   Future<List<TaskChat>> getTaskChats() async {
     final response = await _apiService.get<List<dynamic>>(
-      ApiEndpoints.taskChats,
+      ApiEndpoints.taskChatList,
     );
 
     if (!response.isSuccess || response.data == null) {
@@ -102,6 +151,19 @@ class MessageRepository {
     return response.data!
         .map((e) => TaskChat.fromJson(e as Map<String, dynamic>))
         .toList();
+  }
+
+  /// 获取任务聊天未读数量
+  Future<int> getTaskChatUnreadCount() async {
+    final response = await _apiService.get<Map<String, dynamic>>(
+      ApiEndpoints.taskChatUnreadCount,
+    );
+
+    if (!response.isSuccess || response.data == null) {
+      return 0;
+    }
+
+    return response.data!['count'] as int? ?? 0;
   }
 
   /// 获取任务聊天消息
@@ -128,7 +190,39 @@ class MessageRepository {
         .toList();
   }
 
-  /// 上传聊天图片
+  /// 发送任务聊天消息
+  Future<Message> sendTaskChatMessage(
+    int taskId, {
+    required String content,
+    String messageType = 'text',
+  }) async {
+    final response = await _apiService.post<Map<String, dynamic>>(
+      ApiEndpoints.taskChatSend(taskId),
+      data: {
+        'content': content,
+        'message_type': messageType,
+      },
+    );
+
+    if (!response.isSuccess || response.data == null) {
+      throw MessageException(response.message ?? '发送任务聊天消息失败');
+    }
+
+    return Message.fromJson(response.data!);
+  }
+
+  /// 标记任务聊天已读
+  Future<void> markTaskChatRead(int taskId) async {
+    final response = await _apiService.post(
+      ApiEndpoints.taskChatRead(taskId),
+    );
+
+    if (!response.isSuccess) {
+      throw MessageException(response.message ?? '标记任务聊天已读失败');
+    }
+  }
+
+  /// 上传聊天图片（私密图片）
   Future<String> uploadImage(String filePath) async {
     final response = await _apiService.uploadFile<Map<String, dynamic>>(
       ApiEndpoints.uploadImage,

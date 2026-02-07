@@ -3,7 +3,7 @@ import '../services/api_service.dart';
 import '../../core/constants/api_endpoints.dart';
 
 /// 活动仓库
-/// 参考iOS APIService+Endpoints.swift 活动相关
+/// 与iOS ActivityViewModel + 后端路由对齐
 class ActivityRepository {
   ActivityRepository({
     required ApiService apiService,
@@ -56,7 +56,8 @@ class ActivityRepository {
     final response = await _apiService.post<Map<String, dynamic>>(
       ApiEndpoints.applyActivity(activityId),
       data: {
-        if (preferredTimeSlot != null) 'preferred_time_slot': preferredTimeSlot,
+        if (preferredTimeSlot != null)
+          'preferred_time_slot': preferredTimeSlot,
       },
     );
 
@@ -65,6 +66,50 @@ class ActivityRepository {
     }
 
     return response.data!;
+  }
+
+  /// 收藏/取消收藏活动
+  Future<void> toggleFavorite(int activityId) async {
+    final response = await _apiService.post(
+      ApiEndpoints.activityFavorite(activityId),
+    );
+
+    if (!response.isSuccess) {
+      throw ActivityException(response.message ?? '操作失败');
+    }
+  }
+
+  /// 获取活动收藏状态
+  Future<bool> getFavoriteStatus(int activityId) async {
+    final response = await _apiService.get<Map<String, dynamic>>(
+      ApiEndpoints.activityFavoriteStatus(activityId),
+    );
+
+    if (!response.isSuccess || response.data == null) {
+      return false;
+    }
+
+    return response.data!['is_favorite'] as bool? ?? false;
+  }
+
+  /// 获取我参与的活动
+  Future<ActivityListResponse> getMyActivities({
+    int page = 1,
+    int pageSize = 20,
+  }) async {
+    final response = await _apiService.get<Map<String, dynamic>>(
+      ApiEndpoints.myActivities,
+      queryParameters: {
+        'page': page,
+        'page_size': pageSize,
+      },
+    );
+
+    if (!response.isSuccess || response.data == null) {
+      throw ActivityException(response.message ?? '获取我的活动失败');
+    }
+
+    return ActivityListResponse.fromJson(response.data!);
   }
 }
 

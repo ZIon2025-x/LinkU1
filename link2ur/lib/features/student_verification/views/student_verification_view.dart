@@ -54,15 +54,11 @@ class _StudentVerificationViewState extends State<StudentVerificationView> {
     try {
       final repository = context.read<StudentVerificationRepository>();
 
-      // Load verification status and universities in parallel
-      final results = await Future.wait([
-        repository.getVerificationStatus(),
-        repository.getUniversities(),
-      ]);
+      // Load verification status
+      final verification = await repository.getVerificationStatus();
 
       setState(() {
-        _verification = results[0] as StudentVerification;
-        _universities = results[1] as List<University>;
+        _verification = verification;
         _isLoading = false;
 
         // Pre-fill form if email is locked

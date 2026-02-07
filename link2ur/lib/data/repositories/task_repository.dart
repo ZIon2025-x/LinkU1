@@ -4,7 +4,7 @@ import '../services/api_service.dart';
 import '../../core/constants/api_endpoints.dart';
 
 /// 任务仓库
-/// 参考iOS APIService+Endpoints.swift 任务相关
+/// 与iOS TasksViewModel/TaskDetailViewModel + 后端路由对齐
 class TaskRepository {
   TaskRepository({
     required ApiService apiService,
@@ -46,7 +46,7 @@ class TaskRepository {
     int pageSize = 20,
   }) async {
     final response = await _apiService.get<Map<String, dynamic>>(
-      ApiEndpoints.recommendedTasks,
+      ApiEndpoints.recommendations,
       queryParameters: {
         'page': page,
         'page_size': pageSize,
@@ -60,7 +60,17 @@ class TaskRepository {
     return TaskListResponse.fromJson(response.data!);
   }
 
-  /// 获取附近任务
+  /// 推荐反馈
+  Future<void> sendRecommendationFeedback(int taskId, {
+    required String action,
+  }) async {
+    await _apiService.post(
+      ApiEndpoints.recommendationFeedback(taskId),
+      data: {'action': action},
+    );
+  }
+
+  /// 获取附近任务（通过 /api/tasks 加location参数）
   Future<TaskListResponse> getNearbyTasks({
     required double latitude,
     required double longitude,
@@ -69,13 +79,14 @@ class TaskRepository {
     double? radius,
   }) async {
     final response = await _apiService.get<Map<String, dynamic>>(
-      ApiEndpoints.nearbyTasks,
+      ApiEndpoints.tasks,
       queryParameters: {
         'latitude': latitude,
         'longitude': longitude,
         'page': page,
         'page_size': pageSize,
         if (radius != null) 'radius': radius,
+        'sort_by': 'distance',
       },
     );
 
@@ -99,7 +110,7 @@ class TaskRepository {
     return Task.fromJson(response.data!);
   }
 
-  /// 获取任务详情（别名，供 TaskDetailBloc 使用）
+  /// 获取任务详情（别名）
   Future<Task> getTaskDetail(int id) => getTaskById(id);
 
   /// 创建任务
@@ -130,25 +141,90 @@ class TaskRepository {
     }
   }
 
-  /// 取消申请
-  Future<void> cancelApplication(int taskId) async {
+  /// 获取任务申请列表
+  Future<List<Map<String, dynamic>>> getTaskApplications(int taskId) async {
+    final response = await _apiService.get<Map<String, dynamic>>(
+      ApiEndpoints.taskApplications(taskId),
+    );
+
+    if (!response.isSuccess || response.data == null) {
+      throw TaskException(response.message ?? '获取申请列表失败');
+    }
+
+    final items = response.data!['items'] as List<dynamic>? ?? [];
+    return items.map((e) => e as Map<String, dynamic>).toList();
+  }
+
+  /// 接受申请
+  Future<void> acceptApplication(int taskId, int applicationId) async {
     final response = await _apiService.post(
-      ApiEndpoints.cancelApplication(taskId),
+      ApiEndpoints.acceptApplication(taskId, applicationId),
     );
 
     if (!response.isSuccess) {
-      throw TaskException(response.message ?? '取消申请失败');
+      throw TaskException(response.message ?? '接受申请失败');
     }
   }
 
-  /// 接受申请人
-  Future<void> acceptApplicant(int taskId, int applicantId) async {
+  /// 拒绝申请
+  Future<void> rejectApplication(int taskId, int applicationId) async {
     final response = await _apiService.post(
-      ApiEndpoints.acceptApplicant(taskId, applicantId),
+      ApiEndpoints.rejectApplication(taskId, applicationId),
     );
 
     if (!response.isSuccess) {
-      throw TaskException(response.message ?? '接受申请人失败');
+      throw TaskException(response.message ?? '拒绝申请失败');
+    }
+  }
+
+  /// 撤回申请
+  Future<void> withdrawApplication(int taskId, int applicationId) async {
+    final response = await _apiService.post(
+      ApiEndpoints.withdrawApplication(taskId, applicationId),
+    );
+
+    if (!response.isSuccess) {
+      throw TaskException(response.message ?? '撤回申请失败');
+    }
+  }
+
+  /// 申请议价
+  Future<void> negotiateApplication(
+    int taskId,
+    int applicationId, {
+    required double proposedPrice,
+    String? message,
+  }) async {
+    final response = await _apiService.post(
+      ApiEndpoints.negotiateApplication(taskId, applicationId),
+      data: {
+        'proposed_price': proposedPrice,
+        if (message != null) 'message': message,
+      },
+    );
+
+    if (!response.isSuccess) {
+      throw TaskException(response.message ?? '议价失败');
+    }
+  }
+
+  /// 回复议价
+  Future<void> respondNegotiation(
+    int taskId,
+    int applicationId, {
+    required String action, // accept, reject, counter
+    double? counterPrice,
+  }) async {
+    final response = await _apiService.post(
+      ApiEndpoints.respondNegotiation(taskId, applicationId),
+      data: {
+        'action': action,
+        if (counterPrice != null) 'counter_price': counterPrice,
+      },
+    );
+
+    if (!response.isSuccess) {
+      throw TaskException(response.message ?? '回复议价失败');
     }
   }
 
@@ -191,7 +267,29 @@ class TaskRepository {
     }
   }
 
-  /// 评价任务（使用 CreateReviewRequest）
+  /// 删除任务
+  Future<void> deleteTask(int taskId) async {
+    final response = await _apiService.delete(
+      ApiEndpoints.deleteTask(taskId),
+    );
+
+    if (!response.isSuccess) {
+      throw TaskException(response.message ?? '删除任务失败');
+    }
+  }
+
+  /// 拒绝任务
+  Future<void> rejectTask(int taskId) async {
+    final response = await _apiService.post(
+      ApiEndpoints.rejectTask(taskId),
+    );
+
+    if (!response.isSuccess) {
+      throw TaskException(response.message ?? '拒绝任务失败');
+    }
+  }
+
+  /// 评价任务
   Future<void> reviewTask(int taskId, CreateReviewRequest review) async {
     final response = await _apiService.post(
       ApiEndpoints.reviewTask(taskId),
@@ -203,7 +301,230 @@ class TaskRepository {
     }
   }
 
-  /// 获取我的任务（接取的）
+  /// 获取任务评价列表
+  Future<List<Map<String, dynamic>>> getTaskReviews(int taskId) async {
+    final response = await _apiService.get<Map<String, dynamic>>(
+      ApiEndpoints.taskReviews(taskId),
+    );
+
+    if (!response.isSuccess || response.data == null) {
+      throw TaskException(response.message ?? '获取评价失败');
+    }
+
+    final items = response.data!['items'] as List<dynamic>? ?? [];
+    return items.map((e) => e as Map<String, dynamic>).toList();
+  }
+
+  /// 接受任务
+  Future<void> acceptTask(int taskId) async {
+    final response = await _apiService.post(
+      ApiEndpoints.acceptTask(taskId),
+    );
+
+    if (!response.isSuccess) {
+      throw TaskException(response.message ?? '接受任务失败');
+    }
+  }
+
+  /// 审批任务
+  Future<void> approveTask(int taskId) async {
+    final response = await _apiService.post(
+      ApiEndpoints.approveTask(taskId),
+    );
+
+    if (!response.isSuccess) {
+      throw TaskException(response.message ?? '审批任务失败');
+    }
+  }
+
+  /// 获取任务匹配分数
+  Future<Map<String, dynamic>> getTaskMatchScore(int taskId) async {
+    final response = await _apiService.get<Map<String, dynamic>>(
+      ApiEndpoints.taskMatchScore(taskId),
+    );
+
+    if (!response.isSuccess || response.data == null) {
+      throw TaskException(response.message ?? '获取匹配分数失败');
+    }
+
+    return response.data!;
+  }
+
+  /// 获取任务历史记录
+  Future<List<Map<String, dynamic>>> getTaskHistory(int taskId) async {
+    final response = await _apiService.get<Map<String, dynamic>>(
+      ApiEndpoints.taskHistory(taskId),
+    );
+
+    if (!response.isSuccess || response.data == null) {
+      throw TaskException(response.message ?? '获取任务历史失败');
+    }
+
+    final items = response.data!['items'] as List<dynamic>? ?? [];
+    return items.map((e) => e as Map<String, dynamic>).toList();
+  }
+
+  /// 发起争议
+  Future<Map<String, dynamic>> disputeTask(
+    int taskId, {
+    required String reason,
+    List<String>? evidence,
+  }) async {
+    final response = await _apiService.post<Map<String, dynamic>>(
+      ApiEndpoints.disputeTask(taskId),
+      data: {
+        'reason': reason,
+        if (evidence != null) 'evidence': evidence,
+      },
+    );
+
+    if (!response.isSuccess || response.data == null) {
+      throw TaskException(response.message ?? '发起争议失败');
+    }
+
+    return response.data!;
+  }
+
+  // ==================== 退款/争议 ====================
+
+  /// 发起退款请求
+  Future<Map<String, dynamic>> requestRefund(
+    int taskId, {
+    required String reason,
+    List<String>? evidence,
+  }) async {
+    final response = await _apiService.post<Map<String, dynamic>>(
+      ApiEndpoints.refundRequest(taskId),
+      data: {
+        'reason': reason,
+        if (evidence != null) 'evidence': evidence,
+      },
+    );
+
+    if (!response.isSuccess || response.data == null) {
+      throw TaskException(response.message ?? '退款请求失败');
+    }
+
+    return response.data!;
+  }
+
+  /// 获取退款状态
+  Future<Map<String, dynamic>> getRefundStatus(int taskId) async {
+    final response = await _apiService.get<Map<String, dynamic>>(
+      ApiEndpoints.refundStatus(taskId),
+    );
+
+    if (!response.isSuccess || response.data == null) {
+      throw TaskException(response.message ?? '获取退款状态失败');
+    }
+
+    return response.data!;
+  }
+
+  /// 获取退款历史
+  Future<List<Map<String, dynamic>>> getRefundHistory(int taskId) async {
+    final response = await _apiService.get<Map<String, dynamic>>(
+      ApiEndpoints.refundHistory(taskId),
+    );
+
+    if (!response.isSuccess || response.data == null) {
+      throw TaskException(response.message ?? '获取退款历史失败');
+    }
+
+    final items = response.data!['items'] as List<dynamic>? ?? [];
+    return items.map((e) => e as Map<String, dynamic>).toList();
+  }
+
+  /// 取消退款请求
+  Future<void> cancelRefundRequest(int taskId, int refundId) async {
+    final response = await _apiService.post(
+      ApiEndpoints.cancelRefundRequest(taskId, refundId),
+    );
+
+    if (!response.isSuccess) {
+      throw TaskException(response.message ?? '取消退款请求失败');
+    }
+  }
+
+  /// 提交退款反驳
+  Future<void> submitRefundRebuttal(
+    int taskId,
+    int refundId, {
+    required String content,
+    List<String>? evidence,
+  }) async {
+    final response = await _apiService.post(
+      ApiEndpoints.submitRefundRebuttal(taskId, refundId),
+      data: {
+        'content': content,
+        if (evidence != null) 'evidence': evidence,
+      },
+    );
+
+    if (!response.isSuccess) {
+      throw TaskException(response.message ?? '提交反驳失败');
+    }
+  }
+
+  /// 获取争议时间线
+  Future<List<Map<String, dynamic>>> getDisputeTimeline(int taskId) async {
+    final response = await _apiService.get<Map<String, dynamic>>(
+      ApiEndpoints.disputeTimeline(taskId),
+    );
+
+    if (!response.isSuccess || response.data == null) {
+      throw TaskException(response.message ?? '获取争议时间线失败');
+    }
+
+    final items = response.data!['items'] as List<dynamic>? ?? [];
+    return items.map((e) => e as Map<String, dynamic>).toList();
+  }
+
+  // ==================== 多参与者 ====================
+
+  /// 获取任务参与者
+  Future<List<Map<String, dynamic>>> getTaskParticipants(
+      String taskId) async {
+    final response = await _apiService.get<Map<String, dynamic>>(
+      ApiEndpoints.taskParticipants(taskId),
+    );
+
+    if (!response.isSuccess || response.data == null) {
+      throw TaskException(response.message ?? '获取参与者失败');
+    }
+
+    final items = response.data!['items'] as List<dynamic>? ?? [];
+    return items.map((e) => e as Map<String, dynamic>).toList();
+  }
+
+  /// 参与者标记完成
+  Future<void> participantComplete(String taskId) async {
+    final response = await _apiService.post(
+      ApiEndpoints.participantComplete(taskId),
+    );
+
+    if (!response.isSuccess) {
+      throw TaskException(response.message ?? '标记完成失败');
+    }
+  }
+
+  /// 参与者请求退出
+  Future<void> participantExitRequest(String taskId, {String? reason}) async {
+    final response = await _apiService.post(
+      ApiEndpoints.participantExitRequest(taskId),
+      data: {
+        if (reason != null) 'reason': reason,
+      },
+    );
+
+    if (!response.isSuccess) {
+      throw TaskException(response.message ?? '退出请求失败');
+    }
+  }
+
+  // ==================== 我的任务 ====================
+
+  /// 获取我的任务
   Future<TaskListResponse> getMyTasks({
     int page = 1,
     int pageSize = 20,
@@ -225,17 +546,39 @@ class TaskRepository {
     return TaskListResponse.fromJson(response.data!);
   }
 
-  /// 获取我发布的任务
+  /// 取消自己的申请（便捷方法，需要 applicationId）
+  /// BLoC 应在获取申请列表后传入 applicationId 调用 withdrawApplication
+  Future<void> cancelApplication(int taskId,
+      {int? applicationId}) async {
+    if (applicationId != null) {
+      return withdrawApplication(taskId, applicationId);
+    }
+    // 如果没有 applicationId，尝试直接 POST cancel
+    final response = await _apiService.post(
+      ApiEndpoints.cancelTask(taskId),
+    );
+    if (!response.isSuccess) {
+      throw TaskException(response.message ?? '取消申请失败');
+    }
+  }
+
+  /// 接受申请人（便捷方法，applicantId 即 applicationId）
+  Future<void> acceptApplicant(int taskId, int applicantId) async {
+    return acceptApplication(taskId, applicantId);
+  }
+
+  /// 获取我发布的任务（通过tasks接口加filter）
   Future<TaskListResponse> getMyPostedTasks({
     int page = 1,
     int pageSize = 20,
     String? status,
   }) async {
     final response = await _apiService.get<Map<String, dynamic>>(
-      ApiEndpoints.myPostedTasks,
+      ApiEndpoints.myTasks,
       queryParameters: {
         'page': page,
         'page_size': pageSize,
+        'role': 'poster',
         if (status != null) 'status': status,
       },
     );

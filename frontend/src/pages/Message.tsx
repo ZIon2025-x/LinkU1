@@ -622,6 +622,7 @@ const MessagePage: React.FC = () => {
   const [previewImageUrl, setPreviewImageUrl] = useState('');
   const [showMobileImageSendModal, setShowMobileImageSendModal] = useState(false);
   const [totalUnreadCount, setTotalUnreadCount] = useState(0);
+  const [showDebugPanel, setShowDebugPanel] = useState(false);
   
   // 无限滚动相关状态
   const [loadingMoreMessages, setLoadingMoreMessages] = useState(false);
@@ -3721,6 +3722,23 @@ const MessagePage: React.FC = () => {
                 {totalUnreadCount}
               </span>
             )}
+            <button
+              onClick={(e) => { e.stopPropagation(); setShowDebugPanel(prev => !prev); }}
+              style={{
+                marginLeft: '8px',
+                padding: '2px 8px',
+                fontSize: '11px',
+                background: showDebugPanel ? '#ef4444' : '#64748b',
+                color: '#fff',
+                border: 'none',
+                borderRadius: '4px',
+                cursor: 'pointer',
+                opacity: 0.7
+              }}
+              title="Toggle debug panel"
+            >
+              🐛 Debug
+            </button>
           </div>
 
           {/* 搜索框 */}
@@ -3738,6 +3756,114 @@ const MessagePage: React.FC = () => {
               </div>
             </div>
           </div>
+
+          {/* 调试面板 - 显示未读消息详情 */}
+          {showDebugPanel && (
+            <div style={{
+              background: '#1e293b',
+              color: '#e2e8f0',
+              fontSize: '11px',
+              fontFamily: 'monospace',
+              padding: '10px 12px',
+              maxHeight: '300px',
+              overflowY: 'auto',
+              borderBottom: '2px solid #ef4444'
+            }}>
+              <div style={{ marginBottom: '8px', color: '#f59e0b', fontWeight: 'bold', fontSize: '12px' }}>
+                🐛 未读消息调试信息
+              </div>
+              <div style={{ marginBottom: '6px', padding: '4px 6px', background: '#334155', borderRadius: '4px' }}>
+                <span style={{ color: '#94a3b8' }}>全局未读数 (Context): </span>
+                <span style={{ color: '#22d3ee', fontWeight: 'bold' }}>{globalUnreadCount}</span>
+                <span style={{ color: '#94a3b8' }}> | 本地未读数: </span>
+                <span style={{ color: '#22d3ee', fontWeight: 'bold' }}>{totalUnreadCount}</span>
+              </div>
+              <div style={{ marginBottom: '6px', padding: '4px 6px', background: '#334155', borderRadius: '4px' }}>
+                <span style={{ color: '#94a3b8' }}>任务总数: </span>
+                <span style={{ color: '#a5f3fc' }}>{tasks.length}</span>
+                <span style={{ color: '#94a3b8' }}> | 有未读的任务: </span>
+                <span style={{ color: '#fbbf24', fontWeight: 'bold' }}>
+                  {tasks.filter((t: any) => t.unread_count > 0).length}
+                </span>
+                <span style={{ color: '#94a3b8' }}> | 任务未读总和: </span>
+                <span style={{ color: '#fbbf24', fontWeight: 'bold' }}>
+                  {tasks.reduce((sum: number, t: any) => sum + (t.unread_count || 0), 0)}
+                </span>
+              </div>
+              
+              {/* 列出所有有未读消息的任务 */}
+              {tasks.filter((t: any) => t.unread_count > 0).length > 0 ? (
+                <div style={{ marginTop: '6px' }}>
+                  <div style={{ color: '#fb923c', fontWeight: 'bold', marginBottom: '4px' }}>
+                    📋 有未读消息的任务:
+                  </div>
+                  {tasks.filter((t: any) => t.unread_count > 0).map((task: any) => (
+                    <div key={task.id} style={{
+                      padding: '6px 8px',
+                      marginBottom: '4px',
+                      background: '#0f172a',
+                      borderRadius: '4px',
+                      borderLeft: '3px solid #f59e0b'
+                    }}>
+                      <div>
+                        <span style={{ color: '#94a3b8' }}>任务ID: </span>
+                        <span style={{ color: '#38bdf8' }}>{task.id}</span>
+                        <span style={{ color: '#94a3b8' }}> | 未读: </span>
+                        <span style={{ color: '#ef4444', fontWeight: 'bold' }}>{task.unread_count}</span>
+                        <span style={{ color: '#94a3b8' }}> | 状态: </span>
+                        <span style={{ color: '#a5f3fc' }}>{task.status}</span>
+                      </div>
+                      <div style={{ color: '#cbd5e1', marginTop: '2px' }}>
+                        标题: {task.title?.substring(0, 40)}{task.title?.length > 40 ? '...' : ''}
+                      </div>
+                      {task.last_message && (
+                        <div style={{ marginTop: '2px', color: '#94a3b8' }}>
+                          最后消息: <span style={{ color: '#67e8f9' }}>{task.last_message.sender_name}</span>
+                          : {task.last_message.content?.substring(0, 50)}{task.last_message.content?.length > 50 ? '...' : ''}
+                          <br />
+                          时间: {dayjs(task.last_message.created_at).format('YYYY-MM-DD HH:mm:ss')}
+                          <span style={{ color: '#94a3b8' }}> | is_read: </span>
+                          <span style={{ color: task.last_message.is_read ? '#22c55e' : '#ef4444' }}>
+                            {String(task.last_message.is_read)}
+                          </span>
+                        </div>
+                      )}
+                      <div style={{ marginTop: '2px', color: '#64748b', fontSize: '10px' }}>
+                        task_type: {task.task_type} | poster_id: {task.poster_id} | helper_id: {task.helper_id}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div style={{ color: '#22c55e', padding: '4px 6px', background: '#334155', borderRadius: '4px' }}>
+                  ✅ 任务列表中没有未读消息 (但全局未读数为 {globalUnreadCount})
+                  {globalUnreadCount > 0 && (
+                    <div style={{ color: '#fbbf24', marginTop: '4px' }}>
+                      ⚠️ 全局显示有未读，但任务列表中所有 unread_count 均为 0。
+                      可能原因: 客服消息未读 / 私聊消息未读 / API数据不同步
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* 显示所有任务的简要信息 */}
+              <div style={{ marginTop: '8px' }}>
+                <div style={{ color: '#94a3b8', fontWeight: 'bold', marginBottom: '4px' }}>
+                  📜 所有任务列表 (含 unread_count):
+                </div>
+                {tasks.map((task: any, idx: number) => (
+                  <div key={task.id} style={{
+                    padding: '2px 6px',
+                    fontSize: '10px',
+                    color: task.unread_count > 0 ? '#fbbf24' : '#64748b',
+                    borderBottom: '1px solid #1e293b'
+                  }}>
+                    #{idx + 1} ID:{task.id} | unread:{task.unread_count || 0} | {task.title?.substring(0, 30)} | {task.status}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* 任务列表 */}
           <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
