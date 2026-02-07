@@ -3940,23 +3940,81 @@ const MessagePage: React.FC = () => {
                             </div>
                             {debugInfo.by_task.map((item: any) => (
                               <div key={item.task_id} style={{
-                                padding: '4px 8px',
-                                marginBottom: '3px',
+                                padding: '6px 8px',
+                                marginBottom: '4px',
                                 background: '#0f172a',
                                 borderRadius: '4px',
                                 borderLeft: '3px solid #ef4444'
                               }}>
-                                <span style={{ color: '#94a3b8' }}>任务ID: </span>
-                                <span style={{ color: '#38bdf8', fontWeight: 'bold' }}>{item.task_id}</span>
-                                <span style={{ color: '#94a3b8' }}> | 未读数: </span>
-                                <span style={{ color: '#ef4444', fontWeight: 'bold' }}>{item.count}</span>
-                                {/* 检查该任务是否在前端任务列表中 */}
-                                <span style={{ color: '#94a3b8' }}> | 在列表中: </span>
-                                <span style={{ color: tasks.some((t: any) => t.id === item.task_id) ? '#22c55e' : '#ef4444', fontWeight: 'bold' }}>
-                                  {tasks.some((t: any) => t.id === item.task_id) ? '✅ 是' : '❌ 否 (这就是看不到的原因!)'}
-                                </span>
+                                <div>
+                                  <span style={{ color: '#94a3b8' }}>任务ID: </span>
+                                  <span style={{ color: '#38bdf8', fontWeight: 'bold' }}>{item.task_id}</span>
+                                  <span style={{ color: '#94a3b8' }}> | 未读数: </span>
+                                  <span style={{ color: '#ef4444', fontWeight: 'bold' }}>{item.count}</span>
+                                  {/* 检查该任务是否在前端任务列表中 */}
+                                  <span style={{ color: '#94a3b8' }}> | 在列表中: </span>
+                                  <span style={{ color: tasks.some((t: any) => t.id === item.task_id) ? '#22c55e' : '#ef4444', fontWeight: 'bold' }}>
+                                    {tasks.some((t: any) => t.id === item.task_id) ? '✅ 是' : '❌ 否 (这就是看不到的原因!)'}
+                                  </span>
+                                </div>
+                                {/* 任务详细信息 */}
+                                {item.task_info && (
+                                  <div style={{ marginTop: '4px', padding: '4px 6px', background: '#1e293b', borderRadius: '3px', fontSize: '10px' }}>
+                                    {item.task_info.error ? (
+                                      <span style={{ color: '#ef4444' }}>⚠️ {item.task_info.error}</span>
+                                    ) : (
+                                      <>
+                                        <div>
+                                          <span style={{ color: '#94a3b8' }}>标题: </span>
+                                          <span style={{ color: '#e2e8f0' }}>{item.task_info.title}</span>
+                                          <span style={{ color: '#94a3b8' }}> | 任务状态: </span>
+                                          <span style={{ color: item.task_info.status === 'cancelled' ? '#ef4444' : '#22d3ee', fontWeight: 'bold' }}>
+                                            {item.task_info.status}
+                                          </span>
+                                        </div>
+                                        <div style={{ marginTop: '2px' }}>
+                                          <span style={{ color: '#94a3b8' }}>poster_id: </span>
+                                          <span style={{ color: '#a5f3fc' }}>{item.task_info.poster_id}</span>
+                                          <span style={{ color: item.task_info.user_is_poster ? '#22c55e' : '#64748b' }}>
+                                            {item.task_info.user_is_poster ? ' (是你)' : ''}
+                                          </span>
+                                          <span style={{ color: '#94a3b8' }}> | taker_id: </span>
+                                          <span style={{ color: '#a5f3fc' }}>{item.task_info.taker_id || 'null'}</span>
+                                          <span style={{ color: item.task_info.user_is_taker ? '#22c55e' : '#64748b' }}>
+                                            {item.task_info.user_is_taker ? ' (是你)' : ''}
+                                          </span>
+                                        </div>
+                                        <div style={{ marginTop: '2px' }}>
+                                          <span style={{ color: '#94a3b8' }}>多人任务: </span>
+                                          <span style={{ color: item.task_info.is_multi_participant ? '#fbbf24' : '#64748b' }}>
+                                            {item.task_info.is_multi_participant ? '是' : '否'}
+                                          </span>
+                                          <span style={{ color: '#94a3b8' }}> | 参与者状态: </span>
+                                          <span style={{ color: item.task_info.participant_status === 'completed' ? '#f59e0b' : '#22c55e', fontWeight: 'bold' }}>
+                                            {item.task_info.participant_status || '不是参与者'}
+                                          </span>
+                                          {item.task_info.participant_status === 'completed' && (
+                                            <span style={{ color: '#ef4444', fontWeight: 'bold' }}>
+                                              {' '}← 原因: 参与者状态completed未被聊天列表查询包含!
+                                            </span>
+                                          )}
+                                          {item.task_info.status === 'cancelled' && (
+                                            <span style={{ color: '#ef4444', fontWeight: 'bold' }}>
+                                              {' '}← 原因: 任务已取消，前端过滤掉了!
+                                            </span>
+                                          )}
+                                          {!item.task_info.user_is_poster && !item.task_info.user_is_taker && !item.task_info.participant_status && (
+                                            <span style={{ color: '#ef4444', fontWeight: 'bold' }}>
+                                              {' '}← 原因: 用户与该任务无关联但仍计入未读!
+                                            </span>
+                                          )}
+                                        </div>
+                                      </>
+                                    )}
+                                  </div>
+                                )}
                                 {item.latest_message && (
-                                  <div style={{ marginTop: '2px', fontSize: '10px', color: '#94a3b8' }}>
+                                  <div style={{ marginTop: '3px', fontSize: '10px', color: '#94a3b8' }}>
                                     最新未读: [{item.latest_message.sender_id}] {item.latest_message.content}
                                     <br />时间: {item.latest_message.created_at}
                                   </div>

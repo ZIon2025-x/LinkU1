@@ -5227,6 +5227,8 @@ def get_unread_count_api(
     result = {"unread_count": len(unread_messages)}
     
     if debug:
+        from app.models import Task, TaskParticipant
+        
         # 调试模式：返回每条未读消息的详细信息
         debug_details = []
         for msg in unread_messages:
@@ -5240,7 +5242,7 @@ def get_unread_count_api(
                 "created_at": msg.created_at.isoformat() if msg.created_at else None,
             })
         
-        # 按 task_id 分组统计
+        # 按 task_id 分组统计，并查询任务详情
         task_unread_map = {}
         for msg in unread_messages:
             tid = msg.task_id
@@ -5254,6 +5256,34 @@ def get_unread_count_api(
                     "content": (msg.content[:50] + '...') if msg.content and len(msg.content) > 50 else msg.content,
                     "created_at": msg.created_at.isoformat() if msg.created_at else None,
                 }
+        
+        # 查询每个有未读消息的任务的详细信息
+        for tid in task_unread_map:
+            task = db.query(Task).filter(Task.id == tid).first()
+            if task:
+                task_info = {
+                    "title": task.title[:50] if task.title else None,
+                    "status": task.status,
+                    "poster_id": task.poster_id,
+                    "taker_id": task.taker_id,
+                    "is_multi_participant": getattr(task, 'is_multi_participant', False),
+                    "user_is_poster": str(task.poster_id) == str(current_user.id),
+                    "user_is_taker": str(task.taker_id) == str(current_user.id) if task.taker_id else False,
+                }
+                # 查询用户在该任务中的参与者身份
+                participant = db.query(TaskParticipant).filter(
+                    TaskParticipant.task_id == tid,
+                    TaskParticipant.user_id == current_user.id
+                ).first()
+                if participant:
+                    task_info["participant_status"] = participant.status
+                    task_info["participant_role"] = getattr(participant, 'role', None)
+                else:
+                    task_info["participant_status"] = None
+                    task_info["participant_role"] = None
+                task_unread_map[tid]["task_info"] = task_info
+            else:
+                task_unread_map[tid]["task_info"] = {"error": "任务不存在(已删除?)"}
         
         result["debug"] = {
             "user_id": current_user.id,
