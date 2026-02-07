@@ -100,7 +100,7 @@ class _ForumViewState extends State<ForumView> {
   /// 对标iOS CommunityView: HStack自定义顶部导航栏
   Widget _buildCustomAppBar(bool isDark) {
     return Container(
-      padding: EdgeInsets.symmetric(
+      padding: const EdgeInsets.symmetric(
         horizontal: AppSpacing.sm,
         vertical: AppSpacing.xs,
       ),
@@ -184,7 +184,7 @@ class _CommunityTabButton extends StatelessWidget {
             const SizedBox(height: 6),
             AnimatedContainer(
               duration: const Duration(milliseconds: 280),
-              curve: Curves.easeOutBack,
+              curve: Curves.easeOut,
               height: 3,
               width: isSelected ? 28 : 0,
               decoration: BoxDecoration(

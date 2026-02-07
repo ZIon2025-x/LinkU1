@@ -6,6 +6,8 @@ import 'package:path_provider/path_provider.dart';
 
 import '../../../data/services/storage_service.dart';
 import '../../../data/services/api_service.dart';
+import '../../../core/utils/cache_manager.dart';
+import '../../../core/utils/translation_cache_manager.dart';
 import '../../../core/utils/logger.dart';
 
 // ==================== Events ====================
@@ -237,9 +239,15 @@ class SettingsBloc extends Bloc<SettingsEvent, SettingsState> {
     Emitter<SettingsState> emit,
   ) async {
     try {
+      // 计算临时目录大小（图片缓存等）
       final cacheDir = await getTemporaryDirectory();
-      final size = await _calculateDirectorySize(cacheDir);
-      emit(state.copyWith(cacheSize: _formatFileSize(size)));
+      final tempSize = await _calculateDirectorySize(cacheDir);
+
+      // 加上 CacheManager 的缓存大小
+      final apiCacheSize = CacheManager.shared.diskCacheSizeBytes;
+
+      final totalSize = tempSize + apiCacheSize;
+      emit(state.copyWith(cacheSize: _formatFileSize(totalSize)));
     } catch (e) {
       emit(state.copyWith(cacheSize: '未知'));
     }
@@ -252,7 +260,16 @@ class SettingsBloc extends Bloc<SettingsEvent, SettingsState> {
     try {
       emit(state.copyWith(isClearingCache: true));
 
-      // 清理临时目录
+      // 1. 清理 CacheManager（API 响应缓存）
+      await CacheManager.shared.clearAll();
+
+      // 2. 清理翻译缓存
+      await TranslationCacheManager.shared.clearAllCache();
+
+      // 3. 清理 StorageService 的 Hive 缓存
+      await StorageService.instance.clearCache();
+
+      // 4. 清理临时目录（图片缓存等）
       final cacheDir = await getTemporaryDirectory();
       if (cacheDir.existsSync()) {
         await for (final entity in cacheDir.list()) {
@@ -268,11 +285,12 @@ class SettingsBloc extends Bloc<SettingsEvent, SettingsState> {
         }
       }
 
-      // 清理图片缓存
-      // CachedNetworkImage 使用的缓存会在临时目录中
+      // 记录缓存统计
+      final stats = CacheManager.shared.getStatistics();
+      AppLogger.info('Cache cleared. Stats before clear: $stats');
 
       emit(state.copyWith(
-        cacheSize: '0 MB',
+        cacheSize: '0 B',
         isClearingCache: false,
       ));
     } catch (e) {

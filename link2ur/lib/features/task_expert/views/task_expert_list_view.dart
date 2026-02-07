@@ -226,7 +226,7 @@ class _ExpertCard extends StatelessWidget {
                 Row(
                   children: [
                     // Rating
-                    Icon(Icons.star, size: 14, color: AppColors.gold),
+                    const Icon(Icons.star, size: 14, color: AppColors.gold),
                     const SizedBox(width: 4),
                     Text(
                       expert.ratingDisplay,

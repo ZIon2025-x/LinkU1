@@ -171,7 +171,7 @@ class _FleaMarketDetailContent extends StatelessWidget {
                   AppSpacing.vSm,
                   Text(
                     item.description!,
-                    style: TextStyle(
+                    style: const TextStyle(
                       color: AppColors.textSecondaryLight,
                       height: 1.5,
                       fontSize: 15,
@@ -193,10 +193,10 @@ class _FleaMarketDetailContent extends StatelessWidget {
                   ),
                   child: Row(
                     children: [
-                      CircleAvatar(
+                      const CircleAvatar(
                         radius: 24,
                         backgroundColor: AppColors.primary,
-                        child: const Icon(Icons.person, color: Colors.white),
+                        child: Icon(Icons.person, color: Colors.white),
                       ),
                       AppSpacing.hMd,
                       Expanded(
@@ -232,7 +232,7 @@ class _FleaMarketDetailContent extends StatelessWidget {
                                   : item.sellerUserLevel == 'vip'
                                       ? 'VIP用户'
                                       : '普通用户',
-                              style: TextStyle(
+                              style: const TextStyle(
                                 fontSize: 12,
                                 color: AppColors.textSecondaryLight,
                               ),
@@ -306,7 +306,7 @@ class _FleaMarketDetailContent extends StatelessWidget {
         const SizedBox(width: 4),
         Text(
           text,
-          style: TextStyle(
+          style: const TextStyle(
             fontSize: 12,
             color: AppColors.textTertiaryLight,
           ),

@@ -49,6 +49,47 @@ class LeaderboardVoteItem extends LeaderboardEvent {
   List<Object?> get props => [itemId];
 }
 
+class LeaderboardApplyRequested extends LeaderboardEvent {
+  const LeaderboardApplyRequested({
+    required this.title,
+    required this.description,
+    this.rules,
+  });
+
+  final String title;
+  final String description;
+  final String? rules;
+
+  @override
+  List<Object?> get props => [title, description, rules];
+}
+
+class LeaderboardSubmitItem extends LeaderboardEvent {
+  const LeaderboardSubmitItem({
+    required this.leaderboardId,
+    required this.name,
+    this.description,
+    this.score,
+  });
+
+  final int leaderboardId;
+  final String name;
+  final String? description;
+  final double? score;
+
+  @override
+  List<Object?> get props => [leaderboardId, name, description, score];
+}
+
+class LeaderboardLoadItemDetail extends LeaderboardEvent {
+  const LeaderboardLoadItemDetail(this.itemId);
+
+  final int itemId;
+
+  @override
+  List<Object?> get props => [itemId];
+}
+
 // ==================== State ====================
 
 enum LeaderboardStatus { initial, loading, loaded, error }
@@ -64,6 +105,9 @@ class LeaderboardState extends Equatable {
     this.hasMore = true,
     this.selectedCategory,
     this.errorMessage,
+    this.itemDetail,
+    this.isSubmitting = false,
+    this.actionMessage,
   });
 
   final LeaderboardStatus status;
@@ -75,6 +119,9 @@ class LeaderboardState extends Equatable {
   final bool hasMore;
   final String? selectedCategory;
   final String? errorMessage;
+  final Map<String, dynamic>? itemDetail;
+  final bool isSubmitting;
+  final String? actionMessage;
 
   bool get isLoading => status == LeaderboardStatus.loading;
 
@@ -88,6 +135,9 @@ class LeaderboardState extends Equatable {
     bool? hasMore,
     String? selectedCategory,
     String? errorMessage,
+    Map<String, dynamic>? itemDetail,
+    bool? isSubmitting,
+    String? actionMessage,
   }) {
     return LeaderboardState(
       status: status ?? this.status,
@@ -100,6 +150,9 @@ class LeaderboardState extends Equatable {
       hasMore: hasMore ?? this.hasMore,
       selectedCategory: selectedCategory ?? this.selectedCategory,
       errorMessage: errorMessage,
+      itemDetail: itemDetail,
+      isSubmitting: isSubmitting ?? this.isSubmitting,
+      actionMessage: actionMessage,
     );
   }
 
@@ -128,6 +181,9 @@ class LeaderboardBloc extends Bloc<LeaderboardEvent, LeaderboardState> {
     on<LeaderboardRefreshRequested>(_onRefresh);
     on<LeaderboardLoadDetail>(_onLoadDetail);
     on<LeaderboardVoteItem>(_onVoteItem);
+    on<LeaderboardApplyRequested>(_onApplyRequested);
+    on<LeaderboardSubmitItem>(_onSubmitItem);
+    on<LeaderboardLoadItemDetail>(_onLoadItemDetail);
   }
 
   final LeaderboardRepository _leaderboardRepository;
@@ -257,6 +313,82 @@ class LeaderboardBloc extends Bloc<LeaderboardEvent, LeaderboardState> {
       emit(state.copyWith(items: updatedItems));
     } catch (e) {
       AppLogger.error('Failed to vote', e);
+    }
+  }
+
+  Future<void> _onApplyRequested(
+    LeaderboardApplyRequested event,
+    Emitter<LeaderboardState> emit,
+  ) async {
+    emit(state.copyWith(isSubmitting: true, actionMessage: null));
+
+    try {
+      await _leaderboardRepository.applyLeaderboard(
+        title: event.title,
+        description: event.description,
+        rules: event.rules,
+      );
+
+      emit(state.copyWith(
+        isSubmitting: false,
+        actionMessage: '申请已提交',
+      ));
+    } catch (e) {
+      AppLogger.error('Failed to apply leaderboard', e);
+      emit(state.copyWith(
+        isSubmitting: false,
+        actionMessage: '申请失败: ${e.toString()}',
+      ));
+    }
+  }
+
+  Future<void> _onSubmitItem(
+    LeaderboardSubmitItem event,
+    Emitter<LeaderboardState> emit,
+  ) async {
+    emit(state.copyWith(isSubmitting: true, actionMessage: null));
+
+    try {
+      await _leaderboardRepository.submitItem(
+        leaderboardId: event.leaderboardId,
+        name: event.name,
+        description: event.description,
+        score: event.score,
+      );
+
+      emit(state.copyWith(
+        isSubmitting: false,
+        actionMessage: '提交成功',
+      ));
+    } catch (e) {
+      AppLogger.error('Failed to submit item', e);
+      emit(state.copyWith(
+        isSubmitting: false,
+        actionMessage: '提交失败: ${e.toString()}',
+      ));
+    }
+  }
+
+  Future<void> _onLoadItemDetail(
+    LeaderboardLoadItemDetail event,
+    Emitter<LeaderboardState> emit,
+  ) async {
+    emit(state.copyWith(status: LeaderboardStatus.loading));
+
+    try {
+      final itemDetail =
+          await _leaderboardRepository.getItemDetail(event.itemId);
+
+      emit(state.copyWith(
+        status: LeaderboardStatus.loaded,
+        itemDetail: itemDetail,
+      ));
+    } catch (e) {
+      AppLogger.error('Failed to load item detail', e);
+      emit(state.copyWith(
+        status: LeaderboardStatus.error,
+        errorMessage: e.toString(),
+      ));
     }
   }
 }

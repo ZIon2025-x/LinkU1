@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:go_router/go_router.dart';
 
 import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_spacing.dart';
@@ -8,10 +7,12 @@ import '../../../core/design/app_radius.dart';
 import '../../../core/utils/l10n_extension.dart';
 import '../../../core/widgets/loading_view.dart';
 import '../../../core/widgets/error_state_view.dart';
-import '../../../core/widgets/async_image_view.dart';
 import '../../../core/widgets/stat_item.dart';
 import '../../../data/models/user.dart';
 import '../../../data/repositories/user_repository.dart';
+import '../../../data/repositories/task_repository.dart';
+import '../../../data/repositories/forum_repository.dart';
+import '../bloc/profile_bloc.dart';
 
 /// 公开用户资料页
 /// 参考iOS UserProfileView.swift
@@ -25,80 +26,64 @@ class UserProfileView extends StatefulWidget {
 }
 
 class _UserProfileViewState extends State<UserProfileView> {
-  User? _user;
-  bool _isLoading = true;
-  String? _errorMessage;
-
-  @override
-  void initState() {
-    super.initState();
-    _loadProfile();
-  }
-
-  Future<void> _loadProfile() async {
-    setState(() {
-      _isLoading = true;
-      _errorMessage = null;
-    });
-
-    try {
-      final repo = context.read<UserRepository>();
-      final user = await repo.getUserProfile(widget.userId);
-      if (mounted) {
-        setState(() {
-          _user = user;
-          _isLoading = false;
-        });
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(() {
-          _errorMessage = e.toString();
-          _isLoading = false;
-        });
-      }
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
 
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(l10n.profileUserProfile),
+    return BlocProvider(
+      create: (context) => ProfileBloc(
+        userRepository: context.read<UserRepository>(),
+        taskRepository: context.read<TaskRepository>(),
+        forumRepository: context.read<ForumRepository>(),
+      )..add(ProfileLoadPublicProfile(widget.userId)),
+      child: BlocBuilder<ProfileBloc, ProfileState>(
+        builder: (context, state) {
+          return Scaffold(
+            appBar: AppBar(
+              title: Text(l10n.profileUserProfile),
+            ),
+            body: state.isLoading
+                ? const LoadingView()
+                : state.errorMessage != null
+                    ? ErrorStateView(
+                        message: state.errorMessage!,
+                        onRetry: () {
+                          context.read<ProfileBloc>().add(
+                                ProfileLoadPublicProfile(widget.userId),
+                              );
+                        },
+                      )
+                    : state.publicUser == null
+                        ? const SizedBox.shrink()
+                        : RefreshIndicator(
+                            onRefresh: () async {
+                              context.read<ProfileBloc>().add(
+                                    ProfileLoadPublicProfile(widget.userId),
+                                  );
+                            },
+                            child: SingleChildScrollView(
+                              physics: const AlwaysScrollableScrollPhysics(),
+                              child: Column(
+                                children: [
+                                  // 用户信息卡片
+                                  _buildUserInfoCard(context, state.publicUser!),
+                                  // 统计数据
+                                  _buildStatsRow(context, state.publicUser!),
+                                  // 近期任务
+                                  _buildRecentTasksSection(context),
+                                  const SizedBox(height: AppSpacing.xl),
+                                ],
+                              ),
+                            ),
+                          ),
+          );
+        },
       ),
-      body: _isLoading
-          ? const LoadingView()
-          : _errorMessage != null
-              ? ErrorStateView(
-                  message: _errorMessage!,
-                  onRetry: _loadProfile,
-                )
-              : _user == null
-                  ? const SizedBox.shrink()
-                  : RefreshIndicator(
-                      onRefresh: _loadProfile,
-                      child: SingleChildScrollView(
-                        physics: const AlwaysScrollableScrollPhysics(),
-                        child: Column(
-                          children: [
-                            // 用户信息卡片
-                            _buildUserInfoCard(context),
-                            // 统计数据
-                            _buildStatsRow(context),
-                            // 近期任务
-                            _buildRecentTasksSection(context),
-                            const SizedBox(height: AppSpacing.xl),
-                          ],
-                        ),
-                      ),
-                    ),
     );
   }
 
-  Widget _buildUserInfoCard(BuildContext context) {
-    final user = _user!;
+  Widget _buildUserInfoCard(BuildContext context, User user) {
     return Container(
       margin: const EdgeInsets.all(AppSpacing.md),
       padding: const EdgeInsets.all(AppSpacing.lg),
@@ -107,7 +92,7 @@ class _UserProfileViewState extends State<UserProfileView> {
         borderRadius: BorderRadius.circular(AppRadius.large),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -138,11 +123,11 @@ class _UserProfileViewState extends State<UserProfileView> {
               ),
               if (user.isVerified) ...[
                 const SizedBox(width: 6),
-                Icon(Icons.verified, color: AppColors.primary, size: 20),
+                const Icon(Icons.verified, color: AppColors.primary, size: 20),
               ],
               if (user.isStudentVerified) ...[
                 const SizedBox(width: 6),
-                Icon(Icons.school, color: Colors.blue, size: 20),
+                const Icon(Icons.school, color: Colors.blue, size: 20),
               ],
             ],
           ),
@@ -152,7 +137,7 @@ class _UserProfileViewState extends State<UserProfileView> {
           if (user.bio != null && user.bio!.isNotEmpty)
             Text(
               user.bio!,
-              style: TextStyle(
+              style: const TextStyle(
                   fontSize: 14, color: AppColors.textSecondary),
               textAlign: TextAlign.center,
               maxLines: 3,
@@ -166,12 +151,12 @@ class _UserProfileViewState extends State<UserProfileView> {
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(Icons.location_on,
+                const Icon(Icons.location_on,
                     size: 14, color: AppColors.textTertiary),
                 const SizedBox(width: 4),
                 Text(
                   user.residenceCity!,
-                  style: TextStyle(
+                  style: const TextStyle(
                       fontSize: 13, color: AppColors.textTertiary),
                 ),
               ],
@@ -184,7 +169,7 @@ class _UserProfileViewState extends State<UserProfileView> {
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(Icons.star, size: 16, color: Colors.amber),
+                const Icon(Icons.star, size: 16, color: Colors.amber),
                 const SizedBox(width: 4),
                 Text(
                   user.ratingDisplay,
@@ -199,8 +184,7 @@ class _UserProfileViewState extends State<UserProfileView> {
     );
   }
 
-  Widget _buildStatsRow(BuildContext context) {
-    final user = _user!;
+  Widget _buildStatsRow(BuildContext context, User user) {
     final l10n = context.l10n;
 
     return Padding(
@@ -245,7 +229,7 @@ class _UserProfileViewState extends State<UserProfileView> {
         children: [
           Row(
             children: [
-              Icon(Icons.list, color: AppColors.primary, size: 18),
+              const Icon(Icons.list, color: AppColors.primary, size: 18),
               const SizedBox(width: 8),
               Text(l10n.profileRecentTasks,
                   style: const TextStyle(
@@ -263,7 +247,7 @@ class _UserProfileViewState extends State<UserProfileView> {
             child: Center(
               child: Text(
                 l10n.profileNoRecentTasks,
-                style: TextStyle(color: AppColors.textSecondary),
+                style: const TextStyle(color: AppColors.textSecondary),
               ),
             ),
           ),

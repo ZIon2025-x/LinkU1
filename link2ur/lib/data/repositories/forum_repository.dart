@@ -1,6 +1,7 @@
 import '../models/forum.dart';
 import '../services/api_service.dart';
 import '../../core/constants/api_endpoints.dart';
+import '../../core/utils/cache_manager.dart';
 
 /// 论坛仓库
 /// 与iOS ForumViewModel + 后端 forum_routes 对齐
@@ -10,20 +11,42 @@ class ForumRepository {
   }) : _apiService = apiService;
 
   final ApiService _apiService;
+  final CacheManager _cache = CacheManager.shared;
 
   /// 获取可见论坛分类（首页展示用）
   Future<List<ForumCategory>> getVisibleCategories() async {
-    final response = await _apiService.get<List<dynamic>>(
-      ApiEndpoints.forumVisibleCategories,
-    );
+    final cacheKey = '${CacheManager.prefixForumCategories}visible';
 
-    if (!response.isSuccess || response.data == null) {
-      throw ForumException(response.message ?? '获取论坛分类失败');
+    final cached = _cache.get<List<dynamic>>(cacheKey);
+    if (cached != null) {
+      return cached
+          .map((e) => ForumCategory.fromJson(e as Map<String, dynamic>))
+          .toList();
     }
 
-    return response.data!
-        .map((e) => ForumCategory.fromJson(e as Map<String, dynamic>))
-        .toList();
+    try {
+      final response = await _apiService.get<List<dynamic>>(
+        ApiEndpoints.forumVisibleCategories,
+      );
+
+      if (!response.isSuccess || response.data == null) {
+        throw ForumException(response.message ?? '获取论坛分类失败');
+      }
+
+      await _cache.set(cacheKey, response.data!, ttl: CacheManager.staticTTL);
+
+      return response.data!
+          .map((e) => ForumCategory.fromJson(e as Map<String, dynamic>))
+          .toList();
+    } catch (e) {
+      final stale = _cache.getStale<List<dynamic>>(cacheKey);
+      if (stale != null) {
+        return stale
+            .map((e) => ForumCategory.fromJson(e as Map<String, dynamic>))
+            .toList();
+      }
+      rethrow;
+    }
   }
 
   /// 获取帖子列表
@@ -34,50 +57,110 @@ class ForumRepository {
     String? keyword,
     String? sortBy,
   }) async {
-    final response = await _apiService.get<Map<String, dynamic>>(
-      ApiEndpoints.forumPosts,
-      queryParameters: {
-        'page': page,
-        'page_size': pageSize,
-        if (categoryId != null) 'category_id': categoryId,
-        if (keyword != null) 'keyword': keyword,
-        if (sortBy != null) 'sort_by': sortBy,
-      },
-    );
+    final params = {
+      'page': page,
+      'page_size': pageSize,
+      if (categoryId != null) 'category_id': categoryId,
+      if (keyword != null) 'keyword': keyword,
+      if (sortBy != null) 'sort_by': sortBy,
+    };
+    final cacheKey = keyword == null
+        ? CacheManager.buildKey(CacheManager.prefixForumPosts, params)
+        : null;
 
-    if (!response.isSuccess || response.data == null) {
-      throw ForumException(response.message ?? '获取帖子列表失败');
+    if (cacheKey != null) {
+      final cached = _cache.get<Map<String, dynamic>>(cacheKey);
+      if (cached != null) {
+        return ForumPostListResponse.fromJson(cached);
+      }
     }
 
-    return ForumPostListResponse.fromJson(response.data!);
+    try {
+      final response = await _apiService.get<Map<String, dynamic>>(
+        ApiEndpoints.forumPosts,
+        queryParameters: params,
+      );
+
+      if (!response.isSuccess || response.data == null) {
+        throw ForumException(response.message ?? '获取帖子列表失败');
+      }
+
+      if (cacheKey != null) {
+        await _cache.set(cacheKey, response.data!, ttl: CacheManager.shortTTL);
+      }
+
+      return ForumPostListResponse.fromJson(response.data!);
+    } catch (e) {
+      if (cacheKey != null) {
+        final stale = _cache.getStale<Map<String, dynamic>>(cacheKey);
+        if (stale != null) return ForumPostListResponse.fromJson(stale);
+      }
+      rethrow;
+    }
   }
 
   /// 获取所有论坛分类
   Future<List<ForumCategory>> getCategories() async {
-    final response = await _apiService.get<List<dynamic>>(
-      ApiEndpoints.forumCategories,
-    );
+    final cacheKey = '${CacheManager.prefixForumCategories}all';
 
-    if (!response.isSuccess || response.data == null) {
-      throw ForumException(response.message ?? '获取论坛分类失败');
+    final cached = _cache.get<List<dynamic>>(cacheKey);
+    if (cached != null) {
+      return cached
+          .map((e) => ForumCategory.fromJson(e as Map<String, dynamic>))
+          .toList();
     }
 
-    return response.data!
-        .map((e) => ForumCategory.fromJson(e as Map<String, dynamic>))
-        .toList();
+    try {
+      final response = await _apiService.get<List<dynamic>>(
+        ApiEndpoints.forumCategories,
+      );
+
+      if (!response.isSuccess || response.data == null) {
+        throw ForumException(response.message ?? '获取论坛分类失败');
+      }
+
+      await _cache.set(cacheKey, response.data!, ttl: CacheManager.staticTTL);
+
+      return response.data!
+          .map((e) => ForumCategory.fromJson(e as Map<String, dynamic>))
+          .toList();
+    } catch (e) {
+      final stale = _cache.getStale<List<dynamic>>(cacheKey);
+      if (stale != null) {
+        return stale
+            .map((e) => ForumCategory.fromJson(e as Map<String, dynamic>))
+            .toList();
+      }
+      rethrow;
+    }
   }
 
   /// 获取帖子详情
   Future<ForumPost> getPostById(int id) async {
-    final response = await _apiService.get<Map<String, dynamic>>(
-      ApiEndpoints.forumPostById(id),
-    );
+    final cacheKey = '${CacheManager.prefixForumPostDetail}$id';
 
-    if (!response.isSuccess || response.data == null) {
-      throw ForumException(response.message ?? '获取帖子详情失败');
+    final cached = _cache.get<Map<String, dynamic>>(cacheKey);
+    if (cached != null) {
+      return ForumPost.fromJson(cached);
     }
 
-    return ForumPost.fromJson(response.data!);
+    try {
+      final response = await _apiService.get<Map<String, dynamic>>(
+        ApiEndpoints.forumPostById(id),
+      );
+
+      if (!response.isSuccess || response.data == null) {
+        throw ForumException(response.message ?? '获取帖子详情失败');
+      }
+
+      await _cache.set(cacheKey, response.data!, ttl: CacheManager.defaultTTL);
+
+      return ForumPost.fromJson(response.data!);
+    } catch (e) {
+      final stale = _cache.getStale<Map<String, dynamic>>(cacheKey);
+      if (stale != null) return ForumPost.fromJson(stale);
+      rethrow;
+    }
   }
 
   /// 创建帖子
@@ -90,6 +173,10 @@ class ForumRepository {
     if (!response.isSuccess || response.data == null) {
       throw ForumException(response.message ?? '发帖失败');
     }
+
+    // 创建后失效论坛缓存
+    await _cache.invalidateForumCache();
+    await _cache.invalidateMyForumCache();
 
     return ForumPost.fromJson(response.data!);
   }
@@ -168,17 +255,25 @@ class ForumRepository {
     int page = 1,
     int pageSize = 20,
   }) async {
+    final params = {'page': page, 'page_size': pageSize};
+    final cacheKey =
+        CacheManager.buildKey('${CacheManager.prefixMyForumPosts}posts_', params);
+
+    final cached = _cache.get<Map<String, dynamic>>(cacheKey);
+    if (cached != null) {
+      return ForumPostListResponse.fromJson(cached);
+    }
+
     final response = await _apiService.get<Map<String, dynamic>>(
       ApiEndpoints.myForumPosts,
-      queryParameters: {
-        'page': page,
-        'page_size': pageSize,
-      },
+      queryParameters: params,
     );
 
     if (!response.isSuccess || response.data == null) {
       throw ForumException(response.message ?? '获取我的帖子失败');
     }
+
+    await _cache.set(cacheKey, response.data!, ttl: CacheManager.personalTTL);
 
     return ForumPostListResponse.fromJson(response.data!);
   }
@@ -276,6 +371,10 @@ class ForumRepository {
       throw ForumException(response.message ?? '更新帖子失败');
     }
 
+    // 失效相关缓存
+    await _cache.remove('${CacheManager.prefixForumPostDetail}$postId');
+    await _cache.invalidateForumCache();
+
     return ForumPost.fromJson(response.data!);
   }
 
@@ -288,6 +387,9 @@ class ForumRepository {
     if (!response.isSuccess) {
       throw ForumException(response.message ?? '删除帖子失败');
     }
+
+    await _cache.invalidateForumCache();
+    await _cache.invalidateMyForumCache();
   }
 
   /// 更新回复
@@ -356,17 +458,25 @@ class ForumRepository {
     int page = 1,
     int pageSize = 20,
   }) async {
+    final params = {'page': page, 'page_size': pageSize};
+    final cacheKey =
+        CacheManager.buildKey('${CacheManager.prefixForumPosts}hot_', params);
+
+    final cached = _cache.get<Map<String, dynamic>>(cacheKey);
+    if (cached != null) {
+      return ForumPostListResponse.fromJson(cached);
+    }
+
     final response = await _apiService.get<Map<String, dynamic>>(
       ApiEndpoints.forumHotPosts,
-      queryParameters: {
-        'page': page,
-        'page_size': pageSize,
-      },
+      queryParameters: params,
     );
 
     if (!response.isSuccess || response.data == null) {
       throw ForumException(response.message ?? '获取热帖失败');
     }
+
+    await _cache.set(cacheKey, response.data!, ttl: CacheManager.shortTTL);
 
     return ForumPostListResponse.fromJson(response.data!);
   }

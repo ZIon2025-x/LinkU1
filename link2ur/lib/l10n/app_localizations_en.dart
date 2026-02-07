@@ -847,7 +847,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get taskExpertNoExpertsFoundWithQuery =>
-      'No experts found containing \\';
+      'No experts found matching your search';
 
   @override
   String get taskExpertSearchTitle => 'Search experts';
@@ -1110,7 +1110,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get studentVerificationBenefitCampusLifeDescription =>
-      'Only verified students can post \\';
+      'Post and participate in campus life related tasks';
 
   @override
   String get studentVerificationBenefitStudentCommunity =>
@@ -1302,7 +1302,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String errorRequestFailed(int param1) {
-    return 'Request failed';
+    return 'Request failed (Error code: $param1)';
   }
 
   @override
@@ -1310,7 +1310,7 @@ class AppLocalizationsEn extends AppLocalizations {
       'Data parsing failed, please try again later';
 
   @override
-  String get errorUnknown => 'An unknown error occurred';
+  String get errorUnknown => 'Unknown error occurred, please try again later';
 
   @override
   String get errorFileTooLarge => 'File too large';
@@ -2889,7 +2889,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get createTaskCampusLifeRestriction =>
-      'Only verified students can post \\';
+      'Only verified students can post campus life tasks';
 
   @override
   String get studentVerificationStudentVerification => 'Student Verification';
@@ -3167,7 +3167,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get createTaskStudentVerificationRequired =>
-      'Only verified students can post \\';
+      'Only verified students can post campus life tasks';
 
   @override
   String get taskExpertBecomeExpert => 'Become Expert';
@@ -3545,7 +3545,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get vipAutoRenewCancelled => 'Auto-renew cancelled';
 
   @override
-  String get vipFaqHowToUpgradeSteps => 'Tap \\';
+  String get vipFaqHowToUpgradeSteps =>
+      'Tap the \'Upgrade to VIP\' button on the VIP membership page and choose a suitable plan to purchase.';
 
   @override
   String get serviceNoImages => 'No images';
@@ -5851,10 +5852,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get errorNetworkTimeout => 'Network connection timed out';
 
   @override
+  String get errorRequestFailedGeneric => 'Request failed';
+
+  @override
   String get errorRequestCancelled => 'Request cancelled';
 
   @override
   String get errorNetworkConnection => 'Network connection failed';
+
+  @override
+  String get errorUnknownGeneric => 'An unknown error occurred';
 
   @override
   String get errorInsufficientFunds =>

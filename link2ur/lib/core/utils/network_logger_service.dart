@@ -55,12 +55,8 @@ class NetworkLoggerService {
 
   final List<NetworkLog> _logs = [];
   static const int _maxLogs = 100;
-  bool _isEnabled = true;
+  bool isEnabled = true;
   int _requestIdCounter = 0;
-
-  /// 是否启用
-  bool get isEnabled => _isEnabled;
-  set isEnabled(bool value) => _isEnabled = value;
 
   /// 所有日志
   List<NetworkLog> get logs => List.unmodifiable(_logs);
@@ -73,7 +69,7 @@ class NetworkLoggerService {
     Map<String, dynamic>? headers,
     dynamic body,
   }) {
-    if (!_isEnabled) return '';
+    if (!isEnabled) return '';
 
     final requestId = 'req_${++_requestIdCounter}';
 
@@ -106,7 +102,7 @@ class NetworkLoggerService {
     Duration? duration,
     String? error,
   }) {
-    if (!_isEnabled) return;
+    if (!isEnabled) return;
 
     // 找到对应的请求日志
     final logIndex = _logs.indexWhere((l) => l.id == requestId);

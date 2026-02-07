@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 
 import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_spacing.dart';
-import '../../../core/design/app_radius.dart';
 import '../../../core/utils/l10n_extension.dart';
 
 /// 任务筛选页
@@ -93,7 +92,7 @@ class _TaskFilterViewState extends State<TaskFilterView> {
             return ListTile(
               title: Text(cat.$2),
               trailing: isSelected
-                  ? Icon(Icons.check, color: AppColors.primary)
+                  ? const Icon(Icons.check, color: AppColors.primary)
                   : null,
               onTap: () => setState(() => _selectedCategory = value),
             );
@@ -116,7 +115,7 @@ class _TaskFilterViewState extends State<TaskFilterView> {
             return ListTile(
               title: Text(city),
               trailing: isSelected
-                  ? Icon(Icons.check, color: AppColors.primary)
+                  ? const Icon(Icons.check, color: AppColors.primary)
                   : null,
               onTap: () => setState(() => _selectedCity = value),
             );

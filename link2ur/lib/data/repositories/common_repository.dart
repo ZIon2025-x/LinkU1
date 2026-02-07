@@ -1,6 +1,8 @@
 import '../models/banner.dart';
 import '../services/api_service.dart';
 import '../../core/constants/api_endpoints.dart';
+import '../../core/utils/cache_manager.dart';
+import '../../core/utils/translation_cache_manager.dart';
 
 /// 通用仓库
 /// 与iOS + 后端路由对齐
@@ -10,9 +12,20 @@ class CommonRepository {
   }) : _apiService = apiService;
 
   final ApiService _apiService;
+  final CacheManager _cache = CacheManager.shared;
 
   /// 获取轮播图/横幅
   Future<List<Banner>> getBanners() async {
+    final cacheKey = '${CacheManager.prefixBanners}all';
+
+    final cached = _cache.get<Map<String, dynamic>>(cacheKey);
+    if (cached != null) {
+      final banners = cached['banners'] as List<dynamic>? ?? [];
+      return banners
+          .map((e) => Banner.fromJson(e as Map<String, dynamic>))
+          .toList();
+    }
+
     final response = await _apiService.get<Map<String, dynamic>>(
       ApiEndpoints.banners,
     );
@@ -20,6 +33,9 @@ class CommonRepository {
     if (!response.isSuccess || response.data == null) {
       throw CommonException(response.message ?? '获取横幅失败');
     }
+
+    // Banner 变动少，使用长TTL
+    await _cache.set(cacheKey, response.data!, ttl: CacheManager.longTTL);
 
     final banners = response.data!['banners'] as List<dynamic>? ?? [];
     return banners
@@ -29,6 +45,13 @@ class CommonRepository {
 
   /// 获取FAQ列表
   Future<List<Map<String, dynamic>>> getFAQ({String lang = 'zh'}) async {
+    final cacheKey = '${CacheManager.prefixCommon}faq_$lang';
+
+    final cached = _cache.get<List<dynamic>>(cacheKey);
+    if (cached != null) {
+      return cached.map((e) => e as Map<String, dynamic>).toList();
+    }
+
     final response = await _apiService.get<List<dynamic>>(
       ApiEndpoints.faq(lang: lang),
     );
@@ -36,6 +59,9 @@ class CommonRepository {
     if (!response.isSuccess || response.data == null) {
       throw CommonException(response.message ?? '获取FAQ失败');
     }
+
+    // FAQ 内容稳定，使用静态TTL
+    await _cache.set(cacheKey, response.data!, ttl: CacheManager.staticTTL);
 
     return response.data!.map((e) => e as Map<String, dynamic>).toList();
   }
@@ -45,6 +71,11 @@ class CommonRepository {
     required String type,
     String lang = 'zh',
   }) async {
+    final cacheKey = '${CacheManager.prefixCommon}legal_${type}_$lang';
+
+    final cached = _cache.get<Map<String, dynamic>>(cacheKey);
+    if (cached != null) return cached;
+
     final response = await _apiService.get<Map<String, dynamic>>(
       ApiEndpoints.legalDocument(type: type, lang: lang),
     );
@@ -52,6 +83,9 @@ class CommonRepository {
     if (!response.isSuccess || response.data == null) {
       throw CommonException(response.message ?? '获取法律文档失败');
     }
+
+    // 法律文档极少更新，使用静态TTL
+    await _cache.set(cacheKey, response.data!, ttl: CacheManager.staticTTL);
 
     return response.data!;
   }
@@ -199,12 +233,23 @@ class CommonRepository {
 
   // ==================== 翻译 ====================
 
-  /// 翻译文本
+  /// 翻译文本（带缓存，参考iOS TranslationCacheManager）
   Future<Map<String, dynamic>> translate({
     required String text,
     required String targetLang,
     String? sourceLang,
   }) async {
+    // 检查翻译缓存
+    final cachedTranslation =
+        TranslationCacheManager.shared.getCachedTranslation(
+      text: text,
+      targetLang: targetLang,
+      sourceLang: sourceLang ?? 'auto',
+    );
+    if (cachedTranslation != null) {
+      return {'translated_text': cachedTranslation, 'cached': true};
+    }
+
     final response = await _apiService.post<Map<String, dynamic>>(
       ApiEndpoints.translate,
       data: {
@@ -218,19 +263,56 @@ class CommonRepository {
       throw CommonException(response.message ?? '翻译失败');
     }
 
+    // 缓存翻译结果
+    final translatedText =
+        response.data!['translated_text'] as String? ?? '';
+    if (translatedText.isNotEmpty) {
+      await TranslationCacheManager.shared.saveTranslation(
+        text: text,
+        translatedText: translatedText,
+        targetLang: targetLang,
+        sourceLang: sourceLang ?? 'auto',
+      );
+    }
+
     return response.data!;
   }
 
-  /// 批量翻译
+  /// 批量翻译（带缓存）
   Future<Map<String, dynamic>> translateBatch({
     required List<String> texts,
     required String targetLang,
     String? sourceLang,
   }) async {
+    // 分离已缓存和未缓存的文本
+    final uncachedTexts = <String>[];
+    final cachedResults = <int, String>{};
+
+    for (int i = 0; i < texts.length; i++) {
+      final cached = TranslationCacheManager.shared.getCachedTranslation(
+        text: texts[i],
+        targetLang: targetLang,
+        sourceLang: sourceLang ?? 'auto',
+      );
+      if (cached != null) {
+        cachedResults[i] = cached;
+      } else {
+        uncachedTexts.add(texts[i]);
+      }
+    }
+
+    // 全部命中缓存
+    if (uncachedTexts.isEmpty) {
+      final results = List.generate(
+          texts.length, (i) => cachedResults[i] ?? texts[i]);
+      return {'translations': results, 'cached': true};
+    }
+
+    // 请求未缓存的部分
     final response = await _apiService.post<Map<String, dynamic>>(
       ApiEndpoints.translateBatch,
       data: {
-        'texts': texts,
+        'texts': uncachedTexts,
         'target_lang': targetLang,
         if (sourceLang != null) 'source_lang': sourceLang,
       },
@@ -238,6 +320,18 @@ class CommonRepository {
 
     if (!response.isSuccess || response.data == null) {
       throw CommonException(response.message ?? '批量翻译失败');
+    }
+
+    // 缓存新翻译结果
+    final newTranslations =
+        response.data!['translations'] as List<dynamic>? ?? [];
+    if (newTranslations.length == uncachedTexts.length) {
+      await TranslationCacheManager.shared.saveTranslationBatch(
+        texts: uncachedTexts,
+        translatedTexts: newTranslations.map((e) => e.toString()).toList(),
+        targetLang: targetLang,
+        sourceLang: sourceLang ?? 'auto',
+      );
     }
 
     return response.data!;

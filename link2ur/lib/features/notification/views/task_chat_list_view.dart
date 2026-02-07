@@ -12,75 +12,55 @@ import '../../../core/widgets/error_state_view.dart';
 import '../../../core/widgets/async_image_view.dart';
 import '../../../data/models/message.dart';
 import '../../../data/repositories/message_repository.dart';
+import '../../message/bloc/message_bloc.dart';
 
 /// 任务聊天列表页
 /// 参考iOS TaskChatListView.swift
 /// 显示所有任务相关的聊天会话
-class TaskChatListView extends StatefulWidget {
+class TaskChatListView extends StatelessWidget {
   const TaskChatListView({super.key});
 
   @override
-  State<TaskChatListView> createState() => _TaskChatListViewState();
+  Widget build(BuildContext context) {
+    return BlocProvider(
+      create: (context) => MessageBloc(
+        messageRepository: context.read<MessageRepository>(),
+      )..add(const MessageLoadTaskChats()),
+      child: _TaskChatListViewContent(),
+    );
+  }
 }
 
-class _TaskChatListViewState extends State<TaskChatListView> {
-  List<TaskChat> _chats = [];
-  bool _isLoading = true;
-  String? _errorMessage;
-
-  @override
-  void initState() {
-    super.initState();
-    _loadChats();
-  }
-
-  Future<void> _loadChats() async {
-    try {
-      final repo = context.read<MessageRepository>();
-      final chats = await repo.getTaskChats();
-      if (mounted) {
-        setState(() {
-          _chats = chats;
-          _isLoading = false;
-        });
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(() {
-          _errorMessage = e.toString();
-          _isLoading = false;
-        });
-      }
-    }
-  }
-
+class _TaskChatListViewContent extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: const Text('任务聊天'),
       ),
-      body: _buildBody(),
+      body: BlocBuilder<MessageBloc, MessageState>(
+        builder: (context, state) {
+          return _buildBody(context, state);
+        },
+      ),
     );
   }
 
-  Widget _buildBody() {
-    if (_isLoading) return const LoadingView();
+  Widget _buildBody(BuildContext context, MessageState state) {
+    if (state.status == MessageStatus.loading && state.taskChats.isEmpty) {
+      return const LoadingView();
+    }
 
-    if (_errorMessage != null) {
+    if (state.status == MessageStatus.error && state.taskChats.isEmpty) {
       return ErrorStateView.loadFailed(
-        message: _errorMessage,
+        message: state.errorMessage ?? '加载失败',
         onRetry: () {
-          setState(() {
-            _isLoading = true;
-            _errorMessage = null;
-          });
-          _loadChats();
+          context.read<MessageBloc>().add(const MessageLoadTaskChats());
         },
       );
     }
 
-    if (_chats.isEmpty) {
+    if (state.taskChats.isEmpty) {
       return EmptyStateView.noData(
         title: '暂无任务聊天',
         description: '接取或发布任务后，可以在这里与对方沟通',
@@ -89,14 +69,14 @@ class _TaskChatListViewState extends State<TaskChatListView> {
 
     return RefreshIndicator(
       onRefresh: () async {
-        await _loadChats();
+        context.read<MessageBloc>().add(const MessageRefreshRequested());
       },
       child: ListView.separated(
         padding: AppSpacing.allMd,
-        itemCount: _chats.length,
+        itemCount: state.taskChats.length,
         separatorBuilder: (_, __) => const Divider(height: 1),
         itemBuilder: (context, index) {
-          final chat = _chats[index];
+          final chat = state.taskChats[index];
           return _TaskChatRow(
             chat: chat,
             onTap: () {
@@ -170,7 +150,7 @@ class _TaskChatRow extends StatelessWidget {
           if (chat.lastMessageTime != null)
             Text(
               _formatTime(chat.lastMessageTime!),
-              style: TextStyle(
+              style: const TextStyle(
                 fontSize: 12,
                 color: AppColors.textTertiaryLight,
               ),
@@ -184,7 +164,7 @@ class _TaskChatRow extends StatelessWidget {
               chat.lastMessage ?? '',
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: TextStyle(
+              style: const TextStyle(
                 fontSize: 13,
                 color: AppColors.textSecondaryLight,
               ),

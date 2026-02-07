@@ -4,13 +4,19 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/design/app_colors.dart';
-import '../../core/widgets/badge_view.dart';
 import '../../core/utils/l10n_extension.dart';
+import '../../core/utils/responsive.dart';
+import '../../core/widgets/badge_view.dart';
+import '../../core/widgets/buttons.dart';
+import '../../core/widgets/content_constraint.dart';
+import '../../core/widgets/desktop_sidebar.dart';
 import '../auth/bloc/auth_bloc.dart';
 import '../notification/bloc/notification_bloc.dart';
 
-/// 主页面（底部导航栏）
-/// 参考iOS MainTabView.swift
+/// 主页面（响应式导航布局）
+/// - 移动端：底部导航栏
+/// - 平板端：左侧收起侧边栏（NavigationRail 风格）
+/// - 桌面端：左侧展开侧边栏 + 内容区宽度约束
 class MainTabView extends StatefulWidget {
   const MainTabView({
     super.key,
@@ -26,44 +32,68 @@ class MainTabView extends StatefulWidget {
 class _MainTabViewState extends State<MainTabView> {
   int _currentIndex = 0;
 
-  // 对齐iOS MainTabView SF Symbols
-  final List<_TabItem> _tabs = const [
+  // 移动端底部导航栏的 tab 配置（包含中间 create 按钮）
+  final List<_TabItem> _mobileTabs = const [
     _TabItem(
-      icon: Icons.home_outlined,              // house.fill
+      icon: Icons.home_outlined,
       activeIcon: Icons.home,
       label: 'home',
       route: '/',
     ),
     _TabItem(
-      icon: Icons.groups_outlined,            // person.3.fill
+      icon: Icons.groups_outlined,
       activeIcon: Icons.groups,
       label: 'community',
       route: '/community',
     ),
     _TabItem(
-      icon: Icons.add_circle_outline,         // plus.circle.fill
+      icon: Icons.add_circle_outline,
       activeIcon: Icons.add_circle,
       label: '',
       route: '/tasks/create',
       isCenter: true,
     ),
     _TabItem(
-      icon: Icons.message_outlined,           // message.fill
+      icon: Icons.message_outlined,
       activeIcon: Icons.message,
       label: 'messages',
       route: '/messages-tab',
     ),
     _TabItem(
-      icon: Icons.person_outline,             // person.fill
+      icon: Icons.person_outline,
       activeIcon: Icons.person,
       label: 'profile',
       route: '/profile-tab',
     ),
   ];
 
-  void _onTabTapped(int index) {
-    // 中间按钮特殊处理
-    if (_tabs[index].isCenter) {
+  // 桌面/平板侧边栏的路由列表（不含 create 按钮，与侧边栏索引一一对应）
+  final List<String> _sidebarRoutes = const [
+    '/',
+    '/community',
+    '/messages-tab',
+    '/profile-tab',
+  ];
+
+  /// 将移动端 tab 索引转换为侧边栏索引
+  int get _sidebarIndex {
+    // 移动端索引：0=首页, 1=社区, 2=创建, 3=消息, 4=个人
+    // 侧边栏索引：0=首页, 1=社区, 2=消息, 3=个人
+    if (_currentIndex <= 1) return _currentIndex;
+    if (_currentIndex >= 3) return _currentIndex - 1;
+    return 0; // create 按钮情况，默认回到首页
+  }
+
+  /// 将侧边栏索引转换为移动端 tab 索引
+  int _sidebarToMobileIndex(int sidebarIndex) {
+    // 侧边栏索引 0,1 对应移动端 0,1
+    // 侧边栏索引 2,3 对应移动端 3,4（跳过中间 create 按钮）
+    if (sidebarIndex <= 1) return sidebarIndex;
+    return sidebarIndex + 1;
+  }
+
+  void _onMobileTabTapped(int index) {
+    if (_mobileTabs[index].isCenter) {
       HapticFeedback.mediumImpact();
       _showCreateOptions();
       return;
@@ -74,13 +104,23 @@ class _MainTabViewState extends State<MainTabView> {
       setState(() {
         _currentIndex = index;
       });
-      context.go(_tabs[index].route);
+      context.go(_mobileTabs[index].route);
+    }
+  }
+
+  void _onSidebarTabSelected(int sidebarIndex) {
+    final mobileIndex = _sidebarToMobileIndex(sidebarIndex);
+    if (mobileIndex != _currentIndex) {
+      setState(() {
+        _currentIndex = mobileIndex;
+      });
+      context.go(_sidebarRoutes[sidebarIndex]);
     }
   }
 
   void _showCreateOptions() {
     final authState = context.read<AuthBloc>().state;
-    
+
     if (!authState.isAuthenticated) {
       context.push('/login');
       return;
@@ -95,13 +135,73 @@ class _MainTabViewState extends State<MainTabView> {
 
   @override
   Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        if (constraints.maxWidth >= Breakpoints.tablet) {
+          return _buildDesktopLayout(context);
+        } else if (constraints.maxWidth >= Breakpoints.mobile) {
+          return _buildTabletLayout(context);
+        }
+        return _buildMobileLayout(context);
+      },
+    );
+  }
+
+  // ==================== 桌面布局 ====================
+  Widget _buildDesktopLayout(BuildContext context) {
+    return Scaffold(
+      body: Row(
+        children: [
+          // 展开的侧边栏
+          DesktopSidebar(
+            currentIndex: _sidebarIndex,
+            onTabSelected: _onSidebarTabSelected,
+            onCreateTapped: _showCreateOptions,
+            isCollapsed: false,
+          ),
+          // 内容区
+          Expanded(
+            child: ContentConstraint(
+              child: widget.child,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ==================== 平板布局 ====================
+  Widget _buildTabletLayout(BuildContext context) {
+    return Scaffold(
+      body: Row(
+        children: [
+          // 收起的侧边栏（仅图标）
+          DesktopSidebar(
+            currentIndex: _sidebarIndex,
+            onTabSelected: _onSidebarTabSelected,
+            onCreateTapped: _showCreateOptions,
+            isCollapsed: true,
+          ),
+          // 内容区
+          Expanded(
+            child: widget.child,
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ==================== 移动端布局 ====================
+  Widget _buildMobileLayout(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
       body: widget.child,
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
-          color: isDark ? AppColors.cardBackgroundDark : AppColors.cardBackgroundLight,
+          color: isDark
+              ? AppColors.cardBackgroundDark
+              : AppColors.cardBackgroundLight,
           boxShadow: [
             BoxShadow(
               color: Colors.black.withValues(alpha: 0.05),
@@ -115,15 +215,15 @@ class _MainTabViewState extends State<MainTabView> {
             height: 60,
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: List.generate(_tabs.length, (index) {
-                final tab = _tabs[index];
+              children: List.generate(_mobileTabs.length, (index) {
+                final tab = _mobileTabs[index];
                 final isSelected = index == _currentIndex;
 
                 if (tab.isCenter) {
                   return _buildCenterButton();
                 }
 
-                return _buildTabItem(
+                return _buildMobileTabItem(
                   tab: tab,
                   isSelected: isSelected,
                   index: index,
@@ -136,7 +236,7 @@ class _MainTabViewState extends State<MainTabView> {
     );
   }
 
-  Widget _buildTabItem({
+  Widget _buildMobileTabItem({
     required _TabItem tab,
     required bool isSelected,
     required int index,
@@ -145,7 +245,7 @@ class _MainTabViewState extends State<MainTabView> {
 
     return Expanded(
       child: GestureDetector(
-        onTap: () => _onTabTapped(index),
+        onTap: () => _onMobileTabTapped(index),
         behavior: HitTestBehavior.opaque,
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -197,8 +297,10 @@ class _MainTabViewState extends State<MainTabView> {
   }
 
   Widget _buildCenterButton() {
-    return GestureDetector(
-      onTap: () => _onTabTapped(2),
+    // 使用ScaleTapWrapper实现iOS FloatingButtonStyle的按压缩放效果(0.9)
+    return ScaleTapWrapper(
+      scaleDown: 0.9,
+      onTap: () => _onMobileTabTapped(2),
       child: Container(
         width: 56,
         height: 56,
@@ -212,8 +314,8 @@ class _MainTabViewState extends State<MainTabView> {
           boxShadow: [
             BoxShadow(
               color: AppColors.primary.withValues(alpha: 0.3),
-              blurRadius: 10,
-              offset: const Offset(0, 4),
+              blurRadius: 15,
+              offset: const Offset(0, 6),
             ),
           ],
         ),

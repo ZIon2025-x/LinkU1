@@ -1,5 +1,6 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../../../data/models/task.dart';
 import '../../../data/repositories/task_repository.dart';
 import '../../../core/utils/logger.dart';
 import 'home_event.dart';
@@ -25,26 +26,46 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
   ) async {
     if (state.status == HomeStatus.loading) return;
 
-    emit(state.copyWith(status: HomeStatus.loading));
+    // 对标iOS: 已有数据时不显示全屏loading（避免闪烁）
+    final hasExistingData = state.recommendedTasks.isNotEmpty;
+    if (!hasExistingData) {
+      emit(state.copyWith(status: HomeStatus.loading));
+    }
 
     try {
-      final recommended = await _taskRepository.getRecommendedTasks(
-        page: 1,
-        pageSize: 20,
-      );
+      // 优先尝试推荐任务（需要认证），失败则降级为公开任务列表
+      TaskListResponse result;
+      try {
+        result = await _taskRepository.getRecommendedTasks(
+          page: 1,
+          pageSize: 20,
+        );
+      } catch (_) {
+        // 未登录或认证失败时，降级到公开任务列表
+        AppLogger.info('Recommendations unavailable, falling back to public tasks');
+        result = await _taskRepository.getTasks(
+          page: 1,
+          pageSize: 20,
+        );
+      }
 
       emit(state.copyWith(
         status: HomeStatus.loaded,
-        recommendedTasks: recommended.tasks,
-        hasMoreRecommended: recommended.hasMore,
+        recommendedTasks: result.tasks,
+        hasMoreRecommended: result.hasMore,
         recommendedPage: 1,
       ));
     } catch (e) {
       AppLogger.error('Failed to load home data', e);
-      emit(state.copyWith(
-        status: HomeStatus.error,
-        errorMessage: e.toString(),
-      ));
+      // 对标iOS: 已有数据时不切换到error状态，保持显示旧数据
+      if (hasExistingData) {
+        AppLogger.info('Keeping existing data despite load failure');
+      } else {
+        emit(state.copyWith(
+          status: HomeStatus.error,
+          errorMessage: e.toString(),
+        ));
+      }
     }
   }
 
@@ -55,15 +76,23 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
     emit(state.copyWith(isRefreshing: true));
 
     try {
-      final recommended = await _taskRepository.getRecommendedTasks(
-        page: 1,
-        pageSize: 20,
-      );
+      TaskListResponse result;
+      try {
+        result = await _taskRepository.getRecommendedTasks(
+          page: 1,
+          pageSize: 20,
+        );
+      } catch (_) {
+        result = await _taskRepository.getTasks(
+          page: 1,
+          pageSize: 20,
+        );
+      }
 
       emit(state.copyWith(
         status: HomeStatus.loaded,
-        recommendedTasks: recommended.tasks,
-        hasMoreRecommended: recommended.hasMore,
+        recommendedTasks: result.tasks,
+        hasMoreRecommended: result.hasMore,
         recommendedPage: 1,
         isRefreshing: false,
       ));
@@ -77,30 +106,42 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
     HomeLoadRecommended event,
     Emitter<HomeState> emit,
   ) async {
-    if (!event.loadMore) {
+    // 对标iOS: 已有数据时不显示全屏loading
+    final hasExistingData = state.recommendedTasks.isNotEmpty;
+    if (!event.loadMore && !hasExistingData) {
       emit(state.copyWith(status: HomeStatus.loading));
     }
 
     try {
       final page = event.loadMore ? state.recommendedPage + 1 : 1;
-      final recommended = await _taskRepository.getRecommendedTasks(
-        page: page,
-        pageSize: 20,
-      );
+
+      TaskListResponse result;
+      try {
+        result = await _taskRepository.getRecommendedTasks(
+          page: page,
+          pageSize: 20,
+        );
+      } catch (_) {
+        result = await _taskRepository.getTasks(
+          page: page,
+          pageSize: 20,
+        );
+      }
 
       final tasks = event.loadMore
-          ? [...state.recommendedTasks, ...recommended.tasks]
-          : recommended.tasks;
+          ? [...state.recommendedTasks, ...result.tasks]
+          : result.tasks;
 
       emit(state.copyWith(
         status: HomeStatus.loaded,
         recommendedTasks: tasks,
-        hasMoreRecommended: recommended.hasMore,
+        hasMoreRecommended: result.hasMore,
         recommendedPage: page,
       ));
     } catch (e) {
       AppLogger.error('Failed to load recommended tasks', e);
-      if (!event.loadMore) {
+      // 已有数据时不切换到error
+      if (!event.loadMore && !hasExistingData) {
         emit(state.copyWith(
           status: HomeStatus.error,
           errorMessage: e.toString(),
@@ -113,7 +154,8 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
     HomeLoadNearby event,
     Emitter<HomeState> emit,
   ) async {
-    if (!event.loadMore) {
+    final hasExistingData = state.nearbyTasks.isNotEmpty;
+    if (!event.loadMore && !hasExistingData) {
       emit(state.copyWith(status: HomeStatus.loading));
     }
 
@@ -138,7 +180,7 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
       ));
     } catch (e) {
       AppLogger.error('Failed to load nearby tasks', e);
-      if (!event.loadMore) {
+      if (!event.loadMore && !hasExistingData) {
         emit(state.copyWith(
           status: HomeStatus.error,
           errorMessage: e.toString(),

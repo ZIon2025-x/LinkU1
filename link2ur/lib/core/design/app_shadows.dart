@@ -16,12 +16,12 @@ class AppShadows {
         ),
       ];
 
-  /// 小阴影 - 卡片默认
+  /// 小阴影 - 卡片默认（与iOS对齐offset改为(0,4)）
   static List<BoxShadow> get small => [
         BoxShadow(
           color: AppColors.shadowLight.withValues(alpha: 0.06),
           blurRadius: 8,
-          offset: const Offset(0, 2),
+          offset: const Offset(0, 4),
         ),
       ];
 

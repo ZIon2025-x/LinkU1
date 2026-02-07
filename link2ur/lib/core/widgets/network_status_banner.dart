@@ -1,8 +1,8 @@
 import 'dart:async';
-import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/material.dart';
 import '../design/app_colors.dart';
 import '../design/app_typography.dart';
+import '../utils/network_monitor.dart';
 
 /// 网络状态横幅
 /// 参考iOS NetworkStatusBannerViewModel.swift
@@ -18,7 +18,7 @@ class NetworkStatusBanner extends StatefulWidget {
 
 class _NetworkStatusBannerState extends State<NetworkStatusBanner>
     with SingleTickerProviderStateMixin {
-  late final StreamSubscription<List<ConnectivityResult>> _subscription;
+  late final StreamSubscription<NetworkStatus> _subscription;
   late final AnimationController _animController;
   late final Animation<double> _slideAnimation;
   bool _isOffline = false;
@@ -35,11 +35,14 @@ class _NetworkStatusBannerState extends State<NetworkStatusBanner>
       CurvedAnimation(parent: _animController, curve: Curves.easeOut),
     );
 
-    _subscription =
-        Connectivity().onConnectivityChanged.listen(_onConnectivityChanged);
+    // 使用 NetworkMonitor 单例，避免重复创建 Connectivity 实例
+    _isOffline = !NetworkMonitor.instance.isConnected;
+    if (_isOffline) {
+      _animController.forward();
+    }
 
-    // 检查初始网络状态
-    Connectivity().checkConnectivity().then(_onConnectivityChanged);
+    _subscription =
+        NetworkMonitor.instance.statusStream.listen(_onStatusChanged);
   }
 
   @override
@@ -49,9 +52,8 @@ class _NetworkStatusBannerState extends State<NetworkStatusBanner>
     super.dispose();
   }
 
-  void _onConnectivityChanged(List<ConnectivityResult> results) {
-    final isOffline = results.isEmpty ||
-        results.every((r) => r == ConnectivityResult.none);
+  void _onStatusChanged(NetworkStatus status) {
+    final isOffline = status == NetworkStatus.offline;
 
     if (isOffline != _isOffline) {
       setState(() => _isOffline = isOffline);

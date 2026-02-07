@@ -136,7 +136,7 @@ class _LeaderboardCard extends StatelessWidget {
                   const SizedBox(height: 4),
                   Text(
                     leaderboard.displayDescription ?? '描述信息...',
-                    style: TextStyle(
+                    style: const TextStyle(
                       fontSize: 14,
                       color: AppColors.textSecondaryLight,
                     ),
@@ -146,11 +146,11 @@ class _LeaderboardCard extends StatelessWidget {
                   const SizedBox(height: 4),
                   Row(
                     children: [
-                      Icon(Icons.thumb_up_outlined, size: 14, color: AppColors.textTertiaryLight),   // hand.thumbsup
+                      const Icon(Icons.thumb_up_outlined, size: 14, color: AppColors.textTertiaryLight),   // hand.thumbsup
                       const SizedBox(width: 4),
                       Text(
                         '${leaderboard.voteCount} 票',
-                        style: TextStyle(fontSize: 12, color: AppColors.textTertiaryLight),
+                        style: const TextStyle(fontSize: 12, color: AppColors.textTertiaryLight),
                       ),
                     ],
                   ),

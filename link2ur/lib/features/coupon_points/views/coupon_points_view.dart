@@ -296,7 +296,7 @@ class _TransactionRow extends StatelessWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Container(
-      margin: EdgeInsets.only(bottom: AppSpacing.sm),
+      margin: const EdgeInsets.only(bottom: AppSpacing.sm),
       padding: AppSpacing.allMd,
       decoration: BoxDecoration(
         color: isDark
@@ -488,7 +488,7 @@ class _AvailableCouponCard extends StatelessWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Container(
-      margin: EdgeInsets.only(bottom: AppSpacing.sm),
+      margin: const EdgeInsets.only(bottom: AppSpacing.sm),
       padding: AppSpacing.allMd,
       decoration: BoxDecoration(
         color: isDark
@@ -583,7 +583,7 @@ class _MyCouponCard extends StatelessWidget {
     return Opacity(
       opacity: isUsable ? 1.0 : 0.5,
       child: Container(
-        margin: EdgeInsets.only(bottom: AppSpacing.sm),
+        margin: const EdgeInsets.only(bottom: AppSpacing.sm),
         padding: AppSpacing.allMd,
         decoration: BoxDecoration(
           color: isDark
@@ -836,7 +836,7 @@ class _CheckInTab extends StatelessWidget {
           final isAchieved = state.consecutiveDays >= (days as int);
 
           return _RewardRow(
-            title: '连续签到${days}天',
+            title: '连续签到$days天',
             reward: rewardText.toString(),
             icon: icon,
             iconColor: iconColor,
@@ -868,7 +868,7 @@ class _RewardRow extends StatelessWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Container(
-      margin: EdgeInsets.only(bottom: AppSpacing.sm),
+      margin: const EdgeInsets.only(bottom: AppSpacing.sm),
       padding: AppSpacing.allMd,
       decoration: BoxDecoration(
         color: isDark

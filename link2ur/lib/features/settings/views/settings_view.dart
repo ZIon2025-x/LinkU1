@@ -170,7 +170,7 @@ class _SettingsViewState extends State<SettingsView> {
                             children: [
                               Text(
                                 context.l10n.settingsThemeMode,
-                                style: TextStyle(
+                                style: const TextStyle(
                                   fontSize: 15,
                                   fontWeight: FontWeight.w500,
                                 ),
@@ -302,7 +302,7 @@ class _SettingsViewState extends State<SettingsView> {
                         _SettingsNavRow(
                           icon: Icons.help_outline,
                           title: context.l10n.settingsFaq,
-                          onTap: () => context.push('/info/faq'),
+                          onTap: () => context.push('/faq'),
                         ),
                         _settingsDivider(isDark),
                         _SettingsNavRow(
@@ -463,7 +463,7 @@ class _SettingsSection extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
-          padding: EdgeInsets.symmetric(horizontal: AppSpacing.sm),
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
           child: Text(
             title,
             style: TextStyle(
@@ -483,11 +483,17 @@ class _SettingsSection extends StatelessWidget {
                 ? AppColors.cardBackgroundDark
                 : AppColors.cardBackgroundLight,
             borderRadius: AppRadius.allLarge,
+            // 与iOS InsetGroupedListStyle对齐：微妙边框 + 轻阴影
+            border: Border.all(
+              color: (isDark ? AppColors.separatorDark : AppColors.separatorLight)
+                  .withValues(alpha: 0.3),
+              width: 0.5,
+            ),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.03),
+                color: Colors.black.withValues(alpha: 0.04),
                 blurRadius: 8,
-                offset: const Offset(0, 2),
+                offset: const Offset(0, 4),
               ),
             ],
           ),

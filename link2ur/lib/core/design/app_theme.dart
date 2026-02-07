@@ -64,22 +64,27 @@ class AppTheme {
         unselectedLabelStyle: TextStyle(fontSize: 10),
       ),
 
-      // 卡片主题
+      // 卡片主题 - 与iOS对齐添加微妙边框(separator.opacity(0.3), 0.5pt)
       cardTheme: CardThemeData(
         elevation: 0,
         color: AppColors.cardBackgroundLight,
         shape: RoundedRectangleBorder(
           borderRadius: AppRadius.card,
+          side: BorderSide(
+            color: AppColors.separatorLight.withValues(alpha: 0.3),
+            width: 0.5,
+          ),
         ),
         margin: EdgeInsets.zero,
       ),
 
-      // 按钮主题
+      // 按钮主题 - 高度对齐iOS 50pt
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
           elevation: 0,
           backgroundColor: AppColors.primary,
           foregroundColor: Colors.white,
+          minimumSize: const Size(0, 50),
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
           shape: RoundedRectangleBorder(
             borderRadius: AppRadius.button,
@@ -91,6 +96,7 @@ class AppTheme {
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
           foregroundColor: AppColors.primary,
+          minimumSize: const Size(0, 50),
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
           shape: RoundedRectangleBorder(
             borderRadius: AppRadius.button,
@@ -175,7 +181,7 @@ class AppTheme {
       ),
 
       // 底部Sheet主题
-      bottomSheetTheme: BottomSheetThemeData(
+      bottomSheetTheme: const BottomSheetThemeData(
         backgroundColor: AppColors.cardBackgroundLight,
         elevation: 0,
         shape: RoundedRectangleBorder(
@@ -267,22 +273,27 @@ class AppTheme {
         unselectedLabelStyle: TextStyle(fontSize: 10),
       ),
 
-      // 卡片主题
+      // 卡片主题 - 与iOS对齐添加微妙边框(separator.opacity(0.3), 0.5pt)
       cardTheme: CardThemeData(
         elevation: 0,
         color: AppColors.cardBackgroundDark,
         shape: RoundedRectangleBorder(
           borderRadius: AppRadius.card,
+          side: BorderSide(
+            color: AppColors.separatorDark.withValues(alpha: 0.3),
+            width: 0.5,
+          ),
         ),
         margin: EdgeInsets.zero,
       ),
 
-      // 按钮主题
+      // 按钮主题 - 高度对齐iOS 50pt
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
           elevation: 0,
           backgroundColor: AppColors.primary,
           foregroundColor: Colors.white,
+          minimumSize: const Size(0, 50),
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
           shape: RoundedRectangleBorder(
             borderRadius: AppRadius.button,
@@ -294,6 +305,7 @@ class AppTheme {
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
           foregroundColor: AppColors.primary,
+          minimumSize: const Size(0, 50),
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
           shape: RoundedRectangleBorder(
             borderRadius: AppRadius.button,
@@ -378,7 +390,7 @@ class AppTheme {
       ),
 
       // 底部Sheet主题
-      bottomSheetTheme: BottomSheetThemeData(
+      bottomSheetTheme: const BottomSheetThemeData(
         backgroundColor: AppColors.cardBackgroundDark,
         elevation: 0,
         shape: RoundedRectangleBorder(

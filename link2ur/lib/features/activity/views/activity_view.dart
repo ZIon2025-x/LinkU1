@@ -208,7 +208,7 @@ class _ActivityCard extends StatelessWidget {
           // 时间和地点
           Row(
             children: [
-              Icon(
+              const Icon(
                 Icons.access_time,
                 size: 16,
                 color: AppColors.textTertiaryLight,
@@ -225,7 +225,7 @@ class _ActivityCard extends StatelessWidget {
               ),
               if (activity.location.isNotEmpty) ...[
                 const SizedBox(width: 16),
-                Icon(
+                const Icon(
                   Icons.location_on_outlined,
                   size: 16,
                   color: AppColors.textTertiaryLight,

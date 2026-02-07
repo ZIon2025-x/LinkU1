@@ -9,7 +9,10 @@ import '../../../core/widgets/loading_view.dart';
 import '../../../core/widgets/error_state_view.dart';
 import '../../../core/widgets/empty_state_view.dart';
 import '../../../data/repositories/forum_repository.dart';
+import '../../../data/repositories/user_repository.dart';
+import '../../../data/repositories/task_repository.dart';
 import '../../../data/models/forum.dart';
+import '../bloc/profile_bloc.dart';
 
 /// 我的帖子视图
 /// 参考iOS MyForumPostsView.swift
@@ -21,94 +24,83 @@ class MyPostsView extends StatefulWidget {
 }
 
 class _MyPostsViewState extends State<MyPostsView> {
-  final List<ForumPost> _posts = [];
-  bool _isLoading = false;
-  bool _isLoadingMore = false;
-  String? _errorMessage;
-  int _page = 1;
-  bool _hasMore = true;
-  final int _pageSize = 20;
+  final ScrollController _scrollController = ScrollController();
+  ProfileState? _currentState;
+  bool _scrollListenerAttached = false;
 
   @override
   void initState() {
     super.initState();
-    _loadPosts();
   }
 
-  Future<void> _loadPosts({bool refresh = false}) async {
-    if (_isLoading && !refresh) return;
-
-    setState(() {
-      _isLoading = refresh || _page == 1;
-      _isLoadingMore = !refresh && _page > 1;
-      _errorMessage = null;
-    });
-
-    try {
-      final repository = context.read<ForumRepository>();
-      final response = await repository.getMyPosts(
-        page: refresh ? 1 : _page,
-        pageSize: _pageSize,
-      );
-
-      setState(() {
-        if (refresh || _page == 1) {
-          _posts.clear();
-          _posts.addAll(response.posts);
-          _page = 1;
-        } else {
-          _posts.addAll(response.posts);
-        }
-        _hasMore = response.hasMore;
-        _page = response.page;
-        _isLoading = false;
-        _isLoadingMore = false;
-      });
-    } catch (e) {
-      setState(() {
-        _errorMessage = e.toString();
-        _isLoading = false;
-        _isLoadingMore = false;
-      });
-    }
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
   }
 
-  Future<void> _onRefresh() async {
-    await _loadPosts(refresh: true);
-  }
-
-  void _loadMore() {
-    if (!_isLoadingMore && _hasMore) {
-      setState(() {
-        _page++;
-      });
-      _loadPosts();
+  void _onScroll() {
+    if (_currentState == null) return;
+    if (_scrollController.position.pixels >=
+        _scrollController.position.maxScrollExtent - 200) {
+      if (_currentState!.forumPostsHasMore) {
+        context.read<ProfileBloc>().add(
+              ProfileLoadMyForumPosts(
+                page: _currentState!.forumPostsPage + 1,
+              ),
+            );
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('我的帖子'),
+    return BlocProvider(
+      create: (context) => ProfileBloc(
+        userRepository: context.read<UserRepository>(),
+        taskRepository: context.read<TaskRepository>(),
+        forumRepository: context.read<ForumRepository>(),
+      )..add(const ProfileLoadMyForumPosts(page: 1)),
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('我的帖子'),
+        ),
+        body: BlocBuilder<ProfileBloc, ProfileState>(
+          builder: (context, state) {
+            // Update current state for scroll listener
+            _currentState = state;
+            // Ensure scroll listener is attached once
+            if (!_scrollListenerAttached) {
+              _scrollListenerAttached = true;
+              _scrollController.addListener(_onScroll);
+            }
+
+            return _buildBody(context, state);
+          },
+        ),
       ),
-      body: _buildBody(),
     );
   }
 
-  Widget _buildBody() {
-    if (_isLoading && _posts.isEmpty) {
+  Widget _buildBody(BuildContext context, ProfileState state) {
+    final isLoading = state.myForumPosts.isEmpty && state.status == ProfileStatus.loading;
+
+    if (isLoading) {
       return const LoadingView();
     }
 
-    if (_errorMessage != null && _posts.isEmpty) {
+    if (state.errorMessage != null && state.myForumPosts.isEmpty) {
       return ErrorStateView.loadFailed(
-        message: _errorMessage!,
-        onRetry: () => _loadPosts(refresh: true),
+        message: state.errorMessage!,
+        onRetry: () {
+          context.read<ProfileBloc>().add(
+                const ProfileLoadMyForumPosts(page: 1),
+              );
+        },
       );
     }
 
-    if (_posts.isEmpty) {
+    if (state.myForumPosts.isEmpty) {
       return EmptyStateView.noData(
         title: '暂无帖子',
         description: '您还没有发布过帖子',
@@ -116,23 +108,26 @@ class _MyPostsViewState extends State<MyPostsView> {
     }
 
     return RefreshIndicator(
-      onRefresh: _onRefresh,
+      onRefresh: () async {
+        context.read<ProfileBloc>().add(
+              const ProfileLoadMyForumPosts(page: 1),
+            );
+      },
       child: ListView.separated(
+        controller: _scrollController,
         padding: AppSpacing.allMd,
-        itemCount: _posts.length + (_hasMore ? 1 : 0),
+        itemCount: state.myForumPosts.length + (state.forumPostsHasMore ? 1 : 0),
         separatorBuilder: (context, index) => AppSpacing.vMd,
         itemBuilder: (context, index) {
-          if (index == _posts.length) {
-            // Load more trigger
-            _loadMore();
+          if (index >= state.myForumPosts.length) {
             return const Center(
               child: Padding(
                 padding: EdgeInsets.all(16.0),
-                child: LoadingIndicator(),
+                child: CircularProgressIndicator(),
               ),
             );
           }
-          return _PostCard(post: _posts[index]);
+          return _PostCard(post: state.myForumPosts[index]);
         },
       ),
     );
@@ -180,7 +175,7 @@ class _PostCard extends StatelessWidget {
             if (post.content != null)
               Text(
                 post.content!,
-                style: TextStyle(color: AppColors.textSecondaryLight),
+                style: const TextStyle(color: AppColors.textSecondaryLight),
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
               ),
@@ -199,13 +194,13 @@ class _PostCard extends StatelessWidget {
                 const SizedBox(width: 4),
                 Text(
                   '${post.likeCount}',
-                  style: TextStyle(
+                  style: const TextStyle(
                     fontSize: 12,
                     color: AppColors.textTertiaryLight,
                   ),
                 ),
                 const SizedBox(width: 16),
-                Icon(
+                const Icon(
                   Icons.comment_outlined,
                   size: 16,
                   color: AppColors.textTertiaryLight,
@@ -213,7 +208,7 @@ class _PostCard extends StatelessWidget {
                 const SizedBox(width: 4),
                 Text(
                   '${post.replyCount}',
-                  style: TextStyle(
+                  style: const TextStyle(
                     fontSize: 12,
                     color: AppColors.textTertiaryLight,
                   ),
@@ -221,7 +216,7 @@ class _PostCard extends StatelessWidget {
                 const Spacer(),
                 Text(
                   _formatTime(post.createdAt),
-                  style: TextStyle(
+                  style: const TextStyle(
                     fontSize: 12,
                     color: AppColors.textTertiaryLight,
                   ),

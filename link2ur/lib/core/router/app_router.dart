@@ -224,92 +224,142 @@ class AppRouter {
         builder: (context, state) => const ForgotPasswordView(),
       ),
 
-      // 任务
+      // 任务（具体路径在参数化路径之前）
       GoRoute(
         path: AppRoutes.tasks,
         name: 'tasks',
         builder: (context, state) => const TasksView(),
       ),
       GoRoute(
-        path: AppRoutes.taskDetail,
-        name: 'taskDetail',
-        builder: (context, state) {
-          final id = int.parse(state.pathParameters['id']!);
-          return TaskDetailView(taskId: id);
-        },
-      ),
-      GoRoute(
         path: AppRoutes.createTask,
         name: 'createTask',
         builder: (context, state) => const CreateTaskView(),
       ),
+      GoRoute(
+        path: AppRoutes.taskFilter,
+        name: 'taskFilter',
+        builder: (context, state) => const TaskFilterView(),
+      ),
+      GoRoute(
+        path: AppRoutes.taskDetail,
+        name: 'taskDetail',
+        builder: (context, state) {
+          final id = int.tryParse(state.pathParameters['id'] ?? '') ?? 0;
+          return TaskDetailView(taskId: id);
+        },
+      ),
 
-      // 跳蚤市场
+      // 跳蚤市场（具体路径在参数化路径之前）
       GoRoute(
         path: AppRoutes.fleaMarket,
         name: 'fleaMarket',
         builder: (context, state) => const FleaMarketView(),
       ),
       GoRoute(
-        path: AppRoutes.fleaMarketDetail,
-        name: 'fleaMarketDetail',
-        builder: (context, state) {
-          final id = int.parse(state.pathParameters['id']!);
-          return FleaMarketDetailView(itemId: id);
-        },
-      ),
-      GoRoute(
         path: AppRoutes.createFleaMarketItem,
         name: 'createFleaMarketItem',
         builder: (context, state) => const CreateFleaMarketItemView(),
       ),
+      GoRoute(
+        path: AppRoutes.editFleaMarketItem,
+        name: 'editFleaMarketItem',
+        builder: (context, state) {
+          final id = int.tryParse(state.pathParameters['id'] ?? '') ?? 0;
+          final item = state.extra as dynamic;
+          return EditFleaMarketItemView(itemId: id, item: item);
+        },
+      ),
+      GoRoute(
+        path: AppRoutes.fleaMarketDetail,
+        name: 'fleaMarketDetail',
+        builder: (context, state) {
+          final id = int.tryParse(state.pathParameters['id'] ?? '') ?? 0;
+          return FleaMarketDetailView(itemId: id);
+        },
+      ),
 
-      // 任务达人
+      // 任务达人（具体路径在参数化路径之前）
       GoRoute(
         path: AppRoutes.taskExperts,
         name: 'taskExperts',
         builder: (context, state) => const TaskExpertListView(),
       ),
       GoRoute(
+        path: AppRoutes.taskExpertSearch,
+        name: 'taskExpertSearch',
+        builder: (context, state) => const TaskExpertSearchView(),
+      ),
+      GoRoute(
+        path: AppRoutes.taskExpertsIntro,
+        name: 'taskExpertsIntro',
+        builder: (context, state) => const TaskExpertsIntroView(),
+      ),
+      GoRoute(
         path: AppRoutes.taskExpertDetail,
         name: 'taskExpertDetail',
         builder: (context, state) {
-          final id = int.parse(state.pathParameters['id']!);
+          final id = int.tryParse(state.pathParameters['id'] ?? '') ?? 0;
           return TaskExpertDetailView(expertId: id);
         },
       ),
 
-      // 论坛
+      // 论坛（具体路径在参数化路径之前）
       GoRoute(
         path: AppRoutes.forum,
         name: 'forum',
         builder: (context, state) => const ForumView(),
       ),
       GoRoute(
-        path: AppRoutes.forumPostDetail,
-        name: 'forumPostDetail',
-        builder: (context, state) {
-          final id = int.parse(state.pathParameters['id']!);
-          return ForumPostDetailView(postId: id);
-        },
-      ),
-      GoRoute(
         path: AppRoutes.createPost,
         name: 'createPost',
         builder: (context, state) => const CreatePostView(),
       ),
+      GoRoute(
+        path: AppRoutes.myForumPosts,
+        name: 'myForumPosts',
+        builder: (context, state) => const MyForumPostsView(),
+      ),
+      GoRoute(
+        path: AppRoutes.forumPostDetail,
+        name: 'forumPostDetail',
+        builder: (context, state) {
+          final id = int.tryParse(state.pathParameters['id'] ?? '') ?? 0;
+          return ForumPostDetailView(postId: id);
+        },
+      ),
 
-      // 排行榜
+      // 排行榜（具体路径在参数化路径之前）
       GoRoute(
         path: AppRoutes.leaderboard,
         name: 'leaderboard',
         builder: (context, state) => const LeaderboardView(),
       ),
       GoRoute(
+        path: AppRoutes.applyLeaderboard,
+        name: 'applyLeaderboard',
+        builder: (context, state) => const ApplyLeaderboardView(),
+      ),
+      GoRoute(
+        path: AppRoutes.leaderboardItemDetail,
+        name: 'leaderboardItemDetail',
+        builder: (context, state) {
+          final id = int.tryParse(state.pathParameters['id'] ?? '') ?? 0;
+          return LeaderboardItemDetailView(itemId: id);
+        },
+      ),
+      GoRoute(
+        path: AppRoutes.submitLeaderboardItem,
+        name: 'submitLeaderboardItem',
+        builder: (context, state) {
+          final id = int.tryParse(state.pathParameters['id'] ?? '') ?? 0;
+          return SubmitLeaderboardItemView(leaderboardId: id);
+        },
+      ),
+      GoRoute(
         path: AppRoutes.leaderboardDetail,
         name: 'leaderboardDetail',
         builder: (context, state) {
-          final id = int.parse(state.pathParameters['id']!);
+          final id = int.tryParse(state.pathParameters['id'] ?? '') ?? 0;
           return LeaderboardDetailView(leaderboardId: id);
         },
       ),
@@ -324,7 +374,7 @@ class AppRouter {
         path: AppRoutes.chat,
         name: 'chat',
         builder: (context, state) {
-          final userId = int.parse(state.pathParameters['userId']!);
+          final userId = int.tryParse(state.pathParameters['userId'] ?? '') ?? 0;
           return ChatView(userId: userId);
         },
       ),
@@ -332,7 +382,7 @@ class AppRouter {
         path: AppRoutes.taskChat,
         name: 'taskChat',
         builder: (context, state) {
-          final taskId = int.parse(state.pathParameters['taskId']!);
+          final taskId = int.tryParse(state.pathParameters['taskId'] ?? '') ?? 0;
           return TaskChatView(taskId: taskId);
         },
       ),
@@ -390,7 +440,7 @@ class AppRouter {
         path: AppRoutes.activityDetail,
         name: 'activityDetail',
         builder: (context, state) {
-          final id = int.parse(state.pathParameters['id']!);
+          final id = int.tryParse(state.pathParameters['id'] ?? '') ?? 0;
           return ActivityDetailView(activityId: id);
         },
       ),
@@ -474,23 +524,6 @@ class AppRouter {
         builder: (context, state) => const SearchView(),
       ),
 
-      // 任务筛选
-      GoRoute(
-        path: AppRoutes.taskFilter,
-        name: 'taskFilter',
-        builder: (context, state) => const TaskFilterView(),
-      ),
-
-      // 编辑跳蚤市场商品
-      GoRoute(
-        path: AppRoutes.editFleaMarketItem,
-        name: 'editFleaMarketItem',
-        builder: (context, state) {
-          final id = int.parse(state.pathParameters['id']!);
-          final item = state.extra as dynamic;
-          return EditFleaMarketItemView(itemId: id, item: item);
-        },
-      ),
 
       // 论坛分类帖子列表
       GoRoute(
@@ -502,19 +535,12 @@ class AppRouter {
         },
       ),
 
-      // 我的论坛帖子
-      GoRoute(
-        path: AppRoutes.myForumPosts,
-        name: 'myForumPosts',
-        builder: (context, state) => const MyForumPostsView(),
-      ),
-
       // 用户公开资料
       GoRoute(
         path: AppRoutes.userProfile,
         name: 'userProfile',
         builder: (context, state) {
-          final id = int.parse(state.pathParameters['id']!);
+          final id = int.tryParse(state.pathParameters['id'] ?? '') ?? 0;
           return UserProfileView(userId: id);
         },
       ),
@@ -526,26 +552,12 @@ class AppRouter {
         builder: (context, state) => const TaskPreferencesView(),
       ),
 
-      // 任务达人搜索
-      GoRoute(
-        path: AppRoutes.taskExpertSearch,
-        name: 'taskExpertSearch',
-        builder: (context, state) => const TaskExpertSearchView(),
-      ),
-
-      // 任务达人介绍
-      GoRoute(
-        path: AppRoutes.taskExpertsIntro,
-        name: 'taskExpertsIntro',
-        builder: (context, state) => const TaskExpertsIntroView(),
-      ),
-
       // 服务详情
       GoRoute(
         path: AppRoutes.serviceDetail,
         name: 'serviceDetail',
         builder: (context, state) {
-          final id = int.parse(state.pathParameters['id']!);
+          final id = int.tryParse(state.pathParameters['id'] ?? '') ?? 0;
           return ServiceDetailView(serviceId: id);
         },
       ),
@@ -557,32 +569,6 @@ class AppRouter {
         builder: (context, state) => const MyServiceApplicationsView(),
       ),
 
-      // 排行榜条目详情
-      GoRoute(
-        path: AppRoutes.leaderboardItemDetail,
-        name: 'leaderboardItemDetail',
-        builder: (context, state) {
-          final id = int.parse(state.pathParameters['id']!);
-          return LeaderboardItemDetailView(itemId: id);
-        },
-      ),
-
-      // 申请创建排行榜
-      GoRoute(
-        path: AppRoutes.applyLeaderboard,
-        name: 'applyLeaderboard',
-        builder: (context, state) => const ApplyLeaderboardView(),
-      ),
-
-      // 提交排行榜条目
-      GoRoute(
-        path: AppRoutes.submitLeaderboardItem,
-        name: 'submitLeaderboardItem',
-        builder: (context, state) {
-          final id = int.parse(state.pathParameters['id']!);
-          return SubmitLeaderboardItemView(leaderboardId: id);
-        },
-      ),
 
       // 通知列表
       GoRoute(

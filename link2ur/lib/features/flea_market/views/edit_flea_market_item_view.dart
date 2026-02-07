@@ -10,10 +10,11 @@ import '../../../core/utils/l10n_extension.dart';
 import '../../../core/widgets/async_image_view.dart';
 import '../../../data/models/flea_market.dart';
 import '../../../data/repositories/flea_market_repository.dart';
+import '../bloc/flea_market_bloc.dart';
 
 /// 编辑跳蚤市场商品页
 /// 参考iOS EditFleaMarketItemView.swift
-class EditFleaMarketItemView extends StatefulWidget {
+class EditFleaMarketItemView extends StatelessWidget {
   const EditFleaMarketItemView({
     super.key,
     required this.itemId,
@@ -24,10 +25,32 @@ class EditFleaMarketItemView extends StatefulWidget {
   final FleaMarketItem item;
 
   @override
-  State<EditFleaMarketItemView> createState() => _EditFleaMarketItemViewState();
+  Widget build(BuildContext context) {
+    return BlocProvider(
+      create: (context) => FleaMarketBloc(
+        fleaMarketRepository: context.read<FleaMarketRepository>(),
+      ),
+      child: _EditFleaMarketItemViewContent(itemId: itemId, item: item),
+    );
+  }
 }
 
-class _EditFleaMarketItemViewState extends State<EditFleaMarketItemView> {
+class _EditFleaMarketItemViewContent extends StatefulWidget {
+  const _EditFleaMarketItemViewContent({
+    required this.itemId,
+    required this.item,
+  });
+
+  final int itemId;
+  final FleaMarketItem item;
+
+  @override
+  State<_EditFleaMarketItemViewContent> createState() =>
+      _EditFleaMarketItemViewContentState();
+}
+
+class _EditFleaMarketItemViewContentState
+    extends State<_EditFleaMarketItemViewContent> {
   late final TextEditingController _titleController;
   late final TextEditingController _descriptionController;
   late final TextEditingController _priceController;
@@ -35,9 +58,8 @@ class _EditFleaMarketItemViewState extends State<EditFleaMarketItemView> {
 
   String _selectedCategory = '';
   List<String> _existingImageUrls = [];
-  List<XFile> _newImages = [];
-  bool _isLoading = false;
-  String? _errorMessage;
+  final List<XFile> _newImages = [];
+  final List<String> _uploadedUrls = [];
 
   final _categories = [
     'Electronics', 'Clothing', 'Furniture', 'Books',
@@ -51,7 +73,7 @@ class _EditFleaMarketItemViewState extends State<EditFleaMarketItemView> {
     _descriptionController =
         TextEditingController(text: widget.item.description ?? '');
     _priceController =
-        TextEditingController(text: widget.item.price?.toString() ?? '');
+        TextEditingController(text: widget.item.price.toString());
     _locationController =
         TextEditingController(text: widget.item.location ?? 'Online');
     _selectedCategory = widget.item.category ?? '';
@@ -97,48 +119,48 @@ class _EditFleaMarketItemViewState extends State<EditFleaMarketItemView> {
 
   Future<void> _saveChanges() async {
     if (_titleController.text.isEmpty || _priceController.text.isEmpty) {
-      setState(() {
-        _errorMessage = context.l10n.fleaMarketFillRequired;
-      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(context.l10n.fleaMarketFillRequired),
+          backgroundColor: AppColors.error,
+        ),
+      );
       return;
     }
 
-    setState(() {
-      _isLoading = true;
-      _errorMessage = null;
-    });
+    final bloc = context.read<FleaMarketBloc>();
 
-    try {
-      final repo = context.read<FleaMarketRepository>();
-
-      // 上传新图片
-      final uploadedUrls = <String>[];
-      for (final image in _newImages) {
-        final bytes = await image.readAsBytes();
-        final url = await repo.uploadImage(bytes, image.name);
-        uploadedUrls.add(url);
-      }
-
-      final allImages = [..._existingImageUrls, ...uploadedUrls];
-
-      await repo.updateItem(
-        widget.itemId.toString(),
-        title: _titleController.text,
-        description: _descriptionController.text,
-        price: double.tryParse(_priceController.text) ?? 0,
-        category: _selectedCategory,
-        images: allImages,
+    // Upload new images first
+    _uploadedUrls.clear();
+    for (final image in _newImages) {
+      final bytes = await image.readAsBytes();
+      bloc.add(FleaMarketUploadImage(
+        imageBytes: bytes,
+        filename: image.name,
+      ));
+      // Wait for upload to complete
+      await bloc.stream.firstWhere(
+        (state) => !state.isUploadingImage,
       );
-
-      if (mounted) {
-        Navigator.of(context).pop(true);
+      if (bloc.state.uploadedImageUrl != null) {
+        _uploadedUrls.add(bloc.state.uploadedImageUrl!);
+      } else if (bloc.state.errorMessage != null) {
+        // Upload failed, stop
+        return;
       }
-    } catch (e) {
-      setState(() {
-        _errorMessage = e.toString();
-        _isLoading = false;
-      });
     }
+
+    final allImages = [..._existingImageUrls, ..._uploadedUrls];
+
+    // Update item
+    bloc.add(FleaMarketUpdateItem(
+      itemId: widget.itemId,
+      title: _titleController.text,
+      description: _descriptionController.text,
+      price: double.tryParse(_priceController.text) ?? 0,
+      category: _selectedCategory,
+      images: allImages,
+    ));
   }
 
   @override
@@ -146,17 +168,36 @@ class _EditFleaMarketItemViewState extends State<EditFleaMarketItemView> {
     final l10n = context.l10n;
     final totalImages = _existingImageUrls.length + _newImages.length;
 
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(l10n.fleaMarketEditItem),
-      ),
-      body: GestureDetector(
-        onTap: () => FocusScope.of(context).unfocus(),
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(AppSpacing.md),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
+    return BlocListener<FleaMarketBloc, FleaMarketState>(
+      listener: (context, state) {
+        if (state.actionMessage == '商品更新成功') {
+          Navigator.of(context).pop(true);
+        } else if (state.errorMessage != null && state.actionMessage == null) {
+          // Show error for upload/update failures
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(state.errorMessage!),
+              backgroundColor: AppColors.error,
+            ),
+          );
+        }
+      },
+      child: BlocBuilder<FleaMarketBloc, FleaMarketState>(
+        builder: (context, state) {
+          final isLoading = state.isSubmitting || state.isUploadingImage;
+          final errorMessage = state.errorMessage;
+
+          return Scaffold(
+            appBar: AppBar(
+              title: Text(l10n.fleaMarketEditItem),
+            ),
+            body: GestureDetector(
+              onTap: () => FocusScope.of(context).unfocus(),
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(AppSpacing.md),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
               // 基本信息卡片
               _buildSection(
                 title: l10n.fleaMarketProductInfo,
@@ -215,7 +256,7 @@ class _EditFleaMarketItemViewState extends State<EditFleaMarketItemView> {
                 icon: Icons.photo_library,
                 trailing: Text(
                   '$totalImages/5',
-                  style: TextStyle(
+                  style: const TextStyle(
                     color: AppColors.primary,
                     fontWeight: FontWeight.bold,
                   ),
@@ -260,7 +301,7 @@ class _EditFleaMarketItemViewState extends State<EditFleaMarketItemView> {
                                 borderRadius:
                                     BorderRadius.circular(AppRadius.medium),
                                 border: Border.all(
-                                  color: AppColors.primary.withOpacity(0.3),
+                                  color: AppColors.primary.withValues(alpha: 0.3),
                                   style: BorderStyle.solid,
                                 ),
                                 color: AppColors.background,
@@ -268,12 +309,12 @@ class _EditFleaMarketItemViewState extends State<EditFleaMarketItemView> {
                               child: Column(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
-                                  Icon(Icons.add_photo_alternate,
+                                  const Icon(Icons.add_photo_alternate,
                                       color: AppColors.primary, size: 28),
                                   const SizedBox(height: 4),
                                   Text(
                                     l10n.fleaMarketAddImage,
-                                    style: TextStyle(
+                                    style: const TextStyle(
                                       fontSize: 11,
                                       color: AppColors.textSecondary,
                                     ),
@@ -287,61 +328,65 @@ class _EditFleaMarketItemViewState extends State<EditFleaMarketItemView> {
                   ),
                 ],
               ),
-              const SizedBox(height: AppSpacing.lg),
+                    const SizedBox(height: AppSpacing.lg),
 
-              // 错误提示
-              if (_errorMessage != null)
-                Container(
-                  padding: const EdgeInsets.all(AppSpacing.sm),
-                  decoration: BoxDecoration(
-                    color: AppColors.error.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(AppRadius.medium),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(Icons.error_outline,
-                          color: AppColors.error, size: 16),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          _errorMessage!,
-                          style: TextStyle(
-                              color: AppColors.error, fontSize: 13),
+                    // 错误提示
+                    if (errorMessage != null)
+                      Container(
+                        padding: const EdgeInsets.all(AppSpacing.sm),
+                        decoration: BoxDecoration(
+                          color: AppColors.error.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(AppRadius.medium),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.error_outline,
+                                color: AppColors.error, size: 16),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                errorMessage,
+                                style: const TextStyle(
+                                    color: AppColors.error, fontSize: 13),
+                              ),
+                            ),
+                          ],
                         ),
                       ),
-                    ],
-                  ),
-                ),
 
-              const SizedBox(height: AppSpacing.xl),
+                    const SizedBox(height: AppSpacing.xl),
 
-              // 保存按钮
-              SizedBox(
-                height: 52,
-                child: ElevatedButton(
-                  onPressed: _isLoading ? null : _saveChanges,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary,
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(AppRadius.large),
+                    // 保存按钮
+                    SizedBox(
+                      height: 52,
+                      child: ElevatedButton(
+                        onPressed: isLoading ? null : _saveChanges,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.primary,
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius:
+                                BorderRadius.circular(AppRadius.large),
+                          ),
+                        ),
+                        child: isLoading
+                            ? const SizedBox(
+                                width: 24,
+                                height: 24,
+                                child: CircularProgressIndicator(
+                                    color: Colors.white, strokeWidth: 2))
+                            : Text(l10n.fleaMarketSaveChanges,
+                                style: const TextStyle(
+                                    fontSize: 16, fontWeight: FontWeight.w600)),
+                      ),
                     ),
-                  ),
-                  child: _isLoading
-                      ? const SizedBox(
-                          width: 24,
-                          height: 24,
-                          child: CircularProgressIndicator(
-                              color: Colors.white, strokeWidth: 2))
-                      : Text(l10n.fleaMarketSaveChanges,
-                          style: const TextStyle(
-                              fontSize: 16, fontWeight: FontWeight.w600)),
+                    const SizedBox(height: AppSpacing.xxl),
+                  ],
                 ),
               ),
-              const SizedBox(height: AppSpacing.xxl),
-            ],
-          ),
-        ),
+            ),
+          );
+        },
       ),
     );
   }
@@ -359,7 +404,7 @@ class _EditFleaMarketItemViewState extends State<EditFleaMarketItemView> {
         borderRadius: BorderRadius.circular(AppRadius.large),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.03),
+            color: Colors.black.withValues(alpha: 0.03),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -400,10 +445,10 @@ class _EditFleaMarketItemViewState extends State<EditFleaMarketItemView> {
         Row(
           children: [
             Text(label,
-                style: TextStyle(
+                style: const TextStyle(
                     fontSize: 14, color: AppColors.textSecondary)),
             if (isRequired)
-              Text(' *', style: TextStyle(color: AppColors.error)),
+              const Text(' *', style: TextStyle(color: AppColors.error)),
           ],
         ),
         const SizedBox(height: 6),
@@ -435,10 +480,10 @@ class _EditFleaMarketItemViewState extends State<EditFleaMarketItemView> {
       children: [
         Text(label,
             style:
-                TextStyle(fontSize: 14, color: AppColors.textSecondary)),
+                const TextStyle(fontSize: 14, color: AppColors.textSecondary)),
         const SizedBox(height: 6),
         DropdownButtonFormField<String>(
-          value: value,
+          initialValue: value,
           decoration: InputDecoration(
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(AppRadius.medium),
@@ -477,7 +522,7 @@ class _EditFleaMarketItemViewState extends State<EditFleaMarketItemView> {
               onTap: onRemove,
               child: Container(
                 decoration: BoxDecoration(
-                  color: Colors.black.withOpacity(0.5),
+                  color: Colors.black.withValues(alpha: 0.5),
                   shape: BoxShape.circle,
                 ),
                 padding: const EdgeInsets.all(4),

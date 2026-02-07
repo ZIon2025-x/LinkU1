@@ -179,7 +179,7 @@ class _RankItem extends StatelessWidget {
                 const SizedBox(height: 4),
                 Text(
                   '${item.netVotes} 票',
-                  style: TextStyle(fontSize: 12, color: AppColors.textSecondaryLight),
+                  style: const TextStyle(fontSize: 12, color: AppColors.textSecondaryLight),
                 ),
               ],
             ),

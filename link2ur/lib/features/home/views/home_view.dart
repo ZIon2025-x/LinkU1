@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/constants/app_assets.dart';
 import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_typography.dart';
@@ -155,7 +156,7 @@ class _HomeViewContentState extends State<_HomeViewContent> {
   /// 对标iOS: HStack自定义顶部导航栏
   Widget _buildCustomAppBar(bool isDark) {
     return Container(
-      padding: EdgeInsets.symmetric(
+      padding: const EdgeInsets.symmetric(
         horizontal: AppSpacing.md,
         vertical: AppSpacing.sm,
       ),
@@ -319,7 +320,7 @@ class _TabButton extends StatelessWidget {
             // 对标iOS: Capsule下划线指示器
             AnimatedContainer(
               duration: const Duration(milliseconds: 280),
-              curve: Curves.easeOutBack,
+              curve: Curves.easeOut,
               height: 3,
               width: isSelected ? 28 : 0,
               decoration: BoxDecoration(
@@ -371,7 +372,7 @@ class _RecommendedTab extends StatelessWidget {
               // 对标iOS: RecommendedTasksSection - 推荐任务标题
               SliverToBoxAdapter(
                 child: Padding(
-                  padding: EdgeInsets.fromLTRB(
+                  padding: const EdgeInsets.fromLTRB(
                       AppSpacing.md, AppSpacing.lg, AppSpacing.md, AppSpacing.md),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -441,7 +442,7 @@ class _RecommendedTab extends StatelessWidget {
                     height: 200,
                     child: ListView.separated(
                       scrollDirection: Axis.horizontal,
-                      padding: EdgeInsets.only(
+                      padding: const EdgeInsets.only(
                         left: AppSpacing.md,
                         right: AppSpacing.lg,
                       ),
@@ -460,7 +461,7 @@ class _RecommendedTab extends StatelessWidget {
                 // 对标iOS: PopularActivitiesSection - 热门活动标题
                 SliverToBoxAdapter(
                   child: Padding(
-                    padding: EdgeInsets.fromLTRB(
+                    padding: const EdgeInsets.fromLTRB(
                         AppSpacing.md, AppSpacing.lg, AppSpacing.md, AppSpacing.md),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -507,7 +508,7 @@ class _RecommendedTab extends StatelessWidget {
                 // 对标iOS: RecentActivitiesSection - 最新动态标题
                 SliverToBoxAdapter(
                   child: Padding(
-                    padding: EdgeInsets.fromLTRB(
+                    padding: const EdgeInsets.fromLTRB(
                         AppSpacing.md, AppSpacing.lg, AppSpacing.md, AppSpacing.md),
                     child: Text(
                       context.l10n.homeLatestActivity,
@@ -547,7 +548,7 @@ class _GreetingSection extends StatelessWidget {
         : '同学';
 
     return Padding(
-      padding: EdgeInsets.fromLTRB(
+      padding: const EdgeInsets.fromLTRB(
           AppSpacing.md, AppSpacing.lg, AppSpacing.md, AppSpacing.md),
       child: Row(
         children: [
@@ -630,7 +631,7 @@ class _BannerCarouselState extends State<_BannerCarousel> {
       children: [
         Container(
           height: 150,
-          margin: EdgeInsets.symmetric(horizontal: AppSpacing.md),
+          margin: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
           child: PageView(
             controller: _controller,
             onPageChanged: (index) {
@@ -639,20 +640,22 @@ class _BannerCarouselState extends State<_BannerCarousel> {
               });
             },
             children: [
-              // 对标iOS: 跳蚤市场Banner (hardcoded)
+              // 对标iOS: 跳蚤市场Banner — 使用真实图片
               _BannerItem(
                 title: '二手市场',
                 subtitle: '闲置物品，低价出售',
                 gradient: const [Color(0xFF34C759), Color(0xFF30D158)],
                 icon: Icons.storefront,
+                imagePath: AppAssets.fleaMarketBanner,
                 onTap: () => context.push('/flea-market'),
               ),
-              // 对标iOS: 学生认证Banner (hardcoded)
+              // 对标iOS: 学生认证Banner — 使用真实图片
               _BannerItem(
                 title: '学生认证',
                 subtitle: '完成认证，享受更多权益',
                 gradient: const [Color(0xFF5856D6), Color(0xFF007AFF)],
                 icon: Icons.school,
+                imagePath: AppAssets.studentVerificationBanner,
                 onTap: () => context.push('/student-verification'),
               ),
               // 任务达人Banner
@@ -697,6 +700,7 @@ class _BannerItem extends StatelessWidget {
     required this.gradient,
     required this.icon,
     required this.onTap,
+    this.imagePath,
   });
 
   final String title;
@@ -704,6 +708,7 @@ class _BannerItem extends StatelessWidget {
   final List<Color> gradient;
   final IconData icon;
   final VoidCallback onTap;
+  final String? imagePath;
 
   @override
   Widget build(BuildContext context) {
@@ -711,12 +716,15 @@ class _BannerItem extends StatelessWidget {
       onTap: onTap,
       child: Container(
         margin: const EdgeInsets.symmetric(horizontal: 4),
+        clipBehavior: Clip.antiAlias,
         decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: gradient,
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
+          gradient: imagePath == null
+              ? LinearGradient(
+                  colors: gradient,
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                )
+              : null,
           borderRadius: AppRadius.allMedium,
           boxShadow: [
             BoxShadow(
@@ -727,17 +735,52 @@ class _BannerItem extends StatelessWidget {
           ],
         ),
         child: Stack(
+          fit: StackFit.expand,
           children: [
-            // 装饰图标
-            Positioned(
-              right: 20,
-              bottom: 10,
-              child: Icon(
-                icon,
-                size: 80,
-                color: Colors.white.withValues(alpha: 0.2),
+            // 真实图片背景
+            if (imagePath != null)
+              Image.asset(
+                imagePath!,
+                fit: BoxFit.cover,
+                errorBuilder: (context, error, stackTrace) {
+                  // 图片加载失败时回退到渐变背景
+                  return Container(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: gradient,
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                    ),
+                  );
+                },
               ),
-            ),
+            // 图片上的渐变遮罩，保证文字可读
+            if (imagePath != null)
+              Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      Colors.black.withValues(alpha: 0.55),
+                      Colors.black.withValues(alpha: 0.15),
+                    ],
+                    begin: Alignment.centerLeft,
+                    end: Alignment.centerRight,
+                  ),
+                ),
+              ),
+            // 装饰图标（无图片时显示）
+            if (imagePath == null)
+              Positioned(
+                right: 20,
+                bottom: 10,
+                child: Icon(
+                  icon,
+                  size: 80,
+                  color: Colors.white.withValues(alpha: 0.2),
+                ),
+              ),
+            // 文字内容
             Padding(
               padding: const EdgeInsets.all(20),
               child: Column(
@@ -750,14 +793,28 @@ class _BannerItem extends StatelessWidget {
                       color: Colors.white,
                       fontSize: 22,
                       fontWeight: FontWeight.bold,
+                      shadows: [
+                        Shadow(
+                          color: Colors.black26,
+                          blurRadius: 4,
+                          offset: Offset(0, 1),
+                        ),
+                      ],
                     ),
                   ),
                   const SizedBox(height: 6),
                   Text(
                     subtitle,
                     style: TextStyle(
-                      color: Colors.white.withValues(alpha: 0.85),
+                      color: Colors.white.withValues(alpha: 0.9),
                       fontSize: 14,
+                      shadows: const [
+                        Shadow(
+                          color: Colors.black26,
+                          blurRadius: 4,
+                          offset: Offset(0, 1),
+                        ),
+                      ],
                     ),
                   ),
                 ],
@@ -778,7 +835,7 @@ class _PopularActivitiesSection extends StatelessWidget {
       height: 120,
       child: ListView(
         scrollDirection: Axis.horizontal,
-        padding: EdgeInsets.only(
+        padding: const EdgeInsets.only(
           left: AppSpacing.md,
           right: AppSpacing.lg,
         ),
@@ -878,24 +935,24 @@ class _RecentActivitiesSection extends StatelessWidget {
 
     // 模拟最新动态数据 (实际应从API获取)
     final activities = [
-      _RecentActivityData(
+      const _RecentActivityData(
         icon: Icons.forum,
-        iconGradient: const [Color(0xFF34C759), Color(0xFF30D158)],
+        iconGradient: [Color(0xFF34C759), Color(0xFF30D158)],
         userName: '用户',
         actionText: '发布了新帖子',
         title: '校园生活分享',
         description: '分享我的校园日常',
       ),
-      _RecentActivityData(
+      const _RecentActivityData(
         icon: Icons.shopping_bag,
-        iconGradient: const [Color(0xFFFF9500), Color(0xFFFF6B00)],
+        iconGradient: [Color(0xFFFF9500), Color(0xFFFF6B00)],
         userName: '用户',
         actionText: '发布了新商品',
         title: '闲置书籍出售',
       ),
-      _RecentActivityData(
+      const _RecentActivityData(
         icon: Icons.emoji_events,
-        iconGradient: const [Color(0xFF5856D6), Color(0xFF007AFF)],
+        iconGradient: [Color(0xFF5856D6), Color(0xFF007AFF)],
         userName: '系统',
         actionText: '创建了新排行榜',
         title: '本周任务达人榜',
@@ -983,7 +1040,7 @@ class _ActivityRow extends StatelessWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Container(
-      padding: EdgeInsets.all(AppSpacing.md),
+      padding: const EdgeInsets.all(AppSpacing.md),
       decoration: BoxDecoration(
         color: isDark
             ? AppColors.cardBackgroundDark
@@ -1024,7 +1081,7 @@ class _ActivityRow extends StatelessWidget {
               size: 22,
             ),
           ),
-          SizedBox(width: AppSpacing.md),
+          const SizedBox(width: AppSpacing.md),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -1176,7 +1233,7 @@ class _HorizontalTaskCard extends StatelessWidget {
                       children: [
                         Text(
                           '${task.currency == 'GBP' ? '£' : '\$'}${task.reward.toStringAsFixed(0)}',
-                          style: TextStyle(
+                          style: const TextStyle(
                             fontSize: 14,
                             fontWeight: FontWeight.bold,
                             color: AppColors.primary,
@@ -1222,7 +1279,7 @@ class _NearbyTab extends StatelessWidget {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(
+                const Icon(
                   Icons.location_off_outlined,
                   size: 64,
                   color: AppColors.textTertiaryLight,
@@ -1230,7 +1287,7 @@ class _NearbyTab extends StatelessWidget {
                 AppSpacing.vMd,
                 Text(
                   context.l10n.homeNoNearbyTasks,
-                  style: TextStyle(color: AppColors.textSecondaryLight),
+                  style: const TextStyle(color: AppColors.textSecondaryLight),
                 ),
                 AppSpacing.vMd,
                 TextButton.icon(
@@ -1286,14 +1343,14 @@ class _ExpertsTab extends StatelessWidget {
       children: [
         // 对标iOS: 搜索框
         Padding(
-          padding: EdgeInsets.symmetric(
+          padding: const EdgeInsets.symmetric(
             horizontal: AppSpacing.md,
             vertical: AppSpacing.sm,
           ),
           child: GestureDetector(
             onTap: () => context.push('/task-experts'),
             child: Container(
-              padding: EdgeInsets.symmetric(
+              padding: const EdgeInsets.symmetric(
                 horizontal: AppSpacing.md,
                 vertical: AppSpacing.sm + 2,
               ),
@@ -1316,7 +1373,7 @@ class _ExpertsTab extends StatelessWidget {
                         : AppColors.textTertiaryLight,
                     size: 20,
                   ),
-                  SizedBox(width: AppSpacing.sm),
+                  const SizedBox(width: AppSpacing.sm),
                   Text(
                     context.l10n.homeSearchExperts,
                     style: AppTypography.subheadline.copyWith(
@@ -1517,7 +1574,7 @@ class _MenuView extends StatelessWidget {
           ),
           // 标题栏
           Padding(
-            padding: EdgeInsets.symmetric(
+            padding: const EdgeInsets.symmetric(
               horizontal: AppSpacing.md,
               vertical: AppSpacing.sm,
             ),
@@ -1743,7 +1800,7 @@ class _SearchViewState extends State<_SearchView> {
 
           // 搜索栏
           Padding(
-            padding: EdgeInsets.symmetric(
+            padding: const EdgeInsets.symmetric(
               horizontal: AppSpacing.md,
               vertical: AppSpacing.sm,
             ),
@@ -1955,7 +2012,7 @@ class _SearchCategoryItem extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Padding(
-        padding: EdgeInsets.only(bottom: AppSpacing.sm),
+        padding: const EdgeInsets.only(bottom: AppSpacing.sm),
         child: Row(
           children: [
             Container(

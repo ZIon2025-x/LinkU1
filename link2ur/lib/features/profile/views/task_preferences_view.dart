@@ -6,6 +6,9 @@ import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_radius.dart';
 import '../../../core/utils/l10n_extension.dart';
 import '../../../data/repositories/user_repository.dart';
+import '../../../data/repositories/task_repository.dart';
+import '../../../data/repositories/forum_repository.dart';
+import '../bloc/profile_bloc.dart';
 
 /// 任务偏好设置页
 /// 参考iOS TaskPreferencesView.swift
@@ -17,9 +20,6 @@ class TaskPreferencesView extends StatefulWidget {
 }
 
 class _TaskPreferencesViewState extends State<TaskPreferencesView> {
-  bool _isLoading = true;
-  bool _isSaving = false;
-
   final Set<String> _selectedTaskTypes = {};
   final Set<String> _selectedLocations = {};
   final Set<String> _selectedLevels = {};
@@ -50,50 +50,13 @@ class _TaskPreferencesViewState extends State<TaskPreferencesView> {
 
   static const _taskLevels = ['Normal', 'VIP', 'Super'];
 
-  @override
-  void initState() {
-    super.initState();
-    _loadPreferences();
-  }
-
-  Future<void> _loadPreferences() async {
-    try {
-      final repo = context.read<UserRepository>();
-      final prefs = await repo.getUserPreferences();
-      if (mounted) {
-        setState(() {
-          _selectedTaskTypes.addAll(prefs['task_types'] as List<String>? ?? []);
-          _selectedLocations.addAll(prefs['locations'] as List<String>? ?? []);
-          _selectedLevels.addAll(prefs['task_levels'] as List<String>? ?? []);
-          _minDeadlineDays = prefs['min_deadline_days'] as int? ?? 1;
-          _isLoading = false;
-        });
-      }
-    } catch (_) {
-      if (mounted) setState(() => _isLoading = false);
-    }
-  }
-
-  Future<void> _savePreferences() async {
-    setState(() => _isSaving = true);
-
-    try {
-      final repo = context.read<UserRepository>();
-      await repo.updateUserPreferences({
-        'task_types': _selectedTaskTypes.toList(),
-        'locations': _selectedLocations.toList(),
-        'task_levels': _selectedLevels.toList(),
-        'min_deadline_days': _minDeadlineDays,
-      });
-      if (mounted) Navigator.of(context).pop();
-    } catch (e) {
-      if (mounted) {
-        setState(() => _isSaving = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e.toString())),
-        );
-      }
-    }
+  void _savePreferences(BuildContext context) {
+    context.read<ProfileBloc>().add(ProfileUpdatePreferences({
+          'task_types': _selectedTaskTypes.toList(),
+          'locations': _selectedLocations.toList(),
+          'task_levels': _selectedLevels.toList(),
+          'min_deadline_days': _minDeadlineDays,
+        }));
   }
 
   void _toggleItem(Set<String> set, String item) {
@@ -110,19 +73,51 @@ class _TaskPreferencesViewState extends State<TaskPreferencesView> {
   Widget build(BuildContext context) {
     final l10n = context.l10n;
 
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(l10n.taskPreferencesTitle),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: Text(l10n.commonDone),
-          ),
-        ],
-      ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : SingleChildScrollView(
+    return BlocProvider(
+      create: (context) => ProfileBloc(
+        userRepository: context.read<UserRepository>(),
+        taskRepository: context.read<TaskRepository>(),
+        forumRepository: context.read<ForumRepository>(),
+      )..add(const ProfileLoadPreferences()),
+      child: BlocConsumer<ProfileBloc, ProfileState>(
+        listener: (context, state) {
+          // Initialize form fields when preferences load
+          if (state.preferences != null && _selectedTaskTypes.isEmpty) {
+            final prefs = state.preferences!;
+            setState(() {
+              _selectedTaskTypes.addAll(prefs['task_types'] as List<String>? ?? []);
+              _selectedLocations.addAll(prefs['locations'] as List<String>? ?? []);
+              _selectedLevels.addAll(prefs['task_levels'] as List<String>? ?? []);
+              _minDeadlineDays = prefs['min_deadline_days'] as int? ?? 1;
+            });
+          }
+
+          // Handle save success
+          if (state.actionMessage == '偏好设置已更新') {
+            Navigator.of(context).pop();
+          }
+
+          // Handle errors
+          if (state.errorMessage != null && state.actionMessage == null) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text(state.errorMessage!)),
+            );
+          }
+        },
+        builder: (context, state) {
+          return Scaffold(
+            appBar: AppBar(
+              title: Text(l10n.taskPreferencesTitle),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: Text(l10n.commonDone),
+                ),
+              ],
+            ),
+            body: state.preferences == null && state.status == ProfileStatus.loading
+                ? const Center(child: CircularProgressIndicator())
+                : SingleChildScrollView(
               padding: const EdgeInsets.all(AppSpacing.md),
               child: Column(
                 children: [
@@ -230,7 +225,7 @@ class _TaskPreferencesViewState extends State<TaskPreferencesView> {
                     width: double.infinity,
                     height: 56,
                     child: ElevatedButton(
-                      onPressed: _isSaving ? null : _savePreferences,
+                      onPressed: state.isUpdating ? null : () => _savePreferences(context),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.primary,
                         foregroundColor: Colors.white,
@@ -239,7 +234,7 @@ class _TaskPreferencesViewState extends State<TaskPreferencesView> {
                               BorderRadius.circular(AppRadius.large),
                         ),
                       ),
-                      child: _isSaving
+                      child: state.isUpdating
                           ? const SizedBox(
                               width: 24,
                               height: 24,
@@ -255,6 +250,9 @@ class _TaskPreferencesViewState extends State<TaskPreferencesView> {
                 ],
               ),
             ),
+          );
+        },
+      ),
     );
   }
 }
@@ -279,7 +277,7 @@ class _PreferenceSection extends StatelessWidget {
         borderRadius: BorderRadius.circular(AppRadius.large),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.04),
+            color: Colors.black.withValues(alpha: 0.04),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -293,7 +291,7 @@ class _PreferenceSection extends StatelessWidget {
                   fontSize: 16, fontWeight: FontWeight.bold)),
           const SizedBox(height: 4),
           Text(description,
-              style: TextStyle(
+              style: const TextStyle(
                   fontSize: 12, color: AppColors.textSecondary)),
           const SizedBox(height: AppSpacing.md),
           child,
@@ -322,7 +320,7 @@ class _ToggleChip extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
         decoration: BoxDecoration(
           color: isSelected
-              ? AppColors.primary.withOpacity(0.1)
+              ? AppColors.primary.withValues(alpha: 0.1)
               : Theme.of(context).cardColor,
           borderRadius: BorderRadius.circular(AppRadius.medium),
           border: Border.all(

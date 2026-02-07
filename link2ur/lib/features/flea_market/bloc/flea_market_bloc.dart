@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -95,6 +97,19 @@ class FleaMarketLoadDetailRequested extends FleaMarketEvent {
   List<Object?> get props => [itemId];
 }
 
+class FleaMarketUploadImage extends FleaMarketEvent {
+  const FleaMarketUploadImage({
+    required this.imageBytes,
+    required this.filename,
+  });
+
+  final Uint8List imageBytes;
+  final String filename;
+
+  @override
+  List<Object?> get props => [imageBytes.length, filename];
+}
+
 // ==================== State ====================
 
 enum FleaMarketStatus { initial, loading, loaded, error }
@@ -114,6 +129,8 @@ class FleaMarketState extends Equatable {
     this.actionMessage,
     this.selectedItem,
     this.detailStatus = FleaMarketStatus.initial,
+    this.isUploadingImage = false,
+    this.uploadedImageUrl,
   });
 
   final FleaMarketStatus status;
@@ -129,6 +146,8 @@ class FleaMarketState extends Equatable {
   final String? actionMessage;
   final FleaMarketItem? selectedItem;
   final FleaMarketStatus detailStatus;
+  final bool isUploadingImage;
+  final String? uploadedImageUrl;
 
   bool get isLoading => status == FleaMarketStatus.loading;
   bool get isEmpty => items.isEmpty && status == FleaMarketStatus.loaded;
@@ -149,6 +168,8 @@ class FleaMarketState extends Equatable {
     String? actionMessage,
     FleaMarketItem? selectedItem,
     FleaMarketStatus? detailStatus,
+    bool? isUploadingImage,
+    String? uploadedImageUrl,
   }) {
     return FleaMarketState(
       status: status ?? this.status,
@@ -164,6 +185,8 @@ class FleaMarketState extends Equatable {
       actionMessage: actionMessage,
       selectedItem: selectedItem ?? this.selectedItem,
       detailStatus: detailStatus ?? this.detailStatus,
+      isUploadingImage: isUploadingImage ?? this.isUploadingImage,
+      uploadedImageUrl: uploadedImageUrl,
     );
   }
 
@@ -200,6 +223,7 @@ class FleaMarketBloc extends Bloc<FleaMarketEvent, FleaMarketState> {
     on<FleaMarketPurchaseItem>(_onPurchaseItem);
     on<FleaMarketUpdateItem>(_onUpdateItem);
     on<FleaMarketLoadDetailRequested>(_onLoadDetailRequested);
+    on<FleaMarketUploadImage>(_onUploadImage);
   }
 
   final FleaMarketRepository _fleaMarketRepository;
@@ -450,6 +474,34 @@ class FleaMarketBloc extends Bloc<FleaMarketEvent, FleaMarketState> {
       AppLogger.error('Failed to load flea market item detail', e);
       emit(state.copyWith(
         detailStatus: FleaMarketStatus.error,
+        errorMessage: e.toString(),
+      ));
+    }
+  }
+
+  Future<void> _onUploadImage(
+    FleaMarketUploadImage event,
+    Emitter<FleaMarketState> emit,
+  ) async {
+    emit(state.copyWith(
+      isUploadingImage: true,
+      uploadedImageUrl: null,
+      errorMessage: null,
+    ));
+
+    try {
+      final url = await _fleaMarketRepository.uploadImage(
+        event.imageBytes,
+        event.filename,
+      );
+      emit(state.copyWith(
+        isUploadingImage: false,
+        uploadedImageUrl: url,
+      ));
+    } catch (e) {
+      AppLogger.error('Failed to upload image', e);
+      emit(state.copyWith(
+        isUploadingImage: false,
         errorMessage: e.toString(),
       ));
     }

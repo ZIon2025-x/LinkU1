@@ -12,7 +12,9 @@ import '../../../core/widgets/cards.dart';
 import '../../../core/widgets/async_image_view.dart';
 import '../../../data/models/task.dart';
 import '../../../data/repositories/task_repository.dart';
-import '../../../core/utils/logger.dart';
+import '../../../data/repositories/user_repository.dart';
+import '../../../data/repositories/forum_repository.dart';
+import '../bloc/profile_bloc.dart';
 
 /// 我的任务页面
 /// 显示我接取的任务和我发布的任务
@@ -27,25 +29,13 @@ class _MyTasksViewState extends State<MyTasksView>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
   final ScrollController _scrollController = ScrollController();
-
-  List<Task> _myTasks = [];
-  List<Task> _myPostedTasks = [];
-  bool _isLoadingMyTasks = false;
-  bool _isLoadingMyPostedTasks = false;
-  String? _errorMessageMyTasks;
-  String? _errorMessageMyPostedTasks;
-  int _myTasksPage = 1;
-  int _myPostedTasksPage = 1;
-  bool _hasMoreMyTasks = true;
-  bool _hasMoreMyPostedTasks = true;
+  ProfileState? _currentState;
+  bool _scrollListenerAttached = false;
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
-    _scrollController.addListener(_onScroll);
-    _loadMyTasks();
-    _loadMyPostedTasks();
   }
 
   @override
@@ -56,147 +46,91 @@ class _MyTasksViewState extends State<MyTasksView>
   }
 
   void _onScroll() {
+    if (_currentState == null) return;
     if (_scrollController.position.pixels >=
         _scrollController.position.maxScrollExtent - 200) {
-      if (_tabController.index == 0 && _hasMoreMyTasks) {
-        _loadMoreMyTasks();
-      } else if (_tabController.index == 1 && _hasMoreMyPostedTasks) {
-        _loadMoreMyPostedTasks();
+      final context = this.context;
+      final bloc = context.read<ProfileBloc>();
+      if (_tabController.index == 0 && _currentState!.myTasksHasMore) {
+        bloc.add(ProfileLoadMyTasks(
+          isPosted: false,
+          page: _currentState!.myTasksPage + 1,
+        ));
+      } else if (_tabController.index == 1 && _currentState!.postedTasksHasMore) {
+        bloc.add(ProfileLoadMyTasks(
+          isPosted: true,
+          page: _currentState!.postedTasksPage + 1,
+        ));
       }
-    }
-  }
-
-  Future<void> _loadMyTasks() async {
-    if (_isLoadingMyTasks) return;
-
-    setState(() {
-      _isLoadingMyTasks = true;
-      _errorMessageMyTasks = null;
-    });
-
-    try {
-      final taskRepo = context.read<TaskRepository>();
-      final response = await taskRepo.getMyTasks(page: 1, pageSize: 20);
-
-      setState(() {
-        _myTasks = response.tasks;
-        _myTasksPage = 1;
-        _hasMoreMyTasks = response.hasMore;
-        _isLoadingMyTasks = false;
-      });
-    } catch (e) {
-      AppLogger.error('Failed to load my tasks', e);
-      setState(() {
-        _isLoadingMyTasks = false;
-        _errorMessageMyTasks = e.toString();
-      });
-    }
-  }
-
-  Future<void> _loadMoreMyTasks() async {
-    if (_isLoadingMyTasks || !_hasMoreMyTasks) return;
-
-    try {
-      final taskRepo = context.read<TaskRepository>();
-      final nextPage = _myTasksPage + 1;
-      final response = await taskRepo.getMyTasks(page: nextPage, pageSize: 20);
-
-      setState(() {
-        _myTasks.addAll(response.tasks);
-        _myTasksPage = nextPage;
-        _hasMoreMyTasks = response.hasMore;
-      });
-    } catch (e) {
-      AppLogger.error('Failed to load more my tasks', e);
-    }
-  }
-
-  Future<void> _loadMyPostedTasks() async {
-    if (_isLoadingMyPostedTasks) return;
-
-    setState(() {
-      _isLoadingMyPostedTasks = true;
-      _errorMessageMyPostedTasks = null;
-    });
-
-    try {
-      final taskRepo = context.read<TaskRepository>();
-      final response =
-          await taskRepo.getMyPostedTasks(page: 1, pageSize: 20);
-
-      setState(() {
-        _myPostedTasks = response.tasks;
-        _myPostedTasksPage = 1;
-        _hasMoreMyPostedTasks = response.hasMore;
-        _isLoadingMyPostedTasks = false;
-      });
-    } catch (e) {
-      AppLogger.error('Failed to load my posted tasks', e);
-      setState(() {
-        _isLoadingMyPostedTasks = false;
-        _errorMessageMyPostedTasks = e.toString();
-      });
-    }
-  }
-
-  Future<void> _loadMoreMyPostedTasks() async {
-    if (_isLoadingMyPostedTasks || !_hasMoreMyPostedTasks) return;
-
-    try {
-      final taskRepo = context.read<TaskRepository>();
-      final nextPage = _myPostedTasksPage + 1;
-      final response =
-          await taskRepo.getMyPostedTasks(page: nextPage, pageSize: 20);
-
-      setState(() {
-        _myPostedTasks.addAll(response.tasks);
-        _myPostedTasksPage = nextPage;
-        _hasMoreMyPostedTasks = response.hasMore;
-      });
-    } catch (e) {
-      AppLogger.error('Failed to load more my posted tasks', e);
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('我的任务'),
-        bottom: TabBar(
-          controller: _tabController,
-          tabs: const [
-            Tab(text: '我接的'),
-            Tab(text: '我发的'),
-          ],
-          labelColor: AppColors.primary,
-          unselectedLabelColor: AppColors.textSecondaryLight,
-          indicatorColor: AppColors.primary,
+    return BlocProvider(
+      create: (context) => ProfileBloc(
+        userRepository: context.read<UserRepository>(),
+        taskRepository: context.read<TaskRepository>(),
+        forumRepository: context.read<ForumRepository>(),
+      )
+        ..add(const ProfileLoadMyTasks(isPosted: false, page: 1))
+        ..add(const ProfileLoadMyTasks(isPosted: true, page: 1)),
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('我的任务'),
+          bottom: TabBar(
+            controller: _tabController,
+            tabs: const [
+              Tab(text: '我接的'),
+              Tab(text: '我发的'),
+            ],
+            labelColor: AppColors.primary,
+            unselectedLabelColor: AppColors.textSecondaryLight,
+            indicatorColor: AppColors.primary,
+          ),
         ),
-      ),
-      body: TabBarView(
-        controller: _tabController,
-        children: [
-          _buildMyTasksTab(),
-          _buildMyPostedTasksTab(),
-        ],
+        body: BlocBuilder<ProfileBloc, ProfileState>(
+          builder: (context, state) {
+            // Update current state for scroll listener
+            _currentState = state;
+            // Ensure scroll listener is attached once
+            if (!_scrollListenerAttached) {
+              _scrollListenerAttached = true;
+              _scrollController.addListener(_onScroll);
+            }
+
+            return TabBarView(
+              controller: _tabController,
+              children: [
+                _buildMyTasksTab(context, state),
+                _buildMyPostedTasksTab(context, state),
+              ],
+            );
+          },
+        ),
       ),
     );
   }
 
-  Widget _buildMyTasksTab() {
-    if (_isLoadingMyTasks && _myTasks.isEmpty) {
+  Widget _buildMyTasksTab(BuildContext context, ProfileState state) {
+    final isLoading = state.myTasks.isEmpty && state.status == ProfileStatus.loading;
+    
+    if (isLoading) {
       return const LoadingView();
     }
 
-    if (_errorMessageMyTasks != null && _myTasks.isEmpty) {
+    if (state.errorMessage != null && state.myTasks.isEmpty) {
       return ErrorStateView(
-        message: _errorMessageMyTasks!,
-        onRetry: _loadMyTasks,
+        message: state.errorMessage!,
+        onRetry: () {
+          context.read<ProfileBloc>().add(
+                const ProfileLoadMyTasks(isPosted: false, page: 1),
+              );
+        },
       );
     }
 
-    if (_myTasks.isEmpty) {
+    if (state.myTasks.isEmpty) {
       return EmptyStateView.noTasks(
         actionText: '去接任务',
         onAction: () {
@@ -206,14 +140,18 @@ class _MyTasksViewState extends State<MyTasksView>
     }
 
     return RefreshIndicator(
-      onRefresh: _loadMyTasks,
+      onRefresh: () async {
+        context.read<ProfileBloc>().add(
+              const ProfileLoadMyTasks(isPosted: false, page: 1),
+            );
+      },
       child: ListView.separated(
         controller: _scrollController,
         padding: AppSpacing.allMd,
-        itemCount: _myTasks.length + (_hasMoreMyTasks ? 1 : 0),
+        itemCount: state.myTasks.length + (state.myTasksHasMore ? 1 : 0),
         separatorBuilder: (context, index) => AppSpacing.vMd,
         itemBuilder: (context, index) {
-          if (index >= _myTasks.length) {
+          if (index >= state.myTasks.length) {
             return const Center(
               child: Padding(
                 padding: EdgeInsets.all(16),
@@ -221,25 +159,31 @@ class _MyTasksViewState extends State<MyTasksView>
               ),
             );
           }
-          return _TaskCard(task: _myTasks[index]);
+          return _TaskCard(task: state.myTasks[index]);
         },
       ),
     );
   }
 
-  Widget _buildMyPostedTasksTab() {
-    if (_isLoadingMyPostedTasks && _myPostedTasks.isEmpty) {
+  Widget _buildMyPostedTasksTab(BuildContext context, ProfileState state) {
+    final isLoading = state.postedTasks.isEmpty && state.status == ProfileStatus.loading;
+    
+    if (isLoading) {
       return const LoadingView();
     }
 
-    if (_errorMessageMyPostedTasks != null && _myPostedTasks.isEmpty) {
+    if (state.errorMessage != null && state.postedTasks.isEmpty) {
       return ErrorStateView(
-        message: _errorMessageMyPostedTasks!,
-        onRetry: _loadMyPostedTasks,
+        message: state.errorMessage!,
+        onRetry: () {
+          context.read<ProfileBloc>().add(
+                const ProfileLoadMyTasks(isPosted: true, page: 1),
+              );
+        },
       );
     }
 
-    if (_myPostedTasks.isEmpty) {
+    if (state.postedTasks.isEmpty) {
       return EmptyStateView.noTasks(
         actionText: '发布任务',
         onAction: () {
@@ -249,14 +193,18 @@ class _MyTasksViewState extends State<MyTasksView>
     }
 
     return RefreshIndicator(
-      onRefresh: _loadMyPostedTasks,
+      onRefresh: () async {
+        context.read<ProfileBloc>().add(
+              const ProfileLoadMyTasks(isPosted: true, page: 1),
+            );
+      },
       child: ListView.separated(
         controller: _scrollController,
         padding: AppSpacing.allMd,
-        itemCount: _myPostedTasks.length + (_hasMoreMyPostedTasks ? 1 : 0),
+        itemCount: state.postedTasks.length + (state.postedTasksHasMore ? 1 : 0),
         separatorBuilder: (context, index) => AppSpacing.vMd,
         itemBuilder: (context, index) {
-          if (index >= _myPostedTasks.length) {
+          if (index >= state.postedTasks.length) {
             return const Center(
               child: Padding(
                 padding: EdgeInsets.all(16),
@@ -264,7 +212,7 @@ class _MyTasksViewState extends State<MyTasksView>
               ),
             );
           }
-          return _TaskCard(task: _myPostedTasks[index]);
+          return _TaskCard(task: state.postedTasks[index]);
         },
       ),
     );
@@ -316,7 +264,7 @@ class _TaskCard extends StatelessWidget {
                     ),
                     Text(
                       task.taskTypeText,
-                      style: TextStyle(
+                      style: const TextStyle(
                         fontSize: 12,
                         color: AppColors.textTertiaryLight,
                       ),
@@ -369,7 +317,7 @@ class _TaskCard extends StatelessWidget {
             AppSpacing.vSm,
             Text(
               task.displayDescription!,
-              style: TextStyle(
+              style: const TextStyle(
                 fontSize: 14,
                 color: AppColors.textSecondaryLight,
               ),
@@ -394,7 +342,7 @@ class _TaskCard extends StatelessWidget {
               if (task.location != null)
                 Row(
                   children: [
-                    Icon(
+                    const Icon(
                       Icons.location_on_outlined,
                       size: 16,
                       color: AppColors.textTertiaryLight,
@@ -402,7 +350,7 @@ class _TaskCard extends StatelessWidget {
                     const SizedBox(width: 4),
                     Text(
                       task.location!,
-                      style: TextStyle(
+                      style: const TextStyle(
                         fontSize: 12,
                         color: AppColors.textTertiaryLight,
                       ),

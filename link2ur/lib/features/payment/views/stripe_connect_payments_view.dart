@@ -105,8 +105,8 @@ class _PaymentCard extends StatelessWidget {
             height: 40,
             decoration: BoxDecoration(
               color: amount > 0
-                  ? AppColors.success.withOpacity(0.1)
-                  : AppColors.error.withOpacity(0.1),
+                  ? AppColors.success.withValues(alpha: 0.1)
+                  : AppColors.error.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(10),
             ),
             child: Icon(
@@ -125,7 +125,7 @@ class _PaymentCard extends StatelessWidget {
                         fontSize: 14, fontWeight: FontWeight.w500)),
                 const SizedBox(height: 4),
                 Text(createdAt,
-                    style: TextStyle(
+                    style: const TextStyle(
                         fontSize: 12,
                         color: AppColors.textTertiary)),
               ],
@@ -144,7 +144,7 @@ class _PaymentCard extends StatelessWidget {
               ),
               const SizedBox(height: 4),
               Text(status,
-                  style: TextStyle(
+                  style: const TextStyle(
                       fontSize: 11,
                       color: AppColors.textTertiary)),
             ],

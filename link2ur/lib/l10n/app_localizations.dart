@@ -1698,7 +1698,7 @@ abstract class AppLocalizations {
   /// No description provided for @taskExpertNoExpertsFoundWithQuery.
   ///
   /// In en, this message translates to:
-  /// **'No experts found containing \\'**
+  /// **'No experts found matching your search'**
   String get taskExpertNoExpertsFoundWithQuery;
 
   /// No description provided for @taskExpertSearchTitle.
@@ -2184,7 +2184,7 @@ abstract class AppLocalizations {
   /// No description provided for @studentVerificationBenefitCampusLifeDescription.
   ///
   /// In en, this message translates to:
-  /// **'Only verified students can post \\'**
+  /// **'Post and participate in campus life related tasks'**
   String get studentVerificationBenefitCampusLifeDescription;
 
   /// No description provided for @studentVerificationBenefitStudentCommunity.
@@ -2538,7 +2538,7 @@ abstract class AppLocalizations {
   /// No description provided for @errorRequestFailed.
   ///
   /// In en, this message translates to:
-  /// **'Request failed'**
+  /// **'Request failed (Error code: {param1})'**
   String errorRequestFailed(int param1);
 
   /// No description provided for @errorDecodingError.
@@ -2550,7 +2550,7 @@ abstract class AppLocalizations {
   /// No description provided for @errorUnknown.
   ///
   /// In en, this message translates to:
-  /// **'An unknown error occurred'**
+  /// **'Unknown error occurred, please try again later'**
   String get errorUnknown;
 
   /// No description provided for @errorFileTooLarge.
@@ -5328,7 +5328,7 @@ abstract class AppLocalizations {
   /// No description provided for @createTaskCampusLifeRestriction.
   ///
   /// In en, this message translates to:
-  /// **'Only verified students can post \\'**
+  /// **'Only verified students can post campus life tasks'**
   String get createTaskCampusLifeRestriction;
 
   /// No description provided for @studentVerificationStudentVerification.
@@ -5874,7 +5874,7 @@ abstract class AppLocalizations {
   /// No description provided for @createTaskStudentVerificationRequired.
   ///
   /// In en, this message translates to:
-  /// **'Only verified students can post \\'**
+  /// **'Only verified students can post campus life tasks'**
   String get createTaskStudentVerificationRequired;
 
   /// No description provided for @taskExpertBecomeExpert.
@@ -6540,7 +6540,7 @@ abstract class AppLocalizations {
   /// No description provided for @vipFaqHowToUpgradeSteps.
   ///
   /// In en, this message translates to:
-  /// **'Tap \\'**
+  /// **'Tap the \'Upgrade to VIP\' button on the VIP membership page and choose a suitable plan to purchase.'**
   String get vipFaqHowToUpgradeSteps;
 
   /// No description provided for @serviceNoImages.
@@ -10700,6 +10700,12 @@ abstract class AppLocalizations {
   /// **'Network connection timed out'**
   String get errorNetworkTimeout;
 
+  /// No description provided for @errorRequestFailedGeneric.
+  ///
+  /// In en, this message translates to:
+  /// **'Request failed'**
+  String get errorRequestFailedGeneric;
+
   /// No description provided for @errorRequestCancelled.
   ///
   /// In en, this message translates to:
@@ -10711,6 +10717,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Network connection failed'**
   String get errorNetworkConnection;
+
+  /// No description provided for @errorUnknownGeneric.
+  ///
+  /// In en, this message translates to:
+  /// **'An unknown error occurred'**
+  String get errorUnknownGeneric;
 
   /// No description provided for @errorInsufficientFunds.
   ///

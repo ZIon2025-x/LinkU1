@@ -1,6 +1,7 @@
 import '../models/payment.dart';
 import '../services/api_service.dart';
 import '../../core/constants/api_endpoints.dart';
+import '../../core/utils/cache_manager.dart';
 
 /// 支付仓库
 /// 与iOS PaymentViewModel + 后端 coupon_points_routes 对齐
@@ -10,16 +11,27 @@ class PaymentRepository {
   }) : _apiService = apiService;
 
   final ApiService _apiService;
+  final CacheManager _cache = CacheManager.shared;
 
   /// 创建任务支付（对应后端 /api/coupon-points/tasks/{taskId}/payment）
+  ///
+  /// [preferredPaymentMethod] 对齐 iOS PaymentViewModel：
+  /// - `'card'` → 后端设置 `payment_method_types: ["card"]`
+  /// - `'alipay'` → 后端设置 `payment_method_types: ["alipay"]`
+  /// - `'wechat_pay'` → 微信走单独的 Checkout Session，不用此方法
+  /// - `null` → 后端使用默认支付方式
   Future<TaskPaymentResponse> createTaskPayment({
     required int taskId,
     int? couponId,
+    String? preferredPaymentMethod,
   }) async {
     final response = await _apiService.post<Map<String, dynamic>>(
       ApiEndpoints.createTaskPayment(taskId),
       data: {
+        'payment_method': 'stripe',
         if (couponId != null) 'coupon_id': couponId,
+        if (preferredPaymentMethod != null)
+          'preferred_payment_method': preferredPaymentMethod,
       },
     );
 
@@ -48,17 +60,27 @@ class PaymentRepository {
     int page = 1,
     int pageSize = 20,
   }) async {
+    final params = {'page': page, 'page_size': pageSize};
+    final cacheKey =
+        CacheManager.buildKey('${CacheManager.prefixPayment}history_', params);
+
+    final cached = _cache.get<Map<String, dynamic>>(cacheKey);
+    if (cached != null) {
+      final items = cached['items'] as List<dynamic>? ?? [];
+      return items.map((e) => e as Map<String, dynamic>).toList();
+    }
+
     final response = await _apiService.get<Map<String, dynamic>>(
       ApiEndpoints.paymentHistory,
-      queryParameters: {
-        'page': page,
-        'page_size': pageSize,
-      },
+      queryParameters: params,
     );
 
     if (!response.isSuccess || response.data == null) {
       throw PaymentException(response.message ?? '获取支付历史失败');
     }
+
+    // 支付数据使用个人TTL
+    await _cache.set(cacheKey, response.data!, ttl: CacheManager.personalTTL);
 
     final items = response.data!['items'] as List<dynamic>? ?? [];
     return items.map((e) => e as Map<String, dynamic>).toList();
@@ -87,23 +109,18 @@ class PaymentRepository {
   Future<TaskPaymentResponse> createPaymentIntent({
     required int taskId,
     int? couponId,
+    String? preferredPaymentMethod,
   }) async {
-    return createTaskPayment(taskId: taskId, couponId: couponId);
-  }
-
-  /// 确认支付（Stripe PaymentIntent 确认）
-  Future<void> confirmPayment({required String paymentIntentId}) async {
-    // Stripe 支付确认通常在客户端完成，后端通过 webhook 处理
-    // 此处调用后端确认端点
-    final response = await _apiService.post(
-      ApiEndpoints.paymentHistory, // 触发后端确认逻辑
-      data: {'payment_intent_id': paymentIntentId},
+    return createTaskPayment(
+      taskId: taskId,
+      couponId: couponId,
+      preferredPaymentMethod: preferredPaymentMethod,
     );
-
-    if (!response.isSuccess) {
-      throw PaymentException(response.message ?? '确认支付失败');
-    }
   }
+
+  // 注意：支付确认由 Stripe SDK (PaymentSheet / Apple Pay) 在客户端完成，
+  // 后端通过 Stripe Webhook 接收 payment_intent.succeeded 事件处理。
+  // 无需手动调用后端确认端点。
 
   /// 获取支付方式列表
   Future<List<Map<String, dynamic>>> getPaymentMethods() async {
@@ -205,6 +222,11 @@ class PaymentRepository {
 
   /// 获取Stripe Connect余额
   Future<Map<String, dynamic>> getStripeConnectBalance() async {
+    final cacheKey = '${CacheManager.prefixPayment}balance';
+
+    final cached = _cache.get<Map<String, dynamic>>(cacheKey);
+    if (cached != null) return cached;
+
     final response = await _apiService.get<Map<String, dynamic>>(
       ApiEndpoints.stripeConnectAccountBalance,
     );
@@ -212,6 +234,8 @@ class PaymentRepository {
     if (!response.isSuccess || response.data == null) {
       throw PaymentException(response.message ?? '获取余额失败');
     }
+
+    await _cache.set(cacheKey, response.data!, ttl: CacheManager.personalTTL);
 
     return response.data!;
   }
@@ -221,17 +245,26 @@ class PaymentRepository {
     int page = 1,
     int pageSize = 20,
   }) async {
+    final params = {'page': page, 'page_size': pageSize};
+    final cacheKey =
+        CacheManager.buildKey('${CacheManager.prefixPayment}transactions_', params);
+
+    final cached = _cache.get<Map<String, dynamic>>(cacheKey);
+    if (cached != null) {
+      final items = cached['items'] as List<dynamic>? ?? [];
+      return items.map((e) => e as Map<String, dynamic>).toList();
+    }
+
     final response = await _apiService.get<Map<String, dynamic>>(
       ApiEndpoints.stripeConnectTransactions,
-      queryParameters: {
-        'page': page,
-        'page_size': pageSize,
-      },
+      queryParameters: params,
     );
 
     if (!response.isSuccess || response.data == null) {
       throw PaymentException(response.message ?? '获取交易记录失败');
     }
+
+    await _cache.set(cacheKey, response.data!, ttl: CacheManager.personalTTL);
 
     final items = response.data!['items'] as List<dynamic>? ?? [];
     return items.map((e) => e as Map<String, dynamic>).toList();
@@ -274,6 +307,9 @@ class PaymentRepository {
     if (!response.isSuccess || response.data == null) {
       throw PaymentException(response.message ?? '提现请求失败');
     }
+
+    // 提现后失效支付相关缓存
+    await _cache.invalidatePaymentCache();
 
     return response.data!;
   }

@@ -54,31 +54,31 @@ class AppRadius {
 
   // ==================== 特殊圆角 ====================
   /// 顶部圆角（底部Sheet）
-  static final BorderRadius topLarge = BorderRadius.only(
+  static const BorderRadius topLarge = BorderRadius.only(
     topLeft: Radius.circular(large),
     topRight: Radius.circular(large),
   );
 
   /// 顶部圆角（模态框）
-  static final BorderRadius topXlarge = BorderRadius.only(
+  static const BorderRadius topXlarge = BorderRadius.only(
     topLeft: Radius.circular(xlarge),
     topRight: Radius.circular(xlarge),
   );
 
   /// 底部圆角
-  static final BorderRadius bottomMedium = BorderRadius.only(
+  static const BorderRadius bottomMedium = BorderRadius.only(
     bottomLeft: Radius.circular(medium),
     bottomRight: Radius.circular(medium),
   );
 
   /// 左侧圆角
-  static final BorderRadius leftMedium = BorderRadius.only(
+  static const BorderRadius leftMedium = BorderRadius.only(
     topLeft: Radius.circular(medium),
     bottomLeft: Radius.circular(medium),
   );
 
   /// 右侧圆角
-  static final BorderRadius rightMedium = BorderRadius.only(
+  static const BorderRadius rightMedium = BorderRadius.only(
     topRight: Radius.circular(medium),
     bottomRight: Radius.circular(medium),
   );
@@ -87,11 +87,11 @@ class AppRadius {
   /// 卡片默认圆角
   static final BorderRadius card = allMedium;
 
-  /// 按钮圆角
-  static final BorderRadius button = allSmall;
+  /// 按钮圆角 - 与iOS对齐使用medium(12pt)
+  static final BorderRadius button = allMedium;
 
-  /// 输入框圆角
-  static final BorderRadius input = allSmall;
+  /// 输入框圆角 - 与iOS对齐使用medium(12pt)
+  static final BorderRadius input = allMedium;
 
   /// 图片圆角
   static final BorderRadius image = allMedium;
@@ -103,13 +103,13 @@ class AppRadius {
   static final BorderRadius tag = allTiny;
 
   /// 模态框圆角
-  static final BorderRadius modal = topXlarge;
+  static const BorderRadius modal = topXlarge;
 
   // ==================== Radius快捷方式 ====================
   /// 圆形Radius
-  static final Radius circularTiny = Radius.circular(tiny);
-  static final Radius circularSmall = Radius.circular(small);
-  static final Radius circularMedium = Radius.circular(medium);
-  static final Radius circularLarge = Radius.circular(large);
-  static final Radius circularXlarge = Radius.circular(xlarge);
+  static const Radius circularTiny = Radius.circular(tiny);
+  static const Radius circularSmall = Radius.circular(small);
+  static const Radius circularMedium = Radius.circular(medium);
+  static const Radius circularLarge = Radius.circular(large);
+  static const Radius circularXlarge = Radius.circular(xlarge);
 }

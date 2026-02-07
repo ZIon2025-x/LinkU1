@@ -24,6 +24,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     on<AuthSendEmailCodeRequested>(_onSendEmailCodeRequested);
     on<AuthSendPhoneCodeRequested>(_onSendPhoneCodeRequested);
     on<AuthUserUpdated>(_onUserUpdated);
+    on<AuthResetPasswordRequested>(_onResetPasswordRequested);
   }
 
   final AuthRepository _authRepository;
@@ -196,7 +197,12 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     AuthLogoutRequested event,
     Emitter<AuthState> emit,
   ) async {
-    await _authRepository.logout();
+    try {
+      await _authRepository.logout();
+    } catch (e) {
+      // 即使登出API失败，仍然清除本地状态
+      AppLogger.error('Logout API failed, clearing local state', e);
+    }
     emit(const AuthState(status: AuthStatus.unauthenticated));
   }
 
@@ -258,5 +264,39 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     Emitter<AuthState> emit,
   ) {
     emit(state.copyWith(user: event.user));
+  }
+
+  /// 重置密码
+  Future<void> _onResetPasswordRequested(
+    AuthResetPasswordRequested event,
+    Emitter<AuthState> emit,
+  ) async {
+    emit(state.copyWith(
+      resetPasswordStatus: ResetPasswordStatus.loading,
+      resetPasswordMessage: null,
+    ));
+
+    try {
+      await _authRepository.resetPassword(
+        email: event.email,
+        code: event.code,
+        newPassword: event.newPassword,
+      );
+      emit(state.copyWith(
+        resetPasswordStatus: ResetPasswordStatus.success,
+        resetPasswordMessage: '密码重置成功，请使用新密码登录',
+      ));
+    } on AuthException catch (e) {
+      emit(state.copyWith(
+        resetPasswordStatus: ResetPasswordStatus.error,
+        resetPasswordMessage: e.message,
+      ));
+    } catch (e) {
+      AppLogger.error('Reset password failed', e);
+      emit(state.copyWith(
+        resetPasswordStatus: ResetPasswordStatus.error,
+        resetPasswordMessage: '密码重置失败，请重试',
+      ));
+    }
   }
 }

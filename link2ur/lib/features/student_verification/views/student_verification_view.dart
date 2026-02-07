@@ -162,7 +162,7 @@ class _StudentVerificationContentState
                       AppSpacing.vSm,
                       Text(
                         verification.university!.displayName,
-                        style: TextStyle(
+                        style: const TextStyle(
                           fontSize: 16,
                           color: AppColors.textSecondaryLight,
                         ),
@@ -172,7 +172,7 @@ class _StudentVerificationContentState
                       AppSpacing.vSm,
                       Text(
                         verification.email!,
-                        style: TextStyle(
+                        style: const TextStyle(
                           fontSize: 14,
                           color: AppColors.textTertiaryLight,
                         ),
@@ -186,11 +186,11 @@ class _StudentVerificationContentState
           if (verification.isVerified &&
               verification.daysRemaining != null) ...[
             AppSpacing.vMd,
-            Divider(color: AppColors.dividerLight),
+            const Divider(color: AppColors.dividerLight),
             AppSpacing.vMd,
             Row(
               children: [
-                Icon(
+                const Icon(
                   Icons.access_time_outlined,
                   size: 16,
                   color: AppColors.textSecondaryLight,
@@ -289,7 +289,7 @@ class _StudentVerificationContentState
                 color: AppColors.warning.withValues(alpha: 0.1),
                 borderRadius: AppRadius.allMedium,
               ),
-              child: Row(
+              child: const Row(
                 children: [
                   Icon(Icons.info_outline, color: AppColors.warning),
                   AppSpacing.hSm,
@@ -311,7 +311,7 @@ class _StudentVerificationContentState
                 color: AppColors.warning.withValues(alpha: 0.1),
                 borderRadius: AppRadius.allMedium,
               ),
-              child: Row(
+              child: const Row(
                 children: [
                   Icon(Icons.pending_outlined, color: AppColors.warning),
                   AppSpacing.hSm,

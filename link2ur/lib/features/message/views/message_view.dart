@@ -96,7 +96,7 @@ class _MessageContent extends StatelessWidget {
                 Center(
                   child: Column(
                     children: [
-                      Icon(
+                      const Icon(
                         Icons.message,              // message.fill
                         size: 48,
                         color: AppColors.textTertiaryLight,
@@ -104,7 +104,7 @@ class _MessageContent extends StatelessWidget {
                       AppSpacing.vSm,
                       Text(
                         context.l10n.messagesNoTaskChats,
-                        style: TextStyle(
+                        style: const TextStyle(
                           fontSize: 14,
                           color: AppColors.textSecondaryLight,
                         ),
@@ -145,7 +145,7 @@ class _SystemMessageCard extends StatelessWidget {
       },
       child: Container(
         height: 80,
-        padding: EdgeInsets.symmetric(
+        padding: const EdgeInsets.symmetric(
           horizontal: AppSpacing.lg,
           vertical: AppSpacing.md,
         ),
@@ -236,7 +236,7 @@ class _CustomerServiceCard extends StatelessWidget {
       },
       child: Container(
         height: 80,
-        padding: EdgeInsets.symmetric(
+        padding: const EdgeInsets.symmetric(
           horizontal: AppSpacing.lg,
           vertical: AppSpacing.md,
         ),
@@ -268,7 +268,7 @@ class _CustomerServiceCard extends StatelessWidget {
                 color: Colors.white,
                 shape: BoxShape.circle,
               ),
-              child: Icon(
+              child: const Icon(
                 Icons.headset_mic,
                 color: AppColors.success,
                 size: 22,
@@ -326,7 +326,7 @@ class _InteractionMessageCard extends StatelessWidget {
       },
       child: Container(
         height: 80,
-        padding: EdgeInsets.symmetric(
+        padding: const EdgeInsets.symmetric(
           horizontal: AppSpacing.lg,
           vertical: AppSpacing.md,
         ),
@@ -358,7 +358,7 @@ class _InteractionMessageCard extends StatelessWidget {
                 color: Colors.white,
                 shape: BoxShape.circle,
               ),
-              child: Icon(
+              child: const Icon(
                 Icons.favorite,
                 color: AppColors.warning,
                 size: 22,
@@ -482,7 +482,7 @@ class _TaskChatItem extends StatelessWidget {
                             ? DateFormatter.formatSmart(
                                 taskChat.lastMessageTime!)
                             : '',
-                        style: TextStyle(
+                        style: const TextStyle(
                             fontSize: 12,
                             color: AppColors.textTertiaryLight),
                       ),

@@ -6,7 +6,6 @@ import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_radius.dart';
 import '../../../core/utils/l10n_extension.dart';
-import '../../../core/utils/logger.dart';
 import '../../../data/services/iap_service.dart';
 
 /// VIP 购买页
@@ -202,7 +201,7 @@ class _VIPPurchaseViewState extends State<VIPPurchaseView> {
             const SizedBox(height: 8),
             Text(
               l10n.vipSelectPackage,
-              style: TextStyle(
+              style: const TextStyle(
                   fontSize: 14, color: AppColors.textSecondary),
             ),
             const SizedBox(height: AppSpacing.xl),
@@ -218,7 +217,7 @@ class _VIPPurchaseViewState extends State<VIPPurchaseView> {
                 padding: const EdgeInsets.all(40),
                 child: Column(
                   children: [
-                    Icon(Icons.workspace_premium,
+                    const Icon(Icons.workspace_premium,
                         size: 48, color: AppColors.textTertiary),
                     const SizedBox(height: 12),
                     const Text('暂无可用的 VIP 套餐',
@@ -236,7 +235,6 @@ class _VIPPurchaseViewState extends State<VIPPurchaseView> {
               ...List.generate(_products.length, (index) {
                 final product = _products[index];
                 final isSelected = _selectedIndex == index;
-                final isMonthly = product.id == IAPService.vipMonthlyId;
 
                 return GestureDetector(
                   onTap: () => setState(() => _selectedIndex = index),
@@ -292,7 +290,7 @@ class _VIPPurchaseViewState extends State<VIPPurchaseView> {
                                       fontWeight: FontWeight.w600)),
                               const SizedBox(height: 4),
                               Text(product.description,
-                                  style: TextStyle(
+                                  style: const TextStyle(
                                       fontSize: 13,
                                       color: AppColors.textSecondary)),
                             ],
@@ -302,7 +300,7 @@ class _VIPPurchaseViewState extends State<VIPPurchaseView> {
                         // 价格
                         Text(
                           product.price,
-                          style: TextStyle(
+                          style: const TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
                             color: AppColors.primary,
@@ -357,7 +355,7 @@ class _VIPPurchaseViewState extends State<VIPPurchaseView> {
             TextButton(
               onPressed: _isPurchasing ? null : _restorePurchases,
               child: Text(l10n.vipRestorePurchase,
-                  style: TextStyle(color: AppColors.primary)),
+                  style: const TextStyle(color: AppColors.primary)),
             ),
 
             // 错误信息
@@ -387,12 +385,12 @@ class _VIPPurchaseViewState extends State<VIPPurchaseView> {
                           fontWeight: FontWeight.w600)),
                   const SizedBox(height: 8),
                   Text(l10n.vipSubscriptionAutoRenew,
-                      style: TextStyle(
+                      style: const TextStyle(
                           fontSize: 13,
                           color: AppColors.textSecondary)),
                   const SizedBox(height: 4),
                   Text(l10n.vipManageSubscription,
-                      style: TextStyle(
+                      style: const TextStyle(
                           fontSize: 13,
                           color: AppColors.textSecondary)),
                 ],
@@ -436,9 +434,9 @@ class _VIPPurchaseViewState extends State<VIPPurchaseView> {
     return ListTile(
       contentPadding: EdgeInsets.zero,
       title: Text(title,
-          style: TextStyle(
+          style: const TextStyle(
               fontSize: 14, color: AppColors.primary)),
-      trailing: Icon(Icons.chevron_right,
+      trailing: const Icon(Icons.chevron_right,
           size: 18, color: AppColors.textSecondary),
       onTap: onTap,
     );

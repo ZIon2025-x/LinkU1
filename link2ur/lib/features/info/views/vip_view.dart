@@ -167,37 +167,37 @@ class VipView extends StatelessWidget {
 
   Widget _buildBenefitsSection(BuildContext context) {
     final benefits = [
-      _BenefitItem(
+      const _BenefitItem(
         icon: Icons.bolt,
         title: '优先推荐',
         description: '任务和帖子获得更高曝光度',
         color: AppColors.primary,
       ),
-      _BenefitItem(
+      const _BenefitItem(
         icon: Icons.verified,
         title: 'VIP标识',
         description: '独特VIP身份标识，提升信任度',
-        color: const Color(0xFFFFD700),
+        color: Color(0xFFFFD700),
       ),
-      _BenefitItem(
+      const _BenefitItem(
         icon: Icons.discount,
         title: '手续费优惠',
         description: '平台手续费享受折扣',
         color: AppColors.success,
       ),
-      _BenefitItem(
+      const _BenefitItem(
         icon: Icons.support_agent,
         title: '专属客服',
         description: '优先客服响应，快速解决问题',
         color: AppColors.accentPink,
       ),
-      _BenefitItem(
+      const _BenefitItem(
         icon: Icons.card_giftcard,
         title: '专属优惠券',
         description: '每月赠送专属优惠券',
         color: AppColors.accent,
       ),
-      _BenefitItem(
+      const _BenefitItem(
         icon: Icons.analytics,
         title: '数据分析',
         description: '查看任务和帖子的详细数据统计',
@@ -249,7 +249,7 @@ class VipView extends StatelessWidget {
                   const SizedBox(height: 2),
                   Text(
                     benefit.description,
-                    style: TextStyle(
+                    style: const TextStyle(
                       fontSize: 11,
                       color: AppColors.textSecondaryLight,
                     ),
@@ -297,10 +297,10 @@ class VipView extends StatelessWidget {
   }
 
   Widget _buildFaqSection(BuildContext context) {
-    return Column(
+    return const Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
+        Text(
           '常见问题',
           style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
         ),
@@ -413,7 +413,7 @@ class _PlanCard extends StatelessWidget {
                             const Icon(Icons.check, size: 14, color: AppColors.success),
                             const SizedBox(width: 4),
                             Text(f,
-                                style: TextStyle(
+                                style: const TextStyle(
                                     fontSize: 12,
                                     color: AppColors.textSecondaryLight)),
                           ],
@@ -435,7 +435,7 @@ class _PlanCard extends StatelessWidget {
                 ),
                 Text(
                   period,
-                  style: TextStyle(
+                  style: const TextStyle(
                     fontSize: 12,
                     color: AppColors.textSecondaryLight,
                   ),
@@ -493,7 +493,7 @@ class _FaqItemState extends State<_FaqItem> {
             padding: const EdgeInsets.only(bottom: 12),
             child: Text(
               widget.answer,
-              style: TextStyle(
+              style: const TextStyle(
                 color: AppColors.textSecondaryLight,
                 fontSize: 13,
               ),

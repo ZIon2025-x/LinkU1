@@ -1,4 +1,3 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -116,11 +115,11 @@ class _LocationInputFieldState extends State<LocationInputField> {
                   ),
             border: OutlineInputBorder(
               borderRadius: AppRadius.allMedium,
-              borderSide: BorderSide(color: AppColors.dividerLight),
+              borderSide: const BorderSide(color: AppColors.dividerLight),
             ),
             enabledBorder: OutlineInputBorder(
               borderRadius: AppRadius.allMedium,
-              borderSide: BorderSide(color: AppColors.dividerLight),
+              borderSide: const BorderSide(color: AppColors.dividerLight),
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: AppRadius.allMedium,
@@ -265,7 +264,7 @@ class TaskLocationDetailView extends StatelessWidget {
                       Expanded(
                         child: Text(
                           address,
-                          style: TextStyle(
+                          style: const TextStyle(
                             fontSize: 14,
                             color: AppColors.textSecondaryLight,
                           ),
@@ -277,7 +276,7 @@ class TaskLocationDetailView extends StatelessWidget {
                     AppSpacing.vSm,
                     Text(
                       '坐标: $latitude, $longitude',
-                      style: TextStyle(
+                      style: const TextStyle(
                         fontSize: 12,
                         color: AppColors.textTertiaryLight,
                       ),

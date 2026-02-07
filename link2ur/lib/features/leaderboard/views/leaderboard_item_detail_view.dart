@@ -7,170 +7,146 @@ import '../../../core/design/app_radius.dart';
 import '../../../core/utils/l10n_extension.dart';
 import '../../../core/widgets/loading_view.dart';
 import '../../../core/widgets/error_state_view.dart';
-import '../../../core/widgets/async_image_view.dart';
 import '../../../data/repositories/leaderboard_repository.dart';
+import '../bloc/leaderboard_bloc.dart';
 
 /// 排行榜条目详情页
 /// 参考iOS LeaderboardItemDetailView.swift
-class LeaderboardItemDetailView extends StatefulWidget {
+class LeaderboardItemDetailView extends StatelessWidget {
   const LeaderboardItemDetailView({super.key, required this.itemId});
 
   final int itemId;
 
   @override
-  State<LeaderboardItemDetailView> createState() =>
-      _LeaderboardItemDetailViewState();
-}
-
-class _LeaderboardItemDetailViewState
-    extends State<LeaderboardItemDetailView> {
-  Map<String, dynamic>? _item;
-  bool _isLoading = true;
-  String? _errorMessage;
-
-  @override
-  void initState() {
-    super.initState();
-    _loadItem();
-  }
-
-  Future<void> _loadItem() async {
-    setState(() {
-      _isLoading = true;
-      _errorMessage = null;
-    });
-
-    try {
-      final repo = context.read<LeaderboardRepository>();
-      final item = await repo.getItemDetail(widget.itemId);
-      if (mounted) {
-        setState(() {
-          _item = item;
-          _isLoading = false;
-        });
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(() {
-          _errorMessage = e.toString();
-          _isLoading = false;
-        });
-      }
-    }
-  }
-
-  @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
 
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(l10n.leaderboardItemDetail),
-      ),
-      body: _isLoading
-          ? const LoadingView()
-          : _errorMessage != null
-              ? ErrorStateView(
-                  message: _errorMessage!,
-                  onRetry: _loadItem,
-                )
-              : _item == null
-                  ? const SizedBox.shrink()
-                  : SingleChildScrollView(
-                      padding: const EdgeInsets.all(AppSpacing.md),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          // 排名与得分
-                          Container(
-                            padding: const EdgeInsets.all(AppSpacing.lg),
-                            decoration: BoxDecoration(
-                              gradient: LinearGradient(
-                                colors: [
-                                  AppColors.primary,
-                                  AppColors.primary.withOpacity(0.8),
-                                ],
-                              ),
-                              borderRadius:
-                                  BorderRadius.circular(AppRadius.large),
-                            ),
-                            child: Row(
-                              mainAxisAlignment:
-                                  MainAxisAlignment.spaceEvenly,
-                              children: [
-                                _buildRankInfo(
-                                  l10n.leaderboardRank,
-                                  '#${_item!['rank'] ?? '-'}',
-                                ),
-                                Container(
-                                  width: 1,
-                                  height: 40,
-                                  color: Colors.white.withOpacity(0.3),
-                                ),
-                                _buildRankInfo(
-                                  l10n.leaderboardScore,
-                                  '${_item!['score'] ?? 0}',
-                                ),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(height: AppSpacing.lg),
+    return BlocProvider(
+      create: (context) => LeaderboardBloc(
+        leaderboardRepository: context.read<LeaderboardRepository>(),
+      )..add(LeaderboardLoadItemDetail(itemId)),
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text(l10n.leaderboardItemDetail),
+        ),
+        body: BlocBuilder<LeaderboardBloc, LeaderboardState>(
+          builder: (context, state) {
+            if (state.isLoading) {
+              return const LoadingView();
+            }
 
-                          // 用户信息
-                          Container(
-                            padding: const EdgeInsets.all(AppSpacing.md),
-                            decoration: BoxDecoration(
-                              color: Theme.of(context).cardColor,
-                              borderRadius:
-                                  BorderRadius.circular(AppRadius.large),
-                            ),
-                            child: Row(
-                              children: [
-                                CircleAvatar(
-                                  radius: 24,
-                                  backgroundImage:
-                                      _item!['avatar'] != null
-                                          ? NetworkImage(
-                                              _item!['avatar'] as String)
-                                          : null,
-                                  child: _item!['avatar'] == null
-                                      ? const Icon(Icons.person)
-                                      : null,
-                                ),
-                                const SizedBox(width: AppSpacing.md),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        _item!['name'] as String? ??
-                                            '',
-                                        style: const TextStyle(
-                                            fontSize: 16,
-                                            fontWeight:
-                                                FontWeight.w600),
-                                      ),
-                                      if (_item!['description'] !=
-                                          null)
-                                        Text(
-                                          _item!['description']
-                                              as String,
-                                          style: TextStyle(
-                                              fontSize: 13,
-                                              color: AppColors
-                                                  .textSecondary),
-                                        ),
-                                    ],
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(height: AppSpacing.xl),
+            if (state.errorMessage != null) {
+              return ErrorStateView(
+                message: state.errorMessage!,
+                onRetry: () => context
+                    .read<LeaderboardBloc>()
+                    .add(LeaderboardLoadItemDetail(itemId)),
+              );
+            }
+
+            final item = state.itemDetail;
+            if (item == null) {
+              return const SizedBox.shrink();
+            }
+
+            return SingleChildScrollView(
+              padding: const EdgeInsets.all(AppSpacing.md),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // 排名与得分
+                  Container(
+                    padding: const EdgeInsets.all(AppSpacing.lg),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [
+                          AppColors.primary,
+                          AppColors.primary.withValues(alpha: 0.8),
                         ],
                       ),
+                      borderRadius:
+                          BorderRadius.circular(AppRadius.large),
                     ),
+                    child: Row(
+                      mainAxisAlignment:
+                          MainAxisAlignment.spaceEvenly,
+                      children: [
+                        _buildRankInfo(
+                          l10n.leaderboardRank,
+                          '#${item['rank'] ?? '-'}',
+                        ),
+                        Container(
+                          width: 1,
+                          height: 40,
+                          color: Colors.white.withValues(alpha: 0.3),
+                        ),
+                        _buildRankInfo(
+                          l10n.leaderboardScore,
+                          '${item['score'] ?? 0}',
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.lg),
+
+                  // 用户信息
+                  Container(
+                    padding: const EdgeInsets.all(AppSpacing.md),
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).cardColor,
+                      borderRadius:
+                          BorderRadius.circular(AppRadius.large),
+                    ),
+                    child: Row(
+                      children: [
+                        CircleAvatar(
+                          radius: 24,
+                          backgroundImage:
+                              item['avatar'] != null
+                                  ? NetworkImage(
+                                      item['avatar'] as String)
+                                  : null,
+                          child: item['avatar'] == null
+                              ? const Icon(Icons.person)
+                              : null,
+                        ),
+                        const SizedBox(width: AppSpacing.md),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment:
+                                CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                item['name'] as String? ??
+                                    '',
+                                style: const TextStyle(
+                                    fontSize: 16,
+                                    fontWeight:
+                                        FontWeight.w600),
+                              ),
+                              if (item['description'] !=
+                                  null)
+                                Text(
+                                  item['description']
+                                      as String,
+                                  style: const TextStyle(
+                                      fontSize: 13,
+                                      color: AppColors
+                                          .textSecondary),
+                                ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.xl),
+                ],
+              ),
+            );
+          },
+        ),
+      ),
     );
   }
 
@@ -186,7 +162,7 @@ class _LeaderboardItemDetailViewState
         Text(label,
             style: TextStyle(
                 fontSize: 13,
-                color: Colors.white.withOpacity(0.8))),
+                color: Colors.white.withValues(alpha: 0.8))),
       ],
     );
   }

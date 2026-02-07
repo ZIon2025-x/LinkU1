@@ -130,7 +130,7 @@ class _MenuTile extends StatelessWidget {
       title: Text(title, style: const TextStyle(fontWeight: FontWeight.w500)),
       subtitle: Text(
         subtitle,
-        style: TextStyle(fontSize: 12, color: AppColors.textSecondaryLight),
+        style: const TextStyle(fontSize: 12, color: AppColors.textSecondaryLight),
       ),
       trailing: const Icon(Icons.chevron_right, color: AppColors.textTertiaryLight, size: 20),
     );

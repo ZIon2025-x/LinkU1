@@ -119,7 +119,7 @@ class _PayoutCard extends StatelessWidget {
             width: 40,
             height: 40,
             decoration: BoxDecoration(
-              color: AppColors.primary.withOpacity(0.1),
+              color: AppColors.primary.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(10),
             ),
             child: Icon(
@@ -143,7 +143,7 @@ class _PayoutCard extends StatelessWidget {
                 const SizedBox(height: 4),
                 if (arrivalDate.isNotEmpty)
                   Text(arrivalDate,
-                      style: TextStyle(
+                      style: const TextStyle(
                           fontSize: 12,
                           color: AppColors.textTertiary)),
               ],
@@ -153,7 +153,7 @@ class _PayoutCard extends StatelessWidget {
             padding:
                 const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
             decoration: BoxDecoration(
-              color: statusColor.withOpacity(0.1),
+              color: statusColor.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Text(

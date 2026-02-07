@@ -50,6 +50,28 @@ class TaskExpertApplyService extends TaskExpertEvent {
   List<Object?> get props => [serviceId, message];
 }
 
+class TaskExpertLoadServiceDetail extends TaskExpertEvent {
+  const TaskExpertLoadServiceDetail(this.serviceId);
+
+  final int serviceId;
+
+  @override
+  List<Object?> get props => [serviceId];
+}
+
+class TaskExpertLoadMyApplications extends TaskExpertEvent {
+  const TaskExpertLoadMyApplications();
+}
+
+class TaskExpertSearchRequested extends TaskExpertEvent {
+  const TaskExpertSearchRequested(this.keyword);
+
+  final String keyword;
+
+  @override
+  List<Object?> get props => [keyword];
+}
+
 // ==================== State ====================
 
 enum TaskExpertStatus { initial, loading, loaded, error }
@@ -66,6 +88,9 @@ class TaskExpertState extends Equatable {
     this.errorMessage,
     this.isSubmitting = false,
     this.actionMessage,
+    this.serviceDetail,
+    this.applications = const [],
+    this.searchResults = const [],
   });
 
   final TaskExpertStatus status;
@@ -78,6 +103,9 @@ class TaskExpertState extends Equatable {
   final String? errorMessage;
   final bool isSubmitting;
   final String? actionMessage;
+  final Map<String, dynamic>? serviceDetail;
+  final List<Map<String, dynamic>> applications;
+  final List<TaskExpert> searchResults;
 
   bool get isLoading => status == TaskExpertStatus.loading;
 
@@ -92,6 +120,9 @@ class TaskExpertState extends Equatable {
     String? errorMessage,
     bool? isSubmitting,
     String? actionMessage,
+    Map<String, dynamic>? serviceDetail,
+    List<Map<String, dynamic>>? applications,
+    List<TaskExpert>? searchResults,
   }) {
     return TaskExpertState(
       status: status ?? this.status,
@@ -104,6 +135,9 @@ class TaskExpertState extends Equatable {
       errorMessage: errorMessage,
       isSubmitting: isSubmitting ?? this.isSubmitting,
       actionMessage: actionMessage,
+      serviceDetail: serviceDetail,
+      applications: applications ?? this.applications,
+      searchResults: searchResults ?? this.searchResults,
     );
   }
 
@@ -119,6 +153,9 @@ class TaskExpertState extends Equatable {
         errorMessage,
         isSubmitting,
         actionMessage,
+        serviceDetail,
+        applications,
+        searchResults,
       ];
 }
 
@@ -133,6 +170,9 @@ class TaskExpertBloc extends Bloc<TaskExpertEvent, TaskExpertState> {
     on<TaskExpertRefreshRequested>(_onRefresh);
     on<TaskExpertLoadDetail>(_onLoadDetail);
     on<TaskExpertApplyService>(_onApplyService);
+    on<TaskExpertLoadServiceDetail>(_onLoadServiceDetail);
+    on<TaskExpertLoadMyApplications>(_onLoadMyApplications);
+    on<TaskExpertSearchRequested>(_onSearchRequested);
   }
 
   final TaskExpertRepository _taskExpertRepository;
@@ -252,6 +292,76 @@ class TaskExpertBloc extends Bloc<TaskExpertEvent, TaskExpertState> {
       emit(state.copyWith(
         isSubmitting: false,
         actionMessage: '申请失败',
+      ));
+    }
+  }
+
+  Future<void> _onLoadServiceDetail(
+    TaskExpertLoadServiceDetail event,
+    Emitter<TaskExpertState> emit,
+  ) async {
+    emit(state.copyWith(status: TaskExpertStatus.loading));
+
+    try {
+      final serviceDetail =
+          await _taskExpertRepository.getServiceDetail(event.serviceId);
+
+      emit(state.copyWith(
+        status: TaskExpertStatus.loaded,
+        serviceDetail: serviceDetail,
+      ));
+    } catch (e) {
+      AppLogger.error('Failed to load service detail', e);
+      emit(state.copyWith(
+        status: TaskExpertStatus.error,
+        errorMessage: e.toString(),
+      ));
+    }
+  }
+
+  Future<void> _onLoadMyApplications(
+    TaskExpertLoadMyApplications event,
+    Emitter<TaskExpertState> emit,
+  ) async {
+    emit(state.copyWith(status: TaskExpertStatus.loading));
+
+    try {
+      final applications =
+          await _taskExpertRepository.getMyServiceApplications();
+
+      emit(state.copyWith(
+        status: TaskExpertStatus.loaded,
+        applications: applications,
+      ));
+    } catch (e) {
+      AppLogger.error('Failed to load my applications', e);
+      emit(state.copyWith(
+        status: TaskExpertStatus.error,
+        errorMessage: e.toString(),
+      ));
+    }
+  }
+
+  Future<void> _onSearchRequested(
+    TaskExpertSearchRequested event,
+    Emitter<TaskExpertState> emit,
+  ) async {
+    emit(state.copyWith(status: TaskExpertStatus.loading));
+
+    try {
+      final results = await _taskExpertRepository.searchExperts(
+        keyword: event.keyword,
+      );
+
+      emit(state.copyWith(
+        status: TaskExpertStatus.loaded,
+        searchResults: results,
+      ));
+    } catch (e) {
+      AppLogger.error('Failed to search experts', e);
+      emit(state.copyWith(
+        status: TaskExpertStatus.error,
+        errorMessage: e.toString(),
       ));
     }
   }

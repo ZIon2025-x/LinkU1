@@ -48,9 +48,11 @@ class TaskExpertDetailView extends StatelessWidget {
                   onPressed: () {
                     final expert = state.selectedExpert;
                     if (expert != null) {
-                      Share.share(
-                        '来看看这位任务达人：${expert.displayName}\nhttps://link2ur.com/task-experts/${expert.id}',
-                        subject: '分享任务达人 - ${expert.displayName}',
+                      SharePlus.instance.share(
+                        ShareParams(
+                          text: '来看看这位任务达人：${expert.displayName}\nhttps://link2ur.com/task-experts/${expert.id}',
+                          subject: '分享任务达人 - ${expert.displayName}',
+                        ),
                       );
                     }
                   },
@@ -262,7 +264,7 @@ class _ProfileHeader extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(Icons.star, size: 16, color: AppColors.gold),
+              const Icon(Icons.star, size: 16, color: AppColors.gold),
               const SizedBox(width: 4),
               Text(
                 expert.ratingDisplay,

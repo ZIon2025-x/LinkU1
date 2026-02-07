@@ -105,7 +105,7 @@ class _SearchContentState extends State<_SearchContent> {
           }
 
           if (!state.hasResults) {
-            return EmptyStateView(
+            return const EmptyStateView(
               icon: Icons.search_off,
               title: '未找到结果',
               message: '尝试使用不同的关键词搜索',
@@ -311,7 +311,7 @@ class _SearchResultCard extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        margin: EdgeInsets.only(bottom: AppSpacing.sm),
+        margin: const EdgeInsets.only(bottom: AppSpacing.sm),
         padding: AppSpacing.allMd,
         decoration: BoxDecoration(
           color: isDark

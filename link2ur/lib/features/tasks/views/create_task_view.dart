@@ -211,7 +211,7 @@ class _CreateTaskContentState extends State<_CreateTaskContent> {
                     ),
                     child: Row(
                       children: [
-                        Icon(Icons.calendar_today_outlined,
+                        const Icon(Icons.calendar_today_outlined,
                             color: AppColors.textSecondaryLight),
                         AppSpacing.hMd,
                         Text(
@@ -308,12 +308,12 @@ class _CreateTaskContentState extends State<_CreateTaskContent> {
               border: Border.all(color: AppColors.dividerLight),
               borderRadius: AppRadius.allMedium,
             ),
-            child: Column(
+            child: const Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Icon(Icons.add_photo_alternate_outlined,
                     color: AppColors.textSecondaryLight),
-                const SizedBox(height: 4),
+                SizedBox(height: 4),
                 Text(
                   '0/9',
                   style: TextStyle(

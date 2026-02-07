@@ -159,7 +159,7 @@ class MessageGroupBubbleView extends StatelessWidget {
                           const EdgeInsets.only(left: 4, bottom: 2),
                       child: Text(
                         group.senderName!,
-                        style: TextStyle(
+                        style: const TextStyle(
                           fontSize: 11,
                           color: AppColors.textTertiaryLight,
                         ),
@@ -185,7 +185,7 @@ class MessageGroupBubbleView extends StatelessWidget {
                       child: Text(
                         DateFormatter.formatMessageTime(
                             group.messages.last.createdAt!),
-                        style: TextStyle(
+                        style: const TextStyle(
                           fontSize: 10,
                           color: AppColors.textTertiaryLight,
                         ),

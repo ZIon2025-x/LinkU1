@@ -2,6 +2,7 @@ import '../models/task.dart';
 import '../models/review.dart';
 import '../services/api_service.dart';
 import '../../core/constants/api_endpoints.dart';
+import '../../core/utils/cache_manager.dart';
 
 /// 任务仓库
 /// 与iOS TasksViewModel/TaskDetailViewModel + 后端路由对齐
@@ -11,8 +12,10 @@ class TaskRepository {
   }) : _apiService = apiService;
 
   final ApiService _apiService;
+  final CacheManager _cache = CacheManager.shared;
 
   /// 获取任务列表
+  /// 对标iOS TasksViewModel.loadTasks() — 缓存优先 + 离线回退
   Future<TaskListResponse> getTasks({
     int page = 1,
     int pageSize = 20,
@@ -21,43 +24,92 @@ class TaskRepository {
     String? keyword,
     String? sortBy,
   }) async {
-    final response = await _apiService.get<Map<String, dynamic>>(
-      ApiEndpoints.tasks,
-      queryParameters: {
-        'page': page,
-        'page_size': pageSize,
-        if (taskType != null) 'task_type': taskType,
-        if (status != null) 'status': status,
-        if (keyword != null) 'keyword': keyword,
-        if (sortBy != null) 'sort_by': sortBy,
-      },
-    );
+    final params = {
+      'page': page,
+      'page_size': pageSize,
+      if (taskType != null) 'task_type': taskType,
+      if (status != null) 'status': status,
+      if (keyword != null) 'keyword': keyword,
+      if (sortBy != null) 'sort_by': sortBy,
+    };
+    final cacheKey = keyword == null
+        ? CacheManager.buildKey(CacheManager.prefixTasks, params)
+        : null;
 
-    if (!response.isSuccess || response.data == null) {
-      throw TaskException(response.message ?? '获取任务列表失败');
+    // 1. 检查未过期缓存
+    if (cacheKey != null) {
+      final cached = _cache.get<Map<String, dynamic>>(cacheKey);
+      if (cached != null) {
+        return TaskListResponse.fromJson(cached);
+      }
     }
 
-    return TaskListResponse.fromJson(response.data!);
+    // 2. 请求网络
+    try {
+      final response = await _apiService.get<Map<String, dynamic>>(
+        ApiEndpoints.tasks,
+        queryParameters: params,
+      );
+
+      if (!response.isSuccess || response.data == null) {
+        throw TaskException(response.message ?? '获取任务列表失败');
+      }
+
+      // 写入缓存
+      if (cacheKey != null) {
+        await _cache.set(cacheKey, response.data!, ttl: CacheManager.shortTTL);
+      }
+
+      return TaskListResponse.fromJson(response.data!);
+    } catch (e) {
+      // 3. 网络失败 → 回退到过期缓存
+      if (cacheKey != null) {
+        final stale = _cache.getStale<Map<String, dynamic>>(cacheKey);
+        if (stale != null) {
+          return TaskListResponse.fromJson(stale);
+        }
+      }
+      rethrow;
+    }
   }
 
   /// 获取推荐任务
+  /// 对标iOS — 缓存优先 + 离线回退
   Future<TaskListResponse> getRecommendedTasks({
     int page = 1,
     int pageSize = 20,
   }) async {
-    final response = await _apiService.get<Map<String, dynamic>>(
-      ApiEndpoints.recommendations,
-      queryParameters: {
-        'page': page,
-        'page_size': pageSize,
-      },
-    );
+    final params = {'page': page, 'page_size': pageSize};
+    final cacheKey =
+        CacheManager.buildKey(CacheManager.prefixRecommendedTasks, params);
 
-    if (!response.isSuccess || response.data == null) {
-      throw TaskException(response.message ?? '获取推荐任务失败');
+    // 1. 检查未过期缓存
+    final cached = _cache.get<Map<String, dynamic>>(cacheKey);
+    if (cached != null) {
+      return TaskListResponse.fromJson(cached);
     }
 
-    return TaskListResponse.fromJson(response.data!);
+    // 2. 请求网络
+    try {
+      final response = await _apiService.get<Map<String, dynamic>>(
+        ApiEndpoints.recommendations,
+        queryParameters: params,
+      );
+
+      if (!response.isSuccess || response.data == null) {
+        throw TaskException(response.message ?? '获取推荐任务失败');
+      }
+
+      await _cache.set(cacheKey, response.data!, ttl: CacheManager.shortTTL);
+      return TaskListResponse.fromJson(response.data!);
+    } catch (e) {
+      // 3. 网络失败 → 回退到过期缓存
+      final stale = _cache.getStale<Map<String, dynamic>>(cacheKey);
+      if (stale != null) {
+        return TaskListResponse.fromJson(stale);
+      }
+      rethrow;
+    }
   }
 
   /// 推荐反馈
@@ -99,15 +151,34 @@ class TaskRepository {
 
   /// 获取任务详情
   Future<Task> getTaskById(int id) async {
-    final response = await _apiService.get<Map<String, dynamic>>(
-      ApiEndpoints.taskById(id),
-    );
+    final cacheKey = '${CacheManager.prefixTaskDetail}$id';
 
-    if (!response.isSuccess || response.data == null) {
-      throw TaskException(response.message ?? '获取任务详情失败');
+    // 1. 检查未过期缓存
+    final cached = _cache.get<Map<String, dynamic>>(cacheKey);
+    if (cached != null) {
+      return Task.fromJson(cached);
     }
 
-    return Task.fromJson(response.data!);
+    // 2. 请求网络
+    try {
+      final response = await _apiService.get<Map<String, dynamic>>(
+        ApiEndpoints.taskById(id),
+      );
+
+      if (!response.isSuccess || response.data == null) {
+        throw TaskException(response.message ?? '获取任务详情失败');
+      }
+
+      await _cache.set(cacheKey, response.data!, ttl: CacheManager.defaultTTL);
+      return Task.fromJson(response.data!);
+    } catch (e) {
+      // 3. 网络失败 → 回退到过期缓存
+      final stale = _cache.getStale<Map<String, dynamic>>(cacheKey);
+      if (stale != null) {
+        return Task.fromJson(stale);
+      }
+      rethrow;
+    }
   }
 
   /// 获取任务详情（别名）
@@ -124,6 +195,10 @@ class TaskRepository {
       throw TaskException(response.message ?? '创建任务失败');
     }
 
+    // 创建后失效任务列表缓存
+    await _cache.invalidateTasksCache();
+    await _cache.invalidateMyTasksCache();
+
     return Task.fromJson(response.data!);
   }
 
@@ -139,6 +214,10 @@ class TaskRepository {
     if (!response.isSuccess) {
       throw TaskException(response.message ?? '申请任务失败');
     }
+
+    // 失效相关缓存
+    await _cache.invalidateTaskDetailCache(taskId);
+    await _cache.invalidateMyTasksCache();
   }
 
   /// 获取任务申请列表
@@ -240,6 +319,9 @@ class TaskRepository {
     if (!response.isSuccess) {
       throw TaskException(response.message ?? '完成任务失败');
     }
+
+    await _cache.invalidateTaskDetailCache(taskId);
+    await _cache.invalidateMyTasksCache();
   }
 
   /// 确认完成
@@ -251,6 +333,10 @@ class TaskRepository {
     if (!response.isSuccess) {
       throw TaskException(response.message ?? '确认完成失败');
     }
+
+    await _cache.invalidateTaskDetailCache(taskId);
+    await _cache.invalidateMyTasksCache();
+    await _cache.invalidatePaymentCache();
   }
 
   /// 取消任务
@@ -265,6 +351,9 @@ class TaskRepository {
     if (!response.isSuccess) {
       throw TaskException(response.message ?? '取消任务失败');
     }
+
+    await _cache.invalidateTaskDetailCache(taskId);
+    await _cache.invalidateAllTasksCache();
   }
 
   /// 删除任务
@@ -276,6 +365,8 @@ class TaskRepository {
     if (!response.isSuccess) {
       throw TaskException(response.message ?? '删除任务失败');
     }
+
+    await _cache.invalidateAllTasksCache();
   }
 
   /// 拒绝任务
@@ -530,20 +621,35 @@ class TaskRepository {
     int pageSize = 20,
     String? status,
   }) async {
-    final response = await _apiService.get<Map<String, dynamic>>(
-      ApiEndpoints.myTasks,
-      queryParameters: {
-        'page': page,
-        'page_size': pageSize,
-        if (status != null) 'status': status,
-      },
-    );
+    final params = {
+      'page': page,
+      'page_size': pageSize,
+      if (status != null) 'status': status,
+    };
+    final cacheKey = CacheManager.buildKey(CacheManager.prefixMyTasks, params);
 
-    if (!response.isSuccess || response.data == null) {
-      throw TaskException(response.message ?? '获取我的任务失败');
+    final cached = _cache.get<Map<String, dynamic>>(cacheKey);
+    if (cached != null) {
+      return TaskListResponse.fromJson(cached);
     }
 
-    return TaskListResponse.fromJson(response.data!);
+    try {
+      final response = await _apiService.get<Map<String, dynamic>>(
+        ApiEndpoints.myTasks,
+        queryParameters: params,
+      );
+
+      if (!response.isSuccess || response.data == null) {
+        throw TaskException(response.message ?? '获取我的任务失败');
+      }
+
+      await _cache.set(cacheKey, response.data!, ttl: CacheManager.personalTTL);
+      return TaskListResponse.fromJson(response.data!);
+    } catch (e) {
+      final stale = _cache.getStale<Map<String, dynamic>>(cacheKey);
+      if (stale != null) return TaskListResponse.fromJson(stale);
+      rethrow;
+    }
   }
 
   /// 取消自己的申请（便捷方法，需要 applicationId）

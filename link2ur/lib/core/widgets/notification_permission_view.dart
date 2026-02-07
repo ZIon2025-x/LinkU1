@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../design/app_colors.dart';
 import '../design/app_spacing.dart';
 import '../design/app_typography.dart';
 import '../design/app_radius.dart';
-import '../../data/services/storage_service.dart';
 
 /// 通知权限引导视图
 /// 参考iOS NotificationPermissionView.swift
@@ -123,7 +123,8 @@ class NotificationPermissionView extends StatelessWidget {
     final status = await Permission.notification.request();
 
     // 标记已请求过通知权限
-    await StorageService.instance.setBool('notification_permission_asked', true);
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('notification_permission_asked', true);
 
     if (status.isGranted) {
       // 权限已授予
@@ -139,7 +140,8 @@ class NotificationPermissionView extends StatelessWidget {
   }
 
   void _skip(BuildContext context) async {
-    await StorageService.instance.setBool('notification_permission_asked', true);
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('notification_permission_asked', true);
     onComplete();
   }
 
@@ -173,8 +175,8 @@ class NotificationPermissionView extends StatelessWidget {
 
 /// 检查是否需要显示通知权限引导
 Future<bool> shouldShowNotificationPermission() async {
-  final hasAsked =
-      StorageService.instance.getBool('notification_permission_asked') ?? false;
+  final prefs = await SharedPreferences.getInstance();
+  final hasAsked = prefs.getBool('notification_permission_asked') ?? false;
   if (hasAsked) return false;
 
   final status = await Permission.notification.status;

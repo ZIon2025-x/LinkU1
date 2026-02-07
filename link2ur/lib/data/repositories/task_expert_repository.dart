@@ -1,6 +1,7 @@
 import '../models/task_expert.dart';
 import '../services/api_service.dart';
 import '../../core/constants/api_endpoints.dart';
+import '../../core/utils/cache_manager.dart';
 
 /// 任务达人仓库
 /// 与iOS TaskExpertViewModel + 后端 task_expert_routes 对齐
@@ -10,6 +11,7 @@ class TaskExpertRepository {
   }) : _apiService = apiService;
 
   final ApiService _apiService;
+  final CacheManager _cache = CacheManager.shared;
 
   /// 获取任务达人列表
   Future<TaskExpertListResponse> getExperts({
@@ -17,17 +19,35 @@ class TaskExpertRepository {
     int pageSize = 20,
     String? keyword,
   }) async {
+    final params = {
+      'page': page,
+      'page_size': pageSize,
+      if (keyword != null) 'keyword': keyword,
+    };
+
+    // 无搜索时使用缓存（达人列表变动少，使用长TTL）
+    if (keyword == null) {
+      final cacheKey =
+          CacheManager.buildKey(CacheManager.prefixTaskExperts, params);
+      final cached = _cache.get<Map<String, dynamic>>(cacheKey);
+      if (cached != null) {
+        return TaskExpertListResponse.fromJson(cached);
+      }
+    }
+
     final response = await _apiService.get<Map<String, dynamic>>(
       ApiEndpoints.taskExperts,
-      queryParameters: {
-        'page': page,
-        'page_size': pageSize,
-        if (keyword != null) 'keyword': keyword,
-      },
+      queryParameters: params,
     );
 
     if (!response.isSuccess || response.data == null) {
       throw TaskExpertException(response.message ?? '获取达人列表失败');
+    }
+
+    if (keyword == null) {
+      final cacheKey =
+          CacheManager.buildKey(CacheManager.prefixTaskExperts, params);
+      await _cache.set(cacheKey, response.data!, ttl: CacheManager.longTTL);
     }
 
     return TaskExpertListResponse.fromJson(response.data!);
@@ -35,6 +55,13 @@ class TaskExpertRepository {
 
   /// 获取达人详情
   Future<TaskExpert> getExpertById(String id) async {
+    final cacheKey = '${CacheManager.prefixExpertDetail}$id';
+
+    final cached = _cache.get<Map<String, dynamic>>(cacheKey);
+    if (cached != null) {
+      return TaskExpert.fromJson(cached);
+    }
+
     final response = await _apiService.get<Map<String, dynamic>>(
       ApiEndpoints.taskExpertById(id),
     );
@@ -43,11 +70,22 @@ class TaskExpertRepository {
       throw TaskExpertException(response.message ?? '获取达人详情失败');
     }
 
+    await _cache.set(cacheKey, response.data!, ttl: CacheManager.longTTL);
+
     return TaskExpert.fromJson(response.data!);
   }
 
   /// 获取达人服务列表
   Future<List<TaskExpertService>> getExpertServices(String expertId) async {
+    final cacheKey = '${CacheManager.prefixExpertDetail}${expertId}_services';
+
+    final cached = _cache.get<List<dynamic>>(cacheKey);
+    if (cached != null) {
+      return cached
+          .map((e) => TaskExpertService.fromJson(e as Map<String, dynamic>))
+          .toList();
+    }
+
     final response = await _apiService.get<List<dynamic>>(
       ApiEndpoints.taskExpertServices(expertId),
     );
@@ -55,6 +93,8 @@ class TaskExpertRepository {
     if (!response.isSuccess || response.data == null) {
       throw TaskExpertException(response.message ?? '获取达人服务失败');
     }
+
+    await _cache.set(cacheKey, response.data!, ttl: CacheManager.longTTL);
 
     return response.data!
         .map(
@@ -64,6 +104,11 @@ class TaskExpertRepository {
 
   /// 获取服务详情
   Future<Map<String, dynamic>> getServiceDetail(int serviceId) async {
+    final cacheKey = '${CacheManager.prefixExpertDetail}service_$serviceId';
+
+    final cached = _cache.get<Map<String, dynamic>>(cacheKey);
+    if (cached != null) return cached;
+
     final response = await _apiService.get<Map<String, dynamic>>(
       ApiEndpoints.taskExpertServiceDetail(serviceId),
     );
@@ -71,6 +116,8 @@ class TaskExpertRepository {
     if (!response.isSuccess || response.data == null) {
       throw TaskExpertException(response.message ?? '获取服务详情失败');
     }
+
+    await _cache.set(cacheKey, response.data!, ttl: CacheManager.longTTL);
 
     return response.data!;
   }

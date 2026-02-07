@@ -14,28 +14,25 @@ abstract class PaymentEvent extends Equatable {
   List<Object?> get props => [];
 }
 
-/// 创建支付意向
+/// 创建支付意向（对齐 iOS createPaymentIntent）
+///
+/// [preferredPaymentMethod]: 'card' / 'alipay' / null
+/// [isMethodSwitch]: true 表示切换支付方式时重建，不会重置 UI 为 loading 状态
 class PaymentCreateIntent extends PaymentEvent {
   const PaymentCreateIntent({
     required this.taskId,
     this.couponId,
+    this.preferredPaymentMethod,
+    this.isMethodSwitch = false,
   });
 
   final int taskId;
   final int? couponId;
+  final String? preferredPaymentMethod;
+  final bool isMethodSwitch;
 
   @override
-  List<Object?> get props => [taskId, couponId];
-}
-
-/// 确认支付
-class PaymentConfirm extends PaymentEvent {
-  const PaymentConfirm({required this.paymentIntentId});
-
-  final String paymentIntentId;
-
-  @override
-  List<Object?> get props => [paymentIntentId];
+  List<Object?> get props => [taskId, couponId, preferredPaymentMethod, isMethodSwitch];
 }
 
 /// 选择优惠券
@@ -64,7 +61,7 @@ class PaymentCheckStatus extends PaymentEvent {
   List<Object?> get props => [taskId];
 }
 
-/// 创建微信支付会话
+/// 创建微信支付 Checkout Session（对齐 iOS confirmWeChatPayment）
 class PaymentCreateWeChatSession extends PaymentEvent {
   const PaymentCreateWeChatSession({
     required this.taskId,
@@ -78,7 +75,17 @@ class PaymentCreateWeChatSession extends PaymentEvent {
   List<Object?> get props => [taskId, couponId];
 }
 
-/// 标记支付成功（由外部回调触发）
+/// 开始处理中（用于 PaymentSheet / Apple Pay 等客户端 UI 支付流程）
+class PaymentStartProcessing extends PaymentEvent {
+  const PaymentStartProcessing();
+}
+
+/// 清除错误信息
+class PaymentClearError extends PaymentEvent {
+  const PaymentClearError();
+}
+
+/// 标记支付成功（由 Stripe SDK 回调触发）
 class PaymentMarkSuccess extends PaymentEvent {
   const PaymentMarkSuccess();
 }
@@ -103,16 +110,22 @@ class PaymentState extends Equatable {
     this.paymentResponse,
     this.selectedCouponId,
     this.selectedCouponName,
+    this.preferredPaymentMethod,
     this.weChatCheckoutUrl,
     this.errorMessage,
+    this.isMethodSwitching = false,
   });
 
   final PaymentStatus status;
   final TaskPaymentResponse? paymentResponse;
   final int? selectedCouponId;
   final String? selectedCouponName;
+  /// 当前 PaymentIntent 对应的支付方式（'card' / 'alipay'）
+  final String? preferredPaymentMethod;
   final String? weChatCheckoutUrl;
   final String? errorMessage;
+  /// 是否正在切换支付方式（不应重置整个 UI）
+  final bool isMethodSwitching;
 
   bool get isLoading => status == PaymentStatus.loading;
   bool get isProcessing => status == PaymentStatus.processing;
@@ -124,10 +137,13 @@ class PaymentState extends Equatable {
     TaskPaymentResponse? paymentResponse,
     int? selectedCouponId,
     String? selectedCouponName,
+    String? preferredPaymentMethod,
     String? weChatCheckoutUrl,
     String? errorMessage,
+    bool? isMethodSwitching,
     bool clearCoupon = false,
     bool clearWeChatUrl = false,
+    bool clearError = false,
   }) {
     return PaymentState(
       status: status ?? this.status,
@@ -136,10 +152,13 @@ class PaymentState extends Equatable {
           clearCoupon ? null : (selectedCouponId ?? this.selectedCouponId),
       selectedCouponName:
           clearCoupon ? null : (selectedCouponName ?? this.selectedCouponName),
+      preferredPaymentMethod:
+          preferredPaymentMethod ?? this.preferredPaymentMethod,
       weChatCheckoutUrl: clearWeChatUrl
           ? null
           : (weChatCheckoutUrl ?? this.weChatCheckoutUrl),
-      errorMessage: errorMessage,
+      errorMessage: clearError ? null : (errorMessage ?? this.errorMessage),
+      isMethodSwitching: isMethodSwitching ?? false,
     );
   }
 
@@ -149,70 +168,79 @@ class PaymentState extends Equatable {
         paymentResponse,
         selectedCouponId,
         selectedCouponName,
+        preferredPaymentMethod,
         weChatCheckoutUrl,
         errorMessage,
+        isMethodSwitching,
       ];
 }
 
 // ==================== Bloc ====================
 
+/// 支付 BLoC
+///
+/// 对齐 iOS PaymentViewModel 的支付流程：
+/// 1. 创建 PaymentIntent（带 preferred_payment_method）
+/// 2. Stripe SDK 在客户端完成支付（PaymentSheet / Apple Pay）
+/// 3. 后端通过 Webhook 接收确认通知
+///
+/// 注意：卡支付和支付宝都通过 Stripe PaymentSheet 完成，
+/// 微信支付通过 Stripe Checkout Session + WebView 完成。
 class PaymentBloc extends Bloc<PaymentEvent, PaymentState> {
   PaymentBloc({required PaymentRepository paymentRepository})
       : _repository = paymentRepository,
         super(const PaymentState()) {
     on<PaymentCreateIntent>(_onCreateIntent);
-    on<PaymentConfirm>(_onConfirm);
     on<PaymentSelectCoupon>(_onSelectCoupon);
     on<PaymentRemoveCoupon>(_onRemoveCoupon);
     on<PaymentCheckStatus>(_onCheckStatus);
     on<PaymentCreateWeChatSession>(_onCreateWeChatSession);
+    on<PaymentStartProcessing>(_onStartProcessing);
+    on<PaymentClearError>(_onClearError);
     on<PaymentMarkSuccess>(_onMarkSuccess);
     on<PaymentMarkFailed>(_onMarkFailed);
   }
 
   final PaymentRepository _repository;
 
+  /// 创建支付意向
+  ///
+  /// 对齐 iOS PaymentViewModel.createPaymentIntent()
+  /// - 初始加载：status → loading → ready
+  /// - 方法切换：保持当前 UI，静默刷新（isMethodSwitching = true）
   Future<void> _onCreateIntent(
     PaymentCreateIntent event,
     Emitter<PaymentState> emit,
   ) async {
-    emit(state.copyWith(status: PaymentStatus.loading));
+    if (event.isMethodSwitch) {
+      // 方法切换：不清空 UI，保留旧的 paymentResponse 显示金额信息
+      emit(state.copyWith(
+        isMethodSwitching: true,
+        clearError: true,
+      ));
+    } else {
+      emit(state.copyWith(status: PaymentStatus.loading, clearError: true));
+    }
 
     try {
       final response = await _repository.createPaymentIntent(
         taskId: event.taskId,
         couponId: event.couponId ?? state.selectedCouponId,
+        preferredPaymentMethod: event.preferredPaymentMethod,
       );
 
       emit(state.copyWith(
         status: PaymentStatus.ready,
         paymentResponse: response,
+        preferredPaymentMethod: event.preferredPaymentMethod,
+        isMethodSwitching: false,
       ));
     } catch (e) {
       AppLogger.error('Failed to create payment intent', e);
       emit(state.copyWith(
-        status: PaymentStatus.error,
+        status: event.isMethodSwitch ? PaymentStatus.ready : PaymentStatus.error,
         errorMessage: _formatError(e),
-      ));
-    }
-  }
-
-  Future<void> _onConfirm(
-    PaymentConfirm event,
-    Emitter<PaymentState> emit,
-  ) async {
-    emit(state.copyWith(status: PaymentStatus.processing));
-
-    try {
-      await _repository.confirmPayment(
-        paymentIntentId: event.paymentIntentId,
-      );
-      emit(state.copyWith(status: PaymentStatus.success));
-    } catch (e) {
-      AppLogger.error('Failed to confirm payment', e);
-      emit(state.copyWith(
-        status: PaymentStatus.error,
-        errorMessage: _formatError(e),
+        isMethodSwitching: false,
       ));
     }
   }
@@ -249,11 +277,16 @@ class PaymentBloc extends Bloc<PaymentEvent, PaymentState> {
     }
   }
 
+  /// 创建微信支付 Checkout Session
+  ///
+  /// 对齐 iOS PaymentViewModel.confirmWeChatPayment()
+  /// 微信支付不走 PaymentIntent → PaymentSheet 流程，
+  /// 而是创建 Stripe Checkout Session → 在 WebView 中完成支付
   Future<void> _onCreateWeChatSession(
     PaymentCreateWeChatSession event,
     Emitter<PaymentState> emit,
   ) async {
-    emit(state.copyWith(status: PaymentStatus.processing));
+    emit(state.copyWith(status: PaymentStatus.processing, clearError: true));
 
     try {
       final checkoutUrl = await _repository.createWeChatCheckoutSession(
@@ -272,6 +305,26 @@ class PaymentBloc extends Bloc<PaymentEvent, PaymentState> {
         errorMessage: _formatError(e),
       ));
     }
+  }
+
+  Future<void> _onStartProcessing(
+    PaymentStartProcessing event,
+    Emitter<PaymentState> emit,
+  ) async {
+    emit(state.copyWith(status: PaymentStatus.processing, clearError: true));
+  }
+
+  Future<void> _onClearError(
+    PaymentClearError event,
+    Emitter<PaymentState> emit,
+  ) async {
+    emit(state.copyWith(
+      status: state.paymentResponse != null
+          ? PaymentStatus.ready
+          : PaymentStatus.initial,
+      clearError: true,
+      clearWeChatUrl: true,
+    ));
   }
 
   Future<void> _onMarkSuccess(
@@ -294,15 +347,15 @@ class PaymentBloc extends Bloc<PaymentEvent, PaymentState> {
   String _formatError(dynamic error) {
     final msg = error.toString();
     if (msg.contains('insufficient_funds')) {
-      return '余额不足，请更换支付方式或充值后重试。';
+      return 'error_insufficient_funds';
     } else if (msg.contains('card_declined')) {
-      return '银行卡被拒绝，请更换银行卡或联系银行。';
+      return 'error_card_declined';
     } else if (msg.contains('expired_card')) {
-      return '银行卡已过期，请更换银行卡。';
+      return 'error_expired_card';
     } else if (msg.contains('network')) {
-      return '网络连接失败，请检查网络后重试。';
+      return 'error_network_connection';
     } else if (msg.contains('timeout')) {
-      return '请求超时，请稍后重试。';
+      return 'error_network_timeout';
     }
     return msg
         .replaceAll('PaymentException: ', '')

@@ -103,3 +103,19 @@ class AuthUserUpdated extends AuthEvent {
   @override
   List<Object> get props => [user];
 }
+
+/// 重置密码
+class AuthResetPasswordRequested extends AuthEvent {
+  const AuthResetPasswordRequested({
+    required this.email,
+    required this.code,
+    required this.newPassword,
+  });
+
+  final String email;
+  final String code;
+  final String newPassword;
+
+  @override
+  List<Object> get props => [email, code, newPassword];
+}

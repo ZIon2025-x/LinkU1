@@ -15,217 +15,134 @@ import '../../../data/models/coupon_points.dart';
 import '../../../data/models/payment.dart';
 import '../../../data/repositories/coupon_points_repository.dart';
 import '../../../data/repositories/payment_repository.dart';
-import '../../../core/utils/logger.dart';
+import '../bloc/wallet_bloc.dart';
 
 /// 钱包页面
 /// 显示积分余额、交易记录、优惠券和Stripe Connect状态
-class WalletView extends StatefulWidget {
+class WalletView extends StatelessWidget {
   const WalletView({super.key});
 
   @override
-  State<WalletView> createState() => _WalletViewState();
+  Widget build(BuildContext context) {
+    return BlocProvider(
+      create: (context) => WalletBloc(
+        couponPointsRepository: context.read<CouponPointsRepository>(),
+        paymentRepository: context.read<PaymentRepository>(),
+      )..add(const WalletLoadRequested()),
+      child: const _WalletContent(),
+    );
+  }
 }
 
-class _WalletViewState extends State<WalletView> {
-  PointsAccount? _pointsAccount;
-  List<PointsTransaction> _transactions = [];
-  List<UserCoupon> _myCoupons = [];
-  StripeConnectStatus? _stripeConnectStatus;
-  bool _isLoading = true;
-  bool _isCheckingIn = false;
-  String? _errorMessage;
-  int _transactionPage = 1;
-  bool _hasMoreTransactions = true;
-
-  @override
-  void initState() {
-    super.initState();
-    _loadData();
-  }
-
-  Future<void> _loadData() async {
-    setState(() {
-      _isLoading = true;
-      _errorMessage = null;
-    });
-
-    try {
-      final couponRepo = context.read<CouponPointsRepository>();
-      final paymentRepo = context.read<PaymentRepository>();
-
-      // 并行加载所有数据
-      final results = await Future.wait([
-        couponRepo.getPointsAccount(),
-        couponRepo.getPointsTransactions(page: 1, pageSize: 20),
-        couponRepo.getMyCoupons(),
-        paymentRepo.getStripeConnectStatus(),
-      ]);
-
-      setState(() {
-        _pointsAccount = results[0] as PointsAccount;
-        _transactions = results[1] as List<PointsTransaction>;
-        _myCoupons = results[2] as List<UserCoupon>;
-        _stripeConnectStatus = results[3] as StripeConnectStatus;
-        _isLoading = false;
-        _hasMoreTransactions = _transactions.length >= 20;
-      });
-    } catch (e) {
-      AppLogger.error('Failed to load wallet data', e);
-      setState(() {
-        _isLoading = false;
-        _errorMessage = e.toString();
-      });
-    }
-  }
-
-  Future<void> _checkIn() async {
-    if (_isCheckingIn) return;
-
-    setState(() {
-      _isCheckingIn = true;
-    });
-
-    try {
-      final couponRepo = context.read<CouponPointsRepository>();
-      final transaction = await couponRepo.checkIn();
-
-      // 刷新积分账户
-      final account = await couponRepo.getPointsAccount();
-
-      setState(() {
-        _pointsAccount = account;
-        _transactions.insert(0, transaction);
-        _isCheckingIn = false;
-      });
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('签到成功！'),
-            backgroundColor: AppColors.success,
-          ),
-        );
-      }
-    } catch (e) {
-      AppLogger.error('Failed to check in', e);
-      setState(() {
-        _isCheckingIn = false;
-      });
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('签到失败: ${e.toString()}'),
-            backgroundColor: AppColors.error,
-          ),
-        );
-      }
-    }
-  }
-
-  Future<void> _loadMoreTransactions() async {
-    if (!_hasMoreTransactions || _isLoading) return;
-
-    try {
-      final couponRepo = context.read<CouponPointsRepository>();
-      final nextPage = _transactionPage + 1;
-      final moreTransactions = await couponRepo.getPointsTransactions(
-        page: nextPage,
-        pageSize: 20,
-      );
-
-      setState(() {
-        _transactions.addAll(moreTransactions);
-        _transactionPage = nextPage;
-        _hasMoreTransactions = moreTransactions.length >= 20;
-      });
-    } catch (e) {
-      AppLogger.error('Failed to load more transactions', e);
-    }
-  }
+class _WalletContent extends StatelessWidget {
+  const _WalletContent();
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(context.l10n.profileMyWallet),
+    return BlocListener<WalletBloc, WalletState>(
+      listenWhen: (prev, curr) => prev.actionMessage != curr.actionMessage,
+      listener: (context, state) {
+        if (state.actionMessage != null) {
+          final isError = state.actionMessage!.contains('失败');
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(state.actionMessage!),
+              backgroundColor: isError ? AppColors.error : AppColors.success,
+            ),
+          );
+        }
+      },
+      child: BlocBuilder<WalletBloc, WalletState>(
+        builder: (context, state) {
+          return Scaffold(
+            appBar: AppBar(
+              title: Text(context.l10n.profileMyWallet),
+            ),
+            body: state.isLoading && state.pointsAccount == null
+                ? const LoadingView()
+                : state.errorMessage != null && state.pointsAccount == null
+                    ? ErrorStateView(
+                        message: state.errorMessage!,
+                        onRetry: () => context
+                            .read<WalletBloc>()
+                            .add(const WalletLoadRequested()),
+                      )
+                    : RefreshIndicator(
+                        onRefresh: () async {
+                          context
+                              .read<WalletBloc>()
+                              .add(const WalletLoadRequested());
+                        },
+                        child: SingleChildScrollView(
+                          physics: const AlwaysScrollableScrollPhysics(),
+                          padding: AppSpacing.allMd,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              if (state.pointsAccount != null)
+                                _PointsCard(account: state.pointsAccount!),
+                              AppSpacing.vLg,
+                              _CheckInButton(
+                                isCheckingIn: state.isCheckingIn,
+                                onPressed: () => context
+                                    .read<WalletBloc>()
+                                    .add(const WalletCheckIn()),
+                              ),
+                              AppSpacing.vLg,
+                              if (state.stripeConnectStatus != null)
+                                _StripeConnectSection(
+                                    status: state.stripeConnectStatus!),
+                              AppSpacing.vLg,
+                              _TransactionsSection(
+                                transactions: state.transactions,
+                                hasMore: state.hasMoreTransactions,
+                                onLoadMore: () => context
+                                    .read<WalletBloc>()
+                                    .add(const WalletLoadMoreTransactions()),
+                              ),
+                              AppSpacing.vLg,
+                              _CouponsSection(coupons: state.coupons),
+                            ],
+                          ),
+                        ),
+                      ),
+          );
+        },
       ),
-      body: _isLoading && _pointsAccount == null
-          ? const LoadingView()
-          : _errorMessage != null && _pointsAccount == null
-              ? ErrorStateView(
-                  message: _errorMessage!,
-                  onRetry: _loadData,
-                )
-              : RefreshIndicator(
-                  onRefresh: _loadData,
-                  child: SingleChildScrollView(
-                    physics: const AlwaysScrollableScrollPhysics(),
-                    padding: AppSpacing.allMd,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // 积分余额卡片
-                        if (_pointsAccount != null) _buildPointsCard(),
-                        AppSpacing.vLg,
-
-                        // 签到按钮
-                        _buildCheckInButton(),
-                        AppSpacing.vLg,
-
-                        // Stripe Connect状态
-                        if (_stripeConnectStatus != null)
-                          _buildStripeConnectSection(),
-                        AppSpacing.vLg,
-
-                        // 交易记录
-                        _buildTransactionsSection(),
-                        AppSpacing.vLg,
-
-                        // 我的优惠券
-                        _buildCouponsSection(),
-                      ],
-                    ),
-                  ),
-                ),
     );
   }
+}
 
-  Widget _buildPointsCard() {
-    final account = _pointsAccount!;
+// ==================== 子组件 ====================
+
+class _PointsCard extends StatelessWidget {
+  const _PointsCard({required this.account});
+  final PointsAccount account;
+
+  @override
+  Widget build(BuildContext context) {
     return AppCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            '积分余额',
-            style: TextStyle(
-              fontSize: 14,
-              color: AppColors.textSecondaryLight,
-            ),
-          ),
+          const Text('积分余额',
+              style: TextStyle(
+                  fontSize: 14, color: AppColors.textSecondaryLight)),
           AppSpacing.vSm,
           Row(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              Text(
-                account.balanceDisplay,
-                style: const TextStyle(
-                  fontSize: 36,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.primary,
-                ),
-              ),
+              Text(account.balanceDisplay,
+                  style: const TextStyle(
+                      fontSize: 36,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.primary)),
               AppSpacing.hSm,
               Padding(
                 padding: const EdgeInsets.only(bottom: 8),
-                child: Text(
-                  account.currency,
-                  style: TextStyle(
-                    fontSize: 16,
-                    color: AppColors.textSecondaryLight,
-                  ),
-                ),
+                child: Text(account.currency,
+                    style: const TextStyle(
+                        fontSize: 16, color: AppColors.textSecondaryLight)),
               ),
             ],
           ),
@@ -233,63 +150,64 @@ class _WalletViewState extends State<WalletView> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
-              _buildStatItem('累计获得', account.totalEarned.toString()),
-              Container(
-                width: 1,
-                height: 30,
-                color: AppColors.dividerLight,
-              ),
-              _buildStatItem('累计消费', account.totalSpent.toString()),
+              _StatItem(label: '累计获得', value: account.totalEarned.toString()),
+              Container(width: 1, height: 30, color: AppColors.dividerLight),
+              _StatItem(label: '累计消费', value: account.totalSpent.toString()),
             ],
           ),
         ],
       ),
     );
   }
+}
 
-  Widget _buildStatItem(String label, String value) {
+class _StatItem extends StatelessWidget {
+  const _StatItem({required this.label, required this.value});
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
     return Column(
       children: [
-        Text(
-          value,
-          style: const TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
+        Text(value,
+            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
         const SizedBox(height: 4),
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 12,
-            color: AppColors.textSecondaryLight,
-          ),
-        ),
+        Text(label,
+            style:
+                const TextStyle(fontSize: 12, color: AppColors.textSecondaryLight)),
       ],
     );
   }
+}
 
-  Widget _buildCheckInButton() {
+class _CheckInButton extends StatelessWidget {
+  const _CheckInButton({required this.isCheckingIn, required this.onPressed});
+  final bool isCheckingIn;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
     return PrimaryButton(
-      text: _isCheckingIn ? '签到中...' : '每日签到',
+      text: isCheckingIn ? '签到中...' : '每日签到',
       icon: Icons.check_circle_outline,
-      onPressed: _isCheckingIn ? null : _checkIn,
-      isLoading: _isCheckingIn,
+      onPressed: isCheckingIn ? null : onPressed,
+      isLoading: isCheckingIn,
     );
   }
+}
 
-  Widget _buildStripeConnectSection() {
-    final status = _stripeConnectStatus!;
+class _StripeConnectSection extends StatelessWidget {
+  const _StripeConnectSection({required this.status});
+  final StripeConnectStatus status;
+
+  @override
+  Widget build(BuildContext context) {
     return GroupedCard(
-      header: Padding(
+      header: const Padding(
         padding: AppSpacing.horizontalMd,
-        child: const Text(
-          '收款账户',
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
+        child: Text('收款账户',
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
       ),
       children: [
         ListTile(
@@ -350,53 +268,67 @@ class _WalletViewState extends State<WalletView> {
             padding: AppSpacing.horizontalMd,
             child: SecondaryButton(
               text: status.isConnected ? '查看账户详情' : '设置收款账户',
-              onPressed: () => context.push('/payment/stripe-connect/onboarding'),
+              onPressed: () =>
+                  context.push('/payment/stripe-connect/onboarding'),
             ),
           ),
       ],
     );
   }
+}
 
-  Widget _buildTransactionsSection() {
+class _TransactionsSection extends StatelessWidget {
+  const _TransactionsSection({
+    required this.transactions,
+    required this.hasMore,
+    required this.onLoadMore,
+  });
+  final List<PointsTransaction> transactions;
+  final bool hasMore;
+  final VoidCallback onLoadMore;
+
+  @override
+  Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Padding(
+        const Padding(
           padding: AppSpacing.horizontalMd,
-          child: const Text(
-            '交易记录',
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
+          child: Text('交易记录',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
         ),
         AppSpacing.vSm,
-        if (_transactions.isEmpty)
+        if (transactions.isEmpty)
           EmptyStateView.noData(
             title: '暂无交易记录',
             description: '您的积分交易记录将显示在这里',
           )
         else
           GroupedCard(
-            children: _transactions
+            children: transactions
                 .take(10)
-                .map((transaction) => _buildTransactionItem(transaction))
+                .map((t) => _TransactionItem(transaction: t))
                 .toList(),
           ),
-        if (_hasMoreTransactions && _transactions.length > 10)
+        if (hasMore && transactions.length > 10)
           Padding(
             padding: AppSpacing.allMd,
             child: TextButton(
-              onPressed: _loadMoreTransactions,
+              onPressed: onLoadMore,
               child: const Text('查看更多交易记录'),
             ),
           ),
       ],
     );
   }
+}
 
-  Widget _buildTransactionItem(PointsTransaction transaction) {
+class _TransactionItem extends StatelessWidget {
+  const _TransactionItem({required this.transaction});
+  final PointsTransaction transaction;
+
+  @override
+  Widget build(BuildContext context) {
     return ListTile(
       contentPadding: AppSpacing.horizontalMd,
       leading: Container(
@@ -429,56 +361,67 @@ class _WalletViewState extends State<WalletView> {
             style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.w600,
-              color: transaction.isIncome
-                  ? AppColors.success
-                  : AppColors.error,
+              color:
+                  transaction.isIncome ? AppColors.success : AppColors.error,
             ),
           ),
           if (transaction.createdAt != null)
             Text(
               _formatDate(transaction.createdAt!),
-              style: TextStyle(
-                fontSize: 12,
-                color: AppColors.textTertiaryLight,
-              ),
+              style:
+                  const TextStyle(fontSize: 12, color: AppColors.textTertiaryLight),
             ),
         ],
       ),
     );
   }
 
-  Widget _buildCouponsSection() {
+  String _formatDate(DateTime date) {
+    final now = DateTime.now();
+    final difference = now.difference(date);
+    if (difference.inDays == 0) return '今天';
+    if (difference.inDays == 1) return '昨天';
+    if (difference.inDays < 7) return '${difference.inDays}天前';
+    return '${date.month}/${date.day}';
+  }
+}
+
+class _CouponsSection extends StatelessWidget {
+  const _CouponsSection({required this.coupons});
+  final List<UserCoupon> coupons;
+
+  @override
+  Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Padding(
+        const Padding(
           padding: AppSpacing.horizontalMd,
-          child: const Text(
-            '我的优惠券',
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
+          child: Text('我的优惠券',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
         ),
         AppSpacing.vSm,
-        if (_myCoupons.isEmpty)
+        if (coupons.isEmpty)
           EmptyStateView.noData(
             title: '暂无优惠券',
             description: '您还没有优惠券',
           )
         else
           GroupedCard(
-            children: _myCoupons
-                .take(5)
-                .map((userCoupon) => _buildCouponItem(userCoupon))
-                .toList(),
+            children:
+                coupons.take(5).map((uc) => _CouponItem(userCoupon: uc)).toList(),
           ),
       ],
     );
   }
+}
 
-  Widget _buildCouponItem(UserCoupon userCoupon) {
+class _CouponItem extends StatelessWidget {
+  const _CouponItem({required this.userCoupon});
+  final UserCoupon userCoupon;
+
+  @override
+  Widget build(BuildContext context) {
     final coupon = userCoupon.coupon;
     return ListTile(
       contentPadding: AppSpacing.horizontalMd,
@@ -489,48 +432,25 @@ class _WalletViewState extends State<WalletView> {
           color: AppColors.primaryLight,
           borderRadius: AppRadius.allSmall,
         ),
-        child: const Icon(
-          Icons.card_giftcard,
-          color: AppColors.primary,
-        ),
+        child: const Icon(Icons.card_giftcard, color: AppColors.primary),
       ),
       title: Text(coupon.name),
-      subtitle: Text(
-        '${coupon.typeText} · ${coupon.discountValueDisplay}',
-      ),
+      subtitle: Text('${coupon.typeText} · ${coupon.discountValueDisplay}'),
       trailing: Container(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
         decoration: BoxDecoration(
-          color: userCoupon.isUsable
-              ? AppColors.successLight
-              : AppColors.errorLight,
+          color:
+              userCoupon.isUsable ? AppColors.successLight : AppColors.errorLight,
           borderRadius: AppRadius.allTiny,
         ),
         child: Text(
           userCoupon.statusText,
           style: TextStyle(
             fontSize: 12,
-            color: userCoupon.isUsable
-                ? AppColors.success
-                : AppColors.error,
+            color: userCoupon.isUsable ? AppColors.success : AppColors.error,
           ),
         ),
       ),
     );
-  }
-
-  String _formatDate(DateTime date) {
-    final now = DateTime.now();
-    final difference = now.difference(date);
-
-    if (difference.inDays == 0) {
-      return '今天';
-    } else if (difference.inDays == 1) {
-      return '昨天';
-    } else if (difference.inDays < 7) {
-      return '${difference.inDays}天前';
-    } else {
-      return '${date.month}/${date.day}';
-    }
   }
 }

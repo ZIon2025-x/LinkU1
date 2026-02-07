@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../data/repositories/forum_repository.dart';
 import '../bloc/forum_bloc.dart';
@@ -103,7 +102,7 @@ class _CreatePostViewState extends State<CreatePostView> {
                 // 分类选择
                 if (state.categories.isNotEmpty) ...[
                   DropdownButtonFormField<int>(
-                    value: _selectedCategoryId,
+                    initialValue: _selectedCategoryId,
                     decoration: const InputDecoration(
                       labelText: '选择分类',
                       border: OutlineInputBorder(),

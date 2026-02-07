@@ -1,6 +1,7 @@
 import '../models/leaderboard.dart';
 import '../services/api_service.dart';
 import '../../core/constants/api_endpoints.dart';
+import '../../core/utils/cache_manager.dart';
 
 /// 排行榜仓库
 /// 与iOS LeaderboardViewModel + 后端 custom_leaderboard_routes 对齐
@@ -10,6 +11,7 @@ class LeaderboardRepository {
   }) : _apiService = apiService;
 
   final ApiService _apiService;
+  final CacheManager _cache = CacheManager.shared;
 
   /// 获取排行榜列表
   Future<LeaderboardListResponse> getLeaderboards({
@@ -18,18 +20,37 @@ class LeaderboardRepository {
     String? keyword,
     String? location,
   }) async {
+    final params = {
+      'page': page,
+      'page_size': pageSize,
+      if (keyword != null) 'keyword': keyword,
+      if (location != null) 'location': location,
+    };
+
+    // 无搜索时使用缓存
+    if (keyword == null) {
+      final cacheKey =
+          CacheManager.buildKey(CacheManager.prefixLeaderboard, params);
+      final cached = _cache.get<Map<String, dynamic>>(cacheKey);
+      if (cached != null) {
+        return LeaderboardListResponse.fromJson(cached);
+      }
+    }
+
     final response = await _apiService.get<Map<String, dynamic>>(
       ApiEndpoints.leaderboards,
-      queryParameters: {
-        'page': page,
-        'page_size': pageSize,
-        if (keyword != null) 'keyword': keyword,
-        if (location != null) 'location': location,
-      },
+      queryParameters: params,
     );
 
     if (!response.isSuccess || response.data == null) {
       throw LeaderboardException(response.message ?? '获取排行榜列表失败');
+    }
+
+    // 排行榜变动少，使用长TTL
+    if (keyword == null) {
+      final cacheKey =
+          CacheManager.buildKey(CacheManager.prefixLeaderboard, params);
+      await _cache.set(cacheKey, response.data!, ttl: CacheManager.longTTL);
     }
 
     return LeaderboardListResponse.fromJson(response.data!);
@@ -37,6 +58,13 @@ class LeaderboardRepository {
 
   /// 获取排行榜详情
   Future<Leaderboard> getLeaderboardById(int id) async {
+    final cacheKey = '${CacheManager.prefixLeaderboardDetail}$id';
+
+    final cached = _cache.get<Map<String, dynamic>>(cacheKey);
+    if (cached != null) {
+      return Leaderboard.fromJson(cached);
+    }
+
     final response = await _apiService.get<Map<String, dynamic>>(
       ApiEndpoints.leaderboardById(id),
     );
@@ -44,6 +72,8 @@ class LeaderboardRepository {
     if (!response.isSuccess || response.data == null) {
       throw LeaderboardException(response.message ?? '获取排行榜详情失败');
     }
+
+    await _cache.set(cacheKey, response.data!, ttl: CacheManager.longTTL);
 
     return Leaderboard.fromJson(response.data!);
   }
@@ -55,6 +85,23 @@ class LeaderboardRepository {
     int pageSize = 20,
     String? sortBy,
   }) async {
+    final params = {
+      'lb_id': leaderboardId,
+      'page': page,
+      'page_size': pageSize,
+      if (sortBy != null) 'sort_by': sortBy,
+    };
+    final cacheKey =
+        CacheManager.buildKey('${CacheManager.prefixLeaderboard}items_', params);
+
+    final cached = _cache.get<Map<String, dynamic>>(cacheKey);
+    if (cached != null) {
+      final items = cached['items'] as List<dynamic>? ?? [];
+      return items
+          .map((e) => LeaderboardItem.fromJson(e as Map<String, dynamic>))
+          .toList();
+    }
+
     final response = await _apiService.get<Map<String, dynamic>>(
       ApiEndpoints.leaderboardItems(leaderboardId),
       queryParameters: {
@@ -67,6 +114,8 @@ class LeaderboardRepository {
     if (!response.isSuccess || response.data == null) {
       throw LeaderboardException(response.message ?? '获取排行榜项目失败');
     }
+
+    await _cache.set(cacheKey, response.data!, ttl: CacheManager.longTTL);
 
     final items = response.data!['items'] as List<dynamic>? ?? [];
     return items

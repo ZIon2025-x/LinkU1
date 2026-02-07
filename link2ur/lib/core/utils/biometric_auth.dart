@@ -59,7 +59,7 @@ class BiometricAuthManager {
     try {
       final available = await isAvailable;
       if (!available) {
-        return BiometricAuthResult(
+        return const BiometricAuthResult(
           success: false,
           error: BiometricAuthError.notAvailable,
           message: '设备不支持生物认证',
@@ -89,7 +89,7 @@ class BiometricAuthManager {
       );
     } catch (e) {
       AppLogger.error('BiometricAuth - Unknown error', e);
-      return BiometricAuthResult(
+      return const BiometricAuthResult(
         success: false,
         error: BiometricAuthError.unknown,
         message: '认证出错',

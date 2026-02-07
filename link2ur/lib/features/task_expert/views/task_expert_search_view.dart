@@ -8,23 +8,37 @@ import '../../../core/design/app_radius.dart';
 import '../../../core/utils/l10n_extension.dart';
 import '../../../core/widgets/loading_view.dart';
 import '../../../core/widgets/empty_state_view.dart';
-import '../../../core/widgets/async_image_view.dart';
 import '../../../data/models/task_expert.dart';
 import '../../../data/repositories/task_expert_repository.dart';
+import '../bloc/task_expert_bloc.dart';
 
 /// 任务达人搜索页
 /// 参考iOS TaskExpertSearchView.swift
-class TaskExpertSearchView extends StatefulWidget {
+class TaskExpertSearchView extends StatelessWidget {
   const TaskExpertSearchView({super.key});
 
   @override
-  State<TaskExpertSearchView> createState() => _TaskExpertSearchViewState();
+  Widget build(BuildContext context) {
+    return BlocProvider(
+      create: (context) => TaskExpertBloc(
+        taskExpertRepository: context.read<TaskExpertRepository>(),
+      ),
+      child: const _TaskExpertSearchContent(),
+    );
+  }
 }
 
-class _TaskExpertSearchViewState extends State<TaskExpertSearchView> {
+class _TaskExpertSearchContent extends StatefulWidget {
+  const _TaskExpertSearchContent();
+
+  @override
+  State<_TaskExpertSearchContent> createState() =>
+      _TaskExpertSearchContentState();
+}
+
+class _TaskExpertSearchContentState
+    extends State<_TaskExpertSearchContent> {
   final TextEditingController _searchController = TextEditingController();
-  List<TaskExpert> _results = [];
-  bool _isLoading = false;
   bool _hasSearched = false;
 
   @override
@@ -33,26 +47,12 @@ class _TaskExpertSearchViewState extends State<TaskExpertSearchView> {
     super.dispose();
   }
 
-  Future<void> _search(String keyword) async {
+  void _search(String keyword) {
     if (keyword.trim().isEmpty) return;
-
-    setState(() {
-      _isLoading = true;
-      _hasSearched = true;
-    });
-
-    try {
-      final repo = context.read<TaskExpertRepository>();
-      final results = await repo.searchExperts(keyword: keyword);
-      if (mounted) {
-        setState(() {
-          _results = results;
-          _isLoading = false;
-        });
-      }
-    } catch (_) {
-      if (mounted) setState(() => _isLoading = false);
-    }
+    setState(() => _hasSearched = true);
+    context
+        .read<TaskExpertBloc>()
+        .add(TaskExpertSearchRequested(keyword));
   }
 
   @override
@@ -77,42 +77,54 @@ class _TaskExpertSearchViewState extends State<TaskExpertSearchView> {
           ),
         ],
       ),
-      body: _isLoading
-          ? const LoadingView()
-          : !_hasSearched
-              ? Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.search,
-                          size: 64, color: AppColors.textTertiary),
-                      const SizedBox(height: AppSpacing.md),
-                      Text(l10n.taskExpertSearchPrompt,
-                          style: TextStyle(
-                              color: AppColors.textSecondary)),
-                    ],
-                  ),
-                )
-              : _results.isEmpty
-                  ? EmptyStateView(
-                      icon: Icons.search_off,
-                      title: l10n.commonNoResults,
-                      message: l10n.taskExpertNoResults,
-                    )
-                  : ListView.separated(
-                      padding: const EdgeInsets.all(AppSpacing.md),
-                      itemCount: _results.length,
-                      separatorBuilder: (_, __) =>
-                          const SizedBox(height: AppSpacing.md),
-                      itemBuilder: (context, index) {
-                        final expert = _results[index];
-                        return _ExpertCard(
-                          expert: expert,
-                          onTap: () =>
-                              context.push('/task-experts/${expert.id}'),
-                        );
-                      },
-                    ),
+      body: BlocBuilder<TaskExpertBloc, TaskExpertState>(
+        builder: (context, state) {
+          final results = state.searchResults;
+
+          if (state.isLoading) {
+            return const LoadingView();
+          }
+
+          if (!_hasSearched) {
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.search,
+                      size: 64, color: AppColors.textTertiary),
+                  const SizedBox(height: AppSpacing.md),
+                  Text(l10n.taskExpertSearchPrompt,
+                      style:
+                          const TextStyle(color: AppColors.textSecondary)),
+                ],
+              ),
+            );
+          }
+
+          if (results.isEmpty) {
+            return EmptyStateView(
+              icon: Icons.search_off,
+              title: l10n.commonNoResults,
+              message: l10n.taskExpertNoResults,
+            );
+          }
+
+          return ListView.separated(
+            padding: const EdgeInsets.all(AppSpacing.md),
+            itemCount: results.length,
+            separatorBuilder: (_, __) =>
+                const SizedBox(height: AppSpacing.md),
+            itemBuilder: (context, index) {
+              final expert = results[index];
+              return _ExpertCard(
+                expert: expert,
+                onTap: () =>
+                    context.push('/task-experts/${expert.id}'),
+              );
+            },
+          );
+        },
+      ),
     );
   }
 }
@@ -134,7 +146,7 @@ class _ExpertCard extends StatelessWidget {
           borderRadius: BorderRadius.circular(AppRadius.large),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.04),
+              color: Colors.black.withValues(alpha: 0.04),
               blurRadius: 8,
               offset: const Offset(0, 2),
             ),
@@ -165,7 +177,7 @@ class _ExpertCard extends StatelessWidget {
                       expert.specialties!.isNotEmpty)
                     Text(
                       expert.specialties!.join(' · '),
-                      style: TextStyle(
+                      style: const TextStyle(
                           fontSize: 13,
                           color: AppColors.textSecondary),
                       maxLines: 1,
@@ -175,7 +187,7 @@ class _ExpertCard extends StatelessWidget {
               ),
             ),
             if (expert.avgRating != null) ...[
-              Icon(Icons.star, size: 16, color: Colors.amber),
+              const Icon(Icons.star, size: 16, color: Colors.amber),
               const SizedBox(width: 4),
               Text(expert.avgRating!.toStringAsFixed(1),
                   style: const TextStyle(

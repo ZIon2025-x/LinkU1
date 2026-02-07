@@ -238,7 +238,7 @@ class _CreateFleaMarketItemContentState
 
                 // 分类
                 DropdownButtonFormField<String>(
-                  value: _selectedCategory,
+                  initialValue: _selectedCategory,
                   decoration: InputDecoration(
                     labelText: '分类',
                     prefixIcon: const Icon(Icons.category_outlined),
@@ -356,7 +356,7 @@ class _CreateFleaMarketItemContentState
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(
+                  const Icon(
                     Icons.add_photo_alternate_outlined,
                     size: 28,
                     color: AppColors.textTertiaryLight,
@@ -364,7 +364,7 @@ class _CreateFleaMarketItemContentState
                   const SizedBox(height: 2),
                   Text(
                     '${_selectedImages.length}/9',
-                    style: TextStyle(
+                    style: const TextStyle(
                       fontSize: 10,
                       color: AppColors.textTertiaryLight,
                     ),

@@ -825,7 +825,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get taskExpertNoExpertsFoundMessage => '尝试调整筛选条件';
 
   @override
-  String get taskExpertNoExpertsFoundWithQuery => '没有找到包含\\';
+  String get taskExpertNoExpertsFoundWithQuery => '没有找到匹配搜索的达人';
 
   @override
   String get taskExpertSearchTitle => '搜索达人';
@@ -1255,14 +1255,14 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String errorRequestFailed(int param1) {
-    return '请求失败';
+    return '请求失败 (错误代码: $param1)';
   }
 
   @override
   String get errorDecodingError => '数据解析失败，请稍后重试';
 
   @override
-  String get errorUnknown => '发生未知错误';
+  String get errorUnknown => '发生未知错误，请稍后重试';
 
   @override
   String get errorFileTooLarge => '文件过大';
@@ -2772,7 +2772,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get createTaskOnline => '线上';
 
   @override
-  String get createTaskCampusLifeRestriction => '仅已验证学生可发布\\';
+  String get createTaskCampusLifeRestriction => '仅已验证学生可发布校园生活任务';
 
   @override
   String get studentVerificationStudentVerification => '学生认证';
@@ -3045,7 +3045,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get createTaskImageUploadFailed => '部分图片上传失败，请重试';
 
   @override
-  String get createTaskStudentVerificationRequired => '只有已通过学生认证的用户才能发布\\';
+  String get createTaskStudentVerificationRequired => '只有已通过学生认证的用户才能发布校园生活任务';
 
   @override
   String get taskExpertBecomeExpert => '成为达人';
@@ -5605,10 +5605,16 @@ class AppLocalizationsZh extends AppLocalizations {
   String get errorNetworkTimeout => '网络连接超时';
 
   @override
+  String get errorRequestFailedGeneric => '请求失败';
+
+  @override
   String get errorRequestCancelled => '请求已取消';
 
   @override
   String get errorNetworkConnection => '网络连接失败';
+
+  @override
+  String get errorUnknownGeneric => '发生未知错误';
 
   @override
   String get errorInsufficientFunds => '余额不足，请更换支付方式或充值后重试。';
@@ -5767,6 +5773,9 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get authLogout => '退出登入';
+
+  @override
+  String get authForgotPassword => '忘記密碼';
 
   @override
   String get authEmail => '郵箱';
@@ -6468,7 +6477,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get taskExpertNoExpertsFoundMessage => '嘗試調整篩選條件';
 
   @override
-  String get taskExpertNoExpertsFoundWithQuery => '沒有找到包含\\';
+  String get taskExpertNoExpertsFoundWithQuery => '沒有找到匹配搜尋的達人';
 
   @override
   String get taskExpertSearchTitle => '搜尋達人';
@@ -6898,14 +6907,14 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String errorRequestFailed(int param1) {
-    return '請求失敗';
+    return '請求失敗 (錯誤代碼: $param1)';
   }
 
   @override
   String get errorDecodingError => '數據解析失敗，請稍後重試';
 
   @override
-  String get errorUnknown => '發生未知錯誤';
+  String get errorUnknown => '發生未知錯誤，請稍後重試';
 
   @override
   String get errorFileTooLarge => '文件過大';
@@ -8415,7 +8424,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get createTaskOnline => '線上';
 
   @override
-  String get createTaskCampusLifeRestriction => '僅已驗證學生可發布\\';
+  String get createTaskCampusLifeRestriction => '僅已驗證學生可發布校園生活任務';
 
   @override
   String get studentVerificationStudentVerification => '學生認證';
@@ -8688,7 +8697,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get createTaskImageUploadFailed => '部分圖片上傳失敗，請重試';
 
   @override
-  String get createTaskStudentVerificationRequired => '只有已通過學生認證的用戶才能發布\\';
+  String get createTaskStudentVerificationRequired => '只有已通過學生認證的用戶才能發布校園生活任務';
 
   @override
   String get taskExpertBecomeExpert => '成爲達人';
@@ -10056,6 +10065,9 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get notificationSystemMessage => '系統訊息';
 
   @override
+  String get notificationTaskChats => '任務聊天';
+
+  @override
   String get commonLoadMore => '加載更多';
 
   @override
@@ -11245,10 +11257,16 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get errorNetworkTimeout => '網路連線逾時';
 
   @override
+  String get errorRequestFailedGeneric => '請求失敗';
+
+  @override
   String get errorRequestCancelled => '請求已取消';
 
   @override
   String get errorNetworkConnection => '網路連線失敗';
+
+  @override
+  String get errorUnknownGeneric => '發生未知錯誤';
 
   @override
   String get errorInsufficientFunds => '餘額不足，請更換支付方式或儲值後重試。';

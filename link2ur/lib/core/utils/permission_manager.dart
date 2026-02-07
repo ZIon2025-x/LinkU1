@@ -80,7 +80,7 @@ class PermissionManager {
           granted: false,
           permissionName: permissionName,
           isPermanentlyDenied: true,
-          message: '请在系统设置中开启${permissionName}权限',
+          message: '请在系统设置中开启$permissionName权限',
         );
       }
 
@@ -90,14 +90,14 @@ class PermissionManager {
         granted: result.isGranted,
         permissionName: permissionName,
         isPermanentlyDenied: result.isPermanentlyDenied,
-        message: result.isGranted ? null : '${permissionName}权限被拒绝',
+        message: result.isGranted ? null : '$permissionName权限被拒绝',
       );
     } catch (e) {
       AppLogger.error('Permission - Request $permissionName failed', e);
       return PermissionResult(
         granted: false,
         permissionName: permissionName,
-        message: '请求${permissionName}权限出错',
+        message: '请求$permissionName权限出错',
       );
     }
   }
@@ -111,11 +111,11 @@ class PermissionManager {
     await showDialog<void>(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text('需要${permissionName}权限'),
+        title: Text('需要$permissionName权限'),
         content: Text(
           isPermanentlyDenied
-              ? '请在系统设置中开启${permissionName}权限后重试'
-              : '此功能需要${permissionName}权限才能正常使用',
+              ? '请在系统设置中开启$permissionName权限后重试'
+              : '此功能需要$permissionName权限才能正常使用',
         ),
         actions: [
           TextButton(

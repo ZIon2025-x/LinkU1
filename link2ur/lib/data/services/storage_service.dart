@@ -4,7 +4,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 
 import '../../core/constants/storage_keys.dart';
+import '../../core/utils/cache_manager.dart';
 import '../../core/utils/logger.dart';
+import '../../core/utils/translation_cache_manager.dart';
 
 /// 存储服务
 /// 参考iOS KeychainHelper.swift 和 UserDefaults
@@ -30,6 +32,9 @@ class StorageService {
 
     // 初始化Hive缓存
     _cacheBox = await Hive.openBox(StorageKeys.cacheBox);
+
+    // 初始化 CacheManager（内存+磁盘双层缓存）
+    await CacheManager.shared.init();
 
     AppLogger.info('StorageService initialized');
   }
@@ -257,6 +262,8 @@ class StorageService {
   Future<void> clearAllOnLogout() async {
     await clearTokens();
     await clearUserInfo();
+    // 清除个人数据缓存（保留公共缓存如分类、FAQ等）
+    await CacheManager.shared.invalidatePersonalDataCache();
     // 保留语言和主题设置
     AppLogger.info('User data cleared on logout');
   }
@@ -266,6 +273,10 @@ class StorageService {
     await clearTokens();
     await clearUserInfo();
     await clearCache();
+    // 清除所有 API 缓存
+    await CacheManager.shared.clearAll();
+    // 清除翻译缓存
+    await TranslationCacheManager.shared.clearAllCache();
     // 清除所有 SharedPreferences
     await _prefs.clear();
     AppLogger.info('All user data cleared');

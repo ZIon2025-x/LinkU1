@@ -18,6 +18,14 @@ enum CodeSendStatus {
   error,
 }
 
+/// 重置密码状态
+enum ResetPasswordStatus {
+  initial,
+  loading,
+  success,
+  error,
+}
+
 /// 认证状态
 class AuthState extends Equatable {
   const AuthState({
@@ -25,12 +33,16 @@ class AuthState extends Equatable {
     this.user,
     this.errorMessage,
     this.codeSendStatus = CodeSendStatus.initial,
+    this.resetPasswordStatus = ResetPasswordStatus.initial,
+    this.resetPasswordMessage,
   });
 
   final AuthStatus status;
   final User? user;
   final String? errorMessage;
   final CodeSendStatus codeSendStatus;
+  final ResetPasswordStatus resetPasswordStatus;
+  final String? resetPasswordMessage;
 
   /// 是否已认证
   bool get isAuthenticated => status == AuthStatus.authenticated && user != null;
@@ -46,15 +58,26 @@ class AuthState extends Equatable {
     User? user,
     String? errorMessage,
     CodeSendStatus? codeSendStatus,
+    ResetPasswordStatus? resetPasswordStatus,
+    String? resetPasswordMessage,
   }) {
     return AuthState(
       status: status ?? this.status,
       user: user ?? this.user,
       errorMessage: errorMessage,
       codeSendStatus: codeSendStatus ?? this.codeSendStatus,
+      resetPasswordStatus: resetPasswordStatus ?? this.resetPasswordStatus,
+      resetPasswordMessage: resetPasswordMessage,
     );
   }
 
   @override
-  List<Object?> get props => [status, user, errorMessage, codeSendStatus];
+  List<Object?> get props => [
+        status,
+        user,
+        errorMessage,
+        codeSendStatus,
+        resetPasswordStatus,
+        resetPasswordMessage,
+      ];
 }

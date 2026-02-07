@@ -6,6 +6,7 @@ import 'package:hive_flutter/hive_flutter.dart';
 import 'app.dart';
 import 'core/config/app_config.dart';
 import 'core/utils/logger.dart';
+import 'core/utils/network_monitor.dart';
 import 'data/services/api_service.dart';
 import 'data/services/iap_service.dart';
 import 'data/services/storage_service.dart';
@@ -40,6 +41,9 @@ void main() async {
 
   // 初始化应用配置
   await AppConfig.instance.init();
+
+  // 初始化网络监测
+  await NetworkMonitor.instance.initialize();
 
   // 初始化Bloc观察者
   Bloc.observer = AppBlocObserver();

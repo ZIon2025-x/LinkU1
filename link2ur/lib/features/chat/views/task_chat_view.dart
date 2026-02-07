@@ -154,7 +154,7 @@ class _TaskChatViewState extends State<TaskChatView> {
       padding: AppSpacing.allMd,
       decoration: BoxDecoration(
         color: AppColors.primary.withValues(alpha: 0.08),
-        border: Border(
+        border: const Border(
           bottom: BorderSide(color: AppColors.dividerLight),
         ),
       ),
@@ -179,7 +179,7 @@ class _TaskChatViewState extends State<TaskChatView> {
                   style: const TextStyle(fontWeight: FontWeight.w600),
                 ),
                 const SizedBox(height: 2),
-                Text(
+                const Text(
                   '进行中',
                   style: TextStyle(
                     fontSize: 12,
@@ -257,7 +257,7 @@ class _TaskChatViewState extends State<TaskChatView> {
     }
 
     if (state.messages.isEmpty) {
-      return Center(
+      return const Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [

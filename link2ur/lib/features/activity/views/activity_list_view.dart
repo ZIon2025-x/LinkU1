@@ -148,7 +148,7 @@ class _ActivityCard extends StatelessWidget {
             if (activity.description.isNotEmpty)
               Text(
                 activity.description,
-                style: TextStyle(color: AppColors.textSecondaryLight),
+                style: const TextStyle(color: AppColors.textSecondaryLight),
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
               ),
@@ -158,7 +158,7 @@ class _ActivityCard extends StatelessWidget {
             if (activity.location.isNotEmpty)
               Row(
                 children: [
-                  Icon(
+                  const Icon(
                     Icons.location_on_outlined,
                     size: 16,
                     color: AppColors.textTertiaryLight,
@@ -167,7 +167,7 @@ class _ActivityCard extends StatelessWidget {
                   Expanded(
                     child: Text(
                       activity.location,
-                      style: TextStyle(
+                      style: const TextStyle(
                         fontSize: 12,
                         color: AppColors.textTertiaryLight,
                       ),
@@ -194,7 +194,7 @@ class _ActivityCard extends StatelessWidget {
                   ),
                   child: Text(
                     activity.priceDisplay,
-                    style: TextStyle(
+                    style: const TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w600,
                       color: AppColors.primary,
@@ -206,7 +206,7 @@ class _ActivityCard extends StatelessWidget {
                 // 参与进度
                 Row(
                   children: [
-                    Icon(
+                    const Icon(
                       Icons.people_outline,
                       size: 16,
                       color: AppColors.textTertiaryLight,
@@ -214,7 +214,7 @@ class _ActivityCard extends StatelessWidget {
                     const SizedBox(width: 4),
                     Text(
                       '${activity.currentParticipants ?? 0}/${activity.maxParticipants}',
-                      style: TextStyle(
+                      style: const TextStyle(
                         fontSize: 12,
                         color: AppColors.textTertiaryLight,
                       ),
@@ -232,7 +232,7 @@ class _ActivityCard extends StatelessWidget {
                 child: LinearProgressIndicator(
                   value: activity.participationProgress,
                   backgroundColor: AppColors.skeletonBase,
-                  valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
+                  valueColor: const AlwaysStoppedAnimation<Color>(AppColors.primary),
                   minHeight: 4,
                 ),
               ),
@@ -273,7 +273,7 @@ class _ActivityCard extends StatelessWidget {
                     ),
                     child: Text(
                       '${activity.discountPercentage!.toStringAsFixed(0)}% OFF',
-                      style: TextStyle(
+                      style: const TextStyle(
                         fontSize: 12,
                         color: AppColors.error,
                       ),

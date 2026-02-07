@@ -4,6 +4,7 @@ import 'package:web_socket_channel/web_socket_channel.dart';
 
 import '../../core/config/app_config.dart';
 import '../../core/utils/logger.dart';
+import '../../core/utils/network_monitor.dart';
 import 'storage_service.dart';
 
 /// WebSocket服务
@@ -14,16 +15,18 @@ class WebSocketService {
 
   WebSocketChannel? _channel;
   StreamSubscription? _subscription;
+  StreamSubscription<NetworkStatus>? _networkSubscription;
   Timer? _heartbeatTimer;
   Timer? _reconnectTimer;
 
   bool _isConnected = false;
   bool _isConnecting = false;
+  bool _shouldBeConnected = false; // 是否应该保持连接（用户已登录）
   int _reconnectAttempts = 0;
-  static const int _maxReconnectAttempts = 5;
+  static const int _maxReconnectAttempts = 15;
   static const Duration _heartbeatInterval = Duration(seconds: 30);
   static const Duration _initialReconnectDelay = Duration(seconds: 1);
-  static const Duration _maxReconnectDelay = Duration(seconds: 30);
+  static const Duration _maxReconnectDelay = Duration(seconds: 60);
 
   /// 消息流控制器
   final _messageController = StreamController<WebSocketMessage>.broadcast();
@@ -44,7 +47,16 @@ class WebSocketService {
   Future<void> connect() async {
     if (_isConnected || _isConnecting) return;
 
+    _shouldBeConnected = true;
     _isConnecting = true;
+
+    // 检查网络状态 — 无网络时不尝试连接，等待网络恢复
+    if (!NetworkMonitor.instance.isConnected) {
+      AppLogger.warning('Cannot connect WebSocket: No network, will retry when online');
+      _isConnecting = false;
+      _listenForNetworkRecovery();
+      return;
+    }
 
     try {
       final token = await StorageService.instance.getAccessToken();
@@ -55,7 +67,7 @@ class WebSocketService {
       }
 
       final wsUrl = '${AppConfig.instance.wsUrl}/ws?token=$token';
-      AppLogger.info('Connecting to WebSocket: $wsUrl');
+      AppLogger.info('Connecting to WebSocket...');
 
       _channel = WebSocketChannel.connect(Uri.parse(wsUrl));
 
@@ -78,6 +90,9 @@ class WebSocketService {
 
       // 开始心跳
       _startHeartbeat();
+
+      // 监听网络变化以便断网时暂停/恢复
+      _listenForNetworkRecovery();
     } catch (e) {
       AppLogger.error('WebSocket connection failed', e);
       _isConnecting = false;
@@ -85,10 +100,21 @@ class WebSocketService {
     }
   }
 
+  /// 手动重连（重置计数器）
+  Future<void> reconnect() async {
+    _reconnectAttempts = 0;
+    await disconnect();
+    _shouldBeConnected = true;
+    await connect();
+  }
+
   /// 断开连接
   Future<void> disconnect() async {
+    _shouldBeConnected = false;
     _cancelReconnect();
     _stopHeartbeat();
+    _networkSubscription?.cancel();
+    _networkSubscription = null;
     _subscription?.cancel();
     _subscription = null;
 
@@ -207,16 +233,44 @@ class WebSocketService {
     _heartbeatTimer = null;
   }
 
+  /// 监听网络恢复并自动重连
+  void _listenForNetworkRecovery() {
+    _networkSubscription?.cancel();
+    _networkSubscription = NetworkMonitor.instance.statusStream.listen((status) {
+      if (_shouldBeConnected && !_isConnected && !_isConnecting) {
+        if (status == NetworkStatus.wifi || status == NetworkStatus.cellular) {
+          AppLogger.info('Network recovered, reconnecting WebSocket...');
+          _reconnectAttempts = 0; // 网络恢复时重置计数器
+          connect();
+        }
+      }
+    });
+  }
+
   /// 安排重连（指数退避）
   void _scheduleReconnect() {
+    if (!_shouldBeConnected) return;
+
     if (_reconnectAttempts >= _maxReconnectAttempts) {
-      AppLogger.warning('Max reconnect attempts reached');
+      AppLogger.warning(
+        'Max reconnect attempts ($_maxReconnectAttempts) reached. '
+        'Will auto-reconnect when network status changes.',
+      );
+      // 即使达到最大尝试次数，仍然监听网络恢复
+      _listenForNetworkRecovery();
+      return;
+    }
+
+    // 无网络时不发起重连，等待网络恢复事件
+    if (!NetworkMonitor.instance.isConnected) {
+      AppLogger.info('No network, waiting for connectivity to resume...');
+      _listenForNetworkRecovery();
       return;
     }
 
     _reconnectTimer?.cancel();
 
-    // 指数退避：1s, 2s, 4s, 8s, 16s... 最大30s
+    // 指数退避：1s, 2s, 4s, 8s, 16s... 最大60s
     final delaySeconds = _initialReconnectDelay.inSeconds *
         (1 << _reconnectAttempts); // 2^attempts
     final clampedDelay = Duration(
@@ -227,11 +281,11 @@ class WebSocketService {
     );
 
     AppLogger.info(
-        'Scheduling reconnect in ${clampedDelay.inSeconds}s (attempt ${_reconnectAttempts + 1})');
+        'Scheduling reconnect in ${clampedDelay.inSeconds}s (attempt ${_reconnectAttempts + 1}/$_maxReconnectAttempts)');
 
     _reconnectTimer = Timer(clampedDelay, () {
       _reconnectAttempts++;
-      AppLogger.info('Reconnecting... (attempt $_reconnectAttempts)');
+      AppLogger.info('Reconnecting... (attempt $_reconnectAttempts/$_maxReconnectAttempts)');
       connect();
     });
   }
@@ -246,6 +300,8 @@ class WebSocketService {
   /// 释放资源
   void dispose() {
     disconnect();
+    _networkSubscription?.cancel();
+    _networkSubscription = null;
     _messageController.close();
     _connectionController.close();
   }

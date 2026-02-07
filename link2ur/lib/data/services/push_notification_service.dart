@@ -103,13 +103,13 @@ class PushNotificationService {
 
   /// 初始化本地通知
   Future<void> _initLocalNotifications() async {
-    final androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
-    final iosSettings = DarwinInitializationSettings(
+    const androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
+    const iosSettings = DarwinInitializationSettings(
       requestAlertPermission: false,
       requestBadgePermission: false,
       requestSoundPermission: false,
     );
-    final settings = InitializationSettings(
+    const settings = InitializationSettings(
       android: androidSettings,
       iOS: iosSettings,
     );
@@ -121,7 +121,7 @@ class PushNotificationService {
 
     // 创建 Android 通知渠道
     if (Platform.isAndroid) {
-      final channel = AndroidNotificationChannel(
+      const channel = AndroidNotificationChannel(
         'link2ur_default',
         'Link2Ur 通知',
         description: 'Link2Ur 应用通知',
@@ -180,7 +180,7 @@ class PushNotificationService {
     required String body,
     String? payload,
   }) async {
-    final androidDetails = AndroidNotificationDetails(
+    const androidDetails = AndroidNotificationDetails(
       'link2ur_default',
       'Link2Ur 通知',
       channelDescription: 'Link2Ur 应用通知',
@@ -188,12 +188,12 @@ class PushNotificationService {
       priority: Priority.high,
       showWhen: true,
     );
-    final iosDetails = DarwinNotificationDetails(
+    const iosDetails = DarwinNotificationDetails(
       presentAlert: true,
       presentBadge: true,
       presentSound: true,
     );
-    final details = NotificationDetails(
+    const details = NotificationDetails(
       android: androidDetails,
       iOS: iosDetails,
     );

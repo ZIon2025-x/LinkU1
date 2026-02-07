@@ -159,7 +159,7 @@ class _OnboardingViewState extends State<OnboardingView> {
               Align(
                 alignment: Alignment.topRight,
                 child: Padding(
-                  padding: EdgeInsets.only(
+                  padding: const EdgeInsets.only(
                     top: AppSpacing.md,
                     right: AppSpacing.md,
                   ),
@@ -216,7 +216,7 @@ class _OnboardingViewState extends State<OnboardingView> {
 
               // 页面指示器
               Padding(
-                padding: EdgeInsets.symmetric(vertical: AppSpacing.sm),
+                padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: List.generate(_totalPages, (index) {
@@ -239,7 +239,7 @@ class _OnboardingViewState extends State<OnboardingView> {
 
               // 底部按钮
               Padding(
-                padding: EdgeInsets.symmetric(
+                padding: const EdgeInsets.symmetric(
                   horizontal: AppSpacing.lg,
                   vertical: AppSpacing.xl,
                 ),
@@ -343,7 +343,7 @@ class _OnboardingPageWidget extends StatelessWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Padding(
-      padding: EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
@@ -391,7 +391,7 @@ class _OnboardingPageWidget extends StatelessWidget {
 
           // 描述
           Padding(
-            padding: EdgeInsets.symmetric(horizontal: AppSpacing.xl),
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
             child: Text(
               page.description,
               style: AppTypography.body.copyWith(
@@ -438,7 +438,7 @@ class _PersonalizationPage extends StatelessWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return SingleChildScrollView(
-      padding: EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -620,7 +620,7 @@ class _PersonalizationPage extends StatelessWidget {
                 Switch(
                   value: notificationEnabled,
                   onChanged: onNotificationChanged,
-                  activeColor: AppColors.primary,
+                  activeThumbColor: AppColors.primary,
                 ),
               ],
             ),

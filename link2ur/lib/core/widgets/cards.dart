@@ -37,6 +37,12 @@ class AppCard extends StatelessWidget {
         (isDark ? AppColors.cardBackgroundDark : AppColors.cardBackgroundLight);
     final effectiveBorderRadius = borderRadius ?? AppRadius.card;
 
+    // 与iOS cardBackground()对齐：默认添加微妙边框 separator.opacity(0.3), 0.5pt
+    final defaultBorder = Border.all(
+      color: (isDark ? AppColors.separatorDark : AppColors.separatorLight).withValues(alpha: 0.3),
+      width: 0.5,
+    );
+
     Widget card = Container(
       margin: margin,
       padding: padding ?? AppSpacing.allMd,
@@ -50,7 +56,7 @@ class AppCard extends StatelessWidget {
             ? Border.all(
                 color: borderColor ?? (isDark ? AppColors.dividerDark : AppColors.dividerLight),
               )
-            : null,
+            : defaultBorder,
       ),
       child: child,
     );
@@ -174,6 +180,10 @@ class GroupedCard extends StatelessWidget {
           decoration: BoxDecoration(
             color: bgColor,
             borderRadius: AppRadius.card,
+            border: Border.all(
+              color: (isDark ? AppColors.separatorDark : AppColors.separatorLight).withValues(alpha: 0.3),
+              width: 0.5,
+            ),
           ),
           child: Column(
             children: List.generate(children.length * 2 - 1, (index) {

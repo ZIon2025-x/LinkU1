@@ -1,6 +1,7 @@
 import '../models/activity.dart';
 import '../services/api_service.dart';
 import '../../core/constants/api_endpoints.dart';
+import '../../core/utils/cache_manager.dart';
 
 /// 活动仓库
 /// 与iOS ActivityViewModel + 后端路由对齐
@@ -10,6 +11,7 @@ class ActivityRepository {
   }) : _apiService = apiService;
 
   final ApiService _apiService;
+  final CacheManager _cache = CacheManager.shared;
 
   /// 获取活动列表
   Future<ActivityListResponse> getActivities({
@@ -18,34 +20,69 @@ class ActivityRepository {
     String? status,
     String? keyword,
   }) async {
-    final response = await _apiService.get<Map<String, dynamic>>(
-      ApiEndpoints.activities,
-      queryParameters: {
-        'page': page,
-        'page_size': pageSize,
-        if (status != null) 'status': status,
-        if (keyword != null) 'keyword': keyword,
-      },
-    );
+    final params = {
+      'page': page,
+      'page_size': pageSize,
+      if (status != null) 'status': status,
+      if (keyword != null) 'keyword': keyword,
+    };
 
-    if (!response.isSuccess || response.data == null) {
-      throw ActivityException(response.message ?? '获取活动列表失败');
+    final cacheKey = keyword == null
+        ? CacheManager.buildKey(CacheManager.prefixActivities, params)
+        : null;
+
+    if (cacheKey != null) {
+      final cached = _cache.get<Map<String, dynamic>>(cacheKey);
+      if (cached != null) return ActivityListResponse.fromJson(cached);
     }
 
-    return ActivityListResponse.fromJson(response.data!);
+    try {
+      final response = await _apiService.get<Map<String, dynamic>>(
+        ApiEndpoints.activities,
+        queryParameters: params,
+      );
+
+      if (!response.isSuccess || response.data == null) {
+        throw ActivityException(response.message ?? '获取活动列表失败');
+      }
+
+      if (cacheKey != null) {
+        await _cache.set(cacheKey, response.data!, ttl: CacheManager.shortTTL);
+      }
+
+      return ActivityListResponse.fromJson(response.data!);
+    } catch (e) {
+      if (cacheKey != null) {
+        final stale = _cache.getStale<Map<String, dynamic>>(cacheKey);
+        if (stale != null) return ActivityListResponse.fromJson(stale);
+      }
+      rethrow;
+    }
   }
 
   /// 获取活动详情
   Future<Activity> getActivityById(int id) async {
-    final response = await _apiService.get<Map<String, dynamic>>(
-      ApiEndpoints.activityById(id),
-    );
+    final cacheKey = '${CacheManager.prefixActivityDetail}$id';
 
-    if (!response.isSuccess || response.data == null) {
-      throw ActivityException(response.message ?? '获取活动详情失败');
+    final cached = _cache.get<Map<String, dynamic>>(cacheKey);
+    if (cached != null) return Activity.fromJson(cached);
+
+    try {
+      final response = await _apiService.get<Map<String, dynamic>>(
+        ApiEndpoints.activityById(id),
+      );
+
+      if (!response.isSuccess || response.data == null) {
+        throw ActivityException(response.message ?? '获取活动详情失败');
+      }
+
+      await _cache.set(cacheKey, response.data!, ttl: CacheManager.defaultTTL);
+      return Activity.fromJson(response.data!);
+    } catch (e) {
+      final stale = _cache.getStale<Map<String, dynamic>>(cacheKey);
+      if (stale != null) return Activity.fromJson(stale);
+      rethrow;
     }
-
-    return Activity.fromJson(response.data!);
   }
 
   /// 申请参加活动
@@ -64,6 +101,10 @@ class ActivityRepository {
     if (!response.isSuccess || response.data == null) {
       throw ActivityException(response.message ?? '申请活动失败');
     }
+
+    // 申请后失效缓存
+    await _cache.remove('${CacheManager.prefixActivityDetail}$activityId');
+    await _cache.invalidateActivitiesCache();
 
     return response.data!;
   }

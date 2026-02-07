@@ -19,178 +19,219 @@ class NotificationCenterView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return DefaultTabController(
-      length: 2,
-      child: Scaffold(
-        appBar: AppBar(
-          title: Text(context.l10n.notificationsNotifications),
-          actions: [
-            BlocBuilder<NotificationBloc, NotificationState>(
-              builder: (context, state) {
-                return TextButton(
-                  onPressed: state.notifications.isEmpty
-                      ? null
-                      : () {
-                          context.read<NotificationBloc>().add(
-                                const NotificationMarkAllAsRead(),
-                              );
-                        },
-                  child: const Text('全部已读'),
-                );
-              },
-            ),
-          ],
-          bottom: const TabBar(
-            tabs: [
-              Tab(text: '系统通知'),
-              Tab(text: '互动消息'),
+    return BlocProvider(
+      create: (context) => NotificationBloc(
+        notificationRepository: context.read<NotificationRepository>(),
+      ),
+      child: DefaultTabController(
+        length: 2,
+        child: Scaffold(
+          appBar: AppBar(
+            title: Text(context.l10n.notificationsNotifications),
+            actions: [
+              BlocBuilder<NotificationBloc, NotificationState>(
+                builder: (context, state) {
+                  return TextButton(
+                    onPressed: state.notifications.isEmpty
+                        ? null
+                        : () {
+                            context.read<NotificationBloc>().add(
+                                  const NotificationMarkAllAsRead(),
+                                );
+                          },
+                    child: const Text('全部已读'),
+                  );
+                },
+              ),
             ],
-            labelColor: AppColors.primary,
-            unselectedLabelColor: AppColors.textSecondaryLight,
-            indicatorColor: AppColors.primary,
+            bottom: const TabBar(
+              tabs: [
+                Tab(text: '系统通知'),
+                Tab(text: '互动消息'),
+              ],
+              labelColor: AppColors.primary,
+              unselectedLabelColor: AppColors.textSecondaryLight,
+              indicatorColor: AppColors.primary,
+            ),
           ),
-        ),
-        body: const TabBarView(
-          children: [
-            _SystemNotificationList(),
-            _InteractionNotificationList(),
-          ],
+          body: const TabBarView(
+            children: [
+              _SystemNotificationList(),
+              _InteractionNotificationList(),
+            ],
+          ),
         ),
       ),
     );
   }
 }
 
-class _SystemNotificationList extends StatelessWidget {
+class _SystemNotificationList extends StatefulWidget {
   const _SystemNotificationList();
 
   @override
+  State<_SystemNotificationList> createState() => _SystemNotificationListState();
+}
+
+class _SystemNotificationListState extends State<_SystemNotificationList> {
+  @override
+  void initState() {
+    super.initState();
+    // Load system notifications when tab is first shown
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<NotificationBloc>().add(
+            const NotificationLoadRequested(type: 'system'),
+          );
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return BlocProvider(
-      create: (context) => NotificationBloc(
-        notificationRepository: context.read<NotificationRepository>(),
-      )..add(const NotificationLoadRequested(type: 'system')),
-      child: BlocBuilder<NotificationBloc, NotificationState>(
-        builder: (context, state) {
-          if (state.status == NotificationStatus.loading &&
-              state.notifications.isEmpty) {
-            return const LoadingView();
-          }
+    return BlocBuilder<NotificationBloc, NotificationState>(
+      builder: (context, state) {
+        // Show only when selectedType matches
+        if (state.selectedType != 'system' &&
+            state.status != NotificationStatus.loading) {
+          return const SizedBox.shrink();
+        }
 
-          if (state.status == NotificationStatus.error &&
-              state.notifications.isEmpty) {
-            return ErrorStateView.loadFailed(
-              message: state.errorMessage ?? '加载失败',
-              onRetry: () {
-                context.read<NotificationBloc>().add(
-                      const NotificationLoadRequested(type: 'system'),
-                    );
-              },
-            );
-          }
+        if (state.status == NotificationStatus.loading &&
+            state.notifications.isEmpty) {
+          return const LoadingView();
+        }
 
-          if (state.notifications.isEmpty) {
-            return EmptyStateView.noNotifications();
-          }
-
-          return RefreshIndicator(
-            onRefresh: () async {
+        if (state.status == NotificationStatus.error &&
+            state.notifications.isEmpty) {
+          return ErrorStateView.loadFailed(
+            message: state.errorMessage ?? '加载失败',
+            onRetry: () {
               context.read<NotificationBloc>().add(
                     const NotificationLoadRequested(type: 'system'),
                   );
             },
-            child: ListView.separated(
-              padding: AppSpacing.allMd,
-              itemCount: state.notifications.length + (state.hasMore ? 1 : 0),
-              separatorBuilder: (context, index) => const Divider(),
-              itemBuilder: (context, index) {
-                if (index == state.notifications.length) {
-                  context.read<NotificationBloc>().add(
-                        const NotificationLoadMore(),
-                      );
-                  return const Center(
-                    child: Padding(
-                      padding: EdgeInsets.all(16.0),
-                      child: LoadingIndicator(),
-                    ),
-                  );
-                }
-                return _NotificationItem(
-                  notification: state.notifications[index],
-                  isSystem: true,
-                );
-              },
-            ),
           );
-        },
-      ),
+        }
+
+        if (state.notifications.isEmpty) {
+          return EmptyStateView.noNotifications();
+        }
+
+        return RefreshIndicator(
+          onRefresh: () async {
+            context.read<NotificationBloc>().add(
+                  const NotificationLoadRequested(type: 'system'),
+                );
+          },
+          child: ListView.separated(
+            padding: AppSpacing.allMd,
+            itemCount: state.notifications.length + (state.hasMore ? 1 : 0),
+            separatorBuilder: (context, index) => const Divider(),
+            itemBuilder: (context, index) {
+              if (index == state.notifications.length) {
+                context.read<NotificationBloc>().add(
+                      const NotificationLoadMore(),
+                    );
+                return const Center(
+                  child: Padding(
+                    padding: EdgeInsets.all(16.0),
+                    child: CircularProgressIndicator(),
+                  ),
+                );
+              }
+              return _NotificationItem(
+                notification: state.notifications[index],
+                isSystem: true,
+              );
+            },
+          ),
+        );
+      },
     );
   }
 }
 
-class _InteractionNotificationList extends StatelessWidget {
+class _InteractionNotificationList extends StatefulWidget {
   const _InteractionNotificationList();
 
   @override
+  State<_InteractionNotificationList> createState() =>
+      _InteractionNotificationListState();
+}
+
+class _InteractionNotificationListState
+    extends State<_InteractionNotificationList> {
+  @override
+  void initState() {
+    super.initState();
+    // Load interaction notifications when tab is first shown
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<NotificationBloc>().add(
+            const NotificationLoadRequested(type: 'interaction'),
+          );
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return BlocProvider(
-      create: (context) => NotificationBloc(
-        notificationRepository: context.read<NotificationRepository>(),
-      )..add(const NotificationLoadRequested(type: 'interaction')),
-      child: BlocBuilder<NotificationBloc, NotificationState>(
-        builder: (context, state) {
-          if (state.status == NotificationStatus.loading &&
-              state.notifications.isEmpty) {
-            return const LoadingView();
-          }
+    return BlocBuilder<NotificationBloc, NotificationState>(
+      builder: (context, state) {
+        // Show only when selectedType matches
+        if (state.selectedType != 'interaction' &&
+            state.status != NotificationStatus.loading) {
+          return const SizedBox.shrink();
+        }
 
-          if (state.status == NotificationStatus.error &&
-              state.notifications.isEmpty) {
-            return ErrorStateView.loadFailed(
-              message: state.errorMessage ?? '加载失败',
-              onRetry: () {
-                context.read<NotificationBloc>().add(
-                      const NotificationLoadRequested(type: 'interaction'),
-                    );
-              },
-            );
-          }
+        if (state.status == NotificationStatus.loading &&
+            state.notifications.isEmpty) {
+          return const LoadingView();
+        }
 
-          if (state.notifications.isEmpty) {
-            return EmptyStateView.noNotifications();
-          }
-
-          return RefreshIndicator(
-            onRefresh: () async {
+        if (state.status == NotificationStatus.error &&
+            state.notifications.isEmpty) {
+          return ErrorStateView.loadFailed(
+            message: state.errorMessage ?? '加载失败',
+            onRetry: () {
               context.read<NotificationBloc>().add(
                     const NotificationLoadRequested(type: 'interaction'),
                   );
             },
-            child: ListView.separated(
-              padding: AppSpacing.allMd,
-              itemCount: state.notifications.length + (state.hasMore ? 1 : 0),
-              separatorBuilder: (context, index) => const Divider(),
-              itemBuilder: (context, index) {
-                if (index == state.notifications.length) {
-                  context.read<NotificationBloc>().add(
-                        const NotificationLoadMore(),
-                      );
-                  return const Center(
-                    child: Padding(
-                      padding: EdgeInsets.all(16.0),
-                      child: LoadingIndicator(),
-                    ),
-                  );
-                }
-                return _NotificationItem(
-                  notification: state.notifications[index],
-                  isSystem: false,
-                );
-              },
-            ),
           );
-        },
-      ),
+        }
+
+        if (state.notifications.isEmpty) {
+          return EmptyStateView.noNotifications();
+        }
+
+        return RefreshIndicator(
+          onRefresh: () async {
+            context.read<NotificationBloc>().add(
+                  const NotificationLoadRequested(type: 'interaction'),
+                );
+          },
+          child: ListView.separated(
+            padding: AppSpacing.allMd,
+            itemCount: state.notifications.length + (state.hasMore ? 1 : 0),
+            separatorBuilder: (context, index) => const Divider(),
+            itemBuilder: (context, index) {
+              if (index == state.notifications.length) {
+                context.read<NotificationBloc>().add(
+                      const NotificationLoadMore(),
+                    );
+                return const Center(
+                  child: Padding(
+                    padding: EdgeInsets.all(16.0),
+                    child: CircularProgressIndicator(),
+                  ),
+                );
+              }
+              return _NotificationItem(
+                notification: state.notifications[index],
+                isSystem: false,
+              );
+            },
+          ),
+        );
+      },
     );
   }
 }
@@ -253,7 +294,7 @@ class _NotificationItem extends StatelessWidget {
                   const SizedBox(height: 4),
                   Text(
                     notification.displayContent,
-                    style: TextStyle(
+                    style: const TextStyle(
                       fontSize: 14,
                       color: AppColors.textSecondaryLight,
                     ),
@@ -263,7 +304,7 @@ class _NotificationItem extends StatelessWidget {
                   const SizedBox(height: 4),
                   Text(
                     _formatTime(notification.createdAt),
-                    style: TextStyle(
+                    style: const TextStyle(
                       fontSize: 12,
                       color: AppColors.textTertiaryLight,
                     ),

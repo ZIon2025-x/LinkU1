@@ -8,74 +8,66 @@ import '../../../core/utils/l10n_extension.dart';
 import '../../../core/widgets/loading_view.dart';
 import '../../../core/widgets/empty_state_view.dart';
 import '../../../data/repositories/task_expert_repository.dart';
+import '../bloc/task_expert_bloc.dart';
 
 /// 我的服务申请页
 /// 参考iOS MyServiceApplicationsView.swift
-class MyServiceApplicationsView extends StatefulWidget {
+class MyServiceApplicationsView extends StatelessWidget {
   const MyServiceApplicationsView({super.key});
 
   @override
-  State<MyServiceApplicationsView> createState() =>
-      _MyServiceApplicationsViewState();
+  Widget build(BuildContext context) {
+    return BlocProvider(
+      create: (context) => TaskExpertBloc(
+        taskExpertRepository: context.read<TaskExpertRepository>(),
+      )..add(const TaskExpertLoadMyApplications()),
+      child: const _MyServiceApplicationsContent(),
+    );
+  }
 }
 
-class _MyServiceApplicationsViewState
-    extends State<MyServiceApplicationsView> {
-  List<Map<String, dynamic>> _applications = [];
-  bool _isLoading = true;
-
-  @override
-  void initState() {
-    super.initState();
-    _loadApplications();
-  }
-
-  Future<void> _loadApplications() async {
-    setState(() => _isLoading = true);
-
-    try {
-      final repo = context.read<TaskExpertRepository>();
-      final apps = await repo.getMyServiceApplications();
-      if (mounted) {
-        setState(() {
-          _applications = apps;
-          _isLoading = false;
-        });
-      }
-    } catch (_) {
-      if (mounted) setState(() => _isLoading = false);
-    }
-  }
+class _MyServiceApplicationsContent extends StatelessWidget {
+  const _MyServiceApplicationsContent();
 
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
 
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(l10n.taskExpertMyApplications),
-      ),
-      body: _isLoading
-          ? const LoadingView()
-          : _applications.isEmpty
-              ? EmptyStateView(
-                  icon: Icons.assignment_outlined,
-                  title: l10n.taskExpertNoApplications,
-                  message: l10n.taskExpertNoApplicationsMessage,
-                )
-              : RefreshIndicator(
-                  onRefresh: _loadApplications,
-                  child: ListView.separated(
-                    padding: const EdgeInsets.all(AppSpacing.md),
-                    itemCount: _applications.length,
-                    separatorBuilder: (_, __) =>
-                        const SizedBox(height: AppSpacing.md),
-                    itemBuilder: (context, index) {
-                      final app = _applications[index];
-                      return _ApplicationCard(application: app);
-                    },
-                  ),
-                ),
+    return BlocBuilder<TaskExpertBloc, TaskExpertState>(
+      builder: (context, state) {
+        final applications = state.applications;
+
+        return Scaffold(
+          appBar: AppBar(
+            title: Text(l10n.taskExpertMyApplications),
+          ),
+          body: state.isLoading && applications.isEmpty
+              ? const LoadingView()
+              : applications.isEmpty
+                  ? EmptyStateView(
+                      icon: Icons.assignment_outlined,
+                      title: l10n.taskExpertNoApplications,
+                      message: l10n.taskExpertNoApplicationsMessage,
+                    )
+                  : RefreshIndicator(
+                      onRefresh: () async {
+                        context
+                            .read<TaskExpertBloc>()
+                            .add(const TaskExpertLoadMyApplications());
+                      },
+                      child: ListView.separated(
+                        padding: const EdgeInsets.all(AppSpacing.md),
+                        itemCount: applications.length,
+                        separatorBuilder: (_, __) =>
+                            const SizedBox(height: AppSpacing.md),
+                        itemBuilder: (context, index) {
+                          final app = applications[index];
+                          return _ApplicationCard(application: app);
+                        },
+                      ),
+                    ),
+        );
+      },
     );
   }
 }
@@ -110,7 +102,7 @@ class _ApplicationCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(AppRadius.large),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.04),
+            color: Colors.black.withValues(alpha: 0.04),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -130,7 +122,7 @@ class _ApplicationCard extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(
                     horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
-                  color: statusColor.withOpacity(0.1),
+                  color: statusColor.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
@@ -146,7 +138,7 @@ class _ApplicationCard extends StatelessWidget {
           if (createdAt.isNotEmpty) ...[
             const SizedBox(height: 8),
             Text(createdAt,
-                style: TextStyle(
+                style: const TextStyle(
                     fontSize: 12, color: AppColors.textTertiary)),
           ],
         ],

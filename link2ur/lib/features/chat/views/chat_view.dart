@@ -143,7 +143,7 @@ class _ChatViewState extends State<ChatView> {
     }
 
     if (state.messages.isEmpty) {
-      return Center(
+      return const Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -192,7 +192,7 @@ class _ChatViewState extends State<ChatView> {
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
         color: Theme.of(context).cardColor,
-        border: Border(
+        border: const Border(
           top: BorderSide(color: AppColors.dividerLight, width: 0.5),
         ),
       ),
@@ -333,7 +333,7 @@ class _AttachOption extends StatelessWidget {
           const SizedBox(height: 4),
           Text(
             label,
-            style: TextStyle(
+            style: const TextStyle(
               fontSize: 11,
               color: AppColors.textSecondaryLight,
             ),

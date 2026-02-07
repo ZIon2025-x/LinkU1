@@ -5,6 +5,7 @@ import 'package:dio/dio.dart';
 import '../models/flea_market.dart';
 import '../services/api_service.dart';
 import '../../core/constants/api_endpoints.dart';
+import '../../core/utils/cache_manager.dart';
 
 /// 跳蚤市场仓库
 /// 与iOS FleaMarketViewModel + 后端 flea_market_routes 对齐
@@ -14,6 +15,7 @@ class FleaMarketRepository {
   }) : _apiService = apiService;
 
   final ApiService _apiService;
+  final CacheManager _cache = CacheManager.shared;
 
   /// 获取跳蚤市场商品列表
   Future<FleaMarketListResponse> getItems({
@@ -23,26 +25,58 @@ class FleaMarketRepository {
     String? keyword,
     String? sortBy,
   }) async {
-    final response = await _apiService.get<Map<String, dynamic>>(
-      ApiEndpoints.fleaMarketItems,
-      queryParameters: {
-        'page': page,
-        'page_size': pageSize,
-        if (category != null) 'category': category,
-        if (keyword != null) 'keyword': keyword,
-        if (sortBy != null) 'sort_by': sortBy,
-      },
-    );
+    final params = {
+      'page': page,
+      'page_size': pageSize,
+      if (category != null) 'category': category,
+      if (keyword != null) 'keyword': keyword,
+      if (sortBy != null) 'sort_by': sortBy,
+    };
 
-    if (!response.isSuccess || response.data == null) {
-      throw FleaMarketException(response.message ?? '获取商品列表失败');
+    final cacheKey = keyword == null
+        ? CacheManager.buildKey(CacheManager.prefixFleaMarket, params)
+        : null;
+
+    if (cacheKey != null) {
+      final cached = _cache.get<Map<String, dynamic>>(cacheKey);
+      if (cached != null) {
+        return FleaMarketListResponse.fromJson(cached);
+      }
     }
 
-    return FleaMarketListResponse.fromJson(response.data!);
+    try {
+      final response = await _apiService.get<Map<String, dynamic>>(
+        ApiEndpoints.fleaMarketItems,
+        queryParameters: params,
+      );
+
+      if (!response.isSuccess || response.data == null) {
+        throw FleaMarketException(response.message ?? '获取商品列表失败');
+      }
+
+      if (cacheKey != null) {
+        await _cache.set(cacheKey, response.data!, ttl: CacheManager.shortTTL);
+      }
+
+      return FleaMarketListResponse.fromJson(response.data!);
+    } catch (e) {
+      if (cacheKey != null) {
+        final stale = _cache.getStale<Map<String, dynamic>>(cacheKey);
+        if (stale != null) return FleaMarketListResponse.fromJson(stale);
+      }
+      rethrow;
+    }
   }
 
   /// 获取商品分类
   Future<List<Map<String, dynamic>>> getCategories() async {
+    final cacheKey = '${CacheManager.prefixFleaMarketCategories}all';
+
+    final cached = _cache.get<List<dynamic>>(cacheKey);
+    if (cached != null) {
+      return cached.map((e) => e as Map<String, dynamic>).toList();
+    }
+
     final response = await _apiService.get<List<dynamic>>(
       ApiEndpoints.fleaMarketCategories,
     );
@@ -51,20 +85,34 @@ class FleaMarketRepository {
       throw FleaMarketException(response.message ?? '获取分类失败');
     }
 
+    await _cache.set(cacheKey, response.data!, ttl: CacheManager.staticTTL);
+
     return response.data!.map((e) => e as Map<String, dynamic>).toList();
   }
 
   /// 获取商品详情
   Future<FleaMarketItem> getItemById(String id) async {
-    final response = await _apiService.get<Map<String, dynamic>>(
-      ApiEndpoints.fleaMarketItemById(id),
-    );
+    final cacheKey = '${CacheManager.prefixFleaMarketDetail}$id';
 
-    if (!response.isSuccess || response.data == null) {
-      throw FleaMarketException(response.message ?? '获取商品详情失败');
+    final cached = _cache.get<Map<String, dynamic>>(cacheKey);
+    if (cached != null) return FleaMarketItem.fromJson(cached);
+
+    try {
+      final response = await _apiService.get<Map<String, dynamic>>(
+        ApiEndpoints.fleaMarketItemById(id),
+      );
+
+      if (!response.isSuccess || response.data == null) {
+        throw FleaMarketException(response.message ?? '获取商品详情失败');
+      }
+
+      await _cache.set(cacheKey, response.data!, ttl: CacheManager.defaultTTL);
+      return FleaMarketItem.fromJson(response.data!);
+    } catch (e) {
+      final stale = _cache.getStale<Map<String, dynamic>>(cacheKey);
+      if (stale != null) return FleaMarketItem.fromJson(stale);
+      rethrow;
     }
-
-    return FleaMarketItem.fromJson(response.data!);
   }
 
   /// 发布商品
@@ -77,6 +125,10 @@ class FleaMarketRepository {
     if (!response.isSuccess || response.data == null) {
       throw FleaMarketException(response.message ?? '发布商品失败');
     }
+
+    // 创建后失效列表缓存
+    await _cache.invalidateFleaMarketCache();
+    await _cache.invalidateMyFleaMarketCache();
 
     return FleaMarketItem.fromJson(response.data!);
   }
@@ -195,17 +247,25 @@ class FleaMarketRepository {
     int page = 1,
     int pageSize = 20,
   }) async {
+    final params = {'page': page, 'page_size': pageSize};
+    final cacheKey =
+        CacheManager.buildKey('${CacheManager.prefixMyFleaMarket}items_', params);
+
+    final cached = _cache.get<Map<String, dynamic>>(cacheKey);
+    if (cached != null) {
+      return FleaMarketListResponse.fromJson(cached);
+    }
+
     final response = await _apiService.get<Map<String, dynamic>>(
       ApiEndpoints.fleaMarketMyItems,
-      queryParameters: {
-        'page': page,
-        'page_size': pageSize,
-      },
+      queryParameters: params,
     );
 
     if (!response.isSuccess || response.data == null) {
       throw FleaMarketException(response.message ?? '获取我的商品失败');
     }
+
+    await _cache.set(cacheKey, response.data!, ttl: CacheManager.personalTTL);
 
     return FleaMarketListResponse.fromJson(response.data!);
   }
@@ -309,6 +369,10 @@ class FleaMarketRepository {
       throw FleaMarketException(response.message ?? '更新商品失败');
     }
 
+    // 失效缓存
+    await _cache.remove('${CacheManager.prefixFleaMarketDetail}$id');
+    await _cache.invalidateFleaMarketCache();
+
     return FleaMarketItem.fromJson(response.data!);
   }
 
@@ -321,6 +385,9 @@ class FleaMarketRepository {
     if (!response.isSuccess) {
       throw FleaMarketException(response.message ?? '删除商品失败');
     }
+
+    await _cache.invalidateFleaMarketCache();
+    await _cache.invalidateMyFleaMarketCache();
   }
 }
 

@@ -88,7 +88,7 @@ class ForumPostDetailView extends StatelessWidget {
                             ),
                             Text(
                               _formatTime(post.createdAt),
-                              style: TextStyle(
+                              style: const TextStyle(
                                 fontSize: 12,
                                 color: AppColors.textSecondaryLight,
                               ),
@@ -111,7 +111,7 @@ class ForumPostDetailView extends StatelessWidget {
                   if (post.content != null)
                     Text(
                       post.content!,
-                      style: TextStyle(
+                      style: const TextStyle(
                         fontSize: 16,
                         color: AppColors.textSecondaryLight,
                         height: 1.6,
@@ -162,8 +162,8 @@ class ForumPostDetailView extends StatelessWidget {
                   const Text('评论', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
                   AppSpacing.vMd,
                   if (state.replies.isEmpty)
-                    Padding(
-                      padding: const EdgeInsets.all(32.0),
+                    const Padding(
+                      padding: EdgeInsets.all(32.0),
                       child: Text(
                         '暂无评论',
                         style: TextStyle(
@@ -327,7 +327,7 @@ class _CommentItem extends StatelessWidget {
                     const SizedBox(width: 8),
                     Text(
                       _formatTime(reply.createdAt),
-                      style: TextStyle(
+                      style: const TextStyle(
                         fontSize: 12,
                         color: AppColors.textTertiaryLight,
                       ),
@@ -337,7 +337,7 @@ class _CommentItem extends StatelessWidget {
                 const SizedBox(height: 4),
                 Text(
                   reply.content,
-                  style: TextStyle(color: AppColors.textSecondaryLight),
+                  style: const TextStyle(color: AppColors.textSecondaryLight),
                 ),
               ],
             ),

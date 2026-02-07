@@ -213,7 +213,7 @@ class CustomSharePanel extends StatelessWidget {
 
             // 标题栏
             Padding(
-              padding: EdgeInsets.symmetric(
+              padding: const EdgeInsets.symmetric(
                 horizontal: AppSpacing.md,
                 vertical: AppSpacing.sm,
               ),
@@ -249,7 +249,7 @@ class CustomSharePanel extends StatelessWidget {
 
             // 分享平台网格
             Padding(
-              padding: EdgeInsets.symmetric(
+              padding: const EdgeInsets.symmetric(
                 horizontal: AppSpacing.md,
                 vertical: AppSpacing.lg,
               ),
@@ -334,7 +334,7 @@ class CustomSharePanel extends StatelessWidget {
         // 延迟显示系统分享面板，确保底部Sheet完全关闭
         await Future.delayed(const Duration(milliseconds: 300));
         final shareText = '$title\n$description\n${url ?? ''}';
-        await Share.share(shareText);
+        await SharePlus.instance.share(ShareParams(text: shareText));
         break;
 
       default:
@@ -342,7 +342,7 @@ class CustomSharePanel extends StatelessWidget {
         onDismiss?.call();
         await Future.delayed(const Duration(milliseconds: 300));
         final defaultShareText = '$title\n$description\n${url ?? ''}';
-        await Share.share(defaultShareText);
+        await SharePlus.instance.share(ShareParams(text: defaultShareText));
         break;
     }
   }
@@ -356,7 +356,7 @@ class CustomSharePanel extends StatelessWidget {
       if (!installed) {
         // 微信未安装，使用系统分享
         await Future.delayed(const Duration(milliseconds: 300));
-        await Share.share('$title\n$description\n${url ?? ''}');
+        await SharePlus.instance.share(ShareParams(text: '$title\n$description\n${url ?? ''}'));
         return;
       }
 
@@ -378,12 +378,12 @@ class CustomSharePanel extends StatelessWidget {
       if (!success && context.mounted) {
         // 分享失败，回退到系统分享
         await Future.delayed(const Duration(milliseconds: 300));
-        await Share.share('$title\n$description\n${url ?? ''}');
+        await SharePlus.instance.share(ShareParams(text: '$title\n$description\n${url ?? ''}'));
       }
     } catch (_) {
       // 出错时回退到系统分享
       await Future.delayed(const Duration(milliseconds: 300));
-      await Share.share('$title\n$description\n${url ?? ''}');
+      await SharePlus.instance.share(ShareParams(text: '$title\n$description\n${url ?? ''}'));
     }
   }
 
@@ -396,7 +396,7 @@ class CustomSharePanel extends StatelessWidget {
       if (!installed) {
         // QQ 未安装，使用系统分享
         await Future.delayed(const Duration(milliseconds: 300));
-        await Share.share('$title\n$description\n${url ?? ''}');
+        await SharePlus.instance.share(ShareParams(text: '$title\n$description\n${url ?? ''}'));
         return;
       }
 
@@ -417,11 +417,11 @@ class CustomSharePanel extends StatelessWidget {
 
       if (!success && context.mounted) {
         await Future.delayed(const Duration(milliseconds: 300));
-        await Share.share('$title\n$description\n${url ?? ''}');
+        await SharePlus.instance.share(ShareParams(text: '$title\n$description\n${url ?? ''}'));
       }
     } catch (_) {
       await Future.delayed(const Duration(milliseconds: 300));
-      await Share.share('$title\n$description\n${url ?? ''}');
+      await SharePlus.instance.share(ShareParams(text: '$title\n$description\n${url ?? ''}'));
     }
   }
 }

@@ -31,7 +31,7 @@ class TaskChatActionMenu extends StatelessWidget {
       clipBehavior: Clip.hardEdge,
       decoration: BoxDecoration(
         color: Theme.of(context).cardColor,
-        border: Border(
+        border: const Border(
           top: BorderSide(color: AppColors.dividerLight, width: 0.5),
         ),
       ),
@@ -110,7 +110,7 @@ class _ChatActionButton extends StatelessWidget {
           const SizedBox(height: 6),
           Text(
             label,
-            style: TextStyle(
+            style: const TextStyle(
               fontSize: 11,
               color: AppColors.textSecondaryLight,
             ),

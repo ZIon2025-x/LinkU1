@@ -278,7 +278,7 @@ class _TaskDetailContent extends StatelessWidget {
           AppSpacing.vMd,
           Text(
             task.displayDescription!,
-            style: TextStyle(
+            style: const TextStyle(
               fontSize: 14,
               color: AppColors.textSecondaryLight,
               height: 1.5,
@@ -464,7 +464,7 @@ class _InfoRow extends StatelessWidget {
         AppSpacing.hMd,
         Text(
           label,
-          style: TextStyle(color: AppColors.textSecondaryLight),
+          style: const TextStyle(color: AppColors.textSecondaryLight),
         ),
         const Spacer(),
         Text(

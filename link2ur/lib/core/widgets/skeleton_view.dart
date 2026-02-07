@@ -114,15 +114,15 @@ class SkeletonCard extends StatelessWidget {
             ),
             AppSpacing.hMd,
           ],
-          Expanded(
+          const Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const SkeletonLine(width: double.infinity, height: 18),
+                SkeletonLine(width: double.infinity, height: 18),
                 AppSpacing.vSm,
-                const SkeletonLine(width: 200, height: 14),
+                SkeletonLine(width: 200, height: 14),
                 AppSpacing.vSm,
-                const SkeletonLine(width: 100, height: 14),
+                SkeletonLine(width: 100, height: 14),
               ],
             ),
           ),
@@ -194,38 +194,38 @@ class SkeletonDetail extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
+    return const SingleChildScrollView(
       padding: AppSpacing.allMd,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // 图片区域
-          const SkeletonView(
+          SkeletonView(
             width: double.infinity,
             height: 200,
             borderRadius: BorderRadius.zero,
           ),
           AppSpacing.vMd,
           // 标题
-          const SkeletonLine(width: double.infinity, height: 24),
+          SkeletonLine(width: double.infinity, height: 24),
           AppSpacing.vSm,
-          const SkeletonLine(width: 200, height: 16),
+          SkeletonLine(width: 200, height: 16),
           AppSpacing.vLg,
           // 内容
-          const SkeletonLine(width: double.infinity),
+          SkeletonLine(width: double.infinity),
           AppSpacing.vSm,
-          const SkeletonLine(width: double.infinity),
+          SkeletonLine(width: double.infinity),
           AppSpacing.vSm,
-          const SkeletonLine(width: double.infinity),
+          SkeletonLine(width: double.infinity),
           AppSpacing.vSm,
-          const SkeletonLine(width: 150),
+          SkeletonLine(width: 150),
           AppSpacing.vLg,
           // 用户信息
           Row(
             children: [
-              const SkeletonCircle(size: 48),
+              SkeletonCircle(size: 48),
               AppSpacing.hMd,
-              const Column(
+              Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   SkeletonLine(width: 100, height: 16),

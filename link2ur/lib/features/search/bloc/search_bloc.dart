@@ -159,7 +159,7 @@ class SearchBloc extends Bloc<SearchEvent, SearchState> {
       return response.tasks
           .map((t) => {
                 'id': t.id,
-                'title': t.titleZh ?? t.titleEn ?? t.title ?? '',
+                'title': t.titleZh ?? t.titleEn ?? t.title,
                 'type': 'task',
                 'description': t.descriptionZh ?? t.descriptionEn ?? '',
                 'status': t.status,

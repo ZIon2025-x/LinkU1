@@ -34,8 +34,8 @@ class TaskExpertsIntroView extends StatelessWidget {
                 fit: BoxFit.cover,
                 errorBuilder: (_, __, ___) => Container(
                   height: 200,
-                  color: AppColors.primary.withOpacity(0.1),
-                  child: Icon(Icons.star,
+                  color: AppColors.primary.withValues(alpha: 0.1),
+                  child: const Icon(Icons.star,
                       size: 64, color: AppColors.primary),
                 ),
               ),
@@ -53,7 +53,7 @@ class TaskExpertsIntroView extends StatelessWidget {
 
             Text(
               l10n.taskExpertIntroSubtitle,
-              style: TextStyle(
+              style: const TextStyle(
                   fontSize: 15, color: AppColors.textSecondary),
               textAlign: TextAlign.center,
             ),
@@ -121,7 +121,7 @@ class TaskExpertsIntroView extends StatelessWidget {
         borderRadius: BorderRadius.circular(AppRadius.large),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.04),
+            color: Colors.black.withValues(alpha: 0.04),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -133,7 +133,7 @@ class TaskExpertsIntroView extends StatelessWidget {
             width: 48,
             height: 48,
             decoration: BoxDecoration(
-              color: AppColors.primary.withOpacity(0.1),
+              color: AppColors.primary.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Icon(icon, color: AppColors.primary, size: 24),
@@ -148,7 +148,7 @@ class TaskExpertsIntroView extends StatelessWidget {
                         fontSize: 15, fontWeight: FontWeight.w600)),
                 const SizedBox(height: 4),
                 Text(description,
-                    style: TextStyle(
+                    style: const TextStyle(
                         fontSize: 13,
                         color: AppColors.textSecondary)),
               ],

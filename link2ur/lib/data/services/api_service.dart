@@ -1,11 +1,11 @@
 import 'dart:async';
-import 'dart:convert';
 import 'package:dio/dio.dart';
 
 import '../../core/config/app_config.dart';
 import '../../core/config/api_config.dart';
 import '../../core/utils/logger.dart';
 import '../../core/utils/network_interceptor.dart';
+import '../../core/utils/network_monitor.dart';
 import 'storage_service.dart';
 
 /// API服务
@@ -17,6 +17,10 @@ class ApiService {
   }
 
   late final Dio _dio;
+
+  // Token刷新相关
+  bool _isRefreshing = false;
+  final List<Completer<void>> _refreshCompleters = [];
 
   /// 基础配置
   BaseOptions get _baseOptions => BaseOptions(
@@ -61,6 +65,19 @@ class ApiService {
     RequestOptions options,
     RequestInterceptorHandler handler,
   ) async {
+    // 网络状态预检 — 无网络时立即失败，避免等待超时
+    if (!NetworkMonitor.instance.isConnected) {
+      AppLogger.warning('Request rejected: No network connection - ${options.uri}');
+      handler.reject(
+        DioException(
+          requestOptions: options,
+          type: DioExceptionType.connectionError,
+          message: 'error_network_connection',
+        ),
+      );
+      return;
+    }
+
     // 添加Token
     final token = await StorageService.instance.getAccessToken();
     if (token != null && token.isNotEmpty) {
@@ -68,7 +85,7 @@ class ApiService {
     }
 
     // 添加语言
-    final language = await StorageService.instance.getLanguage();
+    final language = StorageService.instance.getLanguage();
     options.headers['Accept-Language'] = language ?? 'zh-CN';
 
     AppLogger.network(
@@ -105,7 +122,44 @@ class ApiService {
 
     // 401未授权，尝试刷新Token
     if (error.response?.statusCode == 401) {
+      // 如果是refresh接口本身返回401，直接失败，避免无限循环
+      if (error.requestOptions.path.contains('/api/secure-auth/refresh')) {
+        AppLogger.warning('Refresh token expired or invalid');
+        // 清除token并触发登出
+        await StorageService.instance.clearTokens();
+        return handler.reject(error);
+      }
+
+      // 如果正在刷新，等待刷新完成
+      if (_isRefreshing) {
+        try {
+          final completer = Completer<void>();
+          _refreshCompleters.add(completer);
+          await completer.future;
+
+          // 刷新完成后重试原请求
+          final response = await _retry(error.requestOptions);
+          return handler.resolve(response);
+        } catch (e) {
+          return handler.reject(error);
+        }
+      }
+
+      // 开始刷新token
+      _isRefreshing = true;
       final refreshed = await _refreshToken();
+      _isRefreshing = false;
+
+      // 通知所有等待的请求
+      for (final completer in _refreshCompleters) {
+        if (refreshed) {
+          completer.complete();
+        } else {
+          completer.completeError('Token refresh failed');
+        }
+      }
+      _refreshCompleters.clear();
+
       if (refreshed) {
         // 重试原请求
         try {
@@ -124,24 +178,54 @@ class ApiService {
   Future<bool> _refreshToken() async {
     try {
       final refreshToken = await StorageService.instance.getRefreshToken();
-      if (refreshToken == null) return false;
+      if (refreshToken == null || refreshToken.isEmpty) {
+        AppLogger.warning('No refresh token available');
+        return false;
+      }
 
-      final response = await Dio(_baseOptions).post(
+      AppLogger.info('Attempting to refresh access token...');
+
+      // 创建独立的Dio实例，不使用auth拦截器避免循环
+      // 但保留基础配置（超时、baseUrl等）
+      final refreshDio = Dio(_baseOptions);
+
+      final response = await refreshDio.post(
         '/api/secure-auth/refresh',
         data: {'refresh_token': refreshToken},
+        options: Options(
+          // 设置较短的超时，refresh不应该很慢
+          receiveTimeout: const Duration(seconds: 10),
+          sendTimeout: const Duration(seconds: 10),
+        ),
       );
 
-      if (response.statusCode == 200) {
+      if (response.statusCode == 200 && response.data != null) {
         final data = response.data;
-        await StorageService.instance.saveTokens(
-          accessToken: data['access_token'],
-          refreshToken: data['refresh_token'],
-        );
-        return true;
+        final newAccessToken = data['access_token'];
+        final newRefreshToken = data['refresh_token'];
+
+        if (newAccessToken != null && newRefreshToken != null) {
+          await StorageService.instance.saveTokens(
+            accessToken: newAccessToken,
+            refreshToken: newRefreshToken,
+          );
+          AppLogger.info('Token refresh successful');
+          return true;
+        } else {
+          AppLogger.error('Invalid response: missing tokens');
+          return false;
+        }
       }
+
+      AppLogger.warning('Token refresh failed: status ${response.statusCode}');
       return false;
-    } catch (e) {
-      AppLogger.error('Token refresh failed', e);
+    } catch (e, stackTrace) {
+      AppLogger.error('Token refresh failed', e, stackTrace);
+      // 如果是401或403，清除token
+      if (e is DioException &&
+          (e.response?.statusCode == 401 || e.response?.statusCode == 403)) {
+        await StorageService.instance.clearTokens();
+      }
       return false;
     }
   }
@@ -457,7 +541,7 @@ class _RetryInterceptor extends Interceptor {
     final delayMs = retryDelayMs * (1 << retryCount);
 
     AppLogger.info(
-        'Retrying request (${nextRetry}/$maxRetries) in ${delayMs}ms: ${err.requestOptions.uri}');
+        'Retrying request ($nextRetry/$maxRetries) in ${delayMs}ms: ${err.requestOptions.uri}');
 
     await Future.delayed(Duration(milliseconds: delayMs));
 

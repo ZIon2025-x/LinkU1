@@ -10,10 +10,11 @@ import '../../../core/widgets/loading_view.dart';
 import '../../../core/widgets/empty_state_view.dart';
 import '../../../data/models/notification.dart' as model;
 import '../../../data/repositories/notification_repository.dart';
+import '../bloc/notification_bloc.dart';
 
 /// 通知列表页
 /// 参考iOS NotificationListView.swift
-class NotificationListView extends StatefulWidget {
+class NotificationListView extends StatelessWidget {
   const NotificationListView({
     super.key,
     this.type,
@@ -22,80 +23,78 @@ class NotificationListView extends StatefulWidget {
   final String? type; // "system", "task", "forum" 等
 
   @override
-  State<NotificationListView> createState() => _NotificationListViewState();
+  Widget build(BuildContext context) {
+    return BlocProvider(
+      create: (context) => NotificationBloc(
+        notificationRepository: context.read<NotificationRepository>(),
+      )..add(NotificationLoadRequested(type: type)),
+      child: _NotificationListViewContent(type: type),
+    );
+  }
 }
 
-class _NotificationListViewState extends State<NotificationListView> {
-  List<model.AppNotification> _notifications = [];
-  bool _isLoading = true;
+class _NotificationListViewContent extends StatelessWidget {
+  const _NotificationListViewContent({this.type});
 
-  @override
-  void initState() {
-    super.initState();
-    _loadNotifications();
-  }
-
-  Future<void> _loadNotifications() async {
-    setState(() => _isLoading = true);
-
-    try {
-      final repo = context.read<NotificationRepository>();
-      final notifications = await repo.getNotifications(type: widget.type);
-      if (mounted) {
-        setState(() {
-          _notifications = notifications.notifications;
-          _isLoading = false;
-        });
-      }
-    } catch (_) {
-      if (mounted) setState(() => _isLoading = false);
-    }
-  }
+  final String? type;
 
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
 
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(_getTitle(l10n)),
-        actions: [
-          if (_notifications.isNotEmpty)
-            TextButton(
-              onPressed: _markAllAsRead,
-              child: Text(l10n.notificationMarkAllRead),
-            ),
-        ],
-      ),
-      body: _isLoading
-          ? const LoadingView()
-          : _notifications.isEmpty
-              ? EmptyStateView(
-                  icon: Icons.notifications_none,
-                  title: l10n.notificationEmpty,
-                  message: l10n.notificationEmptyMessage,
-                )
-              : RefreshIndicator(
-                  onRefresh: _loadNotifications,
-                  child: ListView.separated(
-                    padding: const EdgeInsets.all(AppSpacing.md),
-                    itemCount: _notifications.length,
-                    separatorBuilder: (_, __) =>
-                        const SizedBox(height: AppSpacing.sm),
-                    itemBuilder: (context, index) {
-                      final notification = _notifications[index];
-                      return _NotificationCard(
-                        notification: notification,
-                        onTap: () => _handleNotificationTap(notification),
-                      );
-                    },
-                  ),
+    return BlocBuilder<NotificationBloc, NotificationState>(
+      builder: (context, state) {
+        final notifications = state.notifications;
+
+        return Scaffold(
+          appBar: AppBar(
+            title: Text(_getTitle(l10n)),
+            actions: [
+              if (notifications.isNotEmpty)
+                TextButton(
+                  onPressed: () => context
+                      .read<NotificationBloc>()
+                      .add(const NotificationMarkAllAsRead()),
+                  child: Text(l10n.notificationMarkAllRead),
                 ),
+            ],
+          ),
+          body: state.isLoading
+              ? const LoadingView()
+              : notifications.isEmpty
+                  ? EmptyStateView(
+                      icon: Icons.notifications_none,
+                      title: l10n.notificationEmpty,
+                      message: l10n.notificationEmptyMessage,
+                    )
+                  : RefreshIndicator(
+                      onRefresh: () async {
+                        context
+                            .read<NotificationBloc>()
+                            .add(NotificationLoadRequested(type: type));
+                      },
+                      child: ListView.separated(
+                        padding: const EdgeInsets.all(AppSpacing.md),
+                        itemCount: notifications.length,
+                        separatorBuilder: (_, __) =>
+                            const SizedBox(height: AppSpacing.sm),
+                        itemBuilder: (context, index) {
+                          final notification = notifications[index];
+                          return _NotificationCard(
+                            notification: notification,
+                            onTap: () =>
+                                _handleNotificationTap(context, notification),
+                          );
+                        },
+                      ),
+                    ),
+        );
+      },
     );
   }
 
   String _getTitle(dynamic l10n) {
-    switch (widget.type) {
+    switch (type) {
       case 'system':
         return l10n.notificationSystem;
       case 'task':
@@ -107,28 +106,13 @@ class _NotificationListViewState extends State<NotificationListView> {
     }
   }
 
-  Future<void> _markAllAsRead() async {
-    try {
-      final repo = context.read<NotificationRepository>();
-      await repo.markAllAsRead();
-      _loadNotifications();
-    } catch (_) {}
-  }
-
-  void _handleNotificationTap(model.AppNotification notification) {
+  void _handleNotificationTap(
+      BuildContext context, model.AppNotification notification) {
     // 标记为已读
     if (!notification.isRead) {
-      try {
-        final repo = context.read<NotificationRepository>();
-        repo.markAsRead(notification.id);
-        setState(() {
-          final index =
-              _notifications.indexWhere((n) => n.id == notification.id);
-          if (index != -1) {
-            _notifications[index] = notification.copyWith(isRead: true);
-          }
-        });
-      } catch (_) {}
+      context
+          .read<NotificationBloc>()
+          .add(NotificationMarkAsRead(notification.id));
     }
 
     // 根据通知类型跳转到对应页面
@@ -182,7 +166,6 @@ class _NotificationListViewState extends State<NotificationListView> {
         }
         break;
       default:
-        // 系统通知不跳转
         break;
     }
   }
@@ -206,11 +189,11 @@ class _NotificationCard extends StatelessWidget {
         decoration: BoxDecoration(
           color: notification.isRead
               ? Theme.of(context).cardColor
-              : AppColors.primary.withOpacity(0.05),
+              : AppColors.primary.withValues(alpha: 0.05),
           borderRadius: BorderRadius.circular(AppRadius.medium),
           border: !notification.isRead
               ? Border.all(
-                  color: AppColors.primary.withOpacity(0.2), width: 1)
+                  color: AppColors.primary.withValues(alpha: 0.2), width: 1)
               : null,
         ),
         child: Row(
@@ -221,7 +204,7 @@ class _NotificationCard extends StatelessWidget {
               width: 40,
               height: 40,
               decoration: BoxDecoration(
-                color: _getIconColor().withOpacity(0.1),
+                color: _getIconColor().withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Icon(_getIcon(), color: _getIconColor(), size: 20),
@@ -246,7 +229,7 @@ class _NotificationCard extends StatelessWidget {
                     const SizedBox(height: 4),
                     Text(
                       notification.content,
-                      style: TextStyle(
+                      style: const TextStyle(
                           fontSize: 13,
                           color: AppColors.textSecondary),
                       maxLines: 2,
@@ -256,7 +239,7 @@ class _NotificationCard extends StatelessWidget {
                   const SizedBox(height: 6),
                   Text(
                     notification.createdAt?.toString().split('.').first ?? '',
-                    style: TextStyle(
+                    style: const TextStyle(
                         fontSize: 11,
                         color: AppColors.textTertiary),
                   ),
@@ -269,7 +252,7 @@ class _NotificationCard extends StatelessWidget {
               Container(
                 width: 8,
                 height: 8,
-                decoration: BoxDecoration(
+                decoration: const BoxDecoration(
                   color: AppColors.primary,
                   shape: BoxShape.circle,
                 ),

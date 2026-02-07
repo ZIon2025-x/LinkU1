@@ -127,7 +127,7 @@ class _FAQItemWidgetState extends State<_FAQItemWidget> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Container(
-      margin: EdgeInsets.only(bottom: AppSpacing.sm),
+      margin: const EdgeInsets.only(bottom: AppSpacing.sm),
       decoration: BoxDecoration(
         color: isDark
             ? AppColors.cardBackgroundDark
@@ -146,7 +146,7 @@ class _FAQItemWidgetState extends State<_FAQItemWidget> {
             ),
           ),
           tilePadding: AppSpacing.horizontalMd,
-          childrenPadding: EdgeInsets.only(
+          childrenPadding: const EdgeInsets.only(
             left: AppSpacing.md,
             right: AppSpacing.md,
             bottom: AppSpacing.md,
@@ -603,31 +603,31 @@ class VIPView extends StatelessWidget {
                     ),
                   ),
                   AppSpacing.vMd,
-                  _VIPFeatureItem(
+                  const _VIPFeatureItem(
                     icon: Icons.bolt,
                     title: '优先接单',
                     description: '任务推送优先，抢单更快一步',
                     color: AppColors.warning,
                   ),
-                  _VIPFeatureItem(
+                  const _VIPFeatureItem(
                     icon: Icons.badge,
                     title: '专属标识',
                     description: '头像显示VIP标识，提升可信度',
                     color: AppColors.accent,
                   ),
-                  _VIPFeatureItem(
+                  const _VIPFeatureItem(
                     icon: Icons.discount,
                     title: '手续费减免',
                     description: '平台服务费享受折扣优惠',
                     color: AppColors.success,
                   ),
-                  _VIPFeatureItem(
+                  const _VIPFeatureItem(
                     icon: Icons.support_agent,
                     title: '专属客服',
                     description: 'VIP专属客服通道，问题优先处理',
                     color: AppColors.primary,
                   ),
-                  _VIPFeatureItem(
+                  const _VIPFeatureItem(
                     icon: Icons.card_giftcard,
                     title: '积分加倍',
                     description: '每日签到积分翻倍',
@@ -679,7 +679,7 @@ class _VIPFeatureItem extends StatelessWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Padding(
-      padding: EdgeInsets.only(bottom: AppSpacing.md),
+      padding: const EdgeInsets.only(bottom: AppSpacing.md),
       child: Row(
         children: [
           Container(

@@ -14,6 +14,7 @@ import '../../../core/widgets/async_image_view.dart';
 import '../../../data/models/user.dart';
 import '../../../data/repositories/user_repository.dart';
 import '../../../data/repositories/task_repository.dart';
+import '../../../data/repositories/forum_repository.dart';
 import '../../auth/bloc/auth_bloc.dart';
 import '../../coupon_points/views/coupon_points_view.dart';
 import 'avatar_picker_view.dart';
@@ -36,6 +37,7 @@ class ProfileView extends StatelessWidget {
           create: (context) => ProfileBloc(
             userRepository: context.read<UserRepository>(),
             taskRepository: context.read<TaskRepository>(),
+            forumRepository: context.read<ForumRepository>(),
           )
             ..add(const ProfileLoadRequested())
             ..add(const ProfileLoadMyTasks())
@@ -235,7 +237,7 @@ class _ProfileContent extends StatelessWidget {
   Widget _buildUserInfoSection(
       BuildContext context, User user, bool isDark) {
     return Padding(
-      padding: EdgeInsets.fromLTRB(AppSpacing.md, 40, AppSpacing.md, 0),
+      padding: const EdgeInsets.fromLTRB(AppSpacing.md, 40, AppSpacing.md, 0),
       child: Column(
         children: [
           // 头像 + 角标（点击可更换头像）
@@ -358,7 +360,7 @@ class _ProfileContent extends StatelessWidget {
         .length;
 
     return Container(
-      margin: EdgeInsets.symmetric(horizontal: AppSpacing.md),
+      margin: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
       padding: const EdgeInsets.symmetric(vertical: 16),
       decoration: BoxDecoration(
         color: isDark
@@ -420,12 +422,12 @@ class _ProfileContent extends StatelessWidget {
   /// 我的内容 (对齐iOS myContentSection)
   Widget _buildMyContentSection(BuildContext context, bool isDark) {
     return Padding(
-      padding: EdgeInsets.symmetric(horizontal: AppSpacing.md),
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Padding(
-            padding: EdgeInsets.symmetric(horizontal: AppSpacing.sm),
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
             child: Text(
               context.l10n.profileMyContent,
               style: TextStyle(
@@ -499,12 +501,12 @@ class _ProfileContent extends StatelessWidget {
   /// 系统与认证 (对齐iOS systemSection)
   Widget _buildSystemSection(BuildContext context, bool isDark) {
     return Padding(
-      padding: EdgeInsets.symmetric(horizontal: AppSpacing.md),
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Padding(
-            padding: EdgeInsets.symmetric(horizontal: AppSpacing.sm),
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
             child: Text(
               context.l10n.profileSystemAndVerification,
               style: TextStyle(
@@ -589,7 +591,7 @@ class _ProfileContent extends StatelessWidget {
   /// 登出按钮 - 对齐iOS样式（红色边框 + 红色半透明背景）
   Widget _buildLogoutButton(BuildContext context, bool isDark) {
     return Padding(
-      padding: EdgeInsets.fromLTRB(AppSpacing.md, 8, AppSpacing.md, 40),
+      padding: const EdgeInsets.fromLTRB(AppSpacing.md, 8, AppSpacing.md, 40),
       child: GestureDetector(
         onTap: () {
           HapticFeedback.heavyImpact();
@@ -609,12 +611,12 @@ class _ProfileContent extends StatelessWidget {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(Icons.power_settings_new,       // power
+              const Icon(Icons.power_settings_new,       // power
                   color: AppColors.error, size: 18),
-              SizedBox(width: 8),
+              const SizedBox(width: 8),
               Text(
                 context.l10n.profileLogout,
-                style: TextStyle(
+                style: const TextStyle(
                   color: AppColors.error,
                   fontWeight: FontWeight.bold,
                   fontSize: 16,

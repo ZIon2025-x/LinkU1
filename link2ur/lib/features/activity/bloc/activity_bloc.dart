@@ -40,6 +40,15 @@ class ActivityApply extends ActivityEvent {
   List<Object?> get props => [activityId];
 }
 
+class ActivityLoadDetail extends ActivityEvent {
+  const ActivityLoadDetail(this.activityId);
+
+  final int activityId;
+
+  @override
+  List<Object?> get props => [activityId];
+}
+
 // ==================== State ====================
 
 enum ActivityStatus { initial, loading, loaded, error }
@@ -54,6 +63,8 @@ class ActivityState extends Equatable {
     this.errorMessage,
     this.isSubmitting = false,
     this.actionMessage,
+    this.activityDetail,
+    this.detailStatus = ActivityStatus.initial,
   });
 
   final ActivityStatus status;
@@ -64,8 +75,11 @@ class ActivityState extends Equatable {
   final String? errorMessage;
   final bool isSubmitting;
   final String? actionMessage;
+  final Activity? activityDetail;
+  final ActivityStatus detailStatus;
 
   bool get isLoading => status == ActivityStatus.loading;
+  bool get isDetailLoading => detailStatus == ActivityStatus.loading;
 
   ActivityState copyWith({
     ActivityStatus? status,
@@ -76,6 +90,8 @@ class ActivityState extends Equatable {
     String? errorMessage,
     bool? isSubmitting,
     String? actionMessage,
+    Activity? activityDetail,
+    ActivityStatus? detailStatus,
   }) {
     return ActivityState(
       status: status ?? this.status,
@@ -86,6 +102,8 @@ class ActivityState extends Equatable {
       errorMessage: errorMessage,
       isSubmitting: isSubmitting ?? this.isSubmitting,
       actionMessage: actionMessage,
+      activityDetail: activityDetail ?? this.activityDetail,
+      detailStatus: detailStatus ?? this.detailStatus,
     );
   }
 
@@ -99,6 +117,8 @@ class ActivityState extends Equatable {
         errorMessage,
         isSubmitting,
         actionMessage,
+        activityDetail,
+        detailStatus,
       ];
 }
 
@@ -112,6 +132,7 @@ class ActivityBloc extends Bloc<ActivityEvent, ActivityState> {
     on<ActivityLoadMore>(_onLoadMore);
     on<ActivityRefreshRequested>(_onRefresh);
     on<ActivityApply>(_onApply);
+    on<ActivityLoadDetail>(_onLoadDetail);
   }
 
   final ActivityRepository _activityRepository;
@@ -197,12 +218,36 @@ class ActivityBloc extends Bloc<ActivityEvent, ActivityState> {
         isSubmitting: false,
         actionMessage: '报名成功',
       ));
-      // 刷新列表
+      // 刷新列表和详情
       add(const ActivityRefreshRequested());
+      if (state.activityDetail?.id == event.activityId) {
+        add(ActivityLoadDetail(event.activityId));
+      }
     } catch (e) {
       emit(state.copyWith(
         isSubmitting: false,
         actionMessage: '报名失败',
+      ));
+    }
+  }
+
+  Future<void> _onLoadDetail(
+    ActivityLoadDetail event,
+    Emitter<ActivityState> emit,
+  ) async {
+    emit(state.copyWith(detailStatus: ActivityStatus.loading));
+
+    try {
+      final activity = await _activityRepository.getActivityById(event.activityId);
+      emit(state.copyWith(
+        detailStatus: ActivityStatus.loaded,
+        activityDetail: activity,
+      ));
+    } catch (e) {
+      AppLogger.error('Failed to load activity detail', e);
+      emit(state.copyWith(
+        detailStatus: ActivityStatus.error,
+        errorMessage: e.toString(),
       ));
     }
   }

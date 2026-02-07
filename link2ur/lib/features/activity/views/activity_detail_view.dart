@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:go_router/go_router.dart';
 
 import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_spacing.dart';
@@ -9,11 +8,11 @@ import '../../../core/widgets/loading_view.dart';
 import '../../../core/widgets/error_state_view.dart';
 import '../../../core/widgets/buttons.dart';
 import '../../../data/repositories/activity_repository.dart';
-import '../../../data/models/activity.dart';
+import '../bloc/activity_bloc.dart';
 
 /// 活动详情视图
 /// 参考iOS ActivityDetailView.swift
-class ActivityDetailView extends StatefulWidget {
+class ActivityDetailView extends StatelessWidget {
   const ActivityDetailView({
     super.key,
     required this.activityId,
@@ -22,118 +21,76 @@ class ActivityDetailView extends StatefulWidget {
   final int activityId;
 
   @override
-  State<ActivityDetailView> createState() => _ActivityDetailViewState();
+  Widget build(BuildContext context) {
+    return BlocProvider(
+      create: (context) => ActivityBloc(
+        activityRepository: context.read<ActivityRepository>(),
+      )..add(ActivityLoadDetail(activityId)),
+      child: _ActivityDetailViewContent(activityId: activityId),
+    );
+  }
 }
 
-class _ActivityDetailViewState extends State<ActivityDetailView> {
-  Activity? _activity;
-  bool _isLoading = false;
-  bool _isSubmitting = false;
-  String? _errorMessage;
-  String? _actionMessage;
+class _ActivityDetailViewContent extends StatelessWidget {
+  const _ActivityDetailViewContent({required this.activityId});
 
-  @override
-  void initState() {
-    super.initState();
-    _loadActivity();
-  }
-
-  Future<void> _loadActivity() async {
-    setState(() {
-      _isLoading = true;
-      _errorMessage = null;
-    });
-
-    try {
-      final repository = context.read<ActivityRepository>();
-      final activity = await repository.getActivityById(widget.activityId);
-
-      setState(() {
-        _activity = activity;
-        _isLoading = false;
-      });
-    } catch (e) {
-      setState(() {
-        _errorMessage = e.toString();
-        _isLoading = false;
-      });
-    }
-  }
-
-  Future<void> _applyActivity() async {
-    if (_activity == null || _isSubmitting) return;
-
-    setState(() {
-      _isSubmitting = true;
-      _actionMessage = null;
-    });
-
-    try {
-      final repository = context.read<ActivityRepository>();
-      await repository.applyActivity(widget.activityId);
-
-      setState(() {
-        _isSubmitting = false;
-        _actionMessage = '报名成功';
-      });
-
-      // Refresh activity to get updated status
-      await _loadActivity();
-
-      // Show success message
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('报名成功'),
-            backgroundColor: AppColors.success,
-          ),
-        );
-      }
-    } catch (e) {
-      setState(() {
-        _isSubmitting = false;
-        _actionMessage = '报名失败: ${e.toString()}';
-      });
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('报名失败: ${e.toString()}'),
-            backgroundColor: AppColors.error,
-          ),
-        );
-      }
-    }
-  }
+  final int activityId;
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('活动详情'),
+    return BlocListener<ActivityBloc, ActivityState>(
+      listener: (context, state) {
+        if (state.actionMessage == '报名成功') {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('报名成功'),
+              backgroundColor: AppColors.success,
+            ),
+          );
+        } else if (state.actionMessage != null &&
+            state.actionMessage!.startsWith('报名失败')) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(state.actionMessage!),
+              backgroundColor: AppColors.error,
+            ),
+          );
+        }
+      },
+      child: BlocBuilder<ActivityBloc, ActivityState>(
+        builder: (context, state) {
+          return Scaffold(
+            appBar: AppBar(
+              title: const Text('活动详情'),
+            ),
+            body: _buildBody(context, state),
+            bottomNavigationBar: _buildBottomBar(context, state),
+          );
+        },
       ),
-      body: _buildBody(),
-      bottomNavigationBar: _buildBottomBar(),
     );
   }
 
-  Widget _buildBody() {
-    if (_isLoading) {
+  Widget _buildBody(BuildContext context, ActivityState state) {
+    if (state.isDetailLoading && state.activityDetail == null) {
       return const LoadingView();
     }
 
-    if (_errorMessage != null && _activity == null) {
+    if (state.detailStatus == ActivityStatus.error &&
+        state.activityDetail == null) {
       return ErrorStateView.loadFailed(
-        message: _errorMessage!,
-        onRetry: _loadActivity,
+        message: state.errorMessage ?? '加载失败',
+        onRetry: () {
+          context.read<ActivityBloc>().add(ActivityLoadDetail(activityId));
+        },
       );
     }
 
-    if (_activity == null) {
+    if (state.activityDetail == null) {
       return ErrorStateView.notFound();
     }
 
-    final activity = _activity!;
+    final activity = state.activityDetail!;
 
     return SingleChildScrollView(
       padding: AppSpacing.allMd,
@@ -188,7 +145,7 @@ class _ActivityDetailViewState extends State<ActivityDetailView> {
                 ),
                 child: Text(
                   activity.priceDisplay,
-                  style: TextStyle(
+                  style: const TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
                     color: AppColors.primary,
@@ -208,7 +165,7 @@ class _ActivityDetailViewState extends State<ActivityDetailView> {
                   ),
                   child: Text(
                     '${activity.discountPercentage!.toStringAsFixed(0)}% OFF',
-                    style: TextStyle(
+                    style: const TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w600,
                       color: AppColors.error,
@@ -242,7 +199,7 @@ class _ActivityDetailViewState extends State<ActivityDetailView> {
           // 参与进度
           Row(
             children: [
-              Icon(
+              const Icon(
                 Icons.people_outline,
                 size: 20,
                 color: AppColors.textSecondaryLight,
@@ -250,7 +207,7 @@ class _ActivityDetailViewState extends State<ActivityDetailView> {
               AppSpacing.hSm,
               Text(
                 '参与人数: ${activity.currentParticipants ?? 0}/${activity.maxParticipants}',
-                style: TextStyle(
+                style: const TextStyle(
                   fontSize: 16,
                   color: AppColors.textSecondaryLight,
                 ),
@@ -263,7 +220,7 @@ class _ActivityDetailViewState extends State<ActivityDetailView> {
             child: LinearProgressIndicator(
               value: activity.participationProgress,
               backgroundColor: AppColors.skeletonBase,
-              valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
+              valueColor: const AlwaysStoppedAnimation<Color>(AppColors.primary),
               minHeight: 8,
             ),
           ),
@@ -273,7 +230,7 @@ class _ActivityDetailViewState extends State<ActivityDetailView> {
           if (activity.location.isNotEmpty) ...[
             Row(
               children: [
-                Icon(
+                const Icon(
                   Icons.location_on_outlined,
                   size: 20,
                   color: AppColors.textSecondaryLight,
@@ -282,7 +239,7 @@ class _ActivityDetailViewState extends State<ActivityDetailView> {
                 Expanded(
                   child: Text(
                     activity.location,
-                    style: TextStyle(
+                    style: const TextStyle(
                       fontSize: 16,
                       color: AppColors.textSecondaryLight,
                     ),
@@ -305,7 +262,7 @@ class _ActivityDetailViewState extends State<ActivityDetailView> {
             AppSpacing.vMd,
             Text(
               activity.description,
-              style: TextStyle(
+              style: const TextStyle(
                 fontSize: 16,
                 color: AppColors.textSecondaryLight,
                 height: 1.6,
@@ -318,7 +275,7 @@ class _ActivityDetailViewState extends State<ActivityDetailView> {
           if (activity.deadline != null) ...[
             Row(
               children: [
-                Icon(
+                const Icon(
                   Icons.access_time_outlined,
                   size: 20,
                   color: AppColors.textSecondaryLight,
@@ -326,7 +283,7 @@ class _ActivityDetailViewState extends State<ActivityDetailView> {
                 AppSpacing.hSm,
                 Text(
                   '截止时间: ${_formatDateTime(activity.deadline)}',
-                  style: TextStyle(
+                  style: const TextStyle(
                     fontSize: 16,
                     color: AppColors.textSecondaryLight,
                   ),
@@ -339,10 +296,10 @@ class _ActivityDetailViewState extends State<ActivityDetailView> {
     );
   }
 
-  Widget? _buildBottomBar() {
-    if (_activity == null) return null;
+  Widget? _buildBottomBar(BuildContext context, ActivityState state) {
+    if (state.activityDetail == null) return null;
 
-    final activity = _activity!;
+    final activity = state.activityDetail!;
     final canApply = activity.status == 'active' &&
         !activity.isFull &&
         (activity.hasApplied != true);
@@ -364,8 +321,14 @@ class _ActivityDetailViewState extends State<ActivityDetailView> {
       child: SafeArea(
         child: PrimaryButton(
           text: '立即报名',
-          onPressed: _isSubmitting ? null : _applyActivity,
-          isLoading: _isSubmitting,
+          onPressed: state.isSubmitting
+              ? null
+              : () {
+                  context.read<ActivityBloc>().add(
+                        ActivityApply(activityId),
+                      );
+                },
+          isLoading: state.isSubmitting,
         ),
       ),
     );

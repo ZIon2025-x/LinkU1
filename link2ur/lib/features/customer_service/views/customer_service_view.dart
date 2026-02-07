@@ -274,7 +274,7 @@ class _CustomerServiceContentState extends State<_CustomerServiceContent> {
             if (widget.isModal)
               TextButton(
                 onPressed: () => Navigator.of(context).pop(),
-                child: Text(
+                child: const Text(
                   '完成',
                   style: TextStyle(color: AppColors.primary),
                 ),
@@ -316,7 +316,7 @@ class _CustomerServiceContentState extends State<_CustomerServiceContent> {
                                         .read<CustomerServiceBloc>()
                                         .add(const CustomerServiceEndChat());
                                   },
-                                  child: Text('结束',
+                                  child: const Text('结束',
                                       style:
                                           TextStyle(color: AppColors.error)),
                                 ),
@@ -429,7 +429,7 @@ class _CustomerServiceContentState extends State<_CustomerServiceContent> {
       onTap: () => _focusNode.unfocus(),
       child: ListView.builder(
         controller: _scrollController,
-        padding: EdgeInsets.symmetric(
+        padding: const EdgeInsets.symmetric(
           horizontal: AppSpacing.md,
           vertical: AppSpacing.sm,
         ),
@@ -507,7 +507,7 @@ class _CustomerServiceContentState extends State<_CustomerServiceContent> {
 
   Widget _buildSystemMessage(CustomerServiceMessage message, bool isDark) {
     return Padding(
-      padding: EdgeInsets.symmetric(vertical: AppSpacing.xs),
+      padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
       child: Center(
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
@@ -547,7 +547,7 @@ class _CustomerServiceContentState extends State<_CustomerServiceContent> {
   Widget _buildMessageBubble(
       CustomerServiceMessage message, bool isFromUser, bool isDark) {
     return Padding(
-      padding: EdgeInsets.symmetric(vertical: AppSpacing.xs),
+      padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
       child: Row(
         mainAxisAlignment:
             isFromUser ? MainAxisAlignment.end : MainAxisAlignment.start,
@@ -612,7 +612,7 @@ class _CustomerServiceContentState extends State<_CustomerServiceContent> {
   Widget _buildInputArea(CustomerServiceState state, bool isDark) {
     if (state.isEnded) {
       return Container(
-        padding: EdgeInsets.symmetric(
+        padding: const EdgeInsets.symmetric(
           horizontal: AppSpacing.md,
           vertical: AppSpacing.md,
         ),
@@ -677,7 +677,7 @@ class _CustomerServiceContentState extends State<_CustomerServiceContent> {
     }
 
     return Container(
-      padding: EdgeInsets.symmetric(
+      padding: const EdgeInsets.symmetric(
         horizontal: AppSpacing.md,
         vertical: AppSpacing.sm,
       ),

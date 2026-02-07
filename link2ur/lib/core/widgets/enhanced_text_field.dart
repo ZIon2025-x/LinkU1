@@ -310,10 +310,12 @@ class _EnhancedTextFieldState extends State<EnhancedTextField>
     }
 
     if (widgets.isEmpty) return null;
-    if (widgets.length == 1) return Padding(
+    if (widgets.length == 1) {
+      return Padding(
       padding: const EdgeInsets.only(right: 12),
       child: widgets.first,
     );
+    }
 
     return Padding(
       padding: const EdgeInsets.only(right: 8),
