@@ -6,7 +6,6 @@ import '../../../data/models/message.dart';
 import '../../../data/repositories/message_repository.dart';
 import '../../../data/services/websocket_service.dart';
 import '../../../core/utils/logger.dart';
-import '../../../data/models/user.dart';
 
 // ==================== Events ====================
 
@@ -47,6 +46,15 @@ class ChatSendMessage extends ChatEvent {
 
   @override
   List<Object?> get props => [content, messageType];
+}
+
+class ChatSendImage extends ChatEvent {
+  const ChatSendImage({required this.filePath});
+
+  final String filePath;
+
+  @override
+  List<Object?> get props => [filePath];
 }
 
 class ChatMessageReceived extends ChatEvent {
@@ -125,6 +133,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     on<ChatLoadMessages>(_onLoadMessages);
     on<ChatLoadMore>(_onLoadMore);
     on<ChatSendMessage>(_onSendMessage);
+    on<ChatSendImage>(_onSendImage);
     on<ChatMessageReceived>(_onMessageReceived);
     on<ChatMarkAsRead>(_onMarkAsRead);
 
@@ -249,6 +258,37 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
       );
     } catch (e) {
       AppLogger.error('Failed to send message', e);
+      emit(state.copyWith(isSending: false));
+    }
+  }
+
+  Future<void> _onSendImage(
+    ChatSendImage event,
+    Emitter<ChatState> emit,
+  ) async {
+    emit(state.copyWith(isSending: true));
+
+    try {
+      // 先上传图片获取URL
+      final imageUrl = await _messageRepository.uploadImage(event.filePath);
+
+      // 然后发送图片消息
+      final message = await _messageRepository.sendMessage(
+        SendMessageRequest(
+          receiverId: state.userId,
+          content: '[图片]',
+          messageType: 'image',
+          taskId: state.taskId,
+          imageUrl: imageUrl,
+        ),
+      );
+
+      emit(state.copyWith(
+        messages: [message, ...state.messages],
+        isSending: false,
+      ));
+    } catch (e) {
+      AppLogger.error('Failed to send image', e);
       emit(state.copyWith(isSending: false));
     }
   }

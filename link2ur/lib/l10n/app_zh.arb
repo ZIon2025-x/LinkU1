@@ -1,174 +1,2813 @@
 {
   "@@locale": "zh",
-  "appTitle": "Link²Ur",
-  "home": "首页",
-  "community": "社区",
-  "messages": "消息",
-  "profile": "我的",
-  "login": "登录",
-  "register": "注册",
-  "logout": "登出",
-  "logoutConfirmTitle": "确认登出",
-  "logoutConfirmMessage": "确定要登出吗？",
-  "cancel": "取消",
-  "confirm": "确认",
-  "save": "保存",
-  "submit": "提交",
-  "delete": "删除",
-  "edit": "编辑",
-  "search": "搜索",
-  "loading": "加载中...",
-  "loadFailed": "加载失败",
-  "retry": "重试",
-  "noData": "暂无数据",
-  "noMore": "没有更多了",
-  "pullToRefresh": "下拉刷新",
-  "settings": "设置",
-  "settingsTitle": "设置",
-  "accountInfo": "账户信息",
-  "email": "邮箱",
-  "phone": "手机号",
-  "notBound": "未绑定",
-  "preferences": "偏好设置",
-  "language": "语言",
-  "chinese": "中文",
-  "english": "English",
-  "notifications": "通知",
-  "receiveNotifications": "接收推送通知",
-  "appearance": "外观",
-  "themeMode": "主题",
+  "commonOk": "确定",
+  "commonCancel": "取消",
+  "commonGoSetup": "去设置",
+  "commonConfirm": "确认",
+  "commonDelete": "删除",
+  "commonSave": "保存",
+  "commonEdit": "编辑",
+  "commonClose": "关闭",
+  "commonRetry": "重试",
+  "commonLoading": "加载中...",
+  "commonSearch": "搜索",
+  "commonAll": "全部",
+  "commonFilter": "筛选",
+  "commonLoadMore": "加载更多",
+  "commonTagSeparator": "、",
+  "commonCopy": "复制",
+  "commonCopied": "已复制: {param1}",
+  "@commonCopied": {
+    "placeholders": {
+      "param1": {
+        "type": "String"
+      }
+    }
+  },
+  "commonTap": "点击",
+  "commonLongPressToCopy": "长按复制",
+  "commonClear": "清空",
+  "commonSubmit": "提交",
+  "commonSubmitting": "提交中...",
+  "commonBack": "返回",
+  "commonNext": "下一步",
+  "commonFinish": "完成",
+  "commonDone": "完成",
+  "commonNotice": "提示",
+  "commonShare": "分享",
+  "commonMore": "更多",
+  "commonViewAll": "查看全部",
+  "commonLoadingImage": "加载图片中...",
+  "commonNotProvided": "未提供",
+  "commonPleaseSelect": "请选择",
+  "commonUser": "用户",
+  "appName": "Link²Ur",
+  "appTagline": "连接你我，创造价值",
+  "appUser": "Link²Ur用户",
+  "appTermsOfService": "服务条款",
+  "appPrivacyPolicy": "隐私政策",
+  "appAbout": "关于",
+  "appVersion": "版本",
+  "authLogin": "登录",
+  "authRegister": "注册",
+  "authLogout": "退出登录",
+  "authForgotPassword": "忘记密码",
+  "authEmail": "邮箱",
+  "authEmailOrId": "邮箱/ID",
+  "authPassword": "密码",
+  "authPhone": "手机号",
+  "authVerificationCode": "验证码",
+  "authLoginLater": "稍后登录",
+  "authCountdownSeconds": "{param1} 秒",
+  "@authCountdownSeconds": {
+    "placeholders": {
+      "param1": {
+        "type": "int"
+      }
+    }
+  },
+  "loginRequired": "需要登录",
+  "loginRequiredForPoints": "请登录后查看积分与优惠券",
+  "loginRequiredForVerification": "请登录后进行学生认证",
+  "loginLoginNow": "立即登录",
+  "authSendCode": "发送验证码",
+  "authResendCode": "重新发送",
+  "authLoginMethod": "登录方式",
+  "authEmailPassword": "邮箱/ID密码",
+  "authEmailCode": "邮箱验证码",
+  "authPhoneCode": "手机验证码",
+  "authEnterEmail": "请输入邮箱",
+  "authEnterEmailOrId": "请输入邮箱或ID",
+  "authEnterPassword": "请输入密码",
+  "authEnterPhone": "请输入手机号",
+  "authEnterCode": "请输入验证码",
+  "authNoAccount": "还没有账号？",
+  "authHasAccount": "已有账户？",
+  "authRegisterNow": "立即注册",
+  "authLoginNow": "立即登录",
+  "authNoAccountUseCode": "验证码登录即可",
+  "authRegisterSuccess": "注册成功",
+  "authCaptchaTitle": "人机验证",
+  "authCaptchaMessage": "请完成人机验证",
+  "authCaptchaError": "无法加载验证码，请稍后重试",
+  "authUsername": "用户名",
+  "authEnterUsername": "请输入用户名",
+  "authPasswordHint": "至少8个字符，包含字母和数字",
+  "authPhoneOptional": "手机号（可选）",
+  "authAgreeToTerms": "我已阅读并同意",
+  "authTermsOfService": "《用户协议》",
+  "authPrivacyPolicy": "《隐私政策》",
+  "homeExperts": "达人",
+  "homeRecommended": "推荐",
+  "homeNearby": "附近",
+  "homeGreeting": "你好，{param1}",
+  "@homeGreeting": {
+    "placeholders": {
+      "param1": {
+        "type": "String"
+      }
+    }
+  },
+  "homeWhatToDo": "今天想做点什么？",
+  "homeMenu": "菜单",
+  "homeSearchExperts": "搜索达人",
+  "homeSearch": "搜索",
+  "homeNoResults": "没有找到相关结果",
+  "homeTryOtherKeywords": "试试其他关键词",
+  "homeSearchHistory": "搜索历史",
+  "homeHotSearches": "热门搜索",
+  "homeNoNearbyTasks": "附近暂无任务",
+  "homeNoNearbyTasksMessage": "附近还没有任务发布，快来发布第一个任务吧！",
+  "homeNoExperts": "暂无任务达人",
+  "homeNoExpertsMessage": "还没有任务达人，敬请期待...",
+  "homeRecommendedTasks": "推荐任务",
+  "homeMemberPublished": "会员发布",
+  "homeMemberSeller": "会员卖家",
+  "homeNoRecommendedTasks": "暂无推荐任务",
+  "homeNoRecommendedTasksMessage": "还没有推荐任务，快去任务大厅看看吧！",
+  "homeLatestActivity": "最新动态",
+  "homeNoActivity": "暂无动态",
+  "homeNoActivityMessage": "还没有最新动态",
+  "homeNoMoreActivity": "以上为最新动态",
+  "homeHotEvents": "热门活动",
+  "homeNoEvents": "暂无活动",
+  "homeNoEventsMessage": "目前还没有活动，敬请期待...",
+  "homeViewEvent": "查看活动",
+  "homeTapToViewEvents": "点击查看最新活动",
+  "homeMultiplePeople": "多人",
+  "homeView": "查看",
+  "tasksTaskDetail": "任务详情",
+  "tasksLoadFailed": "加载失败",
+  "tasksCancelTask": "取消任务",
+  "tasksCancelTaskConfirm": "确定要取消这个任务吗？",
+  "tasksApply": "申请",
+  "tasksMyTasks": "我的任务",
+  "tasksApplyTask": "申请任务",
+  "tasksApplyMessage": "留言（可选）",
+  "tasksApplyInfo": "申请信息",
+  "tasksPriceNegotiation": "价格协商",
+  "tasksApplyHint": "向发布者说明你的申请理由，有助于提高申请成功率",
+  "tasksSubmitApplication": "提交申请",
+  "tasksNoApplicants": "暂无申请者",
+  "tasksApplicantsList": "申请者列表 ({param1})",
+  "@tasksApplicantsList": {
+    "placeholders": {
+      "param1": {
+        "type": "int"
+      }
+    }
+  },
+  "tasksMessageLabel": "留言: {param1}",
+  "@tasksMessageLabel": {
+    "placeholders": {
+      "param1": {
+        "type": "String"
+      }
+    }
+  },
+  "tasksTaskDescription": "任务描述",
+  "tasksTimeInfo": "时间信息",
+  "tasksPublishTime": "发布时间",
+  "tasksDeadline": "截止时间",
+  "tasksPublisher": "发布者",
+  "tasksYourTask": "这是您发布的任务",
+  "tasksManageTask": "您可以在下方查看申请者并管理任务",
+  "tasksReviews": "评价 ({param1})",
+  "@tasksReviews": {
+    "placeholders": {
+      "param1": {
+        "type": "int"
+      }
+    }
+  },
+  "tasksNoTaskImages": "暂无任务图片",
+  "tasksPointsReward": "{param1} 积分",
+  "@tasksPointsReward": {
+    "placeholders": {
+      "param1": {
+        "type": "int"
+      }
+    }
+  },
+  "tasksShareTo": "分享到...",
+  "tasksTask": "任务",
+  "tasksTasks": "任务",
+  "tasksNotInterested": "不感兴趣",
+  "tasksMarkNotInterestedConfirm": "确定要将此任务标记为不感兴趣吗？",
+  "expertsExperts": "任务达人",
+  "expertsBecomeExpert": "成为达人",
+  "expertsSearchExperts": "搜索任务达人",
+  "expertsApplyNow": "立即申请",
+  "expertsLoginToApply": "登录后申请",
+  "forumForum": "论坛",
+  "forumAllPosts": "全部帖子",
+  "forumNoPosts": "暂无帖子",
+  "forumNoPostsMessage": "这个板块还没有帖子，快来发布第一个吧！",
+  "forumSearchPosts": "搜索帖子",
+  "forumPosts": "帖子",
+  "forumPostLoadFailed": "加载帖子失败",
+  "forumOfficial": "官方",
+  "forumAllReplies": "全部回复",
+  "forumReply": "回复",
+  "forumWriteReply": "写回复...",
+  "forumSend": "发送",
+  "forumView": "浏览量",
+  "forumLike": "点赞",
+  "forumFavorite": "收藏",
+  "forumCreatePostTitle": "发布帖子",
+  "forumCreatePostBasicInfo": "基本信息",
+  "forumCreatePostPostTitle": "帖子标题",
+  "forumCreatePostPostTitlePlaceholder": "给您的帖子起个吸引人的标题",
+  "forumCreatePostPostContent": "帖子内容",
+  "forumCreatePostContentPlaceholder": "分享您的见解、经验或提出问题。友好互助，共同成长...",
+  "forumCreatePostPublishing": "发布中...",
+  "forumCreatePostPublishNow": "立即发布",
+  "fleaMarketFleaMarket": "跳蚤市场",
+  "fleaMarketSubtitle": "发现好物，出售闲置",
+  "fleaMarketNoItems": "暂无商品",
+  "fleaMarketNoItemsMessage": "跳蚤市场还没有商品，快来发布第一个吧！",
+  "fleaMarketSearchItems": "搜索商品",
+  "fleaMarketItems": "商品",
+  "fleaMarketProductInfo": "商品信息",
+  "fleaMarketProductTitle": "商品标题",
+  "fleaMarketProductTitlePlaceholder": "请输入商品标题",
+  "fleaMarketDescription": "商品描述",
+  "fleaMarketDescriptionPlaceholder": "详细描述您的商品",
+  "fleaMarketPrice": "价格",
+  "fleaMarketContact": "联系方式",
+  "fleaMarketContactPlaceholder": "请输入联系方式",
+  "fleaMarketNoImage": "暂无图片",
+  "fleaMarketActiveSeller": "活跃卖家",
+  "fleaMarketAddImage": "添加图片",
+  "fleaMarketAutoRemovalDays": "{param1} 天后自动下架",
+  "@fleaMarketAutoRemovalDays": {
+    "placeholders": {
+      "param1": {
+        "type": "int"
+      }
+    }
+  },
+  "fleaMarketAutoRemovalSoon": "商品即将下架",
+  "fleaMarketBidPurchase": "竞价购买",
+  "fleaMarketBuyNow": "立即购买",
+  "fleaMarketCategory": "商品分类",
+  "fleaMarketConfirmPurchase": "确认购买",
+  "fleaMarketContactSeller": "联系卖家",
+  "fleaMarketCreatePublishNow": "立即发布商品",
+  "fleaMarketCreatePublishing": "发布中...",
+  "fleaMarketCreateSearchLocation": "搜索地点或输入 Online",
+  "fleaMarketEditItem": "编辑商品",
+  "fleaMarketEnterAmount": "输入金额",
+  "fleaMarketNegotiateRequestSent": "议价请求已发送",
+  "fleaMarketNegotiateRequestSentMessage": "您已提交购买申请，请等待卖家处理",
+  "fleaMarketNegotiateRequestFailed": "议价请求发送失败，请重试",
+  "fleaMarketNegotiatePriceInvalid": "请输入有效的议价金额。",
+  "fleaMarketNegotiatePriceTooHigh": "议价金额不能高于原价。",
+  "fleaMarketNegotiatePriceTooLow": "议价金额必须大于0。",
+  "fleaMarketFavorite": "收藏",
+  "fleaMarketLoadFailed": "加载商品信息失败",
+  "fleaMarketLoading": "加载中...",
+  "fleaMarketMessagePlaceholder": "例如：希望面交，能否包邮等...",
+  "fleaMarketMessageToSeller": "给卖家留言（可选）",
+  "fleaMarketNegotiate": "议价",
+  "fleaMarketNoDescription": "卖家还没有写任何内容~",
+  "fleaMarketOnline": "线上",
+  "fleaMarketPriceAndTransaction": "价格与交易",
+  "fleaMarketProductDetail": "商品详情",
+  "fleaMarketProductImages": "商品图片",
+  "fleaMarketPublishItem": "发布商品",
+  "fleaMarketTransactionLocation": "交易地点",
+  "fleaMarketYourBid": "您的出价",
+  "profileProfile": "个人中心",
+  "profileMyTasks": "我的任务",
+  "profileMyPosts": "我的闲置",
+  "profileSettings": "设置",
+  "profileAbout": "关于",
+  "profileLogout": "退出登录",
+  "profileLogoutConfirm": "确定要退出登录吗？",
+  "profilePleaseUpdateEmailTitle": "请更新邮箱",
+  "profilePleaseUpdateEmailMessage": "请尽快在设置中更新您的邮箱地址，以免错过重要通知邮件。",
+  "messagesMessages": "消息",
+  "messagesChat": "聊天",
+  "messagesSend": "发送",
+  "messagesEnterMessage": "输入消息...",
+  "leaderboardLeaderboard": "排行榜",
+  "leaderboardRank": "排名",
+  "leaderboardPoints": "积分",
+  "leaderboardUser": "用户",
+  "leaderboardItemLoadFailed": "竞品信息加载失败",
+  "leaderboardAddCoverImage": "添加封面图片",
+  "leaderboardApplyTitle": "申请新榜单",
+  "leaderboardCoverImage": "封面图片（可选）",
+  "leaderboardDescription": "描述",
+  "leaderboardDescriptionPlaceholder": "简单介绍一下这个竞品...",
+  "leaderboardInfo": "榜单信息",
+  "leaderboardItemCount": "竞品",
+  "leaderboardLoadFailed": "加载榜单失败",
+  "leaderboardLoading": "加载中...",
+  "leaderboardName": "榜单名称",
+  "leaderboardNamePlaceholder": "请输入名称",
+  "leaderboardNoItems": "暂无项目",
+  "leaderboardNoItemsMessage": "此榜单还没有参与者。成为第一个提交者吧！",
+  "leaderboardReason": "申请理由",
+  "leaderboardReasonPlaceholder": "向管理员说明创建此榜单的必要性，有助于加快审核流程...",
+  "leaderboardReasonTitle": "为什么要创建此榜单？",
+  "leaderboardRegion": "地区",
+  "leaderboardSortComprehensive": "综合",
+  "leaderboardSortLatest": "最新",
+  "leaderboardSortNetVotes": "净投票",
+  "leaderboardSortUpvotes": "支持票",
+  "leaderboardTotalVotes": "总投票",
+  "leaderboardViewCount": "浏览量",
+  "leaderboardSubmittedBy": "由 {param1} 提交",
+  "@leaderboardSubmittedBy": {
+    "placeholders": {
+      "param1": {
+        "type": "String"
+      }
+    }
+  },
+  "leaderboardItemDetail": "竞品详情",
+  "leaderboardNoDescription": "暂无描述信息",
+  "leaderboardContactLocation": "联系与位置",
+  "leaderboardCurrentScore": "当前得分",
+  "leaderboardTotalVotesCount": "总投票数",
+  "leaderboardFeaturedComments": "精选留言",
+  "leaderboardNoComments": "暂无留言，快来发表你的看法吧",
+  "leaderboardOppose": "反对",
+  "leaderboardSupport": "支持",
+  "leaderboardNoImages": "暂无图片",
+  "leaderboardWriteReason": "写下你的理由让大家参考吧...",
+  "leaderboardAnonymousVote": "匿名投票",
+  "leaderboardSubmitVote": "提交投票",
+  "leaderboardAddImage": "添加图片",
+  "leaderboardApplyNew": "申请新榜单",
+  "leaderboardSupportReason": "支持理由",
+  "leaderboardOpposeReason": "反对理由",
+  "leaderboardAnonymousUser": "匿名用户",
+  "leaderboardNetScore": "净分",
+  "leaderboardBasicInfo": "基本信息",
+  "leaderboardContactInfo": "联系方式 (可选)",
+  "leaderboardImageDisplay": "图片展示 (可选)",
+  "leaderboardItemName": "竞品名称",
+  "leaderboardItemDescription": "竞品描述",
+  "leaderboardItemAddress": "地址",
+  "leaderboardItemPhone": "电话",
+  "leaderboardItemWebsite": "官方网站",
+  "leaderboardSubmitItem": "提交竞品",
+  "leaderboardSubmitting": "正在提交...",
+  "leaderboardAddressPlaceholder": "请输入详细地址",
+  "leaderboardPhonePlaceholder": "请输入联系电话",
+  "leaderboardWebsitePlaceholder": "请输入网站地址",
+  "leaderboardPleaseEnterItemName": "请输入竞品名称",
+  "activityPerson": "人",
+  "activityPersonsBooked": "人已约",
+  "taskExpertServicesCount": "{param1} 个服务",
+  "@taskExpertServicesCount": {
+    "placeholders": {
+      "param1": {
+        "type": "int"
+      }
+    }
+  },
+  "taskExpertCompletionRate": "完成率",
+  "taskExpertNoServices": "该达人暂时没有上架服务",
+  "taskExpertOrder": "单",
+  "taskExpertCompletionRatePercent": "{param1}%完成率",
+  "@taskExpertCompletionRatePercent": {
+    "placeholders": {
+      "param1": {
+        "type": "int"
+      }
+    }
+  },
+  "taskExpertSearchExperts": "搜索任务达人",
+  "taskExpertNoExpertsFound": "没有找到相关达人",
+  "taskExpertNoExpertsFoundMessage": "尝试调整筛选条件",
+  "taskExpertNoExpertsFoundWithQuery": "没有找到包含\\",
+  "taskExpertSearchTitle": "搜索达人",
+  "taskExpertAllTypes": "全部类型",
+  "taskExpertType": "类型",
+  "taskExpertLocation": "位置",
+  "taskExpertAllCities": "全部城市",
+  "taskExpertRating": "评分",
+  "taskExpertCompleted": "已完成",
+  "serviceLoading": "加载中...",
+  "serviceLoadFailed": "服务信息加载失败",
+  "serviceNeedDescription": "简单说明你的需求，方便达人了解...",
+  "locationGoogleMaps": "Google 地图",
+  "webviewWebPage": "网页",
+  "webviewLoading": "加载中...",
+  "webviewDone": "完成",
+  "profileRecentTasks": "最近任务",
+  "profileUserReviews": "用户评价",
+  "profileJoinedDays": "加入 {param1} 天",
+  "@profileJoinedDays": {
+    "placeholders": {
+      "param1": {
+        "type": "int"
+      }
+    }
+  },
+  "profileReward": "奖励",
+  "profileSelectAvatar": "选择头像",
+  "locationTitle": "位置",
+  "locationSearchPlaceholder": "搜索地点或输入 Online",
+  "locationGettingAddress": "正在获取地址...",
+  "locationDragToSelect": "拖动地图选择位置",
+  "locationCurrentLocation": "当前位置",
+  "locationOnlineRemote": "线上/远程",
+  "locationSelectTitle": "选择位置",
+  "locationSearchPlace": "搜索地点、地址、邮编...",
+  "locationMoving": "移动中",
+  "searchResultsTitle": "搜索结果",
+  "taskExpertLoading": "加载中...",
+  "taskExpertLoadFailed": "专家信息加载失败",
+  "externalWebLoading": "加载中...",
+  "emptyStateNoContent": "暂无内容",
+  "emptyStateNoContentMessage": "这里还没有任何内容，试试刷新或稍后再来",
+  "emptyStateNoResults": "未找到结果",
+  "emptyStateNoResultsMessage": "没有找到匹配的搜索结果，请尝试其他关键词",
+  "leaderboardEmptyTitle": "暂无排行榜",
+  "leaderboardEmptyMessage": "还没有排行榜，快来申请创建第一个吧！",
+  "leaderboardSortHot": "热门",
+  "leaderboardSortVotes": "投票数",
+  "leaderboardAddItem": "添加竞品",
+  "leaderboardVoteCount": "投票",
+  "paymentSetupAccount": "设置收款账户",
+  "paymentPleaseSetupFirst": "请先设置收款账户",
+  "paymentPleaseSetupMessage": "申请任务前需要先设置收款账户。请前往设置完成。",
+  "notificationsNotifications": "通知",
+  "notificationsNoNotifications": "暂无通知",
+  "notificationsMarkAllRead": "全部标记为已读",
+  "notificationEnableNotification": "开启通知",
+  "notificationEnableNotificationTitle": "开启通知",
+  "notificationEnableNotificationMessage": "及时接收任务更新、消息提醒",
+  "notificationEnableNotificationDescription": "不错过任何重要信息",
+  "notificationAllowNotification": "允许通知",
+  "notificationNotNow": "稍后提醒",
+  "studentVerificationVerification": "学生认证",
+  "studentVerificationSubmit": "提交认证",
+  "studentVerificationUploadDocument": "上传证件",
+  "studentVerificationSubmitting": "正在提交...",
+  "studentVerificationSendEmail": "发送验证邮件",
+  "studentVerificationRenewing": "正在续期...",
+  "studentVerificationRenewNow": "立即续期",
+  "studentVerificationChanging": "正在更换...",
+  "studentVerificationConfirmChange": "确认更换",
+  "studentVerificationVerified": "已认证",
+  "studentVerificationUnverified": "未认证",
+  "studentVerificationBenefitsTitleVerified": "您已享有的学生特权",
+  "studentVerificationBenefitsTitleUnverified": "完成认证后，您将获得",
+  "customerServiceCustomerService": "客服中心",
+  "customerServiceChatWithService": "联系客服",
+  "activityActivity": "动态",
+  "activityRecentActivity": "最近动态",
+  "activityPostedForumPost": "发布了帖子",
+  "activityPostedFleaMarketItem": "发布了闲置",
+  "activityCreatedLeaderboard": "创建了排行榜",
+  "activityEnded": "已结束",
+  "activityFull": "已满",
+  "activityApply": "申请参加",
+  "activityApplied": "已申请",
+  "searchSearch": "搜索",
+  "searchResults": "结果",
+  "searchNoResults": "没有找到相关结果",
+  "searchTryOtherKeywords": "试试其他关键词",
+  "searchPlaceholder": "搜索任务、达人、商品...",
+  "searchTaskPlaceholder": "搜索任务",
+  "errorNetworkError": "网络错误",
+  "errorUnknownError": "未知错误",
+  "errorInvalidInput": "输入无效",
+  "errorLoginFailed": "登录失败",
+  "errorRegisterFailed": "注册失败",
+  "successOperationSuccess": "操作成功",
+  "successSaved": "已保存",
+  "successDeleted": "已删除",
+  "successRefreshSuccess": "刷新成功",
+  "successRefreshSuccessMessage": "商品已刷新，自动下架计时器已重置",
+  "currencyPound": "£",
+  "currencyPoints": "积分",
+  "pointsBalance": "积分余额",
+  "pointsUnit": "积分",
+  "pointsTotalEarned": "累计获得",
+  "pointsTotalSpent": "累计消费",
+  "pointsBalanceAfter": "余额",
+  "pointsAmountFormat": "{param1} 积分",
+  "@pointsAmountFormat": {
+    "placeholders": {
+      "param1": {
+        "type": "int"
+      }
+    }
+  },
+  "pointsBalanceFormat": "余额: {param1} 积分",
+  "@pointsBalanceFormat": {
+    "placeholders": {
+      "param1": {
+        "type": "int"
+      }
+    }
+  },
+  "pointsPoints": "积分",
+  "pointsPointsAndPayment": "积分+支付",
+  "pointsPointsDeduction": "积分抵扣",
+  "pointsCheckIn": "签到",
+  "pointsCheckedInToday": "今日已签到",
+  "pointsCheckInReward": "签到领积分",
+  "pointsCheckInDescription": "• 每日签到可获得积分奖励\\n• 连续签到天数越多，奖励越丰厚\\n• 签到中断后，连续天数将重新计算",
+  "pointsTransactionHistory": "您的积分变动记录将显示在这里",
+  "pointsNoTransactionHistory": "暂无交易记录",
+  "pointsPointsAndCoupons": "积分与优惠券",
+  "pointsShowRecentOnly": "仅显示最近记录",
+  "couponCoupons": "优惠券",
+  "couponCheckIn": "签到",
+  "couponAllowed": "可用于",
+  "couponForbidden": "不可用于",
+  "couponCheckInRules": "签到规则",
+  "couponStatusUnused": "未使用",
+  "couponStatusUsed": "已使用",
+  "couponStatusExpired": "已过期",
+  "timeJustNow": "刚刚",
+  "timeMinutesAgo": "{param1}分钟前",
+  "@timeMinutesAgo": {
+    "placeholders": {
+      "param1": {
+        "type": "int"
+      }
+    }
+  },
+  "timeHoursAgo": "{param1}小时前",
+  "@timeHoursAgo": {
+    "placeholders": {
+      "param1": {
+        "type": "int"
+      }
+    }
+  },
+  "timeDaysAgo": "{param1}天前",
+  "@timeDaysAgo": {
+    "placeholders": {
+      "param1": {
+        "type": "int"
+      }
+    }
+  },
+  "timeWeeksAgo": "{param1}周前",
+  "@timeWeeksAgo": {
+    "placeholders": {
+      "param1": {
+        "type": "int"
+      }
+    }
+  },
+  "timeMonthsAgo": "{param1}个月前",
+  "@timeMonthsAgo": {
+    "placeholders": {
+      "param1": {
+        "type": "int"
+      }
+    }
+  },
+  "timeYearsAgo": "{param1}年前",
+  "@timeYearsAgo": {
+    "placeholders": {
+      "param1": {
+        "type": "int"
+      }
+    }
+  },
+  "timeSecondsAgo": "{param1}秒前",
+  "@timeSecondsAgo": {
+    "placeholders": {
+      "param1": {
+        "type": "int"
+      }
+    }
+  },
+  "timeDeadlineUnknown": "截止时间未知",
+  "timeExpired": "已过期",
+  "timeMonths": "{param1}个月",
+  "@timeMonths": {
+    "placeholders": {
+      "param1": {
+        "type": "int"
+      }
+    }
+  },
+  "timeWeeks": "{param1}周",
+  "@timeWeeks": {
+    "placeholders": {
+      "param1": {
+        "type": "int"
+      }
+    }
+  },
+  "timeDays": "{param1}天",
+  "@timeDays": {
+    "placeholders": {
+      "param1": {
+        "type": "int"
+      }
+    }
+  },
+  "timeHours": "{param1}小时",
+  "@timeHours": {
+    "placeholders": {
+      "param1": {
+        "type": "int"
+      }
+    }
+  },
+  "timeMinutes": "{param1}分钟",
+  "@timeMinutes": {
+    "placeholders": {
+      "param1": {
+        "type": "int"
+      }
+    }
+  },
+  "timeSeconds": "{param1}秒",
+  "@timeSeconds": {
+    "placeholders": {
+      "param1": {
+        "type": "int"
+      }
+    }
+  },
+  "timeMonthDayFormat": "MM月dd日",
+  "timeYearMonthDayFormat": "yyyy年MM月dd日",
+  "timeDurationHoursMinutes": "{param1}小时{param2}分钟",
+  "@timeDurationHoursMinutes": {
+    "placeholders": {
+      "param1": {
+        "type": "int"
+      },
+      "param2": {
+        "type": "int"
+      }
+    }
+  },
+  "timeDurationMinutesSeconds": "{param1}分钟{param2}秒",
+  "@timeDurationMinutesSeconds": {
+    "placeholders": {
+      "param1": {
+        "type": "int"
+      },
+      "param2": {
+        "type": "int"
+      }
+    }
+  },
+  "timeDurationSeconds": "{param1}秒",
+  "@timeDurationSeconds": {
+    "placeholders": {
+      "param1": {
+        "type": "int"
+      }
+    }
+  },
+  "timeWan": "万",
+  "timeWanPlus": "+",
+  "tabsHome": "首页",
+  "tabsCommunity": "社区",
+  "tabsCreate": "发布",
+  "tabsMessages": "消息",
+  "tabsProfile": "我的",
+  "communityForum": "论坛",
+  "communityLeaderboard": "排行榜",
+  "postPinned": "置顶",
+  "postFeatured": "精华",
+  "postOfficial": "官方",
+  "postAll": "全部",
+  "actionsApprove": "批准",
+  "actionsReject": "拒绝",
+  "actionsChat": "聊天",
+  "actionsShare": "分享",
+  "actionsCancel": "取消",
+  "actionsConfirm": "确定",
+  "actionsSubmit": "提交",
+  "actionsLoadingMessages": "加载消息中...",
+  "actionsNoMessagesYet": "还没有消息",
+  "actionsStartConversation": "开始对话吧！",
+  "actionsEnterMessage": "输入消息...",
+  "actionsPrivateMessage": "私信",
+  "actionsProcessing": "处理中...",
+  "actionsMarkComplete": "标记任务完成",
+  "actionsConfirmComplete": "确认任务完成",
+  "actionsContactRecipient": "联系接受者",
+  "actionsContactPoster": "联系发布者",
+  "actionsRateTask": "评价任务",
+  "actionsCancelTask": "取消任务",
+  "actionsApplyForTask": "申请参与任务",
+  "actionsOptionalMessage": "留言（可选）",
+  "actionsNegotiatePrice": "想要协商价格",
+  "actionsApplyReasonHint": "向发布者说明你的申请理由，有助于提高申请成功率",
+  "actionsSubmitApplication": "提交申请",
+  "actionsCancelReason": "取消原因（可选）",
+  "actionsShareTo": "分享到...",
+  "profileUser": "用户",
+  "profileMyTasksSubtitle": "查看我发布和接取的任务",
+  "profileMyPostsSubtitle": "管理我的闲置物品",
+  "profileMyWallet": "我的钱包",
+  "profileMyWalletSubtitle": "查看余额和交易记录",
+  "profileMyApplications": "我的活动",
+  "profileMyApplicationsSubtitle": "查看申请和收藏的活动",
+  "profilePointsCoupons": "积分与优惠券",
+  "profileName": "姓名",
+  "profileEnterName": "输入姓名",
+  "profileEnterEmail": "输入邮箱",
+  "profileEnterNewEmail": "输入新邮箱",
+  "profileVerificationCode": "验证码",
+  "profileEnterVerificationCode": "输入验证码",
+  "profilePhone": "手机号",
+  "profileEnterPhone": "输入手机号",
+  "profileEnterNewPhone": "输入新手机号",
+  "profileClickToChangeAvatar": "点击相机图标更换头像",
+  "profileEditProfile": "编辑资料",
+  "profileUpdated": "资料已更新",
+  "profilePointsCouponsSubtitle": "查看积分、优惠券和签到",
+  "profileStudentVerification": "学生认证",
+  "profileStudentVerificationSubtitle": "验证学生身份享受优惠",
+  "profileActivity": "活动",
+  "profileActivitySubtitle": "查看和参加活动",
+  "profileSettingsSubtitle": "应用设置和偏好",
+  "profileEmail": "邮箱",
+  "profileWelcome": "欢迎使用 Link²Ur",
+  "profileLoginPrompt": "登录后即可使用全部功能",
+  "profileConfirmLogout": "确认退出",
+  "profileLogoutMessage": "确定要退出登录吗？",
+  "taskDetailTaskDetail": "任务详情",
+  "taskDetailShare": "分享",
+  "taskDetailCancelTask": "取消任务",
+  "taskDetailCancelTaskConfirm": "确定要取消这个任务吗？",
+  "taskDetailNoTaskImages": "暂无任务图片",
+  "taskDetailVipTask": "VIP任务",
+  "taskDetailSuperTask": "超级任务",
+  "taskDetailTaskDescription": "任务描述",
+  "taskDetailTimeInfo": "时间信息",
+  "taskDetailPublishTime": "发布时间",
+  "taskDetailDeadline": "截止时间",
+  "taskDetailPublisher": "发布者",
+  "taskDetailBuyer": "买家",
+  "taskDetailSeller": "卖家",
+  "taskDetailEmailNotProvided": "未提供邮箱",
+  "taskDetailYourTask": "这是您发布的任务",
+  "taskDetailManageTask": "您可以在下方查看申请者并管理任务",
+  "taskDetailReviews": "评价 ({param1})",
+  "@taskDetailReviews": {
+    "placeholders": {
+      "param1": {
+        "type": "int"
+      }
+    }
+  },
+  "taskDetailMyReviews": "我的评价",
+  "taskDetailAnonymousUser": "匿名用户",
+  "taskDetailUnknownUser": "未知用户",
+  "taskDetailApplyInfo": "申请信息",
+  "taskDetailPriceNegotiation": "价格协商",
+  "taskDetailApplyReasonHint": "向发布者说明你的申请理由，有助于提高申请成功率",
+  "taskDetailSubmitApplication": "提交申请",
+  "taskDetailApplicantsList": "申请者列表 ({param1})",
+  "@taskDetailApplicantsList": {
+    "placeholders": {
+      "param1": {
+        "type": "int"
+      }
+    }
+  },
+  "taskDetailNoApplicants": "暂无申请者",
+  "taskDetailMessageLabel": "留言: {param1}",
+  "@taskDetailMessageLabel": {
+    "placeholders": {
+      "param1": {
+        "type": "String"
+      }
+    }
+  },
+  "taskDetailWaitingReview": "等待发布者审核",
+  "taskDetailTaskCompleted": "任务已完成",
+  "taskDetailApplicationApproved": "申请已通过",
+  "taskDetailApplicationRejected": "申请被拒绝",
+  "taskDetailUnknownStatus": "未知状态",
+  "taskDetailApplicationSuccess": "申请成功",
+  "taskDetailApplicationSuccessMessage": "您已成功申请此任务，请等待发布者审核。",
+  "taskDetailTaskCompletedMessage": "恭喜！您已完成任务，请等待发布者确认。",
+  "taskDetailConfirmCompletionSuccess": "任务已确认完成",
+  "taskDetailTaskAlreadyReviewed": "任务已评价",
+  "taskDetailCompleteTaskSuccess": "已提交完成",
+  "taskDetailConfirmCompletionSuccessMessage": "任务状态已更新为已完成。奖励将自动转给任务接受者。",
+  "refundRequestSubmitted": "退款申请已提交",
+  "refundRebuttalSubmitted": "反驳已提交",
+  "taskDetailApplicationApprovedMessage": "恭喜！您的申请已通过，可以开始执行任务了。",
+  "taskDetailPendingPaymentMessage": "任务发布者正在支付平台服务费，支付完成后任务将开始。",
+  "taskDetailApplicationRejectedMessage": "很抱歉，您的申请未通过审核。",
+  "taskDetailAlreadyApplied": "您已经申请过此任务",
+  "taskDetailTaskAcceptedByOthers": "此任务已被其他用户接受",
+  "taskDetailPendingReview": "待审核",
+  "taskDetailApproved": "已通过",
+  "taskDetailRejected": "已拒绝",
+  "taskDetailRejectApplication": "拒绝申请",
+  "taskDetailRejectApplicationConfirm": "确定要拒绝这个申请吗？拒绝后无法撤销。",
+  "taskDetailUnknown": "未知",
+  "taskDetailQualityGood": "工作质量好",
+  "taskDetailOnTime": "准时",
+  "taskDetailResponsible": "负责任",
+  "taskDetailGoodAttitude": "态度好",
+  "taskDetailSkilled": "技能熟练",
+  "taskDetailTrustworthy": "值得信赖",
+  "taskDetailRecommended": "推荐",
+  "taskDetailExcellent": "优秀",
+  "taskDetailTaskClear": "任务清晰",
+  "taskDetailCommunicationTimely": "沟通及时",
+  "taskDetailPaymentTimely": "付款及时",
+  "taskDetailReasonableRequirements": "要求合理",
+  "taskDetailPleasantCooperation": "合作愉快",
+  "taskDetailProfessionalEfficient": "专业高效",
+  "messagesLoadingMessages": "加载消息中...",
+  "messagesNoMessagesYet": "还没有消息",
+  "messagesStartConversation": "开始对话吧！",
+  "messagesNoTaskChats": "暂无任务聊天",
+  "messagesNoTaskChatsMessage": "还没有任务相关的聊天记录",
+  "messagesCustomerService": "客服中心",
+  "messagesContactService": "联系客服获取帮助",
+  "messagesInteractionInfo": "互动信息",
+  "messagesViewForumInteractions": "查看论坛互动消息",
+  "messagesNoInteractions": "暂无互动消息",
+  "messagesNoInteractionsMessage": "还没有收到任何互动通知",
+  "messagesClickToView": "点击查看消息",
+  "messagesLoadingMore": "加载中...",
+  "messagesLoadMoreHistory": "加载更多历史消息",
+  "translationTranslating": "翻译中...",
+  "translationTranslate": "翻译",
+  "translationShowTranslation": "显示翻译",
+  "translationShowOriginal": "显示原文",
+  "permissionLocationUsageDescription": "我们需要获取您的位置信息，以便为您提供更精准的服务和任务推荐",
+  "customerServiceWelcome": "欢迎使用客服中心",
+  "customerServiceStartConversation": "点击下方连接按钮开始与客服对话",
+  "customerServiceLoadingMessages": "加载消息中...",
+  "customerServiceQueuePosition": "排队位置: 第 {param1} 位",
+  "@customerServiceQueuePosition": {
+    "placeholders": {
+      "param1": {
+        "type": "int"
+      }
+    }
+  },
+  "customerServiceEstimatedWait": "预计等待时间: {param1} 秒",
+  "@customerServiceEstimatedWait": {
+    "placeholders": {
+      "param1": {
+        "type": "int"
+      }
+    }
+  },
+  "customerServiceConversationEnded": "对话已结束",
+  "customerServiceNewConversation": "新对话",
+  "customerServiceEnterMessage": "输入消息...",
+  "customerServiceConnecting": "正在连接客服...",
+  "customerServiceEndConversation": "结束对话",
+  "customerServiceHistory": "历史",
+  "customerServiceLoginRequired": "请先登录后再使用客服功能",
+  "customerServiceWhatCanHelp": "有什么可以帮助您的吗？",
+  "customerServiceNoChatHistory": "暂无对话历史",
+  "customerServiceStartNewConversation": "开始新的对话吧！",
+  "customerServiceChatHistory": "对话历史",
+  "customerServiceDone": "完成",
+  "customerServiceServiceChat": "客服对话",
+  "customerServiceEnded": "已结束",
+  "customerServiceInProgress": "进行中",
+  "customerServiceRateService": "评价客服",
+  "customerServiceSatisfactionQuestion": "您对 {param1} 的服务满意吗？",
+  "@customerServiceSatisfactionQuestion": {
+    "placeholders": {
+      "param1": {
+        "type": "String"
+      }
+    }
+  },
+  "customerServiceSelectRating": "请选择评分",
+  "customerServiceRatingContent": "评价内容（可选）",
+  "customerServiceSubmitRating": "提交评价",
+  "customerServiceRateServiceTitle": "评价客服",
+  "customerServiceSkip": "跳过",
+  "ratingVeryPoor": "非常差",
+  "ratingPoor": "差",
+  "ratingAverage": "一般",
+  "ratingGood": "好",
+  "ratingExcellent": "非常好",
+  "ratingRating": "评分",
+  "ratingSelectTags": "选择标签（可选）",
+  "ratingComment": "评论（可选）",
+  "ratingAnonymous": "匿名评价",
+  "ratingSubmit": "提交评价",
+  "ratingSuccess": "评价成功",
+  "ratingAnonymousRating": "匿名评价",
+  "ratingSubmitRating": "提交评价",
+  "ratingHalfStar": "{param1}星",
+  "@ratingHalfStar": {
+    "placeholders": {
+      "param1": {
+        "type": "String"
+      }
+    }
+  },
+  "rating05Stars": "0.5星",
+  "rating15Stars": "1.5星",
+  "rating25Stars": "2.5星",
+  "rating35Stars": "3.5星",
+  "rating45Stars": "4.5星",
+  "ratingTagHighQuality": "完成质量高",
+  "ratingTagOnTime": "准时到达",
+  "ratingTagResponsible": "态度负责",
+  "ratingTagGoodCommunication": "沟通愉快",
+  "ratingTagProfessionalEfficient": "专业高效",
+  "ratingTagTrustworthy": "值得信赖",
+  "ratingTagStronglyRecommended": "强烈推荐",
+  "ratingTagExcellent": "非常优秀",
+  "ratingTagClearTask": "任务描述清晰",
+  "ratingTagTimelyCommunication": "沟通及时",
+  "ratingTagTimelyPayment": "付款爽快",
+  "ratingTagReasonableRequirements": "要求合理",
+  "ratingTagPleasantCooperation": "合作愉快",
+  "ratingTagVeryProfessional": "非常专业",
+  "taskApplicationApplyTask": "申请任务",
+  "taskApplicationIWantToNegotiatePrice": "我想要协商价格",
+  "taskApplicationExpectedAmount": "期望金额",
+  "taskApplicationNegotiatePriceHint": "提示: 协商价格可能会影响发布者的选择哦。",
+  "taskApplicationSubmitApplication": "提交申请",
+  "taskApplicationMessage": "留言",
+  "taskApplicationMessageToApplicant": "给申请者留言...",
+  "taskApplicationIsNegotiatePrice": "是否议价",
+  "taskApplicationNegotiateAmount": "议价金额",
+  "taskApplicationSendMessage": "发送留言",
+  "taskApplicationAdvantagePlaceholder": "简要说明您的优势或如何完成任务...",
+  "taskApplicationReviewPlaceholder": "写下您的合作体验，帮助其他用户...",
+  "taskApplicationUnknownUser": "未知用户",
+  "emptyNoTasks": "暂无任务",
+  "emptyNoTasksMessage": "还没有任务发布，快来发布第一个任务吧！",
+  "emptyNoNotifications": "暂无通知",
+  "emptyNoNotificationsMessage": "还没有收到任何通知消息",
+  "emptyNoPaymentRecords": "暂无支付记录",
+  "emptyNoPaymentRecordsMessage": "您的支付记录将显示在这里",
+  "paymentStatusSuccess": "成功",
+  "paymentStatusProcessing": "处理中",
+  "paymentStatusFailed": "失败",
+  "paymentStatusCanceled": "已撤销",
+  "paymentStatusTaskPayment": "任务付款",
+  "paymentTaskNumber": "任务 #{param1}",
+  "@paymentTaskNumber": {
+    "placeholders": {
+      "param1": {
+        "type": "int"
+      }
+    }
+  },
+  "notificationNotifications": "通知",
+  "notificationNoTaskChat": "暂无任务聊天",
+  "notificationNoTaskChatMessage": "还没有任务相关的聊天记录",
+  "notificationNoMessages": "还没有消息",
+  "notificationStartConversation": "开始对话吧！",
+  "notificationNewMessage": "新消息",
+  "notificationSending": "发送中...",
+  "notificationViewDetails": "查看详情",
+  "notificationImage": "图片",
+  "notificationTaskDetail": "任务详情",
+  "notificationDetailAddress": "详细地址",
+  "notificationSystemMessages": "系统消息",
+  "notificationViewAllNotifications": "查看全部通知消息",
+  "notificationSystemNotification": "系统通知",
+  "notificationCustomerService": "客服中心",
+  "notificationTaskChat": "任务聊天",
+  "notificationPoster": "发布方",
+  "notificationTaker": "接受方",
+  "notificationExpert": "服务方",
+  "notificationParticipant": "参与者",
+  "notificationSystem": "系统",
+  "notificationSystemMessage": "系统消息",
+  "notificationTaskChats": "任务聊天",
+  "notificationAgree": "同意",
+  "notificationReject": "拒绝",
+  "notificationExpired": "已过期",
+  "notificationNoNotifications": "暂无通知",
+  "notificationNoNotificationsMessage": "还没有收到任何通知消息",
+  "notificationTitleTaskApplication": "新任务申请",
+  "notificationTitleApplicationAccepted": "申请者已接受您的议价，请完成支付",
+  "notificationTitleApplicationRejected": "您的申请已被拒绝",
+  "notificationTitleApplicationWithdrawn": "有申请者撤回了申请",
+  "notificationTitleTaskCompleted": "任务已完成",
+  "notificationTitleTaskConfirmed": "奖励已发放",
+  "notificationTitleTaskCancelled": "任务已取消",
+  "notificationTitleTaskAutoCancelled": "任务自动取消",
+  "notificationTitleApplicationMessage": "新留言",
+  "notificationTitleNegotiationOffer": "新的议价提议",
+  "notificationTitleNegotiationRejected": "申请者已拒绝您的议价",
+  "notificationTitleTaskApproved": "任务申请已通过",
+  "notificationTitleTaskRewardPaid": "任务奖励已支付",
+  "notificationTitleTaskApprovedWithPayment": "任务申请已同意，请完成支付",
+  "notificationTitleAnnouncement": "公告",
+  "notificationTitleCustomerService": "客服消息",
+  "notificationTitleUnknown": "通知",
+  "notificationContentTaskApplication": "{applicant_name} 申请了任务「{task_title}」\\n申请留言：{application_message}\\n议价金额：{price_info}",
+  "@notificationContentTaskApplication": {
+    "placeholders": {
+      "applicant_name": {
+        "type": "String"
+      },
+      "task_title": {
+        "type": "String"
+      },
+      "application_message": {
+        "type": "String"
+      },
+      "price_info": {
+        "type": "String"
+      }
+    }
+  },
+  "notificationContentApplicationAccepted": "申请者已接受您对任务「{task_title}」的议价，请完成支付。{payment_expires_info}",
+  "@notificationContentApplicationAccepted": {
+    "placeholders": {
+      "task_title": {
+        "type": "String"
+      },
+      "payment_expires_info": {
+        "type": "String"
+      }
+    }
+  },
+  "notificationContentApplicationRejected": "您的任务申请已被拒绝：{task_title}",
+  "@notificationContentApplicationRejected": {
+    "placeholders": {
+      "task_title": {
+        "type": "String"
+      }
+    }
+  },
+  "notificationContentApplicationWithdrawn": "有申请者撤回了对任务「{task_title}」的申请",
+  "@notificationContentApplicationWithdrawn": {
+    "placeholders": {
+      "task_title": {
+        "type": "String"
+      }
+    }
+  },
+  "notificationContentTaskCompleted": "{taker_name} 已将任务「{task_title}」标记为完成",
+  "@notificationContentTaskCompleted": {
+    "placeholders": {
+      "taker_name": {
+        "type": "String"
+      },
+      "task_title": {
+        "type": "String"
+      }
+    }
+  },
+  "notificationContentTaskConfirmed": "任务已完成并确认！「{task_title}」的奖励已发放",
+  "@notificationContentTaskConfirmed": {
+    "placeholders": {
+      "task_title": {
+        "type": "String"
+      }
+    }
+  },
+  "notificationContentTaskCancelled": "您的任务「{task_title}」已被取消",
+  "@notificationContentTaskCancelled": {
+    "placeholders": {
+      "task_title": {
+        "type": "String"
+      }
+    }
+  },
+  "notificationContentTaskAutoCancelled": "您的任务「{task_title}」因超过截止日期已自动取消",
+  "@notificationContentTaskAutoCancelled": {
+    "placeholders": {
+      "task_title": {
+        "type": "String"
+      }
+    }
+  },
+  "notificationContentApplicationMessage": "任务「{task_title}」的发布者给您留言：{message}",
+  "@notificationContentApplicationMessage": {
+    "placeholders": {
+      "task_title": {
+        "type": "String"
+      },
+      "message": {
+        "type": "String"
+      }
+    }
+  },
+  "notificationContentNegotiationOffer": "任务「{task_title}」的发布者提出议价\n留言：{message}\n议价金额：£{negotiated_price} {currency}",
+  "@notificationContentNegotiationOffer": {
+    "placeholders": {
+      "task_title": {
+        "type": "String"
+      },
+      "message": {
+        "type": "String"
+      },
+      "negotiated_price": {
+        "type": "String"
+      },
+      "currency": {
+        "type": "String"
+      }
+    }
+  },
+  "notificationContentNegotiationRejected": "申请者已拒绝您对任务「{task_title}」的议价",
+  "@notificationContentNegotiationRejected": {
+    "placeholders": {
+      "task_title": {
+        "type": "String"
+      }
+    }
+  },
+  "notificationContentTaskApproved": "您对任务「{task_title}」的申请已通过",
+  "@notificationContentTaskApproved": {
+    "placeholders": {
+      "task_title": {
+        "type": "String"
+      }
+    }
+  },
+  "notificationContentTaskRewardPaid": "任务「{task_title}」的奖励已支付",
+  "@notificationContentTaskRewardPaid": {
+    "placeholders": {
+      "task_title": {
+        "type": "String"
+      }
+    }
+  },
+  "notificationContentTaskApprovedWithPayment": "您的任务申请已被同意！任务：{task_title}{payment_expires_info}",
+  "@notificationContentTaskApprovedWithPayment": {
+    "placeholders": {
+      "task_title": {
+        "type": "String"
+      },
+      "payment_expires_info": {
+        "type": "String"
+      }
+    }
+  },
+  "notificationContentAnnouncement": "{message}",
+  "@notificationContentAnnouncement": {
+    "placeholders": {
+      "message": {
+        "type": "String"
+      }
+    }
+  },
+  "notificationContentCustomerService": "{message}",
+  "@notificationContentCustomerService": {
+    "placeholders": {
+      "message": {
+        "type": "String"
+      }
+    }
+  },
+  "notificationContentUnknown": "{message}",
+  "@notificationContentUnknown": {
+    "placeholders": {
+      "message": {
+        "type": "String"
+      }
+    }
+  },
+  "notificationTaskCancelledCannotSend": "任务已取消，无法发送消息",
+  "notificationTaskChatList": "所有任务聊天列表",
+  "notificationTaskCompletedCannotSend": "任务已完成，无法发送消息",
+  "notificationTaskEnded": "任务已结束",
+  "notificationTaskPendingCannotSend": "任务待确认，消息发送已暂停",
+  "customerServiceConversationEndedMessage": "对话已结束，如需帮助请重新发起对话",
+  "customerServiceConnected": "👋 已连接到客服 {param1}",
+  "@customerServiceConnected": {
+    "placeholders": {
+      "param1": {
+        "type": "String"
+      }
+    }
+  },
+  "customerServiceTotalMessages": "{param1} 条消息",
+  "@customerServiceTotalMessages": {
+    "placeholders": {
+      "param1": {
+        "type": "int"
+      }
+    }
+  },
+  "paymentRecordsPaymentRecords": "支付记录",
+  "paymentRecordsLoading": "加载中...",
+  "paymentRecordsLoadFailed": "加载失败",
+  "couponMinAmountAvailable": "满{param1}可用",
+  "@couponMinAmountAvailable": {
+    "placeholders": {
+      "param1": {
+        "type": "String"
+      }
+    }
+  },
+  "couponAvailable": "可领取的",
+  "couponDiscount": "优惠: {param1}",
+  "@couponDiscount": {
+    "placeholders": {
+      "param1": {
+        "type": "int"
+      }
+    }
+  },
+  "couponMyCoupons": "我的卡券",
+  "couponAvailableCoupons": "可领取优惠券",
+  "couponRedeemSuccess": "兑换成功",
+  "couponRedeemFailed": "兑换失败",
+  "couponEnterRedemptionCode": "输入兑换码",
+  "couponEnterRedemptionCodePlaceholder": "请输入兑换码",
+  "couponRedeem": "兑换",
+  "couponConfirmRedeem": "确认兑换",
+  "couponConfirmRedeemWithPoints": "确定使用 {param1} 积分兑换此优惠券吗？",
+  "@couponConfirmRedeemWithPoints": {
+    "placeholders": {
+      "param1": {
+        "type": "int"
+      }
+    }
+  },
+  "couponNoThreshold": "无门槛",
+  "couponClaimNow": "立即领取",
+  "couponValidUntil": "有效期至: {param1}",
+  "@couponValidUntil": {
+    "placeholders": {
+      "param1": {
+        "type": "String"
+      }
+    }
+  },
+  "couponNoAvailableCoupons": "暂无可用优惠券",
+  "couponNoAvailableCouponsMessage": "目前没有可领取的优惠券，关注活动哦",
+  "couponNoMyCoupons": "您还没有优惠券",
+  "couponNoMyCouponsMessage": "领取的优惠券将出现在这里",
+  "couponUsageInstructions": "使用说明",
+  "couponTransactionHistory": "交易记录",
+  "couponCheckInReward": "签到奖励",
+  "couponCheckInSuccess": "签到成功",
+  "couponAwesome": "太棒了",
+  "couponDays": "{param1}天",
+  "@couponDays": {
+    "placeholders": {
+      "param1": {
+        "type": "int"
+      }
+    }
+  },
+  "couponRememberTomorrow": "明天也要记得来哦",
+  "couponConsecutiveReward": "连续签到奖励更丰富",
+  "couponCheckInNow": "立即签到",
+  "couponConsecutiveDays": "已连续签到 {param1} 天",
+  "@couponConsecutiveDays": {
+    "placeholders": {
+      "param1": {
+        "type": "int"
+      }
+    }
+  },
+  "couponConsecutiveCheckIn": "{param1}天连续签到",
+  "@couponConsecutiveCheckIn": {
+    "placeholders": {
+      "param1": {
+        "type": "int"
+      }
+    }
+  },
+  "couponMemberOnly": "会员专属",
+  "couponLimitPerDay": "每日限领{param1}次",
+  "@couponLimitPerDay": {
+    "placeholders": {
+      "param1": {
+        "type": "int"
+      }
+    }
+  },
+  "couponLimitPerWeek": "每周限领{param1}次",
+  "@couponLimitPerWeek": {
+    "placeholders": {
+      "param1": {
+        "type": "int"
+      }
+    }
+  },
+  "couponLimitPerMonth": "每月限领{param1}次",
+  "@couponLimitPerMonth": {
+    "placeholders": {
+      "param1": {
+        "type": "int"
+      }
+    }
+  },
+  "couponLimitPerYear": "每年限领{param1}次",
+  "@couponLimitPerYear": {
+    "placeholders": {
+      "param1": {
+        "type": "int"
+      }
+    }
+  },
+  "taskApplicationApplyInfo": "申请信息",
+  "taskApplicationOverallRating": "整体评价",
+  "taskApplicationRatingTags": "评价标签",
+  "taskApplicationRatingContent": "评价内容",
+  "createTaskPublishing": "正在发布...",
+  "createTaskPublishNow": "立即发布任务",
+  "createTaskPublishTask": "发布任务",
+  "createTaskCampusLifeRestriction": "仅已验证学生可发布\\",
+  "createTaskCity": "城市",
+  "createTaskDescription": "任务详情",
+  "createTaskDescriptionPlaceholder": "请详细描述您的需求、时间、特殊要求等。描述越详细，越容易被接受...",
+  "createTaskOnline": "线上",
+  "createTaskReward": "任务奖励",
+  "createTaskTitle": "任务标题",
+  "createTaskTitlePlaceholder": "简要描述您的需求（例如：代取包裹）",
+  "studentVerificationStudentVerification": "学生认证",
+  "studentVerificationEmailInfo": "邮箱信息",
+  "studentVerificationSchoolEmail": "学校邮箱",
+  "studentVerificationSchoolEmailPlaceholder": "请输入学校邮箱",
+  "studentVerificationRenewVerification": "续期认证",
+  "studentVerificationChangeEmail": "更换邮箱",
+  "studentVerificationSubmitVerification": "提交认证",
+  "studentVerificationStudentVerificationTitle": "学生认证",
+  "studentVerificationDescription": "学生认证可以让您享受更多平台特权和服务",
+  "studentVerificationStartVerification": "开始认证",
+  "studentVerificationStatus": "认证状态",
+  "studentVerificationEmailInstruction": "请输入您的学校邮箱地址",
+  "studentVerificationRenewInfo": "续期信息",
+  "studentVerificationRenewEmailPlaceholder": "请输入学校邮箱",
+  "studentVerificationRenewInstruction": "如果您的认证即将到期，可以续期",
+  "studentVerificationNewSchoolEmail": "新学校邮箱",
+  "studentVerificationNewSchoolEmailPlaceholder": "请输入新的学校邮箱",
+  "studentVerificationChangeEmailInstruction": "如需更换学校邮箱，请填写新的邮箱地址",
+  "studentVerificationBenefitCampusLife": "发布校园生活任务",
+  "studentVerificationBenefitCampusLifeDescription": "发布和参与校园生活相关任务",
+  "studentVerificationBenefitStudentCommunity": "访问学生社区",
+  "studentVerificationBenefitStudentCommunityDescription": "访问专属学生论坛板块，与校友互动",
+  "studentVerificationBenefitExclusiveBenefits": "学生专享福利",
+  "studentVerificationBenefitExclusiveBenefitsDescription": "享受学生折扣、专属活动等更多特权",
+  "studentVerificationBenefitVerificationBadge": "认证徽章",
+  "studentVerificationBenefitVerificationBadgeDescription": "显示学生认证徽章，提升可信度",
+  "studentVerificationVerificationEmail": "验证邮箱",
+  "studentVerificationVerificationTime": "认证时间",
+  "studentVerificationExpiryTime": "到期时间",
+  "studentVerificationDaysRemaining": "剩余 {param1} 天",
+  "@studentVerificationDaysRemaining": {
+    "placeholders": {
+      "param1": {
+        "type": "int"
+      }
+    }
+  },
+  "studentVerificationDaysFormat": "{param1} 天",
+  "@studentVerificationDaysFormat": {
+    "placeholders": {
+      "param1": {
+        "type": "int"
+      }
+    }
+  },
+  "stripeConnectSetupAccount": "设置收款账户",
+  "stripeConnectLoadFailed": "加载失败",
+  "activityLoadFailed": "加载失败",
+  "activityPleaseRetry": "请重试",
+  "activityDescription": "活动描述",
+  "activityDetails": "详细信息",
+  "activitySelectTimeSlot": "选择时间段",
+  "activityApplyToJoin": "申请参加活动",
+  "activityConfirmApply": "确认申请",
+  "activityFavorite": "收藏",
+  "activityPoster": "活动发布者",
+  "activityPreferredDate": "首选日期",
+  "activityTimeFlexible": "时间灵活",
+  "activityTimeFlexibleMessage": "如果您在近期任何时间都有空",
+  "activityViewExpertProfile": "查看达人资料",
+  "activityNoAvailableTime": "暂无可用时间",
+  "activityNoAvailableTimeMessage": "目前没有可选的时间段",
+  "activityParticipateTime": "参与时间",
+  "activityByAppointment": "预约制",
+  "activityParticipants": "参与者",
+  "activityRemainingSlots": "剩余名额",
+  "activityStatus": "状态",
+  "activityHotRecruiting": "热招中",
+  "activityLocation": "具体地点",
+  "activityType": "活动类型",
+  "activityTimeArrangement": "时间安排",
+  "activityMultipleTimeSlots": "支持多个时间段预约",
+  "activityDeadline": "截止日期",
+  "activityExclusiveDiscount": "专享折扣",
+  "activityFilter": "筛选",
+  "activityAll": "全部",
+  "activityActive": "进行中",
+  "activitySingle": "单人活动",
+  "activityMulti": "多人活动",
+  "activityTabAll": "全部",
+  "activityTabApplied": "申请过的",
+  "activityTabFavorited": "收藏的",
+  "activityActivities": "活动",
+  "activityNoEndedActivities": "暂无已结束的活动",
+  "activityNoEndedActivitiesMessage": "没有已结束的活动记录",
+  "activityNoActivities": "暂无活动",
+  "activityNoActivitiesMessage": "目前还没有活动，敬请期待...",
+  "activityFullCapacity": "已满员",
+  "taskTypeSuperTask": "超级任务",
+  "taskTypeVipTask": "VIP任务",
+  "errorError": "错误",
+  "errorRetry": "重试",
+  "errorSomethingWentWrong": "出错了",
+  "errorOperationFailed": "操作失败",
+  "errorInvalidUrl": "请求地址无效，请稍后重试",
+  "errorNetworkConnectionFailed": "网络连接失败，请检查网络设置",
+  "errorRequestTimeout": "请求超时，请稍后重试",
+  "errorNetworkRequestFailed": "网络请求失败，请稍后重试",
+  "errorInvalidResponse": "服务器响应异常，请稍后重试",
+  "errorBadRequest": "请求参数错误",
+  "errorUnauthorized": "登录已过期，请重新登录",
+  "errorForbidden": "没有权限执行此操作",
+  "errorNotFound": "请求的资源不存在",
+  "errorTooManyRequests": "请求过于频繁，请稍后重试",
+  "errorServerError": "服务器错误，请稍后重试",
+  "errorRequestFailed": "请求失败 (错误代码: {param1})",
+  "@errorRequestFailed": {
+    "placeholders": {
+      "param1": {
+        "type": "int"
+      }
+    }
+  },
+  "errorDecodingError": "数据解析失败，请稍后重试",
+  "errorUnknown": "发生未知错误，请稍后重试",
+  "errorFileTooLarge": "文件过大",
+  "errorFileTooLargeWithDetail": "文件过大：{param1}",
+  "@errorFileTooLargeWithDetail": {
+    "placeholders": {
+      "param1": {
+        "type": "String"
+      }
+    }
+  },
+  "errorRequestFailedWithReason": "请求失败：{param1}",
+  "@errorRequestFailedWithReason": {
+    "placeholders": {
+      "param1": {
+        "type": "String"
+      }
+    }
+  },
+  "errorInvalidResponseBody": "无效的响应",
+  "errorServerErrorCode": "服务器错误（代码：{param1}）",
+  "@errorServerErrorCode": {
+    "placeholders": {
+      "param1": {
+        "type": "int"
+      }
+    }
+  },
+  "errorServerErrorCodeWithMessage": "服务器错误（代码：{param2}）：{param1}",
+  "@errorServerErrorCodeWithMessage": {
+    "placeholders": {
+      "param1": {
+        "type": "String"
+      },
+      "param2": {
+        "type": "int"
+      }
+    }
+  },
+  "errorDecodingErrorWithReason": "数据解析错误：{param1}",
+  "@errorDecodingErrorWithReason": {
+    "placeholders": {
+      "param1": {
+        "type": "String"
+      }
+    }
+  },
+  "errorCodeEmailAlreadyUsed": "该邮箱已被其他用户使用",
+  "errorCodeEmailAlreadyExists": "该邮箱已被注册，请使用其他邮箱或直接登录",
+  "errorCodePhoneAlreadyUsed": "该手机号已被其他用户使用",
+  "errorCodePhoneAlreadyExists": "该手机号已被注册，请使用其他手机号或直接登录",
+  "errorCodeUsernameAlreadyExists": "该用户名已被使用，请选择其他用户名",
+  "errorCodeCodeInvalidOrExpired": "验证码错误或已过期，请重新发送",
+  "errorCodeSendCodeFailed": "发送验证码失败，请稍后重试",
+  "errorCodeEmailUpdateNeedCode": "修改邮箱需要验证码，请先发送验证码到新邮箱",
+  "errorCodePhoneUpdateNeedCode": "修改手机号需要验证码，请先发送验证码到新手机号",
+  "errorCodeTempEmailNotAllowed": "不能使用临时邮箱地址，请使用您的真实邮箱",
+  "errorCodeLoginRequired": "需要登录才能查看",
+  "errorCodeForbiddenView": "无权限查看",
+  "errorCodeTaskAlreadyApplied": "您已经申请过此任务",
+  "errorCodeDisputeAlreadySubmitted": "您已经提交过争议，请等待管理员处理",
+  "errorCodeRebuttalAlreadySubmitted": "您已经提交过反驳，无法重复提交",
+  "errorCodeTaskNotPaid": "任务尚未支付，请先完成支付",
+  "errorCodeTaskPaymentUnavailable": "任务已不再支付，无法处理退款",
+  "errorCodeStripeDisputeFrozen": "任务因 Stripe 争议已冻结，请等待争议解决后再试",
+  "errorCodeStripeSetupRequired": "请先完成收款账户设置",
+  "errorCodeStripeOtherPartyNotSetup": "对方尚未完成收款账户设置，请联系对方完成设置",
+  "errorCodeStripeAccountNotVerified": "收款账户尚未启用收款功能，请完成账户验证",
+  "errorCodeStripeAccountInvalid": "收款账户无效，请重新设置",
+  "errorCodeStripeVerificationFailed": "收款账户验证失败，请检查网络后重试",
+  "errorCodeRefundAmountRequired": "请填写退款金额或退款比例",
+  "errorCodeEvidenceFilesLimit": "证据文件数量超出限制",
+  "errorCodeEvidenceTextLimit": "文字证据说明不能超过 500 字",
+  "errorCodeAccountHasActiveTasks": "无法删除账户：您有进行中的任务，请先完成或取消",
+  "errorCodeTempEmailNoPasswordReset": "您当前使用的是临时邮箱，无法接收密码重置邮件，请在设置中更新邮箱",
+  "stripeDashboard": "Stripe 仪表板",
+  "stripeConnectInitFailed": "无法初始化收款账户设置",
+  "stripeConnectLoadFailedWithReason": "加载失败：{param1}",
+  "@stripeConnectLoadFailedWithReason": {
+    "placeholders": {
+      "param1": {
+        "type": "String"
+      }
+    }
+  },
+  "stripeOnboardingCreateFailed": "无法创建收款设置会话，请重试",
+  "uploadNetworkErrorWithReason": "网络错误：{param1}",
+  "@uploadNetworkErrorWithReason": {
+    "placeholders": {
+      "param1": {
+        "type": "String"
+      }
+    }
+  },
+  "uploadCannotConnectServer": "无法连接到服务器，请稍后重试",
+  "uploadBadRequestFormatImage": "请求格式错误，请检查图片格式",
+  "uploadBadRequestRetry": "请求格式错误，请重试",
+  "uploadFileTooLargeChooseSmaller": "文件过大，请选择较小的文件",
+  "uploadForbiddenUploadImage": "无权限上传图片",
+  "uploadForbiddenUploadFile": "无权限上传文件",
+  "uploadImageTooLarge": "图片文件过大，请选择较小的图片",
+  "uploadImageTooLargeWithMessage": "图片文件过大：{param1}",
+  "@uploadImageTooLargeWithMessage": {
+    "placeholders": {
+      "param1": {
+        "type": "String"
+      }
+    }
+  },
+  "uploadServerErrorRetry": "服务器错误（{param1}），请稍后重试",
+  "@uploadServerErrorRetry": {
+    "placeholders": {
+      "param1": {
+        "type": "int"
+      }
+    }
+  },
+  "uploadServerErrorCode": "服务器错误（{param1}）",
+  "@uploadServerErrorCode": {
+    "placeholders": {
+      "param1": {
+        "type": "int"
+      }
+    }
+  },
+  "uploadBadRequestWithMessage": "请求格式错误：{param1}",
+  "@uploadBadRequestWithMessage": {
+    "placeholders": {
+      "param1": {
+        "type": "String"
+      }
+    }
+  },
+  "uploadServerErrorCodeWithMessage": "服务器错误（{param2}）：{param1}",
+  "@uploadServerErrorCodeWithMessage": {
+    "placeholders": {
+      "param1": {
+        "type": "String"
+      },
+      "param2": {
+        "type": "int"
+      }
+    }
+  },
+  "uploadParseResponseFailed": "解析响应失败：{param1}",
+  "@uploadParseResponseFailed": {
+    "placeholders": {
+      "param1": {
+        "type": "String"
+      }
+    }
+  },
+  "uploadInvalidResponseFormat": "服务器响应格式错误",
+  "uploadUnknownRetry": "未知错误，请重试",
+  "uploadAllFailed": "所有图片上传失败。\\n{param1}",
+  "@uploadAllFailed": {
+    "placeholders": {
+      "param1": {
+        "type": "String"
+      }
+    }
+  },
+  "uploadPartialFailed": "部分图片上传失败：\\n{param1}",
+  "@uploadPartialFailed": {
+    "placeholders": {
+      "param1": {
+        "type": "String"
+      }
+    }
+  },
+  "uploadPartialFailedContinue": "部分图片上传失败，将使用已上传的图片继续提交：\\n{param1}",
+  "@uploadPartialFailedContinue": {
+    "placeholders": {
+      "param1": {
+        "type": "String"
+      }
+    }
+  },
+  "uploadImageIndexError": "第 {param2} 张图片：{param1}",
+  "@uploadImageIndexError": {
+    "placeholders": {
+      "param1": {
+        "type": "String"
+      },
+      "param2": {
+        "type": "int"
+      }
+    }
+  },
+  "refundForbidden": "无权限提交退款申请",
+  "refundTaskNotFound": "任务不存在或无权访问",
+  "refundBadRequestFormat": "请求格式错误，请检查输入",
+  "menuMenu": "菜单",
+  "menuMy": "我的",
+  "menuTaskHall": "任务大厅",
+  "menuTaskExperts": "任务达人",
+  "menuForum": "论坛",
+  "menuLeaderboard": "排行榜",
+  "menuFleaMarket": "跳蚤市场",
+  "menuActivity": "活动",
+  "menuPointsCoupons": "积分与优惠券",
+  "menuStudentVerification": "学生认证",
+  "menuSettings": "设置",
+  "menuClose": "关闭",
+  "taskCategoryAll": "全部",
+  "taskCategoryHousekeeping": "清洁家政",
+  "taskCategoryCampusLife": "校园生活",
+  "taskCategorySecondhandRental": "二手租赁",
+  "taskCategoryErrandRunning": "跑腿代购",
+  "taskCategorySkillService": "技能服务",
+  "taskCategorySocialHelp": "社交互助",
+  "taskCategoryTransportation": "交通用车",
+  "taskCategoryPetCare": "宠物寄养",
+  "taskCategoryLifeConvenience": "生活便利",
+  "taskCategoryOther": "其他",
+  "expertCategoryAll": "全部",
+  "expertCategoryProgramming": "编程",
+  "expertCategoryTranslation": "翻译",
+  "expertCategoryTutoring": "辅导",
+  "expertCategoryFood": "食品",
+  "expertCategoryBeverage": "饮料",
+  "expertCategoryCake": "蛋糕",
+  "expertCategoryErrandTransport": "跑腿/交通",
+  "expertCategorySocialEntertainment": "社交/娱乐",
+  "expertCategoryBeautySkincare": "美容/护肤",
+  "expertCategoryHandicraft": "手工艺",
+  "taskFilterCategory": "分类",
+  "taskFilterCity": "城市",
+  "taskFilterSelectCategory": "选择分类",
+  "taskFilterSelectCity": "选择城市",
+  "createTaskBasicInfo": "基本信息",
+  "createTaskRewardLocation": "报酬与地点",
+  "createTaskCurrency": "货币",
+  "createTaskTaskType": "任务类型",
+  "createTaskImages": "图片",
+  "createTaskAddImages": "添加图片",
+  "createTaskFillAllRequired": "请填写所有必填项",
+  "createTaskImageUploadFailed": "部分图片上传失败，请重试",
+  "createTaskStudentVerificationRequired": "只有已通过学生认证的用户才能发布\\",
+  "taskExpertBecomeExpert": "成为达人",
+  "taskExpertBecomeExpertTitle": "成为任务达人",
+  "taskExpertShowcaseSkills": "展示您的专业技能，获得更多任务机会",
+  "taskExpertBenefits": "成为达人的好处",
+  "taskExpertHowToApply": "如何申请？",
+  "taskExpertApplyNow": "立即申请",
+  "taskExpertLoginToApply": "登录后申请",
+  "taskExpertApplicationInfo": "申请信息",
+  "taskExpertApplicationHint": "请介绍您的专业技能、经验和优势，这将帮助平台更好地了解您。",
+  "taskExpertSubmitApplication": "提交申请",
+  "taskExpertApplicationSubmitted": "您的申请已提交，我们将在3-5个工作日内完成审核。",
+  "taskExpertNoIntro": "暂无简介",
+  "taskExpertServiceMenu": "服务菜单",
+  "taskExpertOptionalTimeSlots": "可选时间段",
+  "taskExpertNoAvailableSlots": "暂无可用时间段",
+  "taskExpertApplyService": "申请服务",
+  "taskExpertOptional": "可选",
+  "taskExpertFull": "已满",
+  "taskExpertApplicationMessage": "申请留言",
+  "taskExpertNegotiatePrice": "议价金额",
+  "taskExpertApplicationSubmittedMessage": "您的申请已提交，我们将在3-5个工作日内完成审核",
+  "taskExpertApplied": "已申请",
+  "taskExpertApplyTitle": "申请成为任务达人",
+  "taskExpertByAppointment": "预约制",
+  "taskExpertExclusiveBadge": "专属徽章",
+  "taskExpertExclusiveBadgeDesc": "显示达人认证徽章，提升专业形象",
+  "taskExpertFillApplication": "填写申请信息",
+  "taskExpertFillApplicationDesc": "介绍您的专业技能和经验",
+  "taskExpertMoreExposure": "更多曝光",
+  "taskExpertMoreExposureDesc": "您的服务将优先展示，获得更多用户关注",
+  "taskExpertMoreOrders": "更多订单",
+  "taskExpertMoreOrdersDesc": "获得更多任务申请，增加收入机会",
+  "taskExpertNoActivities": "暂无活动",
+  "taskExpertNoActivitiesMessage": "目前还没有活动记录",
+  "taskExpertNoAppliedMessage": "您还没有申请过任何活动",
+  "taskExpertExpertiseAreas": "专业领域",
+  "taskExpertFeaturedSkills": "特色技能",
+  "taskExpertAchievements": "成就勋章",
+  "taskExpertResponseTime": "响应时间",
+  "taskExpertReviews": "评价",
+  "taskExpertNoReviews": "暂无评价",
+  "taskExpertReviewsCount": "{param1} 条评价",
+  "@taskExpertReviewsCount": {
+    "placeholders": {
+      "param1": {
+        "type": "int"
+      }
+    }
+  },
+  "taskExpertNoExpertiseAreas": "暂无专业领域",
+  "taskExpertNoFeaturedSkills": "暂无特色技能",
+  "taskExpertNoAchievements": "暂无成就勋章",
+  "taskExpertNoExperts": "暂无达人",
+  "taskExpertNoExpertsMessage": "目前还没有任务达人，敬请期待...",
+  "taskExpertNoExpertsSearchMessage": "尝试调整筛选条件",
+  "taskExpertNoFavorites": "暂无收藏",
+  "taskExpertNoFavoritesMessage": "您还没有收藏任何达人",
+  "taskExpertPlatformSupport": "平台支持",
+  "taskExpertPlatformSupportDesc": "享受平台提供的专业支持和资源",
+  "taskExpertSearchPrompt": "搜索任务达人",
+  "taskExpertStartService": "开始服务",
+  "taskExpertStartServiceDesc": "开始提供专业服务",
+  "taskExpertSubmitReview": "提交评价",
+  "taskExpertSubmitReviewDesc": "提交服务评价",
+  "taskExpertTitle": "任务达人",
+  "taskExpertWhatIs": "什么是任务达人？",
+  "taskExpertWhatIsContent": "任务达人是平台认证的专业服务提供者，拥有丰富的经验和良好的声誉。成为任务达人后，您的服务将获得更多曝光，吸引更多客户",
+  "taskExpertExpertNegotiatePrice": "任务达人提出议价：",
+  "taskExpertViewTask": "查看任务",
+  "taskExpertTaskDetails": "任务详情: {param1}",
+  "@taskExpertTaskDetails": {
+    "placeholders": {
+      "param1": {
+        "type": "String"
+      }
+    }
+  },
+  "taskExpertClear": "清除",
+  "forumNeedLogin": "需要登录",
+  "forumCommunityLoginMessage": "社区功能仅对已登录且完成学生认证的用户开放",
+  "forumLoginNow": "立即登录",
+  "forumNeedStudentVerification": "需要学生认证",
+  "forumVerificationPending": "您的学生认证申请正在审核中，请耐心等待",
+  "forumVerificationRejected": "您的学生认证申请未通过，请重新提交",
+  "forumCompleteVerification": "请完成学生认证以访问社区功能",
+  "forumCompleteVerificationMessage": "请完成学生认证以访问社区功能",
+  "forumGoVerify": "去认证",
+  "forumReplies": "回复 ({param1})",
+  "@forumReplies": {
+    "placeholders": {
+      "param1": {
+        "type": "String"
+      }
+    }
+  },
+  "forumLoadRepliesFailed": "加载回复失败: {param1}",
+  "@forumLoadRepliesFailed": {
+    "placeholders": {
+      "param1": {
+        "type": "String"
+      }
+    }
+  },
+  "forumNoReplies": "暂无回复",
+  "forumPostReply": "发布回复",
+  "forumSelectSection": "选择板块",
+  "forumPleaseSelectSection": "请选择板块",
+  "forumPublish": "发布",
+  "forumSomeone": "有人",
+  "forumNotificationNewReply": "新回复",
+  "forumNotificationNewLike": "新点赞",
+  "forumNotificationReplyPost": "{param1} 回复了您的帖子",
+  "@forumNotificationReplyPost": {
+    "placeholders": {
+      "param1": {
+        "type": "String"
+      }
+    }
+  },
+  "forumNotificationReplyReply": "{param1} 回复了您的回复",
+  "@forumNotificationReplyReply": {
+    "placeholders": {
+      "param1": {
+        "type": "String"
+      }
+    }
+  },
+  "forumNotificationLikePost": "{param1} 点赞了您的帖子",
+  "@forumNotificationLikePost": {
+    "placeholders": {
+      "param1": {
+        "type": "String"
+      }
+    }
+  },
+  "forumNotificationLikeReply": "{param1} 点赞了您的回复",
+  "@forumNotificationLikeReply": {
+    "placeholders": {
+      "param1": {
+        "type": "String"
+      }
+    }
+  },
+  "forumNotificationPinPost": "帖子已置顶",
+  "forumNotificationPinPostContent": "您的帖子已被管理员置顶",
+  "forumNotificationFeaturePost": "帖子已加精",
+  "forumNotificationFeaturePostContent": "您的帖子已被管理员加精",
+  "forumNotificationDefault": "论坛通知",
+  "forumNotificationDefaultContent": "您收到了一条论坛通知",
+  "infoConnectPlatform": "连接你我的任务平台",
+  "infoContactUs": "联系我们",
+  "infoMemberBenefits": "会员权益",
+  "infoFaq": "常见问题",
+  "infoNeedHelp": "需要帮助？",
+  "infoContactAdmin": "联系管理员了解更多会员信息",
+  "infoContactService": "联系客服",
+  "infoTermsOfService": "服务条款",
+  "infoPrivacyPolicy": "隐私政策",
+  "infoLastUpdated": "最后更新：2024年1月1日",
+  "infoAboutUs": "关于我们",
+  "infoOurMission": "我们的使命",
+  "infoOurVision": "我们的愿景",
+  "infoAboutUsContent": "Link²Ur 是一个创新的任务发布与接取平台，致力于连接需要帮助的人和愿意提供帮助的人。我们相信每个人都有自己的技能和时间，通过平台可以让这些资源得到更好的利用。",
+  "infoOurMissionContent": "让任务发布和接取变得简单、高效、安全。我们致力于打造一个值得信赖的社区平台，让每个人都能找到合适的任务，也能为他人提供帮助。",
+  "infoOurVisionContent": "成为英国最受欢迎的任务平台，连接成千上万的用户，创造更多价值，让社区更加紧密。",
+  "vipMember": "VIP 会员",
+  "vipBecomeVip": "成为 VIP 会员",
+  "vipEnjoyBenefits": "享受专属权益和特权",
+  "vipUnlockPrivileges": "解锁更多特权和服务",
+  "vipPriorityRecommendation": "优先推荐",
+  "vipPriorityRecommendationDesc": "您的任务和申请将优先展示，获得更多曝光机会",
+  "vipFeeDiscount": "手续费优惠",
+  "vipFeeDiscountDesc": "享受更低的任务发布手续费，节省更多成本",
+  "vipExclusiveBadge": "专属标识",
+  "vipExclusiveBadgeDesc": "显示专属 VIP 标识，提升您的信誉度",
+  "vipExclusiveActivity": "专属活动",
+  "vipExclusiveActivityDesc": "参与 VIP 专属活动和优惠，获得更多奖励",
+  "vipFaqHowToUpgrade": "如何升级会员？",
+  "vipFaqHowToUpgradeAnswer": "目前会员升级功能正在开发中，您可以联系管理员手动升级，或等待自动升级功能上线。",
+  "vipFaqWhenEffective": "会员权益何时生效？",
+  "vipFaqWhenEffectiveAnswer": "会员权益在升级后立即生效，您可以立即享受相应的特权服务。",
+  "vipFaqCanCancel": "可以随时取消会员吗？",
+  "vipFaqCanCancelAnswer": "是的，您可以随时联系管理员取消会员服务，取消后将在下个计费周期生效。",
+  "vipComingSoon": "VIP功能即将推出，敬请期待！",
+  "vipSelectPackage": "选择适合您的会员套餐",
+  "vipNoProducts": "暂无可用的VIP产品",
+  "vipTryLaterContact": "请稍后再试或联系客服",
+  "vipPleaseSelectPackage": "请选择套餐",
+  "vipBuyNow": "立即购买",
+  "vipRestorePurchase": "恢复购买",
+  "vipPurchaseInstructions": "购买说明",
+  "vipSubscriptionAutoRenew": "• 订阅将自动续费，除非在到期前至少24小时取消",
+  "vipManageSubscription": "• 可以在App Store账户设置中管理订阅",
+  "vipPurchaseEffective": "• 购买后立即生效，享受所有VIP权益",
+  "vipPurchaseTitle": "购买VIP会员",
+  "vipPurchaseSuccess": "购买成功",
+  "vipCongratulations": "恭喜您成为VIP会员！现在可以享受所有VIP权益了。",
+  "vipRestoreFailed": "恢复购买失败: {param1}",
+  "@vipRestoreFailed": {
+    "placeholders": {
+      "param1": {
+        "type": "String"
+      }
+    }
+  },
+  "vipPurchased": "已购买",
+  "vipAlreadyVip": "您已是VIP会员",
+  "vipThankYou": "感谢您的支持，享受所有VIP权益",
+  "vipExpiryTime": "到期时间：{param1}",
+  "@vipExpiryTime": {
+    "placeholders": {
+      "param1": {
+        "type": "String"
+      }
+    }
+  },
+  "vipWillAutoRenew": "将自动续费",
+  "vipAutoRenewCancelled": "已取消自动续费",
+  "vipFaqHowToUpgradeSteps": "您可以在VIP会员页面点击「升级VIP会员」按钮，选择适合的套餐进行购买。",
+  "serviceNoImages": "暂无图片",
+  "serviceDetail": "服务详情",
+  "serviceNoDescription": "暂无详细描述",
+  "serviceApplyMessage": "申请留言",
+  "serviceExpectedPrice": "期望价格",
+  "serviceFlexibleTime": "灵活时间",
+  "serviceExpectedDate": "期望完成日期",
+  "serviceSelectDate": "选择日期",
+  "serviceApplyTitle": "申请服务",
+  "offlineMode": "离线模式",
+  "offlinePendingSync": "({param1} 待同步)",
+  "@offlinePendingSync": {
+    "placeholders": {
+      "param1": {
+        "type": "int"
+      }
+    }
+  },
+  "networkOffline": "离线",
+  "networkDisconnected": "网络连接已断开",
+  "networkCheckSettings": "请检查您的网络设置",
+  "networkRestored": "网络已恢复",
+  "networkConnectedWifi": "已连接到 Wi-Fi",
+  "networkConnectedCellular": "已连接到蜂窝网络",
+  "networkConnectedEthernet": "已连接到以太网",
+  "networkConnected": "网络已连接",
+  "notificationExpiresSeconds": "{param1}秒后过期",
+  "@notificationExpiresSeconds": {
+    "placeholders": {
+      "param1": {
+        "type": "double"
+      }
+    }
+  },
+  "notificationExpiresMinutes": "{param1}分钟后过期",
+  "@notificationExpiresMinutes": {
+    "placeholders": {
+      "param1": {
+        "type": "int"
+      }
+    }
+  },
+  "notificationExpiresHours": "{param1}小时后过期",
+  "@notificationExpiresHours": {
+    "placeholders": {
+      "param1": {
+        "type": "int"
+      }
+    }
+  },
+  "notificationViewFull": "查看全文",
+  "notificationExpiryTime": "过期时间: {param1}",
+  "@notificationExpiryTime": {
+    "placeholders": {
+      "param1": {
+        "type": "String"
+      }
+    }
+  },
+  "notificationUnread": "未读",
+  "notificationContent": "通知内容",
+  "notificationDetail": "通知详情",
+  "notificationGetNegotiationFailed": "无法获取议价信息，请刷新后重试",
+  "translationFailed": "翻译失败",
+  "translationRetryMessage": "无法翻译此消息，请检查网络连接后重试",
+  "taskDetailCollapse": "收起",
+  "taskDetailExpandAll": "展开全部",
+  "taskDetailCompletedCount": "{param1} 已完成",
+  "@taskDetailCompletedCount": {
+    "placeholders": {
+      "param1": {
+        "type": "int"
+      }
+    }
+  },
+  "taskDetailExpired": "已截止",
+  "taskDetailRemainingMinutes": "剩余 {param1} 分钟",
+  "@taskDetailRemainingMinutes": {
+    "placeholders": {
+      "param1": {
+        "type": "int"
+      }
+    }
+  },
+  "taskDetailRemainingHours": "剩余 {param1} 小时",
+  "@taskDetailRemainingHours": {
+    "placeholders": {
+      "param1": {
+        "type": "int"
+      }
+    }
+  },
+  "taskDetailRemainingDays": "剩余 {param1} 天",
+  "@taskDetailRemainingDays": {
+    "placeholders": {
+      "param1": {
+        "type": "int"
+      }
+    }
+  },
+  "shareWechat": "微信",
+  "shareWechatMoments": "朋友圈",
+  "shareQq": "QQ",
+  "shareQzone": "QQ空间",
+  "shareWeibo": "微博",
+  "shareSms": "短信",
+  "shareCopyLink": "复制链接",
+  "shareGenerateImage": "生成分享图",
+  "shareShareTo": "分享到",
+  "shareGeneratingImage": "正在生成分享图...",
+  "shareImage": "分享图",
+  "shareShareImage": "分享图片",
+  "shareSaveToPhotos": "保存到相册",
+  "walletQuickActions": "快速操作",
+  "walletRecentTransactions": "最近交易",
+  "walletBalance": "钱包余额",
+  "walletMyWallet": "我的钱包",
+  "walletPayoutManagement": "提现管理",
+  "walletPaymentRecords": "支付记录",
+  "walletPaymentRecordsSubtitle": "查看所有支付记录",
+  "walletPayoutManagementSubtitle": "管理您的提现",
+  "settingsNotifications": "通知设置",
+  "settingsAllowNotifications": "允许通知",
+  "settingsSuccessSound": "成功提示音",
+  "settingsSuccessSoundDescription": "操作成功时播放短促提示音",
+  "settingsAppearance": "外观",
+  "settingsThemeMode": "主题模式",
+  "settingsMembership": "会员",
+  "settingsVipMembership": "VIP会员",
+  "settingsHelpSupport": "帮助与支持",
+  "settingsFaq": "常见问题",
+  "settingsContactSupport": "联系客服",
+  "settingsLegal": "法律信息",
+  "settingsAbout": "关于",
+  "settingsAppName": "应用名称",
+  "settingsPaymentAccount": "收款账户",
+  "settingsSetupPaymentAccount": "设置收款账户",
+  "settingsAccount": "账户信息",
+  "settingsUserId": "用户ID",
+  "settingsDeleteAccount": "删除账户",
+  "settingsDeleteAccountMessage": "确定要删除您的账户吗？此操作无法撤销。您的所有数据将被永久删除。",
   "themeSystem": "跟随系统",
   "themeLight": "浅色",
   "themeDark": "深色",
-  "accountManagement": "账户管理",
-  "studentVerification": "学生认证",
-  "privacyAndLegal": "隐私与法律",
-  "privacyPolicy": "隐私政策",
-  "termsOfService": "服务条款",
-  "clearCache": "清除缓存",
-  "cacheCleared": "缓存已清除",
-  "about": "关于",
-  "version": "版本",
-  "tasks": "任务",
-  "taskDetail": "任务详情",
-  "createTask": "创建任务",
-  "myTasks": "我的任务",
-  "myAccepted": "我接的",
-  "myPosted": "我发的",
-  "apply": "申请",
-  "applied": "已申请",
-  "accepted": "已接受",
-  "rejected": "已拒绝",
-  "open": "开放中",
-  "inProgress": "进行中",
-  "completed": "已完成",
-  "cancelled": "已取消",
-  "fleaMarket": "跳蚤市场",
-  "productDetail": "商品详情",
-  "publishProduct": "发布商品",
-  "allCategories": "全部",
-  "electronics": "电子产品",
-  "booksTextbooks": "书籍教材",
-  "dailySupplies": "生活用品",
-  "clothingBags": "服饰鞋包",
-  "sportsOutdoor": "运动户外",
-  "otherCategory": "其他",
-  "price": "价格",
-  "sold": "已售出",
-  "delisted": "已下架",
-  "contactSeller": "联系卖家",
-  "productDescription": "商品描述",
-  "sellerInfo": "卖家",
-  "superUser": "超级用户",
-  "vipUser": "VIP用户",
-  "normalUser": "普通用户",
-  "taskExperts": "任务达人",
-  "expertDetail": "达人详情",
-  "services": "提供的服务",
-  "noServices": "暂无服务",
-  "booking": "预约",
-  "booked": "已预约",
-  "rating": "评分",
-  "completedOrders": "完成单数",
-  "serviceItems": "服务项目",
-  "bio": "简介",
-  "activities": "活动",
-  "activityDetail": "活动详情",
-  "signUp": "立即报名",
-  "signedUp": "已报名",
-  "signUpSuccess": "报名成功",
-  "signUpFailed": "报名失败",
-  "ongoing": "进行中",
-  "ended": "已结束",
-  "forum": "论坛",
-  "createPost": "发帖",
-  "myPosts": "我的帖子",
-  "noPosts": "暂无帖子",
-  "leaderboard": "排行榜",
-  "notificationCenter": "通知",
-  "systemNotifications": "系统通知",
-  "interactionMessages": "互动消息",
-  "markAllAsRead": "全部已读",
-  "noNotifications": "暂无通知",
-  "wallet": "钱包",
-  "myWallet": "我的钱包",
-  "pointsBalance": "积分余额",
-  "totalEarned": "累计获得",
-  "totalSpent": "累计消费",
-  "dailyCheckIn": "每日签到",
-  "checkInSuccess": "签到成功！",
-  "checkInFailed": "签到失败",
-  "paymentAccount": "收款账户",
-  "stripeConnect": "Stripe Connect",
-  "activated": "已激活",
-  "pendingActivation": "待激活",
-  "notConnected": "未连接",
-  "setupPaymentAccount": "设置收款账户",
-  "viewAccountDetails": "查看账户详情",
-  "transactionHistory": "交易记录",
-  "noTransactions": "暂无交易记录",
-  "myCoupons": "我的优惠券",
-  "noCoupons": "暂无优惠券",
-  "viewMore": "查看更多",
-  "editProfile": "编辑资料",
-  "name": "姓名",
-  "enterName": "请输入姓名",
-  "bioLabel": "个人简介",
-  "enterBio": "介绍一下自己...",
-  "residenceCity": "居住城市",
-  "enterCity": "例如：伦敦",
-  "profileSaved": "资料已保存",
-  "profileSaveFailed": "保存失败",
-  "avatarUpdated": "头像已更新",
-  "helpCenter": "帮助中心",
-  "aboutUs": "关于我们",
-  "myIdleItems": "我的闲置",
-  "myFavorites": "我的收藏",
-  "activityCenter": "活动中心",
-  "coupons": "优惠券",
-  "loginRequired": "请先登录",
-  "loginToView": "登录后查看个人信息",
-  "loginNow": "立即登录",
-  "goToLogin": "去登录",
-  "publishSuccess": "发布成功",
-  "publishFailed": "发布失败",
-  "purchaseSuccess": "购买成功",
-  "purchaseFailed": "购买失败",
-  "applicationSubmitted": "申请已提交",
-  "applicationFailed": "申请失败",
-  "title": "标题",
-  "description": "描述",
-  "location": "位置",
-  "category": "分类",
-  "images": "图片",
-  "addImage": "添加图片",
-  "today": "今天",
-  "yesterday": "昨天",
-  "daysAgo": "{count}天前",
-  "hoursAgo": "{count}小时前",
-  "minutesAgo": "{count}分钟前",
-  "justNow": "刚刚",
-  "views": "{count} 次浏览",
-  "favorites": "{count} 人收藏",
-  "participants": "{current}/{max}人"
+  "paymentLoadingForm": "正在加载支付表单...",
+  "paymentPreparing": "准备支付...",
+  "paymentSuccess": "支付成功！",
+  "paymentSuccessMessage": "任务已成功支付，正在更新状态...",
+  "paymentError": "支付错误",
+  "paymentTaskInfo": "任务信息",
+  "paymentTaskTitle": "任务标题",
+  "paymentApplicant": "申请者",
+  "paymentTip": "提示",
+  "paymentConfirmPayment": "确认支付",
+  "paymentPreparingPayment": "正在准备支付...",
+  "paymentPayment": "支付",
+  "paymentCancel": "取消",
+  "paymentRetry": "重试",
+  "paymentRetryPayment": "重试支付",
+  "paymentCoupons": "优惠券",
+  "paymentCouponDiscount": "优惠券折扣",
+  "paymentNoAvailableCoupons": "暂无可用优惠券",
+  "paymentTotalAmount": "总金额",
+  "paymentFinalPayment": "最终支付",
+  "paymentMixed": "混合",
+  "paymentSelectMethod": "选择支付方式",
+  "paymentPayWithApplePay": "使用 Apple Pay 支付",
+  "paymentPayWithWechatPay": "使用微信支付",
+  "paymentPayWithAlipay": "使用支付宝支付",
+  "paymentNoPayoutRecords": "无提现记录",
+  "paymentNoPayoutRecordsMessage": "还没有提现记录",
+  "paymentViewDetails": "查看详情",
+  "paymentPayout": "提现",
+  "paymentNoAvailableBalance": "无可用余额",
+  "paymentPayoutRecords": "支付记录",
+  "paymentTotalBalance": "总余额",
+  "paymentAvailableBalance": "可用余额",
+  "paymentPending": "待处理",
+  "paymentPayoutAmount": "提现金额",
+  "paymentPayoutAmountTitle": "提现金额",
+  "paymentIncomeAmount": "收入金额",
+  "paymentNoteOptional": "备注（可选）",
+  "paymentPayoutNote": "提现备注",
+  "paymentConfirmPayout": "确认提现",
+  "paymentAccountInfo": "账户信息",
+  "paymentAccountDetails": "账户详情",
+  "paymentOpenStripeDashboard": "打开 Stripe 控制台",
+  "paymentExternalAccount": "外部账户",
+  "paymentNoExternalAccount": "无外部账户",
+  "paymentDetails": "详情",
+  "paymentAccountId": "账户ID",
+  "paymentDisplayName": "显示名称",
+  "paymentCountry": "国家",
+  "paymentAccountType": "账户类型",
+  "paymentDetailsSubmitted": "详情已提交",
+  "paymentChargesEnabled": "收款已启用",
+  "paymentPayoutsEnabled": "提现已启用",
+  "paymentYes": "是",
+  "paymentNo": "否",
+  "paymentBankAccount": "银行账户",
+  "paymentCard": "卡片",
+  "paymentBankName": "银行名称",
+  "paymentAccountLast4": "账户后4位",
+  "paymentRoutingNumber": "路由号码",
+  "paymentAccountHolder": "账户持有人",
+  "paymentHolderType": "持有人类型",
+  "paymentIndividual": "个人",
+  "paymentCompany": "公司",
+  "paymentStatus": "状态",
+  "paymentCardBrand": "卡片品牌",
+  "paymentCardLast4": "卡片后4位",
+  "paymentExpiry": "有效期",
+  "paymentCardType": "卡片类型",
+  "paymentCreditCard": "信用卡",
+  "paymentDebitCard": "借记卡",
+  "paymentTransactionId": "交易ID",
+  "paymentDescription": "描述",
+  "paymentTime": "时间",
+  "paymentType": "类型",
+  "paymentIncome": "收入",
+  "paymentSource": "来源",
+  "paymentAccountSetupComplete": "账户设置完成",
+  "paymentCanReceiveRewards": "可以接收奖励",
+  "paymentAccountInfoBelow": "您的账户信息如下",
+  "paymentRefreshAccountInfo": "刷新账户信息",
+  "paymentTransactionDetails": "交易详情",
+  "paymentComplete": "完成",
+  "paymentCountdownExpired": "已过期",
+  "paymentCountdownRemaining": "剩余 {param1}",
+  "@paymentCountdownRemaining": {
+    "placeholders": {
+      "param1": {
+        "type": "String"
+      }
+    }
+  },
+  "paymentCountdownBannerTitle": "请在30分钟内完成支付",
+  "paymentCountdownBannerSubtitle": "剩余时间：{param1}",
+  "@paymentCountdownBannerSubtitle": {
+    "placeholders": {
+      "param1": {
+        "type": "String"
+      }
+    }
+  },
+  "paymentCountdownBannerExpired": "支付已过期，任务将自动取消",
+  "myTasksLoadingCompleted": "加载已完成任务...",
+  "myTasksNetworkUnavailable": "网络不可用",
+  "myTasksCheckNetwork": "请检查网络连接后重试",
+  "myTasksNoPendingApplications": "暂无待处理申请",
+  "myTasksNoPendingApplicationsMessage": "没有待处理的申请记录",
+  "myTasksPending": "待处理",
+  "myTasksApplicationMessage": "申请消息",
+  "myTasksViewDetails": "查看详情",
+  "myTasksTabAll": "全部",
+  "myTasksTabPosted": "我发布的",
+  "myTasksTabTaken": "我接受的",
+  "myTasksTabPending": "待处理申请",
+  "myTasksTabCompleted": "已完成",
+  "myTasksTabCancelled": "已取消",
+  "myTasksEmptyAll": "您还没有发布或接受任何任务",
+  "myTasksEmptyPosted": "您还没有发布任何任务",
+  "myTasksEmptyTaken": "您还没有接受任何任务",
+  "myTasksEmptyInProgress": "您还没有进行中的任务",
+  "myTasksEmptyPending": "您还没有待处理的申请记录",
+  "myTasksEmptyCompleted": "您还没有已完成的任务",
+  "myTasksEmptyCancelled": "您还没有已取消的任务",
+  "myTasksRolePoster": "发布者",
+  "myTasksRoleTaker": "接受者",
+  "myTasksRoleExpert": "任务达人",
+  "myTasksRoleApplicant": "申请者",
+  "myTasksRoleParticipant": "参与者",
+  "myTasksRoleUser": "用户",
+  "myTasksRoleOrganizer": "组织者",
+  "myTasksRoleUnknown": "未知",
+  "taskSourceNormal": "普通任务",
+  "taskSourceFleaMarket": "跳蚤市场",
+  "taskSourceExpertService": "达人服务",
+  "taskSourceExpertActivity": "达人活动",
+  "taskStatusOpen": "开放中",
+  "taskStatusInProgress": "进行中",
+  "taskStatusCompleted": "已完成",
+  "taskStatusCancelled": "已取消",
+  "taskStatusPendingConfirmation": "待确认",
+  "taskStatusPendingPayment": "待支付",
+  "myPostsTitle": "我的闲置",
+  "taskLocationAddress": "任务地址",
+  "taskLocationCoordinates": "坐标",
+  "taskLocationAppleMaps": "Apple 地图",
+  "taskLocationMyLocation": "我的位置",
+  "taskLocationLoadingAddress": "加载地址中...",
+  "taskLocationDetailAddress": "详细地址",
+  "taskLocationSearchCity": "搜索或输入城市名称",
+  "taskPreferencesTitle": "任务偏好",
+  "taskPreferencesPreferredTypes": "偏好任务类型",
+  "taskPreferencesPreferredTypesDescription": "选择您感兴趣的任务类型。系统将优先推荐这些类型的任务",
+  "taskPreferencesPreferredLocations": "偏好地点",
+  "taskPreferencesPreferredLocationsDescription": "选择您希望接收任务的地理位置",
+  "taskPreferencesPreferredLevels": "偏好任务等级",
+  "taskPreferencesPreferredLevelsDescription": "选择您感兴趣的任务等级",
+  "taskPreferencesMinDeadline": "最短截止时间",
+  "taskPreferencesMinDeadlineDescription": "设置任务截止时间所需的最少天数。系统将只推荐满足此条件的任务",
+  "taskPreferencesDays": "天",
+  "taskPreferencesDaysRange": "（至少1天，最多30天）",
+  "taskPreferencesSave": "保存偏好",
+  "notificationContactService": "联系客服",
+  "paymentPayoutManagement": "提现管理",
+  "onboardingSkip": "跳过",
+  "onboardingWelcomeTitle": "欢迎来到 Link²Ur",
+  "onboardingWelcomeSubtitle": "连接你的世界",
+  "onboardingWelcomeDescription": "发布任务、接受任务、买卖二手商品，一切尽在掌握",
+  "onboardingPublishTaskTitle": "发布任务",
+  "onboardingPublishTaskSubtitle": "轻松发布你的需求",
+  "onboardingPublishTaskDescription": "需要帮助？发布任务，让有能力的用户来帮你完成",
+  "onboardingAcceptTaskTitle": "接受任务",
+  "onboardingAcceptTaskSubtitle": "赚取额外收入",
+  "onboardingAcceptTaskDescription": "浏览任务，接受感兴趣的任务，完成任务后获得奖励",
+  "onboardingSecurePaymentTitle": "安全支付",
+  "onboardingSecurePaymentSubtitle": "平台保障交易安全",
+  "onboardingSecurePaymentDescription": "使用 Stripe 安全支付，任务完成后自动转账，保障双方权益",
+  "onboardingCommunityTitle": "社区互动",
+  "onboardingCommunitySubtitle": "论坛、排行榜、跳蚤市场",
+  "onboardingCommunityDescription": "参与社区讨论，查看排行榜，买卖二手商品，丰富你的校园生活",
+  "onboardingPersonalizationTitle": "个性化设置",
+  "onboardingPersonalizationSubtitle": "帮助我们为你推荐更合适的内容",
+  "onboardingPreferredCity": "常用城市",
+  "onboardingUseCurrentLocation": "使用当前位置",
+  "onboardingPreferredTaskTypes": "感兴趣的任务类型",
+  "onboardingPreferredTaskTypesOptional": "感兴趣的任务类型（可选）",
+  "onboardingEnableNotifications": "启用通知",
+  "onboardingEnableNotificationsDescription": "及时接收任务状态更新和消息提醒",
+  "onboardingGetStarted": "开始使用",
+  "onboardingPrevious": "上一步",
+  "spotlightTask": "任务",
+  "spotlightTasks": "任务",
+  "spotlightExpert": "任务达人",
+  "spotlightQuickAction": "快速操作",
+  "shortcutsPublishTask": "发布任务",
+  "shortcutsPublishTaskDescription": "快速发布一个新任务",
+  "shortcutsViewMyTasks": "查看我的任务",
+  "shortcutsViewMyTasksDescription": "查看我发布和接受的任务",
+  "shortcutsViewMessages": "查看消息",
+  "shortcutsViewMessagesDescription": "查看未读消息和通知",
+  "shortcutsSearchTasks": "搜索任务",
+  "shortcutsSearchTasksDescription": "搜索任务",
+  "shortcutsViewFleaMarket": "查看跳蚤市场",
+  "shortcutsViewFleaMarketDescription": "浏览和发布二手商品",
+  "shortcutsViewForum": "查看论坛",
+  "shortcutsViewForumDescription": "参与社区讨论",
+  "profileInProgress": "进行中",
+  "profileCompleted": "已完成",
+  "profileCreditScore": "信用分",
+  "profileMyContent": "我的内容",
+  "profileSystemAndVerification": "系统与验证",
+  "profileMyTasksSubtitleText": "管理我发布和接受的任务",
+  "profileMyPostsSubtitleText": "闲置物品交易记录",
+  "profileMyForumPosts": "我的帖子",
+  "profileMyForumPostsSubtitle": "查看我在论坛发布的讨论",
+  "profileMyWalletSubtitleText": "余额、充值与提现",
+  "profilePointsCouponsSubtitleText": "积分明细与优惠券",
+  "profileStudentVerificationSubtitleText": "获取学生专属认证标识",
+  "profileActivitySubtitleText": "查看我参与的线下活动",
+  "profileTaskPreferences": "任务偏好",
+  "profileTaskPreferencesSubtitle": "个性化定制推荐内容",
+  "profileMyApplicationsSubtitleText": "达人/服务商申请状态",
+  "profileSettingsSubtitleText": "个人资料、密码与安全",
+  "profilePaymentAccount": "收款账户",
+  "profilePaymentAccountSubtitle": "设置收款账户以接收任务报酬",
+  "profileNoContactInfo": "未绑定联系方式",
+  "profileUserProfile": "用户资料",
+  "profilePostedTasks": "发布任务",
+  "profileTakenTasks": "接取任务",
+  "profileCompletedTasks": "完成任务",
+  "myItemsSelling": "正在出售",
+  "myItemsPurchased": "收的闲置",
+  "myItemsFavorites": "收藏的",
+  "myItemsSold": "已售出",
+  "myItemsEmptySelling": "暂无在售商品",
+  "myItemsEmptyPurchased": "暂无购买记录",
+  "myItemsEmptyFavorites": "暂无收藏",
+  "myItemsEmptySold": "暂无已售商品",
+  "myItemsEmptySellingMessage": "您还没有发布任何闲置商品",
+  "myItemsEmptyPurchasedMessage": "您还没有购买过任何商品",
+  "myItemsEmptyFavoritesMessage": "您还没有收藏任何商品",
+  "myItemsEmptySoldMessage": "您还没有成功出售过商品",
+  "myItemsStatusSelling": "在售",
+  "myItemsStatusPurchased": "已购",
+  "myItemsStatusSold": "已售",
+  "forumPinned": "置顶",
+  "forumFeatured": "精华",
+  "forumWriteReplyPlaceholder": "写下你的回复...",
+  "forumViewThisPost": "看看这篇帖子",
+  "forumBrowse": "浏览",
+  "forumRepliesCount": "回复",
+  "fleaMarketStatusActive": "在售",
+  "fleaMarketStatusDelisted": "已下架",
+  "fleaMarketRefreshing": "延时中",
+  "fleaMarketRefresh": "延时",
+  "fleaMarketConfirm": "确认",
+  "fleaMarketSubmit": "提交",
+  "fleaMarketViewItem": "查看这个商品",
+  "fleaMarketSaving": "正在保存...",
+  "fleaMarketSaveChanges": "保存修改",
+  "fleaMarketEditItemTitle": "编辑商品",
+  "fleaMarketCategoryElectronics": "电子产品",
+  "fleaMarketCategoryClothing": "服装配饰",
+  "fleaMarketCategoryFurniture": "家具家电",
+  "fleaMarketCategoryBooks": "图书文具",
+  "fleaMarketCategorySports": "运动户外",
+  "fleaMarketCategoryBeauty": "美妆护肤",
+  "fleaMarketCategoryOther": "其他",
+  "fleaMarketPartialUploadFailed": "部分图片上传失败，请重试",
+  "fleaMarketFillRequiredFields": "请填写所有必填项",
+  "fleaMarketPurchaseRequestsCount": "购买申请 ({param1})",
+  "@fleaMarketPurchaseRequestsCount": {
+    "placeholders": {
+      "param1": {
+        "type": "int"
+      }
+    }
+  },
+  "fleaMarketNoPurchaseRequests": "暂无购买申请",
+  "fleaMarketWaitingSellerConfirm": "等待卖家确认",
+  "fleaMarketNegotiateAmountFormat": "议价金额：£{param1}",
+  "@fleaMarketNegotiateAmountFormat": {
+    "placeholders": {
+      "param1": {
+        "type": "double"
+      }
+    }
+  },
+  "fleaMarketContinuePayment": "继续支付",
+  "fleaMarketPreparing": "准备中...",
+  "fleaMarketSendingNegotiateRequest": "正在发送议价请求...",
+  "fleaMarketProcessingPurchase": "正在处理购买...",
+  "fleaMarketNegotiateAmountLabel": "议价金额:",
+  "fleaMarketSellerNegotiateLabel": "卖家议价:",
+  "fleaMarketRejectPurchaseConfirmTitle": "拒绝购买申请",
+  "fleaMarketRejectPurchaseConfirmMessage": "确定要拒绝这个购买申请吗？",
+  "fleaMarketRequestStatusPending": "待处理",
+  "fleaMarketRequestStatusSellerNegotiating": "卖家已议价",
+  "fleaMarketRequestStatusAccepted": "已接受",
+  "fleaMarketRequestStatusRejected": "已拒绝",
+  "applePayNotSupported": "您的设备不支持 Apple Pay",
+  "applePayUseOtherMethod": "请使用其他支付方式",
+  "applePayTitle": "Apple Pay 支付",
+  "applePayNotConfigured": "Apple Pay 未配置",
+  "applePayPaymentInfoNotReady": "支付信息未准备好",
+  "applePayTaskPaymentFallback": "Link²Ur 任务支付",
+  "applePayUnableToCreateForm": "无法创建 Apple Pay 支付表单",
+  "applePayUnableToGetPaymentInfo": "无法获取支付信息",
+  "chatEvidenceFile": "证据文件",
+  "paymentUnknownError": "未知错误",
+  "paymentAmount": "支付金额",
+  "paymentSuccessCompleted": "您的支付已成功完成",
+  "paymentFailed": "支付失败",
+  "wechatPayTitle": "微信支付",
+  "wechatPayLoading": "正在加载支付页面...",
+  "wechatPayLoadFailed": "加载失败",
+  "wechatPayCancelConfirmTitle": "确认取消支付？",
+  "wechatPayContinuePay": "继续支付",
+  "wechatPayCancelPay": "取消支付",
+  "wechatPayCancelWarning": "取消后需要重新发起支付",
+  "wechatPayInvalidLink": "支付链接无效",
+  "forumMyPosts": "我的帖子",
+  "forumMyPostsPosted": "我发布的",
+  "forumMyPostsFavorited": "我收藏的",
+  "forumMyPostsLiked": "我喜欢的",
+  "forumMyPostsEmptyPosted": "您还没有发布过帖子",
+  "forumMyPostsEmptyFavorited": "您还没有收藏过帖子",
+  "forumMyPostsEmptyLiked": "您还没有喜欢过帖子",
+  "forumLoadFailed": "加载失败",
+  "forumRetry": "重试",
+  "forumNoCategories": "暂无板块",
+  "forumCategoriesLoading": "论坛板块加载中...",
+  "forumRequestNewCategory": "申请新建板块",
+  "forumRequestSubmitted": "申请已提交",
+  "forumRequestSubmittedMessage": "您的申请已成功提交，管理员将在审核后通知您结果。",
+  "forumRequestInstructions": "申请说明",
+  "forumRequestInstructionsText": "填写以下信息申请新建论坛板块。您的申请将由管理员审核，审核通过后板块将正式创建。",
+  "forumCategoryName": "板块名称",
+  "forumCategoryNamePlaceholder": "请输入板块名称",
+  "forumCategoryDescription": "板块描述",
+  "forumCategoryDescriptionPlaceholder": "请简要描述这个板块的用途和讨论主题",
+  "forumCategoryIcon": "板块图标（可选）",
+  "forumCategoryIconHint": "可以输入一个 emoji 表情作为板块图标，例如：💬、📚、🎮 等",
+  "forumCategoryIconExample": "例如：💬",
+  "forumCategoryIconEntered": "已输入 1 个 emoji",
+  "forumSubmitRequest": "提交申请",
+  "forumMyRequests": "我的申请",
+  "forumRequestStatusAll": "全部",
+  "forumRequestStatusPending": "待审核",
+  "forumRequestStatusApproved": "已通过",
+  "forumRequestStatusRejected": "已拒绝",
+  "forumNoRequests": "暂无申请",
+  "forumNoRequestsMessage": "您还没有提交过板块申请。",
+  "forumNoRequestsFiltered": "没有找到相关状态的申请。",
+  "forumReviewComment": "审核意见",
+  "forumReviewTime": "审核时间",
+  "forumRequestTime": "申请时间",
+  "forumRequestNameRequired": "请输入板块名称",
+  "forumRequestNameTooLong": "板块名称不能超过{param1}个字符",
+  "@forumRequestNameTooLong": {
+    "placeholders": {
+      "param1": {
+        "type": "int"
+      }
+    }
+  },
+  "forumRequestDescriptionTooLong": "板块描述不能超过{param1}个字符",
+  "@forumRequestDescriptionTooLong": {
+    "placeholders": {
+      "param1": {
+        "type": "int"
+      }
+    }
+  },
+  "forumRequestIconTooLong": "图标不能超过{param1}个字符",
+  "@forumRequestIconTooLong": {
+    "placeholders": {
+      "param1": {
+        "type": "int"
+      }
+    }
+  },
+  "forumRequestSubmitFailed": "提交失败，请检查输入内容是否正确",
+  "forumRequestLoginExpired": "登录已过期，请重新登录",
+  "activityWaitingExpertResponse": "等待达人回应",
+  "activityContinuePayment": "继续支付",
+  "serviceApplied": "已申请",
+  "serviceWaitingExpertResponse": "等待达人回应",
+  "serviceContinuePayment": "继续支付",
+  "taskDetailConfirmDeadline": "确认截止时间",
+  "taskDetailPlatformServiceFee": "支付平台服务费",
+  "taskDetailCountdownRemainingDays": "剩余 {param1}天 {param2}小时 {param3}分钟",
+  "@taskDetailCountdownRemainingDays": {
+    "placeholders": {
+      "param1": {
+        "type": "int"
+      },
+      "param2": {
+        "type": "int"
+      },
+      "param3": {
+        "type": "int"
+      }
+    }
+  },
+  "taskDetailCountdownRemainingHours": "剩余 {param1}小时 {param2}分钟 {param3}秒",
+  "@taskDetailCountdownRemainingHours": {
+    "placeholders": {
+      "param1": {
+        "type": "int"
+      },
+      "param2": {
+        "type": "int"
+      },
+      "param3": {
+        "type": "int"
+      }
+    }
+  },
+  "taskDetailCountdownRemainingMinutes": "剩余 {param1}分钟 {param2}秒",
+  "@taskDetailCountdownRemainingMinutes": {
+    "placeholders": {
+      "param1": {
+        "type": "int"
+      },
+      "param2": {
+        "type": "int"
+      }
+    }
+  },
+  "taskDetailCountdownRemainingSeconds": "剩余 {param1}秒",
+  "@taskDetailCountdownRemainingSeconds": {
+    "placeholders": {
+      "param1": {
+        "type": "int"
+      }
+    }
+  },
+  "taskDetailTaskCompletedTitle": "任务已完成",
+  "taskDetailTaskCompletedUploadHint": "您已完成此任务。请上传相关证据图片或填写文字说明（可选），以便发布者确认任务完成情况。",
+  "taskDetailSectionTextOptional": "文字说明（可选）",
+  "taskDetailSectionEvidenceImagesOptional": "证据图片（可选）",
+  "taskDetailSectionEvidenceFilesOptional": "证据文件（可选）",
+  "taskDetailSectionCompletionEvidenceOptional": "完成证据（可选）",
+  "taskDetailTextLimit500": "文字说明不能超过500字",
+  "taskDetailImageLimit5mb5": "单张图片不超过 5MB，最多上传 5 张",
+  "taskDetailAddImage": "添加图片",
+  "taskDetailUploadProgress": "上传进度",
+  "taskDetailUploadingCount": "上传中 {param1}/{param2}...",
+  "@taskDetailUploadingCount": {
+    "placeholders": {
+      "param1": {
+        "type": "int"
+      },
+      "param2": {
+        "type": "int"
+      }
+    }
+  },
+  "taskDetailConfirmCompleteTaskButton": "确认完成任务",
+  "taskDetailConfirmTaskCompleteAlertTitle": "确认完成任务",
+  "taskDetailConfirmTaskCompleteAlertMessage": "确定任务已完成吗？提交后将等待发布者确认。",
+  "taskDetailConfirmTaskCompleteTitle": "确认任务完成",
+  "taskDetailConfirmTaskCompleteHint": "您已确认此任务完成。可以上传相关证据图片（可选），如完成截图、验收记录等。",
+  "taskDetailConfirmCompleteButton": "确认完成",
+  "taskDetailPleaseConfirmComplete": "请确认任务完成",
+  "taskDetailAutoConfirmSoon": "即将自动确认，请立即确认！",
+  "taskDetailConfirmNow": "立即确认",
+  "taskDetailWaitingPosterConfirm": "等待发布者确认",
+  "taskDetailAutoConfirmOnExpiry": "（到期将自动确认）",
+  "taskDetailDisputeDetail": "任务争议详情",
+  "taskDetailDeadlineLabel": "截止时间",
+  "taskDetailNoUploadableImages": "没有可上传的图片",
+  "taskDetailImageSizeErrorFormat": "第 {param1} 张图片压缩后仍过大 ({param2}MB)，请选择较小的图片",
+  "@taskDetailImageSizeErrorFormat": {
+    "placeholders": {
+      "param1": {
+        "type": "int"
+      },
+      "param2": {
+        "type": "double"
+      }
+    }
+  },
+  "taskDetailImageTooLargeSelectFormat": "图片过大 ({param1}MB)，请选择较小的图片",
+  "@taskDetailImageTooLargeSelectFormat": {
+    "placeholders": {
+      "param1": {
+        "type": "double"
+      }
+    }
+  },
+  "taskDetailMaxImages5": "最多只能上传 5 张图片",
+  "taskDetailCompleteTaskNavTitle": "完成任务",
+  "taskDetailTaskCompletionEvidence": "任务完成证据",
+  "taskDetailImageConvertError": "无法转换图片数据",
+  "taskDetailImageProcessErrorFormat": "第 {param1} 张图片无法处理，请重新选择",
+  "@taskDetailImageProcessErrorFormat": {
+    "placeholders": {
+      "param1": {
+        "type": "int"
+      }
+    }
+  },
+  "taskDetailCompletedCountFormat": "{param1} 已完成",
+  "@taskDetailCompletedCountFormat": {
+    "placeholders": {
+      "param1": {
+        "type": "int"
+      }
+    }
+  },
+  "refundSubmitRebuttalEvidence": "提交反驳证据",
+  "refundSubmitRebuttalNavTitle": "提交反驳",
+  "refundViewHistory": "查看历史",
+  "refundViewHistoryRecords": "查看历史记录",
+  "refundWithdrawApplication": "撤销退款申请",
+  "refundWithdrawApplicationMessage": "确定要撤销此退款申请吗？撤销后将无法恢复。",
+  "refundWithdrawing": "撤销中...",
+  "refundWithdrawApply": "撤销申请",
+  "refundTaskIncompleteApplyRefund": "任务未完成（申请退款）",
+  "refundHistory": "📋 退款历史",
+  "refundReasonLabel": "退款原因：{param1}",
+  "@refundReasonLabel": {
+    "placeholders": {
+      "param1": {
+        "type": "String"
+      }
+    }
+  },
+  "refundTypeFull": "全额退款",
+  "refundTypePartial": "部分退款",
+  "refundAdminCommentLabel": "管理员备注：{param1}",
+  "@refundAdminCommentLabel": {
+    "placeholders": {
+      "param1": {
+        "type": "String"
+      }
+    }
+  },
+  "refundTakerRebuttal": "接单者反驳",
+  "refundEvidenceFilesCount": "已上传 {param1} 个证据文件",
+  "@refundEvidenceFilesCount": {
+    "placeholders": {
+      "param1": {
+        "type": "int"
+      }
+    }
+  },
+  "refundNoHistory": "暂无退款申请历史记录",
+  "refundReasonTypeLabel": "原因类型：",
+  "refundTypeLabel": "退款类型：",
+  "refundReviewTimeLabel": "审核时间：{param1}",
+  "@refundReviewTimeLabel": {
+    "placeholders": {
+      "param1": {
+        "type": "String"
+      }
+    }
+  },
+  "refundApplyTimeLabel": "申请时间：{param1}",
+  "@refundApplyTimeLabel": {
+    "placeholders": {
+      "param1": {
+        "type": "String"
+      }
+    }
+  },
+  "refundApplyRefund": "申请退款",
+  "refundApplyRefundHint": "请详细说明退款原因，并上传相关证据（如截图、聊天记录等）。管理员将在3-5个工作日内审核。",
+  "refundReasonTypeRequired": "退款原因类型 *",
+  "refundReasonTypePlaceholder": "请选择退款原因类型",
+  "refundPartialAmountTooHigh": "部分退款金额不能大于或等于任务金额，请选择全额退款",
+  "refundAmountExceedsTask": "退款金额不能超过任务金额（£{param1}）",
+  "@refundAmountExceedsTask": {
+    "placeholders": {
+      "param1": {
+        "type": "double"
+      }
+    }
+  },
+  "refundAmountMustBePositive": "退款金额必须是大于0的数字",
+  "refundRatioRange": "退款比例必须在0-100之间",
+  "refundReasonDetailRequired": "退款原因详细说明 *",
+  "refundReasonMinLength": "退款原因至少需要10个字符",
+  "refundTypeRequired": "退款类型 *",
+  "refundAmountOrRatioRequired": "退款金额或比例 *",
+  "refundAmountPound": "退款金额（£）",
+  "refundRatioPercent": "退款比例（%）",
+  "refundTaskAmountFormat": "任务金额: £{param1}",
+  "@refundTaskAmountFormat": {
+    "placeholders": {
+      "param1": {
+        "type": "double"
+      }
+    }
+  },
+  "refundRefundAmountFormat": "退款金额: £{param1}",
+  "@refundRefundAmountFormat": {
+    "placeholders": {
+      "param1": {
+        "type": "double"
+      }
+    }
+  },
+  "refundSubmitRefundApplication": "提交退款申请",
+  "refundNoDisputeRecords": "暂无争议记录",
+  "refundRebuttalDescription": "反驳说明",
+  "refundRebuttalMinLength": "反驳说明至少需要10个字符",
+  "refundUploadLimit5": "最多上传5张图片或文件，每张不超过5MB",
+  "refundSelectImage": "选择图片",
+  "refundStatusLabel": "状态：{param1}",
+  "@refundStatusLabel": {
+    "placeholders": {
+      "param1": {
+        "type": "String"
+      }
+    }
+  },
+  "refundRebuttalHint": "请详细说明任务完成情况，并上传完成证据（如截图、文件等）。您的反驳将帮助管理员做出公正的裁定。",
+  "refundHistorySheetTitle": "退款申请历史记录",
+  "disputeActorPoster": "发布者",
+  "disputeActorTaker": "接单者",
+  "disputeActorAdmin": "管理员",
+  "refundReasonCompletionTime": "对完成时间不满意",
+  "refundReasonNotCompleted": "接单者完全未完成",
+  "refundReasonQualityIssue": "质量问题",
+  "refundReasonOther": "其他",
+  "refundStatusPending": "待审核",
+  "refundStatusProcessing": "处理中",
+  "refundStatusApproved": "已批准",
+  "refundStatusRejected": "已拒绝",
+  "refundStatusCompleted": "已完成",
+  "refundStatusCancelled": "已撤销",
+  "refundStatusUnknown": "未知状态",
+  "refundStatusPendingFull": "退款申请待审核",
+  "refundStatusProcessingFull": "退款处理中",
+  "refundStatusApprovedFull": "退款申请已批准",
+  "refundStatusRejectedFull": "退款申请已拒绝",
+  "refundStatusCompletedFull": "退款已完成",
+  "refundStatusCancelledFull": "退款申请已取消",
+  "refundDescPending": "您的退款申请已提交，管理员将在3-5个工作日内审核",
+  "refundDescProcessing": "退款正在处理中，请耐心等待",
+  "refundDescApprovedAmount": "退款金额：£{param2}{param1}，退款将在5-10个工作日内退回",
+  "@refundDescApprovedAmount": {
+    "placeholders": {
+      "param1": {
+        "type": "String"
+      },
+      "param2": {
+        "type": "double"
+      }
+    }
+  },
+  "refundDescApprovedGeneric": "退款将在5-10个工作日内退回您的原支付方式",
+  "refundDescRejectedReason": "拒绝理由：{param1}",
+  "@refundDescRejectedReason": {
+    "placeholders": {
+      "param1": {
+        "type": "String"
+      }
+    }
+  },
+  "refundDescRejectedGeneric": "退款申请已被拒绝",
+  "refundDescCompletedAmount": "退款金额：£{param2}{param1}，已退回您的原支付方式",
+  "@refundDescCompletedAmount": {
+    "placeholders": {
+      "param1": {
+        "type": "String"
+      },
+      "param2": {
+        "type": "double"
+      }
+    }
+  },
+  "refundDescCompletedGeneric": "退款已退回您的原支付方式",
+  "refundDescCancelled": "退款申请已取消",
+  "commonUnknown": "未知",
+  "commonOr": "或",
+
+  "fleaMarketProductTitleHint": "请输入商品标题",
+  "fleaMarketDescriptionHint": "请详细描述您的商品",
+  "fleaMarketPriceAndTrade": "价格与交易",
+  "fleaMarketFillRequired": "请填写所有必填项",
+  "fleaMarketLocation": "交易地点",
+
+  "taskPreferencesTypes": "偏好任务类型",
+  "taskPreferencesTypesDesc": "选择您感兴趣的任务类型",
+  "taskPreferencesLocations": "偏好地点",
+  "taskPreferencesLocationsDesc": "选择您偏好的任务完成地点",
+  "taskPreferencesLevels": "偏好任务等级",
+  "taskPreferencesLevelsDesc": "选择您想接收的任务等级",
+  "taskPreferencesMinDeadlineDesc": "仅显示截止时间超过设定天数的任务",
+
+  "vipPleaseSelect": "请选择套餐",
+
+  "forumAllPosts": "所有帖子",
+  "forumSearchPosts": "搜索帖子...",
+  "forumNoPosts": "暂无帖子",
+  "forumNoPostsMessage": "还没有帖子，快来发布第一条吧！",
+  "forumPinned": "置顶",
+
+  "commonFilter": "筛选",
+  "commonDone": "完成",
+  "commonNoResults": "无结果",
+  "commonAll": "全部",
+
+  "taskFilterCategory": "分类",
+  "taskFilterCity": "城市",
+
+  "taskExpertSearchHint": "按名称或技能搜索达人...",
+  "taskExpertNoResults": "没有找到匹配的达人",
+  "taskExpertServiceDetail": "服务详情",
+  "taskExpertPrice": "价格",
+  "taskExpertDescription": "描述",
+  "taskExpertCategory": "类别",
+  "taskExpertDeliveryTime": "交付时间",
+  "taskExpertMyApplications": "我的服务申请",
+  "taskExpertNoApplications": "暂无申请",
+  "taskExpertNoApplicationsMessage": "您还没有提交任何服务申请",
+  "taskExpertIntro": "任务达人",
+  "taskExpertIntroTitle": "成为任务达人",
+  "taskExpertIntroSubtitle": "展示您的技能，通过完成任务赚取更多收入",
+  "taskExpertBenefit1Title": "认证达人徽章",
+  "taskExpertBenefit1Desc": "在个人资料上展示认证达人徽章，脱颖而出",
+  "taskExpertBenefit2Title": "优先匹配",
+  "taskExpertBenefit2Desc": "优先匹配与您专业相关的任务",
+  "taskExpertBenefit3Title": "更高收入",
+  "taskExpertBenefit3Desc": "达人完成任务可获得最高20%的额外收入",
+
+  "leaderboardScore": "积分",
+  "leaderboardApplySuccess": "排行榜申请提交成功",
+  "leaderboardDescription": "描述",
+  "leaderboardDescriptionHint": "描述这个排行榜",
+  "leaderboardTitle": "标题",
+  "leaderboardTitleHint": "输入排行榜标题",
+  "leaderboardRules": "规则",
+  "leaderboardRulesHint": "描述排行榜规则",
+  "leaderboardFillRequired": "请填写所有必填项",
+  "leaderboardSubmitApply": "提交申请",
+  "leaderboardApply": "申请排行榜",
+  "leaderboardSubmitItem": "提交参赛项",
+  "leaderboardItemName": "名称",
+  "leaderboardItemDescription": "描述",
+  "leaderboardItemScore": "分数",
+  "leaderboardSubmitSuccess": "条目提交成功",
+  "leaderboardSubmit": "提交",
+
+  "paymentStripeConnect": "Stripe Connect 设置",
+  "paymentConnectPayments": "收款记录",
+  "paymentConnectPayouts": "提现记录",
+  "paymentNoPayments": "暂无收款",
+  "paymentNoPaymentsMessage": "您还没有任何收款记录",
+  "paymentNoPayouts": "暂无提现",
+  "paymentNoPayoutsMessage": "您还没有任何提现记录",
+
+  "profileTaskCount": "任务数",
+  "profileRating": "评分",
+  "profileNoRecentTasks": "暂无近期任务",
+
+  "notificationMarkAllRead": "全部已读",
+  "notificationEmpty": "暂无通知",
+  "notificationEmptyMessage": "没有新通知，已全部处理！",
+  "notificationAll": "全部通知",
+  "notificationTask": "任务通知",
+  "notificationForum": "论坛通知",
+
+  "infoPrivacyPolicy": "隐私政策",
+  "infoTermsOfService": "服务条款"
 }

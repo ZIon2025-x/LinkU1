@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_typography.dart';
+import '../../../core/utils/l10n_extension.dart';
 import '../../../core/widgets/loading_view.dart';
 import '../../../core/widgets/error_state_view.dart';
 import '../../../core/widgets/empty_state_view.dart';
@@ -82,13 +83,13 @@ class _TaskExpertListViewContentState extends State<_TaskExpertListViewContent> 
             ? TextField(
                 controller: _searchController,
                 autofocus: true,
-                decoration: const InputDecoration(
-                  hintText: '搜索技能或关键词...',
+                decoration: InputDecoration(
+                  hintText: context.l10n.taskExpertSearchPrompt,
                   border: InputBorder.none,
                 ),
                 onChanged: _onSearchChanged,
               )
-            : const Text('任务达人'),
+            : Text(context.l10n.expertsExperts),
         actions: [
           IconButton(
             icon: Icon(_isSearching ? Icons.close : Icons.search),
@@ -108,7 +109,7 @@ class _TaskExpertListViewContentState extends State<_TaskExpertListViewContent> 
             if (state.status == TaskExpertStatus.error &&
                 state.experts.isEmpty) {
               return ErrorStateView.loadFailed(
-                message: state.errorMessage ?? '加载失败',
+                message: state.errorMessage ?? context.l10n.tasksLoadFailed,
                 onRetry: () {
                   context.read<TaskExpertBloc>().add(
                         const TaskExpertLoadRequested(),
@@ -120,8 +121,8 @@ class _TaskExpertListViewContentState extends State<_TaskExpertListViewContent> 
             // Empty state
             if (state.experts.isEmpty) {
               return EmptyStateView.noData(
-                title: '暂无达人',
-                description: '还没有任务达人',
+                title: context.l10n.taskExpertNoExperts,
+                description: context.l10n.taskExpertNoExpertsMessage,
               );
             }
 

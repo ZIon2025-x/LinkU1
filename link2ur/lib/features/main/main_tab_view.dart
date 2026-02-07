@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/design/app_colors.dart';
+import '../../core/design/app_typography.dart';
 import '../../core/widgets/badge_view.dart';
+import '../../core/utils/l10n_extension.dart';
 import '../auth/bloc/auth_bloc.dart';
 
 /// 主页面（底部导航栏）
@@ -23,36 +26,37 @@ class MainTabView extends StatefulWidget {
 class _MainTabViewState extends State<MainTabView> {
   int _currentIndex = 0;
 
+  // 对齐iOS MainTabView SF Symbols
   final List<_TabItem> _tabs = const [
     _TabItem(
-      icon: Icons.home_outlined,
+      icon: Icons.home_outlined,              // house.fill
       activeIcon: Icons.home,
-      label: '首页',
+      label: 'home',
       route: '/',
     ),
     _TabItem(
-      icon: Icons.forum_outlined,
-      activeIcon: Icons.forum,
-      label: '社区',
+      icon: Icons.groups_outlined,            // person.3.fill
+      activeIcon: Icons.groups,
+      label: 'community',
       route: '/community',
     ),
     _TabItem(
-      icon: Icons.add_circle_outline,
+      icon: Icons.add_circle_outline,         // plus.circle.fill
       activeIcon: Icons.add_circle,
       label: '',
       route: '/tasks/create',
       isCenter: true,
     ),
     _TabItem(
-      icon: Icons.chat_bubble_outline,
-      activeIcon: Icons.chat_bubble,
-      label: '消息',
+      icon: Icons.message_outlined,           // message.fill
+      activeIcon: Icons.message,
+      label: 'messages',
       route: '/messages-tab',
     ),
     _TabItem(
-      icon: Icons.person_outline,
+      icon: Icons.person_outline,             // person.fill
       activeIcon: Icons.person,
-      label: '我的',
+      label: 'profile',
       route: '/profile-tab',
     ),
   ];
@@ -60,11 +64,13 @@ class _MainTabViewState extends State<MainTabView> {
   void _onTabTapped(int index) {
     // 中间按钮特殊处理
     if (_tabs[index].isCenter) {
+      HapticFeedback.mediumImpact();
       _showCreateOptions();
       return;
     }
 
     if (index != _currentIndex) {
+      HapticFeedback.selectionClick();
       setState(() {
         _currentIndex = index;
       });
@@ -174,7 +180,7 @@ class _MainTabViewState extends State<MainTabView> {
               ),
             const SizedBox(height: 4),
             Text(
-              tab.label,
+              _getTabLabel(context, tab.label),
               style: TextStyle(
                 fontSize: 10,
                 fontWeight: isSelected ? FontWeight.w500 : FontWeight.normal,
@@ -219,6 +225,23 @@ class _MainTabViewState extends State<MainTabView> {
         ),
       ),
     );
+  }
+
+  String _getTabLabel(BuildContext context, String key) {
+    if (key.isEmpty) return '';
+    final l10n = context.l10n;
+    switch (key) {
+      case 'home':
+        return l10n.tabsHome;
+      case 'community':
+        return l10n.tabsCommunity;
+      case 'messages':
+        return l10n.tabsMessages;
+      case 'profile':
+        return l10n.tabsProfile;
+      default:
+        return key;
+    }
   }
 }
 
@@ -270,7 +293,7 @@ class _CreateOptionsSheet extends StatelessWidget {
             children: [
               _CreateOption(
                 icon: Icons.task_alt,
-                label: '发布任务',
+                label: context.l10n.createTaskPublishTask,
                 color: AppColors.primary,
                 onTap: () {
                   Navigator.pop(context);
@@ -288,7 +311,7 @@ class _CreateOptionsSheet extends StatelessWidget {
               ),
               _CreateOption(
                 icon: Icons.article,
-                label: '发布帖子',
+                label: context.l10n.forumCreatePostTitle,
                 color: AppColors.success,
                 onTap: () {
                   Navigator.pop(context);

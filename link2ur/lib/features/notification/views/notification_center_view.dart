@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_spacing.dart';
+import '../../../core/utils/l10n_extension.dart';
 import '../../../core/widgets/loading_view.dart';
 import '../../../core/widgets/error_state_view.dart';
 import '../../../core/widgets/empty_state_view.dart';
@@ -21,7 +23,7 @@ class NotificationCenterView extends StatelessWidget {
       length: 2,
       child: Scaffold(
         appBar: AppBar(
-          title: const Text('通知'),
+          title: Text(context.l10n.notificationsNotifications),
           actions: [
             BlocBuilder<NotificationBloc, NotificationState>(
               builder: (context, state) {
@@ -211,6 +213,8 @@ class _NotificationItem extends StatelessWidget {
                 NotificationMarkAsRead(notification.id),
               );
         }
+        // 根据通知类型跳转到相关页面
+        _navigateToRelated(context, notification);
       },
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 12),
@@ -282,6 +286,25 @@ class _NotificationItem extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  void _navigateToRelated(BuildContext context, models.AppNotification notification) {
+    final relatedId = notification.relatedId;
+    if (relatedId == null) return;
+
+    switch (notification.relatedType) {
+      case 'task_id':
+        context.push('/tasks/$relatedId');
+        break;
+      case 'forum_post_id':
+        context.push('/forum/posts/$relatedId');
+        break;
+      case 'flea_market_id':
+        context.push('/flea-market/$relatedId');
+        break;
+      default:
+        break;
+    }
   }
 
   String _formatTime(DateTime? time) {

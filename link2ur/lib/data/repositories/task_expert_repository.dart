@@ -83,6 +83,33 @@ class TaskExpertRepository {
     return response.data!;
   }
 
+  /// 搜索达人（getExperts 的快捷方法）
+  Future<List<TaskExpert>> searchExperts({
+    required String keyword,
+    int page = 1,
+    int pageSize = 20,
+  }) async {
+    final result = await getExperts(
+      keyword: keyword,
+      page: page,
+      pageSize: pageSize,
+    );
+    return result.experts;
+  }
+
+  /// 获取服务详情
+  Future<Map<String, dynamic>> getServiceDetail(int serviceId) async {
+    final response = await _apiService.get<Map<String, dynamic>>(
+      '${ApiEndpoints.taskExpertServiceDetail}/$serviceId',
+    );
+
+    if (!response.isSuccess || response.data == null) {
+      throw TaskExpertException(response.message ?? '获取服务详情失败');
+    }
+
+    return response.data!;
+  }
+
   /// 获取我的服务申请
   Future<List<Map<String, dynamic>>> getMyServiceApplications({
     int page = 1,

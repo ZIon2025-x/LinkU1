@@ -62,6 +62,30 @@ class FleaMarketPurchaseItem extends FleaMarketEvent {
   List<Object?> get props => [itemId];
 }
 
+class FleaMarketUpdateItem extends FleaMarketEvent {
+  const FleaMarketUpdateItem({
+    required this.itemId,
+    required this.title,
+    required this.description,
+    required this.price,
+    this.location,
+    this.category,
+    this.images,
+  });
+
+  final int itemId;
+  final String title;
+  final String description;
+  final double price;
+  final String? location;
+  final String? category;
+  final List<String>? images;
+
+  @override
+  List<Object?> get props =>
+      [itemId, title, description, price, location, category, images];
+}
+
 class FleaMarketLoadDetailRequested extends FleaMarketEvent {
   const FleaMarketLoadDetailRequested(this.itemId);
 
@@ -174,6 +198,7 @@ class FleaMarketBloc extends Bloc<FleaMarketEvent, FleaMarketState> {
     on<FleaMarketSearchChanged>(_onSearchChanged);
     on<FleaMarketCreateItem>(_onCreateItem);
     on<FleaMarketPurchaseItem>(_onPurchaseItem);
+    on<FleaMarketUpdateItem>(_onUpdateItem);
     on<FleaMarketLoadDetailRequested>(_onLoadDetailRequested);
   }
 
@@ -367,6 +392,44 @@ class FleaMarketBloc extends Bloc<FleaMarketEvent, FleaMarketState> {
       emit(state.copyWith(
         isSubmitting: false,
         actionMessage: '购买失败',
+      ));
+    }
+  }
+
+  Future<void> _onUpdateItem(
+    FleaMarketUpdateItem event,
+    Emitter<FleaMarketState> emit,
+  ) async {
+    emit(state.copyWith(isSubmitting: true));
+
+    try {
+      final updatedItem = await _fleaMarketRepository.updateItem(
+        event.itemId,
+        title: event.title,
+        description: event.description,
+        price: event.price,
+        category: event.category,
+        images: event.images,
+      );
+
+      // 更新列表中的对应项
+      final updatedItems = state.items.map((item) {
+        final itemIdInt = int.tryParse(item.id);
+        return itemIdInt == event.itemId ? updatedItem : item;
+      }).toList();
+
+      emit(state.copyWith(
+        isSubmitting: false,
+        items: updatedItems,
+        selectedItem:
+            state.selectedItem?.id == updatedItem.id ? updatedItem : null,
+        actionMessage: '商品更新成功',
+      ));
+    } catch (e) {
+      AppLogger.error('Failed to update flea market item', e);
+      emit(state.copyWith(
+        isSubmitting: false,
+        actionMessage: '更新失败: ${e.toString()}',
       ));
     }
   }

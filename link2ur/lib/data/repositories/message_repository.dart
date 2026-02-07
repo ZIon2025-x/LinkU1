@@ -128,6 +128,21 @@ class MessageRepository {
         .toList();
   }
 
+  /// 上传聊天图片
+  Future<String> uploadImage(String filePath) async {
+    final response = await _apiService.uploadFile<Map<String, dynamic>>(
+      ApiEndpoints.uploadImage,
+      filePath: filePath,
+      fieldName: 'file',
+    );
+
+    if (!response.isSuccess || response.data == null) {
+      throw MessageException(response.message ?? '上传图片失败');
+    }
+
+    return response.data!['url'] as String? ?? '';
+  }
+
   /// 发送正在输入状态
   void sendTypingStatus(int receiverId) {
     WebSocketService.instance.sendTyping(receiverId: receiverId);

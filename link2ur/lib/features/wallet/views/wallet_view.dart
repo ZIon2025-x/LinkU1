@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:url_launcher/url_launcher.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_radius.dart';
+import '../../../core/utils/l10n_extension.dart';
 import '../../../core/widgets/loading_view.dart';
 import '../../../core/widgets/error_state_view.dart';
 import '../../../core/widgets/empty_state_view.dart';
@@ -147,7 +148,7 @@ class _WalletViewState extends State<WalletView> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('我的钱包'),
+        title: Text(context.l10n.profileMyWallet),
       ),
       body: _isLoading && _pointsAccount == null
           ? const LoadingView()
@@ -328,19 +329,28 @@ class _WalletViewState extends State<WalletView> {
             ),
           ),
         ),
+        if (status.isFullyActive) ...[
+          ListTile(
+            contentPadding: AppSpacing.horizontalMd,
+            leading: const Icon(Icons.payments_outlined, size: 20),
+            title: const Text('收款记录'),
+            trailing: const Icon(Icons.chevron_right, size: 20),
+            onTap: () => context.push('/payment/stripe-connect/payments'),
+          ),
+          ListTile(
+            contentPadding: AppSpacing.horizontalMd,
+            leading: const Icon(Icons.account_balance_outlined, size: 20),
+            title: const Text('提现记录'),
+            trailing: const Icon(Icons.chevron_right, size: 20),
+            onTap: () => context.push('/payment/stripe-connect/payouts'),
+          ),
+        ],
         if (!status.isFullyActive)
           Padding(
             padding: AppSpacing.horizontalMd,
             child: SecondaryButton(
               text: status.isConnected ? '查看账户详情' : '设置收款账户',
-              onPressed: () async {
-                if (status.onboardingUrl != null) {
-                  final uri = Uri.parse(status.onboardingUrl!);
-                  if (await canLaunchUrl(uri)) {
-                    await launchUrl(uri, mode: LaunchMode.externalApplication);
-                  }
-                }
-              },
+              onPressed: () => context.push('/payment/stripe-connect/onboarding'),
             ),
           ),
       ],

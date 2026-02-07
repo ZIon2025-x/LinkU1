@@ -61,12 +61,18 @@ class ApiEndpoints {
   static const String myForumPosts = '/api/forum/posts/my';
   static const String favoriteForumPosts = '/api/forum/posts/favorites';
 
+  // ==================== 任务达人补充 ====================
+  static const String taskExpertServiceDetail = '/api/task-expert-services';
+
   // ==================== 排行榜 ====================
   static const String leaderboards = '/api/leaderboards';
   static String leaderboardById(int id) => '/api/leaderboards/$id';
   static String leaderboardItems(int id) => '/api/leaderboards/$id/items';
   static String voteItem(int itemId) => '/api/leaderboard-items/$itemId/vote';
   static const String myLeaderboards = '/api/leaderboards/my';
+  static const String leaderboardItemById = '/api/leaderboard-items';
+  static const String applyLeaderboard = '/api/leaderboards/apply';
+  static String submitLeaderboardItem(int id) => '/api/leaderboards/$id/items';
 
   // ==================== 消息相关 ====================
   static const String messages = '/api/messages';
@@ -106,6 +112,7 @@ class ApiEndpoints {
   static const String paymentMethods = '/api/payments/methods';
   static const String stripeConnectOnboarding = '/api/stripe-connect/onboarding';
   static const String stripeConnectStatus = '/api/stripe-connect/status';
+  static const String stripeConnectTransactions = '/api/stripe-connect/transactions';
 
   // ==================== 学生认证 ====================
   static const String studentVerificationStatus = '/api/student-verification/status';

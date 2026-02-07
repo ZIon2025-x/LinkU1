@@ -47,6 +47,15 @@ class _FleaMarketDetailContent extends StatelessWidget {
           appBar: AppBar(
             title: const Text('商品详情'),
             actions: [
+              // 编辑按钮（仅卖家可见）
+              if (state.selectedItem != null)
+                IconButton(
+                  icon: const Icon(Icons.edit_outlined),
+                  tooltip: '编辑',
+                  onPressed: () => context.push(
+                    '/flea-market/${state.selectedItem!.id}/edit',
+                  ),
+                ),
               IconButton(
                 icon: const Icon(Icons.share_outlined),
                 onPressed: () {},

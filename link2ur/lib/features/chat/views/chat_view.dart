@@ -1,19 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
+import 'package:image_picker/image_picker.dart';
 
 import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_radius.dart';
 import '../../../core/widgets/loading_view.dart';
 import '../../../core/widgets/error_state_view.dart';
-import '../../../core/utils/date_formatter.dart';
 import '../../../data/repositories/message_repository.dart';
-import '../../../data/models/message.dart';
 import '../../../data/services/storage_service.dart';
 import '../bloc/chat_bloc.dart';
+import '../widgets/message_group_bubble.dart';
 
 /// 私信聊天页
 /// 参考iOS ChatView.swift
+/// 增强版本：支持消息分组、图片发送、头像点击
 class ChatView extends StatefulWidget {
   const ChatView({
     super.key,
@@ -29,7 +31,9 @@ class ChatView extends StatefulWidget {
 class _ChatViewState extends State<ChatView> {
   final _messageController = TextEditingController();
   final _scrollController = ScrollController();
+  final _imagePicker = ImagePicker();
   int? _currentUserId;
+  bool _showAttachMenu = false;
 
   @override
   void initState() {
@@ -46,12 +50,13 @@ class _ChatViewState extends State<ChatView> {
 
   void _sendMessage() {
     if (_messageController.text.trim().isEmpty) return;
-    
+
     final content = _messageController.text.trim();
     context.read<ChatBloc>().add(
-      ChatSendMessage(content: content),
-    );
+          ChatSendMessage(content: content),
+        );
     _messageController.clear();
+    setState(() => _showAttachMenu = false);
   }
 
   void _scrollToBottom() {
@@ -64,6 +69,20 @@ class _ChatViewState extends State<ChatView> {
     }
   }
 
+  Future<void> _pickImage() async {
+    final image = await _imagePicker.pickImage(
+      source: ImageSource.gallery,
+      imageQuality: 80,
+      maxWidth: 1200,
+    );
+    if (image != null && mounted) {
+      context.read<ChatBloc>().add(
+            ChatSendImage(filePath: image.path),
+          );
+      setState(() => _showAttachMenu = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final messageRepository = context.read<MessageRepository>();
@@ -73,7 +92,6 @@ class _ChatViewState extends State<ChatView> {
         ..add(ChatLoadMessages(userId: widget.userId)),
       child: BlocConsumer<ChatBloc, ChatState>(
         listener: (context, state) {
-          // 当消息发送成功或收到新消息时，滚动到底部
           if (state.status == ChatStatus.loaded) {
             WidgetsBinding.instance.addPostFrameCallback((_) {
               _scrollToBottom();
@@ -85,16 +103,20 @@ class _ChatViewState extends State<ChatView> {
             appBar: AppBar(
               title: Text('用户 ${widget.userId}'),
               actions: [
-                IconButton(icon: const Icon(Icons.more_vert), onPressed: () {}),
+                IconButton(
+                  icon: const Icon(Icons.person_outline),
+                  onPressed: () => context.push('/user/${widget.userId}'),
+                ),
               ],
             ),
             body: Column(
               children: [
-                // 消息列表
-                Expanded(
-                  child: _buildMessageList(state),
-                ),
-                
+                // 消息列表（使用分组气泡）
+                Expanded(child: _buildGroupedMessageList(state)),
+
+                // 附件选项
+                if (_showAttachMenu) _buildAttachMenu(),
+
                 // 输入区域
                 _buildInputArea(state),
               ],
@@ -105,7 +127,7 @@ class _ChatViewState extends State<ChatView> {
     );
   }
 
-  Widget _buildMessageList(ChatState state) {
+  Widget _buildGroupedMessageList(ChatState state) {
     if (state.status == ChatStatus.loading && state.messages.isEmpty) {
       return const LoadingView();
     }
@@ -120,29 +142,83 @@ class _ChatViewState extends State<ChatView> {
     }
 
     if (state.messages.isEmpty) {
-      return const Center(
-        child: Text(
-          '还没有消息，开始对话吧',
-          style: TextStyle(color: AppColors.textSecondaryLight),
+      return Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.chat_bubble_outline,
+                size: 48, color: AppColors.textTertiaryLight),
+            AppSpacing.vMd,
+            Text(
+              '还没有消息，开始对话吧',
+              style: TextStyle(color: AppColors.textSecondaryLight),
+            ),
+          ],
         ),
       );
     }
 
-    // 反转消息列表，使最新的在底部
-    final reversedMessages = state.messages.reversed.toList();
+    // 使用消息分组
+    final groups = groupMessages(state.messages, _currentUserId);
 
     return ListView.builder(
       controller: _scrollController,
-      padding: AppSpacing.allMd,
-      itemCount: reversedMessages.length,
+      padding: const EdgeInsets.symmetric(vertical: 12),
+      itemCount: groups.length,
       itemBuilder: (context, index) {
-        final message = reversedMessages[index];
-        final isMe = _currentUserId != null && message.senderId == _currentUserId;
-        return _MessageBubble(
-          message: message,
-          isMe: isMe,
+        final group = groups[index];
+        return MessageGroupBubbleView(
+          group: group,
+          onAvatarTap: () {
+            if (group.senderId != null) {
+              context.push('/user/${group.senderId}');
+            }
+          },
+          onImageTap: (url) {
+            // TODO: 打开全屏图片查看器
+          },
         );
       },
+    );
+  }
+
+  Widget _buildAttachMenu() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: Theme.of(context).cardColor,
+        border: Border(
+          top: BorderSide(color: AppColors.dividerLight, width: 0.5),
+        ),
+      ),
+      child: Row(
+        children: [
+          _AttachOption(
+            icon: Icons.photo_library,
+            label: '图片',
+            color: AppColors.success,
+            onTap: _pickImage,
+          ),
+          const SizedBox(width: 24),
+          _AttachOption(
+            icon: Icons.camera_alt,
+            label: '拍照',
+            color: AppColors.primary,
+            onTap: () async {
+              final image = await _imagePicker.pickImage(
+                source: ImageSource.camera,
+                imageQuality: 80,
+              );
+              if (image != null && mounted) {
+                context.read<ChatBloc>().add(
+                      ChatSendImage(filePath: image.path),
+                    );
+                setState(() => _showAttachMenu = false);
+              }
+            },
+          ),
+        ],
+      ),
     );
   }
 
@@ -163,19 +239,30 @@ class _ChatViewState extends State<ChatView> {
         child: Row(
           children: [
             IconButton(
-              icon: const Icon(Icons.add_circle_outline),
-              onPressed: () {},
-              color: AppColors.textSecondaryLight,
+              icon: AnimatedRotation(
+                turns: _showAttachMenu ? 0.125 : 0,
+                duration: const Duration(milliseconds: 200),
+                child: const Icon(Icons.add_circle_outline),
+              ),
+              onPressed: () {
+                setState(() => _showAttachMenu = !_showAttachMenu);
+              },
+              color: _showAttachMenu
+                  ? AppColors.primary
+                  : AppColors.textSecondaryLight,
             ),
             Expanded(
               child: TextField(
                 controller: _messageController,
                 enabled: !state.isSending,
+                maxLines: 4,
+                minLines: 1,
                 decoration: InputDecoration(
                   hintText: '输入消息...',
                   filled: true,
                   fillColor: AppColors.skeletonBase,
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                  contentPadding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                   border: OutlineInputBorder(
                     borderRadius: AppRadius.allPill,
                     borderSide: BorderSide.none,
@@ -183,6 +270,11 @@ class _ChatViewState extends State<ChatView> {
                 ),
                 textInputAction: TextInputAction.send,
                 onSubmitted: (_) => _sendMessage(),
+                onTap: () {
+                  if (_showAttachMenu) {
+                    setState(() => _showAttachMenu = false);
+                  }
+                },
               ),
             ),
             AppSpacing.hSm,
@@ -204,92 +296,43 @@ class _ChatViewState extends State<ChatView> {
   }
 }
 
-class _MessageBubble extends StatelessWidget {
-  const _MessageBubble({
-    required this.message,
-    required this.isMe,
+class _AttachOption extends StatelessWidget {
+  const _AttachOption({
+    required this.icon,
+    required this.label,
+    required this.color,
+    required this.onTap,
   });
 
-  final Message message;
-  final bool isMe;
+  final IconData icon;
+  final String label;
+  final Color color;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    final timeText = message.createdAt != null
-        ? DateFormatter.formatMessageTime(message.createdAt!)
-        : '';
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(
-        mainAxisAlignment: isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
-        crossAxisAlignment: CrossAxisAlignment.end,
+    return GestureDetector(
+      onTap: onTap,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          if (!isMe) ...[
-            const CircleAvatar(
-              radius: 16,
-              backgroundColor: AppColors.skeletonBase,
-              child: Icon(Icons.person, size: 18, color: AppColors.textTertiaryLight),
+          Container(
+            width: 48,
+            height: 48,
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.12),
+              borderRadius: AppRadius.allMedium,
             ),
-            AppSpacing.hSm,
-          ],
-          
-          Flexible(
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-              decoration: BoxDecoration(
-                color: isMe ? AppColors.primary : AppColors.skeletonBase,
-                borderRadius: BorderRadius.only(
-                  topLeft: const Radius.circular(16),
-                  topRight: const Radius.circular(16),
-                  bottomLeft: Radius.circular(isMe ? 16 : 4),
-                  bottomRight: Radius.circular(isMe ? 4 : 16),
-                ),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  if (message.isImage && message.imageUrl != null)
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(8),
-                      child: Image.network(
-                        message.imageUrl!,
-                        width: 200,
-                        height: 200,
-                        fit: BoxFit.cover,
-                        errorBuilder: (context, error, stackTrace) {
-                          return Container(
-                            width: 200,
-                            height: 200,
-                            color: AppColors.skeletonBase,
-                            child: const Icon(Icons.broken_image),
-                          );
-                        },
-                      ),
-                    )
-                  else
-                    Text(
-                      message.content,
-                      style: TextStyle(
-                        color: isMe ? Colors.white : AppColors.textPrimaryLight,
-                      ),
-                    ),
-                  if (timeText.isNotEmpty) ...[
-                    const SizedBox(height: 2),
-                    Text(
-                      timeText,
-                      style: TextStyle(
-                        fontSize: 10,
-                        color: isMe ? Colors.white70 : AppColors.textTertiaryLight,
-                      ),
-                    ),
-                  ],
-                ],
-              ),
+            child: Icon(icon, color: color, size: 22),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 11,
+              color: AppColors.textSecondaryLight,
             ),
           ),
-          
-          if (isMe) AppSpacing.hSm,
         ],
       ),
     );

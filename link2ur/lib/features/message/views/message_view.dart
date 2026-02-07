@@ -1,20 +1,22 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_radius.dart';
-import '../../../core/widgets/empty_state_view.dart';
 import '../../../core/widgets/loading_view.dart';
-import '../../../core/widgets/error_state_view.dart';
 import '../../../core/utils/date_formatter.dart';
+import '../../notification/widgets/notification_menu.dart';
+import '../../../core/utils/l10n_extension.dart';
 import '../../../data/repositories/message_repository.dart';
 import '../../../data/models/message.dart';
+import '../../customer_service/views/customer_service_view.dart';
 import '../bloc/message_bloc.dart';
 
 /// 消息列表页
-/// 参考iOS MessageView.swift
+/// 参考iOS MessageView.swift - 单列表布局
 class MessageView extends StatelessWidget {
   const MessageView({super.key});
 
@@ -26,109 +28,380 @@ class MessageView extends StatelessWidget {
       create: (context) => MessageBloc(messageRepository: messageRepository)
         ..add(const MessageLoadContacts())
         ..add(const MessageLoadTaskChats()),
-      child: DefaultTabController(
-        length: 2,
-        child: Scaffold(
-          appBar: AppBar(
-            title: const Text('消息'),
-            bottom: const TabBar(
-              tabs: [
-                Tab(text: '任务消息'),
-                Tab(text: '私信'),
-              ],
-              labelColor: AppColors.primary,
-              unselectedLabelColor: AppColors.textSecondaryLight,
-              indicatorColor: AppColors.primary,
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text(context.l10n.messagesMessages),
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.notifications_outlined),
+              onPressed: () => NotificationMenu.show(context),
             ),
-          ),
-          body: const TabBarView(
+          ],
+        ),
+        body: const _MessageContent(),
+      ),
+    );
+  }
+}
+
+class _MessageContent extends StatelessWidget {
+  const _MessageContent();
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocBuilder<MessageBloc, MessageState>(
+      builder: (context, state) {
+        return RefreshIndicator(
+          onRefresh: () async {
+            context.read<MessageBloc>()
+              ..add(const MessageLoadContacts())
+              ..add(const MessageLoadTaskChats());
+            await Future.delayed(const Duration(milliseconds: 500));
+          },
+          child: ListView(
+            padding: AppSpacing.allMd,
             children: [
-              _TaskChatList(),
-              _PrivateChatList(),
+              // 系统消息卡片
+              _SystemMessageCard(
+                onTap: () => context.push('/notifications'),
+              ),
+              AppSpacing.vMd,
+
+              // 客服卡片
+              _CustomerServiceCard(
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const CustomerServiceView(),
+                  ),
+                ),
+              ),
+              AppSpacing.vMd,
+
+              // 互动消息卡片
+              _InteractionMessageCard(
+                onTap: () => context.push('/notifications'),
+              ),
+              AppSpacing.vMd,
+
+              // 任务消息分隔
+              if (state.taskChats.isNotEmpty) ...[
+                const SizedBox(height: 8),
+                // 任务聊天列表
+                ...state.taskChats.map(
+                  (taskChat) => _TaskChatItem(taskChat: taskChat),
+                ),
+              ] else if (state.status != MessageStatus.loading) ...[
+                const SizedBox(height: 40),
+                Center(
+                  child: Column(
+                    children: [
+                      Icon(
+                        Icons.message,              // message.fill
+                        size: 48,
+                        color: AppColors.textTertiaryLight,
+                      ),
+                      AppSpacing.vSm,
+                      Text(
+                        context.l10n.messagesNoTaskChats,
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: AppColors.textSecondaryLight,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+
+              if (state.status == MessageStatus.loading &&
+                  state.taskChats.isEmpty)
+                const Padding(
+                  padding: EdgeInsets.only(top: 40),
+                  child: LoadingView(),
+                ),
             ],
           ),
+        );
+      },
+    );
+  }
+}
+
+/// 系统消息卡片 - 对齐iOS SystemMessageCard
+class _SystemMessageCard extends StatelessWidget {
+  const _SystemMessageCard({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return GestureDetector(
+      onTap: () {
+        HapticFeedback.selectionClick();
+        onTap();
+      },
+      child: Container(
+        height: 80,
+        padding: EdgeInsets.symmetric(
+          horizontal: AppSpacing.lg,
+          vertical: AppSpacing.md,
+        ),
+        decoration: BoxDecoration(
+          color: isDark
+              ? AppColors.cardBackgroundDark
+              : AppColors.cardBackgroundLight,
+          borderRadius: AppRadius.allLarge,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.04),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            // 图标
+            Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                color: AppColors.primary.withValues(alpha: 0.1),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.notifications,            // bell.fill (filled)
+                color: AppColors.primary,
+                size: 22,
+              ),
+            ),
+            const SizedBox(width: 16),
+            // 文字
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    '系统消息',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: isDark
+                          ? AppColors.textPrimaryDark
+                          : AppColors.textPrimaryLight,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    '查看系统通知',
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: isDark
+                          ? AppColors.textSecondaryDark
+                          : AppColors.textSecondaryLight,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Icon(
+              Icons.chevron_right,
+              color: isDark
+                  ? AppColors.textTertiaryDark
+                  : AppColors.textTertiaryLight,
+            ),
+          ],
         ),
       ),
     );
   }
 }
 
-class _TaskChatList extends StatelessWidget {
-  const _TaskChatList();
+/// 客服卡片 - 对齐iOS CustomerServiceCard (带渐变背景)
+class _CustomerServiceCard extends StatelessWidget {
+  const _CustomerServiceCard({required this.onTap});
+
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<MessageBloc, MessageState>(
-      builder: (context, state) {
-        if (state.status == MessageStatus.loading && state.taskChats.isEmpty) {
-          return const LoadingView();
-        }
-
-        if (state.status == MessageStatus.error && state.taskChats.isEmpty) {
-          return ErrorStateView.loadFailed(
-            message: state.errorMessage,
-            onRetry: () {
-              context.read<MessageBloc>().add(const MessageLoadTaskChats());
-            },
-          );
-        }
-
-        if (state.taskChats.isEmpty) {
-          return EmptyStateView.noMessages();
-        }
-
-        return ListView.separated(
-          padding: AppSpacing.allMd,
-          itemCount: state.taskChats.length,
-          separatorBuilder: (context, index) => const Divider(),
-          itemBuilder: (context, index) {
-            final taskChat = state.taskChats[index];
-            return _TaskChatItem(taskChat: taskChat);
-          },
-        );
+    return GestureDetector(
+      onTap: () {
+        HapticFeedback.selectionClick();
+        onTap();
       },
+      child: Container(
+        height: 80,
+        padding: EdgeInsets.symmetric(
+          horizontal: AppSpacing.lg,
+          vertical: AppSpacing.md,
+        ),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [
+              AppColors.success.withValues(alpha: 0.8),
+              AppColors.success,
+            ],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: AppRadius.allLarge,
+          boxShadow: [
+            BoxShadow(
+              color: AppColors.success.withValues(alpha: 0.3),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            // 图标
+            Container(
+              width: 44,
+              height: 44,
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                Icons.headset_mic,
+                color: AppColors.success,
+                size: 22,
+              ),
+            ),
+            const SizedBox(width: 16),
+            // 文字
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    context.l10n.messagesCustomerService,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.white,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    context.l10n.messagesContactService,
+                    style: const TextStyle(
+                      fontSize: 13,
+                      color: Colors.white70,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const Icon(
+              Icons.chevron_right,
+              color: Colors.white70,
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
 
-class _PrivateChatList extends StatelessWidget {
-  const _PrivateChatList();
+/// 互动消息卡片 - 对齐iOS InteractionMessageCard (带渐变背景)
+class _InteractionMessageCard extends StatelessWidget {
+  const _InteractionMessageCard({required this.onTap});
+
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<MessageBloc, MessageState>(
-      builder: (context, state) {
-        if (state.status == MessageStatus.loading && state.contacts.isEmpty) {
-          return const LoadingView();
-        }
-
-        if (state.status == MessageStatus.error && state.contacts.isEmpty) {
-          return ErrorStateView.loadFailed(
-            message: state.errorMessage,
-            onRetry: () {
-              context.read<MessageBloc>().add(const MessageLoadContacts());
-            },
-          );
-        }
-
-        if (state.contacts.isEmpty) {
-          return EmptyStateView.noMessages();
-        }
-
-        return ListView.separated(
-          padding: AppSpacing.allMd,
-          itemCount: state.contacts.length,
-          separatorBuilder: (context, index) => const Divider(),
-          itemBuilder: (context, index) {
-            final contact = state.contacts[index];
-            return _PrivateChatItem(contact: contact);
-          },
-        );
+    return GestureDetector(
+      onTap: () {
+        HapticFeedback.selectionClick();
+        onTap();
       },
+      child: Container(
+        height: 80,
+        padding: EdgeInsets.symmetric(
+          horizontal: AppSpacing.lg,
+          vertical: AppSpacing.md,
+        ),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [
+              AppColors.warning.withValues(alpha: 0.8),
+              AppColors.warning,
+            ],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: AppRadius.allLarge,
+          boxShadow: [
+            BoxShadow(
+              color: AppColors.warning.withValues(alpha: 0.3),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            // 图标
+            Container(
+              width: 44,
+              height: 44,
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                Icons.favorite,
+                color: AppColors.warning,
+                size: 22,
+              ),
+            ),
+            const SizedBox(width: 16),
+            // 文字
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    context.l10n.messagesInteractionInfo,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.white,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    context.l10n.messagesViewForumInteractions,
+                    style: const TextStyle(
+                      fontSize: 13,
+                      color: Colors.white70,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const Icon(
+              Icons.chevron_right,
+              color: Colors.white70,
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
 
+/// 任务聊天项 - 对齐iOS TaskChatRow
 class _TaskChatItem extends StatelessWidget {
   const _TaskChatItem({
     required this.taskChat,
@@ -138,6 +411,8 @@ class _TaskChatItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return GestureDetector(
       onTap: () {
         context.push('/task-chat/${taskChat.taskId}');
@@ -147,7 +422,7 @@ class _TaskChatItem extends StatelessWidget {
         padding: const EdgeInsets.symmetric(vertical: 12),
         child: Row(
           children: [
-            // 头像 - 使用任务图标或第一个参与者头像
+            // 头像
             Stack(
               children: [
                 CircleAvatar(
@@ -171,7 +446,9 @@ class _TaskChatItem extends StatelessWidget {
                         minHeight: 18,
                       ),
                       child: Text(
-                        taskChat.unreadCount > 99 ? '99+' : '${taskChat.unreadCount}',
+                        taskChat.unreadCount > 99
+                            ? '99+'
+                            : '${taskChat.unreadCount}',
                         style: const TextStyle(
                           color: Colors.white,
                           fontSize: 10,
@@ -184,7 +461,7 @@ class _TaskChatItem extends StatelessWidget {
               ],
             ),
             AppSpacing.hMd,
-            
+
             // 内容
             Expanded(
               child: Column(
@@ -202,9 +479,12 @@ class _TaskChatItem extends StatelessWidget {
                       ),
                       Text(
                         taskChat.lastMessageTime != null
-                            ? DateFormatter.formatSmart(taskChat.lastMessageTime!)
+                            ? DateFormatter.formatSmart(
+                                taskChat.lastMessageTime!)
                             : '',
-                        style: TextStyle(fontSize: 12, color: AppColors.textTertiaryLight),
+                        style: TextStyle(
+                            fontSize: 12,
+                            color: AppColors.textTertiaryLight),
                       ),
                     ],
                   ),
@@ -214,146 +494,33 @@ class _TaskChatItem extends StatelessWidget {
                       Expanded(
                         child: Text(
                           taskChat.lastMessage ?? '暂无消息',
-                          style: TextStyle(fontSize: 14, color: AppColors.textSecondaryLight),
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: isDark
+                                ? AppColors.textSecondaryDark
+                                : AppColors.textSecondaryLight,
+                          ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
                       if (taskChat.taskStatus != null)
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 6, vertical: 2),
                           decoration: BoxDecoration(
                             color: AppColors.primary.withValues(alpha: 0.1),
                             borderRadius: AppRadius.allSmall,
                           ),
                           child: Text(
                             taskChat.taskStatus!,
-                            style: TextStyle(
+                            style: const TextStyle(
                               fontSize: 10,
                               color: AppColors.primary,
                             ),
                           ),
                         ),
                     ],
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _PrivateChatItem extends StatelessWidget {
-  const _PrivateChatItem({
-    required this.contact,
-  });
-
-  final ChatContact contact;
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: () {
-        context.push('/chat/${contact.id}');
-      },
-      behavior: HitTestBehavior.opaque,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 12),
-        child: Row(
-          children: [
-            // 头像
-            Stack(
-              children: [
-                CircleAvatar(
-                  radius: 26,
-                  backgroundColor: AppColors.primary.withValues(alpha: 0.1),
-                  backgroundImage: contact.user.avatar != null
-                      ? NetworkImage(contact.user.avatar!)
-                      : null,
-                  child: contact.user.avatar == null
-                      ? const Icon(Icons.person, color: AppColors.primary)
-                      : null,
-                ),
-                if (contact.isOnline)
-                  Positioned(
-                    right: 0,
-                    top: 0,
-                    child: Container(
-                      width: 10,
-                      height: 10,
-                      decoration: BoxDecoration(
-                        color: AppColors.success,
-                        shape: BoxShape.circle,
-                        border: Border.all(color: Colors.white, width: 2),
-                      ),
-                    ),
-                  ),
-                if (contact.unreadCount > 0 && !contact.isOnline)
-                  Positioned(
-                    right: 0,
-                    top: 0,
-                    child: Container(
-                      padding: const EdgeInsets.all(4),
-                      decoration: BoxDecoration(
-                        color: AppColors.error,
-                        shape: BoxShape.circle,
-                        border: Border.all(color: Colors.white, width: 2),
-                      ),
-                      constraints: const BoxConstraints(
-                        minWidth: 18,
-                        minHeight: 18,
-                      ),
-                      child: Text(
-                        contact.unreadCount > 99 ? '99+' : '${contact.unreadCount}',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 10,
-                          fontWeight: FontWeight.bold,
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-            AppSpacing.hMd,
-            
-            // 内容
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          contact.user.name.isNotEmpty ? contact.user.name : '用户${contact.user.id}',
-                          style: const TextStyle(fontWeight: FontWeight.w500),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                      Text(
-                        contact.lastMessageTime != null
-                            ? DateFormatter.formatSmart(contact.lastMessageTime!)
-                            : '',
-                        style: TextStyle(fontSize: 12, color: AppColors.textTertiaryLight),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    contact.lastMessage ?? '暂无消息',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: AppColors.textSecondaryLight,
-                      fontWeight: contact.unreadCount > 0 ? FontWeight.w500 : FontWeight.normal,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
                   ),
                 ],
               ),

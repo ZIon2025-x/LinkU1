@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_radius.dart';
+import '../../../core/utils/l10n_extension.dart';
 import '../../../core/widgets/loading_view.dart';
 import '../../../core/widgets/error_state_view.dart';
 import '../../../core/widgets/empty_state_view.dart';
@@ -25,7 +26,7 @@ class LeaderboardView extends StatelessWidget {
       )..add(const LeaderboardLoadRequested()),
       child: Scaffold(
         appBar: AppBar(
-          title: const Text('排行榜'),
+          title: Text(context.l10n.leaderboardLeaderboard),
         ),
         body: BlocBuilder<LeaderboardBloc, LeaderboardState>(
           builder: (context, state) {
@@ -37,7 +38,7 @@ class LeaderboardView extends StatelessWidget {
             if (state.status == LeaderboardStatus.error &&
                 state.leaderboards.isEmpty) {
               return ErrorStateView.loadFailed(
-                message: state.errorMessage ?? '加载失败',
+                message: state.errorMessage ?? context.l10n.tasksLoadFailed,
                 onRetry: () {
                   context.read<LeaderboardBloc>().add(
                         const LeaderboardLoadRequested(),
@@ -121,7 +122,7 @@ class _LeaderboardCard extends StatelessWidget {
                 color: AppColors.primary.withValues(alpha: 0.1),
                 borderRadius: AppRadius.allMedium,
               ),
-              child: const Icon(Icons.leaderboard, color: AppColors.primary, size: 32),
+              child: const Icon(Icons.emoji_events, color: AppColors.primary, size: 32),   // trophy.fill
             ),
             AppSpacing.hMd,
             Expanded(
@@ -145,7 +146,7 @@ class _LeaderboardCard extends StatelessWidget {
                   const SizedBox(height: 4),
                   Row(
                     children: [
-                      Icon(Icons.how_to_vote_outlined, size: 14, color: AppColors.textTertiaryLight),
+                      Icon(Icons.thumb_up_outlined, size: 14, color: AppColors.textTertiaryLight),   // hand.thumbsup
                       const SizedBox(width: 4),
                       Text(
                         '${leaderboard.voteCount} 票',

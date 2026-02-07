@@ -296,7 +296,7 @@ class _LoginViewState extends State<LoginView> {
                 TextActionButton(
                   text: '忘记密码？',
                   onPressed: () {
-                    // TODO: 忘记密码
+                    context.push('/forgot-password');
                   },
                 ),
                 TextActionButton(

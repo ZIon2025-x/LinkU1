@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:image_picker/image_picker.dart';
 
 import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_spacing.dart';
@@ -8,14 +9,15 @@ import '../../../core/design/app_radius.dart';
 import '../../../core/widgets/buttons.dart';
 import '../../../core/widgets/loading_view.dart';
 import '../../../core/widgets/error_state_view.dart';
-import '../../../core/utils/date_formatter.dart';
 import '../../../data/repositories/message_repository.dart';
-import '../../../data/models/message.dart';
 import '../../../data/services/storage_service.dart';
 import '../bloc/chat_bloc.dart';
+import '../widgets/message_group_bubble.dart';
+import '../widgets/task_chat_action_menu.dart';
 
 /// 任务聊天页
 /// 参考iOS TaskChatView.swift
+/// 增强版本：支持消息分组、操作菜单、图片发送
 class TaskChatView extends StatefulWidget {
   const TaskChatView({
     super.key,
@@ -31,7 +33,9 @@ class TaskChatView extends StatefulWidget {
 class _TaskChatViewState extends State<TaskChatView> {
   final _messageController = TextEditingController();
   final _scrollController = ScrollController();
+  final _imagePicker = ImagePicker();
   int? _currentUserId;
+  bool _showActionMenu = false;
 
   @override
   void initState() {
@@ -48,12 +52,13 @@ class _TaskChatViewState extends State<TaskChatView> {
 
   void _sendMessage() {
     if (_messageController.text.trim().isEmpty) return;
-    
+
     final content = _messageController.text.trim();
     context.read<ChatBloc>().add(
-      ChatSendMessage(content: content),
-    );
+          ChatSendMessage(content: content),
+        );
     _messageController.clear();
+    setState(() => _showActionMenu = false);
   }
 
   void _scrollToBottom() {
@@ -66,6 +71,24 @@ class _TaskChatViewState extends State<TaskChatView> {
     }
   }
 
+  Future<void> _pickImage() async {
+    final image = await _imagePicker.pickImage(
+      source: ImageSource.gallery,
+      imageQuality: 80,
+      maxWidth: 1200,
+    );
+    if (image != null && mounted) {
+      context.read<ChatBloc>().add(
+            ChatSendImage(filePath: image.path),
+          );
+      setState(() => _showActionMenu = false);
+    }
+  }
+
+  void _toggleActionMenu() {
+    setState(() => _showActionMenu = !_showActionMenu);
+  }
+
   @override
   Widget build(BuildContext context) {
     final messageRepository = context.read<MessageRepository>();
@@ -75,7 +98,6 @@ class _TaskChatViewState extends State<TaskChatView> {
         ..add(ChatLoadMessages(userId: 0, taskId: widget.taskId)),
       child: BlocConsumer<ChatBloc, ChatState>(
         listener: (context, state) {
-          // 当消息发送成功或收到新消息时，滚动到底部
           if (state.status == ChatStatus.loaded) {
             WidgetsBinding.instance.addPostFrameCallback((_) {
               _scrollToBottom();
@@ -87,24 +109,35 @@ class _TaskChatViewState extends State<TaskChatView> {
             appBar: AppBar(
               title: Text('任务 ${widget.taskId}'),
               actions: [
-                IconButton(icon: const Icon(Icons.info_outline), onPressed: () {
-                  context.push('/task/${widget.taskId}');
-                }),
+                IconButton(
+                  icon: const Icon(Icons.info_outline),
+                  onPressed: () {
+                    context.push('/tasks/${widget.taskId}');
+                  },
+                ),
               ],
             ),
             body: Column(
               children: [
                 // 任务信息卡片
                 _buildTaskInfoCard(state),
-                
-                // 消息列表
-                Expanded(
-                  child: _buildMessageList(state),
-                ),
-                
+
+                // 消息列表（使用分组）
+                Expanded(child: _buildGroupedMessageList(state)),
+
                 // 快捷操作
                 _buildQuickActions(),
-                
+
+                // 操作菜单（可展开）
+                TaskChatActionMenu(
+                  isExpanded: _showActionMenu,
+                  onImagePicker: _pickImage,
+                  onTaskDetail: () {
+                    context.push('/tasks/${widget.taskId}');
+                  },
+                  onViewLocation: null,
+                ),
+
                 // 输入区域
                 _buildInputArea(state),
               ],
@@ -116,31 +149,41 @@ class _TaskChatViewState extends State<TaskChatView> {
   }
 
   Widget _buildTaskInfoCard(ChatState state) {
-    // Try to get task info from state if available, otherwise show placeholder
-    final taskTitle = state.taskId != null ? '任务: 任务 ${widget.taskId}' : '任务: 示例任务 ${widget.taskId}';
-    
     return Container(
       padding: AppSpacing.allMd,
       decoration: BoxDecoration(
-        color: AppColors.primary.withValues(alpha: 0.1),
+        color: AppColors.primary.withValues(alpha: 0.08),
         border: Border(
           bottom: BorderSide(color: AppColors.dividerLight),
         ),
       ),
       child: Row(
         children: [
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: AppColors.primary.withValues(alpha: 0.15),
+              borderRadius: AppRadius.allSmall,
+            ),
+            child: const Icon(Icons.task_alt, color: AppColors.primary, size: 20),
+          ),
+          AppSpacing.hMd,
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  taskTitle,
+                  '任务 #${widget.taskId}',
                   style: const TextStyle(fontWeight: FontWeight.w600),
                 ),
-                const SizedBox(height: 4),
+                const SizedBox(height: 2),
                 Text(
-                  '状态: 进行中',
-                  style: TextStyle(fontSize: 12, color: AppColors.textSecondaryLight),
+                  '进行中',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: AppColors.success,
+                  ),
                 ),
               ],
             ),
@@ -148,7 +191,7 @@ class _TaskChatViewState extends State<TaskChatView> {
           SmallActionButton(
             text: '查看详情',
             onPressed: () {
-              context.push('/task/${widget.taskId}');
+              context.push('/tasks/${widget.taskId}');
             },
           ),
         ],
@@ -163,20 +206,40 @@ class _TaskChatViewState extends State<TaskChatView> {
         scrollDirection: Axis.horizontal,
         child: Row(
           children: [
-            _QuickActionChip(label: '已完成', onTap: () {}),
+            _QuickActionChip(
+              label: '已完成',
+              icon: Icons.check_circle_outline,
+              onTap: () {
+                _messageController.text = '任务已完成，请确认。';
+              },
+            ),
             AppSpacing.hSm,
-            _QuickActionChip(label: '遇到问题', onTap: () {}),
+            _QuickActionChip(
+              label: '遇到问题',
+              icon: Icons.error_outline,
+              onTap: () {
+                _messageController.text = '我遇到了一些问题：';
+              },
+            ),
             AppSpacing.hSm,
-            _QuickActionChip(label: '申请退款', onTap: () {}),
+            _QuickActionChip(
+              label: '申请退款',
+              icon: Icons.money_off,
+              onTap: () {},
+            ),
             AppSpacing.hSm,
-            _QuickActionChip(label: '上传凭证', onTap: () {}),
+            _QuickActionChip(
+              label: '上传凭证',
+              icon: Icons.upload_file,
+              onTap: _pickImage,
+            ),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildMessageList(ChatState state) {
+  Widget _buildGroupedMessageList(ChatState state) {
     if (state.status == ChatStatus.loading && state.messages.isEmpty) {
       return const LoadingView();
     }
@@ -185,33 +248,49 @@ class _TaskChatViewState extends State<TaskChatView> {
       return ErrorStateView.loadFailed(
         message: state.errorMessage,
         onRetry: () {
-          context.read<ChatBloc>().add(ChatLoadMessages(userId: 0, taskId: widget.taskId));
+          context.read<ChatBloc>().add(
+                ChatLoadMessages(userId: 0, taskId: widget.taskId),
+              );
         },
       );
     }
 
     if (state.messages.isEmpty) {
-      return const Center(
-        child: Text(
-          '还没有消息，开始对话吧',
-          style: TextStyle(color: AppColors.textSecondaryLight),
+      return Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.chat_bubble_outline,
+                size: 48, color: AppColors.textTertiaryLight),
+            AppSpacing.vMd,
+            Text(
+              '还没有消息，开始对话吧',
+              style: TextStyle(color: AppColors.textSecondaryLight),
+            ),
+          ],
         ),
       );
     }
 
-    // 反转消息列表，使最新的在底部
-    final reversedMessages = state.messages.reversed.toList();
+    // 使用消息分组
+    final groups = groupMessages(state.messages, _currentUserId);
 
     return ListView.builder(
       controller: _scrollController,
-      padding: AppSpacing.allMd,
-      itemCount: reversedMessages.length,
+      padding: const EdgeInsets.symmetric(vertical: 12),
+      itemCount: groups.length,
       itemBuilder: (context, index) {
-        final message = reversedMessages[index];
-        final isMe = _currentUserId != null && message.senderId == _currentUserId;
-        return _MessageBubble(
-          message: message,
-          isMe: isMe,
+        final group = groups[index];
+        return MessageGroupBubbleView(
+          group: group,
+          onAvatarTap: () {
+            if (group.senderId != null) {
+              context.push('/user/${group.senderId}');
+            }
+          },
+          onImageTap: (url) {
+            // TODO: 打开全屏图片查看器
+          },
         );
       },
     );
@@ -233,20 +312,30 @@ class _TaskChatViewState extends State<TaskChatView> {
       child: SafeArea(
         child: Row(
           children: [
+            // 展开/收起操作菜单
             IconButton(
-              icon: const Icon(Icons.add_circle_outline),
-              onPressed: () {},
-              color: AppColors.textSecondaryLight,
+              icon: AnimatedRotation(
+                turns: _showActionMenu ? 0.125 : 0,
+                duration: const Duration(milliseconds: 200),
+                child: const Icon(Icons.add_circle_outline),
+              ),
+              onPressed: _toggleActionMenu,
+              color: _showActionMenu
+                  ? AppColors.primary
+                  : AppColors.textSecondaryLight,
             ),
             Expanded(
               child: TextField(
                 controller: _messageController,
                 enabled: !state.isSending,
+                maxLines: 4,
+                minLines: 1,
                 decoration: InputDecoration(
                   hintText: '输入消息...',
                   filled: true,
                   fillColor: AppColors.skeletonBase,
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                  contentPadding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                   border: OutlineInputBorder(
                     borderRadius: AppRadius.allPill,
                     borderSide: BorderSide.none,
@@ -254,6 +343,11 @@ class _TaskChatViewState extends State<TaskChatView> {
                 ),
                 textInputAction: TextInputAction.send,
                 onSubmitted: (_) => _sendMessage(),
+                onTap: () {
+                  if (_showActionMenu) {
+                    setState(() => _showActionMenu = false);
+                  }
+                },
               ),
             ),
             AppSpacing.hSm,
@@ -279,10 +373,12 @@ class _QuickActionChip extends StatelessWidget {
   const _QuickActionChip({
     required this.label,
     required this.onTap,
+    this.icon,
   });
 
   final String label;
   final VoidCallback onTap;
+  final IconData? icon;
 
   @override
   Widget build(BuildContext context) {
@@ -291,91 +387,22 @@ class _QuickActionChip extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         decoration: BoxDecoration(
-          border: Border.all(color: AppColors.primary),
+          border: Border.all(color: AppColors.primary.withValues(alpha: 0.5)),
           borderRadius: AppRadius.allPill,
         ),
-        child: Text(
-          label,
-          style: const TextStyle(
-            fontSize: 12,
-            color: AppColors.primary,
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _MessageBubble extends StatelessWidget {
-  const _MessageBubble({
-    required this.message,
-    required this.isMe,
-  });
-
-  final Message message;
-  final bool isMe;
-
-  @override
-  Widget build(BuildContext context) {
-    final timeText = message.createdAt != null
-        ? DateFormatter.formatMessageTime(message.createdAt!)
-        : '';
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(
-        mainAxisAlignment: isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
-        children: [
-          Flexible(
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-              decoration: BoxDecoration(
-                color: isMe ? AppColors.primary : AppColors.skeletonBase,
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  if (message.isImage && message.imageUrl != null)
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(8),
-                      child: Image.network(
-                        message.imageUrl!,
-                        width: 200,
-                        height: 200,
-                        fit: BoxFit.cover,
-                        errorBuilder: (context, error, stackTrace) {
-                          return Container(
-                            width: 200,
-                            height: 200,
-                            color: AppColors.skeletonBase,
-                            child: const Icon(Icons.broken_image),
-                          );
-                        },
-                      ),
-                    )
-                  else
-                    Text(
-                      message.content,
-                      style: TextStyle(
-                        color: isMe ? Colors.white : AppColors.textPrimaryLight,
-                      ),
-                    ),
-                  if (timeText.isNotEmpty) ...[
-                    const SizedBox(height: 2),
-                    Text(
-                      timeText,
-                      style: TextStyle(
-                        fontSize: 10,
-                        color: isMe ? Colors.white70 : AppColors.textTertiaryLight,
-                      ),
-                    ),
-                  ],
-                ],
-              ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (icon != null) ...[
+              Icon(icon, size: 14, color: AppColors.primary),
+              const SizedBox(width: 4),
+            ],
+            Text(
+              label,
+              style: const TextStyle(fontSize: 12, color: AppColors.primary),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

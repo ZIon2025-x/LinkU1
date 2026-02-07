@@ -97,6 +97,70 @@ class LeaderboardRepository {
     return LeaderboardItem.fromJson(response.data!);
   }
 
+  /// 获取排行榜条目详情
+  Future<Map<String, dynamic>> getItemDetail(int itemId) async {
+    final response = await _apiService.get<Map<String, dynamic>>(
+      '${ApiEndpoints.leaderboardItemById}/$itemId',
+    );
+
+    if (!response.isSuccess || response.data == null) {
+      throw LeaderboardException(response.message ?? '获取条目详情失败');
+    }
+
+    return response.data!;
+  }
+
+  /// 申请创建排行榜
+  Future<Leaderboard> applyLeaderboard({
+    required String title,
+    required String description,
+    String? rules,
+    String? location,
+    String? coverImage,
+  }) async {
+    final response = await _apiService.post<Map<String, dynamic>>(
+      ApiEndpoints.applyLeaderboard,
+      data: {
+        'title': title,
+        'description': description,
+        if (rules != null) 'rules': rules,
+        if (location != null) 'location': location,
+        if (coverImage != null) 'cover_image': coverImage,
+      },
+    );
+
+    if (!response.isSuccess || response.data == null) {
+      throw LeaderboardException(response.message ?? '申请排行榜失败');
+    }
+
+    return Leaderboard.fromJson(response.data!);
+  }
+
+  /// 提交排行榜条目
+  Future<LeaderboardItem> submitItem({
+    required int leaderboardId,
+    required String name,
+    String? description,
+    double? score,
+    List<String>? images,
+  }) async {
+    final response = await _apiService.post<Map<String, dynamic>>(
+      ApiEndpoints.submitLeaderboardItem(leaderboardId),
+      data: {
+        'name': name,
+        if (description != null) 'description': description,
+        if (score != null) 'score': score,
+        if (images != null) 'images': images,
+      },
+    );
+
+    if (!response.isSuccess || response.data == null) {
+      throw LeaderboardException(response.message ?? '提交条目失败');
+    }
+
+    return LeaderboardItem.fromJson(response.data!);
+  }
+
   /// 获取我的排行榜
   Future<LeaderboardListResponse> getMyLeaderboards({
     int page = 1,

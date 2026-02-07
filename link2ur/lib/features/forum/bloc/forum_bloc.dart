@@ -98,6 +98,24 @@ class ForumCreatePost extends ForumEvent {
   List<Object?> get props => [request];
 }
 
+class ForumLoadMyPosts extends ForumEvent {
+  const ForumLoadMyPosts({this.page = 1});
+
+  final int page;
+
+  @override
+  List<Object?> get props => [page];
+}
+
+class ForumLoadFavoritedPosts extends ForumEvent {
+  const ForumLoadFavoritedPosts({this.page = 1});
+
+  final int page;
+
+  @override
+  List<Object?> get props => [page];
+}
+
 class ForumReplyPost extends ForumEvent {
   const ForumReplyPost({
     required this.postId,
@@ -133,6 +151,10 @@ class ForumState extends Equatable {
     this.replies = const [],
     this.isCreatingPost = false,
     this.isReplying = false,
+    this.myPosts = const [],
+    this.favoritedPosts = const [],
+    this.isLoadingMyPosts = false,
+    this.isLoadingFavoritedPosts = false,
   });
 
   final ForumStatus status;
@@ -149,6 +171,10 @@ class ForumState extends Equatable {
   final List<ForumReply> replies;
   final bool isCreatingPost;
   final bool isReplying;
+  final List<ForumPost> myPosts;
+  final List<ForumPost> favoritedPosts;
+  final bool isLoadingMyPosts;
+  final bool isLoadingFavoritedPosts;
 
   bool get isLoading => status == ForumStatus.loading;
 
@@ -168,6 +194,10 @@ class ForumState extends Equatable {
     List<ForumReply>? replies,
     bool? isCreatingPost,
     bool? isReplying,
+    List<ForumPost>? myPosts,
+    List<ForumPost>? favoritedPosts,
+    bool? isLoadingMyPosts,
+    bool? isLoadingFavoritedPosts,
   }) {
     return ForumState(
       status: status ?? this.status,
@@ -185,6 +215,11 @@ class ForumState extends Equatable {
       replies: replies ?? this.replies,
       isCreatingPost: isCreatingPost ?? this.isCreatingPost,
       isReplying: isReplying ?? this.isReplying,
+      myPosts: myPosts ?? this.myPosts,
+      favoritedPosts: favoritedPosts ?? this.favoritedPosts,
+      isLoadingMyPosts: isLoadingMyPosts ?? this.isLoadingMyPosts,
+      isLoadingFavoritedPosts:
+          isLoadingFavoritedPosts ?? this.isLoadingFavoritedPosts,
     );
   }
 
@@ -204,6 +239,10 @@ class ForumState extends Equatable {
         replies,
         isCreatingPost,
         isReplying,
+        myPosts,
+        favoritedPosts,
+        isLoadingMyPosts,
+        isLoadingFavoritedPosts,
       ];
 }
 
@@ -225,6 +264,8 @@ class ForumBloc extends Bloc<ForumEvent, ForumState> {
     on<ForumLoadReplies>(_onLoadReplies);
     on<ForumCreatePost>(_onCreatePost);
     on<ForumReplyPost>(_onReplyPost);
+    on<ForumLoadMyPosts>(_onLoadMyPosts);
+    on<ForumLoadFavoritedPosts>(_onLoadFavoritedPosts);
   }
 
   final ForumRepository _forumRepository;
@@ -514,6 +555,49 @@ class ForumBloc extends Bloc<ForumEvent, ForumState> {
       AppLogger.error('Failed to reply post', e);
       emit(state.copyWith(
         isReplying: false,
+        errorMessage: e.toString(),
+      ));
+    }
+  }
+
+  Future<void> _onLoadMyPosts(
+    ForumLoadMyPosts event,
+    Emitter<ForumState> emit,
+  ) async {
+    emit(state.copyWith(isLoadingMyPosts: true));
+
+    try {
+      final response = await _forumRepository.getMyPosts(page: event.page);
+      emit(state.copyWith(
+        myPosts: response.posts,
+        isLoadingMyPosts: false,
+      ));
+    } catch (e) {
+      AppLogger.error('Failed to load my posts', e);
+      emit(state.copyWith(
+        isLoadingMyPosts: false,
+        errorMessage: e.toString(),
+      ));
+    }
+  }
+
+  Future<void> _onLoadFavoritedPosts(
+    ForumLoadFavoritedPosts event,
+    Emitter<ForumState> emit,
+  ) async {
+    emit(state.copyWith(isLoadingFavoritedPosts: true));
+
+    try {
+      final response =
+          await _forumRepository.getFavoritePosts(page: event.page);
+      emit(state.copyWith(
+        favoritedPosts: response.posts,
+        isLoadingFavoritedPosts: false,
+      ));
+    } catch (e) {
+      AppLogger.error('Failed to load favorited posts', e);
+      emit(state.copyWith(
+        isLoadingFavoritedPosts: false,
         errorMessage: e.toString(),
       ));
     }

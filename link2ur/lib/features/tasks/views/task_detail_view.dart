@@ -1,15 +1,20 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_spacing.dart';
+import '../../../core/design/app_typography.dart';
 import '../../../core/design/app_radius.dart';
 import '../../../core/widgets/buttons.dart';
 import '../../../core/widgets/cards.dart';
 import '../../../core/widgets/skeleton_view.dart';
 import '../../../core/widgets/error_state_view.dart';
 import '../../../core/widgets/async_image_view.dart';
+import '../../../core/widgets/full_screen_image_view.dart';
+import '../../../core/widgets/custom_share_panel.dart';
+import '../../../core/widgets/user_identity_badges.dart';
 import '../../../data/models/task.dart';
 import '../../../data/repositories/task_repository.dart';
 import '../bloc/task_detail_bloc.dart';
@@ -53,7 +58,17 @@ class _TaskDetailContent extends StatelessWidget {
             actions: [
               IconButton(
                 icon: const Icon(Icons.share_outlined),
-                onPressed: () {},
+                onPressed: () {
+                  if (state.task != null) {
+                    HapticFeedback.selectionClick();
+                    CustomSharePanel.show(
+                      context,
+                      title: state.task!.displayTitle,
+                      description: state.task!.displayDescription ?? '',
+                      url: 'https://link2ur.com/tasks/${state.task!.id}',
+                    );
+                  }
+                },
               ),
               IconButton(
                 icon: const Icon(Icons.more_horiz),
@@ -165,15 +180,51 @@ class _TaskDetailContent extends StatelessWidget {
   Widget _buildImageCarousel(Task task) {
     return SizedBox(
       height: 250,
-      child: PageView.builder(
-        itemCount: task.images.length,
-        itemBuilder: (context, index) {
-          return AsyncImageView(
-            imageUrl: task.images[index],
-            width: double.infinity,
-            height: 250,
-          );
-        },
+      child: Stack(
+        children: [
+          PageView.builder(
+            itemCount: task.images.length,
+            itemBuilder: (context, index) {
+              return GestureDetector(
+                onTap: () {
+                  // 点击图片全屏查看
+                  FullScreenImageView.show(
+                    context,
+                    images: task.images,
+                    initialIndex: index,
+                  );
+                },
+                child: AsyncImageView(
+                  imageUrl: task.images[index],
+                  width: double.infinity,
+                  height: 250,
+                ),
+              );
+            },
+          ),
+          // 图片数量指示器
+          if (task.images.length > 1)
+            Positioned(
+              right: 12,
+              bottom: 12,
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 4,
+                ),
+                decoration: BoxDecoration(
+                  color: Colors.black.withValues(alpha: 0.6),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  '1/${task.images.length}',
+                  style: AppTypography.caption.copyWith(
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+            ),
+        ],
       ),
     );
   }
@@ -239,58 +290,60 @@ class _TaskDetailContent extends StatelessWidget {
   }
 
   Widget _buildPosterCard(BuildContext context, Task task) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return AppCard(
       onTap: task.poster != null
-          ? () => context.push('/chat/${task.posterId}')
+          ? () {
+              HapticFeedback.selectionClick();
+              context.push('/chat/${task.posterId}');
+            }
           : null,
       child: Row(
         children: [
-          CircleAvatar(
-            radius: 24,
-            backgroundColor: AppColors.primary,
-            child: task.poster?.avatar != null
-                ? ClipOval(
-                    child: Image.network(
-                      task.poster!.avatar!,
-                      width: 48,
-                      height: 48,
-                      fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) =>
-                          const Icon(Icons.person, color: Colors.white),
-                    ),
-                  )
-                : const Icon(Icons.person, color: Colors.white),
+          AvatarView(
+            imageUrl: task.poster?.avatar,
+            name: task.poster?.name ?? '发布者',
+            size: 48,
           ),
           AppSpacing.hMd,
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  task.poster?.name ?? '发布者',
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-                if (task.poster?.isVerified == true)
-                  Row(
-                    children: [
-                      Icon(Icons.verified, size: 14, color: AppColors.primary),
-                      const SizedBox(width: 4),
-                      Text(
-                        '已认证',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: AppColors.textSecondaryLight,
-                        ),
+                Row(
+                  children: [
+                    Text(
+                      task.poster?.name ?? '发布者',
+                      style: AppTypography.bodyBold.copyWith(
+                        color: isDark
+                            ? AppColors.textPrimaryDark
+                            : AppColors.textPrimaryLight,
                       ),
+                    ),
+                    if (task.poster?.isVerified == true) ...[
+                      AppSpacing.hXs,
+                      const Icon(Icons.verified,
+                          size: 16, color: AppColors.primary),
                     ],
+                  ],
+                ),
+                if (task.poster?.isVerified == true) ...[
+                  AppSpacing.vXs,
+                  UserIdentityBadges(
+                    isStudentVerified: task.poster?.isVerified,
+                    compact: true,
                   ),
+                ],
               ],
             ),
           ),
-          const Icon(Icons.chevron_right),
+          Icon(
+            Icons.chevron_right,
+            color: isDark
+                ? AppColors.textTertiaryDark
+                : AppColors.textTertiaryLight,
+          ),
         ],
       ),
     );

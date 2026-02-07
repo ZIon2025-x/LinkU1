@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_radius.dart';
+import '../../../core/utils/l10n_extension.dart';
 import '../../../core/widgets/loading_view.dart';
 import '../../../core/widgets/error_state_view.dart';
 import '../../../core/widgets/empty_state_view.dart';
@@ -46,7 +47,7 @@ class _FleaMarketViewContent extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('跳蚤市场'),
+        title: Text(context.l10n.fleaMarketFleaMarket),
       ),
       body: Column(
         children: [
@@ -55,7 +56,7 @@ class _FleaMarketViewContent extends StatelessWidget {
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
             child: TextField(
               decoration: InputDecoration(
-                hintText: '搜索商品...',
+                hintText: context.l10n.fleaMarketSearchItems,
                 prefixIcon: const Icon(Icons.search, size: 20),
                 filled: true,
                 fillColor: Theme.of(context).brightness == Brightness.dark
@@ -208,7 +209,9 @@ class _FleaMarketItemCard extends StatelessWidget {
       },
       child: Container(
         decoration: BoxDecoration(
-          color: Theme.of(context).cardColor,
+          color: isDark
+              ? AppColors.cardBackgroundDark
+              : AppColors.cardBackgroundLight,
           borderRadius: AppRadius.allMedium,
           boxShadow: [
             BoxShadow(
@@ -297,7 +300,9 @@ class _FleaMarketItemCard extends StatelessWidget {
                               ? Icons.verified
                               : Icons.person,
                           size: 12,
-                          color: AppColors.textTertiaryLight,
+                          color: isDark
+                              ? AppColors.textTertiaryDark
+                              : AppColors.textTertiaryLight,
                         ),
                         const SizedBox(width: 4),
                         Text(
@@ -308,7 +313,9 @@ class _FleaMarketItemCard extends StatelessWidget {
                                   : '普通用户',
                           style: TextStyle(
                             fontSize: 10,
-                            color: AppColors.textTertiaryLight,
+                            color: isDark
+                                ? AppColors.textTertiaryDark
+                                : AppColors.textTertiaryLight,
                           ),
                         ),
                       ],

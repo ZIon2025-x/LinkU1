@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_spacing.dart';
@@ -37,6 +38,11 @@ class LeaderboardDetailView extends StatelessWidget {
             },
           ),
           actions: [
+            IconButton(
+              icon: const Icon(Icons.add_circle_outline),
+              tooltip: '申请排行榜',
+              onPressed: () => context.push('/leaderboard/apply'),
+            ),
             IconButton(icon: const Icon(Icons.share_outlined), onPressed: () {}),
           ],
         ),
@@ -79,16 +85,20 @@ class LeaderboardDetailView extends StatelessWidget {
               itemCount: sortedItems.length,
               separatorBuilder: (context, index) => AppSpacing.vSm,
               itemBuilder: (context, index) {
-                return _RankItem(
-                  item: sortedItems[index],
-                  rank: index + 1,
+                final item = sortedItems[index];
+                return GestureDetector(
+                  onTap: () => context.push('/leaderboard/item/${item.id}'),
+                  child: _RankItem(
+                    item: item,
+                    rank: index + 1,
+                  ),
                 );
               },
             );
           },
         ),
         floatingActionButton: FloatingActionButton.extended(
-          onPressed: () {},
+          onPressed: () => context.push('/leaderboard/$leaderboardId/submit'),
           backgroundColor: AppColors.primary,
           icon: const Icon(Icons.add, color: Colors.white),
           label: const Text('提交竞品', style: TextStyle(color: Colors.white)),

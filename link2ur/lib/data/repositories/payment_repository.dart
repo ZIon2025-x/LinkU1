@@ -77,6 +77,50 @@ class PaymentRepository {
     return response.data!['url'] as String? ?? '';
   }
 
+  /// 获取Stripe Connect收款记录
+  Future<List<Map<String, dynamic>>> getConnectPayments({
+    int page = 1,
+    int pageSize = 20,
+  }) async {
+    final response = await _apiService.get<Map<String, dynamic>>(
+      ApiEndpoints.stripeConnectTransactions,
+      queryParameters: {
+        'page': page,
+        'page_size': pageSize,
+        'type': 'payment',
+      },
+    );
+
+    if (!response.isSuccess || response.data == null) {
+      throw PaymentException(response.message ?? '获取收款记录失败');
+    }
+
+    final items = response.data!['items'] as List<dynamic>? ?? [];
+    return items.map((e) => e as Map<String, dynamic>).toList();
+  }
+
+  /// 获取Stripe Connect提现记录
+  Future<List<Map<String, dynamic>>> getConnectPayouts({
+    int page = 1,
+    int pageSize = 20,
+  }) async {
+    final response = await _apiService.get<Map<String, dynamic>>(
+      ApiEndpoints.stripeConnectTransactions,
+      queryParameters: {
+        'page': page,
+        'page_size': pageSize,
+        'type': 'payout',
+      },
+    );
+
+    if (!response.isSuccess || response.data == null) {
+      throw PaymentException(response.message ?? '获取提现记录失败');
+    }
+
+    final items = response.data!['items'] as List<dynamic>? ?? [];
+    return items.map((e) => e as Map<String, dynamic>).toList();
+  }
+
   /// 获取Stripe Connect状态
   Future<StripeConnectStatus> getStripeConnectStatus() async {
     final response = await _apiService.get<Map<String, dynamic>>(

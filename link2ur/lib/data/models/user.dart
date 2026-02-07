@@ -11,7 +11,9 @@ class User extends Equatable {
     this.avatar,
     this.bio,
     this.isVerified = false,
-    this.userLevel = 1,
+    this.userLevel,
+    this.isExpert = false,
+    this.isStudentVerified = false,
     this.taskCount = 0,
     this.completedTaskCount = 0,
     this.avgRating,
@@ -28,7 +30,9 @@ class User extends Equatable {
   final String? avatar;
   final String? bio;
   final bool isVerified;
-  final int userLevel;
+  final String? userLevel; // 后端返回字符串: "normal", "vip", "super"
+  final bool isExpert;
+  final bool isStudentVerified;
   final int taskCount;
   final int completedTaskCount;
   final double? avgRating;
@@ -63,7 +67,9 @@ class User extends Equatable {
       avatar: json['avatar'] as String?,
       bio: json['bio'] as String?,
       isVerified: json['is_verified'] as bool? ?? false,
-      userLevel: json['user_level'] as int? ?? 1,
+      userLevel: _parseUserLevel(json['user_level']),
+      isExpert: json['is_expert'] as bool? ?? false,
+      isStudentVerified: json['is_student_verified'] as bool? ?? false,
       taskCount: json['task_count'] as int? ?? 0,
       completedTaskCount: json['completed_task_count'] as int? ?? 0,
       avgRating: (json['avg_rating'] as num?)?.toDouble(),
@@ -86,6 +92,8 @@ class User extends Equatable {
       'bio': bio,
       'is_verified': isVerified,
       'user_level': userLevel,
+      'is_expert': isExpert,
+      'is_student_verified': isStudentVerified,
       'task_count': taskCount,
       'completed_task_count': completedTaskCount,
       'avg_rating': avgRating,
@@ -104,7 +112,9 @@ class User extends Equatable {
     String? avatar,
     String? bio,
     bool? isVerified,
-    int? userLevel,
+    String? userLevel,
+    bool? isExpert,
+    bool? isStudentVerified,
     int? taskCount,
     int? completedTaskCount,
     double? avgRating,
@@ -122,6 +132,8 @@ class User extends Equatable {
       bio: bio ?? this.bio,
       isVerified: isVerified ?? this.isVerified,
       userLevel: userLevel ?? this.userLevel,
+      isExpert: isExpert ?? this.isExpert,
+      isStudentVerified: isStudentVerified ?? this.isStudentVerified,
       taskCount: taskCount ?? this.taskCount,
       completedTaskCount: completedTaskCount ?? this.completedTaskCount,
       avgRating: avgRating ?? this.avgRating,
@@ -142,6 +154,8 @@ class User extends Equatable {
         bio,
         isVerified,
         userLevel,
+        isExpert,
+        isStudentVerified,
         taskCount,
         completedTaskCount,
         avgRating,
@@ -150,6 +164,30 @@ class User extends Equatable {
         isAdmin,
         createdAt,
       ];
+
+  /// 信用分（百分制，由avgRating转换）
+  String get creditScoreDisplay {
+    if (avgRating == null || avgRating! <= 0) return '--';
+    final creditScore = (avgRating! / 5.0) * 100.0;
+    return '${creditScore.toInt()}';
+  }
+
+  /// 解析 user_level 字段（后端可能返回 int 或 String）
+  static String? _parseUserLevel(dynamic value) {
+    if (value == null) return null;
+    if (value is String) return value;
+    if (value is int) {
+      switch (value) {
+        case 2:
+          return 'vip';
+        case 3:
+          return 'super';
+        default:
+          return 'normal';
+      }
+    }
+    return value.toString();
+  }
 
   /// 空用户
   static const empty = User(id: 0, name: '');

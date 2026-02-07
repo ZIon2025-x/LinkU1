@@ -1,215 +1,2813 @@
 {
   "@@locale": "en",
-  "appTitle": "Link²Ur",
-  "home": "Home",
-  "community": "Community",
-  "messages": "Messages",
-  "profile": "Profile",
-  "login": "Login",
-  "register": "Register",
-  "logout": "Logout",
-  "logoutConfirmTitle": "Confirm Logout",
-  "logoutConfirmMessage": "Are you sure you want to logout?",
-  "cancel": "Cancel",
-  "confirm": "Confirm",
-  "save": "Save",
-  "submit": "Submit",
-  "delete": "Delete",
-  "edit": "Edit",
-  "search": "Search",
-  "loading": "Loading...",
-  "loadFailed": "Load failed",
-  "retry": "Retry",
-  "noData": "No data",
-  "noMore": "No more",
-  "pullToRefresh": "Pull to refresh",
-  "settings": "Settings",
-  "settingsTitle": "Settings",
-  "accountInfo": "Account Info",
-  "email": "Email",
-  "phone": "Phone",
-  "notBound": "Not bound",
-  "preferences": "Preferences",
-  "language": "Language",
-  "chinese": "Chinese",
-  "english": "English",
-  "notifications": "Notifications",
-  "receiveNotifications": "Receive push notifications",
-  "appearance": "Appearance",
-  "themeMode": "Theme",
-  "themeSystem": "System",
+  "commonOk": "OK",
+  "commonCancel": "Cancel",
+  "commonGoSetup": "Go to setup",
+  "commonConfirm": "Confirm",
+  "commonDelete": "Delete",
+  "commonSave": "Save",
+  "commonEdit": "Edit",
+  "commonClose": "Close",
+  "commonRetry": "Retry",
+  "commonLoading": "Loading...",
+  "commonSearch": "Search",
+  "commonClear": "Clear",
+  "commonSubmit": "Submit",
+  "commonSubmitting": "Submitting...",
+  "commonBack": "Back",
+  "commonNext": "Next",
+  "commonFinish": "Finish",
+  "commonDone": "Done",
+  "commonNotice": "Notice",
+  "commonShare": "Share",
+  "commonMore": "More",
+  "commonViewAll": "View All",
+  "commonLoadingImage": "Loading image...",
+  "commonAll": "All",
+  "commonFilter": "Filter",
+  "commonNotProvided": "Not provided",
+  "commonPleaseSelect": "Please select",
+  "commonUser": "User",
+  "appName": "Link²Ur",
+  "appTagline": "Connect you and me, create value",
+  "appUser": "Link²Ur User",
+  "appTermsOfService": "Terms of Service",
+  "appPrivacyPolicy": "Privacy Policy",
+  "appAbout": "About",
+  "appVersion": "Version",
+  "authLogin": "Login",
+  "authRegister": "Register",
+  "authLogout": "Logout",
+  "authForgotPassword": "Forgot Password",
+  "authEmail": "Email",
+  "authEmailOrId": "Email/ID",
+  "authPassword": "Password",
+  "authPhone": "Phone",
+  "authVerificationCode": "Verification Code",
+  "authLoginLater": "Login Later",
+  "authCountdownSeconds": "{param1} seconds",
+  "@authCountdownSeconds": {
+    "placeholders": {
+      "param1": {
+        "type": "int"
+      }
+    }
+  },
+  "loginRequired": "Login Required",
+  "loginRequiredForPoints": "Please login to view points and coupons",
+  "loginRequiredForVerification": "Please login to verify student status",
+  "loginLoginNow": "Login Now",
+  "authSendCode": "Send Code",
+  "authResendCode": "Resend Code",
+  "authLoginMethod": "Login Method",
+  "authEmailPassword": "Email/ID & Password",
+  "authEmailCode": "Email Code",
+  "authPhoneCode": "Phone Verification",
+  "authEnterEmail": "Enter email",
+  "authEnterEmailOrId": "Enter email or ID",
+  "authEnterPassword": "Enter password",
+  "authEnterPhone": "Enter phone number",
+  "authEnterCode": "Enter verification code",
+  "authNoAccount": "Don't have an account?",
+  "authHasAccount": "Already have an account?",
+  "authRegisterNow": "Register Now",
+  "authLoginNow": "Login Now",
+  "authNoAccountUseCode": "Login with verification code",
+  "authRegisterSuccess": "Registration Successful",
+  "authCaptchaTitle": "Verification",
+  "authCaptchaMessage": "Please complete the verification",
+  "authCaptchaError": "Unable to load verification, please try again later",
+  "authUsername": "Username",
+  "authEnterUsername": "Enter username",
+  "authPasswordHint": "At least 8 characters, including letters and numbers",
+  "authPhoneOptional": "Phone (Optional)",
+  "authAgreeToTerms": "I have read and agree to the",
+  "authTermsOfService": "Terms of Service",
+  "authPrivacyPolicy": "Privacy Policy",
+  "homeExperts": "Experts",
+  "homeRecommended": "Link²Ur",
+  "homeNearby": "Nearby",
+  "homeGreeting": "Hello, {param1}",
+  "@homeGreeting": {
+    "placeholders": {
+      "param1": {
+        "type": "String"
+      }
+    }
+  },
+  "homeWhatToDo": "What would you like to do today?",
+  "homeMenu": "Menu",
+  "homeSearchExperts": "Search Experts",
+  "homeSearch": "Search",
+  "homeNoResults": "No results found",
+  "homeTryOtherKeywords": "Try other keywords",
+  "homeSearchHistory": "Search History",
+  "homeHotSearches": "Hot Searches",
+  "homeNoNearbyTasks": "No nearby tasks",
+  "homeNoNearbyTasksMessage": "No tasks have been posted nearby yet. Be the first to post one!",
+  "homeNoExperts": "No task experts",
+  "homeNoExpertsMessage": "No task experts yet, stay tuned...",
+  "homeRecommendedTasks": "Recommended Tasks",
+  "homeMemberPublished": "Member Published",
+  "homeMemberSeller": "Member Seller",
+  "homeNoRecommendedTasks": "No recommended tasks",
+  "homeNoRecommendedTasksMessage": "No recommended tasks yet. Check out the task hall!",
+  "homeLatestActivity": "Latest Activity",
+  "homeNoActivity": "No activity",
+  "homeNoActivityMessage": "No latest activity yet",
+  "homeNoMoreActivity": "Above are the latest activities",
+  "homeHotEvents": "Hot Events",
+  "homeNoEvents": "No events",
+  "homeNoEventsMessage": "No events at the moment, stay tuned...",
+  "homeViewEvent": "View Event",
+  "homeTapToViewEvents": "Tap to view latest events",
+  "homeMultiplePeople": "Multiple People",
+  "homeView": "View",
+  "tasksTaskDetail": "Task Details",
+  "tasksLoadFailed": "Failed to load",
+  "tasksCancelTask": "Cancel Task",
+  "tasksCancelTaskConfirm": "Are you sure you want to cancel this task?",
+  "tasksApply": "Apply",
+  "tasksApplyTask": "Apply for Task",
+  "tasksApplyMessage": "Message (Optional)",
+  "tasksApplyInfo": "Application Info",
+  "tasksPriceNegotiation": "Price Negotiation",
+  "tasksApplyHint": "Explain your application reason to the publisher to improve success rate",
+  "tasksSubmitApplication": "Submit Application",
+  "tasksNoApplicants": "No applicants",
+  "tasksApplicantsList": "Applicants List ({param1})",
+  "@tasksApplicantsList": {
+    "placeholders": {
+      "param1": {
+        "type": "int"
+      }
+    }
+  },
+  "tasksMessageLabel": "Message: {param1}",
+  "@tasksMessageLabel": {
+    "placeholders": {
+      "param1": {
+        "type": "String"
+      }
+    }
+  },
+  "tasksTaskDescription": "Task Description",
+  "tasksTimeInfo": "Time Information",
+  "tasksPublishTime": "Publish Time",
+  "tasksDeadline": "Deadline",
+  "tasksPublisher": "Publisher",
+  "tasksYourTask": "This is your task",
+  "tasksManageTask": "You can view applicants and manage the task below",
+  "tasksReviews": "Reviews ({param1})",
+  "@tasksReviews": {
+    "placeholders": {
+      "param1": {
+        "type": "int"
+      }
+    }
+  },
+  "tasksNoTaskImages": "No task images",
+  "tasksPointsReward": "{param1} Points",
+  "@tasksPointsReward": {
+    "placeholders": {
+      "param1": {
+        "type": "int"
+      }
+    }
+  },
+  "tasksShareTo": "Share to...",
+  "tasksTask": "Task",
+  "tasksTasks": "Tasks",
+  "tasksNotInterested": "Not Interested",
+  "tasksMarkNotInterestedConfirm": "Are you sure you want to mark this task as not interested?",
+  "tasksMyTasks": "My Tasks",
+  "expertsExperts": "Task Experts",
+  "expertsBecomeExpert": "Become an Expert",
+  "expertsSearchExperts": "Search Task Experts",
+  "expertsApplyNow": "Apply Now",
+  "expertsLoginToApply": "Login to Apply",
+  "forumForum": "Forum",
+  "forumAllPosts": "All Posts",
+  "forumNoPosts": "No Posts",
+  "forumNoPostsMessage": "This section has no posts yet. Be the first to post!",
+  "forumSearchPosts": "Search posts",
+  "forumPosts": "Posts",
+  "forumPostLoadFailed": "Failed to load post",
+  "forumOfficial": "Official",
+  "forumAllReplies": "All Replies",
+  "forumReply": "Reply",
+  "forumWriteReply": "Write your reply...",
+  "forumSend": "Send",
+  "forumView": "Views",
+  "forumLike": "Likes",
+  "forumFavorite": "Favorites",
+  "fleaMarketFleaMarket": "Flea Market",
+  "fleaMarketSubtitle": "Discover great items, sell your unused goods",
+  "fleaMarketNoItems": "No items",
+  "fleaMarketNoItemsMessage": "The flea market has no items yet. Be the first to post one!",
+  "fleaMarketSearchItems": "Search items",
+  "fleaMarketItems": "Items",
+  "fleaMarketCategory": "Product Category",
+  "fleaMarketProductImages": "Product Images",
+  "fleaMarketAddImage": "Add Image",
+  "fleaMarketProductInfo": "Product Information",
+  "fleaMarketProductTitle": "Product Title",
+  "fleaMarketProductTitlePlaceholder": "Enter product title",
+  "fleaMarketDescription": "Description",
+  "fleaMarketDescriptionPlaceholder": "Describe your product in detail",
+  "fleaMarketPrice": "Price",
+  "fleaMarketContact": "Contact",
+  "fleaMarketContactPlaceholder": "Enter contact information",
+  "fleaMarketNoImage": "No Image",
+  "fleaMarketTransactionLocation": "Transaction Location",
+  "fleaMarketOnline": "Online",
+  "profileProfile": "Profile",
+  "profileMyTasks": "My Tasks",
+  "profileMyPosts": "My Items",
+  "profileSettings": "Settings",
+  "profileAbout": "About",
+  "profileLogout": "Logout",
+  "profileLogoutConfirm": "Are you sure you want to logout?",
+  "profilePleaseUpdateEmailTitle": "Please Update Email",
+  "profilePleaseUpdateEmailMessage": "Please update your email address in Settings to avoid missing important notifications.",
+  "profileName": "Name",
+  "profileEnterName": "Enter name",
+  "profileEmail": "Email",
+  "profileEnterEmail": "Enter email",
+  "profileEnterNewEmail": "Enter new email",
+  "profileVerificationCode": "Verification Code",
+  "profileEnterVerificationCode": "Enter verification code",
+  "profilePhone": "Phone",
+  "profileEnterPhone": "Enter phone number",
+  "profileEnterNewPhone": "Enter new phone number",
+  "profileClickToChangeAvatar": "Tap camera icon to change avatar",
+  "profileEditProfile": "Edit Profile",
+  "profileUpdated": "Profile Updated",
+  "messagesMessages": "Messages",
+  "messagesChat": "Chat",
+  "messagesSend": "Send",
+  "messagesEnterMessage": "Enter message...",
+  "leaderboardLeaderboard": "Leaderboard",
+  "leaderboardRank": "Rank",
+  "leaderboardPoints": "Points",
+  "leaderboardUser": "User",
+  "leaderboardLoadFailed": "Failed to load leaderboard",
+  "leaderboardSortComprehensive": "Comprehensive",
+  "leaderboardSortNetVotes": "Net Votes",
+  "leaderboardSortUpvotes": "Upvotes",
+  "leaderboardSortLatest": "Latest",
+  "leaderboardNoItems": "No Items",
+  "leaderboardNoItemsMessage": "This leaderboard has no participants yet. Be the first to submit!",
+  "leaderboardItemCount": "items",
+  "leaderboardTotalVotes": "Total Votes",
+  "leaderboardViewCount": "Views",
+  "leaderboardItemLoadFailed": "Failed to load item",
+  "leaderboardSubmittedBy": "Submitted by {param1}",
+  "@leaderboardSubmittedBy": {
+    "placeholders": {
+      "param1": {
+        "type": "String"
+      }
+    }
+  },
+  "leaderboardItemDetail": "Item Detail",
+  "leaderboardNoDescription": "No description available",
+  "leaderboardContactLocation": "Contact & Location",
+  "leaderboardCurrentScore": "Current Score",
+  "leaderboardTotalVotesCount": "Total Votes",
+  "leaderboardFeaturedComments": "Featured Comments",
+  "leaderboardNoComments": "No comments yet, share your thoughts!",
+  "leaderboardOppose": "Oppose",
+  "leaderboardSupport": "Support",
+  "leaderboardNoImages": "No images",
+  "leaderboardWriteReason": "Write your reason for others to reference...",
+  "leaderboardAnonymousVote": "Anonymous Vote",
+  "leaderboardSubmitVote": "Submit Vote",
+  "leaderboardAddImage": "Add Image",
+  "leaderboardApplyNew": "Apply for New Leaderboard",
+  "leaderboardSupportReason": "Support Reason",
+  "leaderboardOpposeReason": "Oppose Reason",
+  "leaderboardAnonymousUser": "Anonymous User",
+  "leaderboardNetScore": "Net Score",
+  "leaderboardBasicInfo": "Basic Information",
+  "leaderboardContactInfo": "Contact Information (Optional)",
+  "leaderboardImageDisplay": "Image Display (Optional)",
+  "leaderboardItemName": "Item Name",
+  "leaderboardItemDescription": "Item Description",
+  "leaderboardItemAddress": "Address",
+  "leaderboardItemPhone": "Phone",
+  "leaderboardItemWebsite": "Official Website",
+  "leaderboardSubmitItem": "Submit Item",
+  "leaderboardSubmitting": "Submitting...",
+  "leaderboardNamePlaceholder": "e.g., Most Popular Chinese Restaurant",
+  "leaderboardDescriptionPlaceholder": "Please describe the purpose and inclusion criteria of this leaderboard...",
+  "leaderboardAddressPlaceholder": "Please enter detailed address",
+  "leaderboardPhonePlaceholder": "Please enter phone number",
+  "leaderboardWebsitePlaceholder": "Please enter website address",
+  "leaderboardPleaseEnterItemName": "Please enter item name",
+  "activityPerson": "person",
+  "activityPersonsBooked": "persons booked",
+  "taskExpertServicesCount": "{param1} services",
+  "@taskExpertServicesCount": {
+    "placeholders": {
+      "param1": {
+        "type": "int"
+      }
+    }
+  },
+  "taskExpertCompletionRate": "Completion Rate",
+  "taskExpertNoServices": "This expert has no services available yet",
+  "taskExpertOrder": "order",
+  "taskExpertCompletionRatePercent": "{param1}% Completion Rate",
+  "@taskExpertCompletionRatePercent": {
+    "placeholders": {
+      "param1": {
+        "type": "int"
+      }
+    }
+  },
+  "taskExpertSearchExperts": "Search Task Experts",
+  "taskExpertNoExpertsFound": "No experts found",
+  "taskExpertNoExpertsFoundMessage": "Try adjusting filter conditions",
+  "taskExpertNoExpertsFoundWithQuery": "No experts found containing \\",
+  "taskExpertSearchTitle": "Search experts",
+  "taskExpertAllTypes": "All Types",
+  "taskExpertType": "Type",
+  "taskExpertLocation": "Location",
+  "taskExpertAllCities": "All Cities",
+  "taskExpertRating": "Rating",
+  "taskExpertCompleted": "Completed",
+  "serviceLoading": "Loading...",
+  "serviceLoadFailed": "Failed to load service information",
+  "serviceNeedDescription": "Briefly describe your needs to help the expert understand...",
+  "locationGoogleMaps": "Google Maps",
+  "webviewWebPage": "Web Page",
+  "webviewLoading": "Loading...",
+  "webviewDone": "Done",
+  "profileRecentTasks": "Recent Tasks",
+  "profileUserReviews": "User Reviews",
+  "profileJoinedDays": "Joined {param1} days ago",
+  "@profileJoinedDays": {
+    "placeholders": {
+      "param1": {
+        "type": "int"
+      }
+    }
+  },
+  "profileReward": "Reward",
+  "profileSelectAvatar": "Select Avatar",
+  "locationTitle": "Location",
+  "locationSearchPlaceholder": "Search location or enter Online",
+  "locationGettingAddress": "Getting address...",
+  "locationDragToSelect": "Drag map to select location",
+  "locationCurrentLocation": "Current Location",
+  "locationOnlineRemote": "Online/Remote",
+  "locationSelectTitle": "Select location",
+  "locationSearchPlace": "Search place, address, postcode...",
+  "locationMoving": "Moving",
+  "searchResultsTitle": "Search results",
+  "taskExpertLoading": "Loading...",
+  "taskExpertLoadFailed": "Failed to load expert info",
+  "externalWebLoading": "Loading...",
+  "emptyStateNoContent": "No content yet",
+  "emptyStateNoContentMessage": "Nothing here yet. Try refreshing or come back later.",
+  "emptyStateNoResults": "No results found",
+  "emptyStateNoResultsMessage": "No matching search results. Try other keywords.",
+  "leaderboardEmptyTitle": "No leaderboard yet",
+  "leaderboardEmptyMessage": "Be the first to create one!",
+  "leaderboardSortHot": "Hot",
+  "leaderboardSortVotes": "Votes",
+  "leaderboardAddItem": "Add item",
+  "leaderboardVoteCount": "votes",
+  "paymentSetupAccount": "Setup Payment Account",
+  "paymentPleaseSetupFirst": "Please set up payment account first",
+  "paymentPleaseSetupMessage": "You need to set up your payment account before applying for tasks. Please go to Settings to complete setup.",
+  "notificationsNotifications": "Notifications",
+  "notificationsNoNotifications": "No notifications",
+  "notificationsMarkAllRead": "Mark All as Read",
+  "notificationAgree": "Agree",
+  "notificationReject": "Reject",
+  "notificationExpired": "Expired",
+  "notificationNoNotifications": "No Notifications",
+  "notificationNoNotificationsMessage": "No notification messages received yet",
+  "notificationEnableNotification": "Enable Notifications",
+  "notificationEnableNotificationTitle": "Enable Notifications",
+  "notificationEnableNotificationMessage": "Receive task updates and message reminders in time",
+  "notificationEnableNotificationDescription": "Don't miss any important information",
+  "notificationAllowNotification": "Allow Notifications",
+  "notificationNotNow": "Not Now",
+  "studentVerificationVerification": "Student Verification",
+  "studentVerificationSubmit": "Submit Verification",
+  "studentVerificationUploadDocument": "Upload Document",
+  "studentVerificationEmailInfo": "Email Information",
+  "studentVerificationSchoolEmail": "School Email",
+  "studentVerificationSchoolEmailPlaceholder": "Enter your .ac.uk or .edu email",
+  "studentVerificationRenewVerification": "Renew Verification",
+  "studentVerificationChangeEmail": "Change Email",
+  "studentVerificationSubmitVerification": "Submit Verification",
+  "studentVerificationStudentVerificationTitle": "Student Verification",
+  "studentVerificationDescription": "Verify your student identity to enjoy student-exclusive benefits",
+  "studentVerificationStartVerification": "Start Verification",
+  "studentVerificationStatus": "Status: {param1}",
+  "@studentVerificationStatus": {
+    "placeholders": {
+      "param1": {
+        "type": "String"
+      }
+    }
+  },
+  "studentVerificationEmailInstruction": "Note: Please enter your school email address, and we will send a verification email to that address.",
+  "studentVerificationRenewInfo": "Renewal Information",
+  "studentVerificationRenewEmailPlaceholder": "Enter your school email",
+  "studentVerificationRenewInstruction": "Note: Please enter your school email address to renew verification.",
+  "studentVerificationNewSchoolEmail": "New School Email",
+  "studentVerificationNewSchoolEmailPlaceholder": "Enter new school email",
+  "studentVerificationChangeEmailInstruction": "Note: Please enter a new school email address. After changing, re-verification is required.",
+  "studentVerificationBenefitCampusLife": "Post Campus Life Tasks",
+  "studentVerificationBenefitCampusLifeDescription": "Only verified students can post \\",
+  "studentVerificationBenefitStudentCommunity": "Access Student Community",
+  "studentVerificationBenefitStudentCommunityDescription": "Access exclusive student forum sections and interact with schoolmates",
+  "studentVerificationBenefitExclusiveBenefits": "Student-Exclusive Benefits",
+  "studentVerificationBenefitExclusiveBenefitsDescription": "Enjoy student discounts, exclusive events and more privileges",
+  "studentVerificationBenefitVerificationBadge": "Verification Badge",
+  "studentVerificationBenefitVerificationBadgeDescription": "Display student verification badge on profile to increase trust",
+  "studentVerificationVerificationEmail": "Verification Email",
+  "studentVerificationVerificationTime": "Verification Time",
+  "studentVerificationExpiryTime": "Expiry Time",
+  "studentVerificationDaysRemaining": "Days Remaining",
+  "studentVerificationDaysFormat": "{param1} days",
+  "@studentVerificationDaysFormat": {
+    "placeholders": {
+      "param1": {
+        "type": "int"
+      }
+    }
+  },
+  "studentVerificationSubmitting": "Submitting...",
+  "studentVerificationSendEmail": "Send Verification Email",
+  "studentVerificationRenewing": "Renewing...",
+  "studentVerificationRenewNow": "Renew Now",
+  "studentVerificationChanging": "Changing...",
+  "studentVerificationConfirmChange": "Confirm Change",
+  "studentVerificationVerified": "Verified",
+  "studentVerificationUnverified": "Unverified",
+  "studentVerificationBenefitsTitleVerified": "Student Benefits You Enjoy",
+  "studentVerificationBenefitsTitleUnverified": "After verification, you will get",
+  "customerServiceCustomerService": "Customer Service",
+  "customerServiceChatWithService": "Chat with Customer Service",
+  "activityActivity": "Activity",
+  "activityRecentActivity": "Recent Activity",
+  "activityPostedForumPost": "posted a forum post",
+  "activityPostedFleaMarketItem": "posted a flea market item",
+  "activityCreatedLeaderboard": "created a leaderboard",
+  "activityEnded": "Ended",
+  "activityFull": "Full",
+  "activityApply": "Apply to Join",
+  "activityApplied": "Applied",
+  "activityApplyToJoin": "Apply to Join Activity",
+  "searchSearch": "Search",
+  "searchResults": "Results",
+  "searchNoResults": "No results found",
+  "searchTryOtherKeywords": "Try other keywords",
+  "searchPlaceholder": "Search tasks, experts, items...",
+  "searchTaskPlaceholder": "Search tasks",
+  "errorNetworkError": "Network Error",
+  "errorUnknownError": "Unknown Error",
+  "errorInvalidInput": "Invalid Input",
+  "errorLoginFailed": "Login Failed",
+  "errorRegisterFailed": "Registration Failed",
+  "errorError": "Error",
+  "errorRetry": "Retry",
+  "errorSomethingWentWrong": "Something went wrong",
+  "errorInvalidUrl": "Invalid request URL, please try again later",
+  "errorNetworkConnectionFailed": "Network connection failed, please check your network settings",
+  "errorRequestTimeout": "Request timeout, please try again later",
+  "errorNetworkRequestFailed": "Network request failed, please try again later",
+  "errorInvalidResponse": "Server response error, please try again later",
+  "errorBadRequest": "Invalid request parameters",
+  "errorUnauthorized": "Login expired, please login again",
+  "errorForbidden": "No permission to perform this operation",
+  "errorNotFound": "Requested resource does not exist",
+  "errorTooManyRequests": "Too many requests, please try again later",
+  "errorServerError": "Server error, please try again later",
+  "errorRequestFailed": "Request failed (Error code: {param1})",
+  "@errorRequestFailed": {
+    "placeholders": {
+      "param1": {
+        "type": "int"
+      }
+    }
+  },
+  "errorDecodingError": "Data parsing failed, please try again later",
+  "errorUnknown": "Unknown error occurred, please try again later",
+  "errorFileTooLarge": "File too large",
+  "errorFileTooLargeWithDetail": "File too large: {param1}",
+  "@errorFileTooLargeWithDetail": {
+    "placeholders": {
+      "param1": {
+        "type": "String"
+      }
+    }
+  },
+  "errorRequestFailedWithReason": "Request failed: {param1}",
+  "@errorRequestFailedWithReason": {
+    "placeholders": {
+      "param1": {
+        "type": "String"
+      }
+    }
+  },
+  "errorInvalidResponseBody": "Invalid response",
+  "errorServerErrorCode": "Server error (code: {param1})",
+  "@errorServerErrorCode": {
+    "placeholders": {
+      "param1": {
+        "type": "int"
+      }
+    }
+  },
+  "errorServerErrorCodeWithMessage": "Server error (code: {param2}): {param1}",
+  "@errorServerErrorCodeWithMessage": {
+    "placeholders": {
+      "param1": {
+        "type": "String"
+      },
+      "param2": {
+        "type": "int"
+      }
+    }
+  },
+  "errorDecodingErrorWithReason": "Data parsing error: {param1}",
+  "@errorDecodingErrorWithReason": {
+    "placeholders": {
+      "param1": {
+        "type": "String"
+      }
+    }
+  },
+  "errorCodeEmailAlreadyUsed": "This email is already used by another account",
+  "errorCodeEmailAlreadyExists": "This email is already registered. Use another email or log in",
+  "errorCodePhoneAlreadyUsed": "This phone number is already used by another account",
+  "errorCodePhoneAlreadyExists": "This phone number is already registered. Use another or log in",
+  "errorCodeUsernameAlreadyExists": "This username is already taken. Please choose another",
+  "errorCodeCodeInvalidOrExpired": "Verification code is invalid or expired. Please request a new one",
+  "errorCodeSendCodeFailed": "Failed to send verification code. Please try again later",
+  "errorCodeEmailUpdateNeedCode": "Please send a verification code to your new email first",
+  "errorCodePhoneUpdateNeedCode": "Please send a verification code to your new phone number first",
+  "errorCodeTempEmailNotAllowed": "Temporary email addresses are not allowed. Please use a real email",
+  "errorCodeLoginRequired": "Please log in to view",
+  "errorCodeForbiddenView": "You don't have permission to view this",
+  "errorCodeTaskAlreadyApplied": "You have already applied for this task",
+  "errorCodeDisputeAlreadySubmitted": "You have already submitted a dispute. Please wait for review",
+  "errorCodeRebuttalAlreadySubmitted": "You have already submitted a rebuttal",
+  "errorCodeTaskNotPaid": "Task is not paid yet. Please complete payment first",
+  "errorCodeTaskPaymentUnavailable": "Payment is no longer available for this task",
+  "errorCodeStripeDisputeFrozen": "This task is frozen due to a Stripe dispute. Please wait for it to be resolved",
+  "errorCodeStripeSetupRequired": "Please complete payout account setup first",
+  "errorCodeStripeOtherPartyNotSetup": "The other party has not set up their payout account. Please ask them to complete setup",
+  "errorCodeStripeAccountNotVerified": "Payout account is not verified yet. Please complete account verification",
+  "errorCodeStripeAccountInvalid": "Payout account is invalid. Please set it up again",
+  "errorCodeStripeVerificationFailed": "Payout account verification failed. Please check your network and try again",
+  "errorCodeRefundAmountRequired": "Please enter refund amount or percentage",
+  "errorCodeEvidenceFilesLimit": "Too many evidence files",
+  "errorCodeEvidenceTextLimit": "Evidence text must be 500 characters or less",
+  "errorCodeAccountHasActiveTasks": "Cannot delete account: you have active tasks. Complete or cancel them first",
+  "errorCodeTempEmailNoPasswordReset": "Temporary email cannot receive password reset. Please update your email in Settings",
+  "stripeDashboard": "Stripe Dashboard",
+  "stripeConnectInitFailed": "Unable to initialise payout account setup",
+  "stripeConnectLoadFailed": "Payout setup failed to load, please try again",
+  "stripeConnectLoadFailedWithReason": "Load failed: {param1}",
+  "@stripeConnectLoadFailedWithReason": {
+    "placeholders": {
+      "param1": {
+        "type": "String"
+      }
+    }
+  },
+  "stripeOnboardingCreateFailed": "Unable to create payout setup session, please try again",
+  "uploadNetworkErrorWithReason": "Network error: {param1}",
+  "@uploadNetworkErrorWithReason": {
+    "placeholders": {
+      "param1": {
+        "type": "String"
+      }
+    }
+  },
+  "uploadCannotConnectServer": "Cannot connect to server, please try again later",
+  "uploadBadRequestFormatImage": "Invalid request format, please check image format",
+  "uploadBadRequestRetry": "Invalid request, please try again",
+  "uploadFileTooLargeChooseSmaller": "File too large, please choose a smaller file",
+  "uploadForbiddenUploadImage": "No permission to upload image",
+  "uploadForbiddenUploadFile": "No permission to upload file",
+  "uploadImageTooLarge": "Image too large, please choose a smaller one",
+  "uploadImageTooLargeWithMessage": "Image too large: {param1}",
+  "@uploadImageTooLargeWithMessage": {
+    "placeholders": {
+      "param1": {
+        "type": "String"
+      }
+    }
+  },
+  "uploadServerErrorRetry": "Server error ({param1}), please try again later",
+  "@uploadServerErrorRetry": {
+    "placeholders": {
+      "param1": {
+        "type": "int"
+      }
+    }
+  },
+  "uploadServerErrorCode": "Server error ({param1})",
+  "@uploadServerErrorCode": {
+    "placeholders": {
+      "param1": {
+        "type": "int"
+      }
+    }
+  },
+  "uploadBadRequestWithMessage": "Invalid request: {param1}",
+  "@uploadBadRequestWithMessage": {
+    "placeholders": {
+      "param1": {
+        "type": "String"
+      }
+    }
+  },
+  "uploadServerErrorCodeWithMessage": "Server error ({param2}): {param1}",
+  "@uploadServerErrorCodeWithMessage": {
+    "placeholders": {
+      "param1": {
+        "type": "String"
+      },
+      "param2": {
+        "type": "int"
+      }
+    }
+  },
+  "uploadParseResponseFailed": "Failed to parse response: {param1}",
+  "@uploadParseResponseFailed": {
+    "placeholders": {
+      "param1": {
+        "type": "String"
+      }
+    }
+  },
+  "uploadInvalidResponseFormat": "Invalid server response format",
+  "uploadUnknownRetry": "Unknown error, please try again",
+  "uploadAllFailed": "All image uploads failed.\\n{param1}",
+  "@uploadAllFailed": {
+    "placeholders": {
+      "param1": {
+        "type": "String"
+      }
+    }
+  },
+  "uploadPartialFailed": "Some image uploads failed:\\n{param1}",
+  "@uploadPartialFailed": {
+    "placeholders": {
+      "param1": {
+        "type": "String"
+      }
+    }
+  },
+  "uploadPartialFailedContinue": "Some image uploads failed, continuing with uploaded images:\\n{param1}",
+  "@uploadPartialFailedContinue": {
+    "placeholders": {
+      "param1": {
+        "type": "String"
+      }
+    }
+  },
+  "uploadImageIndexError": "Image {param2}: {param1}",
+  "@uploadImageIndexError": {
+    "placeholders": {
+      "param1": {
+        "type": "String"
+      },
+      "param2": {
+        "type": "int"
+      }
+    }
+  },
+  "refundForbidden": "No permission to submit refund request",
+  "refundTaskNotFound": "Task not found or no access",
+  "refundBadRequestFormat": "Invalid request, please check your input",
+  "successOperationSuccess": "Operation Successful",
+  "successSaved": "Saved",
+  "successDeleted": "Deleted",
+  "successRefreshSuccess": "Refresh successful",
+  "successRefreshSuccessMessage": "Item refreshed, auto-removal timer reset",
+  "currencyPound": "£",
+  "currencyPoints": "Points",
+  "pointsBalance": "Points Balance",
+  "pointsUnit": "Points",
+  "pointsTotalEarned": "Total Earned",
+  "pointsTotalSpent": "Total Spent",
+  "pointsBalanceAfter": "Balance",
+  "pointsAmountFormat": "{param1} Points",
+  "@pointsAmountFormat": {
+    "placeholders": {
+      "param1": {
+        "type": "int"
+      }
+    }
+  },
+  "pointsBalanceFormat": "Balance: {param1} Points",
+  "@pointsBalanceFormat": {
+    "placeholders": {
+      "param1": {
+        "type": "int"
+      }
+    }
+  },
+  "pointsPoints": "Points",
+  "pointsPointsAndPayment": "Points + Payment",
+  "pointsPointsDeduction": "Points Deduction",
+  "pointsCheckIn": "Check In",
+  "pointsCheckedInToday": "Checked In Today",
+  "pointsCheckInReward": "Check In for Points",
+  "pointsCheckInDescription": "• Daily check-in rewards points\\n• More consecutive days, more rewards\\n• Consecutive days reset after interruption",
+  "pointsTransactionHistory": "Your point transaction history will be displayed here",
+  "pointsNoTransactionHistory": "No transaction history",
+  "pointsPointsAndCoupons": "Points & Coupons",
+  "pointsShowRecentOnly": "Show recent records only",
+  "couponCoupons": "Coupons",
+  "couponCheckIn": "Check In",
+  "couponAllowed": "Allowed",
+  "couponForbidden": "Forbidden",
+  "couponCheckInRules": "Check-in Rules",
+  "couponStatusUnused": "Unused",
+  "couponStatusUsed": "Used",
+  "couponStatusExpired": "Expired",
+  "timeJustNow": "Just now",
+  "timeMinutesAgo": "{param1} minutes ago",
+  "@timeMinutesAgo": {
+    "placeholders": {
+      "param1": {
+        "type": "int"
+      }
+    }
+  },
+  "timeHoursAgo": "{param1} hours ago",
+  "@timeHoursAgo": {
+    "placeholders": {
+      "param1": {
+        "type": "int"
+      }
+    }
+  },
+  "timeDaysAgo": "{param1} days ago",
+  "@timeDaysAgo": {
+    "placeholders": {
+      "param1": {
+        "type": "int"
+      }
+    }
+  },
+  "timeWeeksAgo": "{param1} weeks ago",
+  "@timeWeeksAgo": {
+    "placeholders": {
+      "param1": {
+        "type": "int"
+      }
+    }
+  },
+  "timeMonthsAgo": "{param1} months ago",
+  "@timeMonthsAgo": {
+    "placeholders": {
+      "param1": {
+        "type": "int"
+      }
+    }
+  },
+  "timeYearsAgo": "{param1} years ago",
+  "@timeYearsAgo": {
+    "placeholders": {
+      "param1": {
+        "type": "int"
+      }
+    }
+  },
+  "timeSecondsAgo": "{param1} seconds ago",
+  "@timeSecondsAgo": {
+    "placeholders": {
+      "param1": {
+        "type": "int"
+      }
+    }
+  },
+  "timeDeadlineUnknown": "Deadline unknown",
+  "timeExpired": "Expired",
+  "timeMonths": "{param1} months",
+  "@timeMonths": {
+    "placeholders": {
+      "param1": {
+        "type": "int"
+      }
+    }
+  },
+  "timeWeeks": "{param1} weeks",
+  "@timeWeeks": {
+    "placeholders": {
+      "param1": {
+        "type": "int"
+      }
+    }
+  },
+  "timeDays": "{param1} days",
+  "@timeDays": {
+    "placeholders": {
+      "param1": {
+        "type": "int"
+      }
+    }
+  },
+  "timeHours": "{param1} hours",
+  "@timeHours": {
+    "placeholders": {
+      "param1": {
+        "type": "int"
+      }
+    }
+  },
+  "timeMinutes": "{param1} minutes",
+  "@timeMinutes": {
+    "placeholders": {
+      "param1": {
+        "type": "int"
+      }
+    }
+  },
+  "timeSeconds": "{param1} seconds",
+  "@timeSeconds": {
+    "placeholders": {
+      "param1": {
+        "type": "int"
+      }
+    }
+  },
+  "timeMonthDayFormat": "MMM d",
+  "timeYearMonthDayFormat": "MMM d, yyyy",
+  "timeDurationHoursMinutes": "{param1} hours {param2} minutes",
+  "@timeDurationHoursMinutes": {
+    "placeholders": {
+      "param1": {
+        "type": "int"
+      },
+      "param2": {
+        "type": "int"
+      }
+    }
+  },
+  "timeDurationMinutesSeconds": "{param1} minutes {param2} seconds",
+  "@timeDurationMinutesSeconds": {
+    "placeholders": {
+      "param1": {
+        "type": "int"
+      },
+      "param2": {
+        "type": "int"
+      }
+    }
+  },
+  "timeDurationSeconds": "{param1} seconds",
+  "@timeDurationSeconds": {
+    "placeholders": {
+      "param1": {
+        "type": "int"
+      }
+    }
+  },
+  "timeWan": "万",
+  "timeWanPlus": "+",
+  "tabsHome": "Home",
+  "tabsCommunity": "Community",
+  "tabsCreate": "Create",
+  "tabsMessages": "Messages",
+  "tabsProfile": "Profile",
+  "communityForum": "Forum",
+  "communityLeaderboard": "Leaderboard",
+  "postPinned": "Pinned",
+  "postFeatured": "Featured",
+  "postOfficial": "Official",
+  "postAll": "All",
+  "actionsApprove": "Approve",
+  "actionsReject": "Reject",
+  "actionsChat": "Chat",
+  "actionsShare": "Share",
+  "actionsCancel": "Cancel",
+  "actionsConfirm": "Confirm",
+  "actionsSubmit": "Submit",
+  "actionsLoadingMessages": "Loading messages...",
+  "actionsNoMessagesYet": "No messages yet",
+  "actionsStartConversation": "Start a conversation!",
+  "actionsEnterMessage": "Enter message...",
+  "actionsPrivateMessage": "Private Message",
+  "actionsProcessing": "Processing...",
+  "actionsMarkComplete": "Mark Task Complete",
+  "actionsConfirmComplete": "Confirm Task Complete",
+  "actionsContactRecipient": "Contact Recipient",
+  "actionsContactPoster": "Contact Poster",
+  "actionsRateTask": "Rate Task",
+  "actionsCancelTask": "Cancel Task",
+  "actionsApplyForTask": "Apply for Task",
+  "actionsOptionalMessage": "Message (Optional)",
+  "actionsNegotiatePrice": "Negotiate Price",
+  "actionsApplyReasonHint": "Explain your application reason to the publisher to improve success rate",
+  "actionsSubmitApplication": "Submit Application",
+  "actionsCancelReason": "Cancel Reason (Optional)",
+  "actionsShareTo": "Share to...",
+  "profileUser": "User",
+  "profileMyTasksSubtitle": "View tasks I published and accepted",
+  "profileMyPostsSubtitle": "Manage my second-hand items",
+  "profileMyWallet": "My Wallet",
+  "profileMyWalletSubtitle": "View balance and transaction history",
+  "profileMyApplications": "My Activities",
+  "profileMyApplicationsSubtitle": "View applied and favorited activities",
+  "profilePointsCoupons": "Points & Coupons",
+  "profilePointsCouponsSubtitle": "View points, coupons and check-in",
+  "profileStudentVerification": "Student Verification",
+  "profileStudentVerificationSubtitle": "Verify student identity for discounts",
+  "profileActivity": "Activity",
+  "profileActivitySubtitle": "View and participate in activities",
+  "profileSettingsSubtitle": "App settings and preferences",
+  "profileWelcome": "Welcome to Link²Ur",
+  "profileLoginPrompt": "Login to access all features",
+  "profileConfirmLogout": "Confirm Logout",
+  "profileLogoutMessage": "Are you sure you want to logout?",
+  "taskDetailTaskDetail": "Task Details",
+  "taskDetailShare": "Share",
+  "taskDetailCancelTask": "Cancel Task",
+  "taskDetailCancelTaskConfirm": "Are you sure you want to cancel this task?",
+  "taskDetailNoTaskImages": "No task images",
+  "taskDetailVipTask": "VIP Task",
+  "taskDetailSuperTask": "Super Task",
+  "taskDetailTaskDescription": "Task Description",
+  "taskDetailTimeInfo": "Time Information",
+  "taskDetailPublishTime": "Publish Time",
+  "taskDetailDeadline": "Deadline",
+  "taskDetailPublisher": "Publisher",
+  "taskDetailBuyer": "Buyer",
+  "taskDetailSeller": "Seller",
+  "taskDetailEmailNotProvided": "Email not provided",
+  "taskDetailYourTask": "This is your task",
+  "taskDetailManageTask": "You can view applicants and manage the task below",
+  "taskDetailReviews": "Reviews ({param1})",
+  "@taskDetailReviews": {
+    "placeholders": {
+      "param1": {
+        "type": "int"
+      }
+    }
+  },
+  "taskDetailMyReviews": "My Reviews",
+  "taskDetailAnonymousUser": "Anonymous User",
+  "taskDetailUnknownUser": "Unknown User",
+  "taskDetailApplyInfo": "Application Info",
+  "taskDetailPriceNegotiation": "Price Negotiation",
+  "taskDetailApplyReasonHint": "Explain your application reason to the publisher to improve success rate",
+  "taskDetailSubmitApplication": "Submit Application",
+  "taskDetailApplicantsList": "Applicants List ({param1})",
+  "@taskDetailApplicantsList": {
+    "placeholders": {
+      "param1": {
+        "type": "int"
+      }
+    }
+  },
+  "taskDetailNoApplicants": "No applicants",
+  "taskDetailMessageLabel": "Message: {param1}",
+  "@taskDetailMessageLabel": {
+    "placeholders": {
+      "param1": {
+        "type": "String"
+      }
+    }
+  },
+  "taskDetailWaitingReview": "Waiting for publisher review",
+  "taskDetailTaskCompleted": "Task Completed",
+  "taskDetailApplicationApproved": "Application Approved",
+  "taskDetailApplicationRejected": "Application Rejected",
+  "taskDetailUnknownStatus": "Unknown Status",
+  "taskDetailApplicationSuccess": "Application Successful",
+  "taskDetailApplicationSuccessMessage": "You have successfully applied for this task. Please wait for the publisher to review.",
+  "taskDetailTaskCompletedMessage": "Congratulations! You have completed the task. Please wait for the publisher to confirm.",
+  "taskDetailConfirmCompletionSuccess": "Task Completion Confirmed",
+  "taskDetailTaskAlreadyReviewed": "Task already reviewed",
+  "taskDetailCompleteTaskSuccess": "Completion submitted",
+  "taskDetailConfirmCompletionSuccessMessage": "Task status has been updated to completed. Rewards will be automatically transferred to the task recipient.",
+  "refundRequestSubmitted": "Refund request submitted",
+  "refundRebuttalSubmitted": "Rebuttal submitted",
+  "taskDetailApplicationApprovedMessage": "Congratulations! Your application has been approved. You can start working on the task.",
+  "taskDetailPendingPaymentMessage": "The task poster is paying the platform service fee. The task will start after payment is completed.",
+  "taskDetailApplicationRejectedMessage": "Sorry, your application was not approved.",
+  "taskDetailAlreadyApplied": "You have already applied for this task.",
+  "taskDetailTaskAcceptedByOthers": "This task has been accepted by another user.",
+  "taskDetailPendingReview": "Pending Review",
+  "taskDetailApproved": "Approved",
+  "taskDetailRejected": "Rejected",
+  "taskDetailRejectApplication": "Reject Application",
+  "taskDetailRejectApplicationConfirm": "Are you sure you want to reject this application? This action cannot be undone.",
+  "taskDetailUnknown": "Unknown",
+  "taskDetailQualityGood": "Good Quality",
+  "taskDetailOnTime": "On Time",
+  "taskDetailResponsible": "Responsible",
+  "taskDetailGoodAttitude": "Good Attitude",
+  "taskDetailSkilled": "Skilled",
+  "taskDetailTrustworthy": "Trustworthy",
+  "taskDetailRecommended": "Recommended",
+  "taskDetailExcellent": "Excellent",
+  "taskDetailTaskClear": "Clear Task",
+  "taskDetailCommunicationTimely": "Timely Communication",
+  "taskDetailPaymentTimely": "Timely Payment",
+  "taskDetailReasonableRequirements": "Reasonable Requirements",
+  "taskDetailPleasantCooperation": "Pleasant Cooperation",
+  "taskDetailProfessionalEfficient": "Professional & Efficient",
+  "messagesLoadingMessages": "Loading messages...",
+  "messagesNoMessagesYet": "No messages yet",
+  "messagesStartConversation": "Start a conversation!",
+  "messagesNoTaskChats": "No Task Chats",
+  "messagesNoTaskChatsMessage": "No task-related chat records yet",
+  "messagesCustomerService": "Customer Service",
+  "messagesContactService": "Contact customer service for help",
+  "messagesInteractionInfo": "Interaction Info",
+  "messagesViewForumInteractions": "View forum interaction messages",
+  "messagesNoInteractions": "No Interactions",
+  "messagesNoInteractionsMessage": "No interaction notifications yet",
+  "messagesClickToView": "Click to view messages",
+  "messagesLoadingMore": "Loading...",
+  "messagesLoadMoreHistory": "Load more history",
+  "permissionLocationUsageDescription": "We need to access your location information to provide you with more accurate services and task recommendations",
+  "customerServiceWelcome": "Welcome to Customer Service",
+  "customerServiceStartConversation": "Click the connect button below to start chatting with customer service",
+  "customerServiceLoadingMessages": "Loading messages...",
+  "customerServiceQueuePosition": "Queue Position: No. {param1}",
+  "@customerServiceQueuePosition": {
+    "placeholders": {
+      "param1": {
+        "type": "int"
+      }
+    }
+  },
+  "customerServiceEstimatedWait": "Estimated Wait Time: {param1} seconds",
+  "@customerServiceEstimatedWait": {
+    "placeholders": {
+      "param1": {
+        "type": "int"
+      }
+    }
+  },
+  "customerServiceConversationEnded": "Conversation ended",
+  "customerServiceNewConversation": "New Conversation",
+  "customerServiceEnterMessage": "Enter message...",
+  "customerServiceConnecting": "Connecting to customer service...",
+  "customerServiceEndConversation": "End Conversation",
+  "customerServiceHistory": "History",
+  "customerServiceLoginRequired": "Please login first to use customer service",
+  "customerServiceWhatCanHelp": "How can we help you?",
+  "customerServiceNoChatHistory": "No Chat History",
+  "customerServiceStartNewConversation": "Start a new conversation!",
+  "customerServiceChatHistory": "Chat History",
+  "customerServiceDone": "Done",
+  "customerServiceServiceChat": "Service Chat",
+  "customerServiceEnded": "Ended",
+  "customerServiceInProgress": "In Progress",
+  "customerServiceRateService": "Rate Service",
+  "customerServiceSatisfactionQuestion": "Are you satisfied with {param1}'s service?",
+  "@customerServiceSatisfactionQuestion": {
+    "placeholders": {
+      "param1": {
+        "type": "String"
+      }
+    }
+  },
+  "customerServiceSelectRating": "Please select a rating",
+  "customerServiceRatingContent": "Rating Content (Optional)",
+  "customerServiceSubmitRating": "Submit Rating",
+  "customerServiceRateServiceTitle": "Rate Service",
+  "customerServiceSkip": "Skip",
+  "ratingVeryPoor": "Very Poor",
+  "ratingPoor": "Poor",
+  "ratingAverage": "Average",
+  "ratingGood": "Good",
+  "ratingExcellent": "Excellent",
+  "ratingRating": "Rating",
+  "ratingSelectTags": "Select Tags (Optional)",
+  "ratingComment": "Comment (Optional)",
+  "ratingAnonymous": "Anonymous Rating",
+  "ratingSubmit": "Submit Rating",
+  "ratingSuccess": "Review submitted",
+  "ratingAnonymousRating": "Anonymous Rating",
+  "ratingSubmitRating": "Submit Rating",
+  "ratingHalfStar": "{param1} stars",
+  "@ratingHalfStar": {
+    "placeholders": {
+      "param1": {
+        "type": "String"
+      }
+    }
+  },
+  "rating05Stars": "0.5 stars",
+  "rating15Stars": "1.5 stars",
+  "rating25Stars": "2.5 stars",
+  "rating35Stars": "3.5 stars",
+  "rating45Stars": "4.5 stars",
+  "ratingTagHighQuality": "High Quality",
+  "ratingTagOnTime": "On Time",
+  "ratingTagResponsible": "Responsible",
+  "ratingTagGoodCommunication": "Good Communication",
+  "ratingTagProfessionalEfficient": "Professional & Efficient",
+  "ratingTagTrustworthy": "Trustworthy",
+  "ratingTagStronglyRecommended": "Strongly Recommended",
+  "ratingTagExcellent": "Excellent",
+  "ratingTagClearTask": "Clear Task Description",
+  "ratingTagTimelyCommunication": "Timely Communication",
+  "ratingTagTimelyPayment": "Timely Payment",
+  "ratingTagReasonableRequirements": "Reasonable Requirements",
+  "ratingTagPleasantCooperation": "Pleasant Cooperation",
+  "ratingTagVeryProfessional": "Very Professional",
+  "taskApplicationApplyTask": "Apply for Task",
+  "taskApplicationIWantToNegotiatePrice": "I want to negotiate price",
+  "taskApplicationExpectedAmount": "Expected Amount",
+  "taskApplicationNegotiatePriceHint": "Tip: Negotiating price may affect the publisher's choice.",
+  "taskApplicationSubmitApplication": "Submit Application",
+  "taskApplicationMessage": "Message",
+  "taskApplicationMessageToApplicant": "Message to applicant...",
+  "taskApplicationIsNegotiatePrice": "Is Negotiate Price",
+  "taskApplicationNegotiateAmount": "Negotiate Amount",
+  "taskApplicationSendMessage": "Send Message",
+  "taskApplicationUnknownUser": "Unknown User",
+  "taskApplicationAdvantagePlaceholder": "Briefly explain your advantages or how to complete the task...",
+  "taskApplicationReviewPlaceholder": "Write about your collaboration experience to help other users...",
+  "emptyNoTasks": "No Tasks",
+  "emptyNoTasksMessage": "No tasks have been posted yet. Be the first to post one!",
+  "emptyNoNotifications": "No Notifications",
+  "emptyNoNotificationsMessage": "No notification messages received yet",
+  "emptyNoPaymentRecords": "No Payment Records",
+  "emptyNoPaymentRecordsMessage": "Your payment records will be displayed here",
+  "paymentStatusSuccess": "Success",
+  "paymentStatusProcessing": "Processing",
+  "paymentStatusFailed": "Failed",
+  "paymentStatusCanceled": "Canceled",
+  "paymentStatusTaskPayment": "Task Payment",
+  "paymentTaskNumber": "Task #{param1}",
+  "@paymentTaskNumber": {
+    "placeholders": {
+      "param1": {
+        "type": "int"
+      }
+    }
+  },
+  "notificationSystemMessages": "System Messages",
+  "notificationViewAllNotifications": "View All Notifications",
+  "customerServiceConversationEndedMessage": "Conversation ended. Please start a new conversation if you need help.",
+  "customerServiceConnected": "👋 Connected to customer service {param1}",
+  "@customerServiceConnected": {
+    "placeholders": {
+      "param1": {
+        "type": "String"
+      }
+    }
+  },
+  "customerServiceTotalMessages": "{param1} messages",
+  "@customerServiceTotalMessages": {
+    "placeholders": {
+      "param1": {
+        "type": "int"
+      }
+    }
+  },
+  "paymentRecordsPaymentRecords": "Payment Records",
+  "paymentRecordsLoading": "Loading...",
+  "paymentRecordsLoadFailed": "Load Failed",
+  "paymentNoPayoutRecords": "No Payout Records",
+  "paymentNoPayoutRecordsMessage": "Your payout records will be displayed here",
+  "paymentViewDetails": "View Details",
+  "paymentPayout": "Payout",
+  "paymentNoAvailableBalance": "No Available Balance",
+  "paymentPayoutRecords": "Payout Records",
+  "paymentTotalBalance": "Total Balance",
+  "paymentAvailableBalance": "Available Balance",
+  "paymentPending": "Pending",
+  "paymentPayoutAmount": "Payout Amount",
+  "paymentPayoutAmountTitle": "Payout Amount",
+  "paymentIncomeAmount": "Income Amount",
+  "paymentNoteOptional": "Note (Optional)",
+  "paymentPayoutNote": "Payout Note",
+  "paymentConfirmPayout": "Confirm Payout",
+  "paymentAccountInfo": "Account Info",
+  "paymentAccountDetails": "Account Details",
+  "paymentOpenStripeDashboard": "Open Stripe Dashboard",
+  "paymentExternalAccount": "External Account",
+  "paymentNoExternalAccount": "No External Account",
+  "paymentDetails": "Details",
+  "paymentAccountId": "Account ID",
+  "paymentDisplayName": "Display Name",
+  "paymentCountry": "Country",
+  "paymentAccountType": "Account Type",
+  "paymentDetailsSubmitted": "Details Submitted",
+  "paymentChargesEnabled": "Charges Enabled",
+  "paymentPayoutsEnabled": "Payouts Enabled",
+  "paymentYes": "Yes",
+  "paymentNo": "No",
+  "paymentBankAccount": "Bank Account",
+  "paymentCard": "Card",
+  "paymentBankName": "Bank Name",
+  "paymentAccountLast4": "Account Last 4",
+  "paymentRoutingNumber": "Routing Number",
+  "paymentAccountHolder": "Account Holder",
+  "paymentHolderType": "Holder Type",
+  "paymentIndividual": "Individual",
+  "paymentCompany": "Company",
+  "paymentStatus": "Status",
+  "paymentCardBrand": "Card Brand",
+  "paymentCardLast4": "Card Last 4",
+  "paymentExpiry": "Expiry",
+  "paymentCardType": "Type",
+  "paymentCreditCard": "Credit Card",
+  "paymentDebitCard": "Debit Card",
+  "paymentTransactionId": "Transaction ID",
+  "paymentDescription": "Description",
+  "paymentTime": "Time",
+  "paymentType": "Type",
+  "paymentIncome": "Income",
+  "paymentSource": "Source",
+  "paymentPayoutManagement": "Payout Management",
+  "paymentTransactionDetails": "Transaction Details",
+  "paymentAccountSetupComplete": "Payment Account Setup Complete",
+  "paymentCanReceiveRewards": "You can now receive task rewards",
+  "paymentAccountInfoBelow": "Your account information is as follows",
+  "paymentRefreshAccountInfo": "Refresh Account Info",
+  "paymentComplete": "Complete",
+  "paymentCountdownExpired": "Expired",
+  "paymentCountdownRemaining": "{param1} left",
+  "@paymentCountdownRemaining": {
+    "placeholders": {
+      "param1": {
+        "type": "String"
+      }
+    }
+  },
+  "paymentCountdownBannerTitle": "Complete payment within 30 minutes",
+  "paymentCountdownBannerSubtitle": "Time remaining: {param1}",
+  "@paymentCountdownBannerSubtitle": {
+    "placeholders": {
+      "param1": {
+        "type": "String"
+      }
+    }
+  },
+  "paymentCountdownBannerExpired": "Payment expired, task will be cancelled",
+  "couponMinAmountAvailable": "Available for {param1} or more",
+  "@couponMinAmountAvailable": {
+    "placeholders": {
+      "param1": {
+        "type": "String"
+      }
+    }
+  },
+  "couponAvailable": "Available",
+  "couponDiscount": "{param1}% Off",
+  "@couponDiscount": {
+    "placeholders": {
+      "param1": {
+        "type": "int"
+      }
+    }
+  },
+  "couponMyCoupons": "My Coupons",
+  "couponNoThreshold": "No Threshold",
+  "couponClaimNow": "Claim Now",
+  "couponAvailableCoupons": "Available Coupons",
+  "couponRedeemSuccess": "Redeem Success",
+  "couponRedeemFailed": "Redeem Failed",
+  "couponEnterRedemptionCode": "Enter Redemption Code",
+  "couponEnterRedemptionCodePlaceholder": "Please enter redemption code",
+  "couponRedeem": "Redeem",
+  "couponConfirmRedeem": "Confirm Redeem",
+  "couponConfirmRedeemWithPoints": "Are you sure you want to redeem this coupon with {param1} points?",
+  "@couponConfirmRedeemWithPoints": {
+    "placeholders": {
+      "param1": {
+        "type": "int"
+      }
+    }
+  },
+  "couponValidUntil": "Valid Until: {param1}",
+  "@couponValidUntil": {
+    "placeholders": {
+      "param1": {
+        "type": "String"
+      }
+    }
+  },
+  "couponNoAvailableCoupons": "No Available Coupons",
+  "couponNoAvailableCouponsMessage": "No coupons available to claim, stay tuned for events",
+  "couponNoMyCoupons": "You have no coupons yet",
+  "couponNoMyCouponsMessage": "Claimed coupons will appear here",
+  "couponUsageInstructions": "Usage Instructions",
+  "couponTransactionHistory": "Transaction History",
+  "couponCheckInReward": "Check-in Rewards",
+  "couponCheckInSuccess": "Check-in Successful",
+  "couponAwesome": "Awesome",
+  "couponDays": "{param1} days",
+  "@couponDays": {
+    "placeholders": {
+      "param1": {
+        "type": "int"
+      }
+    }
+  },
+  "couponRememberTomorrow": "Remember to come back tomorrow",
+  "couponConsecutiveReward": "More consecutive days, more rewards",
+  "couponCheckInNow": "Check In Now",
+  "couponConsecutiveDays": "Consecutive check-in for {param1} days",
+  "@couponConsecutiveDays": {
+    "placeholders": {
+      "param1": {
+        "type": "int"
+      }
+    }
+  },
+  "couponConsecutiveCheckIn": "{param1} days consecutive check-in",
+  "@couponConsecutiveCheckIn": {
+    "placeholders": {
+      "param1": {
+        "type": "int"
+      }
+    }
+  },
+  "couponMemberOnly": "Member Only",
+  "couponLimitPerDay": "{param1} per day",
+  "@couponLimitPerDay": {
+    "placeholders": {
+      "param1": {
+        "type": "int"
+      }
+    }
+  },
+  "couponLimitPerWeek": "{param1} per week",
+  "@couponLimitPerWeek": {
+    "placeholders": {
+      "param1": {
+        "type": "int"
+      }
+    }
+  },
+  "couponLimitPerMonth": "{param1} per month",
+  "@couponLimitPerMonth": {
+    "placeholders": {
+      "param1": {
+        "type": "int"
+      }
+    }
+  },
+  "couponLimitPerYear": "{param1} per year",
+  "@couponLimitPerYear": {
+    "placeholders": {
+      "param1": {
+        "type": "int"
+      }
+    }
+  },
+  "taskApplicationApplyInfo": "Application Info",
+  "taskApplicationOverallRating": "Overall Rating",
+  "taskApplicationRatingTags": "Rating Tags",
+  "taskApplicationRatingContent": "Rating Content",
+  "createTaskPublishing": "Publishing...",
+  "createTaskPublishNow": "Publish Task Now",
+  "createTaskPublishTask": "Publish Task",
+  "createTaskTitle": "Task Title",
+  "createTaskTitlePlaceholder": "Briefly describe your needs (e.g., Pick up package)",
+  "createTaskDescription": "Task Details",
+  "createTaskDescriptionPlaceholder": "Please describe your needs, time, special requirements, etc. in detail. The more detailed, the easier it is to get accepted...",
+  "createTaskReward": "Task Reward",
+  "createTaskCity": "City",
+  "createTaskOnline": "Online",
+  "createTaskCampusLifeRestriction": "Only verified students can post \\",
+  "studentVerificationStudentVerification": "Student Verification",
+  "stripeConnectSetupAccount": "Setup Payment Account",
+  "activityLoadFailed": "Load Failed",
+  "activityPleaseRetry": "Please retry",
+  "activityDescription": "Activity Description",
+  "activityDetails": "Details",
+  "activitySelectTimeSlot": "Select Time Slot",
+  "activityNoAvailableTime": "No Available Time",
+  "activityNoAvailableTimeMessage": "No available time slots at the moment",
+  "activityParticipateTime": "Participate Time",
+  "activityByAppointment": "By Appointment",
+  "activityParticipants": "Participants",
+  "activityRemainingSlots": "Remaining Slots",
+  "activityStatus": "Status",
+  "activityHotRecruiting": "Open",
+  "activityLocation": "Location",
+  "activityType": "Activity Type",
+  "activityTimeArrangement": "Time Arrangement",
+  "activityMultipleTimeSlots": "Supports multiple time slot bookings",
+  "activityDeadline": "Deadline",
+  "activityExclusiveDiscount": "Exclusive Discount",
+  "activityFilter": "Filter",
+  "activityAll": "All",
+  "activityActive": "Active",
+  "activitySingle": "Single",
+  "activityMulti": "Group",
+  "activityTabAll": "All",
+  "activityTabApplied": "Applied",
+  "activityTabFavorited": "Favorited",
+  "activityActivities": "Activities",
+  "activityNoEndedActivities": "No Ended Activities",
+  "activityNoEndedActivitiesMessage": "No ended activity records",
+  "activityNoActivities": "No Activities",
+  "activityNoActivitiesMessage": "No activities yet, stay tuned...",
+  "activityFullCapacity": "Full Capacity",
+  "activityPoster": "Activity Poster",
+  "activityViewExpertProfile": "View Expert Profile",
+  "activityFavorite": "Favorite",
+  "activityTimeFlexible": "Flexible Time",
+  "activityPreferredDate": "Preferred Date",
+  "activityTimeFlexibleMessage": "If you are available at any time in the near future",
+  "activityConfirmApply": "Confirm Application",
+  "taskTypeSuperTask": "Super Task",
+  "taskTypeVipTask": "VIP Task",
+  "menuMenu": "Menu",
+  "menuMy": "My",
+  "menuTaskHall": "Task Hall",
+  "menuTaskExperts": "Task Experts",
+  "menuForum": "Forum",
+  "menuLeaderboard": "Leaderboard",
+  "menuFleaMarket": "Flea Market",
+  "menuActivity": "Activity",
+  "menuPointsCoupons": "Points & Coupons",
+  "menuStudentVerification": "Student Verification",
+  "menuSettings": "Settings",
+  "menuClose": "Close",
+  "taskCategoryAll": "All",
+  "taskCategoryHousekeeping": "Housekeeping",
+  "taskCategoryCampusLife": "Campus Life",
+  "taskCategorySecondhandRental": "Second-hand & Rental",
+  "taskCategoryErrandRunning": "Errand Running",
+  "taskCategorySkillService": "Skill Service",
+  "taskCategorySocialHelp": "Social Help",
+  "taskCategoryTransportation": "Transportation",
+  "taskCategoryPetCare": "Pet Care",
+  "taskCategoryLifeConvenience": "Life Convenience",
+  "taskCategoryOther": "Other",
+  "expertCategoryAll": "All",
+  "expertCategoryProgramming": "Programming",
+  "expertCategoryTranslation": "Translation",
+  "expertCategoryTutoring": "Tutoring",
+  "expertCategoryFood": "Food",
+  "expertCategoryBeverage": "Beverage",
+  "expertCategoryCake": "Cake",
+  "expertCategoryErrandTransport": "Errand/Transport",
+  "expertCategorySocialEntertainment": "Social/Entertainment",
+  "expertCategoryBeautySkincare": "Beauty/Skincare",
+  "expertCategoryHandicraft": "Handicraft",
+  "taskFilterCategory": "Category",
+  "taskFilterCity": "City",
+  "taskFilterSelectCategory": "Select Category",
+  "taskFilterSelectCity": "Select City",
+  "createTaskBasicInfo": "Basic Information",
+  "createTaskRewardLocation": "Reward & Location",
+  "createTaskCurrency": "Currency",
+  "createTaskTaskType": "Task Type",
+  "createTaskImages": "Images",
+  "createTaskAddImages": "Add Images",
+  "createTaskFillAllRequired": "Please fill in all required fields",
+  "createTaskImageUploadFailed": "Some images failed to upload, please try again",
+  "createTaskStudentVerificationRequired": "Only verified students can post \\",
+  "taskExpertBecomeExpert": "Become Expert",
+  "taskExpertBecomeExpertTitle": "Become a Task Expert",
+  "taskExpertShowcaseSkills": "Showcase your professional skills and get more task opportunities",
+  "taskExpertBenefits": "Benefits of Becoming an Expert",
+  "taskExpertHowToApply": "How to Apply?",
+  "taskExpertApplyNow": "Apply Now",
+  "taskExpertLoginToApply": "Login to Apply",
+  "taskExpertApplicationInfo": "Application Information",
+  "taskExpertApplicationHint": "Please introduce your professional skills, experience and advantages. This will help the platform better understand you.",
+  "taskExpertSubmitApplication": "Submit Application",
+  "taskExpertApplicationSubmitted": "Application Submitted",
+  "taskExpertNoIntro": "No Introduction",
+  "taskExpertServiceMenu": "Service Menu",
+  "taskExpertOptionalTimeSlots": "Optional Time Slots",
+  "taskExpertNoAvailableSlots": "No Available Time Slots",
+  "taskExpertApplyService": "Apply for Service",
+  "taskExpertOptional": "Optional",
+  "taskExpertFull": "Full",
+  "taskExpertApplicationMessage": "Application Message",
+  "taskExpertNegotiatePrice": "Negotiate Price",
+  "taskExpertExpertNegotiatePrice": "Task Expert Proposed Price Negotiation:",
+  "taskExpertViewTask": "View Task",
+  "taskExpertTaskDetails": "Task Details: {param1}",
+  "@taskExpertTaskDetails": {
+    "placeholders": {
+      "param1": {
+        "type": "String"
+      }
+    }
+  },
+  "taskExpertClear": "Clear",
+  "taskExpertApplied": "Applied",
+  "taskExpertByAppointment": "By Appointment",
+  "forumNeedLogin": "Login Required",
+  "forumCommunityLoginMessage": "Community features are only available to logged-in users who have completed student verification",
+  "forumLoginNow": "Login Now",
+  "forumNeedStudentVerification": "Student Verification Required",
+  "forumVerificationPending": "Your student verification application is under review. Please wait patiently.",
+  "forumVerificationRejected": "Your student verification application was not approved. Please resubmit.",
+  "forumCompleteVerification": "Please complete student verification to access community features",
+  "forumCompleteVerificationMessage": "Please complete student verification to access community features",
+  "forumGoVerify": "Go Verify",
+  "forumReplies": "Replies ({param1})",
+  "@forumReplies": {
+    "placeholders": {
+      "param1": {
+        "type": "String"
+      }
+    }
+  },
+  "forumLoadRepliesFailed": "Failed to load replies: {param1}",
+  "@forumLoadRepliesFailed": {
+    "placeholders": {
+      "param1": {
+        "type": "String"
+      }
+    }
+  },
+  "forumNoReplies": "No Replies",
+  "forumPostReply": "Post Reply",
+  "forumSelectSection": "Select Section",
+  "forumPleaseSelectSection": "Please Select Section",
+  "forumPublish": "Publish",
+  "forumSomeone": "Someone",
+  "forumNotificationNewReply": "New Reply",
+  "forumNotificationNewLike": "New Like",
+  "forumNotificationReplyPost": "{param1} replied to your post",
+  "@forumNotificationReplyPost": {
+    "placeholders": {
+      "param1": {
+        "type": "String"
+      }
+    }
+  },
+  "forumNotificationReplyReply": "{param1} replied to your reply",
+  "@forumNotificationReplyReply": {
+    "placeholders": {
+      "param1": {
+        "type": "String"
+      }
+    }
+  },
+  "forumNotificationLikePost": "{param1} liked your post",
+  "@forumNotificationLikePost": {
+    "placeholders": {
+      "param1": {
+        "type": "String"
+      }
+    }
+  },
+  "forumNotificationLikeReply": "{param1} liked your reply",
+  "@forumNotificationLikeReply": {
+    "placeholders": {
+      "param1": {
+        "type": "String"
+      }
+    }
+  },
+  "forumNotificationPinPost": "Post Pinned",
+  "forumNotificationPinPostContent": "Your post has been pinned by an administrator",
+  "forumNotificationFeaturePost": "Post Featured",
+  "forumNotificationFeaturePostContent": "Your post has been featured by an administrator",
+  "forumNotificationDefault": "Forum Notification",
+  "forumNotificationDefaultContent": "You received a forum notification",
+  "infoConnectPlatform": "Connect You and Me Task Platform",
+  "infoContactUs": "Contact Us",
+  "infoMemberBenefits": "Member Benefits",
+  "infoFaq": "FAQ",
+  "infoNeedHelp": "Need Help?",
+  "infoContactAdmin": "Contact administrator for more member information",
+  "infoContactService": "Contact Service",
+  "infoTermsOfService": "Terms of Service",
+  "infoPrivacyPolicy": "Privacy Policy",
+  "infoLastUpdated": "Last Updated: January 1, 2024",
+  "infoAboutUs": "About Us",
+  "infoOurMission": "Our Mission",
+  "infoOurVision": "Our Vision",
+  "infoAboutUsContent": "Link²Ur is an innovative task posting and taking platform dedicated to connecting people who need help with those willing to provide help. We believe everyone has their own skills and time, and through the platform, these resources can be better utilized.",
+  "infoOurMissionContent": "Make task posting and taking simple, efficient, and safe. We are committed to building a trusted community platform where everyone can find suitable tasks and help others.",
+  "infoOurVisionContent": "Become the most popular task platform in the UK, connecting thousands of users, creating more value, and making the community closer.",
+  "vipMember": "VIP Member",
+  "vipBecomeVip": "Become VIP Member",
+  "vipEnjoyBenefits": "Enjoy exclusive benefits and privileges",
+  "vipUnlockPrivileges": "Unlock more privileges and services",
+  "vipPriorityRecommendation": "Priority Recommendation",
+  "vipPriorityRecommendationDesc": "Your tasks and applications will be prioritized, gaining more exposure",
+  "vipFeeDiscount": "Fee Discount",
+  "vipFeeDiscountDesc": "Enjoy lower task posting fees, saving more costs",
+  "vipExclusiveBadge": "Exclusive Badge",
+  "vipExclusiveBadgeDesc": "Display exclusive VIP badge on profile to enhance your credibility",
+  "vipExclusiveActivity": "Exclusive Activities",
+  "vipExclusiveActivityDesc": "Participate in VIP exclusive activities and offers, get more rewards",
+  "vipFaqHowToUpgrade": "How to upgrade membership?",
+  "vipFaqHowToUpgradeAnswer": "The membership upgrade feature is currently under development. You can contact the administrator for manual upgrade, or wait for the automatic upgrade feature to be launched.",
+  "vipFaqWhenEffective": "When do membership benefits take effect?",
+  "vipFaqWhenEffectiveAnswer": "Membership benefits take effect immediately after upgrade, and you can immediately enjoy the corresponding privileged services.",
+  "vipFaqCanCancel": "Can I cancel membership at any time?",
+  "vipFaqCanCancelAnswer": "Yes, you can contact the administrator to cancel membership service at any time. The cancellation will take effect in the next billing cycle.",
+  "vipComingSoon": "VIP feature coming soon, stay tuned!",
+  "vipSelectPackage": "Choose the membership plan that suits you",
+  "vipNoProducts": "No VIP products available",
+  "vipTryLaterContact": "Please try again later or contact support",
+  "vipPleaseSelectPackage": "Please select a plan",
+  "vipBuyNow": "Purchase Now",
+  "vipRestorePurchase": "Restore Purchase",
+  "vipPurchaseInstructions": "Purchase Instructions",
+  "vipSubscriptionAutoRenew": "• Subscription will auto-renew unless cancelled at least 24 hours before expiry",
+  "vipManageSubscription": "• Manage subscription in App Store account settings",
+  "vipPurchaseEffective": "• Benefits take effect immediately after purchase",
+  "vipPurchaseTitle": "Purchase VIP Membership",
+  "vipPurchaseSuccess": "Purchase Successful",
+  "vipCongratulations": "Congratulations on becoming a VIP member! Enjoy all VIP benefits.",
+  "vipRestoreFailed": "Restore failed: {param1}",
+  "@vipRestoreFailed": {
+    "placeholders": {
+      "param1": {
+        "type": "String"
+      }
+    }
+  },
+  "vipPurchased": "Purchased",
+  "vipAlreadyVip": "You are already a VIP member",
+  "vipThankYou": "Thank you for your support. Enjoy all VIP benefits.",
+  "vipExpiryTime": "Expires: {param1}",
+  "@vipExpiryTime": {
+    "placeholders": {
+      "param1": {
+        "type": "String"
+      }
+    }
+  },
+  "vipWillAutoRenew": "Will auto-renew",
+  "vipAutoRenewCancelled": "Auto-renew cancelled",
+  "vipFaqHowToUpgradeSteps": "Tap \\",
+  "serviceNoImages": "No images",
+  "serviceDetail": "Service Details",
+  "serviceNoDescription": "No detailed description",
+  "serviceApplyMessage": "Application Message",
+  "serviceExpectedPrice": "Expected price",
+  "serviceFlexibleTime": "Flexible time",
+  "serviceExpectedDate": "Expected completion date",
+  "serviceSelectDate": "Select date",
+  "serviceApplyTitle": "Apply for Service",
+  "offlineMode": "Offline mode",
+  "offlinePendingSync": "({param1} pending sync)",
+  "@offlinePendingSync": {
+    "placeholders": {
+      "param1": {
+        "type": "int"
+      }
+    }
+  },
+  "networkOffline": "Offline",
+  "networkDisconnected": "Network disconnected",
+  "networkCheckSettings": "Please check your network settings",
+  "networkRestored": "Network restored",
+  "networkConnectedWifi": "Connected to Wi-Fi",
+  "networkConnectedCellular": "Connected to cellular",
+  "networkConnectedEthernet": "Connected to Ethernet",
+  "networkConnected": "Network connected",
+  "notificationExpiresSeconds": "Expires in {param1} seconds",
+  "@notificationExpiresSeconds": {
+    "placeholders": {
+      "param1": {
+        "type": "double"
+      }
+    }
+  },
+  "notificationExpiresMinutes": "Expires in {param1} minutes",
+  "@notificationExpiresMinutes": {
+    "placeholders": {
+      "param1": {
+        "type": "int"
+      }
+    }
+  },
+  "notificationExpiresHours": "Expires in {param1} hours",
+  "@notificationExpiresHours": {
+    "placeholders": {
+      "param1": {
+        "type": "int"
+      }
+    }
+  },
+  "notificationViewFull": "View full",
+  "notificationExpiryTime": "Expiry: {param1}",
+  "@notificationExpiryTime": {
+    "placeholders": {
+      "param1": {
+        "type": "String"
+      }
+    }
+  },
+  "notificationUnread": "Unread",
+  "notificationContent": "Notification content",
+  "notificationDetail": "Notification Detail",
+  "notificationGetNegotiationFailed": "Unable to load negotiation info. Please refresh and try again.",
+  "translationFailed": "Translation Failed",
+  "translationRetryMessage": "Unable to translate this message. Please check your network and try again.",
+  "taskDetailCollapse": "Collapse",
+  "taskDetailExpandAll": "Expand all",
+  "taskDetailCompletedCount": "{param1} completed",
+  "@taskDetailCompletedCount": {
+    "placeholders": {
+      "param1": {
+        "type": "int"
+      }
+    }
+  },
+  "taskDetailExpired": "Expired",
+  "taskDetailRemainingMinutes": "{param1} min remaining",
+  "@taskDetailRemainingMinutes": {
+    "placeholders": {
+      "param1": {
+        "type": "int"
+      }
+    }
+  },
+  "taskDetailRemainingHours": "{param1} hrs remaining",
+  "@taskDetailRemainingHours": {
+    "placeholders": {
+      "param1": {
+        "type": "int"
+      }
+    }
+  },
+  "taskDetailRemainingDays": "{param1} days remaining",
+  "@taskDetailRemainingDays": {
+    "placeholders": {
+      "param1": {
+        "type": "int"
+      }
+    }
+  },
+  "walletQuickActions": "Quick Actions",
+  "walletRecentTransactions": "Recent Transactions",
+  "walletBalance": "Wallet Balance",
+  "walletMyWallet": "My Wallet",
+  "walletPaymentRecordsSubtitle": "View all payment records",
+  "walletPayoutManagementSubtitle": "Manage your payouts",
+  "paymentLoadingForm": "Loading payment form...",
+  "paymentPreparing": "Preparing...",
+  "paymentSuccess": "Payment Successful!",
+  "paymentSuccessMessage": "Task payment successful, updating status...",
+  "paymentError": "Payment Error",
+  "paymentTaskInfo": "Task Information",
+  "paymentTaskTitle": "Task Title",
+  "paymentApplicant": "Applicant",
+  "paymentTip": "Tip",
+  "paymentConfirmPayment": "Confirm Payment",
+  "paymentPreparingPayment": "Preparing payment...",
+  "paymentPayment": "Payment",
+  "paymentCancel": "Cancel",
+  "paymentRetry": "Retry",
+  "paymentRetryPayment": "Retry Payment",
+  "paymentCoupons": "Coupons",
+  "paymentCouponDiscount": "Coupon Discount",
+  "paymentNoAvailableCoupons": "No available coupons",
+  "paymentTotalAmount": "Total Amount",
+  "paymentFinalPayment": "Final Payment",
+  "paymentMixed": "Mixed",
+  "paymentSelectMethod": "Select Payment Method",
+  "paymentPayWithApplePay": "Pay with Apple Pay",
+  "paymentPayWithWechatPay": "Pay with WeChat Pay",
+  "paymentPayWithAlipay": "Pay with Alipay",
+  "shareWechat": "WeChat",
+  "shareWechatMoments": "Moments",
+  "shareQq": "QQ",
+  "shareQzone": "QZone",
+  "shareWeibo": "Weibo",
+  "shareSms": "SMS",
+  "shareCopyLink": "Copy Link",
+  "shareGenerateImage": "Generate Share Image",
+  "shareShareTo": "Share To",
+  "shareGeneratingImage": "Generating share image...",
+  "shareImage": "Share Image",
+  "shareShareImage": "Share Image",
+  "shareSaveToPhotos": "Save to Photos",
+  "translationTranslating": "Translating...",
+  "translationTranslate": "Translate",
+  "translationShowTranslation": "Show Translation",
+  "translationShowOriginal": "Show Original",
+  "settingsNotifications": "Notification Settings",
+  "settingsAllowNotifications": "Allow Notifications",
+  "settingsSuccessSound": "Success Sound",
+  "settingsSuccessSoundDescription": "Play a short sound when an action succeeds",
+  "settingsAppearance": "Appearance",
+  "settingsThemeMode": "Theme Mode",
+  "settingsMembership": "Membership",
+  "settingsVipMembership": "VIP Membership",
+  "settingsHelpSupport": "Help & Support",
+  "settingsFaq": "FAQ",
+  "settingsContactSupport": "Contact Support",
+  "settingsLegal": "Legal Information",
+  "settingsAbout": "About",
+  "settingsAppName": "App Name",
+  "settingsPaymentAccount": "Payment Account",
+  "settingsSetupPaymentAccount": "Setup Payment Account",
+  "settingsAccount": "Account",
+  "settingsUserId": "User ID",
+  "settingsDeleteAccount": "Delete Account",
+  "settingsDeleteAccountMessage": "Are you sure you want to delete your account? This action cannot be undone. All your data will be permanently deleted.",
+  "themeSystem": "Follow System",
   "themeLight": "Light",
   "themeDark": "Dark",
-  "accountManagement": "Account Management",
-  "studentVerification": "Student Verification",
-  "privacyAndLegal": "Privacy & Legal",
-  "privacyPolicy": "Privacy Policy",
-  "termsOfService": "Terms of Service",
-  "clearCache": "Clear Cache",
-  "cacheCleared": "Cache cleared",
-  "about": "About",
-  "version": "Version",
-  "tasks": "Tasks",
-  "taskDetail": "Task Detail",
-  "createTask": "Create Task",
-  "myTasks": "My Tasks",
-  "myAccepted": "Accepted",
-  "myPosted": "Posted",
-  "apply": "Apply",
-  "applied": "Applied",
-  "accepted": "Accepted",
-  "rejected": "Rejected",
-  "open": "Open",
-  "inProgress": "In Progress",
-  "completed": "Completed",
-  "cancelled": "Cancelled",
-  "fleaMarket": "Flea Market",
-  "productDetail": "Product Detail",
-  "publishProduct": "Publish",
-  "allCategories": "All",
-  "electronics": "Electronics",
-  "booksTextbooks": "Books",
-  "dailySupplies": "Daily Supplies",
-  "clothingBags": "Clothing",
-  "sportsOutdoor": "Sports",
-  "otherCategory": "Other",
-  "price": "Price",
-  "sold": "Sold",
-  "delisted": "Delisted",
-  "contactSeller": "Contact Seller",
-  "productDescription": "Description",
-  "sellerInfo": "Seller",
-  "superUser": "Super User",
-  "vipUser": "VIP User",
-  "normalUser": "Normal User",
-  "taskExperts": "Task Experts",
-  "expertDetail": "Expert Detail",
-  "services": "Services",
-  "noServices": "No services available",
-  "booking": "Book",
-  "booked": "Booked",
-  "rating": "Rating",
-  "completedOrders": "Completed",
-  "serviceItems": "Services",
-  "bio": "Bio",
-  "activities": "Activities",
-  "activityDetail": "Activity Detail",
-  "signUp": "Sign Up",
-  "signedUp": "Signed Up",
-  "signUpSuccess": "Signed up successfully",
-  "signUpFailed": "Sign up failed",
-  "ongoing": "Ongoing",
-  "ended": "Ended",
-  "forum": "Forum",
-  "createPost": "Create Post",
-  "myPosts": "My Posts",
-  "noPosts": "No posts yet",
-  "leaderboard": "Leaderboard",
-  "notificationCenter": "Notifications",
-  "systemNotifications": "System",
-  "interactionMessages": "Interactions",
-  "markAllAsRead": "Mark all as read",
-  "noNotifications": "No notifications",
-  "wallet": "Wallet",
-  "myWallet": "My Wallet",
-  "pointsBalance": "Points Balance",
-  "totalEarned": "Total Earned",
-  "totalSpent": "Total Spent",
-  "dailyCheckIn": "Daily Check-in",
-  "checkInSuccess": "Check-in successful!",
-  "checkInFailed": "Check-in failed",
-  "paymentAccount": "Payment Account",
-  "stripeConnect": "Stripe Connect",
-  "activated": "Activated",
-  "pendingActivation": "Pending",
-  "notConnected": "Not Connected",
-  "setupPaymentAccount": "Setup Payment Account",
-  "viewAccountDetails": "View Details",
-  "transactionHistory": "Transaction History",
-  "noTransactions": "No transactions",
-  "myCoupons": "My Coupons",
-  "noCoupons": "No coupons",
-  "viewMore": "View More",
-  "editProfile": "Edit Profile",
-  "name": "Name",
-  "enterName": "Enter name",
-  "bioLabel": "Bio",
-  "enterBio": "Introduce yourself...",
-  "residenceCity": "City",
-  "enterCity": "e.g. London",
-  "profileSaved": "Profile saved",
-  "profileSaveFailed": "Save failed",
-  "avatarUpdated": "Avatar updated",
-  "helpCenter": "Help Center",
-  "aboutUs": "About Us",
-  "myIdleItems": "My Items",
-  "myFavorites": "Favorites",
-  "activityCenter": "Activity Center",
-  "coupons": "Coupons",
-  "loginRequired": "Please login first",
-  "loginToView": "Login to view personal info",
-  "loginNow": "Login Now",
-  "goToLogin": "Go to Login",
-  "publishSuccess": "Published successfully",
-  "publishFailed": "Publish failed",
-  "purchaseSuccess": "Purchase successful",
-  "purchaseFailed": "Purchase failed",
-  "applicationSubmitted": "Application submitted",
-  "applicationFailed": "Application failed",
-  "title": "Title",
-  "description": "Description",
-  "location": "Location",
-  "category": "Category",
-  "images": "Images",
-  "addImage": "Add Image",
-  "today": "Today",
-  "yesterday": "Yesterday",
-  "daysAgo": "{count} days ago",
-  "@daysAgo": {
+  "walletPayoutManagement": "Payout Management",
+  "walletPaymentRecords": "Payment Records",
+  "myTasksLoadingCompleted": "Loading completed tasks...",
+  "myTasksNetworkUnavailable": "Network Unavailable",
+  "myTasksCheckNetwork": "Please check your network connection and try again",
+  "myTasksNoPendingApplications": "No Pending Applications",
+  "myTasksNoPendingApplicationsMessage": "You have no pending application records yet",
+  "myTasksPending": "Pending",
+  "myTasksApplicationMessage": "Application Message",
+  "myTasksViewDetails": "View Details",
+  "myTasksTabAll": "All",
+  "myTasksTabPosted": "Posted",
+  "myTasksTabTaken": "Taken",
+  "myTasksTabPending": "Pending",
+  "myTasksTabCompleted": "Completed",
+  "myTasksTabCancelled": "Cancelled",
+  "myTasksEmptyAll": "You haven't posted or accepted any tasks yet",
+  "myTasksEmptyPosted": "You haven't posted any tasks yet",
+  "myTasksEmptyTaken": "You haven't accepted any tasks yet",
+  "myTasksEmptyInProgress": "You have no in-progress tasks yet",
+  "myTasksEmptyPending": "You have no pending application records yet",
+  "myTasksEmptyCompleted": "You have no completed tasks yet",
+  "myTasksEmptyCancelled": "You have no cancelled tasks yet",
+  "myTasksRolePoster": "Poster",
+  "myTasksRoleTaker": "Taker",
+  "myTasksRoleExpert": "Expert",
+  "myTasksRoleApplicant": "Applicant",
+  "myTasksRoleParticipant": "Participant",
+  "myTasksRoleUser": "User",
+  "myTasksRoleOrganizer": "Organizer",
+  "myTasksRoleUnknown": "Unknown",
+  "taskSourceNormal": "Normal Task",
+  "taskSourceFleaMarket": "Flea Market",
+  "taskSourceExpertService": "Expert Service",
+  "taskSourceExpertActivity": "Expert Activity",
+  "taskStatusOpen": "Open",
+  "taskStatusInProgress": "In Progress",
+  "taskStatusCompleted": "Completed",
+  "taskStatusCancelled": "Cancelled",
+  "taskStatusPendingConfirmation": "Pending Confirmation",
+  "taskStatusPendingPayment": "Pending Payment",
+  "myPostsTitle": "My Items",
+  "taskLocationAddress": "Task Address",
+  "taskLocationCoordinates": "Coordinates",
+  "taskLocationAppleMaps": "Apple Maps",
+  "taskLocationMyLocation": "My Location",
+  "taskLocationLoadingAddress": "Loading address...",
+  "taskLocationDetailAddress": "Detail Address",
+  "fleaMarketPublishItem": "Publish Item",
+  "fleaMarketConfirmPurchase": "Confirm Purchase",
+  "fleaMarketBidPurchase": "Bid Purchase",
+  "fleaMarketPriceAndTransaction": "Price & Transaction",
+  "fleaMarketAutoRemovalDays": "Auto removal in {param1} days",
+  "@fleaMarketAutoRemovalDays": {
     "placeholders": {
-      "count": {
+      "param1": {
         "type": "int"
       }
     }
   },
-  "hoursAgo": "{count} hours ago",
-  "@hoursAgo": {
+  "fleaMarketAutoRemovalSoon": "Item will be removed soon",
+  "fleaMarketLoading": "Loading...",
+  "fleaMarketLoadFailed": "Failed to load item information",
+  "fleaMarketProductDetail": "Product Detail",
+  "fleaMarketNoDescription": "Seller has not written anything~",
+  "fleaMarketActiveSeller": "Active Seller",
+  "fleaMarketContactSeller": "Contact",
+  "fleaMarketEditItem": "Edit Item",
+  "fleaMarketFavorite": "Favorite",
+  "fleaMarketNegotiate": "Negotiate",
+  "fleaMarketBuyNow": "Buy Now",
+  "fleaMarketYourBid": "Your Bid",
+  "fleaMarketMessageToSeller": "Message to Seller (Optional)",
+  "fleaMarketMessagePlaceholder": "e.g., Hope to meet in person, can you include shipping, etc...",
+  "fleaMarketEnterAmount": "Enter amount",
+  "fleaMarketNegotiateRequestSent": "Negotiation Request Sent",
+  "fleaMarketNegotiateRequestSentMessage": "You have submitted a purchase request, please wait for the seller to process",
+  "fleaMarketNegotiateRequestFailed": "Failed to send negotiation request. Please try again.",
+  "fleaMarketNegotiatePriceInvalid": "Please enter a valid negotiation price.",
+  "fleaMarketNegotiatePriceTooHigh": "Negotiation price cannot be higher than the original price.",
+  "fleaMarketNegotiatePriceTooLow": "Negotiation price must be greater than 0.",
+  "taskPreferencesTitle": "Task Preferences",
+  "taskPreferencesPreferredTypes": "Preferred Task Types",
+  "taskPreferencesPreferredTypesDescription": "Select task types you are interested in. The system will prioritize recommending these types of tasks",
+  "taskPreferencesPreferredLocations": "Preferred Locations",
+  "taskPreferencesPreferredLocationsDescription": "Select the geographic locations where you want to receive tasks",
+  "taskPreferencesPreferredLevels": "Preferred Task Levels",
+  "taskPreferencesPreferredLevelsDescription": "Select task levels you are interested in",
+  "taskPreferencesMinDeadline": "Minimum Deadline",
+  "taskPreferencesMinDeadlineDescription": "Set the minimum number of days required for task deadlines. The system will only recommend tasks that meet this condition",
+  "taskPreferencesDays": "days",
+  "taskPreferencesDaysRange": "(At least 1 day, at most 30 days)",
+  "taskPreferencesSave": "Save Preferences",
+  "taskLocationSearchCity": "Search or enter city name",
+  "forumCreatePostTitle": "Create Post",
+  "forumCreatePostBasicInfo": "Basic Information",
+  "forumCreatePostPostTitle": "Post Title",
+  "forumCreatePostPostTitlePlaceholder": "Give your post an attractive title",
+  "forumCreatePostPostContent": "Post Content",
+  "forumCreatePostContentPlaceholder": "Share your insights, experiences, or ask questions. Be friendly and help each other grow...",
+  "forumCreatePostPublishing": "Publishing...",
+  "forumCreatePostPublishNow": "Publish Now",
+  "fleaMarketCreatePublishing": "Publishing...",
+  "fleaMarketCreatePublishNow": "Publish Item Now",
+  "fleaMarketCreateSearchLocation": "Search location or enter Online",
+  "taskExpertTitle": "Task Experts",
+  "taskExpertWhatIs": "What are Task Experts?",
+  "taskExpertWhatIsContent": "Task Experts are platform-certified professional service providers with rich experience and good reputation. After becoming a Task Expert, your services will get more exposure and attract more customers.",
+  "taskExpertMoreExposure": "More Exposure",
+  "taskExpertMoreExposureDesc": "Your services will be prioritized and get more user attention",
+  "taskExpertExclusiveBadge": "Exclusive Badge",
+  "taskExpertExclusiveBadgeDesc": "Display expert certification badge to enhance your professional image",
+  "taskExpertMoreOrders": "More Orders",
+  "taskExpertMoreOrdersDesc": "Get more task applications and increase income opportunities",
+  "taskExpertPlatformSupport": "Platform Support",
+  "taskExpertPlatformSupportDesc": "Enjoy professional support and resources provided by the platform",
+  "taskExpertFillApplication": "Fill Application Information",
+  "taskExpertFillApplicationDesc": "Introduce your professional skills and experience",
+  "taskExpertSubmitReview": "Submit for Review",
+  "taskExpertSubmitReviewDesc": "Platform will complete the review within 3-5 business days",
+  "taskExpertStartService": "Start Service",
+  "taskExpertStartServiceDesc": "After approval, you can publish services and start accepting orders",
+  "taskExpertApplyTitle": "Apply to Become Expert",
+  "taskExpertApplicationSubmittedMessage": "Your application has been submitted. We will complete the review within 3-5 business days.",
+  "taskExpertNoExperts": "No Task Experts",
+  "taskExpertNoExpertsMessage": "No task experts yet, stay tuned...",
+  "taskExpertNoExpertsSearchMessage": "No related experts found",
+  "taskExpertSearchPrompt": "Search task experts",
+  "taskExpertNoFavorites": "No Favorites",
+  "taskExpertNoActivities": "No Activities",
+  "taskExpertNoFavoritesMessage": "You have not favorited any activities",
+  "taskExpertNoAppliedMessage": "You have not applied for any activities",
+  "taskExpertNoActivitiesMessage": "You have not applied or favorited any activities",
+  "taskExpertExpertiseAreas": "Expertise Areas",
+  "taskExpertFeaturedSkills": "Featured Skills",
+  "taskExpertAchievements": "Achievements",
+  "taskExpertResponseTime": "Response Time",
+  "taskExpertReviews": "Reviews",
+  "taskExpertNoReviews": "No reviews yet",
+  "taskExpertReviewsCount": "{param1} reviews",
+  "@taskExpertReviewsCount": {
     "placeholders": {
-      "count": {
+      "param1": {
         "type": "int"
       }
     }
   },
-  "minutesAgo": "{count} minutes ago",
-  "@minutesAgo": {
+  "taskExpertNoExpertiseAreas": "No expertise areas",
+  "taskExpertNoFeaturedSkills": "No featured skills",
+  "taskExpertNoAchievements": "No achievements",
+  "leaderboardApplyTitle": "Apply for New Leaderboard",
+  "leaderboardInfo": "Leaderboard Information",
+  "leaderboardName": "Leaderboard Name",
+  "leaderboardRegion": "Region",
+  "leaderboardDescription": "Description",
+  "leaderboardReason": "Application Reason",
+  "leaderboardReasonTitle": "Why create this leaderboard?",
+  "leaderboardReasonPlaceholder": "Explain to the administrator the necessity of creating this leaderboard, which helps speed up the review process...",
+  "leaderboardCoverImage": "Cover Image (Optional)",
+  "leaderboardAddCoverImage": "Add Cover Image",
+  "leaderboardLoading": "Loading...",
+  "notificationNotifications": "Notifications",
+  "notificationNoTaskChat": "No Task Chat",
+  "notificationNoTaskChatMessage": "No task-related chat records yet",
+  "notificationNoMessages": "No messages yet",
+  "notificationStartConversation": "Start a conversation!",
+  "notificationNewMessage": "New messages",
+  "notificationSending": "Sending...",
+  "notificationViewDetails": "View Details",
+  "notificationImage": "Image",
+  "notificationTaskDetail": "Task Detail",
+  "notificationDetailAddress": "Detail Address",
+  "notificationTaskEnded": "Task has ended",
+  "notificationTaskCompletedCannotSend": "Task completed, cannot send messages",
+  "notificationTaskCancelledCannotSend": "Task cancelled, cannot send messages",
+  "notificationTaskPendingCannotSend": "Task pending confirmation, message sending paused",
+  "notificationSystemNotification": "System Notification",
+  "notificationTitleTaskApplication": "New Task Application",
+  "notificationTitleApplicationAccepted": "Application Accepted - Payment Required",
+  "notificationTitleApplicationRejected": "Application Rejected",
+  "notificationTitleApplicationWithdrawn": "Application Withdrawn",
+  "notificationTitleTaskCompleted": "Task Completed",
+  "notificationTitleTaskConfirmed": "Reward Issued",
+  "notificationTitleTaskCancelled": "Task Cancelled",
+  "notificationTitleTaskAutoCancelled": "Task Auto-Cancelled",
+  "notificationTitleApplicationMessage": "New Message",
+  "notificationTitleNegotiationOffer": "New Price Offer",
+  "notificationTitleNegotiationRejected": "Negotiation Rejected",
+  "notificationTitleTaskApproved": "Task Application Approved",
+  "notificationTitleTaskRewardPaid": "Task Reward Paid",
+  "notificationTitleTaskApprovedWithPayment": "Task Application Approved - Payment Required",
+  "notificationTitleAnnouncement": "Announcement",
+  "notificationTitleCustomerService": "Customer Service",
+  "notificationTitleUnknown": "Notification",
+  "notificationContentTaskApplication": "{applicant_name} applied for task「{task_title}」\\nApplication message: {application_message}\\nNegotiated price: {price_info}",
+  "@notificationContentTaskApplication": {
     "placeholders": {
-      "count": {
+      "applicant_name": {
+        "type": "String"
+      },
+      "task_title": {
+        "type": "String"
+      },
+      "application_message": {
+        "type": "String"
+      },
+      "price_info": {
+        "type": "String"
+      }
+    }
+  },
+  "notificationContentApplicationAccepted": "The applicant has accepted your negotiation offer for task「{task_title}」. Please complete the payment.{payment_expires_info}",
+  "@notificationContentApplicationAccepted": {
+    "placeholders": {
+      "task_title": {
+        "type": "String"
+      },
+      "payment_expires_info": {
+        "type": "String"
+      }
+    }
+  },
+  "notificationContentApplicationRejected": "Your task application has been rejected: {task_title}",
+  "@notificationContentApplicationRejected": {
+    "placeholders": {
+      "task_title": {
+        "type": "String"
+      }
+    }
+  },
+  "notificationContentApplicationWithdrawn": "An applicant has withdrawn their application for task「{task_title}」",
+  "@notificationContentApplicationWithdrawn": {
+    "placeholders": {
+      "task_title": {
+        "type": "String"
+      }
+    }
+  },
+  "notificationContentTaskCompleted": "{taker_name} has marked task「{task_title}」as completed",
+  "@notificationContentTaskCompleted": {
+    "placeholders": {
+      "taker_name": {
+        "type": "String"
+      },
+      "task_title": {
+        "type": "String"
+      }
+    }
+  },
+  "notificationContentTaskConfirmed": "Task completed and confirmed! Reward for「{task_title}」has been issued",
+  "@notificationContentTaskConfirmed": {
+    "placeholders": {
+      "task_title": {
+        "type": "String"
+      }
+    }
+  },
+  "notificationContentTaskCancelled": "Your task「{task_title}」has been cancelled",
+  "@notificationContentTaskCancelled": {
+    "placeholders": {
+      "task_title": {
+        "type": "String"
+      }
+    }
+  },
+  "notificationContentTaskAutoCancelled": "Your task「{task_title}」has been automatically cancelled due to exceeding the deadline",
+  "@notificationContentTaskAutoCancelled": {
+    "placeholders": {
+      "task_title": {
+        "type": "String"
+      }
+    }
+  },
+  "notificationContentApplicationMessage": "The publisher of task「{task_title}」sent you a message: {message}",
+  "@notificationContentApplicationMessage": {
+    "placeholders": {
+      "task_title": {
+        "type": "String"
+      },
+      "message": {
+        "type": "String"
+      }
+    }
+  },
+  "notificationContentNegotiationOffer": "The publisher of task「{task_title}」proposed a negotiation\nMessage: {message}\nNegotiated price: £{negotiated_price} {currency}",
+  "@notificationContentNegotiationOffer": {
+    "placeholders": {
+      "task_title": {
+        "type": "String"
+      },
+      "message": {
+        "type": "String"
+      },
+      "negotiated_price": {
+        "type": "String"
+      },
+      "currency": {
+        "type": "String"
+      }
+    }
+  },
+  "notificationContentNegotiationRejected": "The applicant has rejected your negotiation offer for task「{task_title}」",
+  "@notificationContentNegotiationRejected": {
+    "placeholders": {
+      "task_title": {
+        "type": "String"
+      }
+    }
+  },
+  "notificationContentTaskApproved": "Your application for task「{task_title}」has been approved",
+  "@notificationContentTaskApproved": {
+    "placeholders": {
+      "task_title": {
+        "type": "String"
+      }
+    }
+  },
+  "notificationContentTaskRewardPaid": "Reward for task「{task_title}」has been paid",
+  "@notificationContentTaskRewardPaid": {
+    "placeholders": {
+      "task_title": {
+        "type": "String"
+      }
+    }
+  },
+  "notificationContentTaskApprovedWithPayment": "Your task application has been approved! Task: {task_title}{payment_expires_info}",
+  "@notificationContentTaskApprovedWithPayment": {
+    "placeholders": {
+      "task_title": {
+        "type": "String"
+      },
+      "payment_expires_info": {
+        "type": "String"
+      }
+    }
+  },
+  "notificationContentAnnouncement": "{message}",
+  "@notificationContentAnnouncement": {
+    "placeholders": {
+      "message": {
+        "type": "String"
+      }
+    }
+  },
+  "notificationContentCustomerService": "{message}",
+  "@notificationContentCustomerService": {
+    "placeholders": {
+      "message": {
+        "type": "String"
+      }
+    }
+  },
+  "notificationContentUnknown": "{message}",
+  "@notificationContentUnknown": {
+    "placeholders": {
+      "message": {
+        "type": "String"
+      }
+    }
+  },
+  "notificationCustomerService": "Customer Service",
+  "notificationContactService": "Contact Service",
+  "notificationTaskChat": "Task Chat",
+  "notificationTaskChatList": "All Task Chat List",
+  "notificationPoster": "Poster",
+  "notificationTaker": "Taker",
+  "notificationExpert": "Expert",
+  "notificationParticipant": "Participant",
+  "notificationSystem": "System",
+  "notificationSystemMessage": "System Message",
+  "notificationTaskChats": "Task Chats",
+  "commonLoadMore": "Load More",
+  "commonTagSeparator": ", ",
+  "commonCopy": "Copy",
+  "commonCopied": "Copied: {param1}",
+  "@commonCopied": {
+    "placeholders": {
+      "param1": {
+        "type": "String"
+      }
+    }
+  },
+  "commonTap": "Tap",
+  "commonLongPressToCopy": "Long press to copy",
+  "errorOperationFailed": "Operation Failed",
+  "onboardingSkip": "Skip",
+  "onboardingWelcomeTitle": "Welcome to Link²Ur",
+  "onboardingWelcomeSubtitle": "Connect Your World",
+  "onboardingWelcomeDescription": "Publish tasks, accept tasks, buy and sell second-hand goods, everything is in your hands",
+  "onboardingPublishTaskTitle": "Publish Tasks",
+  "onboardingPublishTaskSubtitle": "Easily publish your needs",
+  "onboardingPublishTaskDescription": "Need help? Publish a task and let capable users help you complete it",
+  "onboardingAcceptTaskTitle": "Accept Tasks",
+  "onboardingAcceptTaskSubtitle": "Earn extra income",
+  "onboardingAcceptTaskDescription": "Browse tasks, accept interesting tasks, and earn rewards after completing them",
+  "onboardingSecurePaymentTitle": "Secure Payment",
+  "onboardingSecurePaymentSubtitle": "Platform guarantees transaction security",
+  "onboardingSecurePaymentDescription": "Use Stripe secure payment, automatic transfer after task completion, protecting both parties' rights",
+  "onboardingCommunityTitle": "Community Interaction",
+  "onboardingCommunitySubtitle": "Forum, Leaderboard, Flea Market",
+  "onboardingCommunityDescription": "Participate in community discussions, view leaderboards, buy and sell second-hand goods, enrich your campus life",
+  "onboardingPersonalizationTitle": "Personalization Settings",
+  "onboardingPersonalizationSubtitle": "Help us recommend more suitable content for you",
+  "onboardingPreferredCity": "Preferred City",
+  "onboardingUseCurrentLocation": "Use Current Location",
+  "onboardingPreferredTaskTypes": "Interested Task Types",
+  "onboardingPreferredTaskTypesOptional": "Interested Task Types (Optional)",
+  "onboardingEnableNotifications": "Enable Notifications",
+  "onboardingEnableNotificationsDescription": "Receive task status updates and message reminders in time",
+  "onboardingGetStarted": "Get Started",
+  "onboardingPrevious": "Previous",
+  "spotlightTask": "Task",
+  "spotlightTasks": "Tasks",
+  "spotlightExpert": "Task Expert",
+  "spotlightQuickAction": "Quick Action",
+  "shortcutsPublishTask": "Publish Task",
+  "shortcutsPublishTaskDescription": "Quickly publish a new task",
+  "shortcutsViewMyTasks": "View My Tasks",
+  "shortcutsViewMyTasksDescription": "View tasks I published and accepted",
+  "shortcutsViewMessages": "View Messages",
+  "shortcutsViewMessagesDescription": "View unread messages and notifications",
+  "shortcutsSearchTasks": "Search Tasks",
+  "shortcutsSearchTasksDescription": "Search for tasks",
+  "shortcutsViewFleaMarket": "View Flea Market",
+  "shortcutsViewFleaMarketDescription": "Browse and publish second-hand goods",
+  "shortcutsViewForum": "View Forum",
+  "shortcutsViewForumDescription": "Participate in community discussions",
+  "profileInProgress": "In Progress",
+  "profileCompleted": "Completed",
+  "profileCreditScore": "Credit Score",
+  "profileMyContent": "My Content",
+  "profileSystemAndVerification": "System & Verification",
+  "profileMyTasksSubtitleText": "Manage tasks I published and accepted",
+  "profileMyPostsSubtitleText": "Second-hand item transaction records",
+  "profileMyForumPosts": "My Posts",
+  "profileMyForumPostsSubtitle": "View discussions I posted in the forum",
+  "profileMyWalletSubtitleText": "Balance, recharge and withdrawal",
+  "profilePointsCouponsSubtitleText": "Points details and coupons",
+  "profileStudentVerificationSubtitleText": "Get student-exclusive verification badge",
+  "profileActivitySubtitleText": "View offline activities I participated in",
+  "profileTaskPreferences": "Task Preferences",
+  "profileTaskPreferencesSubtitle": "Personalize recommended content",
+  "profileMyApplicationsSubtitleText": "Expert/Service provider application status",
+  "profileSettingsSubtitleText": "Profile, password and security",
+  "profilePaymentAccount": "Payout Account",
+  "profilePaymentAccountSubtitle": "Set up payout account to receive task rewards",
+  "profileNoContactInfo": "No contact information",
+  "profileUserProfile": "User Profile",
+  "profilePostedTasks": "Posted Tasks",
+  "profileTakenTasks": "Taken Tasks",
+  "profileCompletedTasks": "Completed Tasks",
+  "myItemsSelling": "Selling",
+  "myItemsPurchased": "Purchased",
+  "myItemsFavorites": "Favorites",
+  "myItemsSold": "Sold",
+  "myItemsEmptySelling": "No Items for Sale",
+  "myItemsEmptyPurchased": "No Purchase Records",
+  "myItemsEmptyFavorites": "No Favorites",
+  "myItemsEmptySold": "No Sold Items",
+  "myItemsEmptySellingMessage": "You haven't published any second-hand items yet",
+  "myItemsEmptyPurchasedMessage": "You haven't purchased any items yet",
+  "myItemsEmptyFavoritesMessage": "You haven't favorited any items yet",
+  "myItemsEmptySoldMessage": "You haven't successfully sold any items yet",
+  "myItemsStatusSelling": "For Sale",
+  "myItemsStatusPurchased": "Purchased",
+  "myItemsStatusSold": "Sold",
+  "forumPinned": "Pinned",
+  "forumFeatured": "Featured",
+  "forumWriteReplyPlaceholder": "Write your reply...",
+  "forumViewThisPost": "Check out this post",
+  "forumBrowse": "views",
+  "forumRepliesCount": "replies",
+  "fleaMarketStatusActive": "For Sale",
+  "fleaMarketStatusDelisted": "Delisted",
+  "fleaMarketRefreshing": "Refreshing...",
+  "fleaMarketRefresh": "Refresh",
+  "fleaMarketConfirm": "Confirm",
+  "fleaMarketSubmit": "Submit",
+  "fleaMarketViewItem": "View this item",
+  "fleaMarketSaving": "Saving...",
+  "fleaMarketSaveChanges": "Save Changes",
+  "fleaMarketEditItemTitle": "Edit Item",
+  "fleaMarketCategoryElectronics": "Electronics",
+  "fleaMarketCategoryClothing": "Clothing & Accessories",
+  "fleaMarketCategoryFurniture": "Furniture & Appliances",
+  "fleaMarketCategoryBooks": "Books & Stationery",
+  "fleaMarketCategorySports": "Sports & Outdoors",
+  "fleaMarketCategoryBeauty": "Beauty & Skincare",
+  "fleaMarketCategoryOther": "Other",
+  "fleaMarketPartialUploadFailed": "Some images failed to upload, please try again",
+  "fleaMarketFillRequiredFields": "Please fill in all required fields",
+  "fleaMarketPurchaseRequestsCount": "Purchase Requests ({param1})",
+  "@fleaMarketPurchaseRequestsCount": {
+    "placeholders": {
+      "param1": {
         "type": "int"
       }
     }
   },
-  "justNow": "Just now",
-  "views": "{count} views",
-  "@views": {
+  "fleaMarketNoPurchaseRequests": "No Purchase Requests",
+  "fleaMarketWaitingSellerConfirm": "Waiting for seller confirmation",
+  "fleaMarketNegotiateAmountFormat": "Negotiated price: £{param1}",
+  "@fleaMarketNegotiateAmountFormat": {
     "placeholders": {
-      "count": {
+      "param1": {
+        "type": "double"
+      }
+    }
+  },
+  "fleaMarketContinuePayment": "Continue Payment",
+  "fleaMarketPreparing": "Preparing...",
+  "fleaMarketSendingNegotiateRequest": "Sending negotiation request...",
+  "fleaMarketProcessingPurchase": "Processing purchase...",
+  "fleaMarketNegotiateAmountLabel": "Negotiated price:",
+  "fleaMarketSellerNegotiateLabel": "Seller counter offer:",
+  "fleaMarketRejectPurchaseConfirmTitle": "Reject Purchase Request",
+  "fleaMarketRejectPurchaseConfirmMessage": "Are you sure you want to reject this purchase request?",
+  "fleaMarketRequestStatusPending": "Pending",
+  "fleaMarketRequestStatusSellerNegotiating": "Seller Negotiating",
+  "fleaMarketRequestStatusAccepted": "Accepted",
+  "fleaMarketRequestStatusRejected": "Rejected",
+  "applePayNotSupported": "Your device does not support Apple Pay",
+  "applePayUseOtherMethod": "Please use another payment method",
+  "applePayTitle": "Apple Pay",
+  "applePayNotConfigured": "Apple Pay is not configured",
+  "applePayPaymentInfoNotReady": "Payment info not ready",
+  "applePayTaskPaymentFallback": "Link²Ur Task Payment",
+  "applePayUnableToCreateForm": "Unable to create Apple Pay form",
+  "applePayUnableToGetPaymentInfo": "Unable to get payment info",
+  "chatEvidenceFile": "Evidence file",
+  "paymentUnknownError": "Unknown error",
+  "paymentAmount": "Payment Amount",
+  "paymentSuccessCompleted": "Your payment has been successfully completed",
+  "paymentFailed": "Payment Failed",
+  "wechatPayTitle": "WeChat Pay",
+  "wechatPayLoading": "Loading payment page...",
+  "wechatPayLoadFailed": "Load Failed",
+  "wechatPayCancelConfirmTitle": "Cancel Payment?",
+  "wechatPayContinuePay": "Continue Payment",
+  "wechatPayCancelPay": "Cancel Payment",
+  "wechatPayCancelWarning": "You will need to initiate payment again if you cancel",
+  "wechatPayInvalidLink": "Invalid payment link",
+  "forumMyPosts": "My Posts",
+  "forumMyPostsPosted": "Posted",
+  "forumMyPostsFavorited": "Favorited",
+  "forumMyPostsLiked": "Liked",
+  "forumMyPostsEmptyPosted": "You haven't posted any posts yet",
+  "forumMyPostsEmptyFavorited": "You haven't favorited any posts yet",
+  "forumMyPostsEmptyLiked": "You haven't liked any posts yet",
+  "forumLoadFailed": "Load Failed",
+  "forumRetry": "Retry",
+  "forumNoCategories": "No Categories",
+  "forumCategoriesLoading": "Loading forum categories...",
+  "forumRequestNewCategory": "Request New Category",
+  "forumRequestSubmitted": "Request Submitted",
+  "forumRequestSubmittedMessage": "Your request has been successfully submitted. The administrator will notify you of the result after review.",
+  "forumRequestInstructions": "Request Instructions",
+  "forumRequestInstructionsText": "Fill in the following information to request a new forum category. Your request will be reviewed by the administrator, and the category will be officially created after approval.",
+  "forumCategoryName": "Category Name",
+  "forumCategoryNamePlaceholder": "Please enter category name",
+  "forumCategoryDescription": "Category Description",
+  "forumCategoryDescriptionPlaceholder": "Please briefly describe the purpose and discussion topics of this category",
+  "forumCategoryIcon": "Category Icon (Optional)",
+  "forumCategoryIconHint": "You can enter an emoji as the category icon, for example: 💬, 📚, 🎮, etc.",
+  "forumCategoryIconExample": "For example: 💬",
+  "forumCategoryIconEntered": "1 emoji entered",
+  "forumSubmitRequest": "Submit Request",
+  "forumMyRequests": "My Requests",
+  "forumRequestStatusAll": "All",
+  "forumRequestStatusPending": "Pending",
+  "forumRequestStatusApproved": "Approved",
+  "forumRequestStatusRejected": "Rejected",
+  "forumNoRequests": "No Requests",
+  "forumNoRequestsMessage": "You haven't submitted any category requests yet.",
+  "forumNoRequestsFiltered": "No requests found for this status.",
+  "forumReviewComment": "Review Comment",
+  "forumReviewTime": "Review Time",
+  "forumRequestTime": "Request Time",
+  "forumRequestNameRequired": "Please enter category name",
+  "forumRequestNameTooLong": "Category name cannot exceed {param1} characters",
+  "@forumRequestNameTooLong": {
+    "placeholders": {
+      "param1": {
         "type": "int"
       }
     }
   },
-  "favorites": "{count} favorites",
-  "@favorites": {
+  "forumRequestDescriptionTooLong": "Category description cannot exceed {param1} characters",
+  "@forumRequestDescriptionTooLong": {
     "placeholders": {
-      "count": {
+      "param1": {
         "type": "int"
       }
     }
   },
-  "participants": "{current}/{max}",
-  "@participants": {
+  "forumRequestIconTooLong": "Icon cannot exceed {param1} characters",
+  "@forumRequestIconTooLong": {
     "placeholders": {
-      "current": {"type": "int"},
-      "max": {"type": "int"}
+      "param1": {
+        "type": "int"
+      }
     }
-  }
+  },
+  "forumRequestSubmitFailed": "Submission failed, please check if the input is correct",
+  "forumRequestLoginExpired": "Login expired, please login again",
+  "activityWaitingExpertResponse": "Waiting for Expert Response",
+  "activityContinuePayment": "Continue Payment",
+  "serviceApplied": "Applied",
+  "serviceWaitingExpertResponse": "Waiting for Expert Response",
+  "serviceContinuePayment": "Continue Payment",
+  "taskDetailConfirmDeadline": "Confirm deadline",
+  "taskDetailPlatformServiceFee": "Platform service fee",
+  "taskDetailCountdownRemainingDays": "{param1} days {param2} hrs {param3} min remaining",
+  "@taskDetailCountdownRemainingDays": {
+    "placeholders": {
+      "param1": {
+        "type": "int"
+      },
+      "param2": {
+        "type": "int"
+      },
+      "param3": {
+        "type": "int"
+      }
+    }
+  },
+  "taskDetailCountdownRemainingHours": "{param1} hrs {param2} min {param3} sec remaining",
+  "@taskDetailCountdownRemainingHours": {
+    "placeholders": {
+      "param1": {
+        "type": "int"
+      },
+      "param2": {
+        "type": "int"
+      },
+      "param3": {
+        "type": "int"
+      }
+    }
+  },
+  "taskDetailCountdownRemainingMinutes": "{param1} min {param2} sec remaining",
+  "@taskDetailCountdownRemainingMinutes": {
+    "placeholders": {
+      "param1": {
+        "type": "int"
+      },
+      "param2": {
+        "type": "int"
+      }
+    }
+  },
+  "taskDetailCountdownRemainingSeconds": "{param1} sec remaining",
+  "@taskDetailCountdownRemainingSeconds": {
+    "placeholders": {
+      "param1": {
+        "type": "int"
+      }
+    }
+  },
+  "taskDetailTaskCompletedTitle": "Task completed",
+  "taskDetailTaskCompletedUploadHint": "You have completed this task. You may upload evidence images or add a text description (optional) for the poster to confirm.",
+  "taskDetailSectionTextOptional": "Text description (optional)",
+  "taskDetailSectionEvidenceImagesOptional": "Evidence images (optional)",
+  "taskDetailSectionEvidenceFilesOptional": "Evidence files (optional)",
+  "taskDetailSectionCompletionEvidenceOptional": "Completion evidence (optional)",
+  "taskDetailTextLimit500": "Text description must not exceed 500 characters",
+  "taskDetailImageLimit5mb5": "Max 5MB per image, up to 5 images",
+  "taskDetailAddImage": "Add image",
+  "taskDetailUploadProgress": "Upload progress",
+  "taskDetailUploadingCount": "Uploading {param1}/{param2}...",
+  "@taskDetailUploadingCount": {
+    "placeholders": {
+      "param1": {
+        "type": "int"
+      },
+      "param2": {
+        "type": "int"
+      }
+    }
+  },
+  "taskDetailConfirmCompleteTaskButton": "Confirm task complete",
+  "taskDetailConfirmTaskCompleteAlertTitle": "Confirm task complete",
+  "taskDetailConfirmTaskCompleteAlertMessage": "Are you sure this task is complete? It will be sent to the poster for confirmation.",
+  "taskDetailConfirmTaskCompleteTitle": "Confirm task complete",
+  "taskDetailConfirmTaskCompleteHint": "You have confirmed this task is complete. You may upload evidence images (optional), e.g. screenshots or acceptance records.",
+  "taskDetailConfirmCompleteButton": "Confirm complete",
+  "taskDetailPleaseConfirmComplete": "Please confirm task complete",
+  "taskDetailAutoConfirmSoon": "Will auto-confirm soon. Please confirm now.",
+  "taskDetailConfirmNow": "Confirm now",
+  "taskDetailWaitingPosterConfirm": "Waiting for poster to confirm",
+  "taskDetailAutoConfirmOnExpiry": "(Will auto-confirm on expiry)",
+  "taskDetailDisputeDetail": "Task dispute details",
+  "taskDetailDeadlineLabel": "Deadline",
+  "taskDetailNoUploadableImages": "No images to upload",
+  "taskDetailImageSizeErrorFormat": "Image {param1} is still too large after compression ({param2}MB). Please choose a smaller image.",
+  "@taskDetailImageSizeErrorFormat": {
+    "placeholders": {
+      "param1": {
+        "type": "int"
+      },
+      "param2": {
+        "type": "double"
+      }
+    }
+  },
+  "taskDetailImageTooLargeSelectFormat": "Image too large ({param1}MB). Please choose a smaller image.",
+  "@taskDetailImageTooLargeSelectFormat": {
+    "placeholders": {
+      "param1": {
+        "type": "double"
+      }
+    }
+  },
+  "taskDetailMaxImages5": "Maximum 5 images allowed",
+  "taskDetailCompleteTaskNavTitle": "Complete Task",
+  "taskDetailTaskCompletionEvidence": "Task completion evidence",
+  "taskDetailImageConvertError": "Unable to convert image data",
+  "taskDetailImageProcessErrorFormat": "Image {param1} could not be processed. Please choose again.",
+  "@taskDetailImageProcessErrorFormat": {
+    "placeholders": {
+      "param1": {
+        "type": "int"
+      }
+    }
+  },
+  "taskDetailCompletedCountFormat": "{param1} completed",
+  "@taskDetailCompletedCountFormat": {
+    "placeholders": {
+      "param1": {
+        "type": "int"
+      }
+    }
+  },
+  "refundSubmitRebuttalEvidence": "Submit rebuttal evidence",
+  "refundSubmitRebuttalNavTitle": "Submit rebuttal",
+  "refundViewHistory": "View history",
+  "refundViewHistoryRecords": "View history records",
+  "refundWithdrawApplication": "Withdraw refund application",
+  "refundWithdrawApplicationMessage": "Are you sure you want to withdraw this refund application? This cannot be undone.",
+  "refundWithdrawing": "Withdrawing...",
+  "refundWithdrawApply": "Withdraw application",
+  "refundTaskIncompleteApplyRefund": "Task incomplete (apply for refund)",
+  "refundHistory": "Refund history",
+  "refundReasonLabel": "Refund reason: {param1}",
+  "@refundReasonLabel": {
+    "placeholders": {
+      "param1": {
+        "type": "String"
+      }
+    }
+  },
+  "refundTypeFull": "Full refund",
+  "refundTypePartial": "Partial refund",
+  "refundAdminCommentLabel": "Admin note: {param1}",
+  "@refundAdminCommentLabel": {
+    "placeholders": {
+      "param1": {
+        "type": "String"
+      }
+    }
+  },
+  "refundTakerRebuttal": "Taker rebuttal",
+  "refundEvidenceFilesCount": "{param1} evidence file(s) uploaded",
+  "@refundEvidenceFilesCount": {
+    "placeholders": {
+      "param1": {
+        "type": "int"
+      }
+    }
+  },
+  "refundNoHistory": "No refund history yet",
+  "refundReasonTypeLabel": "Reason type:",
+  "refundTypeLabel": "Refund type:",
+  "refundReviewTimeLabel": "Review time: {param1}",
+  "@refundReviewTimeLabel": {
+    "placeholders": {
+      "param1": {
+        "type": "String"
+      }
+    }
+  },
+  "refundApplyTimeLabel": "Application time: {param1}",
+  "@refundApplyTimeLabel": {
+    "placeholders": {
+      "param1": {
+        "type": "String"
+      }
+    }
+  },
+  "refundApplyRefund": "Apply for refund",
+  "refundApplyRefundHint": "Please describe the refund reason in detail and upload evidence (e.g. screenshots, chat logs). An admin will review within 3-5 business days.",
+  "refundReasonTypeRequired": "Refund reason type *",
+  "refundReasonTypePlaceholder": "Select refund reason type",
+  "refundPartialAmountTooHigh": "Partial refund amount cannot be greater than or equal to task amount. Please choose full refund.",
+  "refundAmountExceedsTask": "Refund amount cannot exceed task amount (£{param1})",
+  "@refundAmountExceedsTask": {
+    "placeholders": {
+      "param1": {
+        "type": "double"
+      }
+    }
+  },
+  "refundAmountMustBePositive": "Refund amount must be a number greater than 0",
+  "refundRatioRange": "Refund percentage must be between 0-100",
+  "refundReasonDetailRequired": "Refund reason details *",
+  "refundReasonMinLength": "Refund reason must be at least 10 characters",
+  "refundTypeRequired": "Refund type *",
+  "refundAmountOrRatioRequired": "Refund amount or ratio *",
+  "refundAmountPound": "Refund amount (£)",
+  "refundRatioPercent": "Refund ratio (%)",
+  "refundTaskAmountFormat": "Task amount: £{param1}",
+  "@refundTaskAmountFormat": {
+    "placeholders": {
+      "param1": {
+        "type": "double"
+      }
+    }
+  },
+  "refundRefundAmountFormat": "Refund amount: £{param1}",
+  "@refundRefundAmountFormat": {
+    "placeholders": {
+      "param1": {
+        "type": "double"
+      }
+    }
+  },
+  "refundSubmitRefundApplication": "Submit refund application",
+  "refundNoDisputeRecords": "No dispute records yet",
+  "refundRebuttalDescription": "Rebuttal description",
+  "refundRebuttalMinLength": "Rebuttal description must be at least 10 characters",
+  "refundUploadLimit5": "Up to 5 images or files, max 5MB each",
+  "refundSelectImage": "Select image",
+  "refundStatusLabel": "Status: {param1}",
+  "@refundStatusLabel": {
+    "placeholders": {
+      "param1": {
+        "type": "String"
+      }
+    }
+  },
+  "refundRebuttalHint": "Please describe the task completion and upload evidence (e.g. screenshots, files). Your rebuttal will help the admin make a fair decision.",
+  "refundHistorySheetTitle": "Refund history",
+  "disputeActorPoster": "Poster",
+  "disputeActorTaker": "Taker",
+  "disputeActorAdmin": "Admin",
+  "refundReasonCompletionTime": "Unsatisfied with completion time",
+  "refundReasonNotCompleted": "Taker did not complete at all",
+  "refundReasonQualityIssue": "Quality issue",
+  "refundReasonOther": "Other",
+  "refundStatusPending": "Pending",
+  "refundStatusProcessing": "Processing",
+  "refundStatusApproved": "Approved",
+  "refundStatusRejected": "Rejected",
+  "refundStatusCompleted": "Completed",
+  "refundStatusCancelled": "Cancelled",
+  "refundStatusUnknown": "Unknown status",
+  "refundStatusPendingFull": "Refund pending review",
+  "refundStatusProcessingFull": "Refund processing",
+  "refundStatusApprovedFull": "Refund approved",
+  "refundStatusRejectedFull": "Refund rejected",
+  "refundStatusCompletedFull": "Refund completed",
+  "refundStatusCancelledFull": "Refund cancelled",
+  "refundDescPending": "Your refund has been submitted. Admin will review within 3-5 business days.",
+  "refundDescProcessing": "Refund is being processed. Please wait.",
+  "refundDescApprovedAmount": "Refund amount: £{param2}{param1}. Will be returned in 5-10 business days.",
+  "@refundDescApprovedAmount": {
+    "placeholders": {
+      "param1": {
+        "type": "String"
+      },
+      "param2": {
+        "type": "double"
+      }
+    }
+  },
+  "refundDescApprovedGeneric": "Will be returned to your original payment method in 5-10 business days.",
+  "refundDescRejectedReason": "Rejection reason: {param1}",
+  "@refundDescRejectedReason": {
+    "placeholders": {
+      "param1": {
+        "type": "String"
+      }
+    }
+  },
+  "refundDescRejectedGeneric": "Refund has been rejected.",
+  "refundDescCompletedAmount": "Refund amount: £{param2}{param1}. Returned to your original payment method.",
+  "@refundDescCompletedAmount": {
+    "placeholders": {
+      "param1": {
+        "type": "String"
+      },
+      "param2": {
+        "type": "double"
+      }
+    }
+  },
+  "refundDescCompletedGeneric": "Refund returned to your original payment method.",
+  "refundDescCancelled": "Refund cancelled.",
+  "commonUnknown": "Unknown",
+  "commonOr": "or",
+
+  "fleaMarketProductTitleHint": "Enter product title",
+  "fleaMarketDescriptionHint": "Describe your product in detail",
+  "fleaMarketPriceAndTrade": "Price & Transaction",
+  "fleaMarketFillRequired": "Please fill in all required fields",
+  "fleaMarketLocation": "Transaction Location",
+
+  "taskPreferencesTypes": "Preferred Task Types",
+  "taskPreferencesTypesDesc": "Select the task types you are interested in",
+  "taskPreferencesLocations": "Preferred Locations",
+  "taskPreferencesLocationsDesc": "Select locations where you prefer to complete tasks",
+  "taskPreferencesLevels": "Preferred Task Levels",
+  "taskPreferencesLevelsDesc": "Select the task levels you want to receive",
+  "taskPreferencesMinDeadlineDesc": "Only show tasks with deadline longer than the set days",
+
+  "vipPleaseSelect": "Please Select a Plan",
+
+  "forumAllPosts": "All Posts",
+  "forumSearchPosts": "Search posts...",
+  "forumNoPosts": "No Posts",
+  "forumNoPostsMessage": "There are no posts yet. Be the first to post!",
+  "forumPinned": "Pinned",
+
+  "commonFilter": "Filter",
+  "commonDone": "Done",
+  "commonNoResults": "No Results",
+  "commonAll": "All",
+
+  "taskFilterCategory": "Category",
+  "taskFilterCity": "City",
+
+  "taskExpertSearchHint": "Search experts by name or skill...",
+  "taskExpertNoResults": "No experts found matching your search",
+  "taskExpertServiceDetail": "Service Detail",
+  "taskExpertPrice": "Price",
+  "taskExpertDescription": "Description",
+  "taskExpertCategory": "Category",
+  "taskExpertDeliveryTime": "Delivery Time",
+  "taskExpertMyApplications": "My Service Applications",
+  "taskExpertNoApplications": "No Applications",
+  "taskExpertNoApplicationsMessage": "You haven't submitted any service applications yet",
+  "taskExpertIntro": "Task Experts",
+  "taskExpertIntroTitle": "Become a Task Expert",
+  "taskExpertIntroSubtitle": "Showcase your skills and earn more from completing tasks",
+  "taskExpertBenefit1Title": "Verified Expert Badge",
+  "taskExpertBenefit1Desc": "Stand out with a verified expert badge on your profile",
+  "taskExpertBenefit2Title": "Priority Matching",
+  "taskExpertBenefit2Desc": "Get matched with tasks that match your expertise first",
+  "taskExpertBenefit3Title": "Higher Earnings",
+  "taskExpertBenefit3Desc": "Experts earn up to 20% more on task completions",
+
+  "leaderboardScore": "Score",
+  "leaderboardApplySuccess": "Leaderboard application submitted successfully",
+  "leaderboardDescription": "Description",
+  "leaderboardDescriptionHint": "Describe this leaderboard",
+  "leaderboardTitle": "Title",
+  "leaderboardTitleHint": "Enter leaderboard title",
+  "leaderboardRules": "Rules",
+  "leaderboardRulesHint": "Describe the rules for this leaderboard",
+  "leaderboardFillRequired": "Please fill in all required fields",
+  "leaderboardSubmitApply": "Submit Application",
+  "leaderboardApply": "Apply for Leaderboard",
+  "leaderboardSubmitItem": "Submit Entry",
+  "leaderboardItemName": "Name",
+  "leaderboardItemDescription": "Description",
+  "leaderboardItemScore": "Score",
+  "leaderboardSubmitSuccess": "Entry submitted successfully",
+  "leaderboardSubmit": "Submit",
+
+  "paymentStripeConnect": "Stripe Connect Setup",
+  "paymentConnectPayments": "Connect Payments",
+  "paymentConnectPayouts": "Connect Payouts",
+  "paymentNoPayments": "No Payments",
+  "paymentNoPaymentsMessage": "You don't have any payment records yet",
+  "paymentNoPayouts": "No Payouts",
+  "paymentNoPayoutsMessage": "You don't have any payout records yet",
+
+  "profileTaskCount": "Tasks",
+  "profileRating": "Rating",
+  "profileNoRecentTasks": "No recent tasks",
+
+  "notificationMarkAllRead": "Mark All Read",
+  "notificationEmpty": "No Notifications",
+  "notificationEmptyMessage": "You're all caught up! No new notifications.",
+  "notificationAll": "All Notifications",
+  "notificationTask": "Task Notifications",
+  "notificationForum": "Forum Notifications",
+
+  "infoPrivacyPolicy": "Privacy Policy",
+  "infoTermsOfService": "Terms of Service"
 }

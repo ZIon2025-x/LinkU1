@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/utils/l10n_extension.dart';
 import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_radius.dart';
+import '../../../core/design/app_typography.dart';
 import '../../../core/widgets/loading_view.dart';
 import '../../../core/widgets/error_state_view.dart';
 import '../../../core/widgets/empty_state_view.dart';
@@ -15,46 +18,197 @@ import '../../../data/models/leaderboard.dart';
 import '../bloc/forum_bloc.dart';
 import '../../leaderboard/bloc/leaderboard_bloc.dart';
 
-/// 论坛页
-/// 参考iOS ForumView.swift
-class ForumView extends StatelessWidget {
+/// 社区页 (论坛 + 排行榜)
+/// 对标iOS CommunityView (MainTabView.swift)
+/// 使用自定义居中TabButton + PageView滑动切换，与首页风格一致
+class ForumView extends StatefulWidget {
   const ForumView({super.key});
 
   @override
+  State<ForumView> createState() => _ForumViewState();
+}
+
+class _ForumViewState extends State<ForumView> {
+  int _selectedTab = 0; // 0: 论坛, 1: 排行榜
+  late PageController _pageController;
+
+  @override
+  void initState() {
+    super.initState();
+    _pageController = PageController(initialPage: _selectedTab);
+  }
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
+
+  void _onTabChanged(int index) {
+    if (_selectedTab != index) {
+      HapticFeedback.selectionClick();
+      setState(() {
+        _selectedTab = index;
+      });
+      _pageController.animateToPage(
+        index,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeInOut,
+      );
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return DefaultTabController(
-      length: 2,
-      child: Scaffold(
-        appBar: AppBar(
-          title: const Text('社区'),
-          bottom: const TabBar(
-            tabs: [
-              Tab(text: '论坛'),
-              Tab(text: '排行榜'),
-            ],
-            labelColor: AppColors.primary,
-            unselectedLabelColor: AppColors.textSecondaryLight,
-            indicatorColor: AppColors.primary,
-          ),
-        ),
-        body: const TabBarView(
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return Scaffold(
+      body: SafeArea(
+        child: Column(
           children: [
-            _ForumTab(),
-            _LeaderboardTab(),
+            // 对标iOS CommunityView: 自定义顶部导航栏（类似首页样式）
+            _buildCustomAppBar(isDark),
+
+            // 内容区域 - 对标iOS TabView(.page)
+            Expanded(
+              child: PageView(
+                controller: _pageController,
+                onPageChanged: (index) {
+                  setState(() {
+                    _selectedTab = index;
+                  });
+                },
+                children: const [
+                  _ForumTab(),
+                  _LeaderboardTab(),
+                ],
+              ),
+            ),
           ],
         ),
-        floatingActionButton: FloatingActionButton(
-          onPressed: () {
-            context.push('/forum/posts/create');
-          },
-          backgroundColor: AppColors.primary,
-          child: const Icon(Icons.edit, color: Colors.white),
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {
+          context.push('/forum/posts/create');
+        },
+        backgroundColor: AppColors.primary,
+        child: const Icon(Icons.edit, color: Colors.white),
+      ),
+    );
+  }
+
+  /// 对标iOS CommunityView: HStack自定义顶部导航栏
+  Widget _buildCustomAppBar(bool isDark) {
+    return Container(
+      padding: EdgeInsets.symmetric(
+        horizontal: AppSpacing.sm,
+        vertical: AppSpacing.xs,
+      ),
+      color: isDark ? AppColors.backgroundDark : AppColors.backgroundLight,
+      child: Row(
+        children: [
+          // 左侧占位（保持对称）
+          const SizedBox(width: 44),
+
+          const Spacer(),
+
+          // 对标iOS: 中间两个标签
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _CommunityTabButton(
+                title: context.l10n.communityForum,
+                isSelected: _selectedTab == 0,
+                onTap: () => _onTabChanged(0),
+              ),
+              _CommunityTabButton(
+                title: context.l10n.communityLeaderboard,
+                isSelected: _selectedTab == 1,
+                onTap: () => _onTabChanged(1),
+              ),
+            ],
+          ),
+
+          const Spacer(),
+
+          // 右侧占位（保持对称）
+          const SizedBox(width: 44),
+        ],
+      ),
+    );
+  }
+}
+
+/// 对标iOS TabButton - 与首页风格一致
+class _CommunityTabButton extends StatelessWidget {
+  const _CommunityTabButton({
+    required this.title,
+    required this.isSelected,
+    required this.onTap,
+  });
+
+  final String title;
+  final bool isSelected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return GestureDetector(
+      onTap: onTap,
+      behavior: HitTestBehavior.opaque,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            AnimatedScale(
+              scale: isSelected ? 1.05 : 1.0,
+              duration: const Duration(milliseconds: 250),
+              curve: Curves.easeOutBack,
+              child: Text(
+                title,
+                style: AppTypography.body.copyWith(
+                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                  color: isSelected
+                      ? (isDark
+                          ? AppColors.textPrimaryDark
+                          : AppColors.textPrimaryLight)
+                      : (isDark
+                          ? AppColors.textSecondaryDark
+                          : AppColors.textSecondaryLight),
+                ),
+              ),
+            ),
+            const SizedBox(height: 6),
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 280),
+              curve: Curves.easeOutBack,
+              height: 3,
+              width: isSelected ? 28 : 0,
+              decoration: BoxDecoration(
+                color: isSelected ? AppColors.primary : Colors.transparent,
+                borderRadius: AppRadius.allPill,
+                boxShadow: isSelected
+                    ? [
+                        BoxShadow(
+                          color: AppColors.primary.withValues(alpha: 0.3),
+                          blurRadius: 4,
+                          offset: const Offset(0, 2),
+                        ),
+                      ]
+                    : [],
+              ),
+            ),
+          ],
         ),
       ),
     );
   }
 }
 
+/// 论坛Tab
 class _ForumTab extends StatelessWidget {
   const _ForumTab();
 
@@ -72,7 +226,7 @@ class _ForumTab extends StatelessWidget {
 
           if (state.status == ForumStatus.error && state.posts.isEmpty) {
             return ErrorStateView.loadFailed(
-              message: state.errorMessage ?? '加载失败',
+              message: state.errorMessage ?? context.l10n.tasksLoadFailed,
               onRetry: () {
                 context.read<ForumBloc>().add(const ForumLoadPosts());
               },
@@ -81,7 +235,7 @@ class _ForumTab extends StatelessWidget {
 
           if (state.posts.isEmpty) {
             return EmptyStateView.noData(
-              title: '暂无帖子',
+              title: context.l10n.forumNoPosts,
               description: '还没有帖子，点击下方按钮发布第一个帖子',
             );
           }
@@ -115,6 +269,7 @@ class _ForumTab extends StatelessWidget {
   }
 }
 
+/// 排行榜Tab
 class _LeaderboardTab extends StatelessWidget {
   const _LeaderboardTab();
 
@@ -134,7 +289,7 @@ class _LeaderboardTab extends StatelessWidget {
           if (state.status == LeaderboardStatus.error &&
               state.leaderboards.isEmpty) {
             return ErrorStateView.loadFailed(
-              message: state.errorMessage ?? '加载失败',
+              message: state.errorMessage ?? context.l10n.tasksLoadFailed,
               onRetry: () {
                 context.read<LeaderboardBloc>().add(
                       const LeaderboardLoadRequested(),
@@ -185,6 +340,7 @@ class _LeaderboardTab extends StatelessWidget {
   }
 }
 
+/// 帖子卡片
 class _PostCard extends StatelessWidget {
   const _PostCard({required this.post});
 
@@ -192,6 +348,8 @@ class _PostCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return GestureDetector(
       onTap: () {
         context.push('/forum/posts/${post.id}');
@@ -199,7 +357,9 @@ class _PostCard extends StatelessWidget {
       child: Container(
         padding: AppSpacing.allMd,
         decoration: BoxDecoration(
-          color: Theme.of(context).cardColor,
+          color: isDark
+              ? AppColors.cardBackgroundDark
+              : AppColors.cardBackgroundLight,
           borderRadius: AppRadius.allMedium,
           boxShadow: [
             BoxShadow(
@@ -232,13 +392,19 @@ class _PostCard extends StatelessWidget {
                     children: [
                       Text(
                         post.author?.name ?? '用户 ${post.authorId}',
-                        style: const TextStyle(fontWeight: FontWeight.w500),
+                        style: AppTypography.body.copyWith(
+                          fontWeight: FontWeight.w500,
+                          color: isDark
+                              ? AppColors.textPrimaryDark
+                              : AppColors.textPrimaryLight,
+                        ),
                       ),
                       Text(
                         _formatTime(post.createdAt),
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: AppColors.textTertiaryLight,
+                        style: AppTypography.caption.copyWith(
+                          color: isDark
+                              ? AppColors.textTertiaryDark
+                              : AppColors.textTertiaryLight,
                         ),
                       ),
                     ],
@@ -251,7 +417,11 @@ class _PostCard extends StatelessWidget {
             // 标题
             Text(
               post.title,
-              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+              style: AppTypography.bodyBold.copyWith(
+                color: isDark
+                    ? AppColors.textPrimaryDark
+                    : AppColors.textPrimaryLight,
+              ),
             ),
             AppSpacing.vSm,
 
@@ -259,7 +429,11 @@ class _PostCard extends StatelessWidget {
             if (post.content != null)
               Text(
                 post.content!,
-                style: TextStyle(color: AppColors.textSecondaryLight),
+                style: AppTypography.subheadline.copyWith(
+                  color: isDark
+                      ? AppColors.textSecondaryDark
+                      : AppColors.textSecondaryLight,
+                ),
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
               ),
@@ -273,28 +447,34 @@ class _PostCard extends StatelessWidget {
                   size: 16,
                   color: post.isLiked
                       ? AppColors.primary
-                      : AppColors.textTertiaryLight,
+                      : (isDark
+                          ? AppColors.textTertiaryDark
+                          : AppColors.textTertiaryLight),
                 ),
                 const SizedBox(width: 4),
                 Text(
                   '${post.likeCount}',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: AppColors.textTertiaryLight,
+                  style: AppTypography.caption.copyWith(
+                    color: isDark
+                        ? AppColors.textTertiaryDark
+                        : AppColors.textTertiaryLight,
                   ),
                 ),
                 const SizedBox(width: 16),
                 Icon(
                   Icons.comment_outlined,
                   size: 16,
-                  color: AppColors.textTertiaryLight,
+                  color: isDark
+                      ? AppColors.textTertiaryDark
+                      : AppColors.textTertiaryLight,
                 ),
                 const SizedBox(width: 4),
                 Text(
                   '${post.replyCount}',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: AppColors.textTertiaryLight,
+                  style: AppTypography.caption.copyWith(
+                    color: isDark
+                        ? AppColors.textTertiaryDark
+                        : AppColors.textTertiaryLight,
                   ),
                 ),
               ],
@@ -322,6 +502,7 @@ class _PostCard extends StatelessWidget {
   }
 }
 
+/// 排行榜卡片
 class _LeaderboardCard extends StatelessWidget {
   const _LeaderboardCard({required this.leaderboard});
 
@@ -329,6 +510,8 @@ class _LeaderboardCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return GestureDetector(
       onTap: () {
         context.push('/leaderboard/${leaderboard.id}');
@@ -336,7 +519,9 @@ class _LeaderboardCard extends StatelessWidget {
       child: Container(
         padding: AppSpacing.allMd,
         decoration: BoxDecoration(
-          color: Theme.of(context).cardColor,
+          color: isDark
+              ? AppColors.cardBackgroundDark
+              : AppColors.cardBackgroundLight,
           borderRadius: AppRadius.allMedium,
           boxShadow: [
             BoxShadow(
@@ -355,7 +540,7 @@ class _LeaderboardCard extends StatelessWidget {
                 color: AppColors.primary.withValues(alpha: 0.1),
                 borderRadius: AppRadius.allMedium,
               ),
-              child: const Icon(Icons.leaderboard, color: AppColors.primary),
+              child: const Icon(Icons.emoji_events, color: AppColors.primary),
             ),
             AppSpacing.hMd,
             Expanded(
@@ -364,20 +549,30 @@ class _LeaderboardCard extends StatelessWidget {
                 children: [
                   Text(
                     leaderboard.displayName,
-                    style: const TextStyle(fontWeight: FontWeight.w600),
+                    style: AppTypography.bodyBold.copyWith(
+                      color: isDark
+                          ? AppColors.textPrimaryDark
+                          : AppColors.textPrimaryLight,
+                    ),
                   ),
                   const SizedBox(height: 4),
                   Text(
                     '${leaderboard.itemCount} 个竞品',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: AppColors.textSecondaryLight,
+                    style: AppTypography.caption.copyWith(
+                      color: isDark
+                          ? AppColors.textSecondaryDark
+                          : AppColors.textSecondaryLight,
                     ),
                   ),
                 ],
               ),
             ),
-            const Icon(Icons.chevron_right, color: AppColors.textTertiaryLight),
+            Icon(
+              Icons.chevron_right,
+              color: isDark
+                  ? AppColors.textTertiaryDark
+                  : AppColors.textTertiaryLight,
+            ),
           ],
         ),
       ),

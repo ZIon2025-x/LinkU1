@@ -31,6 +31,31 @@ import '../../features/settings/views/settings_view.dart';
 import '../../features/activity/views/activity_list_view.dart';
 import '../../features/activity/views/activity_detail_view.dart';
 import '../../features/student_verification/views/student_verification_view.dart';
+import '../../features/onboarding/views/onboarding_view.dart';
+import '../../features/customer_service/views/customer_service_view.dart';
+import '../../features/coupon_points/views/coupon_points_view.dart';
+import '../../features/info/views/info_views.dart';
+import '../../features/info/views/vip_purchase_view.dart';
+import '../../features/flea_market/views/edit_flea_market_item_view.dart';
+import '../../features/forum/views/forum_post_list_view.dart';
+import '../../features/profile/views/user_profile_view.dart';
+import '../../features/profile/views/task_preferences_view.dart';
+import '../../features/profile/views/my_forum_posts_view.dart';
+import '../../features/task_expert/views/task_expert_search_view.dart';
+import '../../features/task_expert/views/service_detail_view.dart';
+import '../../features/task_expert/views/my_service_applications_view.dart';
+import '../../features/task_expert/views/task_experts_intro_view.dart';
+import '../../features/tasks/views/task_filter_view.dart';
+import '../../features/leaderboard/views/leaderboard_item_detail_view.dart';
+import '../../features/leaderboard/views/apply_leaderboard_view.dart';
+import '../../features/leaderboard/views/submit_leaderboard_item_view.dart';
+import '../../features/payment/views/stripe_connect_onboarding_view.dart';
+import '../../features/payment/views/stripe_connect_payments_view.dart';
+import '../../features/payment/views/stripe_connect_payouts_view.dart';
+import '../../features/notification/views/notification_list_view.dart';
+import '../../features/notification/views/task_chat_list_view.dart';
+import '../../features/auth/views/forgot_password_view.dart';
+import '../../features/info/views/vip_view.dart';
 
 /// 路由路径常量
 class AppRoutes {
@@ -39,6 +64,7 @@ class AppRoutes {
   // 认证
   static const String login = '/login';
   static const String register = '/register';
+  static const String forgotPassword = '/forgot-password';
 
   // 主页
   static const String main = '/';
@@ -48,38 +74,54 @@ class AppRoutes {
   static const String tasks = '/tasks';
   static const String taskDetail = '/tasks/:id';
   static const String createTask = '/tasks/create';
+  static const String taskFilter = '/tasks/filter';
 
   // 跳蚤市场
   static const String fleaMarket = '/flea-market';
   static const String fleaMarketDetail = '/flea-market/:id';
   static const String createFleaMarketItem = '/flea-market/create';
+  static const String editFleaMarketItem = '/flea-market/:id/edit';
 
   // 任务达人
   static const String taskExperts = '/task-experts';
   static const String taskExpertDetail = '/task-experts/:id';
+  static const String taskExpertSearch = '/task-experts/search';
+  static const String taskExpertsIntro = '/task-experts/intro';
+  static const String serviceDetail = '/service/:id';
+  static const String myServiceApplications = '/my-service-applications';
 
   // 论坛
   static const String forum = '/forum';
   static const String forumPostDetail = '/forum/posts/:id';
   static const String createPost = '/forum/posts/create';
+  static const String forumPostList = '/forum/category/:categoryId';
+  static const String myForumPosts = '/forum/my-posts';
 
   // 排行榜
   static const String leaderboard = '/leaderboard';
   static const String leaderboardDetail = '/leaderboard/:id';
+  static const String leaderboardItemDetail = '/leaderboard/item/:id';
+  static const String applyLeaderboard = '/leaderboard/apply';
+  static const String submitLeaderboardItem = '/leaderboard/:id/submit';
 
   // 消息
   static const String messages = '/messages';
   static const String chat = '/chat/:userId';
   static const String taskChat = '/task-chat/:taskId';
+  static const String taskChatList = '/task-chats';
 
   // 通知
   static const String notifications = '/notifications';
+  static const String notificationList = '/notifications/:type';
 
   // 个人
   static const String profile = '/profile';
   static const String editProfile = '/profile/edit';
   static const String myTasks = '/profile/my-tasks';
   static const String myPosts = '/profile/my-posts';
+  static const String userProfile = '/user/:id';
+  static const String avatarPicker = '/profile/avatar';
+  static const String taskPreferences = '/profile/task-preferences';
 
   // 钱包
   static const String wallet = '/wallet';
@@ -93,6 +135,29 @@ class AppRoutes {
 
   // 学生认证
   static const String studentVerification = '/student-verification';
+
+  // 引导
+  static const String onboarding = '/onboarding';
+
+  // 客服
+  static const String customerService = '/customer-service';
+
+  // 支付
+  static const String payment = '/payment';
+  static const String stripeConnectOnboarding = '/payment/stripe-connect/onboarding';
+  static const String stripeConnectPayments = '/payment/stripe-connect/payments';
+  static const String stripeConnectPayouts = '/payment/stripe-connect/payouts';
+
+  // 积分与优惠券
+  static const String couponPoints = '/coupon-points';
+
+  // 信息
+  static const String faq = '/faq';
+  static const String terms = '/terms';
+  static const String privacy = '/privacy';
+  static const String about = '/about';
+  static const String vip = '/vip';
+  static const String vipPurchase = '/vip/purchase';
 }
 
 /// 应用路由配置
@@ -148,6 +213,11 @@ class AppRouter {
         path: AppRoutes.register,
         name: 'register',
         builder: (context, state) => const RegisterView(),
+      ),
+      GoRoute(
+        path: AppRoutes.forgotPassword,
+        name: 'forgotPassword',
+        builder: (context, state) => const ForgotPasswordView(),
       ),
 
       // 任务
@@ -262,6 +332,11 @@ class AppRouter {
           return TaskChatView(taskId: taskId);
         },
       ),
+      GoRoute(
+        path: AppRoutes.taskChatList,
+        name: 'taskChatList',
+        builder: (context, state) => const TaskChatListView(),
+      ),
 
       // 通知
       GoRoute(
@@ -322,6 +397,215 @@ class AppRouter {
         name: 'studentVerification',
         builder: (context, state) => const StudentVerificationView(),
       ),
+
+      // 引导页
+      GoRoute(
+        path: AppRoutes.onboarding,
+        name: 'onboarding',
+        builder: (context, state) => OnboardingView(
+          onComplete: () => Navigator.of(context).pop(),
+        ),
+      ),
+
+      // 客服
+      GoRoute(
+        path: AppRoutes.customerService,
+        name: 'customerService',
+        builder: (context, state) => const CustomerServiceView(),
+      ),
+
+      // 积分与优惠券
+      GoRoute(
+        path: AppRoutes.couponPoints,
+        name: 'couponPoints',
+        builder: (context, state) => const CouponPointsView(),
+      ),
+
+      // FAQ
+      GoRoute(
+        path: AppRoutes.faq,
+        name: 'faq',
+        builder: (context, state) => const FAQView(),
+      ),
+
+      // 服务条款
+      GoRoute(
+        path: AppRoutes.terms,
+        name: 'terms',
+        builder: (context, state) => const TermsView(),
+      ),
+
+      // 隐私政策
+      GoRoute(
+        path: AppRoutes.privacy,
+        name: 'privacy',
+        builder: (context, state) => const PrivacyView(),
+      ),
+
+      // 关于
+      GoRoute(
+        path: AppRoutes.about,
+        name: 'about',
+        builder: (context, state) => const AboutView(),
+      ),
+
+      // VIP 会员中心
+      GoRoute(
+        path: AppRoutes.vip,
+        name: 'vip',
+        builder: (context, state) => const VipView(),
+      ),
+
+      // VIP 购买
+      GoRoute(
+        path: AppRoutes.vipPurchase,
+        name: 'vipPurchase',
+        builder: (context, state) => const VIPPurchaseView(),
+      ),
+
+      // 任务筛选
+      GoRoute(
+        path: AppRoutes.taskFilter,
+        name: 'taskFilter',
+        builder: (context, state) => const TaskFilterView(),
+      ),
+
+      // 编辑跳蚤市场商品
+      GoRoute(
+        path: AppRoutes.editFleaMarketItem,
+        name: 'editFleaMarketItem',
+        builder: (context, state) {
+          final id = int.parse(state.pathParameters['id']!);
+          final item = state.extra as dynamic;
+          return EditFleaMarketItemView(itemId: id, item: item);
+        },
+      ),
+
+      // 论坛分类帖子列表
+      GoRoute(
+        path: AppRoutes.forumPostList,
+        name: 'forumPostList',
+        builder: (context, state) {
+          final category = state.extra as dynamic;
+          return ForumPostListView(category: category);
+        },
+      ),
+
+      // 我的论坛帖子
+      GoRoute(
+        path: AppRoutes.myForumPosts,
+        name: 'myForumPosts',
+        builder: (context, state) => const MyForumPostsView(),
+      ),
+
+      // 用户公开资料
+      GoRoute(
+        path: AppRoutes.userProfile,
+        name: 'userProfile',
+        builder: (context, state) {
+          final id = int.parse(state.pathParameters['id']!);
+          return UserProfileView(userId: id);
+        },
+      ),
+
+      // 任务偏好设置
+      GoRoute(
+        path: AppRoutes.taskPreferences,
+        name: 'taskPreferences',
+        builder: (context, state) => const TaskPreferencesView(),
+      ),
+
+      // 任务达人搜索
+      GoRoute(
+        path: AppRoutes.taskExpertSearch,
+        name: 'taskExpertSearch',
+        builder: (context, state) => const TaskExpertSearchView(),
+      ),
+
+      // 任务达人介绍
+      GoRoute(
+        path: AppRoutes.taskExpertsIntro,
+        name: 'taskExpertsIntro',
+        builder: (context, state) => const TaskExpertsIntroView(),
+      ),
+
+      // 服务详情
+      GoRoute(
+        path: AppRoutes.serviceDetail,
+        name: 'serviceDetail',
+        builder: (context, state) {
+          final id = int.parse(state.pathParameters['id']!);
+          return ServiceDetailView(serviceId: id);
+        },
+      ),
+
+      // 我的服务申请
+      GoRoute(
+        path: AppRoutes.myServiceApplications,
+        name: 'myServiceApplications',
+        builder: (context, state) => const MyServiceApplicationsView(),
+      ),
+
+      // 排行榜条目详情
+      GoRoute(
+        path: AppRoutes.leaderboardItemDetail,
+        name: 'leaderboardItemDetail',
+        builder: (context, state) {
+          final id = int.parse(state.pathParameters['id']!);
+          return LeaderboardItemDetailView(itemId: id);
+        },
+      ),
+
+      // 申请创建排行榜
+      GoRoute(
+        path: AppRoutes.applyLeaderboard,
+        name: 'applyLeaderboard',
+        builder: (context, state) => const ApplyLeaderboardView(),
+      ),
+
+      // 提交排行榜条目
+      GoRoute(
+        path: AppRoutes.submitLeaderboardItem,
+        name: 'submitLeaderboardItem',
+        builder: (context, state) {
+          final id = int.parse(state.pathParameters['id']!);
+          return SubmitLeaderboardItemView(leaderboardId: id);
+        },
+      ),
+
+      // 通知列表
+      GoRoute(
+        path: AppRoutes.notificationList,
+        name: 'notificationList',
+        builder: (context, state) {
+          final type = state.pathParameters['type'];
+          return NotificationListView(type: type);
+        },
+      ),
+
+      // Stripe Connect 入驻
+      GoRoute(
+        path: AppRoutes.stripeConnectOnboarding,
+        name: 'stripeConnectOnboarding',
+        builder: (context, state) {
+          final url = state.extra as String;
+          return StripeConnectOnboardingView(onboardingUrl: url);
+        },
+      ),
+
+      // Stripe Connect 收款
+      GoRoute(
+        path: AppRoutes.stripeConnectPayments,
+        name: 'stripeConnectPayments',
+        builder: (context, state) => const StripeConnectPaymentsView(),
+      ),
+
+      // Stripe Connect 提现
+      GoRoute(
+        path: AppRoutes.stripeConnectPayouts,
+        name: 'stripeConnectPayouts',
+        builder: (context, state) => const StripeConnectPayoutsView(),
+      ),
     ],
     errorBuilder: (context, state) => Scaffold(
       body: Center(
@@ -361,5 +645,45 @@ extension GoRouterExtension on BuildContext {
   /// 跳转到任务聊天
   void goToTaskChat(int taskId) {
     go('/task-chat/$taskId');
+  }
+
+  /// 跳转到用户资料
+  void goToUserProfile(int userId) {
+    push('/user/$userId');
+  }
+
+  /// 跳转到排行榜条目详情
+  void goToLeaderboardItemDetail(int itemId) {
+    push('/leaderboard/item/$itemId');
+  }
+
+  /// 跳转到服务详情
+  void goToServiceDetail(int serviceId) {
+    push('/service/$serviceId');
+  }
+
+  /// 跳转到论坛分类
+  void goToForumCategory(dynamic category) {
+    push('/forum/category/${category.id}', extra: category);
+  }
+
+  /// 跳转到VIP购买
+  void goToVIPPurchase() {
+    push('/vip/purchase');
+  }
+
+  /// 跳转到任务偏好
+  void goToTaskPreferences() {
+    push('/profile/task-preferences');
+  }
+
+  /// 跳转到我的论坛帖子
+  void goToMyForumPosts() {
+    push('/forum/my-posts');
+  }
+
+  /// 跳转到任务达人搜索
+  void goToTaskExpertSearch() {
+    push('/task-experts/search');
   }
 }

@@ -1,0 +1,22 @@
+---
+description: Flutter SDK environment path configuration for this project
+alwaysApply: true
+---
+
+# Flutter Environment
+
+Flutter SDK is installed at `F:\flutter\bin\`.
+
+When running Flutter or Dart commands in the Shell tool, always prepend the PATH first:
+
+```powershell
+$env:PATH = "F:\flutter\bin;" + $env:PATH; flutter <command>
+```
+
+Or call the full path directly:
+
+```powershell
+F:\flutter\bin\flutter.bat <command>
+```
+
+The Flutter project is located at `link2ur/` subdirectory.

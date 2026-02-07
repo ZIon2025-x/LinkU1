@@ -57,6 +57,7 @@ class NotificationState extends Equatable {
     this.hasMore = true,
     this.unreadCount = const UnreadNotificationCount(count: 0),
     this.errorMessage,
+    this.selectedType,
   });
 
   final NotificationStatus status;
@@ -66,6 +67,7 @@ class NotificationState extends Equatable {
   final bool hasMore;
   final UnreadNotificationCount unreadCount;
   final String? errorMessage;
+  final String? selectedType;
 
   bool get isLoading => status == NotificationStatus.loading;
   bool get hasUnread => unreadCount.totalCount > 0;
@@ -78,6 +80,7 @@ class NotificationState extends Equatable {
     bool? hasMore,
     UnreadNotificationCount? unreadCount,
     String? errorMessage,
+    String? selectedType,
   }) {
     return NotificationState(
       status: status ?? this.status,
@@ -87,12 +90,21 @@ class NotificationState extends Equatable {
       hasMore: hasMore ?? this.hasMore,
       unreadCount: unreadCount ?? this.unreadCount,
       errorMessage: errorMessage,
+      selectedType: selectedType ?? this.selectedType,
     );
   }
 
   @override
-  List<Object?> get props =>
-      [status, notifications, total, page, hasMore, unreadCount, errorMessage];
+  List<Object?> get props => [
+        status,
+        notifications,
+        total,
+        page,
+        hasMore,
+        unreadCount,
+        errorMessage,
+        selectedType,
+      ];
 }
 
 // ==================== Bloc ====================
@@ -129,6 +141,7 @@ class NotificationBloc extends Bloc<NotificationEvent, NotificationState> {
         total: response.total,
         page: 1,
         hasMore: response.hasMore,
+        selectedType: event.type,
       ));
     } catch (e) {
       AppLogger.error('Failed to load notifications', e);
@@ -149,6 +162,7 @@ class NotificationBloc extends Bloc<NotificationEvent, NotificationState> {
       final nextPage = state.page + 1;
       final response = await _notificationRepository.getNotifications(
         page: nextPage,
+        type: state.selectedType,
       );
 
       emit(state.copyWith(
