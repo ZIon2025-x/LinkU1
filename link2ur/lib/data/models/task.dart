@@ -52,9 +52,9 @@ class Task extends Equatable {
   final String status;
   final List<String> images;
   final DateTime? deadline;
-  final int posterId;
+  final String posterId;
   final UserBrief? poster;
-  final int? takerId;
+  final String? takerId;
   final UserBrief? taker;
   final bool isMultiParticipant;
   final int maxParticipants;
@@ -163,11 +163,11 @@ class Task extends Equatable {
       deadline: json['deadline'] != null
           ? DateTime.parse(json['deadline'])
           : null,
-      posterId: json['poster_id'] as int? ?? 0,
+      posterId: json['poster_id']?.toString() ?? '',
       poster: json['poster'] != null
           ? UserBrief.fromJson(json['poster'] as Map<String, dynamic>)
           : null,
-      takerId: json['taker_id'] as int?,
+      takerId: json['taker_id']?.toString(),
       taker: json['taker'] != null
           ? UserBrief.fromJson(json['taker'] as Map<String, dynamic>)
           : null,
@@ -240,8 +240,13 @@ class TaskListResponse {
   bool get hasMore => tasks.length >= pageSize;
 
   factory TaskListResponse.fromJson(Map<String, dynamic> json) {
+    // 后端不同接口返回不同的键名：
+    //   /api/tasks → 'tasks' 或 'items'
+    //   /api/recommendations → 'recommendations'
+    final taskList = (json['tasks'] ?? json['items'] ?? json['recommendations'])
+        as List<dynamic>?;
     return TaskListResponse(
-      tasks: (json['items'] as List<dynamic>?)
+      tasks: taskList
               ?.map((e) => Task.fromJson(e as Map<String, dynamic>))
               .toList() ??
           [],

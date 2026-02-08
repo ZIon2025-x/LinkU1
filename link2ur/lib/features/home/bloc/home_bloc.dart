@@ -33,7 +33,7 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
     }
 
     try {
-      // 优先尝试推荐任务（需要认证），失败则降级为公开任务列表
+      // 优先尝试推荐任务（需要认证），失败或为空则降级为公开任务列表
       TaskListResponse result;
       try {
         result = await _taskRepository.getRecommendedTasks(
@@ -47,6 +47,19 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
           page: 1,
           pageSize: 20,
         );
+      }
+
+      // 推荐为空时，降级到公开任务列表（新用户可能没有推荐数据）
+      if (result.tasks.isEmpty) {
+        AppLogger.info('Recommendations empty, falling back to public tasks');
+        try {
+          result = await _taskRepository.getTasks(
+            page: 1,
+            pageSize: 20,
+          );
+        } catch (_) {
+          // 公开任务也失败，保持空列表
+        }
       }
 
       emit(state.copyWith(
@@ -87,6 +100,13 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
           page: 1,
           pageSize: 20,
         );
+      }
+
+      // 推荐为空时降级到公开任务
+      if (result.tasks.isEmpty) {
+        try {
+          result = await _taskRepository.getTasks(page: 1, pageSize: 20);
+        } catch (_) {}
       }
 
       emit(state.copyWith(

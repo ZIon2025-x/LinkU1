@@ -85,13 +85,13 @@ class StorageService {
   // ==================== 普通存储（设置等） ====================
 
   /// 保存用户ID
-  Future<void> saveUserId(int userId) async {
-    await _prefs.setInt(StorageKeys.userId, userId);
+  Future<void> saveUserId(String userId) async {
+    await _prefs.setString(StorageKeys.userId, userId);
   }
 
   /// 获取用户ID
-  int? getUserId() {
-    return _prefs.getInt(StorageKeys.userId);
+  String? getUserId() {
+    return _prefs.getString(StorageKeys.userId);
   }
 
   /// 保存用户信息JSON

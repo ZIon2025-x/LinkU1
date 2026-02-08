@@ -24,7 +24,7 @@ void main() {
 
   group('AuthBloc', () {
     final testUser = createTestUser(
-      id: 123,
+      id: '123',
       name: 'Test User',
       email: 'test@example.com',
     );
@@ -403,7 +403,7 @@ void main() {
         ),
         act: (bloc) {
           final updatedUser = createTestUser(
-            id: 123,
+            id: '123',
             name: 'Updated Name',
             email: 'test@example.com',
           );

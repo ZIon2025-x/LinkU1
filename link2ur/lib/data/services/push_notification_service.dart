@@ -253,7 +253,7 @@ class PushNotificationService {
         if (taskId != null) {
           _router!.push('/task-chat/$taskId');
         } else if (userId != null) {
-          _router!.push('/chat/$userId');
+          _router!.push('/chat/${userId.toString()}');
         } else {
           _router!.go('/messages-tab');
         }

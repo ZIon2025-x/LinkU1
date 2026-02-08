@@ -19,7 +19,7 @@ import '../bloc/profile_bloc.dart';
 class UserProfileView extends StatefulWidget {
   const UserProfileView({super.key, required this.userId});
 
-  final int userId;
+  final String userId;
 
   @override
   State<UserProfileView> createState() => _UserProfileViewState();

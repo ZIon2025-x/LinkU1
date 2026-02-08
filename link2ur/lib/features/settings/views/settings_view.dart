@@ -371,7 +371,7 @@ class _SettingsViewState extends State<SettingsView> {
                         _SettingsInfoRow(
                           icon: Icons.badge_outlined,
                           title: context.l10n.settingsUserId,
-                          value: '${user.id}',
+                          value: user.id,
                         ),
                         _settingsDivider(isDark),
                         _SettingsInfoRow(

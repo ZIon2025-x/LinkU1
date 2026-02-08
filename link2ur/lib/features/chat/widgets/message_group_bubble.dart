@@ -26,19 +26,19 @@ class MessageGroup {
 
   final List<Message> messages;
   final BubbleDirection direction;
-  final int? senderId;
+  final String? senderId;
   final String? senderName;
   final String? senderAvatar;
 }
 
 /// 将消息按发送者和时间间隔分组
 /// 参考iOS groupMessages()
-List<MessageGroup> groupMessages(List<Message> messages, int? currentUserId) {
+List<MessageGroup> groupMessages(List<Message> messages, String? currentUserId) {
   if (messages.isEmpty) return [];
 
   final groups = <MessageGroup>[];
   var currentGroup = <Message>[];
-  int? currentSenderId;
+  String? currentSenderId;
   BubbleDirection? currentDirection;
   DateTime? lastMessageTime;
   const timeThreshold = Duration(minutes: 3);

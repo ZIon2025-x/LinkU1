@@ -190,6 +190,8 @@ class _FleaMarketViewContent extends StatelessWidget {
   }
 }
 
+/// 商品卡片 - 对齐iOS FleaMarketView.ItemCard
+/// (渐变遮罩 + 分类胶囊 + 会员标签 + 统计)
 class _FleaMarketItemCard extends StatelessWidget {
   const _FleaMarketItemCard({required this.item});
 
@@ -201,54 +203,113 @@ class _FleaMarketItemCard extends StatelessWidget {
 
     return GestureDetector(
       onTap: () {
-        // Parse item.id (String) to int for navigation
         final itemId = int.tryParse(item.id);
         if (itemId != null) {
           context.push('/flea-market/$itemId');
         }
       },
       child: Container(
+        clipBehavior: Clip.antiAlias,
         decoration: BoxDecoration(
           color: isDark
               ? AppColors.cardBackgroundDark
               : AppColors.cardBackgroundLight,
-          borderRadius: AppRadius.allMedium,
+          borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withValues(alpha: 0.05),
               blurRadius: 8,
-              offset: const Offset(0, 2),
+              offset: const Offset(0, 4),
+            ),
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.02),
+              blurRadius: 2,
+              offset: const Offset(0, 1),
             ),
           ],
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Image
+            // 图片区域 - 对齐iOS: 渐变遮罩 + 分类标签 + 状态标签
             Expanded(
               child: Stack(
+                fit: StackFit.expand,
                 children: [
+                  // 商品图片
                   ClipRRect(
-                    borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
-                    child: AsyncImageView(
-                      imageUrl: item.firstImage,
-                      width: double.infinity,
-                      height: double.infinity,
-                      fit: BoxFit.cover,
+                    borderRadius:
+                        const BorderRadius.vertical(top: Radius.circular(16)),
+                    child: item.firstImage != null
+                        ? AsyncImageView(
+                            imageUrl: item.firstImage!,
+                            width: double.infinity,
+                            height: double.infinity,
+                            fit: BoxFit.cover,
+                          )
+                        : Container(
+                            color: AppColors.primary.withValues(alpha: 0.05),
+                            child: Icon(
+                              Icons.image_outlined,
+                              color: AppColors.primary.withValues(alpha: 0.3),
+                              size: 40,
+                            ),
+                          ),
+                  ),
+                  // 底部渐变遮罩 (iOS style)
+                  Positioned(
+                    bottom: 0,
+                    left: 0,
+                    right: 0,
+                    height: 40,
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [
+                            Colors.transparent,
+                            Colors.black.withValues(alpha: 0.25),
+                          ],
+                        ),
+                      ),
                     ),
                   ),
-                  // Status badge
+                  // 左上: 分类标签 (对齐iOS: Capsule + black 40%)
+                  if (item.category != null)
+                    Positioned(
+                      top: 8,
+                      left: 8,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: Colors.black.withValues(alpha: 0.4),
+                          borderRadius: AppRadius.allPill,
+                        ),
+                        child: Text(
+                          item.category!,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 10,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ),
+                  // 右上: 状态标签 (已售出/已下架)
                   if (!item.isActive)
                     Positioned(
                       top: 8,
                       right: 8,
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 4),
                         decoration: BoxDecoration(
                           color: item.isSold
                               ? Colors.black.withValues(alpha: 0.7)
                               : AppColors.error.withValues(alpha: 0.9),
-                          borderRadius: BorderRadius.circular(4),
+                          borderRadius: AppRadius.allPill,
                         ),
                         child: Text(
                           item.isSold ? '已售出' : '已下架',
@@ -260,67 +321,110 @@ class _FleaMarketItemCard extends StatelessWidget {
                         ),
                       ),
                     ),
+                  // 左下: VIP/Super卖家标签 (对齐iOS: orange gradient badge)
+                  if (item.sellerUserLevel == 'vip' ||
+                      item.sellerUserLevel == 'super')
+                    Positioned(
+                      bottom: 8,
+                      left: 8,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            colors: [Color(0xFFFF9500), Color(0xFFFF6B00)],
+                          ),
+                          borderRadius: AppRadius.allPill,
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.orange.withValues(alpha: 0.4),
+                              blurRadius: 4,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.star,
+                                color: Colors.white, size: 10),
+                            const SizedBox(width: 2),
+                            Text(
+                              item.sellerUserLevel == 'super'
+                                  ? 'Super'
+                                  : 'VIP',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 9,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
                 ],
               ),
             ),
-            // Content
+            // 内容区域 - 对齐iOS: title + price (red) + stats
             Padding(
               padding: const EdgeInsets.all(12),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Title
-                  Text(
-                    item.title,
-                    style: TextStyle(
-                      fontWeight: FontWeight.w500,
-                      fontSize: 14,
-                      color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+                  // 标题
+                  SizedBox(
+                    height: 38,
+                    child: Text(
+                      item.title,
+                      style: TextStyle(
+                        fontWeight: FontWeight.w500,
+                        fontSize: 14,
+                        color: isDark
+                            ? AppColors.textPrimaryDark
+                            : AppColors.textPrimaryLight,
+                        height: 1.3,
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
                     ),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
                   ),
                   const SizedBox(height: 6),
-                  // Price
-                  Text(
-                    item.priceDisplay,
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.error,
-                    ),
-                  ),
-                  // Seller info (optional)
-                  if (item.sellerUserLevel != null) ...[
-                    const SizedBox(height: 4),
-                    Row(
-                      children: [
+                  // 价格 + 统计
+                  Row(
+                    children: [
+                      // 价格 (对齐iOS: red color, rounded font)
+                      Text(
+                        item.priceDisplay,
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFFE64D3D), // iOS red price
+                        ),
+                      ),
+                      const Spacer(),
+                      // 浏览量 (对齐iOS: eye icon + count)
+                      if (item.viewCount > 0) ...[
                         Icon(
-                          item.sellerUserLevel == 'vip' || item.sellerUserLevel == 'super'
-                              ? Icons.verified
-                              : Icons.person,
+                          Icons.remove_red_eye_outlined,
                           size: 12,
                           color: isDark
-                              ? AppColors.textTertiaryDark
-                              : AppColors.textTertiaryLight,
+                              ? AppColors.textTertiaryDark.withValues(alpha: 0.6)
+                              : AppColors.textTertiaryLight.withValues(alpha: 0.6),
                         ),
-                        const SizedBox(width: 4),
+                        const SizedBox(width: 2),
                         Text(
-                          item.sellerUserLevel == 'super'
-                              ? '超级用户'
-                              : item.sellerUserLevel == 'vip'
-                                  ? 'VIP用户'
-                                  : '普通用户',
+                          '${item.viewCount}',
                           style: TextStyle(
                             fontSize: 10,
                             color: isDark
-                                ? AppColors.textTertiaryDark
-                                : AppColors.textTertiaryLight,
+                                ? AppColors.textTertiaryDark.withValues(alpha: 0.6)
+                                : AppColors.textTertiaryLight.withValues(alpha: 0.6),
                           ),
                         ),
                       ],
-                    ),
-                  ],
+                    ],
+                  ),
                 ],
               ),
             ),

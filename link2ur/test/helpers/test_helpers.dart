@@ -19,7 +19,7 @@ class MockStorageService extends Mock implements StorageService {}
 
 /// 创建测试用户对象
 User createTestUser({
-  int id = 1,
+  String id = '1',
   String name = 'testuser',
   String? email = 'test@example.com',
   String? avatar,

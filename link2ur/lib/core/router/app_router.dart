@@ -374,7 +374,7 @@ class AppRouter {
         path: AppRoutes.chat,
         name: 'chat',
         builder: (context, state) {
-          final userId = int.tryParse(state.pathParameters['userId'] ?? '') ?? 0;
+          final userId = state.pathParameters['userId'] ?? '';
           return ChatView(userId: userId);
         },
       ),
@@ -540,7 +540,7 @@ class AppRouter {
         path: AppRoutes.userProfile,
         name: 'userProfile',
         builder: (context, state) {
-          final id = int.tryParse(state.pathParameters['id'] ?? '') ?? 0;
+          final id = state.pathParameters['id'] ?? '';
           return UserProfileView(userId: id);
         },
       ),
@@ -635,7 +635,7 @@ extension GoRouterExtension on BuildContext {
   }
 
   /// 跳转到聊天
-  void goToChat(int userId) {
+  void goToChat(String userId) {
     go('/chat/$userId');
   }
 
@@ -645,7 +645,7 @@ extension GoRouterExtension on BuildContext {
   }
 
   /// 跳转到用户资料
-  void goToUserProfile(int userId) {
+  void goToUserProfile(String userId) {
     push('/user/$userId');
   }
 

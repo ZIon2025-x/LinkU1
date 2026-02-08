@@ -70,7 +70,7 @@ class ForumPost extends Equatable {
   final List<String> images;
   final int categoryId;
   final ForumCategory? category;
-  final int authorId;
+  final String authorId;
   final UserBrief? author;
   final int likeCount;
   final int replyCount;
@@ -100,7 +100,7 @@ class ForumPost extends Equatable {
       category: json['category'] != null
           ? ForumCategory.fromJson(json['category'] as Map<String, dynamic>)
           : null,
-      authorId: json['author_id'] as int? ?? 0,
+      authorId: (json['author_id'] ?? '').toString(),
       author: json['author'] != null
           ? UserBrief.fromJson(json['author'] as Map<String, dynamic>)
           : null,
@@ -186,7 +186,7 @@ class ForumReply extends Equatable {
   final int id;
   final int postId;
   final String content;
-  final int authorId;
+  final String authorId;
   final UserBrief? author;
   final int? parentReplyId;
   final UserBrief? parentReplyAuthor;
@@ -202,7 +202,7 @@ class ForumReply extends Equatable {
       id: json['id'] as int,
       postId: json['post_id'] as int,
       content: json['content'] as String? ?? '',
-      authorId: json['author_id'] as int? ?? 0,
+      authorId: (json['author_id'] ?? '').toString(),
       author: json['author'] != null
           ? UserBrief.fromJson(json['author'] as Map<String, dynamic>)
           : null,

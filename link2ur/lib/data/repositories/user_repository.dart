@@ -47,14 +47,14 @@ class UserRepository {
   }
 
   /// 获取其他用户资料
-  Future<User> getUserProfile(int userId) async {
+  Future<User> getUserProfile(String userId) async {
     return getUserPublicProfile(userId);
   }
 
   /// 获取其他用户公开资料
-  Future<User> getUserPublicProfile(int userId) async {
+  Future<User> getUserPublicProfile(String userId) async {
     final response = await _apiService.get<Map<String, dynamic>>(
-      ApiEndpoints.userById(userId.toString()),
+      ApiEndpoints.userById(userId),
     );
 
     if (!response.isSuccess || response.data == null) {

@@ -23,7 +23,7 @@ class ChatView extends StatefulWidget {
     required this.userId,
   });
 
-  final int userId;
+  final String userId;
 
   @override
   State<ChatView> createState() => _ChatViewState();
@@ -33,7 +33,7 @@ class _ChatViewState extends State<ChatView> {
   final _messageController = TextEditingController();
   final _scrollController = ScrollController();
   final _imagePicker = ImagePicker();
-  int? _currentUserId;
+  String? _currentUserId;
   bool _showAttachMenu = false;
 
   @override

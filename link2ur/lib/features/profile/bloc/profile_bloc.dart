@@ -58,7 +58,7 @@ class ProfileLoadMyTasks extends ProfileEvent {
 class ProfileLoadPublicProfile extends ProfileEvent {
   const ProfileLoadPublicProfile(this.userId);
 
-  final int userId;
+  final String userId;
 
   @override
   List<Object?> get props => [userId];

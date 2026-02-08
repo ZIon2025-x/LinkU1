@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -79,6 +81,7 @@ class _HomeViewContentState extends State<_HomeViewContent> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    debugPrint('[HomeView] build called, isDark=$isDark');
 
     return Scaffold(
       body: Stack(
@@ -439,7 +442,7 @@ class _RecommendedTab extends StatelessWidget {
                 // 对标iOS: 横向滚动任务卡片 (最多10个)
                 SliverToBoxAdapter(
                   child: SizedBox(
-                    height: 200,
+                    height: 242,
                     child: ListView.separated(
                       scrollDirection: Axis.horizontal,
                       padding: const EdgeInsets.only(
@@ -725,12 +728,17 @@ class _BannerItem extends StatelessWidget {
                   end: Alignment.bottomRight,
                 )
               : null,
-          borderRadius: AppRadius.allMedium,
+          borderRadius: AppRadius.allLarge,
           boxShadow: [
             BoxShadow(
-              color: gradient.first.withValues(alpha: 0.3),
-              blurRadius: 10,
-              offset: const Offset(0, 4),
+              color: gradient.first.withValues(alpha: 0.25),
+              blurRadius: 12,
+              offset: const Offset(0, 6),
+            ),
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.05),
+              blurRadius: 3,
+              offset: const Offset(0, 1),
             ),
           ],
         ),
@@ -832,7 +840,7 @@ class _PopularActivitiesSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      height: 120,
+      height: 150,
       child: ListView(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.only(
@@ -889,7 +897,7 @@ class _ActivityCard extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        width: 160,
+        width: 180,
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           gradient: LinearGradient(
@@ -897,28 +905,87 @@ class _ActivityCard extends StatelessWidget {
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
-          borderRadius: AppRadius.allMedium,
+          borderRadius: AppRadius.allLarge,
+          // 对标iOS: 彩色阴影，更有深度感
+          boxShadow: [
+            BoxShadow(
+              color: gradient.first.withValues(alpha: 0.35),
+              blurRadius: 12,
+              offset: const Offset(0, 6),
+            ),
+            BoxShadow(
+              color: gradient.last.withValues(alpha: 0.15),
+              blurRadius: 4,
+              offset: const Offset(0, 2),
+            ),
+          ],
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        child: Stack(
           children: [
-            Icon(icon, color: Colors.white, size: 24),
-            const Spacer(),
-            Text(
-              title,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 15,
-                fontWeight: FontWeight.bold,
+            // 装饰性大圆 (右下角，增加层次感)
+            Positioned(
+              right: -20,
+              bottom: -20,
+              child: Container(
+                width: 80,
+                height: 80,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: Colors.white.withValues(alpha: 0.1),
+                ),
               ),
             ),
-            const SizedBox(height: 2),
-            Text(
-              subtitle,
-              style: TextStyle(
-                color: Colors.white.withValues(alpha: 0.8),
-                fontSize: 11,
+            // 装饰性小圆 (右上角)
+            Positioned(
+              right: 20,
+              top: -10,
+              child: Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: Colors.white.withValues(alpha: 0.08),
+                ),
               ),
+            ),
+            // 主内容
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // 毛玻璃效果图标容器（对标iOS Material风格）
+                Container(
+                  width: 38,
+                  height: 38,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.22),
+                    borderRadius: BorderRadius.circular(11),
+                    border: Border.all(
+                      color: Colors.white.withValues(alpha: 0.3),
+                      width: 0.5,
+                    ),
+                  ),
+                  child: Icon(icon, color: Colors.white, size: 20),
+                ),
+                const Spacer(),
+                Text(
+                  title,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: -0.3,
+                  ),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  subtitle,
+                  style: TextStyle(
+                    color: Colors.white.withValues(alpha: 0.85),
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
             ),
           ],
         ),
@@ -1029,7 +1096,7 @@ class _RecentActivityData {
   final String? description;
 }
 
-/// 对标iOS: ActivityRow - 动态行组件
+/// 对标iOS: ActivityRow - 动态行组件（对标iOS .cardBackground + AppShadow.small）
 class _ActivityRow extends StatelessWidget {
   const _ActivityRow({required this.activity});
 
@@ -1046,17 +1113,29 @@ class _ActivityRow extends StatelessWidget {
             ? AppColors.cardBackgroundDark
             : AppColors.cardBackgroundLight,
         borderRadius: AppRadius.allLarge,
+        // 对标iOS: 0.5pt separator边框
+        border: Border.all(
+          color: (isDark ? AppColors.separatorDark : AppColors.separatorLight)
+              .withValues(alpha: 0.3),
+          width: 0.5,
+        ),
+        // 对标iOS: 双层阴影
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.04),
             blurRadius: 8,
-            offset: const Offset(0, 2),
+            offset: const Offset(0, 4),
+          ),
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.02),
+            blurRadius: 2,
+            offset: const Offset(0, 1),
           ),
         ],
       ),
       child: Row(
         children: [
-          // 对标iOS: 渐变图标
+          // 对标iOS: 渐变图标 + 圆形 + 彩色阴影
           Container(
             width: 44,
             height: 44,
@@ -1069,9 +1148,9 @@ class _ActivityRow extends StatelessWidget {
               shape: BoxShape.circle,
               boxShadow: [
                 BoxShadow(
-                  color: activity.iconGradient.first.withValues(alpha: 0.3),
-                  blurRadius: 4,
-                  offset: const Offset(0, 2),
+                  color: activity.iconGradient.first.withValues(alpha: 0.35),
+                  blurRadius: 6,
+                  offset: const Offset(0, 3),
                 ),
               ],
             ),
@@ -1086,7 +1165,7 @@ class _ActivityRow extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // 对标iOS: 合并用户名和动作文本
+                // 对标iOS: 合并用户名和动作文本 (body + semibold + secondary)
                 RichText(
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
@@ -1112,7 +1191,7 @@ class _ActivityRow extends StatelessWidget {
                     ],
                   ),
                 ),
-                const SizedBox(height: 2),
+                const SizedBox(height: 3),
                 Text(
                   activity.title,
                   style: AppTypography.caption.copyWith(
@@ -1153,11 +1232,49 @@ class _ActivityRow extends StatelessWidget {
   }
 }
 
-/// 对标iOS: 横向任务卡片
+/// 对标iOS: 横向任务卡片 (完全对标 iOS TaskCard 风格)
+/// 图片(160px) + 3段渐变遮罩 + ultraThinMaterial毛玻璃标签 + 任务类型标签 + 双层阴影
 class _HorizontalTaskCard extends StatelessWidget {
   const _HorizontalTaskCard({required this.task});
 
   final Task task;
+
+  // 任务类型图标映射（对标iOS SF Symbols → Material Icons）
+  IconData _taskTypeIcon(String taskType) {
+    switch (taskType) {
+      case 'delivery':
+        return Icons.local_shipping_outlined;
+      case 'shopping':
+        return Icons.shopping_bag_outlined;
+      case 'tutoring':
+        return Icons.school_outlined;
+      case 'translation':
+        return Icons.translate;
+      case 'design':
+        return Icons.design_services_outlined;
+      case 'photography':
+        return Icons.camera_alt_outlined;
+      case 'moving':
+        return Icons.local_shipping_outlined;
+      case 'cleaning':
+        return Icons.cleaning_services_outlined;
+      case 'pet_care':
+        return Icons.pets_outlined;
+      case 'errand':
+        return Icons.directions_run;
+      default:
+        return Icons.task_alt;
+    }
+  }
+
+  String _formatDeadline(DateTime deadline) {
+    final now = DateTime.now();
+    final diff = deadline.difference(now);
+    if (diff.isNegative) return '已截止';
+    if (diff.inDays > 0) return '${diff.inDays}天后截止';
+    if (diff.inHours > 0) return '${diff.inHours}小时后';
+    return '${diff.inMinutes}分钟后';
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -1169,88 +1286,267 @@ class _HorizontalTaskCard extends StatelessWidget {
         context.push('/tasks/${task.id}');
       },
       child: Container(
-        width: 180,
+        width: 220,
+        clipBehavior: Clip.antiAlias,
         decoration: BoxDecoration(
           color: isDark
               ? AppColors.cardBackgroundDark
               : AppColors.cardBackgroundLight,
-          borderRadius: AppRadius.allMedium,
+          borderRadius: AppRadius.allLarge,
+          // 对标iOS: 0.5pt separator边框
+          border: Border.all(
+            color: (isDark ? AppColors.separatorDark : AppColors.separatorLight)
+                .withValues(alpha: 0.3),
+            width: 0.5,
+          ),
+          // 对标iOS: 双层阴影 - primary色柔和扩散 + 黑色紧密底部
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.06),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
+              color: AppColors.primary.withValues(alpha: 0.08),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
+            ),
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.03),
+              blurRadius: 2,
+              offset: const Offset(0, 1),
             ),
           ],
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // 图片区域
-            ClipRRect(
-              borderRadius:
-                  const BorderRadius.vertical(top: Radius.circular(12)),
-              child: Container(
-                height: 100,
-                width: double.infinity,
-                color: AppColors.primary.withValues(alpha: 0.05),
-                child: task.firstImage != null
-                    ? AsyncImageView(
-                        imageUrl: task.firstImage!,
-                        width: 180,
-                        height: 100,
-                      )
-                    : Center(
-                        child: Icon(
-                          Icons.image,
-                          color: isDark
-                              ? AppColors.textTertiaryDark
-                              : AppColors.textTertiaryLight,
-                          size: 32,
+            // ===== 图片区域 (对标iOS + 3段渐变 + 毛玻璃标签) =====
+            SizedBox(
+              height: 170,
+              width: double.infinity,
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  // 图片或占位背景（对标iOS placeholderBackground）
+                  if (task.firstImage != null)
+                    AsyncImageView(
+                      imageUrl: task.firstImage!,
+                      width: 220,
+                      height: 170,
+                      fit: BoxFit.cover,
+                    )
+                  else
+                    Container(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [
+                            AppColors.primary.withValues(alpha: 0.12),
+                            AppColors.primary.withValues(alpha: 0.04),
+                          ],
                         ),
                       ),
-              ),
-            ),
-            // 内容区域
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.all(10),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      task.displayTitle,
-                      style: const TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
+                      child: Icon(
+                        _taskTypeIcon(task.taskType),
+                        color: AppColors.primary.withValues(alpha: 0.25),
+                        size: 44,
                       ),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
                     ),
-                    const Spacer(),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          '${task.currency == 'GBP' ? '£' : '\$'}${task.reward.toStringAsFixed(0)}',
-                          style: const TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.bold,
-                            color: AppColors.primary,
+
+                  // 对标iOS: 3段渐变遮罩（0.2→0.0→0.4）
+                  DecoratedBox(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [
+                          Colors.black.withValues(alpha: 0.20),
+                          Colors.black.withValues(alpha: 0.0),
+                          Colors.black.withValues(alpha: 0.40),
+                        ],
+                        stops: const [0.0, 0.4, 1.0],
+                      ),
+                    ),
+                  ),
+
+                  // 左上: 位置标签 (对标iOS .ultraThinMaterial + Capsule)
+                  if (task.location != null)
+                    Positioned(
+                      top: 8,
+                      left: 8,
+                      child: ClipRRect(
+                        borderRadius: AppRadius.allPill,
+                        child: BackdropFilter(
+                          filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.18),
+                              borderRadius: AppRadius.allPill,
+                              border: Border.all(
+                                color: Colors.white.withValues(alpha: 0.2),
+                                width: 0.5,
+                              ),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  task.isOnline
+                                      ? Icons.language
+                                      : Icons.location_on,
+                                  size: 12,
+                                  color: Colors.white,
+                                ),
+                                const SizedBox(width: 3),
+                                ConstrainedBox(
+                                  constraints:
+                                      const BoxConstraints(maxWidth: 80),
+                                  child: Text(
+                                    task.location!,
+                                    style: const TextStyle(
+                                      fontSize: 11,
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
                         ),
-                        if (task.location != null)
-                          Flexible(
+                      ),
+                    ),
+
+                  // 右下: 任务类型标签 (对标iOS taskType capsule + .ultraThinMaterial)
+                  Positioned(
+                    bottom: 8,
+                    right: 8,
+                    child: ClipRRect(
+                      borderRadius: AppRadius.allPill,
+                      child: BackdropFilter(
+                        filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.18),
+                            borderRadius: AppRadius.allPill,
+                            border: Border.all(
+                              color: Colors.white.withValues(alpha: 0.2),
+                              width: 0.5,
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                _taskTypeIcon(task.taskType),
+                                size: 12,
+                                color: Colors.white,
+                              ),
+                              const SizedBox(width: 3),
+                              Text(
+                                task.taskTypeText,
+                                style: const TextStyle(
+                                  fontSize: 11,
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            // ===== 内容区域 (对标iOS - title + deadline + price badge) =====
+            Padding(
+              padding: const EdgeInsets.fromLTRB(10, 8, 10, 8),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // 标题（对标iOS .body字号 + lineLimit(2)）
+                  Text(
+                    task.displayTitle,
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: isDark
+                          ? AppColors.textPrimaryDark
+                          : AppColors.textPrimaryLight,
+                      height: 1.3,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 6),
+                  // 底部: 截止时间 + 价格标签（对标iOS底部信息栏）
+                  Row(
+                      children: [
+                        // 截止时间 (对标iOS clock.fill + formatDeadline)
+                        if (task.deadline != null) ...[
+                          Icon(
+                            Icons.schedule,
+                            size: 12,
+                            color: task.isExpired
+                                ? AppColors.error
+                                : (isDark
+                                    ? AppColors.textSecondaryDark
+                                    : AppColors.textSecondaryLight),
+                          ),
+                          const SizedBox(width: 3),
+                          Expanded(
                             child: Text(
-                              task.location!,
+                              _formatDeadline(task.deadline!),
                               style: TextStyle(
-                                fontSize: 10,
-                                color: isDark
-                                    ? AppColors.textTertiaryDark
-                                    : AppColors.textTertiaryLight,
+                                fontSize: 11,
+                                color: task.isExpired
+                                    ? AppColors.error
+                                    : (isDark
+                                        ? AppColors.textSecondaryDark
+                                        : AppColors.textSecondaryLight),
                               ),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ] else
+                          const Spacer(),
+                        // 价格标签 (对标iOS 绿色Capsule + £符号分离)
+                        if (task.reward > 0)
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: AppColors.success,
+                              borderRadius: AppRadius.allPill,
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  task.currency == 'GBP' ? '£' : '\$',
+                                  style: const TextStyle(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                                Text(
+                                  task.reward.toStringAsFixed(0),
+                                  style: const TextStyle(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
                       ],
@@ -1258,7 +1554,6 @@ class _HorizontalTaskCard extends StatelessWidget {
                   ],
                 ),
               ),
-            ),
           ],
         ),
       ),
@@ -1426,11 +1721,47 @@ class _ExpertsTab extends StatelessWidget {
   }
 }
 
-/// 任务卡片 - 垂直列表
+/// 任务卡片 - 垂直列表（对标iOS TaskCard风格：图片在上 + 内容在下）
 class _TaskCard extends StatelessWidget {
   const _TaskCard({required this.task});
 
   final Task task;
+
+  IconData _taskTypeIcon(String taskType) {
+    switch (taskType) {
+      case 'delivery':
+        return Icons.local_shipping_outlined;
+      case 'shopping':
+        return Icons.shopping_bag_outlined;
+      case 'tutoring':
+        return Icons.school_outlined;
+      case 'translation':
+        return Icons.translate;
+      case 'design':
+        return Icons.design_services_outlined;
+      case 'photography':
+        return Icons.camera_alt_outlined;
+      case 'moving':
+        return Icons.local_shipping_outlined;
+      case 'cleaning':
+        return Icons.cleaning_services_outlined;
+      case 'pet_care':
+        return Icons.pets_outlined;
+      case 'errand':
+        return Icons.directions_run;
+      default:
+        return Icons.task_alt;
+    }
+  }
+
+  String _formatDeadline(DateTime deadline) {
+    final now = DateTime.now();
+    final diff = deadline.difference(now);
+    if (diff.isNegative) return '已截止';
+    if (diff.inDays > 0) return '${diff.inDays}天后截止';
+    if (diff.inHours > 0) return '${diff.inHours}小时后';
+    return '${diff.inMinutes}分钟后';
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -1442,50 +1773,190 @@ class _TaskCard extends StatelessWidget {
         context.push('/tasks/${task.id}');
       },
       child: Container(
+        clipBehavior: Clip.antiAlias,
         decoration: BoxDecoration(
           color: isDark
               ? AppColors.cardBackgroundDark
               : AppColors.cardBackgroundLight,
-          borderRadius: AppRadius.allMedium,
+          borderRadius: AppRadius.allLarge,
+          // 对标iOS: 0.5pt separator边框
+          border: Border.all(
+            color: (isDark ? AppColors.separatorDark : AppColors.separatorLight)
+                .withValues(alpha: 0.3),
+            width: 0.5,
+          ),
+          // 对标iOS: 双层阴影
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.04),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
+              color: AppColors.primary.withValues(alpha: 0.08),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
+            ),
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.03),
+              blurRadius: 2,
+              offset: const Offset(0, 1),
             ),
           ],
         ),
-        padding: const EdgeInsets.all(12),
-        child: Row(
+        child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // 图片
-            ClipRRect(
-              borderRadius: AppRadius.allMedium,
-              child: Container(
-                width: 80,
-                height: 80,
-                color: AppColors.primary.withValues(alpha: 0.05),
-                child: task.firstImage != null
-                    ? AsyncImageView(
-                        imageUrl: task.firstImage!,
-                        width: 80,
-                        height: 80,
-                      )
-                    : Icon(
-                        Icons.image,
-                        color: isDark
-                            ? AppColors.textTertiaryDark
-                            : AppColors.textTertiaryLight,
+            // ===== 图片区域 (对标iOS 140px + 渐变 + 毛玻璃标签) =====
+            SizedBox(
+              height: 140,
+              width: double.infinity,
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  // 图片或占位背景
+                  if (task.firstImage != null)
+                    AsyncImageView(
+                      imageUrl: task.firstImage!,
+                      width: double.infinity,
+                      height: 140,
+                      fit: BoxFit.cover,
+                    )
+                  else
+                    Container(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [
+                            AppColors.primary.withValues(alpha: 0.12),
+                            AppColors.primary.withValues(alpha: 0.04),
+                          ],
+                        ),
                       ),
+                      child: Icon(
+                        _taskTypeIcon(task.taskType),
+                        color: AppColors.primary.withValues(alpha: 0.25),
+                        size: 48,
+                      ),
+                    ),
+
+                  // 3段渐变遮罩
+                  DecoratedBox(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [
+                          Colors.black.withValues(alpha: 0.15),
+                          Colors.black.withValues(alpha: 0.0),
+                          Colors.black.withValues(alpha: 0.35),
+                        ],
+                        stops: const [0.0, 0.4, 1.0],
+                      ),
+                    ),
+                  ),
+
+                  // 左上: 位置标签 (毛玻璃)
+                  if (task.location != null)
+                    Positioned(
+                      top: 8,
+                      left: 8,
+                      child: ClipRRect(
+                        borderRadius: AppRadius.allPill,
+                        child: BackdropFilter(
+                          filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.18),
+                              borderRadius: AppRadius.allPill,
+                              border: Border.all(
+                                color: Colors.white.withValues(alpha: 0.2),
+                                width: 0.5,
+                              ),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  task.isOnline
+                                      ? Icons.language
+                                      : Icons.location_on,
+                                  size: 12,
+                                  color: Colors.white,
+                                ),
+                                const SizedBox(width: 3),
+                                ConstrainedBox(
+                                  constraints:
+                                      const BoxConstraints(maxWidth: 140),
+                                  child: Text(
+                                    task.location!,
+                                    style: const TextStyle(
+                                      fontSize: 11,
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+
+                  // 右下: 任务类型标签 (毛玻璃)
+                  Positioned(
+                    bottom: 8,
+                    right: 8,
+                    child: ClipRRect(
+                      borderRadius: AppRadius.allPill,
+                      child: BackdropFilter(
+                        filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.18),
+                            borderRadius: AppRadius.allPill,
+                            border: Border.all(
+                              color: Colors.white.withValues(alpha: 0.2),
+                              width: 0.5,
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                _taskTypeIcon(task.taskType),
+                                size: 12,
+                                color: Colors.white,
+                              ),
+                              const SizedBox(width: 3),
+                              Text(
+                                task.taskTypeText,
+                                style: const TextStyle(
+                                  fontSize: 11,
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
-            AppSpacing.hMd,
-            // 内容
-            Expanded(
+
+            // ===== 内容区域 =====
+            Padding(
+              padding: const EdgeInsets.all(14),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  // 标题
                   Text(
                     task.displayTitle,
                     style: AppTypography.bodyBold.copyWith(
@@ -1493,11 +1964,11 @@ class _TaskCard extends StatelessWidget {
                           ? AppColors.textPrimaryDark
                           : AppColors.textPrimaryLight,
                     ),
-                    maxLines: 2,
+                    maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
-                  const SizedBox(height: 4),
-                  if (task.displayDescription != null)
+                  if (task.displayDescription != null) ...[
+                    const SizedBox(height: 4),
                     Text(
                       task.displayDescription!,
                       style: AppTypography.caption.copyWith(
@@ -1508,31 +1979,104 @@ class _TaskCard extends StatelessWidget {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
-                  const SizedBox(height: 8),
+                  ],
+                  const SizedBox(height: 10),
+                  // 底部信息栏（对标iOS: 截止时间 + 状态 + 价格）
                   Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(
-                        '${task.currency == 'GBP' ? '£' : '\$'}${task.reward.toStringAsFixed(0)}',
-                        style: AppTypography.priceSmall.copyWith(
-                          color: AppColors.primary,
+                      // 截止时间
+                      if (task.deadline != null) ...[
+                        Icon(
+                          Icons.schedule,
+                          size: 13,
+                          color: task.isExpired
+                              ? AppColors.error
+                              : (isDark
+                                  ? AppColors.textSecondaryDark
+                                  : AppColors.textSecondaryLight),
                         ),
-                      ),
+                        const SizedBox(width: 3),
+                        Expanded(
+                          child: Text(
+                            _formatDeadline(task.deadline!),
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: task.isExpired
+                                  ? AppColors.error
+                                  : (isDark
+                                      ? AppColors.textSecondaryDark
+                                      : AppColors.textSecondaryLight),
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ] else
+                        const Spacer(),
+                      // 状态标签（对标iOS StatusBadge: 圆点+文字）
                       Container(
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 6, vertical: 2),
+                            horizontal: 8, vertical: 3),
                         decoration: BoxDecoration(
                           color: AppColors.taskStatusColor(task.status)
                               .withValues(alpha: 0.1),
-                          borderRadius: AppRadius.allTiny,
+                          borderRadius: AppRadius.allPill,
                         ),
-                        child: Text(
-                          task.statusText,
-                          style: AppTypography.caption2.copyWith(
-                            color: AppColors.taskStatusColor(task.status),
-                          ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Container(
+                              width: 5,
+                              height: 5,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: AppColors.taskStatusColor(task.status),
+                              ),
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              task.statusText,
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                                color: AppColors.taskStatusColor(task.status),
+                              ),
+                            ),
+                          ],
                         ),
                       ),
+                      const SizedBox(width: 8),
+                      // 价格标签（对标iOS绿色Capsule）
+                      if (task.reward > 0)
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: AppColors.success,
+                            borderRadius: AppRadius.allPill,
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                task.currency == 'GBP' ? '£' : '\$',
+                                style: const TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                ),
+                              ),
+                              Text(
+                                task.reward.toStringAsFixed(0),
+                                style: const TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
                     ],
                   ),
                 ],

@@ -43,15 +43,25 @@ class AppCard extends StatelessWidget {
       width: 0.5,
     );
 
+    // 对齐iOS: 双层阴影 - 一层柔和扩散 + 一层紧密底部
+    final effectiveShadow = hasShadow
+        ? [
+            ...AppShadows.smallForBrightness(isDark ? Brightness.dark : Brightness.light),
+            BoxShadow(
+              color: Colors.black.withValues(alpha: isDark ? 0.06 : 0.02),
+              blurRadius: 2,
+              offset: const Offset(0, 1),
+            ),
+          ]
+        : null;
+
     Widget card = Container(
       margin: margin,
       padding: padding ?? AppSpacing.allMd,
       decoration: BoxDecoration(
         color: bgColor,
         borderRadius: effectiveBorderRadius,
-        boxShadow: hasShadow 
-            ? AppShadows.smallForBrightness(isDark ? Brightness.dark : Brightness.light)
-            : null,
+        boxShadow: effectiveShadow,
         border: hasBorder 
             ? Border.all(
                 color: borderColor ?? (isDark ? AppColors.dividerDark : AppColors.dividerLight),

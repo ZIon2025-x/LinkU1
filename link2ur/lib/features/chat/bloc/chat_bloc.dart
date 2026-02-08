@@ -22,7 +22,7 @@ class ChatLoadMessages extends ChatEvent {
     this.taskId,
   });
 
-  final int userId;
+  final String userId;
   final int? taskId;
 
   @override
@@ -78,7 +78,7 @@ class ChatState extends Equatable {
   const ChatState({
     this.status = ChatStatus.initial,
     this.messages = const [],
-    this.userId = 0,
+    this.userId = '',
     this.taskId,
     this.page = 1,
     this.hasMore = true,
@@ -88,7 +88,7 @@ class ChatState extends Equatable {
 
   final ChatStatus status;
   final List<Message> messages;
-  final int userId;
+  final String userId;
   final int? taskId;
   final int page;
   final bool hasMore;
@@ -100,7 +100,7 @@ class ChatState extends Equatable {
   ChatState copyWith({
     ChatStatus? status,
     List<Message>? messages,
-    int? userId,
+    String? userId,
     int? taskId,
     int? page,
     bool? hasMore,

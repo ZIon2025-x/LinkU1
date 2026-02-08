@@ -2,6 +2,7 @@ import '../models/notification.dart';
 import '../services/api_service.dart';
 import '../../core/constants/api_endpoints.dart';
 import '../../core/utils/cache_manager.dart';
+import '../../core/utils/logger.dart';
 
 /// 通知仓库
 /// 与iOS NotificationViewModel + 后端路由对齐
@@ -12,6 +13,23 @@ class NotificationRepository {
 
   final ApiService _apiService;
   final CacheManager _cache = CacheManager.shared;
+
+  /// 将 API 响应（可能是 List 或 Map）统一解析为 NotificationListResponse
+  NotificationListResponse _parseNotificationResponse(dynamic data) {
+    if (data is List) {
+      return NotificationListResponse.fromList(data);
+    }
+    if (data is Map<String, dynamic>) {
+      return NotificationListResponse.fromJson(data);
+    }
+    AppLogger.warning('Unexpected notification response type: ${data.runtimeType}');
+    return const NotificationListResponse(
+      notifications: [],
+      total: 0,
+      page: 1,
+      pageSize: 20,
+    );
+  }
 
   /// 获取通知列表
   Future<NotificationListResponse> getNotifications({
@@ -32,7 +50,7 @@ class NotificationRepository {
       return NotificationListResponse.fromJson(cached);
     }
 
-    final response = await _apiService.get<Map<String, dynamic>>(
+    final response = await _apiService.get<dynamic>(
       ApiEndpoints.notifications,
       queryParameters: params,
     );
@@ -41,17 +59,19 @@ class NotificationRepository {
       throw NotificationException(response.message ?? '获取通知列表失败');
     }
 
-    // 通知使用短TTL
-    await _cache.set(cacheKey, response.data!, ttl: CacheManager.shortTTL);
+    // 缓存仅支持 Map；如果后端返回 List 则不缓存
+    if (response.data is Map<String, dynamic>) {
+      await _cache.set(cacheKey, response.data!, ttl: CacheManager.shortTTL);
+    }
 
-    return NotificationListResponse.fromJson(response.data!);
+    return _parseNotificationResponse(response.data);
   }
 
   /// 获取带最近已读的通知
   Future<NotificationListResponse> getNotificationsWithRecentRead({
     int recentReadLimit = 10,
   }) async {
-    final response = await _apiService.get<Map<String, dynamic>>(
+    final response = await _apiService.get<dynamic>(
       ApiEndpoints.notificationsWithRecentRead(limit: recentReadLimit),
     );
 
@@ -59,7 +79,7 @@ class NotificationRepository {
       throw NotificationException(response.message ?? '获取通知列表失败');
     }
 
-    return NotificationListResponse.fromJson(response.data!);
+    return _parseNotificationResponse(response.data);
   }
 
   /// 标记通知已读
@@ -106,7 +126,7 @@ class NotificationRepository {
     int page = 1,
     int pageSize = 20,
   }) async {
-    final response = await _apiService.get<Map<String, dynamic>>(
+    final response = await _apiService.get<dynamic>(
       ApiEndpoints.unreadNotifications,
       queryParameters: {
         'page': page,
@@ -118,7 +138,7 @@ class NotificationRepository {
       throw NotificationException(response.message ?? '获取未读通知失败');
     }
 
-    return NotificationListResponse.fromJson(response.data!);
+    return _parseNotificationResponse(response.data);
   }
 
   /// 获取论坛通知
@@ -126,7 +146,7 @@ class NotificationRepository {
     int page = 1,
     int pageSize = 20,
   }) async {
-    final response = await _apiService.get<Map<String, dynamic>>(
+    final response = await _apiService.get<dynamic>(
       ApiEndpoints.forumNotifications,
       queryParameters: {
         'page': page,
@@ -138,7 +158,7 @@ class NotificationRepository {
       throw NotificationException(response.message ?? '获取论坛通知失败');
     }
 
-    return NotificationListResponse.fromJson(response.data!);
+    return _parseNotificationResponse(response.data);
   }
 
   /// 上传设备Token

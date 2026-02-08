@@ -31,6 +31,13 @@ class AuthRepository {
       throw AuthException(response.message ?? '登录失败');
     }
 
+    if (response.data == null) {
+      AppLogger.error('Login response data is null');
+      throw AuthException('登录响应数据为空');
+    }
+
+    AppLogger.debug('Login response keys: ${response.data!.keys.toList()}');
+
     final loginResponse = LoginResponse.fromJson(response.data!);
 
     // 保存Token
@@ -67,6 +74,13 @@ class AuthRepository {
       throw AuthException(response.message ?? '登录失败');
     }
 
+    if (response.data == null) {
+      AppLogger.error('Login with code response data is null');
+      throw AuthException('登录响应数据为空');
+    }
+
+    AppLogger.debug('Login with code response keys: ${response.data!.keys.toList()}');
+
     final loginResponse = LoginResponse.fromJson(response.data!);
 
     await StorageService.instance.saveTokens(
@@ -99,6 +113,13 @@ class AuthRepository {
     if (!response.isSuccess) {
       throw AuthException(response.message ?? '登录失败');
     }
+
+    if (response.data == null) {
+      AppLogger.error('Login with phone response data is null');
+      throw AuthException('登录响应数据为空');
+    }
+
+    AppLogger.debug('Login with phone response keys: ${response.data!.keys.toList()}');
 
     final loginResponse = LoginResponse.fromJson(response.data!);
 
@@ -136,6 +157,13 @@ class AuthRepository {
     if (!response.isSuccess) {
       throw AuthException(response.message ?? '注册失败');
     }
+
+    if (response.data == null) {
+      AppLogger.error('Register response data is null');
+      throw AuthException('注册响应数据为空');
+    }
+
+    AppLogger.debug('Register response keys: ${response.data!.keys.toList()}');
 
     final loginResponse = LoginResponse.fromJson(response.data!);
 

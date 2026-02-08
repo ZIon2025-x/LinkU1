@@ -138,8 +138,11 @@ class NotificationListResponse {
   bool get hasMore => notifications.length >= pageSize;
 
   factory NotificationListResponse.fromJson(Map<String, dynamic> json) {
+    // 后端不同接口可能返回 'items', 'notifications' 或其他键名
+    final items = (json['items'] ?? json['notifications'] ?? json['data'])
+        as List<dynamic>?;
     return NotificationListResponse(
-      notifications: (json['items'] as List<dynamic>?)
+      notifications: items
               ?.map((e) =>
                   AppNotification.fromJson(e as Map<String, dynamic>))
               .toList() ??
@@ -147,6 +150,18 @@ class NotificationListResponse {
       total: json['total'] as int? ?? 0,
       page: json['page'] as int? ?? 1,
       pageSize: json['page_size'] as int? ?? 20,
+    );
+  }
+
+  /// 从裸 List 响应构建（后端有时直接返回列表而非包装对象）
+  factory NotificationListResponse.fromList(List<dynamic> list) {
+    return NotificationListResponse(
+      notifications: list
+          .map((e) => AppNotification.fromJson(e as Map<String, dynamic>))
+          .toList(),
+      total: list.length,
+      page: 1,
+      pageSize: 20,
     );
   }
 }

@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -17,6 +18,15 @@ void main() async {
   // 初始化日志
   AppLogger.init();
   AppLogger.info('App starting...');
+
+  // 捕获 Flutter 框架渲染错误（调试时打印到控制台）
+  FlutterError.onError = (FlutterErrorDetails details) {
+    AppLogger.error('=== FlutterError ===\n${details.exceptionAsString()}',
+        details.exception, details.stack);
+    if (kDebugMode) {
+      FlutterError.dumpErrorToConsole(details);
+    }
+  };
 
   // 设置系统UI样式
   SystemChrome.setSystemUIOverlayStyle(

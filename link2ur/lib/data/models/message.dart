@@ -12,7 +12,7 @@ class ChatContact extends Equatable {
     this.isOnline = false,
   });
 
-  final int id;
+  final String id;
   final UserBrief user;
   final String? lastMessage;
   final DateTime? lastMessageTime;
@@ -21,7 +21,7 @@ class ChatContact extends Equatable {
 
   factory ChatContact.fromJson(Map<String, dynamic> json) {
     return ChatContact(
-      id: json['id'] as int,
+      id: json['id']?.toString() ?? '',
       user: UserBrief.fromJson(json['user'] as Map<String, dynamic>),
       lastMessage: json['last_message'] as String?,
       lastMessageTime: json['last_message_time'] != null
@@ -51,8 +51,8 @@ class Message extends Equatable {
   });
 
   final int id;
-  final int senderId;
-  final int receiverId;
+  final String senderId;
+  final String receiverId;
   final String content;
   final String messageType; // text, image, system
   final String? imageUrl;
@@ -69,8 +69,8 @@ class Message extends Equatable {
   factory Message.fromJson(Map<String, dynamic> json) {
     return Message(
       id: json['id'] as int,
-      senderId: json['sender_id'] as int,
-      receiverId: json['receiver_id'] as int,
+      senderId: json['sender_id']?.toString() ?? '',
+      receiverId: json['receiver_id']?.toString() ?? '',
       content: json['content'] as String? ?? '',
       messageType: json['message_type'] as String? ?? 'text',
       imageUrl: json['image_url'] as String?,
@@ -122,16 +122,20 @@ class TaskChat extends Equatable {
 
   factory TaskChat.fromJson(Map<String, dynamic> json) {
     return TaskChat(
-      taskId: json['task_id'] as int,
-      taskTitle: json['task_title'] as String? ?? '',
-      taskStatus: json['task_status'] as String?,
+      // 后端可能返回 'task_id' 或 'id'
+      taskId: (json['task_id'] ?? json['id']) as int? ?? 0,
+      taskTitle: json['task_title'] as String?
+          ?? json['title'] as String?
+          ?? '',
+      taskStatus: json['task_status'] as String?
+          ?? json['status'] as String?,
       participants: (json['participants'] as List<dynamic>?)
               ?.map((e) => UserBrief.fromJson(e as Map<String, dynamic>))
               .toList() ??
           [],
       lastMessage: json['last_message'] as String?,
       lastMessageTime: json['last_message_time'] != null
-          ? DateTime.parse(json['last_message_time'])
+          ? DateTime.tryParse(json['last_message_time'].toString())
           : null,
       unreadCount: json['unread_count'] as int? ?? 0,
     );
@@ -151,7 +155,7 @@ class SendMessageRequest {
     this.imageUrl,
   });
 
-  final int receiverId;
+  final String receiverId;
   final String content;
   final String messageType;
   final int? taskId;

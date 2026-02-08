@@ -23,7 +23,7 @@ class User extends Equatable {
     this.createdAt,
   });
 
-  final int id;
+  final String id;
   final String name;
   final String? email;
   final String? phone;
@@ -60,26 +60,34 @@ class User extends Equatable {
 
   factory User.fromJson(Map<String, dynamic> json) {
     return User(
-      id: json['id'] as int,
+      id: json['id']?.toString() ?? '',
       name: json['name'] as String? ?? '',
       email: json['email'] as String?,
       phone: json['phone'] as String?,
       avatar: json['avatar'] as String?,
       bio: json['bio'] as String?,
-      isVerified: json['is_verified'] as bool? ?? false,
+      isVerified: _parseBool(json['is_verified']),
       userLevel: _parseUserLevel(json['user_level']),
-      isExpert: json['is_expert'] as bool? ?? false,
-      isStudentVerified: json['is_student_verified'] as bool? ?? false,
+      isExpert: _parseBool(json['is_expert']),
+      isStudentVerified: _parseBool(json['is_student_verified']),
       taskCount: json['task_count'] as int? ?? 0,
       completedTaskCount: json['completed_task_count'] as int? ?? 0,
       avgRating: (json['avg_rating'] as num?)?.toDouble(),
       residenceCity: json['residence_city'] as String?,
       languagePreference: json['language_preference'] as String?,
-      isAdmin: json['is_admin'] as bool? ?? false,
+      isAdmin: _parseBool(json['is_admin']),
       createdAt: json['created_at'] != null 
-          ? DateTime.parse(json['created_at']) 
+          ? DateTime.tryParse(json['created_at'].toString()) 
           : null,
     );
+  }
+
+  /// 兼容后端返回的 bool 可能是 bool、int(0/1) 或 null
+  static bool _parseBool(dynamic value) {
+    if (value is bool) return value;
+    if (value is int) return value != 0;
+    if (value is String) return value == 'true' || value == '1';
+    return false;
   }
 
   Map<String, dynamic> toJson() {
@@ -105,7 +113,7 @@ class User extends Equatable {
   }
 
   User copyWith({
-    int? id,
+    String? id,
     String? name,
     String? email,
     String? phone,
@@ -190,7 +198,7 @@ class User extends Equatable {
   }
 
   /// 空用户
-  static const empty = User(id: 0, name: '');
+  static const empty = User(id: '', name: '');
 
   /// 是否为空用户
   bool get isEmpty => this == empty;
@@ -212,10 +220,26 @@ class LoginResponse {
   final User user;
 
   factory LoginResponse.fromJson(Map<String, dynamic> json) {
+    // 后端返回 session_id 作为认证凭证（兼容旧版 access_token）
+    final accessToken = json['session_id'] as String?
+        ?? json['access_token'] as String?;
+    if (accessToken == null || accessToken.isEmpty) {
+      throw FormatException(
+        'Login response missing session_id/access_token. Keys: ${json.keys.toList()}',
+      );
+    }
+
+    final userJson = json['user'] as Map<String, dynamic>?;
+    if (userJson == null) {
+      throw FormatException(
+        'Login response missing user data. Keys: ${json.keys.toList()}',
+      );
+    }
+
     return LoginResponse(
-      accessToken: json['access_token'] as String,
+      accessToken: accessToken,
       refreshToken: json['refresh_token'] as String?,
-      user: User.fromJson(json['user'] as Map<String, dynamic>),
+      user: User.fromJson(userJson),
     );
   }
 }
@@ -229,14 +253,14 @@ class UserBrief {
     this.isVerified = false,
   });
 
-  final int id;
+  final String id;
   final String name;
   final String? avatar;
   final bool isVerified;
 
   factory UserBrief.fromJson(Map<String, dynamic> json) {
     return UserBrief(
-      id: json['id'] as int,
+      id: json['id']?.toString() ?? '',
       name: json['name'] as String? ?? '',
       avatar: json['avatar'] as String?,
       isVerified: json['is_verified'] as bool? ?? false,

@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'package:web_socket_channel/web_socket_channel.dart';
+import 'package:web_socket_channel/io.dart';
 
 import '../../core/config/app_config.dart';
 import '../../core/utils/logger.dart';
@@ -66,10 +67,16 @@ class WebSocketService {
         return;
       }
 
-      final wsUrl = '${AppConfig.instance.wsUrl}/ws?token=$token';
-      AppLogger.info('Connecting to WebSocket...');
+      final wsUrl = '${AppConfig.instance.wsUrl}/ws?token=${Uri.encodeComponent(token)}';
+      AppLogger.info('Connecting to WebSocket: ${AppConfig.instance.wsUrl}/ws');
 
-      _channel = WebSocketChannel.connect(Uri.parse(wsUrl));
+      _channel = IOWebSocketChannel.connect(
+        Uri.parse(wsUrl),
+        headers: {
+          'X-Session-ID': token,
+          'Authorization': 'Bearer $token',
+        },
+      );
 
       // 等待连接完成
       await _channel!.ready;
@@ -146,7 +153,7 @@ class WebSocketService {
 
   /// 发送聊天消息
   void sendChatMessage({
-    required int receiverId,
+    required String receiverId,
     required String content,
     String? msgType,
     int? taskId,
@@ -162,7 +169,7 @@ class WebSocketService {
 
   /// 发送已读回执
   void sendReadReceipt({
-    required int senderId,
+    required String senderId,
     int? taskId,
   }) {
     send({
@@ -174,7 +181,7 @@ class WebSocketService {
 
   /// 发送正在输入
   void sendTyping({
-    required int receiverId,
+    required String receiverId,
     int? taskId,
   }) {
     send({

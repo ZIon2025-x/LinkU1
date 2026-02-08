@@ -401,7 +401,7 @@ class _InteractionMessageCard extends StatelessWidget {
   }
 }
 
-/// 任务聊天项 - 对齐iOS TaskChatRow
+/// 任务聊天项 - 对齐iOS TaskChatRow (卡片式, 渐变图标, 角色标签)
 class _TaskChatItem extends StatelessWidget {
   const _TaskChatItem({
     required this.taskChat,
@@ -409,86 +409,176 @@ class _TaskChatItem extends StatelessWidget {
 
   final TaskChat taskChat;
 
+  /// 根据任务状态返回不同的渐变颜色
+  List<Color> get _statusGradient {
+    switch (taskChat.taskStatus) {
+      case 'open':
+        return [AppColors.primary, const Color(0xFF5AC8FA)];
+      case 'assigned':
+      case 'in_progress':
+        return [const Color(0xFFFF9500), const Color(0xFFFF6B00)];
+      case 'completed':
+        return [AppColors.success, const Color(0xFF30D158)];
+      default:
+        return [AppColors.primary, const Color(0xFF5856D6)];
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final hasUnread = taskChat.unreadCount > 0;
+    final gradient = _statusGradient;
 
     return GestureDetector(
       onTap: () {
+        HapticFeedback.selectionClick();
         context.push('/task-chat/${taskChat.taskId}');
       },
-      behavior: HitTestBehavior.opaque,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 12),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: AppSpacing.sm),
+        padding: const EdgeInsets.all(AppSpacing.md),
+        decoration: BoxDecoration(
+          color: isDark
+              ? AppColors.cardBackgroundDark
+              : AppColors.cardBackgroundLight,
+          borderRadius: AppRadius.allLarge,
+          border: Border.all(
+            color: (isDark ? AppColors.separatorDark : AppColors.separatorLight)
+                .withValues(alpha: 0.3),
+            width: 0.5,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: gradient.first.withValues(alpha: 0.06),
+              blurRadius: 12,
+              offset: const Offset(0, 3),
+            ),
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.02),
+              blurRadius: 2,
+              offset: const Offset(0, 1),
+            ),
+          ],
+        ),
         child: Row(
           children: [
-            // 头像
+            // 对齐iOS: 渐变图标 (56px) + 未读红点
             Stack(
               children: [
-                CircleAvatar(
-                  radius: 26,
-                  backgroundColor: AppColors.primary.withValues(alpha: 0.1),
-                  child: const Icon(Icons.task, color: AppColors.primary),
+                Container(
+                  width: 56,
+                  height: 56,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: gradient,
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      BoxShadow(
+                        color: gradient.first.withValues(alpha: 0.3),
+                        blurRadius: 8,
+                        offset: const Offset(0, 3),
+                      ),
+                    ],
+                  ),
+                  child: const Icon(Icons.chat_bubble,
+                      color: Colors.white, size: 24),
                 ),
-                if (taskChat.unreadCount > 0)
+                // 对齐iOS: 未读红点 (12px, 右上角, 白色边框)
+                if (hasUnread)
                   Positioned(
-                    right: 0,
-                    top: 0,
+                    right: -2,
+                    top: -2,
                     child: Container(
-                      padding: const EdgeInsets.all(4),
+                      width: 14,
+                      height: 14,
                       decoration: BoxDecoration(
                         color: AppColors.error,
                         shape: BoxShape.circle,
                         border: Border.all(color: Colors.white, width: 2),
-                      ),
-                      constraints: const BoxConstraints(
-                        minWidth: 18,
-                        minHeight: 18,
-                      ),
-                      child: Text(
-                        taskChat.unreadCount > 99
-                            ? '99+'
-                            : '${taskChat.unreadCount}',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 10,
-                          fontWeight: FontWeight.bold,
-                        ),
-                        textAlign: TextAlign.center,
+                        boxShadow: [
+                          BoxShadow(
+                            color: AppColors.error.withValues(alpha: 0.3),
+                            blurRadius: 4,
+                            offset: const Offset(0, 1),
+                          ),
+                        ],
                       ),
                     ),
                   ),
               ],
             ),
-            AppSpacing.hMd,
+            const SizedBox(width: AppSpacing.md),
 
-            // 内容
+            // 内容区域
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  // 第一行: 标题 + 时间 + 未读数
                   Row(
                     children: [
                       Expanded(
                         child: Text(
                           taskChat.taskTitle,
-                          style: const TextStyle(fontWeight: FontWeight.w500),
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight:
+                                hasUnread ? FontWeight.bold : FontWeight.w500,
+                            color: isDark
+                                ? AppColors.textPrimaryDark
+                                : AppColors.textPrimaryLight,
+                          ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
+                      const SizedBox(width: 8),
+                      // 时间
                       Text(
                         taskChat.lastMessageTime != null
                             ? DateFormatter.formatSmart(
                                 taskChat.lastMessageTime!)
                             : '',
-                        style: const TextStyle(
-                            fontSize: 12,
-                            color: AppColors.textTertiaryLight),
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: isDark
+                              ? AppColors.textTertiaryDark
+                              : AppColors.textTertiaryLight,
+                        ),
                       ),
+                      // 对齐iOS: 未读计数胶囊 (在时间旁边)
+                      if (hasUnread) ...[
+                        const SizedBox(width: 6),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            gradient: const LinearGradient(
+                              colors: [Color(0xFFFF3B30), Color(0xFFFF6B6B)],
+                            ),
+                            borderRadius: AppRadius.allPill,
+                          ),
+                          child: Text(
+                            taskChat.unreadCount > 99
+                                ? '99+'
+                                : '${taskChat.unreadCount}',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ],
                     ],
                   ),
                   const SizedBox(height: 4),
+
+                  // 第二行: 预览消息 + 状态标签
                   Row(
                     children: [
                       Expanded(
@@ -496,30 +586,40 @@ class _TaskChatItem extends StatelessWidget {
                           taskChat.lastMessage ?? '暂无消息',
                           style: TextStyle(
                             fontSize: 14,
-                            color: isDark
-                                ? AppColors.textSecondaryDark
-                                : AppColors.textSecondaryLight,
+                            fontWeight: hasUnread
+                                ? FontWeight.w500
+                                : FontWeight.normal,
+                            color: hasUnread
+                                ? (isDark
+                                    ? AppColors.textSecondaryDark
+                                    : AppColors.textSecondaryLight)
+                                : (isDark
+                                    ? AppColors.textTertiaryDark
+                                    : AppColors.textTertiaryLight),
                           ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
-                      if (taskChat.taskStatus != null)
+                      if (taskChat.taskStatus != null) ...[
+                        const SizedBox(width: 8),
                         Container(
                           padding: const EdgeInsets.symmetric(
-                              horizontal: 6, vertical: 2),
+                              horizontal: 8, vertical: 3),
                           decoration: BoxDecoration(
-                            color: AppColors.primary.withValues(alpha: 0.1),
-                            borderRadius: AppRadius.allSmall,
+                            color: gradient.first.withValues(alpha: 0.1),
+                            borderRadius: AppRadius.allPill,
                           ),
                           child: Text(
                             taskChat.taskStatus!,
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 10,
-                              color: AppColors.primary,
+                              fontWeight: FontWeight.w600,
+                              color: gradient.first,
                             ),
                           ),
                         ),
+                      ],
                     ],
                   ),
                 ],

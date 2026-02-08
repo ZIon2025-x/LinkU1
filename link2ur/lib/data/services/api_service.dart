@@ -78,10 +78,11 @@ class ApiService {
       return;
     }
 
-    // 添加Token
+    // 添加Token（session_id 同时作为 Bearer token 和 X-Session-ID 发送）
     final token = await StorageService.instance.getAccessToken();
     if (token != null && token.isNotEmpty) {
       options.headers['Authorization'] = 'Bearer $token';
+      options.headers['X-Session-ID'] = token;
     }
 
     // 添加语言
@@ -189,22 +190,28 @@ class ApiService {
       // 但保留基础配置（超时、baseUrl等）
       final refreshDio = Dio(_baseOptions);
 
+      // 后端接受 refresh_token 通过 X-Refresh-Token header
+      final currentToken = await StorageService.instance.getAccessToken();
       final response = await refreshDio.post(
         '/api/secure-auth/refresh',
-        data: {'refresh_token': refreshToken},
         options: Options(
           // 设置较短的超时，refresh不应该很慢
           receiveTimeout: const Duration(seconds: 10),
           sendTimeout: const Duration(seconds: 10),
+          headers: {
+            if (currentToken != null) 'X-Session-ID': currentToken,
+            'X-Refresh-Token': refreshToken,
+          },
         ),
       );
 
       if (response.statusCode == 200 && response.data != null) {
         final data = response.data;
-        final newAccessToken = data['access_token'];
+        // 后端返回 session_id 作为新的认证凭证（兼容旧版 access_token）
+        final newAccessToken = data['session_id'] ?? data['access_token'];
         final newRefreshToken = data['refresh_token'];
 
-        if (newAccessToken != null && newRefreshToken != null) {
+        if (newAccessToken != null) {
           await StorageService.instance.saveTokens(
             accessToken: newAccessToken,
             refreshToken: newRefreshToken,
@@ -212,7 +219,7 @@ class ApiService {
           AppLogger.info('Token refresh successful');
           return true;
         } else {
-          AppLogger.error('Invalid response: missing tokens');
+          AppLogger.error('Invalid refresh response: missing session_id. Keys: ${data is Map ? data.keys.toList() : data}');
           return false;
         }
       }

@@ -2,6 +2,7 @@ import '../models/message.dart';
 import '../services/api_service.dart';
 import '../services/websocket_service.dart';
 import '../../core/constants/api_endpoints.dart';
+import '../../core/utils/logger.dart';
 
 /// 消息仓库
 /// 与iOS MessageViewModel + 后端路由对齐
@@ -12,11 +13,29 @@ class MessageRepository {
 
   final ApiService _apiService;
 
+  /// 从 API 响应中提取列表数据
+  /// 后端可能返回 List 或 Map（带包装键如 contacts, task_chats, items 等）
+  List<dynamic> _extractList(dynamic data, List<String> possibleKeys) {
+    if (data is List) return data;
+    if (data is Map<String, dynamic>) {
+      for (final key in possibleKeys) {
+        final value = data[key];
+        if (value is List) return value;
+      }
+      // 尝试所有值中的第一个 List
+      for (final value in data.values) {
+        if (value is List) return value;
+      }
+    }
+    AppLogger.warning('_extractList: unexpected data type ${data.runtimeType}');
+    return [];
+  }
+
   // ==================== 私信 ====================
 
   /// 获取聊天联系人列表
   Future<List<ChatContact>> getContacts() async {
-    final response = await _apiService.get<List<dynamic>>(
+    final response = await _apiService.get<dynamic>(
       ApiEndpoints.messageContacts,
     );
 
@@ -24,7 +43,8 @@ class MessageRepository {
       throw MessageException(response.message ?? '获取联系人列表失败');
     }
 
-    return response.data!
+    final items = _extractList(response.data, ['contacts', 'items', 'data']);
+    return items
         .map((e) => ChatContact.fromJson(e as Map<String, dynamic>))
         .toList();
   }
@@ -55,12 +75,12 @@ class MessageRepository {
 
   /// 获取与某用户的消息列表（兼容旧调用）
   Future<List<Message>> getMessagesWith(
-    int userId, {
+    String userId, {
     int page = 1,
     int pageSize = 50,
   }) async {
     return getMessageHistory(
-      userId.toString(),
+      userId,
       page: page,
       pageSize: pageSize,
     );
@@ -101,16 +121,16 @@ class MessageRepository {
     }
   }
 
-  /// 标记消息已读（兼容旧调用，int版）
-  Future<void> markMessagesRead(int contactId) async {
-    await markChatRead(contactId.toString());
+  /// 标记消息已读
+  Future<void> markMessagesRead(String contactId) async {
+    await markChatRead(contactId);
     // 同时通过WebSocket通知已读
     WebSocketService.instance.sendReadReceipt(senderId: contactId);
   }
 
   /// 获取未读消息
   Future<List<Message>> getUnreadMessages() async {
-    final response = await _apiService.get<List<dynamic>>(
+    final response = await _apiService.get<dynamic>(
       ApiEndpoints.unreadMessages,
     );
 
@@ -118,7 +138,9 @@ class MessageRepository {
       throw MessageException(response.message ?? '获取未读消息失败');
     }
 
-    return response.data!
+    final items = _extractList(
+        response.data, ['messages', 'items', 'data']);
+    return items
         .map((e) => Message.fromJson(e as Map<String, dynamic>))
         .toList();
   }
@@ -140,7 +162,7 @@ class MessageRepository {
 
   /// 获取任务聊天列表
   Future<List<TaskChat>> getTaskChats() async {
-    final response = await _apiService.get<List<dynamic>>(
+    final response = await _apiService.get<dynamic>(
       ApiEndpoints.taskChatList,
     );
 
@@ -148,7 +170,9 @@ class MessageRepository {
       throw MessageException(response.message ?? '获取任务聊天列表失败');
     }
 
-    return response.data!
+    final items = _extractList(
+        response.data, ['task_chats', 'tasks', 'items', 'data']);
+    return items
         .map((e) => TaskChat.fromJson(e as Map<String, dynamic>))
         .toList();
   }
@@ -238,7 +262,7 @@ class MessageRepository {
   }
 
   /// 发送正在输入状态
-  void sendTypingStatus(int receiverId) {
+  void sendTypingStatus(String receiverId) {
     WebSocketService.instance.sendTyping(receiverId: receiverId);
   }
 

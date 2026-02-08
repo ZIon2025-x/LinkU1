@@ -35,7 +35,7 @@ class _TaskChatViewState extends State<TaskChatView> {
   final _messageController = TextEditingController();
   final _scrollController = ScrollController();
   final _imagePicker = ImagePicker();
-  int? _currentUserId;
+  String? _currentUserId;
   bool _showActionMenu = false;
 
   @override
@@ -96,7 +96,7 @@ class _TaskChatViewState extends State<TaskChatView> {
 
     return BlocProvider(
       create: (context) => ChatBloc(messageRepository: messageRepository)
-        ..add(ChatLoadMessages(userId: 0, taskId: widget.taskId)),
+        ..add(ChatLoadMessages(userId: '', taskId: widget.taskId)),
       child: BlocConsumer<ChatBloc, ChatState>(
         listener: (context, state) {
           if (state.status == ChatStatus.loaded) {
@@ -250,7 +250,7 @@ class _TaskChatViewState extends State<TaskChatView> {
         message: state.errorMessage,
         onRetry: () {
           context.read<ChatBloc>().add(
-                ChatLoadMessages(userId: 0, taskId: widget.taskId),
+                ChatLoadMessages(userId: '', taskId: widget.taskId),
               );
         },
       );

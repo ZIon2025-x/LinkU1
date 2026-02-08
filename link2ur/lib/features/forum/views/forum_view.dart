@@ -340,7 +340,7 @@ class _LeaderboardTab extends StatelessWidget {
   }
 }
 
-/// 帖子卡片
+/// 帖子卡片 - 对齐iOS ForumPostCard样式
 class _PostCard extends StatelessWidget {
   const _PostCard({required this.post});
 
@@ -352,6 +352,7 @@ class _PostCard extends StatelessWidget {
 
     return GestureDetector(
       onTap: () {
+        HapticFeedback.selectionClick();
         context.push('/forum/posts/${post.id}');
       },
       child: Container(
@@ -360,32 +361,57 @@ class _PostCard extends StatelessWidget {
           color: isDark
               ? AppColors.cardBackgroundDark
               : AppColors.cardBackgroundLight,
-          borderRadius: AppRadius.allMedium,
+          borderRadius: AppRadius.allLarge,
+          border: Border.all(
+            color: (isDark ? AppColors.separatorDark : AppColors.separatorLight)
+                .withValues(alpha: 0.3),
+            width: 0.5,
+          ),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.05),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
+              color: AppColors.primary.withValues(alpha: 0.04),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
+            ),
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.02),
+              blurRadius: 2,
+              offset: const Offset(0, 1),
             ),
           ],
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // 用户信息
+            // 用户信息 - 对齐iOS: avatar + name + time + category tag
             Row(
               children: [
-                CircleAvatar(
-                  radius: 18,
-                  backgroundColor: AppColors.primary,
-                  backgroundImage: post.author?.avatar != null
-                      ? NetworkImage(post.author!.avatar!)
-                      : null,
-                  child: post.author?.avatar == null
-                      ? const Icon(Icons.person, color: Colors.white, size: 20)
-                      : null,
+                // 头像 (带白色边框 + 阴影)
+                Container(
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.08),
+                        blurRadius: 4,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: CircleAvatar(
+                    radius: 20,
+                    backgroundColor: AppColors.primary.withValues(alpha: 0.1),
+                    backgroundImage: post.author?.avatar != null
+                        ? NetworkImage(post.author!.avatar!)
+                        : null,
+                    child: post.author?.avatar == null
+                        ? Icon(Icons.person,
+                            color: AppColors.primary.withValues(alpha: 0.5),
+                            size: 22)
+                        : null,
+                  ),
                 ),
-                AppSpacing.hSm,
+                const SizedBox(width: AppSpacing.sm),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -393,12 +419,13 @@ class _PostCard extends StatelessWidget {
                       Text(
                         post.author?.name ?? '用户 ${post.authorId}',
                         style: AppTypography.body.copyWith(
-                          fontWeight: FontWeight.w500,
+                          fontWeight: FontWeight.w600,
                           color: isDark
                               ? AppColors.textPrimaryDark
                               : AppColors.textPrimaryLight,
                         ),
                       ),
+                      const SizedBox(height: 2),
                       Text(
                         _formatTime(post.createdAt),
                         style: AppTypography.caption.copyWith(
@@ -410,72 +437,92 @@ class _PostCard extends StatelessWidget {
                     ],
                   ),
                 ),
+                // 分类标签 (胶囊)
+                if (post.category != null)
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: AppColors.primary.withValues(alpha: 0.08),
+                      borderRadius: AppRadius.allPill,
+                    ),
+                    child: Text(
+                      post.category!.displayName,
+                      style: AppTypography.caption.copyWith(
+                        color: AppColors.primary,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 11,
+                      ),
+                    ),
+                  ),
               ],
             ),
-            AppSpacing.vMd,
+            const SizedBox(height: AppSpacing.md),
 
             // 标题
             Text(
               post.title,
               style: AppTypography.bodyBold.copyWith(
+                fontSize: 16,
                 color: isDark
                     ? AppColors.textPrimaryDark
                     : AppColors.textPrimaryLight,
               ),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
             ),
-            AppSpacing.vSm,
 
-            // 内容
-            if (post.content != null)
+            // 内容预览
+            if (post.content != null) ...[
+              const SizedBox(height: AppSpacing.sm),
               Text(
                 post.content!,
                 style: AppTypography.subheadline.copyWith(
                   color: isDark
                       ? AppColors.textSecondaryDark
                       : AppColors.textSecondaryLight,
+                  height: 1.4,
                 ),
-                maxLines: 2,
+                maxLines: 3,
                 overflow: TextOverflow.ellipsis,
               ),
-            AppSpacing.vMd,
+            ],
 
-            // 互动
+            const SizedBox(height: AppSpacing.md),
+
+            // 分隔线
+            Divider(
+              height: 1,
+              color: (isDark ? AppColors.separatorDark : AppColors.separatorLight)
+                  .withValues(alpha: 0.3),
+            ),
+
+            const SizedBox(height: AppSpacing.sm),
+
+            // 互动栏 - 对齐iOS: 点赞 + 评论 + 浏览
             Row(
               children: [
-                Icon(
-                  post.isLiked ? Icons.thumb_up : Icons.thumb_up_outlined,
-                  size: 16,
-                  color: post.isLiked
-                      ? AppColors.primary
-                      : (isDark
-                          ? AppColors.textTertiaryDark
-                          : AppColors.textTertiaryLight),
+                _InteractionItem(
+                  icon: post.isLiked
+                      ? Icons.thumb_up
+                      : Icons.thumb_up_outlined,
+                  count: post.likeCount,
+                  color: post.isLiked ? AppColors.primary : null,
+                  isDark: isDark,
                 ),
-                const SizedBox(width: 4),
-                Text(
-                  '${post.likeCount}',
-                  style: AppTypography.caption.copyWith(
-                    color: isDark
-                        ? AppColors.textTertiaryDark
-                        : AppColors.textTertiaryLight,
-                  ),
+                const SizedBox(width: 20),
+                _InteractionItem(
+                  icon: Icons.chat_bubble_outline,
+                  count: post.replyCount,
+                  isDark: isDark,
                 ),
-                const SizedBox(width: 16),
+                const Spacer(),
                 Icon(
-                  Icons.comment_outlined,
+                  Icons.more_horiz,
                   size: 16,
                   color: isDark
                       ? AppColors.textTertiaryDark
                       : AppColors.textTertiaryLight,
-                ),
-                const SizedBox(width: 4),
-                Text(
-                  '${post.replyCount}',
-                  style: AppTypography.caption.copyWith(
-                    color: isDark
-                        ? AppColors.textTertiaryDark
-                        : AppColors.textTertiaryLight,
-                  ),
                 ),
               ],
             ),
@@ -502,47 +549,122 @@ class _PostCard extends StatelessWidget {
   }
 }
 
-/// 排行榜卡片
+/// 互动项组件 (点赞/评论)
+class _InteractionItem extends StatelessWidget {
+  const _InteractionItem({
+    required this.icon,
+    required this.count,
+    required this.isDark,
+    this.color,
+  });
+
+  final IconData icon;
+  final int count;
+  final bool isDark;
+  final Color? color;
+
+  @override
+  Widget build(BuildContext context) {
+    final defaultColor = isDark
+        ? AppColors.textTertiaryDark
+        : AppColors.textTertiaryLight;
+
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 16, color: color ?? defaultColor),
+        const SizedBox(width: 4),
+        Text(
+          count > 0 ? '$count' : '',
+          style: AppTypography.caption.copyWith(
+            color: color ?? defaultColor,
+            fontWeight: color != null ? FontWeight.w600 : null,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// 排行榜卡片 - 对齐iOS CategoryCard样式 (渐变图标 + 标题 + 箭头)
 class _LeaderboardCard extends StatelessWidget {
   const _LeaderboardCard({required this.leaderboard});
 
   final Leaderboard leaderboard;
 
+  // 根据排行榜类型提供不同颜色
+  List<Color> get _gradient {
+    final hash = leaderboard.id.hashCode;
+    final gradients = [
+      [const Color(0xFFFF6B6B), const Color(0xFFFF4757)],
+      [const Color(0xFF7C5CFC), const Color(0xFF5F27CD)],
+      [const Color(0xFF2ED573), const Color(0xFF00B894)],
+      [const Color(0xFFFF9500), const Color(0xFFFF6B00)],
+      [const Color(0xFF5856D6), const Color(0xFF007AFF)],
+    ];
+    return gradients[hash.abs() % gradients.length];
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final colors = _gradient;
 
     return GestureDetector(
       onTap: () {
+        HapticFeedback.selectionClick();
         context.push('/leaderboard/${leaderboard.id}');
       },
       child: Container(
-        padding: AppSpacing.allMd,
+        padding: const EdgeInsets.all(AppSpacing.md),
         decoration: BoxDecoration(
           color: isDark
               ? AppColors.cardBackgroundDark
               : AppColors.cardBackgroundLight,
-          borderRadius: AppRadius.allMedium,
+          borderRadius: AppRadius.allLarge,
+          border: Border.all(
+            color: (isDark ? AppColors.separatorDark : AppColors.separatorLight)
+                .withValues(alpha: 0.3),
+            width: 0.5,
+          ),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.05),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
+              color: colors.first.withValues(alpha: 0.08),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
+            ),
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.02),
+              blurRadius: 2,
+              offset: const Offset(0, 1),
             ),
           ],
         ),
         child: Row(
           children: [
+            // 渐变图标背景 (对齐iOS)
             Container(
-              width: 60,
-              height: 60,
+              width: 56,
+              height: 56,
               decoration: BoxDecoration(
-                color: AppColors.primary.withValues(alpha: 0.1),
-                borderRadius: AppRadius.allMedium,
+                gradient: LinearGradient(
+                  colors: colors,
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(14),
+                boxShadow: [
+                  BoxShadow(
+                    color: colors.first.withValues(alpha: 0.3),
+                    blurRadius: 8,
+                    offset: const Offset(0, 3),
+                  ),
+                ],
               ),
-              child: const Icon(Icons.emoji_events, color: AppColors.primary),
+              child: const Icon(Icons.emoji_events,
+                  color: Colors.white, size: 26),
             ),
-            AppSpacing.hMd,
+            const SizedBox(width: AppSpacing.md),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -550,6 +672,7 @@ class _LeaderboardCard extends StatelessWidget {
                   Text(
                     leaderboard.displayName,
                     style: AppTypography.bodyBold.copyWith(
+                      fontSize: 16,
                       color: isDark
                           ? AppColors.textPrimaryDark
                           : AppColors.textPrimaryLight,
@@ -557,7 +680,7 @@ class _LeaderboardCard extends StatelessWidget {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    '${leaderboard.itemCount} 个竞品',
+                    '${leaderboard.itemCount} 个参与者',
                     style: AppTypography.caption.copyWith(
                       color: isDark
                           ? AppColors.textSecondaryDark
@@ -569,6 +692,7 @@ class _LeaderboardCard extends StatelessWidget {
             ),
             Icon(
               Icons.chevron_right,
+              size: 18,
               color: isDark
                   ? AppColors.textTertiaryDark
                   : AppColors.textTertiaryLight,
