@@ -5,11 +5,13 @@ import 'package:go_router/go_router.dart';
 import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_radius.dart';
+import '../../../core/utils/l10n_extension.dart';
 import '../../../core/widgets/animated_list_item.dart';
 import '../../../core/widgets/loading_view.dart';
 import '../../../core/widgets/skeleton_view.dart';
 import '../../../core/widgets/error_state_view.dart';
 import '../../../core/widgets/empty_state_view.dart';
+import '../../../core/widgets/async_image_view.dart';
 import '../../../data/repositories/activity_repository.dart';
 import '../../../data/models/activity.dart';
 import '../bloc/activity_bloc.dart';
@@ -27,7 +29,9 @@ class ActivityListView extends StatelessWidget {
       )..add(const ActivityLoadRequested()),
       child: Scaffold(
         appBar: AppBar(
-          title: const Text('活动'),
+          title: Builder(
+            builder: (context) => Text(context.l10n.activityActivities),
+          ),
         ),
         body: BlocBuilder<ActivityBloc, ActivityState>(
           builder: (context, state) {
@@ -39,7 +43,7 @@ class ActivityListView extends StatelessWidget {
             if (state.status == ActivityStatus.error &&
                 state.activities.isEmpty) {
               return ErrorStateView.loadFailed(
-                message: state.errorMessage ?? '加载失败',
+                message: state.errorMessage ?? context.l10n.activityLoadFailed,
                 onRetry: () {
                   context.read<ActivityBloc>().add(
                         const ActivityLoadRequested(),
@@ -50,8 +54,8 @@ class ActivityListView extends StatelessWidget {
 
             if (state.activities.isEmpty) {
               return EmptyStateView.noData(
-                title: '暂无活动',
-                description: '还没有可用的活动',
+                title: context.l10n.activityNoActivities,
+                description: context.l10n.activityNoAvailableActivities,
               );
             }
 
@@ -124,19 +128,12 @@ class _ActivityCard extends StatelessWidget {
           children: [
             // 图片
             if (activity.firstImage != null)
-              ClipRRect(
+              AsyncImageView(
+                imageUrl: activity.firstImage,
+                height: 200,
+                width: double.infinity,
+                fit: BoxFit.cover,
                 borderRadius: AppRadius.allMedium,
-                child: Image.network(
-                  activity.firstImage!,
-                  height: 200,
-                  width: double.infinity,
-                  fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) => Container(
-                    height: 200,
-                    color: AppColors.skeletonBase,
-                    child: const Icon(Icons.image_not_supported),
-                  ),
-                ),
               ),
             if (activity.firstImage != null) AppSpacing.vMd,
 
@@ -259,7 +256,7 @@ class _ActivityCard extends StatelessWidget {
                     borderRadius: AppRadius.allTiny,
                   ),
                   child: Text(
-                    _getStatusText(activity.status),
+                    _getStatusText(activity.status, context),
                     style: TextStyle(
                       fontSize: 12,
                       color: _getStatusColor(activity.status),
@@ -307,14 +304,14 @@ class _ActivityCard extends StatelessWidget {
     }
   }
 
-  String _getStatusText(String status) {
+  String _getStatusText(String status, BuildContext context) {
     switch (status) {
       case 'active':
-        return '进行中';
+        return context.l10n.activityInProgress;
       case 'completed':
-        return '已结束';
+        return context.l10n.activityEnded;
       case 'cancelled':
-        return '已取消';
+        return context.l10n.activityCancelled;
       default:
         return status;
     }

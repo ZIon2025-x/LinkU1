@@ -6,6 +6,7 @@ import '../../core/config/api_config.dart';
 import '../../core/utils/logger.dart';
 import '../../core/utils/network_interceptor.dart';
 import '../../core/utils/network_monitor.dart';
+import '../../core/utils/app_exception.dart';
 import 'storage_service.dart';
 
 /// API服务
@@ -115,10 +116,10 @@ class ApiService {
     DioException error,
     ErrorInterceptorHandler handler,
   ) async {
+    // 记录错误但脱敏处理（不输出完整 headers，避免泄露 token）
     AppLogger.error(
-      'API Error: ${error.requestOptions.uri}',
-      error,
-      error.stackTrace,
+      'API Error: ${error.requestOptions.method} ${error.requestOptions.uri} '
+      '[${error.response?.statusCode ?? 'no status'}]',
     );
 
     // 401未授权，尝试刷新Token
@@ -255,6 +256,11 @@ class ApiService {
     );
   }
 
+  // ==================== CancelToken 管理 ====================
+
+  /// 创建一个新的 CancelToken，调用方可在 BLoC close 时取消
+  CancelToken createCancelToken() => CancelToken();
+
   // ==================== HTTP方法 ====================
 
   /// GET请求
@@ -263,12 +269,14 @@ class ApiService {
     Map<String, dynamic>? queryParameters,
     T Function(dynamic)? fromJson,
     Options? options,
+    CancelToken? cancelToken,
   }) async {
     try {
       final response = await _dio.get(
         path,
         queryParameters: queryParameters,
         options: options,
+        cancelToken: cancelToken,
       );
       return ApiResponse.success(
         data: fromJson != null ? fromJson(response.data) : response.data,
@@ -286,6 +294,7 @@ class ApiService {
     Map<String, dynamic>? queryParameters,
     T Function(dynamic)? fromJson,
     Options? options,
+    CancelToken? cancelToken,
   }) async {
     try {
       final response = await _dio.post(
@@ -293,6 +302,7 @@ class ApiService {
         data: data,
         queryParameters: queryParameters,
         options: options,
+        cancelToken: cancelToken,
       );
       return ApiResponse.success(
         data: fromJson != null ? fromJson(response.data) : response.data,
@@ -310,6 +320,7 @@ class ApiService {
     Map<String, dynamic>? queryParameters,
     T Function(dynamic)? fromJson,
     Options? options,
+    CancelToken? cancelToken,
   }) async {
     try {
       final response = await _dio.put(
@@ -317,6 +328,7 @@ class ApiService {
         data: data,
         queryParameters: queryParameters,
         options: options,
+        cancelToken: cancelToken,
       );
       return ApiResponse.success(
         data: fromJson != null ? fromJson(response.data) : response.data,
@@ -334,6 +346,7 @@ class ApiService {
     Map<String, dynamic>? queryParameters,
     T Function(dynamic)? fromJson,
     Options? options,
+    CancelToken? cancelToken,
   }) async {
     try {
       final response = await _dio.patch(
@@ -341,6 +354,7 @@ class ApiService {
         data: data,
         queryParameters: queryParameters,
         options: options,
+        cancelToken: cancelToken,
       );
       return ApiResponse.success(
         data: fromJson != null ? fromJson(response.data) : response.data,
@@ -358,6 +372,7 @@ class ApiService {
     Map<String, dynamic>? queryParameters,
     T Function(dynamic)? fromJson,
     Options? options,
+    CancelToken? cancelToken,
   }) async {
     try {
       final response = await _dio.delete(
@@ -365,6 +380,7 @@ class ApiService {
         data: data,
         queryParameters: queryParameters,
         options: options,
+        cancelToken: cancelToken,
       );
       return ApiResponse.success(
         data: fromJson != null ? fromJson(response.data) : response.data,
@@ -383,6 +399,7 @@ class ApiService {
     Map<String, dynamic>? extraData,
     T Function(dynamic)? fromJson,
     void Function(int, int)? onProgress,
+    CancelToken? cancelToken,
   }) async {
     try {
       final formData = FormData.fromMap({
@@ -394,6 +411,7 @@ class ApiService {
         path,
         data: formData,
         onSendProgress: onProgress,
+        cancelToken: cancelToken,
       );
 
       return ApiResponse.success(
@@ -503,14 +521,14 @@ class ApiResponse<T> {
 }
 
 /// API异常
-class ApiException implements Exception {
-  ApiException(this.message, [this.statusCode]);
+class ApiException extends AppException {
+  ApiException(super.message, [this.statusCode]) 
+      : super(code: statusCode?.toString());
 
-  final String message;
   final int? statusCode;
 
   @override
-  String toString() => 'ApiException: $message (code: $statusCode)';
+  String toString() => 'ApiException: $message${statusCode != null ? ' (code: $statusCode)' : ''}';
 }
 
 /// 自动重试拦截器

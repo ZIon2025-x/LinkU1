@@ -198,8 +198,8 @@ class _StudentVerificationContentState
                 AppSpacing.hSm,
                 Text(
                   verification.daysRemaining! > 0
-                      ? '剩余 ${verification.daysRemaining} 天'
-                      : '已过期',
+                      ? context.l10n.studentVerificationDaysFormat(verification.daysRemaining!)
+                      : context.l10n.timeExpired,
                   style: TextStyle(
                     fontSize: 14,
                     color: verification.isExpiringSoon
@@ -224,9 +224,9 @@ class _StudentVerificationContentState
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            '认证信息',
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+          Text(
+            context.l10n.studentVerificationVerification,
+            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
           ),
           AppSpacing.vMd,
 
@@ -235,7 +235,7 @@ class _StudentVerificationContentState
             controller: _emailController,
             enabled: canSubmit,
             decoration: InputDecoration(
-              labelText: '学校邮箱',
+              labelText: context.l10n.studentVerificationSchoolEmail,
               hintText: 'example@university.ac.uk',
               border: OutlineInputBorder(
                 borderRadius: AppRadius.allMedium,
@@ -245,10 +245,10 @@ class _StudentVerificationContentState
             keyboardType: TextInputType.emailAddress,
             validator: (value) {
               if (value == null || value.trim().isEmpty) {
-                return '请输入邮箱';
+                return context.l10n.authEnterEmail;
               }
               if (!value.contains('@')) {
-                return '请输入有效的邮箱地址';
+                return context.l10n.authPleaseEnterValidEmail;
               }
               return null;
             },
@@ -258,7 +258,7 @@ class _StudentVerificationContentState
           // 提交按钮
           if (canSubmit)
             PrimaryButton(
-              text: verification.canRenew ? '续期认证' : '提交认证',
+              text: verification.canRenew ? context.l10n.studentVerificationRenewVerification : context.l10n.studentVerificationSubmitVerification,
               onPressed: state.isSubmitting
                   ? null
                   : () {
@@ -289,14 +289,14 @@ class _StudentVerificationContentState
                 color: AppColors.warning.withValues(alpha: 0.1),
                 borderRadius: AppRadius.allMedium,
               ),
-              child: const Row(
+              child: Row(
                 children: [
-                  Icon(Icons.info_outline, color: AppColors.warning),
+                  const Icon(Icons.info_outline, color: AppColors.warning),
                   AppSpacing.hSm,
                   Expanded(
                     child: Text(
-                      '邮箱已锁定，请等待审核完成',
-                      style: TextStyle(color: AppColors.warning),
+                      context.l10n.studentVerificationEmailLocked,
+                      style: const TextStyle(color: AppColors.warning),
                     ),
                   ),
                 ],
@@ -311,14 +311,14 @@ class _StudentVerificationContentState
                 color: AppColors.warning.withValues(alpha: 0.1),
                 borderRadius: AppRadius.allMedium,
               ),
-              child: const Row(
+              child: Row(
                 children: [
-                  Icon(Icons.pending_outlined, color: AppColors.warning),
+                  const Icon(Icons.pending_outlined, color: AppColors.warning),
                   AppSpacing.hSm,
                   Expanded(
                     child: Text(
-                      '认证审核中，请查收邮箱并完成验证',
-                      style: TextStyle(color: AppColors.warning),
+                      context.l10n.studentVerificationPending,
+                      style: const TextStyle(color: AppColors.warning),
                     ),
                   ),
                 ],

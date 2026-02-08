@@ -3,6 +3,7 @@ import 'dart:typed_data';
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../../../core/constants/app_constants.dart';
 import '../../../data/models/flea_market.dart';
 import '../../../data/repositories/flea_market_repository.dart';
 import '../../../core/utils/logger.dart';
@@ -393,7 +394,12 @@ class FleaMarketBloc extends Bloc<FleaMarketEvent, FleaMarketState> {
     FleaMarketPurchaseItem event,
     Emitter<FleaMarketState> emit,
   ) async {
-    emit(state.copyWith(isSubmitting: true));
+    // 清除旧的错误/操作消息，避免残留
+    emit(state.copyWith(
+      isSubmitting: true,
+      actionMessage: null,
+      errorMessage: null,
+    ));
 
     try {
       await _fleaMarketRepository.directPurchase(event.itemId.toString());
@@ -402,7 +408,7 @@ class FleaMarketBloc extends Bloc<FleaMarketEvent, FleaMarketState> {
       final updatedItems = state.items.map((item) {
         final itemIdInt = int.tryParse(item.id);
         if (itemIdInt == event.itemId) {
-          return item.copyWith(status: 'sold');
+          return item.copyWith(status: AppConstants.fleaMarketStatusSold);
         }
         return item;
       }).toList();
@@ -413,9 +419,11 @@ class FleaMarketBloc extends Bloc<FleaMarketEvent, FleaMarketState> {
         actionMessage: '购买成功',
       ));
     } catch (e) {
+      AppLogger.error('Failed to purchase item', e);
       emit(state.copyWith(
         isSubmitting: false,
         actionMessage: '购买失败',
+        errorMessage: e.toString(),
       ));
     }
   }

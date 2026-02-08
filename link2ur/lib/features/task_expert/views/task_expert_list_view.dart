@@ -239,7 +239,7 @@ class _ExpertCard extends StatelessWidget {
                     const SizedBox(width: 12),
                     // Completed tasks
                     Text(
-                      '完成 ${expert.completedTasks} 单',
+                      context.l10n.leaderboardCompletedCount(expert.completedTasks),
                       style: AppTypography.caption.copyWith(
                         color: isDark
                             ? AppColors.textSecondaryDark
@@ -249,7 +249,7 @@ class _ExpertCard extends StatelessWidget {
                     if (expert.totalServices > 0) ...[
                       const SizedBox(width: 12),
                       Text(
-                        '${expert.totalServices} 项服务',
+                        context.l10n.taskExpertServiceCount(expert.totalServices),
                         style: AppTypography.caption.copyWith(
                           color: isDark
                               ? AppColors.textSecondaryDark

@@ -1455,28 +1455,6 @@ async def direct_purchase_item(
                 create_pi_kw["payment_method_options"] = payment_method_options
             return stripe.PaymentIntent.create(**create_pi_kw)
         
-        def get_or_create_customer_sync(user_id, user_name):
-            """获取或创建 Stripe Customer（同步函数）"""
-            try:
-                # 首先尝试搜索现有 Customer
-                search_result = stripe.Customer.search(
-                    query=f"metadata['user_id']:'{user_id}'",
-                    limit=1
-                )
-                if search_result.data:
-                    return search_result.data[0].id
-            except Exception:
-                pass  # 搜索失败，直接创建新的
-            
-            # 创建新的 Customer
-            customer = stripe.Customer.create(
-                metadata={
-                    "user_id": str(user_id),
-                    "user_name": user_name or f"User {user_id}",
-                }
-            )
-            return customer.id
-        
         def create_ephemeral_key_sync(customer_id):
             """创建 Ephemeral Key（同步函数）"""
             ephemeral_key = stripe.EphemeralKey.create(
@@ -1485,38 +1463,45 @@ async def direct_purchase_item(
             )
             return ephemeral_key.secret
         
-        # 使用线程池并行执行 PaymentIntent 创建和 Customer 获取/创建
+        # 先获取/创建 Customer（优先使用 DB 缓存，首次用户才需要 API 调用）
+        # 然后创建 PI 并关联 customer，确保 PaymentSheet 能正确工作
         loop = asyncio.get_event_loop()
         executor = concurrent.futures.ThreadPoolExecutor(max_workers=2)
         
         try:
-            # 并行执行：创建 PaymentIntent 和 获取/创建 Customer
-            pi_future = loop.run_in_executor(executor, create_payment_intent_sync)
-            customer_future = loop.run_in_executor(
-                executor, 
-                get_or_create_customer_sync, 
-                current_user.id, 
-                current_user.name
+            from app.utils.stripe_utils import get_or_create_stripe_customer
+            # 同步获取 Customer（优先从 DB 读取，无需 API 调用）
+            # 注意：这里传 db=None，因为异步路由用的是 AsyncSession，不能传给同步函数
+            customer_id = await loop.run_in_executor(
+                executor,
+                get_or_create_stripe_customer,
+                current_user,
+                None
             )
+            # 异步保存 customer_id 到用户记录（避免下次重复创建）
+            if customer_id and (not current_user.stripe_customer_id or current_user.stripe_customer_id != customer_id):
+                await db.execute(
+                    update(models.User)
+                    .where(models.User.id == current_user.id)
+                    .values(stripe_customer_id=customer_id)
+                )
             
-            # 等待两个任务完成
-            payment_intent, customer_id = await asyncio.gather(pi_future, customer_future)
+            # Customer 已确定，将其加入 PI 创建参数
+            if customer_id:
+                create_pi_kw["customer"] = customer_id
+            
+            # 并行执行：创建 PI 和 Ephemeral Key
+            pi_future = loop.run_in_executor(executor, create_payment_intent_sync)
+            ek_future = loop.run_in_executor(executor, create_ephemeral_key_sync, customer_id) if customer_id else None
+            
+            if ek_future:
+                payment_intent, ephemeral_key_secret = await asyncio.gather(pi_future, ek_future)
+            else:
+                payment_intent = await pi_future
+                ephemeral_key_secret = None
             
             # 更新任务的 payment_intent_id
             new_task.payment_intent_id = payment_intent.id
-            
-            # 创建 Ephemeral Key（需要 customer_id，所以在 Customer 创建后执行）
-            ephemeral_key_secret = None
-            if customer_id:
-                try:
-                    ephemeral_key_secret = await loop.run_in_executor(
-                        executor, 
-                        create_ephemeral_key_sync, 
-                        customer_id
-                    )
-                except Exception as e:
-                    logger.warning(f"无法创建 Ephemeral Key: {e}")
-                    ephemeral_key_secret = None
                     
         except Exception as e:
             # 如果创建 PaymentIntent 失败，回滚整个事务
@@ -1933,33 +1918,15 @@ async def approve_purchase_request(
         customer_id = None
         ephemeral_key_secret = None
         try:
-            # 使用 Stripe Search API 查找现有 Customer（通过 metadata.user_id）
-            # 注意：Customer.list() 不支持通过 metadata 查询，需要使用 Search API
-            try:
-                search_result = stripe.Customer.search(
-                    query=f"metadata['user_id']:'{purchase_request.buyer_id}'",
-                    limit=1
+            from app.utils.stripe_utils import get_or_create_stripe_customer
+            customer_id = get_or_create_stripe_customer(buyer)
+            # 保存 customer_id 到买家用户记录
+            if customer_id and buyer and (not buyer.stripe_customer_id or buyer.stripe_customer_id != customer_id):
+                await db.execute(
+                    update(models.User)
+                    .where(models.User.id == buyer.id)
+                    .values(stripe_customer_id=customer_id)
                 )
-                if search_result.data:
-                    customer_id = search_result.data[0].id
-                else:
-                    customer = stripe.Customer.create(
-                        metadata={
-                            "user_id": str(purchase_request.buyer_id),
-                            "user_name": buyer.name if buyer else f"User {purchase_request.buyer_id}",
-                        }
-                    )
-                    customer_id = customer.id
-            except Exception as search_error:
-                # 如果 Search API 不可用或失败，直接创建新的 Customer
-                logger.debug(f"Stripe Search API 不可用，直接创建新 Customer: {search_error}")
-                customer = stripe.Customer.create(
-                    metadata={
-                        "user_id": str(purchase_request.buyer_id),
-                        "user_name": buyer.name if buyer else f"User {purchase_request.buyer_id}",
-                    }
-                )
-                customer_id = customer.id
 
             ephemeral_key = stripe.EphemeralKey.create(
                 customer=customer_id,
@@ -2252,33 +2219,16 @@ async def accept_purchase_request(
         customer_id = None
         ephemeral_key_secret = None
         try:
-            # 使用 Stripe Search API 查找现有 Customer（通过 metadata.user_id）
-            # 注意：Customer.list() 不支持通过 metadata 查询，需要使用 Search API
-            try:
-                search_result = stripe.Customer.search(
-                    query=f"metadata['user_id']:'{purchase_request.buyer_id}'",
-                    limit=1
+            from app.utils.stripe_utils import get_or_create_stripe_customer
+            buyer_user = purchase_request.buyer
+            customer_id = get_or_create_stripe_customer(buyer_user)
+            # 保存 customer_id 到买家用户记录
+            if customer_id and buyer_user and (not buyer_user.stripe_customer_id or buyer_user.stripe_customer_id != customer_id):
+                await db.execute(
+                    update(models.User)
+                    .where(models.User.id == buyer_user.id)
+                    .values(stripe_customer_id=customer_id)
                 )
-                if search_result.data:
-                    customer_id = search_result.data[0].id
-                else:
-                    customer = stripe.Customer.create(
-                        metadata={
-                            "user_id": str(purchase_request.buyer_id),
-                            "user_name": purchase_request.buyer.name if purchase_request.buyer else f"User {purchase_request.buyer_id}",
-                        }
-                    )
-                    customer_id = customer.id
-            except Exception as search_error:
-                # 如果 Search API 不可用或失败，直接创建新的 Customer
-                logger.debug(f"Stripe Search API 不可用，直接创建新 Customer: {search_error}")
-                customer = stripe.Customer.create(
-                    metadata={
-                        "user_id": str(purchase_request.buyer_id),
-                        "user_name": purchase_request.buyer.name if purchase_request.buyer else f"User {purchase_request.buyer_id}",
-                    }
-                )
-                customer_id = customer.id
 
             ephemeral_key = stripe.EphemeralKey.create(
                 customer=customer_id,

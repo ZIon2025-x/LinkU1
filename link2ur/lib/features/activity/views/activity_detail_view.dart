@@ -9,6 +9,7 @@ import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_typography.dart';
 import '../../../core/design/app_radius.dart';
+import '../../../core/utils/l10n_extension.dart';
 import '../../../core/widgets/loading_view.dart';
 import '../../../core/widgets/error_state_view.dart';
 import '../../../core/widgets/async_image_view.dart';
@@ -46,15 +47,15 @@ class _ActivityDetailViewContent extends StatelessWidget {
   Widget build(BuildContext context) {
     return BlocListener<ActivityBloc, ActivityState>(
       listener: (context, state) {
-        if (state.actionMessage == '报名成功') {
+        if (state.actionMessage == context.l10n.activityRegisterSuccess) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('报名成功'),
+            SnackBar(
+              content: Text(context.l10n.activityRegisterSuccess),
               backgroundColor: AppColors.success,
             ),
           );
         } else if (state.actionMessage != null &&
-            state.actionMessage!.startsWith('报名失败')) {
+            state.actionMessage!.startsWith(context.l10n.activityRegisterFailed)) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(state.actionMessage!),
@@ -146,7 +147,7 @@ class _ActivityDetailViewContent extends StatelessWidget {
     if (state.detailStatus == ActivityStatus.error &&
         state.activityDetail == null) {
       return ErrorStateView.loadFailed(
-        message: state.errorMessage ?? '加载失败',
+        message: state.errorMessage ?? context.l10n.activityLoadFailed,
         onRetry: () {
           context.read<ActivityBloc>().add(ActivityLoadDetail(activityId));
         },
@@ -242,7 +243,7 @@ class _ActivityDetailViewContent extends StatelessWidget {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      '收藏',
+                      context.l10n.activityFavorite,
                       style: TextStyle(
                         fontSize: 10,
                         color: isDark
@@ -265,7 +266,7 @@ class _ActivityDetailViewContent extends StatelessWidget {
 
   Widget _buildCTAButton(
       BuildContext context, ActivityState state, Activity activity) {
-    if (activity.status != 'active') {
+        if (activity.status != 'active') {
       return Container(
         height: 50,
         decoration: BoxDecoration(
@@ -274,7 +275,7 @@ class _ActivityDetailViewContent extends StatelessWidget {
         ),
         child: Center(
           child: Text(
-            _getStatusText(activity.status),
+            _getStatusText(activity.status, context),
             style: AppTypography.bodyBold.copyWith(color: Colors.white),
           ),
         ),
@@ -290,7 +291,7 @@ class _ActivityDetailViewContent extends StatelessWidget {
         ),
         child: Center(
           child: Text(
-            '已报名',
+            context.l10n.activityRegistered,
             style: AppTypography.bodyBold.copyWith(color: Colors.white),
           ),
         ),
@@ -306,7 +307,7 @@ class _ActivityDetailViewContent extends StatelessWidget {
         ),
         child: Center(
           child: Text(
-            '已满员',
+            context.l10n.activityFullSlots,
             style: AppTypography.bodyBold.copyWith(color: Colors.white),
           ),
         ),
@@ -341,7 +342,7 @@ class _ActivityDetailViewContent extends StatelessWidget {
                       strokeWidth: 2, color: Colors.white),
                 )
               : Text(
-                  '立即报名',
+                  context.l10n.activityRegisterNow,
                   style: AppTypography.bodyBold.copyWith(color: Colors.white),
                 ),
         ),
@@ -349,14 +350,14 @@ class _ActivityDetailViewContent extends StatelessWidget {
     );
   }
 
-  String _getStatusText(String status) {
+  String _getStatusText(String status, BuildContext context) {
     switch (status) {
       case 'active':
-        return '进行中';
+        return context.l10n.activityInProgress;
       case 'completed':
-        return '已结束';
+        return context.l10n.activityEnded;
       case 'cancelled':
-        return '已取消';
+        return context.l10n.activityCancelled;
       default:
         return status;
     }
@@ -515,7 +516,7 @@ class _ActivityImageCarouselState extends State<_ActivityImageCarousel> {
           ),
           const SizedBox(height: AppSpacing.md),
           Text(
-            '暂无图片',
+            context.l10n.fleaMarketNoImage,
             style: AppTypography.caption.copyWith(
               color: AppColors.textTertiaryLight,
             ),
@@ -602,7 +603,7 @@ class _ActivityHeaderCard extends StatelessWidget {
                 // 预约制
                 if (activity.hasTimeSlots)
                   _BadgeView(
-                    text: '预约制',
+                    text: context.l10n.activityByAppointment,
                     color: Colors.orange,
                     withIcon: true,
                     icon: Icons.schedule,
@@ -639,8 +640,8 @@ class _PriceView extends StatelessWidget {
 
     if (price == null || price == 0) {
       return Text(
-        '免费',
-        style: TextStyle(
+        context.l10n.activityFree,
+        style: const TextStyle(
           fontSize: 20,
           fontWeight: FontWeight.bold,
           color: AppColors.success,
@@ -655,7 +656,7 @@ class _PriceView extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
+            const Text(
               '£',
               style: TextStyle(
                 fontSize: 14,
@@ -666,7 +667,7 @@ class _PriceView extends StatelessWidget {
             ),
             Text(
               price.toStringAsFixed(2),
-              style: TextStyle(
+              style: const TextStyle(
                 fontSize: 28,
                 fontWeight: FontWeight.bold,
                 color: AppColors.primary,
@@ -679,7 +680,7 @@ class _PriceView extends StatelessWidget {
             activity.originalPricePerParticipant != null)
           Text(
             '£${activity.originalPricePerParticipant!.toStringAsFixed(2)}',
-            style: TextStyle(
+            style: const TextStyle(
               fontSize: 14,
               decoration: TextDecoration.lineThrough,
               color: AppColors.textTertiaryLight,
@@ -791,7 +792,7 @@ class _ActivityStatsBar extends StatelessWidget {
                 child: _StatItem(
                   value:
                       '${activity.currentParticipants ?? 0}/${activity.maxParticipants}',
-                  label: '参与人数',
+                  label: context.l10n.activityParticipantsCount,
                   color: AppColors.primary,
                 ),
               ),
@@ -807,7 +808,7 @@ class _ActivityStatsBar extends StatelessWidget {
               Expanded(
                 child: _StatItem(
                   value: '$remaining',
-                  label: '剩余名额',
+                  label: context.l10n.activityRemainingSlots,
                   color: AppColors.success,
                 ),
               ),
@@ -822,8 +823,8 @@ class _ActivityStatsBar extends StatelessWidget {
               // 状态
               Expanded(
                 child: _StatItem(
-                  value: _getStatusText(activity.status),
-                  label: '状态',
+                  value: _getStatusText(activity.status, context),
+                  label: context.l10n.activityStatusLabel,
                   color: _getStatusColor(activity.status),
                 ),
               ),
@@ -847,15 +848,15 @@ class _ActivityStatsBar extends StatelessWidget {
     }
   }
 
-  String _getStatusText(String status) {
-    if (status == 'active' && activity.isFull) return '已满员';
+  String _getStatusText(String status, BuildContext context) {
+    if (status == 'active' && activity.isFull) return context.l10n.activityFullSlots;
     switch (status) {
       case 'active':
-        return '进行中';
+        return context.l10n.activityInProgress;
       case 'completed':
-        return '已结束';
+        return context.l10n.activityEnded;
       case 'cancelled':
-        return '已取消';
+        return context.l10n.activityCancelled;
       default:
         return status;
     }
@@ -935,7 +936,7 @@ class _ActivityDescriptionCard extends StatelessWidget {
             // Section header - 对标iOS SectionHeader
             _SectionHeader(
               icon: Icons.description,
-              title: '活动详情',
+              title: context.l10n.activityDetailTitle,
             ),
             const SizedBox(height: AppSpacing.md),
             Text(
@@ -990,7 +991,7 @@ class _ActivityInfoGrid extends StatelessWidget {
           children: [
             _SectionHeader(
               icon: Icons.info_outline,
-              title: '活动信息',
+              title: context.l10n.activityInfo,
             ),
             const SizedBox(height: AppSpacing.md),
 
@@ -1000,7 +1001,7 @@ class _ActivityInfoGrid extends StatelessWidget {
                 icon: activity.location.toLowerCase().contains('online')
                     ? Icons.public
                     : Icons.location_on,
-                label: '地点',
+                label: context.l10n.activityLocation,
                 value: activity.location,
               ),
 
@@ -1008,7 +1009,7 @@ class _ActivityInfoGrid extends StatelessWidget {
             if (activity.taskType.isNotEmpty)
               _InfoRow(
                 icon: Icons.category,
-                label: '类型',
+                label: context.l10n.activityType,
                 value: activity.taskType,
               ),
 
@@ -1016,7 +1017,7 @@ class _ActivityInfoGrid extends StatelessWidget {
             if (activity.deadline != null)
               _InfoRow(
                 icon: Icons.calendar_today,
-                label: '截止时间',
+                label: context.l10n.activityDeadline,
                 value: _formatDateTime(activity.deadline),
               ),
 
@@ -1024,7 +1025,7 @@ class _ActivityInfoGrid extends StatelessWidget {
             if (activity.hasDiscount)
               _InfoRow(
                 icon: Icons.local_offer,
-                label: '折扣',
+                label: context.l10n.activityDiscount,
                 value:
                     '${activity.discountPercentage!.toStringAsFixed(0)}% OFF',
                 valueColor: AppColors.error,
@@ -1033,8 +1034,8 @@ class _ActivityInfoGrid extends StatelessWidget {
             // 奖励类型
             _InfoRow(
               icon: Icons.monetization_on,
-              label: '奖励类型',
-              value: _getRewardTypeText(activity.rewardType),
+              label: context.l10n.activityRewardType,
+              value: _getRewardTypeText(activity.rewardType, context),
             ),
           ],
         ),
@@ -1042,14 +1043,14 @@ class _ActivityInfoGrid extends StatelessWidget {
     );
   }
 
-  String _getRewardTypeText(String type) {
+  String _getRewardTypeText(String type, BuildContext context) {
     switch (type) {
       case 'cash':
-        return '现金';
+        return context.l10n.activityCash;
       case 'points':
-        return '积分';
+        return context.l10n.activityPointsReward;
       case 'both':
-        return '现金 + 积分';
+        return context.l10n.activityCashAndPoints;
       default:
         return type;
     }
@@ -1212,7 +1213,7 @@ class _PosterInfoRow extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      '发布者',
+                      context.l10n.activityPublisher,
                       style: AppTypography.caption.copyWith(
                         color: isDark
                             ? AppColors.textSecondaryDark
@@ -1221,7 +1222,7 @@ class _PosterInfoRow extends StatelessWidget {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      '查看达人资料',
+                      context.l10n.activityViewExpertProfileShort,
                       style: AppTypography.bodyBold.copyWith(
                         color: isDark
                             ? AppColors.textPrimaryDark

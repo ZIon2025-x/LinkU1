@@ -7,6 +7,8 @@ import '../../../core/design/app_typography.dart';
 import '../../../core/design/app_radius.dart';
 import '../../../core/widgets/buttons.dart';
 import '../../../core/constants/app_assets.dart';
+import '../../../core/router/app_router.dart';
+import '../../../core/utils/l10n_extension.dart';
 
 // ==================== FAQ ====================
 
@@ -15,55 +17,38 @@ import '../../../core/constants/app_assets.dart';
 class FAQView extends StatelessWidget {
   const FAQView({super.key});
 
-  static const List<_FAQSection> _sections = [
-    _FAQSection(
-      title: '账号相关',
-      items: [
-        _FAQItem(
-          question: '如何注册 Link²Ur 账号？',
-          answer: '您可以使用邮箱注册，填写基本信息即可完成注册。如果是在校学生，推荐完成学生认证以享受更多功能。',
-        ),
-        _FAQItem(
-          question: '忘记密码怎么办？',
-          answer: '在登录页面点击"忘记密码"，通过注册邮箱接收重置链接即可修改密码。',
-        ),
-        _FAQItem(
-          question: '如何完成学生认证？',
-          answer: '进入"个人中心"→"学生认证"，上传有效的学生证或教育邮箱即可申请认证。',
-        ),
-      ],
-    ),
-    _FAQSection(
-      title: '任务相关',
-      items: [
-        _FAQItem(
-          question: '如何发布任务？',
-          answer: '点击底部导航栏中间的"+"按钮，选择"发布任务"，填写任务描述、酬劳、截止时间等信息即可发布。',
-        ),
-        _FAQItem(
-          question: '如何接受任务？',
-          answer: '浏览首页或任务列表，找到感兴趣的任务，点击"申请接单"即可。任务发布者确认后，您即可开始执行。',
-        ),
-        _FAQItem(
-          question: '任务酬劳如何结算？',
-          answer: '任务完成后，发布者确认完成，平台将自动将酬劳转入您的钱包。您可以在钱包中提现到银行卡。',
-        ),
-      ],
-    ),
-    _FAQSection(
-      title: '支付与安全',
-      items: [
-        _FAQItem(
-          question: '支付方式有哪些？',
-          answer: '目前支持银行卡（Visa/Mastercard）、Apple Pay、微信支付等方式。',
-        ),
-        _FAQItem(
-          question: '支付安全吗？',
-          answer: '所有支付均通过 Stripe 安全通道处理，您的支付信息经过加密保护，平台不会存储您的银行卡信息。',
-        ),
-      ],
-    ),
-  ];
+  List<_FAQSection> _sections(BuildContext context) {
+    final l10n = context.l10n;
+    return [
+      _FAQSection(
+        title: l10n.infoFAQAccountTitle,
+        items: [
+          _FAQItem(question: l10n.infoFAQAccountQ1, answer: l10n.infoFAQAccountA1),
+          _FAQItem(question: l10n.infoFAQAccountQ2, answer: l10n.infoFAQAccountA2),
+          _FAQItem(question: l10n.infoFAQAccountQ3, answer: l10n.infoFAQAccountA3),
+          _FAQItem(question: l10n.infoFAQAccountQ4, answer: l10n.infoFAQAccountA4),
+        ],
+      ),
+      _FAQSection(
+        title: l10n.infoFAQTaskTitle,
+        items: [
+          _FAQItem(question: l10n.infoFAQTaskQ1, answer: l10n.infoFAQTaskA1),
+          _FAQItem(question: l10n.infoFAQTaskQ2, answer: l10n.infoFAQTaskA2),
+          _FAQItem(question: l10n.infoFAQTaskQ3, answer: l10n.infoFAQTaskA3),
+          _FAQItem(question: l10n.infoFAQTaskQ4, answer: l10n.infoFAQTaskA4),
+        ],
+      ),
+      _FAQSection(
+        title: l10n.infoFAQPaymentTitle,
+        items: [
+          _FAQItem(question: l10n.infoFAQPaymentQ1, answer: l10n.infoFAQPaymentA1),
+          _FAQItem(question: l10n.infoFAQPaymentQ2, answer: l10n.infoFAQPaymentA2),
+          _FAQItem(question: l10n.infoFAQPaymentQ3, answer: l10n.infoFAQPaymentA3),
+          _FAQItem(question: l10n.infoFAQPaymentQ4, answer: l10n.infoFAQPaymentA4),
+        ],
+      ),
+    ];
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -71,14 +56,14 @@ class FAQView extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('常见问题'),
+        title: Text(context.l10n.infoFAQTitle),
         centerTitle: true,
       ),
       body: ListView.builder(
         padding: AppSpacing.allMd,
-        itemCount: _sections.length,
+        itemCount: _sections(context).length,
         itemBuilder: (context, index) {
-          final section = _sections[index];
+          final section = _sections(context)[index];
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -102,13 +87,13 @@ class FAQView extends StatelessWidget {
 }
 
 class _FAQSection {
-  const _FAQSection({required this.title, required this.items});
+  _FAQSection({required this.title, required this.items});
   final String title;
   final List<_FAQItem> items;
 }
 
 class _FAQItem {
-  const _FAQItem({required this.question, required this.answer});
+  _FAQItem({required this.question, required this.answer});
   final String question;
   final String answer;
 }
@@ -227,39 +212,9 @@ class TermsView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const LegalDocumentView(
-      title: '服务条款',
-      content: '''
-Link²Ur 服务条款
-
-最后更新日期：2024年1月1日
-
-1. 服务概述
-Link²Ur 是一个校园互助平台，旨在帮助用户发布和接受各类生活服务任务。
-
-2. 用户责任
-- 用户应提供真实、准确的个人信息
-- 用户应遵守平台规则和相关法律法规
-- 用户对其发布的内容承担责任
-
-3. 平台责任
-- 平台提供信息中介服务
-- 平台对交易资金实行托管保障
-- 平台有权对违规行为进行处理
-
-4. 支付与结算
-- 所有支付通过第三方支付平台处理
-- 任务完成后平台自动结算
-- 平台收取合理的服务费用
-
-5. 隐私保护
-请参阅我们的隐私政策了解详细信息。
-
-6. 免责声明
-平台作为信息中介，不对用户之间的交易承担直接责任。
-
-如有任何疑问，请联系我们的客服团队。
-''',
+    return LegalDocumentView(
+      title: context.l10n.infoTermsTitle,
+      content: context.l10n.infoTermsContent,
     );
   }
 }
@@ -270,46 +225,9 @@ class PrivacyView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const LegalDocumentView(
-      title: '隐私政策',
-      content: '''
-Link²Ur 隐私政策
-
-最后更新日期：2024年1月1日
-
-1. 信息收集
-我们收集以下类型的信息：
-- 注册信息（姓名、邮箱等）
-- 位置信息（用于附近任务推荐）
-- 设备信息（用于推送通知）
-
-2. 信息使用
-我们使用您的信息来：
-- 提供和改善服务
-- 个性化推荐
-- 保障交易安全
-
-3. 信息存储与保护
-- 数据存储在安全的服务器上
-- 采用加密技术保护数据传输
-- 定期进行安全审计
-
-4. 信息共享
-我们不会出售您的个人信息。仅在以下情况下共享：
-- 经您同意
-- 法律要求
-- 服务提供所必需
-
-5. Cookie 政策
-我们使用 Cookie 来改善用户体验。
-
-6. 您的权利
-- 访问和修改个人信息
-- 删除账户
-- 退订通知
-
-如有隐私相关问题，请联系 privacy@link2ur.com
-''',
+    return LegalDocumentView(
+      title: context.l10n.infoPrivacyTitle,
+      content: context.l10n.infoPrivacyContent,
     );
   }
 }
@@ -320,24 +238,9 @@ class CookiePolicyView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const LegalDocumentView(
-      title: 'Cookie 政策',
-      content: '''
-Link²Ur Cookie 政策
-
-我们使用 Cookie 和类似技术来改善您的使用体验。
-
-1. 什么是 Cookie
-Cookie 是存储在您设备上的小型文本文件。
-
-2. 我们如何使用 Cookie
-- 必要 Cookie：保持登录状态
-- 功能 Cookie：记住偏好设置
-- 分析 Cookie：改善服务质量
-
-3. 管理 Cookie
-您可以在设备设置中管理 Cookie 偏好。
-''',
+    return LegalDocumentView(
+      title: context.l10n.infoCookieTitle,
+      content: context.l10n.infoCookieContent,
     );
   }
 }
@@ -379,7 +282,7 @@ class _AboutViewState extends State<AboutView> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('关于'),
+        title: Text(context.l10n.infoAboutTitle),
         centerTitle: true,
       ),
       body: Center(
@@ -409,7 +312,7 @@ class _AboutViewState extends State<AboutView> {
               ),
               AppSpacing.vXs,
               Text(
-                '校园任务互助平台',
+                context.l10n.infoConnectPlatform,
                 style: AppTypography.subheadline.copyWith(
                   color: isDark
                       ? AppColors.textSecondaryDark
@@ -418,7 +321,7 @@ class _AboutViewState extends State<AboutView> {
               ),
               AppSpacing.vSm,
               Text(
-                '版本 $_version ($_buildNumber)',
+                context.l10n.infoVersionFormat(_version, _buildNumber),
                 style: AppTypography.caption.copyWith(
                   color: isDark
                       ? AppColors.textTertiaryDark
@@ -430,7 +333,7 @@ class _AboutViewState extends State<AboutView> {
 
               // 功能列表
               _AboutListItem(
-                title: '服务条款',
+                title: context.l10n.infoTermsTitle,
                 icon: Icons.description,
                 onTap: () => Navigator.push(
                   context,
@@ -438,7 +341,7 @@ class _AboutViewState extends State<AboutView> {
                 ),
               ),
               _AboutListItem(
-                title: '隐私政策',
+                title: context.l10n.infoPrivacyTitle,
                 icon: Icons.privacy_tip,
                 onTap: () => Navigator.push(
                   context,
@@ -446,7 +349,7 @@ class _AboutViewState extends State<AboutView> {
                 ),
               ),
               _AboutListItem(
-                title: 'Cookie 政策',
+                title: context.l10n.infoCookieTitle,
                 icon: Icons.cookie,
                 onTap: () => Navigator.push(
                   context,
@@ -454,7 +357,7 @@ class _AboutViewState extends State<AboutView> {
                 ),
               ),
               _AboutListItem(
-                title: '常见问题',
+                title: context.l10n.infoFAQTitle,
                 icon: Icons.help_outline,
                 onTap: () => Navigator.push(
                   context,
@@ -465,7 +368,7 @@ class _AboutViewState extends State<AboutView> {
               const Spacer(),
 
               Text(
-                '© 2024 Link²Ur. All rights reserved.',
+                context.l10n.infoCopyright,
                 style: AppTypography.caption.copyWith(
                   color: isDark
                       ? AppColors.textTertiaryDark
@@ -531,7 +434,7 @@ class VIPView extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('会员中心'),
+        title: Text(context.l10n.infoVipCenter),
         centerTitle: true,
       ),
       body: SingleChildScrollView(
@@ -575,7 +478,7 @@ class VIPView extends StatelessWidget {
                             ),
                           ),
                           Text(
-                            '尊享会员特权',
+                            context.l10n.vipEnjoyBenefits,
                             style: AppTypography.caption.copyWith(
                               color: Colors.white.withValues(alpha: 0.6),
                             ),
@@ -595,7 +498,7 @@ class VIPView extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    '会员特权',
+                    context.l10n.infoMemberBenefits,
                     style: AppTypography.title3.copyWith(
                       color: isDark
                           ? AppColors.textPrimaryDark
@@ -603,34 +506,34 @@ class VIPView extends StatelessWidget {
                     ),
                   ),
                   AppSpacing.vMd,
-                  const _VIPFeatureItem(
+                  _VIPFeatureItem(
                     icon: Icons.bolt,
-                    title: '优先接单',
-                    description: '任务推送优先，抢单更快一步',
+                    title: context.l10n.infoVipPriority,
+                    description: context.l10n.vipPriorityRecommendationDesc,
                     color: AppColors.warning,
                   ),
-                  const _VIPFeatureItem(
+                  _VIPFeatureItem(
                     icon: Icons.badge,
-                    title: '专属标识',
-                    description: '头像显示VIP标识，提升可信度',
+                    title: context.l10n.infoVipBadge,
+                    description: context.l10n.vipExclusiveBadgeDesc,
                     color: AppColors.accent,
                   ),
-                  const _VIPFeatureItem(
+                  _VIPFeatureItem(
                     icon: Icons.discount,
-                    title: '手续费减免',
-                    description: '平台服务费享受折扣优惠',
+                    title: context.l10n.infoVipFeeReduction,
+                    description: context.l10n.vipFeeDiscountDesc,
                     color: AppColors.success,
                   ),
-                  const _VIPFeatureItem(
+                  _VIPFeatureItem(
                     icon: Icons.support_agent,
-                    title: '专属客服',
-                    description: 'VIP专属客服通道，问题优先处理',
+                    title: context.l10n.infoVipCustomerService,
+                    description: context.l10n.vipExclusiveBadgeDesc,
                     color: AppColors.primary,
                   ),
-                  const _VIPFeatureItem(
+                  _VIPFeatureItem(
                     icon: Icons.card_giftcard,
-                    title: '积分加倍',
-                    description: '每日签到积分翻倍',
+                    title: context.l10n.infoVipPointsBoost,
+                    description: context.l10n.vipExclusiveActivityDesc,
                     color: AppColors.purple,
                   ),
                 ],
@@ -643,9 +546,9 @@ class VIPView extends StatelessWidget {
             Padding(
               padding: AppSpacing.horizontalMd,
               child: PrimaryButton(
-                text: '开通 VIP 会员',
+                text: context.l10n.infoVipSubscribe,
                 onPressed: () {
-                  // TODO: 跳转到支付页面
+                  context.goToVIPPurchase();
                 },
                 gradient: const LinearGradient(
                   colors: [Color(0xFFFFD700), Color(0xFFFF9500)],

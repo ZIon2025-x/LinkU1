@@ -215,13 +215,13 @@ class _ItemDetailContent extends StatelessWidget {
                                 ),
                                 const SizedBox(width: 6),
                                 Text(
-                                  '由 ${item['submitter_name']} 提交',
+                                  context.l10n.leaderboardSubmittedBy(item['submitter_name'] ?? ''),
                                   style: AppTypography.caption.copyWith(
                                     color: AppColors.textSecondaryLight,
                                   ),
                                 ),
                                 const SizedBox(width: 4),
-                                Icon(Icons.chevron_right,
+                                const Icon(Icons.chevron_right,
                                     size: 14,
                                     color: AppColors.textTertiaryLight),
                               ],
@@ -254,7 +254,7 @@ class _ItemDetailContent extends StatelessWidget {
                             ),
                           ),
                           const SizedBox(height: 2),
-                          Text('当前得分',
+                          Text(context.l10n.leaderboardCurrentScore,
                               style: AppTypography.caption.copyWith(
                                   color: AppColors.textSecondaryLight)),
                         ],
@@ -280,7 +280,7 @@ class _ItemDetailContent extends StatelessWidget {
                             ),
                           ),
                           const SizedBox(height: 2),
-                          Text('总投票数',
+                          Text(context.l10n.leaderboardTotalVotesCount,
                               style: AppTypography.caption.copyWith(
                                   color: AppColors.textSecondaryLight)),
                         ],
@@ -307,7 +307,7 @@ class _ItemDetailContent extends StatelessWidget {
                               ),
                             ),
                             const SizedBox(height: 2),
-                            Text('排名',
+                            Text(context.l10n.leaderboardRank,
                                 style: AppTypography.caption.copyWith(
                                     color: AppColors.textSecondaryLight)),
                           ],
@@ -355,7 +355,7 @@ class _ItemDetailContent extends StatelessWidget {
                               ),
                               const SizedBox(width: 8),
                               Text(
-                                '详情',
+                                context.l10n.leaderboardDetails,
                                 style: TextStyle(
                                   fontSize: 16,
                                   fontWeight: FontWeight.w600,
@@ -451,7 +451,7 @@ class _ItemDetailContent extends StatelessWidget {
                             ),
                             const SizedBox(width: 8),
                             Text(
-                              '反对',
+                              context.l10n.leaderboardOppose,
                               style: TextStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.w600,
@@ -495,7 +495,7 @@ class _ItemDetailContent extends StatelessWidget {
                             ),
                             const SizedBox(width: 8),
                             Text(
-                              '支持',
+                              context.l10n.leaderboardSupport,
                               style: TextStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.w600,
@@ -554,7 +554,7 @@ class _ImageSectionState extends State<_ImageSection> {
             Icon(Icons.photo_library, size: 48,
                 color: AppColors.primary.withValues(alpha: 0.3)),
             const SizedBox(height: 8),
-            Text('暂无图片',
+            Text(context.l10n.leaderboardNoImages,
                 style: AppTypography.caption
                     .copyWith(color: AppColors.textTertiaryLight)),
           ],

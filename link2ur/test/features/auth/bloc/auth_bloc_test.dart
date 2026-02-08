@@ -3,7 +3,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 
 import 'package:link2ur/features/auth/bloc/auth_bloc.dart';
-import 'package:link2ur/data/models/user.dart';
 import 'package:link2ur/data/repositories/auth_repository.dart';
 
 import '../../../helpers/test_helpers.dart';
@@ -75,7 +74,7 @@ void main() {
           when(() => mockAuthRepository.login(
                 email: any(named: 'email'),
                 password: any(named: 'password'),
-              )).thenThrow(AuthException('邮箱或密码错误'));
+              )).thenThrow(const AuthException('邮箱或密码错误'));
           return authBloc;
         },
         act: (bloc) => bloc.add(const AuthLoginRequested(
@@ -145,7 +144,7 @@ void main() {
           when(() => mockAuthRepository.loginWithCode(
                 email: any(named: 'email'),
                 code: any(named: 'code'),
-              )).thenThrow(AuthException('验证码无效'));
+              )).thenThrow(const AuthException('验证码无效'));
           return authBloc;
         },
         act: (bloc) => bloc.add(const AuthLoginWithCodeRequested(
@@ -225,7 +224,7 @@ void main() {
                 password: any(named: 'password'),
                 name: any(named: 'name'),
                 code: any(named: 'code'),
-              )).thenThrow(AuthException('邮箱已被注册'));
+              )).thenThrow(const AuthException('邮箱已被注册'));
           return authBloc;
         },
         act: (bloc) => bloc.add(const AuthRegisterRequested(
@@ -356,7 +355,7 @@ void main() {
         'updates codeSendStatus to error with AuthException message',
         build: () {
           when(() => mockAuthRepository.sendEmailCode(any()))
-              .thenThrow(AuthException('发送频率过快'));
+              .thenThrow(const AuthException('发送频率过快'));
           return authBloc;
         },
         act: (bloc) => bloc.add(const AuthSendEmailCodeRequested(
@@ -450,7 +449,7 @@ void main() {
                 email: any(named: 'email'),
                 code: any(named: 'code'),
                 newPassword: any(named: 'newPassword'),
-              )).thenThrow(AuthException('验证码错误'));
+              )).thenThrow(const AuthException('验证码错误'));
           return authBloc;
         },
         act: (bloc) => bloc.add(const AuthResetPasswordRequested(

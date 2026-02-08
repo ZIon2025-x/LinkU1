@@ -62,9 +62,11 @@ void main() async {
   // 初始化Bloc观察者
   Bloc.observer = AppBlocObserver();
 
-  // 初始化 IAP 内购服务
-  final apiService = ApiService();
-  await IAPService.instance.initialize(apiService: apiService);
+  // 初始化 IAP 内购服务（Web 平台不支持 in_app_purchase）
+  if (!kIsWeb) {
+    final apiService = ApiService();
+    await IAPService.instance.initialize(apiService: apiService);
+  }
 
   // 注意：不在这里 remove 原生启动画面
   // 原生启动画面会保持到 app.dart 中认证检查完成后再移除

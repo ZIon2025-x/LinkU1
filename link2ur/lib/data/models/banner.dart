@@ -51,6 +51,26 @@ class Banner extends Equatable {
     };
   }
 
+  Banner copyWith({
+    int? id,
+    String? imageUrl,
+    String? title,
+    String? subtitle,
+    String? linkUrl,
+    String? linkType,
+    int? order,
+  }) {
+    return Banner(
+      id: id ?? this.id,
+      imageUrl: imageUrl ?? this.imageUrl,
+      title: title ?? this.title,
+      subtitle: subtitle ?? this.subtitle,
+      linkUrl: linkUrl ?? this.linkUrl,
+      linkType: linkType ?? this.linkType,
+      order: order ?? this.order,
+    );
+  }
+
   @override
   List<Object?> get props => [id, imageUrl, title];
 }

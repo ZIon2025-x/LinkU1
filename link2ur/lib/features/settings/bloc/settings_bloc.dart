@@ -249,7 +249,7 @@ class SettingsBloc extends Bloc<SettingsEvent, SettingsState> {
       final totalSize = tempSize + apiCacheSize;
       emit(state.copyWith(cacheSize: _formatFileSize(totalSize)));
     } catch (e) {
-      emit(state.copyWith(cacheSize: '未知'));
+      emit(state.copyWith(cacheSize: 'N/A'));
     }
   }
 

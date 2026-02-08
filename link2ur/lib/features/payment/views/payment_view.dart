@@ -8,6 +8,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_radius.dart';
+import '../../../core/utils/l10n_extension.dart';
 import '../../../core/widgets/buttons.dart';
 import '../../../core/widgets/loading_view.dart';
 import '../../../core/widgets/external_web_view.dart';
@@ -15,6 +16,8 @@ import '../../../data/repositories/payment_repository.dart';
 import '../../../data/services/payment_service.dart';
 import '../../../data/models/payment.dart';
 import '../bloc/payment_bloc.dart';
+
+part 'payment_widgets.dart';
 
 /// 支付方式枚举 —— 对齐 iOS PaymentMethod
 enum PaymentMethod {
@@ -165,15 +168,15 @@ class _PaymentContentState extends State<_PaymentContent> {
       context: context,
       barrierDismissible: false,
       builder: (ctx) => AlertDialog(
-        title: const Text('支付已过期'),
-        content: const Text('支付时间已到，请重新发起支付。'),
+        title: Text(context.l10n.paymentExpired),
+        content: Text(context.l10n.paymentExpiredMessage),
         actions: [
           TextButton(
             onPressed: () {
               Navigator.pop(ctx);
               context.pop();
             },
-            child: const Text('确定'),
+            child: Text(context.l10n.commonOk),
           ),
         ],
       ),
@@ -260,7 +263,7 @@ class _PaymentContentState extends State<_PaymentContent> {
   Future<void> _presentApplePay() async {
     if (!Platform.isIOS) {
       context.read<PaymentBloc>().add(
-            const PaymentMarkFailed('Apple Pay 仅在 iOS 设备上可用'),
+            PaymentMarkFailed(context.l10n.paymentApplePayIOSOnly),
           );
       return;
     }
@@ -275,12 +278,16 @@ class _PaymentContentState extends State<_PaymentContent> {
 
     bloc.add(const PaymentStartProcessing());
 
+    // 在 await 之前获取本地化字符串，避免异步间隙使用 BuildContext
+    final notSupportedMsg = context.l10n.paymentApplePayNotSupported;
+    final label = context.l10n.paymentApplePayLabel(widget.taskId);
+
     try {
       final paymentService = PaymentService.instance;
       final isSupported = await paymentService.isApplePaySupported();
       if (!isSupported) {
         if (mounted) {
-          bloc.add(const PaymentMarkFailed('您的设备不支持 Apple Pay，请使用其他支付方式'));
+          bloc.add(PaymentMarkFailed(notSupportedMsg));
         }
         return;
       }
@@ -289,7 +296,7 @@ class _PaymentContentState extends State<_PaymentContent> {
         clientSecret: response.clientSecret!,
         amount: response.finalAmount,
         currency: response.currency,
-        label: '任务 #${widget.taskId}',
+        label: label,
       );
 
       if (!mounted) return;
@@ -346,15 +353,15 @@ class _PaymentContentState extends State<_PaymentContent> {
   String _formatPlatformPaymentError(dynamic error) {
     final msg = error.toString();
     if (msg.contains('insufficient_funds')) {
-      return '余额不足，请更换支付方式或充值后重试。';
+      return context.l10n.errorInsufficientFunds;
     } else if (msg.contains('card_declined')) {
-      return '银行卡被拒绝，请更换银行卡或联系银行。';
+      return context.l10n.errorCardDeclined;
     } else if (msg.contains('expired_card')) {
-      return '银行卡已过期，请更换银行卡。';
+      return context.l10n.errorExpiredCard;
     } else if (msg.contains('network')) {
-      return '网络连接失败，请检查网络后重试。';
+      return context.l10n.paymentNetworkConnectionFailed;
     } else if (msg.contains('timeout')) {
-      return '请求超时，请稍后重试。';
+      return context.l10n.paymentRequestTimeout;
     }
     return msg
         .replaceAll('PaymentException: ', '')
@@ -388,11 +395,11 @@ class _PaymentContentState extends State<_PaymentContent> {
               ),
             ),
             AppSpacing.vMd,
-            const Text('支付成功'),
+            Text(context.l10n.paymentSuccess),
           ],
         ),
-        content: const Text(
-          '您的支付已成功处理，任务将很快开始。',
+        content: Text(
+          context.l10n.paymentSuccessMessage,
           textAlign: TextAlign.center,
         ),
         actionsAlignment: MainAxisAlignment.center,
@@ -411,7 +418,7 @@ class _PaymentContentState extends State<_PaymentContent> {
                   borderRadius: BorderRadius.circular(12),
                 ),
               ),
-              child: const Text('确定'),
+              child: Text(context.l10n.commonOk),
             ),
           ),
         ],
@@ -481,7 +488,7 @@ class _PaymentContentState extends State<_PaymentContent> {
       child: BlocBuilder<PaymentBloc, PaymentState>(
         builder: (context, state) {
           return Scaffold(
-            appBar: AppBar(title: const Text('确认支付')),
+            appBar: AppBar(title: Text(context.l10n.paymentConfirmPayment)),
             body: state.isLoading
                 ? const LoadingView()
                 : SafeArea(
@@ -569,7 +576,7 @@ class _PaymentContentState extends State<_PaymentContent> {
           ),
           const SizedBox(width: 8),
           Text(
-            '支付剩余时间：${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}',
+            context.l10n.paymentRemainingTime('${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}'),
             style: TextStyle(
               fontSize: 13,
               fontWeight: FontWeight.w600,
@@ -628,16 +635,16 @@ class _PaymentContentState extends State<_PaymentContent> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            '订单信息',
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+          Text(
+            context.l10n.paymentOrderInfo,
+            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
           ),
           AppSpacing.vMd,
-          _InfoRow(label: '任务编号', value: '#${widget.taskId}'),
+          _InfoRow(label: context.l10n.paymentTaskNumber, value: '#${widget.taskId}'),
           if (response != null) ...[
             AppSpacing.vSm,
             _InfoRow(
-              label: '原价',
+              label: context.l10n.paymentOriginalPrice,
               value: response.originalAmountDisplay.isNotEmpty
                   ? response.originalAmountDisplay
                   : '£${(response.originalAmount / 100).toStringAsFixed(2)}',
@@ -645,7 +652,7 @@ class _PaymentContentState extends State<_PaymentContent> {
             if (response.hasDiscount) ...[
               AppSpacing.vSm,
               _InfoRow(
-                label: '优惠 (${response.couponName ?? ""})',
+                label: context.l10n.paymentDiscount(response.couponName ?? ''),
                 value:
                     '-${response.couponDiscountDisplay ?? "£${(response.couponDiscount! / 100).toStringAsFixed(2)}"}',
                 valueStyle: const TextStyle(
@@ -659,7 +666,7 @@ class _PaymentContentState extends State<_PaymentContent> {
               child: Divider(height: 1),
             ),
             _InfoRow(
-              label: '实付金额',
+              label: context.l10n.paymentFinalAmount,
               value: response.finalAmountDisplay.isNotEmpty
                   ? response.finalAmountDisplay
                   : '£${(response.finalAmount / 100).toStringAsFixed(2)}',
@@ -679,14 +686,14 @@ class _PaymentContentState extends State<_PaymentContent> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          '支付方式',
-          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+        Text(
+          context.l10n.paymentMethod,
+          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
         ),
         AppSpacing.vMd,
         _PaymentMethodTile(
           icon: Icons.credit_card,
-          title: '信用卡/借记卡',
+          title: context.l10n.paymentCreditDebitCard,
           subtitle: 'Visa, Mastercard, AMEX',
           isSelected: _selectedPaymentMethod == PaymentMethod.card,
           onTap: () => _onPaymentMethodChanged(PaymentMethod.card),
@@ -696,7 +703,7 @@ class _PaymentContentState extends State<_PaymentContent> {
           _PaymentMethodTile(
             icon: Icons.apple,
             title: 'Apple Pay',
-            subtitle: '快速安全支付',
+            subtitle: context.l10n.paymentFastSecure,
             isSelected: _selectedPaymentMethod == PaymentMethod.applePay,
             onTap: () => _onPaymentMethodChanged(PaymentMethod.applePay),
           ),
@@ -713,7 +720,7 @@ class _PaymentContentState extends State<_PaymentContent> {
             child:
                 const Icon(Icons.chat_bubble, color: Colors.white, size: 14),
           ),
-          title: '微信支付',
+          title: context.l10n.paymentWeChatPay,
           subtitle: 'WeChat Pay (Stripe)',
           isSelected: _selectedPaymentMethod == PaymentMethod.wechatPay,
           onTap: () => _onPaymentMethodChanged(PaymentMethod.wechatPay),
@@ -738,7 +745,7 @@ class _PaymentContentState extends State<_PaymentContent> {
               ),
             ),
           ),
-          title: '支付宝',
+          title: context.l10n.paymentAlipay,
           subtitle: 'Alipay (Stripe)',
           isSelected: _selectedPaymentMethod == PaymentMethod.alipay,
           onTap: () => _onPaymentMethodChanged(PaymentMethod.alipay),
@@ -768,7 +775,7 @@ class _PaymentContentState extends State<_PaymentContent> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          state.selectedCouponName ?? '已选择优惠券',
+                          state.selectedCouponName ?? context.l10n.paymentCouponSelected,
                           style: const TextStyle(
                             fontWeight: FontWeight.w500,
                           ),
@@ -783,9 +790,9 @@ class _PaymentContentState extends State<_PaymentContent> {
                           ),
                       ],
                     )
-                  : const Text(
-                      '选择优惠券',
-                      style: TextStyle(
+                  : Text(
+                      context.l10n.paymentSelectCoupon,
+                      style: const TextStyle(
                         color: AppColors.textSecondaryLight,
                       ),
                     ),
@@ -833,7 +840,7 @@ class _PaymentContentState extends State<_PaymentContent> {
       ),
       child: SafeArea(
         child: PrimaryButton(
-          text: isFree ? '确认（免费）' : '立即支付 $amount',
+          text: isFree ? context.l10n.paymentConfirmFree : context.l10n.paymentPayNow(amount),
           isLoading: state.isProcessing,
           onPressed: state.isProcessing ? null : _processPayment,
         ),
@@ -931,263 +938,6 @@ class _PaymentMethodTile extends StatelessWidget {
                   color: AppColors.textTertiaryLight, size: 20),
           ],
         ),
-      ),
-    );
-  }
-}
-
-/// 优惠券选择底部弹窗
-class _CouponSelectorSheet extends StatefulWidget {
-  const _CouponSelectorSheet({this.selectedCouponId});
-
-  final int? selectedCouponId;
-
-  @override
-  State<_CouponSelectorSheet> createState() => _CouponSelectorSheetState();
-}
-
-class _CouponSelectorSheetState extends State<_CouponSelectorSheet> {
-  bool _isLoading = true;
-  List<Map<String, dynamic>> _coupons = [];
-
-  @override
-  void initState() {
-    super.initState();
-    _loadCoupons();
-  }
-
-  Future<void> _loadCoupons() async {
-    try {
-      final repo = context.read<PaymentRepository>();
-      final methods = await repo.getPaymentMethods();
-      if (mounted) {
-        setState(() {
-          _coupons = methods;
-          _isLoading = false;
-        });
-      }
-    } catch (_) {
-      if (mounted) {
-        setState(() => _isLoading = false);
-      }
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      constraints: BoxConstraints(
-        maxHeight: MediaQuery.of(context).size.height * 0.6,
-      ),
-      padding: const EdgeInsets.all(20),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            width: 40,
-            height: 4,
-            decoration: BoxDecoration(
-              color: AppColors.dividerLight,
-              borderRadius: BorderRadius.circular(2),
-            ),
-          ),
-          const SizedBox(height: 16),
-          const Text(
-            '选择优惠券',
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
-          ),
-          const SizedBox(height: 16),
-          if (_isLoading)
-            const Padding(
-              padding: EdgeInsets.all(40),
-              child: CircularProgressIndicator(),
-            )
-          else if (_coupons.isEmpty)
-            const Padding(
-              padding: EdgeInsets.all(40),
-              child: Column(
-                children: [
-                  Icon(Icons.local_offer_outlined,
-                      size: 48, color: AppColors.textTertiaryLight),
-                  SizedBox(height: 12),
-                  Text(
-                    '暂无可用优惠券',
-                    style: TextStyle(color: AppColors.textSecondaryLight),
-                  ),
-                ],
-              ),
-            )
-          else
-            Flexible(
-              child: ListView.separated(
-                shrinkWrap: true,
-                itemCount: _coupons.length,
-                separatorBuilder: (_, __) => const SizedBox(height: 8),
-                itemBuilder: (context, index) {
-                  final coupon = _coupons[index];
-                  final isSelected = coupon['id'] == widget.selectedCouponId;
-                  return GestureDetector(
-                    onTap: () => Navigator.pop(context, coupon),
-                    child: Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: isSelected
-                            ? AppColors.primary.withValues(alpha: 0.05)
-                            : Theme.of(context).cardColor,
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(
-                          color: isSelected
-                              ? AppColors.primary
-                              : AppColors.dividerLight,
-                        ),
-                      ),
-                      child: Row(
-                        children: [
-                          Container(
-                            width: 48,
-                            height: 48,
-                            decoration: BoxDecoration(
-                              color:
-                                  AppColors.accentPink.withValues(alpha: 0.1),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: const Icon(
-                              Icons.local_offer,
-                              color: AppColors.accentPink,
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  coupon['name'] ?? '优惠券',
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                                if (coupon['description'] != null)
-                                  Text(
-                                    coupon['description'],
-                                    style: const TextStyle(
-                                      fontSize: 12,
-                                      color: AppColors.textSecondaryLight,
-                                    ),
-                                  ),
-                              ],
-                            ),
-                          ),
-                          if (isSelected)
-                            const Icon(Icons.check_circle,
-                                color: AppColors.primary),
-                        ],
-                      ),
-                    ),
-                  );
-                },
-              ),
-            ),
-        ],
-      ),
-    );
-  }
-}
-
-/// 微信支付 WebView 页面
-///
-/// 对齐 iOS WeChatPayWebView.swift
-/// 通过 URL 检测 payment-success / payment-cancel 来判断支付结果
-class _WeChatPayWebView extends StatefulWidget {
-  const _WeChatPayWebView({
-    required this.checkoutUrl,
-    required this.onPaymentSuccess,
-    required this.onPaymentCancel,
-  });
-
-  final String checkoutUrl;
-  final VoidCallback onPaymentSuccess;
-  final VoidCallback onPaymentCancel;
-
-  @override
-  State<_WeChatPayWebView> createState() => _WeChatPayWebViewState();
-}
-
-class _WeChatPayWebViewState extends State<_WeChatPayWebView> {
-  String? _errorMessage;
-
-  void _confirmCancel() {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('取消支付'),
-        content: const Text('确定要取消支付吗？'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('继续支付'),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.pop(ctx);
-              widget.onPaymentCancel();
-            },
-            child: const Text('取消支付', style: TextStyle(color: AppColors.error)),
-          ),
-        ],
-      ),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('微信支付'),
-        leading: IconButton(
-          icon: const Icon(Icons.close),
-          onPressed: _confirmCancel,
-        ),
-      ),
-      body: Stack(
-        children: [
-          ExternalWebView(
-            url: widget.checkoutUrl,
-            title: '微信支付',
-          ),
-          if (_errorMessage != null)
-            Center(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Icon(Icons.error_outline, size: 48, color: AppColors.error),
-                  const SizedBox(height: 12),
-                  const Text('加载失败',
-                      style:
-                          TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
-                  const SizedBox(height: 8),
-                  Text(_errorMessage!,
-                      style: const TextStyle(color: AppColors.textSecondaryLight)),
-                  const SizedBox(height: 24),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      OutlinedButton(
-                        onPressed: widget.onPaymentCancel,
-                        child: const Text('返回'),
-                      ),
-                      const SizedBox(width: 16),
-                      ElevatedButton(
-                        onPressed: () =>
-                            setState(() => _errorMessage = null),
-                        child: const Text('重试'),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-        ],
       ),
     );
   }

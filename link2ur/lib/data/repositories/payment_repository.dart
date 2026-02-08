@@ -2,6 +2,7 @@ import '../models/payment.dart';
 import '../services/api_service.dart';
 import '../../core/constants/api_endpoints.dart';
 import '../../core/utils/cache_manager.dart';
+import '../../core/utils/app_exception.dart';
 
 /// 支付仓库
 /// 与iOS PaymentViewModel + 后端 coupon_points_routes 对齐
@@ -222,7 +223,7 @@ class PaymentRepository {
 
   /// 获取Stripe Connect余额
   Future<Map<String, dynamic>> getStripeConnectBalance() async {
-    final cacheKey = '${CacheManager.prefixPayment}balance';
+    const cacheKey = '${CacheManager.prefixPayment}balance';
 
     final cached = _cache.get<Map<String, dynamic>>(cacheKey);
     if (cached != null) return cached;
@@ -313,14 +314,23 @@ class PaymentRepository {
 
     return response.data!;
   }
+
+  /// 获取IAP产品列表
+  Future<List<Map<String, dynamic>>> getIapProducts() async {
+    final response = await _apiService.get<Map<String, dynamic>>(
+      ApiEndpoints.iapProducts,
+    );
+
+    if (!response.isSuccess || response.data == null) {
+      throw PaymentException(response.message ?? '获取IAP产品列表失败');
+    }
+
+    final items = response.data!['products'] as List<dynamic>? ?? [];
+    return items.map((e) => e as Map<String, dynamic>).toList();
+  }
 }
 
 /// 支付异常
-class PaymentException implements Exception {
-  PaymentException(this.message);
-
-  final String message;
-
-  @override
-  String toString() => 'PaymentException: $message';
+class PaymentException extends AppException {
+  const PaymentException(super.message);
 }

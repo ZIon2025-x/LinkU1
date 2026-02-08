@@ -36,6 +36,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get commonRetry => '重试';
 
   @override
+  String get commonReload => '重新加载';
+
+  @override
   String get commonLoading => '加载中...';
 
   @override
@@ -477,7 +480,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get forumOfficial => '官方';
 
   @override
-  String get forumAllReplies => '全部回复';
+  String get forumAllReplies => '全部评论';
 
   @override
   String get forumReply => '回复';
@@ -663,16 +666,16 @@ class AppLocalizationsZh extends AppLocalizations {
   String get leaderboardSortLatest => '最新';
 
   @override
-  String get leaderboardNoItems => '暂无项目';
+  String get leaderboardNoItems => '暂无排行榜';
 
   @override
   String get leaderboardNoItemsMessage => '此榜单还没有参与者。成为第一个提交者吧！';
 
   @override
-  String get leaderboardItemCount => '竞品';
+  String get leaderboardItemCount => '竞品数';
 
   @override
-  String get leaderboardTotalVotes => '总投票';
+  String get leaderboardTotalVotes => '总投票数';
 
   @override
   String get leaderboardViewCount => '浏览量';
@@ -767,7 +770,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get leaderboardItemWebsite => '官方网站';
 
   @override
-  String get leaderboardSubmitItem => '提交参赛项';
+  String get leaderboardSubmitItem => '提交竞品';
 
   @override
   String get leaderboardSubmitting => '正在提交...';
@@ -805,7 +808,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get taskExpertCompletionRate => '完成率';
 
   @override
-  String get taskExpertNoServices => '该达人暂时没有上架服务';
+  String get taskExpertNoServices => '暂无服务';
 
   @override
   String get taskExpertOrder => '单';
@@ -953,7 +956,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get leaderboardAddItem => '添加竞品';
 
   @override
-  String get leaderboardVoteCount => '投票';
+  String get leaderboardVoteCount => '投票数';
 
   @override
   String get paymentSetupAccount => '设置收款账户';
@@ -1596,18 +1599,18 @@ class AppLocalizationsZh extends AppLocalizations {
   String get timeJustNow => '刚刚';
 
   @override
-  String timeMinutesAgo(int param1) {
-    return '$param1分钟前';
+  String timeMinutesAgo(int minutes) {
+    return '$minutes分钟前';
   }
 
   @override
-  String timeHoursAgo(int param1) {
-    return '$param1小时前';
+  String timeHoursAgo(int hours) {
+    return '$hours小时前';
   }
 
   @override
-  String timeDaysAgo(int param1) {
-    return '$param1天前';
+  String timeDaysAgo(int days) {
+    return '$days天前';
   }
 
   @override
@@ -2373,7 +2376,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get paymentStatusTaskPayment => '任务付款';
 
   @override
-  String paymentTaskNumber(int param1) {
+  String paymentTaskNumberWithId(int param1) {
     return '任务 #$param1';
   }
 
@@ -2701,8 +2704,8 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String couponConsecutiveCheckIn(int param1) {
-    return '$param1天连续签到';
+  String couponConsecutiveCheckIn(int days) {
+    return '连续签到$days天';
   }
 
   @override
@@ -2750,10 +2753,10 @@ class AppLocalizationsZh extends AppLocalizations {
   String get createTaskPublishTask => '发布任务';
 
   @override
-  String get createTaskTitle => '任务标题';
+  String get createTaskTitle => '发布任务';
 
   @override
-  String get createTaskTitlePlaceholder => '简要描述您的需求（例如：代取包裹）';
+  String get createTaskTitlePlaceholder => '请输入任务标题';
 
   @override
   String get createTaskDescription => '任务详情';
@@ -2763,7 +2766,7 @@ class AppLocalizationsZh extends AppLocalizations {
       '请详细描述您的需求、时间、特殊要求等。描述越详细，越容易被接受...';
 
   @override
-  String get createTaskReward => '任务奖励';
+  String get createTaskReward => '任务报酬';
 
   @override
   String get createTaskCity => '城市';
@@ -2820,10 +2823,10 @@ class AppLocalizationsZh extends AppLocalizations {
   String get activityHotRecruiting => '热招中';
 
   @override
-  String get activityLocation => '具体地点';
+  String get activityLocation => '地点';
 
   @override
-  String get activityType => '活动类型';
+  String get activityType => '类型';
 
   @override
   String get activityTimeArrangement => '时间安排';
@@ -2832,7 +2835,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get activityMultipleTimeSlots => '支持多个时间段预约';
 
   @override
-  String get activityDeadline => '截止日期';
+  String get activityDeadline => '截止时间';
 
   @override
   String get activityExclusiveDiscount => '专享折扣';
@@ -2955,19 +2958,19 @@ class AppLocalizationsZh extends AppLocalizations {
   String get taskCategorySecondhandRental => '二手租赁';
 
   @override
-  String get taskCategoryErrandRunning => '跑腿代购';
+  String get taskCategoryErrandRunning => '跑腿代办';
 
   @override
   String get taskCategorySkillService => '技能服务';
 
   @override
-  String get taskCategorySocialHelp => '社交互助';
+  String get taskCategorySocialHelp => '社交帮助';
 
   @override
-  String get taskCategoryTransportation => '交通用车';
+  String get taskCategoryTransportation => '交通出行';
 
   @override
-  String get taskCategoryPetCare => '宠物寄养';
+  String get taskCategoryPetCare => '宠物照顾';
 
   @override
   String get taskCategoryLifeConvenience => '生活便利';
@@ -3165,7 +3168,7 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get forumNoReplies => '暂无回复';
+  String get forumNoReplies => '暂无评论';
 
   @override
   String get forumPostReply => '发布回复';
@@ -3339,6 +3342,12 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get vipNoProducts => '暂无可用的VIP产品';
+
+  @override
+  String get vipPerMonth => '/ 月';
+
+  @override
+  String get vipPerYear => '/ 年';
 
   @override
   String get vipTryLaterContact => '请稍后再试或联系客服';
@@ -3555,10 +3564,10 @@ class AppLocalizationsZh extends AppLocalizations {
   String get paymentPreparing => '准备支付...';
 
   @override
-  String get paymentSuccess => '支付成功！';
+  String get paymentSuccess => '支付成功';
 
   @override
-  String get paymentSuccessMessage => '任务已成功支付，正在更新状态...';
+  String get paymentSuccessMessage => '您的支付已成功处理，任务将很快开始。';
 
   @override
   String get paymentError => '支付错误';
@@ -3675,7 +3684,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get translationShowOriginal => '显示原文';
 
   @override
-  String get settingsNotifications => '通知设置';
+  String get settingsNotifications => '接收推送通知';
 
   @override
   String get settingsAllowNotifications => '允许通知';
@@ -3747,7 +3756,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get walletPayoutManagement => '提现管理';
 
   @override
-  String get walletPaymentRecords => '支付记录';
+  String get walletPaymentRecords => '收款记录';
 
   @override
   String get myTasksLoadingCompleted => '加载已完成任务...';
@@ -3867,7 +3876,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get taskStatusPendingPayment => '待支付';
 
   @override
-  String get myPostsTitle => '我的闲置';
+  String get myPostsTitle => '我的帖子';
 
   @override
   String get taskLocationAddress => '任务地址';
@@ -4445,7 +4454,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get onboardingWelcomeTitle => '欢迎来到 Link²Ur';
 
   @override
-  String get onboardingWelcomeSubtitle => '连接你的世界';
+  String get onboardingWelcomeSubtitle => '校园互助平台';
 
   @override
   String get onboardingWelcomeDescription => '发布任务、接受任务、买卖二手商品，一切尽在掌握';
@@ -4454,7 +4463,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get onboardingPublishTaskTitle => '发布任务';
 
   @override
-  String get onboardingPublishTaskSubtitle => '轻松发布你的需求';
+  String get onboardingPublishTaskSubtitle => '轻松找人帮忙';
 
   @override
   String get onboardingPublishTaskDescription => '需要帮助？发布任务，让有能力的用户来帮你完成';
@@ -4482,7 +4491,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get onboardingCommunityTitle => '社区互动';
 
   @override
-  String get onboardingCommunitySubtitle => '论坛、排行榜、跳蚤市场';
+  String get onboardingCommunitySubtitle => '连接你的世界';
 
   @override
   String get onboardingCommunityDescription => '参与社区讨论，查看排行榜，买卖二手商品，丰富你的校园生活';
@@ -4629,7 +4638,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get profileUserProfile => '用户资料';
 
   @override
-  String get profilePostedTasks => '发布任务';
+  String get profilePostedTasks => '我发的';
 
   @override
   String get profileTakenTasks => '接取任务';
@@ -4734,13 +4743,13 @@ class AppLocalizationsZh extends AppLocalizations {
   String get fleaMarketCategoryElectronics => '电子产品';
 
   @override
-  String get fleaMarketCategoryClothing => '服装配饰';
+  String get fleaMarketCategoryClothing => '服饰鞋包';
 
   @override
   String get fleaMarketCategoryFurniture => '家具家电';
 
   @override
-  String get fleaMarketCategoryBooks => '图书文具';
+  String get fleaMarketCategoryBooks => '书籍教材';
 
   @override
   String get fleaMarketCategorySports => '运动户外';
@@ -5575,6 +5584,95 @@ class AppLocalizationsZh extends AppLocalizations {
   String get paymentNoPayoutsMessage => '您还没有任何提现记录';
 
   @override
+  String get paymentExpired => '支付已过期';
+
+  @override
+  String get paymentExpiredMessage => '支付时间已到，请重新发起支付。';
+
+  @override
+  String get paymentApplePayIOSOnly => 'Apple Pay 仅在 iOS 设备上可用';
+
+  @override
+  String get paymentApplePayNotSupported => '您的设备不支持 Apple Pay，请使用其他支付方式';
+
+  @override
+  String get paymentNetworkConnectionFailed => '网络连接失败，请检查网络后重试。';
+
+  @override
+  String get paymentRequestTimeout => '请求超时，请稍后重试。';
+
+  @override
+  String paymentRemainingTime(String param1) {
+    return '支付剩余时间：$param1';
+  }
+
+  @override
+  String get paymentOrderInfo => '订单信息';
+
+  @override
+  String get paymentTaskNumber => '任务编号';
+
+  @override
+  String get paymentOriginalPrice => '原价';
+
+  @override
+  String paymentDiscount(String param1) {
+    return '优惠 ($param1)';
+  }
+
+  @override
+  String get paymentFinalAmount => '实付金额';
+
+  @override
+  String get paymentMethod => '支付方式';
+
+  @override
+  String get paymentCreditDebitCard => '信用卡/借记卡';
+
+  @override
+  String get paymentFastSecure => '快速安全支付';
+
+  @override
+  String get paymentWeChatPay => '微信支付';
+
+  @override
+  String get paymentAlipay => '支付宝';
+
+  @override
+  String get paymentCouponSelected => '已选择优惠券';
+
+  @override
+  String get paymentSelectCoupon => '选择优惠券';
+
+  @override
+  String get paymentConfirmFree => '确认（免费）';
+
+  @override
+  String paymentPayNow(String param1) {
+    return '立即支付 $param1';
+  }
+
+  @override
+  String get paymentCancelPayment => '取消支付';
+
+  @override
+  String get paymentCancelPaymentConfirm => '确定要取消支付吗？';
+
+  @override
+  String get paymentContinuePayment => '继续支付';
+
+  @override
+  String get paymentLoadFailed => '加载失败';
+
+  @override
+  String get paymentCoupon => '优惠券';
+
+  @override
+  String paymentApplePayLabel(int param1) {
+    return '任务 #$param1';
+  }
+
+  @override
   String get profileTaskCount => '任务数';
 
   @override
@@ -5646,7 +5744,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get networkOnline => '网络已恢复';
 
   @override
-  String get notificationPermissionTitle => '开启推送通知';
+  String get notificationPermissionTitle => '需要通知权限';
 
   @override
   String get notificationPermissionDescription =>
@@ -5704,6 +5802,1376 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get feedbackCopySuccess => '已复制到剪贴板';
+
+  @override
+  String errorPageNotFound(String uri) {
+    return '页面不存在: $uri';
+  }
+
+  @override
+  String get errorServerTitle => '服务器错误';
+
+  @override
+  String get errorServerMessage => '服务器暂时不可用，请稍后重试';
+
+  @override
+  String get errorLoadFailedTitle => '加载失败';
+
+  @override
+  String get errorLoadFailedMessage => '加载数据时出现错误';
+
+  @override
+  String get errorUnauthorizedTitle => '权限不足';
+
+  @override
+  String get errorUnauthorizedMessage => '您没有权限访问此内容';
+
+  @override
+  String get errorContentNotFoundTitle => '内容不存在';
+
+  @override
+  String get errorContentNotFoundMessage => '您访问的内容不存在或已被删除';
+
+  @override
+  String get errorNetworkTitle => '网络连接失败';
+
+  @override
+  String get errorNetworkMessage => '请检查网络连接后重试';
+
+  @override
+  String get emptyNoData => '暂无数据';
+
+  @override
+  String get emptyNoMessages => '暂无消息';
+
+  @override
+  String get emptyNoMessagesDescription => '还没有收到任何消息';
+
+  @override
+  String get emptyNoTasksDescription => '还没有相关任务，点击下方按钮发布新任务';
+
+  @override
+  String get emptyNoSearchResultsTitle => '未找到结果';
+
+  @override
+  String get emptyNoSearchResultsDescription => '没有找到相关内容';
+
+  @override
+  String emptyNoSearchResultsWithKeyword(String keyword) {
+    return '没有找到与\"$keyword\"相关的内容';
+  }
+
+  @override
+  String get emptyNoFavoritesDescription => '收藏的内容将显示在这里';
+
+  @override
+  String get emptyNoNotificationsDescription => '您的通知将显示在这里';
+
+  @override
+  String get sidebarDiscover => '发现';
+
+  @override
+  String get sidebarAccount => '账户';
+
+  @override
+  String get sidebarWallet => '钱包';
+
+  @override
+  String get commonOpenInBrowser => '在浏览器中打开';
+
+  @override
+  String get commonFree => '免费';
+
+  @override
+  String get commonRetryText => '重试';
+
+  @override
+  String get locationTaskLocation => '任务地点';
+
+  @override
+  String get locationGetFailed => '获取位置失败';
+
+  @override
+  String get notificationPermissionMessage => '您已拒绝通知权限，请在系统设置中手动开启。';
+
+  @override
+  String get notificationPermissionLater => '稍后再说';
+
+  @override
+  String permissionRequired(String permissionName) {
+    return '需要$permissionName权限';
+  }
+
+  @override
+  String get badgeStudent => '学生';
+
+  @override
+  String get badgeExpert => '达人';
+
+  @override
+  String get activityCampusActivities => '校园活动';
+
+  @override
+  String get activityDetailTitle => '活动详情';
+
+  @override
+  String get activityInfoTitle => '活动信息';
+
+  @override
+  String get activityParticipantCount => '参与人数';
+
+  @override
+  String get activityDiscount => '折扣';
+
+  @override
+  String get activityRewardType => '奖励类型';
+
+  @override
+  String get activitySignupSuccess => '报名成功';
+
+  @override
+  String get authResetPassword => '重置密码';
+
+  @override
+  String get authCodeSent => '验证码已发送';
+
+  @override
+  String get authEnterEmailPlaceholder => '请输入邮箱地址';
+
+  @override
+  String get authPasswordLabel => '密码';
+
+  @override
+  String get authPasswordPlaceholder => '请输入密码';
+
+  @override
+  String get authCodePlaceholder => '请输入验证码';
+
+  @override
+  String get authPhonePlaceholder => '请输入手机号';
+
+  @override
+  String get authConfirmPassword => '确认密码';
+
+  @override
+  String get authConfirmPasswordPlaceholder => '请再次输入密码';
+
+  @override
+  String get authPasswordRequirement => '至少8位，包含字母和数字';
+
+  @override
+  String get authPleaseAgreeToTerms => '请阅读并同意用户协议和隐私政策';
+
+  @override
+  String get authPleaseEnterValidEmail => '请输入有效的邮箱地址';
+
+  @override
+  String get authIAgreePrefix => '我已阅读并同意 ';
+
+  @override
+  String get authAnd => ' 和 ';
+
+  @override
+  String get forumPostDetail => '帖子详情';
+
+  @override
+  String get forumWriteComment => '写评论...';
+
+  @override
+  String chatUserTitle(String userId) {
+    return '用户 $userId';
+  }
+
+  @override
+  String chatTaskTitle(int taskId) {
+    return '任务 $taskId';
+  }
+
+  @override
+  String get chatInputHint => '输入消息...';
+
+  @override
+  String get chatImageLabel => '图片';
+
+  @override
+  String get chatCameraLabel => '拍照';
+
+  @override
+  String get chatTaskCompleted => '已完成';
+
+  @override
+  String get chatHasIssue => '遇到问题';
+
+  @override
+  String get chatRequestRefund => '申请退款';
+
+  @override
+  String get chatUploadProof => '上传凭证';
+
+  @override
+  String get chatViewDetail => '查看详情';
+
+  @override
+  String get chatCopied => '已复制';
+
+  @override
+  String get chatTaskDetailLabel => '任务详情';
+
+  @override
+  String get chatAddressLabel => '详细地址';
+
+  @override
+  String get tasksSortLatest => '最新发布';
+
+  @override
+  String get tasksSortHighestPay => '报酬最高';
+
+  @override
+  String get tasksSortDeadline => '即将截止';
+
+  @override
+  String get tasksProcessing => '处理中...';
+
+  @override
+  String get tasksApplyForTask => '申请接单';
+
+  @override
+  String get tasksCancelApplication => '取消申请';
+
+  @override
+  String get tasksCompleteTask => '完成任务';
+
+  @override
+  String get tasksConfirmComplete => '确认完成';
+
+  @override
+  String get fleaMarketChat => '聊天';
+
+  @override
+  String get fleaMarketPurchaseInDev => '购买功能开发中';
+
+  @override
+  String get fleaMarketSeller => '卖家';
+
+  @override
+  String get fleaMarketCreateTitle => '发布商品';
+
+  @override
+  String get fleaMarketTitlePlaceholder => '请输入商品标题';
+
+  @override
+  String get fleaMarketDescPlaceholder => '描述一下你的商品...';
+
+  @override
+  String get fleaMarketSelectCategory => '选择分类';
+
+  @override
+  String get fleaMarketLocationPlaceholder => '例如：校园北门';
+
+  @override
+  String get fleaMarketSelectImageFailed => '选择图片失败';
+
+  @override
+  String get fleaMarketInvalidPrice => '请输入有效价格';
+
+  @override
+  String get profileEditProfileTitle => '编辑资料';
+
+  @override
+  String get profileSaveButton => '保存';
+
+  @override
+  String get profileNamePlaceholder => '请输入姓名';
+
+  @override
+  String get profileBioPlaceholder => '介绍一下自己...';
+
+  @override
+  String get profileLocationPlaceholder => '例如：伦敦';
+
+  @override
+  String get profileMyPostsEmpty => '暂无帖子';
+
+  @override
+  String get profileAcceptedTasks => '我接的';
+
+  @override
+  String get walletPointsBalance => '积分余额';
+
+  @override
+  String get walletTotalEarned => '累计获得';
+
+  @override
+  String get walletTotalSpent => '累计消费';
+
+  @override
+  String get walletPaymentAccount => '收款账户';
+
+  @override
+  String get walletPayoutRecords => '提现记录';
+
+  @override
+  String get walletTransactionRecords => '交易记录';
+
+  @override
+  String get walletNoTransactions => '暂无交易记录';
+
+  @override
+  String get walletViewMore => '查看更多交易记录';
+
+  @override
+  String get walletMyCoupons => '我的优惠券';
+
+  @override
+  String get walletNoCoupons => '暂无优惠券';
+
+  @override
+  String get settingsGoLogin => '去登录';
+
+  @override
+  String get settingsThemeSystem => '跟随系统';
+
+  @override
+  String get settingsThemeLight => '浅色';
+
+  @override
+  String get settingsThemeDark => '深色';
+
+  @override
+  String get settingsLanguage => '语言';
+
+  @override
+  String get settingsPaymentReceiving => '收款与支付';
+
+  @override
+  String get settingsExpenseManagement => '支出管理';
+
+  @override
+  String get settingsPaymentHistory => '支付记录';
+
+  @override
+  String get settingsCookiePolicy => 'Cookie 政策';
+
+  @override
+  String get settingsEmail => '邮箱';
+
+  @override
+  String get settingsOther => '其他';
+
+  @override
+  String get settingsClearCache => '清除缓存';
+
+  @override
+  String get settingsDangerZone => '危险区域';
+
+  @override
+  String get couponPointsTab => '积分';
+
+  @override
+  String get couponCouponsTab => '优惠券';
+
+  @override
+  String get couponCheckInTab => '签到';
+
+  @override
+  String get couponRedeemReward => '兑换奖励';
+
+  @override
+  String get couponRedeemCode => '兑换码';
+
+  @override
+  String get couponNoPointsRecords => '暂无积分记录';
+
+  @override
+  String get couponEnterInviteCodeTitle => '输入邀请码';
+
+  @override
+  String get couponEnterInviteCodeHint => '请输入邀请码或兑换码';
+
+  @override
+  String get couponNoCoupons => '暂无优惠券';
+
+  @override
+  String get couponClaim => '领取';
+
+  @override
+  String get customerServiceRateTitle => '评价客服';
+
+  @override
+  String get customerServiceRateHint => '留下您的评价（可选）';
+
+  @override
+  String get customerServiceEndTitle => '结束对话';
+
+  @override
+  String get customerServiceEndMessage => '确定要结束当前客服对话吗？';
+
+  @override
+  String get customerServiceEndButton => '结束';
+
+  @override
+  String get customerServiceRefresh => '刷新';
+
+  @override
+  String get notificationSystemTab => '系统通知';
+
+  @override
+  String get notificationInteractionTab => '互动消息';
+
+  @override
+  String get notificationTaskChatTitle => '任务聊天';
+
+  @override
+  String get notificationNoTaskChats => '暂无任务聊天';
+
+  @override
+  String get onboardingWelcome => '欢迎使用 Link²Ur';
+
+  @override
+  String get onboardingPublishTask => '发布任务';
+
+  @override
+  String get onboardingAcceptTask => '接受任务';
+
+  @override
+  String get onboardingSafePayment => '安全支付';
+
+  @override
+  String get onboardingSafePaymentSubtitle => '资金有保障';
+
+  @override
+  String get onboardingCommunity => '社区互动';
+
+  @override
+  String get searchTasks => '搜索任务';
+
+  @override
+  String get searchFleaMarket => '搜索闲置';
+
+  @override
+  String get searchForum => '搜索帖子';
+
+  @override
+  String get searchTasksTitle => '任务';
+
+  @override
+  String get searchForumTitle => '论坛';
+
+  @override
+  String get searchFleaMarketTitle => '跳蚤市场';
+
+  @override
+  String get leaderboardRankLabel => '排名';
+
+  @override
+  String get taskExpertNotFound => '达人不存在';
+
+  @override
+  String get taskExpertCompletedOrders => '完成单数';
+
+  @override
+  String get taskExpertServices => '服务项目';
+
+  @override
+  String get taskExpertBook => '预约';
+
+  @override
+  String get createTaskDescPlaceholder => '请详细描述任务要求...';
+
+  @override
+  String get createTaskLocationPlaceholder => '请输入任务地点';
+
+  @override
+  String get createTaskPublish => '发布任务';
+
+  @override
+  String get infoFAQTitle => '常见问题';
+
+  @override
+  String get infoAboutTitle => '关于';
+
+  @override
+  String get infoFAQAccountTitle => '账号相关';
+
+  @override
+  String get infoFAQTaskTitle => '任务相关';
+
+  @override
+  String get infoFAQPaymentTitle => '支付与安全';
+
+  @override
+  String get infoTermsTitle => '服务条款';
+
+  @override
+  String get infoPrivacyTitle => '隐私政策';
+
+  @override
+  String get infoCookieTitle => 'Cookie 政策';
+
+  @override
+  String get infoVipCenter => '会员中心';
+
+  @override
+  String get infoVipPriority => '优先接单';
+
+  @override
+  String get infoVipBadge => '专属标识';
+
+  @override
+  String get infoVipFeeReduction => '手续费减免';
+
+  @override
+  String get infoVipCustomerService => '专属客服';
+
+  @override
+  String get infoVipPointsBoost => '积分加倍';
+
+  @override
+  String get infoVipSubscribe => '开通 VIP 会员';
+
+  @override
+  String get infoVipPriorityRecommend => '优先推荐';
+
+  @override
+  String get infoVipBadgeLabel => 'VIP标识';
+
+  @override
+  String get infoVipFeeDiscount => '手续费优惠';
+
+  @override
+  String get infoVipExclusiveCoupon => '专属优惠券';
+
+  @override
+  String get infoVipDataAnalytics => '数据分析';
+
+  @override
+  String get infoVipMonthly => '月度会员';
+
+  @override
+  String get infoVipYearly => '年度会员';
+
+  @override
+  String get vipPurchaseConfirm => '确定';
+
+  @override
+  String get vipPurchaseRestoreMessage => '已检查购买记录，如有有效订阅将自动恢复。';
+
+  @override
+  String get vipPurchaseNoPlans => '暂无可用的 VIP 套餐';
+
+  @override
+  String get vipPurchaseReload => '重新加载';
+
+  @override
+  String get homeSecondHandMarket => '二手市场';
+
+  @override
+  String get homeSecondHandSubtitle => '闲置物品，低价出售';
+
+  @override
+  String get homeStudentVerification => '学生认证';
+
+  @override
+  String get homeStudentVerificationSubtitle => '完成认证，享受更多权益';
+
+  @override
+  String get homeBecomeExpert => '成为任务达人';
+
+  @override
+  String get homeBecomeExpertSubtitle => '展示技能，获取更多机会';
+
+  @override
+  String get homeNewUserReward => '新人奖励';
+
+  @override
+  String get homeNewUserRewardSubtitle => '完成首单即可获得';
+
+  @override
+  String get homeInviteFriends => '邀请好友';
+
+  @override
+  String get homeInviteFriendsSubtitle => '邀请好友得积分';
+
+  @override
+  String get homeDailyCheckIn => '每日签到';
+
+  @override
+  String get homeDailyCheckInSubtitle => '连续签到得奖励';
+
+  @override
+  String get homeCampusLife => '校园生活分享';
+
+  @override
+  String get homeUsedBooks => '闲置书籍出售';
+
+  @override
+  String get homeWeeklyExperts => '本周任务达人榜';
+
+  @override
+  String get homeLoadNearbyTasks => '加载附近任务';
+
+  @override
+  String get homeBrowseExperts => '浏览达人';
+
+  @override
+  String get mainPublishFleaMarket => '发布闲置';
+
+  @override
+  String get linkCopied => '链接已复制';
+
+  @override
+  String get paymentAlipaySymbol => '支';
+
+  @override
+  String authResendCountdown(int countdown) {
+    return '${countdown}s 后重发';
+  }
+
+  @override
+  String get authPasswordsDoNotMatch => '两次输入的密码不一致';
+
+  @override
+  String get authPleaseEnterEmail => '请输入邮箱';
+
+  @override
+  String get authEmailFormatInvalid => '邮箱格式不正确';
+
+  @override
+  String get authResetPasswordDesc => '输入您的注册邮箱，我们将发送验证码帮助您重置密码。';
+
+  @override
+  String get authCreateAccount => '创建账号';
+
+  @override
+  String get authAlreadyHaveAccount => '已有账号？';
+
+  @override
+  String get authNewPassword => '新密码';
+
+  @override
+  String get authEnterNewPassword => '请输入新密码';
+
+  @override
+  String get authPasswordMinLength => '密码至少8位';
+
+  @override
+  String get authConfirmNewPassword => '确认新密码';
+
+  @override
+  String get authForgotPasswordQuestion => '忘记密码？';
+
+  @override
+  String get authRegisterNewAccount => '注册新账号';
+
+  @override
+  String get authRegisterSubtitle => '加入 Link²Ur，开始技能互助';
+
+  @override
+  String get homeLoadFailed => '加载失败';
+
+  @override
+  String get homePublishTask => '发布任务';
+
+  @override
+  String get homeDeadlineExpired => '已截止';
+
+  @override
+  String homeDeadlineDays(int days) {
+    return '$days天后截止';
+  }
+
+  @override
+  String homeDeadlineHours(int hours) {
+    return '$hours小时后';
+  }
+
+  @override
+  String homeDeadlineMinutes(int minutes) {
+    return '$minutes分钟后';
+  }
+
+  @override
+  String get homeDefaultUser => '用户';
+
+  @override
+  String get homeClassmate => '同学';
+
+  @override
+  String get homePostedNewPost => '发布了新帖子';
+
+  @override
+  String get homePostedNewProduct => '发布了新商品';
+
+  @override
+  String get homeSystemUser => '系统';
+
+  @override
+  String get homeCreatedLeaderboard => '创建了新排行榜';
+
+  @override
+  String get homeCampusLifeDesc => '分享我的校园日常';
+
+  @override
+  String get homeSearchCategory => '搜索分类';
+
+  @override
+  String get homeSearchTasks => '搜索任务';
+
+  @override
+  String get homeSearchFleaMarket => '搜索闲置';
+
+  @override
+  String get homeSearchPosts => '搜索帖子';
+
+  @override
+  String homeSearchQueryResult(String query) {
+    return '搜索 \"$query\"';
+  }
+
+  @override
+  String get homePressEnterToSearch => '按回车键搜索';
+
+  @override
+  String get taskCategoryPickup => '代取快递';
+
+  @override
+  String get taskCategoryTutoring => '论文辅导';
+
+  @override
+  String get taskCategoryMoving => '搬家';
+
+  @override
+  String get taskCategoryPurchasing => '代购';
+
+  @override
+  String get taskCategoryDogWalking => '遛狗';
+
+  @override
+  String get taskCategoryTranslation => '翻译';
+
+  @override
+  String get taskCategoryPhotography => '拍照';
+
+  @override
+  String get taskCategoryTutor => '家教';
+
+  @override
+  String get taskDetailProcessing => '处理中...';
+
+  @override
+  String get taskDetailApplyForTask => '申请接单';
+
+  @override
+  String get taskDetailCancelApplication => '取消申请';
+
+  @override
+  String get taskDetailCompleteTask => '完成任务';
+
+  @override
+  String get taskDetailParticipantCount => '参与人数';
+
+  @override
+  String get taskSortBy => '排序方式';
+
+  @override
+  String get taskSortLatest => '最新发布';
+
+  @override
+  String get taskSortHighestPay => '报酬最高';
+
+  @override
+  String get taskSortNearDeadline => '即将截止';
+
+  @override
+  String get taskDeadlineExpired => '已过期';
+
+  @override
+  String taskDeadlineMinutes(int minutes) {
+    return '$minutes分钟后截止';
+  }
+
+  @override
+  String taskDeadlineHours(int hours) {
+    return '$hours小时后截止';
+  }
+
+  @override
+  String taskDeadlineDays(int days) {
+    return '$days天后截止';
+  }
+
+  @override
+  String taskDeadlineDate(int month, int day) {
+    return '$month/$day 截止';
+  }
+
+  @override
+  String get taskCategoryHousekeepingLife => '家务生活';
+
+  @override
+  String get createTaskType => '任务类型';
+
+  @override
+  String get createTaskTitleField => '任务标题';
+
+  @override
+  String get createTaskTitleHint => '请输入任务标题';
+
+  @override
+  String get createTaskDescHint => '请详细描述任务要求...';
+
+  @override
+  String get createTaskLocation => '任务地点';
+
+  @override
+  String get createTaskLocationHint => '请输入任务地点';
+
+  @override
+  String get createTaskDeadline => '截止时间';
+
+  @override
+  String get createTaskSelectDeadline => '选择截止日期';
+
+  @override
+  String get createTaskCategoryDelivery => '代取代送';
+
+  @override
+  String get createTaskCategoryShopping => '代购';
+
+  @override
+  String get createTaskCategoryTutoring => '辅导';
+
+  @override
+  String get createTaskCategoryTranslation => '翻译';
+
+  @override
+  String get createTaskCategoryDesign => '设计';
+
+  @override
+  String get createTaskCategoryProgramming => '编程';
+
+  @override
+  String get createTaskCategoryWriting => '写作';
+
+  @override
+  String get createTaskCategoryOther => '其他';
+
+  @override
+  String get taskDetailNoImages => '暂无图片';
+
+  @override
+  String forumUserFallback(String userId) {
+    return '用户 $userId';
+  }
+
+  @override
+  String get forumNoLeaderboard => '暂无排行榜';
+
+  @override
+  String get forumNoLeaderboardMessage => '还没有排行榜';
+
+  @override
+  String get forumNoPostsHint => '还没有帖子，点击下方按钮发布第一个帖子';
+
+  @override
+  String get forumEnterTitle => '请输入标题';
+
+  @override
+  String get forumShareThoughts => '分享你的想法...';
+
+  @override
+  String get forumSelectCategory => '选择分类';
+
+  @override
+  String get settingsPleaseLoginFirst => '请先登录';
+
+  @override
+  String get settingsUnknown => '未知';
+
+  @override
+  String get settingsLoading => '加载中...';
+
+  @override
+  String get settingsNotBound => '未绑定';
+
+  @override
+  String get settingsChinese => '中文';
+
+  @override
+  String get walletPayoutAccount => '收款账户';
+
+  @override
+  String get walletActivated => '已激活，可以收款';
+
+  @override
+  String get walletConnectedPending => '已连接，等待激活';
+
+  @override
+  String get walletNotConnected => '未连接';
+
+  @override
+  String get walletActivatedShort => '已激活';
+
+  @override
+  String get walletPendingActivation => '待激活';
+
+  @override
+  String get walletNotConnectedShort => '未连接';
+
+  @override
+  String get walletViewAccountDetail => '查看账户详情';
+
+  @override
+  String get walletSetupPayoutAccount => '设置收款账户';
+
+  @override
+  String get walletPayoutRecordsFull => '收款记录';
+
+  @override
+  String get walletWithdrawalRecords => '提现记录';
+
+  @override
+  String get walletTransactionHistory => '交易记录';
+
+  @override
+  String get walletTransactionsDesc => '您的积分交易记录将显示在这里';
+
+  @override
+  String get walletNoCouponsDesc => '您还没有优惠券';
+
+  @override
+  String get walletToday => '今天';
+
+  @override
+  String get walletYesterday => '昨天';
+
+  @override
+  String get walletCheckingIn => '签到中...';
+
+  @override
+  String get walletDailyCheckIn => '每日签到';
+
+  @override
+  String get myTasksTitle => '我的任务';
+
+  @override
+  String get myTasksAccepted => '我接的';
+
+  @override
+  String get myTasksPosted => '我发的';
+
+  @override
+  String get myTasksGoAccept => '去接任务';
+
+  @override
+  String get profileBio => '个人简介';
+
+  @override
+  String get profileBioHint => '介绍一下自己...';
+
+  @override
+  String get profileCity => '居住城市';
+
+  @override
+  String get profileCityHint => '例如：伦敦';
+
+  @override
+  String get profileNameRequired => '请输入姓名';
+
+  @override
+  String get profileNameMinLength => '姓名至少需要3个字符';
+
+  @override
+  String get profileAnonymousUser => '匿名用户';
+
+  @override
+  String get myPostsEmpty => '暂无帖子';
+
+  @override
+  String get myPostsEmptyDesc => '您还没有发布过帖子';
+
+  @override
+  String get fleaMarketSold => '已售出';
+
+  @override
+  String get fleaMarketDelisted => '已下架';
+
+  @override
+  String get fleaMarketCategoryAll => '全部';
+
+  @override
+  String get fleaMarketCategoryDailyUse => '生活用品';
+
+  @override
+  String get fleaMarketImageSelectFailed => '选择图片失败';
+
+  @override
+  String get fleaMarketTitleMinLength => '标题至少需要2个字符';
+
+  @override
+  String get fleaMarketTitleRequired => '请输入商品标题';
+
+  @override
+  String get fleaMarketDescOptional => '商品描述（选填）';
+
+  @override
+  String get fleaMarketDescHint => '描述一下你的商品...';
+
+  @override
+  String get fleaMarketLocationOptional => '位置（选填）';
+
+  @override
+  String get fleaMarketLocationHint => '例如：校园北门';
+
+  @override
+  String get fleaMarketPriceRequired => '请输入价格';
+
+  @override
+  String get fleaMarketCategoryLabel => '分类';
+
+  @override
+  String get fleaMarketNoItemsHint => '还没有商品，点击下方按钮发布第一个商品';
+
+  @override
+  String get chatNoMessages => '还没有消息，开始对话吧';
+
+  @override
+  String get chatInProgress => '进行中';
+
+  @override
+  String get chatTaskCompletedConfirm => '任务已完成，请确认。';
+
+  @override
+  String get chatHasIssueMessage => '我遇到了一些问题：';
+
+  @override
+  String get activityCheckLater => '稍后再来看看吧';
+
+  @override
+  String get activityNoAvailableActivities => '还没有可用的活动';
+
+  @override
+  String get activityRegisterSuccess => '报名成功';
+
+  @override
+  String get activityRegisterFailed => '报名失败';
+
+  @override
+  String get activityRegisterNow => '立即报名';
+
+  @override
+  String get activityRegistered => '已报名';
+
+  @override
+  String get activityFullSlots => '已满员';
+
+  @override
+  String get activityCancelled => '已取消';
+
+  @override
+  String get activityInProgress => '进行中';
+
+  @override
+  String get activityFree => '免费';
+
+  @override
+  String get activityCash => '现金';
+
+  @override
+  String get activityPointsReward => '积分';
+
+  @override
+  String get activityCashAndPoints => '现金 + 积分';
+
+  @override
+  String get activityInfo => '活动信息';
+
+  @override
+  String get activityPublisher => '发布者';
+
+  @override
+  String get activityViewExpertProfileShort => '查看达人资料';
+
+  @override
+  String get activityParticipantsCount => '参与人数';
+
+  @override
+  String get activityStatusLabel => '状态';
+
+  @override
+  String activityPersonCount(int current, int max) {
+    return '$current/$max人';
+  }
+
+  @override
+  String get leaderboardNoLeaderboards => '暂无排行榜';
+
+  @override
+  String get leaderboardNoLeaderboardsMessage => '还没有排行榜';
+
+  @override
+  String get leaderboardNoCompetitorsHint => '还没有竞品，点击下方按钮提交第一个竞品';
+
+  @override
+  String leaderboardNetVotesCount(int count) {
+    return '净 $count';
+  }
+
+  @override
+  String get leaderboardDetails => '详情';
+
+  @override
+  String leaderboardCompletedCount(int count) {
+    return '完成 $count 单';
+  }
+
+  @override
+  String get notificationSystemNotifications => '系统通知';
+
+  @override
+  String get notificationInteractionMessages => '互动消息';
+
+  @override
+  String get notificationNoTaskChatDesc => '接取或发布任务后，可以在这里与对方沟通';
+
+  @override
+  String get taskExpertDetailTitle => '达人详情';
+
+  @override
+  String get taskExpertExpertNotExist => '达人不存在';
+
+  @override
+  String get taskExpertExpertNotExistDesc => '该达人不存在或已被删除';
+
+  @override
+  String get taskExpertBio => '简介';
+
+  @override
+  String get taskExpertProvidedServices => '提供的服务';
+
+  @override
+  String get taskExpertNoServicesDesc => '该达人还没有提供服务';
+
+  @override
+  String get taskExpertAccepted => '已接受';
+
+  @override
+  String get taskExpertRejected => '已拒绝';
+
+  @override
+  String get taskExpertAppliedStatus => '已申请';
+
+  @override
+  String taskExpertServiceCount(int count) {
+    return '$count 项服务';
+  }
+
+  @override
+  String taskExpertShareTitle(String name) {
+    return '分享任务达人 - $name';
+  }
+
+  @override
+  String taskExpertShareText(String name) {
+    return '来看看这位任务达人：$name';
+  }
+
+  @override
+  String get infoFAQAccountQ1 => '如何注册账号？';
+
+  @override
+  String get infoFAQAccountA1 => '您可以使用邮箱或手机号注册。在登录页点击「注册」，按照提示完成操作即可。';
+
+  @override
+  String get infoFAQAccountQ2 => '如何重置密码？';
+
+  @override
+  String get infoFAQAccountA2 => '在登录页点击「忘记密码」，输入注册邮箱并按照验证步骤重置密码。';
+
+  @override
+  String get infoFAQAccountQ3 => '如何编辑个人资料？';
+
+  @override
+  String get infoFAQAccountA3 => '进入 个人中心 > 编辑资料，即可更新头像、昵称、简介等信息。';
+
+  @override
+  String get infoFAQAccountQ4 => '如何注销账号？';
+
+  @override
+  String get infoFAQAccountA4 => '进入 设置 > 账号安全 > 注销账号。请注意此操作不可撤销。';
+
+  @override
+  String get infoFAQTaskQ1 => '如何发布任务？';
+
+  @override
+  String get infoFAQTaskA1 => '点击底部的「+」按钮，选择「发布任务」，填写任务详情后提交即可。';
+
+  @override
+  String get infoFAQTaskQ2 => '如何接受任务？';
+
+  @override
+  String get infoFAQTaskA2 => '浏览可用任务列表，点击查看详情，然后点击「接受任务」即可开始。';
+
+  @override
+  String get infoFAQTaskQ3 => '如何取消任务？';
+
+  @override
+  String get infoFAQTaskA3 => '进入任务详情页，点击「取消任务」。请注意可能适用取消政策。';
+
+  @override
+  String get infoFAQTaskQ4 => '遇到纠纷怎么办？';
+
+  @override
+  String get infoFAQTaskA4 => '您可以通过任务聊天页面发起纠纷。我们的客服团队会协助解决。';
+
+  @override
+  String get infoFAQPaymentQ1 => '支持哪些付款方式？';
+
+  @override
+  String get infoFAQPaymentA1 => '我们支持 Stripe（信用卡/借记卡）、Apple Pay 和微信支付。';
+
+  @override
+  String get infoFAQPaymentQ2 => '资金托管是如何运作的？';
+
+  @override
+  String get infoFAQPaymentA2 => '支付任务费用后，资金会被安全托管。只有在您确认任务完成后，帮手才能收到款项。';
+
+  @override
+  String get infoFAQPaymentQ3 => '如何申请退款？';
+
+  @override
+  String get infoFAQPaymentA3 => '进入任务详情页，点击「申请退款」，填写退款原因，我们的团队会在1-3个工作日内审核。';
+
+  @override
+  String get infoFAQPaymentQ4 => '如何提现？';
+
+  @override
+  String get infoFAQPaymentA4 => '进入 钱包 > 提现，连接您的 Stripe 账户即可提现到银行卡。';
+
+  @override
+  String get vipPlanFeatureMonthly1 => '任务优先推荐';
+
+  @override
+  String get vipPlanFeatureMonthly2 => '专属VIP徽章';
+
+  @override
+  String get vipPlanFeatureMonthly3 => '服务费减免';
+
+  @override
+  String get vipPlanFeatureYearly1 => '包含所有月度权益';
+
+  @override
+  String get vipPlanFeatureYearly2 => '专属客服支持';
+
+  @override
+  String get vipPlanFeatureYearly3 => '积分加倍 & 专属活动';
+
+  @override
+  String get vipPlanFeatureYearly4 => '数据分析面板';
+
+  @override
+  String get vipPlanBadgeBestValue => '超值推荐';
+
+  @override
+  String get vipRegularUser => '普通用户';
+
+  @override
+  String infoVersionFormat(String version, String buildNumber) {
+    return '版本 $version ($buildNumber)';
+  }
+
+  @override
+  String get infoCopyright => '© 2024 Link²Ur. 保留所有权利。';
+
+  @override
+  String get chatImagePlaceholder => '[图片]';
+
+  @override
+  String get studentVerificationEmailLocked => '邮箱已锁定，请等待审核完成';
+
+  @override
+  String get studentVerificationPending => '认证审核中，请查收邮箱并完成验证';
+
+  @override
+  String get purchaseFailed => '购买失败，请稍后重试。';
+
+  @override
+  String get restorePurchaseFailed => '恢复购买失败，请稍后重试。';
+
+  @override
+  String get onboardingTaskTypeErrand => '跑腿代办';
+
+  @override
+  String get onboardingTaskTypeSkill => '技能服务';
+
+  @override
+  String get onboardingTaskTypeHousekeeping => '家政保洁';
+
+  @override
+  String get onboardingTaskTypeTransport => '交通出行';
+
+  @override
+  String get onboardingTaskTypeSocial => '社交帮助';
+
+  @override
+  String get onboardingTaskTypeCampus => '校园生活';
+
+  @override
+  String get onboardingTaskTypeSecondhand => '二手租赁';
+
+  @override
+  String get onboardingTaskTypePetCare => '宠物看护';
+
+  @override
+  String get onboardingTaskTypeConvenience => '生活便利';
+
+  @override
+  String get onboardingTaskTypeOther => '其他';
+
+  @override
+  String get fleaMarketCategoryKeyElectronics => '电子产品';
+
+  @override
+  String get fleaMarketCategoryKeyBooks => '书籍教材';
+
+  @override
+  String get fleaMarketCategoryKeyDaily => '生活用品';
+
+  @override
+  String get fleaMarketCategoryKeyClothing => '服饰鞋包';
+
+  @override
+  String get fleaMarketCategoryKeySports => '运动户外';
+
+  @override
+  String get fleaMarketCategoryKeyOther => '其他';
+
+  @override
+  String get couponRewardPoints50 => '+50积分';
+
+  @override
+  String get couponRewardPoints100Coupon => '+100积分 + 优惠券';
+
+  @override
+  String get couponRewardPoints500Vip => '+500积分 + VIP体验';
+
+  @override
+  String get settingsLanguageEnglish => 'English';
+
+  @override
+  String get settingsLanguageChinese => '中文';
+
+  @override
+  String get infoTermsContent =>
+      'Link²Ur 服务条款\n\n最后更新日期：2024年1月1日\n\n1. 服务概述\nLink²Ur 是一个校园互助平台，旨在帮助用户发布和接受各类生活服务任务。\n\n2. 用户责任\n- 用户应提供真实、准确的个人信息\n- 用户应遵守平台规则和相关法律法规\n- 用户对其发布的内容承担责任\n\n3. 平台责任\n- 平台提供信息中介服务\n- 平台对交易资金实行托管保障\n- 平台有权对违规行为进行处理\n\n4. 支付与结算\n- 所有支付通过第三方支付平台处理\n- 任务完成后平台自动结算\n- 平台收取合理的服务费用\n\n5. 隐私保护\n请参阅我们的隐私政策了解详细信息。\n\n6. 免责声明\n平台作为信息中介，不对用户之间的交易承担直接责任。\n\n如有任何疑问，请联系我们的客服团队。';
+
+  @override
+  String get infoPrivacyContent =>
+      'Link²Ur 隐私政策\n\n最后更新日期：2024年1月1日\n\n1. 信息收集\n我们收集以下类型的信息：\n- 注册信息（姓名、邮箱等）\n- 位置信息（用于附近任务推荐）\n- 设备信息（用于推送通知）\n\n2. 信息使用\n我们使用您的信息来：\n- 提供和改善服务\n- 个性化推荐\n- 保障交易安全\n\n3. 信息存储与保护\n- 数据存储在安全的服务器上\n- 采用加密技术保护数据传输\n- 定期进行安全审计\n\n4. 信息共享\n我们不会出售您的个人信息。仅在以下情况下共享：\n- 经您同意\n- 法律要求\n- 服务提供所必需\n\n5. Cookie 政策\n我们使用 Cookie 来改善用户体验。\n\n6. 您的权利\n- 访问和修改个人信息\n- 删除账户\n- 退订通知\n\n如有隐私相关问题，请联系 privacy@link2ur.com';
+
+  @override
+  String get infoCookieContent =>
+      'Link²Ur Cookie 政策\n\n我们使用 Cookie 和类似技术来改善您的使用体验。\n\n1. 什么是 Cookie\nCookie 是存储在您设备上的小型文本文件。\n\n2. 我们如何使用 Cookie\n- 必要 Cookie：保持登录状态\n- 功能 Cookie：记住偏好设置\n- 分析 Cookie：改善服务质量\n\n3. 管理 Cookie\n您可以在设备设置中管理 Cookie 偏好。';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -5736,6 +7204,9 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get commonRetry => '重試';
+
+  @override
+  String get commonReload => '重新加載';
 
   @override
   String get commonLoading => '加載中...';
@@ -6179,7 +7650,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get forumOfficial => '官方';
 
   @override
-  String get forumAllReplies => '全部回復';
+  String get forumAllReplies => '全部評論';
 
   @override
   String get forumReply => '回復';
@@ -6365,16 +7836,16 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get leaderboardSortLatest => '最新';
 
   @override
-  String get leaderboardNoItems => '暫無項目';
+  String get leaderboardNoItems => '暫無排行榜';
 
   @override
   String get leaderboardNoItemsMessage => '此榜單還沒有參與者。成爲第一個提交者吧！';
 
   @override
-  String get leaderboardItemCount => '競品';
+  String get leaderboardItemCount => '競品數';
 
   @override
-  String get leaderboardTotalVotes => '總投票';
+  String get leaderboardTotalVotes => '總投票數';
 
   @override
   String get leaderboardViewCount => '瀏覽量';
@@ -6469,7 +7940,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get leaderboardItemWebsite => '官方網站';
 
   @override
-  String get leaderboardSubmitItem => '提交參賽項';
+  String get leaderboardSubmitItem => '提交競品';
 
   @override
   String get leaderboardSubmitting => '正在提交...';
@@ -6507,7 +7978,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get taskExpertCompletionRate => '完成率';
 
   @override
-  String get taskExpertNoServices => '該達人暫時沒有上架服務';
+  String get taskExpertNoServices => '暫無服務';
 
   @override
   String get taskExpertOrder => '單';
@@ -6655,7 +8126,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get leaderboardAddItem => '添加競品';
 
   @override
-  String get leaderboardVoteCount => '投票';
+  String get leaderboardVoteCount => '投票數';
 
   @override
   String get paymentSetupAccount => '設置收款賬戶';
@@ -7298,18 +8769,18 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get timeJustNow => '剛剛';
 
   @override
-  String timeMinutesAgo(int param1) {
-    return '$param1分鐘前';
+  String timeMinutesAgo(int minutes) {
+    return '$minutes分鐘前';
   }
 
   @override
-  String timeHoursAgo(int param1) {
-    return '$param1小時前';
+  String timeHoursAgo(int hours) {
+    return '$hours小時前';
   }
 
   @override
-  String timeDaysAgo(int param1) {
-    return '$param1天前';
+  String timeDaysAgo(int days) {
+    return '$days天前';
   }
 
   @override
@@ -8075,7 +9546,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get paymentStatusTaskPayment => '任務付款';
 
   @override
-  String paymentTaskNumber(int param1) {
+  String paymentTaskNumberWithId(int param1) {
     return '任務 #$param1';
   }
 
@@ -8403,8 +9874,8 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   }
 
   @override
-  String couponConsecutiveCheckIn(int param1) {
-    return '$param1天連續籤到';
+  String couponConsecutiveCheckIn(int days) {
+    return '連續簽到$days天';
   }
 
   @override
@@ -8452,10 +9923,10 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get createTaskPublishTask => '發布任務';
 
   @override
-  String get createTaskTitle => '任務標題';
+  String get createTaskTitle => '發佈任務';
 
   @override
-  String get createTaskTitlePlaceholder => '簡要描述您的需求（例如：代取包裹）';
+  String get createTaskTitlePlaceholder => '請輸入任務標題';
 
   @override
   String get createTaskDescription => '任務詳情';
@@ -8465,7 +9936,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
       '請詳細描述您的需求、時間、特殊要求等。描述越詳細，越容易被接受...';
 
   @override
-  String get createTaskReward => '任務獎勵';
+  String get createTaskReward => '任務報酬';
 
   @override
   String get createTaskCity => '城市';
@@ -8522,10 +9993,10 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get activityHotRecruiting => '熱招中';
 
   @override
-  String get activityLocation => '具體地點';
+  String get activityLocation => '地點';
 
   @override
-  String get activityType => '活動類型';
+  String get activityType => '類型';
 
   @override
   String get activityTimeArrangement => '時間安排';
@@ -8534,7 +10005,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get activityMultipleTimeSlots => '支持多個時間段預約';
 
   @override
-  String get activityDeadline => '截止日期';
+  String get activityDeadline => '截止時間';
 
   @override
   String get activityExclusiveDiscount => '專享折扣';
@@ -8657,19 +10128,19 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get taskCategorySecondhandRental => '二手租賃';
 
   @override
-  String get taskCategoryErrandRunning => '跑腿代購';
+  String get taskCategoryErrandRunning => '跑腿代辦';
 
   @override
   String get taskCategorySkillService => '技能服務';
 
   @override
-  String get taskCategorySocialHelp => '社交互助';
+  String get taskCategorySocialHelp => '社交幫助';
 
   @override
-  String get taskCategoryTransportation => '交通用車';
+  String get taskCategoryTransportation => '交通出行';
 
   @override
-  String get taskCategoryPetCare => '寵物寄養';
+  String get taskCategoryPetCare => '寵物照顧';
 
   @override
   String get taskCategoryLifeConvenience => '生活便利';
@@ -8867,7 +10338,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   }
 
   @override
-  String get forumNoReplies => '暫無回復';
+  String get forumNoReplies => '暫無評論';
 
   @override
   String get forumPostReply => '發布回復';
@@ -9041,6 +10512,12 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get vipNoProducts => '暫無可用的VIP產品';
+
+  @override
+  String get vipPerMonth => '/ 月';
+
+  @override
+  String get vipPerYear => '/ 年';
 
   @override
   String get vipTryLaterContact => '請稍後再試或聯繫客服';
@@ -9377,7 +10854,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get translationShowOriginal => '顯示原文';
 
   @override
-  String get settingsNotifications => '通知設置';
+  String get settingsNotifications => '接收推播通知';
 
   @override
   String get settingsAllowNotifications => '允許通知';
@@ -9449,7 +10926,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get walletPayoutManagement => '提現管理';
 
   @override
-  String get walletPaymentRecords => '支付記錄';
+  String get walletPaymentRecords => '收款記錄';
 
   @override
   String get myTasksLoadingCompleted => '加載已完成任務...';
@@ -9569,7 +11046,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get taskStatusPendingPayment => '待支付';
 
   @override
-  String get myPostsTitle => '我的閒置';
+  String get myPostsTitle => '我的帖子';
 
   @override
   String get taskLocationAddress => '任務地址';
@@ -9590,7 +11067,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get taskLocationDetailAddress => '詳細地址';
 
   @override
-  String get fleaMarketPublishItem => '發布商品';
+  String get fleaMarketPublishItem => '發佈商品';
 
   @override
   String get fleaMarketConfirmPurchase => '確認購買';
@@ -10147,7 +11624,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get onboardingWelcomeTitle => '歡迎來到 Link²Ur';
 
   @override
-  String get onboardingWelcomeSubtitle => '連接你的世界';
+  String get onboardingWelcomeSubtitle => '校園互助平台';
 
   @override
   String get onboardingWelcomeDescription => '發布任務、接受任務、買賣二手商品，一切盡在掌握';
@@ -10156,7 +11633,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get onboardingPublishTaskTitle => '發布任務';
 
   @override
-  String get onboardingPublishTaskSubtitle => '輕鬆發布你的需求';
+  String get onboardingPublishTaskSubtitle => '輕鬆找人幫忙';
 
   @override
   String get onboardingPublishTaskDescription => '需要幫助？發布任務，讓有能力的用戶來幫你完成';
@@ -10184,7 +11661,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get onboardingCommunityTitle => '社區互動';
 
   @override
-  String get onboardingCommunitySubtitle => '論壇、排行榜、跳蚤市場';
+  String get onboardingCommunitySubtitle => '連接你的世界';
 
   @override
   String get onboardingCommunityDescription => '參與社區討論，查看排行榜，買賣二手商品，豐富你的校園生活';
@@ -10331,7 +11808,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get profileUserProfile => '用戶資料';
 
   @override
-  String get profilePostedTasks => '發布任務';
+  String get profilePostedTasks => '我發的';
 
   @override
   String get profileTakenTasks => '接取任務';
@@ -10436,13 +11913,13 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get fleaMarketCategoryElectronics => '電子產品';
 
   @override
-  String get fleaMarketCategoryClothing => '服裝配飾';
+  String get fleaMarketCategoryClothing => '服飾鞋包';
 
   @override
   String get fleaMarketCategoryFurniture => '家具家電';
 
   @override
-  String get fleaMarketCategoryBooks => '圖書文具';
+  String get fleaMarketCategoryBooks => '書籍教材';
 
   @override
   String get fleaMarketCategorySports => '運動戶外';
@@ -11348,7 +12825,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get networkOnline => '網路已恢復';
 
   @override
-  String get notificationPermissionTitle => '開啟推送通知';
+  String get notificationPermissionTitle => '需要通知權限';
 
   @override
   String get notificationPermissionDescription =>
@@ -11406,4 +12883,1374 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get feedbackCopySuccess => '已複製到剪貼簿';
+
+  @override
+  String errorPageNotFound(String uri) {
+    return '頁面不存在: $uri';
+  }
+
+  @override
+  String get errorServerTitle => '伺服器錯誤';
+
+  @override
+  String get errorServerMessage => '伺服器暫時不可用，請稍後重試';
+
+  @override
+  String get errorLoadFailedTitle => '載入失敗';
+
+  @override
+  String get errorLoadFailedMessage => '載入資料時出現錯誤';
+
+  @override
+  String get errorUnauthorizedTitle => '權限不足';
+
+  @override
+  String get errorUnauthorizedMessage => '您沒有權限存取此內容';
+
+  @override
+  String get errorContentNotFoundTitle => '內容不存在';
+
+  @override
+  String get errorContentNotFoundMessage => '您存取的內容不存在或已被刪除';
+
+  @override
+  String get errorNetworkTitle => '網路連線失敗';
+
+  @override
+  String get errorNetworkMessage => '請檢查網路連線後重試';
+
+  @override
+  String get emptyNoData => '暫無資料';
+
+  @override
+  String get emptyNoMessages => '暫無訊息';
+
+  @override
+  String get emptyNoMessagesDescription => '還沒有收到任何訊息';
+
+  @override
+  String get emptyNoTasksDescription => '還沒有相關任務，點擊下方按鈕發佈新任務';
+
+  @override
+  String get emptyNoSearchResultsTitle => '未找到結果';
+
+  @override
+  String get emptyNoSearchResultsDescription => '沒有找到相關內容';
+
+  @override
+  String emptyNoSearchResultsWithKeyword(String keyword) {
+    return '沒有找到與「$keyword」相關的內容';
+  }
+
+  @override
+  String get emptyNoFavoritesDescription => '收藏的內容將顯示在這裡';
+
+  @override
+  String get emptyNoNotificationsDescription => '您的通知將顯示在這裡';
+
+  @override
+  String get sidebarDiscover => '發現';
+
+  @override
+  String get sidebarAccount => '帳戶';
+
+  @override
+  String get sidebarWallet => '錢包';
+
+  @override
+  String get commonOpenInBrowser => '在瀏覽器中開啟';
+
+  @override
+  String get commonFree => '免費';
+
+  @override
+  String get commonRetryText => '重試';
+
+  @override
+  String get locationTaskLocation => '任務地點';
+
+  @override
+  String get locationGetFailed => '取得位置失敗';
+
+  @override
+  String get notificationPermissionMessage => '您已拒絕通知權限，請在系統設定中手動開啟。';
+
+  @override
+  String get notificationPermissionLater => '稍後再說';
+
+  @override
+  String permissionRequired(String permissionName) {
+    return '需要$permissionName權限';
+  }
+
+  @override
+  String get badgeStudent => '學生';
+
+  @override
+  String get badgeExpert => '達人';
+
+  @override
+  String get activityCampusActivities => '校園活動';
+
+  @override
+  String get activityDetailTitle => '活動詳情';
+
+  @override
+  String get activityInfoTitle => '活動資訊';
+
+  @override
+  String get activityParticipantCount => '參與人數';
+
+  @override
+  String get activityDiscount => '折扣';
+
+  @override
+  String get activityRewardType => '獎勵類型';
+
+  @override
+  String get activitySignupSuccess => '報名成功';
+
+  @override
+  String get authResetPassword => '重設密碼';
+
+  @override
+  String get authCodeSent => '驗證碼已發送';
+
+  @override
+  String get authEnterEmailPlaceholder => '請輸入電子郵件地址';
+
+  @override
+  String get authPasswordLabel => '密碼';
+
+  @override
+  String get authPasswordPlaceholder => '請輸入密碼';
+
+  @override
+  String get authCodePlaceholder => '請輸入驗證碼';
+
+  @override
+  String get authPhonePlaceholder => '請輸入手機號碼';
+
+  @override
+  String get authConfirmPassword => '確認密碼';
+
+  @override
+  String get authConfirmPasswordPlaceholder => '請再次輸入密碼';
+
+  @override
+  String get authPasswordRequirement => '至少8位，包含字母和數字';
+
+  @override
+  String get authPleaseAgreeToTerms => '請閱讀並同意使用者協議和隱私政策';
+
+  @override
+  String get authPleaseEnterValidEmail => '請輸入有效的電子郵件地址';
+
+  @override
+  String get authIAgreePrefix => '我已閱讀並同意 ';
+
+  @override
+  String get authAnd => ' 和 ';
+
+  @override
+  String get forumPostDetail => '帖子詳情';
+
+  @override
+  String get forumWriteComment => '撰寫評論...';
+
+  @override
+  String chatUserTitle(String userId) {
+    return '使用者 $userId';
+  }
+
+  @override
+  String chatTaskTitle(int taskId) {
+    return '任務 $taskId';
+  }
+
+  @override
+  String get chatInputHint => '輸入訊息...';
+
+  @override
+  String get chatImageLabel => '圖片';
+
+  @override
+  String get chatCameraLabel => '拍照';
+
+  @override
+  String get chatTaskCompleted => '已完成';
+
+  @override
+  String get chatHasIssue => '遇到問題';
+
+  @override
+  String get chatRequestRefund => '申請退款';
+
+  @override
+  String get chatUploadProof => '上傳憑證';
+
+  @override
+  String get chatViewDetail => '查看詳情';
+
+  @override
+  String get chatCopied => '已複製';
+
+  @override
+  String get chatTaskDetailLabel => '任務詳情';
+
+  @override
+  String get chatAddressLabel => '詳細地址';
+
+  @override
+  String get tasksSortLatest => '最新發佈';
+
+  @override
+  String get tasksSortHighestPay => '報酬最高';
+
+  @override
+  String get tasksSortDeadline => '即將截止';
+
+  @override
+  String get tasksProcessing => '處理中...';
+
+  @override
+  String get tasksApplyForTask => '申請接單';
+
+  @override
+  String get tasksCancelApplication => '取消申請';
+
+  @override
+  String get tasksCompleteTask => '完成任務';
+
+  @override
+  String get tasksConfirmComplete => '確認完成';
+
+  @override
+  String get fleaMarketChat => '聊天';
+
+  @override
+  String get fleaMarketPurchaseInDev => '購買功能開發中';
+
+  @override
+  String get fleaMarketSeller => '賣家';
+
+  @override
+  String get fleaMarketCreateTitle => '發佈商品';
+
+  @override
+  String get fleaMarketTitlePlaceholder => '請輸入商品標題';
+
+  @override
+  String get fleaMarketDescPlaceholder => '描述一下你的商品...';
+
+  @override
+  String get fleaMarketSelectCategory => '選擇分類';
+
+  @override
+  String get fleaMarketLocationPlaceholder => '例如：校園北門';
+
+  @override
+  String get fleaMarketSelectImageFailed => '選擇圖片失敗';
+
+  @override
+  String get fleaMarketInvalidPrice => '請輸入有效價格';
+
+  @override
+  String get profileEditProfileTitle => '編輯資料';
+
+  @override
+  String get profileSaveButton => '儲存';
+
+  @override
+  String get profileNamePlaceholder => '請輸入姓名';
+
+  @override
+  String get profileBioPlaceholder => '介紹一下自己...';
+
+  @override
+  String get profileLocationPlaceholder => '例如：倫敦';
+
+  @override
+  String get profileMyPostsEmpty => '暫無帖子';
+
+  @override
+  String get profileAcceptedTasks => '我接的';
+
+  @override
+  String get walletPointsBalance => '積分餘額';
+
+  @override
+  String get walletTotalEarned => '累計獲得';
+
+  @override
+  String get walletTotalSpent => '累計消費';
+
+  @override
+  String get walletPaymentAccount => '收款帳戶';
+
+  @override
+  String get walletPayoutRecords => '提現記錄';
+
+  @override
+  String get walletTransactionRecords => '交易記錄';
+
+  @override
+  String get walletNoTransactions => '暫無交易記錄';
+
+  @override
+  String get walletViewMore => '查看更多交易記錄';
+
+  @override
+  String get walletMyCoupons => '我的優惠券';
+
+  @override
+  String get walletNoCoupons => '暫無優惠券';
+
+  @override
+  String get settingsGoLogin => '去登入';
+
+  @override
+  String get settingsThemeSystem => '跟隨系統';
+
+  @override
+  String get settingsThemeLight => '淺色';
+
+  @override
+  String get settingsThemeDark => '深色';
+
+  @override
+  String get settingsLanguage => '語言';
+
+  @override
+  String get settingsPaymentReceiving => '收款與付款';
+
+  @override
+  String get settingsExpenseManagement => '支出管理';
+
+  @override
+  String get settingsPaymentHistory => '付款記錄';
+
+  @override
+  String get settingsCookiePolicy => 'Cookie 政策';
+
+  @override
+  String get settingsEmail => '電子郵件';
+
+  @override
+  String get settingsOther => '其他';
+
+  @override
+  String get settingsClearCache => '清除快取';
+
+  @override
+  String get settingsDangerZone => '危險區域';
+
+  @override
+  String get couponPointsTab => '積分';
+
+  @override
+  String get couponCouponsTab => '優惠券';
+
+  @override
+  String get couponCheckInTab => '簽到';
+
+  @override
+  String get couponRedeemReward => '兌換獎勵';
+
+  @override
+  String get couponRedeemCode => '兌換碼';
+
+  @override
+  String get couponNoPointsRecords => '暫無積分記錄';
+
+  @override
+  String get couponEnterInviteCodeTitle => '輸入邀請碼';
+
+  @override
+  String get couponEnterInviteCodeHint => '請輸入邀請碼或兌換碼';
+
+  @override
+  String get couponNoCoupons => '暫無優惠券';
+
+  @override
+  String get couponClaim => '領取';
+
+  @override
+  String get customerServiceRateTitle => '評價客服';
+
+  @override
+  String get customerServiceRateHint => '留下您的評價（可選）';
+
+  @override
+  String get customerServiceEndTitle => '結束對話';
+
+  @override
+  String get customerServiceEndMessage => '確定要結束當前客服對話嗎？';
+
+  @override
+  String get customerServiceEndButton => '結束';
+
+  @override
+  String get customerServiceRefresh => '重新整理';
+
+  @override
+  String get notificationSystemTab => '系統通知';
+
+  @override
+  String get notificationInteractionTab => '互動訊息';
+
+  @override
+  String get notificationTaskChatTitle => '任務聊天';
+
+  @override
+  String get notificationNoTaskChats => '暫無任務聊天';
+
+  @override
+  String get onboardingWelcome => '歡迎使用 Link²Ur';
+
+  @override
+  String get onboardingPublishTask => '發佈任務';
+
+  @override
+  String get onboardingAcceptTask => '接受任務';
+
+  @override
+  String get onboardingSafePayment => '安全付款';
+
+  @override
+  String get onboardingSafePaymentSubtitle => '資金有保障';
+
+  @override
+  String get onboardingCommunity => '社群互動';
+
+  @override
+  String get searchTasks => '搜尋任務';
+
+  @override
+  String get searchFleaMarket => '搜尋閒置';
+
+  @override
+  String get searchForum => '搜尋帖子';
+
+  @override
+  String get searchTasksTitle => '任務';
+
+  @override
+  String get searchForumTitle => '論壇';
+
+  @override
+  String get searchFleaMarketTitle => '跳蚤市場';
+
+  @override
+  String get leaderboardRankLabel => '排名';
+
+  @override
+  String get taskExpertNotFound => '達人不存在';
+
+  @override
+  String get taskExpertCompletedOrders => '完成單數';
+
+  @override
+  String get taskExpertServices => '服務項目';
+
+  @override
+  String get taskExpertBook => '預約';
+
+  @override
+  String get createTaskDescPlaceholder => '請詳細描述任務要求...';
+
+  @override
+  String get createTaskLocationPlaceholder => '請輸入任務地點';
+
+  @override
+  String get createTaskPublish => '發佈任務';
+
+  @override
+  String get infoFAQTitle => '常見問題';
+
+  @override
+  String get infoAboutTitle => '關於';
+
+  @override
+  String get infoFAQAccountTitle => '帳號相關';
+
+  @override
+  String get infoFAQTaskTitle => '任務相關';
+
+  @override
+  String get infoFAQPaymentTitle => '付款與安全';
+
+  @override
+  String get infoTermsTitle => '服務條款';
+
+  @override
+  String get infoPrivacyTitle => '隱私政策';
+
+  @override
+  String get infoCookieTitle => 'Cookie 政策';
+
+  @override
+  String get infoVipCenter => '會員中心';
+
+  @override
+  String get infoVipPriority => '優先接單';
+
+  @override
+  String get infoVipBadge => '專屬標識';
+
+  @override
+  String get infoVipFeeReduction => '手續費減免';
+
+  @override
+  String get infoVipCustomerService => '專屬客服';
+
+  @override
+  String get infoVipPointsBoost => '積分加倍';
+
+  @override
+  String get infoVipSubscribe => '開通 VIP 會員';
+
+  @override
+  String get infoVipPriorityRecommend => '優先推薦';
+
+  @override
+  String get infoVipBadgeLabel => 'VIP標識';
+
+  @override
+  String get infoVipFeeDiscount => '手續費優惠';
+
+  @override
+  String get infoVipExclusiveCoupon => '專屬優惠券';
+
+  @override
+  String get infoVipDataAnalytics => '數據分析';
+
+  @override
+  String get infoVipMonthly => '月度會員';
+
+  @override
+  String get infoVipYearly => '年度會員';
+
+  @override
+  String get vipPurchaseConfirm => '確定';
+
+  @override
+  String get vipPurchaseRestoreMessage => '已檢查購買記錄，如有有效訂閱將自動恢復。';
+
+  @override
+  String get vipPurchaseNoPlans => '暫無可用的 VIP 套餐';
+
+  @override
+  String get vipPurchaseReload => '重新載入';
+
+  @override
+  String get homeSecondHandMarket => '二手市場';
+
+  @override
+  String get homeSecondHandSubtitle => '閒置物品，低價出售';
+
+  @override
+  String get homeStudentVerification => '學生認證';
+
+  @override
+  String get homeStudentVerificationSubtitle => '完成認證，享受更多權益';
+
+  @override
+  String get homeBecomeExpert => '成為任務達人';
+
+  @override
+  String get homeBecomeExpertSubtitle => '展示技能，獲取更多機會';
+
+  @override
+  String get homeNewUserReward => '新人獎勵';
+
+  @override
+  String get homeNewUserRewardSubtitle => '完成首單即可獲得';
+
+  @override
+  String get homeInviteFriends => '邀請好友';
+
+  @override
+  String get homeInviteFriendsSubtitle => '邀請好友得積分';
+
+  @override
+  String get homeDailyCheckIn => '每日簽到';
+
+  @override
+  String get homeDailyCheckInSubtitle => '連續簽到得獎勵';
+
+  @override
+  String get homeCampusLife => '校園生活分享';
+
+  @override
+  String get homeUsedBooks => '閒置書籍出售';
+
+  @override
+  String get homeWeeklyExperts => '本週任務達人榜';
+
+  @override
+  String get homeLoadNearbyTasks => '載入附近任務';
+
+  @override
+  String get homeBrowseExperts => '瀏覽達人';
+
+  @override
+  String get mainPublishFleaMarket => '發佈閒置';
+
+  @override
+  String get linkCopied => '連結已複製';
+
+  @override
+  String get paymentAlipaySymbol => '支';
+
+  @override
+  String authResendCountdown(int countdown) {
+    return '${countdown}s 後重發';
+  }
+
+  @override
+  String get authPasswordsDoNotMatch => '兩次輸入的密碼不一致';
+
+  @override
+  String get authPleaseEnterEmail => '請輸入郵箱';
+
+  @override
+  String get authEmailFormatInvalid => '郵箱格式不正確';
+
+  @override
+  String get authResetPasswordDesc => '輸入您的註冊郵箱，我們將發送驗證碼幫助您重置密碼。';
+
+  @override
+  String get authCreateAccount => '建立帳號';
+
+  @override
+  String get authAlreadyHaveAccount => '已有帳號？';
+
+  @override
+  String get authNewPassword => '新密碼';
+
+  @override
+  String get authEnterNewPassword => '請輸入新密碼';
+
+  @override
+  String get authPasswordMinLength => '密碼至少8位';
+
+  @override
+  String get authConfirmNewPassword => '確認新密碼';
+
+  @override
+  String get authForgotPasswordQuestion => '忘記密碼？';
+
+  @override
+  String get authRegisterNewAccount => '註冊新帳號';
+
+  @override
+  String get authRegisterSubtitle => '加入 Link²Ur，開始技能互助';
+
+  @override
+  String get homeLoadFailed => '載入失敗';
+
+  @override
+  String get homePublishTask => '發佈任務';
+
+  @override
+  String get homeDeadlineExpired => '已截止';
+
+  @override
+  String homeDeadlineDays(int days) {
+    return '$days天後截止';
+  }
+
+  @override
+  String homeDeadlineHours(int hours) {
+    return '$hours小時後';
+  }
+
+  @override
+  String homeDeadlineMinutes(int minutes) {
+    return '$minutes分鐘後';
+  }
+
+  @override
+  String get homeDefaultUser => '用戶';
+
+  @override
+  String get homeClassmate => '同學';
+
+  @override
+  String get homePostedNewPost => '發佈了新帖子';
+
+  @override
+  String get homePostedNewProduct => '發佈了新商品';
+
+  @override
+  String get homeSystemUser => '系統';
+
+  @override
+  String get homeCreatedLeaderboard => '建立了新排行榜';
+
+  @override
+  String get homeCampusLifeDesc => '分享我的校園日常';
+
+  @override
+  String get homeSearchCategory => '搜尋分類';
+
+  @override
+  String get homeSearchTasks => '搜尋任務';
+
+  @override
+  String get homeSearchFleaMarket => '搜尋閒置';
+
+  @override
+  String get homeSearchPosts => '搜尋帖子';
+
+  @override
+  String homeSearchQueryResult(String query) {
+    return '搜尋 \"$query\"';
+  }
+
+  @override
+  String get homePressEnterToSearch => '按回車鍵搜尋';
+
+  @override
+  String get taskCategoryPickup => '代取快遞';
+
+  @override
+  String get taskCategoryTutoring => '論文輔導';
+
+  @override
+  String get taskCategoryMoving => '搬家';
+
+  @override
+  String get taskCategoryPurchasing => '代購';
+
+  @override
+  String get taskCategoryDogWalking => '遛狗';
+
+  @override
+  String get taskCategoryTranslation => '翻譯';
+
+  @override
+  String get taskCategoryPhotography => '拍照';
+
+  @override
+  String get taskCategoryTutor => '家教';
+
+  @override
+  String get taskDetailProcessing => '處理中...';
+
+  @override
+  String get taskDetailApplyForTask => '申請接單';
+
+  @override
+  String get taskDetailCancelApplication => '取消申請';
+
+  @override
+  String get taskDetailCompleteTask => '完成任務';
+
+  @override
+  String get taskDetailParticipantCount => '參與人數';
+
+  @override
+  String get taskSortBy => '排序方式';
+
+  @override
+  String get taskSortLatest => '最新發佈';
+
+  @override
+  String get taskSortHighestPay => '報酬最高';
+
+  @override
+  String get taskSortNearDeadline => '即將截止';
+
+  @override
+  String get taskDeadlineExpired => '已過期';
+
+  @override
+  String taskDeadlineMinutes(int minutes) {
+    return '$minutes分鐘後截止';
+  }
+
+  @override
+  String taskDeadlineHours(int hours) {
+    return '$hours小時後截止';
+  }
+
+  @override
+  String taskDeadlineDays(int days) {
+    return '$days天後截止';
+  }
+
+  @override
+  String taskDeadlineDate(int month, int day) {
+    return '$month/$day 截止';
+  }
+
+  @override
+  String get taskCategoryHousekeepingLife => '家務生活';
+
+  @override
+  String get createTaskType => '任務類型';
+
+  @override
+  String get createTaskTitleField => '任務標題';
+
+  @override
+  String get createTaskTitleHint => '請輸入任務標題';
+
+  @override
+  String get createTaskDescHint => '請詳細描述任務要求...';
+
+  @override
+  String get createTaskLocation => '任務地點';
+
+  @override
+  String get createTaskLocationHint => '請輸入任務地點';
+
+  @override
+  String get createTaskDeadline => '截止時間';
+
+  @override
+  String get createTaskSelectDeadline => '選擇截止日期';
+
+  @override
+  String get createTaskCategoryDelivery => '代取代送';
+
+  @override
+  String get createTaskCategoryShopping => '代購';
+
+  @override
+  String get createTaskCategoryTutoring => '輔導';
+
+  @override
+  String get createTaskCategoryTranslation => '翻譯';
+
+  @override
+  String get createTaskCategoryDesign => '設計';
+
+  @override
+  String get createTaskCategoryProgramming => '編程';
+
+  @override
+  String get createTaskCategoryWriting => '寫作';
+
+  @override
+  String get createTaskCategoryOther => '其他';
+
+  @override
+  String get taskDetailNoImages => '暫無圖片';
+
+  @override
+  String forumUserFallback(String userId) {
+    return '用戶 $userId';
+  }
+
+  @override
+  String get forumNoLeaderboard => '暫無排行榜';
+
+  @override
+  String get forumNoLeaderboardMessage => '還沒有排行榜';
+
+  @override
+  String get forumNoPostsHint => '還沒有帖子，點擊下方按鈕發佈第一個帖子';
+
+  @override
+  String get forumEnterTitle => '請輸入標題';
+
+  @override
+  String get forumShareThoughts => '分享你的想法...';
+
+  @override
+  String get forumSelectCategory => '選擇分類';
+
+  @override
+  String get settingsPleaseLoginFirst => '請先登入';
+
+  @override
+  String get settingsUnknown => '未知';
+
+  @override
+  String get settingsLoading => '載入中...';
+
+  @override
+  String get settingsNotBound => '未綁定';
+
+  @override
+  String get settingsChinese => '中文';
+
+  @override
+  String get walletPayoutAccount => '收款帳戶';
+
+  @override
+  String get walletActivated => '已啟用，可以收款';
+
+  @override
+  String get walletConnectedPending => '已連接，等待啟用';
+
+  @override
+  String get walletNotConnected => '未連接';
+
+  @override
+  String get walletActivatedShort => '已啟用';
+
+  @override
+  String get walletPendingActivation => '待啟用';
+
+  @override
+  String get walletNotConnectedShort => '未連接';
+
+  @override
+  String get walletViewAccountDetail => '查看帳戶詳情';
+
+  @override
+  String get walletSetupPayoutAccount => '設置收款帳戶';
+
+  @override
+  String get walletPayoutRecordsFull => '收款記錄';
+
+  @override
+  String get walletWithdrawalRecords => '提現記錄';
+
+  @override
+  String get walletTransactionHistory => '交易記錄';
+
+  @override
+  String get walletTransactionsDesc => '您的積分交易記錄將顯示在這裡';
+
+  @override
+  String get walletNoCouponsDesc => '您還沒有優惠券';
+
+  @override
+  String get walletToday => '今天';
+
+  @override
+  String get walletYesterday => '昨天';
+
+  @override
+  String get walletCheckingIn => '簽到中...';
+
+  @override
+  String get walletDailyCheckIn => '每日簽到';
+
+  @override
+  String get myTasksTitle => '我的任務';
+
+  @override
+  String get myTasksAccepted => '我接的';
+
+  @override
+  String get myTasksPosted => '我發的';
+
+  @override
+  String get myTasksGoAccept => '去接任務';
+
+  @override
+  String get profileBio => '個人簡介';
+
+  @override
+  String get profileBioHint => '介紹一下自己...';
+
+  @override
+  String get profileCity => '居住城市';
+
+  @override
+  String get profileCityHint => '例如：倫敦';
+
+  @override
+  String get profileNameRequired => '請輸入姓名';
+
+  @override
+  String get profileNameMinLength => '姓名至少需要3個字符';
+
+  @override
+  String get profileAnonymousUser => '匿名用戶';
+
+  @override
+  String get myPostsEmpty => '暫無帖子';
+
+  @override
+  String get myPostsEmptyDesc => '您還沒有發佈過帖子';
+
+  @override
+  String get fleaMarketSold => '已售出';
+
+  @override
+  String get fleaMarketDelisted => '已下架';
+
+  @override
+  String get fleaMarketCategoryAll => '全部';
+
+  @override
+  String get fleaMarketCategoryDailyUse => '生活用品';
+
+  @override
+  String get fleaMarketImageSelectFailed => '選擇圖片失敗';
+
+  @override
+  String get fleaMarketTitleMinLength => '標題至少需要2個字符';
+
+  @override
+  String get fleaMarketTitleRequired => '請輸入商品標題';
+
+  @override
+  String get fleaMarketDescOptional => '商品描述（選填）';
+
+  @override
+  String get fleaMarketDescHint => '描述一下你的商品...';
+
+  @override
+  String get fleaMarketLocationOptional => '位置（選填）';
+
+  @override
+  String get fleaMarketLocationHint => '例如：校園北門';
+
+  @override
+  String get fleaMarketPriceRequired => '請輸入價格';
+
+  @override
+  String get fleaMarketCategoryLabel => '分類';
+
+  @override
+  String get fleaMarketNoItemsHint => '還沒有商品，點擊下方按鈕發佈第一個商品';
+
+  @override
+  String get chatNoMessages => '還沒有訊息，開始對話吧';
+
+  @override
+  String get chatInProgress => '進行中';
+
+  @override
+  String get chatTaskCompletedConfirm => '任務已完成，請確認。';
+
+  @override
+  String get chatHasIssueMessage => '我遇到了一些問題：';
+
+  @override
+  String get activityCheckLater => '稍後再來看看吧';
+
+  @override
+  String get activityNoAvailableActivities => '還沒有可用的活動';
+
+  @override
+  String get activityRegisterSuccess => '報名成功';
+
+  @override
+  String get activityRegisterFailed => '報名失敗';
+
+  @override
+  String get activityRegisterNow => '立即報名';
+
+  @override
+  String get activityRegistered => '已報名';
+
+  @override
+  String get activityFullSlots => '已滿員';
+
+  @override
+  String get activityCancelled => '已取消';
+
+  @override
+  String get activityInProgress => '進行中';
+
+  @override
+  String get activityFree => '免費';
+
+  @override
+  String get activityCash => '現金';
+
+  @override
+  String get activityPointsReward => '積分';
+
+  @override
+  String get activityCashAndPoints => '現金 + 積分';
+
+  @override
+  String get activityInfo => '活動資訊';
+
+  @override
+  String get activityPublisher => '發佈者';
+
+  @override
+  String get activityViewExpertProfileShort => '查看達人資料';
+
+  @override
+  String get activityParticipantsCount => '參與人數';
+
+  @override
+  String get activityStatusLabel => '狀態';
+
+  @override
+  String activityPersonCount(int current, int max) {
+    return '$current/$max人';
+  }
+
+  @override
+  String get leaderboardNoLeaderboards => '暫無排行榜';
+
+  @override
+  String get leaderboardNoLeaderboardsMessage => '還沒有排行榜';
+
+  @override
+  String get leaderboardNoCompetitorsHint => '還沒有競品，點擊下方按鈕提交第一個競品';
+
+  @override
+  String leaderboardNetVotesCount(int count) {
+    return '淨 $count';
+  }
+
+  @override
+  String get leaderboardDetails => '詳情';
+
+  @override
+  String leaderboardCompletedCount(int count) {
+    return '完成 $count 單';
+  }
+
+  @override
+  String get notificationSystemNotifications => '系統通知';
+
+  @override
+  String get notificationInteractionMessages => '互動訊息';
+
+  @override
+  String get notificationNoTaskChatDesc => '接取或發佈任務後，可以在這裡與對方溝通';
+
+  @override
+  String get taskExpertDetailTitle => '達人詳情';
+
+  @override
+  String get taskExpertExpertNotExist => '達人不存在';
+
+  @override
+  String get taskExpertExpertNotExistDesc => '該達人不存在或已被刪除';
+
+  @override
+  String get taskExpertBio => '簡介';
+
+  @override
+  String get taskExpertProvidedServices => '提供的服務';
+
+  @override
+  String get taskExpertNoServicesDesc => '該達人還沒有提供服務';
+
+  @override
+  String get taskExpertAccepted => '已接受';
+
+  @override
+  String get taskExpertRejected => '已拒絕';
+
+  @override
+  String get taskExpertAppliedStatus => '已申請';
+
+  @override
+  String taskExpertServiceCount(int count) {
+    return '$count 項服務';
+  }
+
+  @override
+  String taskExpertShareTitle(String name) {
+    return '分享任務達人 - $name';
+  }
+
+  @override
+  String taskExpertShareText(String name) {
+    return '來看看這位任務達人：$name';
+  }
+
+  @override
+  String get infoFAQAccountQ1 => '如何註冊帳號？';
+
+  @override
+  String get infoFAQAccountA1 => '您可以使用電郵或手機號碼註冊。在登入頁面點擊「註冊」，按照提示完成操作即可。';
+
+  @override
+  String get infoFAQAccountQ2 => '如何重設密碼？';
+
+  @override
+  String get infoFAQAccountA2 => '在登入頁面點擊「忘記密碼」，輸入註冊電郵並按照驗證步驟重設密碼。';
+
+  @override
+  String get infoFAQAccountQ3 => '如何編輯個人資料？';
+
+  @override
+  String get infoFAQAccountA3 => '前往 個人中心 > 編輯資料，即可更新頭像、暱稱、簡介等資訊。';
+
+  @override
+  String get infoFAQAccountQ4 => '如何註銷帳號？';
+
+  @override
+  String get infoFAQAccountA4 => '前往 設定 > 帳號安全 > 註銷帳號。請注意此操作不可撤銷。';
+
+  @override
+  String get infoFAQTaskQ1 => '如何發布任務？';
+
+  @override
+  String get infoFAQTaskA1 => '點擊底部的「+」按鈕，選擇「發布任務」，填寫任務詳情後提交即可。';
+
+  @override
+  String get infoFAQTaskQ2 => '如何接受任務？';
+
+  @override
+  String get infoFAQTaskA2 => '瀏覽可用任務列表，點擊查看詳情，然後點擊「接受任務」即可開始。';
+
+  @override
+  String get infoFAQTaskQ3 => '如何取消任務？';
+
+  @override
+  String get infoFAQTaskA3 => '前往任務詳情頁，點擊「取消任務」。請注意可能適用取消政策。';
+
+  @override
+  String get infoFAQTaskQ4 => '遇到糾紛怎麼辦？';
+
+  @override
+  String get infoFAQTaskA4 => '您可以透過任務聊天頁面發起糾紛。我們的客服團隊會協助解決。';
+
+  @override
+  String get infoFAQPaymentQ1 => '支援哪些付款方式？';
+
+  @override
+  String get infoFAQPaymentA1 => '我們支援 Stripe（信用卡/扣帳卡）、Apple Pay 和微信支付。';
+
+  @override
+  String get infoFAQPaymentQ2 => '資金託管是如何運作的？';
+
+  @override
+  String get infoFAQPaymentA2 => '支付任務費用後，資金會被安全託管。只有在您確認任務完成後，幫手才能收到款項。';
+
+  @override
+  String get infoFAQPaymentQ3 => '如何申請退款？';
+
+  @override
+  String get infoFAQPaymentA3 => '前往任務詳情頁，點擊「申請退款」，填寫退款原因，我們的團隊會在1-3個工作日內審核。';
+
+  @override
+  String get infoFAQPaymentQ4 => '如何提現？';
+
+  @override
+  String get infoFAQPaymentA4 => '前往 錢包 > 提現，連接您的 Stripe 帳戶即可提現到銀行帳戶。';
+
+  @override
+  String get vipPlanFeatureMonthly1 => '任務優先推薦';
+
+  @override
+  String get vipPlanFeatureMonthly2 => '專屬VIP徽章';
+
+  @override
+  String get vipPlanFeatureMonthly3 => '服務費減免';
+
+  @override
+  String get vipPlanFeatureYearly1 => '包含所有月度權益';
+
+  @override
+  String get vipPlanFeatureYearly2 => '專屬客服支援';
+
+  @override
+  String get vipPlanFeatureYearly3 => '積分加倍 & 專屬活動';
+
+  @override
+  String get vipPlanFeatureYearly4 => '數據分析面板';
+
+  @override
+  String get vipPlanBadgeBestValue => '超值推薦';
+
+  @override
+  String get vipRegularUser => '普通用戶';
+
+  @override
+  String infoVersionFormat(String version, String buildNumber) {
+    return '版本 $version ($buildNumber)';
+  }
+
+  @override
+  String get infoCopyright => '© 2024 Link²Ur. 保留所有權利。';
+
+  @override
+  String get chatImagePlaceholder => '[圖片]';
+
+  @override
+  String get studentVerificationEmailLocked => '電郵已鎖定，請等待審核完成';
+
+  @override
+  String get studentVerificationPending => '認證審核中，請查收電郵並完成驗證';
+
+  @override
+  String get purchaseFailed => '購買失敗，請稍後重試。';
+
+  @override
+  String get restorePurchaseFailed => '恢復購買失敗，請稍後重試。';
+
+  @override
+  String get onboardingTaskTypeErrand => '跑腿代辦';
+
+  @override
+  String get onboardingTaskTypeSkill => '技能服務';
+
+  @override
+  String get onboardingTaskTypeHousekeeping => '家政清潔';
+
+  @override
+  String get onboardingTaskTypeTransport => '交通出行';
+
+  @override
+  String get onboardingTaskTypeSocial => '社交幫助';
+
+  @override
+  String get onboardingTaskTypeCampus => '校園生活';
+
+  @override
+  String get onboardingTaskTypeSecondhand => '二手租賃';
+
+  @override
+  String get onboardingTaskTypePetCare => '寵物看護';
+
+  @override
+  String get onboardingTaskTypeConvenience => '生活便利';
+
+  @override
+  String get onboardingTaskTypeOther => '其他';
+
+  @override
+  String get fleaMarketCategoryKeyElectronics => '電子產品';
+
+  @override
+  String get fleaMarketCategoryKeyBooks => '書籍教材';
+
+  @override
+  String get fleaMarketCategoryKeyDaily => '生活用品';
+
+  @override
+  String get fleaMarketCategoryKeyClothing => '服飾鞋包';
+
+  @override
+  String get fleaMarketCategoryKeySports => '運動戶外';
+
+  @override
+  String get fleaMarketCategoryKeyOther => '其他';
+
+  @override
+  String get couponRewardPoints50 => '+50積分';
+
+  @override
+  String get couponRewardPoints100Coupon => '+100積分 + 優惠券';
+
+  @override
+  String get couponRewardPoints500Vip => '+500積分 + VIP體驗';
+
+  @override
+  String get settingsLanguageEnglish => 'English';
+
+  @override
+  String get settingsLanguageChinese => '中文';
+
+  @override
+  String get infoTermsContent =>
+      'Link²Ur 服務條款\n\n最後更新日期：2024年1月1日\n\n1. 服務概述\nLink²Ur 是一個校園互助平台，旨在幫助用戶發布和接受各類生活服務任務。\n\n2. 用戶責任\n- 用戶應提供真實、準確的個人資訊\n- 用戶應遵守平台規則和相關法律法規\n- 用戶對其發布的內容承擔責任\n\n3. 平台責任\n- 平台提供資訊中介服務\n- 平台對交易資金實行託管保障\n- 平台有權對違規行為進行處理\n\n4. 支付與結算\n- 所有支付透過第三方支付平台處理\n- 任務完成後平台自動結算\n- 平台收取合理的服務費用\n\n5. 隱私保護\n請參閱我們的隱私政策了解詳細資訊。\n\n6. 免責聲明\n平台作為資訊中介，不對用戶之間的交易承擔直接責任。\n\n如有任何疑問，請聯繫我們的客服團隊。';
+
+  @override
+  String get infoPrivacyContent =>
+      'Link²Ur 隱私政策\n\n最後更新日期：2024年1月1日\n\n1. 資訊收集\n我們收集以下類型的資訊：\n- 註冊資訊（姓名、電郵等）\n- 位置資訊（用於附近任務推薦）\n- 設備資訊（用於推送通知）\n\n2. 資訊使用\n我們使用您的資訊來：\n- 提供和改善服務\n- 個性化推薦\n- 保障交易安全\n\n3. 資訊儲存與保護\n- 數據儲存在安全的伺服器上\n- 採用加密技術保護數據傳輸\n- 定期進行安全審計\n\n4. 資訊共享\n我們不會出售您的個人資訊。僅在以下情況下共享：\n- 經您同意\n- 法律要求\n- 服務提供所必需\n\n5. Cookie 政策\n我們使用 Cookie 來改善用戶體驗。\n\n6. 您的權利\n- 存取和修改個人資訊\n- 刪除帳號\n- 退訂通知\n\n如有隱私相關問題，請聯繫 privacy@link2ur.com';
+
+  @override
+  String get infoCookieContent =>
+      'Link²Ur Cookie 政策\n\n我們使用 Cookie 和類似技術來改善您的使用體驗。\n\n1. 什麼是 Cookie\nCookie 是儲存在您設備上的小型文字檔案。\n\n2. 我們如何使用 Cookie\n- 必要 Cookie：保持登入狀態\n- 功能 Cookie：記住偏好設定\n- 分析 Cookie：改善服務品質\n\n3. 管理 Cookie\n您可以在設備設定中管理 Cookie 偏好。';
 }

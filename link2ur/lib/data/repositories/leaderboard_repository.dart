@@ -2,6 +2,7 @@ import '../models/leaderboard.dart';
 import '../services/api_service.dart';
 import '../../core/constants/api_endpoints.dart';
 import '../../core/utils/cache_manager.dart';
+import '../../core/utils/app_exception.dart';
 
 /// 排行榜仓库
 /// 与iOS LeaderboardViewModel + 后端 custom_leaderboard_routes 对齐
@@ -327,11 +328,6 @@ class LeaderboardRepository {
 }
 
 /// 排行榜异常
-class LeaderboardException implements Exception {
-  LeaderboardException(this.message);
-
-  final String message;
-
-  @override
-  String toString() => 'LeaderboardException: $message';
+class LeaderboardException extends AppException {
+  const LeaderboardException(super.message);
 }

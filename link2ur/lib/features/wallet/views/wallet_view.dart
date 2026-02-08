@@ -125,8 +125,8 @@ class _PointsCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('积分余额',
-              style: TextStyle(
+          Text(context.l10n.walletPointsBalance,
+              style: const TextStyle(
                   fontSize: 14, color: AppColors.textSecondaryLight)),
           AppSpacing.vSm,
           Row(
@@ -150,9 +150,9 @@ class _PointsCard extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
-              _StatItem(label: '累计获得', value: account.totalEarned.toString()),
+              _StatItem(label: context.l10n.walletTotalEarned, value: account.totalEarned.toString()),
               Container(width: 1, height: 30, color: AppColors.dividerLight),
-              _StatItem(label: '累计消费', value: account.totalSpent.toString()),
+              _StatItem(label: context.l10n.walletTotalSpent, value: account.totalSpent.toString()),
             ],
           ),
         ],
@@ -189,7 +189,7 @@ class _CheckInButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return PrimaryButton(
-      text: isCheckingIn ? '签到中...' : '每日签到',
+      text: isCheckingIn ? context.l10n.walletCheckingIn : context.l10n.walletDailyCheckIn,
       icon: Icons.check_circle_outline,
       onPressed: isCheckingIn ? null : onPressed,
       isLoading: isCheckingIn,
@@ -204,10 +204,10 @@ class _StripeConnectSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return GroupedCard(
-      header: const Padding(
+      header: Padding(
         padding: AppSpacing.horizontalMd,
-        child: Text('收款账户',
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+        child: Text(context.l10n.walletPayoutAccount,
+            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
       ),
       children: [
         ListTile(
@@ -215,10 +215,10 @@ class _StripeConnectSection extends StatelessWidget {
           title: const Text('Stripe Connect'),
           subtitle: Text(
             status.isFullyActive
-                ? '已激活，可以收款'
+                ? context.l10n.walletActivated
                 : status.isConnected
-                    ? '已连接，等待激活'
-                    : '未连接',
+                    ? context.l10n.walletConnectedPending
+                    : context.l10n.walletNotConnected,
           ),
           trailing: Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -232,10 +232,10 @@ class _StripeConnectSection extends StatelessWidget {
             ),
             child: Text(
               status.isFullyActive
-                  ? '已激活'
+                  ? context.l10n.walletActivatedShort
                   : status.isConnected
-                      ? '待激活'
-                      : '未连接',
+                      ? context.l10n.walletPendingActivation
+                      : context.l10n.walletNotConnectedShort,
               style: TextStyle(
                 fontSize: 12,
                 color: status.isFullyActive
@@ -251,14 +251,14 @@ class _StripeConnectSection extends StatelessWidget {
           ListTile(
             contentPadding: AppSpacing.horizontalMd,
             leading: const Icon(Icons.payments_outlined, size: 20),
-            title: const Text('收款记录'),
+            title: Text(context.l10n.walletPayoutRecordsFull),
             trailing: const Icon(Icons.chevron_right, size: 20),
             onTap: () => context.push('/payment/stripe-connect/payments'),
           ),
           ListTile(
             contentPadding: AppSpacing.horizontalMd,
             leading: const Icon(Icons.account_balance_outlined, size: 20),
-            title: const Text('提现记录'),
+            title: Text(context.l10n.walletWithdrawalRecords),
             trailing: const Icon(Icons.chevron_right, size: 20),
             onTap: () => context.push('/payment/stripe-connect/payouts'),
           ),
@@ -267,7 +267,7 @@ class _StripeConnectSection extends StatelessWidget {
           Padding(
             padding: AppSpacing.horizontalMd,
             child: SecondaryButton(
-              text: status.isConnected ? '查看账户详情' : '设置收款账户',
+              text: status.isConnected ? context.l10n.walletViewAccountDetail : context.l10n.walletSetupPayoutAccount,
               onPressed: () =>
                   context.push('/payment/stripe-connect/onboarding'),
             ),
@@ -292,16 +292,16 @@ class _TransactionsSection extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Padding(
+        Padding(
           padding: AppSpacing.horizontalMd,
-          child: Text('交易记录',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+          child: Text(context.l10n.walletTransactionHistory,
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
         ),
         AppSpacing.vSm,
         if (transactions.isEmpty)
           EmptyStateView.noData(
-            title: '暂无交易记录',
-            description: '您的积分交易记录将显示在这里',
+            title: context.l10n.walletNoTransactions,
+            description: context.l10n.walletTransactionsDesc,
           )
         else
           GroupedCard(
@@ -315,7 +315,7 @@ class _TransactionsSection extends StatelessWidget {
             padding: AppSpacing.allMd,
             child: TextButton(
               onPressed: onLoadMore,
-              child: const Text('查看更多交易记录'),
+              child: Text(context.l10n.walletViewMore),
             ),
           ),
       ],
@@ -367,7 +367,7 @@ class _TransactionItem extends StatelessWidget {
           ),
           if (transaction.createdAt != null)
             Text(
-              _formatDate(transaction.createdAt!),
+              _formatDate(context, transaction.createdAt!),
               style:
                   const TextStyle(fontSize: 12, color: AppColors.textTertiaryLight),
             ),
@@ -376,12 +376,12 @@ class _TransactionItem extends StatelessWidget {
     );
   }
 
-  String _formatDate(DateTime date) {
+  String _formatDate(BuildContext context, DateTime date) {
     final now = DateTime.now();
     final difference = now.difference(date);
-    if (difference.inDays == 0) return '今天';
-    if (difference.inDays == 1) return '昨天';
-    if (difference.inDays < 7) return '${difference.inDays}天前';
+    if (difference.inDays == 0) return context.l10n.walletToday;
+    if (difference.inDays == 1) return context.l10n.walletYesterday;
+    if (difference.inDays < 7) return context.l10n.timeDaysAgo(difference.inDays);
     return '${date.month}/${date.day}';
   }
 }
@@ -395,16 +395,16 @@ class _CouponsSection extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Padding(
+        Padding(
           padding: AppSpacing.horizontalMd,
-          child: Text('我的优惠券',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+          child: Text(context.l10n.walletMyCoupons,
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
         ),
         AppSpacing.vSm,
         if (coupons.isEmpty)
           EmptyStateView.noData(
-            title: '暂无优惠券',
-            description: '您还没有优惠券',
+            title: context.l10n.walletNoCoupons,
+            description: context.l10n.walletNoCouponsDesc,
           )
         else
           GroupedCard(

@@ -33,6 +33,24 @@ class AppConstants {
   static const String taskStatusCancelled = 'cancelled';
   static const String taskStatusDisputed = 'disputed';
 
+  /// 跳蚤市场商品状态
+  static const String fleaMarketStatusActive = 'active';
+  static const String fleaMarketStatusSold = 'sold';
+
+  /// 退款状态
+  static const String refundStatusPending = 'pending';
+  static const String refundStatusCompleted = 'completed';
+
+  /// 优惠券状态
+  static const String couponStatusUnused = 'unused';
+  static const String couponStatusUsed = 'used';
+  static const String couponStatusExpired = 'expired';
+
+  /// 学生认证状态
+  static const String verificationStatusPending = 'pending';
+  static const String verificationStatusExpired = 'expired';
+  static const String verificationStatusRevoked = 'revoked';
+
   /// 跳蚤市场分类
   static const List<String> fleaMarketCategories = [
     'electronics',   // 电子产品

@@ -247,6 +247,7 @@ class SkeletonList extends StatelessWidget {
 
     return _ShimmerWrap(
       child: ListView.separated(
+        shrinkWrap: true,
         physics: const NeverScrollableScrollPhysics(),
         padding: AppSpacing.allMd,
         itemCount: itemCount,
@@ -307,8 +308,8 @@ class SkeletonDetail extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return _ShimmerWrap(
-      child: const SingleChildScrollView(
+    return const _ShimmerWrap(
+      child: SingleChildScrollView(
         padding: AppSpacing.allMd,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,

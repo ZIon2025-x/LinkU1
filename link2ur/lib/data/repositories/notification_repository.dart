@@ -3,6 +3,7 @@ import '../services/api_service.dart';
 import '../../core/constants/api_endpoints.dart';
 import '../../core/utils/cache_manager.dart';
 import '../../core/utils/logger.dart';
+import '../../core/utils/app_exception.dart';
 
 /// 通知仓库
 /// 与iOS NotificationViewModel + 后端路由对齐
@@ -183,14 +184,22 @@ class NotificationRepository {
       throw NotificationException(response.message ?? '删除设备Token失败');
     }
   }
+
+  /// 获取协商令牌
+  Future<Map<String, dynamic>> getNegotiationTokens(int notificationId) async {
+    final response = await _apiService.get<Map<String, dynamic>>(
+      ApiEndpoints.negotiationTokens(notificationId),
+    );
+
+    if (!response.isSuccess || response.data == null) {
+      throw NotificationException(response.message ?? '获取协商令牌失败');
+    }
+
+    return response.data!;
+  }
 }
 
 /// 通知异常
-class NotificationException implements Exception {
-  NotificationException(this.message);
-
-  final String message;
-
-  @override
-  String toString() => 'NotificationException: $message';
+class NotificationException extends AppException {
+  const NotificationException(super.message);
 }

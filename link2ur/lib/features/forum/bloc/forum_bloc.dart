@@ -4,6 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../data/models/forum.dart';
 import '../../../data/repositories/forum_repository.dart';
 import '../../../core/utils/logger.dart';
+import '../../../core/utils/app_exception.dart';
 
 // ==================== Events ====================
 
@@ -279,6 +280,12 @@ class ForumBloc extends Bloc<ForumEvent, ForumState> {
       emit(state.copyWith(categories: categories));
     } catch (e) {
       AppLogger.error('Failed to load forum categories', e);
+      if (state.categories.isEmpty) {
+        emit(state.copyWith(
+          status: ForumStatus.error,
+          errorMessage: e is AppException ? e.message : e.toString(),
+        ));
+      }
     }
   }
 
@@ -433,25 +440,32 @@ class ForumBloc extends Bloc<ForumEvent, ForumState> {
     ForumLikePost event,
     Emitter<ForumState> emit,
   ) async {
+    // 乐观更新：先更新 UI，失败时回滚
+    final originalPosts = List<ForumPost>.from(state.posts);
+
+    final updatedPosts = state.posts.map((post) {
+      if (post.id == event.postId) {
+        return post.copyWith(
+          isLiked: !post.isLiked,
+          likeCount: post.isLiked
+              ? post.likeCount - 1
+              : post.likeCount + 1,
+        );
+      }
+      return post;
+    }).toList();
+
+    emit(state.copyWith(posts: updatedPosts));
+
     try {
       await _forumRepository.likePost(event.postId);
-
-      // 更新本地状态
-      final updatedPosts = state.posts.map((post) {
-        if (post.id == event.postId) {
-          return post.copyWith(
-            isLiked: !post.isLiked,
-            likeCount: post.isLiked
-                ? post.likeCount - 1
-                : post.likeCount + 1,
-          );
-        }
-        return post;
-      }).toList();
-
-      emit(state.copyWith(posts: updatedPosts));
     } catch (e) {
       AppLogger.error('Failed to like post', e);
+      // 回滚到原始状态并发出错误信息
+      emit(state.copyWith(
+        posts: originalPosts,
+        errorMessage: e is AppException ? e.message : e.toString(),
+      ));
     }
   }
 
@@ -459,28 +473,38 @@ class ForumBloc extends Bloc<ForumEvent, ForumState> {
     ForumFavoritePost event,
     Emitter<ForumState> emit,
   ) async {
+    // 乐观更新：先更新 UI，失败时回滚
+    final originalPosts = List<ForumPost>.from(state.posts);
+    final originalSelectedPost = state.selectedPost;
+
+    final updatedPosts = state.posts.map((post) {
+      if (post.id == event.postId) {
+        return post.copyWith(isFavorited: !post.isFavorited);
+      }
+      return post;
+    }).toList();
+
+    // Also update selectedPost if it's the same post
+    final updatedSelectedPost = state.selectedPost?.id == event.postId
+        ? state.selectedPost!.copyWith(
+            isFavorited: !state.selectedPost!.isFavorited)
+        : state.selectedPost;
+
+    emit(state.copyWith(
+      posts: updatedPosts,
+      selectedPost: updatedSelectedPost,
+    ));
+
     try {
       await _forumRepository.favoritePost(event.postId);
-
-      final updatedPosts = state.posts.map((post) {
-        if (post.id == event.postId) {
-          return post.copyWith(isFavorited: !post.isFavorited);
-        }
-        return post;
-      }).toList();
-
-      // Also update selectedPost if it's the same post
-      final updatedSelectedPost = state.selectedPost?.id == event.postId
-          ? state.selectedPost!.copyWith(
-              isFavorited: !state.selectedPost!.isFavorited)
-          : state.selectedPost;
-
-      emit(state.copyWith(
-        posts: updatedPosts,
-        selectedPost: updatedSelectedPost,
-      ));
     } catch (e) {
       AppLogger.error('Failed to favorite post', e);
+      // 回滚到原始状态并发出错误信息
+      emit(state.copyWith(
+        posts: originalPosts,
+        selectedPost: originalSelectedPost,
+        errorMessage: e is AppException ? e.message : e.toString(),
+      ));
     }
   }
 

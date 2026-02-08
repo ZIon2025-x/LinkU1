@@ -153,6 +153,12 @@ abstract class AppLocalizations {
   /// **'Retry'**
   String get commonRetry;
 
+  /// No description provided for @commonReload.
+  ///
+  /// In en, this message translates to:
+  /// **'Reload'**
+  String get commonReload;
+
   /// No description provided for @commonLoading.
   ///
   /// In en, this message translates to:
@@ -1014,7 +1020,7 @@ abstract class AppLocalizations {
   /// No description provided for @forumAllReplies.
   ///
   /// In en, this message translates to:
-  /// **'All Replies'**
+  /// **'All Comments'**
   String get forumAllReplies;
 
   /// No description provided for @forumReply.
@@ -1386,7 +1392,7 @@ abstract class AppLocalizations {
   /// No description provided for @leaderboardNoItems.
   ///
   /// In en, this message translates to:
-  /// **'No Items'**
+  /// **'No Leaderboards'**
   String get leaderboardNoItems;
 
   /// No description provided for @leaderboardNoItemsMessage.
@@ -1398,7 +1404,7 @@ abstract class AppLocalizations {
   /// No description provided for @leaderboardItemCount.
   ///
   /// In en, this message translates to:
-  /// **'items'**
+  /// **'Entries'**
   String get leaderboardItemCount;
 
   /// No description provided for @leaderboardTotalVotes.
@@ -1482,7 +1488,7 @@ abstract class AppLocalizations {
   /// No description provided for @leaderboardNoImages.
   ///
   /// In en, this message translates to:
-  /// **'No images'**
+  /// **'No Images'**
   String get leaderboardNoImages;
 
   /// No description provided for @leaderboardWriteReason.
@@ -1662,7 +1668,7 @@ abstract class AppLocalizations {
   /// No description provided for @taskExpertNoServices.
   ///
   /// In en, this message translates to:
-  /// **'This expert has no services available yet'**
+  /// **'No Services'**
   String get taskExpertNoServices;
 
   /// No description provided for @taskExpertOrder.
@@ -1950,7 +1956,7 @@ abstract class AppLocalizations {
   /// No description provided for @leaderboardVoteCount.
   ///
   /// In en, this message translates to:
-  /// **'votes'**
+  /// **'Votes'**
   String get leaderboardVoteCount;
 
   /// No description provided for @paymentSetupAccount.
@@ -3138,20 +3144,20 @@ abstract class AppLocalizations {
   /// No description provided for @timeMinutesAgo.
   ///
   /// In en, this message translates to:
-  /// **'{param1} minutes ago'**
-  String timeMinutesAgo(int param1);
+  /// **'{minutes}m ago'**
+  String timeMinutesAgo(int minutes);
 
   /// No description provided for @timeHoursAgo.
   ///
   /// In en, this message translates to:
-  /// **'{param1} hours ago'**
-  String timeHoursAgo(int param1);
+  /// **'{hours}h ago'**
+  String timeHoursAgo(int hours);
 
   /// No description provided for @timeDaysAgo.
   ///
   /// In en, this message translates to:
-  /// **'{param1} days ago'**
-  String timeDaysAgo(int param1);
+  /// **'{days}d ago'**
+  String timeDaysAgo(int days);
 
   /// No description provided for @timeWeeksAgo.
   ///
@@ -4593,11 +4599,11 @@ abstract class AppLocalizations {
   /// **'Task Payment'**
   String get paymentStatusTaskPayment;
 
-  /// No description provided for @paymentTaskNumber.
+  /// No description provided for @paymentTaskNumberWithId.
   ///
   /// In en, this message translates to:
   /// **'Task #{param1}'**
-  String paymentTaskNumber(int param1);
+  String paymentTaskNumberWithId(int param1);
 
   /// No description provided for @notificationSystemMessages.
   ///
@@ -5208,8 +5214,8 @@ abstract class AppLocalizations {
   /// No description provided for @couponConsecutiveCheckIn.
   ///
   /// In en, this message translates to:
-  /// **'{param1} days consecutive check-in'**
-  String couponConsecutiveCheckIn(int param1);
+  /// **'{days}-day streak'**
+  String couponConsecutiveCheckIn(int days);
 
   /// No description provided for @couponMemberOnly.
   ///
@@ -5286,13 +5292,13 @@ abstract class AppLocalizations {
   /// No description provided for @createTaskTitle.
   ///
   /// In en, this message translates to:
-  /// **'Task Title'**
+  /// **'Post Task'**
   String get createTaskTitle;
 
   /// No description provided for @createTaskTitlePlaceholder.
   ///
   /// In en, this message translates to:
-  /// **'Briefly describe your needs (e.g., Pick up package)'**
+  /// **'Enter task title'**
   String get createTaskTitlePlaceholder;
 
   /// No description provided for @createTaskDescription.
@@ -5310,7 +5316,7 @@ abstract class AppLocalizations {
   /// No description provided for @createTaskReward.
   ///
   /// In en, this message translates to:
-  /// **'Task Reward'**
+  /// **'Reward'**
   String get createTaskReward;
 
   /// No description provided for @createTaskCity.
@@ -5430,7 +5436,7 @@ abstract class AppLocalizations {
   /// No description provided for @activityType.
   ///
   /// In en, this message translates to:
-  /// **'Activity Type'**
+  /// **'Type'**
   String get activityType;
 
   /// No description provided for @activityTimeArrangement.
@@ -5688,19 +5694,19 @@ abstract class AppLocalizations {
   /// No description provided for @taskCategorySecondhandRental.
   ///
   /// In en, this message translates to:
-  /// **'Second-hand & Rental'**
+  /// **'Secondhand'**
   String get taskCategorySecondhandRental;
 
   /// No description provided for @taskCategoryErrandRunning.
   ///
   /// In en, this message translates to:
-  /// **'Errand Running'**
+  /// **'Errands'**
   String get taskCategoryErrandRunning;
 
   /// No description provided for @taskCategorySkillService.
   ///
   /// In en, this message translates to:
-  /// **'Skill Service'**
+  /// **'Skills'**
   String get taskCategorySkillService;
 
   /// No description provided for @taskCategorySocialHelp.
@@ -5712,7 +5718,7 @@ abstract class AppLocalizations {
   /// No description provided for @taskCategoryTransportation.
   ///
   /// In en, this message translates to:
-  /// **'Transportation'**
+  /// **'Transport'**
   String get taskCategoryTransportation;
 
   /// No description provided for @taskCategoryPetCare.
@@ -5724,7 +5730,7 @@ abstract class AppLocalizations {
   /// No description provided for @taskCategoryLifeConvenience.
   ///
   /// In en, this message translates to:
-  /// **'Life Convenience'**
+  /// **'Convenience'**
   String get taskCategoryLifeConvenience;
 
   /// No description provided for @taskCategoryOther.
@@ -6102,7 +6108,7 @@ abstract class AppLocalizations {
   /// No description provided for @forumNoReplies.
   ///
   /// In en, this message translates to:
-  /// **'No Replies'**
+  /// **'No Comments'**
   String get forumNoReplies;
 
   /// No description provided for @forumPostReply.
@@ -6428,6 +6434,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'No VIP products available'**
   String get vipNoProducts;
+
+  /// No description provided for @vipPerMonth.
+  ///
+  /// In en, this message translates to:
+  /// **'/ month'**
+  String get vipPerMonth;
+
+  /// No description provided for @vipPerYear.
+  ///
+  /// In en, this message translates to:
+  /// **'/ year'**
+  String get vipPerYear;
 
   /// No description provided for @vipTryLaterContact.
   ///
@@ -6816,13 +6834,13 @@ abstract class AppLocalizations {
   /// No description provided for @paymentSuccess.
   ///
   /// In en, this message translates to:
-  /// **'Payment Successful!'**
+  /// **'Payment Successful'**
   String get paymentSuccess;
 
   /// No description provided for @paymentSuccessMessage.
   ///
   /// In en, this message translates to:
-  /// **'Task payment successful, updating status...'**
+  /// **'Your payment has been successfully processed, the task will start soon.'**
   String get paymentSuccessMessage;
 
   /// No description provided for @paymentError.
@@ -6906,7 +6924,7 @@ abstract class AppLocalizations {
   /// No description provided for @paymentNoAvailableCoupons.
   ///
   /// In en, this message translates to:
-  /// **'No available coupons'**
+  /// **'No Available Coupons'**
   String get paymentNoAvailableCoupons;
 
   /// No description provided for @paymentTotalAmount.
@@ -7056,7 +7074,7 @@ abstract class AppLocalizations {
   /// No description provided for @settingsNotifications.
   ///
   /// In en, this message translates to:
-  /// **'Notification Settings'**
+  /// **'Receive push notifications'**
   String get settingsNotifications;
 
   /// No description provided for @settingsAllowNotifications.
@@ -7440,7 +7458,7 @@ abstract class AppLocalizations {
   /// No description provided for @myPostsTitle.
   ///
   /// In en, this message translates to:
-  /// **'My Items'**
+  /// **'My Posts'**
   String get myPostsTitle;
 
   /// No description provided for @taskLocationAddress.
@@ -7482,7 +7500,7 @@ abstract class AppLocalizations {
   /// No description provided for @fleaMarketPublishItem.
   ///
   /// In en, this message translates to:
-  /// **'Publish Item'**
+  /// **'List Item'**
   String get fleaMarketPublishItem;
 
   /// No description provided for @fleaMarketConfirmPurchase.
@@ -8082,7 +8100,7 @@ abstract class AppLocalizations {
   /// No description provided for @notificationNoTaskChat.
   ///
   /// In en, this message translates to:
-  /// **'No Task Chat'**
+  /// **'No task chats'**
   String get notificationNoTaskChat;
 
   /// No description provided for @notificationNoTaskChatMessage.
@@ -8501,7 +8519,7 @@ abstract class AppLocalizations {
   /// No description provided for @onboardingWelcomeSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Connect Your World'**
+  /// **'Campus Mutual Aid Platform'**
   String get onboardingWelcomeSubtitle;
 
   /// No description provided for @onboardingWelcomeDescription.
@@ -8519,7 +8537,7 @@ abstract class AppLocalizations {
   /// No description provided for @onboardingPublishTaskSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Easily publish your needs'**
+  /// **'Easily find help'**
   String get onboardingPublishTaskSubtitle;
 
   /// No description provided for @onboardingPublishTaskDescription.
@@ -8573,7 +8591,7 @@ abstract class AppLocalizations {
   /// No description provided for @onboardingCommunitySubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Forum, Leaderboard, Flea Market'**
+  /// **'Connect your world'**
   String get onboardingCommunitySubtitle;
 
   /// No description provided for @onboardingCommunityDescription.
@@ -8867,7 +8885,7 @@ abstract class AppLocalizations {
   /// No description provided for @profilePostedTasks.
   ///
   /// In en, this message translates to:
-  /// **'Posted Tasks'**
+  /// **'Posted'**
   String get profilePostedTasks;
 
   /// No description provided for @profileTakenTasks.
@@ -8999,7 +9017,7 @@ abstract class AppLocalizations {
   /// No description provided for @forumBrowse.
   ///
   /// In en, this message translates to:
-  /// **'views'**
+  /// **'Views'**
   String get forumBrowse;
 
   /// No description provided for @forumRepliesCount.
@@ -9077,7 +9095,7 @@ abstract class AppLocalizations {
   /// No description provided for @fleaMarketCategoryClothing.
   ///
   /// In en, this message translates to:
-  /// **'Clothing & Accessories'**
+  /// **'Clothing & Bags'**
   String get fleaMarketCategoryClothing;
 
   /// No description provided for @fleaMarketCategoryFurniture.
@@ -9089,13 +9107,13 @@ abstract class AppLocalizations {
   /// No description provided for @fleaMarketCategoryBooks.
   ///
   /// In en, this message translates to:
-  /// **'Books & Stationery'**
+  /// **'Books & Textbooks'**
   String get fleaMarketCategoryBooks;
 
   /// No description provided for @fleaMarketCategorySports.
   ///
   /// In en, this message translates to:
-  /// **'Sports & Outdoors'**
+  /// **'Sports & Outdoor'**
   String get fleaMarketCategorySports;
 
   /// No description provided for @fleaMarketCategoryBeauty.
@@ -10640,6 +10658,168 @@ abstract class AppLocalizations {
   /// **'You don\'t have any payout records yet'**
   String get paymentNoPayoutsMessage;
 
+  /// No description provided for @paymentExpired.
+  ///
+  /// In en, this message translates to:
+  /// **'Payment Expired'**
+  String get paymentExpired;
+
+  /// No description provided for @paymentExpiredMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Payment time has expired, please initiate payment again.'**
+  String get paymentExpiredMessage;
+
+  /// No description provided for @paymentApplePayIOSOnly.
+  ///
+  /// In en, this message translates to:
+  /// **'Apple Pay is only available on iOS devices'**
+  String get paymentApplePayIOSOnly;
+
+  /// No description provided for @paymentApplePayNotSupported.
+  ///
+  /// In en, this message translates to:
+  /// **'Your device does not support Apple Pay, please use another payment method'**
+  String get paymentApplePayNotSupported;
+
+  /// No description provided for @paymentNetworkConnectionFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Network connection failed, please check your network and try again.'**
+  String get paymentNetworkConnectionFailed;
+
+  /// No description provided for @paymentRequestTimeout.
+  ///
+  /// In en, this message translates to:
+  /// **'Request timeout, please try again later.'**
+  String get paymentRequestTimeout;
+
+  /// No description provided for @paymentRemainingTime.
+  ///
+  /// In en, this message translates to:
+  /// **'Payment remaining time: {param1}'**
+  String paymentRemainingTime(String param1);
+
+  /// No description provided for @paymentOrderInfo.
+  ///
+  /// In en, this message translates to:
+  /// **'Order Information'**
+  String get paymentOrderInfo;
+
+  /// No description provided for @paymentTaskNumber.
+  ///
+  /// In en, this message translates to:
+  /// **'Task Number'**
+  String get paymentTaskNumber;
+
+  /// No description provided for @paymentOriginalPrice.
+  ///
+  /// In en, this message translates to:
+  /// **'Original Price'**
+  String get paymentOriginalPrice;
+
+  /// No description provided for @paymentDiscount.
+  ///
+  /// In en, this message translates to:
+  /// **'Discount ({param1})'**
+  String paymentDiscount(String param1);
+
+  /// No description provided for @paymentFinalAmount.
+  ///
+  /// In en, this message translates to:
+  /// **'Final Payment Amount'**
+  String get paymentFinalAmount;
+
+  /// No description provided for @paymentMethod.
+  ///
+  /// In en, this message translates to:
+  /// **'Payment Method'**
+  String get paymentMethod;
+
+  /// No description provided for @paymentCreditDebitCard.
+  ///
+  /// In en, this message translates to:
+  /// **'Credit/Debit Card'**
+  String get paymentCreditDebitCard;
+
+  /// No description provided for @paymentFastSecure.
+  ///
+  /// In en, this message translates to:
+  /// **'Fast and secure payment'**
+  String get paymentFastSecure;
+
+  /// No description provided for @paymentWeChatPay.
+  ///
+  /// In en, this message translates to:
+  /// **'WeChat Pay'**
+  String get paymentWeChatPay;
+
+  /// No description provided for @paymentAlipay.
+  ///
+  /// In en, this message translates to:
+  /// **'Alipay'**
+  String get paymentAlipay;
+
+  /// No description provided for @paymentCouponSelected.
+  ///
+  /// In en, this message translates to:
+  /// **'Coupon Selected'**
+  String get paymentCouponSelected;
+
+  /// No description provided for @paymentSelectCoupon.
+  ///
+  /// In en, this message translates to:
+  /// **'Select Coupon'**
+  String get paymentSelectCoupon;
+
+  /// No description provided for @paymentConfirmFree.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm (Free)'**
+  String get paymentConfirmFree;
+
+  /// No description provided for @paymentPayNow.
+  ///
+  /// In en, this message translates to:
+  /// **'Pay Now {param1}'**
+  String paymentPayNow(String param1);
+
+  /// No description provided for @paymentCancelPayment.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel Payment'**
+  String get paymentCancelPayment;
+
+  /// No description provided for @paymentCancelPaymentConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Are you sure you want to cancel payment?'**
+  String get paymentCancelPaymentConfirm;
+
+  /// No description provided for @paymentContinuePayment.
+  ///
+  /// In en, this message translates to:
+  /// **'Continue Payment'**
+  String get paymentContinuePayment;
+
+  /// No description provided for @paymentLoadFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Load Failed'**
+  String get paymentLoadFailed;
+
+  /// No description provided for @paymentCoupon.
+  ///
+  /// In en, this message translates to:
+  /// **'Coupon'**
+  String get paymentCoupon;
+
+  /// No description provided for @paymentApplePayLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Task #{param1}'**
+  String paymentApplePayLabel(int param1);
+
   /// No description provided for @profileTaskCount.
   ///
   /// In en, this message translates to:
@@ -10661,7 +10841,7 @@ abstract class AppLocalizations {
   /// No description provided for @notificationMarkAllRead.
   ///
   /// In en, this message translates to:
-  /// **'Mark All Read'**
+  /// **'Mark all read'**
   String get notificationMarkAllRead;
 
   /// No description provided for @notificationEmpty.
@@ -10781,7 +10961,7 @@ abstract class AppLocalizations {
   /// No description provided for @notificationPermissionTitle.
   ///
   /// In en, this message translates to:
-  /// **'Enable Push Notifications'**
+  /// **'Notification Permission Required'**
   String get notificationPermissionTitle;
 
   /// No description provided for @notificationPermissionDescription.
@@ -10891,6 +11071,2652 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Copied to clipboard'**
   String get feedbackCopySuccess;
+
+  /// No description provided for @errorPageNotFound.
+  ///
+  /// In en, this message translates to:
+  /// **'Page not found: {uri}'**
+  String errorPageNotFound(String uri);
+
+  /// No description provided for @errorServerTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Server Error'**
+  String get errorServerTitle;
+
+  /// No description provided for @errorServerMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Server is temporarily unavailable, please try again later'**
+  String get errorServerMessage;
+
+  /// No description provided for @errorLoadFailedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Load Failed'**
+  String get errorLoadFailedTitle;
+
+  /// No description provided for @errorLoadFailedMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'An error occurred while loading data'**
+  String get errorLoadFailedMessage;
+
+  /// No description provided for @errorUnauthorizedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Unauthorized'**
+  String get errorUnauthorizedTitle;
+
+  /// No description provided for @errorUnauthorizedMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'You do not have permission to access this content'**
+  String get errorUnauthorizedMessage;
+
+  /// No description provided for @errorContentNotFoundTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Content Not Found'**
+  String get errorContentNotFoundTitle;
+
+  /// No description provided for @errorContentNotFoundMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'The content you are looking for does not exist or has been removed'**
+  String get errorContentNotFoundMessage;
+
+  /// No description provided for @errorNetworkTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Network Connection Failed'**
+  String get errorNetworkTitle;
+
+  /// No description provided for @errorNetworkMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Please check your network connection and try again'**
+  String get errorNetworkMessage;
+
+  /// No description provided for @emptyNoData.
+  ///
+  /// In en, this message translates to:
+  /// **'No Data'**
+  String get emptyNoData;
+
+  /// No description provided for @emptyNoMessages.
+  ///
+  /// In en, this message translates to:
+  /// **'No Messages'**
+  String get emptyNoMessages;
+
+  /// No description provided for @emptyNoMessagesDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'No messages received yet'**
+  String get emptyNoMessagesDescription;
+
+  /// No description provided for @emptyNoTasksDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'No tasks available. Tap below to create a new task'**
+  String get emptyNoTasksDescription;
+
+  /// No description provided for @emptyNoSearchResultsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'No Results Found'**
+  String get emptyNoSearchResultsTitle;
+
+  /// No description provided for @emptyNoSearchResultsDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'No related content found'**
+  String get emptyNoSearchResultsDescription;
+
+  /// No description provided for @emptyNoSearchResultsWithKeyword.
+  ///
+  /// In en, this message translates to:
+  /// **'No results found for \"{keyword}\"'**
+  String emptyNoSearchResultsWithKeyword(String keyword);
+
+  /// No description provided for @emptyNoFavoritesDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Your favorites will appear here'**
+  String get emptyNoFavoritesDescription;
+
+  /// No description provided for @emptyNoNotificationsDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Your notifications will appear here'**
+  String get emptyNoNotificationsDescription;
+
+  /// No description provided for @sidebarDiscover.
+  ///
+  /// In en, this message translates to:
+  /// **'Discover'**
+  String get sidebarDiscover;
+
+  /// No description provided for @sidebarAccount.
+  ///
+  /// In en, this message translates to:
+  /// **'Account'**
+  String get sidebarAccount;
+
+  /// No description provided for @sidebarWallet.
+  ///
+  /// In en, this message translates to:
+  /// **'Wallet'**
+  String get sidebarWallet;
+
+  /// No description provided for @commonOpenInBrowser.
+  ///
+  /// In en, this message translates to:
+  /// **'Open in browser'**
+  String get commonOpenInBrowser;
+
+  /// No description provided for @commonFree.
+  ///
+  /// In en, this message translates to:
+  /// **'Free'**
+  String get commonFree;
+
+  /// No description provided for @commonRetryText.
+  ///
+  /// In en, this message translates to:
+  /// **'Retry'**
+  String get commonRetryText;
+
+  /// No description provided for @locationTaskLocation.
+  ///
+  /// In en, this message translates to:
+  /// **'Task Location'**
+  String get locationTaskLocation;
+
+  /// No description provided for @locationGetFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to get location'**
+  String get locationGetFailed;
+
+  /// No description provided for @notificationPermissionMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'You have denied notification permission. Please enable it in system settings.'**
+  String get notificationPermissionMessage;
+
+  /// No description provided for @notificationPermissionLater.
+  ///
+  /// In en, this message translates to:
+  /// **'Maybe Later'**
+  String get notificationPermissionLater;
+
+  /// No description provided for @permissionRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'{permissionName} permission required'**
+  String permissionRequired(String permissionName);
+
+  /// No description provided for @badgeStudent.
+  ///
+  /// In en, this message translates to:
+  /// **'Student'**
+  String get badgeStudent;
+
+  /// No description provided for @badgeExpert.
+  ///
+  /// In en, this message translates to:
+  /// **'Expert'**
+  String get badgeExpert;
+
+  /// No description provided for @activityCampusActivities.
+  ///
+  /// In en, this message translates to:
+  /// **'Campus Activities'**
+  String get activityCampusActivities;
+
+  /// No description provided for @activityDetailTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Activity Details'**
+  String get activityDetailTitle;
+
+  /// No description provided for @activityInfoTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Activity Info'**
+  String get activityInfoTitle;
+
+  /// No description provided for @activityParticipantCount.
+  ///
+  /// In en, this message translates to:
+  /// **'Participants'**
+  String get activityParticipantCount;
+
+  /// No description provided for @activityDiscount.
+  ///
+  /// In en, this message translates to:
+  /// **'Discount'**
+  String get activityDiscount;
+
+  /// No description provided for @activityRewardType.
+  ///
+  /// In en, this message translates to:
+  /// **'Reward Type'**
+  String get activityRewardType;
+
+  /// No description provided for @activitySignupSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Registration Successful'**
+  String get activitySignupSuccess;
+
+  /// No description provided for @authResetPassword.
+  ///
+  /// In en, this message translates to:
+  /// **'Reset Password'**
+  String get authResetPassword;
+
+  /// No description provided for @authCodeSent.
+  ///
+  /// In en, this message translates to:
+  /// **'Verification code sent'**
+  String get authCodeSent;
+
+  /// No description provided for @authEnterEmailPlaceholder.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter email address'**
+  String get authEnterEmailPlaceholder;
+
+  /// No description provided for @authPasswordLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Password'**
+  String get authPasswordLabel;
+
+  /// No description provided for @authPasswordPlaceholder.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter password'**
+  String get authPasswordPlaceholder;
+
+  /// No description provided for @authCodePlaceholder.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter verification code'**
+  String get authCodePlaceholder;
+
+  /// No description provided for @authPhonePlaceholder.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter phone number'**
+  String get authPhonePlaceholder;
+
+  /// No description provided for @authConfirmPassword.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm Password'**
+  String get authConfirmPassword;
+
+  /// No description provided for @authConfirmPasswordPlaceholder.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter password again'**
+  String get authConfirmPasswordPlaceholder;
+
+  /// No description provided for @authPasswordRequirement.
+  ///
+  /// In en, this message translates to:
+  /// **'At least 8 characters with letters and numbers'**
+  String get authPasswordRequirement;
+
+  /// No description provided for @authPleaseAgreeToTerms.
+  ///
+  /// In en, this message translates to:
+  /// **'Please read and agree to the Terms and Privacy Policy'**
+  String get authPleaseAgreeToTerms;
+
+  /// No description provided for @authPleaseEnterValidEmail.
+  ///
+  /// In en, this message translates to:
+  /// **'Please enter a valid email address'**
+  String get authPleaseEnterValidEmail;
+
+  /// No description provided for @authIAgreePrefix.
+  ///
+  /// In en, this message translates to:
+  /// **'I have read and agree to the '**
+  String get authIAgreePrefix;
+
+  /// No description provided for @authAnd.
+  ///
+  /// In en, this message translates to:
+  /// **' and '**
+  String get authAnd;
+
+  /// No description provided for @forumPostDetail.
+  ///
+  /// In en, this message translates to:
+  /// **'Post Detail'**
+  String get forumPostDetail;
+
+  /// No description provided for @forumWriteComment.
+  ///
+  /// In en, this message translates to:
+  /// **'Write a comment...'**
+  String get forumWriteComment;
+
+  /// No description provided for @chatUserTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'User {userId}'**
+  String chatUserTitle(String userId);
+
+  /// No description provided for @chatTaskTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Task {taskId}'**
+  String chatTaskTitle(int taskId);
+
+  /// No description provided for @chatInputHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Type a message...'**
+  String get chatInputHint;
+
+  /// No description provided for @chatImageLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Photo'**
+  String get chatImageLabel;
+
+  /// No description provided for @chatCameraLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Camera'**
+  String get chatCameraLabel;
+
+  /// No description provided for @chatTaskCompleted.
+  ///
+  /// In en, this message translates to:
+  /// **'Completed'**
+  String get chatTaskCompleted;
+
+  /// No description provided for @chatHasIssue.
+  ///
+  /// In en, this message translates to:
+  /// **'Has Issue'**
+  String get chatHasIssue;
+
+  /// No description provided for @chatRequestRefund.
+  ///
+  /// In en, this message translates to:
+  /// **'Request Refund'**
+  String get chatRequestRefund;
+
+  /// No description provided for @chatUploadProof.
+  ///
+  /// In en, this message translates to:
+  /// **'Upload Proof'**
+  String get chatUploadProof;
+
+  /// No description provided for @chatViewDetail.
+  ///
+  /// In en, this message translates to:
+  /// **'View Details'**
+  String get chatViewDetail;
+
+  /// No description provided for @chatCopied.
+  ///
+  /// In en, this message translates to:
+  /// **'Copied'**
+  String get chatCopied;
+
+  /// No description provided for @chatTaskDetailLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Task Details'**
+  String get chatTaskDetailLabel;
+
+  /// No description provided for @chatAddressLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Address'**
+  String get chatAddressLabel;
+
+  /// No description provided for @tasksSortLatest.
+  ///
+  /// In en, this message translates to:
+  /// **'Latest'**
+  String get tasksSortLatest;
+
+  /// No description provided for @tasksSortHighestPay.
+  ///
+  /// In en, this message translates to:
+  /// **'Highest Pay'**
+  String get tasksSortHighestPay;
+
+  /// No description provided for @tasksSortDeadline.
+  ///
+  /// In en, this message translates to:
+  /// **'Ending Soon'**
+  String get tasksSortDeadline;
+
+  /// No description provided for @tasksProcessing.
+  ///
+  /// In en, this message translates to:
+  /// **'Processing...'**
+  String get tasksProcessing;
+
+  /// No description provided for @tasksApplyForTask.
+  ///
+  /// In en, this message translates to:
+  /// **'Apply'**
+  String get tasksApplyForTask;
+
+  /// No description provided for @tasksCancelApplication.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel Application'**
+  String get tasksCancelApplication;
+
+  /// No description provided for @tasksCompleteTask.
+  ///
+  /// In en, this message translates to:
+  /// **'Complete Task'**
+  String get tasksCompleteTask;
+
+  /// No description provided for @tasksConfirmComplete.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm Complete'**
+  String get tasksConfirmComplete;
+
+  /// No description provided for @fleaMarketChat.
+  ///
+  /// In en, this message translates to:
+  /// **'Chat'**
+  String get fleaMarketChat;
+
+  /// No description provided for @fleaMarketPurchaseInDev.
+  ///
+  /// In en, this message translates to:
+  /// **'Purchase feature coming soon'**
+  String get fleaMarketPurchaseInDev;
+
+  /// No description provided for @fleaMarketSeller.
+  ///
+  /// In en, this message translates to:
+  /// **'Seller'**
+  String get fleaMarketSeller;
+
+  /// No description provided for @fleaMarketCreateTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'List Item'**
+  String get fleaMarketCreateTitle;
+
+  /// No description provided for @fleaMarketTitlePlaceholder.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter item title'**
+  String get fleaMarketTitlePlaceholder;
+
+  /// No description provided for @fleaMarketDescPlaceholder.
+  ///
+  /// In en, this message translates to:
+  /// **'Describe your item...'**
+  String get fleaMarketDescPlaceholder;
+
+  /// No description provided for @fleaMarketSelectCategory.
+  ///
+  /// In en, this message translates to:
+  /// **'Select category'**
+  String get fleaMarketSelectCategory;
+
+  /// No description provided for @fleaMarketLocationPlaceholder.
+  ///
+  /// In en, this message translates to:
+  /// **'e.g. North Campus Gate'**
+  String get fleaMarketLocationPlaceholder;
+
+  /// No description provided for @fleaMarketSelectImageFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to select image'**
+  String get fleaMarketSelectImageFailed;
+
+  /// No description provided for @fleaMarketInvalidPrice.
+  ///
+  /// In en, this message translates to:
+  /// **'Please enter a valid price'**
+  String get fleaMarketInvalidPrice;
+
+  /// No description provided for @profileEditProfileTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit Profile'**
+  String get profileEditProfileTitle;
+
+  /// No description provided for @profileSaveButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Save'**
+  String get profileSaveButton;
+
+  /// No description provided for @profileNamePlaceholder.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter name'**
+  String get profileNamePlaceholder;
+
+  /// No description provided for @profileBioPlaceholder.
+  ///
+  /// In en, this message translates to:
+  /// **'Tell us about yourself...'**
+  String get profileBioPlaceholder;
+
+  /// No description provided for @profileLocationPlaceholder.
+  ///
+  /// In en, this message translates to:
+  /// **'e.g. London'**
+  String get profileLocationPlaceholder;
+
+  /// No description provided for @profileMyPostsEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No Posts'**
+  String get profileMyPostsEmpty;
+
+  /// No description provided for @profileAcceptedTasks.
+  ///
+  /// In en, this message translates to:
+  /// **'Accepted'**
+  String get profileAcceptedTasks;
+
+  /// No description provided for @walletPointsBalance.
+  ///
+  /// In en, this message translates to:
+  /// **'Points Balance'**
+  String get walletPointsBalance;
+
+  /// No description provided for @walletTotalEarned.
+  ///
+  /// In en, this message translates to:
+  /// **'Total Earned'**
+  String get walletTotalEarned;
+
+  /// No description provided for @walletTotalSpent.
+  ///
+  /// In en, this message translates to:
+  /// **'Total Spent'**
+  String get walletTotalSpent;
+
+  /// No description provided for @walletPaymentAccount.
+  ///
+  /// In en, this message translates to:
+  /// **'Payment Account'**
+  String get walletPaymentAccount;
+
+  /// No description provided for @walletPayoutRecords.
+  ///
+  /// In en, this message translates to:
+  /// **'Payout Records'**
+  String get walletPayoutRecords;
+
+  /// No description provided for @walletTransactionRecords.
+  ///
+  /// In en, this message translates to:
+  /// **'Transactions'**
+  String get walletTransactionRecords;
+
+  /// No description provided for @walletNoTransactions.
+  ///
+  /// In en, this message translates to:
+  /// **'No Transactions'**
+  String get walletNoTransactions;
+
+  /// No description provided for @walletViewMore.
+  ///
+  /// In en, this message translates to:
+  /// **'View More Transactions'**
+  String get walletViewMore;
+
+  /// No description provided for @walletMyCoupons.
+  ///
+  /// In en, this message translates to:
+  /// **'My Coupons'**
+  String get walletMyCoupons;
+
+  /// No description provided for @walletNoCoupons.
+  ///
+  /// In en, this message translates to:
+  /// **'No Coupons'**
+  String get walletNoCoupons;
+
+  /// No description provided for @settingsGoLogin.
+  ///
+  /// In en, this message translates to:
+  /// **'Login'**
+  String get settingsGoLogin;
+
+  /// No description provided for @settingsThemeSystem.
+  ///
+  /// In en, this message translates to:
+  /// **'System'**
+  String get settingsThemeSystem;
+
+  /// No description provided for @settingsThemeLight.
+  ///
+  /// In en, this message translates to:
+  /// **'Light'**
+  String get settingsThemeLight;
+
+  /// No description provided for @settingsThemeDark.
+  ///
+  /// In en, this message translates to:
+  /// **'Dark'**
+  String get settingsThemeDark;
+
+  /// No description provided for @settingsLanguage.
+  ///
+  /// In en, this message translates to:
+  /// **'Language'**
+  String get settingsLanguage;
+
+  /// No description provided for @settingsPaymentReceiving.
+  ///
+  /// In en, this message translates to:
+  /// **'Payment & Receiving'**
+  String get settingsPaymentReceiving;
+
+  /// No description provided for @settingsExpenseManagement.
+  ///
+  /// In en, this message translates to:
+  /// **'Expense Management'**
+  String get settingsExpenseManagement;
+
+  /// No description provided for @settingsPaymentHistory.
+  ///
+  /// In en, this message translates to:
+  /// **'Payment History'**
+  String get settingsPaymentHistory;
+
+  /// No description provided for @settingsCookiePolicy.
+  ///
+  /// In en, this message translates to:
+  /// **'Cookie Policy'**
+  String get settingsCookiePolicy;
+
+  /// No description provided for @settingsEmail.
+  ///
+  /// In en, this message translates to:
+  /// **'Email'**
+  String get settingsEmail;
+
+  /// No description provided for @settingsOther.
+  ///
+  /// In en, this message translates to:
+  /// **'Other'**
+  String get settingsOther;
+
+  /// No description provided for @settingsClearCache.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear Cache'**
+  String get settingsClearCache;
+
+  /// No description provided for @settingsDangerZone.
+  ///
+  /// In en, this message translates to:
+  /// **'Danger Zone'**
+  String get settingsDangerZone;
+
+  /// No description provided for @couponPointsTab.
+  ///
+  /// In en, this message translates to:
+  /// **'Points'**
+  String get couponPointsTab;
+
+  /// No description provided for @couponCouponsTab.
+  ///
+  /// In en, this message translates to:
+  /// **'Coupons'**
+  String get couponCouponsTab;
+
+  /// No description provided for @couponCheckInTab.
+  ///
+  /// In en, this message translates to:
+  /// **'Check-in'**
+  String get couponCheckInTab;
+
+  /// No description provided for @couponRedeemReward.
+  ///
+  /// In en, this message translates to:
+  /// **'Redeem Reward'**
+  String get couponRedeemReward;
+
+  /// No description provided for @couponRedeemCode.
+  ///
+  /// In en, this message translates to:
+  /// **'Redeem Code'**
+  String get couponRedeemCode;
+
+  /// No description provided for @couponNoPointsRecords.
+  ///
+  /// In en, this message translates to:
+  /// **'No Points Records'**
+  String get couponNoPointsRecords;
+
+  /// No description provided for @couponEnterInviteCodeTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter Invite Code'**
+  String get couponEnterInviteCodeTitle;
+
+  /// No description provided for @couponEnterInviteCodeHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter invite code or redeem code'**
+  String get couponEnterInviteCodeHint;
+
+  /// No description provided for @couponNoCoupons.
+  ///
+  /// In en, this message translates to:
+  /// **'No Coupons'**
+  String get couponNoCoupons;
+
+  /// No description provided for @couponClaim.
+  ///
+  /// In en, this message translates to:
+  /// **'Claim'**
+  String get couponClaim;
+
+  /// No description provided for @customerServiceRateTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Rate Support'**
+  String get customerServiceRateTitle;
+
+  /// No description provided for @customerServiceRateHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Leave your feedback (optional)'**
+  String get customerServiceRateHint;
+
+  /// No description provided for @customerServiceEndTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'End Conversation'**
+  String get customerServiceEndTitle;
+
+  /// No description provided for @customerServiceEndMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Are you sure you want to end this conversation?'**
+  String get customerServiceEndMessage;
+
+  /// No description provided for @customerServiceEndButton.
+  ///
+  /// In en, this message translates to:
+  /// **'End'**
+  String get customerServiceEndButton;
+
+  /// No description provided for @customerServiceRefresh.
+  ///
+  /// In en, this message translates to:
+  /// **'Refresh'**
+  String get customerServiceRefresh;
+
+  /// No description provided for @notificationSystemTab.
+  ///
+  /// In en, this message translates to:
+  /// **'System'**
+  String get notificationSystemTab;
+
+  /// No description provided for @notificationInteractionTab.
+  ///
+  /// In en, this message translates to:
+  /// **'Interactions'**
+  String get notificationInteractionTab;
+
+  /// No description provided for @notificationTaskChatTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Task Chat'**
+  String get notificationTaskChatTitle;
+
+  /// No description provided for @notificationNoTaskChats.
+  ///
+  /// In en, this message translates to:
+  /// **'No Task Chats'**
+  String get notificationNoTaskChats;
+
+  /// No description provided for @onboardingWelcome.
+  ///
+  /// In en, this message translates to:
+  /// **'Welcome to Link²Ur'**
+  String get onboardingWelcome;
+
+  /// No description provided for @onboardingPublishTask.
+  ///
+  /// In en, this message translates to:
+  /// **'Post Tasks'**
+  String get onboardingPublishTask;
+
+  /// No description provided for @onboardingAcceptTask.
+  ///
+  /// In en, this message translates to:
+  /// **'Accept Tasks'**
+  String get onboardingAcceptTask;
+
+  /// No description provided for @onboardingSafePayment.
+  ///
+  /// In en, this message translates to:
+  /// **'Safe Payment'**
+  String get onboardingSafePayment;
+
+  /// No description provided for @onboardingSafePaymentSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Funds are protected'**
+  String get onboardingSafePaymentSubtitle;
+
+  /// No description provided for @onboardingCommunity.
+  ///
+  /// In en, this message translates to:
+  /// **'Community'**
+  String get onboardingCommunity;
+
+  /// No description provided for @searchTasks.
+  ///
+  /// In en, this message translates to:
+  /// **'Search Tasks'**
+  String get searchTasks;
+
+  /// No description provided for @searchFleaMarket.
+  ///
+  /// In en, this message translates to:
+  /// **'Search Items'**
+  String get searchFleaMarket;
+
+  /// No description provided for @searchForum.
+  ///
+  /// In en, this message translates to:
+  /// **'Search Posts'**
+  String get searchForum;
+
+  /// No description provided for @searchTasksTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Tasks'**
+  String get searchTasksTitle;
+
+  /// No description provided for @searchForumTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Forum'**
+  String get searchForumTitle;
+
+  /// No description provided for @searchFleaMarketTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Flea Market'**
+  String get searchFleaMarketTitle;
+
+  /// No description provided for @leaderboardRankLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Rank'**
+  String get leaderboardRankLabel;
+
+  /// No description provided for @taskExpertNotFound.
+  ///
+  /// In en, this message translates to:
+  /// **'Expert not found'**
+  String get taskExpertNotFound;
+
+  /// No description provided for @taskExpertCompletedOrders.
+  ///
+  /// In en, this message translates to:
+  /// **'Completed'**
+  String get taskExpertCompletedOrders;
+
+  /// No description provided for @taskExpertServices.
+  ///
+  /// In en, this message translates to:
+  /// **'Services'**
+  String get taskExpertServices;
+
+  /// No description provided for @taskExpertBook.
+  ///
+  /// In en, this message translates to:
+  /// **'Book'**
+  String get taskExpertBook;
+
+  /// No description provided for @createTaskDescPlaceholder.
+  ///
+  /// In en, this message translates to:
+  /// **'Describe task requirements in detail...'**
+  String get createTaskDescPlaceholder;
+
+  /// No description provided for @createTaskLocationPlaceholder.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter task location'**
+  String get createTaskLocationPlaceholder;
+
+  /// No description provided for @createTaskPublish.
+  ///
+  /// In en, this message translates to:
+  /// **'Publish Task'**
+  String get createTaskPublish;
+
+  /// No description provided for @infoFAQTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'FAQ'**
+  String get infoFAQTitle;
+
+  /// No description provided for @infoAboutTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'About'**
+  String get infoAboutTitle;
+
+  /// No description provided for @infoFAQAccountTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Account'**
+  String get infoFAQAccountTitle;
+
+  /// No description provided for @infoFAQTaskTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Tasks'**
+  String get infoFAQTaskTitle;
+
+  /// No description provided for @infoFAQPaymentTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Payment & Security'**
+  String get infoFAQPaymentTitle;
+
+  /// No description provided for @infoTermsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Terms of Service'**
+  String get infoTermsTitle;
+
+  /// No description provided for @infoPrivacyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Privacy Policy'**
+  String get infoPrivacyTitle;
+
+  /// No description provided for @infoCookieTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Cookie Policy'**
+  String get infoCookieTitle;
+
+  /// No description provided for @infoVipCenter.
+  ///
+  /// In en, this message translates to:
+  /// **'VIP Center'**
+  String get infoVipCenter;
+
+  /// No description provided for @infoVipPriority.
+  ///
+  /// In en, this message translates to:
+  /// **'Priority Orders'**
+  String get infoVipPriority;
+
+  /// No description provided for @infoVipBadge.
+  ///
+  /// In en, this message translates to:
+  /// **'VIP Badge'**
+  String get infoVipBadge;
+
+  /// No description provided for @infoVipFeeReduction.
+  ///
+  /// In en, this message translates to:
+  /// **'Fee Reduction'**
+  String get infoVipFeeReduction;
+
+  /// No description provided for @infoVipCustomerService.
+  ///
+  /// In en, this message translates to:
+  /// **'VIP Support'**
+  String get infoVipCustomerService;
+
+  /// No description provided for @infoVipPointsBoost.
+  ///
+  /// In en, this message translates to:
+  /// **'Points Boost'**
+  String get infoVipPointsBoost;
+
+  /// No description provided for @infoVipSubscribe.
+  ///
+  /// In en, this message translates to:
+  /// **'Subscribe to VIP'**
+  String get infoVipSubscribe;
+
+  /// No description provided for @infoVipPriorityRecommend.
+  ///
+  /// In en, this message translates to:
+  /// **'Priority Listing'**
+  String get infoVipPriorityRecommend;
+
+  /// No description provided for @infoVipBadgeLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'VIP Badge'**
+  String get infoVipBadgeLabel;
+
+  /// No description provided for @infoVipFeeDiscount.
+  ///
+  /// In en, this message translates to:
+  /// **'Fee Discount'**
+  String get infoVipFeeDiscount;
+
+  /// No description provided for @infoVipExclusiveCoupon.
+  ///
+  /// In en, this message translates to:
+  /// **'Exclusive Coupons'**
+  String get infoVipExclusiveCoupon;
+
+  /// No description provided for @infoVipDataAnalytics.
+  ///
+  /// In en, this message translates to:
+  /// **'Data Analytics'**
+  String get infoVipDataAnalytics;
+
+  /// No description provided for @infoVipMonthly.
+  ///
+  /// In en, this message translates to:
+  /// **'Monthly'**
+  String get infoVipMonthly;
+
+  /// No description provided for @infoVipYearly.
+  ///
+  /// In en, this message translates to:
+  /// **'Yearly'**
+  String get infoVipYearly;
+
+  /// No description provided for @vipPurchaseConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm'**
+  String get vipPurchaseConfirm;
+
+  /// No description provided for @vipPurchaseRestoreMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Purchase history checked. Active subscriptions will be restored automatically.'**
+  String get vipPurchaseRestoreMessage;
+
+  /// No description provided for @vipPurchaseNoPlans.
+  ///
+  /// In en, this message translates to:
+  /// **'No VIP plans available'**
+  String get vipPurchaseNoPlans;
+
+  /// No description provided for @vipPurchaseReload.
+  ///
+  /// In en, this message translates to:
+  /// **'Reload'**
+  String get vipPurchaseReload;
+
+  /// No description provided for @homeSecondHandMarket.
+  ///
+  /// In en, this message translates to:
+  /// **'Second-hand Market'**
+  String get homeSecondHandMarket;
+
+  /// No description provided for @homeSecondHandSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Pre-owned items at great prices'**
+  String get homeSecondHandSubtitle;
+
+  /// No description provided for @homeStudentVerification.
+  ///
+  /// In en, this message translates to:
+  /// **'Student Verification'**
+  String get homeStudentVerification;
+
+  /// No description provided for @homeStudentVerificationSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Verify to unlock more benefits'**
+  String get homeStudentVerificationSubtitle;
+
+  /// No description provided for @homeBecomeExpert.
+  ///
+  /// In en, this message translates to:
+  /// **'Become an Expert'**
+  String get homeBecomeExpert;
+
+  /// No description provided for @homeBecomeExpertSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Showcase skills, get more opportunities'**
+  String get homeBecomeExpertSubtitle;
+
+  /// No description provided for @homeNewUserReward.
+  ///
+  /// In en, this message translates to:
+  /// **'New User Reward'**
+  String get homeNewUserReward;
+
+  /// No description provided for @homeNewUserRewardSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Complete first order to earn'**
+  String get homeNewUserRewardSubtitle;
+
+  /// No description provided for @homeInviteFriends.
+  ///
+  /// In en, this message translates to:
+  /// **'Invite Friends'**
+  String get homeInviteFriends;
+
+  /// No description provided for @homeInviteFriendsSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Invite friends to earn points'**
+  String get homeInviteFriendsSubtitle;
+
+  /// No description provided for @homeDailyCheckIn.
+  ///
+  /// In en, this message translates to:
+  /// **'Daily Check-in'**
+  String get homeDailyCheckIn;
+
+  /// No description provided for @homeDailyCheckInSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Check in daily for rewards'**
+  String get homeDailyCheckInSubtitle;
+
+  /// No description provided for @homeCampusLife.
+  ///
+  /// In en, this message translates to:
+  /// **'Campus Life Sharing'**
+  String get homeCampusLife;
+
+  /// No description provided for @homeUsedBooks.
+  ///
+  /// In en, this message translates to:
+  /// **'Used Books for Sale'**
+  String get homeUsedBooks;
+
+  /// No description provided for @homeWeeklyExperts.
+  ///
+  /// In en, this message translates to:
+  /// **'Weekly Expert Leaderboard'**
+  String get homeWeeklyExperts;
+
+  /// No description provided for @homeLoadNearbyTasks.
+  ///
+  /// In en, this message translates to:
+  /// **'Load Nearby Tasks'**
+  String get homeLoadNearbyTasks;
+
+  /// No description provided for @homeBrowseExperts.
+  ///
+  /// In en, this message translates to:
+  /// **'Browse Experts'**
+  String get homeBrowseExperts;
+
+  /// No description provided for @mainPublishFleaMarket.
+  ///
+  /// In en, this message translates to:
+  /// **'List Item'**
+  String get mainPublishFleaMarket;
+
+  /// No description provided for @linkCopied.
+  ///
+  /// In en, this message translates to:
+  /// **'Link copied'**
+  String get linkCopied;
+
+  /// No description provided for @paymentAlipaySymbol.
+  ///
+  /// In en, this message translates to:
+  /// **'A'**
+  String get paymentAlipaySymbol;
+
+  /// No description provided for @authResendCountdown.
+  ///
+  /// In en, this message translates to:
+  /// **'Resend in {countdown}s'**
+  String authResendCountdown(int countdown);
+
+  /// No description provided for @authPasswordsDoNotMatch.
+  ///
+  /// In en, this message translates to:
+  /// **'Passwords do not match'**
+  String get authPasswordsDoNotMatch;
+
+  /// No description provided for @authPleaseEnterEmail.
+  ///
+  /// In en, this message translates to:
+  /// **'Please enter your email'**
+  String get authPleaseEnterEmail;
+
+  /// No description provided for @authEmailFormatInvalid.
+  ///
+  /// In en, this message translates to:
+  /// **'Invalid email format'**
+  String get authEmailFormatInvalid;
+
+  /// No description provided for @authResetPasswordDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter your registered email and we will send a verification code to help you reset your password.'**
+  String get authResetPasswordDesc;
+
+  /// No description provided for @authCreateAccount.
+  ///
+  /// In en, this message translates to:
+  /// **'Create Account'**
+  String get authCreateAccount;
+
+  /// No description provided for @authAlreadyHaveAccount.
+  ///
+  /// In en, this message translates to:
+  /// **'Already have an account?'**
+  String get authAlreadyHaveAccount;
+
+  /// No description provided for @authNewPassword.
+  ///
+  /// In en, this message translates to:
+  /// **'New Password'**
+  String get authNewPassword;
+
+  /// No description provided for @authEnterNewPassword.
+  ///
+  /// In en, this message translates to:
+  /// **'Please enter a new password'**
+  String get authEnterNewPassword;
+
+  /// No description provided for @authPasswordMinLength.
+  ///
+  /// In en, this message translates to:
+  /// **'Password must be at least 8 characters'**
+  String get authPasswordMinLength;
+
+  /// No description provided for @authConfirmNewPassword.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm New Password'**
+  String get authConfirmNewPassword;
+
+  /// No description provided for @authForgotPasswordQuestion.
+  ///
+  /// In en, this message translates to:
+  /// **'Forgot password?'**
+  String get authForgotPasswordQuestion;
+
+  /// No description provided for @authRegisterNewAccount.
+  ///
+  /// In en, this message translates to:
+  /// **'Create account'**
+  String get authRegisterNewAccount;
+
+  /// No description provided for @authRegisterSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Join Link²Ur, start exchanging skills'**
+  String get authRegisterSubtitle;
+
+  /// No description provided for @homeLoadFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to load'**
+  String get homeLoadFailed;
+
+  /// No description provided for @homePublishTask.
+  ///
+  /// In en, this message translates to:
+  /// **'Post Task'**
+  String get homePublishTask;
+
+  /// No description provided for @homeDeadlineExpired.
+  ///
+  /// In en, this message translates to:
+  /// **'Expired'**
+  String get homeDeadlineExpired;
+
+  /// No description provided for @homeDeadlineDays.
+  ///
+  /// In en, this message translates to:
+  /// **'{days}d left'**
+  String homeDeadlineDays(int days);
+
+  /// No description provided for @homeDeadlineHours.
+  ///
+  /// In en, this message translates to:
+  /// **'{hours}h left'**
+  String homeDeadlineHours(int hours);
+
+  /// No description provided for @homeDeadlineMinutes.
+  ///
+  /// In en, this message translates to:
+  /// **'{minutes}m left'**
+  String homeDeadlineMinutes(int minutes);
+
+  /// No description provided for @homeDefaultUser.
+  ///
+  /// In en, this message translates to:
+  /// **'User'**
+  String get homeDefaultUser;
+
+  /// No description provided for @homeClassmate.
+  ///
+  /// In en, this message translates to:
+  /// **'Student'**
+  String get homeClassmate;
+
+  /// No description provided for @homePostedNewPost.
+  ///
+  /// In en, this message translates to:
+  /// **'posted a new topic'**
+  String get homePostedNewPost;
+
+  /// No description provided for @homePostedNewProduct.
+  ///
+  /// In en, this message translates to:
+  /// **'listed a new item'**
+  String get homePostedNewProduct;
+
+  /// No description provided for @homeSystemUser.
+  ///
+  /// In en, this message translates to:
+  /// **'System'**
+  String get homeSystemUser;
+
+  /// No description provided for @homeCreatedLeaderboard.
+  ///
+  /// In en, this message translates to:
+  /// **'created a new leaderboard'**
+  String get homeCreatedLeaderboard;
+
+  /// No description provided for @homeCampusLifeDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Sharing my campus life'**
+  String get homeCampusLifeDesc;
+
+  /// No description provided for @homeSearchCategory.
+  ///
+  /// In en, this message translates to:
+  /// **'Search categories'**
+  String get homeSearchCategory;
+
+  /// No description provided for @homeSearchTasks.
+  ///
+  /// In en, this message translates to:
+  /// **'Search tasks'**
+  String get homeSearchTasks;
+
+  /// No description provided for @homeSearchFleaMarket.
+  ///
+  /// In en, this message translates to:
+  /// **'Search marketplace'**
+  String get homeSearchFleaMarket;
+
+  /// No description provided for @homeSearchPosts.
+  ///
+  /// In en, this message translates to:
+  /// **'Search posts'**
+  String get homeSearchPosts;
+
+  /// No description provided for @homeSearchQueryResult.
+  ///
+  /// In en, this message translates to:
+  /// **'Search \"{query}\"'**
+  String homeSearchQueryResult(String query);
+
+  /// No description provided for @homePressEnterToSearch.
+  ///
+  /// In en, this message translates to:
+  /// **'Press Enter to search'**
+  String get homePressEnterToSearch;
+
+  /// No description provided for @taskCategoryPickup.
+  ///
+  /// In en, this message translates to:
+  /// **'Pickup'**
+  String get taskCategoryPickup;
+
+  /// No description provided for @taskCategoryTutoring.
+  ///
+  /// In en, this message translates to:
+  /// **'Tutoring'**
+  String get taskCategoryTutoring;
+
+  /// No description provided for @taskCategoryMoving.
+  ///
+  /// In en, this message translates to:
+  /// **'Moving'**
+  String get taskCategoryMoving;
+
+  /// No description provided for @taskCategoryPurchasing.
+  ///
+  /// In en, this message translates to:
+  /// **'Purchasing'**
+  String get taskCategoryPurchasing;
+
+  /// No description provided for @taskCategoryDogWalking.
+  ///
+  /// In en, this message translates to:
+  /// **'Dog Walking'**
+  String get taskCategoryDogWalking;
+
+  /// No description provided for @taskCategoryTranslation.
+  ///
+  /// In en, this message translates to:
+  /// **'Translation'**
+  String get taskCategoryTranslation;
+
+  /// No description provided for @taskCategoryPhotography.
+  ///
+  /// In en, this message translates to:
+  /// **'Photography'**
+  String get taskCategoryPhotography;
+
+  /// No description provided for @taskCategoryTutor.
+  ///
+  /// In en, this message translates to:
+  /// **'Tutoring'**
+  String get taskCategoryTutor;
+
+  /// No description provided for @taskDetailProcessing.
+  ///
+  /// In en, this message translates to:
+  /// **'Processing...'**
+  String get taskDetailProcessing;
+
+  /// No description provided for @taskDetailApplyForTask.
+  ///
+  /// In en, this message translates to:
+  /// **'Apply'**
+  String get taskDetailApplyForTask;
+
+  /// No description provided for @taskDetailCancelApplication.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel Application'**
+  String get taskDetailCancelApplication;
+
+  /// No description provided for @taskDetailCompleteTask.
+  ///
+  /// In en, this message translates to:
+  /// **'Complete Task'**
+  String get taskDetailCompleteTask;
+
+  /// No description provided for @taskDetailParticipantCount.
+  ///
+  /// In en, this message translates to:
+  /// **'Participants'**
+  String get taskDetailParticipantCount;
+
+  /// No description provided for @taskSortBy.
+  ///
+  /// In en, this message translates to:
+  /// **'Sort by'**
+  String get taskSortBy;
+
+  /// No description provided for @taskSortLatest.
+  ///
+  /// In en, this message translates to:
+  /// **'Latest'**
+  String get taskSortLatest;
+
+  /// No description provided for @taskSortHighestPay.
+  ///
+  /// In en, this message translates to:
+  /// **'Highest Pay'**
+  String get taskSortHighestPay;
+
+  /// No description provided for @taskSortNearDeadline.
+  ///
+  /// In en, this message translates to:
+  /// **'Near Deadline'**
+  String get taskSortNearDeadline;
+
+  /// No description provided for @taskDeadlineExpired.
+  ///
+  /// In en, this message translates to:
+  /// **'Expired'**
+  String get taskDeadlineExpired;
+
+  /// No description provided for @taskDeadlineMinutes.
+  ///
+  /// In en, this message translates to:
+  /// **'{minutes}m left'**
+  String taskDeadlineMinutes(int minutes);
+
+  /// No description provided for @taskDeadlineHours.
+  ///
+  /// In en, this message translates to:
+  /// **'{hours}h left'**
+  String taskDeadlineHours(int hours);
+
+  /// No description provided for @taskDeadlineDays.
+  ///
+  /// In en, this message translates to:
+  /// **'{days}d left'**
+  String taskDeadlineDays(int days);
+
+  /// No description provided for @taskDeadlineDate.
+  ///
+  /// In en, this message translates to:
+  /// **'{month}/{day} deadline'**
+  String taskDeadlineDate(int month, int day);
+
+  /// No description provided for @taskCategoryHousekeepingLife.
+  ///
+  /// In en, this message translates to:
+  /// **'Housekeeping'**
+  String get taskCategoryHousekeepingLife;
+
+  /// No description provided for @createTaskType.
+  ///
+  /// In en, this message translates to:
+  /// **'Task Type'**
+  String get createTaskType;
+
+  /// No description provided for @createTaskTitleField.
+  ///
+  /// In en, this message translates to:
+  /// **'Task Title'**
+  String get createTaskTitleField;
+
+  /// No description provided for @createTaskTitleHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter task title'**
+  String get createTaskTitleHint;
+
+  /// No description provided for @createTaskDescHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Describe task requirements in detail...'**
+  String get createTaskDescHint;
+
+  /// No description provided for @createTaskLocation.
+  ///
+  /// In en, this message translates to:
+  /// **'Location'**
+  String get createTaskLocation;
+
+  /// No description provided for @createTaskLocationHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter task location'**
+  String get createTaskLocationHint;
+
+  /// No description provided for @createTaskDeadline.
+  ///
+  /// In en, this message translates to:
+  /// **'Deadline'**
+  String get createTaskDeadline;
+
+  /// No description provided for @createTaskSelectDeadline.
+  ///
+  /// In en, this message translates to:
+  /// **'Select deadline'**
+  String get createTaskSelectDeadline;
+
+  /// No description provided for @createTaskCategoryDelivery.
+  ///
+  /// In en, this message translates to:
+  /// **'Delivery'**
+  String get createTaskCategoryDelivery;
+
+  /// No description provided for @createTaskCategoryShopping.
+  ///
+  /// In en, this message translates to:
+  /// **'Shopping'**
+  String get createTaskCategoryShopping;
+
+  /// No description provided for @createTaskCategoryTutoring.
+  ///
+  /// In en, this message translates to:
+  /// **'Tutoring'**
+  String get createTaskCategoryTutoring;
+
+  /// No description provided for @createTaskCategoryTranslation.
+  ///
+  /// In en, this message translates to:
+  /// **'Translation'**
+  String get createTaskCategoryTranslation;
+
+  /// No description provided for @createTaskCategoryDesign.
+  ///
+  /// In en, this message translates to:
+  /// **'Design'**
+  String get createTaskCategoryDesign;
+
+  /// No description provided for @createTaskCategoryProgramming.
+  ///
+  /// In en, this message translates to:
+  /// **'Programming'**
+  String get createTaskCategoryProgramming;
+
+  /// No description provided for @createTaskCategoryWriting.
+  ///
+  /// In en, this message translates to:
+  /// **'Writing'**
+  String get createTaskCategoryWriting;
+
+  /// No description provided for @createTaskCategoryOther.
+  ///
+  /// In en, this message translates to:
+  /// **'Other'**
+  String get createTaskCategoryOther;
+
+  /// No description provided for @taskDetailNoImages.
+  ///
+  /// In en, this message translates to:
+  /// **'No images'**
+  String get taskDetailNoImages;
+
+  /// No description provided for @forumUserFallback.
+  ///
+  /// In en, this message translates to:
+  /// **'User {userId}'**
+  String forumUserFallback(String userId);
+
+  /// No description provided for @forumNoLeaderboard.
+  ///
+  /// In en, this message translates to:
+  /// **'No leaderboard'**
+  String get forumNoLeaderboard;
+
+  /// No description provided for @forumNoLeaderboardMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'No leaderboard available'**
+  String get forumNoLeaderboardMessage;
+
+  /// No description provided for @forumNoPostsHint.
+  ///
+  /// In en, this message translates to:
+  /// **'No posts yet. Tap below to create the first one!'**
+  String get forumNoPostsHint;
+
+  /// No description provided for @forumEnterTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter title'**
+  String get forumEnterTitle;
+
+  /// No description provided for @forumShareThoughts.
+  ///
+  /// In en, this message translates to:
+  /// **'Share your thoughts...'**
+  String get forumShareThoughts;
+
+  /// No description provided for @forumSelectCategory.
+  ///
+  /// In en, this message translates to:
+  /// **'Select category'**
+  String get forumSelectCategory;
+
+  /// No description provided for @settingsPleaseLoginFirst.
+  ///
+  /// In en, this message translates to:
+  /// **'Please login first'**
+  String get settingsPleaseLoginFirst;
+
+  /// No description provided for @settingsUnknown.
+  ///
+  /// In en, this message translates to:
+  /// **'Unknown'**
+  String get settingsUnknown;
+
+  /// No description provided for @settingsLoading.
+  ///
+  /// In en, this message translates to:
+  /// **'Loading...'**
+  String get settingsLoading;
+
+  /// No description provided for @settingsNotBound.
+  ///
+  /// In en, this message translates to:
+  /// **'Not linked'**
+  String get settingsNotBound;
+
+  /// No description provided for @settingsChinese.
+  ///
+  /// In en, this message translates to:
+  /// **'Chinese'**
+  String get settingsChinese;
+
+  /// No description provided for @walletPayoutAccount.
+  ///
+  /// In en, this message translates to:
+  /// **'Payout Account'**
+  String get walletPayoutAccount;
+
+  /// No description provided for @walletActivated.
+  ///
+  /// In en, this message translates to:
+  /// **'Activated, ready to receive'**
+  String get walletActivated;
+
+  /// No description provided for @walletConnectedPending.
+  ///
+  /// In en, this message translates to:
+  /// **'Connected, pending activation'**
+  String get walletConnectedPending;
+
+  /// No description provided for @walletNotConnected.
+  ///
+  /// In en, this message translates to:
+  /// **'Not connected'**
+  String get walletNotConnected;
+
+  /// No description provided for @walletActivatedShort.
+  ///
+  /// In en, this message translates to:
+  /// **'Activated'**
+  String get walletActivatedShort;
+
+  /// No description provided for @walletPendingActivation.
+  ///
+  /// In en, this message translates to:
+  /// **'Pending'**
+  String get walletPendingActivation;
+
+  /// No description provided for @walletNotConnectedShort.
+  ///
+  /// In en, this message translates to:
+  /// **'Not connected'**
+  String get walletNotConnectedShort;
+
+  /// No description provided for @walletViewAccountDetail.
+  ///
+  /// In en, this message translates to:
+  /// **'View account details'**
+  String get walletViewAccountDetail;
+
+  /// No description provided for @walletSetupPayoutAccount.
+  ///
+  /// In en, this message translates to:
+  /// **'Setup payout account'**
+  String get walletSetupPayoutAccount;
+
+  /// No description provided for @walletPayoutRecordsFull.
+  ///
+  /// In en, this message translates to:
+  /// **'Payout Records'**
+  String get walletPayoutRecordsFull;
+
+  /// No description provided for @walletWithdrawalRecords.
+  ///
+  /// In en, this message translates to:
+  /// **'Withdrawal Records'**
+  String get walletWithdrawalRecords;
+
+  /// No description provided for @walletTransactionHistory.
+  ///
+  /// In en, this message translates to:
+  /// **'Transaction History'**
+  String get walletTransactionHistory;
+
+  /// No description provided for @walletTransactionsDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Your points transaction history will appear here'**
+  String get walletTransactionsDesc;
+
+  /// No description provided for @walletNoCouponsDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'You don\'t have any coupons'**
+  String get walletNoCouponsDesc;
+
+  /// No description provided for @walletToday.
+  ///
+  /// In en, this message translates to:
+  /// **'Today'**
+  String get walletToday;
+
+  /// No description provided for @walletYesterday.
+  ///
+  /// In en, this message translates to:
+  /// **'Yesterday'**
+  String get walletYesterday;
+
+  /// No description provided for @walletCheckingIn.
+  ///
+  /// In en, this message translates to:
+  /// **'Checking in...'**
+  String get walletCheckingIn;
+
+  /// No description provided for @walletDailyCheckIn.
+  ///
+  /// In en, this message translates to:
+  /// **'Daily Check-in'**
+  String get walletDailyCheckIn;
+
+  /// No description provided for @myTasksTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'My Tasks'**
+  String get myTasksTitle;
+
+  /// No description provided for @myTasksAccepted.
+  ///
+  /// In en, this message translates to:
+  /// **'Accepted'**
+  String get myTasksAccepted;
+
+  /// No description provided for @myTasksPosted.
+  ///
+  /// In en, this message translates to:
+  /// **'Posted'**
+  String get myTasksPosted;
+
+  /// No description provided for @myTasksGoAccept.
+  ///
+  /// In en, this message translates to:
+  /// **'Browse Tasks'**
+  String get myTasksGoAccept;
+
+  /// No description provided for @profileBio.
+  ///
+  /// In en, this message translates to:
+  /// **'Bio'**
+  String get profileBio;
+
+  /// No description provided for @profileBioHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Tell us about yourself...'**
+  String get profileBioHint;
+
+  /// No description provided for @profileCity.
+  ///
+  /// In en, this message translates to:
+  /// **'City'**
+  String get profileCity;
+
+  /// No description provided for @profileCityHint.
+  ///
+  /// In en, this message translates to:
+  /// **'e.g. London'**
+  String get profileCityHint;
+
+  /// No description provided for @profileNameRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Please enter your name'**
+  String get profileNameRequired;
+
+  /// No description provided for @profileNameMinLength.
+  ///
+  /// In en, this message translates to:
+  /// **'Name must be at least 3 characters'**
+  String get profileNameMinLength;
+
+  /// No description provided for @profileAnonymousUser.
+  ///
+  /// In en, this message translates to:
+  /// **'Anonymous'**
+  String get profileAnonymousUser;
+
+  /// No description provided for @myPostsEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No posts'**
+  String get myPostsEmpty;
+
+  /// No description provided for @myPostsEmptyDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'You haven\'t posted anything yet'**
+  String get myPostsEmptyDesc;
+
+  /// No description provided for @fleaMarketSold.
+  ///
+  /// In en, this message translates to:
+  /// **'Sold'**
+  String get fleaMarketSold;
+
+  /// No description provided for @fleaMarketDelisted.
+  ///
+  /// In en, this message translates to:
+  /// **'Delisted'**
+  String get fleaMarketDelisted;
+
+  /// No description provided for @fleaMarketCategoryAll.
+  ///
+  /// In en, this message translates to:
+  /// **'All'**
+  String get fleaMarketCategoryAll;
+
+  /// No description provided for @fleaMarketCategoryDailyUse.
+  ///
+  /// In en, this message translates to:
+  /// **'Daily Use'**
+  String get fleaMarketCategoryDailyUse;
+
+  /// No description provided for @fleaMarketImageSelectFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to select image'**
+  String get fleaMarketImageSelectFailed;
+
+  /// No description provided for @fleaMarketTitleMinLength.
+  ///
+  /// In en, this message translates to:
+  /// **'Title must be at least 2 characters'**
+  String get fleaMarketTitleMinLength;
+
+  /// No description provided for @fleaMarketTitleRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Please enter a title'**
+  String get fleaMarketTitleRequired;
+
+  /// No description provided for @fleaMarketDescOptional.
+  ///
+  /// In en, this message translates to:
+  /// **'Description (optional)'**
+  String get fleaMarketDescOptional;
+
+  /// No description provided for @fleaMarketDescHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Describe your item...'**
+  String get fleaMarketDescHint;
+
+  /// No description provided for @fleaMarketLocationOptional.
+  ///
+  /// In en, this message translates to:
+  /// **'Location (optional)'**
+  String get fleaMarketLocationOptional;
+
+  /// No description provided for @fleaMarketLocationHint.
+  ///
+  /// In en, this message translates to:
+  /// **'e.g. Campus North Gate'**
+  String get fleaMarketLocationHint;
+
+  /// No description provided for @fleaMarketPriceRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Please enter a price'**
+  String get fleaMarketPriceRequired;
+
+  /// No description provided for @fleaMarketCategoryLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Category'**
+  String get fleaMarketCategoryLabel;
+
+  /// No description provided for @fleaMarketNoItemsHint.
+  ///
+  /// In en, this message translates to:
+  /// **'No items yet. Tap below to list the first one!'**
+  String get fleaMarketNoItemsHint;
+
+  /// No description provided for @chatNoMessages.
+  ///
+  /// In en, this message translates to:
+  /// **'No messages yet. Start a conversation!'**
+  String get chatNoMessages;
+
+  /// No description provided for @chatInProgress.
+  ///
+  /// In en, this message translates to:
+  /// **'In Progress'**
+  String get chatInProgress;
+
+  /// No description provided for @chatTaskCompletedConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Task completed, please confirm.'**
+  String get chatTaskCompletedConfirm;
+
+  /// No description provided for @chatHasIssueMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'I encountered some issues:'**
+  String get chatHasIssueMessage;
+
+  /// No description provided for @activityCheckLater.
+  ///
+  /// In en, this message translates to:
+  /// **'Check back later'**
+  String get activityCheckLater;
+
+  /// No description provided for @activityNoAvailableActivities.
+  ///
+  /// In en, this message translates to:
+  /// **'No activities available yet'**
+  String get activityNoAvailableActivities;
+
+  /// No description provided for @activityRegisterSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Registration successful'**
+  String get activityRegisterSuccess;
+
+  /// No description provided for @activityRegisterFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Registration failed'**
+  String get activityRegisterFailed;
+
+  /// No description provided for @activityRegisterNow.
+  ///
+  /// In en, this message translates to:
+  /// **'Register Now'**
+  String get activityRegisterNow;
+
+  /// No description provided for @activityRegistered.
+  ///
+  /// In en, this message translates to:
+  /// **'Registered'**
+  String get activityRegistered;
+
+  /// No description provided for @activityFullSlots.
+  ///
+  /// In en, this message translates to:
+  /// **'Full'**
+  String get activityFullSlots;
+
+  /// No description provided for @activityCancelled.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancelled'**
+  String get activityCancelled;
+
+  /// No description provided for @activityInProgress.
+  ///
+  /// In en, this message translates to:
+  /// **'In Progress'**
+  String get activityInProgress;
+
+  /// No description provided for @activityFree.
+  ///
+  /// In en, this message translates to:
+  /// **'Free'**
+  String get activityFree;
+
+  /// No description provided for @activityCash.
+  ///
+  /// In en, this message translates to:
+  /// **'Cash'**
+  String get activityCash;
+
+  /// No description provided for @activityPointsReward.
+  ///
+  /// In en, this message translates to:
+  /// **'Points'**
+  String get activityPointsReward;
+
+  /// No description provided for @activityCashAndPoints.
+  ///
+  /// In en, this message translates to:
+  /// **'Cash + Points'**
+  String get activityCashAndPoints;
+
+  /// No description provided for @activityInfo.
+  ///
+  /// In en, this message translates to:
+  /// **'Activity Info'**
+  String get activityInfo;
+
+  /// No description provided for @activityPublisher.
+  ///
+  /// In en, this message translates to:
+  /// **'Publisher'**
+  String get activityPublisher;
+
+  /// No description provided for @activityViewExpertProfileShort.
+  ///
+  /// In en, this message translates to:
+  /// **'View Expert Profile'**
+  String get activityViewExpertProfileShort;
+
+  /// No description provided for @activityParticipantsCount.
+  ///
+  /// In en, this message translates to:
+  /// **'Participants'**
+  String get activityParticipantsCount;
+
+  /// No description provided for @activityStatusLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Status'**
+  String get activityStatusLabel;
+
+  /// No description provided for @activityPersonCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{current}/{max}'**
+  String activityPersonCount(int current, int max);
+
+  /// No description provided for @leaderboardNoLeaderboards.
+  ///
+  /// In en, this message translates to:
+  /// **'No leaderboards'**
+  String get leaderboardNoLeaderboards;
+
+  /// No description provided for @leaderboardNoLeaderboardsMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'No leaderboards available'**
+  String get leaderboardNoLeaderboardsMessage;
+
+  /// No description provided for @leaderboardNoCompetitorsHint.
+  ///
+  /// In en, this message translates to:
+  /// **'No competitors yet. Tap below to submit the first one!'**
+  String get leaderboardNoCompetitorsHint;
+
+  /// No description provided for @leaderboardNetVotesCount.
+  ///
+  /// In en, this message translates to:
+  /// **'Net {count}'**
+  String leaderboardNetVotesCount(int count);
+
+  /// No description provided for @leaderboardDetails.
+  ///
+  /// In en, this message translates to:
+  /// **'Details'**
+  String get leaderboardDetails;
+
+  /// No description provided for @leaderboardCompletedCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} completed'**
+  String leaderboardCompletedCount(int count);
+
+  /// No description provided for @notificationSystemNotifications.
+  ///
+  /// In en, this message translates to:
+  /// **'System'**
+  String get notificationSystemNotifications;
+
+  /// No description provided for @notificationInteractionMessages.
+  ///
+  /// In en, this message translates to:
+  /// **'Interactions'**
+  String get notificationInteractionMessages;
+
+  /// No description provided for @notificationNoTaskChatDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Accept or post a task to start chatting'**
+  String get notificationNoTaskChatDesc;
+
+  /// No description provided for @taskExpertDetailTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Expert Details'**
+  String get taskExpertDetailTitle;
+
+  /// No description provided for @taskExpertExpertNotExist.
+  ///
+  /// In en, this message translates to:
+  /// **'Expert not found'**
+  String get taskExpertExpertNotExist;
+
+  /// No description provided for @taskExpertExpertNotExistDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'This expert does not exist or has been removed'**
+  String get taskExpertExpertNotExistDesc;
+
+  /// No description provided for @taskExpertBio.
+  ///
+  /// In en, this message translates to:
+  /// **'Bio'**
+  String get taskExpertBio;
+
+  /// No description provided for @taskExpertProvidedServices.
+  ///
+  /// In en, this message translates to:
+  /// **'Services Provided'**
+  String get taskExpertProvidedServices;
+
+  /// No description provided for @taskExpertNoServicesDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'This expert hasn\'t listed any services yet'**
+  String get taskExpertNoServicesDesc;
+
+  /// No description provided for @taskExpertAccepted.
+  ///
+  /// In en, this message translates to:
+  /// **'Accepted'**
+  String get taskExpertAccepted;
+
+  /// No description provided for @taskExpertRejected.
+  ///
+  /// In en, this message translates to:
+  /// **'Rejected'**
+  String get taskExpertRejected;
+
+  /// No description provided for @taskExpertAppliedStatus.
+  ///
+  /// In en, this message translates to:
+  /// **'Applied'**
+  String get taskExpertAppliedStatus;
+
+  /// No description provided for @taskExpertServiceCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} services'**
+  String taskExpertServiceCount(int count);
+
+  /// No description provided for @taskExpertShareTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Share Expert - {name}'**
+  String taskExpertShareTitle(String name);
+
+  /// No description provided for @taskExpertShareText.
+  ///
+  /// In en, this message translates to:
+  /// **'Check out this expert: {name}'**
+  String taskExpertShareText(String name);
+
+  /// No description provided for @infoFAQAccountQ1.
+  ///
+  /// In en, this message translates to:
+  /// **'How do I register an account?'**
+  String get infoFAQAccountQ1;
+
+  /// No description provided for @infoFAQAccountA1.
+  ///
+  /// In en, this message translates to:
+  /// **'You can register using your email address or phone number. Click \'Register\' on the login page and follow the instructions.'**
+  String get infoFAQAccountA1;
+
+  /// No description provided for @infoFAQAccountQ2.
+  ///
+  /// In en, this message translates to:
+  /// **'How do I reset my password?'**
+  String get infoFAQAccountQ2;
+
+  /// No description provided for @infoFAQAccountA2.
+  ///
+  /// In en, this message translates to:
+  /// **'Click \'Forgot Password\' on the login page, enter your registered email and follow the verification steps to reset it.'**
+  String get infoFAQAccountA2;
+
+  /// No description provided for @infoFAQAccountQ3.
+  ///
+  /// In en, this message translates to:
+  /// **'How do I edit my profile?'**
+  String get infoFAQAccountQ3;
+
+  /// No description provided for @infoFAQAccountA3.
+  ///
+  /// In en, this message translates to:
+  /// **'Go to Profile > Edit Profile to update your avatar, nickname, bio and other information.'**
+  String get infoFAQAccountA3;
+
+  /// No description provided for @infoFAQAccountQ4.
+  ///
+  /// In en, this message translates to:
+  /// **'How do I delete my account?'**
+  String get infoFAQAccountQ4;
+
+  /// No description provided for @infoFAQAccountA4.
+  ///
+  /// In en, this message translates to:
+  /// **'Go to Settings > Account Security > Delete Account. Please note this action is irreversible.'**
+  String get infoFAQAccountA4;
+
+  /// No description provided for @infoFAQTaskQ1.
+  ///
+  /// In en, this message translates to:
+  /// **'How do I publish a task?'**
+  String get infoFAQTaskQ1;
+
+  /// No description provided for @infoFAQTaskA1.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap the \'+\' button at the bottom of the screen, select \'Publish Task\', fill in the details and submit.'**
+  String get infoFAQTaskA1;
+
+  /// No description provided for @infoFAQTaskQ2.
+  ///
+  /// In en, this message translates to:
+  /// **'How do I accept a task?'**
+  String get infoFAQTaskQ2;
+
+  /// No description provided for @infoFAQTaskA2.
+  ///
+  /// In en, this message translates to:
+  /// **'Browse available tasks, tap on one to view details, then click \'Accept Task\' to start.'**
+  String get infoFAQTaskA2;
+
+  /// No description provided for @infoFAQTaskQ3.
+  ///
+  /// In en, this message translates to:
+  /// **'How do I cancel a task?'**
+  String get infoFAQTaskQ3;
+
+  /// No description provided for @infoFAQTaskA3.
+  ///
+  /// In en, this message translates to:
+  /// **'Go to the task detail page and click \'Cancel Task\'. Please note that cancellation policies may apply.'**
+  String get infoFAQTaskA3;
+
+  /// No description provided for @infoFAQTaskQ4.
+  ///
+  /// In en, this message translates to:
+  /// **'What if there is a dispute?'**
+  String get infoFAQTaskQ4;
+
+  /// No description provided for @infoFAQTaskA4.
+  ///
+  /// In en, this message translates to:
+  /// **'You can raise a dispute via the task chat page. Our customer service team will assist in resolving it.'**
+  String get infoFAQTaskA4;
+
+  /// No description provided for @infoFAQPaymentQ1.
+  ///
+  /// In en, this message translates to:
+  /// **'What payment methods are supported?'**
+  String get infoFAQPaymentQ1;
+
+  /// No description provided for @infoFAQPaymentA1.
+  ///
+  /// In en, this message translates to:
+  /// **'We support Stripe (credit/debit cards), Apple Pay, and WeChat Pay.'**
+  String get infoFAQPaymentA1;
+
+  /// No description provided for @infoFAQPaymentQ2.
+  ///
+  /// In en, this message translates to:
+  /// **'How does the escrow system work?'**
+  String get infoFAQPaymentQ2;
+
+  /// No description provided for @infoFAQPaymentA2.
+  ///
+  /// In en, this message translates to:
+  /// **'When you pay for a task, the funds are held securely. The helper receives payment only after you confirm task completion.'**
+  String get infoFAQPaymentA2;
+
+  /// No description provided for @infoFAQPaymentQ3.
+  ///
+  /// In en, this message translates to:
+  /// **'How do I request a refund?'**
+  String get infoFAQPaymentQ3;
+
+  /// No description provided for @infoFAQPaymentA3.
+  ///
+  /// In en, this message translates to:
+  /// **'Go to the task detail page and click \'Request Refund\'. Provide a reason and our team will review it within 1-3 business days.'**
+  String get infoFAQPaymentA3;
+
+  /// No description provided for @infoFAQPaymentQ4.
+  ///
+  /// In en, this message translates to:
+  /// **'How do I withdraw my earnings?'**
+  String get infoFAQPaymentQ4;
+
+  /// No description provided for @infoFAQPaymentA4.
+  ///
+  /// In en, this message translates to:
+  /// **'Go to Wallet > Withdraw, connect your Stripe account and withdraw to your bank account.'**
+  String get infoFAQPaymentA4;
+
+  /// No description provided for @vipPlanFeatureMonthly1.
+  ///
+  /// In en, this message translates to:
+  /// **'Priority task recommendation'**
+  String get vipPlanFeatureMonthly1;
+
+  /// No description provided for @vipPlanFeatureMonthly2.
+  ///
+  /// In en, this message translates to:
+  /// **'Exclusive VIP badge'**
+  String get vipPlanFeatureMonthly2;
+
+  /// No description provided for @vipPlanFeatureMonthly3.
+  ///
+  /// In en, this message translates to:
+  /// **'Reduced service fees'**
+  String get vipPlanFeatureMonthly3;
+
+  /// No description provided for @vipPlanFeatureYearly1.
+  ///
+  /// In en, this message translates to:
+  /// **'All monthly benefits'**
+  String get vipPlanFeatureYearly1;
+
+  /// No description provided for @vipPlanFeatureYearly2.
+  ///
+  /// In en, this message translates to:
+  /// **'Dedicated customer support'**
+  String get vipPlanFeatureYearly2;
+
+  /// No description provided for @vipPlanFeatureYearly3.
+  ///
+  /// In en, this message translates to:
+  /// **'Points boost & exclusive activities'**
+  String get vipPlanFeatureYearly3;
+
+  /// No description provided for @vipPlanFeatureYearly4.
+  ///
+  /// In en, this message translates to:
+  /// **'Data analytics dashboard'**
+  String get vipPlanFeatureYearly4;
+
+  /// No description provided for @vipPlanBadgeBestValue.
+  ///
+  /// In en, this message translates to:
+  /// **'Best Value'**
+  String get vipPlanBadgeBestValue;
+
+  /// No description provided for @vipRegularUser.
+  ///
+  /// In en, this message translates to:
+  /// **'Regular User'**
+  String get vipRegularUser;
+
+  /// No description provided for @infoVersionFormat.
+  ///
+  /// In en, this message translates to:
+  /// **'Version {version} ({buildNumber})'**
+  String infoVersionFormat(String version, String buildNumber);
+
+  /// No description provided for @infoCopyright.
+  ///
+  /// In en, this message translates to:
+  /// **'© 2024 Link²Ur. All rights reserved.'**
+  String get infoCopyright;
+
+  /// No description provided for @chatImagePlaceholder.
+  ///
+  /// In en, this message translates to:
+  /// **'[Image]'**
+  String get chatImagePlaceholder;
+
+  /// No description provided for @studentVerificationEmailLocked.
+  ///
+  /// In en, this message translates to:
+  /// **'Email is locked, please wait for review to complete'**
+  String get studentVerificationEmailLocked;
+
+  /// No description provided for @studentVerificationPending.
+  ///
+  /// In en, this message translates to:
+  /// **'Verification under review, please check your email and complete verification'**
+  String get studentVerificationPending;
+
+  /// No description provided for @purchaseFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Purchase failed, please try again later.'**
+  String get purchaseFailed;
+
+  /// No description provided for @restorePurchaseFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Restore purchase failed, please try again later.'**
+  String get restorePurchaseFailed;
+
+  /// No description provided for @onboardingTaskTypeErrand.
+  ///
+  /// In en, this message translates to:
+  /// **'Errand Running'**
+  String get onboardingTaskTypeErrand;
+
+  /// No description provided for @onboardingTaskTypeSkill.
+  ///
+  /// In en, this message translates to:
+  /// **'Skill Service'**
+  String get onboardingTaskTypeSkill;
+
+  /// No description provided for @onboardingTaskTypeHousekeeping.
+  ///
+  /// In en, this message translates to:
+  /// **'Housekeeping'**
+  String get onboardingTaskTypeHousekeeping;
+
+  /// No description provided for @onboardingTaskTypeTransport.
+  ///
+  /// In en, this message translates to:
+  /// **'Transportation'**
+  String get onboardingTaskTypeTransport;
+
+  /// No description provided for @onboardingTaskTypeSocial.
+  ///
+  /// In en, this message translates to:
+  /// **'Social Help'**
+  String get onboardingTaskTypeSocial;
+
+  /// No description provided for @onboardingTaskTypeCampus.
+  ///
+  /// In en, this message translates to:
+  /// **'Campus Life'**
+  String get onboardingTaskTypeCampus;
+
+  /// No description provided for @onboardingTaskTypeSecondhand.
+  ///
+  /// In en, this message translates to:
+  /// **'Secondhand & Rental'**
+  String get onboardingTaskTypeSecondhand;
+
+  /// No description provided for @onboardingTaskTypePetCare.
+  ///
+  /// In en, this message translates to:
+  /// **'Pet Care'**
+  String get onboardingTaskTypePetCare;
+
+  /// No description provided for @onboardingTaskTypeConvenience.
+  ///
+  /// In en, this message translates to:
+  /// **'Life Convenience'**
+  String get onboardingTaskTypeConvenience;
+
+  /// No description provided for @onboardingTaskTypeOther.
+  ///
+  /// In en, this message translates to:
+  /// **'Other'**
+  String get onboardingTaskTypeOther;
+
+  /// No description provided for @fleaMarketCategoryKeyElectronics.
+  ///
+  /// In en, this message translates to:
+  /// **'electronics'**
+  String get fleaMarketCategoryKeyElectronics;
+
+  /// No description provided for @fleaMarketCategoryKeyBooks.
+  ///
+  /// In en, this message translates to:
+  /// **'books'**
+  String get fleaMarketCategoryKeyBooks;
+
+  /// No description provided for @fleaMarketCategoryKeyDaily.
+  ///
+  /// In en, this message translates to:
+  /// **'daily'**
+  String get fleaMarketCategoryKeyDaily;
+
+  /// No description provided for @fleaMarketCategoryKeyClothing.
+  ///
+  /// In en, this message translates to:
+  /// **'clothing'**
+  String get fleaMarketCategoryKeyClothing;
+
+  /// No description provided for @fleaMarketCategoryKeySports.
+  ///
+  /// In en, this message translates to:
+  /// **'sports'**
+  String get fleaMarketCategoryKeySports;
+
+  /// No description provided for @fleaMarketCategoryKeyOther.
+  ///
+  /// In en, this message translates to:
+  /// **'other'**
+  String get fleaMarketCategoryKeyOther;
+
+  /// No description provided for @couponRewardPoints50.
+  ///
+  /// In en, this message translates to:
+  /// **'+50 Points'**
+  String get couponRewardPoints50;
+
+  /// No description provided for @couponRewardPoints100Coupon.
+  ///
+  /// In en, this message translates to:
+  /// **'+100 Points + Coupon'**
+  String get couponRewardPoints100Coupon;
+
+  /// No description provided for @couponRewardPoints500Vip.
+  ///
+  /// In en, this message translates to:
+  /// **'+500 Points + VIP Trial'**
+  String get couponRewardPoints500Vip;
+
+  /// No description provided for @settingsLanguageEnglish.
+  ///
+  /// In en, this message translates to:
+  /// **'English'**
+  String get settingsLanguageEnglish;
+
+  /// No description provided for @settingsLanguageChinese.
+  ///
+  /// In en, this message translates to:
+  /// **'中文'**
+  String get settingsLanguageChinese;
+
+  /// No description provided for @infoTermsContent.
+  ///
+  /// In en, this message translates to:
+  /// **'Link²Ur Terms of Service\n\nLast updated: January 1, 2024\n\n1. Service Overview\nLink²Ur is a campus mutual-aid platform designed to help users publish and accept various life service tasks.\n\n2. User Responsibilities\n- Users must provide truthful and accurate personal information\n- Users must comply with platform rules and applicable laws\n- Users are responsible for the content they publish\n\n3. Platform Responsibilities\n- The platform provides information intermediary services\n- The platform implements escrow protection for transaction funds\n- The platform reserves the right to take action against violations\n\n4. Payment & Settlement\n- All payments are processed through third-party payment platforms\n- Tasks are automatically settled upon completion\n- The platform charges reasonable service fees\n\n5. Privacy Protection\nPlease refer to our Privacy Policy for detailed information.\n\n6. Disclaimer\nAs an information intermediary, the platform does not bear direct responsibility for transactions between users.\n\nIf you have any questions, please contact our customer service team.'**
+  String get infoTermsContent;
+
+  /// No description provided for @infoPrivacyContent.
+  ///
+  /// In en, this message translates to:
+  /// **'Link²Ur Privacy Policy\n\nLast updated: January 1, 2024\n\n1. Information Collection\nWe collect the following types of information:\n- Registration information (name, email, etc.)\n- Location information (for nearby task recommendations)\n- Device information (for push notifications)\n\n2. Information Usage\nWe use your information to:\n- Provide and improve services\n- Personalized recommendations\n- Ensure transaction security\n\n3. Information Storage & Protection\n- Data is stored on secure servers\n- Encryption technology is used to protect data transmission\n- Regular security audits are conducted\n\n4. Information Sharing\nWe do not sell your personal information. We only share in the following cases:\n- With your consent\n- Legal requirements\n- Necessary for service provision\n\n5. Cookie Policy\nWe use cookies to improve user experience.\n\n6. Your Rights\n- Access and modify personal information\n- Delete account\n- Unsubscribe from notifications\n\nFor privacy-related questions, please contact privacy@link2ur.com'**
+  String get infoPrivacyContent;
+
+  /// No description provided for @infoCookieContent.
+  ///
+  /// In en, this message translates to:
+  /// **'Link²Ur Cookie Policy\n\nWe use cookies and similar technologies to improve your experience.\n\n1. What are Cookies\nCookies are small text files stored on your device.\n\n2. How We Use Cookies\n- Essential Cookies: Maintain login status\n- Functional Cookies: Remember preferences\n- Analytics Cookies: Improve service quality\n\n3. Managing Cookies\nYou can manage cookie preferences in your device settings.'**
+  String get infoCookieContent;
 }
 
 class _AppLocalizationsDelegate

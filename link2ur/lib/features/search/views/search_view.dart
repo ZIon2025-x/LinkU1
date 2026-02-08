@@ -94,7 +94,7 @@ class _SearchContentState extends State<_SearchContent> {
           if (state.status == SearchStatus.error) {
             return Center(
               child: Text(
-                state.errorMessage ?? '搜索失败',
+                state.errorMessage ?? context.l10n.searchNoResults,
                 style: TextStyle(
                   color: isDark
                       ? AppColors.textSecondaryDark
@@ -105,10 +105,10 @@ class _SearchContentState extends State<_SearchContent> {
           }
 
           if (!state.hasResults) {
-            return const EmptyStateView(
+            return EmptyStateView(
               icon: Icons.search_off,
-              title: '未找到结果',
-              message: '尝试使用不同的关键词搜索',
+              title: context.l10n.searchNoResults,
+              message: context.l10n.searchTryDifferent,
             );
           }
 
@@ -173,7 +173,7 @@ class _SearchContentState extends State<_SearchContent> {
           ),
           AppSpacing.vMd,
           Text(
-            '搜索任务、帖子、商品',
+            context.l10n.searchHint,
             style: AppTypography.subheadline.copyWith(
               color: isDark
                   ? AppColors.textSecondaryDark
@@ -193,7 +193,7 @@ class _SearchContentState extends State<_SearchContent> {
         children: [
           // 搜索统计
           Text(
-            '共找到 ${state.totalResults} 个结果',
+            context.l10n.searchResultCount(state.totalResults),
             style: AppTypography.caption.copyWith(
               color: isDark
                   ? AppColors.textSecondaryDark
@@ -205,7 +205,7 @@ class _SearchContentState extends State<_SearchContent> {
           // 任务结果
           if (state.taskResults.isNotEmpty) ...[
             _SectionHeader(
-              title: '任务',
+              title: context.l10n.searchTasksTitle,
               count: state.taskResults.length,
               icon: Icons.task_alt,
               color: AppColors.primary,
@@ -224,7 +224,7 @@ class _SearchContentState extends State<_SearchContent> {
           // 论坛结果
           if (state.forumResults.isNotEmpty) ...[
             _SectionHeader(
-              title: '论坛',
+              title: context.l10n.searchForumTitle,
               count: state.forumResults.length,
               icon: Icons.forum,
               color: AppColors.accent,
@@ -243,7 +243,7 @@ class _SearchContentState extends State<_SearchContent> {
           // 跳蚤市场结果
           if (state.fleaMarketResults.isNotEmpty) ...[
             _SectionHeader(
-              title: '跳蚤市场',
+              title: context.l10n.searchFleaMarketTitle,
               count: state.fleaMarketResults.length,
               icon: Icons.store,
               color: AppColors.warning,

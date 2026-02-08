@@ -3,6 +3,7 @@ import '../models/review.dart';
 import '../services/api_service.dart';
 import '../../core/constants/api_endpoints.dart';
 import '../../core/utils/cache_manager.dart';
+import '../../core/utils/app_exception.dart';
 
 /// 任务仓库
 /// 与iOS TasksViewModel/TaskDetailViewModel + 后端路由对齐
@@ -727,14 +728,33 @@ class TaskRepository {
 
     return TaskListResponse.fromJson(normalized);
   }
+
+  /// 发送申请消息
+  Future<void> sendApplicationMessage(int taskId, int applicationId, {required String content}) async {
+    final response = await _apiService.post(
+      ApiEndpoints.sendApplicationMessage(taskId, applicationId),
+      data: {'content': content},
+    );
+
+    if (!response.isSuccess) {
+      throw TaskException(response.message ?? '发送消息失败');
+    }
+  }
+
+  /// 回复申请消息
+  Future<void> replyApplicationMessage(int taskId, int applicationId, {required String content}) async {
+    final response = await _apiService.post(
+      ApiEndpoints.replyApplicationMessage(taskId, applicationId),
+      data: {'content': content},
+    );
+
+    if (!response.isSuccess) {
+      throw TaskException(response.message ?? '回复消息失败');
+    }
+  }
 }
 
 /// 任务异常
-class TaskException implements Exception {
-  TaskException(this.message);
-
-  final String message;
-
-  @override
-  String toString() => 'TaskException: $message';
+class TaskException extends AppException {
+  const TaskException(super.message);
 }

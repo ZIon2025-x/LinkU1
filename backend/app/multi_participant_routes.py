@@ -703,33 +703,8 @@ def apply_to_activity(
             customer_id = None
             ephemeral_key_secret = None
             try:
-                # 使用 Stripe Search API 查找现有 Customer（通过 metadata.user_id）
-                # 注意：Customer.list() 不支持通过 metadata 查询，需要使用 Search API
-                try:
-                    search_result = stripe.Customer.search(
-                        query=f"metadata['user_id']:'{current_user.id}'",
-                        limit=1
-                    )
-                    if search_result.data:
-                        customer_id = search_result.data[0].id
-                    else:
-                        customer = stripe.Customer.create(
-                            metadata={
-                                "user_id": str(current_user.id),
-                                "user_name": current_user.name or f"User {current_user.id}",
-                            }
-                        )
-                        customer_id = customer.id
-                except Exception as search_error:
-                    # 如果 Search API 不可用或失败，直接创建新的 Customer
-                    logger.debug(f"Stripe Search API 不可用，直接创建新 Customer: {search_error}")
-                    customer = stripe.Customer.create(
-                        metadata={
-                            "user_id": str(current_user.id),
-                            "user_name": current_user.name or f"User {current_user.id}",
-                        }
-                    )
-                    customer_id = customer.id
+                from app.utils.stripe_utils import get_or_create_stripe_customer
+                customer_id = get_or_create_stripe_customer(current_user, db=db)
 
                 ephemeral_key = stripe.EphemeralKey.create(
                     customer=customer_id,

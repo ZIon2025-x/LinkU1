@@ -1,22 +1,14 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:mocktail/mocktail.dart';
-import 'package:dio/dio.dart';
-
-import 'package:link2ur/data/services/api_service.dart';
-import 'package:link2ur/data/services/storage_service.dart';
 
 import '../../helpers/test_helpers.dart';
 
 void main() {
-  late MockStorageService mockStorageService;
-  late ApiService apiService;
 
   setUpAll(() {
     registerFallbackValues();
   });
 
   setUp(() {
-    mockStorageService = MockStorageService();
     // Note: ApiService 实际使用 StorageService.instance，
     // 这里的测试更多是单元测试概念演示
     // 实际集成测试需要模拟整个 Dio 流程

@@ -1,5 +1,9 @@
 import 'package:mocktail/mocktail.dart';
 import 'package:link2ur/data/repositories/auth_repository.dart';
+import 'package:link2ur/data/repositories/forum_repository.dart';
+import 'package:link2ur/data/repositories/flea_market_repository.dart';
+import 'package:link2ur/data/repositories/message_repository.dart';
+import 'package:link2ur/data/repositories/task_repository.dart';
 import 'package:link2ur/data/repositories/payment_repository.dart';
 import 'package:link2ur/data/services/api_service.dart';
 import 'package:link2ur/data/services/storage_service.dart';
@@ -10,6 +14,14 @@ import 'package:link2ur/data/models/user.dart';
 class MockAuthRepository extends Mock implements AuthRepository {}
 
 class MockPaymentRepository extends Mock implements PaymentRepository {}
+
+class MockForumRepository extends Mock implements ForumRepository {}
+
+class MockFleaMarketRepository extends Mock implements FleaMarketRepository {}
+
+class MockMessageRepository extends Mock implements MessageRepository {}
+
+class MockTaskRepository extends Mock implements TaskRepository {}
 
 class MockApiService extends Mock implements ApiService {}
 

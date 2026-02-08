@@ -11,6 +11,7 @@ import '../../../core/widgets/loading_view.dart';
 import '../../../core/widgets/skeleton_view.dart';
 import '../../../core/widgets/error_state_view.dart';
 import '../../../core/widgets/empty_state_view.dart';
+import '../../../core/widgets/async_image_view.dart';
 import '../../../data/models/leaderboard.dart';
 import '../../../data/repositories/leaderboard_repository.dart';
 import '../bloc/leaderboard_bloc.dart';
@@ -51,8 +52,8 @@ class LeaderboardView extends StatelessWidget {
 
             if (state.leaderboards.isEmpty) {
               return EmptyStateView.noData(
-                title: '暂无排行榜',
-                description: '还没有排行榜',
+                title: context.l10n.leaderboardNoLeaderboards,
+                description: context.l10n.leaderboardNoLeaderboardsMessage,
               );
             }
 
@@ -152,20 +153,20 @@ class _LeaderboardCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 // 封面图片或渐变占位 (对标iOS 100x100)
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(14),
-                  child: leaderboard.coverImage != null &&
-                          leaderboard.coverImage!.isNotEmpty
-                      ? Image.network(
-                          leaderboard.coverImage!,
-                          width: 90,
-                          height: 90,
-                          fit: BoxFit.cover,
-                          errorBuilder: (_, __, ___) =>
-                              _buildPlaceholderIcon(colors),
-                        )
-                      : _buildPlaceholderIcon(colors),
-                ),
+                leaderboard.coverImage != null &&
+                        leaderboard.coverImage!.isNotEmpty
+                    ? AsyncImageView(
+                        imageUrl: leaderboard.coverImage,
+                        width: 90,
+                        height: 90,
+                        fit: BoxFit.cover,
+                        borderRadius: BorderRadius.circular(14),
+                        errorWidget: _buildPlaceholderIcon(colors),
+                      )
+                    : ClipRRect(
+                        borderRadius: BorderRadius.circular(14),
+                        child: _buildPlaceholderIcon(colors),
+                      ),
                 const SizedBox(width: AppSpacing.md),
                 Expanded(
                   child: Column(

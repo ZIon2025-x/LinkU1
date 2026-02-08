@@ -22,6 +22,10 @@ class MessageLoadTaskChats extends MessageEvent {
   const MessageLoadTaskChats();
 }
 
+class MessageLoadMoreTaskChats extends MessageEvent {
+  const MessageLoadMoreTaskChats();
+}
+
 class MessageRefreshRequested extends MessageEvent {
   const MessageRefreshRequested();
 }
@@ -36,12 +40,18 @@ class MessageState extends Equatable {
     this.contacts = const [],
     this.taskChats = const [],
     this.errorMessage,
+    this.taskChatsPage = 1,
+    this.hasMoreTaskChats = true,
+    this.isLoadingMore = false,
   });
 
   final MessageStatus status;
   final List<ChatContact> contacts;
   final List<TaskChat> taskChats;
   final String? errorMessage;
+  final int taskChatsPage;
+  final bool hasMoreTaskChats;
+  final bool isLoadingMore;
 
   bool get isLoading => status == MessageStatus.loading;
 
@@ -55,17 +65,31 @@ class MessageState extends Equatable {
     List<ChatContact>? contacts,
     List<TaskChat>? taskChats,
     String? errorMessage,
+    int? taskChatsPage,
+    bool? hasMoreTaskChats,
+    bool? isLoadingMore,
   }) {
     return MessageState(
       status: status ?? this.status,
       contacts: contacts ?? this.contacts,
       taskChats: taskChats ?? this.taskChats,
       errorMessage: errorMessage,
+      taskChatsPage: taskChatsPage ?? this.taskChatsPage,
+      hasMoreTaskChats: hasMoreTaskChats ?? this.hasMoreTaskChats,
+      isLoadingMore: isLoadingMore ?? this.isLoadingMore,
     );
   }
 
   @override
-  List<Object?> get props => [status, contacts, taskChats, errorMessage];
+  List<Object?> get props => [
+        status,
+        contacts,
+        taskChats,
+        errorMessage,
+        taskChatsPage,
+        hasMoreTaskChats,
+        isLoadingMore,
+      ];
 }
 
 // ==================== Bloc ====================
@@ -76,10 +100,12 @@ class MessageBloc extends Bloc<MessageEvent, MessageState> {
         super(const MessageState()) {
     on<MessageLoadContacts>(_onLoadContacts);
     on<MessageLoadTaskChats>(_onLoadTaskChats);
+    on<MessageLoadMoreTaskChats>(_onLoadMoreTaskChats);
     on<MessageRefreshRequested>(_onRefresh);
   }
 
   final MessageRepository _messageRepository;
+  static const _pageSize = 20;
 
   Future<void> _onLoadContacts(
     MessageLoadContacts event,
@@ -110,16 +136,19 @@ class MessageBloc extends Bloc<MessageEvent, MessageState> {
     MessageLoadTaskChats event,
     Emitter<MessageState> emit,
   ) async {
-    // 不再检查 loading 状态，允许与 LoadContacts 并行执行
     try {
-      final taskChats = await _messageRepository.getTaskChats();
+      final taskChats = await _messageRepository.getTaskChats(
+        page: 1,
+        pageSize: _pageSize,
+      );
       emit(state.copyWith(
         status: MessageStatus.loaded,
         taskChats: taskChats,
+        taskChatsPage: 1,
+        hasMoreTaskChats: taskChats.length >= _pageSize,
       ));
     } catch (e) {
       AppLogger.error('Failed to load task chats', e);
-      // 仅在当前未加载成功时才设为 error
       if (state.status != MessageStatus.loaded) {
         emit(state.copyWith(
           status: MessageStatus.error,
@@ -129,17 +158,49 @@ class MessageBloc extends Bloc<MessageEvent, MessageState> {
     }
   }
 
+  Future<void> _onLoadMoreTaskChats(
+    MessageLoadMoreTaskChats event,
+    Emitter<MessageState> emit,
+  ) async {
+    if (state.isLoadingMore || !state.hasMoreTaskChats) return;
+
+    emit(state.copyWith(isLoadingMore: true));
+
+    try {
+      final nextPage = state.taskChatsPage + 1;
+      final newTaskChats = await _messageRepository.getTaskChats(
+        page: nextPage,
+        pageSize: _pageSize,
+      );
+
+      emit(state.copyWith(
+        taskChats: [...state.taskChats, ...newTaskChats],
+        taskChatsPage: nextPage,
+        hasMoreTaskChats: newTaskChats.length >= _pageSize,
+        isLoadingMore: false,
+      ));
+    } catch (e) {
+      AppLogger.error('Failed to load more task chats', e);
+      emit(state.copyWith(isLoadingMore: false));
+    }
+  }
+
   Future<void> _onRefresh(
     MessageRefreshRequested event,
     Emitter<MessageState> emit,
   ) async {
     try {
       final contacts = await _messageRepository.getContacts();
-      final taskChats = await _messageRepository.getTaskChats();
+      final taskChats = await _messageRepository.getTaskChats(
+        page: 1,
+        pageSize: _pageSize,
+      );
       emit(state.copyWith(
         status: MessageStatus.loaded,
         contacts: contacts,
         taskChats: taskChats,
+        taskChatsPage: 1,
+        hasMoreTaskChats: taskChats.length >= _pageSize,
       ));
     } catch (e) {
       AppLogger.error('Failed to refresh messages', e);

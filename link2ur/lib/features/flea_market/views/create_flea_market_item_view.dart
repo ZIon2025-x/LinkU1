@@ -7,6 +7,7 @@ import 'package:image_picker/image_picker.dart';
 import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_radius.dart';
+import '../../../core/utils/l10n_extension.dart';
 import '../../../core/widgets/buttons.dart';
 import '../../../data/repositories/flea_market_repository.dart';
 import '../../../data/models/flea_market.dart';
@@ -47,13 +48,13 @@ class _CreateFleaMarketItemContentState
   final List<File> _selectedImages = [];
   final _imagePicker = ImagePicker();
 
-  static const _categories = [
-    '电子产品',
-    '书籍教材',
-    '生活用品',
-    '服饰鞋包',
-    '运动户外',
-    '其他',
+  List<(String, String)> _getCategories(BuildContext context) => [
+    (context.l10n.fleaMarketCategoryKeyElectronics, context.l10n.fleaMarketCategoryElectronics),
+    (context.l10n.fleaMarketCategoryKeyBooks, context.l10n.fleaMarketCategoryBooks),
+    (context.l10n.fleaMarketCategoryKeyDaily, context.l10n.fleaMarketCategoryDailyUse),
+    (context.l10n.fleaMarketCategoryKeyClothing, context.l10n.fleaMarketCategoryClothing),
+    (context.l10n.fleaMarketCategoryKeySports, context.l10n.fleaMarketCategorySports),
+    (context.l10n.fleaMarketCategoryKeyOther, context.l10n.fleaMarketCategoryOther),
   ];
 
   @override
@@ -86,7 +87,7 @@ class _CreateFleaMarketItemContentState
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('选择图片失败: ${e.toString()}'),
+            content: Text('${context.l10n.fleaMarketImageSelectFailed}: ${e.toString()}'),
             backgroundColor: AppColors.error,
           ),
         );
@@ -106,8 +107,8 @@ class _CreateFleaMarketItemContentState
     final price = double.tryParse(_priceController.text.trim());
     if (price == null || price <= 0) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('请输入有效价格'),
+        SnackBar(
+          content: Text(context.l10n.fleaMarketInvalidPrice),
           backgroundColor: AppColors.error,
         ),
       );
@@ -151,7 +152,7 @@ class _CreateFleaMarketItemContentState
       },
       child: Scaffold(
         appBar: AppBar(
-          title: const Text('发布商品'),
+          title: Text(context.l10n.fleaMarketPublishItem),
         ),
         body: SingleChildScrollView(
           padding: AppSpacing.allMd,
@@ -161,9 +162,9 @@ class _CreateFleaMarketItemContentState
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 // 商品图片
-                const Text(
-                  '商品图片',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                Text(
+                  context.l10n.fleaMarketProductImages,
+                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
                 ),
                 AppSpacing.vSm,
                 _buildImagePicker(),
@@ -173,8 +174,8 @@ class _CreateFleaMarketItemContentState
                 TextFormField(
                   controller: _titleController,
                   decoration: InputDecoration(
-                    labelText: '商品标题',
-                    hintText: '请输入商品标题',
+                    labelText: context.l10n.fleaMarketProductTitle,
+                    hintText: context.l10n.fleaMarketProductTitlePlaceholder,
                     prefixIcon: const Icon(Icons.title),
                     border: OutlineInputBorder(
                       borderRadius: AppRadius.allMedium,
@@ -182,10 +183,10 @@ class _CreateFleaMarketItemContentState
                   ),
                   validator: (value) {
                     if (value == null || value.trim().isEmpty) {
-                      return '请输入商品标题';
+                      return context.l10n.fleaMarketTitleRequired;
                     }
                     if (value.trim().length < 2) {
-                      return '标题至少需要2个字符';
+                      return context.l10n.fleaMarketTitleMinLength;
                     }
                     return null;
                   },
@@ -196,8 +197,8 @@ class _CreateFleaMarketItemContentState
                 TextFormField(
                   controller: _descriptionController,
                   decoration: InputDecoration(
-                    labelText: '商品描述（选填）',
-                    hintText: '描述一下你的商品...',
+                    labelText: context.l10n.fleaMarketDescOptional,
+                    hintText: context.l10n.fleaMarketDescHint,
                     prefixIcon: const Icon(Icons.description_outlined),
                     border: OutlineInputBorder(
                       borderRadius: AppRadius.allMedium,
@@ -213,7 +214,7 @@ class _CreateFleaMarketItemContentState
                 TextFormField(
                   controller: _priceController,
                   decoration: InputDecoration(
-                    labelText: '价格',
+                    labelText: context.l10n.fleaMarketPrice,
                     hintText: '0.00',
                     prefixIcon: const Icon(Icons.attach_money),
                     prefixText: '£ ',
@@ -225,11 +226,11 @@ class _CreateFleaMarketItemContentState
                       const TextInputType.numberWithOptions(decimal: true),
                   validator: (value) {
                     if (value == null || value.trim().isEmpty) {
-                      return '请输入价格';
+                      return context.l10n.fleaMarketPriceRequired;
                     }
                     final price = double.tryParse(value.trim());
                     if (price == null || price <= 0) {
-                      return '请输入有效价格';
+                      return context.l10n.fleaMarketInvalidPrice;
                     }
                     return null;
                   },
@@ -240,21 +241,24 @@ class _CreateFleaMarketItemContentState
                 DropdownButtonFormField<String>(
                   initialValue: _selectedCategory,
                   decoration: InputDecoration(
-                    labelText: '分类',
+                    labelText: context.l10n.fleaMarketCategoryLabel,
                     prefixIcon: const Icon(Icons.category_outlined),
                     border: OutlineInputBorder(
                       borderRadius: AppRadius.allMedium,
                     ),
                   ),
-                  items: _categories
-                      .map((c) => DropdownMenuItem(value: c, child: Text(c)))
+                  items: _getCategories(context)
+                      .map((category) => DropdownMenuItem(
+                            value: category.$1,
+                            child: Text(category.$2),
+                          ))
                       .toList(),
                   onChanged: (value) {
                     setState(() {
                       _selectedCategory = value;
                     });
                   },
-                  hint: const Text('选择分类'),
+                  hint: Text(context.l10n.fleaMarketSelectCategory),
                 ),
                 AppSpacing.vMd,
 
@@ -262,8 +266,8 @@ class _CreateFleaMarketItemContentState
                 TextFormField(
                   controller: _locationController,
                   decoration: InputDecoration(
-                    labelText: '位置（选填）',
-                    hintText: '例如：校园北门',
+                    labelText: context.l10n.fleaMarketLocationOptional,
+                    hintText: context.l10n.fleaMarketLocationHint,
                     prefixIcon: const Icon(Icons.location_on_outlined),
                     border: OutlineInputBorder(
                       borderRadius: AppRadius.allMedium,
@@ -278,7 +282,7 @@ class _CreateFleaMarketItemContentState
                     return SizedBox(
                       width: double.infinity,
                       child: PrimaryButton(
-                        text: '发布商品',
+                        text: context.l10n.fleaMarketPublishItem,
                         onPressed: state.isSubmitting ? null : _submitForm,
                         isLoading: state.isSubmitting,
                       ),

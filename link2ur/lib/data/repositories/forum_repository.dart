@@ -2,6 +2,7 @@ import '../models/forum.dart';
 import '../services/api_service.dart';
 import '../../core/constants/api_endpoints.dart';
 import '../../core/utils/cache_manager.dart';
+import '../../core/utils/app_exception.dart';
 
 /// 论坛仓库
 /// 与iOS ForumViewModel + 后端 forum_routes 对齐
@@ -15,7 +16,7 @@ class ForumRepository {
 
   /// 获取可见论坛分类（首页展示用）
   Future<List<ForumCategory>> getVisibleCategories() async {
-    final cacheKey = '${CacheManager.prefixForumCategories}visible';
+    const cacheKey = '${CacheManager.prefixForumCategories}visible';
 
     final cached = _cache.get<List<dynamic>>(cacheKey);
     if (cached != null) {
@@ -101,7 +102,7 @@ class ForumRepository {
 
   /// 获取所有论坛分类
   Future<List<ForumCategory>> getCategories() async {
-    final cacheKey = '${CacheManager.prefixForumCategories}all';
+    const cacheKey = '${CacheManager.prefixForumCategories}all';
 
     final cached = _cache.get<List<dynamic>>(cacheKey);
     if (cached != null) {
@@ -506,14 +507,114 @@ class ForumRepository {
 
     return response.data!['is_favorite'] as bool? ?? false;
   }
+
+  /// 批量获取分类收藏状态
+  Future<Map<int, bool>> getCategoryFavoritesBatch(List<int> categoryIds) async {
+    final response = await _apiService.post<Map<String, dynamic>>(
+      ApiEndpoints.forumCategoryFavoritesBatch,
+      data: {'category_ids': categoryIds},
+    );
+
+    if (!response.isSuccess || response.data == null) {
+      return {};
+    }
+
+    final result = <int, bool>{};
+    final favorites = response.data!['favorites'] as Map<String, dynamic>? ?? {};
+    favorites.forEach((key, value) {
+      result[int.tryParse(key) ?? 0] = value as bool? ?? false;
+    });
+    return result;
+  }
+
+  /// 获取用户论坛统计
+  Future<Map<String, dynamic>> getUserStats(String userId) async {
+    final response = await _apiService.get<Map<String, dynamic>>(
+      ApiEndpoints.forumUserStats(userId),
+    );
+
+    if (!response.isSuccess || response.data == null) {
+      throw ForumException(response.message ?? '获取用户统计失败');
+    }
+
+    return response.data!;
+  }
+
+  /// 获取用户热门帖子
+  Future<List<Map<String, dynamic>>> getUserHotPosts(String userId, {int limit = 10}) async {
+    final response = await _apiService.get<Map<String, dynamic>>(
+      ApiEndpoints.forumUserHotPosts(userId),
+      queryParameters: {'limit': limit},
+    );
+
+    if (!response.isSuccess || response.data == null) {
+      throw ForumException(response.message ?? '获取热门帖子失败');
+    }
+
+    final items = response.data!['posts'] as List<dynamic>? ?? [];
+    return items.map((e) => e as Map<String, dynamic>).toList();
+  }
+
+  /// 获取帖子排行榜
+  Future<List<Map<String, dynamic>>> getLeaderboardPosts({int limit = 20}) async {
+    final response = await _apiService.get<Map<String, dynamic>>(
+      ApiEndpoints.forumLeaderboardPosts,
+      queryParameters: {'limit': limit},
+    );
+
+    if (!response.isSuccess || response.data == null) {
+      throw ForumException(response.message ?? '获取排行榜失败');
+    }
+
+    final items = response.data!['items'] as List<dynamic>? ?? [];
+    return items.map((e) => e as Map<String, dynamic>).toList();
+  }
+
+  /// 获取收藏排行榜
+  Future<List<Map<String, dynamic>>> getLeaderboardFavorites({int limit = 20}) async {
+    final response = await _apiService.get<Map<String, dynamic>>(
+      ApiEndpoints.forumLeaderboardFavorites,
+      queryParameters: {'limit': limit},
+    );
+
+    if (!response.isSuccess || response.data == null) {
+      throw ForumException(response.message ?? '获取收藏排行榜失败');
+    }
+
+    final items = response.data!['items'] as List<dynamic>? ?? [];
+    return items.map((e) => e as Map<String, dynamic>).toList();
+  }
+
+  /// 获取点赞排行榜
+  Future<List<Map<String, dynamic>>> getLeaderboardLikes({int limit = 20}) async {
+    final response = await _apiService.get<Map<String, dynamic>>(
+      ApiEndpoints.forumLeaderboardLikes,
+      queryParameters: {'limit': limit},
+    );
+
+    if (!response.isSuccess || response.data == null) {
+      throw ForumException(response.message ?? '获取点赞排行榜失败');
+    }
+
+    final items = response.data!['items'] as List<dynamic>? ?? [];
+    return items.map((e) => e as Map<String, dynamic>).toList();
+  }
+
+  /// 获取分类统计
+  Future<Map<String, dynamic>> getCategoryStats(int categoryId) async {
+    final response = await _apiService.get<Map<String, dynamic>>(
+      ApiEndpoints.forumCategoryStats(categoryId),
+    );
+
+    if (!response.isSuccess || response.data == null) {
+      throw ForumException(response.message ?? '获取分类统计失败');
+    }
+
+    return response.data!;
+  }
 }
 
 /// 论坛异常
-class ForumException implements Exception {
-  ForumException(this.message);
-
-  final String message;
-
-  @override
-  String toString() => 'ForumException: $message';
+class ForumException extends AppException {
+  const ForumException(super.message);
 }

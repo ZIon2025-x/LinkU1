@@ -4,6 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/utils/l10n_extension.dart';
+import '../../../core/utils/responsive.dart';
 import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_radius.dart';
@@ -13,14 +14,14 @@ import '../../../core/widgets/loading_view.dart';
 import '../../../core/widgets/skeleton_view.dart';
 import '../../../core/widgets/error_state_view.dart';
 import '../../../core/widgets/empty_state_view.dart';
+import '../../../core/widgets/async_image_view.dart';
+import '../../../core/widgets/content_constraint.dart';
 import '../../../data/models/forum.dart';
 import '../../../data/models/leaderboard.dart';
 import '../bloc/forum_bloc.dart';
 import '../../leaderboard/bloc/leaderboard_bloc.dart';
 
 /// 社区页 (论坛 + 排行榜)
-/// 对标iOS CommunityView (MainTabView.swift)
-/// 使用自定义居中TabButton + PageView滑动切换，与首页风格一致
 class ForumView extends StatefulWidget {
   const ForumView({super.key});
 
@@ -30,7 +31,7 @@ class ForumView extends StatefulWidget {
 
 class _ForumViewState extends State<ForumView> {
   int _selectedTab = 0; // 0: 论坛, 1: 排行榜
-  late PageController _pageController;
+  PageController? _pageController;
 
   @override
   void initState() {
@@ -40,7 +41,7 @@ class _ForumViewState extends State<ForumView> {
 
   @override
   void dispose() {
-    _pageController.dispose();
+    _pageController?.dispose();
     super.dispose();
   }
 
@@ -50,7 +51,7 @@ class _ForumViewState extends State<ForumView> {
       setState(() {
         _selectedTab = index;
       });
-      _pageController.animateToPage(
+      _pageController?.animateToPage(
         index,
         duration: const Duration(milliseconds: 300),
         curve: Curves.easeInOut,
@@ -61,22 +62,94 @@ class _ForumViewState extends State<ForumView> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final isDesktop = ResponsiveUtils.isDesktop(context);
 
+    if (isDesktop) {
+      return _buildDesktopLayout(isDark);
+    }
+    return _buildMobileLayout(isDark);
+  }
+
+  Widget _buildDesktopLayout(bool isDark) {
+    return Scaffold(
+      backgroundColor: isDark ? AppColors.backgroundDark : Colors.white,
+      body: Column(
+        children: [
+          // Notion 风格 tab + 发帖按钮
+          _buildDesktopHeader(isDark),
+
+          // 直接渲染 tab 内容
+          Expanded(
+            child: ContentConstraint(
+              child: IndexedStack(
+                index: _selectedTab,
+                children: const [
+                  _ForumTab(),
+                  _LeaderboardTab(),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDesktopHeader(bool isDark) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(40, 20, 40, 12),
+      child: Row(
+        children: [
+          // 分段控件
+          Container(
+            padding: const EdgeInsets.all(3),
+            decoration: BoxDecoration(
+              color: isDark
+                  ? Colors.white.withValues(alpha: 0.06)
+                  : const Color(0xFFF2F2F7),
+              borderRadius: BorderRadius.circular(9),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                _DesktopSegment(
+                  label: context.l10n.communityForum,
+                  isSelected: _selectedTab == 0,
+                  onTap: () => _onTabChanged(0),
+                  isDark: isDark,
+                ),
+                _DesktopSegment(
+                  label: context.l10n.communityLeaderboard,
+                  isSelected: _selectedTab == 1,
+                  onTap: () => _onTabChanged(1),
+                  isDark: isDark,
+                ),
+              ],
+            ),
+          ),
+          const Spacer(),
+          // 发帖按钮
+          _DesktopCreateButton(
+            label: context.l10n.forumCreatePostTitle,
+            icon: Icons.edit_rounded,
+            onTap: () => context.push('/forum/posts/create'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMobileLayout(bool isDark) {
     return Scaffold(
       body: SafeArea(
         child: Column(
           children: [
-            // 对标iOS CommunityView: 自定义顶部导航栏（类似首页样式）
-            _buildCustomAppBar(isDark),
-
-            // 内容区域 - 对标iOS TabView(.page)
+            _buildMobileAppBar(isDark),
             Expanded(
               child: PageView(
                 controller: _pageController,
                 onPageChanged: (index) {
-                  setState(() {
-                    _selectedTab = index;
-                  });
+                  setState(() => _selectedTab = index);
                 },
                 children: const [
                   _ForumTab(),
@@ -88,31 +161,23 @@ class _ForumViewState extends State<ForumView> {
         ),
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          context.push('/forum/posts/create');
-        },
+        onPressed: () => context.push('/forum/posts/create'),
         backgroundColor: AppColors.primary,
         child: const Icon(Icons.edit, color: Colors.white),
       ),
     );
   }
 
-  /// 对标iOS CommunityView: HStack自定义顶部导航栏
-  Widget _buildCustomAppBar(bool isDark) {
+  Widget _buildMobileAppBar(bool isDark) {
     return Container(
       padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.sm,
-        vertical: AppSpacing.xs,
+        horizontal: AppSpacing.sm, vertical: AppSpacing.xs,
       ),
       color: isDark ? AppColors.backgroundDark : AppColors.backgroundLight,
       child: Row(
         children: [
-          // 左侧占位（保持对称）
           const SizedBox(width: 44),
-
           const Spacer(),
-
-          // 对标iOS: 中间两个标签
           Row(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -128,12 +193,124 @@ class _ForumViewState extends State<ForumView> {
               ),
             ],
           ),
-
           const Spacer(),
-
-          // 右侧占位（保持对称）
           const SizedBox(width: 44),
         ],
+      ),
+    );
+  }
+}
+
+/// 桌面端分段按钮
+class _DesktopSegment extends StatefulWidget {
+  const _DesktopSegment({
+    required this.label,
+    required this.isSelected,
+    required this.onTap,
+    required this.isDark,
+  });
+
+  final String label;
+  final bool isSelected;
+  final VoidCallback onTap;
+  final bool isDark;
+
+  @override
+  State<_DesktopSegment> createState() => _DesktopSegmentState();
+}
+
+class _DesktopSegmentState extends State<_DesktopSegment> {
+  bool _isHovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      onEnter: (_) => setState(() => _isHovered = true),
+      onExit: (_) => setState(() => _isHovered = false),
+      cursor: SystemMouseCursors.click,
+      child: GestureDetector(
+        onTap: widget.onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 180),
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
+          decoration: BoxDecoration(
+            color: widget.isSelected
+                ? (widget.isDark ? const Color(0xFF2C2C2E) : Colors.white)
+                : (_isHovered
+                    ? (widget.isDark
+                        ? Colors.white.withValues(alpha: 0.04)
+                        : Colors.black.withValues(alpha: 0.03))
+                    : Colors.transparent),
+            borderRadius: BorderRadius.circular(7),
+            boxShadow: widget.isSelected
+                ? [BoxShadow(color: Colors.black.withValues(alpha: 0.06), blurRadius: 3, offset: const Offset(0, 1))]
+                : [],
+          ),
+          child: Text(
+            widget.label,
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: widget.isSelected ? FontWeight.w600 : FontWeight.w500,
+              color: widget.isSelected
+                  ? (widget.isDark ? Colors.white : const Color(0xFF37352F))
+                  : (widget.isDark ? AppColors.textSecondaryDark : const Color(0xFF9B9A97)),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// 桌面端创建按钮（Notion 风格）
+class _DesktopCreateButton extends StatefulWidget {
+  const _DesktopCreateButton({
+    required this.label,
+    required this.icon,
+    required this.onTap,
+  });
+
+  final String label;
+  final IconData icon;
+  final VoidCallback onTap;
+
+  @override
+  State<_DesktopCreateButton> createState() => _DesktopCreateButtonState();
+}
+
+class _DesktopCreateButtonState extends State<_DesktopCreateButton> {
+  bool _isHovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      onEnter: (_) => setState(() => _isHovered = true),
+      onExit: (_) => setState(() => _isHovered = false),
+      cursor: SystemMouseCursors.click,
+      child: GestureDetector(
+        onTap: widget.onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 150),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          decoration: BoxDecoration(
+            color: _isHovered ? AppColors.primary : AppColors.primary.withValues(alpha: 0.9),
+            borderRadius: BorderRadius.circular(8),
+            boxShadow: _isHovered
+                ? [BoxShadow(color: AppColors.primary.withValues(alpha: 0.3), blurRadius: 8, offset: const Offset(0, 2))]
+                : [],
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(widget.icon, size: 16, color: Colors.white),
+              const SizedBox(width: 6),
+              Text(
+                widget.label,
+                style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Colors.white),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -214,6 +391,8 @@ class _ForumTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDesktop = ResponsiveUtils.isDesktop(context);
+
     return BlocBuilder<ForumBloc, ForumState>(
       builder: (context, state) {
         if (state.status == ForumStatus.loading && state.posts.isEmpty) {
@@ -232,7 +411,7 @@ class _ForumTab extends StatelessWidget {
         if (state.posts.isEmpty) {
           return EmptyStateView.noData(
             title: context.l10n.forumNoPosts,
-            description: '还没有帖子，点击下方按钮发布第一个帖子',
+            description: context.l10n.forumNoPostsHint,
           );
         }
 
@@ -240,28 +419,62 @@ class _ForumTab extends StatelessWidget {
           onRefresh: () async {
             context.read<ForumBloc>().add(const ForumRefreshRequested());
           },
-          child: ListView.separated(
-            clipBehavior: Clip.none,
-            padding: AppSpacing.allMd,
-            itemCount: state.posts.length + (state.hasMore ? 1 : 0),
-            separatorBuilder: (context, index) => AppSpacing.vMd,
-            itemBuilder: (context, index) {
-              if (index == state.posts.length) {
-                // Load more trigger
-                context.read<ForumBloc>().add(const ForumLoadMorePosts());
-                return const Center(
-                  child: Padding(
-                    padding: EdgeInsets.all(16.0),
-                    child: LoadingIndicator(),
-                  ),
-                );
-              }
-              return AnimatedListItem(
-                index: index,
-                child: _PostCard(post: state.posts[index]),
-              );
-            },
+          child: isDesktop
+              ? _buildDesktopGrid(context, state)
+              : _buildMobileList(context, state),
+        );
+      },
+    );
+  }
+
+  Widget _buildDesktopGrid(BuildContext context, ForumState state) {
+    return CustomScrollView(
+      slivers: [
+        SliverPadding(
+          padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 8),
+          sliver: SliverGrid(
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 2,
+              mainAxisSpacing: 16,
+              crossAxisSpacing: 16,
+              childAspectRatio: 1.6,
+            ),
+            delegate: SliverChildBuilderDelegate(
+              (context, index) {
+                if (index == state.posts.length) {
+                  context.read<ForumBloc>().add(const ForumLoadMorePosts());
+                  return const Center(child: Padding(
+                    padding: EdgeInsets.all(16), child: LoadingIndicator()));
+                }
+                return _PostCard(post: state.posts[index]);
+              },
+              childCount: state.posts.length + (state.hasMore ? 1 : 0),
+            ),
           ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildMobileList(BuildContext context, ForumState state) {
+    return ListView.separated(
+      clipBehavior: Clip.none,
+      padding: AppSpacing.allMd,
+      itemCount: state.posts.length + (state.hasMore ? 1 : 0),
+      separatorBuilder: (context, index) => AppSpacing.vMd,
+      itemBuilder: (context, index) {
+        if (index == state.posts.length) {
+          context.read<ForumBloc>().add(const ForumLoadMorePosts());
+          return const Center(
+            child: Padding(
+              padding: EdgeInsets.all(16.0),
+              child: LoadingIndicator(),
+            ),
+          );
+        }
+        return AnimatedListItem(
+          index: index,
+          child: _PostCard(post: state.posts[index]),
         );
       },
     );
@@ -295,8 +508,8 @@ class _LeaderboardTab extends StatelessWidget {
 
         if (state.leaderboards.isEmpty) {
           return EmptyStateView.noData(
-            title: '暂无排行榜',
-            description: '还没有排行榜',
+            title: context.l10n.forumNoLeaderboard,
+            description: context.l10n.forumNoLeaderboardMessage,
           );
         }
 
@@ -415,7 +628,7 @@ class _PostCard extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        post.author?.name ?? '用户 ${post.authorId}',
+                        post.author?.name ?? context.l10n.forumUserFallback(post.authorId.toString()),
                         style: AppTypography.body.copyWith(
                           fontWeight: FontWeight.w600,
                           color: isDark
@@ -425,7 +638,7 @@ class _PostCard extends StatelessWidget {
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        _formatTime(post.createdAt),
+                        _formatTime(context, post.createdAt),
                         style: AppTypography.caption.copyWith(
                           color: isDark
                               ? AppColors.textTertiaryDark
@@ -530,19 +743,19 @@ class _PostCard extends StatelessWidget {
     );
   }
 
-  String _formatTime(DateTime? time) {
+  String _formatTime(BuildContext context, DateTime? time) {
     if (time == null) return '';
     final now = DateTime.now();
     final difference = now.difference(time);
 
     if (difference.inDays > 0) {
-      return '${difference.inDays}天前';
+      return context.l10n.timeDaysAgo(difference.inDays);
     } else if (difference.inHours > 0) {
-      return '${difference.inHours}小时前';
+      return context.l10n.timeHoursAgo(difference.inHours);
     } else if (difference.inMinutes > 0) {
-      return '${difference.inMinutes}分钟前';
+      return context.l10n.timeMinutesAgo(difference.inMinutes);
     } else {
-      return '刚刚';
+      return context.l10n.timeJustNow;
     }
   }
 }
@@ -646,20 +859,20 @@ class _LeaderboardCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 // 封面图片或渐变占位 (对标iOS 100x100)
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(14),
-                  child: leaderboard.coverImage != null &&
-                          leaderboard.coverImage!.isNotEmpty
-                      ? Image.network(
-                          leaderboard.coverImage!,
-                          width: 90,
-                          height: 90,
-                          fit: BoxFit.cover,
-                          errorBuilder: (_, __, ___) =>
-                              _buildPlaceholderIcon(colors),
-                        )
-                      : _buildPlaceholderIcon(colors),
-                ),
+                leaderboard.coverImage != null &&
+                        leaderboard.coverImage!.isNotEmpty
+                    ? AsyncImageView(
+                        imageUrl: leaderboard.coverImage,
+                        width: 90,
+                        height: 90,
+                        fit: BoxFit.cover,
+                        borderRadius: BorderRadius.circular(14),
+                        errorWidget: _buildPlaceholderIcon(colors),
+                      )
+                    : ClipRRect(
+                        borderRadius: BorderRadius.circular(14),
+                        child: _buildPlaceholderIcon(colors),
+                      ),
                 const SizedBox(width: AppSpacing.md),
                 Expanded(
                   child: Column(

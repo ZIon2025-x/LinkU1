@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../l10n/app_localizations.dart';
 import '../design/app_colors.dart';
 import '../design/app_spacing.dart';
 import '../design/app_typography.dart';
@@ -6,13 +7,14 @@ import '../design/app_radius.dart';
 
 /// 错误状态视图
 /// 参考iOS ErrorStateView.swift
+/// retryText / title / message 等默认值全部使用 l10n，不再硬编码中文
 class ErrorStateView extends StatelessWidget {
   const ErrorStateView({
     super.key,
     required this.message,
     this.icon = Icons.error_outline,
     this.title,
-    this.retryText = '重试',
+    this.retryText,
     this.onRetry,
     this.iconSize = 64,
     this.iconColor,
@@ -21,69 +23,86 @@ class ErrorStateView extends StatelessWidget {
   final String message;
   final IconData icon;
   final String? title;
-  final String retryText;
+  /// 传 null 时自动使用 l10n.commonRetry
+  final String? retryText;
   final VoidCallback? onRetry;
   final double iconSize;
   final Color? iconColor;
 
   /// 网络错误
   factory ErrorStateView.network({
+    String? title,
+    String? message,
     VoidCallback? onRetry,
   }) {
     return ErrorStateView(
       icon: Icons.wifi_off_outlined,
-      title: '网络连接失败',
-      message: '请检查网络连接后重试',
+      title: title,
+      message: message ?? '',
       onRetry: onRetry,
     );
   }
 
   /// 服务器错误
   factory ErrorStateView.server({
+    String? title,
+    String? message,
     VoidCallback? onRetry,
   }) {
     return ErrorStateView(
       icon: Icons.cloud_off_outlined,
-      title: '服务器错误',
-      message: '服务器暂时不可用，请稍后重试',
+      title: title,
+      message: message ?? '',
       onRetry: onRetry,
     );
   }
 
   /// 加载失败
   factory ErrorStateView.loadFailed({
+    String? title,
     String? message,
     VoidCallback? onRetry,
   }) {
     return ErrorStateView(
       icon: Icons.refresh,
-      title: '加载失败',
-      message: message ?? '加载数据时出现错误',
+      title: title,
+      message: message ?? '',
       onRetry: onRetry,
     );
   }
 
   /// 权限不足
-  factory ErrorStateView.unauthorized() {
-    return const ErrorStateView(
+  factory ErrorStateView.unauthorized({
+    String? title,
+    String? message,
+  }) {
+    return ErrorStateView(
       icon: Icons.lock_outline,
-      title: '权限不足',
-      message: '您没有权限访问此内容',
+      title: title,
+      message: message ?? '',
     );
   }
 
   /// 内容不存在
-  factory ErrorStateView.notFound() {
-    return const ErrorStateView(
+  factory ErrorStateView.notFound({
+    String? title,
+    String? message,
+  }) {
+    return ErrorStateView(
       icon: Icons.search_off,
-      title: '内容不存在',
-      message: '您访问的内容不存在或已被删除',
+      title: title,
+      message: message ?? '',
     );
   }
 
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final l10n = AppLocalizations.of(context);
+
+    // 运行时解析默认文本（l10n 优先，兼容无 context 场景）
+    final resolvedRetryText = retryText ?? l10n?.commonRetry ?? 'Retry';
+    final resolvedMessage = message.isNotEmpty ? message : (l10n?.errorUnknown ?? '');
 
     return Center(
       child: Padding(
@@ -117,20 +136,21 @@ class ErrorStateView extends StatelessWidget {
               ),
             if (title != null) AppSpacing.vSm,
             // 错误信息
-            Text(
-              message,
-              style: AppTypography.subheadline.copyWith(
-                color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+            if (resolvedMessage.isNotEmpty)
+              Text(
+                resolvedMessage,
+                style: AppTypography.subheadline.copyWith(
+                  color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                ),
+                textAlign: TextAlign.center,
               ),
-              textAlign: TextAlign.center,
-            ),
             if (onRetry != null) ...[
               AppSpacing.vLg,
               // 重试按钮
               ElevatedButton.icon(
                 onPressed: onRetry,
                 icon: const Icon(Icons.refresh, size: 20),
-                label: Text(retryText),
+                label: Text(resolvedRetryText),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.primary,
                   foregroundColor: Colors.white,

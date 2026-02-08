@@ -1,5 +1,6 @@
 /// API端点常量
 /// 与iOS项目 APIEndpoints.swift 和后端路由完全对齐
+/// 标记 [RESERVED] 的端点已在后端定义但Flutter客户端尚未使用
 class ApiEndpoints {
   ApiEndpoints._();
 
@@ -98,9 +99,9 @@ class ApiEndpoints {
       '/api/tasks/$taskId/applications/$applicationId/negotiate';
   static String respondNegotiation(int taskId, int applicationId) =>
       '/api/tasks/$taskId/applications/$applicationId/respond-negotiation';
-  static String sendApplicationMessage(int taskId, int applicationId) =>
+  static String sendApplicationMessage(int taskId, int applicationId) => // [RESERVED]
       '/api/tasks/$taskId/applications/$applicationId/send-message';
-  static String replyApplicationMessage(int taskId, int applicationId) =>
+  static String replyApplicationMessage(int taskId, int applicationId) => // [RESERVED]
       '/api/tasks/$taskId/applications/$applicationId/reply-message';
 
   // ==================== 跳蚤市场 ====================
@@ -121,6 +122,7 @@ class ApiEndpoints {
   static const String fleaMarketMyPurchases = '/api/flea-market/my-purchases';
   static const String fleaMarketFavorites = '/api/flea-market/favorites/items';
   static const String fleaMarketUploadImage = '/api/flea-market/upload-image';
+  // [RESERVED] 以下跳蚤市场端点已在后端定义但Flutter客户端尚未集成
   static String fleaMarketItemPurchaseRequests(String id) =>
       '/api/flea-market/items/$id/purchase-requests';
   static String fleaMarketAcceptPurchase(String id) =>
@@ -152,9 +154,10 @@ class ApiEndpoints {
       '/api/task-experts/services/$serviceId';
   static String taskExpertServiceReviews(int serviceId) =>
       '/api/task-experts/services/$serviceId/reviews';
-  static String taskExpertReviews(String expertId) =>
+  static String taskExpertReviews(String expertId) => // [RESERVED]
       '/api/task-experts/$expertId/reviews';
   static const String applyToBeExpert = '/api/task-experts/apply';
+  // [RESERVED] 以下达人管理端点已在后端定义但Flutter客户端尚未集成
   static const String myExpertApplication = '/api/task-experts/my-application';
   static const String myExpertProfile = '/api/task-experts/me';
   static const String myExpertServices = '/api/task-experts/me/services';
@@ -165,15 +168,15 @@ class ApiEndpoints {
   static const String myExpertClosedDates = '/api/task-experts/me/closed-dates';
   static const String myServiceApplications =
       '/api/users/me/service-applications';
-  // --- 达人服务时间段 ---
+  // --- 达人服务时间段 [RESERVED] ---
   static String serviceTimeSlots(int serviceId) =>
       '/api/task-experts/services/$serviceId/time-slots';
   static String myServiceTimeSlots(int serviceId) =>
       '/api/task-experts/me/services/$serviceId/time-slots';
-  // --- 达人资料更新请求 ---
+  // --- 达人资料更新请求 [RESERVED] ---
   static const String myExpertProfileUpdateRequest =
       '/api/task-experts/me/profile-update-request';
-  // --- 用户服务申请操作 ---
+  // --- 用户服务申请操作 [RESERVED] ---
   static String respondServiceCounterOffer(int applicationId) =>
       '/api/users/me/service-applications/$applicationId/respond-counter-offer';
   static String cancelServiceApplication(int applicationId) =>
@@ -215,14 +218,14 @@ class ApiEndpoints {
       '/api/forum/categories/$categoryId/favorite';
   static String forumCategoryFavoriteStatus(int categoryId) =>
       '/api/forum/categories/$categoryId/favorite/status';
-  static const String forumCategoryFavoritesBatch =
+  static const String forumCategoryFavoritesBatch = // [RESERVED]
       '/api/forum/categories/favorites/batch';
   static const String myForumCategoryFavorites =
       '/api/forum/my/category-favorites';
   static const String myForumCategoryRequests =
       '/api/forum/categories/requests/my';
 
-  // --- 论坛用户统计/排行 ---
+  // --- 论坛用户统计/排行 [RESERVED] ---
   static String forumUserStats(String userId) =>
       '/api/forum/users/$userId/stats';
   static String forumUserHotPosts(String userId) =>
@@ -276,7 +279,7 @@ class ApiEndpoints {
       '/api/users/messages/mark-chat-read/$contactId';
   static const String unreadMessages = '/api/users/messages/unread';
   static const String unreadMessagesCount = '/api/users/messages/unread/count';
-  static const String messageGenerateImageUrl =
+  static const String messageGenerateImageUrl = // [RESERVED]
       '/api/messages/generate-image-url';
 
   // ==================== 任务聊天 ====================
@@ -302,7 +305,7 @@ class ApiEndpoints {
       '/api/users/notifications/$id/read';
   static const String markAllNotificationsRead =
       '/api/users/notifications/read-all';
-  static String negotiationTokens(int notificationId) =>
+  static String negotiationTokens(int notificationId) => // [RESERVED]
       '/api/notifications/$notificationId/negotiation-tokens';
 
   // ==================== 活动相关 ====================
@@ -400,9 +403,9 @@ class ApiEndpoints {
   // ==================== VIP ====================
   // 后端: routers.py → /users/vip/*
   static const String activateVIP = '/api/users/vip/activate';
-  static const String vipStatus = '/api/users/vip/status';
+  static const String vipStatus = '/api/users/vip/status'; // [RESERVED]
   static const String vipHistory = '/api/users/vip/history';
-  static const String iapProducts = '/api/iap/products';
+  static const String iapProducts = '/api/iap/products'; // [RESERVED]
 
   // ==================== 推荐 ====================
   static const String recommendations = '/api/recommendations';
@@ -421,9 +424,9 @@ class ApiEndpoints {
   static const String uploadPublicImage = '/api/upload/public-image';
   static const String uploadFile = '/api/upload/file';
   static const String refreshImageUrl = '/api/refresh-image-url';
-  static String privateImage(String imageId) =>
+  static String privateImage(String imageId) => // [RESERVED]
       '/api/private-image/$imageId';
-  static const String privateFile = '/api/private-file';
+  static const String privateFile = '/api/private-file'; // [RESERVED]
   static const String banners = '/api/banners';
   static const String healthCheck = '/api/health';
   static const String systemSettingsPublic = '/api/system-settings/public';

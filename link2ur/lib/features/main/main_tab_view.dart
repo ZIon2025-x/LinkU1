@@ -24,8 +24,7 @@ import '../notification/bloc/notification_bloc.dart';
 
 /// 主页面（响应式导航布局）
 /// - 移动端：底部导航栏
-/// - 平板端：左侧收起侧边栏（NavigationRail 风格）
-/// - 桌面端：左侧展开侧边栏 + 内容区宽度约束
+/// - 桌面/平板端：TopBar + 右侧 Overlay Drawer + 全宽内容
 class MainTabView extends StatefulWidget {
   const MainTabView({
     super.key,
@@ -40,6 +39,8 @@ class MainTabView extends StatefulWidget {
 
 class _MainTabViewState extends State<MainTabView> {
   int _currentIndex = 0;
+  final _desktopScaffoldKey = GlobalKey<ScaffoldState>();
+  final Set<int> _loadedTabs = {0}; // 首页默认加载
 
   // 移动端底部导航栏的 tab 配置（包含中间 create 按钮）
   final List<_TabItem> _mobileTabs = const [
@@ -76,29 +77,10 @@ class _MainTabViewState extends State<MainTabView> {
     ),
   ];
 
-  // 桌面/平板侧边栏的路由列表（不含 create 按钮，与侧边栏索引一一对应）
-  final List<String> _sidebarRoutes = const [
-    '/',
-    '/community',
-    '/messages-tab',
-    '/profile-tab',
-  ];
-
-  /// 将移动端 tab 索引转换为侧边栏索引
-  int get _sidebarIndex {
-    // 移动端索引：0=首页, 1=社区, 2=创建, 3=消息, 4=个人
-    // 侧边栏索引：0=首页, 1=社区, 2=消息, 3=个人
-    if (_currentIndex <= 1) return _currentIndex;
-    if (_currentIndex >= 3) return _currentIndex - 1;
-    return 0; // create 按钮情况，默认回到首页
-  }
-
-  /// 将侧边栏索引转换为移动端 tab 索引
-  int _sidebarToMobileIndex(int sidebarIndex) {
-    // 侧边栏索引 0,1 对应移动端 0,1
-    // 侧边栏索引 2,3 对应移动端 3,4（跳过中间 create 按钮）
-    if (sidebarIndex <= 1) return sidebarIndex;
-    return sidebarIndex + 1;
+  String get _currentRoute {
+    if (_currentIndex == 2) return '/'; // center button
+    if (_currentIndex < 2) return _mobileTabs[_currentIndex].route;
+    return _mobileTabs[_currentIndex].route;
   }
 
   void _onMobileTabTapped(int index) {
@@ -113,17 +95,45 @@ class _MainTabViewState extends State<MainTabView> {
       setState(() {
         _currentIndex = index;
       });
+      _ensureTabLoaded(index);
       context.go(_mobileTabs[index].route);
     }
   }
 
-  void _onSidebarTabSelected(int sidebarIndex) {
-    final mobileIndex = _sidebarToMobileIndex(sidebarIndex);
-    if (mobileIndex != _currentIndex) {
+  /// 确保 Tab 对应的 BLoC 数据已加载（懒加载）
+  void _ensureTabLoaded(int index) {
+    if (_loadedTabs.contains(index)) return;
+    _loadedTabs.add(index);
+
+    // 根据 tab index 触发对应 BLoC 数据加载
+    switch (index) {
+      case 0: // Home
+        context.read<HomeBloc>().add(const HomeLoadRequested());
+        break;
+      case 1: // Community (Forum)
+        context.read<ForumBloc>().add(const ForumLoadPosts());
+        break;
+      case 3: // Messages
+        context.read<MessageBloc>()
+          ..add(const MessageLoadContacts())
+          ..add(const MessageLoadTaskChats());
+        break;
+      case 4: // Profile — no BLoC here at this level
+        break;
+    }
+  }
+
+  void _onDesktopNavigate(String route) {
+    // 查找匹配的移动端 tab 索引
+    final mobileIndex = _mobileTabs.indexWhere((t) => t.route == route);
+    if (mobileIndex >= 0 && mobileIndex != _currentIndex) {
       setState(() {
         _currentIndex = mobileIndex;
       });
-      context.go(_sidebarRoutes[sidebarIndex]);
+      context.go(route);
+    } else if (mobileIndex < 0) {
+      // 非主 tab 路由，直接 push
+      context.push(route);
     }
   }
 
@@ -145,37 +155,37 @@ class _MainTabViewState extends State<MainTabView> {
   @override
   Widget build(BuildContext context) {
     // 将 Tab 级别的 BLoC 提升到此处，切换 Tab 时不再重建
+    // 使用懒加载：仅首页立即加载，其余 Tab 在首次切换时触发
     return MultiBlocProvider(
       providers: [
         BlocProvider<HomeBloc>(
           create: (context) => HomeBloc(
             taskRepository: context.read<TaskRepository>(),
-          )..add(const HomeLoadRequested()),
+          )..add(const HomeLoadRequested()), // 首页默认加载
         ),
         BlocProvider<ForumBloc>(
+          lazy: true,
           create: (context) => ForumBloc(
             forumRepository: context.read<ForumRepository>(),
-          )..add(const ForumLoadPosts()),
+          ), // 延迟到 Tab 切换时加载
         ),
         BlocProvider<LeaderboardBloc>(
+          lazy: true,
           create: (context) => LeaderboardBloc(
             leaderboardRepository: context.read<LeaderboardRepository>(),
-          )..add(const LeaderboardLoadRequested()),
+          ), // 延迟到需要时加载
         ),
         BlocProvider<MessageBloc>(
+          lazy: true,
           create: (context) => MessageBloc(
             messageRepository: context.read<MessageRepository>(),
-          )
-            ..add(const MessageLoadContacts())
-            ..add(const MessageLoadTaskChats()),
+          ), // 延迟到 Tab 切换时加载
         ),
       ],
       child: LayoutBuilder(
         builder: (context, constraints) {
-          if (constraints.maxWidth >= Breakpoints.tablet) {
+          if (constraints.maxWidth >= Breakpoints.mobile) {
             return _buildDesktopLayout(context);
-          } else if (constraints.maxWidth >= Breakpoints.mobile) {
-            return _buildTabletLayout(context);
           }
           return _buildMobileLayout(context);
         },
@@ -183,44 +193,30 @@ class _MainTabViewState extends State<MainTabView> {
     );
   }
 
-  // ==================== 桌面布局 ====================
+  // ==================== 桌面/平板布局 ====================
   Widget _buildDesktopLayout(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Scaffold(
-      body: Row(
+      key: _desktopScaffoldKey,
+      endDrawer: DesktopDrawer(
+        currentRoute: _currentRoute,
+        onNavigate: _onDesktopNavigate,
+      ),
+      body: Column(
         children: [
-          // 展开的侧边栏
-          DesktopSidebar(
-            currentIndex: _sidebarIndex,
-            onTabSelected: _onSidebarTabSelected,
-            onCreateTapped: _showCreateOptions,
-            isCollapsed: false,
+          // TopBar
+          _DesktopTopBar(
+            isDark: isDark,
+            onMenuTap: () {
+              _desktopScaffoldKey.currentState?.openEndDrawer();
+            },
           ),
-          // 内容区
+          // 全宽内容区
           Expanded(
             child: ContentConstraint(
               child: widget.child,
             ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // ==================== 平板布局 ====================
-  Widget _buildTabletLayout(BuildContext context) {
-    return Scaffold(
-      body: Row(
-        children: [
-          // 收起的侧边栏（仅图标）
-          DesktopSidebar(
-            currentIndex: _sidebarIndex,
-            onTabSelected: _onSidebarTabSelected,
-            onCreateTapped: _showCreateOptions,
-            isCollapsed: true,
-          ),
-          // 内容区
-          Expanded(
-            child: widget.child,
           ),
         ],
       ),
@@ -382,6 +378,238 @@ class _MainTabViewState extends State<MainTabView> {
   }
 }
 
+// ==================== TopBar ====================
+
+/// 桌面端顶部导航栏
+/// Notion/Linear 风格：Logo + 搜索框 + 通知 + 汉堡菜单
+class _DesktopTopBar extends StatelessWidget {
+  const _DesktopTopBar({
+    required this.isDark,
+    required this.onMenuTap,
+  });
+
+  final bool isDark;
+  final VoidCallback onMenuTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 56,
+      padding: const EdgeInsets.symmetric(horizontal: 24),
+      decoration: BoxDecoration(
+        color: isDark
+            ? AppColors.cardBackgroundDark
+            : AppColors.cardBackgroundLight,
+        border: Border(
+          bottom: BorderSide(
+            color: isDark
+                ? Colors.white.withValues(alpha: 0.06)
+                : AppColors.desktopBorderLight,
+            width: 1,
+          ),
+        ),
+      ),
+      child: Row(
+        children: [
+          // Logo
+          GestureDetector(
+            onTap: () => context.go('/'),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Image.asset(
+                  'assets/images/logo.png',
+                  width: 28,
+                  height: 28,
+                  errorBuilder: (_, __, ___) => Container(
+                    width: 28,
+                    height: 28,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(7),
+                      gradient: const LinearGradient(
+                        colors: AppColors.gradientPrimary,
+                      ),
+                    ),
+                    child: const Center(
+                      child: Text('L',
+                          style: TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w900,
+                              fontSize: 14)),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Text(
+                  'Link²Ur',
+                  style: TextStyle(
+                    fontSize: 17,
+                    fontWeight: FontWeight.w700,
+                    color: isDark
+                        ? AppColors.textPrimaryDark
+                        : AppColors.desktopTextLight,
+                    letterSpacing: -0.3,
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          const SizedBox(width: 32),
+
+          // 搜索框
+          Expanded(
+            child: Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 480),
+                child: GestureDetector(
+                  onTap: () => context.push('/search'),
+                  child: MouseRegion(
+                    cursor: SystemMouseCursors.click,
+                    child: Container(
+                      height: 36,
+                      padding: const EdgeInsets.symmetric(horizontal: 14),
+                      decoration: BoxDecoration(
+                        color: isDark
+                            ? Colors.white.withValues(alpha: 0.06)
+                            : AppColors.desktopHoverLight,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                          color: isDark
+                              ? Colors.white.withValues(alpha: 0.08)
+                              : AppColors.desktopBorderLight,
+                          width: 1,
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.search_rounded,
+                            size: 18,
+                            color: isDark
+                                ? AppColors.textTertiaryDark
+                                : AppColors.desktopPlaceholderLight,
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            context.l10n.searchPlaceholder,
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: isDark
+                                  ? AppColors.textTertiaryDark
+                                  : AppColors.desktopPlaceholderLight,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+
+          const SizedBox(width: 16),
+
+          // 通知铃铛
+          BlocBuilder<NotificationBloc, NotificationState>(
+            builder: (context, state) {
+              final count = state.unreadCount.totalCount;
+              return _TopBarIconButton(
+                icon: Icons.notifications_outlined,
+                isDark: isDark,
+                badge: count > 0 ? count : null,
+                onTap: () => context.push('/notifications'),
+              );
+            },
+          ),
+
+          const SizedBox(width: 4),
+
+          // 汉堡菜单
+          _TopBarIconButton(
+            icon: Icons.menu_rounded,
+            isDark: isDark,
+            onTap: onMenuTap,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// TopBar 图标按钮（带 hover 效果）
+class _TopBarIconButton extends StatefulWidget {
+  const _TopBarIconButton({
+    required this.icon,
+    required this.isDark,
+    required this.onTap,
+    this.badge,
+  });
+
+  final IconData icon;
+  final bool isDark;
+  final VoidCallback onTap;
+  final int? badge;
+
+  @override
+  State<_TopBarIconButton> createState() => _TopBarIconButtonState();
+}
+
+class _TopBarIconButtonState extends State<_TopBarIconButton> {
+  bool _isHovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      onEnter: (_) => setState(() => _isHovered = true),
+      onExit: (_) => setState(() => _isHovered = false),
+      cursor: SystemMouseCursors.click,
+      child: GestureDetector(
+        onTap: widget.onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 120),
+          width: 36,
+          height: 36,
+          decoration: BoxDecoration(
+            color: _isHovered
+                ? (widget.isDark
+                    ? Colors.white.withValues(alpha: 0.08)
+                    : AppColors.desktopHoverLight)
+                : Colors.transparent,
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              Icon(
+                widget.icon,
+                size: 22,
+                color: widget.isDark
+                    ? AppColors.textSecondaryDark
+                    : AppColors.desktopTextLight,
+              ),
+              if (widget.badge != null)
+                Positioned(
+                  top: 4,
+                  right: 4,
+                  child: Container(
+                    width: 8,
+                    height: 8,
+                    decoration: const BoxDecoration(
+                      color: AppColors.badgeRed,
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _TabItem {
   const _TabItem({
     required this.icon,
@@ -439,7 +667,7 @@ class _CreateOptionsSheet extends StatelessWidget {
               ),
               _CreateOption(
                 icon: Icons.storefront,
-                label: '发布闲置',
+                label: context.l10n.fleaMarketPublishItem,
                 color: AppColors.accent,
                 onTap: () {
                   Navigator.pop(context);

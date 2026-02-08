@@ -103,8 +103,8 @@ class _VIPPurchaseViewState extends State<VIPPurchaseView> {
             Text(context.l10n.vipPurchaseSuccess),
           ],
         ),
-        content: const Text(
-          '您已成功订阅 VIP，享受专属权益！',
+        content: Text(
+          context.l10n.vipCongratulations,
           textAlign: TextAlign.center,
         ),
         actionsAlignment: MainAxisAlignment.center,
@@ -120,7 +120,7 @@ class _VIPPurchaseViewState extends State<VIPPurchaseView> {
                 backgroundColor: AppColors.primary,
                 foregroundColor: Colors.white,
               ),
-              child: const Text('确定'),
+              child: Text(context.l10n.vipPurchaseConfirm),
             ),
           ),
         ],
@@ -145,7 +145,7 @@ class _VIPPurchaseViewState extends State<VIPPurchaseView> {
       if (mounted) {
         setState(() {
           _isPurchasing = false;
-          _errorMessage = '购买失败，请稍后重试。';
+          _errorMessage = context.l10n.purchaseFailed;
         });
       }
     }
@@ -165,14 +165,14 @@ class _VIPPurchaseViewState extends State<VIPPurchaseView> {
       if (mounted) {
         setState(() => _isPurchasing = false);
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('已检查购买记录，如有有效订阅将自动恢复。')),
+          SnackBar(content: Text(context.l10n.vipPurchaseRestoreMessage)),
         );
       }
     } catch (e) {
       if (mounted) {
         setState(() {
           _isPurchasing = false;
-          _errorMessage = '恢复购买失败，请稍后重试。';
+          _errorMessage = context.l10n.restorePurchaseFailed;
         });
       }
     }
@@ -220,12 +220,12 @@ class _VIPPurchaseViewState extends State<VIPPurchaseView> {
                     const Icon(Icons.workspace_premium,
                         size: 48, color: AppColors.textTertiary),
                     const SizedBox(height: 12),
-                    const Text('暂无可用的 VIP 套餐',
-                        style: TextStyle(color: AppColors.textSecondary)),
+                    Text(context.l10n.vipNoProducts,
+                        style: const TextStyle(color: AppColors.textSecondary)),
                     const SizedBox(height: 16),
                     TextButton(
                       onPressed: _loadProducts,
-                      child: const Text('重新加载'),
+                      child: Text(context.l10n.commonReload),
                     ),
                   ],
                 ),

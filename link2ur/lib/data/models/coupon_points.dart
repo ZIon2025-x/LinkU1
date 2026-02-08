@@ -1,4 +1,5 @@
 import 'package:equatable/equatable.dart';
+import '../../core/constants/app_constants.dart';
 
 /// 积分账户模型
 /// 参考后端 PointsAccountOut
@@ -197,7 +198,7 @@ class UserCoupon extends Equatable {
   const UserCoupon({
     required this.id,
     required this.coupon,
-    this.status = 'unused',
+    this.status = AppConstants.couponStatusUnused,
     this.obtainedAt,
     this.validUntil,
   });
@@ -209,24 +210,24 @@ class UserCoupon extends Equatable {
   final DateTime? validUntil;
 
   /// 是否可用
-  bool get isUsable => status == 'unused' && !isExpired;
+  bool get isUsable => status == AppConstants.couponStatusUnused && !isExpired;
 
   /// 是否已过期
   bool get isExpired =>
-      status == 'expired' ||
+      status == AppConstants.couponStatusExpired ||
       (validUntil != null && validUntil!.isBefore(DateTime.now()));
 
   /// 是否已使用
-  bool get isUsed => status == 'used';
+  bool get isUsed => status == AppConstants.couponStatusUsed;
 
   /// 状态显示
   String get statusText {
     switch (status) {
-      case 'unused':
+      case AppConstants.couponStatusUnused:
         return '未使用';
-      case 'used':
+      case AppConstants.couponStatusUsed:
         return '已使用';
-      case 'expired':
+      case AppConstants.couponStatusExpired:
         return '已过期';
       default:
         return status;
@@ -237,7 +238,7 @@ class UserCoupon extends Equatable {
     return UserCoupon(
       id: json['id'] as int,
       coupon: Coupon.fromJson(json['coupon'] as Map<String, dynamic>),
-      status: json['status'] as String? ?? 'unused',
+      status: json['status'] as String? ?? AppConstants.couponStatusUnused,
       obtainedAt: json['obtained_at'] != null
           ? DateTime.parse(json['obtained_at'])
           : null,

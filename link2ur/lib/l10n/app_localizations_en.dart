@@ -36,6 +36,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get commonRetry => 'Retry';
 
   @override
+  String get commonReload => 'Reload';
+
+  @override
   String get commonLoading => 'Loading...';
 
   @override
@@ -488,7 +491,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get forumOfficial => 'Official';
 
   @override
-  String get forumAllReplies => 'All Replies';
+  String get forumAllReplies => 'All Comments';
 
   @override
   String get forumReply => 'Reply';
@@ -678,14 +681,14 @@ class AppLocalizationsEn extends AppLocalizations {
   String get leaderboardSortLatest => 'Latest';
 
   @override
-  String get leaderboardNoItems => 'No Items';
+  String get leaderboardNoItems => 'No Leaderboards';
 
   @override
   String get leaderboardNoItemsMessage =>
       'This leaderboard has no participants yet. Be the first to submit!';
 
   @override
-  String get leaderboardItemCount => 'items';
+  String get leaderboardItemCount => 'Entries';
 
   @override
   String get leaderboardTotalVotes => 'Total Votes';
@@ -729,7 +732,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get leaderboardSupport => 'Support';
 
   @override
-  String get leaderboardNoImages => 'No images';
+  String get leaderboardNoImages => 'No Images';
 
   @override
   String get leaderboardWriteReason =>
@@ -824,8 +827,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get taskExpertCompletionRate => 'Completion Rate';
 
   @override
-  String get taskExpertNoServices =>
-      'This expert has no services available yet';
+  String get taskExpertNoServices => 'No Services';
 
   @override
   String get taskExpertOrder => 'order';
@@ -978,7 +980,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get leaderboardAddItem => 'Add item';
 
   @override
-  String get leaderboardVoteCount => 'votes';
+  String get leaderboardVoteCount => 'Votes';
 
   @override
   String get paymentSetupAccount => 'Setup Payment Account';
@@ -1679,18 +1681,18 @@ class AppLocalizationsEn extends AppLocalizations {
   String get timeJustNow => 'Just now';
 
   @override
-  String timeMinutesAgo(int param1) {
-    return '$param1 minutes ago';
+  String timeMinutesAgo(int minutes) {
+    return '${minutes}m ago';
   }
 
   @override
-  String timeHoursAgo(int param1) {
-    return '$param1 hours ago';
+  String timeHoursAgo(int hours) {
+    return '${hours}h ago';
   }
 
   @override
-  String timeDaysAgo(int param1) {
-    return '$param1 days ago';
+  String timeDaysAgo(int days) {
+    return '${days}d ago';
   }
 
   @override
@@ -2481,7 +2483,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get paymentStatusTaskPayment => 'Task Payment';
 
   @override
-  String paymentTaskNumber(int param1) {
+  String paymentTaskNumberWithId(int param1) {
     return 'Task #$param1';
   }
 
@@ -2816,8 +2818,8 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String couponConsecutiveCheckIn(int param1) {
-    return '$param1 days consecutive check-in';
+  String couponConsecutiveCheckIn(int days) {
+    return '$days-day streak';
   }
 
   @override
@@ -2865,11 +2867,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get createTaskPublishTask => 'Publish Task';
 
   @override
-  String get createTaskTitle => 'Task Title';
+  String get createTaskTitle => 'Post Task';
 
   @override
-  String get createTaskTitlePlaceholder =>
-      'Briefly describe your needs (e.g., Pick up package)';
+  String get createTaskTitlePlaceholder => 'Enter task title';
 
   @override
   String get createTaskDescription => 'Task Details';
@@ -2879,7 +2880,7 @@ class AppLocalizationsEn extends AppLocalizations {
       'Please describe your needs, time, special requirements, etc. in detail. The more detailed, the easier it is to get accepted...';
 
   @override
-  String get createTaskReward => 'Task Reward';
+  String get createTaskReward => 'Reward';
 
   @override
   String get createTaskCity => 'City';
@@ -2941,7 +2942,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get activityLocation => 'Location';
 
   @override
-  String get activityType => 'Activity Type';
+  String get activityType => 'Type';
 
   @override
   String get activityTimeArrangement => 'Time Arrangement';
@@ -3072,25 +3073,25 @@ class AppLocalizationsEn extends AppLocalizations {
   String get taskCategoryCampusLife => 'Campus Life';
 
   @override
-  String get taskCategorySecondhandRental => 'Second-hand & Rental';
+  String get taskCategorySecondhandRental => 'Secondhand';
 
   @override
-  String get taskCategoryErrandRunning => 'Errand Running';
+  String get taskCategoryErrandRunning => 'Errands';
 
   @override
-  String get taskCategorySkillService => 'Skill Service';
+  String get taskCategorySkillService => 'Skills';
 
   @override
   String get taskCategorySocialHelp => 'Social Help';
 
   @override
-  String get taskCategoryTransportation => 'Transportation';
+  String get taskCategoryTransportation => 'Transport';
 
   @override
   String get taskCategoryPetCare => 'Pet Care';
 
   @override
-  String get taskCategoryLifeConvenience => 'Life Convenience';
+  String get taskCategoryLifeConvenience => 'Convenience';
 
   @override
   String get taskCategoryOther => 'Other';
@@ -3295,7 +3296,7 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get forumNoReplies => 'No Replies';
+  String get forumNoReplies => 'No Comments';
 
   @override
   String get forumPostReply => 'Post Reply';
@@ -3480,6 +3481,12 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get vipNoProducts => 'No VIP products available';
+
+  @override
+  String get vipPerMonth => '/ month';
+
+  @override
+  String get vipPerYear => '/ year';
 
   @override
   String get vipTryLaterContact => 'Please try again later or contact support';
@@ -3704,11 +3711,11 @@ class AppLocalizationsEn extends AppLocalizations {
   String get paymentPreparing => 'Preparing...';
 
   @override
-  String get paymentSuccess => 'Payment Successful!';
+  String get paymentSuccess => 'Payment Successful';
 
   @override
   String get paymentSuccessMessage =>
-      'Task payment successful, updating status...';
+      'Your payment has been successfully processed, the task will start soon.';
 
   @override
   String get paymentError => 'Payment Error';
@@ -3750,7 +3757,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get paymentCouponDiscount => 'Coupon Discount';
 
   @override
-  String get paymentNoAvailableCoupons => 'No available coupons';
+  String get paymentNoAvailableCoupons => 'No Available Coupons';
 
   @override
   String get paymentTotalAmount => 'Total Amount';
@@ -3825,7 +3832,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get translationShowOriginal => 'Show Original';
 
   @override
-  String get settingsNotifications => 'Notification Settings';
+  String get settingsNotifications => 'Receive push notifications';
 
   @override
   String get settingsAllowNotifications => 'Allow Notifications';
@@ -4022,7 +4029,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get taskStatusPendingPayment => 'Pending Payment';
 
   @override
-  String get myPostsTitle => 'My Items';
+  String get myPostsTitle => 'My Posts';
 
   @override
   String get taskLocationAddress => 'Task Address';
@@ -4043,7 +4050,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get taskLocationDetailAddress => 'Detail Address';
 
   @override
-  String get fleaMarketPublishItem => 'Publish Item';
+  String get fleaMarketPublishItem => 'List Item';
 
   @override
   String get fleaMarketConfirmPurchase => 'Confirm Purchase';
@@ -4373,7 +4380,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get notificationNotifications => 'Notifications';
 
   @override
-  String get notificationNoTaskChat => 'No Task Chat';
+  String get notificationNoTaskChat => 'No task chats';
 
   @override
   String get notificationNoTaskChatMessage =>
@@ -4628,7 +4635,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get onboardingWelcomeTitle => 'Welcome to Link²Ur';
 
   @override
-  String get onboardingWelcomeSubtitle => 'Connect Your World';
+  String get onboardingWelcomeSubtitle => 'Campus Mutual Aid Platform';
 
   @override
   String get onboardingWelcomeDescription =>
@@ -4638,7 +4645,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get onboardingPublishTaskTitle => 'Publish Tasks';
 
   @override
-  String get onboardingPublishTaskSubtitle => 'Easily publish your needs';
+  String get onboardingPublishTaskSubtitle => 'Easily find help';
 
   @override
   String get onboardingPublishTaskDescription =>
@@ -4669,7 +4676,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get onboardingCommunityTitle => 'Community Interaction';
 
   @override
-  String get onboardingCommunitySubtitle => 'Forum, Leaderboard, Flea Market';
+  String get onboardingCommunitySubtitle => 'Connect your world';
 
   @override
   String get onboardingCommunityDescription =>
@@ -4832,7 +4839,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get profileUserProfile => 'User Profile';
 
   @override
-  String get profilePostedTasks => 'Posted Tasks';
+  String get profilePostedTasks => 'Posted';
 
   @override
   String get profileTakenTasks => 'Taken Tasks';
@@ -4902,7 +4909,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get forumViewThisPost => 'Check out this post';
 
   @override
-  String get forumBrowse => 'views';
+  String get forumBrowse => 'Views';
 
   @override
   String get forumRepliesCount => 'replies';
@@ -4941,16 +4948,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get fleaMarketCategoryElectronics => 'Electronics';
 
   @override
-  String get fleaMarketCategoryClothing => 'Clothing & Accessories';
+  String get fleaMarketCategoryClothing => 'Clothing & Bags';
 
   @override
   String get fleaMarketCategoryFurniture => 'Furniture & Appliances';
 
   @override
-  String get fleaMarketCategoryBooks => 'Books & Stationery';
+  String get fleaMarketCategoryBooks => 'Books & Textbooks';
 
   @override
-  String get fleaMarketCategorySports => 'Sports & Outdoors';
+  String get fleaMarketCategorySports => 'Sports & Outdoor';
 
   @override
   String get fleaMarketCategoryBeauty => 'Beauty & Skincare';
@@ -5821,6 +5828,101 @@ class AppLocalizationsEn extends AppLocalizations {
       'You don\'t have any payout records yet';
 
   @override
+  String get paymentExpired => 'Payment Expired';
+
+  @override
+  String get paymentExpiredMessage =>
+      'Payment time has expired, please initiate payment again.';
+
+  @override
+  String get paymentApplePayIOSOnly =>
+      'Apple Pay is only available on iOS devices';
+
+  @override
+  String get paymentApplePayNotSupported =>
+      'Your device does not support Apple Pay, please use another payment method';
+
+  @override
+  String get paymentNetworkConnectionFailed =>
+      'Network connection failed, please check your network and try again.';
+
+  @override
+  String get paymentRequestTimeout =>
+      'Request timeout, please try again later.';
+
+  @override
+  String paymentRemainingTime(String param1) {
+    return 'Payment remaining time: $param1';
+  }
+
+  @override
+  String get paymentOrderInfo => 'Order Information';
+
+  @override
+  String get paymentTaskNumber => 'Task Number';
+
+  @override
+  String get paymentOriginalPrice => 'Original Price';
+
+  @override
+  String paymentDiscount(String param1) {
+    return 'Discount ($param1)';
+  }
+
+  @override
+  String get paymentFinalAmount => 'Final Payment Amount';
+
+  @override
+  String get paymentMethod => 'Payment Method';
+
+  @override
+  String get paymentCreditDebitCard => 'Credit/Debit Card';
+
+  @override
+  String get paymentFastSecure => 'Fast and secure payment';
+
+  @override
+  String get paymentWeChatPay => 'WeChat Pay';
+
+  @override
+  String get paymentAlipay => 'Alipay';
+
+  @override
+  String get paymentCouponSelected => 'Coupon Selected';
+
+  @override
+  String get paymentSelectCoupon => 'Select Coupon';
+
+  @override
+  String get paymentConfirmFree => 'Confirm (Free)';
+
+  @override
+  String paymentPayNow(String param1) {
+    return 'Pay Now $param1';
+  }
+
+  @override
+  String get paymentCancelPayment => 'Cancel Payment';
+
+  @override
+  String get paymentCancelPaymentConfirm =>
+      'Are you sure you want to cancel payment?';
+
+  @override
+  String get paymentContinuePayment => 'Continue Payment';
+
+  @override
+  String get paymentLoadFailed => 'Load Failed';
+
+  @override
+  String get paymentCoupon => 'Coupon';
+
+  @override
+  String paymentApplePayLabel(int param1) {
+    return 'Task #$param1';
+  }
+
+  @override
   String get profileTaskCount => 'Tasks';
 
   @override
@@ -5830,7 +5932,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get profileNoRecentTasks => 'No recent tasks';
 
   @override
-  String get notificationMarkAllRead => 'Mark All Read';
+  String get notificationMarkAllRead => 'Mark all read';
 
   @override
   String get notificationEmpty => 'No Notifications';
@@ -5895,7 +5997,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get networkOnline => 'Network restored';
 
   @override
-  String get notificationPermissionTitle => 'Enable Push Notifications';
+  String get notificationPermissionTitle => 'Notification Permission Required';
 
   @override
   String get notificationPermissionDescription =>
@@ -5953,4 +6055,1411 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get feedbackCopySuccess => 'Copied to clipboard';
+
+  @override
+  String errorPageNotFound(String uri) {
+    return 'Page not found: $uri';
+  }
+
+  @override
+  String get errorServerTitle => 'Server Error';
+
+  @override
+  String get errorServerMessage =>
+      'Server is temporarily unavailable, please try again later';
+
+  @override
+  String get errorLoadFailedTitle => 'Load Failed';
+
+  @override
+  String get errorLoadFailedMessage => 'An error occurred while loading data';
+
+  @override
+  String get errorUnauthorizedTitle => 'Unauthorized';
+
+  @override
+  String get errorUnauthorizedMessage =>
+      'You do not have permission to access this content';
+
+  @override
+  String get errorContentNotFoundTitle => 'Content Not Found';
+
+  @override
+  String get errorContentNotFoundMessage =>
+      'The content you are looking for does not exist or has been removed';
+
+  @override
+  String get errorNetworkTitle => 'Network Connection Failed';
+
+  @override
+  String get errorNetworkMessage =>
+      'Please check your network connection and try again';
+
+  @override
+  String get emptyNoData => 'No Data';
+
+  @override
+  String get emptyNoMessages => 'No Messages';
+
+  @override
+  String get emptyNoMessagesDescription => 'No messages received yet';
+
+  @override
+  String get emptyNoTasksDescription =>
+      'No tasks available. Tap below to create a new task';
+
+  @override
+  String get emptyNoSearchResultsTitle => 'No Results Found';
+
+  @override
+  String get emptyNoSearchResultsDescription => 'No related content found';
+
+  @override
+  String emptyNoSearchResultsWithKeyword(String keyword) {
+    return 'No results found for \"$keyword\"';
+  }
+
+  @override
+  String get emptyNoFavoritesDescription => 'Your favorites will appear here';
+
+  @override
+  String get emptyNoNotificationsDescription =>
+      'Your notifications will appear here';
+
+  @override
+  String get sidebarDiscover => 'Discover';
+
+  @override
+  String get sidebarAccount => 'Account';
+
+  @override
+  String get sidebarWallet => 'Wallet';
+
+  @override
+  String get commonOpenInBrowser => 'Open in browser';
+
+  @override
+  String get commonFree => 'Free';
+
+  @override
+  String get commonRetryText => 'Retry';
+
+  @override
+  String get locationTaskLocation => 'Task Location';
+
+  @override
+  String get locationGetFailed => 'Failed to get location';
+
+  @override
+  String get notificationPermissionMessage =>
+      'You have denied notification permission. Please enable it in system settings.';
+
+  @override
+  String get notificationPermissionLater => 'Maybe Later';
+
+  @override
+  String permissionRequired(String permissionName) {
+    return '$permissionName permission required';
+  }
+
+  @override
+  String get badgeStudent => 'Student';
+
+  @override
+  String get badgeExpert => 'Expert';
+
+  @override
+  String get activityCampusActivities => 'Campus Activities';
+
+  @override
+  String get activityDetailTitle => 'Activity Details';
+
+  @override
+  String get activityInfoTitle => 'Activity Info';
+
+  @override
+  String get activityParticipantCount => 'Participants';
+
+  @override
+  String get activityDiscount => 'Discount';
+
+  @override
+  String get activityRewardType => 'Reward Type';
+
+  @override
+  String get activitySignupSuccess => 'Registration Successful';
+
+  @override
+  String get authResetPassword => 'Reset Password';
+
+  @override
+  String get authCodeSent => 'Verification code sent';
+
+  @override
+  String get authEnterEmailPlaceholder => 'Enter email address';
+
+  @override
+  String get authPasswordLabel => 'Password';
+
+  @override
+  String get authPasswordPlaceholder => 'Enter password';
+
+  @override
+  String get authCodePlaceholder => 'Enter verification code';
+
+  @override
+  String get authPhonePlaceholder => 'Enter phone number';
+
+  @override
+  String get authConfirmPassword => 'Confirm Password';
+
+  @override
+  String get authConfirmPasswordPlaceholder => 'Enter password again';
+
+  @override
+  String get authPasswordRequirement =>
+      'At least 8 characters with letters and numbers';
+
+  @override
+  String get authPleaseAgreeToTerms =>
+      'Please read and agree to the Terms and Privacy Policy';
+
+  @override
+  String get authPleaseEnterValidEmail => 'Please enter a valid email address';
+
+  @override
+  String get authIAgreePrefix => 'I have read and agree to the ';
+
+  @override
+  String get authAnd => ' and ';
+
+  @override
+  String get forumPostDetail => 'Post Detail';
+
+  @override
+  String get forumWriteComment => 'Write a comment...';
+
+  @override
+  String chatUserTitle(String userId) {
+    return 'User $userId';
+  }
+
+  @override
+  String chatTaskTitle(int taskId) {
+    return 'Task $taskId';
+  }
+
+  @override
+  String get chatInputHint => 'Type a message...';
+
+  @override
+  String get chatImageLabel => 'Photo';
+
+  @override
+  String get chatCameraLabel => 'Camera';
+
+  @override
+  String get chatTaskCompleted => 'Completed';
+
+  @override
+  String get chatHasIssue => 'Has Issue';
+
+  @override
+  String get chatRequestRefund => 'Request Refund';
+
+  @override
+  String get chatUploadProof => 'Upload Proof';
+
+  @override
+  String get chatViewDetail => 'View Details';
+
+  @override
+  String get chatCopied => 'Copied';
+
+  @override
+  String get chatTaskDetailLabel => 'Task Details';
+
+  @override
+  String get chatAddressLabel => 'Address';
+
+  @override
+  String get tasksSortLatest => 'Latest';
+
+  @override
+  String get tasksSortHighestPay => 'Highest Pay';
+
+  @override
+  String get tasksSortDeadline => 'Ending Soon';
+
+  @override
+  String get tasksProcessing => 'Processing...';
+
+  @override
+  String get tasksApplyForTask => 'Apply';
+
+  @override
+  String get tasksCancelApplication => 'Cancel Application';
+
+  @override
+  String get tasksCompleteTask => 'Complete Task';
+
+  @override
+  String get tasksConfirmComplete => 'Confirm Complete';
+
+  @override
+  String get fleaMarketChat => 'Chat';
+
+  @override
+  String get fleaMarketPurchaseInDev => 'Purchase feature coming soon';
+
+  @override
+  String get fleaMarketSeller => 'Seller';
+
+  @override
+  String get fleaMarketCreateTitle => 'List Item';
+
+  @override
+  String get fleaMarketTitlePlaceholder => 'Enter item title';
+
+  @override
+  String get fleaMarketDescPlaceholder => 'Describe your item...';
+
+  @override
+  String get fleaMarketSelectCategory => 'Select category';
+
+  @override
+  String get fleaMarketLocationPlaceholder => 'e.g. North Campus Gate';
+
+  @override
+  String get fleaMarketSelectImageFailed => 'Failed to select image';
+
+  @override
+  String get fleaMarketInvalidPrice => 'Please enter a valid price';
+
+  @override
+  String get profileEditProfileTitle => 'Edit Profile';
+
+  @override
+  String get profileSaveButton => 'Save';
+
+  @override
+  String get profileNamePlaceholder => 'Enter name';
+
+  @override
+  String get profileBioPlaceholder => 'Tell us about yourself...';
+
+  @override
+  String get profileLocationPlaceholder => 'e.g. London';
+
+  @override
+  String get profileMyPostsEmpty => 'No Posts';
+
+  @override
+  String get profileAcceptedTasks => 'Accepted';
+
+  @override
+  String get walletPointsBalance => 'Points Balance';
+
+  @override
+  String get walletTotalEarned => 'Total Earned';
+
+  @override
+  String get walletTotalSpent => 'Total Spent';
+
+  @override
+  String get walletPaymentAccount => 'Payment Account';
+
+  @override
+  String get walletPayoutRecords => 'Payout Records';
+
+  @override
+  String get walletTransactionRecords => 'Transactions';
+
+  @override
+  String get walletNoTransactions => 'No Transactions';
+
+  @override
+  String get walletViewMore => 'View More Transactions';
+
+  @override
+  String get walletMyCoupons => 'My Coupons';
+
+  @override
+  String get walletNoCoupons => 'No Coupons';
+
+  @override
+  String get settingsGoLogin => 'Login';
+
+  @override
+  String get settingsThemeSystem => 'System';
+
+  @override
+  String get settingsThemeLight => 'Light';
+
+  @override
+  String get settingsThemeDark => 'Dark';
+
+  @override
+  String get settingsLanguage => 'Language';
+
+  @override
+  String get settingsPaymentReceiving => 'Payment & Receiving';
+
+  @override
+  String get settingsExpenseManagement => 'Expense Management';
+
+  @override
+  String get settingsPaymentHistory => 'Payment History';
+
+  @override
+  String get settingsCookiePolicy => 'Cookie Policy';
+
+  @override
+  String get settingsEmail => 'Email';
+
+  @override
+  String get settingsOther => 'Other';
+
+  @override
+  String get settingsClearCache => 'Clear Cache';
+
+  @override
+  String get settingsDangerZone => 'Danger Zone';
+
+  @override
+  String get couponPointsTab => 'Points';
+
+  @override
+  String get couponCouponsTab => 'Coupons';
+
+  @override
+  String get couponCheckInTab => 'Check-in';
+
+  @override
+  String get couponRedeemReward => 'Redeem Reward';
+
+  @override
+  String get couponRedeemCode => 'Redeem Code';
+
+  @override
+  String get couponNoPointsRecords => 'No Points Records';
+
+  @override
+  String get couponEnterInviteCodeTitle => 'Enter Invite Code';
+
+  @override
+  String get couponEnterInviteCodeHint => 'Enter invite code or redeem code';
+
+  @override
+  String get couponNoCoupons => 'No Coupons';
+
+  @override
+  String get couponClaim => 'Claim';
+
+  @override
+  String get customerServiceRateTitle => 'Rate Support';
+
+  @override
+  String get customerServiceRateHint => 'Leave your feedback (optional)';
+
+  @override
+  String get customerServiceEndTitle => 'End Conversation';
+
+  @override
+  String get customerServiceEndMessage =>
+      'Are you sure you want to end this conversation?';
+
+  @override
+  String get customerServiceEndButton => 'End';
+
+  @override
+  String get customerServiceRefresh => 'Refresh';
+
+  @override
+  String get notificationSystemTab => 'System';
+
+  @override
+  String get notificationInteractionTab => 'Interactions';
+
+  @override
+  String get notificationTaskChatTitle => 'Task Chat';
+
+  @override
+  String get notificationNoTaskChats => 'No Task Chats';
+
+  @override
+  String get onboardingWelcome => 'Welcome to Link²Ur';
+
+  @override
+  String get onboardingPublishTask => 'Post Tasks';
+
+  @override
+  String get onboardingAcceptTask => 'Accept Tasks';
+
+  @override
+  String get onboardingSafePayment => 'Safe Payment';
+
+  @override
+  String get onboardingSafePaymentSubtitle => 'Funds are protected';
+
+  @override
+  String get onboardingCommunity => 'Community';
+
+  @override
+  String get searchTasks => 'Search Tasks';
+
+  @override
+  String get searchFleaMarket => 'Search Items';
+
+  @override
+  String get searchForum => 'Search Posts';
+
+  @override
+  String get searchTasksTitle => 'Tasks';
+
+  @override
+  String get searchForumTitle => 'Forum';
+
+  @override
+  String get searchFleaMarketTitle => 'Flea Market';
+
+  @override
+  String get leaderboardRankLabel => 'Rank';
+
+  @override
+  String get taskExpertNotFound => 'Expert not found';
+
+  @override
+  String get taskExpertCompletedOrders => 'Completed';
+
+  @override
+  String get taskExpertServices => 'Services';
+
+  @override
+  String get taskExpertBook => 'Book';
+
+  @override
+  String get createTaskDescPlaceholder =>
+      'Describe task requirements in detail...';
+
+  @override
+  String get createTaskLocationPlaceholder => 'Enter task location';
+
+  @override
+  String get createTaskPublish => 'Publish Task';
+
+  @override
+  String get infoFAQTitle => 'FAQ';
+
+  @override
+  String get infoAboutTitle => 'About';
+
+  @override
+  String get infoFAQAccountTitle => 'Account';
+
+  @override
+  String get infoFAQTaskTitle => 'Tasks';
+
+  @override
+  String get infoFAQPaymentTitle => 'Payment & Security';
+
+  @override
+  String get infoTermsTitle => 'Terms of Service';
+
+  @override
+  String get infoPrivacyTitle => 'Privacy Policy';
+
+  @override
+  String get infoCookieTitle => 'Cookie Policy';
+
+  @override
+  String get infoVipCenter => 'VIP Center';
+
+  @override
+  String get infoVipPriority => 'Priority Orders';
+
+  @override
+  String get infoVipBadge => 'VIP Badge';
+
+  @override
+  String get infoVipFeeReduction => 'Fee Reduction';
+
+  @override
+  String get infoVipCustomerService => 'VIP Support';
+
+  @override
+  String get infoVipPointsBoost => 'Points Boost';
+
+  @override
+  String get infoVipSubscribe => 'Subscribe to VIP';
+
+  @override
+  String get infoVipPriorityRecommend => 'Priority Listing';
+
+  @override
+  String get infoVipBadgeLabel => 'VIP Badge';
+
+  @override
+  String get infoVipFeeDiscount => 'Fee Discount';
+
+  @override
+  String get infoVipExclusiveCoupon => 'Exclusive Coupons';
+
+  @override
+  String get infoVipDataAnalytics => 'Data Analytics';
+
+  @override
+  String get infoVipMonthly => 'Monthly';
+
+  @override
+  String get infoVipYearly => 'Yearly';
+
+  @override
+  String get vipPurchaseConfirm => 'Confirm';
+
+  @override
+  String get vipPurchaseRestoreMessage =>
+      'Purchase history checked. Active subscriptions will be restored automatically.';
+
+  @override
+  String get vipPurchaseNoPlans => 'No VIP plans available';
+
+  @override
+  String get vipPurchaseReload => 'Reload';
+
+  @override
+  String get homeSecondHandMarket => 'Second-hand Market';
+
+  @override
+  String get homeSecondHandSubtitle => 'Pre-owned items at great prices';
+
+  @override
+  String get homeStudentVerification => 'Student Verification';
+
+  @override
+  String get homeStudentVerificationSubtitle =>
+      'Verify to unlock more benefits';
+
+  @override
+  String get homeBecomeExpert => 'Become an Expert';
+
+  @override
+  String get homeBecomeExpertSubtitle =>
+      'Showcase skills, get more opportunities';
+
+  @override
+  String get homeNewUserReward => 'New User Reward';
+
+  @override
+  String get homeNewUserRewardSubtitle => 'Complete first order to earn';
+
+  @override
+  String get homeInviteFriends => 'Invite Friends';
+
+  @override
+  String get homeInviteFriendsSubtitle => 'Invite friends to earn points';
+
+  @override
+  String get homeDailyCheckIn => 'Daily Check-in';
+
+  @override
+  String get homeDailyCheckInSubtitle => 'Check in daily for rewards';
+
+  @override
+  String get homeCampusLife => 'Campus Life Sharing';
+
+  @override
+  String get homeUsedBooks => 'Used Books for Sale';
+
+  @override
+  String get homeWeeklyExperts => 'Weekly Expert Leaderboard';
+
+  @override
+  String get homeLoadNearbyTasks => 'Load Nearby Tasks';
+
+  @override
+  String get homeBrowseExperts => 'Browse Experts';
+
+  @override
+  String get mainPublishFleaMarket => 'List Item';
+
+  @override
+  String get linkCopied => 'Link copied';
+
+  @override
+  String get paymentAlipaySymbol => 'A';
+
+  @override
+  String authResendCountdown(int countdown) {
+    return 'Resend in ${countdown}s';
+  }
+
+  @override
+  String get authPasswordsDoNotMatch => 'Passwords do not match';
+
+  @override
+  String get authPleaseEnterEmail => 'Please enter your email';
+
+  @override
+  String get authEmailFormatInvalid => 'Invalid email format';
+
+  @override
+  String get authResetPasswordDesc =>
+      'Enter your registered email and we will send a verification code to help you reset your password.';
+
+  @override
+  String get authCreateAccount => 'Create Account';
+
+  @override
+  String get authAlreadyHaveAccount => 'Already have an account?';
+
+  @override
+  String get authNewPassword => 'New Password';
+
+  @override
+  String get authEnterNewPassword => 'Please enter a new password';
+
+  @override
+  String get authPasswordMinLength => 'Password must be at least 8 characters';
+
+  @override
+  String get authConfirmNewPassword => 'Confirm New Password';
+
+  @override
+  String get authForgotPasswordQuestion => 'Forgot password?';
+
+  @override
+  String get authRegisterNewAccount => 'Create account';
+
+  @override
+  String get authRegisterSubtitle => 'Join Link²Ur, start exchanging skills';
+
+  @override
+  String get homeLoadFailed => 'Failed to load';
+
+  @override
+  String get homePublishTask => 'Post Task';
+
+  @override
+  String get homeDeadlineExpired => 'Expired';
+
+  @override
+  String homeDeadlineDays(int days) {
+    return '${days}d left';
+  }
+
+  @override
+  String homeDeadlineHours(int hours) {
+    return '${hours}h left';
+  }
+
+  @override
+  String homeDeadlineMinutes(int minutes) {
+    return '${minutes}m left';
+  }
+
+  @override
+  String get homeDefaultUser => 'User';
+
+  @override
+  String get homeClassmate => 'Student';
+
+  @override
+  String get homePostedNewPost => 'posted a new topic';
+
+  @override
+  String get homePostedNewProduct => 'listed a new item';
+
+  @override
+  String get homeSystemUser => 'System';
+
+  @override
+  String get homeCreatedLeaderboard => 'created a new leaderboard';
+
+  @override
+  String get homeCampusLifeDesc => 'Sharing my campus life';
+
+  @override
+  String get homeSearchCategory => 'Search categories';
+
+  @override
+  String get homeSearchTasks => 'Search tasks';
+
+  @override
+  String get homeSearchFleaMarket => 'Search marketplace';
+
+  @override
+  String get homeSearchPosts => 'Search posts';
+
+  @override
+  String homeSearchQueryResult(String query) {
+    return 'Search \"$query\"';
+  }
+
+  @override
+  String get homePressEnterToSearch => 'Press Enter to search';
+
+  @override
+  String get taskCategoryPickup => 'Pickup';
+
+  @override
+  String get taskCategoryTutoring => 'Tutoring';
+
+  @override
+  String get taskCategoryMoving => 'Moving';
+
+  @override
+  String get taskCategoryPurchasing => 'Purchasing';
+
+  @override
+  String get taskCategoryDogWalking => 'Dog Walking';
+
+  @override
+  String get taskCategoryTranslation => 'Translation';
+
+  @override
+  String get taskCategoryPhotography => 'Photography';
+
+  @override
+  String get taskCategoryTutor => 'Tutoring';
+
+  @override
+  String get taskDetailProcessing => 'Processing...';
+
+  @override
+  String get taskDetailApplyForTask => 'Apply';
+
+  @override
+  String get taskDetailCancelApplication => 'Cancel Application';
+
+  @override
+  String get taskDetailCompleteTask => 'Complete Task';
+
+  @override
+  String get taskDetailParticipantCount => 'Participants';
+
+  @override
+  String get taskSortBy => 'Sort by';
+
+  @override
+  String get taskSortLatest => 'Latest';
+
+  @override
+  String get taskSortHighestPay => 'Highest Pay';
+
+  @override
+  String get taskSortNearDeadline => 'Near Deadline';
+
+  @override
+  String get taskDeadlineExpired => 'Expired';
+
+  @override
+  String taskDeadlineMinutes(int minutes) {
+    return '${minutes}m left';
+  }
+
+  @override
+  String taskDeadlineHours(int hours) {
+    return '${hours}h left';
+  }
+
+  @override
+  String taskDeadlineDays(int days) {
+    return '${days}d left';
+  }
+
+  @override
+  String taskDeadlineDate(int month, int day) {
+    return '$month/$day deadline';
+  }
+
+  @override
+  String get taskCategoryHousekeepingLife => 'Housekeeping';
+
+  @override
+  String get createTaskType => 'Task Type';
+
+  @override
+  String get createTaskTitleField => 'Task Title';
+
+  @override
+  String get createTaskTitleHint => 'Enter task title';
+
+  @override
+  String get createTaskDescHint => 'Describe task requirements in detail...';
+
+  @override
+  String get createTaskLocation => 'Location';
+
+  @override
+  String get createTaskLocationHint => 'Enter task location';
+
+  @override
+  String get createTaskDeadline => 'Deadline';
+
+  @override
+  String get createTaskSelectDeadline => 'Select deadline';
+
+  @override
+  String get createTaskCategoryDelivery => 'Delivery';
+
+  @override
+  String get createTaskCategoryShopping => 'Shopping';
+
+  @override
+  String get createTaskCategoryTutoring => 'Tutoring';
+
+  @override
+  String get createTaskCategoryTranslation => 'Translation';
+
+  @override
+  String get createTaskCategoryDesign => 'Design';
+
+  @override
+  String get createTaskCategoryProgramming => 'Programming';
+
+  @override
+  String get createTaskCategoryWriting => 'Writing';
+
+  @override
+  String get createTaskCategoryOther => 'Other';
+
+  @override
+  String get taskDetailNoImages => 'No images';
+
+  @override
+  String forumUserFallback(String userId) {
+    return 'User $userId';
+  }
+
+  @override
+  String get forumNoLeaderboard => 'No leaderboard';
+
+  @override
+  String get forumNoLeaderboardMessage => 'No leaderboard available';
+
+  @override
+  String get forumNoPostsHint =>
+      'No posts yet. Tap below to create the first one!';
+
+  @override
+  String get forumEnterTitle => 'Enter title';
+
+  @override
+  String get forumShareThoughts => 'Share your thoughts...';
+
+  @override
+  String get forumSelectCategory => 'Select category';
+
+  @override
+  String get settingsPleaseLoginFirst => 'Please login first';
+
+  @override
+  String get settingsUnknown => 'Unknown';
+
+  @override
+  String get settingsLoading => 'Loading...';
+
+  @override
+  String get settingsNotBound => 'Not linked';
+
+  @override
+  String get settingsChinese => 'Chinese';
+
+  @override
+  String get walletPayoutAccount => 'Payout Account';
+
+  @override
+  String get walletActivated => 'Activated, ready to receive';
+
+  @override
+  String get walletConnectedPending => 'Connected, pending activation';
+
+  @override
+  String get walletNotConnected => 'Not connected';
+
+  @override
+  String get walletActivatedShort => 'Activated';
+
+  @override
+  String get walletPendingActivation => 'Pending';
+
+  @override
+  String get walletNotConnectedShort => 'Not connected';
+
+  @override
+  String get walletViewAccountDetail => 'View account details';
+
+  @override
+  String get walletSetupPayoutAccount => 'Setup payout account';
+
+  @override
+  String get walletPayoutRecordsFull => 'Payout Records';
+
+  @override
+  String get walletWithdrawalRecords => 'Withdrawal Records';
+
+  @override
+  String get walletTransactionHistory => 'Transaction History';
+
+  @override
+  String get walletTransactionsDesc =>
+      'Your points transaction history will appear here';
+
+  @override
+  String get walletNoCouponsDesc => 'You don\'t have any coupons';
+
+  @override
+  String get walletToday => 'Today';
+
+  @override
+  String get walletYesterday => 'Yesterday';
+
+  @override
+  String get walletCheckingIn => 'Checking in...';
+
+  @override
+  String get walletDailyCheckIn => 'Daily Check-in';
+
+  @override
+  String get myTasksTitle => 'My Tasks';
+
+  @override
+  String get myTasksAccepted => 'Accepted';
+
+  @override
+  String get myTasksPosted => 'Posted';
+
+  @override
+  String get myTasksGoAccept => 'Browse Tasks';
+
+  @override
+  String get profileBio => 'Bio';
+
+  @override
+  String get profileBioHint => 'Tell us about yourself...';
+
+  @override
+  String get profileCity => 'City';
+
+  @override
+  String get profileCityHint => 'e.g. London';
+
+  @override
+  String get profileNameRequired => 'Please enter your name';
+
+  @override
+  String get profileNameMinLength => 'Name must be at least 3 characters';
+
+  @override
+  String get profileAnonymousUser => 'Anonymous';
+
+  @override
+  String get myPostsEmpty => 'No posts';
+
+  @override
+  String get myPostsEmptyDesc => 'You haven\'t posted anything yet';
+
+  @override
+  String get fleaMarketSold => 'Sold';
+
+  @override
+  String get fleaMarketDelisted => 'Delisted';
+
+  @override
+  String get fleaMarketCategoryAll => 'All';
+
+  @override
+  String get fleaMarketCategoryDailyUse => 'Daily Use';
+
+  @override
+  String get fleaMarketImageSelectFailed => 'Failed to select image';
+
+  @override
+  String get fleaMarketTitleMinLength => 'Title must be at least 2 characters';
+
+  @override
+  String get fleaMarketTitleRequired => 'Please enter a title';
+
+  @override
+  String get fleaMarketDescOptional => 'Description (optional)';
+
+  @override
+  String get fleaMarketDescHint => 'Describe your item...';
+
+  @override
+  String get fleaMarketLocationOptional => 'Location (optional)';
+
+  @override
+  String get fleaMarketLocationHint => 'e.g. Campus North Gate';
+
+  @override
+  String get fleaMarketPriceRequired => 'Please enter a price';
+
+  @override
+  String get fleaMarketCategoryLabel => 'Category';
+
+  @override
+  String get fleaMarketNoItemsHint =>
+      'No items yet. Tap below to list the first one!';
+
+  @override
+  String get chatNoMessages => 'No messages yet. Start a conversation!';
+
+  @override
+  String get chatInProgress => 'In Progress';
+
+  @override
+  String get chatTaskCompletedConfirm => 'Task completed, please confirm.';
+
+  @override
+  String get chatHasIssueMessage => 'I encountered some issues:';
+
+  @override
+  String get activityCheckLater => 'Check back later';
+
+  @override
+  String get activityNoAvailableActivities => 'No activities available yet';
+
+  @override
+  String get activityRegisterSuccess => 'Registration successful';
+
+  @override
+  String get activityRegisterFailed => 'Registration failed';
+
+  @override
+  String get activityRegisterNow => 'Register Now';
+
+  @override
+  String get activityRegistered => 'Registered';
+
+  @override
+  String get activityFullSlots => 'Full';
+
+  @override
+  String get activityCancelled => 'Cancelled';
+
+  @override
+  String get activityInProgress => 'In Progress';
+
+  @override
+  String get activityFree => 'Free';
+
+  @override
+  String get activityCash => 'Cash';
+
+  @override
+  String get activityPointsReward => 'Points';
+
+  @override
+  String get activityCashAndPoints => 'Cash + Points';
+
+  @override
+  String get activityInfo => 'Activity Info';
+
+  @override
+  String get activityPublisher => 'Publisher';
+
+  @override
+  String get activityViewExpertProfileShort => 'View Expert Profile';
+
+  @override
+  String get activityParticipantsCount => 'Participants';
+
+  @override
+  String get activityStatusLabel => 'Status';
+
+  @override
+  String activityPersonCount(int current, int max) {
+    return '$current/$max';
+  }
+
+  @override
+  String get leaderboardNoLeaderboards => 'No leaderboards';
+
+  @override
+  String get leaderboardNoLeaderboardsMessage => 'No leaderboards available';
+
+  @override
+  String get leaderboardNoCompetitorsHint =>
+      'No competitors yet. Tap below to submit the first one!';
+
+  @override
+  String leaderboardNetVotesCount(int count) {
+    return 'Net $count';
+  }
+
+  @override
+  String get leaderboardDetails => 'Details';
+
+  @override
+  String leaderboardCompletedCount(int count) {
+    return '$count completed';
+  }
+
+  @override
+  String get notificationSystemNotifications => 'System';
+
+  @override
+  String get notificationInteractionMessages => 'Interactions';
+
+  @override
+  String get notificationNoTaskChatDesc =>
+      'Accept or post a task to start chatting';
+
+  @override
+  String get taskExpertDetailTitle => 'Expert Details';
+
+  @override
+  String get taskExpertExpertNotExist => 'Expert not found';
+
+  @override
+  String get taskExpertExpertNotExistDesc =>
+      'This expert does not exist or has been removed';
+
+  @override
+  String get taskExpertBio => 'Bio';
+
+  @override
+  String get taskExpertProvidedServices => 'Services Provided';
+
+  @override
+  String get taskExpertNoServicesDesc =>
+      'This expert hasn\'t listed any services yet';
+
+  @override
+  String get taskExpertAccepted => 'Accepted';
+
+  @override
+  String get taskExpertRejected => 'Rejected';
+
+  @override
+  String get taskExpertAppliedStatus => 'Applied';
+
+  @override
+  String taskExpertServiceCount(int count) {
+    return '$count services';
+  }
+
+  @override
+  String taskExpertShareTitle(String name) {
+    return 'Share Expert - $name';
+  }
+
+  @override
+  String taskExpertShareText(String name) {
+    return 'Check out this expert: $name';
+  }
+
+  @override
+  String get infoFAQAccountQ1 => 'How do I register an account?';
+
+  @override
+  String get infoFAQAccountA1 =>
+      'You can register using your email address or phone number. Click \'Register\' on the login page and follow the instructions.';
+
+  @override
+  String get infoFAQAccountQ2 => 'How do I reset my password?';
+
+  @override
+  String get infoFAQAccountA2 =>
+      'Click \'Forgot Password\' on the login page, enter your registered email and follow the verification steps to reset it.';
+
+  @override
+  String get infoFAQAccountQ3 => 'How do I edit my profile?';
+
+  @override
+  String get infoFAQAccountA3 =>
+      'Go to Profile > Edit Profile to update your avatar, nickname, bio and other information.';
+
+  @override
+  String get infoFAQAccountQ4 => 'How do I delete my account?';
+
+  @override
+  String get infoFAQAccountA4 =>
+      'Go to Settings > Account Security > Delete Account. Please note this action is irreversible.';
+
+  @override
+  String get infoFAQTaskQ1 => 'How do I publish a task?';
+
+  @override
+  String get infoFAQTaskA1 =>
+      'Tap the \'+\' button at the bottom of the screen, select \'Publish Task\', fill in the details and submit.';
+
+  @override
+  String get infoFAQTaskQ2 => 'How do I accept a task?';
+
+  @override
+  String get infoFAQTaskA2 =>
+      'Browse available tasks, tap on one to view details, then click \'Accept Task\' to start.';
+
+  @override
+  String get infoFAQTaskQ3 => 'How do I cancel a task?';
+
+  @override
+  String get infoFAQTaskA3 =>
+      'Go to the task detail page and click \'Cancel Task\'. Please note that cancellation policies may apply.';
+
+  @override
+  String get infoFAQTaskQ4 => 'What if there is a dispute?';
+
+  @override
+  String get infoFAQTaskA4 =>
+      'You can raise a dispute via the task chat page. Our customer service team will assist in resolving it.';
+
+  @override
+  String get infoFAQPaymentQ1 => 'What payment methods are supported?';
+
+  @override
+  String get infoFAQPaymentA1 =>
+      'We support Stripe (credit/debit cards), Apple Pay, and WeChat Pay.';
+
+  @override
+  String get infoFAQPaymentQ2 => 'How does the escrow system work?';
+
+  @override
+  String get infoFAQPaymentA2 =>
+      'When you pay for a task, the funds are held securely. The helper receives payment only after you confirm task completion.';
+
+  @override
+  String get infoFAQPaymentQ3 => 'How do I request a refund?';
+
+  @override
+  String get infoFAQPaymentA3 =>
+      'Go to the task detail page and click \'Request Refund\'. Provide a reason and our team will review it within 1-3 business days.';
+
+  @override
+  String get infoFAQPaymentQ4 => 'How do I withdraw my earnings?';
+
+  @override
+  String get infoFAQPaymentA4 =>
+      'Go to Wallet > Withdraw, connect your Stripe account and withdraw to your bank account.';
+
+  @override
+  String get vipPlanFeatureMonthly1 => 'Priority task recommendation';
+
+  @override
+  String get vipPlanFeatureMonthly2 => 'Exclusive VIP badge';
+
+  @override
+  String get vipPlanFeatureMonthly3 => 'Reduced service fees';
+
+  @override
+  String get vipPlanFeatureYearly1 => 'All monthly benefits';
+
+  @override
+  String get vipPlanFeatureYearly2 => 'Dedicated customer support';
+
+  @override
+  String get vipPlanFeatureYearly3 => 'Points boost & exclusive activities';
+
+  @override
+  String get vipPlanFeatureYearly4 => 'Data analytics dashboard';
+
+  @override
+  String get vipPlanBadgeBestValue => 'Best Value';
+
+  @override
+  String get vipRegularUser => 'Regular User';
+
+  @override
+  String infoVersionFormat(String version, String buildNumber) {
+    return 'Version $version ($buildNumber)';
+  }
+
+  @override
+  String get infoCopyright => '© 2024 Link²Ur. All rights reserved.';
+
+  @override
+  String get chatImagePlaceholder => '[Image]';
+
+  @override
+  String get studentVerificationEmailLocked =>
+      'Email is locked, please wait for review to complete';
+
+  @override
+  String get studentVerificationPending =>
+      'Verification under review, please check your email and complete verification';
+
+  @override
+  String get purchaseFailed => 'Purchase failed, please try again later.';
+
+  @override
+  String get restorePurchaseFailed =>
+      'Restore purchase failed, please try again later.';
+
+  @override
+  String get onboardingTaskTypeErrand => 'Errand Running';
+
+  @override
+  String get onboardingTaskTypeSkill => 'Skill Service';
+
+  @override
+  String get onboardingTaskTypeHousekeeping => 'Housekeeping';
+
+  @override
+  String get onboardingTaskTypeTransport => 'Transportation';
+
+  @override
+  String get onboardingTaskTypeSocial => 'Social Help';
+
+  @override
+  String get onboardingTaskTypeCampus => 'Campus Life';
+
+  @override
+  String get onboardingTaskTypeSecondhand => 'Secondhand & Rental';
+
+  @override
+  String get onboardingTaskTypePetCare => 'Pet Care';
+
+  @override
+  String get onboardingTaskTypeConvenience => 'Life Convenience';
+
+  @override
+  String get onboardingTaskTypeOther => 'Other';
+
+  @override
+  String get fleaMarketCategoryKeyElectronics => 'electronics';
+
+  @override
+  String get fleaMarketCategoryKeyBooks => 'books';
+
+  @override
+  String get fleaMarketCategoryKeyDaily => 'daily';
+
+  @override
+  String get fleaMarketCategoryKeyClothing => 'clothing';
+
+  @override
+  String get fleaMarketCategoryKeySports => 'sports';
+
+  @override
+  String get fleaMarketCategoryKeyOther => 'other';
+
+  @override
+  String get couponRewardPoints50 => '+50 Points';
+
+  @override
+  String get couponRewardPoints100Coupon => '+100 Points + Coupon';
+
+  @override
+  String get couponRewardPoints500Vip => '+500 Points + VIP Trial';
+
+  @override
+  String get settingsLanguageEnglish => 'English';
+
+  @override
+  String get settingsLanguageChinese => '中文';
+
+  @override
+  String get infoTermsContent =>
+      'Link²Ur Terms of Service\n\nLast updated: January 1, 2024\n\n1. Service Overview\nLink²Ur is a campus mutual-aid platform designed to help users publish and accept various life service tasks.\n\n2. User Responsibilities\n- Users must provide truthful and accurate personal information\n- Users must comply with platform rules and applicable laws\n- Users are responsible for the content they publish\n\n3. Platform Responsibilities\n- The platform provides information intermediary services\n- The platform implements escrow protection for transaction funds\n- The platform reserves the right to take action against violations\n\n4. Payment & Settlement\n- All payments are processed through third-party payment platforms\n- Tasks are automatically settled upon completion\n- The platform charges reasonable service fees\n\n5. Privacy Protection\nPlease refer to our Privacy Policy for detailed information.\n\n6. Disclaimer\nAs an information intermediary, the platform does not bear direct responsibility for transactions between users.\n\nIf you have any questions, please contact our customer service team.';
+
+  @override
+  String get infoPrivacyContent =>
+      'Link²Ur Privacy Policy\n\nLast updated: January 1, 2024\n\n1. Information Collection\nWe collect the following types of information:\n- Registration information (name, email, etc.)\n- Location information (for nearby task recommendations)\n- Device information (for push notifications)\n\n2. Information Usage\nWe use your information to:\n- Provide and improve services\n- Personalized recommendations\n- Ensure transaction security\n\n3. Information Storage & Protection\n- Data is stored on secure servers\n- Encryption technology is used to protect data transmission\n- Regular security audits are conducted\n\n4. Information Sharing\nWe do not sell your personal information. We only share in the following cases:\n- With your consent\n- Legal requirements\n- Necessary for service provision\n\n5. Cookie Policy\nWe use cookies to improve user experience.\n\n6. Your Rights\n- Access and modify personal information\n- Delete account\n- Unsubscribe from notifications\n\nFor privacy-related questions, please contact privacy@link2ur.com';
+
+  @override
+  String get infoCookieContent =>
+      'Link²Ur Cookie Policy\n\nWe use cookies and similar technologies to improve your experience.\n\n1. What are Cookies\nCookies are small text files stored on your device.\n\n2. How We Use Cookies\n- Essential Cookies: Maintain login status\n- Functional Cookies: Remember preferences\n- Analytics Cookies: Improve service quality\n\n3. Managing Cookies\nYou can manage cookie preferences in your device settings.';
 }

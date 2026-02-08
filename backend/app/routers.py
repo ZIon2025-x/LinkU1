@@ -5480,17 +5480,37 @@ def register_device_token(
         models.DeviceToken.device_token == device_token
     ).first()
     
-    # 在注册/更新令牌前，禁用同一 device_id 的其他旧令牌
-    # 这样可以避免同一设备有多个活跃的令牌（iOS 令牌刷新时会产生新令牌）
+    # 在注册/更新令牌前，禁用同一 device_id 的所有其他旧令牌（包括其他用户的）
+    # 同一台物理设备同一时间只能有一个用户登录，切换账号后旧用户的 token 会失效
+    # 如果不禁用，推送到旧用户时会收到 BadDeviceToken 错误
     if device_id and device_id.strip():
-        deactivated_count = db.query(models.DeviceToken).filter(
+        # 1) 禁用同一 device_id 上当前用户的其他旧令牌
+        deactivated_own = db.query(models.DeviceToken).filter(
             models.DeviceToken.user_id == current_user.id,
             models.DeviceToken.device_id == device_id,
             models.DeviceToken.device_token != device_token,
             models.DeviceToken.is_active == True
         ).update({"is_active": False, "updated_at": get_utc_time()})
-        if deactivated_count > 0:
-            logger.info(f"[DEVICE_TOKEN] 已禁用同一 device_id 的 {deactivated_count} 个旧令牌: user_id={current_user.id}, device_id={device_id}")
+        if deactivated_own > 0:
+            logger.info(f"[DEVICE_TOKEN] 已禁用同一 device_id 的 {deactivated_own} 个当前用户旧令牌: user_id={current_user.id}, device_id={device_id}")
+        
+        # 2) 禁用同一 device_id 上其他用户的令牌（账号切换场景）
+        deactivated_others = db.query(models.DeviceToken).filter(
+            models.DeviceToken.user_id != current_user.id,
+            models.DeviceToken.device_id == device_id,
+            models.DeviceToken.is_active == True
+        ).update({"is_active": False, "updated_at": get_utc_time()})
+        if deactivated_others > 0:
+            logger.info(f"[DEVICE_TOKEN] 已禁用同一 device_id 上其他用户的 {deactivated_others} 个令牌（账号切换）: device_id={device_id}")
+    
+    # 3) 禁用其他用户持有的相同 device_token（同一 APNs token 不能属于多个用户）
+    deactivated_same_token = db.query(models.DeviceToken).filter(
+        models.DeviceToken.user_id != current_user.id,
+        models.DeviceToken.device_token == device_token,
+        models.DeviceToken.is_active == True
+    ).update({"is_active": False, "updated_at": get_utc_time()})
+    if deactivated_same_token > 0:
+        logger.info(f"[DEVICE_TOKEN] 已禁用其他用户持有的相同 device_token 的 {deactivated_same_token} 个记录")
     
     if existing_token:
         # 更新现有令牌

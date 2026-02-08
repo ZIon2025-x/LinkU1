@@ -6,11 +6,13 @@ import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_radius.dart';
 import '../../../core/design/app_typography.dart';
+import '../../../core/utils/l10n_extension.dart';
 import '../../../core/widgets/loading_view.dart';
 import '../../../core/widgets/error_state_view.dart';
 import '../../../core/widgets/empty_state_view.dart';
 import '../../../core/widgets/cards.dart';
 import '../../../core/widgets/buttons.dart';
+import '../../../core/widgets/async_image_view.dart';
 import '../../../data/repositories/task_expert_repository.dart';
 import '../../../data/models/task_expert.dart';
 import '../bloc/task_expert_bloc.dart';
@@ -36,7 +38,7 @@ class TaskExpertDetailView extends StatelessWidget {
           title: BlocBuilder<TaskExpertBloc, TaskExpertState>(
             builder: (context, state) {
               return Text(
-                state.selectedExpert?.displayName ?? '达人详情',
+                state.selectedExpert?.displayName ?? context.l10n.taskExpertDetailTitle,
               );
             },
           ),
@@ -50,8 +52,8 @@ class TaskExpertDetailView extends StatelessWidget {
                     if (expert != null) {
                       SharePlus.instance.share(
                         ShareParams(
-                          text: '来看看这位任务达人：${expert.displayName}\nhttps://link2ur.com/task-experts/${expert.id}',
-                          subject: '分享任务达人 - ${expert.displayName}',
+                          text: '${context.l10n.taskExpertShareText(expert.displayName)}\nhttps://link2ur.com/task-experts/${expert.id}',
+                          subject: context.l10n.taskExpertShareTitle(expert.displayName),
                         ),
                       );
                     }
@@ -73,7 +75,7 @@ class TaskExpertDetailView extends StatelessWidget {
             if (state.status == TaskExpertStatus.error &&
                 state.selectedExpert == null) {
               return ErrorStateView.loadFailed(
-                message: state.errorMessage ?? '加载失败',
+                message: state.errorMessage ?? context.l10n.taskExpertLoadFailed,
                 onRetry: () {
                   context.read<TaskExpertBloc>().add(
                         TaskExpertLoadDetail(expertId),
@@ -85,8 +87,8 @@ class TaskExpertDetailView extends StatelessWidget {
             final expert = state.selectedExpert;
             if (expert == null) {
               return EmptyStateView.noData(
-                title: '达人不存在',
-                description: '该达人不存在或已被删除',
+                title: context.l10n.taskExpertExpertNotExist,
+                description: context.l10n.taskExpertExpertNotExistDesc,
               );
             }
 
@@ -105,7 +107,7 @@ class TaskExpertDetailView extends StatelessWidget {
                         Expanded(
                           child: StatCard(
                             value: expert.ratingDisplay,
-                            label: '评分',
+                            label: context.l10n.taskExpertRating,
                             icon: Icons.star,
                             iconColor: AppColors.gold,
                           ),
@@ -114,7 +116,7 @@ class TaskExpertDetailView extends StatelessWidget {
                         Expanded(
                           child: StatCard(
                             value: '${expert.completedTasks}',
-                            label: '完成单数',
+                            label: context.l10n.taskExpertCompletedOrders,
                             icon: Icons.check_circle_outline,
                           ),
                         ),
@@ -122,7 +124,7 @@ class TaskExpertDetailView extends StatelessWidget {
                         Expanded(
                           child: StatCard(
                             value: '${expert.totalServices}',
-                            label: '服务项目',
+                            label: context.l10n.taskExpertServices,
                             icon: Icons.work_outline,
                           ),
                         ),
@@ -139,7 +141,7 @@ class TaskExpertDetailView extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              '简介',
+                              context.l10n.taskExpertBio,
                               style: AppTypography.title3.copyWith(
                                 fontWeight: FontWeight.w600,
                               ),
@@ -161,7 +163,7 @@ class TaskExpertDetailView extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          '提供的服务',
+                          context.l10n.taskExpertProvidedServices,
                           style: AppTypography.title2.copyWith(
                             fontWeight: FontWeight.w600,
                           ),
@@ -169,8 +171,8 @@ class TaskExpertDetailView extends StatelessWidget {
                         AppSpacing.vMd,
                         if (state.services.isEmpty)
                           EmptyStateView.noData(
-                            title: '暂无服务',
-                            description: '该达人还没有提供服务',
+                            title: context.l10n.taskExpertNoServices,
+                            description: context.l10n.taskExpertNoServicesDesc,
                           )
                         else
                           ...state.services.map(
@@ -274,7 +276,7 @@ class _ProfileHeader extends StatelessWidget {
               ),
               const SizedBox(width: 16),
               Text(
-                '完成 ${expert.completedTasks} 单',
+                context.l10n.leaderboardCompletedCount(expert.completedTasks),
                 style: AppTypography.subheadline.copyWith(
                   color: isDark
                       ? AppColors.textSecondaryDark
@@ -309,28 +311,24 @@ class _ServiceItem extends StatelessWidget {
         children: [
           // Service image or icon
           if (service.firstImage != null)
-            ClipRRect(
+            AsyncImageView(
+              imageUrl: service.firstImage,
+              width: 80,
+              height: 80,
+              fit: BoxFit.cover,
               borderRadius: AppRadius.allSmall,
-              child: Image.network(
-                service.firstImage!,
+              errorWidget: Container(
                 width: 80,
                 height: 80,
-                fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) {
-                  return Container(
-                    width: 80,
-                    height: 80,
-                    decoration: BoxDecoration(
-                      color: AppColors.primary.withValues(alpha: 0.1),
-                      borderRadius: AppRadius.allSmall,
-                    ),
-                    child: const Icon(
-                      Icons.work_outline,
-                      color: AppColors.primary,
-                      size: 40,
-                    ),
-                  );
-                },
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withValues(alpha: 0.1),
+                  borderRadius: AppRadius.allSmall,
+                ),
+                child: const Icon(
+                  Icons.work_outline,
+                  color: AppColors.primary,
+                  size: 40,
+                ),
               ),
             )
           else
@@ -417,10 +415,10 @@ class _ServiceItem extends StatelessWidget {
               if (service.hasApplied) {
                 return SmallActionButton(
                   text: service.userApplicationStatus == 'accepted'
-                      ? '已接受'
+                      ? context.l10n.taskExpertAccepted
                       : service.userApplicationStatus == 'rejected'
-                          ? '已拒绝'
-                          : '已申请',
+                          ? context.l10n.taskExpertRejected
+                          : context.l10n.taskExpertAppliedStatus,
                   filled: true,
                   color: service.userApplicationStatus == 'accepted'
                       ? AppColors.success
@@ -429,7 +427,7 @@ class _ServiceItem extends StatelessWidget {
               }
 
               return SmallActionButton(
-                text: '预约',
+                text: context.l10n.taskExpertBook,
                 onPressed: isSubmitting ? null : onApply,
                 filled: true,
                 color: AppColors.primary,

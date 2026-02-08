@@ -6,6 +6,7 @@ import 'package:image_picker/image_picker.dart';
 import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_radius.dart';
+import '../../../core/utils/l10n_extension.dart';
 import '../../../core/widgets/buttons.dart';
 import '../../../core/widgets/full_screen_image_view.dart';
 import '../../../core/widgets/loading_view.dart';
@@ -108,7 +109,7 @@ class _TaskChatViewState extends State<TaskChatView> {
         builder: (context, state) {
           return Scaffold(
             appBar: AppBar(
-              title: Text('任务 ${widget.taskId}'),
+              title: Text(context.l10n.chatTaskTitle(widget.taskId)),
               actions: [
                 IconButton(
                   icon: const Icon(Icons.info_outline),
@@ -175,13 +176,13 @@ class _TaskChatViewState extends State<TaskChatView> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  '任务 #${widget.taskId}',
+                  context.l10n.chatTaskTitle(widget.taskId),
                   style: const TextStyle(fontWeight: FontWeight.w600),
                 ),
                 const SizedBox(height: 2),
-                const Text(
-                  '进行中',
-                  style: TextStyle(
+                Text(
+                  context.l10n.chatInProgress,
+                  style: const TextStyle(
                     fontSize: 12,
                     color: AppColors.success,
                   ),
@@ -190,7 +191,7 @@ class _TaskChatViewState extends State<TaskChatView> {
             ),
           ),
           SmallActionButton(
-            text: '查看详情',
+            text: context.l10n.chatViewDetail,
             onPressed: () {
               context.push('/tasks/${widget.taskId}');
             },
@@ -208,29 +209,31 @@ class _TaskChatViewState extends State<TaskChatView> {
         child: Row(
           children: [
             _QuickActionChip(
-              label: '已完成',
+              label: context.l10n.chatTaskCompleted,
               icon: Icons.check_circle_outline,
               onTap: () {
-                _messageController.text = '任务已完成，请确认。';
+                _messageController.text = context.l10n.chatTaskCompletedConfirm;
               },
             ),
             AppSpacing.hSm,
             _QuickActionChip(
-              label: '遇到问题',
+              label: context.l10n.chatHasIssue,
               icon: Icons.error_outline,
               onTap: () {
-                _messageController.text = '我遇到了一些问题：';
+                _messageController.text = context.l10n.chatHasIssueMessage;
               },
             ),
             AppSpacing.hSm,
             _QuickActionChip(
-              label: '申请退款',
+              label: context.l10n.chatRequestRefund,
               icon: Icons.money_off,
-              onTap: () {},
+              onTap: () {
+                _messageController.text = context.l10n.chatRequestRefund;
+              },
             ),
             AppSpacing.hSm,
             _QuickActionChip(
-              label: '上传凭证',
+              label: context.l10n.chatUploadProof,
               icon: Icons.upload_file,
               onTap: _pickImage,
             ),
@@ -257,16 +260,16 @@ class _TaskChatViewState extends State<TaskChatView> {
     }
 
     if (state.messages.isEmpty) {
-      return const Center(
+      return Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.chat_bubble_outline,
+            const Icon(Icons.chat_bubble_outline,
                 size: 48, color: AppColors.textTertiaryLight),
             AppSpacing.vMd,
             Text(
-              '还没有消息，开始对话吧',
-              style: TextStyle(color: AppColors.textSecondaryLight),
+              context.l10n.chatNoMessages,
+              style: const TextStyle(color: AppColors.textSecondaryLight),
             ),
           ],
         ),
@@ -336,7 +339,7 @@ class _TaskChatViewState extends State<TaskChatView> {
                 maxLines: 4,
                 minLines: 1,
                 decoration: InputDecoration(
-                  hintText: '输入消息...',
+                  hintText: context.l10n.chatInputHint,
                   filled: true,
                   fillColor: AppColors.skeletonBase,
                   contentPadding:

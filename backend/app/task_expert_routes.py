@@ -3052,33 +3052,15 @@ async def approve_service_application(
     customer_id = None
     ephemeral_key_secret = None
     try:
-        # 使用 Stripe Search API 查找现有 Customer（通过 metadata.user_id）
-        # 注意：Customer.list() 不支持通过 metadata 查询，需要使用 Search API
-        try:
-            search_result = stripe.Customer.search(
-                query=f"metadata['user_id']:'{application.applicant_id}'",
-                limit=1
+        from app.utils.stripe_utils import get_or_create_stripe_customer
+        customer_id = get_or_create_stripe_customer(applicant_user)
+        # 保存 customer_id 到用户记录
+        if customer_id and applicant_user and (not applicant_user.stripe_customer_id or applicant_user.stripe_customer_id != customer_id):
+            await db.execute(
+                update(models.User)
+                .where(models.User.id == applicant_user.id)
+                .values(stripe_customer_id=customer_id)
             )
-            if search_result.data:
-                customer_id = search_result.data[0].id
-            else:
-                customer = stripe.Customer.create(
-                    metadata={
-                        "user_id": str(application.applicant_id),
-                        "user_name": applicant_user.name if applicant_user else f"User {application.applicant_id}",
-                    }
-                )
-                customer_id = customer.id
-        except Exception as search_error:
-            # 如果 Search API 不可用或失败，直接创建新的 Customer
-            logger.debug(f"Stripe Search API 不可用，直接创建新 Customer: {search_error}")
-            customer = stripe.Customer.create(
-                metadata={
-                    "user_id": str(application.applicant_id),
-                    "user_name": applicant_user.name if applicant_user else f"User {application.applicant_id}",
-                }
-            )
-            customer_id = customer.id
 
         ephemeral_key = stripe.EphemeralKey.create(
             customer=customer_id,

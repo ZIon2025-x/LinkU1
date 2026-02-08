@@ -1057,34 +1057,8 @@ def create_task_payment(
                     ephemeral_key_secret = None
                     
                     try:
-                        # 使用 Stripe Search API 查找现有 Customer（通过 metadata.user_id）
-                        # 注意：Customer.list() 不支持通过 metadata 查询，需要使用 Search API
-                        try:
-                            search_result = stripe.Customer.search(
-                                query=f"metadata['user_id']:'{current_user.id}'",
-                                limit=1
-                            )
-                            if search_result.data:
-                                customer_id = search_result.data[0].id
-                            else:
-                                # 创建新的 Stripe Customer
-                                customer = stripe.Customer.create(
-                                    metadata={
-                                        "user_id": str(current_user.id),
-                                        "user_name": current_user.name
-                                    }
-                                )
-                                customer_id = customer.id
-                        except Exception as search_error:
-                            # 如果 Search API 不可用或失败，直接创建新的 Customer
-                            logger.debug(f"Stripe Search API 不可用，直接创建新 Customer: {search_error}")
-                            customer = stripe.Customer.create(
-                                metadata={
-                                    "user_id": str(current_user.id),
-                                    "user_name": current_user.name
-                                }
-                            )
-                            customer_id = customer.id
+                        from app.utils.stripe_utils import get_or_create_stripe_customer
+                        customer_id = get_or_create_stripe_customer(current_user, db=db)
                         
                         # 创建 Ephemeral Key
                         ephemeral_key = stripe.EphemeralKey.create(
@@ -1188,47 +1162,18 @@ def create_task_payment(
             )
         
         # 创建或获取 Stripe Customer（用于保存支付方式）
+        # 优先使用数据库缓存的 stripe_customer_id，避免 Stripe Search API 索引延迟导致重复创建
         customer_id = None
         ephemeral_key_secret = None
         
-        # 检查用户是否已有 Stripe Customer ID（可以存储在 User 模型中，这里先检查数据库）
-        # 如果没有，创建一个新的 Customer
         try:
-            # 使用 Stripe Search API 查找现有 Customer（通过 metadata.user_id）
-            # 注意：Customer.list() 不支持通过 metadata 查询，需要使用 Search API
-            try:
-                search_result = stripe.Customer.search(
-                    query=f"metadata['user_id']:'{current_user.id}'",
-                    limit=1
-                )
-                if search_result.data:
-                    customer_id = search_result.data[0].id
-                else:
-                    # 创建新的 Stripe Customer
-                    customer = stripe.Customer.create(
-                        metadata={
-                            "user_id": str(current_user.id),
-                            "user_name": current_user.name
-                        }
-                    )
-                    customer_id = customer.id
-            except Exception as search_error:
-                # 如果 Search API 不可用或失败，直接创建新的 Customer
-                logger.debug(f"Stripe Search API 不可用，直接创建新 Customer: {search_error}")
-                customer = stripe.Customer.create(
-                    metadata={
-                        "user_id": str(current_user.id),
-                        "user_name": current_user.name
-                    }
-                )
-                customer_id = customer.id
-                # 注意：这里可以将 customer_id 保存到 User 模型，但为了简化，暂时不保存
+            from app.utils.stripe_utils import get_or_create_stripe_customer
+            customer_id = get_or_create_stripe_customer(current_user, db=db)
             
             # 创建 Ephemeral Key（用于客户端访问 Customer 的支付方式）
-            # Ephemeral Key 有效期通常为 24 小时
             ephemeral_key = stripe.EphemeralKey.create(
                 customer=customer_id,
-                stripe_version="2025-04-30.preview"  # 使用最新的 API 版本
+                stripe_version="2025-04-30.preview"
             )
             ephemeral_key_secret = ephemeral_key.secret
             
@@ -1304,32 +1249,21 @@ def create_task_payment(
             },
             "description": f"任务 #{task_id} 任务金额支付 - {task.title}",
         }
+        # 关联 Customer，PaymentSheet 需要 PI 上的 customer 才能正确保存/复用支付方式
+        if customer_id:
+            create_kw["customer"] = customer_id
         if payment_method_options:
             create_kw["payment_method_options"] = payment_method_options
         payment_intent = stripe.PaymentIntent.create(**create_kw)
         
-        # 记录 PaymentIntent 的支付方式类型，用于调试
+        # 记录 PaymentIntent 的支付方式类型（仅当未指定 preferred 时检查 WeChat Pay）
         payment_method_types = payment_intent.get("payment_method_types", [])
         logger.info(f"PaymentIntent 创建的支付方式类型: {payment_method_types}")
-        if "wechat_pay" in payment_method_types:
-            logger.info("✅ PaymentIntent 包含 WeChat Pay")
-        else:
+        # 仅当未指定 preferred_payment_method（即应包含全部方式）时才警告缺少 WeChat Pay
+        # 指定了 preferred_payment_method 时（如 'card'），WeChat Pay 走独立 Checkout Session，不需要包含
+        if not payment_request.preferred_payment_method and "wechat_pay" not in payment_method_types:
             logger.warning(f"⚠️ PaymentIntent 不包含 WeChat Pay，当前支付方式: {payment_method_types}")
             logger.warning("请检查 Stripe Dashboard 中是否已启用 WeChat Pay")
-        
-        # 检查 Payment Method Configuration（诊断 WeChat Pay 不显示的问题）
-        try:
-            # 获取 Payment Method Configurations
-            pm_configs = stripe.PaymentMethodConfiguration.list(limit=1)
-            if pm_configs and pm_configs.data:
-                pm_config = pm_configs.data[0]
-                wechat_config = getattr(pm_config, 'wechat_pay', None)
-                if wechat_config:
-                    logger.info(f"🔍 WeChat Pay Configuration: available={getattr(wechat_config, 'available', 'N/A')}, display_preference={getattr(wechat_config, 'display_preference', 'N/A')}")
-                else:
-                    logger.warning("⚠️ 未找到 WeChat Pay 在 Payment Method Configuration 中的配置")
-        except Exception as e:
-            logger.debug(f"无法获取 Payment Method Configuration: {e}")
         
         # ⚠️ 重要：更新任务的 payment_intent_id，确保下次调用 API 时能复用
         # 这样即使前端清除 clientSecret，后端也能复用已有的 PaymentIntent，避免重复创建
@@ -1611,39 +1545,21 @@ async def create_wechat_checkout_session(
     # 创建或获取 Stripe Customer（用于预填邮箱/姓名，减少 Checkout 表单输入）
     customer_id = None
     try:
-        if current_user.id:
-            search_result = stripe.Customer.search(
-                query=f"metadata['user_id']:'{current_user.id}'",
-                limit=1
-            )
-            if search_result.data:
-                existing_customer = search_result.data[0]
-                customer_id = existing_customer.id
-                
-                # 检查并更新 Customer 的 email/name（确保 Checkout 页面能预填用户信息）
-                # 这样用户不需要每次都手动输入邮箱和姓名
-                update_fields = {}
-                if current_user.email and existing_customer.email != current_user.email:
-                    update_fields["email"] = current_user.email
-                if current_user.name and existing_customer.name != current_user.name:
-                    update_fields["name"] = current_user.name
-                
-                if update_fields:
-                    try:
-                        stripe.Customer.modify(customer_id, **update_fields)
-                        logger.info(f"更新 Stripe Customer {customer_id} 信息: {list(update_fields.keys())}")
-                    except Exception as update_err:
-                        logger.warning(f"更新 Stripe Customer 信息失败: {update_err}")
-            else:
-                customer = stripe.Customer.create(
-                    email=current_user.email or None,
-                    name=current_user.name or None,
-                    metadata={
-                        "user_id": str(current_user.id),
-                        "user_name": current_user.name or ""
-                    }
-                )
-                customer_id = customer.id
+        from app.utils.stripe_utils import get_or_create_stripe_customer
+        customer_id = get_or_create_stripe_customer(current_user, db=db)
+        
+        # 更新 Customer 的 email/name（确保 Checkout 页面能预填用户信息）
+        if customer_id:
+            update_fields = {}
+            if current_user.email:
+                update_fields["email"] = current_user.email
+            if current_user.name:
+                update_fields["name"] = current_user.name
+            if update_fields:
+                try:
+                    stripe.Customer.modify(customer_id, **update_fields)
+                except Exception as update_err:
+                    logger.debug(f"更新 Stripe Customer 信息失败: {update_err}")
     except Exception as e:
         logger.warning(f"无法创建 Stripe Customer（微信支付 Checkout）：{e}")
         customer_id = None

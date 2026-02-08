@@ -7,6 +7,7 @@ import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_typography.dart';
 import '../../../core/design/app_radius.dart';
+import '../../../core/utils/l10n_extension.dart';
 import '../../../core/widgets/skeleton_view.dart';
 import '../../../core/widgets/error_state_view.dart';
 import '../../../core/widgets/empty_state_view.dart';
@@ -56,8 +57,8 @@ class _LeaderboardDetailContent extends StatelessWidget {
                       context.push('/leaderboard/$leaderboardId/submit'),
                   backgroundColor: AppColors.primary,
                   icon: const Icon(Icons.add, color: Colors.white),
-                  label: const Text('提交竞品',
-                      style: TextStyle(color: Colors.white)),
+                  label: Text(context.l10n.leaderboardSubmitItem,
+                      style: const TextStyle(color: Colors.white)),
                 )
               : null,
         );
@@ -70,7 +71,7 @@ class _LeaderboardDetailContent extends StatelessWidget {
     if (!hasHero) {
       return AppBar(
         title: Text(
-            state.selectedLeaderboard?.displayName ?? '排行榜详情'),
+            state.selectedLeaderboard?.displayName ?? context.l10n.leaderboardItemDetail),
         actions: [
           IconButton(
             icon: const Icon(Icons.share_outlined),
@@ -136,7 +137,7 @@ class _LeaderboardDetailContent extends StatelessWidget {
     if (state.status == LeaderboardStatus.error &&
         state.selectedLeaderboard == null) {
       return ErrorStateView.loadFailed(
-        message: state.errorMessage ?? '加载失败',
+        message: state.errorMessage ?? context.l10n.leaderboardLoadFailed,
         onRetry: () {
           context
               .read<LeaderboardBloc>()
@@ -197,8 +198,8 @@ class _LeaderboardDetailContent extends StatelessWidget {
           if (sortedItems.isEmpty)
             SliverFillRemaining(
               child: EmptyStateView.noData(
-                title: '暂无竞品',
-                description: '还没有竞品，点击下方按钮提交第一个竞品',
+                title: context.l10n.leaderboardNoItems,
+                description: context.l10n.leaderboardNoCompetitorsHint,
               ),
             )
           else
@@ -344,19 +345,19 @@ class _StatsBar extends StatelessWidget {
             _StatColumn(
               icon: Icons.list_alt,
               value: '${leaderboard.itemCount}',
-              label: '竞品数',
+              label: context.l10n.leaderboardItemCount,
             ),
             _StatDivider(isDark: isDark),
             _StatColumn(
               icon: Icons.how_to_vote,
               value: '${leaderboard.voteCount}',
-              label: '投票数',
+              label: context.l10n.leaderboardTotalVotes,
             ),
             _StatDivider(isDark: isDark),
             _StatColumn(
               icon: Icons.visibility_outlined,
               value: '${leaderboard.viewCount}',
-              label: '浏览量',
+              label: context.l10n.leaderboardViewCount,
             ),
           ],
         ),
@@ -531,7 +532,7 @@ class _RankItemCard extends StatelessWidget {
                 // 投票统计行 - 对标iOS vote line
                 Row(
                   children: [
-                    Icon(Icons.thumb_up, size: 12, color: AppColors.success),
+                    const Icon(Icons.thumb_up, size: 12, color: AppColors.success),
                     const SizedBox(width: 3),
                     Text(
                       '${item.upvotes}',
@@ -539,7 +540,7 @@ class _RankItemCard extends StatelessWidget {
                           .copyWith(color: AppColors.success),
                     ),
                     const SizedBox(width: 8),
-                    Icon(Icons.thumb_down, size: 12, color: AppColors.error),
+                    const Icon(Icons.thumb_down, size: 12, color: AppColors.error),
                     const SizedBox(width: 3),
                     Text(
                       '${item.downvotes}',
@@ -554,7 +555,7 @@ class _RankItemCard extends StatelessWidget {
                     ),
                     const SizedBox(width: 4),
                     Text(
-                      '净 ${item.netVotes}',
+                      context.l10n.leaderboardNetVotesCount(item.netVotes),
                       style: AppTypography.caption.copyWith(
                         color: AppColors.textSecondaryLight,
                         fontWeight: FontWeight.w500,

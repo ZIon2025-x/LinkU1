@@ -4,6 +4,7 @@ import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_typography.dart';
 import '../../../core/design/app_radius.dart';
+import '../../../core/utils/l10n_extension.dart';
 
 /// 引导教程页面
 /// 参考iOS OnboardingView.swift
@@ -28,39 +29,39 @@ class _OnboardingViewState extends State<OnboardingView> {
   final Set<String> _selectedTaskTypes = {};
   bool _notificationEnabled = false;
 
-  final List<_OnboardingPage> _pages = const [
+  List<_OnboardingPage> _getPages(BuildContext context) => [
     _OnboardingPage(
-      title: '欢迎使用 Link²Ur',
-      subtitle: '校园互助平台',
-      description: '发布任务、接受任务、连接校园生活的每一面',
+      title: context.l10n.onboardingWelcome,
+      subtitle: context.l10n.onboardingWelcomeSubtitle,
+      description: context.l10n.onboardingWelcomeDescription,
       icon: Icons.home_filled,
       color: AppColors.primary,
     ),
     _OnboardingPage(
-      title: '发布任务',
-      subtitle: '轻松找人帮忙',
-      description: '描述你的需求，设定酬劳，等待有能力的同学接单',
+      title: context.l10n.onboardingPublishTask,
+      subtitle: context.l10n.onboardingPublishTaskSubtitle,
+      description: context.l10n.onboardingPublishTaskDescription,
       icon: Icons.add_circle,
       color: AppColors.success,
     ),
     _OnboardingPage(
-      title: '接受任务',
-      subtitle: '赚取额外收入',
-      description: '浏览附近任务，选择你擅长的领域，利用闲暇时间获得报酬',
+      title: context.l10n.onboardingAcceptTask,
+      subtitle: context.l10n.onboardingAcceptTaskSubtitle,
+      description: context.l10n.onboardingAcceptTaskDescription,
       icon: Icons.check_circle,
       color: AppColors.warning,
     ),
     _OnboardingPage(
-      title: '安全支付',
-      subtitle: '资金有保障',
-      description: '平台托管资金，任务完成后自动结算，安全可靠',
+      title: context.l10n.onboardingSafePayment,
+      subtitle: context.l10n.onboardingSafePaymentSubtitle,
+      description: context.l10n.onboardingSecurePaymentDescription,
       icon: Icons.shield,
       color: AppColors.error,
     ),
     _OnboardingPage(
-      title: '社区互动',
-      subtitle: '连接你的世界',
-      description: '论坛交流、排行榜挑战、跳蚤市场…丰富的校园社交体验',
+      title: context.l10n.onboardingCommunity,
+      subtitle: context.l10n.onboardingCommunitySubtitle,
+      description: context.l10n.onboardingCommunityDescription,
       icon: Icons.people,
       color: AppColors.primary,
     ),
@@ -77,20 +78,20 @@ class _OnboardingViewState extends State<OnboardingView> {
     'Leeds',
   ];
 
-  final List<String> _taskTypes = const [
-    '跑腿代办',
-    '技能服务',
-    '家政保洁',
-    '交通出行',
-    '社交帮助',
-    '校园生活',
-    '二手租赁',
-    '宠物看护',
-    '生活便利',
-    '其他',
+  List<String> _getTaskTypes(BuildContext context) => [
+    context.l10n.onboardingTaskTypeErrand,
+    context.l10n.onboardingTaskTypeSkill,
+    context.l10n.onboardingTaskTypeHousekeeping,
+    context.l10n.onboardingTaskTypeTransport,
+    context.l10n.onboardingTaskTypeSocial,
+    context.l10n.onboardingTaskTypeCampus,
+    context.l10n.onboardingTaskTypeSecondhand,
+    context.l10n.onboardingTaskTypePetCare,
+    context.l10n.onboardingTaskTypeConvenience,
+    context.l10n.onboardingTaskTypeOther,
   ];
 
-  int get _totalPages => _pages.length + 1; // +1 for personalization page
+  int _totalPages(BuildContext context) => _getPages(context).length + 1; // +1 for personalization page
 
   @override
   void dispose() {
@@ -98,8 +99,8 @@ class _OnboardingViewState extends State<OnboardingView> {
     super.dispose();
   }
 
-  void _goToNextPage() {
-    if (_currentPage < _totalPages - 1) {
+  void _goToNextPage(BuildContext context) {
+    if (_currentPage < _totalPages(context) - 1) {
       _pageController.nextPage(
         duration: const Duration(milliseconds: 300),
         curve: Curves.easeInOut,
@@ -166,7 +167,7 @@ class _OnboardingViewState extends State<OnboardingView> {
                   child: TextButton(
                     onPressed: _skipOnboarding,
                     child: Text(
-                      '跳过',
+                      context.l10n.onboardingSkip,
                       style: AppTypography.body.copyWith(
                         color: isDark
                             ? AppColors.textSecondaryDark
@@ -184,17 +185,18 @@ class _OnboardingViewState extends State<OnboardingView> {
                   onPageChanged: (index) {
                     setState(() => _currentPage = index);
                   },
-                  itemCount: _totalPages,
+                  itemCount: _totalPages(context),
                   itemBuilder: (context, index) {
-                    if (index < _pages.length) {
-                      return _OnboardingPageWidget(page: _pages[index]);
+                    final pages = _getPages(context);
+                    if (index < pages.length) {
+                      return _OnboardingPageWidget(page: pages[index]);
                     } else {
                       return _PersonalizationPage(
                         selectedCity: _selectedCity,
                         selectedTaskTypes: _selectedTaskTypes,
                         notificationEnabled: _notificationEnabled,
                         popularCities: _popularCities,
-                        taskTypes: _taskTypes,
+                        taskTypes: _getTaskTypes(context),
                         onCityChanged: (city) =>
                             setState(() => _selectedCity = city),
                         onTaskTypeToggled: (type) {
@@ -219,7 +221,7 @@ class _OnboardingViewState extends State<OnboardingView> {
                 padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
-                  children: List.generate(_totalPages, (index) {
+                  children: List.generate(_totalPages(context), (index) {
                     return Container(
                       width: _currentPage == index ? 24 : 8,
                       height: 8,
@@ -250,7 +252,7 @@ class _OnboardingViewState extends State<OnboardingView> {
                         child: OutlinedButton.icon(
                           onPressed: _goToPreviousPage,
                           icon: const Icon(Icons.chevron_left, size: 20),
-                          label: const Text('上一步'),
+                          label: Text(context.l10n.onboardingPrevious),
                           style: OutlinedButton.styleFrom(
                             padding: AppSpacing.button,
                             shape: RoundedRectangleBorder(
@@ -274,7 +276,7 @@ class _OnboardingViewState extends State<OnboardingView> {
                           borderRadius: AppRadius.button,
                         ),
                         child: ElevatedButton(
-                          onPressed: _goToNextPage,
+                          onPressed: () => _goToNextPage(context),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.transparent,
                             shadowColor: Colors.transparent,
@@ -287,14 +289,14 @@ class _OnboardingViewState extends State<OnboardingView> {
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
                               Text(
-                                _currentPage < _totalPages - 1
-                                    ? '下一步'
-                                    : '开始使用',
+                                _currentPage < _totalPages(context) - 1
+                                    ? context.l10n.commonNext
+                                    : context.l10n.onboardingGetStarted,
                                 style: AppTypography.button.copyWith(
                                   color: Colors.white,
                                 ),
                               ),
-                              if (_currentPage < _totalPages - 1) ...[
+                              if (_currentPage < _totalPages(context) - 1) ...[
                                 AppSpacing.hXs,
                                 const Icon(Icons.chevron_right,
                                     size: 20, color: Colors.white),
@@ -449,7 +451,7 @@ class _PersonalizationPage extends StatelessWidget {
             child: Column(
               children: [
                 Text(
-                  '个性化设置',
+                  context.l10n.onboardingPersonalizationTitle,
                   style: AppTypography.largeTitle.copyWith(
                     color: isDark
                         ? AppColors.textPrimaryDark
@@ -458,7 +460,7 @@ class _PersonalizationPage extends StatelessWidget {
                 ),
                 AppSpacing.vSm,
                 Text(
-                  '帮助我们为你推荐更合适的内容',
+                  context.l10n.onboardingPersonalizationSubtitle,
                   style: AppTypography.body.copyWith(
                     color: isDark
                         ? AppColors.textSecondaryDark
@@ -474,7 +476,7 @@ class _PersonalizationPage extends StatelessWidget {
 
           // 选择常用城市
           Text(
-            '常用城市',
+            context.l10n.onboardingPreferredCity,
             style: AppTypography.title3.copyWith(
               color: isDark
                   ? AppColors.textPrimaryDark
@@ -528,7 +530,7 @@ class _PersonalizationPage extends StatelessWidget {
 
           // 选择感兴趣的任务类型
           Text(
-            '感兴趣的任务类型（可选）',
+            context.l10n.onboardingPreferredTaskTypesOptional,
             style: AppTypography.title3.copyWith(
               color: isDark
                   ? AppColors.textPrimaryDark
@@ -598,7 +600,7 @@ class _PersonalizationPage extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        '开启通知提醒',
+                        context.l10n.onboardingEnableNotifications,
                         style: AppTypography.title3.copyWith(
                           color: isDark
                               ? AppColors.textPrimaryDark
@@ -607,7 +609,7 @@ class _PersonalizationPage extends StatelessWidget {
                       ),
                       AppSpacing.vXs,
                       Text(
-                        '接收任务更新、消息提醒等重要通知',
+                        context.l10n.onboardingEnableNotificationsDescription,
                         style: AppTypography.caption.copyWith(
                           color: isDark
                               ? AppColors.textSecondaryDark

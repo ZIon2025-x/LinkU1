@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
@@ -47,36 +48,34 @@ class _TasksViewContent extends StatefulWidget {
 class _TasksViewContentState extends State<_TasksViewContent> {
   final TextEditingController _searchController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
+  Timer? _debounceTimer;
+  static const _debounceDuration = Duration(milliseconds: 400);
 
   // 11个分类 (对齐iOS TasksView - SF Symbols)
   final List<Map<String, dynamic>> _categories = [
-    {'key': 'all', 'label': '全部', 'icon': Icons.grid_view},
-    {'key': 'housekeeping', 'label': '家务生活', 'icon': Icons.home_outlined},
-    {'key': 'campus', 'label': '校园生活', 'icon': Icons.school_outlined},
+    {'key': 'all', 'icon': Icons.grid_view},
+    {'key': 'housekeeping', 'icon': Icons.home_outlined},
+    {'key': 'campus', 'icon': Icons.school_outlined},
     {
       'key': 'secondhand',
-      'label': '二手租赁',
       'icon': Icons.shopping_bag_outlined
     },
     {
       'key': 'delivery',
-      'label': '跑腿代办',
       'icon': Icons.directions_run_outlined
     },
-    {'key': 'skill', 'label': '技能服务', 'icon': Icons.build_outlined},
-    {'key': 'social', 'label': '社交帮助', 'icon': Icons.people_outlined},
+    {'key': 'skill', 'icon': Icons.build_outlined},
+    {'key': 'social', 'icon': Icons.people_outlined},
     {
       'key': 'transport',
-      'label': '交通出行',
       'icon': Icons.directions_car_outlined
     },
-    {'key': 'pet', 'label': '宠物照顾', 'icon': Icons.pets_outlined},
+    {'key': 'pet', 'icon': Icons.pets_outlined},
     {
       'key': 'life',
-      'label': '生活便利',
       'icon': Icons.shopping_cart_outlined
     },
-    {'key': 'other', 'label': '其他', 'icon': Icons.apps},
+    {'key': 'other', 'icon': Icons.apps},
   ];
 
   @override
@@ -89,6 +88,7 @@ class _TasksViewContentState extends State<_TasksViewContent> {
   void dispose() {
     _searchController.dispose();
     _scrollController.dispose();
+    _debounceTimer?.cancel();
     super.dispose();
   }
 
@@ -166,9 +166,13 @@ class _TasksViewContentState extends State<_TasksViewContent> {
                   contentPadding: const EdgeInsets.symmetric(vertical: 12),
                 ),
                 onChanged: (value) {
-                  context
-                      .read<TaskListBloc>()
-                      .add(TaskListSearchChanged(value));
+                  _debounceTimer?.cancel();
+                  _debounceTimer = Timer(_debounceDuration, () {
+                    if (!mounted) return;
+                    context
+                        .read<TaskListBloc>()
+                        .add(TaskListSearchChanged(value));
+                  });
                 },
               ),
             ),
@@ -177,6 +181,7 @@ class _TasksViewContentState extends State<_TasksViewContent> {
                 icon: const Icon(Icons.clear, size: 18),
                 onPressed: () {
                   _searchController.clear();
+                  _debounceTimer?.cancel();
                   context
                       .read<TaskListBloc>()
                       .add(const TaskListSearchChanged(''));
@@ -265,7 +270,7 @@ class _TasksViewContentState extends State<_TasksViewContent> {
       case 'all':
         return l10n.taskCategoryAll;
       case 'housekeeping':
-        return l10n.taskCategoryHousekeeping;
+        return l10n.taskCategoryHousekeepingLife;
       case 'campus':
         return l10n.taskCategoryCampusLife;
       case 'secondhand':
@@ -310,7 +315,7 @@ class _TasksViewContentState extends State<_TasksViewContent> {
 
         if (state.isEmpty) {
           return EmptyStateView.noTasks(
-            actionText: '发布任务',
+            actionText: context.l10n.homePublishTask,
             onAction: () {
               context.push('/tasks/create');
             },
@@ -363,11 +368,11 @@ class _TasksViewContentState extends State<_TasksViewContent> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Padding(
-                padding: EdgeInsets.all(16),
+              Padding(
+                padding: const EdgeInsets.all(16),
                 child: Text(
-                  '排序方式',
-                  style: TextStyle(
+                  ctx.l10n.taskSortBy,
+                  style: const TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
                   ),
@@ -375,7 +380,7 @@ class _TasksViewContentState extends State<_TasksViewContent> {
               ),
               ListTile(
                 leading: const Icon(Icons.access_time),
-                title: const Text('最新发布'),
+                title: Text(ctx.l10n.taskSortLatest),
                 onTap: () {
                   context
                       .read<TaskListBloc>()
@@ -385,7 +390,7 @@ class _TasksViewContentState extends State<_TasksViewContent> {
               ),
               ListTile(
                 leading: const Icon(Icons.attach_money),
-                title: const Text('报酬最高'),
+                title: Text(ctx.l10n.taskSortHighestPay),
                 onTap: () {
                   context
                       .read<TaskListBloc>()
@@ -395,7 +400,7 @@ class _TasksViewContentState extends State<_TasksViewContent> {
               ),
               ListTile(
                 leading: const Icon(Icons.timer),
-                title: const Text('即将截止'),
+                title: Text(ctx.l10n.taskSortNearDeadline),
                 onTap: () {
                   context
                       .read<TaskListBloc>()
@@ -491,7 +496,7 @@ class _TaskGridCard extends StatelessWidget {
             // 内容区域 (对齐iOS: title + deadline + price)
             Expanded(
               flex: 3,
-              child: _buildContentArea(isDark),
+              child: _buildContentArea(context, isDark),
             ),
           ],
         ),
@@ -650,7 +655,7 @@ class _TaskGridCard extends StatelessWidget {
   }
 
   /// 内容区域 (对齐iOS: title + HStack(deadline, Spacer, priceBadge))
-  Widget _buildContentArea(bool isDark) {
+  Widget _buildContentArea(BuildContext context, bool isDark) {
     return Padding(
       padding: const EdgeInsets.all(10),
       child: Column(
@@ -687,7 +692,7 @@ class _TaskGridCard extends StatelessWidget {
                       const SizedBox(width: 3),
                       Flexible(
                         child: Text(
-                          _formatDeadline(task.deadline!),
+                          _formatDeadline(context, task.deadline!),
                           style: AppTypography.caption.copyWith(
                             color: _deadlineColor(task.deadline!),
                           ),
@@ -758,22 +763,23 @@ class _TaskGridCard extends StatelessWidget {
     return AppColors.textTertiaryLight; // 正常
   }
 
-  String _formatDeadline(DateTime deadline) {
+  String _formatDeadline(BuildContext context, DateTime deadline) {
     final now = DateTime.now();
     final diff = deadline.difference(now);
+    final l10n = context.l10n;
 
     if (diff.isNegative) {
-      return '已过期';
+      return l10n.taskDeadlineExpired;
     }
     if (diff.inMinutes < 60) {
-      return '${diff.inMinutes}分钟后截止';
+      return l10n.taskDeadlineMinutes(diff.inMinutes);
     }
     if (diff.inHours < 24) {
-      return '${diff.inHours}小时后截止';
+      return l10n.taskDeadlineHours(diff.inHours);
     }
     if (diff.inDays < 7) {
-      return '${diff.inDays}天后截止';
+      return l10n.taskDeadlineDays(diff.inDays);
     }
-    return '${deadline.month}/${deadline.day} 截止';
+    return l10n.taskDeadlineDate(deadline.month, deadline.day);
   }
 }

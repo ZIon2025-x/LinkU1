@@ -11,6 +11,7 @@ import '../../../core/design/app_typography.dart';
 import '../../../core/design/app_radius.dart';
 import '../../../core/utils/validators.dart';
 import '../../../core/router/app_router.dart';
+import '../../../core/utils/l10n_extension.dart';
 import '../bloc/auth_bloc.dart';
 
 /// 注册页面
@@ -84,7 +85,7 @@ class _RegisterViewState extends State<RegisterView>
 
     if (!_agreeTerms) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('请阅读并同意用户协议和隐私政策')),
+        SnackBar(content: Text(context.l10n.authPleaseAgreeToTerms)),
       );
       return;
     }
@@ -103,7 +104,7 @@ class _RegisterViewState extends State<RegisterView>
     final email = _emailController.text.trim();
     if (Validators.validateEmail(email) != null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('请输入有效的邮箱地址')),
+        SnackBar(content: Text(context.l10n.authPleaseEnterValidEmail)),
       );
       return;
     }
@@ -148,7 +149,7 @@ class _RegisterViewState extends State<RegisterView>
             );
           } else if (state.codeSendStatus == CodeSendStatus.sent) {
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('验证码已发送')),
+              SnackBar(content: Text(context.l10n.authCodeSent)),
             );
           }
         },
@@ -350,7 +351,7 @@ class _RegisterViewState extends State<RegisterView>
           ),
           const SizedBox(height: AppSpacing.md),
           Text(
-            '创建账号',
+            context.l10n.authCreateAccount,
             style: AppTypography.largeTitle.copyWith(
               color: isDark
                   ? AppColors.textPrimaryDark
@@ -359,7 +360,7 @@ class _RegisterViewState extends State<RegisterView>
           ),
           const SizedBox(height: AppSpacing.xs),
           Text(
-            '加入 Link²Ur，开始技能互助',
+            context.l10n.authRegisterSubtitle,
             style: AppTypography.subheadline.copyWith(
               color: isDark
                   ? AppColors.textSecondaryDark
@@ -411,8 +412,8 @@ class _RegisterViewState extends State<RegisterView>
                 // 用户名
                 _buildStyledTextField(
                   controller: _nameController,
-                  label: '用户名',
-                  placeholder: '请输入用户名',
+                  label: context.l10n.authUsername,
+                  placeholder: context.l10n.authEnterUsername,
                   icon: Icons.person_outlined,
                   isDark: isDark,
                   validator: Validators.validateUsername,
@@ -422,8 +423,8 @@ class _RegisterViewState extends State<RegisterView>
                 // 邮箱
                 _buildStyledTextField(
                   controller: _emailController,
-                  label: '邮箱',
-                  placeholder: '请输入邮箱地址',
+                  label: context.l10n.authEmail,
+                  placeholder: context.l10n.authEnterEmailPlaceholder,
                   icon: Icons.email_outlined,
                   keyboardType: TextInputType.emailAddress,
                   isDark: isDark,
@@ -438,8 +439,8 @@ class _RegisterViewState extends State<RegisterView>
                     Expanded(
                       child: _buildStyledTextField(
                         controller: _codeController,
-                        label: '验证码',
-                        placeholder: '请输入验证码',
+                        label: context.l10n.authVerificationCode,
+                        placeholder: context.l10n.authCodePlaceholder,
                         icon: Icons.pin_outlined,
                         keyboardType: TextInputType.number,
                         isDark: isDark,
@@ -454,8 +455,8 @@ class _RegisterViewState extends State<RegisterView>
                 // 密码
                 _buildStyledTextField(
                   controller: _passwordController,
-                  label: '密码',
-                  placeholder: '至少8位，包含字母和数字',
+                  label: context.l10n.authPasswordLabel,
+                  placeholder: context.l10n.authPasswordRequirement,
                   icon: Icons.lock_outlined,
                   obscureText: _obscurePassword,
                   isDark: isDark,
@@ -479,8 +480,8 @@ class _RegisterViewState extends State<RegisterView>
                 // 确认密码
                 _buildStyledTextField(
                   controller: _confirmPasswordController,
-                  label: '确认密码',
-                  placeholder: '请再次输入密码',
+                  label: context.l10n.authConfirmPassword,
+                  placeholder: context.l10n.authConfirmPasswordPlaceholder,
                   icon: Icons.lock_outlined,
                   obscureText: _obscureConfirmPassword,
                   isDark: isDark,
@@ -661,7 +662,7 @@ class _RegisterViewState extends State<RegisterView>
                         ),
                       )
                     : Text(
-                        '发送',
+                        context.l10n.forumSend,
                         style: AppTypography.caption.copyWith(
                           color: AppColors.primary,
                           fontWeight: FontWeight.w600,
@@ -723,7 +724,7 @@ class _RegisterViewState extends State<RegisterView>
           Expanded(
             child: Text.rich(
               TextSpan(
-                text: '我已阅读并同意 ',
+                text: context.l10n.authIAgreePrefix,
                 style: AppTypography.subheadline.copyWith(
                   color: isDark
                       ? AppColors.textSecondaryDark
@@ -731,15 +732,15 @@ class _RegisterViewState extends State<RegisterView>
                 ),
                 children: [
                   TextSpan(
-                    text: '用户协议',
+                    text: context.l10n.authTermsOfService,
                     style: AppTypography.subheadline.copyWith(
                       color: AppColors.primary,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
-                  const TextSpan(text: ' 和 '),
+                  TextSpan(text: context.l10n.authAnd),
                   TextSpan(
-                    text: '隐私政策',
+                    text: context.l10n.authPrivacyPolicy,
                     style: AppTypography.subheadline.copyWith(
                       color: AppColors.primary,
                       fontWeight: FontWeight.w600,
@@ -818,7 +819,7 @@ class _RegisterViewState extends State<RegisterView>
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Text(
-                            '创建账号',
+                            context.l10n.authCreateAccount,
                             style: AppTypography.bodyBold.copyWith(
                               color: Colors.white,
                             ),
@@ -846,7 +847,7 @@ class _RegisterViewState extends State<RegisterView>
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         Text(
-          '已有账号？',
+          context.l10n.authAlreadyHaveAccount,
           style: AppTypography.subheadline.copyWith(
             color: isDark
                 ? AppColors.textSecondaryDark
@@ -857,7 +858,7 @@ class _RegisterViewState extends State<RegisterView>
         GestureDetector(
           onTap: () => context.pop(),
           child: Text(
-            '立即登录',
+            context.l10n.authLoginNow,
             style: AppTypography.subheadline.copyWith(
               color: AppColors.primary,
               fontWeight: FontWeight.w600,

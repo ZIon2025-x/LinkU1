@@ -35,15 +35,15 @@ class NotificationCenterView extends StatelessWidget {
                                 const NotificationMarkAllAsRead(),
                               );
                         },
-                  child: const Text('全部已读'),
+                  child: Text(context.l10n.notificationMarkAllRead),
                 );
               },
             ),
           ],
-          bottom: const TabBar(
+          bottom: TabBar(
             tabs: [
-              Tab(text: '系统通知'),
-              Tab(text: '互动消息'),
+              Tab(text: context.l10n.notificationSystemNotifications),
+              Tab(text: context.l10n.notificationInteractionMessages),
             ],
             labelColor: AppColors.primary,
             unselectedLabelColor: AppColors.textSecondaryLight,
@@ -98,7 +98,7 @@ class _SystemNotificationListState extends State<_SystemNotificationList> {
         if (state.status == NotificationStatus.error &&
             state.notifications.isEmpty) {
           return ErrorStateView.loadFailed(
-            message: state.errorMessage ?? '加载失败',
+            message: state.errorMessage ?? context.l10n.activityLoadFailed,
             onRetry: () {
               context.read<NotificationBloc>().add(
                     const NotificationLoadRequested(type: 'system'),
@@ -187,7 +187,7 @@ class _InteractionNotificationListState
         if (state.status == NotificationStatus.error &&
             state.notifications.isEmpty) {
           return ErrorStateView.loadFailed(
-            message: state.errorMessage ?? '加载失败',
+            message: state.errorMessage ?? context.l10n.activityLoadFailed,
             onRetry: () {
               context.read<NotificationBloc>().add(
                     const NotificationLoadRequested(type: 'interaction'),
@@ -304,7 +304,7 @@ class _NotificationItem extends StatelessWidget {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    _formatTime(notification.createdAt),
+                    _formatTime(context, notification.createdAt),
                     style: const TextStyle(
                       fontSize: 12,
                       color: AppColors.textTertiaryLight,
@@ -349,19 +349,19 @@ class _NotificationItem extends StatelessWidget {
     }
   }
 
-  String _formatTime(DateTime? time) {
+  String _formatTime(BuildContext context, DateTime? time) {
     if (time == null) return '';
     final now = DateTime.now();
     final difference = now.difference(time);
 
     if (difference.inDays > 0) {
-      return '${difference.inDays}天前';
+      return context.l10n.timeDaysAgo(difference.inDays);
     } else if (difference.inHours > 0) {
-      return '${difference.inHours}小时前';
+      return context.l10n.timeHoursAgo(difference.inHours);
     } else if (difference.inMinutes > 0) {
-      return '${difference.inMinutes}分钟前';
+      return context.l10n.timeMinutesAgo(difference.inMinutes);
     } else {
-      return '刚刚';
+      return context.l10n.timeJustNow;
     }
   }
 }

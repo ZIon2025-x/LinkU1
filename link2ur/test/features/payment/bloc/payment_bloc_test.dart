@@ -22,7 +22,7 @@ void main() {
   });
 
   group('PaymentBloc', () {
-    final testPaymentResponse = TaskPaymentResponse(
+    const testPaymentResponse = TaskPaymentResponse(
       originalAmount: 9999, // 99.99 pounds in pence
       finalAmount: 8999, // 89.99 pounds in pence
       currency: 'GBP',
@@ -55,7 +55,7 @@ void main() {
         )),
         expect: () => [
           const PaymentState(status: PaymentStatus.loading),
-          PaymentState(
+          const PaymentState(
             status: PaymentStatus.ready,
             paymentResponse: testPaymentResponse,
             preferredPaymentMethod: 'card',
@@ -103,7 +103,7 @@ void main() {
               )).thenAnswer((_) async => testPaymentResponse);
           return paymentBloc;
         },
-        seed: () => PaymentState(
+        seed: () => const PaymentState(
           status: PaymentStatus.ready,
           paymentResponse: testPaymentResponse,
           preferredPaymentMethod: 'card',
@@ -114,13 +114,13 @@ void main() {
           isMethodSwitch: true,
         )),
         expect: () => [
-          PaymentState(
+          const PaymentState(
             status: PaymentStatus.ready,
             paymentResponse: testPaymentResponse,
             preferredPaymentMethod: 'card',
             isMethodSwitching: true,
           ),
-          PaymentState(
+          const PaymentState(
             status: PaymentStatus.ready,
             paymentResponse: testPaymentResponse,
             preferredPaymentMethod: 'alipay',
@@ -169,13 +169,13 @@ void main() {
       blocTest<PaymentBloc, PaymentState>(
         'transitions to success state',
         build: () => paymentBloc,
-        seed: () => PaymentState(
+        seed: () => const PaymentState(
           status: PaymentStatus.processing,
           paymentResponse: testPaymentResponse,
         ),
         act: (bloc) => bloc.add(const PaymentMarkSuccess()),
         expect: () => [
-          PaymentState(
+          const PaymentState(
             status: PaymentStatus.success,
             paymentResponse: testPaymentResponse,
           ),
@@ -187,13 +187,13 @@ void main() {
       blocTest<PaymentBloc, PaymentState>(
         'transitions to error state with error message',
         build: () => paymentBloc,
-        seed: () => PaymentState(
+        seed: () => const PaymentState(
           status: PaymentStatus.processing,
           paymentResponse: testPaymentResponse,
         ),
         act: (bloc) => bloc.add(const PaymentMarkFailed('Payment declined')),
         expect: () => [
-          PaymentState(
+          const PaymentState(
             status: PaymentStatus.error,
             paymentResponse: testPaymentResponse,
             errorMessage: 'Payment declined',
@@ -206,13 +206,13 @@ void main() {
       blocTest<PaymentBloc, PaymentState>(
         'transitions to processing state',
         build: () => paymentBloc,
-        seed: () => PaymentState(
+        seed: () => const PaymentState(
           status: PaymentStatus.ready,
           paymentResponse: testPaymentResponse,
         ),
         act: (bloc) => bloc.add(const PaymentStartProcessing()),
         expect: () => [
-          PaymentState(
+          const PaymentState(
             status: PaymentStatus.processing,
             paymentResponse: testPaymentResponse,
           ),

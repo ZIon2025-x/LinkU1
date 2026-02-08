@@ -5,10 +5,12 @@ import 'package:go_router/go_router.dart';
 import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_radius.dart';
+import '../../../core/utils/l10n_extension.dart';
 import '../../../core/widgets/cards.dart';
 import '../../../core/widgets/loading_view.dart';
 import '../../../core/widgets/error_state_view.dart';
 import '../../../core/widgets/empty_state_view.dart';
+import '../../../core/widgets/async_image_view.dart';
 import '../../../data/repositories/activity_repository.dart';
 import '../../../data/models/activity.dart';
 import '../bloc/activity_bloc.dart';
@@ -25,7 +27,9 @@ class ActivityView extends StatelessWidget {
       )..add(const ActivityLoadRequested()),
       child: Scaffold(
         appBar: AppBar(
-          title: const Text('校园活动'),
+          title: Builder(
+            builder: (context) => Text(context.l10n.activityCampusActivities),
+          ),
         ),
         body: BlocBuilder<ActivityBloc, ActivityState>(
           builder: (context, state) {
@@ -37,7 +41,7 @@ class ActivityView extends StatelessWidget {
             if (state.status == ActivityStatus.error &&
                 state.activities.isEmpty) {
               return ErrorStateView.loadFailed(
-                message: state.errorMessage ?? '加载失败',
+                message: state.errorMessage ?? context.l10n.activityLoadFailed,
                 onRetry: () {
                   context.read<ActivityBloc>().add(
                         const ActivityLoadRequested(),
@@ -47,10 +51,10 @@ class ActivityView extends StatelessWidget {
             }
 
             if (state.activities.isEmpty) {
-              return const EmptyStateView(
+              return EmptyStateView(
                 icon: Icons.event_outlined,
-                title: '暂无活动',
-                description: '稍后再来看看吧',
+                title: context.l10n.activityNoActivities,
+                description: context.l10n.activityCheckLater,
               );
             }
 
@@ -99,14 +103,14 @@ class _ActivityCard extends StatelessWidget {
     return '${dt.month}月${dt.day}日 ${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
   }
 
-  String _getStatusText(String status) {
+  String _getStatusText(String status, BuildContext context) {
     switch (status) {
       case 'active':
-        return '立即报名';
+        return context.l10n.activityRegisterNow;
       case 'completed':
-        return '已结束';
+        return context.l10n.activityEnded;
       case 'cancelled':
-        return '已取消';
+        return context.l10n.activityCancelled;
       default:
         return status;
     }
@@ -125,34 +129,12 @@ class _ActivityCard extends StatelessWidget {
         children: [
           // 封面图
           if (activity.firstImage != null)
-            ClipRRect(
+            AsyncImageView(
+              imageUrl: activity.firstImage,
+              height: 150,
+              width: double.infinity,
+              fit: BoxFit.cover,
               borderRadius: AppRadius.allMedium,
-              child: Image.network(
-                activity.firstImage!,
-                height: 150,
-                width: double.infinity,
-                fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) => Container(
-                  height: 150,
-                  width: double.infinity,
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [
-                        AppColors.primary.withValues(alpha: 0.7),
-                        AppColors.primary,
-                      ],
-                    ),
-                    borderRadius: AppRadius.allMedium,
-                  ),
-                  child: Center(
-                    child: Icon(
-                      Icons.event,
-                      color: Colors.white.withValues(alpha: 0.5),
-                      size: 48,
-                    ),
-                  ),
-                ),
-              ),
             ),
           if (activity.firstImage == null)
             Container(
@@ -254,7 +236,7 @@ class _ActivityCard extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                '${activity.currentParticipants ?? 0}/${activity.maxParticipants}人',
+                context.l10n.activityPersonCount(activity.currentParticipants ?? 0, activity.maxParticipants),
                 style: TextStyle(
                   fontSize: 13,
                   color: isDark
@@ -284,10 +266,10 @@ class _ActivityCard extends StatelessWidget {
                   ),
                   child: Text(
                     activity.hasApplied == true
-                        ? '已报名'
+                        ? context.l10n.activityRegistered
                         : activity.isFull
-                            ? '已满员'
-                            : _getStatusText(activity.status),
+                            ? context.l10n.activityFullSlots
+                            : _getStatusText(activity.status, context),
                     style: TextStyle(
                       color: activity.status == 'active' &&
                               !activity.isFull &&

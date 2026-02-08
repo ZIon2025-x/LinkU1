@@ -1,4 +1,5 @@
 import 'package:equatable/equatable.dart';
+import '../../core/constants/app_constants.dart';
 import 'user.dart';
 
 /// 任务模型
@@ -80,7 +81,7 @@ class Task extends Equatable {
 
   /// 是否可以申请
   bool get canApply => 
-      status == 'open' && 
+      status == AppConstants.taskStatusOpen && 
       !hasApplied && 
       !isExpired && 
       currentParticipants < maxParticipants;
@@ -88,17 +89,17 @@ class Task extends Equatable {
   /// 状态显示文本
   String get statusText {
     switch (status) {
-      case 'open':
+      case AppConstants.taskStatusOpen:
         return '招募中';
-      case 'in_progress':
+      case AppConstants.taskStatusInProgress:
         return '进行中';
-      case 'pending_confirmation':
+      case AppConstants.taskStatusPendingConfirmation:
         return '待确认';
-      case 'completed':
+      case AppConstants.taskStatusCompleted:
         return '已完成';
-      case 'cancelled':
+      case AppConstants.taskStatusCancelled:
         return '已取消';
-      case 'disputed':
+      case AppConstants.taskStatusDisputed:
         return '争议中';
       default:
         return status;
@@ -155,7 +156,7 @@ class Task extends Equatable {
       longitude: (json['longitude'] as num?)?.toDouble(),
       reward: (json['reward'] as num?)?.toDouble() ?? 0,
       currency: json['currency'] as String? ?? 'USD',
-      status: json['status'] as String? ?? 'open',
+      status: json['status'] as String? ?? AppConstants.taskStatusOpen,
       images: (json['images'] as List<dynamic>?)
               ?.map((e) => e as String)
               .toList() ??
@@ -217,6 +218,70 @@ class Task extends Equatable {
       'created_at': createdAt?.toIso8601String(),
       'updated_at': updatedAt?.toIso8601String(),
     };
+  }
+
+  Task copyWith({
+    int? id,
+    String? title,
+    String? titleEn,
+    String? titleZh,
+    String? description,
+    String? descriptionEn,
+    String? descriptionZh,
+    String? taskType,
+    String? location,
+    double? latitude,
+    double? longitude,
+    double? reward,
+    String? currency,
+    String? status,
+    List<String>? images,
+    DateTime? deadline,
+    String? posterId,
+    UserBrief? poster,
+    String? takerId,
+    UserBrief? taker,
+    bool? isMultiParticipant,
+    int? maxParticipants,
+    int? currentParticipants,
+    String? taskSource,
+    bool? hasApplied,
+    String? userApplicationStatus,
+    String? completionEvidence,
+    DateTime? createdAt,
+    DateTime? updatedAt,
+  }) {
+    return Task(
+      id: id ?? this.id,
+      title: title ?? this.title,
+      titleEn: titleEn ?? this.titleEn,
+      titleZh: titleZh ?? this.titleZh,
+      description: description ?? this.description,
+      descriptionEn: descriptionEn ?? this.descriptionEn,
+      descriptionZh: descriptionZh ?? this.descriptionZh,
+      taskType: taskType ?? this.taskType,
+      location: location ?? this.location,
+      latitude: latitude ?? this.latitude,
+      longitude: longitude ?? this.longitude,
+      reward: reward ?? this.reward,
+      currency: currency ?? this.currency,
+      status: status ?? this.status,
+      images: images ?? this.images,
+      deadline: deadline ?? this.deadline,
+      posterId: posterId ?? this.posterId,
+      poster: poster ?? this.poster,
+      takerId: takerId ?? this.takerId,
+      taker: taker ?? this.taker,
+      isMultiParticipant: isMultiParticipant ?? this.isMultiParticipant,
+      maxParticipants: maxParticipants ?? this.maxParticipants,
+      currentParticipants: currentParticipants ?? this.currentParticipants,
+      taskSource: taskSource ?? this.taskSource,
+      hasApplied: hasApplied ?? this.hasApplied,
+      userApplicationStatus: userApplicationStatus ?? this.userApplicationStatus,
+      completionEvidence: completionEvidence ?? this.completionEvidence,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+    );
   }
 
   @override

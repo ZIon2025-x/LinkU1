@@ -149,6 +149,71 @@ def validate_user_stripe_account_for_receiving(
         )
 
 
+def get_or_create_stripe_customer(user, db=None) -> str:
+    """
+    获取或创建 Stripe Customer（用于支付），优先使用数据库缓存的 stripe_customer_id。
+    
+    解决以下问题：
+    1. Stripe Search API 有索引延迟（eventual consistency），导致短时间内重复创建 Customer
+    2. 多处代码重复实现相同逻辑
+    
+    Args:
+        user: User 模型对象，需要有 id, name, stripe_customer_id 属性
+        db: 数据库 Session（可选，传入则会将 customer_id 保存到用户记录）
+    
+    Returns:
+        str: Stripe Customer ID
+    
+    Raises:
+        Exception: 如果无法创建 Customer
+    """
+    import stripe
+    
+    # 1. 优先使用数据库中缓存的 customer_id
+    if hasattr(user, 'stripe_customer_id') and user.stripe_customer_id:
+        logger.debug(f"使用数据库缓存的 Stripe Customer: user={user.id}, customer={user.stripe_customer_id}")
+        return user.stripe_customer_id
+    
+    # 2. 搜索 Stripe 中是否已有该用户的 Customer（兼容旧数据）
+    customer_id = None
+    try:
+        search_result = stripe.Customer.search(
+            query=f"metadata['user_id']:'{user.id}'",
+            limit=1
+        )
+        if search_result.data:
+            customer_id = search_result.data[0].id
+            logger.info(f"从 Stripe 找到已有 Customer: user={user.id}, customer={customer_id}")
+    except Exception as e:
+        logger.debug(f"Stripe Customer Search 失败，将创建新 Customer: {e}")
+    
+    # 3. 未找到则创建新的
+    if not customer_id:
+        customer = stripe.Customer.create(
+            metadata={
+                "user_id": str(user.id),
+                "user_name": getattr(user, 'name', None) or f"User {user.id}",
+            }
+        )
+        customer_id = customer.id
+        logger.info(f"创建新 Stripe Customer: user={user.id}, customer={customer_id}")
+    
+    # 4. 保存到数据库（避免下次重复查询/创建）
+    if db and hasattr(user, 'stripe_customer_id'):
+        try:
+            user.stripe_customer_id = customer_id
+            db.commit()
+            logger.info(f"已保存 Stripe Customer ID 到用户记录: user={user.id}, customer={customer_id}")
+        except Exception as e:
+            logger.warning(f"保存 Stripe Customer ID 失败（不影响支付）: {e}")
+            try:
+                db.rollback()
+            except Exception:
+                pass
+    
+    return customer_id
+
+
 def get_user_stripe_account_status(user) -> dict:
     """
     获取用户的 Stripe 账户状态摘要

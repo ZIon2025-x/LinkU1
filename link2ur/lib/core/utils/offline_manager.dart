@@ -130,6 +130,7 @@ class OfflineManager {
   final List<OfflineOperation> _operations = [];
   StreamSubscription? _networkSubscription;
   bool _isSyncing = false;
+  bool _initialized = false;
 
   /// 是否处于离线模式
   bool get isOfflineMode => !NetworkMonitor.instance.isConnected;
@@ -149,6 +150,12 @@ class OfflineManager {
 
   /// 初始化
   Future<void> initialize() async {
+    // 防止重复初始化导致旧订阅泄漏
+    if (_initialized) {
+      AppLogger.debug('OfflineManager - Already initialized, skipping');
+      return;
+    }
+
     // 加载持久化的操作
     await _loadOperations();
 
@@ -161,6 +168,7 @@ class OfflineManager {
       }
     });
 
+    _initialized = true;
     AppLogger.info('OfflineManager initialized with ${_operations.length} operations');
   }
 
@@ -361,6 +369,8 @@ class OfflineManager {
   /// 释放资源
   void dispose() {
     _networkSubscription?.cancel();
+    _networkSubscription = null;
+    _initialized = false;
   }
 }
 

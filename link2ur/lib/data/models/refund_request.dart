@@ -1,4 +1,5 @@
 import 'package:equatable/equatable.dart';
+import '../../core/constants/app_constants.dart';
 
 /// 退款申请模型
 /// 参考iOS RefundRequest.swift
@@ -54,10 +55,10 @@ class RefundRequest extends Equatable {
   final String updatedAt;
 
   /// 是否已完成
-  bool get isCompleted => status == 'completed';
+  bool get isCompleted => status == AppConstants.refundStatusCompleted;
 
   /// 是否待处理
-  bool get isPending => status == 'pending';
+  bool get isPending => status == AppConstants.refundStatusPending;
 
   /// 是否已有反驳
   bool get hasRebuttal =>
@@ -76,7 +77,7 @@ class RefundRequest extends Equatable {
           .toList(),
       refundAmount: (json['refund_amount'] as num?)?.toDouble(),
       refundPercentage: (json['refund_percentage'] as num?)?.toDouble(),
-      status: json['status'] as String? ?? 'pending',
+      status: json['status'] as String? ?? AppConstants.refundStatusPending,
       adminComment: json['admin_comment'] as String?,
       reviewedBy: json['reviewed_by'] as String?,
       reviewedAt: json['reviewed_at'] as String?,

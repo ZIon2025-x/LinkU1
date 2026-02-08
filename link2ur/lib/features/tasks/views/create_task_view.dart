@@ -47,16 +47,18 @@ class _CreateTaskContentState extends State<_CreateTaskContent> {
   String _selectedCurrency = 'GBP';
   DateTime? _deadline;
 
-  final List<Map<String, String>> _categories = [
-    {'key': 'delivery', 'label': '代取代送'},
-    {'key': 'shopping', 'label': '代购'},
-    {'key': 'tutoring', 'label': '辅导'},
-    {'key': 'translation', 'label': '翻译'},
-    {'key': 'design', 'label': '设计'},
-    {'key': 'programming', 'label': '编程'},
-    {'key': 'writing', 'label': '写作'},
-    {'key': 'other', 'label': '其他'},
-  ];
+  List<Map<String, String>> _getCategories(BuildContext context) {
+    return [
+      {'key': 'delivery', 'label': context.l10n.createTaskCategoryDelivery},
+      {'key': 'shopping', 'label': context.l10n.createTaskCategoryShopping},
+      {'key': 'tutoring', 'label': context.l10n.createTaskCategoryTutoring},
+      {'key': 'translation', 'label': context.l10n.createTaskCategoryTranslation},
+      {'key': 'design', 'label': context.l10n.createTaskCategoryDesign},
+      {'key': 'programming', 'label': context.l10n.createTaskCategoryProgramming},
+      {'key': 'writing', 'label': context.l10n.createTaskCategoryWriting},
+      {'key': 'other', 'label': context.l10n.createTaskCategoryOther},
+    ];
+  }
 
   @override
   void dispose() {
@@ -117,37 +119,37 @@ class _CreateTaskContentState extends State<_CreateTaskContent> {
       },
       builder: (context, state) {
         return Scaffold(
-          appBar: AppBar(title: const Text('发布任务')),
+          appBar: AppBar(title: Text(context.l10n.createTaskTitle)),
           body: Form(
             key: _formKey,
             child: ListView(
               padding: AppSpacing.allMd,
               children: [
-                _buildSectionTitle('任务类型'),
+                _buildSectionTitle(context.l10n.createTaskType),
                 _buildCategorySelector(),
                 AppSpacing.vLg,
 
-                _buildSectionTitle('任务标题'),
+                _buildSectionTitle(context.l10n.createTaskTitleField),
                 TextFormField(
                   controller: _titleController,
-                  decoration: const InputDecoration(hintText: '请输入任务标题'),
+                  decoration: InputDecoration(hintText: context.l10n.createTaskTitleHint),
                   maxLength: 100,
                   validator: Validators.validateTitle,
                 ),
                 AppSpacing.vMd,
 
-                _buildSectionTitle('任务描述'),
+                _buildSectionTitle(context.l10n.taskDetailTaskDescription),
                 TextFormField(
                   controller: _descriptionController,
                   decoration:
-                      const InputDecoration(hintText: '请详细描述任务要求...'),
+                      InputDecoration(hintText: context.l10n.createTaskDescHint),
                   maxLines: 5,
                   maxLength: 2000,
                   validator: (value) => Validators.validateDescription(value),
                 ),
                 AppSpacing.vMd,
 
-                _buildSectionTitle('任务报酬'),
+                _buildSectionTitle(context.l10n.createTaskReward),
                 Row(
                   children: [
                     Expanded(
@@ -180,11 +182,11 @@ class _CreateTaskContentState extends State<_CreateTaskContent> {
                 ),
                 AppSpacing.vLg,
 
-                _buildSectionTitle('任务地点'),
+                _buildSectionTitle(context.l10n.createTaskLocation),
                 TextFormField(
                   controller: _locationController,
                   decoration: InputDecoration(
-                    hintText: '请输入任务地点',
+                    hintText: context.l10n.createTaskLocationHint,
                     suffixIcon: IconButton(
                       icon: const Icon(Icons.my_location),
                       onPressed: () {},
@@ -193,7 +195,7 @@ class _CreateTaskContentState extends State<_CreateTaskContent> {
                 ),
                 AppSpacing.vLg,
 
-                _buildSectionTitle('截止时间'),
+                _buildSectionTitle(context.l10n.createTaskDeadline),
                 GestureDetector(
                   onTap: _selectDeadline,
                   child: Container(
@@ -212,7 +214,7 @@ class _CreateTaskContentState extends State<_CreateTaskContent> {
                         Text(
                           _deadline != null
                               ? '${_deadline!.year}-${_deadline!.month.toString().padLeft(2, '0')}-${_deadline!.day.toString().padLeft(2, '0')}'
-                              : '选择截止日期',
+                              : context.l10n.createTaskSelectDeadline,
                           style: TextStyle(
                             color: _deadline != null
                                 ? null
@@ -225,12 +227,12 @@ class _CreateTaskContentState extends State<_CreateTaskContent> {
                 ),
                 AppSpacing.vLg,
 
-                _buildSectionTitle('添加图片'),
+                _buildSectionTitle(context.l10n.createTaskAddImages),
                 _buildImagePicker(),
                 AppSpacing.vXxl,
 
                 PrimaryButton(
-                  text: '发布任务',
+                  text: context.l10n.createTaskTitle,
                   onPressed: state.isSubmitting ? null : _submitTask,
                   isLoading: state.isSubmitting,
                 ),
@@ -257,7 +259,7 @@ class _CreateTaskContentState extends State<_CreateTaskContent> {
     return Wrap(
       spacing: 8,
       runSpacing: 8,
-      children: _categories.map((category) {
+      children: _getCategories(context).map((category) {
         final isSelected = _selectedCategory == category['key'];
         return GestureDetector(
           onTap: () => setState(() => _selectedCategory = category['key']!),

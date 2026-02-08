@@ -74,7 +74,7 @@ class _CreatePostViewState extends State<CreatePostView> {
         builder: (context, state) {
           return Scaffold(
             appBar: AppBar(
-              title: const Text('发布帖子'),
+              title: Text(context.l10n.forumCreatePostTitle),
               actions: [
                 TextButton(
                   onPressed: state.isCreatingPost
@@ -86,7 +86,7 @@ class _CreatePostViewState extends State<CreatePostView> {
                           height: 16,
                           child: CircularProgressIndicator(strokeWidth: 2),
                         )
-                      : const Text('发布'),
+                      : Text(context.l10n.forumPublish),
                 ),
               ],
             ),
@@ -97,9 +97,9 @@ class _CreatePostViewState extends State<CreatePostView> {
                 if (state.categories.isNotEmpty) ...[
                   DropdownButtonFormField<int>(
                     initialValue: _selectedCategoryId,
-                    decoration: const InputDecoration(
-                      labelText: '选择分类',
-                      border: OutlineInputBorder(),
+                    decoration: InputDecoration(
+                      labelText: context.l10n.forumSelectCategory,
+                      border: const OutlineInputBorder(),
                     ),
                     items: state.categories.map((category) {
                       return DropdownMenuItem<int>(
@@ -118,8 +118,8 @@ class _CreatePostViewState extends State<CreatePostView> {
                 // 标题
                 TextField(
                   controller: _titleController,
-                  decoration: const InputDecoration(
-                    hintText: '请输入标题',
+                  decoration: InputDecoration(
+                    hintText: context.l10n.forumEnterTitle,
                     border: InputBorder.none,
                   ),
                   style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
@@ -128,8 +128,8 @@ class _CreatePostViewState extends State<CreatePostView> {
                 // 内容
                 TextField(
                   controller: _contentController,
-                  decoration: const InputDecoration(
-                    hintText: '分享你的想法...',
+                  decoration: InputDecoration(
+                    hintText: context.l10n.forumShareThoughts,
                     border: InputBorder.none,
                   ),
                   maxLines: null,

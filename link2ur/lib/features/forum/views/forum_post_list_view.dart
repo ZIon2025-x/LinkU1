@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -45,10 +47,13 @@ class _ForumPostListViewContent extends StatefulWidget {
 class _ForumPostListViewContentState
     extends State<_ForumPostListViewContent> {
   final TextEditingController _searchController = TextEditingController();
+  Timer? _debounceTimer;
+  static const _debounceDuration = Duration(milliseconds: 400);
 
   @override
   void dispose() {
     _searchController.dispose();
+    _debounceTimer?.cancel();
     super.dispose();
   }
 
@@ -86,11 +91,12 @@ class _ForumPostListViewContentState
                 contentPadding: const EdgeInsets.symmetric(vertical: 12),
               ),
               onChanged: (value) {
-                final bloc = context.read<ForumBloc>();
-                Future.delayed(const Duration(milliseconds: 500), () {
-                  if (mounted && _searchController.text == value) {
-                    bloc.add(ForumSearchChanged(value.isEmpty ? '' : value));
-                  }
+                _debounceTimer?.cancel();
+                _debounceTimer = Timer(_debounceDuration, () {
+                  if (!mounted) return;
+                  context
+                      .read<ForumBloc>()
+                      .add(ForumSearchChanged(value.isEmpty ? '' : value));
                 });
               },
             ),

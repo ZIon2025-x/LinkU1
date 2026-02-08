@@ -35,8 +35,16 @@ class NetworkMonitor {
       StreamController<NetworkStatus>.broadcast();
   Stream<NetworkStatus> get statusStream => _statusController.stream;
 
+  bool _initialized = false;
+
   /// 初始化网络监测
   Future<void> initialize() async {
+    // 防止重复初始化导致旧订阅泄漏
+    if (_initialized) {
+      AppLogger.debug('NetworkMonitor - Already initialized, skipping');
+      return;
+    }
+
     try {
       // 获取初始状态
       final results = await _connectivity.checkConnectivity();
@@ -57,6 +65,7 @@ class NetworkMonitor {
           AppLogger.error('NetworkMonitor - Stream error', error);
         },
       );
+      _initialized = true;
     } catch (e) {
       AppLogger.error('NetworkMonitor - Initialization failed', e);
     }
@@ -95,6 +104,7 @@ class NetworkMonitor {
     _subscription?.cancel();
     _subscription = null;
     _statusController.close();
+    _initialized = false;
   }
 }
 

@@ -2,6 +2,7 @@ import '../models/task_expert.dart';
 import '../services/api_service.dart';
 import '../../core/constants/api_endpoints.dart';
 import '../../core/utils/cache_manager.dart';
+import '../../core/utils/app_exception.dart';
 
 /// 任务达人仓库
 /// 与iOS TaskExpertViewModel + 后端 task_expert_routes 对齐
@@ -208,14 +209,187 @@ class TaskExpertRepository {
     final items = response.data!['items'] as List<dynamic>? ?? [];
     return items.map((e) => e as Map<String, dynamic>).toList();
   }
+
+  /// 获取达人评价列表
+  Future<List<Map<String, dynamic>>> getExpertReviews(String expertId) async {
+    final response = await _apiService.get<Map<String, dynamic>>(
+      ApiEndpoints.taskExpertReviews(expertId),
+    );
+
+    if (!response.isSuccess || response.data == null) {
+      throw TaskExpertException(response.message ?? '获取达人评价失败');
+    }
+
+    final items = response.data!['items'] as List<dynamic>? ?? [];
+    return items.map((e) => e as Map<String, dynamic>).toList();
+  }
+
+  /// 获取我的达人申请状态
+  Future<Map<String, dynamic>?> getMyExpertApplication() async {
+    final response = await _apiService.get<Map<String, dynamic>>(
+      ApiEndpoints.myExpertApplication,
+    );
+
+    if (!response.isSuccess) {
+      throw TaskExpertException(response.message ?? '获取申请状态失败');
+    }
+
+    return response.data;
+  }
+
+  /// 获取我的达人资料
+  Future<Map<String, dynamic>?> getMyExpertProfile() async {
+    final response = await _apiService.get<Map<String, dynamic>>(
+      ApiEndpoints.myExpertProfile,
+    );
+
+    if (!response.isSuccess) {
+      throw TaskExpertException(response.message ?? '获取达人资料失败');
+    }
+
+    return response.data;
+  }
+
+  /// 获取我的达人服务列表
+  Future<List<Map<String, dynamic>>> getMyExpertServices() async {
+    final response = await _apiService.get<Map<String, dynamic>>(
+      ApiEndpoints.myExpertServices,
+    );
+
+    if (!response.isSuccess || response.data == null) {
+      throw TaskExpertException(response.message ?? '获取服务列表失败');
+    }
+
+    final items = response.data!['items'] as List<dynamic>? ?? [];
+    return items.map((e) => e as Map<String, dynamic>).toList();
+  }
+
+  /// 获取我的达人申请记录（别人申请我的服务）
+  Future<List<Map<String, dynamic>>> getMyExpertApplications({
+    int page = 1,
+    int pageSize = 20,
+  }) async {
+    final response = await _apiService.get<Map<String, dynamic>>(
+      ApiEndpoints.myExpertApplications,
+      queryParameters: {
+        'page': page,
+        'page_size': pageSize,
+      },
+    );
+
+    if (!response.isSuccess || response.data == null) {
+      throw TaskExpertException(response.message ?? '获取申请记录失败');
+    }
+
+    final items = response.data!['items'] as List<dynamic>? ?? [];
+    return items.map((e) => e as Map<String, dynamic>).toList();
+  }
+
+  /// 获取达人仪表盘统计
+  Future<Map<String, dynamic>> getMyExpertDashboardStats() async {
+    final response = await _apiService.get<Map<String, dynamic>>(
+      ApiEndpoints.myExpertDashboardStats,
+    );
+
+    if (!response.isSuccess || response.data == null) {
+      throw TaskExpertException(response.message ?? '获取统计数据失败');
+    }
+
+    return response.data!;
+  }
+
+  /// 获取达人日程
+  Future<Map<String, dynamic>> getMyExpertSchedule() async {
+    final response = await _apiService.get<Map<String, dynamic>>(
+      ApiEndpoints.myExpertSchedule,
+    );
+
+    if (!response.isSuccess || response.data == null) {
+      throw TaskExpertException(response.message ?? '获取日程失败');
+    }
+
+    return response.data!;
+  }
+
+  /// 获取达人休息日
+  Future<List<String>> getMyExpertClosedDates() async {
+    final response = await _apiService.get<Map<String, dynamic>>(
+      ApiEndpoints.myExpertClosedDates,
+    );
+
+    if (!response.isSuccess || response.data == null) {
+      throw TaskExpertException(response.message ?? '获取休息日失败');
+    }
+
+    final dates = response.data!['dates'] as List<dynamic>? ?? [];
+    return dates.map((e) => e.toString()).toList();
+  }
+
+  /// 获取服务时间段
+  Future<List<Map<String, dynamic>>> getServiceTimeSlots(int serviceId) async {
+    final response = await _apiService.get<Map<String, dynamic>>(
+      ApiEndpoints.serviceTimeSlots(serviceId),
+    );
+
+    if (!response.isSuccess || response.data == null) {
+      throw TaskExpertException(response.message ?? '获取时间段失败');
+    }
+
+    final items = response.data!['time_slots'] as List<dynamic>? ?? [];
+    return items.map((e) => e as Map<String, dynamic>).toList();
+  }
+
+  /// 获取我的服务时间段（达人管理）
+  Future<List<Map<String, dynamic>>> getMyServiceTimeSlots(int serviceId) async {
+    final response = await _apiService.get<Map<String, dynamic>>(
+      ApiEndpoints.myServiceTimeSlots(serviceId),
+    );
+
+    if (!response.isSuccess || response.data == null) {
+      throw TaskExpertException(response.message ?? '获取时间段失败');
+    }
+
+    final items = response.data!['time_slots'] as List<dynamic>? ?? [];
+    return items.map((e) => e as Map<String, dynamic>).toList();
+  }
+
+  /// 请求更新达人资料
+  Future<void> requestExpertProfileUpdate(Map<String, dynamic> data) async {
+    final response = await _apiService.post(
+      ApiEndpoints.myExpertProfileUpdateRequest,
+      data: data,
+    );
+
+    if (!response.isSuccess) {
+      throw TaskExpertException(response.message ?? '提交资料更新请求失败');
+    }
+  }
+
+  /// 回应服务还价
+  Future<void> respondServiceCounterOffer(int applicationId, {required bool accept}) async {
+    final response = await _apiService.post(
+      ApiEndpoints.respondServiceCounterOffer(applicationId),
+      data: {'accept': accept},
+    );
+
+    if (!response.isSuccess) {
+      throw TaskExpertException(response.message ?? '回应还价失败');
+    }
+  }
+
+  /// 取消服务申请
+  Future<void> cancelServiceApplication(int applicationId) async {
+    final response = await _apiService.post(
+      ApiEndpoints.cancelServiceApplication(applicationId),
+    );
+
+    if (!response.isSuccess) {
+      throw TaskExpertException(response.message ?? '取消申请失败');
+    }
+  }
 }
 
 /// 任务达人异常
-class TaskExpertException implements Exception {
-  TaskExpertException(this.message);
-
-  final String message;
-
-  @override
-  String toString() => 'TaskExpertException: $message';
+class TaskExpertException extends AppException {
+  const TaskExpertException(super.message);
 }

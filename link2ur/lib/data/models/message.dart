@@ -96,6 +96,30 @@ class Message extends Equatable {
     };
   }
 
+  Message copyWith({
+    int? id,
+    String? senderId,
+    String? receiverId,
+    String? content,
+    String? messageType,
+    String? imageUrl,
+    int? taskId,
+    bool? isRead,
+    DateTime? createdAt,
+  }) {
+    return Message(
+      id: id ?? this.id,
+      senderId: senderId ?? this.senderId,
+      receiverId: receiverId ?? this.receiverId,
+      content: content ?? this.content,
+      messageType: messageType ?? this.messageType,
+      imageUrl: imageUrl ?? this.imageUrl,
+      taskId: taskId ?? this.taskId,
+      isRead: isRead ?? this.isRead,
+      createdAt: createdAt ?? this.createdAt,
+    );
+  }
+
   @override
   List<Object?> get props => [id, senderId, receiverId, content, createdAt];
 }

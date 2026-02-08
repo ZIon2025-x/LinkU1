@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/constants/app_constants.dart';
 import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_radius.dart';
+import '../../../core/utils/l10n_extension.dart';
 import '../../../core/widgets/loading_view.dart';
 import '../../../core/widgets/error_state_view.dart';
 import '../../../core/widgets/empty_state_view.dart';
@@ -77,12 +79,12 @@ class _MyTasksViewState extends State<MyTasksView>
         ..add(const ProfileLoadMyTasks(isPosted: true, page: 1)),
       child: Scaffold(
         appBar: AppBar(
-          title: const Text('我的任务'),
+          title: Text(context.l10n.myTasksTitle),
           bottom: TabBar(
             controller: _tabController,
-            tabs: const [
-              Tab(text: '我接的'),
-              Tab(text: '我发的'),
+            tabs: [
+              Tab(text: context.l10n.myTasksAccepted),
+              Tab(text: context.l10n.myTasksPosted),
             ],
             labelColor: AppColors.primary,
             unselectedLabelColor: AppColors.textSecondaryLight,
@@ -132,7 +134,7 @@ class _MyTasksViewState extends State<MyTasksView>
 
     if (state.myTasks.isEmpty) {
       return EmptyStateView.noTasks(
-        actionText: '去接任务',
+        actionText: context.l10n.myTasksGoAccept,
         onAction: () {
           context.push('/tasks');
         },
@@ -185,7 +187,7 @@ class _MyTasksViewState extends State<MyTasksView>
 
     if (state.postedTasks.isEmpty) {
       return EmptyStateView.noTasks(
-        actionText: '发布任务',
+        actionText: context.l10n.homePublishTask,
         onAction: () {
           context.push('/tasks/create');
         },
@@ -259,7 +261,7 @@ class _TaskCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      task.poster?.name ?? '匿名用户',
+                      task.poster?.name ?? context.l10n.profileAnonymousUser,
                       style: const TextStyle(fontWeight: FontWeight.w500),
                     ),
                     Text(
@@ -366,13 +368,13 @@ class _TaskCard extends StatelessWidget {
 
   Color _statusColor(String status) {
     switch (status) {
-      case 'open':
+      case AppConstants.taskStatusOpen:
         return AppColors.success;
-      case 'in_progress':
+      case AppConstants.taskStatusInProgress:
         return AppColors.primary;
-      case 'completed':
+      case AppConstants.taskStatusCompleted:
         return AppColors.textSecondaryLight;
-      case 'cancelled':
+      case AppConstants.taskStatusCancelled:
         return AppColors.error;
       default:
         return AppColors.textSecondaryLight;

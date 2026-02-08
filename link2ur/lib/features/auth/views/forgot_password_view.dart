@@ -102,7 +102,7 @@ class _ForgotPasswordViewState extends State<ForgotPasswordView> {
 
           return Scaffold(
             appBar: AppBar(
-              title: const Text('忘记密码'),
+              title: Text(context.l10n.authForgotPassword),
             ),
             body: SafeArea(
               child: SingleChildScrollView(
@@ -121,10 +121,10 @@ class _ForgotPasswordViewState extends State<ForgotPasswordView> {
                       AppSpacing.vLg,
 
                       // 说明
-                      const Text(
-                        '输入您的注册邮箱，我们将发送验证码帮助您重置密码。',
+                      Text(
+                        context.l10n.authResetPasswordDesc,
                         textAlign: TextAlign.center,
-                        style: TextStyle(
+                        style: const TextStyle(
                           color: AppColors.textSecondaryLight,
                           fontSize: 14,
                         ),
@@ -198,10 +198,10 @@ class _ForgotPasswordViewState extends State<ForgotPasswordView> {
                         ),
                         validator: (value) {
                           if (value == null || value.trim().isEmpty) {
-                            return '请输入邮箱';
+                            return context.l10n.authPleaseEnterEmail;
                           }
                           if (!Validators.isValidEmail(value.trim())) {
-                            return '邮箱格式不正确';
+                            return context.l10n.authEmailFormatInvalid;
                           }
                           return null;
                         },
@@ -211,7 +211,7 @@ class _ForgotPasswordViewState extends State<ForgotPasswordView> {
                       // 发送验证码按钮
                       if (!_codeSent) ...[
                         PrimaryButton(
-                          text: '发送验证码',
+                          text: context.l10n.authSendCode,
                           isLoading: isSendingCode,
                           onPressed:
                               isSendingCode ? null : _sendVerificationCode,
@@ -222,7 +222,7 @@ class _ForgotPasswordViewState extends State<ForgotPasswordView> {
                           controller: _codeController,
                           keyboardType: TextInputType.number,
                           decoration: InputDecoration(
-                            labelText: '验证码',
+                            labelText: context.l10n.authVerificationCode,
                             prefixIcon: const Icon(Icons.pin),
                             suffixIcon: TextButton(
                               onPressed: _countdown > 0
@@ -230,8 +230,8 @@ class _ForgotPasswordViewState extends State<ForgotPasswordView> {
                                   : _sendVerificationCode,
                               child: Text(
                                 _countdown > 0
-                                    ? '${_countdown}s 后重发'
-                                    : '重新发送',
+                                    ? context.l10n.authResendCountdown(_countdown)
+                                    : context.l10n.authResendCode,
                               ),
                             ),
                             border: OutlineInputBorder(
@@ -240,7 +240,7 @@ class _ForgotPasswordViewState extends State<ForgotPasswordView> {
                           ),
                           validator: (value) {
                             if (value == null || value.trim().isEmpty) {
-                              return '请输入验证码';
+                              return context.l10n.authEnterCode;
                             }
                             return null;
                           },
@@ -252,7 +252,7 @@ class _ForgotPasswordViewState extends State<ForgotPasswordView> {
                           controller: _passwordController,
                           obscureText: _obscurePassword,
                           decoration: InputDecoration(
-                            labelText: '新密码',
+                            labelText: context.l10n.authNewPassword,
                             prefixIcon: const Icon(Icons.lock_outline),
                             suffixIcon: IconButton(
                               icon: Icon(
@@ -271,10 +271,10 @@ class _ForgotPasswordViewState extends State<ForgotPasswordView> {
                           ),
                           validator: (value) {
                             if (value == null || value.isEmpty) {
-                              return '请输入新密码';
+                              return context.l10n.authEnterNewPassword;
                             }
                             if (value.length < 8) {
-                              return '密码至少8位';
+                              return context.l10n.authPasswordMinLength;
                             }
                             return null;
                           },
@@ -286,7 +286,7 @@ class _ForgotPasswordViewState extends State<ForgotPasswordView> {
                           controller: _confirmPasswordController,
                           obscureText: _obscureConfirm,
                           decoration: InputDecoration(
-                            labelText: '确认新密码',
+                            labelText: context.l10n.authConfirmNewPassword,
                             prefixIcon: const Icon(Icons.lock_outline),
                             suffixIcon: IconButton(
                               icon: Icon(
@@ -305,7 +305,7 @@ class _ForgotPasswordViewState extends State<ForgotPasswordView> {
                           ),
                           validator: (value) {
                             if (value != _passwordController.text) {
-                              return '两次输入的密码不一致';
+                              return context.l10n.authPasswordsDoNotMatch;
                             }
                             return null;
                           },
@@ -314,7 +314,7 @@ class _ForgotPasswordViewState extends State<ForgotPasswordView> {
 
                         // 重置按钮
                         PrimaryButton(
-                          text: '重置密码',
+                          text: context.l10n.authResetPassword,
                           isLoading: isResetting,
                           onPressed: isResetting ? null : _resetPassword,
                         ),

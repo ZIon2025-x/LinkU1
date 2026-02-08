@@ -110,8 +110,8 @@ class _LoginViewState extends State<LoginView>
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(_loginMethod == LoginMethod.phoneCode
-              ? '请输入手机号'
-              : '请输入邮箱地址'),
+              ? context.l10n.authPhonePlaceholder
+              : context.l10n.authEnterEmailPlaceholder),
         ),
       );
       return;
@@ -184,7 +184,7 @@ class _LoginViewState extends State<LoginView>
             );
           } else if (state.codeSendStatus == CodeSendStatus.sent) {
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('验证码已发送')),
+              SnackBar(content: Text(context.l10n.authCodeSent)),
             );
           }
         },
@@ -516,7 +516,7 @@ class _LoginViewState extends State<LoginView>
                       : null,
                 ),
                 child: Text(
-                  method.label,
+                  _getMethodLabel(method),
                   textAlign: TextAlign.center,
                   style: AppTypography.caption.copyWith(
                     color: isSelected
@@ -536,6 +536,19 @@ class _LoginViewState extends State<LoginView>
         }).toList(),
       ),
     );
+  }
+
+  // ==================== 登录方式标签 ====================
+
+  String _getMethodLabel(LoginMethod method) {
+    switch (method) {
+      case LoginMethod.password:
+        return context.l10n.authEmailPassword;
+      case LoginMethod.emailCode:
+        return context.l10n.authEmailCode;
+      case LoginMethod.phoneCode:
+        return context.l10n.authPhoneCode;
+    }
   }
 
   // ==================== 输入区域 ====================
@@ -558,7 +571,7 @@ class _LoginViewState extends State<LoginView>
         _StyledTextField(
           controller: _emailController,
           label: context.l10n.authEmailPassword,
-          placeholder: '邮箱 / ID',
+          placeholder: context.l10n.authEnterEmailOrId,
           icon: Icons.person_outlined,
           keyboardType: TextInputType.emailAddress,
           isDark: isDark,
@@ -567,8 +580,8 @@ class _LoginViewState extends State<LoginView>
         const SizedBox(height: AppSpacing.md),
         _StyledTextField(
           controller: _passwordController,
-          label: '密码',
-          placeholder: '请输入密码',
+          label: context.l10n.authPasswordLabel,
+          placeholder: context.l10n.authPasswordPlaceholder,
           icon: Icons.lock_outlined,
           obscureText: _obscurePassword,
           isDark: isDark,
@@ -597,8 +610,8 @@ class _LoginViewState extends State<LoginView>
       children: [
         _StyledTextField(
           controller: _emailController,
-          label: '邮箱',
-          placeholder: '请输入邮箱地址',
+          label: context.l10n.authEmail,
+          placeholder: context.l10n.authEnterEmailPlaceholder,
           icon: Icons.email_outlined,
           keyboardType: TextInputType.emailAddress,
           isDark: isDark,
@@ -611,8 +624,8 @@ class _LoginViewState extends State<LoginView>
             Expanded(
               child: _StyledTextField(
                 controller: _codeController,
-                label: '验证码',
-                placeholder: '请输入验证码',
+                label: context.l10n.authVerificationCode,
+                placeholder: context.l10n.authCodePlaceholder,
                 icon: Icons.pin_outlined,
                 keyboardType: TextInputType.number,
                 isDark: isDark,
@@ -633,8 +646,8 @@ class _LoginViewState extends State<LoginView>
       children: [
         _StyledTextField(
           controller: _emailController,
-          label: '手机号',
-          placeholder: '请输入手机号',
+          label: context.l10n.authPhone,
+          placeholder: context.l10n.authPhonePlaceholder,
           icon: Icons.phone_outlined,
           keyboardType: TextInputType.phone,
           isDark: isDark,
@@ -647,8 +660,8 @@ class _LoginViewState extends State<LoginView>
             Expanded(
               child: _StyledTextField(
                 controller: _codeController,
-                label: '验证码',
-                placeholder: '请输入验证码',
+                label: context.l10n.authVerificationCode,
+                placeholder: context.l10n.authCodePlaceholder,
                 icon: Icons.pin_outlined,
                 keyboardType: TextInputType.number,
                 isDark: isDark,
@@ -694,7 +707,7 @@ class _LoginViewState extends State<LoginView>
               ),
               child: Center(
                 child: isSending
-                    ? SizedBox(
+                    ? const SizedBox(
                         width: 18,
                         height: 18,
                         child: CircularProgressIndicator(
@@ -703,7 +716,7 @@ class _LoginViewState extends State<LoginView>
                         ),
                       )
                     : Text(
-                        '发送',
+                        context.l10n.forumSend,
                         style: AppTypography.caption.copyWith(
                           color: AppColors.primary,
                           fontWeight: FontWeight.w600,
@@ -817,7 +830,7 @@ class _LoginViewState extends State<LoginView>
               TextButton(
                 onPressed: () => context.push('/forgot-password'),
                 child: Text(
-                  '忘记密码？',
+                  context.l10n.authForgotPasswordQuestion,
                   style: AppTypography.subheadline.copyWith(
                     color: AppColors.primary,
                   ),
@@ -826,7 +839,7 @@ class _LoginViewState extends State<LoginView>
               TextButton(
                 onPressed: () => context.push(AppRoutes.register),
                 child: Text(
-                  '注册新账号',
+                  context.l10n.authRegisterNewAccount,
                   style: AppTypography.subheadline.copyWith(
                     color: AppColors.primary,
                     fontWeight: FontWeight.w600,

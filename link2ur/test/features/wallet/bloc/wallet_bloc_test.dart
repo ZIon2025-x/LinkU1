@@ -242,13 +242,13 @@ void main() {
               .thenThrow(Exception('Already checked in today'));
           return walletBloc;
         },
-        seed: () => WalletState(
+        seed: () => const WalletState(
           status: WalletStatus.loaded,
           pointsAccount: testAccount,
         ),
         act: (bloc) => bloc.add(const WalletCheckIn()),
         expect: () => [
-          WalletState(
+          const WalletState(
             status: WalletStatus.loaded,
             pointsAccount: testAccount,
             isCheckingIn: true,

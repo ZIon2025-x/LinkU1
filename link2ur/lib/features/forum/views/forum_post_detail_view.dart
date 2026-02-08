@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../core/design/app_colors.dart';
+import '../../../core/utils/l10n_extension.dart';
 import '../../../core/widgets/skeleton_view.dart';
 import '../../../core/widgets/error_state_view.dart';
 import '../../../data/repositories/forum_repository.dart';
@@ -43,7 +44,7 @@ class _ForumPostDetailViewState extends State<ForumPostDetailView> {
         ..add(ForumLoadReplies(widget.postId)),
       child: Scaffold(
         appBar: AppBar(
-          title: const Text('帖子详情'),
+          title: Text(context.l10n.forumPostDetail),
           actions: [
             IconButton(
               icon: const Icon(Icons.share_outlined),
@@ -63,7 +64,7 @@ class _ForumPostDetailViewState extends State<ForumPostDetailView> {
             if (state.status == ForumStatus.error &&
                 state.selectedPost == null) {
               return ErrorStateView.loadFailed(
-                message: state.errorMessage ?? '加载失败',
+                message: state.errorMessage ?? context.l10n.forumLoadFailed,
                 onRetry: () {
                   context.read<ForumBloc>()
                     ..add(ForumLoadPostDetail(widget.postId))
@@ -201,11 +202,11 @@ class _ForumPostDetailViewState extends State<ForumPostDetailView> {
                                   controller: _replyController,
                                   enabled: !state.isReplying,
                                   style: const TextStyle(fontSize: 15),
-                                  decoration: const InputDecoration(
-                                    hintText: '写评论...',
-                                    hintStyle: TextStyle(fontSize: 15),
+                                  decoration: InputDecoration(
+                                    hintText: context.l10n.forumWriteComment,
+                                    hintStyle: const TextStyle(fontSize: 15),
                                     border: InputBorder.none,
-                                    contentPadding: EdgeInsets.symmetric(
+                                    contentPadding: const EdgeInsets.symmetric(
                                         horizontal: 16),
                                   ),
                                   onChanged: (_) => setState(() {}),
@@ -294,7 +295,7 @@ class _PostHeader extends StatelessWidget {
                 children: [
                   if (post.isPinned)
                     _TagChip(
-                      text: '置顶',
+                      text: context.l10n.forumPinned,
                       color: AppColors.error,
                       icon: Icons.push_pin,
                     ),
@@ -368,7 +369,7 @@ class _PostHeader extends StatelessWidget {
                     Row(
                       children: [
                         Text(
-                          post.author?.name ?? '用户 ${post.authorId}',
+                          post.author?.name ?? context.l10n.forumUserFallback(post.authorId.toString()),
                           style: TextStyle(
                             fontSize: 15,
                             fontWeight: FontWeight.w600,
@@ -381,7 +382,7 @@ class _PostHeader extends StatelessWidget {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      _formatTime(post.createdAt),
+                      _formatTime(context, post.createdAt),
                       style: TextStyle(
                         fontSize: 12,
                         color: isDark
@@ -399,14 +400,14 @@ class _PostHeader extends StatelessWidget {
     );
   }
 
-  String _formatTime(DateTime? time) {
+  String _formatTime(BuildContext context, DateTime? time) {
     if (time == null) return '';
     final now = DateTime.now();
     final difference = now.difference(time);
-    if (difference.inDays > 0) return '${difference.inDays}天前';
-    if (difference.inHours > 0) return '${difference.inHours}小时前';
-    if (difference.inMinutes > 0) return '${difference.inMinutes}分钟前';
-    return '刚刚';
+    if (difference.inDays > 0) return context.l10n.timeDaysAgo(difference.inDays);
+    if (difference.inHours > 0) return context.l10n.timeHoursAgo(difference.inHours);
+    if (difference.inMinutes > 0) return context.l10n.timeMinutesAgo(difference.inMinutes);
+    return context.l10n.timeJustNow;
   }
 }
 
@@ -498,7 +499,7 @@ class _PostStats extends StatelessWidget {
           _StatLabel(
             icon: Icons.visibility_outlined,
             value: '${post.viewCount}',
-            label: '浏览',
+            label: context.l10n.forumBrowse,
           ),
           const SizedBox(width: 24),
           // 点赞 (交互)
@@ -510,7 +511,7 @@ class _PostStats extends StatelessWidget {
             child: _StatLabel(
               icon: post.isLiked ? Icons.thumb_up : Icons.thumb_up_outlined,
               value: '${post.likeCount}',
-              label: '点赞',
+              label: context.l10n.forumLike,
               color: post.isLiked ? AppColors.error : null,
             ),
           ),
@@ -526,7 +527,7 @@ class _PostStats extends StatelessWidget {
                   ? Icons.bookmark
                   : Icons.bookmark_border,
               value: '',
-              label: '收藏',
+              label: context.l10n.forumFavorite,
               color: post.isFavorited ? Colors.orange : null,
             ),
           ),
@@ -575,7 +576,7 @@ class _StatLabel extends StatelessWidget {
         const SizedBox(height: 2),
         Text(
           label,
-          style: TextStyle(fontSize: 10, color: AppColors.textTertiaryLight),
+          style: const TextStyle(fontSize: 10, color: AppColors.textTertiaryLight),
         ),
       ],
     );
@@ -606,7 +607,7 @@ class _ReplySection extends StatelessWidget {
           Row(
             children: [
               Text(
-                '全部评论',
+                context.l10n.forumAllReplies,
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
@@ -642,15 +643,15 @@ class _ReplySection extends StatelessWidget {
               child: Center(
                 child: Column(
                   children: [
-                    Icon(
+                    const Icon(
                       Icons.chat_bubble_outline,
                       size: 40,
                       color: AppColors.textTertiaryLight,
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      '暂无评论',
-                      style: TextStyle(
+                      context.l10n.forumNoReplies,
+                      style: const TextStyle(
                         fontSize: 14,
                         color: AppColors.textSecondaryLight,
                       ),
@@ -737,7 +738,7 @@ class _ReplyCard extends StatelessWidget {
                 Row(
                   children: [
                     Text(
-                      reply.author?.name ?? '用户 ${reply.authorId}',
+                      reply.author?.name ?? context.l10n.forumUserFallback(reply.authorId.toString()),
                       style: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w600,
@@ -748,7 +749,7 @@ class _ReplyCard extends StatelessWidget {
                     ),
                     const Spacer(),
                     Text(
-                      _formatTime(reply.createdAt),
+                      _formatTime(context, reply.createdAt),
                       style: TextStyle(
                         fontSize: 11,
                         color: isDark
@@ -825,8 +826,8 @@ class _ReplyCard extends StatelessWidget {
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Text(
-                      '回复',
-                      style: TextStyle(
+                      context.l10n.forumReply,
+                      style: const TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w500,
                         color: AppColors.primary,
@@ -842,13 +843,13 @@ class _ReplyCard extends StatelessWidget {
     );
   }
 
-  String _formatTime(DateTime? time) {
+  String _formatTime(BuildContext context, DateTime? time) {
     if (time == null) return '';
     final now = DateTime.now();
     final difference = now.difference(time);
-    if (difference.inDays > 0) return '${difference.inDays}天前';
-    if (difference.inHours > 0) return '${difference.inHours}小时前';
-    if (difference.inMinutes > 0) return '${difference.inMinutes}分钟前';
-    return '刚刚';
+    if (difference.inDays > 0) return context.l10n.timeDaysAgo(difference.inDays);
+    if (difference.inHours > 0) return context.l10n.timeHoursAgo(difference.inHours);
+    if (difference.inMinutes > 0) return context.l10n.timeMinutesAgo(difference.inMinutes);
+    return context.l10n.timeJustNow;
   }
 }

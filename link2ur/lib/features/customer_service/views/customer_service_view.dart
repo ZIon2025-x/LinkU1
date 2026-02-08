@@ -87,7 +87,7 @@ class _CustomerServiceContentState extends State<_CustomerServiceContent> {
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setDialogState) => AlertDialog(
-          title: const Text('评价客服'),
+          title: Text(context.l10n.customerServiceRateServiceTitle),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -109,9 +109,9 @@ class _CustomerServiceContentState extends State<_CustomerServiceContent> {
               TextField(
                 controller: commentController,
                 maxLines: 3,
-                decoration: const InputDecoration(
-                  hintText: '留下您的评价（可选）',
-                  border: OutlineInputBorder(),
+                decoration: InputDecoration(
+                  hintText: context.l10n.customerServiceRatingContent,
+                  border: const OutlineInputBorder(),
                 ),
               ),
             ],
@@ -119,7 +119,7 @@ class _CustomerServiceContentState extends State<_CustomerServiceContent> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx),
-              child: const Text('取消'),
+              child: Text(context.l10n.commonCancel),
             ),
             TextButton(
               onPressed: () {
@@ -133,7 +133,7 @@ class _CustomerServiceContentState extends State<_CustomerServiceContent> {
                     );
                 Navigator.pop(ctx);
               },
-              child: const Text('提交'),
+              child: Text(context.l10n.commonSubmit),
             ),
           ],
         ),
@@ -171,7 +171,7 @@ class _CustomerServiceContentState extends State<_CustomerServiceContent> {
               ),
               const SizedBox(height: 16),
               Text(
-                '聊天历史',
+                context.l10n.customerServiceChatHistory,
                 style: AppTypography.title3.copyWith(
                   fontWeight: FontWeight.w600,
                 ),
@@ -189,7 +189,7 @@ class _CustomerServiceContentState extends State<_CustomerServiceContent> {
                               : AppColors.textTertiaryLight),
                       const SizedBox(height: 12),
                       Text(
-                        '暂无聊天记录',
+                        context.l10n.customerServiceNoChatHistory,
                         style: TextStyle(
                           color: isDark
                               ? AppColors.textSecondaryDark
@@ -274,9 +274,9 @@ class _CustomerServiceContentState extends State<_CustomerServiceContent> {
             if (widget.isModal)
               TextButton(
                 onPressed: () => Navigator.of(context).pop(),
-                child: const Text(
-                  '完成',
-                  style: TextStyle(color: AppColors.primary),
+                child: Text(
+                  context.l10n.commonDone,
+                  style: const TextStyle(color: AppColors.primary),
                 ),
               ),
             BlocBuilder<CustomerServiceBloc, CustomerServiceState>(
@@ -297,17 +297,17 @@ class _CustomerServiceContentState extends State<_CustomerServiceContent> {
                     if (state.isConnected)
                       IconButton(
                         icon: const Icon(Icons.close),
-                        tooltip: '结束对话',
+                        tooltip: context.l10n.customerServiceEndConversation,
                         onPressed: () {
                           showDialog(
                             context: context,
                             builder: (ctx) => AlertDialog(
-                              title: const Text('结束对话'),
-                              content: const Text('确定要结束当前客服对话吗？'),
+                              title: Text(context.l10n.customerServiceEndConversation),
+                              content: Text(context.l10n.customerServiceEndMessage),
                               actions: [
                                 TextButton(
                                   onPressed: () => Navigator.pop(ctx),
-                                  child: const Text('取消'),
+                                  child: Text(context.l10n.commonCancel),
                                 ),
                                 TextButton(
                                   onPressed: () {
@@ -316,9 +316,9 @@ class _CustomerServiceContentState extends State<_CustomerServiceContent> {
                                         .read<CustomerServiceBloc>()
                                         .add(const CustomerServiceEndChat());
                                   },
-                                  child: const Text('结束',
+                                  child: Text(context.l10n.customerServiceEndConversation,
                                       style:
-                                          TextStyle(color: AppColors.error)),
+                                          const TextStyle(color: AppColors.error)),
                                 ),
                               ],
                             ),
@@ -371,7 +371,7 @@ class _CustomerServiceContentState extends State<_CustomerServiceContent> {
                             const LoadingIndicator(),
                             AppSpacing.vMd,
                             Text(
-                              '正在连接客服...',
+                              context.l10n.customerServiceConnecting,
                               style: AppTypography.subheadline.copyWith(
                                 color: isDark
                                     ? AppColors.textSecondaryDark
@@ -403,8 +403,8 @@ class _CustomerServiceContentState extends State<_CustomerServiceContent> {
           Expanded(
             child: Text(
               queueStatus.position != null
-                  ? '排队中，前方还有 ${queueStatus.position} 人'
-                  : '正在等待客服接入...',
+                  ? context.l10n.customerServiceQueuePosition(queueStatus.position!)
+                  : context.l10n.customerServiceConnecting,
               style: const TextStyle(fontSize: 13, color: AppColors.warning),
             ),
           ),
@@ -412,7 +412,7 @@ class _CustomerServiceContentState extends State<_CustomerServiceContent> {
             onPressed: () => context
                 .read<CustomerServiceBloc>()
                 .add(const CustomerServiceCheckQueue()),
-            child: const Text('刷新'),
+            child: Text(context.l10n.successRefreshSuccess),
           ),
         ],
       ),
@@ -464,7 +464,7 @@ class _CustomerServiceContentState extends State<_CustomerServiceContent> {
             ),
             AppSpacing.vLg,
             Text(
-              '欢迎使用客服',
+              context.l10n.customerServiceWelcome,
               style: AppTypography.title3.copyWith(
                 color: isDark
                     ? AppColors.textPrimaryDark
@@ -473,7 +473,7 @@ class _CustomerServiceContentState extends State<_CustomerServiceContent> {
             ),
             AppSpacing.vSm,
             Text(
-              '点击下方按钮连接客服',
+              context.l10n.customerServiceStartConversation,
               style: AppTypography.subheadline.copyWith(
                 color: isDark
                     ? AppColors.textSecondaryDark
@@ -640,7 +640,7 @@ class _CustomerServiceContentState extends State<_CustomerServiceContent> {
               AppSpacing.hSm,
               Expanded(
                 child: Text(
-                  '对话已结束',
+                  context.l10n.customerServiceConversationEnded,
                   style: AppTypography.body.copyWith(
                     color: isDark
                         ? AppColors.textTertiaryDark
@@ -651,7 +651,7 @@ class _CustomerServiceContentState extends State<_CustomerServiceContent> {
               TextButton(
                 onPressed: () => _showRatingDialog(),
                 child: Text(
-                  '评价',
+                  context.l10n.customerServiceRateService,
                   style: AppTypography.caption.copyWith(
                     color: AppColors.accent,
                     fontWeight: FontWeight.w500,
@@ -663,7 +663,7 @@ class _CustomerServiceContentState extends State<_CustomerServiceContent> {
                     .read<CustomerServiceBloc>()
                     .add(const CustomerServiceStartNew()),
                 child: Text(
-                  '新对话',
+                  context.l10n.customerServiceNewConversation,
                   style: AppTypography.caption.copyWith(
                     color: AppColors.primary,
                     fontWeight: FontWeight.w500,
@@ -714,7 +714,7 @@ class _CustomerServiceContentState extends State<_CustomerServiceContent> {
                 focusNode: _focusNode,
                 enabled: !state.isSending && state.isConnected,
                 decoration: InputDecoration(
-                  hintText: state.isConnected ? '输入消息...' : '请先连接客服',
+                  hintText: state.isConnected ? context.l10n.customerServiceEnterMessage : context.l10n.customerServiceConnecting,
                   border: OutlineInputBorder(
                     borderRadius: AppRadius.allSmall,
                     borderSide: BorderSide(

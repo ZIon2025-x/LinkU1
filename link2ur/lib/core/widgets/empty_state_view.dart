@@ -46,51 +46,66 @@ class EmptyStateView extends StatelessWidget {
 
   /// 无任务
   factory EmptyStateView.noTasks({
+    String? title,
+    String? description,
     String? actionText,
     VoidCallback? onAction,
   }) {
     return EmptyStateView(
       icon: Icons.task_alt_outlined,
-      title: '暂无任务',
-      description: '还没有相关任务，点击下方按钮发布新任务',
+      title: title ?? '暂无任务',
+      description: description ?? '还没有相关任务，点击下方按钮发布新任务',
       actionText: actionText,
       onAction: onAction,
     );
   }
 
   /// 无消息
-  factory EmptyStateView.noMessages() {
-    return const EmptyStateView(
+  factory EmptyStateView.noMessages({
+    String? title,
+    String? description,
+  }) {
+    return EmptyStateView(
       icon: Icons.chat_bubble_outline,
-      title: '暂无消息',
-      description: '还没有收到任何消息',
+      title: title ?? '暂无消息',
+      description: description ?? '还没有收到任何消息',
     );
   }
 
   /// 无搜索结果
-  factory EmptyStateView.noSearchResults({String? keyword}) {
+  factory EmptyStateView.noSearchResults({
+    String? title,
+    String? description,
+    String? keyword,
+  }) {
     return EmptyStateView(
       icon: Icons.search_off,
-      title: '未找到结果',
-      description: keyword != null ? '没有找到与"$keyword"相关的内容' : '没有找到相关内容',
+      title: title ?? '未找到结果',
+      description: description ?? (keyword != null ? '没有找到与"$keyword"相关的内容' : '没有找到相关内容'),
     );
   }
 
   /// 无收藏
-  factory EmptyStateView.noFavorites() {
-    return const EmptyStateView(
+  factory EmptyStateView.noFavorites({
+    String? title,
+    String? description,
+  }) {
+    return EmptyStateView(
       icon: Icons.favorite_outline,
-      title: '暂无收藏',
-      description: '收藏的内容将显示在这里',
+      title: title ?? '暂无收藏',
+      description: description ?? '收藏的内容将显示在这里',
     );
   }
 
   /// 无通知
-  factory EmptyStateView.noNotifications() {
-    return const EmptyStateView(
+  factory EmptyStateView.noNotifications({
+    String? title,
+    String? description,
+  }) {
+    return EmptyStateView(
       icon: Icons.notifications_none_outlined,
-      title: '暂无通知',
-      description: '您的通知将显示在这里',
+      title: title ?? '暂无通知',
+      description: description ?? '您的通知将显示在这里',
     );
   }
 

@@ -132,8 +132,8 @@ class CacheManager {
     // 按键排序确保一致性
     final sortedKeys = params.keys.toList()..sort();
     final parts =
-        sortedKeys.map((k) => '${k}=${params[k]}').join('&');
-    return '${prefix}$parts';
+        sortedKeys.map((k) => '$k=${params[k]}').join('&');
+    return '$prefix$parts';
   }
 
   /// 设置缓存（同时写入内存和磁盘）
@@ -330,7 +330,7 @@ class CacheManager {
 
   /// 清除任务详情缓存
   Future<void> invalidateTaskDetailCache(int taskId) async {
-    await remove('${prefixTaskDetail}$taskId');
+    await remove('$prefixTaskDetail$taskId');
     AppLogger.debug('Task detail cache invalidated: $taskId');
   }
 

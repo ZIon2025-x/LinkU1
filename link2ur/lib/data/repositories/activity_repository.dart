@@ -2,6 +2,7 @@ import '../models/activity.dart';
 import '../services/api_service.dart';
 import '../../core/constants/api_endpoints.dart';
 import '../../core/utils/cache_manager.dart';
+import '../../core/utils/app_exception.dart';
 
 /// 活动仓库
 /// 与iOS ActivityViewModel + 后端路由对齐
@@ -155,11 +156,6 @@ class ActivityRepository {
 }
 
 /// 活动异常
-class ActivityException implements Exception {
-  ActivityException(this.message);
-
-  final String message;
-
-  @override
-  String toString() => 'ActivityException: $message';
+class ActivityException extends AppException {
+  const ActivityException(super.message);
 }

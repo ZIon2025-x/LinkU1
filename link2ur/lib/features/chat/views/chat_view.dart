@@ -6,6 +6,7 @@ import 'package:image_picker/image_picker.dart';
 import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_radius.dart';
+import '../../../core/utils/l10n_extension.dart';
 import '../../../core/widgets/full_screen_image_view.dart';
 import '../../../core/widgets/loading_view.dart';
 import '../../../core/widgets/error_state_view.dart';
@@ -102,7 +103,7 @@ class _ChatViewState extends State<ChatView> {
         builder: (context, state) {
           return Scaffold(
             appBar: AppBar(
-              title: Text('用户 ${widget.userId}'),
+              title: Text(context.l10n.chatUserTitle(widget.userId)),
               actions: [
                 IconButton(
                   icon: const Icon(Icons.person_outline),
@@ -143,16 +144,16 @@ class _ChatViewState extends State<ChatView> {
     }
 
     if (state.messages.isEmpty) {
-      return const Center(
+      return Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.chat_bubble_outline,
+            const Icon(Icons.chat_bubble_outline,
                 size: 48, color: AppColors.textTertiaryLight),
             AppSpacing.vMd,
             Text(
-              '还没有消息，开始对话吧',
-              style: TextStyle(color: AppColors.textSecondaryLight),
+              context.l10n.chatNoMessages,
+              style: const TextStyle(color: AppColors.textSecondaryLight),
             ),
           ],
         ),
@@ -200,14 +201,14 @@ class _ChatViewState extends State<ChatView> {
         children: [
           _AttachOption(
             icon: Icons.photo_library,
-            label: '图片',
+            label: context.l10n.chatImageLabel,
             color: AppColors.success,
             onTap: _pickImage,
           ),
           const SizedBox(width: 24),
           _AttachOption(
             icon: Icons.camera_alt,
-            label: '拍照',
+            label: context.l10n.chatCameraLabel,
             color: AppColors.primary,
             onTap: () async {
               final image = await _imagePicker.pickImage(
@@ -263,7 +264,7 @@ class _ChatViewState extends State<ChatView> {
                 maxLines: 4,
                 minLines: 1,
                 decoration: InputDecoration(
-                  hintText: '输入消息...',
+                  hintText: context.l10n.chatInputHint,
                   filled: true,
                   fillColor: AppColors.skeletonBase,
                   contentPadding:

@@ -96,10 +96,10 @@ class _CouponPointsContentState extends State<_CouponPointsContent>
                 ? AppColors.textSecondaryDark
                 : AppColors.textSecondaryLight,
             indicatorColor: AppColors.primary,
-            tabs: const [
-              Tab(text: '积分'),
-              Tab(text: '优惠券'),
-              Tab(text: '签到'),
+            tabs: [
+              Tab(text: context.l10n.couponPointsTab),
+              Tab(text: context.l10n.couponCouponsTab),
+              Tab(text: context.l10n.couponCheckInTab),
             ],
           ),
         ),
@@ -171,7 +171,7 @@ class _PointsTab extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        '我的积分',
+                        context.l10n.pointsBalance,
                         style: AppTypography.subheadline.copyWith(
                           color: Colors.white.withValues(alpha: 0.8),
                         ),
@@ -187,7 +187,7 @@ class _PointsTab extends StatelessWidget {
                       ),
                       AppSpacing.vSm,
                       Text(
-                        '累计获得: ${state.pointsAccount.totalEarned}  已使用: ${state.pointsAccount.totalSpent}',
+                        '${context.l10n.pointsTotalEarned}: ${state.pointsAccount.totalEarned}  ${context.l10n.pointsTotalSpent}: ${state.pointsAccount.totalSpent}',
                         style: AppTypography.caption.copyWith(
                           color: Colors.white.withValues(alpha: 0.7),
                         ),
@@ -197,7 +197,7 @@ class _PointsTab extends StatelessWidget {
                         children: [
                           _PointActionButton(
                             icon: Icons.card_giftcard,
-                            label: '兑换奖励',
+                            label: context.l10n.couponRedeemReward,
                             onTap: () {
                               context
                                   .read<CouponPointsBloc>()
@@ -207,7 +207,7 @@ class _PointsTab extends StatelessWidget {
                           AppSpacing.hMd,
                           _PointActionButton(
                             icon: Icons.confirmation_number,
-                            label: '兑换码',
+                            label: context.l10n.couponRedeemCode,
                             onTap: () => _showRedemptionCodeDialog(context),
                           ),
                         ],
@@ -220,7 +220,7 @@ class _PointsTab extends StatelessWidget {
 
                 // 积分记录
                 Text(
-                  '积分记录',
+                  context.l10n.pointsTransactionHistory,
                   style: AppTypography.title3.copyWith(
                     color: isDark
                         ? AppColors.textPrimaryDark
@@ -230,7 +230,7 @@ class _PointsTab extends StatelessWidget {
                 AppSpacing.vMd,
 
                 if (state.transactions.isEmpty)
-                  EmptyStateView.noData(title: '暂无积分记录')
+                  EmptyStateView.noData(title: context.l10n.couponNoPointsRecords)
                 else
                   ListView.builder(
                     shrinkWrap: true,
@@ -254,18 +254,18 @@ class _PointsTab extends StatelessWidget {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('输入邀请码'),
+        title: Text(context.l10n.couponEnterInviteCodeTitle),
         content: TextField(
           controller: controller,
-          decoration: const InputDecoration(
-            hintText: '请输入邀请码或兑换码',
-            border: OutlineInputBorder(),
+          decoration: InputDecoration(
+            hintText: context.l10n.couponEnterInviteCodeHint,
+            border: const OutlineInputBorder(),
           ),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('取消'),
+            child: Text(context.l10n.commonCancel),
           ),
           TextButton(
             onPressed: () {
@@ -277,7 +277,7 @@ class _PointsTab extends StatelessWidget {
                 Navigator.pop(ctx);
               }
             },
-            child: const Text('确认'),
+            child: Text(context.l10n.commonConfirm),
           ),
         ],
       ),
@@ -432,7 +432,7 @@ class _CouponsTab extends StatelessWidget {
                 // 可领取的优惠券
                 if (state.availableCoupons.isNotEmpty) ...[
                   Text(
-                    '可领取',
+                    context.l10n.couponAvailable,
                     style: AppTypography.title3.copyWith(
                       color:
                           Theme.of(context).brightness == Brightness.dark
@@ -450,7 +450,7 @@ class _CouponsTab extends StatelessWidget {
 
                 // 我的优惠券
                 Text(
-                  '我的优惠券',
+                  context.l10n.walletMyCoupons,
                   style: AppTypography.title3.copyWith(
                     color: Theme.of(context).brightness == Brightness.dark
                         ? AppColors.textPrimaryDark
@@ -460,7 +460,7 @@ class _CouponsTab extends StatelessWidget {
                 AppSpacing.vMd,
 
                 if (state.myCoupons.isEmpty)
-                  EmptyStateView.noData(title: '暂无优惠券')
+                  EmptyStateView.noData(title: context.l10n.couponNoCoupons)
                 else
                   ...state.myCoupons
                       .map((coupon) => _MyCouponCard(coupon: coupon)),
@@ -544,7 +544,7 @@ class _AvailableCouponCard extends StatelessWidget {
                 ),
                 if (coupon.minAmountDisplay.isNotEmpty)
                   Text(
-                    '满 ${coupon.minAmountDisplay} 可用',
+                    context.l10n.couponMinAmountAvailable(coupon.minAmountDisplay),
                     style: AppTypography.caption.copyWith(
                       color: isDark
                           ? AppColors.textSecondaryDark
@@ -555,7 +555,7 @@ class _AvailableCouponCard extends StatelessWidget {
             ),
           ),
           SmallActionButton(
-            text: '领取',
+            text: context.l10n.couponClaim,
             onPressed: isSubmitting
                 ? null
                 : () => context
@@ -627,7 +627,7 @@ class _MyCouponCard extends StatelessWidget {
                   ),
                   if (coupon.validUntil != null)
                     Text(
-                      '有效期至 ${_formatDate(coupon.validUntil!)}',
+                      context.l10n.couponValidUntil(_formatDate(coupon.validUntil!)),
                       style: AppTypography.caption2.copyWith(
                         color: isDark
                             ? AppColors.textTertiaryDark
@@ -682,7 +682,7 @@ class _CheckInTab extends StatelessWidget {
                   child: Column(
                     children: [
                       Text(
-                        '每日签到',
+                        context.l10n.walletDailyCheckIn,
                         style: AppTypography.title3.copyWith(
                           color: isDark
                               ? AppColors.textPrimaryDark
@@ -691,7 +691,7 @@ class _CheckInTab extends StatelessWidget {
                       ),
                       AppSpacing.vSm,
                       Text(
-                        '连续签到 ${state.consecutiveDays} 天',
+                        context.l10n.couponConsecutiveDays(state.consecutiveDays),
                         style: AppTypography.caption.copyWith(
                           color: isDark
                               ? AppColors.textSecondaryDark
@@ -763,8 +763,8 @@ class _CheckInTab extends StatelessWidget {
                         width: double.infinity,
                         child: PrimaryButton(
                           text: state.isCheckedInToday
-                              ? '今日已签到'
-                              : '签到领积分',
+                              ? context.l10n.pointsCheckedInToday
+                              : context.l10n.pointsCheckInReward,
                           isLoading: state.isSubmitting,
                           onPressed: state.isCheckedInToday ||
                                   state.isSubmitting
@@ -781,7 +781,9 @@ class _CheckInTab extends StatelessWidget {
                 AppSpacing.vLg,
 
                 // 签到奖励列表
-                _buildRewardSection(isDark, state),
+                Builder(
+                  builder: (ctx) => _buildRewardSection(ctx, isDark, state),
+                ),
               ],
             ),
           ),
@@ -790,21 +792,21 @@ class _CheckInTab extends StatelessWidget {
     );
   }
 
-  Widget _buildRewardSection(bool isDark, CouponPointsState state) {
+  Widget _buildRewardSection(BuildContext context, bool isDark, CouponPointsState state) {
     // 使用后端返回的奖励配置，如果没有则显示默认
     final rewards = state.checkInRewards.isNotEmpty
         ? state.checkInRewards
         : [
-            {'days': 3, 'reward': '+50积分', 'icon': 'fire'},
-            {'days': 7, 'reward': '+100积分 + 优惠券', 'icon': 'star'},
-            {'days': 30, 'reward': '+500积分 + VIP体验', 'icon': 'premium'},
+            {'days': 3, 'reward': context.l10n.couponRewardPoints50, 'icon': 'fire'},
+            {'days': 7, 'reward': context.l10n.couponRewardPoints100Coupon, 'icon': 'star'},
+            {'days': 30, 'reward': context.l10n.couponRewardPoints500Vip, 'icon': 'premium'},
           ];
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          '签到奖励',
+          context.l10n.couponCheckInReward,
           style: AppTypography.title3.copyWith(
             color: isDark
                 ? AppColors.textPrimaryDark
@@ -813,7 +815,8 @@ class _CheckInTab extends StatelessWidget {
         ),
         AppSpacing.vMd,
         ...rewards.map((reward) {
-          final days = reward['days'] ?? 0;
+          final daysValue = reward['days'] ?? 0;
+          final days = daysValue is int ? daysValue : int.tryParse(daysValue.toString()) ?? 0;
           final rewardText = reward['reward'] ?? '';
           final iconName = reward['icon'] ?? 'star';
 
@@ -833,10 +836,10 @@ class _CheckInTab extends StatelessWidget {
               iconColor = AppColors.accent;
           }
 
-          final isAchieved = state.consecutiveDays >= (days as int);
+          final isAchieved = state.consecutiveDays >= days;
 
           return _RewardRow(
-            title: '连续签到$days天',
+            title: context.l10n.couponConsecutiveCheckIn(days),
             reward: rewardText.toString(),
             icon: icon,
             iconColor: iconColor,

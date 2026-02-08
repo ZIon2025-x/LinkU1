@@ -4,26 +4,61 @@ import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/constants/app_constants.dart';
 import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_radius.dart';
+import '../../../core/utils/responsive.dart';
 import '../../../core/widgets/skeleton_view.dart';
 import '../../../core/utils/date_formatter.dart';
 import '../../notification/bloc/notification_bloc.dart';
 import '../../../core/utils/l10n_extension.dart';
+import '../../../core/widgets/content_constraint.dart';
 import '../../../data/models/message.dart';
 import '../../auth/bloc/auth_bloc.dart';
 import '../../customer_service/views/customer_service_view.dart';
 import '../bloc/message_bloc.dart';
 
 /// 消息列表页
-/// 参考iOS MessageView.swift - 单列表布局
 /// BLoC 在 MainTabView 中创建
 class MessageView extends StatelessWidget {
   const MessageView({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final isDesktop = ResponsiveUtils.isDesktop(context);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    if (isDesktop) {
+      return Scaffold(
+        backgroundColor: isDark ? AppColors.backgroundDark : Colors.white,
+        body: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // 桌面端标题栏
+            Padding(
+              padding: const EdgeInsets.fromLTRB(40, 20, 40, 12),
+              child: Text(
+                context.l10n.messagesMessages,
+                style: TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.w700,
+                  color: isDark
+                      ? AppColors.textPrimaryDark
+                      : const Color(0xFF37352F),
+                ),
+              ),
+            ),
+            const Expanded(
+              child: ContentConstraint(
+                child: _MessageContent(),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
     return Scaffold(
       appBar: AppBar(
         title: Text(context.l10n.messagesMessages),
@@ -41,6 +76,8 @@ class _MessageContent extends StatelessWidget {
     final currentUserId = context.select<AuthBloc, String?>(
       (bloc) => bloc.state.user?.id,
     );
+    final isDesktop = ResponsiveUtils.isDesktop(context);
+    final horizontalPadding = isDesktop ? 40.0 : AppSpacing.md;
 
     return BlocBuilder<MessageBloc, MessageState>(
       builder: (context, state) {
@@ -53,51 +90,57 @@ class _MessageContent extends StatelessWidget {
               .add(const NotificationLoadUnreadNotificationCount());
             await Future.delayed(const Duration(milliseconds: 500));
           },
-          child: ListView(
-            padding: AppSpacing.allMd,
-            children: [
-              // 顶部快捷入口：系统消息 / 客服中心 / 互动信息
-              const _QuickActionBar(),
-              const SizedBox(height: 16),
+          child: ListView.builder(
+            padding: EdgeInsets.symmetric(
+              horizontal: horizontalPadding,
+              vertical: AppSpacing.md,
+            ),
+            itemCount: 2 + (state.taskChats.isNotEmpty
+                ? state.taskChats.length
+                : 1),
+            itemBuilder: (context, index) {
+              if (index == 0) return const _QuickActionBar();
+              if (index == 1) return const SizedBox(height: 16);
 
-              // 任务聊天列表
-              if (state.taskChats.isNotEmpty) ...[
-                ...state.taskChats.map(
-                  (taskChat) => _TaskChatItem(
-                    taskChat: taskChat,
-                    currentUserId: currentUserId,
-                  ),
-                ),
-              ] else if (state.status != MessageStatus.loading) ...[
-                const SizedBox(height: 40),
-                Center(
-                  child: Column(
-                    children: [
-                      const Icon(
-                        Icons.message,
-                        size: 48,
-                        color: AppColors.textTertiaryLight,
-                      ),
-                      AppSpacing.vSm,
-                      Text(
-                        context.l10n.messagesNoTaskChats,
-                        style: const TextStyle(
-                          fontSize: 14,
-                          color: AppColors.textSecondaryLight,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
+              if (state.taskChats.isNotEmpty) {
+                final taskChat = state.taskChats[index - 2];
+                return _TaskChatItem(
+                  taskChat: taskChat,
+                  currentUserId: currentUserId,
+                );
+              }
 
-              if (state.status == MessageStatus.loading &&
-                  state.taskChats.isEmpty)
-                const Padding(
+              if (state.status == MessageStatus.loading) {
+                return const Padding(
                   padding: EdgeInsets.only(top: 40),
                   child: SkeletonList(),
-                ),
-            ],
+                );
+              }
+              return Column(
+                children: [
+                  const SizedBox(height: 40),
+                  Center(
+                    child: Column(
+                      children: [
+                        const Icon(
+                          Icons.message,
+                          size: 48,
+                          color: AppColors.textTertiaryLight,
+                        ),
+                        AppSpacing.vSm,
+                        Text(
+                          context.l10n.messagesNoTaskChats,
+                          style: const TextStyle(
+                            fontSize: 14,
+                            color: AppColors.textSecondaryLight,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              );
+            },
           ),
         );
       },
@@ -336,14 +379,14 @@ class _TaskChatItem extends StatelessWidget {
   /// 根据任务状态返回渐变颜色
   List<Color> get _statusGradient {
     switch (taskChat.taskStatus) {
-      case 'open':
+      case AppConstants.taskStatusOpen:
         return [AppColors.primary, const Color(0xFF5AC8FA)];
       case 'assigned':
-      case 'in_progress':
+      case AppConstants.taskStatusInProgress:
         return [const Color(0xFFFF9500), const Color(0xFFFF6B00)];
-      case 'completed':
+      case AppConstants.taskStatusCompleted:
         return [AppColors.success, const Color(0xFF30D158)];
-      case 'pending_confirmation':
+      case AppConstants.taskStatusPendingConfirmation:
       case 'pending_payment':
         return [const Color(0xFFFF9500), const Color(0xFFFF6B00)];
       default:
@@ -355,16 +398,16 @@ class _TaskChatItem extends StatelessWidget {
   String _localizedStatus(BuildContext context) {
     final l10n = context.l10n;
     switch (taskChat.taskStatus) {
-      case 'open':
+      case AppConstants.taskStatusOpen:
         return l10n.taskStatusOpen;
-      case 'in_progress':
+      case AppConstants.taskStatusInProgress:
       case 'assigned':
         return l10n.taskStatusInProgress;
-      case 'completed':
+      case AppConstants.taskStatusCompleted:
         return l10n.taskStatusCompleted;
-      case 'cancelled':
+      case AppConstants.taskStatusCancelled:
         return l10n.taskStatusCancelled;
-      case 'pending_confirmation':
+      case AppConstants.taskStatusPendingConfirmation:
         return l10n.taskStatusPendingConfirmation;
       case 'pending_payment':
         return l10n.taskStatusPendingPayment;

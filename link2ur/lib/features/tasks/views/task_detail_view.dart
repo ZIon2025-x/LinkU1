@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/constants/app_constants.dart';
 import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_typography.dart';
@@ -16,6 +17,7 @@ import '../../../core/widgets/async_image_view.dart';
 import '../../../core/widgets/full_screen_image_view.dart';
 import '../../../core/widgets/custom_share_panel.dart';
 import '../../../core/widgets/user_identity_badges.dart';
+import '../../../core/utils/l10n_extension.dart';
 import '../../../data/models/task.dart';
 import '../../../data/repositories/task_repository.dart';
 import '../bloc/task_detail_bloc.dart';
@@ -145,7 +147,7 @@ class _TaskDetailContent extends StatelessWidget {
 
     if (state.status == TaskDetailStatus.error) {
       return ErrorStateView(
-        message: state.errorMessage ?? '加载失败',
+        message: state.errorMessage ?? context.l10n.homeLoadFailed,
         onRetry: () {
           final bloc = context.read<TaskDetailBloc>();
           if (state.task != null) {
@@ -242,8 +244,8 @@ class _TaskDetailContent extends StatelessWidget {
     final task = state.task!;
 
     if (state.isSubmitting) {
-      return const PrimaryButton(
-        text: '处理中...',
+      return PrimaryButton(
+        text: context.l10n.taskDetailProcessing,
         onPressed: null,
         isLoading: true,
       );
@@ -251,7 +253,7 @@ class _TaskDetailContent extends StatelessWidget {
 
     if (task.canApply) {
       return PrimaryButton(
-        text: '申请接单',
+        text: context.l10n.taskDetailApplyForTask,
         onPressed: () {
           context
               .read<TaskDetailBloc>()
@@ -262,7 +264,7 @@ class _TaskDetailContent extends StatelessWidget {
 
     if (task.hasApplied) {
       return PrimaryButton(
-        text: '取消申请',
+        text: context.l10n.taskDetailCancelApplication,
         onPressed: () {
           context.read<TaskDetailBloc>().add(
               const TaskDetailCancelApplicationRequested());
@@ -270,9 +272,9 @@ class _TaskDetailContent extends StatelessWidget {
       );
     }
 
-    if (task.status == 'in_progress') {
+    if (task.status == AppConstants.taskStatusInProgress) {
       return PrimaryButton(
-        text: '完成任务',
+        text: context.l10n.taskDetailCompleteTask,
         onPressed: () {
           context
               .read<TaskDetailBloc>()
@@ -281,9 +283,9 @@ class _TaskDetailContent extends StatelessWidget {
       );
     }
 
-    if (task.status == 'pending_confirmation') {
+    if (task.status == AppConstants.taskStatusPendingConfirmation) {
       return PrimaryButton(
-        text: '确认完成',
+        text: context.l10n.taskDetailConfirmCompleteButton,
         onPressed: () {
           context.read<TaskDetailBloc>().add(
               const TaskDetailConfirmCompletionRequested());
@@ -469,7 +471,7 @@ class _TaskImageCarouselState extends State<_TaskImageCarousel> {
             ),
             const SizedBox(height: AppSpacing.md),
             Text(
-              '暂无图片',
+              context.l10n.taskDetailNoImages,
               style: AppTypography.caption.copyWith(
                 color: AppColors.textTertiaryLight,
               ),
@@ -621,7 +623,7 @@ class _TaskHeaderCard extends StatelessWidget {
         ),
         Text(
           priceText,
-          style: TextStyle(
+          style: const TextStyle(
             fontSize: 32,
             fontWeight: FontWeight.bold,
             color: AppColors.primary,
@@ -715,14 +717,14 @@ class _TaskInfoCard extends StatelessWidget {
             // 描述标题 (对齐iOS: icon + "任务描述")
             Row(
               children: [
-                Icon(
+                const Icon(
                   Icons.text_snippet_outlined,
                   size: 18,
                   color: AppColors.primary,
                 ),
                 const SizedBox(width: 8),
                 Text(
-                  '任务描述',
+                  context.l10n.taskDetailTaskDescription,
                   style: AppTypography.title3.copyWith(
                     color: isDark
                         ? AppColors.textPrimaryDark
@@ -754,7 +756,7 @@ class _TaskInfoCard extends StatelessWidget {
           if (task.deadline != null)
             _buildInfoRow(
               icon: Icons.access_time,
-              title: '截止时间',
+              title: context.l10n.taskDetailDeadline,
               value: _formatDate(task.deadline!),
               iconColor: _isDeadlineUrgent(task.deadline!)
                   ? AppColors.error
@@ -766,7 +768,7 @@ class _TaskInfoCard extends StatelessWidget {
           if (task.createdAt != null)
             _buildInfoRow(
               icon: Icons.calendar_today,
-              title: '发布时间',
+              title: context.l10n.taskDetailPublishTime,
               value: _formatDate(task.createdAt!),
               iconColor: AppColors.primary,
             ),
@@ -776,7 +778,7 @@ class _TaskInfoCard extends StatelessWidget {
             const SizedBox(height: AppSpacing.md),
             _buildInfoRow(
               icon: Icons.people_outline,
-              title: '参与人数',
+              title: context.l10n.taskDetailParticipantCount,
               value:
                   '${task.currentParticipants}/${task.maxParticipants}',
               iconColor: AppColors.primary,
@@ -928,7 +930,7 @@ class _TaskPosterCard extends StatelessWidget {
                     children: [
                       Flexible(
                         child: Text(
-                          task.poster?.name ?? '发布者',
+                          task.poster?.name ?? context.l10n.taskDetailPublisher,
                           style: AppTypography.bodyBold.copyWith(
                             color: isDark
                                 ? AppColors.textPrimaryDark
@@ -958,7 +960,7 @@ class _TaskPosterCard extends StatelessWidget {
 
             // 角色标签 + 箭头圆圈 (对标iOS chevron in circle)
             Text(
-              '发布者',
+              context.l10n.taskDetailPublisher,
               style: AppTypography.caption.copyWith(
                 color: isDark
                     ? AppColors.textSecondaryDark

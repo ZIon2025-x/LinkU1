@@ -41,7 +41,7 @@ class _SettingsViewState extends State<SettingsView> {
     } catch (e) {
       if (mounted) {
         setState(() {
-          _appVersion = '未知';
+          _appVersion = null; // Will use l10n fallback in build method
         });
       }
     }
@@ -105,14 +105,14 @@ class _SettingsViewState extends State<SettingsView> {
                     color: AppColors.textTertiaryLight,
                   ),
                   AppSpacing.vMd,
-                  const Text(
-                    '请先登录',
-                    style: TextStyle(color: AppColors.textSecondaryLight),
+                  Text(
+                    context.l10n.settingsPleaseLoginFirst,
+                    style: const TextStyle(color: AppColors.textSecondaryLight),
                   ),
                   AppSpacing.vLg,
                   ElevatedButton(
                     onPressed: () => context.push('/login'),
-                    child: const Text('去登录'),
+                    child: Text(context.l10n.settingsGoLogin),
                   ),
                 ],
               ),
@@ -134,7 +134,7 @@ class _SettingsViewState extends State<SettingsView> {
                         _SettingsSwitchRow(
                           icon: Icons.notifications_outlined,
                           title: context.l10n.settingsAllowNotifications,
-                          subtitle: '接收推送通知',
+                          subtitle: context.l10n.settingsNotifications,
                           value: settingsState.notificationsEnabled,
                           onChanged: (value) {
                             context.read<SettingsBloc>().add(
@@ -177,21 +177,21 @@ class _SettingsViewState extends State<SettingsView> {
                               ),
                               AppSpacing.vSm,
                               SegmentedButton<ThemeMode>(
-                                segments: const [
+                                segments: [
                                   ButtonSegment<ThemeMode>(
                                     value: ThemeMode.system,
-                                    label: Text('跟随系统'),
-                                    icon: Icon(Icons.brightness_auto, size: 18),
+                                    label: Text(context.l10n.settingsThemeSystem),
+                                    icon: const Icon(Icons.brightness_auto, size: 18),
                                   ),
                                   ButtonSegment<ThemeMode>(
                                     value: ThemeMode.light,
-                                    label: Text('浅色'),
-                                    icon: Icon(Icons.light_mode, size: 18),
+                                    label: Text(context.l10n.settingsThemeLight),
+                                    icon: const Icon(Icons.light_mode, size: 18),
                                   ),
                                   ButtonSegment<ThemeMode>(
                                     value: ThemeMode.dark,
-                                    label: Text('深色'),
-                                    icon: Icon(Icons.dark_mode, size: 18),
+                                    label: Text(context.l10n.settingsThemeDark),
+                                    icon: const Icon(Icons.dark_mode, size: 18),
                                   ),
                                 ],
                                 selected: {settingsState.themeMode},
@@ -208,11 +208,11 @@ class _SettingsViewState extends State<SettingsView> {
                         _settingsDivider(isDark),
                         _SettingsNavRow(
                           icon: Icons.language,
-                          title: '语言',
+                          title: context.l10n.settingsLanguage,
                           trailing: Text(
                             settingsState.locale == 'zh' ||
                                     settingsState.locale == 'zh-CN'
-                                ? '中文'
+                                ? context.l10n.settingsChinese
                                 : 'English',
                             style: TextStyle(
                               color: isDark
@@ -237,7 +237,7 @@ class _SettingsViewState extends State<SettingsView> {
 
                     // 收款与支付 (对齐iOS)
                     _SettingsSection(
-                      title: '收款与支付',
+                      title: context.l10n.settingsPaymentReceiving,
                       children: [
                         _SettingsNavRow(
                           icon: Icons.account_balance,
@@ -248,13 +248,13 @@ class _SettingsViewState extends State<SettingsView> {
                         _settingsDivider(isDark),
                         _SettingsNavRow(
                           icon: Icons.payments_outlined,
-                          title: '支出管理',
+                          title: context.l10n.settingsExpenseManagement,
                           onTap: () => context.push('/wallet'),
                         ),
                         _settingsDivider(isDark),
                         _SettingsNavRow(
                           icon: Icons.receipt_long_outlined,
-                          title: '支付记录',
+                          title: context.l10n.settingsPaymentHistory,
                           onTap: () => context.push('/wallet'),
                         ),
                       ],
@@ -334,7 +334,7 @@ class _SettingsViewState extends State<SettingsView> {
                         _settingsDivider(isDark),
                         _SettingsNavRow(
                           icon: Icons.cookie_outlined,
-                          title: 'Cookie 政策',
+                          title: context.l10n.settingsCookiePolicy,
                           onTap: () =>
                               _launchUrl('https://link2ur.com/cookies'),
                         ),
@@ -358,7 +358,7 @@ class _SettingsViewState extends State<SettingsView> {
                           value: _appVersion ??
                               (settingsState.appVersion.isNotEmpty
                                   ? settingsState.appVersion
-                                  : '加载中...'),
+                                  : context.l10n.settingsUnknown),
                         ),
                       ],
                     ),
@@ -376,8 +376,8 @@ class _SettingsViewState extends State<SettingsView> {
                         _settingsDivider(isDark),
                         _SettingsInfoRow(
                           icon: Icons.email_outlined,
-                          title: '邮箱',
-                          value: user.email ?? '未绑定',
+                          title: context.l10n.settingsEmail,
+                          value: user.email ?? context.l10n.settingsNotBound,
                         ),
                       ],
                     ),
@@ -385,11 +385,11 @@ class _SettingsViewState extends State<SettingsView> {
 
                     // 其他
                     _SettingsSection(
-                      title: '其他',
+                      title: context.l10n.settingsOther,
                       children: [
                         _SettingsNavRow(
                           icon: Icons.delete_outline,
-                          title: '清除缓存',
+                          title: context.l10n.settingsClearCache,
                           trailing: Text(
                             settingsState.cacheSize,
                             style: TextStyle(
@@ -411,7 +411,7 @@ class _SettingsViewState extends State<SettingsView> {
 
                     // 危险区域 (对齐iOS)
                     _SettingsSection(
-                      title: '危险区域',
+                      title: context.l10n.settingsDangerZone,
                       titleColor: AppColors.error,
                       children: [
                         _SettingsNavRow(

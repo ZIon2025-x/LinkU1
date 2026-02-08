@@ -6,6 +6,7 @@ import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_radius.dart';
 import '../../../core/utils/date_formatter.dart';
+import '../../../core/utils/l10n_extension.dart';
 import '../../../core/widgets/loading_view.dart';
 import '../../../core/widgets/empty_state_view.dart';
 import '../../../core/widgets/error_state_view.dart';
@@ -36,7 +37,7 @@ class _TaskChatListViewContent extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('任务聊天'),
+        title: Text(context.l10n.notificationTaskChat),
       ),
       body: BlocBuilder<MessageBloc, MessageState>(
         builder: (context, state) {
@@ -53,7 +54,7 @@ class _TaskChatListViewContent extends StatelessWidget {
 
     if (state.status == MessageStatus.error && state.taskChats.isEmpty) {
       return ErrorStateView.loadFailed(
-        message: state.errorMessage ?? '加载失败',
+        message: state.errorMessage ?? context.l10n.activityLoadFailed,
         onRetry: () {
           context.read<MessageBloc>().add(const MessageLoadTaskChats());
         },
@@ -62,8 +63,8 @@ class _TaskChatListViewContent extends StatelessWidget {
 
     if (state.taskChats.isEmpty) {
       return EmptyStateView.noData(
-        title: '暂无任务聊天',
-        description: '接取或发布任务后，可以在这里与对方沟通',
+        title: context.l10n.notificationNoTaskChat,
+        description: context.l10n.notificationNoTaskChatDesc,
       );
     }
 
@@ -117,7 +118,7 @@ class _TaskChatRow extends StatelessWidget {
         children: [
           AvatarView(
             imageUrl: otherUser?.avatar,
-            name: otherUser?.name ?? '用户',
+            name: otherUser?.name ?? context.l10n.homeDefaultUser,
             size: 48,
           ),
           // 任务图标角标

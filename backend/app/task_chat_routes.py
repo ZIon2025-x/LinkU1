@@ -17,7 +17,7 @@ from fastapi import (
     Request,
     status,
 )
-from sqlalchemy import and_, func, or_, select, text, exists, desc
+from sqlalchemy import and_, func, or_, select, text, exists, desc, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -1337,41 +1337,24 @@ async def accept_application(
     使用事务锁防止并发，支持幂等性
     """
     try:
-        async def _create_customer_and_ephemeral_key(stripe_module, user_id: str, user_name: str):
+        async def _create_customer_and_ephemeral_key(stripe_module, user_obj, db_session):
             """
             为支付方创建/获取 Stripe Customer，并生成 Ephemeral Key（用于客户端保存/复用支付方式）。
+            优先使用数据库缓存的 stripe_customer_id，避免 Stripe Search API 索引延迟导致重复创建。
             失败时返回 (None, None)，不阻塞支付流程。
             """
             customer_id = None
             ephemeral_key_secret = None
             try:
-                # 使用 Stripe Search API 查找现有 Customer（通过 metadata.user_id）
-                # 注意：Customer.list() 不支持通过 metadata 查询，需要使用 Search API
-                try:
-                    search_result = stripe_module.Customer.search(
-                        query=f"metadata['user_id']:'{user_id}'",
-                        limit=1
+                from app.utils.stripe_utils import get_or_create_stripe_customer
+                customer_id = get_or_create_stripe_customer(user_obj)
+                # 保存 customer_id 到用户记录
+                if customer_id and user_obj and (not user_obj.stripe_customer_id or user_obj.stripe_customer_id != customer_id):
+                    await db_session.execute(
+                        update(models.User)
+                        .where(models.User.id == user_obj.id)
+                        .values(stripe_customer_id=customer_id)
                     )
-                    if search_result.data:
-                        customer_id = search_result.data[0].id
-                    else:
-                        customer = stripe_module.Customer.create(
-                            metadata={
-                                "user_id": user_id,
-                                "user_name": user_name,
-                            }
-                        )
-                        customer_id = customer.id
-                except Exception as search_error:
-                    # 如果 Search API 不可用或失败，直接创建新的 Customer
-                    logger.debug(f"Stripe Search API 不可用，直接创建新 Customer: {search_error}")
-                    customer = stripe_module.Customer.create(
-                        metadata={
-                            "user_id": user_id,
-                            "user_name": user_name,
-                        }
-                    )
-                    customer_id = customer.id
 
                 ephemeral_key = stripe_module.EphemeralKey.create(
                     customer=customer_id,
@@ -1487,8 +1470,8 @@ async def accept_application(
                     # 为支付方创建/获取 Customer + EphemeralKey（用于保存卡）
                     customer_id, ephemeral_key_secret = await _create_customer_and_ephemeral_key(
                         stripe_module=stripe,
-                        user_id=str(current_user.id),
-                        user_name=current_user.name or f"User {current_user.id}",
+                        user_obj=current_user,
+                        db_session=db,
                     )
                     
                     # 检查 PaymentIntent 状态
@@ -1662,8 +1645,8 @@ async def accept_application(
         # 为支付方创建/获取 Customer + EphemeralKey（用于保存卡）
         customer_id, ephemeral_key_secret = await _create_customer_and_ephemeral_key(
             stripe_module=stripe,
-            user_id=str(current_user.id),
-            user_name=current_user.name or f"User {current_user.id}",
+            user_obj=current_user,
+            db_session=db,
         )
         
         # 保存 payment_intent_id 到任务（临时存储，支付成功后才会真正批准）
@@ -2601,41 +2584,23 @@ async def respond_negotiation(
             customer_id = None
             ephemeral_key_secret = None
             try:
-                # 使用 Stripe Search API 查找现有 Customer（通过 metadata.user_id）
-                # 注意：Customer.list() 不支持通过 metadata 查询，需要使用 Search API
-                try:
-                    search_result = stripe.Customer.search(
-                        query=f"metadata['user_id']:'{locked_task.poster_id}'",
-                        limit=1
-                    )
-                    if search_result.data:
-                        customer_id = search_result.data[0].id
-                    else:
-                        poster = await db.get(models.User, locked_task.poster_id)
-                        customer = stripe.Customer.create(
-                            metadata={
-                                "user_id": str(locked_task.poster_id),
-                                "user_name": poster.name if poster else f"User {locked_task.poster_id}",
-                            }
+                from app.utils.stripe_utils import get_or_create_stripe_customer
+                poster = await db.get(models.User, locked_task.poster_id)
+                if poster:
+                    customer_id = get_or_create_stripe_customer(poster)
+                    # 保存 customer_id 到用户记录
+                    if customer_id and (not poster.stripe_customer_id or poster.stripe_customer_id != customer_id):
+                        await db.execute(
+                            update(models.User)
+                            .where(models.User.id == poster.id)
+                            .values(stripe_customer_id=customer_id)
                         )
-                        customer_id = customer.id
-                except Exception as search_error:
-                    # 如果 Search API 不可用或失败，直接创建新的 Customer
-                    logger.debug(f"Stripe Search API 不可用，直接创建新 Customer: {search_error}")
-                    poster = await db.get(models.User, locked_task.poster_id)
-                    customer = stripe.Customer.create(
-                        metadata={
-                            "user_id": str(locked_task.poster_id),
-                            "user_name": poster.name if poster else f"User {locked_task.poster_id}",
-                        }
-                    )
-                    customer_id = customer.id
 
-                ephemeral_key = stripe.EphemeralKey.create(
-                    customer=customer_id,
-                    stripe_version="2025-04-30.preview",
-                )
-                ephemeral_key_secret = ephemeral_key.secret
+                    ephemeral_key = stripe.EphemeralKey.create(
+                        customer=customer_id,
+                        stripe_version="2025-04-30.preview",
+                    )
+                    ephemeral_key_secret = ephemeral_key.secret
             except Exception as e:
                 logger.warning(f"无法创建 Stripe Customer 或 Ephemeral Key: {e}")
                 customer_id = None

@@ -3,6 +3,7 @@ import '../models/payment.dart';
 import '../services/api_service.dart';
 import '../services/storage_service.dart';
 import '../../core/constants/api_endpoints.dart';
+import '../../core/utils/app_exception.dart';
 
 /// 用户仓库
 /// 与iOS APIService+Users + 后端路由对齐
@@ -249,14 +250,22 @@ class UserRepository {
         .map((e) => Transaction.fromJson(e as Map<String, dynamic>))
         .toList();
   }
+
+  /// 获取VIP状态
+  Future<Map<String, dynamic>> getVipStatus() async {
+    final response = await _apiService.get<Map<String, dynamic>>(
+      ApiEndpoints.vipStatus,
+    );
+
+    if (!response.isSuccess || response.data == null) {
+      throw UserException(response.message ?? '获取VIP状态失败');
+    }
+
+    return response.data!;
+  }
 }
 
 /// 用户异常
-class UserException implements Exception {
-  UserException(this.message);
-
-  final String message;
-
-  @override
-  String toString() => 'UserException: $message';
+class UserException extends AppException {
+  const UserException(super.message);
 }

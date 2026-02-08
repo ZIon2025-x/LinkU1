@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/utils/date_formatter.dart';
+import '../../../core/utils/l10n_extension.dart';
 import '../../../core/widgets/async_image_view.dart';
 import '../../../data/models/message.dart';
 
@@ -234,20 +235,12 @@ class _GroupBubbleItem extends StatelessWidget {
         padding: const EdgeInsets.symmetric(vertical: 1),
         child: GestureDetector(
           onTap: () => onImageTap?.call(message.imageUrl!),
-          child: ClipRRect(
+          child: AsyncImageView(
+            imageUrl: message.imageUrl,
+            width: 200,
+            height: 200,
+            fit: BoxFit.cover,
             borderRadius: borderRadius,
-            child: Image.network(
-              message.imageUrl!,
-              width: 200,
-              height: 200,
-              fit: BoxFit.cover,
-              errorBuilder: (_, __, ___) => Container(
-                width: 200,
-                height: 200,
-                color: AppColors.skeletonBase,
-                child: const Icon(Icons.broken_image),
-              ),
-            ),
           ),
         ),
       );
@@ -262,9 +255,9 @@ class _GroupBubbleItem extends StatelessWidget {
           Clipboard.setData(ClipboardData(text: message.content));
           HapticFeedback.lightImpact();
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('已复制'),
-              duration: Duration(seconds: 1),
+            SnackBar(
+              content: Text(context.l10n.chatCopied),
+              duration: const Duration(seconds: 1),
             ),
           );
         },

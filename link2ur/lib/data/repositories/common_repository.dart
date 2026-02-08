@@ -3,6 +3,7 @@ import '../services/api_service.dart';
 import '../../core/constants/api_endpoints.dart';
 import '../../core/utils/cache_manager.dart';
 import '../../core/utils/translation_cache_manager.dart';
+import '../../core/utils/app_exception.dart';
 
 /// 通用仓库
 /// 与iOS + 后端路由对齐
@@ -16,7 +17,7 @@ class CommonRepository {
 
   /// 获取轮播图/横幅
   Future<List<Banner>> getBanners() async {
-    final cacheKey = '${CacheManager.prefixBanners}all';
+    const cacheKey = '${CacheManager.prefixBanners}all';
 
     final cached = _cache.get<Map<String, dynamic>>(cacheKey);
     if (cached != null) {
@@ -350,14 +351,36 @@ class CommonRepository {
 
     return response.data!['url'] as String? ?? '';
   }
+
+  /// 获取私有图片URL
+  Future<String> getPrivateImage(String imageId) async {
+    final response = await _apiService.get<Map<String, dynamic>>(
+      ApiEndpoints.privateImage(imageId),
+    );
+
+    if (!response.isSuccess || response.data == null) {
+      throw CommonException(response.message ?? '获取私有图片失败');
+    }
+
+    return response.data!['url'] as String? ?? '';
+  }
+
+  /// 获取私有文件URL
+  Future<String> getPrivateFile(String fileId) async {
+    final response = await _apiService.get<Map<String, dynamic>>(
+      ApiEndpoints.privateFile,
+      queryParameters: {'file_id': fileId},
+    );
+
+    if (!response.isSuccess || response.data == null) {
+      throw CommonException(response.message ?? '获取私有文件失败');
+    }
+
+    return response.data!['url'] as String? ?? '';
+  }
 }
 
 /// 通用异常
-class CommonException implements Exception {
-  CommonException(this.message);
-
-  final String message;
-
-  @override
-  String toString() => 'CommonException: $message';
+class CommonException extends AppException {
+  const CommonException(super.message);
 }

@@ -3,14 +3,17 @@ import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/constants/app_constants.dart';
 import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_typography.dart';
 import '../../../core/design/app_radius.dart';
 import '../../../core/utils/l10n_extension.dart';
+import '../../../core/utils/responsive.dart';
 import '../../../core/widgets/user_identity_badges.dart';
 import '../../../core/widgets/stat_item.dart';
 import '../../../core/widgets/async_image_view.dart';
+import '../../../core/widgets/content_constraint.dart';
 import '../../../data/models/user.dart';
 import '../../../data/repositories/user_repository.dart';
 import '../../../data/repositories/task_repository.dart';
@@ -154,18 +157,23 @@ class _ProfileContent extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final isDesktop = ResponsiveUtils.isDesktop(context);
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(context.l10n.tabsProfile),
-        actions: [
-          // 编辑按钮 (对齐iOS: pencil SF Symbol)
-          IconButton(
-            icon: const Icon(Icons.edit),
-            onPressed: () => context.push('/profile/edit'),
-          ),
-        ],
-      ),
+      backgroundColor: isDesktop
+          ? (isDark ? AppColors.backgroundDark : Colors.white)
+          : null,
+      appBar: isDesktop
+          ? null
+          : AppBar(
+              title: Text(context.l10n.tabsProfile),
+              actions: [
+                IconButton(
+                  icon: const Icon(Icons.edit),
+                  onPressed: () => context.push('/profile/edit'),
+                ),
+              ],
+            ),
       body: BlocBuilder<ProfileBloc, ProfileState>(
         builder: (context, profileState) {
           final user = authState.user!;
@@ -178,58 +186,265 @@ class _ProfileContent extends StatelessWidget {
                 ..add(const ProfileLoadMyTasks(isPosted: true));
               await Future.delayed(const Duration(milliseconds: 500));
             },
+            child: isDesktop
+                ? ContentConstraint(
+                    child: _buildDesktopProfile(context, profileState, user, isDark),
+                  )
+                : _buildMobileProfile(context, profileState, user, isDark),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildDesktopProfile(
+      BuildContext context, ProfileState profileState, User user, bool isDark) {
+    return SingleChildScrollView(
+      physics: const AlwaysScrollableScrollPhysics(),
+      padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // 标题 + 编辑按钮
+          Row(
+            children: [
+              Text(
+                context.l10n.tabsProfile,
+                style: TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.w700,
+                  color: isDark
+                      ? AppColors.textPrimaryDark
+                      : const Color(0xFF37352F),
+                ),
+              ),
+              const Spacer(),
+              _DesktopEditButton(
+                onTap: () => context.push('/profile/edit'),
+                isDark: isDark,
+              ),
+            ],
+          ),
+          const SizedBox(height: 24),
+
+          // 横向用户信息 + 统计
+          _buildDesktopUserCard(context, profileState, user, isDark),
+          const SizedBox(height: 32),
+
+          // 两列菜单
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: _buildMyContentSection(context, isDark),
+              ),
+              const SizedBox(width: 20),
+              Expanded(
+                child: _buildSystemSection(context, isDark),
+              ),
+            ],
+          ),
+          const SizedBox(height: 32),
+
+          // 登出按钮
+          _buildLogoutButton(context, isDark),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDesktopUserCard(
+      BuildContext context, ProfileState state, User user, bool isDark) {
+    final inProgressCount = state.myTasks
+        .where((t) =>
+            t.status == 'assigned' ||
+            t.status == AppConstants.taskStatusInProgress ||
+            t.status == 'accepted')
+        .length;
+    final completedCount = state.myTasks
+        .where((t) => t.status == AppConstants.taskStatusCompleted)
+        .length;
+
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: isDark ? AppColors.cardBackgroundDark : Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: isDark
+              ? Colors.white.withValues(alpha: 0.06)
+              : const Color(0xFFE8E8E5),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          // 头像
+          GestureDetector(
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => AvatarPickerView(
+                    currentAvatar: user.avatar,
+                    onSelected: (newAvatar) {},
+                  ),
+                ),
+              );
+            },
             child: Stack(
+              alignment: Alignment.bottomRight,
               children: [
-                // 顶部渐变背景 (对齐iOS)
-                Positioned(
-                  top: 0,
-                  left: 0,
-                  right: 0,
-                  child: Container(
-                    height: 300,
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [
-                          AppColors.primary.withValues(alpha: 0.15),
-                          Colors.transparent,
-                        ],
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
+                Container(
+                  width: 80,
+                  height: 80,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: Colors.white,
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.08),
+                        blurRadius: 8,
+                        offset: const Offset(0, 3),
                       ),
+                    ],
+                  ),
+                  child: Center(
+                    child: AvatarView(
+                      imageUrl: user.avatar,
+                      name: user.name,
+                      size: 72,
                     ),
                   ),
                 ),
-                SingleChildScrollView(
-                  physics: const AlwaysScrollableScrollPhysics(),
-                  padding: const EdgeInsets.only(bottom: 20),
-                  child: Column(
-                    children: [
-                      // 用户信息区域 (居中布局，对齐iOS)
-                      _buildUserInfoSection(context, user, isDark),
-                      const SizedBox(height: 24),
+                MemberBadgeAvatarOverlay(
+                  userLevel: user.userLevel,
+                  size: 24,
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 20),
 
-                      // 统计数据 (3项: 进行中/已完成/信用分)
-                      _buildStatsSection(context, profileState, user, isDark),
-                      const SizedBox(height: 24),
-
-                      // 我的内容
-                      _buildMyContentSection(context, isDark),
-                      const SizedBox(height: 24),
-
-                      // 系统与认证
-                      _buildSystemSection(context, isDark),
-                      const SizedBox(height: 24),
-
-                      // 登出按钮
-                      _buildLogoutButton(context, isDark),
+          // 用户信息
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Flexible(
+                      child: Text(
+                        user.displayName,
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: isDark
+                              ? AppColors.textPrimaryDark
+                              : const Color(0xFF37352F),
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    if (user.isVerified) ...[
+                      const SizedBox(width: 8),
+                      const Icon(Icons.verified, color: Colors.blue, size: 18),
                     ],
+                  ],
+                ),
+                const SizedBox(height: 4),
+                UserIdentityBadges(
+                  userLevel: user.userLevel,
+                  isExpert: user.isExpert,
+                  isStudentVerified: user.isStudentVerified,
+                  compact: false,
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  user.email ?? user.phone ?? 'ID: ${user.id}',
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: isDark
+                        ? AppColors.textSecondaryDark
+                        : const Color(0xFF9B9A97),
                   ),
                 ),
               ],
             ),
-          );
-        },
+          ),
+
+          // 统计数据
+          Row(
+            children: [
+              _DesktopStatItem(
+                value: '$inProgressCount',
+                label: context.l10n.profileInProgress,
+                color: AppColors.primary,
+              ),
+              const SizedBox(width: 24),
+              _DesktopStatItem(
+                value: '$completedCount',
+                label: context.l10n.profileCompleted,
+                color: AppColors.success,
+              ),
+              const SizedBox(width: 24),
+              _DesktopStatItem(
+                value: user.creditScoreDisplay,
+                label: context.l10n.profileCreditScore,
+                color: AppColors.warning,
+              ),
+            ],
+          ),
+        ],
       ),
+    );
+  }
+
+  Widget _buildMobileProfile(
+      BuildContext context, ProfileState profileState, User user, bool isDark) {
+    return Stack(
+      children: [
+        Positioned(
+          top: 0, left: 0, right: 0,
+          child: Container(
+            height: 300,
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  AppColors.primary.withValues(alpha: 0.15),
+                  Colors.transparent,
+                ],
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+              ),
+            ),
+          ),
+        ),
+        SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.only(bottom: 20),
+          child: Column(
+            children: [
+              _buildUserInfoSection(context, user, isDark),
+              const SizedBox(height: 24),
+              _buildStatsSection(context, profileState, user, isDark),
+              const SizedBox(height: 24),
+              _buildMyContentSection(context, isDark),
+              const SizedBox(height: 24),
+              _buildSystemSection(context, isDark),
+              const SizedBox(height: 24),
+              _buildLogoutButton(context, isDark),
+            ],
+          ),
+        ),
+      ],
     );
   }
 
@@ -352,11 +567,11 @@ class _ProfileContent extends StatelessWidget {
     final inProgressCount = state.myTasks
         .where((t) =>
             t.status == 'assigned' ||
-            t.status == 'in_progress' ||
+            t.status == AppConstants.taskStatusInProgress ||
             t.status == 'accepted')
         .length;
     final completedCount = state.myTasks
-        .where((t) => t.status == 'completed')
+        .where((t) => t.status == AppConstants.taskStatusCompleted)
         .length;
 
     return Container(
@@ -659,6 +874,117 @@ class _ProfileContent extends StatelessWidget {
       height: 1,
       indent: 56,
       color: isDark ? AppColors.dividerDark : AppColors.dividerLight,
+    );
+  }
+}
+
+/// 桌面端统计项
+class _DesktopStatItem extends StatelessWidget {
+  const _DesktopStatItem({
+    required this.value,
+    required this.label,
+    required this.color,
+  });
+
+  final String value;
+  final String label;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return Column(
+      children: [
+        Text(
+          value,
+          style: TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.w700,
+            color: color,
+          ),
+        ),
+        const SizedBox(height: 2),
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 12,
+            color: isDark
+                ? AppColors.textSecondaryDark
+                : const Color(0xFF9B9A97),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// 桌面端编辑按钮
+class _DesktopEditButton extends StatefulWidget {
+  const _DesktopEditButton({
+    required this.onTap,
+    required this.isDark,
+  });
+
+  final VoidCallback onTap;
+  final bool isDark;
+
+  @override
+  State<_DesktopEditButton> createState() => _DesktopEditButtonState();
+}
+
+class _DesktopEditButtonState extends State<_DesktopEditButton> {
+  bool _isHovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      onEnter: (_) => setState(() => _isHovered = true),
+      onExit: (_) => setState(() => _isHovered = false),
+      cursor: SystemMouseCursors.click,
+      child: GestureDetector(
+        onTap: widget.onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 150),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+          decoration: BoxDecoration(
+            color: _isHovered
+                ? (widget.isDark
+                    ? Colors.white.withValues(alpha: 0.08)
+                    : const Color(0xFFF0F0EE))
+                : Colors.transparent,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(
+              color: widget.isDark
+                  ? Colors.white.withValues(alpha: 0.1)
+                  : const Color(0xFFE8E8E5),
+            ),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                Icons.edit_outlined,
+                size: 16,
+                color: widget.isDark
+                    ? AppColors.textSecondaryDark
+                    : const Color(0xFF37352F),
+              ),
+              const SizedBox(width: 6),
+              Text(
+                context.l10n.profileEditProfile,
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w500,
+                  color: widget.isDark
+                      ? AppColors.textPrimaryDark
+                      : const Color(0xFF37352F),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

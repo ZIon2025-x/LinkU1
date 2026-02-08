@@ -3,6 +3,7 @@ import '../services/api_service.dart';
 import '../services/websocket_service.dart';
 import '../../core/constants/api_endpoints.dart';
 import '../../core/utils/logger.dart';
+import '../../core/utils/app_exception.dart';
 
 /// 消息仓库
 /// 与iOS MessageViewModel + 后端路由对齐
@@ -34,9 +35,16 @@ class MessageRepository {
   // ==================== 私信 ====================
 
   /// 获取聊天联系人列表
-  Future<List<ChatContact>> getContacts() async {
+  Future<List<ChatContact>> getContacts({
+    int page = 1,
+    int pageSize = 20,
+  }) async {
     final response = await _apiService.get<dynamic>(
       ApiEndpoints.messageContacts,
+      queryParameters: {
+        'page': page,
+        'page_size': pageSize,
+      },
     );
 
     if (!response.isSuccess || response.data == null) {
@@ -165,9 +173,16 @@ class MessageRepository {
   // ==================== 任务聊天 ====================
 
   /// 获取任务聊天列表
-  Future<List<TaskChat>> getTaskChats() async {
+  Future<List<TaskChat>> getTaskChats({
+    int page = 1,
+    int pageSize = 20,
+  }) async {
     final response = await _apiService.get<dynamic>(
       ApiEndpoints.taskChatList,
+      queryParameters: {
+        'page': page,
+        'page_size': pageSize,
+      },
     );
 
     if (!response.isSuccess || response.data == null) {
@@ -281,14 +296,22 @@ class MessageRepository {
   /// 获取连接状态流
   Stream<bool> get connectionStream =>
       WebSocketService.instance.connectionStream;
+
+  /// 生成消息图片上传URL
+  Future<String> generateImageUrl() async {
+    final response = await _apiService.post<Map<String, dynamic>>(
+      ApiEndpoints.messageGenerateImageUrl,
+    );
+
+    if (!response.isSuccess || response.data == null) {
+      throw MessageException(response.message ?? '生成图片URL失败');
+    }
+
+    return response.data!['url'] as String? ?? '';
+  }
 }
 
 /// 消息异常
-class MessageException implements Exception {
-  MessageException(this.message);
-
-  final String message;
-
-  @override
-  String toString() => 'MessageException: $message';
+class MessageException extends AppException {
+  const MessageException(super.message);
 }

@@ -6,6 +6,7 @@ import '../models/flea_market.dart';
 import '../services/api_service.dart';
 import '../../core/constants/api_endpoints.dart';
 import '../../core/utils/cache_manager.dart';
+import '../../core/utils/app_exception.dart';
 
 /// 跳蚤市场仓库
 /// 与iOS FleaMarketViewModel + 后端 flea_market_routes 对齐
@@ -70,7 +71,7 @@ class FleaMarketRepository {
 
   /// 获取商品分类
   Future<List<Map<String, dynamic>>> getCategories() async {
-    final cacheKey = '${CacheManager.prefixFleaMarketCategories}all';
+    const cacheKey = '${CacheManager.prefixFleaMarketCategories}all';
 
     final cached = _cache.get<List<dynamic>>(cacheKey);
     if (cached != null) {
@@ -389,14 +390,92 @@ class FleaMarketRepository {
     await _cache.invalidateFleaMarketCache();
     await _cache.invalidateMyFleaMarketCache();
   }
+
+  /// 获取商品的购买请求列表
+  Future<List<Map<String, dynamic>>> getItemPurchaseRequests(String id) async {
+    final response = await _apiService.get<Map<String, dynamic>>(
+      ApiEndpoints.fleaMarketItemPurchaseRequests(id),
+    );
+
+    if (!response.isSuccess || response.data == null) {
+      throw FleaMarketException(response.message ?? '获取购买请求失败');
+    }
+
+    final items = response.data!['items'] as List<dynamic>? ?? [];
+    return items.map((e) => e as Map<String, dynamic>).toList();
+  }
+
+  /// 接受购买请求
+  Future<void> acceptPurchase(String id) async {
+    final response = await _apiService.post(
+      ApiEndpoints.fleaMarketAcceptPurchase(id),
+    );
+
+    if (!response.isSuccess) {
+      throw FleaMarketException(response.message ?? '接受购买请求失败');
+    }
+
+    await _cache.invalidateFleaMarketCache();
+  }
+
+  /// 拒绝购买请求
+  Future<void> rejectPurchase(String id) async {
+    final response = await _apiService.post(
+      ApiEndpoints.fleaMarketRejectPurchase(id),
+    );
+
+    if (!response.isSuccess) {
+      throw FleaMarketException(response.message ?? '拒绝购买请求失败');
+    }
+
+    await _cache.invalidateFleaMarketCache();
+  }
+
+  /// 发起还价
+  Future<void> counterOffer(String id, {required double price, String? message}) async {
+    final response = await _apiService.post(
+      ApiEndpoints.fleaMarketCounterOffer(id),
+      data: {
+        'price': price,
+        if (message != null) 'message': message,
+      },
+    );
+
+    if (!response.isSuccess) {
+      throw FleaMarketException(response.message ?? '发起还价失败');
+    }
+  }
+
+  /// 回应还价
+  Future<void> respondCounterOffer(String id, {required bool accept, double? newPrice}) async {
+    final response = await _apiService.post(
+      ApiEndpoints.fleaMarketRespondCounterOffer(id),
+      data: {
+        'accept': accept,
+        if (newPrice != null) 'new_price': newPrice,
+      },
+    );
+
+    if (!response.isSuccess) {
+      throw FleaMarketException(response.message ?? '回应还价失败');
+    }
+
+    await _cache.invalidateFleaMarketCache();
+  }
+
+  /// 同意跳蚤市场须知
+  Future<void> agreeNotice() async {
+    final response = await _apiService.post(
+      ApiEndpoints.fleaMarketAgreeNotice,
+    );
+
+    if (!response.isSuccess) {
+      throw FleaMarketException(response.message ?? '操作失败');
+    }
+  }
 }
 
 /// 跳蚤市场异常
-class FleaMarketException implements Exception {
-  FleaMarketException(this.message);
-
-  final String message;
-
-  @override
-  String toString() => 'FleaMarketException: $message';
+class FleaMarketException extends AppException {
+  const FleaMarketException(super.message);
 }

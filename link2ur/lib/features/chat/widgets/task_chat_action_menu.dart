@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_radius.dart';
+import '../../../core/utils/l10n_extension.dart';
 
 /// 任务聊天功能菜单
 /// 参考iOS TaskChatActionMenu.swift
@@ -46,14 +47,14 @@ class TaskChatActionMenu extends StatelessWidget {
             children: [
               _ChatActionButton(
                 icon: Icons.photo_library,
-                label: '图片',
+                label: context.l10n.chatImageLabel,
                 color: AppColors.success,
                 onTap: onImagePicker,
               ),
               const SizedBox(width: AppSpacing.xl),
               _ChatActionButton(
                 icon: Icons.description,
-                label: '任务详情',
+                label: context.l10n.chatTaskDetailLabel,
                 color: AppColors.primary,
                 onTap: onTaskDetail,
               ),
@@ -61,7 +62,7 @@ class TaskChatActionMenu extends StatelessWidget {
                 const SizedBox(width: AppSpacing.xl),
                 _ChatActionButton(
                   icon: Icons.location_on,
-                  label: '详细地址',
+                  label: context.l10n.chatAddressLabel,
                   color: AppColors.warning,
                   onTap: onViewLocation!,
                 ),

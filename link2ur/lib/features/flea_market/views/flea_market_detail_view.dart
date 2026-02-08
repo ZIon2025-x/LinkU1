@@ -3,6 +3,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import '../../../core/constants/app_constants.dart';
 import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_typography.dart';
@@ -10,6 +11,7 @@ import '../../../core/widgets/loading_view.dart';
 import '../../../core/widgets/error_state_view.dart';
 import '../../../core/widgets/async_image_view.dart';
 import '../../../core/widgets/full_screen_image_view.dart';
+import '../../../core/utils/l10n_extension.dart';
 import '../../../data/repositories/flea_market_repository.dart';
 import '../../../data/models/flea_market.dart';
 import '../bloc/flea_market_bloc.dart';
@@ -120,7 +122,7 @@ class _FleaMarketDetailContent extends StatelessWidget {
 
     if (state.detailStatus == FleaMarketStatus.error) {
       return ErrorStateView.loadFailed(
-        message: state.errorMessage ?? '加载失败',
+        message: state.errorMessage ?? context.l10n.fleaMarketLoadFailed,
         onRetry: () {
           context
               .read<FleaMarketBloc>()
@@ -198,7 +200,7 @@ class _FleaMarketDetailContent extends StatelessWidget {
     final item = state.selectedItem!;
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    if (item.status != 'active') return const SizedBox.shrink();
+    if (item.status != AppConstants.fleaMarketStatusActive) return const SizedBox.shrink();
 
     return ClipRect(
       child: BackdropFilter(
@@ -251,7 +253,7 @@ class _FleaMarketDetailContent extends StatelessWidget {
                         children: [
                           const Icon(Icons.chat_bubble, size: 18, color: Colors.white),
                           const SizedBox(width: 6),
-                          Text('聊天',
+                          Text(context.l10n.fleaMarketChat,
                               style: AppTypography.bodyBold
                                   .copyWith(color: Colors.white)),
                         ],
@@ -267,8 +269,8 @@ class _FleaMarketDetailContent extends StatelessWidget {
                           : () {
                               HapticFeedback.selectionClick();
                               ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                    content: Text('购买功能开发中')),
+                                SnackBar(
+                                    content: Text(context.l10n.fleaMarketPurchaseInDev)),
                               );
                             },
                       child: Container(
@@ -299,7 +301,7 @@ class _FleaMarketDetailContent extends StatelessWidget {
                                       strokeWidth: 2, color: Colors.white),
                                 )
                               : Text(
-                                  item.isSold ? '已售出' : '立即购买',
+                                  item.isSold ? context.l10n.fleaMarketSold : context.l10n.fleaMarketBuyNow,
                                   style: AppTypography.bodyBold
                                       .copyWith(color: Colors.white),
                                 ),
@@ -351,10 +353,10 @@ class _ImageGalleryState extends State<_ImageGallery> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.photo_library,
+            const Icon(Icons.photo_library,
                 size: 48, color: AppColors.textTertiaryLight),
             const SizedBox(height: AppSpacing.md),
-            Text('暂无图片',
+            Text(context.l10n.fleaMarketNoImage,
                 style: AppTypography.caption
                     .copyWith(color: AppColors.textTertiaryLight)),
           ],
@@ -499,21 +501,21 @@ class _PriceTitleCard extends StatelessWidget {
             Row(
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
-                Text(
+                const Text(
                   '£',
                   style: TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
-                    color: const Color(0xFFE64D4D),
+                    color: Color(0xFFE64D4D),
                     height: 1.5,
                   ),
                 ),
                 Text(
                   _priceNumber,
-                  style: TextStyle(
+                  style: const TextStyle(
                     fontSize: 32,
                     fontWeight: FontWeight.bold,
-                    color: const Color(0xFFE64D4D),
+                    color: Color(0xFFE64D4D),
                     height: 1.1,
                   ),
                 ),
@@ -554,7 +556,7 @@ class _PriceTitleCard extends StatelessWidget {
                     ),
                     child: Text(
                       item.category!,
-                      style: TextStyle(
+                      style: const TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w500,
                         color: AppColors.primary,
@@ -570,7 +572,7 @@ class _PriceTitleCard extends StatelessWidget {
                 if (item.createdAt != null)
                   _InfoChip(
                     icon: Icons.access_time,
-                    text: _formatDate(item.createdAt!),
+                    text: _formatDate(context, item.createdAt!),
                   ),
               ],
             ),
@@ -584,19 +586,19 @@ class _PriceTitleCard extends StatelessWidget {
     return item.price.toStringAsFixed(2);
   }
 
-  String _formatDate(DateTime date) {
+  String _formatDate(BuildContext context, DateTime date) {
     final now = DateTime.now();
     final difference = now.difference(date);
     if (difference.inDays > 7) {
       return '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
     } else if (difference.inDays > 0) {
-      return '${difference.inDays}天前';
+      return context.l10n.timeDaysAgo(difference.inDays);
     } else if (difference.inHours > 0) {
-      return '${difference.inHours}小时前';
+      return context.l10n.timeHoursAgo(difference.inHours);
     } else if (difference.inMinutes > 0) {
-      return '${difference.inMinutes}分钟前';
+      return context.l10n.timeMinutesAgo(difference.inMinutes);
     }
-    return '刚刚';
+    return context.l10n.timeJustNow;
   }
 }
 
@@ -623,7 +625,7 @@ class _StatusBadge extends StatelessWidget {
           ),
           const SizedBox(width: 4),
           Text(
-            item.isSold ? '已售出' : '已下架',
+            item.isSold ? context.l10n.fleaMarketSold : context.l10n.fleaMarketDelisted,
             style: TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.w600,
@@ -703,7 +705,7 @@ class _DetailsCard extends StatelessWidget {
                 ),
                 const SizedBox(width: 8),
                 Text(
-                  '商品描述',
+                  context.l10n.fleaMarketDescription,
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
@@ -730,7 +732,7 @@ class _DetailsCard extends StatelessWidget {
               const SizedBox(height: 12),
               Row(
                 children: [
-                  Icon(Icons.location_on, size: 18, color: AppColors.primary),
+                  const Icon(Icons.location_on, size: 18, color: AppColors.primary),
                   const SizedBox(width: 6),
                   Expanded(
                     child: Text(
@@ -810,7 +812,7 @@ class _SellerCard extends StatelessWidget {
                   Row(
                     children: [
                       Text(
-                        '卖家',
+                        context.l10n.fleaMarketSeller,
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w600,
@@ -820,15 +822,15 @@ class _SellerCard extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(width: 6),
-                      Icon(
+                      const Icon(
                         Icons.verified,
                         size: 14,
                         color: AppColors.success,
                       ),
                       const SizedBox(width: 3),
                       Text(
-                        '活跃卖家',
-                        style: TextStyle(
+                        context.l10n.fleaMarketActiveSeller,
+                        style: const TextStyle(
                           fontSize: 12,
                           color: AppColors.success,
                         ),
@@ -856,7 +858,7 @@ class _SellerCard extends StatelessWidget {
                   borderRadius: BorderRadius.circular(999),
                 ),
                 child: Text(
-                  '联系卖家',
+                  context.l10n.fleaMarketContactSeller,
                   style: AppTypography.caption
                       .copyWith(color: Colors.white, fontWeight: FontWeight.w600),
                 ),

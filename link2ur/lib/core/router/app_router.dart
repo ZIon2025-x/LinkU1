@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'page_transitions.dart';
+import '../../l10n/app_localizations.dart';
+import '../../features/auth/bloc/auth_bloc.dart';
 
 import '../../features/auth/views/login_view.dart';
 import '../../features/auth/views/register_view.dart';
@@ -165,13 +168,78 @@ class AppRoutes {
   static const String vipPurchase = '/vip/purchase';
 }
 
+/// 需要认证才能访问的路由（其余公开路由无需登录）
+const _authRequiredRoutes = <String>{
+  AppRoutes.createTask,
+  AppRoutes.createFleaMarketItem,
+  AppRoutes.createPost,
+  AppRoutes.editProfile,
+  AppRoutes.myTasks,
+  AppRoutes.myPosts,
+  AppRoutes.myForumPosts,
+  AppRoutes.myServiceApplications,
+  AppRoutes.wallet,
+  AppRoutes.payment,
+  AppRoutes.stripeConnectOnboarding,
+  AppRoutes.stripeConnectPayments,
+  AppRoutes.stripeConnectPayouts,
+  AppRoutes.couponPoints,
+  AppRoutes.studentVerification,
+  AppRoutes.taskPreferences,
+  AppRoutes.chat,
+  AppRoutes.taskChat,
+  AppRoutes.taskChatList,
+  AppRoutes.notifications,
+  AppRoutes.notificationList,
+};
+
 /// 应用路由配置
 class AppRouter {
   AppRouter();
 
+  /// 检查路径是否需要认证（支持参数化路径匹配）
+  static bool _requiresAuth(String location) {
+    for (final route in _authRequiredRoutes) {
+      // 将路由模板转为正则：/chat/:userId → /chat/[^/]+
+      final pattern = route.replaceAllMapped(
+        RegExp(r':(\w+)'),
+        (m) => r'[^/]+',
+      );
+      if (RegExp('^$pattern\$').hasMatch(location)) return true;
+    }
+    return false;
+  }
+
   late final GoRouter router = GoRouter(
     initialLocation: AppRoutes.main,
-    debugLogDiagnostics: true,
+    debugLogDiagnostics: false,
+    redirect: (BuildContext context, GoRouterState state) {
+      final authState = context.read<AuthBloc>().state;
+      final isAuthenticated = authState.isAuthenticated;
+      final location = state.matchedLocation;
+
+      // 认证检查中，不做跳转
+      if (authState.status == AuthStatus.initial ||
+          authState.status == AuthStatus.checking) {
+        return null;
+      }
+
+      final isAuthRoute = location == AppRoutes.login ||
+          location == AppRoutes.register ||
+          location == AppRoutes.forgotPassword;
+
+      // 未登录 + 需要认证的路由 → 跳转到登录
+      if (!isAuthenticated && _requiresAuth(location)) {
+        return AppRoutes.login;
+      }
+
+      // 已登录 + 在认证页 → 跳转到首页
+      if (isAuthenticated && isAuthRoute) {
+        return AppRoutes.main;
+      }
+
+      return null;
+    },
     routes: [
       // 主页面（底部导航栏）
       ShellRoute(
@@ -640,7 +708,7 @@ class AppRouter {
     ],
     errorBuilder: (context, state) => Scaffold(
       body: Center(
-        child: Text('页面不存在: ${state.uri}'),
+        child: Text(AppLocalizations.of(context)?.errorPageNotFound(state.uri.toString()) ?? 'Page not found: ${state.uri}'),
       ),
     ),
   );

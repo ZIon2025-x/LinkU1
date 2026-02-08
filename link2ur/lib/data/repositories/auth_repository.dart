@@ -4,6 +4,7 @@ import '../services/storage_service.dart';
 import '../services/websocket_service.dart';
 import '../../core/constants/api_endpoints.dart';
 import '../../core/utils/logger.dart';
+import '../../core/utils/app_exception.dart';
 
 /// 认证仓库
 /// 参考iOS APIService+Endpoints.swift 认证相关
@@ -33,7 +34,7 @@ class AuthRepository {
 
     if (response.data == null) {
       AppLogger.error('Login response data is null');
-      throw AuthException('登录响应数据为空');
+      throw const AuthException('登录响应数据为空');
     }
 
     AppLogger.debug('Login response keys: ${response.data!.keys.toList()}');
@@ -76,7 +77,7 @@ class AuthRepository {
 
     if (response.data == null) {
       AppLogger.error('Login with code response data is null');
-      throw AuthException('登录响应数据为空');
+      throw const AuthException('登录响应数据为空');
     }
 
     AppLogger.debug('Login with code response keys: ${response.data!.keys.toList()}');
@@ -116,7 +117,7 @@ class AuthRepository {
 
     if (response.data == null) {
       AppLogger.error('Login with phone response data is null');
-      throw AuthException('登录响应数据为空');
+      throw const AuthException('登录响应数据为空');
     }
 
     AppLogger.debug('Login with phone response keys: ${response.data!.keys.toList()}');
@@ -160,7 +161,7 @@ class AuthRepository {
 
     if (response.data == null) {
       AppLogger.error('Register response data is null');
-      throw AuthException('注册响应数据为空');
+      throw const AuthException('注册响应数据为空');
     }
 
     AppLogger.debug('Register response keys: ${response.data!.keys.toList()}');
@@ -319,11 +320,6 @@ class AuthRepository {
 }
 
 /// 认证异常
-class AuthException implements Exception {
-  AuthException(this.message);
-
-  final String message;
-
-  @override
-  String toString() => 'AuthException: $message';
+class AuthException extends AppException {
+  const AuthException(super.message);
 }

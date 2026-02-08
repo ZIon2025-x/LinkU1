@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -31,18 +33,33 @@ class FleaMarketView extends StatelessWidget {
   }
 }
 
-class _FleaMarketViewContent extends StatelessWidget {
+class _FleaMarketViewContent extends StatefulWidget {
   const _FleaMarketViewContent();
 
-  static const _categories = <(String, String)>[
-    ('all', '全部'),
-    ('电子产品', '电子产品'),
-    ('书籍教材', '书籍教材'),
-    ('生活用品', '生活用品'),
-    ('服饰鞋包', '服饰鞋包'),
-    ('运动户外', '运动户外'),
-    ('其他', '其他'),
+  @override
+  State<_FleaMarketViewContent> createState() =>
+      _FleaMarketViewContentState();
+}
+
+class _FleaMarketViewContentState extends State<_FleaMarketViewContent> {
+  Timer? _debounceTimer;
+  static const _debounceDuration = Duration(milliseconds: 400);
+
+  List<(String, String)> _getCategories(BuildContext context) => [
+    ('all', context.l10n.fleaMarketCategoryAll),
+    (context.l10n.fleaMarketCategoryKeyElectronics, context.l10n.fleaMarketCategoryElectronics),
+    (context.l10n.fleaMarketCategoryKeyBooks, context.l10n.fleaMarketCategoryBooks),
+    (context.l10n.fleaMarketCategoryKeyDaily, context.l10n.fleaMarketCategoryDailyUse),
+    (context.l10n.fleaMarketCategoryKeyClothing, context.l10n.fleaMarketCategoryClothing),
+    (context.l10n.fleaMarketCategoryKeySports, context.l10n.fleaMarketCategorySports),
+    (context.l10n.fleaMarketCategoryKeyOther, context.l10n.fleaMarketCategoryOther),
   ];
+
+  @override
+  void dispose() {
+    _debounceTimer?.cancel();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -70,7 +87,11 @@ class _FleaMarketViewContent extends StatelessWidget {
                 ),
               ),
               onChanged: (query) {
-                context.read<FleaMarketBloc>().add(FleaMarketSearchChanged(query));
+                _debounceTimer?.cancel();
+                _debounceTimer = Timer(_debounceDuration, () {
+                  if (!mounted) return;
+                  context.read<FleaMarketBloc>().add(FleaMarketSearchChanged(query));
+                });
               },
             ),
           ),
@@ -79,15 +100,16 @@ class _FleaMarketViewContent extends StatelessWidget {
           BlocBuilder<FleaMarketBloc, FleaMarketState>(
             buildWhen: (prev, curr) => prev.selectedCategory != curr.selectedCategory,
             builder: (context, state) {
+              final categories = _getCategories(context);
               return SizedBox(
                 height: 48,
                 child: ListView.separated(
                   scrollDirection: Axis.horizontal,
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  itemCount: _categories.length,
+                  itemCount: categories.length,
                   separatorBuilder: (_, __) => const SizedBox(width: 8),
                   itemBuilder: (context, index) {
-                    final (value, label) = _categories[index];
+                    final (value, label) = categories[index];
                     final isSelected = state.selectedCategory == value;
                     return FilterChip(
                       label: Text(label),
@@ -130,7 +152,7 @@ class _FleaMarketViewContent extends StatelessWidget {
                 // Error state
                 if (state.status == FleaMarketStatus.error && state.items.isEmpty) {
                   return ErrorStateView.loadFailed(
-                    message: state.errorMessage ?? '加载失败',
+                    message: state.errorMessage ?? context.l10n.fleaMarketLoadFailed,
                     onRetry: () {
                       context.read<FleaMarketBloc>().add(const FleaMarketLoadRequested());
                     },
@@ -140,8 +162,8 @@ class _FleaMarketViewContent extends StatelessWidget {
                 // Empty state
                 if (state.isEmpty) {
                   return EmptyStateView.noData(
-                    title: '暂无商品',
-                    description: '还没有商品，点击下方按钮发布第一个商品',
+                    title: context.l10n.fleaMarketNoItems,
+                    description: context.l10n.fleaMarketNoItemsHint,
                   );
                 }
 
@@ -320,7 +342,7 @@ class _FleaMarketItemCard extends StatelessWidget {
                           borderRadius: AppRadius.allPill,
                         ),
                         child: Text(
-                          item.isSold ? '已售出' : '已下架',
+                          item.isSold ? context.l10n.fleaMarketSold : context.l10n.fleaMarketDelisted,
                           style: const TextStyle(
                             color: Colors.white,
                             fontSize: 10,

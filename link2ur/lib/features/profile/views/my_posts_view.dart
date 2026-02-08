@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_radius.dart';
+import '../../../core/utils/l10n_extension.dart';
 import '../../../core/widgets/skeleton_view.dart';
 import '../../../core/widgets/error_state_view.dart';
 import '../../../core/widgets/empty_state_view.dart';
@@ -63,7 +64,7 @@ class _MyPostsViewState extends State<MyPostsView> {
       )..add(const ProfileLoadMyForumPosts(page: 1)),
       child: Scaffold(
         appBar: AppBar(
-          title: const Text('我的帖子'),
+          title: Text(context.l10n.myPostsTitle),
         ),
         body: BlocBuilder<ProfileBloc, ProfileState>(
           builder: (context, state) {
@@ -102,8 +103,8 @@ class _MyPostsViewState extends State<MyPostsView> {
 
     if (state.myForumPosts.isEmpty) {
       return EmptyStateView.noData(
-        title: '暂无帖子',
-        description: '您还没有发布过帖子',
+        title: context.l10n.myPostsEmpty,
+        description: context.l10n.myPostsEmptyDesc,
       );
     }
 
@@ -216,7 +217,7 @@ class _PostCard extends StatelessWidget {
                 ),
                 const Spacer(),
                 Text(
-                  _formatTime(post.createdAt),
+                  _formatTime(context, post.createdAt),
                   style: const TextStyle(
                     fontSize: 12,
                     color: AppColors.textTertiaryLight,
@@ -230,19 +231,19 @@ class _PostCard extends StatelessWidget {
     );
   }
 
-  String _formatTime(DateTime? time) {
+  String _formatTime(BuildContext context, DateTime? time) {
     if (time == null) return '';
     final now = DateTime.now();
     final difference = now.difference(time);
 
     if (difference.inDays > 0) {
-      return '${difference.inDays}天前';
+      return context.l10n.timeDaysAgo(difference.inDays);
     } else if (difference.inHours > 0) {
-      return '${difference.inHours}小时前';
+      return context.l10n.timeHoursAgo(difference.inHours);
     } else if (difference.inMinutes > 0) {
-      return '${difference.inMinutes}分钟前';
+      return context.l10n.timeMinutesAgo(difference.inMinutes);
     } else {
-      return '刚刚';
+      return context.l10n.timeJustNow;
     }
   }
 }

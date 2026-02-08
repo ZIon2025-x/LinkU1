@@ -129,7 +129,7 @@ class _EditProfileContentState extends State<_EditProfileContent> {
       builder: (context, state) {
         if (state.isLoading && state.user == null) {
           return Scaffold(
-            appBar: AppBar(title: const Text('编辑资料')),
+            appBar: AppBar(title: Text(context.l10n.profileEditProfile)),
             body: const Center(child: CircularProgressIndicator()),
           );
         }
@@ -138,7 +138,7 @@ class _EditProfileContentState extends State<_EditProfileContent> {
 
         return Scaffold(
           appBar: AppBar(
-            title: const Text('编辑资料'),
+            title: Text(context.l10n.profileEditProfile),
             actions: [
               TextButton(
                 onPressed: state.isUpdating ? null : _saveProfile,
@@ -148,7 +148,7 @@ class _EditProfileContentState extends State<_EditProfileContent> {
                         height: 20,
                         child: CircularProgressIndicator(strokeWidth: 2),
                       )
-                    : const Text('保存'),
+                    : Text(context.l10n.commonSave),
               ),
             ],
           ),
@@ -220,18 +220,18 @@ class _EditProfileContentState extends State<_EditProfileContent> {
                   TextFormField(
                     controller: _nameController,
                     decoration: InputDecoration(
-                      labelText: '姓名',
-                      hintText: '请输入姓名',
+                      labelText: context.l10n.profileName,
+                      hintText: context.l10n.profileEnterName,
                       prefixIcon: const Icon(Icons.person_outline),
                       border: OutlineInputBorder(
                           borderRadius: AppRadius.allMedium),
                     ),
                     validator: (value) {
                       if (value == null || value.trim().isEmpty) {
-                        return '请输入姓名';
+                        return context.l10n.profileNameRequired;
                       }
                       if (value.trim().length < 3) {
-                        return '姓名至少需要3个字符';
+                        return context.l10n.profileNameMinLength;
                       }
                       return null;
                     },
@@ -242,8 +242,8 @@ class _EditProfileContentState extends State<_EditProfileContent> {
                   TextFormField(
                     controller: _bioController,
                     decoration: InputDecoration(
-                      labelText: '个人简介',
-                      hintText: '介绍一下自己...',
+                      labelText: context.l10n.profileBio,
+                      hintText: context.l10n.profileBioHint,
                       prefixIcon: const Icon(Icons.description_outlined),
                       border: OutlineInputBorder(
                           borderRadius: AppRadius.allMedium),
@@ -257,8 +257,8 @@ class _EditProfileContentState extends State<_EditProfileContent> {
                   TextFormField(
                     controller: _residenceCityController,
                     decoration: InputDecoration(
-                      labelText: '居住城市',
-                      hintText: '例如：伦敦',
+                      labelText: context.l10n.profileCity,
+                      hintText: context.l10n.profileCityHint,
                       prefixIcon: const Icon(Icons.location_city_outlined),
                       border: OutlineInputBorder(
                           borderRadius: AppRadius.allMedium),
@@ -270,7 +270,7 @@ class _EditProfileContentState extends State<_EditProfileContent> {
                   SizedBox(
                     width: double.infinity,
                     child: PrimaryButton(
-                      text: '保存',
+                      text: context.l10n.commonSave,
                       onPressed: state.isUpdating ? null : _saveProfile,
                       isLoading: state.isUpdating,
                     ),

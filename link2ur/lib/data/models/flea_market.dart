@@ -1,4 +1,5 @@
 import 'package:equatable/equatable.dart';
+import '../../core/constants/app_constants.dart';
 
 /// 跳蚤市场商品模型
 /// 参考后端 FleaMarketItemResponse
@@ -14,7 +15,7 @@ class FleaMarketItem extends Equatable {
     this.latitude,
     this.longitude,
     this.category,
-    this.status = 'active',
+    this.status = AppConstants.fleaMarketStatusActive,
     required this.sellerId,
     this.sellerUserLevel,
     this.viewCount = 0,
@@ -76,10 +77,10 @@ class FleaMarketItem extends Equatable {
   bool get hasImages => images.isNotEmpty;
 
   /// 是否在售
-  bool get isActive => status == 'active';
+  bool get isActive => status == AppConstants.fleaMarketStatusActive;
 
   /// 是否已售出
-  bool get isSold => status == 'sold';
+  bool get isSold => status == AppConstants.fleaMarketStatusSold;
 
   /// 价格显示
   String get priceDisplay => '£${price.toStringAsFixed(2)}';
@@ -102,7 +103,7 @@ class FleaMarketItem extends Equatable {
       latitude: (json['latitude'] as num?)?.toDouble(),
       longitude: (json['longitude'] as num?)?.toDouble(),
       category: json['category'] as String?,
-      status: json['status'] as String? ?? 'active',
+      status: json['status'] as String? ?? AppConstants.fleaMarketStatusActive,
       sellerId: json['seller_id']?.toString() ?? '',
       sellerUserLevel: json['seller_user_level'] as String?,
       viewCount: json['view_count'] as int? ?? 0,

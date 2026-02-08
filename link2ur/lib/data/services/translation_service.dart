@@ -2,6 +2,7 @@ import 'dart:ui' as ui;
 
 import '../../core/constants/api_endpoints.dart';
 import '../../core/utils/logger.dart';
+import '../../core/utils/app_exception.dart';
 import 'api_service.dart';
 
 /// 翻译服务
@@ -110,7 +111,7 @@ class TranslationService {
     String? sourceLanguage,
   }) async {
     if (_apiService == null) {
-      throw TranslationException('TranslationService not initialized');
+      throw const TranslationException('TranslationService not initialized');
     }
 
     if (text.trim().isEmpty) return text;
@@ -162,7 +163,7 @@ class TranslationService {
     String? targetLanguage,
   }) async {
     if (_apiService == null) {
-      throw TranslationException('TranslationService not initialized');
+      throw const TranslationException('TranslationService not initialized');
     }
 
     if (texts.isEmpty) return {};
@@ -242,10 +243,6 @@ class TranslationService {
 }
 
 /// 翻译异常
-class TranslationException implements Exception {
-  TranslationException(this.message);
-  final String message;
-
-  @override
-  String toString() => 'TranslationException: $message';
+class TranslationException extends AppException {
+  const TranslationException(super.message);
 }

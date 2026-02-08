@@ -5,6 +5,7 @@ import 'package:flutter_stripe/flutter_stripe.dart';
 
 import '../../core/config/app_config.dart';
 import '../../core/utils/logger.dart';
+import '../../core/utils/app_exception.dart';
 import '../models/payment.dart';
 
 /// Stripe 支付服务
@@ -52,7 +53,7 @@ class PaymentService {
     String countryCode = 'GB',
   }) async {
     if (!Platform.isIOS) {
-      throw PaymentServiceException('Apple Pay is only available on iOS');
+      throw const PaymentServiceException('Apple Pay is only available on iOS');
     }
 
     try {
@@ -151,10 +152,6 @@ class PaymentService {
 }
 
 /// 支付服务异常
-class PaymentServiceException implements Exception {
-  PaymentServiceException(this.message);
-  final String message;
-
-  @override
-  String toString() => 'PaymentServiceException: $message';
+class PaymentServiceException extends AppException {
+  const PaymentServiceException(super.message);
 }

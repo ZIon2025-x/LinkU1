@@ -1,4 +1,5 @@
 import 'package:equatable/equatable.dart';
+import '../../core/constants/app_constants.dart';
 
 /// 学生认证模型
 /// 参考后端 StudentVerification status response
@@ -30,13 +31,13 @@ class StudentVerification extends Equatable {
   final bool tokenExpired;
 
   /// 是否正在审核中
-  bool get isPending => status == 'pending';
+  bool get isPending => status == AppConstants.verificationStatusPending;
 
   /// 是否已过期
-  bool get isExpired => status == 'expired';
+  bool get isExpired => status == AppConstants.verificationStatusExpired;
 
   /// 是否已被撤销
-  bool get isRevoked => status == 'revoked';
+  bool get isRevoked => status == AppConstants.verificationStatusRevoked;
 
   /// 是否即将过期（30天内）
   bool get isExpiringSoon =>
@@ -45,13 +46,13 @@ class StudentVerification extends Equatable {
   /// 状态显示文本
   String get statusText {
     switch (status) {
-      case 'pending':
+      case AppConstants.verificationStatusPending:
         return '审核中';
       case 'verified':
         return '已认证';
-      case 'expired':
+      case AppConstants.verificationStatusExpired:
         return '已过期';
-      case 'revoked':
+      case AppConstants.verificationStatusRevoked:
         return '已撤销';
       default:
         return '未认证';

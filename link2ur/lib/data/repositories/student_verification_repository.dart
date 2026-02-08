@@ -1,6 +1,7 @@
 import '../models/student_verification.dart';
 import '../services/api_service.dart';
 import '../../core/constants/api_endpoints.dart';
+import '../../core/utils/app_exception.dart';
 
 /// 学生认证仓库
 /// 与iOS StudentVerificationViewModel + 后端路由对齐
@@ -63,11 +64,6 @@ class StudentVerificationRepository {
 }
 
 /// 学生认证异常
-class StudentVerificationException implements Exception {
-  StudentVerificationException(this.message);
-
-  final String message;
-
-  @override
-  String toString() => 'StudentVerificationException: $message';
+class StudentVerificationException extends AppException {
+  const StudentVerificationException(super.message);
 }

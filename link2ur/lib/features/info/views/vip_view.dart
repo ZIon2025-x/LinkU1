@@ -31,17 +31,17 @@ class VipView extends StatelessWidget {
                     end: Alignment.bottomRight,
                   ),
                 ),
-                child: const Center(
+                child: Center(
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      SizedBox(height: 40),
-                      Icon(Icons.workspace_premium,
+                      const SizedBox(height: 40),
+                      const Icon(Icons.workspace_premium,
                           size: 56, color: Colors.white),
-                      SizedBox(height: 8),
+                      const SizedBox(height: 8),
                       Text(
-                        'VIP 会员',
-                        style: TextStyle(
+                        context.l10n.vipMember,
+                        style: const TextStyle(
                           color: Colors.white,
                           fontSize: 22,
                           fontWeight: FontWeight.bold,
@@ -113,9 +113,9 @@ class VipView extends StatelessWidget {
                   color: const Color(0xFFFFD700).withValues(alpha: 0.2),
                   borderRadius: AppRadius.allPill,
                 ),
-                child: const Text(
-                  '普通用户',
-                  style: TextStyle(
+                child: Text(
+                  context.l10n.vipRegularUser,
+                  style: const TextStyle(
                     color: Color(0xFFFFD700),
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
@@ -125,9 +125,9 @@ class VipView extends StatelessWidget {
             ],
           ),
           AppSpacing.vMd,
-          const Text(
-            '升级VIP，解锁更多特权',
-            style: TextStyle(
+          Text(
+            context.l10n.vipUnlockPrivileges,
+            style: const TextStyle(
               color: Colors.white,
               fontSize: 18,
               fontWeight: FontWeight.w600,
@@ -135,7 +135,7 @@ class VipView extends StatelessWidget {
           ),
           AppSpacing.vSm,
           Text(
-            '享受专属权益，提升任务效率',
+            context.l10n.vipEnjoyBenefits,
             style: TextStyle(
               color: Colors.white.withValues(alpha: 0.7),
               fontSize: 14,
@@ -154,9 +154,9 @@ class VipView extends StatelessWidget {
                 ),
                 padding: const EdgeInsets.symmetric(vertical: 12),
               ),
-              child: const Text(
-                '立即升级',
-                style: TextStyle(fontWeight: FontWeight.bold),
+              child: Text(
+                context.l10n.vipBuyNow,
+                style: const TextStyle(fontWeight: FontWeight.bold),
               ),
             ),
           ),
@@ -166,41 +166,42 @@ class VipView extends StatelessWidget {
   }
 
   Widget _buildBenefitsSection(BuildContext context) {
+    final l10n = context.l10n;
     final benefits = [
-      const _BenefitItem(
+      _BenefitItem(
         icon: Icons.bolt,
-        title: '优先推荐',
-        description: '任务和帖子获得更高曝光度',
+        title: l10n.infoVipPriorityRecommend,
+        description: l10n.vipPriorityRecommendationDesc,
         color: AppColors.primary,
       ),
-      const _BenefitItem(
+      _BenefitItem(
         icon: Icons.verified,
-        title: 'VIP标识',
-        description: '独特VIP身份标识，提升信任度',
-        color: Color(0xFFFFD700),
+        title: l10n.infoVipBadgeLabel,
+        description: l10n.vipExclusiveBadgeDesc,
+        color: const Color(0xFFFFD700),
       ),
-      const _BenefitItem(
+      _BenefitItem(
         icon: Icons.discount,
-        title: '手续费优惠',
-        description: '平台手续费享受折扣',
+        title: l10n.infoVipFeeDiscount,
+        description: l10n.vipFeeDiscountDesc,
         color: AppColors.success,
       ),
-      const _BenefitItem(
+      _BenefitItem(
         icon: Icons.support_agent,
-        title: '专属客服',
-        description: '优先客服响应，快速解决问题',
+        title: l10n.infoVipCustomerService,
+        description: l10n.vipExclusiveBadgeDesc,
         color: AppColors.accentPink,
       ),
-      const _BenefitItem(
+      _BenefitItem(
         icon: Icons.card_giftcard,
-        title: '专属优惠券',
-        description: '每月赠送专属优惠券',
+        title: l10n.infoVipExclusiveCoupon,
+        description: l10n.vipExclusiveActivityDesc,
         color: AppColors.accent,
       ),
-      const _BenefitItem(
+      _BenefitItem(
         icon: Icons.analytics,
-        title: '数据分析',
-        description: '查看任务和帖子的详细数据统计',
+        title: l10n.infoVipDataAnalytics,
+        description: l10n.vipExclusiveActivityDesc,
         color: Colors.teal,
       ),
     ];
@@ -208,9 +209,9 @@ class VipView extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          'VIP 专属权益',
-          style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+        Text(
+          context.l10n.infoMemberBenefits,
+          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
         ),
         AppSpacing.vMd,
         GridView.builder(
@@ -266,30 +267,40 @@ class VipView extends StatelessWidget {
   }
 
   Widget _buildPlansSection(BuildContext context) {
+    final l10n = context.l10n;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          '会员套餐',
-          style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+        Text(
+          l10n.vipSelectPackage,
+          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
         ),
         AppSpacing.vMd,
         _PlanCard(
-          title: '月度会员',
+          title: l10n.infoVipMonthly,
           price: '\$4.99',
-          period: '/ 月',
-          features: const ['全部VIP权益', '随时取消'],
+          period: l10n.vipPerMonth,
+          features: [
+            l10n.vipPlanFeatureMonthly1,
+            l10n.vipPlanFeatureMonthly2,
+            l10n.vipPlanFeatureMonthly3,
+          ],
           isPrimary: false,
           onTap: () => context.push('/vip/purchase'),
         ),
         AppSpacing.vSm,
         _PlanCard(
-          title: '年度会员',
+          title: l10n.infoVipYearly,
           price: '\$39.99',
-          period: '/ 年',
-          features: const ['全部VIP权益', '节省33%', '额外赠送3张优惠券'],
+          period: l10n.vipPerYear,
+          features: [
+            l10n.vipPlanFeatureYearly1,
+            l10n.vipPlanFeatureYearly2,
+            l10n.vipPlanFeatureYearly3,
+            l10n.vipPlanFeatureYearly4,
+          ],
           isPrimary: true,
-          badge: '最划算',
+          badge: l10n.vipPlanBadgeBestValue,
           onTap: () => context.push('/vip/purchase'),
         ),
       ],
@@ -297,25 +308,26 @@ class VipView extends StatelessWidget {
   }
 
   Widget _buildFaqSection(BuildContext context) {
-    return const Column(
+    final l10n = context.l10n;
+    return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          '常见问题',
-          style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+          l10n.infoFAQTitle,
+          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
         ),
         AppSpacing.vMd,
         _FaqItem(
-          question: 'VIP会员可以退款吗？',
-          answer: '会员订阅可在试用期内免费取消。超过试用期后，当期费用不予退还，但您可以在下一个计费周期前取消。',
+          question: l10n.vipFaqCanCancel,
+          answer: l10n.vipFaqCanCancelAnswer,
         ),
         _FaqItem(
-          question: '会员权益何时生效？',
-          answer: '付款成功后立即生效，您可以立刻享受所有VIP权益。',
+          question: l10n.vipFaqWhenEffective,
+          answer: l10n.vipFaqWhenEffectiveAnswer,
         ),
         _FaqItem(
-          question: '如何取消自动续费？',
-          answer: '在"设置-会员管理"中可以随时取消自动续费。取消后，当期会员权益仍可使用至到期日。',
+          question: l10n.vipFaqHowToUpgrade,
+          answer: l10n.vipFaqHowToUpgradeAnswer,
         ),
       ],
     );
@@ -323,7 +335,7 @@ class VipView extends StatelessWidget {
 }
 
 class _BenefitItem {
-  const _BenefitItem({
+  _BenefitItem({
     required this.icon,
     required this.title,
     required this.description,

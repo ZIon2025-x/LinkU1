@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../constants/app_constants.dart';
 
 /// 应用颜色系统
 /// 参考iOS DesignSystem.swift - AppColors
@@ -100,6 +101,31 @@ class AppColors {
   static const Color dividerLight = Color(0xFFE5E5EA);
   static const Color dividerDark = Color(0xFF38383A);
 
+  // ==================== 桌面端 Notion/Linear 风格 ====================
+  /// 桌面端文字色（浅色模式）
+  static const Color desktopTextLight = Color(0xFF37352F);
+
+  /// 桌面端输入框/悬浮背景（浅色模式）
+  static const Color desktopHoverLight = Color(0xFFF0F0EE);
+
+  /// 桌面端边框/分隔线（浅色模式）
+  static const Color desktopBorderLight = Color(0xFFE8E8E5);
+
+  /// 桌面端占位文字（浅色模式）
+  static const Color desktopPlaceholderLight = Color(0xFF9B9A97);
+
+  /// 通知红点
+  static const Color badgeRed = Color(0xFFEB5757);
+
+  /// 价格红色
+  static const Color priceRed = Color(0xFFE64D4D);
+
+  /// VIP 金色渐变
+  static const List<Color> gradientGold = [
+    Color(0xFFFFD700),
+    Color(0xFFFF8C00),
+  ];
+
   // ==================== 特殊颜色 ====================
   /// 遮罩层
   static const Color overlay = Color(0x80000000);
@@ -125,17 +151,17 @@ class AppColors {
   // ==================== 任务状态颜色 ====================
   static Color taskStatusColor(String status) {
     switch (status) {
-      case 'open':
+      case AppConstants.taskStatusOpen:
         return success;
-      case 'in_progress':
+      case AppConstants.taskStatusInProgress:
         return primary;
-      case 'pending_confirmation':
+      case AppConstants.taskStatusPendingConfirmation:
         return warning;
-      case 'completed':
+      case AppConstants.taskStatusCompleted:
         return const Color(0xFF8E8E93);
-      case 'cancelled':
+      case AppConstants.taskStatusCancelled:
         return error;
-      case 'disputed':
+      case AppConstants.taskStatusDisputed:
         return accentPink;
       default:
         return textSecondaryLight;

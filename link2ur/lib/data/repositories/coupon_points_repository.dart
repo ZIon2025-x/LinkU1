@@ -1,6 +1,7 @@
 import '../models/coupon_points.dart';
 import '../services/api_service.dart';
 import '../../core/constants/api_endpoints.dart';
+import '../../core/utils/app_exception.dart';
 
 /// 积分优惠券仓库
 /// 与iOS CouponPointsViewModel + 后端 coupon_points_routes 对齐
@@ -233,11 +234,6 @@ class CouponPointsRepository {
 }
 
 /// 积分优惠券异常
-class CouponPointsException implements Exception {
-  CouponPointsException(this.message);
-
-  final String message;
-
-  @override
-  String toString() => 'CouponPointsException: $message';
+class CouponPointsException extends AppException {
+  const CouponPointsException(super.message);
 }
