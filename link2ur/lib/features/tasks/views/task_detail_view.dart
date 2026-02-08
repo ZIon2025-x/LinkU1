@@ -68,22 +68,35 @@ class _TaskDetailContent extends StatelessWidget {
     );
   }
 
-  /// 透明AppBar (对齐iOS - 图片延伸到状态栏下方)
+  /// 透明AppBar - 始终透明，按钮浮在图片/占位上方
   PreferredSizeWidget _buildAppBar(
       BuildContext context, TaskDetailState state) {
-    final hasImages =
-        state.task != null && state.task!.images.isNotEmpty;
-
     return AppBar(
-      backgroundColor:
-          hasImages ? Colors.transparent : null,
+      backgroundColor: Colors.transparent,
       elevation: 0,
-      leading: _buildBackButton(context, hasImages),
+      surfaceTintColor: Colors.transparent,
+      scrolledUnderElevation: 0,
+      forceMaterialTransparency: true,
+      leading: Padding(
+        padding: const EdgeInsets.all(4),
+        child: GestureDetector(
+          onTap: () => Navigator.of(context).pop(),
+          child: Container(
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(
+              color: Colors.black.withValues(alpha: 0.3),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(Icons.arrow_back_ios_new,
+                size: 18, color: Colors.white),
+          ),
+        ),
+      ),
       actions: [
         if (state.task != null) ...[
           _buildAppBarButton(
             icon: Icons.share_outlined,
-            hasImages: hasImages,
             onPressed: () {
               HapticFeedback.selectionClick();
               CustomSharePanel.show(
@@ -96,7 +109,6 @@ class _TaskDetailContent extends StatelessWidget {
           ),
           _buildAppBarButton(
             icon: Icons.more_horiz,
-            hasImages: hasImages,
             onPressed: () {},
           ),
         ],
@@ -104,38 +116,11 @@ class _TaskDetailContent extends StatelessWidget {
     );
   }
 
-  /// 返回按钮 (对齐iOS - 图片上方用白色圆底)
-  Widget _buildBackButton(BuildContext context, bool hasImages) {
-    if (!hasImages) {
-      return const BackButton();
-    }
-    return Padding(
-      padding: const EdgeInsets.all(4),
-      child: GestureDetector(
-        onTap: () => Navigator.of(context).pop(),
-        child: Container(
-          width: 36,
-          height: 36,
-          decoration: BoxDecoration(
-            color: Colors.black.withValues(alpha: 0.3),
-            shape: BoxShape.circle,
-          ),
-          child: const Icon(Icons.arrow_back_ios_new,
-              size: 18, color: Colors.white),
-        ),
-      ),
-    );
-  }
-
   /// AppBar上的圆形按钮
   Widget _buildAppBarButton({
     required IconData icon,
-    required bool hasImages,
     required VoidCallback onPressed,
   }) {
-    if (!hasImages) {
-      return IconButton(icon: Icon(icon), onPressed: onPressed);
-    }
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 4),
       child: GestureDetector(
@@ -208,33 +193,46 @@ class _TaskDetailContent extends StatelessWidget {
 
   Widget _buildBottomBar(BuildContext context, TaskDetailState state) {
     final task = state.task!;
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Theme.of(context).scaffoldBackgroundColor,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 10,
-            offset: const Offset(0, -2),
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return ClipRect(
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
+        child: Container(
+          decoration: BoxDecoration(
+            color: (isDark
+                    ? AppColors.cardBackgroundDark
+                    : AppColors.cardBackgroundLight)
+                .withValues(alpha: 0.85),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.05),
+                blurRadius: 10,
+                offset: const Offset(0, -5),
+              ),
+            ],
           ),
-        ],
-      ),
-      child: SafeArea(
-        child: Row(
-          children: [
-            IconActionButton(
-              icon: Icons.chat_bubble_outline,
-              onPressed: () {
-                context.push('/chat/${task.posterId}');
-              },
-              backgroundColor: AppColors.skeletonBase,
+          child: SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(
+                  horizontal: 16, vertical: 12),
+              child: Row(
+                children: [
+                  IconActionButton(
+                    icon: Icons.chat_bubble_outline,
+                    onPressed: () {
+                      context.push('/chat/${task.posterId}');
+                    },
+                    backgroundColor: AppColors.skeletonBase,
+                  ),
+                  AppSpacing.hMd,
+                  Expanded(
+                    child: _buildActionButton(context, state),
+                  ),
+                ],
+              ),
             ),
-            AppSpacing.hMd,
-            Expanded(
-              child: _buildActionButton(context, state),
-            ),
-          ],
+          ),
         ),
       ),
     );
@@ -357,6 +355,12 @@ class _TaskImageCarouselState extends State<_TaskImageCarousel> {
               setState(() => _currentPage = index);
             },
             itemBuilder: (context, index) {
+              final imageWidget = AsyncImageView(
+                imageUrl: images[index],
+                width: double.infinity,
+                height: 300,
+                fit: BoxFit.cover,
+              );
               return GestureDetector(
                 onTap: () {
                   FullScreenImageView.show(
@@ -365,14 +369,36 @@ class _TaskImageCarouselState extends State<_TaskImageCarousel> {
                     initialIndex: index,
                   );
                 },
-                child: AsyncImageView(
-                  imageUrl: images[index],
-                  width: double.infinity,
-                  height: 300,
-                  fit: BoxFit.cover,
-                ),
+                child: index == 0
+                    ? Hero(
+                        tag: 'task_image_${widget.task.id}',
+                        child: imageWidget,
+                      )
+                    : imageWidget,
               );
             },
+          ),
+
+          // 底部渐变过渡 (对标iOS - gradient transparent → background)
+          Positioned(
+            left: 0,
+            right: 0,
+            bottom: 0,
+            height: 60,
+            child: Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    Colors.transparent,
+                    Theme.of(context)
+                        .scaffoldBackgroundColor
+                        .withValues(alpha: 0.6),
+                  ],
+                ),
+              ),
+            ),
           ),
 
           // 自定义页面指示器 (对齐iOS - Capsule dots + 毛玻璃背景)
@@ -860,11 +886,36 @@ class _TaskPosterCard extends StatelessWidget {
             : null,
         child: Row(
           children: [
-            // 头像 (对齐iOS AsyncImageView 50x50 circle)
-            AvatarView(
-              imageUrl: task.poster?.avatar,
-              name: task.poster?.name ?? '发布者',
-              size: 50,
+            // 头像 (对齐iOS AvatarView 52 + gradient stroke ring)
+            Container(
+              width: 52,
+              height: 52,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: const LinearGradient(
+                  colors: [AppColors.primary, Color(0xFF0059B3)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.primary.withValues(alpha: 0.2),
+                    blurRadius: 4,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(2),
+                child: task.poster?.avatar != null
+                    ? CircleAvatar(
+                        backgroundImage:
+                            NetworkImage(task.poster!.avatar!),
+                        backgroundColor: Colors.transparent,
+                      )
+                    : const Icon(Icons.person,
+                        size: 22, color: Colors.white),
+              ),
             ),
             const SizedBox(width: AppSpacing.md),
 
@@ -905,7 +956,7 @@ class _TaskPosterCard extends StatelessWidget {
               ),
             ),
 
-            // 角色标签 + 箭头
+            // 角色标签 + 箭头圆圈 (对标iOS chevron in circle)
             Text(
               '发布者',
               style: AppTypography.caption.copyWith(
@@ -914,12 +965,22 @@ class _TaskPosterCard extends StatelessWidget {
                     : AppColors.textSecondaryLight,
               ),
             ),
-            const SizedBox(width: 4),
-            Icon(
-              Icons.chevron_right,
-              color: isDark
-                  ? AppColors.textTertiaryDark
-                  : AppColors.textTertiaryLight,
+            const SizedBox(width: 8),
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: isDark
+                    ? AppColors.backgroundDark
+                    : AppColors.backgroundLight,
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                Icons.chevron_right,
+                size: 14,
+                color: isDark
+                    ? AppColors.textTertiaryDark
+                    : AppColors.textTertiaryLight,
+              ),
             ),
           ],
         ),

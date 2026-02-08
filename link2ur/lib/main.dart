@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_native_splash/flutter_native_splash.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 
 import 'app.dart';
@@ -13,7 +14,10 @@ import 'data/services/iap_service.dart';
 import 'data/services/storage_service.dart';
 
 void main() async {
-  WidgetsFlutterBinding.ensureInitialized();
+  WidgetsBinding widgetsBinding = WidgetsFlutterBinding.ensureInitialized();
+
+  // 保持原生启动画面直到 Flutter 初始化完毕
+  FlutterNativeSplash.preserve(widgetsBinding: widgetsBinding);
 
   // 初始化日志
   AppLogger.init();
@@ -61,6 +65,10 @@ void main() async {
   // 初始化 IAP 内购服务
   final apiService = ApiService();
   await IAPService.instance.initialize(apiService: apiService);
+
+  // 注意：不在这里 remove 原生启动画面
+  // 原生启动画面会保持到 app.dart 中认证检查完成后再移除
+  // 这样用户看到的是：原生 logo → 直接进主界面，没有重复的 Flutter SplashView
 
   runApp(const Link2UrApp());
 }

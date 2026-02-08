@@ -6,7 +6,8 @@ import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_radius.dart';
 import '../../../core/utils/l10n_extension.dart';
-import '../../../core/widgets/loading_view.dart';
+import '../../../core/widgets/animated_list_item.dart';
+import '../../../core/widgets/skeleton_view.dart';
 import '../../../core/widgets/error_state_view.dart';
 import '../../../core/widgets/empty_state_view.dart';
 import '../../../core/widgets/async_image_view.dart';
@@ -123,7 +124,7 @@ class _FleaMarketViewContent extends StatelessWidget {
               builder: (context, state) {
                 // Loading state
                 if (state.isLoading && state.items.isEmpty) {
-                  return const LoadingView();
+                  return const SkeletonList();
                 }
 
                 // Error state
@@ -151,6 +152,7 @@ class _FleaMarketViewContent extends StatelessWidget {
                     await Future.delayed(const Duration(milliseconds: 500));
                   },
                   child: GridView.builder(
+                    clipBehavior: Clip.none,
                     padding: AppSpacing.allMd,
                     gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                       crossAxisCount: 2,
@@ -170,7 +172,10 @@ class _FleaMarketViewContent extends StatelessWidget {
                         );
                       }
                       final item = state.items[index];
-                      return _FleaMarketItemCard(item: item);
+                      return AnimatedListItem(
+                        index: index,
+                        child: _FleaMarketItemCard(item: item),
+                      );
                     },
                   ),
                 );
@@ -241,11 +246,14 @@ class _FleaMarketItemCard extends StatelessWidget {
                     borderRadius:
                         const BorderRadius.vertical(top: Radius.circular(16)),
                     child: item.firstImage != null
-                        ? AsyncImageView(
-                            imageUrl: item.firstImage!,
-                            width: double.infinity,
-                            height: double.infinity,
-                            fit: BoxFit.cover,
+                        ? Hero(
+                            tag: 'flea_market_image_${item.id}',
+                            child: AsyncImageView(
+                              imageUrl: item.firstImage!,
+                              width: double.infinity,
+                              height: double.infinity,
+                              fit: BoxFit.cover,
+                            ),
                           )
                         : Container(
                             color: AppColors.primary.withValues(alpha: 0.05),

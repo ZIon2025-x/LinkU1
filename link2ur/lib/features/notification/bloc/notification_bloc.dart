@@ -123,6 +123,34 @@ class NotificationBloc extends Bloc<NotificationEvent, NotificationState> {
 
   final NotificationRepository _notificationRepository;
 
+  /// 互动消息类型前缀（论坛 + 排行榜）
+  static const _interactionTypePrefixes = ['forum_', 'leaderboard_'];
+
+  /// 判断是否为互动消息类型
+  static bool _isInteractionType(String type) {
+    return _interactionTypePrefixes.any((prefix) => type.startsWith(prefix));
+  }
+
+  /// 判断是否为系统消息类型（非互动类型）
+  static bool _isSystemType(String type) {
+    return !_isInteractionType(type);
+  }
+
+  /// 根据请求的类型过滤通知列表
+  List<AppNotification> _filterNotifications(
+    List<AppNotification> notifications,
+    String? type,
+  ) {
+    if (type == 'interaction') {
+      // 互动消息：只保留 forum_* 和 leaderboard_* 类型
+      return notifications.where((n) => _isInteractionType(n.type)).toList();
+    } else if (type == 'system') {
+      // 系统消息：排除 forum_* 和 leaderboard_* 类型
+      return notifications.where((n) => _isSystemType(n.type)).toList();
+    }
+    return notifications;
+  }
+
   Future<void> _onLoadRequested(
     NotificationLoadRequested event,
     Emitter<NotificationState> emit,
@@ -130,17 +158,59 @@ class NotificationBloc extends Bloc<NotificationEvent, NotificationState> {
     emit(state.copyWith(status: NotificationStatus.loading));
 
     try {
-      final response = await _notificationRepository.getNotifications(
-        page: 1,
-        type: event.type,
-      );
+      NotificationListResponse response;
+
+      if (event.type == 'interaction') {
+        // 互动消息：合并论坛通知 + 排行榜相关的系统通知
+        // 先加载论坛通知
+        final forumResponse = await _notificationRepository.getForumNotifications(
+          page: 1,
+        );
+        // 再加载系统通知中的排行榜部分
+        final systemResponse = await _notificationRepository.getNotifications(
+          page: 1,
+        );
+
+        // 合并：论坛通知 + 系统通知中 leaderboard_* 类型
+        final leaderboardNotifications = systemResponse.notifications
+            .where((n) => n.type.startsWith('leaderboard_'))
+            .toList();
+
+        final allInteraction = [
+          ...forumResponse.notifications,
+          ...leaderboardNotifications,
+        ];
+
+        // 按时间排序（最新在前）
+        allInteraction.sort((a, b) {
+          final aTime = a.createdAt ?? DateTime(2000);
+          final bTime = b.createdAt ?? DateTime(2000);
+          return bTime.compareTo(aTime);
+        });
+
+        response = NotificationListResponse(
+          notifications: allInteraction,
+          total: allInteraction.length,
+          page: 1,
+          pageSize: 20,
+        );
+      } else {
+        // 系统消息或全部
+        response = await _notificationRepository.getNotifications(
+          page: 1,
+          type: event.type,
+        );
+      }
+
+      // 客户端二次过滤确保数据干净
+      final filtered = _filterNotifications(response.notifications, event.type);
 
       emit(state.copyWith(
         status: NotificationStatus.loaded,
-        notifications: response.notifications,
-        total: response.total,
+        notifications: filtered,
+        total: filtered.length,
         page: 1,
-        hasMore: response.hasMore,
+        hasMore: event.type == 'interaction' ? false : response.hasMore,
         selectedType: event.type,
       ));
     } catch (e) {
@@ -175,6 +245,7 @@ class NotificationBloc extends Bloc<NotificationEvent, NotificationState> {
       ));
     } catch (e) {
       AppLogger.error('Failed to load more notifications', e);
+      emit(state.copyWith(hasMore: false));
     }
   }
 

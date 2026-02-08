@@ -3,6 +3,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/design/app_spacing.dart';
+import '../../../core/utils/l10n_extension.dart';
+import '../../../core/widgets/app_feedback.dart';
 import '../../../data/repositories/forum_repository.dart';
 import '../bloc/forum_bloc.dart';
 import '../../../data/models/forum.dart';
@@ -31,16 +33,12 @@ class _CreatePostViewState extends State<CreatePostView> {
   void _submit(BuildContext context) {
     if (_titleController.text.trim().isEmpty ||
         _contentController.text.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('请填写标题和内容')),
-      );
+      AppFeedback.showWarning(context, context.l10n.feedbackFillTitleAndContent);
       return;
     }
 
     if (_selectedCategoryId == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('请选择分类')),
-      );
+      AppFeedback.showWarning(context, context.l10n.feedbackSelectCategory);
       return;
     }
 
@@ -65,15 +63,11 @@ class _CreatePostViewState extends State<CreatePostView> {
       child: BlocConsumer<ForumBloc, ForumState>(
         listener: (context, state) {
           if (state.isCreatingPost == false && state.errorMessage != null) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(state.errorMessage!)),
-            );
+            AppFeedback.showError(context, state.errorMessage!);
           } else if (state.isCreatingPost == false &&
               state.posts.isNotEmpty &&
               state.posts.first.title == _titleController.text.trim()) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('发布成功')),
-            );
+            AppFeedback.showSuccess(context, context.l10n.feedbackPostPublishSuccess);
             context.pop();
           }
         },

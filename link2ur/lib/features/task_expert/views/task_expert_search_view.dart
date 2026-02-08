@@ -6,7 +6,7 @@ import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_radius.dart';
 import '../../../core/utils/l10n_extension.dart';
-import '../../../core/widgets/loading_view.dart';
+import '../../../core/widgets/skeleton_view.dart';
 import '../../../core/widgets/empty_state_view.dart';
 import '../../../data/models/task_expert.dart';
 import '../../../data/repositories/task_expert_repository.dart';
@@ -82,7 +82,7 @@ class _TaskExpertSearchContentState
           final results = state.searchResults;
 
           if (state.isLoading) {
-            return const LoadingView();
+            return const SkeletonList();
           }
 
           if (!_hasSearched) {
@@ -110,6 +110,7 @@ class _TaskExpertSearchContentState
           }
 
           return ListView.separated(
+            clipBehavior: Clip.none,
             padding: const EdgeInsets.all(AppSpacing.md),
             itemCount: results.length,
             separatorBuilder: (_, __) =>

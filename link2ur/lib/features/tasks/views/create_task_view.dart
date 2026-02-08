@@ -5,6 +5,8 @@ import 'package:go_router/go_router.dart';
 import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_radius.dart';
+import '../../../core/utils/l10n_extension.dart';
+import '../../../core/widgets/app_feedback.dart';
 import '../../../core/widgets/buttons.dart';
 import '../../../core/utils/validators.dart';
 import '../../../data/models/task.dart';
@@ -107,17 +109,10 @@ class _CreateTaskContentState extends State<_CreateTaskContent> {
     return BlocConsumer<CreateTaskBloc, CreateTaskState>(
       listener: (context, state) {
         if (state.isSuccess) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('任务发布成功')),
-          );
+          AppFeedback.showSuccess(context, context.l10n.feedbackTaskPublishSuccess);
           context.pop();
         } else if (state.status == CreateTaskStatus.error) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(state.errorMessage ?? '发布失败'),
-              backgroundColor: AppColors.error,
-            ),
-          );
+          AppFeedback.showError(context, state.errorMessage ?? context.l10n.feedbackPublishFailed);
         }
       },
       builder: (context, state) {

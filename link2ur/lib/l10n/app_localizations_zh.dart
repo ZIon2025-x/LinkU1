@@ -5602,6 +5602,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get notificationForum => '论坛通知';
 
   @override
+  String get notificationInteraction => '互动消息';
+
+  @override
   String get errorNetworkTimeout => '网络连接超时';
 
   @override
@@ -5654,6 +5657,53 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get notificationPermissionSkip => '暂时跳过';
+
+  @override
+  String get feedbackPublishSuccess => '发布成功';
+
+  @override
+  String get feedbackPublishFailed => '发布失败';
+
+  @override
+  String get feedbackTaskPublishSuccess => '任务发布成功';
+
+  @override
+  String get feedbackPostPublishSuccess => '帖子发布成功';
+
+  @override
+  String get feedbackFillTitleAndContent => '请填写标题和内容';
+
+  @override
+  String get feedbackSelectCategory => '请选择分类';
+
+  @override
+  String feedbackPickImageFailed(String error) {
+    return '选择图片失败: $error';
+  }
+
+  @override
+  String get feedbackSaveSuccess => '保存成功';
+
+  @override
+  String get feedbackSaveFailed => '保存失败';
+
+  @override
+  String get feedbackOperationSuccess => '操作成功';
+
+  @override
+  String get feedbackOperationFailed => '操作失败';
+
+  @override
+  String get feedbackLoadFailed => '加载失败';
+
+  @override
+  String get feedbackNetworkError => '网络错误，请重试';
+
+  @override
+  String get feedbackDeleteSuccess => '删除成功';
+
+  @override
+  String get feedbackCopySuccess => '已复制到剪贴板';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -11254,6 +11304,9 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get notificationForum => '論壇通知';
 
   @override
+  String get notificationInteraction => '互動訊息';
+
+  @override
   String get errorNetworkTimeout => '網路連線逾時';
 
   @override
@@ -11306,4 +11359,51 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get notificationPermissionSkip => '暫時跳過';
+
+  @override
+  String get feedbackPublishSuccess => '發布成功';
+
+  @override
+  String get feedbackPublishFailed => '發布失敗';
+
+  @override
+  String get feedbackTaskPublishSuccess => '任務發布成功';
+
+  @override
+  String get feedbackPostPublishSuccess => '帖子發布成功';
+
+  @override
+  String get feedbackFillTitleAndContent => '請填寫標題和內容';
+
+  @override
+  String get feedbackSelectCategory => '請選擇分類';
+
+  @override
+  String feedbackPickImageFailed(String error) {
+    return '選擇圖片失敗: $error';
+  }
+
+  @override
+  String get feedbackSaveSuccess => '儲存成功';
+
+  @override
+  String get feedbackSaveFailed => '儲存失敗';
+
+  @override
+  String get feedbackOperationSuccess => '操作成功';
+
+  @override
+  String get feedbackOperationFailed => '操作失敗';
+
+  @override
+  String get feedbackLoadFailed => '載入失敗';
+
+  @override
+  String get feedbackNetworkError => '網路錯誤，請重試';
+
+  @override
+  String get feedbackDeleteSuccess => '刪除成功';
+
+  @override
+  String get feedbackCopySuccess => '已複製到剪貼簿';
 }

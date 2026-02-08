@@ -89,7 +89,7 @@ class AppLogger {
     if (kDebugMode) {
       developer.log(
         logMessage,
-        name: 'Link2Ur',
+        name: 'Link²Ur',
         error: error,
         stackTrace: stackTrace,
       );

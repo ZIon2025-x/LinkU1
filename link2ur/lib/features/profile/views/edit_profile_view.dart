@@ -7,6 +7,8 @@ import 'package:image_picker/image_picker.dart';
 import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_radius.dart';
+import '../../../core/utils/l10n_extension.dart';
+import '../../../core/widgets/app_feedback.dart';
 import '../../../core/widgets/buttons.dart';
 import '../../../data/repositories/user_repository.dart';
 import '../../../data/repositories/task_repository.dart';
@@ -88,12 +90,7 @@ class _EditProfileContentState extends State<_EditProfileContent> {
     } catch (e) {
       AppLogger.error('Failed to pick image', e);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('选择图片失败: ${e.toString()}'),
-            backgroundColor: AppColors.error,
-          ),
-        );
+        AppFeedback.showError(context, context.l10n.feedbackPickImageFailed(e.toString()));
       }
     }
   }
@@ -119,12 +116,11 @@ class _EditProfileContentState extends State<_EditProfileContent> {
         if (state.actionMessage != null) {
           final isSuccess = state.actionMessage!.contains('成功') ||
               state.actionMessage!.contains('保存');
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(state.actionMessage!),
-              backgroundColor: isSuccess ? AppColors.success : AppColors.error,
-            ),
-          );
+          if (isSuccess) {
+            AppFeedback.showSuccess(context, state.actionMessage!);
+          } else {
+            AppFeedback.showError(context, state.actionMessage!);
+          }
           if (isSuccess && !state.isUpdating) {
             context.pop();
           }

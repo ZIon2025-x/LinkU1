@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:flutter_native_splash/flutter_native_splash.dart';
 
 import 'core/design/app_theme.dart';
 import 'core/router/app_router.dart';
@@ -124,33 +125,43 @@ class _Link2UrAppState extends State<Link2UrApp> {
             )..add(const NotificationLoadUnreadNotificationCount()),
           ),
         ],
-        child: BlocBuilder<AuthBloc, AuthState>(
-          builder: (context, authState) {
-            return BlocBuilder<SettingsBloc, SettingsState>(
-              builder: (context, settingsState) {
-                return MaterialApp.router(
-                  title: 'Link²Ur',
-                  debugShowCheckedModeBanner: false,
-                  theme: AppTheme.lightTheme,
-                  darkTheme: AppTheme.darkTheme,
-                  themeMode: settingsState.themeMode,
-                  routerConfig: _appRouter.router,
-                  localizationsDelegates: const [
-                    AppLocalizations.delegate,
-                    GlobalMaterialLocalizations.delegate,
-                    GlobalWidgetsLocalizations.delegate,
-                    GlobalCupertinoLocalizations.delegate,
-                  ],
-                  supportedLocales: const [
-                    Locale('zh', 'CN'),
-                    Locale('zh', 'TW'),
-                    Locale('en', 'US'),
-                  ],
-                  locale: _localeFromString(settingsState.locale),
-                );
-              },
-            );
+        child: BlocListener<AuthBloc, AuthState>(
+          listenWhen: (prev, curr) {
+            // 当认证检查完成时触发（从 initial/checking 变为其他状态）
+            final wasChecking = prev.status == AuthStatus.initial ||
+                prev.status == AuthStatus.checking;
+            final isChecking = curr.status == AuthStatus.initial ||
+                curr.status == AuthStatus.checking;
+            return wasChecking && !isChecking;
           },
+          listener: (context, state) {
+            // 认证检查完成，移除原生启动画面，直接展示主界面
+            FlutterNativeSplash.remove();
+          },
+          child: BlocBuilder<SettingsBloc, SettingsState>(
+            builder: (context, settingsState) {
+              return MaterialApp.router(
+                title: 'Link²Ur',
+                debugShowCheckedModeBanner: false,
+                theme: AppTheme.lightTheme,
+                darkTheme: AppTheme.darkTheme,
+                themeMode: settingsState.themeMode,
+                routerConfig: _appRouter.router,
+                localizationsDelegates: const [
+                  AppLocalizations.delegate,
+                  GlobalMaterialLocalizations.delegate,
+                  GlobalWidgetsLocalizations.delegate,
+                  GlobalCupertinoLocalizations.delegate,
+                ],
+                supportedLocales: const [
+                  Locale('zh', 'CN'),
+                  Locale('zh', 'TW'),
+                  Locale('en', 'US'),
+                ],
+                locale: _localeFromString(settingsState.locale),
+              );
+            },
+          ),
         ),
       ),
     );

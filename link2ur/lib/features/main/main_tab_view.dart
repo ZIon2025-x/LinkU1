@@ -10,7 +10,16 @@ import '../../core/widgets/badge_view.dart';
 import '../../core/widgets/buttons.dart';
 import '../../core/widgets/content_constraint.dart';
 import '../../core/widgets/desktop_sidebar.dart';
+import '../../data/repositories/forum_repository.dart';
+import '../../data/repositories/leaderboard_repository.dart';
+import '../../data/repositories/message_repository.dart';
+import '../../data/repositories/task_repository.dart';
 import '../auth/bloc/auth_bloc.dart';
+import '../forum/bloc/forum_bloc.dart';
+import '../home/bloc/home_bloc.dart';
+import '../home/bloc/home_event.dart';
+import '../leaderboard/bloc/leaderboard_bloc.dart';
+import '../message/bloc/message_bloc.dart';
 import '../notification/bloc/notification_bloc.dart';
 
 /// 主页面（响应式导航布局）
@@ -135,15 +144,42 @@ class _MainTabViewState extends State<MainTabView> {
 
   @override
   Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        if (constraints.maxWidth >= Breakpoints.tablet) {
-          return _buildDesktopLayout(context);
-        } else if (constraints.maxWidth >= Breakpoints.mobile) {
-          return _buildTabletLayout(context);
-        }
-        return _buildMobileLayout(context);
-      },
+    // 将 Tab 级别的 BLoC 提升到此处，切换 Tab 时不再重建
+    return MultiBlocProvider(
+      providers: [
+        BlocProvider<HomeBloc>(
+          create: (context) => HomeBloc(
+            taskRepository: context.read<TaskRepository>(),
+          )..add(const HomeLoadRequested()),
+        ),
+        BlocProvider<ForumBloc>(
+          create: (context) => ForumBloc(
+            forumRepository: context.read<ForumRepository>(),
+          )..add(const ForumLoadPosts()),
+        ),
+        BlocProvider<LeaderboardBloc>(
+          create: (context) => LeaderboardBloc(
+            leaderboardRepository: context.read<LeaderboardRepository>(),
+          )..add(const LeaderboardLoadRequested()),
+        ),
+        BlocProvider<MessageBloc>(
+          create: (context) => MessageBloc(
+            messageRepository: context.read<MessageRepository>(),
+          )
+            ..add(const MessageLoadContacts())
+            ..add(const MessageLoadTaskChats()),
+        ),
+      ],
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          if (constraints.maxWidth >= Breakpoints.tablet) {
+            return _buildDesktopLayout(context);
+          } else if (constraints.maxWidth >= Breakpoints.mobile) {
+            return _buildTabletLayout(context);
+          }
+          return _buildMobileLayout(context);
+        },
+      ),
     );
   }
 

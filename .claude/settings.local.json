@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(grep:*)",
+      "Bash(for method in \"getWalletInfo\" \"getTransactions\" \"getPaymentHistory\" \"validateCoupon\" \"useCoupon\" \"getFavoriteStatus\" \"validateInvitationCode\" \"getInvitationStatus\" \"sendRecommendationFeedback\")",
+      "Bash(do echo \"=== Checking $method ===\")",
+      "Bash(done)",
+      "Bash($env:PATH = \"F:\\\\flutter\\\\bin;\" + $env:PATH)",
+      "Bash($env:PUB_CACHE = \"F:\\\\DevCache\\\\.pub-cache\")",
+      "Bash(flutter analyze:*)"
+    ]
+  }
+}

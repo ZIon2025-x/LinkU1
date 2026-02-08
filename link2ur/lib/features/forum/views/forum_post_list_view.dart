@@ -6,7 +6,7 @@ import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_radius.dart';
 import '../../../core/utils/l10n_extension.dart';
-import '../../../core/widgets/loading_view.dart';
+import '../../../core/widgets/skeleton_view.dart';
 import '../../../core/widgets/empty_state_view.dart';
 import '../../../core/widgets/error_state_view.dart';
 import '../../../data/models/forum.dart';
@@ -105,7 +105,7 @@ class _ForumPostListViewContentState
                 final errorMessage = state.errorMessage;
 
                 if (isLoading && posts.isEmpty) {
-                  return const LoadingView();
+                  return const SkeletonList();
                 }
                 if (errorMessage != null && posts.isEmpty) {
                   return ErrorStateView(
@@ -127,6 +127,7 @@ class _ForumPostListViewContentState
                         ForumLoadPosts(categoryId: widget.category?.id));
                   },
                   child: ListView.separated(
+                    clipBehavior: Clip.none,
                     padding: const EdgeInsets.symmetric(
                         horizontal: AppSpacing.md),
                     itemCount: posts.length,

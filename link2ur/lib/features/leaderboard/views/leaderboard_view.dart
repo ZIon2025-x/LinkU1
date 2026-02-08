@@ -5,8 +5,10 @@ import 'package:go_router/go_router.dart';
 import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_radius.dart';
+import '../../../core/design/app_typography.dart';
 import '../../../core/utils/l10n_extension.dart';
 import '../../../core/widgets/loading_view.dart';
+import '../../../core/widgets/skeleton_view.dart';
 import '../../../core/widgets/error_state_view.dart';
 import '../../../core/widgets/empty_state_view.dart';
 import '../../../data/models/leaderboard.dart';
@@ -32,7 +34,7 @@ class LeaderboardView extends StatelessWidget {
           builder: (context, state) {
             if (state.status == LeaderboardStatus.loading &&
                 state.leaderboards.isEmpty) {
-              return const LoadingView();
+              return const SkeletonList();
             }
 
             if (state.status == LeaderboardStatus.error &&
@@ -61,6 +63,7 @@ class LeaderboardView extends StatelessWidget {
                     );
               },
               child: ListView.separated(
+                clipBehavior: Clip.none,
                 padding: AppSpacing.allMd,
                 itemCount: state.leaderboards.length + (state.hasMore ? 1 : 0),
                 separatorBuilder: (context, index) => AppSpacing.vMd,
@@ -89,13 +92,30 @@ class LeaderboardView extends StatelessWidget {
   }
 }
 
+/// 排行榜卡片 - 对标iOS LeaderboardCard样式
+/// 封面图(90x90) + 标题 + 描述 + 位置 + 分隔线 + 统计行(项目/投票/浏览)
 class _LeaderboardCard extends StatelessWidget {
   const _LeaderboardCard({required this.leaderboard});
 
   final Leaderboard leaderboard;
 
+  List<Color> get _gradient {
+    final hash = leaderboard.id.hashCode;
+    final gradients = [
+      [const Color(0xFFFF6B6B), const Color(0xFFFF4757)],
+      [const Color(0xFF7C5CFC), const Color(0xFF5F27CD)],
+      [const Color(0xFF2ED573), const Color(0xFF00B894)],
+      [const Color(0xFFFF9500), const Color(0xFFFF6B00)],
+      [const Color(0xFF5856D6), const Color(0xFF007AFF)],
+    ];
+    return gradients[hash.abs() % gradients.length];
+  }
+
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final colors = _gradient;
+
     return GestureDetector(
       onTap: () {
         context.push('/leaderboard/${leaderboard.id}');
@@ -103,64 +123,203 @@ class _LeaderboardCard extends StatelessWidget {
       child: Container(
         padding: AppSpacing.allMd,
         decoration: BoxDecoration(
-          color: Theme.of(context).cardColor,
-          borderRadius: AppRadius.allMedium,
+          color: isDark
+              ? AppColors.cardBackgroundDark
+              : AppColors.cardBackgroundLight,
+          borderRadius: AppRadius.allLarge,
+          border: Border.all(
+            color: (isDark ? AppColors.separatorDark : AppColors.separatorLight)
+                .withValues(alpha: 0.3),
+            width: 0.5,
+          ),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.05),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
+              color: colors.first.withValues(alpha: 0.08),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
+            ),
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.02),
+              blurRadius: 2,
+              offset: const Offset(0, 1),
             ),
           ],
         ),
-        child: Row(
+        child: Column(
           children: [
-            Container(
-              width: 70,
-              height: 70,
-              decoration: BoxDecoration(
-                color: AppColors.primary.withValues(alpha: 0.1),
-                borderRadius: AppRadius.allMedium,
-              ),
-              child: const Icon(Icons.emoji_events, color: AppColors.primary, size: 32),   // trophy.fill
-            ),
-            AppSpacing.hMd,
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    leaderboard.displayName,
-                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    leaderboard.displayDescription ?? '描述信息...',
-                    style: const TextStyle(
-                      fontSize: 14,
-                      color: AppColors.textSecondaryLight,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 4),
-                  Row(
+            // 封面 + 标题/描述/位置
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // 封面图片或渐变占位 (对标iOS 100x100)
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(14),
+                  child: leaderboard.coverImage != null &&
+                          leaderboard.coverImage!.isNotEmpty
+                      ? Image.network(
+                          leaderboard.coverImage!,
+                          width: 90,
+                          height: 90,
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, __, ___) =>
+                              _buildPlaceholderIcon(colors),
+                        )
+                      : _buildPlaceholderIcon(colors),
+                ),
+                const SizedBox(width: AppSpacing.md),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Icon(Icons.thumb_up_outlined, size: 14, color: AppColors.textTertiaryLight),   // hand.thumbsup
-                      const SizedBox(width: 4),
                       Text(
-                        '${leaderboard.voteCount} 票',
-                        style: const TextStyle(fontSize: 12, color: AppColors.textTertiaryLight),
+                        leaderboard.displayName,
+                        style: AppTypography.bodyBold.copyWith(
+                          fontSize: 17,
+                          color: isDark
+                              ? AppColors.textPrimaryDark
+                              : AppColors.textPrimaryLight,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
+                      if (leaderboard.displayDescription != null) ...[
+                        const SizedBox(height: 4),
+                        Text(
+                          leaderboard.displayDescription!,
+                          style: AppTypography.caption.copyWith(
+                            color: isDark
+                                ? AppColors.textSecondaryDark
+                                : AppColors.textSecondaryLight,
+                          ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                      if (leaderboard.location.isNotEmpty) ...[
+                        const SizedBox(height: 6),
+                        Row(
+                          children: [
+                            Icon(
+                              Icons.location_on,
+                              size: 13,
+                              color: isDark
+                                  ? AppColors.textSecondaryDark
+                                  : AppColors.textSecondaryLight,
+                            ),
+                            const SizedBox(width: 3),
+                            Expanded(
+                              child: Text(
+                                leaderboard.location,
+                                style: AppTypography.caption2.copyWith(
+                                  fontWeight: FontWeight.w500,
+                                  color: isDark
+                                      ? AppColors.textSecondaryDark
+                                      : AppColors.textSecondaryLight,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
                     ],
                   ),
-                ],
+                ),
+              ],
+            ),
+
+            // 分隔线
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
+              child: Divider(
+                height: 1,
+                color: (isDark
+                        ? AppColors.separatorDark
+                        : AppColors.separatorLight)
+                    .withValues(alpha: 0.3),
               ),
             ),
-            const Icon(Icons.chevron_right, color: AppColors.textTertiaryLight),
+
+            // 统计行 (对标iOS CompactStatItem: items + votes + views)
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                _CompactStat(
+                  icon: Icons.grid_view,
+                  count: leaderboard.itemCount,
+                  isDark: isDark,
+                ),
+                _CompactStat(
+                  icon: Icons.thumb_up_outlined,
+                  count: leaderboard.voteCount,
+                  isDark: isDark,
+                ),
+                _CompactStat(
+                  icon: Icons.visibility_outlined,
+                  count: leaderboard.viewCount,
+                  isDark: isDark,
+                ),
+              ],
+            ),
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildPlaceholderIcon(List<Color> colors) {
+    return Container(
+      width: 90,
+      height: 90,
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: colors,
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: const Icon(Icons.emoji_events, color: Colors.white, size: 36),
+    );
+  }
+}
+
+class _CompactStat extends StatelessWidget {
+  const _CompactStat({
+    required this.icon,
+    required this.count,
+    required this.isDark,
+  });
+
+  final IconData icon;
+  final int count;
+  final bool isDark;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(
+          icon,
+          size: 14,
+          color: isDark
+              ? AppColors.textTertiaryDark
+              : AppColors.textTertiaryLight,
+        ),
+        const SizedBox(width: 4),
+        Text(
+          '$count',
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w500,
+            color: isDark
+                ? AppColors.textSecondaryDark
+                : AppColors.textSecondaryLight,
+          ),
+        ),
+      ],
     );
   }
 }

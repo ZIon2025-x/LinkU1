@@ -2807,6 +2807,7 @@
   "notificationAll": "全部通知",
   "notificationTask": "任务通知",
   "notificationForum": "论坛通知",
+  "notificationInteraction": "互动消息",
 
   "infoPrivacyPolicy": "隐私政策",
   "infoTermsOfService": "服务条款",
@@ -2839,5 +2840,28 @@
   "notificationPermissionTitle": "开启推送通知",
   "notificationPermissionDescription": "开启通知后，您可以及时收到：\n\n• 任务状态更新\n• 新消息提醒\n• 任务匹配推荐\n• 优惠活动通知",
   "notificationPermissionEnable": "开启通知",
-  "notificationPermissionSkip": "暂时跳过"
+  "notificationPermissionSkip": "暂时跳过",
+
+  "feedbackPublishSuccess": "发布成功",
+  "feedbackPublishFailed": "发布失败",
+  "feedbackTaskPublishSuccess": "任务发布成功",
+  "feedbackPostPublishSuccess": "帖子发布成功",
+  "feedbackFillTitleAndContent": "请填写标题和内容",
+  "feedbackSelectCategory": "请选择分类",
+  "feedbackPickImageFailed": "选择图片失败: {error}",
+  "@feedbackPickImageFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "feedbackSaveSuccess": "保存成功",
+  "feedbackSaveFailed": "保存失败",
+  "feedbackOperationSuccess": "操作成功",
+  "feedbackOperationFailed": "操作失败",
+  "feedbackLoadFailed": "加载失败",
+  "feedbackNetworkError": "网络错误，请重试",
+  "feedbackDeleteSuccess": "删除成功",
+  "feedbackCopySuccess": "已复制到剪贴板"
 }

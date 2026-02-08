@@ -6,15 +6,14 @@ import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_radius.dart';
 import '../../../core/utils/l10n_extension.dart';
-import '../../../core/widgets/loading_view.dart';
+import '../../../core/widgets/skeleton_view.dart';
 import '../../../core/widgets/empty_state_view.dart';
 import '../../../data/models/notification.dart' as model;
-import '../../../data/repositories/notification_repository.dart';
 import '../bloc/notification_bloc.dart';
 
 /// 通知列表页
 /// 参考iOS NotificationListView.swift
-class NotificationListView extends StatelessWidget {
+class NotificationListView extends StatefulWidget {
   const NotificationListView({
     super.key,
     this.type,
@@ -23,13 +22,22 @@ class NotificationListView extends StatelessWidget {
   final String? type; // "system", "task", "forum" 等
 
   @override
+  State<NotificationListView> createState() => _NotificationListViewState();
+}
+
+class _NotificationListViewState extends State<NotificationListView> {
+  @override
+  void initState() {
+    super.initState();
+    // 使用根级 NotificationBloc，加载指定类型的通知
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<NotificationBloc>().add(NotificationLoadRequested(type: widget.type));
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return BlocProvider(
-      create: (context) => NotificationBloc(
-        notificationRepository: context.read<NotificationRepository>(),
-      )..add(NotificationLoadRequested(type: type)),
-      child: _NotificationListViewContent(type: type),
-    );
+    return _NotificationListViewContent(type: widget.type);
   }
 }
 
@@ -60,7 +68,7 @@ class _NotificationListViewContent extends StatelessWidget {
             ],
           ),
           body: state.isLoading
-              ? const LoadingView()
+              ? const SkeletonList()
               : notifications.isEmpty
                   ? EmptyStateView(
                       icon: Icons.notifications_none,
@@ -101,6 +109,8 @@ class _NotificationListViewContent extends StatelessWidget {
         return l10n.notificationTask;
       case 'forum':
         return l10n.notificationForum;
+      case 'interaction':
+        return l10n.notificationInteraction;
       default:
         return l10n.notificationAll;
     }
@@ -115,31 +125,48 @@ class _NotificationListViewContent extends StatelessWidget {
           .add(NotificationMarkAsRead(notification.id));
     }
 
-    // 根据通知类型跳转到对应页面
-    switch (notification.type) {
-      case 'task_applied':
-      case 'task_accepted':
-      case 'task_completed':
-      case 'task_confirmed':
-      case 'task_cancelled':
-      case 'task_update':
-        final taskId = notification.taskId ?? notification.relatedId;
-        if (taskId != null) {
-          context.push('/tasks/$taskId');
-        }
-        break;
-      case 'message':
-      case 'task_chat':
-        final taskId = notification.taskId;
+    final type = notification.type;
+    final relatedId = notification.relatedId;
+    final taskId = notification.taskId;
+
+    // 论坛相关 - 跳转到帖子详情
+    if (type.startsWith('forum_')) {
+      final postId = relatedId;
+      if (postId != null) {
+        context.push('/forum/posts/$postId');
+      }
+      return;
+    }
+
+    // 排行榜相关 - 跳转到排行榜项目详情
+    if (type.startsWith('leaderboard_')) {
+      final itemId = relatedId;
+      if (itemId != null) {
+        context.push('/leaderboard/$itemId');
+      }
+      return;
+    }
+
+    // 任务相关
+    if (type.startsWith('task_')) {
+      if (type == 'task_chat') {
         if (taskId != null) {
           context.push('/task-chat/$taskId');
         }
-        break;
-      case 'forum_reply':
-      case 'forum_like':
-        final postId = notification.relatedId;
-        if (postId != null) {
-          context.push('/forum/posts/$postId');
+      } else {
+        final id = taskId ?? relatedId;
+        if (id != null) {
+          context.push('/tasks/$id');
+        }
+      }
+      return;
+    }
+
+    // 其他系统类型
+    switch (type) {
+      case 'message':
+        if (taskId != null) {
+          context.push('/task-chat/$taskId');
         }
         break;
       case 'payment':
@@ -148,21 +175,13 @@ class _NotificationListViewContent extends StatelessWidget {
         context.push('/wallet');
         break;
       case 'flea_market':
-        final itemId = notification.relatedId;
-        if (itemId != null) {
-          context.push('/flea-market/$itemId');
+        if (relatedId != null) {
+          context.push('/flea-market/$relatedId');
         }
         break;
       case 'activity':
-        final activityId = notification.relatedId;
-        if (activityId != null) {
-          context.push('/activities/$activityId');
-        }
-        break;
-      case 'leaderboard':
-        final leaderboardId = notification.relatedId;
-        if (leaderboardId != null) {
-          context.push('/leaderboard/$leaderboardId');
+        if (relatedId != null) {
+          context.push('/activities/$relatedId');
         }
         break;
       default:
@@ -264,30 +283,71 @@ class _NotificationCard extends StatelessWidget {
   }
 
   IconData _getIcon() {
-    switch (notification.type) {
-      case 'task':
-        return Icons.assignment;
-      case 'forum':
-        return Icons.forum;
+    final type = notification.type;
+    // 论坛互动类型
+    if (type.startsWith('forum_')) {
+      if (type == 'forum_like') return Icons.favorite;
+      if (type == 'forum_reply') return Icons.reply;
+      if (type == 'forum_mention') return Icons.alternate_email;
+      if (type == 'forum_favorite') return Icons.bookmark;
+      if (type == 'forum_pin') return Icons.push_pin;
+      if (type == 'forum_feature') return Icons.star;
+      return Icons.forum;
+    }
+    // 排行榜互动类型
+    if (type.startsWith('leaderboard_')) {
+      if (type == 'leaderboard_vote') return Icons.how_to_vote;
+      if (type == 'leaderboard_comment') return Icons.comment;
+      if (type == 'leaderboard_like') return Icons.thumb_up;
+      return Icons.leaderboard;
+    }
+    // 任务类型
+    if (type.startsWith('task_')) return Icons.assignment;
+    // 其他系统类型
+    switch (type) {
+      case 'payment':
+      case 'payment_success':
+      case 'payment_failed':
+        return Icons.payment;
+      case 'flea_market':
+        return Icons.storefront;
+      case 'activity':
+        return Icons.event;
+      case 'announcement':
+        return Icons.campaign;
       case 'system':
         return Icons.info;
-      case 'payment':
-        return Icons.payment;
       default:
         return Icons.notifications;
     }
   }
 
   Color _getIconColor() {
-    switch (notification.type) {
-      case 'task':
-        return AppColors.primary;
-      case 'forum':
-        return Colors.blue;
+    final type = notification.type;
+    // 论坛互动类型 - 粉色系
+    if (type.startsWith('forum_')) {
+      if (type == 'forum_like') return AppColors.accentPink;
+      return Colors.blue;
+    }
+    // 排行榜互动类型 - 橙色系
+    if (type.startsWith('leaderboard_')) return Colors.orange;
+    // 任务类型
+    if (type.startsWith('task_')) return AppColors.primary;
+    // 其他系统类型
+    switch (type) {
+      case 'payment':
+      case 'payment_success':
+        return AppColors.success;
+      case 'payment_failed':
+        return AppColors.error;
+      case 'flea_market':
+        return Colors.teal;
+      case 'activity':
+        return Colors.purple;
+      case 'announcement':
+        return Colors.orange;
       case 'system':
         return Colors.orange;
-      case 'payment':
-        return AppColors.success;
       default:
         return AppColors.textSecondary;
     }

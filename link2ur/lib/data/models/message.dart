@@ -100,43 +100,127 @@ class Message extends Equatable {
   List<Object?> get props => [id, senderId, receiverId, content, createdAt];
 }
 
-/// 任务聊天
+/// 最后一条消息（含发送者信息，对齐iOS LastMessage）
+class ChatLastMessage {
+  const ChatLastMessage({
+    this.id,
+    this.content,
+    this.senderId,
+    this.senderName,
+    this.createdAt,
+  });
+
+  final int? id;
+  final String? content;
+  final String? senderId;
+  final String? senderName;
+  final String? createdAt;
+
+  factory ChatLastMessage.fromJson(Map<String, dynamic> json) {
+    return ChatLastMessage(
+      id: json['id'] as int?,
+      content: json['content'] as String?,
+      senderId: json['sender_id']?.toString(),
+      senderName: json['sender_name'] as String?,
+      createdAt: json['created_at'] as String?,
+    );
+  }
+}
+
+/// 任务聊天（对齐iOS TaskChatItem）
 class TaskChat extends Equatable {
   const TaskChat({
     required this.taskId,
     required this.taskTitle,
+    this.titleEn,
+    this.titleZh,
     this.taskStatus,
+    this.taskType,
+    this.taskSource,
+    this.posterId,
+    this.takerId,
+    this.expertCreatorId,
+    this.images = const [],
+    this.isMultiParticipant = false,
     required this.participants,
     this.lastMessage,
+    this.lastMessageObj,
     this.lastMessageTime,
     this.unreadCount = 0,
   });
 
   final int taskId;
   final String taskTitle;
+  final String? titleEn;
+  final String? titleZh;
   final String? taskStatus;
+  final String? taskType;
+  final String? taskSource;
+  final String? posterId;
+  final String? takerId;
+  final String? expertCreatorId;
+  final List<String> images;
+  final bool isMultiParticipant;
   final List<UserBrief> participants;
   final String? lastMessage;
+  final ChatLastMessage? lastMessageObj;
   final DateTime? lastMessageTime;
   final int unreadCount;
 
+  /// 多语言显示标题（对齐iOS displayTitle）
+  String get displayTitle => titleZh ?? titleEn ?? taskTitle;
+
   factory TaskChat.fromJson(Map<String, dynamic> json) {
+    // 解析 last_message：兼容 String 或 Object 两种格式
+    String? lastMessageText;
+    ChatLastMessage? lastMessageObj;
+    final rawLastMessage = json['last_message'];
+    if (rawLastMessage is Map<String, dynamic>) {
+      lastMessageObj = ChatLastMessage.fromJson(rawLastMessage);
+      lastMessageText = lastMessageObj.content;
+    } else if (rawLastMessage is String) {
+      lastMessageText = rawLastMessage;
+    }
+
+    // 解析 last_message_time，如果没有则从 lastMessage.createdAt 提取
+    DateTime? lastMessageTime;
+    final rawTime = json['last_message_time'];
+    if (rawTime != null) {
+      lastMessageTime = DateTime.tryParse(rawTime.toString());
+    } else if (lastMessageObj?.createdAt != null) {
+      lastMessageTime = DateTime.tryParse(lastMessageObj!.createdAt!);
+    }
+
+    // 解析 images：可能是数组或其他格式
+    List<String> images = [];
+    final rawImages = json['images'];
+    if (rawImages is List) {
+      images = rawImages.whereType<String>().toList();
+    }
+
     return TaskChat(
-      // 后端可能返回 'task_id' 或 'id'
       taskId: (json['task_id'] ?? json['id']) as int? ?? 0,
       taskTitle: json['task_title'] as String?
           ?? json['title'] as String?
           ?? '',
+      titleEn: json['title_en'] as String?,
+      titleZh: json['title_zh'] as String?,
       taskStatus: json['task_status'] as String?
           ?? json['status'] as String?,
+      taskType: json['task_type'] as String?,
+      taskSource: json['task_source'] as String?,
+      posterId: json['poster_id']?.toString(),
+      takerId: json['taker_id']?.toString(),
+      expertCreatorId: json['expert_creator_id']?.toString(),
+      images: images,
+      isMultiParticipant: json['is_multi_participant'] as bool? ?? false,
       participants: (json['participants'] as List<dynamic>?)
               ?.map((e) => UserBrief.fromJson(e as Map<String, dynamic>))
               .toList() ??
           [],
-      lastMessage: json['last_message'] as String?,
-      lastMessageTime: json['last_message_time'] != null
-          ? DateTime.tryParse(json['last_message_time'].toString())
-          : null,
+      lastMessage: lastMessageText,
+      lastMessageObj: lastMessageObj,
+      lastMessageTime: lastMessageTime,
       unreadCount: json['unread_count'] as int? ?? 0,
     );
   }

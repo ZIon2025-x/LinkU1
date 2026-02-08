@@ -123,8 +123,8 @@ class PushNotificationService {
     if (Platform.isAndroid) {
       const channel = AndroidNotificationChannel(
         'link2ur_default',
-        'Link2Ur 通知',
-        description: 'Link2Ur 应用通知',
+        'Link²Ur 通知',
+        description: 'Link²Ur 应用通知',
         importance: Importance.high,
       );
 
@@ -182,8 +182,8 @@ class PushNotificationService {
   }) async {
     const androidDetails = AndroidNotificationDetails(
       'link2ur_default',
-      'Link2Ur 通知',
-      channelDescription: 'Link2Ur 应用通知',
+      'Link²Ur 通知',
+      channelDescription: 'Link²Ur 应用通知',
       importance: Importance.high,
       priority: Priority.high,
       showWhen: true,

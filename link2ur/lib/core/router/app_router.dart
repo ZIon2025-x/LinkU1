@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'page_transitions.dart';
 
 import '../../features/auth/views/login_view.dart';
 import '../../features/auth/views/register_view.dart';
@@ -207,21 +208,30 @@ class AppRouter {
         ],
       ),
 
-      // 认证
+      // 认证 — 淡入缩放转场
       GoRoute(
         path: AppRoutes.login,
         name: 'login',
-        builder: (context, state) => const LoginView(),
+        pageBuilder: (context, state) => FadeScaleTransitionPage(
+          key: state.pageKey,
+          child: const LoginView(),
+        ),
       ),
       GoRoute(
         path: AppRoutes.register,
         name: 'register',
-        builder: (context, state) => const RegisterView(),
+        pageBuilder: (context, state) => FadeScaleTransitionPage(
+          key: state.pageKey,
+          child: const RegisterView(),
+        ),
       ),
       GoRoute(
         path: AppRoutes.forgotPassword,
         name: 'forgotPassword',
-        builder: (context, state) => const ForgotPasswordView(),
+        pageBuilder: (context, state) => FadeScaleTransitionPage(
+          key: state.pageKey,
+          child: const ForgotPasswordView(),
+        ),
       ),
 
       // 任务（具体路径在参数化路径之前）
@@ -233,7 +243,10 @@ class AppRouter {
       GoRoute(
         path: AppRoutes.createTask,
         name: 'createTask',
-        builder: (context, state) => const CreateTaskView(),
+        pageBuilder: (context, state) => SlideUpTransitionPage(
+          key: state.pageKey,
+          child: const CreateTaskView(),
+        ),
       ),
       GoRoute(
         path: AppRoutes.taskFilter,
@@ -258,15 +271,21 @@ class AppRouter {
       GoRoute(
         path: AppRoutes.createFleaMarketItem,
         name: 'createFleaMarketItem',
-        builder: (context, state) => const CreateFleaMarketItemView(),
+        pageBuilder: (context, state) => SlideUpTransitionPage(
+          key: state.pageKey,
+          child: const CreateFleaMarketItemView(),
+        ),
       ),
       GoRoute(
         path: AppRoutes.editFleaMarketItem,
         name: 'editFleaMarketItem',
-        builder: (context, state) {
+        pageBuilder: (context, state) {
           final id = int.tryParse(state.pathParameters['id'] ?? '') ?? 0;
           final item = state.extra as dynamic;
-          return EditFleaMarketItemView(itemId: id, item: item);
+          return SlideUpTransitionPage(
+            key: state.pageKey,
+            child: EditFleaMarketItemView(itemId: id, item: item),
+          );
         },
       ),
       GoRoute(
@@ -312,7 +331,10 @@ class AppRouter {
       GoRoute(
         path: AppRoutes.createPost,
         name: 'createPost',
-        builder: (context, state) => const CreatePostView(),
+        pageBuilder: (context, state) => SlideUpTransitionPage(
+          key: state.pageKey,
+          child: const CreatePostView(),
+        ),
       ),
       GoRoute(
         path: AppRoutes.myForumPosts,
@@ -337,7 +359,10 @@ class AppRouter {
       GoRoute(
         path: AppRoutes.applyLeaderboard,
         name: 'applyLeaderboard',
-        builder: (context, state) => const ApplyLeaderboardView(),
+        pageBuilder: (context, state) => SlideUpTransitionPage(
+          key: state.pageKey,
+          child: const ApplyLeaderboardView(),
+        ),
       ),
       GoRoute(
         path: AppRoutes.leaderboardItemDetail,
@@ -350,9 +375,12 @@ class AppRouter {
       GoRoute(
         path: AppRoutes.submitLeaderboardItem,
         name: 'submitLeaderboardItem',
-        builder: (context, state) {
+        pageBuilder: (context, state) {
           final id = int.tryParse(state.pathParameters['id'] ?? '') ?? 0;
-          return SubmitLeaderboardItemView(leaderboardId: id);
+          return SlideUpTransitionPage(
+            key: state.pageKey,
+            child: SubmitLeaderboardItemView(leaderboardId: id),
+          );
         },
       ),
       GoRoute(
@@ -403,7 +431,10 @@ class AppRouter {
       GoRoute(
         path: AppRoutes.editProfile,
         name: 'editProfile',
-        builder: (context, state) => const EditProfileView(),
+        pageBuilder: (context, state) => SlideUpTransitionPage(
+          key: state.pageKey,
+          child: const EditProfileView(),
+        ),
       ),
       GoRoute(
         path: AppRoutes.myTasks,
@@ -452,12 +483,15 @@ class AppRouter {
         builder: (context, state) => const StudentVerificationView(),
       ),
 
-      // 引导页
+      // 引导页 — 淡入缩放转场
       GoRoute(
         path: AppRoutes.onboarding,
         name: 'onboarding',
-        builder: (context, state) => OnboardingView(
-          onComplete: () => Navigator.of(context).pop(),
+        pageBuilder: (context, state) => FadeScaleTransitionPage(
+          key: state.pageKey,
+          child: OnboardingView(
+            onComplete: () => Navigator.of(context).pop(),
+          ),
         ),
       ),
 

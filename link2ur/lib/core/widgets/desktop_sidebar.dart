@@ -170,7 +170,7 @@ class DesktopSidebar extends StatelessWidget {
                 const SizedBox(width: AppSpacing.sm),
                 Expanded(
                   child: Text(
-                    'Link2Ur',
+                    'Link²Ur',
                     style: AppTypography.title3.copyWith(
                       color: isDark
                           ? AppColors.textPrimaryDark

@@ -98,6 +98,9 @@ dependencies:
   # 加密
   encrypt: ^5.0.3
 
+  # 原生启动画面
+  flutter_native_splash: ^2.4.4
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -117,19 +120,47 @@ flutter_launcher_icons:
   remove_alpha_ios: true
   web:
     generate: true
-    image_path: "assets/images/logo.png"
+    image_path: "assets/images/app_icon_ios.png"
     background_color: "#ffffff"
     theme_color: "#4CAF50"
   windows:
     generate: true
-    image_path: "assets/images/logo.png"
+    image_path: "assets/images/app_icon_ios.png"
     icon_size: 48
   macos:
     generate: true
-    image_path: "assets/images/logo.png"
-  image_path: "assets/images/logo.png"
+    image_path: "assets/images/app_icon_ios.png"
+  image_path: "assets/images/app_icon_ios.png"
   adaptive_icon_background: "#ffffff"
-  adaptive_icon_foreground: "assets/images/logo.png"
+  adaptive_icon_foreground: "assets/images/app_icon_adaptive_fg.png"
+
+# 原生启动画面配置
+# 高品质设计：渐变背景 + Logo圆形容器 + 品牌文字，支持暗黑模式
+flutter_native_splash:
+  # 背景图（渐变 + 弥散光效果）
+  background_image: "assets/images/splash_bg_light.png"
+  background_image_dark: "assets/images/splash_bg_dark.png"
+
+  # 居中 Logo（带圆形容器 + 阴影）
+  image: "assets/images/splash_logo_light.png"
+  image_dark: "assets/images/splash_logo_dark.png"
+
+  # 底部品牌文字
+  branding: "assets/images/splash_branding_light.png"
+  branding_dark: "assets/images/splash_branding_dark.png"
+
+  # Android 12+ SplashScreen API（圆形遮罩，Logo 需有安全边距）
+  android_12:
+    color: "#ffffff"
+    color_dark: "#12121A"
+    image: "assets/images/splash_android12_light.png"
+    image_dark: "assets/images/splash_android12_dark.png"
+    icon_background_color: "#ffffff"
+    icon_background_color_dark: "#1E2338"
+
+  # iOS 配置
+  ios: true
+  web: false
 
 # QQ SDK 配置（tencent_kit 要求）
 # TODO: 替换为真实的腾讯开放平台 App ID

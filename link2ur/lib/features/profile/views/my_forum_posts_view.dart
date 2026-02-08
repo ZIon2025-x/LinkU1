@@ -6,7 +6,7 @@ import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_radius.dart';
 import '../../../core/utils/l10n_extension.dart';
-import '../../../core/widgets/loading_view.dart';
+import '../../../core/widgets/skeleton_view.dart';
 import '../../../core/widgets/empty_state_view.dart';
 import '../../../data/models/forum.dart';
 import '../../../data/repositories/forum_repository.dart';
@@ -146,7 +146,7 @@ class _MyForumPostsViewState extends State<MyForumPostsView>
     String emptyMessage,
     String type,
   ) {
-    if (isLoading && posts.isEmpty) return const LoadingView();
+    if (isLoading && posts.isEmpty) return const SkeletonList();
     if (posts.isEmpty) {
       return EmptyStateView(
         icon: Icons.article_outlined,
@@ -162,6 +162,7 @@ class _MyForumPostsViewState extends State<MyForumPostsView>
             );
       },
       child: ListView.separated(
+        clipBehavior: Clip.none,
         padding: const EdgeInsets.all(AppSpacing.md),
         itemCount: posts.length,
         separatorBuilder: (_, __) => const SizedBox(height: AppSpacing.md),

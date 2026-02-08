@@ -12,11 +12,11 @@ import '../../../core/design/app_typography.dart';
 import '../../../core/design/app_radius.dart';
 import '../../../core/utils/l10n_extension.dart';
 import '../../../core/widgets/async_image_view.dart';
-import '../../../core/widgets/loading_view.dart';
+import '../../../core/widgets/animated_list_item.dart';
+import '../../../core/widgets/skeleton_view.dart';
 import '../../../core/widgets/error_state_view.dart';
 import '../../../core/widgets/empty_state_view.dart';
 import '../../../data/models/task.dart';
-import '../../../data/repositories/task_repository.dart';
 import '../../auth/bloc/auth_bloc.dart';
 import '../bloc/home_bloc.dart';
 import '../bloc/home_event.dart';
@@ -24,17 +24,13 @@ import '../bloc/home_state.dart';
 
 /// 首页
 /// 对标iOS HomeView.swift
+/// BLoC 在 MainTabView 中创建，此处直接使用
 class HomeView extends StatelessWidget {
   const HomeView({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return BlocProvider(
-      create: (context) => HomeBloc(
-        taskRepository: context.read<TaskRepository>(),
-      )..add(const HomeLoadRequested()),
-      child: const _HomeViewContent(),
-    );
+    return const _HomeViewContent();
   }
 }
 
@@ -416,7 +412,7 @@ class _RecommendedTab extends StatelessWidget {
               // 对标iOS: 横向滚动推荐任务
               if (state.isLoading && state.recommendedTasks.isEmpty)
                 const SliverFillRemaining(
-                  child: LoadingView(),
+                  child: SkeletonList(),
                 )
               else if (state.hasError && state.recommendedTasks.isEmpty)
                 SliverFillRemaining(
@@ -442,12 +438,15 @@ class _RecommendedTab extends StatelessWidget {
                 // 对标iOS: 横向滚动任务卡片 (最多10个)
                 SliverToBoxAdapter(
                   child: SizedBox(
-                    height: 242,
+                    height: 256,
                     child: ListView.separated(
                       scrollDirection: Axis.horizontal,
+                      clipBehavior: Clip.none,
                       padding: const EdgeInsets.only(
                         left: AppSpacing.md,
                         right: AppSpacing.lg,
+                        top: 4,
+                        bottom: 10,
                       ),
                       itemCount: state.recommendedTasks.length > 10
                           ? 10
@@ -455,7 +454,10 @@ class _RecommendedTab extends StatelessWidget {
                       separatorBuilder: (_, __) => const SizedBox(width: 12),
                       itemBuilder: (context, index) {
                         final task = state.recommendedTasks[index];
-                        return _HorizontalTaskCard(task: task);
+                        return AnimatedListItem(
+                          index: index,
+                          child: _HorizontalTaskCard(task: task),
+                        );
                       },
                     ),
                   ),
@@ -632,10 +634,12 @@ class _BannerCarouselState extends State<_BannerCarousel> {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        Container(
-          height: 150,
-          margin: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
-          child: PageView(
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+          child: SizedBox(
+            height: 162,
+            child: PageView(
+              clipBehavior: Clip.none,
             controller: _controller,
             onPageChanged: (index) {
               setState(() {
@@ -670,6 +674,7 @@ class _BannerCarouselState extends State<_BannerCarousel> {
                 onTap: () => context.push('/task-experts/intro'),
               ),
             ],
+          ),
           ),
         ),
         // 页面指示器
@@ -718,7 +723,7 @@ class _BannerItem extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 4),
+        margin: const EdgeInsets.fromLTRB(4, 4, 4, 10),
         clipBehavior: Clip.antiAlias,
         decoration: BoxDecoration(
           gradient: imagePath == null
@@ -840,12 +845,15 @@ class _PopularActivitiesSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      height: 150,
+      height: 164,
       child: ListView(
         scrollDirection: Axis.horizontal,
+        clipBehavior: Clip.none,
         padding: const EdgeInsets.only(
           left: AppSpacing.md,
           right: AppSpacing.lg,
+          top: 4,
+          bottom: 10,
         ),
         children: [
           _ActivityCard(
@@ -1325,11 +1333,14 @@ class _HorizontalTaskCard extends StatelessWidget {
                 children: [
                   // 图片或占位背景（对标iOS placeholderBackground）
                   if (task.firstImage != null)
-                    AsyncImageView(
-                      imageUrl: task.firstImage!,
-                      width: 220,
-                      height: 170,
-                      fit: BoxFit.cover,
+                    Hero(
+                      tag: 'task_image_${task.id}',
+                      child: AsyncImageView(
+                        imageUrl: task.firstImage!,
+                        width: 220,
+                        height: 170,
+                        fit: BoxFit.cover,
+                      ),
                     )
                   else
                     Container(

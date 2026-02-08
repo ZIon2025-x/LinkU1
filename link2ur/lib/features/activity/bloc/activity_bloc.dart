@@ -184,6 +184,7 @@ class ActivityBloc extends Bloc<ActivityEvent, ActivityState> {
       ));
     } catch (e) {
       AppLogger.error('Failed to load more activities', e);
+      emit(state.copyWith(hasMore: false));
     }
   }
 

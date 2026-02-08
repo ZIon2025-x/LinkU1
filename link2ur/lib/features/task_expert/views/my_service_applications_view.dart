@@ -5,7 +5,7 @@ import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_radius.dart';
 import '../../../core/utils/l10n_extension.dart';
-import '../../../core/widgets/loading_view.dart';
+import '../../../core/widgets/skeleton_view.dart';
 import '../../../core/widgets/empty_state_view.dart';
 import '../../../data/repositories/task_expert_repository.dart';
 import '../bloc/task_expert_bloc.dart';
@@ -42,7 +42,7 @@ class _MyServiceApplicationsContent extends StatelessWidget {
             title: Text(l10n.taskExpertMyApplications),
           ),
           body: state.isLoading && applications.isEmpty
-              ? const LoadingView()
+              ? const SkeletonList()
               : applications.isEmpty
                   ? EmptyStateView(
                       icon: Icons.assignment_outlined,
@@ -56,6 +56,7 @@ class _MyServiceApplicationsContent extends StatelessWidget {
                             .add(const TaskExpertLoadMyApplications());
                       },
                       child: ListView.separated(
+                        clipBehavior: Clip.none,
                         padding: const EdgeInsets.all(AppSpacing.md),
                         itemCount: applications.length,
                         separatorBuilder: (_, __) =>

@@ -55,7 +55,7 @@ class MessageRepository {
     int page = 1,
     int pageSize = 50,
   }) async {
-    final response = await _apiService.get<Map<String, dynamic>>(
+    final response = await _apiService.get(
       ApiEndpoints.messageHistory(userId),
       queryParameters: {
         'page': page,
@@ -67,7 +67,8 @@ class MessageRepository {
       throw MessageException(response.message ?? '获取消息失败');
     }
 
-    final items = response.data!['items'] as List<dynamic>? ?? [];
+    final items = _extractList(
+        response.data, ['items', 'messages', 'data']);
     return items
         .map((e) => Message.fromJson(e as Map<String, dynamic>))
         .toList();
@@ -147,7 +148,7 @@ class MessageRepository {
 
   /// 获取未读消息数量
   Future<int> getUnreadMessagesCount() async {
-    final response = await _apiService.get<Map<String, dynamic>>(
+    final response = await _apiService.get(
       ApiEndpoints.unreadMessagesCount,
     );
 
@@ -155,7 +156,10 @@ class MessageRepository {
       return 0;
     }
 
-    return response.data!['count'] as int? ?? 0;
+    if (response.data is Map<String, dynamic>) {
+      return (response.data as Map<String, dynamic>)['count'] as int? ?? 0;
+    }
+    return 0;
   }
 
   // ==================== 任务聊天 ====================
@@ -179,7 +183,7 @@ class MessageRepository {
 
   /// 获取任务聊天未读数量
   Future<int> getTaskChatUnreadCount() async {
-    final response = await _apiService.get<Map<String, dynamic>>(
+    final response = await _apiService.get(
       ApiEndpoints.taskChatUnreadCount,
     );
 
@@ -187,7 +191,10 @@ class MessageRepository {
       return 0;
     }
 
-    return response.data!['count'] as int? ?? 0;
+    if (response.data is Map<String, dynamic>) {
+      return (response.data as Map<String, dynamic>)['count'] as int? ?? 0;
+    }
+    return 0;
   }
 
   /// 获取任务聊天消息
@@ -196,7 +203,7 @@ class MessageRepository {
     int page = 1,
     int pageSize = 50,
   }) async {
-    final response = await _apiService.get<Map<String, dynamic>>(
+    final response = await _apiService.get(
       ApiEndpoints.taskChatMessages(taskId),
       queryParameters: {
         'page': page,
@@ -208,7 +215,8 @@ class MessageRepository {
       throw MessageException(response.message ?? '获取任务聊天消息失败');
     }
 
-    final items = response.data!['items'] as List<dynamic>? ?? [];
+    final items = _extractList(
+        response.data, ['items', 'messages', 'data']);
     return items
         .map((e) => Message.fromJson(e as Map<String, dynamic>))
         .toList();

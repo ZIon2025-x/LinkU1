@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -6,40 +7,28 @@ import 'package:go_router/go_router.dart';
 import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_radius.dart';
-import '../../../core/widgets/loading_view.dart';
+import '../../../core/widgets/skeleton_view.dart';
 import '../../../core/utils/date_formatter.dart';
-import '../../notification/widgets/notification_menu.dart';
+import '../../notification/bloc/notification_bloc.dart';
 import '../../../core/utils/l10n_extension.dart';
-import '../../../data/repositories/message_repository.dart';
 import '../../../data/models/message.dart';
+import '../../auth/bloc/auth_bloc.dart';
 import '../../customer_service/views/customer_service_view.dart';
 import '../bloc/message_bloc.dart';
 
 /// 消息列表页
 /// 参考iOS MessageView.swift - 单列表布局
+/// BLoC 在 MainTabView 中创建
 class MessageView extends StatelessWidget {
   const MessageView({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final messageRepository = context.read<MessageRepository>();
-
-    return BlocProvider(
-      create: (context) => MessageBloc(messageRepository: messageRepository)
-        ..add(const MessageLoadContacts())
-        ..add(const MessageLoadTaskChats()),
-      child: Scaffold(
-        appBar: AppBar(
-          title: Text(context.l10n.messagesMessages),
-          actions: [
-            IconButton(
-              icon: const Icon(Icons.notifications_outlined),
-              onPressed: () => NotificationMenu.show(context),
-            ),
-          ],
-        ),
-        body: const _MessageContent(),
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(context.l10n.messagesMessages),
       ),
+      body: const _MessageContent(),
     );
   }
 }
@@ -49,6 +38,10 @@ class _MessageContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final currentUserId = context.select<AuthBloc, String?>(
+      (bloc) => bloc.state.user?.id,
+    );
+
     return BlocBuilder<MessageBloc, MessageState>(
       builder: (context, state) {
         return RefreshIndicator(
@@ -56,40 +49,24 @@ class _MessageContent extends StatelessWidget {
             context.read<MessageBloc>()
               ..add(const MessageLoadContacts())
               ..add(const MessageLoadTaskChats());
+            context.read<NotificationBloc>()
+              .add(const NotificationLoadUnreadNotificationCount());
             await Future.delayed(const Duration(milliseconds: 500));
           },
           child: ListView(
             padding: AppSpacing.allMd,
             children: [
-              // 系统消息卡片
-              _SystemMessageCard(
-                onTap: () => context.push('/notifications'),
-              ),
-              AppSpacing.vMd,
+              // 顶部快捷入口：系统消息 / 客服中心 / 互动信息
+              const _QuickActionBar(),
+              const SizedBox(height: 16),
 
-              // 客服卡片
-              _CustomerServiceCard(
-                onTap: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => const CustomerServiceView(),
-                  ),
-                ),
-              ),
-              AppSpacing.vMd,
-
-              // 互动消息卡片
-              _InteractionMessageCard(
-                onTap: () => context.push('/notifications'),
-              ),
-              AppSpacing.vMd,
-
-              // 任务消息分隔
+              // 任务聊天列表
               if (state.taskChats.isNotEmpty) ...[
-                const SizedBox(height: 8),
-                // 任务聊天列表
                 ...state.taskChats.map(
-                  (taskChat) => _TaskChatItem(taskChat: taskChat),
+                  (taskChat) => _TaskChatItem(
+                    taskChat: taskChat,
+                    currentUserId: currentUserId,
+                  ),
                 ),
               ] else if (state.status != MessageStatus.loading) ...[
                 const SizedBox(height: 40),
@@ -97,7 +74,7 @@ class _MessageContent extends StatelessWidget {
                   child: Column(
                     children: [
                       const Icon(
-                        Icons.message,              // message.fill
+                        Icons.message,
                         size: 48,
                         color: AppColors.textTertiaryLight,
                       ),
@@ -118,7 +95,7 @@ class _MessageContent extends StatelessWidget {
                   state.taskChats.isEmpty)
                 const Padding(
                   padding: EdgeInsets.only(top: 40),
-                  child: LoadingView(),
+                  child: SkeletonList(),
                 ),
             ],
           ),
@@ -128,181 +105,182 @@ class _MessageContent extends StatelessWidget {
   }
 }
 
-/// 系统消息卡片 - 对齐iOS SystemMessageCard
-class _SystemMessageCard extends StatelessWidget {
-  const _SystemMessageCard({required this.onTap});
-
-  final VoidCallback onTap;
+/// 顶部快捷入口栏：三个圆形图标按钮一行排列
+class _QuickActionBar extends StatelessWidget {
+  const _QuickActionBar();
 
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    return GestureDetector(
-      onTap: () {
-        HapticFeedback.selectionClick();
-        onTap();
-      },
-      child: Container(
-        height: 80,
-        padding: const EdgeInsets.symmetric(
-          horizontal: AppSpacing.lg,
-          vertical: AppSpacing.md,
-        ),
-        decoration: BoxDecoration(
-          color: isDark
-              ? AppColors.cardBackgroundDark
-              : AppColors.cardBackgroundLight,
-          borderRadius: AppRadius.allLarge,
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.04),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
-        child: Row(
+    return BlocBuilder<NotificationBloc, NotificationState>(
+      builder: (context, notifState) {
+        final systemUnread = notifState.unreadCount.count;
+        final interactionUnread = notifState.unreadCount.forumCount;
+
+        return Row(
+          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
           children: [
-            // 图标
-            Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(
-                color: AppColors.primary.withValues(alpha: 0.1),
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(
-                Icons.notifications,            // bell.fill (filled)
-                color: AppColors.primary,
-                size: 22,
-              ),
+            // 系统消息
+            _QuickActionButton(
+              icon: Icons.notifications,
+              label: context.l10n.notificationSystemMessages,
+              color: AppColors.primary,
+              unreadCount: systemUnread,
+              isDark: isDark,
+              onTap: () {
+                HapticFeedback.selectionClick();
+                context.push('/notifications/system');
+              },
             ),
-            const SizedBox(width: 16),
-            // 文字
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(
-                    '系统消息',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      color: isDark
-                          ? AppColors.textPrimaryDark
-                          : AppColors.textPrimaryLight,
-                    ),
+            // 客服中心
+            _QuickActionButton(
+              icon: Icons.headset_mic,
+              label: context.l10n.messagesCustomerService,
+              color: AppColors.success,
+              unreadCount: 0,
+              isDark: isDark,
+              onTap: () {
+                HapticFeedback.selectionClick();
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const CustomerServiceView(),
                   ),
-                  const SizedBox(height: 2),
-                  Text(
-                    '查看系统通知',
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: isDark
-                          ? AppColors.textSecondaryDark
-                          : AppColors.textSecondaryLight,
-                    ),
-                  ),
-                ],
-              ),
+                );
+              },
             ),
-            Icon(
-              Icons.chevron_right,
-              color: isDark
-                  ? AppColors.textTertiaryDark
-                  : AppColors.textTertiaryLight,
+            // 互动信息
+            _QuickActionButton(
+              icon: Icons.favorite,
+              label: context.l10n.messagesInteractionInfo,
+              color: AppColors.warning,
+              unreadCount: interactionUnread,
+              isDark: isDark,
+              onTap: () {
+                HapticFeedback.selectionClick();
+                context.push('/notifications/interaction');
+              },
             ),
           ],
-        ),
-      ),
+        );
+      },
     );
   }
 }
 
-/// 客服卡片 - 对齐iOS CustomerServiceCard (带渐变背景)
-class _CustomerServiceCard extends StatelessWidget {
-  const _CustomerServiceCard({required this.onTap});
+/// 单个圆形快捷入口按钮（带未读徽章）
+class _QuickActionButton extends StatelessWidget {
+  const _QuickActionButton({
+    required this.icon,
+    required this.label,
+    required this.color,
+    required this.unreadCount,
+    required this.isDark,
+    required this.onTap,
+  });
 
+  final IconData icon;
+  final String label;
+  final Color color;
+  final int unreadCount;
+  final bool isDark;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: () {
-        HapticFeedback.selectionClick();
-        onTap();
-      },
-      child: Container(
-        height: 80,
-        padding: const EdgeInsets.symmetric(
-          horizontal: AppSpacing.lg,
-          vertical: AppSpacing.md,
-        ),
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: [
-              AppColors.success.withValues(alpha: 0.8),
-              AppColors.success,
-            ],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-          borderRadius: AppRadius.allLarge,
-          boxShadow: [
-            BoxShadow(
-              color: AppColors.success.withValues(alpha: 0.3),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
-        child: Row(
+      onTap: onTap,
+      child: SizedBox(
+        width: 72,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            // 图标
-            Container(
-              width: 44,
-              height: 44,
-              decoration: const BoxDecoration(
-                color: Colors.white,
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(
-                Icons.headset_mic,
-                color: AppColors.success,
-                size: 22,
-              ),
-            ),
-            const SizedBox(width: 16),
-            // 文字
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(
-                    context.l10n.messagesCustomerService,
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.white,
+            // 圆形图标 + 未读徽章
+            Stack(
+              clipBehavior: Clip.none,
+              children: [
+                Container(
+                  width: 52,
+                  height: 52,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: LinearGradient(
+                      colors: [
+                        color.withValues(alpha: 0.85),
+                        color,
+                      ],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: color.withValues(alpha: 0.25),
+                        blurRadius: 8,
+                        offset: const Offset(0, 3),
+                      ),
+                    ],
+                  ),
+                  child: Icon(icon, color: Colors.white, size: 24),
+                ),
+                // 未读计数徽章
+                if (unreadCount > 0)
+                  Positioned(
+                    right: -4,
+                    top: -4,
+                    child: Container(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: unreadCount > 9 ? 5 : 0,
+                        vertical: 0,
+                      ),
+                      constraints: const BoxConstraints(
+                        minWidth: 20,
+                        minHeight: 20,
+                      ),
+                      decoration: BoxDecoration(
+                        color: AppColors.error,
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(
+                          color: isDark
+                              ? AppColors.cardBackgroundDark
+                              : Colors.white,
+                          width: 2,
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: AppColors.error.withValues(alpha: 0.3),
+                            blurRadius: 4,
+                            offset: const Offset(0, 1),
+                          ),
+                        ],
+                      ),
+                      child: Center(
+                        child: Text(
+                          unreadCount > 99 ? '99+' : '$unreadCount',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                            height: 1.2,
+                          ),
+                        ),
+                      ),
                     ),
                   ),
-                  const SizedBox(height: 2),
-                  Text(
-                    context.l10n.messagesContactService,
-                    style: const TextStyle(
-                      fontSize: 13,
-                      color: Colors.white70,
-                    ),
-                  ),
-                ],
-              ),
+              ],
             ),
-            const Icon(
-              Icons.chevron_right,
-              color: Colors.white70,
+            const SizedBox(height: 6),
+            // 标签文字
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 11,
+                color: isDark
+                    ? AppColors.textSecondaryDark
+                    : AppColors.textSecondaryLight,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
           ],
         ),
@@ -311,105 +289,51 @@ class _CustomerServiceCard extends StatelessWidget {
   }
 }
 
-/// 互动消息卡片 - 对齐iOS InteractionMessageCard (带渐变背景)
-class _InteractionMessageCard extends StatelessWidget {
-  const _InteractionMessageCard({required this.onTap});
 
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: () {
-        HapticFeedback.selectionClick();
-        onTap();
-      },
-      child: Container(
-        height: 80,
-        padding: const EdgeInsets.symmetric(
-          horizontal: AppSpacing.lg,
-          vertical: AppSpacing.md,
-        ),
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: [
-              AppColors.warning.withValues(alpha: 0.8),
-              AppColors.warning,
-            ],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-          borderRadius: AppRadius.allLarge,
-          boxShadow: [
-            BoxShadow(
-              color: AppColors.warning.withValues(alpha: 0.3),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
-        child: Row(
-          children: [
-            // 图标
-            Container(
-              width: 44,
-              height: 44,
-              decoration: const BoxDecoration(
-                color: Colors.white,
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(
-                Icons.favorite,
-                color: AppColors.warning,
-                size: 22,
-              ),
-            ),
-            const SizedBox(width: 16),
-            // 文字
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(
-                    context.l10n.messagesInteractionInfo,
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.white,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    context.l10n.messagesViewForumInteractions,
-                    style: const TextStyle(
-                      fontSize: 13,
-                      color: Colors.white70,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const Icon(
-              Icons.chevron_right,
-              color: Colors.white70,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-/// 任务聊天项 - 对齐iOS TaskChatRow (卡片式, 渐变图标, 角色标签)
+/// 任务聊天项 - 对齐iOS TaskChatRow (卡片式, 图片/图标, 角色标签, 消息预览)
 class _TaskChatItem extends StatelessWidget {
   const _TaskChatItem({
     required this.taskChat,
+    this.currentUserId,
   });
 
   final TaskChat taskChat;
+  final String? currentUserId;
 
-  /// 根据任务状态返回不同的渐变颜色
+  // ==================== iOS 对齐: taskTypeIcons ====================
+
+  static const Map<String, IconData> _taskTypeIcons = {
+    'Housekeeping': Icons.home_filled,
+    'Campus Life': Icons.school,
+    'Second-hand & Rental': Icons.shopping_bag,
+    'Errand Running': Icons.directions_run,
+    'Skill Service': Icons.build,
+    'Social Help': Icons.people,
+    'Transportation': Icons.directions_car,
+    'Pet Care': Icons.pets,
+    'Life Convenience': Icons.shopping_cart,
+    'Other': Icons.grid_view,
+  };
+
+  /// 按 taskSource / taskType 获取图标 (对齐iOS getTaskIcon)
+  IconData get _taskIcon {
+    final source = taskChat.taskSource ?? 'normal';
+    switch (source) {
+      case 'flea_market':
+        return Icons.shopping_bag;
+      case 'expert_service':
+        return Icons.star;
+      case 'expert_activity':
+        return Icons.groups;
+      default:
+        if (taskChat.taskType != null) {
+          return _taskTypeIcons[taskChat.taskType!] ?? Icons.chat_bubble;
+        }
+        return Icons.chat_bubble;
+    }
+  }
+
+  /// 根据任务状态返回渐变颜色
   List<Color> get _statusGradient {
     switch (taskChat.taskStatus) {
       case 'open':
@@ -419,9 +343,78 @@ class _TaskChatItem extends StatelessWidget {
         return [const Color(0xFFFF9500), const Color(0xFFFF6B00)];
       case 'completed':
         return [AppColors.success, const Color(0xFF30D158)];
+      case 'pending_confirmation':
+      case 'pending_payment':
+        return [const Color(0xFFFF9500), const Color(0xFFFF6B00)];
       default:
         return [AppColors.primary, const Color(0xFF5856D6)];
     }
+  }
+
+  /// 本地化任务状态
+  String _localizedStatus(BuildContext context) {
+    final l10n = context.l10n;
+    switch (taskChat.taskStatus) {
+      case 'open':
+        return l10n.taskStatusOpen;
+      case 'in_progress':
+      case 'assigned':
+        return l10n.taskStatusInProgress;
+      case 'completed':
+        return l10n.taskStatusCompleted;
+      case 'cancelled':
+        return l10n.taskStatusCancelled;
+      case 'pending_confirmation':
+        return l10n.taskStatusPendingConfirmation;
+      case 'pending_payment':
+        return l10n.taskStatusPendingPayment;
+      default:
+        return taskChat.taskStatus ?? '';
+    }
+  }
+
+  /// 角色标签 (对齐iOS roleLabel)
+  String? _roleLabel(BuildContext context) {
+    if (currentUserId == null) return null;
+    final l10n = context.l10n;
+    final source = taskChat.taskSource ?? 'normal';
+
+    if (taskChat.posterId == currentUserId) {
+      switch (source) {
+        case 'flea_market':
+          return l10n.taskDetailBuyer;
+        case 'expert_service':
+          return l10n.myTasksRoleUser;
+        case 'expert_activity':
+          return l10n.myTasksRoleParticipant;
+        default:
+          return l10n.notificationPoster;
+      }
+    }
+    if (taskChat.takerId == currentUserId) {
+      switch (source) {
+        case 'flea_market':
+          return l10n.taskDetailSeller;
+        case 'expert_service':
+          return l10n.myTasksRoleExpert;
+        case 'expert_activity':
+          return l10n.myTasksRoleOrganizer;
+        default:
+          return l10n.notificationTaker;
+      }
+    }
+    if (taskChat.expertCreatorId != null &&
+        taskChat.expertCreatorId == currentUserId) {
+      switch (source) {
+        case 'expert_activity':
+          return l10n.myTasksRoleOrganizer;
+        case 'expert_service':
+          return l10n.myTasksRoleExpert;
+        default:
+          return l10n.notificationExpert;
+      }
+    }
+    return l10n.notificationParticipant;
   }
 
   @override
@@ -429,6 +422,7 @@ class _TaskChatItem extends StatelessWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final hasUnread = taskChat.unreadCount > 0;
     final gradient = _statusGradient;
+    final l10n = context.l10n;
 
     return GestureDetector(
       onTap: () {
@@ -462,55 +456,10 @@ class _TaskChatItem extends StatelessWidget {
           ],
         ),
         child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // 对齐iOS: 渐变图标 (56px) + 未读红点
-            Stack(
-              children: [
-                Container(
-                  width: 56,
-                  height: 56,
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: gradient,
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                    borderRadius: BorderRadius.circular(16),
-                    boxShadow: [
-                      BoxShadow(
-                        color: gradient.first.withValues(alpha: 0.3),
-                        blurRadius: 8,
-                        offset: const Offset(0, 3),
-                      ),
-                    ],
-                  ),
-                  child: const Icon(Icons.chat_bubble,
-                      color: Colors.white, size: 24),
-                ),
-                // 对齐iOS: 未读红点 (12px, 右上角, 白色边框)
-                if (hasUnread)
-                  Positioned(
-                    right: -2,
-                    top: -2,
-                    child: Container(
-                      width: 14,
-                      height: 14,
-                      decoration: BoxDecoration(
-                        color: AppColors.error,
-                        shape: BoxShape.circle,
-                        border: Border.all(color: Colors.white, width: 2),
-                        boxShadow: [
-                          BoxShadow(
-                            color: AppColors.error.withValues(alpha: 0.3),
-                            blurRadius: 4,
-                            offset: const Offset(0, 1),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-              ],
-            ),
+            // 对齐iOS: 任务图片/渐变图标 (56px) + 未读红点
+            _buildTaskIcon(gradient, hasUnread),
             const SizedBox(width: AppSpacing.md),
 
             // 内容区域
@@ -523,11 +472,11 @@ class _TaskChatItem extends StatelessWidget {
                     children: [
                       Expanded(
                         child: Text(
-                          taskChat.taskTitle,
+                          taskChat.displayTitle,
                           style: TextStyle(
                             fontSize: 16,
                             fontWeight:
-                                hasUnread ? FontWeight.bold : FontWeight.w500,
+                                hasUnread ? FontWeight.bold : FontWeight.w600,
                             color: isDark
                                 ? AppColors.textPrimaryDark
                                 : AppColors.textPrimaryLight,
@@ -537,69 +486,22 @@ class _TaskChatItem extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(width: 8),
-                      // 时间
-                      Text(
-                        taskChat.lastMessageTime != null
-                            ? DateFormatter.formatSmart(
-                                taskChat.lastMessageTime!)
-                            : '',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: isDark
-                              ? AppColors.textTertiaryDark
-                              : AppColors.textTertiaryLight,
-                        ),
-                      ),
-                      // 对齐iOS: 未读计数胶囊 (在时间旁边)
-                      if (hasUnread) ...[
-                        const SizedBox(width: 6),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 6, vertical: 2),
-                          decoration: BoxDecoration(
-                            gradient: const LinearGradient(
-                              colors: [Color(0xFFFF3B30), Color(0xFFFF6B6B)],
-                            ),
-                            borderRadius: AppRadius.allPill,
-                          ),
-                          child: Text(
-                            taskChat.unreadCount > 99
-                                ? '99+'
-                                : '${taskChat.unreadCount}',
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 10,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                      ],
+                      // 时间 + 未读数 (对齐iOS: 同一行)
+                      ..._buildTimeAndUnread(isDark, hasUnread),
                     ],
                   ),
-                  const SizedBox(height: 4),
 
-                  // 第二行: 预览消息 + 状态标签
+                  // 第二行: 角色标签 (对齐iOS roleLabel)
+                  _buildRoleLabel(context, isDark),
+
+                  const SizedBox(height: 2),
+
+                  // 第三行: 消息预览 + 状态标签
                   Row(
                     children: [
                       Expanded(
-                        child: Text(
-                          taskChat.lastMessage ?? '暂无消息',
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: hasUnread
-                                ? FontWeight.w500
-                                : FontWeight.normal,
-                            color: hasUnread
-                                ? (isDark
-                                    ? AppColors.textSecondaryDark
-                                    : AppColors.textSecondaryLight)
-                                : (isDark
-                                    ? AppColors.textTertiaryDark
-                                    : AppColors.textTertiaryLight),
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
+                        child: _buildMessagePreview(
+                            context, isDark, hasUnread, l10n),
                       ),
                       if (taskChat.taskStatus != null) ...[
                         const SizedBox(width: 8),
@@ -611,7 +513,7 @@ class _TaskChatItem extends StatelessWidget {
                             borderRadius: AppRadius.allPill,
                           ),
                           child: Text(
-                            taskChat.taskStatus!,
+                            _localizedStatus(context),
                             style: TextStyle(
                               fontSize: 10,
                               fontWeight: FontWeight.w600,
@@ -628,6 +530,223 @@ class _TaskChatItem extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+
+  /// 对齐iOS: 有任务图片时显示图片，无图片时渐变背景+动态图标
+  Widget _buildTaskIcon(List<Color> gradient, bool hasUnread) {
+    const double imageSize = 56;
+
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        // 有图片: 显示第一张任务图片 (对齐iOS AsyncImageView)
+        if (taskChat.images.isNotEmpty)
+          ClipRRect(
+            borderRadius: BorderRadius.circular(16),
+            child: CachedNetworkImage(
+              imageUrl: taskChat.images.first,
+              width: imageSize,
+              height: imageSize,
+              fit: BoxFit.cover,
+              placeholder: (_, __) => Container(
+                width: imageSize,
+                height: imageSize,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: gradient,
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Icon(_taskIcon, color: Colors.white, size: 24),
+              ),
+              errorWidget: (_, __, ___) => Container(
+                width: imageSize,
+                height: imageSize,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: gradient,
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Icon(_taskIcon, color: Colors.white, size: 24),
+              ),
+            ),
+          )
+        else
+          // 无图片: 渐变背景 + 动态图标 (对齐iOS gradientPrimary + getTaskIcon)
+          Container(
+            width: imageSize,
+            height: imageSize,
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: gradient,
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: gradient.first.withValues(alpha: 0.3),
+                  blurRadius: 8,
+                  offset: const Offset(0, 3),
+                ),
+              ],
+            ),
+            child: Icon(_taskIcon, color: Colors.white, size: 24),
+          ),
+
+        // 对齐iOS: 未读红点 (12px, 右上角, 白色边框)
+        if (hasUnread)
+          Positioned(
+            right: -2,
+            top: -2,
+            child: Container(
+              width: 14,
+              height: 14,
+              decoration: BoxDecoration(
+                color: AppColors.error,
+                shape: BoxShape.circle,
+                border: Border.all(color: Colors.white, width: 2),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.error.withValues(alpha: 0.3),
+                    blurRadius: 4,
+                    offset: const Offset(0, 1),
+                  ),
+                ],
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+
+  /// 时间 + 未读计数胶囊
+  List<Widget> _buildTimeAndUnread(bool isDark, bool hasUnread) {
+    return [
+      // 时间
+      Text(
+        taskChat.lastMessageTime != null
+            ? DateFormatter.formatSmart(taskChat.lastMessageTime!)
+            : '',
+        style: TextStyle(
+          fontSize: 12,
+          color: isDark
+              ? AppColors.textTertiaryDark
+              : AppColors.textTertiaryLight,
+        ),
+      ),
+      // 对齐iOS: 未读计数胶囊 (在时间旁边)
+      if (hasUnread) ...[
+        const SizedBox(width: 6),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+          decoration: BoxDecoration(
+            color: AppColors.error,
+            borderRadius: AppRadius.allPill,
+          ),
+          child: Text(
+            taskChat.unreadCount > 99 ? '99+' : '${taskChat.unreadCount}',
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 10,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ),
+      ],
+    ];
+  }
+
+  /// 对齐iOS: 角色标签行 (person.fill + 角色文本)
+  Widget _buildRoleLabel(BuildContext context, bool isDark) {
+    final role = _roleLabel(context);
+    if (role == null) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.only(top: 2),
+      child: Row(
+        children: [
+          Icon(
+            Icons.person,
+            size: 12,
+            color: isDark
+                ? AppColors.textTertiaryDark
+                : AppColors.textTertiaryLight,
+          ),
+          const SizedBox(width: 4),
+          Text(
+            role,
+            style: TextStyle(
+              fontSize: 12,
+              color: isDark
+                  ? AppColors.textTertiaryDark
+                  : AppColors.textTertiaryLight,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// 对齐iOS: 消息预览 ("发送者: 消息内容" 格式)
+  Widget _buildMessagePreview(
+      BuildContext context, bool isDark, bool hasUnread, dynamic l10n) {
+    final lastMsg = taskChat.lastMessageObj;
+    final previewColor = hasUnread
+        ? (isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight)
+        : (isDark ? AppColors.textTertiaryDark : AppColors.textTertiaryLight);
+    final previewWeight = hasUnread ? FontWeight.w500 : FontWeight.normal;
+
+    // 有 lastMessageObj 时使用结构化消息预览
+    if (lastMsg != null) {
+      final senderPrefix = (lastMsg.senderName != null &&
+              lastMsg.senderName!.isNotEmpty)
+          ? '${lastMsg.senderName}: '
+          : '${l10n.notificationSystem}: ';
+      final content =
+          lastMsg.content?.isNotEmpty == true ? lastMsg.content! : '';
+
+      return Text.rich(
+        TextSpan(
+          children: [
+            TextSpan(
+              text: senderPrefix,
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: previewWeight,
+                color: previewColor,
+              ),
+            ),
+            TextSpan(
+              text: content,
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: previewWeight,
+                color: previewColor,
+              ),
+            ),
+          ],
+        ),
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+      );
+    }
+
+    // 降级：使用纯文本 lastMessage
+    return Text(
+      taskChat.lastMessage ?? l10n.messagesNoTaskChats,
+      style: TextStyle(
+        fontSize: 13,
+        fontWeight: previewWeight,
+        color: previewColor,
+      ),
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
     );
   }
 }

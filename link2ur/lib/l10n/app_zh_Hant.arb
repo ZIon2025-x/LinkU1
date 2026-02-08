@@ -2782,6 +2782,7 @@
   "notificationAll": "全部通知",
   "notificationTask": "任務通知",
   "notificationForum": "論壇通知",
+  "notificationInteraction": "互動訊息",
 
   "errorNetworkTimeout": "網路連線逾時",
   "errorRequestFailedGeneric": "請求失敗",
@@ -2811,5 +2812,28 @@
   "notificationPermissionTitle": "開啟推送通知",
   "notificationPermissionDescription": "開啟通知後，您可以即時收到：\n\n• 任務狀態更新\n• 新訊息提醒\n• 任務配對推薦\n• 優惠活動通知",
   "notificationPermissionEnable": "開啟通知",
-  "notificationPermissionSkip": "暫時跳過"
+  "notificationPermissionSkip": "暫時跳過",
+
+  "feedbackPublishSuccess": "發布成功",
+  "feedbackPublishFailed": "發布失敗",
+  "feedbackTaskPublishSuccess": "任務發布成功",
+  "feedbackPostPublishSuccess": "帖子發布成功",
+  "feedbackFillTitleAndContent": "請填寫標題和內容",
+  "feedbackSelectCategory": "請選擇分類",
+  "feedbackPickImageFailed": "選擇圖片失敗: {error}",
+  "@feedbackPickImageFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "feedbackSaveSuccess": "儲存成功",
+  "feedbackSaveFailed": "儲存失敗",
+  "feedbackOperationSuccess": "操作成功",
+  "feedbackOperationFailed": "操作失敗",
+  "feedbackLoadFailed": "載入失敗",
+  "feedbackNetworkError": "網路錯誤，請重試",
+  "feedbackDeleteSuccess": "刪除成功",
+  "feedbackCopySuccess": "已複製到剪貼簿"
 }

@@ -167,6 +167,9 @@ class LeaderboardState extends Equatable {
         hasMore,
         selectedCategory,
         errorMessage,
+        itemDetail,
+        isSubmitting,
+        actionMessage,
       ];
 }
 
@@ -239,6 +242,7 @@ class LeaderboardBloc extends Bloc<LeaderboardEvent, LeaderboardState> {
       ));
     } catch (e) {
       AppLogger.error('Failed to load more leaderboards', e);
+      emit(state.copyWith(hasMore: false));
     }
   }
 

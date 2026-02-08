@@ -95,6 +95,7 @@ class ScaleTapWrapperState extends State<ScaleTapWrapper>
 
 /// 主要按钮
 /// 参考iOS PrimaryButtonStyle - 渐变背景 + 按压缩放(0.96) + 触觉反馈
+/// 加载态切换：文字/图标 ↔ loading 指示器平滑 crossfade
 class PrimaryButton extends StatelessWidget {
   const PrimaryButton({
     super.key,
@@ -133,7 +134,9 @@ class PrimaryButton extends StatelessWidget {
         HapticFeedback.lightImpact();
         onPressed?.call();
       },
-      child: Container(
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 250),
+        curve: Curves.easeInOut,
         width: width,
         height: height,
         decoration: BoxDecoration(
@@ -143,21 +146,31 @@ class PrimaryButton extends StatelessWidget {
           boxShadow: isActive ? AppShadows.primary(opacity: 0.2) : null,
         ),
         child: Center(
-          child: isLoading
-              ? const ButtonLoadingIndicator()
-              : Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    if (icon != null) ...[
-                      Icon(icon, color: Colors.white, size: 20),
-                      AppSpacing.hSm,
+          child: AnimatedSwitcher(
+            duration: const Duration(milliseconds: 250),
+            switchInCurve: Curves.easeOut,
+            switchOutCurve: Curves.easeIn,
+            transitionBuilder: (child, animation) => FadeTransition(
+              opacity: animation,
+              child: ScaleTransition(scale: animation, child: child),
+            ),
+            child: isLoading
+                ? const ButtonLoadingIndicator(key: ValueKey('loading'))
+                : Row(
+                    key: const ValueKey('content'),
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (icon != null) ...[
+                        Icon(icon, color: Colors.white, size: 20),
+                        AppSpacing.hSm,
+                      ],
+                      Text(
+                        text,
+                        style: AppTypography.button.copyWith(color: Colors.white),
+                      ),
                     ],
-                    Text(
-                      text,
-                      style: AppTypography.button.copyWith(color: Colors.white),
-                    ),
-                  ],
-                ),
+                  ),
+          ),
         ),
       ),
     );
@@ -166,6 +179,7 @@ class PrimaryButton extends StatelessWidget {
 
 /// 次要按钮
 /// 参考iOS SecondaryButtonStyle - 边框 + 按压缩放(0.96) + 触觉反馈
+/// 加载态切换：文字/图标 ↔ loading 指示器平滑 crossfade
 class SecondaryButton extends StatelessWidget {
   const SecondaryButton({
     super.key,
@@ -199,7 +213,9 @@ class SecondaryButton extends StatelessWidget {
         HapticFeedback.lightImpact();
         onPressed?.call();
       },
-      child: Container(
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 250),
+        curve: Curves.easeInOut,
         width: width,
         height: height,
         decoration: BoxDecoration(
@@ -207,21 +223,34 @@ class SecondaryButton extends StatelessWidget {
           borderRadius: AppRadius.button,
         ),
         child: Center(
-          child: isLoading
-              ? ButtonLoadingIndicator(color: effectiveColor)
-              : Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    if (icon != null) ...[
-                      Icon(icon, color: effectiveColor, size: 20),
-                      AppSpacing.hSm,
+          child: AnimatedSwitcher(
+            duration: const Duration(milliseconds: 250),
+            switchInCurve: Curves.easeOut,
+            switchOutCurve: Curves.easeIn,
+            transitionBuilder: (child, animation) => FadeTransition(
+              opacity: animation,
+              child: ScaleTransition(scale: animation, child: child),
+            ),
+            child: isLoading
+                ? ButtonLoadingIndicator(
+                    key: const ValueKey('loading'),
+                    color: effectiveColor,
+                  )
+                : Row(
+                    key: const ValueKey('content'),
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (icon != null) ...[
+                        Icon(icon, color: effectiveColor, size: 20),
+                        AppSpacing.hSm,
+                      ],
+                      Text(
+                        text,
+                        style: AppTypography.button.copyWith(color: effectiveColor),
+                      ),
                     ],
-                    Text(
-                      text,
-                      style: AppTypography.button.copyWith(color: effectiveColor),
-                    ),
-                  ],
-                ),
+                  ),
+          ),
         ),
       ),
     );

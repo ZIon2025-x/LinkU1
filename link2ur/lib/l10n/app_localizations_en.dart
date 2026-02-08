@@ -5849,6 +5849,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get notificationForum => 'Forum Notifications';
 
   @override
+  String get notificationInteraction => 'Interaction Messages';
+
+  @override
   String get errorNetworkTimeout => 'Network connection timed out';
 
   @override
@@ -5903,4 +5906,51 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get notificationPermissionSkip => 'Skip for now';
+
+  @override
+  String get feedbackPublishSuccess => 'Published successfully';
+
+  @override
+  String get feedbackPublishFailed => 'Publish failed';
+
+  @override
+  String get feedbackTaskPublishSuccess => 'Task published successfully';
+
+  @override
+  String get feedbackPostPublishSuccess => 'Post published successfully';
+
+  @override
+  String get feedbackFillTitleAndContent => 'Please fill in title and content';
+
+  @override
+  String get feedbackSelectCategory => 'Please select a category';
+
+  @override
+  String feedbackPickImageFailed(String error) {
+    return 'Failed to pick image: $error';
+  }
+
+  @override
+  String get feedbackSaveSuccess => 'Saved successfully';
+
+  @override
+  String get feedbackSaveFailed => 'Save failed';
+
+  @override
+  String get feedbackOperationSuccess => 'Operation successful';
+
+  @override
+  String get feedbackOperationFailed => 'Operation failed';
+
+  @override
+  String get feedbackLoadFailed => 'Load failed';
+
+  @override
+  String get feedbackNetworkError => 'Network error, please try again';
+
+  @override
+  String get feedbackDeleteSuccess => 'Deleted successfully';
+
+  @override
+  String get feedbackCopySuccess => 'Copied to clipboard';
 }

@@ -121,7 +121,7 @@ class ChatState extends Equatable {
 
   @override
   List<Object?> get props =>
-      [status, messages, userId, taskId, page, hasMore, isSending];
+      [status, messages, userId, taskId, page, hasMore, isSending, errorMessage];
 }
 
 // ==================== Bloc ====================
@@ -222,6 +222,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
       ));
     } catch (e) {
       AppLogger.error('Failed to load more messages', e);
+      emit(state.copyWith(hasMore: false));
     }
   }
 

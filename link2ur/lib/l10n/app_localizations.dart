@@ -10694,6 +10694,12 @@ abstract class AppLocalizations {
   /// **'Forum Notifications'**
   String get notificationForum;
 
+  /// No description provided for @notificationInteraction.
+  ///
+  /// In en, this message translates to:
+  /// **'Interaction Messages'**
+  String get notificationInteraction;
+
   /// No description provided for @errorNetworkTimeout.
   ///
   /// In en, this message translates to:
@@ -10795,6 +10801,96 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Skip for now'**
   String get notificationPermissionSkip;
+
+  /// No description provided for @feedbackPublishSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Published successfully'**
+  String get feedbackPublishSuccess;
+
+  /// No description provided for @feedbackPublishFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Publish failed'**
+  String get feedbackPublishFailed;
+
+  /// No description provided for @feedbackTaskPublishSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Task published successfully'**
+  String get feedbackTaskPublishSuccess;
+
+  /// No description provided for @feedbackPostPublishSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Post published successfully'**
+  String get feedbackPostPublishSuccess;
+
+  /// No description provided for @feedbackFillTitleAndContent.
+  ///
+  /// In en, this message translates to:
+  /// **'Please fill in title and content'**
+  String get feedbackFillTitleAndContent;
+
+  /// No description provided for @feedbackSelectCategory.
+  ///
+  /// In en, this message translates to:
+  /// **'Please select a category'**
+  String get feedbackSelectCategory;
+
+  /// No description provided for @feedbackPickImageFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to pick image: {error}'**
+  String feedbackPickImageFailed(String error);
+
+  /// No description provided for @feedbackSaveSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Saved successfully'**
+  String get feedbackSaveSuccess;
+
+  /// No description provided for @feedbackSaveFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Save failed'**
+  String get feedbackSaveFailed;
+
+  /// No description provided for @feedbackOperationSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Operation successful'**
+  String get feedbackOperationSuccess;
+
+  /// No description provided for @feedbackOperationFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Operation failed'**
+  String get feedbackOperationFailed;
+
+  /// No description provided for @feedbackLoadFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Load failed'**
+  String get feedbackLoadFailed;
+
+  /// No description provided for @feedbackNetworkError.
+  ///
+  /// In en, this message translates to:
+  /// **'Network error, please try again'**
+  String get feedbackNetworkError;
+
+  /// No description provided for @feedbackDeleteSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Deleted successfully'**
+  String get feedbackDeleteSuccess;
+
+  /// No description provided for @feedbackCopySuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Copied to clipboard'**
+  String get feedbackCopySuccess;
 }
 
 class _AppLocalizationsDelegate

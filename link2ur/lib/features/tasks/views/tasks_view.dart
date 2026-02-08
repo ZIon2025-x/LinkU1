@@ -11,8 +11,9 @@ import '../../../core/design/app_radius.dart';
 import '../../../core/design/app_typography.dart';
 import '../../../core/utils/l10n_extension.dart';
 import '../../../core/widgets/async_image_view.dart';
+import '../../../core/widgets/animated_list_item.dart';
 import '../../../core/widgets/empty_state_view.dart';
-import '../../../core/widgets/loading_view.dart';
+import '../../../core/widgets/skeleton_view.dart';
 import '../../../core/widgets/error_state_view.dart';
 import '../../../data/models/task.dart';
 import '../../../data/repositories/task_repository.dart';
@@ -293,7 +294,7 @@ class _TasksViewContentState extends State<_TasksViewContent> {
     return BlocBuilder<TaskListBloc, TaskListState>(
       builder: (context, state) {
         if (state.isLoading && state.tasks.isEmpty) {
-          return const LoadingView();
+          return const SkeletonList();
         }
 
         if (state.hasError && state.tasks.isEmpty) {
@@ -325,6 +326,7 @@ class _TasksViewContentState extends State<_TasksViewContent> {
           },
           child: GridView.builder(
             controller: _scrollController,
+            clipBehavior: Clip.none,
             padding: AppSpacing.allMd,
             gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
               crossAxisCount: 2,
@@ -342,7 +344,10 @@ class _TasksViewContentState extends State<_TasksViewContent> {
                   ),
                 );
               }
-              return _TaskGridCard(task: state.tasks[index]);
+              return AnimatedListItem(
+                index: index,
+                child: _TaskGridCard(task: state.tasks[index]),
+              );
             },
           ),
         );
@@ -501,9 +506,12 @@ class _TaskGridCard extends StatelessWidget {
       children: [
         // 任务图片或占位背景
         if (task.firstImage != null)
-          AsyncImageView(
-            imageUrl: task.firstImage!,
-            fit: BoxFit.cover,
+          Hero(
+            tag: 'task_image_${task.id}',
+            child: AsyncImageView(
+              imageUrl: task.firstImage!,
+              fit: BoxFit.cover,
+            ),
           )
         else
           _buildPlaceholderBackground(),

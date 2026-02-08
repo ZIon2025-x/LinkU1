@@ -8,11 +8,11 @@ import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_radius.dart';
 import '../../../core/design/app_typography.dart';
+import '../../../core/widgets/animated_list_item.dart';
 import '../../../core/widgets/loading_view.dart';
+import '../../../core/widgets/skeleton_view.dart';
 import '../../../core/widgets/error_state_view.dart';
 import '../../../core/widgets/empty_state_view.dart';
-import '../../../data/repositories/forum_repository.dart';
-import '../../../data/repositories/leaderboard_repository.dart';
 import '../../../data/models/forum.dart';
 import '../../../data/models/leaderboard.dart';
 import '../bloc/forum_bloc.dart';
@@ -208,63 +208,62 @@ class _CommunityTabButton extends StatelessWidget {
   }
 }
 
-/// 论坛Tab
+/// 论坛Tab - BLoC 在 MainTabView 中创建
 class _ForumTab extends StatelessWidget {
   const _ForumTab();
 
   @override
   Widget build(BuildContext context) {
-    return BlocProvider(
-      create: (context) => ForumBloc(
-        forumRepository: context.read<ForumRepository>(),
-      )..add(const ForumLoadPosts()),
-      child: BlocBuilder<ForumBloc, ForumState>(
-        builder: (context, state) {
-          if (state.status == ForumStatus.loading && state.posts.isEmpty) {
-            return const LoadingView();
-          }
+    return BlocBuilder<ForumBloc, ForumState>(
+      builder: (context, state) {
+        if (state.status == ForumStatus.loading && state.posts.isEmpty) {
+          return const SkeletonList();
+        }
 
-          if (state.status == ForumStatus.error && state.posts.isEmpty) {
-            return ErrorStateView.loadFailed(
-              message: state.errorMessage ?? context.l10n.tasksLoadFailed,
-              onRetry: () {
-                context.read<ForumBloc>().add(const ForumLoadPosts());
-              },
-            );
-          }
-
-          if (state.posts.isEmpty) {
-            return EmptyStateView.noData(
-              title: context.l10n.forumNoPosts,
-              description: '还没有帖子，点击下方按钮发布第一个帖子',
-            );
-          }
-
-          return RefreshIndicator(
-            onRefresh: () async {
-              context.read<ForumBloc>().add(const ForumRefreshRequested());
+        if (state.status == ForumStatus.error && state.posts.isEmpty) {
+          return ErrorStateView.loadFailed(
+            message: state.errorMessage ?? context.l10n.tasksLoadFailed,
+            onRetry: () {
+              context.read<ForumBloc>().add(const ForumLoadPosts());
             },
-            child: ListView.separated(
-              padding: AppSpacing.allMd,
-              itemCount: state.posts.length + (state.hasMore ? 1 : 0),
-              separatorBuilder: (context, index) => AppSpacing.vMd,
-              itemBuilder: (context, index) {
-                if (index == state.posts.length) {
-                  // Load more trigger
-                  context.read<ForumBloc>().add(const ForumLoadMorePosts());
-                  return const Center(
-                    child: Padding(
-                      padding: EdgeInsets.all(16.0),
-                      child: LoadingIndicator(),
-                    ),
-                  );
-                }
-                return _PostCard(post: state.posts[index]);
-              },
-            ),
           );
-        },
-      ),
+        }
+
+        if (state.posts.isEmpty) {
+          return EmptyStateView.noData(
+            title: context.l10n.forumNoPosts,
+            description: '还没有帖子，点击下方按钮发布第一个帖子',
+          );
+        }
+
+        return RefreshIndicator(
+          onRefresh: () async {
+            context.read<ForumBloc>().add(const ForumRefreshRequested());
+          },
+          child: ListView.separated(
+            clipBehavior: Clip.none,
+            padding: AppSpacing.allMd,
+            itemCount: state.posts.length + (state.hasMore ? 1 : 0),
+            separatorBuilder: (context, index) => AppSpacing.vMd,
+            itemBuilder: (context, index) {
+              if (index == state.posts.length) {
+                // Load more trigger
+                context.read<ForumBloc>().add(const ForumLoadMorePosts());
+                return const Center(
+                  child: Padding(
+                    padding: EdgeInsets.all(16.0),
+                    child: LoadingIndicator(),
+                  ),
+                );
+              }
+              return AnimatedListItem(
+                index: index,
+                child: _PostCard(post: state.posts[index]),
+              );
+            },
+          ),
+        );
+      },
     );
   }
 }
@@ -275,52 +274,49 @@ class _LeaderboardTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BlocProvider(
-      create: (context) => LeaderboardBloc(
-        leaderboardRepository: context.read<LeaderboardRepository>(),
-      )..add(const LeaderboardLoadRequested()),
-      child: BlocBuilder<LeaderboardBloc, LeaderboardState>(
-        builder: (context, state) {
-          if (state.status == LeaderboardStatus.loading &&
-              state.leaderboards.isEmpty) {
-            return const LoadingView();
-          }
+    return BlocBuilder<LeaderboardBloc, LeaderboardState>(
+      builder: (context, state) {
+        if (state.status == LeaderboardStatus.loading &&
+            state.leaderboards.isEmpty) {
+          return const SkeletonList();
+        }
 
-          if (state.status == LeaderboardStatus.error &&
-              state.leaderboards.isEmpty) {
-            return ErrorStateView.loadFailed(
-              message: state.errorMessage ?? context.l10n.tasksLoadFailed,
-              onRetry: () {
-                context.read<LeaderboardBloc>().add(
-                      const LeaderboardLoadRequested(),
-                    );
-              },
-            );
-          }
-
-          if (state.leaderboards.isEmpty) {
-            return EmptyStateView.noData(
-              title: '暂无排行榜',
-              description: '还没有排行榜',
-            );
-          }
-
-          return RefreshIndicator(
-            onRefresh: () async {
+        if (state.status == LeaderboardStatus.error &&
+            state.leaderboards.isEmpty) {
+          return ErrorStateView.loadFailed(
+            message: state.errorMessage ?? context.l10n.tasksLoadFailed,
+            onRetry: () {
               context.read<LeaderboardBloc>().add(
-                    const LeaderboardRefreshRequested(),
+                    const LeaderboardLoadRequested(),
                   );
             },
-            child: ListView.separated(
-              padding: AppSpacing.allMd,
-              itemCount: state.leaderboards.length +
-                  (state.hasMore ? 1 : 0),
-              separatorBuilder: (context, index) => AppSpacing.vMd,
-              itemBuilder: (context, index) {
-                if (index == state.leaderboards.length) {
-                  context.read<LeaderboardBloc>().add(
-                        const LeaderboardLoadMore(),
-                      );
+          );
+        }
+
+        if (state.leaderboards.isEmpty) {
+          return EmptyStateView.noData(
+            title: '暂无排行榜',
+            description: '还没有排行榜',
+          );
+        }
+
+        return RefreshIndicator(
+          onRefresh: () async {
+            context.read<LeaderboardBloc>().add(
+                  const LeaderboardRefreshRequested(),
+                );
+          },
+          child: ListView.separated(
+            clipBehavior: Clip.none,
+            padding: AppSpacing.allMd,
+            itemCount: state.leaderboards.length +
+                (state.hasMore ? 1 : 0),
+            separatorBuilder: (context, index) => AppSpacing.vMd,
+            itemBuilder: (context, index) {
+              if (index == state.leaderboards.length) {
+                context.read<LeaderboardBloc>().add(
+                      const LeaderboardLoadMore(),
+                    );
                   return const Center(
                     child: Padding(
                       padding: EdgeInsets.all(16.0),
@@ -328,15 +324,17 @@ class _LeaderboardTab extends StatelessWidget {
                     ),
                   );
                 }
-                return _LeaderboardCard(
-                  leaderboard: state.leaderboards[index],
+                return AnimatedListItem(
+                  index: index,
+                  child: _LeaderboardCard(
+                    leaderboard: state.leaderboards[index],
+                  ),
                 );
               },
             ),
           );
         },
-      ),
-    );
+      );
   }
 }
 
@@ -586,7 +584,8 @@ class _InteractionItem extends StatelessWidget {
   }
 }
 
-/// 排行榜卡片 - 对齐iOS CategoryCard样式 (渐变图标 + 标题 + 箭头)
+/// 排行榜卡片 - 对标iOS LeaderboardCard样式
+/// 封面图(100x100) + 标题 + 描述 + 位置 + 分隔线 + 统计行(项目/投票/浏览)
 class _LeaderboardCard extends StatelessWidget {
   const _LeaderboardCard({required this.leaderboard});
 
@@ -640,66 +639,184 @@ class _LeaderboardCard extends StatelessWidget {
             ),
           ],
         ),
-        child: Row(
+        child: Column(
           children: [
-            // 渐变图标背景 (对齐iOS)
-            Container(
-              width: 56,
-              height: 56,
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: colors,
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
+            // 对标iOS: 封面 + 标题/描述/位置
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // 封面图片或渐变占位 (对标iOS 100x100)
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(14),
+                  child: leaderboard.coverImage != null &&
+                          leaderboard.coverImage!.isNotEmpty
+                      ? Image.network(
+                          leaderboard.coverImage!,
+                          width: 90,
+                          height: 90,
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, __, ___) =>
+                              _buildPlaceholderIcon(colors),
+                        )
+                      : _buildPlaceholderIcon(colors),
                 ),
-                borderRadius: BorderRadius.circular(14),
-                boxShadow: [
-                  BoxShadow(
-                    color: colors.first.withValues(alpha: 0.3),
-                    blurRadius: 8,
-                    offset: const Offset(0, 3),
+                const SizedBox(width: AppSpacing.md),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // 标题 (对标iOS title3 bold, lineLimit 1)
+                      Text(
+                        leaderboard.displayName,
+                        style: AppTypography.bodyBold.copyWith(
+                          fontSize: 17,
+                          color: isDark
+                              ? AppColors.textPrimaryDark
+                              : AppColors.textPrimaryLight,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      // 描述 (对标iOS caption, lineLimit 2)
+                      if (leaderboard.displayDescription != null) ...[
+                        const SizedBox(height: 4),
+                        Text(
+                          leaderboard.displayDescription!,
+                          style: AppTypography.caption.copyWith(
+                            color: isDark
+                                ? AppColors.textSecondaryDark
+                                : AppColors.textSecondaryLight,
+                          ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                      // 位置 (对标iOS mappin.circle.fill)
+                      if (leaderboard.location.isNotEmpty) ...[
+                        const SizedBox(height: 6),
+                        Row(
+                          children: [
+                            Icon(
+                              Icons.location_on,
+                              size: 13,
+                              color: isDark
+                                  ? AppColors.textSecondaryDark
+                                  : AppColors.textSecondaryLight,
+                            ),
+                            const SizedBox(width: 3),
+                            Expanded(
+                              child: Text(
+                                leaderboard.location,
+                                style: AppTypography.caption2.copyWith(
+                                  fontWeight: FontWeight.w500,
+                                  color: isDark
+                                      ? AppColors.textSecondaryDark
+                                      : AppColors.textSecondaryLight,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ],
                   ),
-                ],
-              ),
-              child: const Icon(Icons.emoji_events,
-                  color: Colors.white, size: 26),
+                ),
+              ],
             ),
-            const SizedBox(width: AppSpacing.md),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    leaderboard.displayName,
-                    style: AppTypography.bodyBold.copyWith(
-                      fontSize: 16,
-                      color: isDark
-                          ? AppColors.textPrimaryDark
-                          : AppColors.textPrimaryLight,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    '${leaderboard.itemCount} 个参与者',
-                    style: AppTypography.caption.copyWith(
-                      color: isDark
-                          ? AppColors.textSecondaryDark
-                          : AppColors.textSecondaryLight,
-                    ),
-                  ),
-                ],
+
+            // 对标iOS: 分隔线
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
+              child: Divider(
+                height: 1,
+                color: (isDark
+                        ? AppColors.separatorDark
+                        : AppColors.separatorLight)
+                    .withValues(alpha: 0.3),
               ),
             ),
-            Icon(
-              Icons.chevron_right,
-              size: 18,
-              color: isDark
-                  ? AppColors.textTertiaryDark
-                  : AppColors.textTertiaryLight,
+
+            // 对标iOS: 统计行 (items + votes + views) - CompactStatItem
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                _StatItem(
+                  icon: Icons.grid_view,
+                  count: leaderboard.itemCount,
+                  isDark: isDark,
+                ),
+                _StatItem(
+                  icon: Icons.thumb_up_outlined,
+                  count: leaderboard.voteCount,
+                  isDark: isDark,
+                ),
+                _StatItem(
+                  icon: Icons.visibility_outlined,
+                  count: leaderboard.viewCount,
+                  isDark: isDark,
+                ),
+              ],
             ),
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildPlaceholderIcon(List<Color> colors) {
+    return Container(
+      width: 90,
+      height: 90,
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: colors,
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: const Icon(Icons.emoji_events, color: Colors.white, size: 36),
+    );
+  }
+}
+
+/// 统计项组件 (对标iOS CompactStatItem)
+class _StatItem extends StatelessWidget {
+  const _StatItem({
+    required this.icon,
+    required this.count,
+    required this.isDark,
+  });
+
+  final IconData icon;
+  final int count;
+  final bool isDark;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(
+          icon,
+          size: 14,
+          color: isDark
+              ? AppColors.textTertiaryDark
+              : AppColors.textTertiaryLight,
+        ),
+        const SizedBox(width: 4),
+        Text(
+          '$count',
+          style: AppTypography.caption.copyWith(
+            color: isDark
+                ? AppColors.textSecondaryDark
+                : AppColors.textSecondaryLight,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+      ],
     );
   }
 }

@@ -5,10 +5,10 @@ import 'package:go_router/go_router.dart';
 import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/utils/l10n_extension.dart';
-import '../../../core/widgets/loading_view.dart';
+import '../../../core/widgets/animated_list_item.dart';
+import '../../../core/widgets/skeleton_view.dart';
 import '../../../core/widgets/error_state_view.dart';
 import '../../../core/widgets/empty_state_view.dart';
-import '../../../data/repositories/notification_repository.dart';
 import '../bloc/notification_bloc.dart';
 import '../../../data/models/notification.dart' as models;
 
@@ -19,47 +19,42 @@ class NotificationCenterView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BlocProvider(
-      create: (context) => NotificationBloc(
-        notificationRepository: context.read<NotificationRepository>(),
-      ),
-      child: DefaultTabController(
-        length: 2,
-        child: Scaffold(
-          appBar: AppBar(
-            title: Text(context.l10n.notificationsNotifications),
-            actions: [
-              BlocBuilder<NotificationBloc, NotificationState>(
-                builder: (context, state) {
-                  return TextButton(
-                    onPressed: state.notifications.isEmpty
-                        ? null
-                        : () {
-                            context.read<NotificationBloc>().add(
-                                  const NotificationMarkAllAsRead(),
-                                );
-                          },
-                    child: const Text('全部已读'),
-                  );
-                },
-              ),
-            ],
-            bottom: const TabBar(
-              tabs: [
-                Tab(text: '系统通知'),
-                Tab(text: '互动消息'),
-              ],
-              labelColor: AppColors.primary,
-              unselectedLabelColor: AppColors.textSecondaryLight,
-              indicatorColor: AppColors.primary,
+    return DefaultTabController(
+      length: 2,
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text(context.l10n.notificationsNotifications),
+          actions: [
+            BlocBuilder<NotificationBloc, NotificationState>(
+              builder: (context, state) {
+                return TextButton(
+                  onPressed: state.notifications.isEmpty
+                      ? null
+                      : () {
+                          context.read<NotificationBloc>().add(
+                                const NotificationMarkAllAsRead(),
+                              );
+                        },
+                  child: const Text('全部已读'),
+                );
+              },
             ),
-          ),
-          body: const TabBarView(
-            children: [
-              _SystemNotificationList(),
-              _InteractionNotificationList(),
+          ],
+          bottom: const TabBar(
+            tabs: [
+              Tab(text: '系统通知'),
+              Tab(text: '互动消息'),
             ],
+            labelColor: AppColors.primary,
+            unselectedLabelColor: AppColors.textSecondaryLight,
+            indicatorColor: AppColors.primary,
           ),
+        ),
+        body: const TabBarView(
+          children: [
+            _SystemNotificationList(),
+            _InteractionNotificationList(),
+          ],
         ),
       ),
     );
@@ -97,7 +92,7 @@ class _SystemNotificationListState extends State<_SystemNotificationList> {
 
         if (state.status == NotificationStatus.loading &&
             state.notifications.isEmpty) {
-          return const LoadingView();
+          return const SkeletonList();
         }
 
         if (state.status == NotificationStatus.error &&
@@ -138,9 +133,12 @@ class _SystemNotificationListState extends State<_SystemNotificationList> {
                   ),
                 );
               }
-              return _NotificationItem(
-                notification: state.notifications[index],
-                isSystem: true,
+              return AnimatedListItem(
+                index: index,
+                child: _NotificationItem(
+                  notification: state.notifications[index],
+                  isSystem: true,
+                ),
               );
             },
           ),
@@ -183,7 +181,7 @@ class _InteractionNotificationListState
 
         if (state.status == NotificationStatus.loading &&
             state.notifications.isEmpty) {
-          return const LoadingView();
+          return const SkeletonList();
         }
 
         if (state.status == NotificationStatus.error &&
@@ -224,9 +222,12 @@ class _InteractionNotificationListState
                   ),
                 );
               }
-              return _NotificationItem(
-                notification: state.notifications[index],
-                isSystem: false,
+              return AnimatedListItem(
+                index: index,
+                child: _NotificationItem(
+                  notification: state.notifications[index],
+                  isSystem: false,
+                ),
               );
             },
           ),

@@ -2807,6 +2807,7 @@
   "notificationAll": "All Notifications",
   "notificationTask": "Task Notifications",
   "notificationForum": "Forum Notifications",
+  "notificationInteraction": "Interaction Messages",
 
   "infoPrivacyPolicy": "Privacy Policy",
   "infoTermsOfService": "Terms of Service",
@@ -2839,5 +2840,28 @@
   "notificationPermissionTitle": "Enable Push Notifications",
   "notificationPermissionDescription": "Stay updated with:\n\n• Task status updates\n• New message alerts\n• Task matching recommendations\n• Promotional notifications",
   "notificationPermissionEnable": "Enable Notifications",
-  "notificationPermissionSkip": "Skip for now"
+  "notificationPermissionSkip": "Skip for now",
+
+  "feedbackPublishSuccess": "Published successfully",
+  "feedbackPublishFailed": "Publish failed",
+  "feedbackTaskPublishSuccess": "Task published successfully",
+  "feedbackPostPublishSuccess": "Post published successfully",
+  "feedbackFillTitleAndContent": "Please fill in title and content",
+  "feedbackSelectCategory": "Please select a category",
+  "feedbackPickImageFailed": "Failed to pick image: {error}",
+  "@feedbackPickImageFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "feedbackSaveSuccess": "Saved successfully",
+  "feedbackSaveFailed": "Save failed",
+  "feedbackOperationSuccess": "Operation successful",
+  "feedbackOperationFailed": "Operation failed",
+  "feedbackLoadFailed": "Load failed",
+  "feedbackNetworkError": "Network error, please try again",
+  "feedbackDeleteSuccess": "Deleted successfully",
+  "feedbackCopySuccess": "Copied to clipboard"
 }

@@ -616,6 +616,9 @@ class TaskRepository {
   // ==================== 我的任务 ====================
 
   /// 获取我的任务
+  /// 兼容后端两种返回格式：
+  ///   - 裸数组: [{task1}, {task2}, ...]
+  ///   - 分页对象: {"tasks": [...], "total": 10, "page": 1}
   Future<TaskListResponse> getMyTasks({
     int page = 1,
     int pageSize = 20,
@@ -634,7 +637,7 @@ class TaskRepository {
     }
 
     try {
-      final response = await _apiService.get<Map<String, dynamic>>(
+      final response = await _apiService.get(
         ApiEndpoints.myTasks,
         queryParameters: params,
       );
@@ -643,8 +646,22 @@ class TaskRepository {
         throw TaskException(response.message ?? '获取我的任务失败');
       }
 
-      await _cache.set(cacheKey, response.data!, ttl: CacheManager.personalTTL);
-      return TaskListResponse.fromJson(response.data!);
+      // 兼容后端返回裸数组或分页对象
+      final Map<String, dynamic> normalized;
+      if (response.data is List) {
+        final list = response.data as List;
+        normalized = {
+          'tasks': list,
+          'total': list.length,
+          'page': page,
+          'page_size': pageSize,
+        };
+      } else {
+        normalized = response.data as Map<String, dynamic>;
+      }
+
+      await _cache.set(cacheKey, normalized, ttl: CacheManager.personalTTL);
+      return TaskListResponse.fromJson(normalized);
     } catch (e) {
       final stale = _cache.getStale<Map<String, dynamic>>(cacheKey);
       if (stale != null) return TaskListResponse.fromJson(stale);
@@ -674,12 +691,13 @@ class TaskRepository {
   }
 
   /// 获取我发布的任务（通过tasks接口加filter）
+  /// 兼容后端两种返回格式（裸数组 / 分页对象）
   Future<TaskListResponse> getMyPostedTasks({
     int page = 1,
     int pageSize = 20,
     String? status,
   }) async {
-    final response = await _apiService.get<Map<String, dynamic>>(
+    final response = await _apiService.get(
       ApiEndpoints.myTasks,
       queryParameters: {
         'page': page,
@@ -693,7 +711,21 @@ class TaskRepository {
       throw TaskException(response.message ?? '获取已发布任务失败');
     }
 
-    return TaskListResponse.fromJson(response.data!);
+    // 兼容后端返回裸数组或分页对象
+    final Map<String, dynamic> normalized;
+    if (response.data is List) {
+      final list = response.data as List;
+      normalized = {
+        'tasks': list,
+        'total': list.length,
+        'page': page,
+        'page_size': pageSize,
+      };
+    } else {
+      normalized = response.data as Map<String, dynamic>;
+    }
+
+    return TaskListResponse.fromJson(normalized);
   }
 }
 

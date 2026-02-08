@@ -5,7 +5,9 @@ import 'package:go_router/go_router.dart';
 import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_radius.dart';
+import '../../../core/widgets/animated_list_item.dart';
 import '../../../core/widgets/loading_view.dart';
+import '../../../core/widgets/skeleton_view.dart';
 import '../../../core/widgets/error_state_view.dart';
 import '../../../core/widgets/empty_state_view.dart';
 import '../../../data/repositories/activity_repository.dart';
@@ -31,7 +33,7 @@ class ActivityListView extends StatelessWidget {
           builder: (context, state) {
             if (state.status == ActivityStatus.loading &&
                 state.activities.isEmpty) {
-              return const LoadingView();
+              return const SkeletonList();
             }
 
             if (state.status == ActivityStatus.error &&
@@ -62,6 +64,7 @@ class ActivityListView extends StatelessWidget {
                 await Future.delayed(const Duration(milliseconds: 500));
               },
               child: ListView.separated(
+                clipBehavior: Clip.none,
                 padding: AppSpacing.allMd,
                 itemCount: state.activities.length + (state.hasMore ? 1 : 0),
                 separatorBuilder: (context, index) => AppSpacing.vMd,
@@ -78,7 +81,10 @@ class ActivityListView extends StatelessWidget {
                       ),
                     );
                   }
-                  return _ActivityCard(activity: state.activities[index]);
+                  return AnimatedListItem(
+                    index: index,
+                    child: _ActivityCard(activity: state.activities[index]),
+                  );
                 },
               ),
             );

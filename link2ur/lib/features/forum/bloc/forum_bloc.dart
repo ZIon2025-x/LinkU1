@@ -286,7 +286,12 @@ class ForumBloc extends Bloc<ForumEvent, ForumState> {
     ForumLoadPosts event,
     Emitter<ForumState> emit,
   ) async {
-    emit(state.copyWith(status: ForumStatus.loading));
+    // 防止重复加载：已有数据且非强制刷新时跳过全屏 loading
+    if (state.status == ForumStatus.loading) return;
+    final hasExistingData = state.posts.isNotEmpty;
+    if (!hasExistingData) {
+      emit(state.copyWith(status: ForumStatus.loading));
+    }
 
     try {
       final response = await _forumRepository.getPosts(
@@ -333,6 +338,7 @@ class ForumBloc extends Bloc<ForumEvent, ForumState> {
       ));
     } catch (e) {
       AppLogger.error('Failed to load more posts', e);
+      emit(state.copyWith(hasMore: false));
     }
   }
 

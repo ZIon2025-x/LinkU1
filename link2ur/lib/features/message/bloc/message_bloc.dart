@@ -85,7 +85,11 @@ class MessageBloc extends Bloc<MessageEvent, MessageState> {
     MessageLoadContacts event,
     Emitter<MessageState> emit,
   ) async {
-    emit(state.copyWith(status: MessageStatus.loading));
+    if (state.status == MessageStatus.loading) return;
+    final hasExistingData = state.contacts.isNotEmpty;
+    if (!hasExistingData) {
+      emit(state.copyWith(status: MessageStatus.loading));
+    }
 
     try {
       final contacts = await _messageRepository.getContacts();
@@ -106,6 +110,7 @@ class MessageBloc extends Bloc<MessageEvent, MessageState> {
     MessageLoadTaskChats event,
     Emitter<MessageState> emit,
   ) async {
+    // 不再检查 loading 状态，允许与 LoadContacts 并行执行
     try {
       final taskChats = await _messageRepository.getTaskChats();
       emit(state.copyWith(
@@ -114,6 +119,13 @@ class MessageBloc extends Bloc<MessageEvent, MessageState> {
       ));
     } catch (e) {
       AppLogger.error('Failed to load task chats', e);
+      // 仅在当前未加载成功时才设为 error
+      if (state.status != MessageStatus.loaded) {
+        emit(state.copyWith(
+          status: MessageStatus.error,
+          errorMessage: e.toString(),
+        ));
+      }
     }
   }
 
@@ -131,6 +143,10 @@ class MessageBloc extends Bloc<MessageEvent, MessageState> {
       ));
     } catch (e) {
       AppLogger.error('Failed to refresh messages', e);
+      emit(state.copyWith(
+        status: MessageStatus.error,
+        errorMessage: e.toString(),
+      ));
     }
   }
 }

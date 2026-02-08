@@ -5,7 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_radius.dart';
-import '../../../core/widgets/loading_view.dart';
+import '../../../core/widgets/skeleton_view.dart';
 import '../../../core/widgets/error_state_view.dart';
 import '../../../core/widgets/empty_state_view.dart';
 import '../../../data/repositories/forum_repository.dart';
@@ -86,7 +86,7 @@ class _MyPostsViewState extends State<MyPostsView> {
     final isLoading = state.myForumPosts.isEmpty && state.status == ProfileStatus.loading;
 
     if (isLoading) {
-      return const LoadingView();
+      return const SkeletonList();
     }
 
     if (state.errorMessage != null && state.myForumPosts.isEmpty) {
@@ -115,6 +115,7 @@ class _MyPostsViewState extends State<MyPostsView> {
       },
       child: ListView.separated(
         controller: _scrollController,
+        clipBehavior: Clip.none,
         padding: AppSpacing.allMd,
         itemCount: state.myForumPosts.length + (state.forumPostsHasMore ? 1 : 0),
         separatorBuilder: (context, index) => AppSpacing.vMd,
