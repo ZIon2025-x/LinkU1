@@ -504,6 +504,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get forumReply => 'Reply';
 
   @override
+  String get forumReplyTo => 'Reply to';
+
+  @override
   String get forumWriteReply => 'Write your reply...';
 
   @override
@@ -765,6 +768,21 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get leaderboardAnonymousUser => 'Anonymous User';
+
+  @override
+  String get leaderboardConfirmSupport => 'Confirm Support';
+
+  @override
+  String get leaderboardConfirmOppose => 'Confirm Oppose';
+
+  @override
+  String get leaderboardCopied => 'Copied to clipboard';
+
+  @override
+  String get leaderboardComments => 'Vote Comments';
+
+  @override
+  String get leaderboardContactInfoDetail => 'Contact Info';
 
   @override
   String get leaderboardNetScore => 'Net Score';

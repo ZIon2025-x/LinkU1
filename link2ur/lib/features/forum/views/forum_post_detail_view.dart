@@ -5,10 +5,14 @@ import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../core/design/app_colors.dart';
+import '../../../core/router/app_router.dart';
 import '../../../core/utils/l10n_extension.dart';
 import '../../../core/utils/responsive.dart';
 import '../../../core/widgets/skeleton_view.dart';
 import '../../../core/widgets/error_state_view.dart';
+import '../../../core/widgets/async_image_view.dart';
+import '../../../core/widgets/full_screen_image_view.dart';
+import '../../../core/widgets/custom_share_panel.dart';
 import '../../../data/repositories/forum_repository.dart';
 import '../../../data/models/forum.dart';
 import '../bloc/forum_bloc.dart';
@@ -28,11 +32,29 @@ class ForumPostDetailView extends StatefulWidget {
 
 class _ForumPostDetailViewState extends State<ForumPostDetailView> {
   final _replyController = TextEditingController();
+  int? _replyToId;
+  String? _replyToName;
 
   @override
   void dispose() {
     _replyController.dispose();
     super.dispose();
+  }
+
+  void _setReplyTo(int replyId, String authorName) {
+    setState(() {
+      _replyToId = replyId;
+      _replyToName = authorName;
+    });
+    _replyController.clear();
+    // TODO: Focus the text field
+  }
+
+  void _clearReplyTo() {
+    setState(() {
+      _replyToId = null;
+      _replyToName = null;
+    });
   }
 
   @override
@@ -51,6 +73,12 @@ class _ForumPostDetailViewState extends State<ForumPostDetailView> {
               icon: const Icon(Icons.share_outlined),
               onPressed: () {
                 HapticFeedback.selectionClick();
+                CustomSharePanel.show(
+                  context,
+                  title: context.l10n.forumPostDetail,
+                  description: '',
+                  url: 'https://link2ur.com/forum/posts/${widget.postId}',
+                );
               },
             ),
           ],
@@ -96,6 +124,10 @@ class _ForumPostDetailViewState extends State<ForumPostDetailView> {
                   // 帖子内容 - 对标iOS postContent
                   _PostContent(post: post, isDark: isDark),
 
+                  // 图片区域
+                  if (post.images.isNotEmpty)
+                    _PostImages(images: post.images),
+
                   // 互动统计 - 对标iOS postStats
                   _PostStats(
                     post: post,
@@ -119,6 +151,7 @@ class _ForumPostDetailViewState extends State<ForumPostDetailView> {
                     replies: state.replies,
                     isDark: isDark,
                     postId: widget.postId,
+                    onReplyTo: _setReplyTo,
                   ),
 
                   const SizedBox(height: 120),
@@ -163,107 +196,140 @@ class _ForumPostDetailViewState extends State<ForumPostDetailView> {
                 child: Padding(
                   padding: const EdgeInsets.symmetric(
                       horizontal: 16, vertical: 12),
-                  child: Row(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
                     children: [
-                      // 点赞按钮 - 对标iOS like button
-                      if (post != null)
-                        GestureDetector(
-                          onTap: () {
-                            HapticFeedback.selectionClick();
-                            context
-                                .read<ForumBloc>()
-                                .add(ForumLikePost(widget.postId));
-                          },
-                          child: SizedBox(
-                            width: 44,
-                            height: 44,
-                            child: Icon(
-                              post.isLiked
-                                  ? Icons.favorite
-                                  : Icons.favorite_border,
-                              size: 22,
-                              color: post.isLiked
-                                  ? AppColors.error
-                                  : (isDark
-                                      ? AppColors.textTertiaryDark
-                                      : AppColors.textTertiaryLight),
-                            ),
-                          ),
-                        ),
-
-                      // 回复输入框 - 对标iOS ReplyInputView (pill shape)
-                      Expanded(
-                        child: Container(
-                          height: 44,
-                          decoration: BoxDecoration(
-                            color: isDark
-                                ? Colors.white.withValues(alpha: 0.08)
-                                : AppColors.skeletonBase,
-                            borderRadius: BorderRadius.circular(22),
-                          ),
+                      // 回复目标提示条
+                      if (_replyToName != null)
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 16, vertical: 6),
+                          color: AppColors.primary.withValues(alpha: 0.05),
                           child: Row(
                             children: [
-                              Expanded(
-                                child: TextField(
-                                  controller: _replyController,
-                                  enabled: !state.isReplying,
-                                  style: const TextStyle(fontSize: 15),
-                                  decoration: InputDecoration(
-                                    hintText: context.l10n.forumWriteComment,
-                                    hintStyle: const TextStyle(fontSize: 15),
-                                    border: InputBorder.none,
-                                    contentPadding: const EdgeInsets.symmetric(
-                                        horizontal: 16),
-                                  ),
-                                  onChanged: (_) => setState(() {}),
+                              Text(
+                                '${context.l10n.forumReplyTo} @$_replyToName',
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  color: AppColors.primary,
                                 ),
                               ),
-                              // 发送按钮 - 对标iOS send circle
-                              if (_replyController.text.trim().isNotEmpty)
-                                Padding(
-                                  padding: const EdgeInsets.only(right: 4),
-                                  child: GestureDetector(
-                                    onTap: state.isReplying
-                                        ? null
-                                        : () {
-                                            HapticFeedback.selectionClick();
-                                            context.read<ForumBloc>().add(
-                                                  ForumReplyPost(
-                                                    postId: widget.postId,
-                                                    content: _replyController
-                                                        .text
-                                                        .trim(),
-                                                  ),
-                                                );
-                                            _replyController.clear();
-                                            setState(() {});
-                                          },
-                                    child: Container(
-                                      width: 36,
-                                      height: 36,
-                                      decoration: BoxDecoration(
-                                        color: AppColors.primary
-                                            .withValues(alpha: 0.1),
-                                        shape: BoxShape.circle,
-                                      ),
-                                      child: state.isReplying
-                                          ? const Padding(
-                                              padding: EdgeInsets.all(8),
-                                              child:
-                                                  CircularProgressIndicator(
-                                                      strokeWidth: 2),
-                                            )
-                                          : const Icon(
-                                              Icons.send,
-                                              size: 18,
-                                              color: AppColors.primary,
-                                            ),
-                                    ),
-                                  ),
-                                ),
+                              const Spacer(),
+                              GestureDetector(
+                                onTap: _clearReplyTo,
+                                child: const Icon(Icons.close,
+                                    size: 16, color: AppColors.textTertiaryLight),
+                              ),
                             ],
                           ),
                         ),
+                      Row(
+                        children: [
+                          // 点赞按钮
+                          if (post != null)
+                            GestureDetector(
+                              onTap: () {
+                                HapticFeedback.selectionClick();
+                                context
+                                    .read<ForumBloc>()
+                                    .add(ForumLikePost(widget.postId));
+                              },
+                              child: SizedBox(
+                                width: 44,
+                                height: 44,
+                                child: Icon(
+                                  post.isLiked
+                                      ? Icons.favorite
+                                      : Icons.favorite_border,
+                                  size: 22,
+                                  color: post.isLiked
+                                      ? AppColors.error
+                                      : (isDark
+                                          ? AppColors.textTertiaryDark
+                                          : AppColors.textTertiaryLight),
+                                ),
+                              ),
+                            ),
+
+                          // 回复输入框
+                          Expanded(
+                            child: Container(
+                              height: 44,
+                              decoration: BoxDecoration(
+                                color: isDark
+                                    ? Colors.white.withValues(alpha: 0.08)
+                                    : AppColors.skeletonBase,
+                                borderRadius: BorderRadius.circular(22),
+                              ),
+                              child: Row(
+                                children: [
+                                  Expanded(
+                                    child: TextField(
+                                      controller: _replyController,
+                                      enabled: !state.isReplying,
+                                      style: const TextStyle(fontSize: 15),
+                                      decoration: InputDecoration(
+                                        hintText: _replyToName != null
+                                            ? '${context.l10n.forumReplyTo} @$_replyToName'
+                                            : context.l10n.forumWriteComment,
+                                        hintStyle: const TextStyle(fontSize: 15),
+                                        border: InputBorder.none,
+                                        contentPadding:
+                                            const EdgeInsets.symmetric(
+                                                horizontal: 16),
+                                      ),
+                                      onChanged: (_) => setState(() {}),
+                                    ),
+                                  ),
+                                  // 发送按钮
+                                  if (_replyController.text.trim().isNotEmpty)
+                                    Padding(
+                                      padding: const EdgeInsets.only(right: 4),
+                                      child: GestureDetector(
+                                        onTap: state.isReplying
+                                            ? null
+                                            : () {
+                                                HapticFeedback.selectionClick();
+                                                context.read<ForumBloc>().add(
+                                                      ForumReplyPost(
+                                                        postId: widget.postId,
+                                                        content: _replyController
+                                                            .text
+                                                            .trim(),
+                                                        parentReplyId: _replyToId,
+                                                      ),
+                                                    );
+                                                _replyController.clear();
+                                                _clearReplyTo();
+                                              },
+                                        child: Container(
+                                          width: 36,
+                                          height: 36,
+                                          decoration: BoxDecoration(
+                                            color: AppColors.primary
+                                                .withValues(alpha: 0.1),
+                                            shape: BoxShape.circle,
+                                          ),
+                                          child: state.isReplying
+                                              ? const Padding(
+                                                  padding: EdgeInsets.all(8),
+                                                  child:
+                                                      CircularProgressIndicator(
+                                                          strokeWidth: 2),
+                                                )
+                                              : const Icon(
+                                                  Icons.send,
+                                                  size: 18,
+                                                  color: AppColors.primary,
+                                                ),
+                                        ),
+                                      ),
+                                    ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ),
@@ -343,28 +409,31 @@ class _PostHeader extends StatelessWidget {
           // 作者行 - 对标iOS author row (avatar + name + time)
           Row(
             children: [
-              // 头像
-              Container(
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.05),
-                      blurRadius: 2,
-                      offset: const Offset(0, 1),
-                    ),
-                  ],
-                ),
-                child: CircleAvatar(
-                  radius: 22,
-                  backgroundColor: AppColors.primary,
-                  backgroundImage: post.author?.avatar != null
-                      ? NetworkImage(post.author!.avatar!)
-                      : null,
-                  child: post.author?.avatar == null
-                      ? const Icon(Icons.person,
-                          color: Colors.white, size: 20)
-                      : null,
+              // 头像 — 点击跳转个人主页
+              GestureDetector(
+                onTap: () => context.goToUserProfile(post.authorId.toString()),
+                child: Container(
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.05),
+                        blurRadius: 2,
+                        offset: const Offset(0, 1),
+                      ),
+                    ],
+                  ),
+                  child: CircleAvatar(
+                    radius: 22,
+                    backgroundColor: AppColors.primary,
+                    backgroundImage: post.author?.avatar != null
+                        ? NetworkImage(post.author!.avatar!)
+                        : null,
+                    child: post.author?.avatar == null
+                        ? const Icon(Icons.person,
+                            color: Colors.white, size: 20)
+                        : null,
+                  ),
                 ),
               ),
               const SizedBox(width: 10),
@@ -374,14 +443,17 @@ class _PostHeader extends StatelessWidget {
                   children: [
                     Row(
                       children: [
-                        Text(
-                          post.author?.name ?? context.l10n.forumUserFallback(post.authorId.toString()),
-                          style: TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.w600,
-                            color: isDark
-                                ? AppColors.textPrimaryDark
-                                : AppColors.textPrimaryLight,
+                        GestureDetector(
+                          onTap: () => context.goToUserProfile(post.authorId.toString()),
+                          child: Text(
+                            post.author?.name ?? context.l10n.forumUserFallback(post.authorId.toString()),
+                            style: TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w600,
+                              color: isDark
+                                  ? AppColors.textPrimaryDark
+                                  : AppColors.textPrimaryLight,
+                            ),
                           ),
                         ),
                       ],
@@ -596,11 +668,13 @@ class _ReplySection extends StatelessWidget {
     required this.replies,
     required this.isDark,
     required this.postId,
+    required this.onReplyTo,
   });
 
   final List<ForumReply> replies;
   final bool isDark;
   final int postId;
+  final void Function(int replyId, String authorName) onReplyTo;
 
   @override
   Widget build(BuildContext context) {
@@ -672,7 +746,7 @@ class _ReplySection extends StatelessWidget {
               final reply = entry.value;
               return Column(
                 children: [
-                  _ReplyCard(reply: reply, isDark: isDark, postId: postId),
+                  _ReplyCard(reply: reply, isDark: isDark, postId: postId, onReplyTo: onReplyTo),
                   if (index < replies.length - 1)
                     Divider(
                       height: 1,
@@ -698,41 +772,53 @@ class _ReplyCard extends StatelessWidget {
     required this.reply,
     required this.isDark,
     required this.postId,
+    required this.onReplyTo,
   });
 
   final ForumReply reply;
   final bool isDark;
   final int postId;
+  final void Function(int replyId, String authorName) onReplyTo;
 
   @override
   Widget build(BuildContext context) {
+    final isSubReply = reply.isSubReply;
+
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 16),
+      padding: EdgeInsets.only(
+        top: 16,
+        bottom: 16,
+        left: isSubReply ? 32 : 0, // 子回复缩进
+      ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // 头像
-          Container(
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.05),
-                  blurRadius: 2,
-                  offset: const Offset(0, 1),
-                ),
-              ],
-            ),
-            child: CircleAvatar(
-              radius: 16,
-              backgroundColor: AppColors.skeletonBase,
-              backgroundImage: reply.author?.avatar != null
-                  ? NetworkImage(reply.author!.avatar!)
-                  : null,
-              child: reply.author?.avatar == null
-                  ? const Icon(Icons.person,
-                      size: 14, color: AppColors.textTertiaryLight)
-                  : null,
+          // 头像 — 点击跳转个人主页
+          GestureDetector(
+            onTap: () => context.goToUserProfile(reply.authorId.toString()),
+            child: Container(
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.05),
+                    blurRadius: 2,
+                    offset: const Offset(0, 1),
+                  ),
+                ],
+              ),
+              child: CircleAvatar(
+                radius: isSubReply ? 14 : 16,
+                backgroundColor: AppColors.skeletonBase,
+                backgroundImage: reply.author?.avatar != null
+                    ? NetworkImage(reply.author!.avatar!)
+                    : null,
+                child: reply.author?.avatar == null
+                    ? Icon(Icons.person,
+                        size: isSubReply ? 12 : 14,
+                        color: AppColors.textTertiaryLight)
+                    : null,
+              ),
             ),
           ),
           const SizedBox(width: 10),
@@ -743,14 +829,17 @@ class _ReplyCard extends StatelessWidget {
                 // 作者行
                 Row(
                   children: [
-                    Text(
-                      reply.author?.name ?? context.l10n.forumUserFallback(reply.authorId.toString()),
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: isDark
-                            ? AppColors.textPrimaryDark
-                            : AppColors.textPrimaryLight,
+                    GestureDetector(
+                      onTap: () => context.goToUserProfile(reply.authorId.toString()),
+                      child: Text(
+                        reply.author?.name ?? context.l10n.forumUserFallback(reply.authorId.toString()),
+                        style: TextStyle(
+                          fontSize: isSubReply ? 13 : 14,
+                          fontWeight: FontWeight.w600,
+                          color: isDark
+                              ? AppColors.textPrimaryDark
+                              : AppColors.textPrimaryLight,
+                        ),
                       ),
                     ),
                     const Spacer(),
@@ -803,6 +892,33 @@ class _ReplyCard extends StatelessWidget {
                     ),
                   ],
                 ),
+
+                // 嵌套回复引用块 — "回复 @xxx"
+                if (isSubReply)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 4),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: isDark
+                            ? Colors.white.withValues(alpha: 0.04)
+                            : AppColors.skeletonBase.withValues(alpha: 0.6),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text(
+                        reply.parentReplyAuthor != null
+                            ? '${context.l10n.forumReplyTo} @${reply.parentReplyAuthor!.name}'
+                            : context.l10n.forumReplyTo,
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: AppColors.primary.withValues(alpha: 0.8),
+                          fontStyle: FontStyle.italic,
+                        ),
+                      ),
+                    ),
+                  ),
+
                 const SizedBox(height: 6),
                 // 内容
                 Padding(
@@ -810,7 +926,7 @@ class _ReplyCard extends StatelessWidget {
                   child: Text(
                     reply.content,
                     style: TextStyle(
-                      fontSize: 15,
+                      fontSize: isSubReply ? 14 : 15,
                       color: isDark
                           ? AppColors.textPrimaryDark
                           : AppColors.textPrimaryLight,
@@ -819,10 +935,14 @@ class _ReplyCard extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 6),
-                // 回复按钮 - 对标iOS "Reply" pill
+                // 回复按钮
                 GestureDetector(
                   onTap: () {
                     HapticFeedback.selectionClick();
+                    onReplyTo(
+                      reply.id,
+                      reply.author?.name ?? reply.authorId.toString(),
+                    );
                   },
                   child: Container(
                     padding: const EdgeInsets.symmetric(
@@ -857,5 +977,117 @@ class _ReplyCard extends StatelessWidget {
     if (difference.inHours > 0) return context.l10n.timeHoursAgo(difference.inHours);
     if (difference.inMinutes > 0) return context.l10n.timeMinutesAgo(difference.inMinutes);
     return context.l10n.timeJustNow;
+  }
+}
+
+// ==================== 帖子图片区域 ====================
+
+class _PostImages extends StatelessWidget {
+  const _PostImages({required this.images});
+  final List<String> images;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
+      child: _buildImageLayout(context),
+    );
+  }
+
+  Widget _buildImageLayout(BuildContext context) {
+    if (images.length == 1) {
+      // 单张全宽
+      return GestureDetector(
+        onTap: () => _openFullScreen(context, 0),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(12),
+          child: AsyncImageView(
+            imageUrl: images[0],
+            width: double.infinity,
+            height: 220,
+            fit: BoxFit.cover,
+          ),
+        ),
+      );
+    }
+
+    if (images.length == 2) {
+      // 2张并排
+      return Row(
+        children: [
+          Expanded(
+            child: GestureDetector(
+              onTap: () => _openFullScreen(context, 0),
+              child: ClipRRect(
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(12),
+                  bottomLeft: Radius.circular(12),
+                ),
+                child: AsyncImageView(
+                  imageUrl: images[0],
+                  width: double.infinity,
+                  height: 180,
+                  fit: BoxFit.cover,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 4),
+          Expanded(
+            child: GestureDetector(
+              onTap: () => _openFullScreen(context, 1),
+              child: ClipRRect(
+                borderRadius: const BorderRadius.only(
+                  topRight: Radius.circular(12),
+                  bottomRight: Radius.circular(12),
+                ),
+                child: AsyncImageView(
+                  imageUrl: images[1],
+                  width: double.infinity,
+                  height: 180,
+                  fit: BoxFit.cover,
+                ),
+              ),
+            ),
+          ),
+        ],
+      );
+    }
+
+    // 3+ 张网格
+    return GridView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 3,
+        mainAxisSpacing: 4,
+        crossAxisSpacing: 4,
+        childAspectRatio: 1,
+      ),
+      itemCount: images.length,
+      itemBuilder: (context, index) {
+        return GestureDetector(
+          onTap: () => _openFullScreen(context, index),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: AsyncImageView(
+              imageUrl: images[index],
+              width: double.infinity,
+              height: double.infinity,
+              fit: BoxFit.cover,
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  void _openFullScreen(BuildContext context, int index) {
+    Navigator.of(context).push(MaterialPageRoute(
+      builder: (_) => FullScreenImageView(
+        images: images,
+        initialIndex: index,
+      ),
+    ));
   }
 }

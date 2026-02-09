@@ -492,6 +492,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get forumReply => '回复';
 
   @override
+  String get forumReplyTo => '回复';
+
+  @override
   String get forumWriteReply => '写回复...';
 
   @override
@@ -747,6 +750,21 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get leaderboardAnonymousUser => '匿名用户';
+
+  @override
+  String get leaderboardConfirmSupport => '确认支持';
+
+  @override
+  String get leaderboardConfirmOppose => '确认反对';
+
+  @override
+  String get leaderboardCopied => '已复制到剪贴板';
+
+  @override
+  String get leaderboardComments => '投票评论';
+
+  @override
+  String get leaderboardContactInfoDetail => '联系方式';
 
   @override
   String get leaderboardNetScore => '净分';
@@ -7689,6 +7707,9 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get forumReply => '回復';
 
   @override
+  String get forumReplyTo => '回覆';
+
+  @override
   String get forumWriteReply => '寫回復...';
 
   @override
@@ -7944,6 +7965,21 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get leaderboardAnonymousUser => '匿名用戶';
+
+  @override
+  String get leaderboardConfirmSupport => '確認支持';
+
+  @override
+  String get leaderboardConfirmOppose => '確認反對';
+
+  @override
+  String get leaderboardCopied => '已複製到剪貼簿';
+
+  @override
+  String get leaderboardComments => '投票評論';
+
+  @override
+  String get leaderboardContactInfoDetail => '聯繫方式';
 
   @override
   String get leaderboardNetScore => '淨分';

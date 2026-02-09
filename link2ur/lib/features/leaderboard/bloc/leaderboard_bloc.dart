@@ -32,21 +32,62 @@ class LeaderboardRefreshRequested extends LeaderboardEvent {
 }
 
 class LeaderboardLoadDetail extends LeaderboardEvent {
-  const LeaderboardLoadDetail(this.leaderboardId);
+  const LeaderboardLoadDetail(this.leaderboardId, {this.sortBy});
 
+  final int leaderboardId;
+  final String? sortBy;
+
+  @override
+  List<Object?> get props => [leaderboardId, sortBy];
+}
+
+/// 投票事件 — 支持 voteType / comment / isAnonymous
+class LeaderboardVoteItem extends LeaderboardEvent {
+  const LeaderboardVoteItem(
+    this.itemId, {
+    required this.voteType,
+    this.comment,
+    this.isAnonymous = false,
+  });
+
+  final int itemId;
+  final String voteType; // 'upvote' or 'downvote'
+  final String? comment;
+  final bool isAnonymous;
+
+  @override
+  List<Object?> get props => [itemId, voteType, comment, isAnonymous];
+}
+
+/// 排序变更
+class LeaderboardSortChanged extends LeaderboardEvent {
+  const LeaderboardSortChanged(this.sortBy, {required this.leaderboardId});
+
+  final String sortBy;
   final int leaderboardId;
 
   @override
-  List<Object?> get props => [leaderboardId];
+  List<Object?> get props => [sortBy, leaderboardId];
 }
 
-class LeaderboardVoteItem extends LeaderboardEvent {
-  const LeaderboardVoteItem(this.itemId);
+/// 加载条目投票/评论列表
+class LeaderboardLoadItemVotes extends LeaderboardEvent {
+  const LeaderboardLoadItemVotes(this.itemId);
 
   final int itemId;
 
   @override
   List<Object?> get props => [itemId];
+}
+
+/// 点赞投票/评论
+class LeaderboardLikeVote extends LeaderboardEvent {
+  const LeaderboardLikeVote(this.voteId);
+
+  final int voteId;
+
+  @override
+  List<Object?> get props => [voteId];
 }
 
 class LeaderboardApplyRequested extends LeaderboardEvent {
@@ -104,8 +145,10 @@ class LeaderboardState extends Equatable {
     this.page = 1,
     this.hasMore = true,
     this.selectedCategory,
+    this.sortBy,
     this.errorMessage,
     this.itemDetail,
+    this.itemVotes = const [],
     this.isSubmitting = false,
     this.actionMessage,
   });
@@ -118,8 +161,10 @@ class LeaderboardState extends Equatable {
   final int page;
   final bool hasMore;
   final String? selectedCategory;
+  final String? sortBy;
   final String? errorMessage;
-  final Map<String, dynamic>? itemDetail;
+  final LeaderboardItem? itemDetail;
+  final List<Map<String, dynamic>> itemVotes;
   final bool isSubmitting;
   final String? actionMessage;
 
@@ -134,10 +179,13 @@ class LeaderboardState extends Equatable {
     int? page,
     bool? hasMore,
     String? selectedCategory,
+    String? sortBy,
     String? errorMessage,
-    Map<String, dynamic>? itemDetail,
+    LeaderboardItem? itemDetail,
+    List<Map<String, dynamic>>? itemVotes,
     bool? isSubmitting,
     String? actionMessage,
+    bool clearItemDetail = false,
   }) {
     return LeaderboardState(
       status: status ?? this.status,
@@ -149,8 +197,10 @@ class LeaderboardState extends Equatable {
       page: page ?? this.page,
       hasMore: hasMore ?? this.hasMore,
       selectedCategory: selectedCategory ?? this.selectedCategory,
+      sortBy: sortBy ?? this.sortBy,
       errorMessage: errorMessage,
-      itemDetail: itemDetail,
+      itemDetail: clearItemDetail ? null : (itemDetail ?? this.itemDetail),
+      itemVotes: itemVotes ?? this.itemVotes,
       isSubmitting: isSubmitting ?? this.isSubmitting,
       actionMessage: actionMessage,
     );
@@ -166,8 +216,10 @@ class LeaderboardState extends Equatable {
         page,
         hasMore,
         selectedCategory,
+        sortBy,
         errorMessage,
         itemDetail,
+        itemVotes,
         isSubmitting,
         actionMessage,
       ];
@@ -184,6 +236,9 @@ class LeaderboardBloc extends Bloc<LeaderboardEvent, LeaderboardState> {
     on<LeaderboardRefreshRequested>(_onRefresh);
     on<LeaderboardLoadDetail>(_onLoadDetail);
     on<LeaderboardVoteItem>(_onVoteItem);
+    on<LeaderboardSortChanged>(_onSortChanged);
+    on<LeaderboardLoadItemVotes>(_onLoadItemVotes);
+    on<LeaderboardLikeVote>(_onLikeVote);
     on<LeaderboardApplyRequested>(_onApplyRequested);
     on<LeaderboardSubmitItem>(_onSubmitItem);
     on<LeaderboardLoadItemDetail>(_onLoadItemDetail);
@@ -277,8 +332,10 @@ class LeaderboardBloc extends Bloc<LeaderboardEvent, LeaderboardState> {
     try {
       final leaderboard = await _leaderboardRepository
           .getLeaderboardById(event.leaderboardId);
-      final items = await _leaderboardRepository
-          .getLeaderboardItems(event.leaderboardId);
+      final items = await _leaderboardRepository.getLeaderboardItems(
+        event.leaderboardId,
+        sortBy: event.sortBy ?? state.sortBy,
+      );
 
       emit(state.copyWith(
         status: LeaderboardStatus.loaded,
@@ -294,29 +351,165 @@ class LeaderboardBloc extends Bloc<LeaderboardEvent, LeaderboardState> {
     }
   }
 
+  /// 排序变更 — 重新加载 items
+  Future<void> _onSortChanged(
+    LeaderboardSortChanged event,
+    Emitter<LeaderboardState> emit,
+  ) async {
+    emit(state.copyWith(sortBy: event.sortBy));
+
+    try {
+      final items = await _leaderboardRepository.getLeaderboardItems(
+        event.leaderboardId,
+        sortBy: event.sortBy,
+      );
+      emit(state.copyWith(items: items));
+    } catch (e) {
+      AppLogger.error('Failed to sort items', e);
+    }
+  }
+
+  /// 投票 — 支持 upvote / downvote + comment
   Future<void> _onVoteItem(
     LeaderboardVoteItem event,
     Emitter<LeaderboardState> emit,
   ) async {
     try {
-      await _leaderboardRepository.voteItem(event.itemId, voteType: 'upvote');
+      await _leaderboardRepository.voteItem(
+        event.itemId,
+        voteType: event.voteType,
+        comment: event.comment,
+        isAnonymous: event.isAnonymous,
+      );
 
-      // 更新本地状态
+      // 乐观更新 items 列表（排行榜详情页）
       final updatedItems = state.items.map((item) {
         if (item.id == event.itemId) {
-          final wasVoted = item.hasVoted;
-          return item.copyWith(
-            userVote: wasVoted ? null : 'upvote',
-            upvotes: wasVoted ? item.upvotes - 1 : item.upvotes + 1,
-            netVotes: wasVoted ? item.netVotes - 1 : item.netVotes + 1,
-          );
+          return _applyVoteUpdate(item, event.voteType);
         }
         return item;
       }).toList();
 
-      emit(state.copyWith(items: updatedItems));
+      // 乐观更新 itemDetail（竞品详情页）
+      LeaderboardItem? updatedDetail;
+      if (state.itemDetail != null && state.itemDetail!.id == event.itemId) {
+        updatedDetail = _applyVoteUpdate(state.itemDetail!, event.voteType);
+      }
+
+      emit(state.copyWith(
+        items: updatedItems,
+        itemDetail: updatedDetail ?? state.itemDetail,
+      ));
     } catch (e) {
       AppLogger.error('Failed to vote', e);
+      emit(state.copyWith(actionMessage: '投票失败'));
+    }
+  }
+
+  /// 根据投票类型计算新的投票状态
+  LeaderboardItem _applyVoteUpdate(LeaderboardItem item, String voteType) {
+    final previousVote = item.userVote;
+
+    if (previousVote == voteType) {
+      // 取消投票（再次点同类型 = toggle off）
+      return LeaderboardItem(
+        id: item.id,
+        leaderboardId: item.leaderboardId,
+        name: item.name,
+        description: item.description,
+        address: item.address,
+        phone: item.phone,
+        website: item.website,
+        images: item.images,
+        submittedBy: item.submittedBy,
+        status: item.status,
+        upvotes: voteType == 'upvote' ? item.upvotes - 1 : item.upvotes,
+        downvotes:
+            voteType == 'downvote' ? item.downvotes - 1 : item.downvotes,
+        netVotes: voteType == 'upvote'
+            ? item.netVotes - 1
+            : item.netVotes + 1,
+        voteScore: item.voteScore,
+        userVote: null,
+        createdAt: item.createdAt,
+        updatedAt: item.updatedAt,
+      );
+    } else if (previousVote != null) {
+      // 切换投票方向（例 upvote → downvote）
+      return LeaderboardItem(
+        id: item.id,
+        leaderboardId: item.leaderboardId,
+        name: item.name,
+        description: item.description,
+        address: item.address,
+        phone: item.phone,
+        website: item.website,
+        images: item.images,
+        submittedBy: item.submittedBy,
+        status: item.status,
+        upvotes: voteType == 'upvote' ? item.upvotes + 1 : item.upvotes - 1,
+        downvotes:
+            voteType == 'downvote' ? item.downvotes + 1 : item.downvotes - 1,
+        netVotes: voteType == 'upvote'
+            ? item.netVotes + 2
+            : item.netVotes - 2,
+        voteScore: item.voteScore,
+        userVote: voteType,
+        createdAt: item.createdAt,
+        updatedAt: item.updatedAt,
+      );
+    } else {
+      // 新增投票
+      return item.copyWith(
+        userVote: voteType,
+        upvotes: voteType == 'upvote' ? item.upvotes + 1 : item.upvotes,
+        downvotes:
+            voteType == 'downvote' ? item.downvotes + 1 : item.downvotes,
+        netVotes: voteType == 'upvote'
+            ? item.netVotes + 1
+            : item.netVotes - 1,
+      );
+    }
+  }
+
+  /// 加载条目投票/评论列表
+  Future<void> _onLoadItemVotes(
+    LeaderboardLoadItemVotes event,
+    Emitter<LeaderboardState> emit,
+  ) async {
+    try {
+      final votes = await _leaderboardRepository.getItemVotes(event.itemId);
+      emit(state.copyWith(itemVotes: votes));
+    } catch (e) {
+      AppLogger.error('Failed to load item votes', e);
+    }
+  }
+
+  /// 点赞评论
+  Future<void> _onLikeVote(
+    LeaderboardLikeVote event,
+    Emitter<LeaderboardState> emit,
+  ) async {
+    try {
+      await _leaderboardRepository.likeVote(event.voteId);
+
+      // 乐观更新评论列表中的点赞数
+      final updatedVotes = state.itemVotes.map((vote) {
+        if (vote['id'] == event.voteId) {
+          final wasLiked = vote['is_liked'] == true;
+          final currentLikes = (vote['like_count'] as int?) ?? 0;
+          return {
+            ...vote,
+            'is_liked': !wasLiked,
+            'like_count': wasLiked ? currentLikes - 1 : currentLikes + 1,
+          };
+        }
+        return vote;
+      }).toList();
+
+      emit(state.copyWith(itemVotes: updatedVotes));
+    } catch (e) {
+      AppLogger.error('Failed to like vote', e);
     }
   }
 
@@ -373,6 +566,7 @@ class LeaderboardBloc extends Bloc<LeaderboardEvent, LeaderboardState> {
     }
   }
 
+  /// 加载条目详情 — 使用 LeaderboardItem 模型
   Future<void> _onLoadItemDetail(
     LeaderboardLoadItemDetail event,
     Emitter<LeaderboardState> emit,
@@ -380,8 +574,9 @@ class LeaderboardBloc extends Bloc<LeaderboardEvent, LeaderboardState> {
     emit(state.copyWith(status: LeaderboardStatus.loading));
 
     try {
-      final itemDetail =
+      final rawDetail =
           await _leaderboardRepository.getItemDetail(event.itemId);
+      final itemDetail = LeaderboardItem.fromJson(rawDetail);
 
       emit(state.copyWith(
         status: LeaderboardStatus.loaded,

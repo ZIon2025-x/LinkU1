@@ -13,6 +13,7 @@ import '../../../core/widgets/skeleton_view.dart';
 import '../../../core/widgets/error_state_view.dart';
 import '../../../core/widgets/empty_state_view.dart';
 import '../../../core/widgets/async_image_view.dart';
+import '../../../core/widgets/custom_share_panel.dart';
 import '../../../data/repositories/leaderboard_repository.dart';
 import '../../../data/models/leaderboard.dart';
 import '../bloc/leaderboard_bloc.dart';
@@ -53,7 +54,8 @@ class _LeaderboardDetailContent extends StatelessWidget {
           appBar: _buildAppBar(context, state, hasHero),
           body: Center(
             child: ConstrainedBox(
-              constraints: BoxConstraints(maxWidth: ResponsiveUtils.detailMaxWidth(context)),
+              constraints: BoxConstraints(
+                  maxWidth: ResponsiveUtils.detailMaxWidth(context)),
               child: _buildBody(context, state),
             ),
           ),
@@ -74,16 +76,25 @@ class _LeaderboardDetailContent extends StatelessWidget {
 
   PreferredSizeWidget _buildAppBar(
       BuildContext context, LeaderboardState state, bool hasHero) {
+    void onShare() {
+      final lb = state.selectedLeaderboard;
+      if (lb == null) return;
+      CustomSharePanel.show(
+        context,
+        title: lb.displayName,
+        description: lb.displayDescription ?? '',
+        url: 'https://link2ur.com/leaderboard/${lb.id}',
+      );
+    }
+
     if (!hasHero) {
       return AppBar(
-        title: Text(
-            state.selectedLeaderboard?.displayName ?? context.l10n.leaderboardItemDetail),
+        title: Text(state.selectedLeaderboard?.displayName ??
+            context.l10n.leaderboardItemDetail),
         actions: [
           IconButton(
             icon: const Icon(Icons.share_outlined),
-            onPressed: () {
-              HapticFeedback.selectionClick();
-            },
+            onPressed: onShare,
           ),
         ],
       );
@@ -115,9 +126,7 @@ class _LeaderboardDetailContent extends StatelessWidget {
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 4),
           child: GestureDetector(
-            onTap: () {
-              HapticFeedback.selectionClick();
-            },
+            onTap: onShare,
             child: Container(
               width: 36,
               height: 36,
@@ -158,10 +167,7 @@ class _LeaderboardDetailContent extends StatelessWidget {
 
     final lb = state.selectedLeaderboard!;
     final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    // Sort items
-    final sortedItems = List<LeaderboardItem>.from(state.items)
-      ..sort((a, b) => b.netVotes.compareTo(a.netVotes));
+    final items = state.items;
 
     return RefreshIndicator(
       onRefresh: () async {
@@ -171,7 +177,7 @@ class _LeaderboardDetailContent extends StatelessWidget {
       },
       child: CustomScrollView(
         slivers: [
-          // Hero 区域 - 对标iOS hero section (240pt)
+          // Hero 区域
           SliverToBoxAdapter(
             child: _HeroSection(leaderboard: lb),
           ),
@@ -195,13 +201,21 @@ class _LeaderboardDetailContent extends StatelessWidget {
               ),
             ),
 
-          // 统计栏 - 对标iOS stats bar
+          // 统计栏
           SliverToBoxAdapter(
             child: _StatsBar(leaderboard: lb, isDark: isDark),
           ),
 
+          // 排序筛选行
+          SliverToBoxAdapter(
+            child: _SortFilterRow(
+              currentSort: state.sortBy,
+              leaderboardId: leaderboardId,
+            ),
+          ),
+
           // 列表或空状态
-          if (sortedItems.isEmpty)
+          if (items.isEmpty)
             SliverFillRemaining(
               child: EmptyStateView.noData(
                 title: context.l10n.leaderboardNoItems,
@@ -215,10 +229,9 @@ class _LeaderboardDetailContent extends StatelessWidget {
               sliver: SliverList(
                 delegate: SliverChildBuilderDelegate(
                   (context, index) {
-                    final item = sortedItems[index];
+                    final item = items[index];
                     return Padding(
-                      padding:
-                          const EdgeInsets.only(bottom: AppSpacing.sm),
+                      padding: const EdgeInsets.only(bottom: AppSpacing.sm),
                       child: GestureDetector(
                         onTap: () =>
                             context.push('/leaderboard/item/${item.id}'),
@@ -230,11 +243,84 @@ class _LeaderboardDetailContent extends StatelessWidget {
                       ),
                     );
                   },
-                  childCount: sortedItems.length,
+                  childCount: items.length,
                 ),
               ),
             ),
         ],
+      ),
+    );
+  }
+}
+
+// ==================== 排序筛选行 ====================
+
+class _SortFilterRow extends StatelessWidget {
+  const _SortFilterRow({
+    required this.currentSort,
+    required this.leaderboardId,
+  });
+
+  final String? currentSort;
+  final int leaderboardId;
+
+  @override
+  Widget build(BuildContext context) {
+    final sorts = [
+      ('vote_score', context.l10n.leaderboardSortComprehensive),
+      ('net_votes', context.l10n.leaderboardSortNetVotes),
+      ('upvotes', context.l10n.leaderboardSortUpvotes),
+      ('created_at', context.l10n.leaderboardSortLatest),
+    ];
+
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      padding:
+          const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: 4),
+      child: Row(
+        children: sorts.map((entry) {
+          final isActive =
+              currentSort == entry.$1 || (currentSort == null && entry.$1 == 'vote_score');
+          return Padding(
+            padding: const EdgeInsets.only(right: 8),
+            child: GestureDetector(
+              onTap: () {
+                HapticFeedback.selectionClick();
+                context.read<LeaderboardBloc>().add(
+                      LeaderboardSortChanged(entry.$1,
+                          leaderboardId: leaderboardId),
+                    );
+              },
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 14, vertical: 8),
+                decoration: BoxDecoration(
+                  color: isActive
+                      ? AppColors.primary.withValues(alpha: 0.12)
+                      : Colors.transparent,
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(
+                    color: isActive
+                        ? AppColors.primary
+                        : AppColors.textTertiaryLight.withValues(alpha: 0.3),
+                    width: 1,
+                  ),
+                ),
+                child: Text(
+                  entry.$2,
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight:
+                        isActive ? FontWeight.w600 : FontWeight.normal,
+                    color: isActive
+                        ? AppColors.primary
+                        : AppColors.textSecondaryLight,
+                  ),
+                ),
+              ),
+            ),
+          );
+        }).toList(),
       ),
     );
   }
@@ -253,7 +339,6 @@ class _HeroSection extends StatelessWidget {
       child: Stack(
         fit: StackFit.expand,
         children: [
-          // 背景图或渐变
           if (leaderboard.coverImage != null)
             AsyncImageView(
               imageUrl: leaderboard.coverImage!,
@@ -274,8 +359,6 @@ class _HeroSection extends StatelessWidget {
                 ),
               ),
             ),
-
-          // 底部渐变叠层 - 对标iOS black 60% → transparent
           Container(
             decoration: BoxDecoration(
               gradient: LinearGradient(
@@ -288,8 +371,6 @@ class _HeroSection extends StatelessWidget {
               ),
             ),
           ),
-
-          // 标题文字 - 对标iOS bottom-left title
           Positioned(
             left: AppSpacing.md,
             right: AppSpacing.md,
@@ -461,20 +542,17 @@ class _RankItemCard extends StatelessWidget {
       ),
       child: Row(
         children: [
-          // 排名圆圈 - 对标iOS 36px for top3, 32px for others
+          // 排名圆圈
           Container(
             width: isTop3 ? 36 : 32,
             height: isTop3 ? 36 : 32,
             decoration: BoxDecoration(
-              color: isTop3
-                  ? _getRankColor(rank)
-                  : AppColors.skeletonBase,
+              color: isTop3 ? _getRankColor(rank) : AppColors.skeletonBase,
               shape: BoxShape.circle,
               boxShadow: isTop3
                   ? [
                       BoxShadow(
-                        color: _getRankColor(rank)
-                            .withValues(alpha: 0.4),
+                        color: _getRankColor(rank).withValues(alpha: 0.4),
                         blurRadius: 4,
                         offset: const Offset(0, 2),
                       ),
@@ -485,9 +563,8 @@ class _RankItemCard extends StatelessWidget {
               child: Text(
                 '$rank',
                 style: TextStyle(
-                  color: isTop3
-                      ? Colors.white
-                      : AppColors.textSecondaryLight,
+                  color:
+                      isTop3 ? Colors.white : AppColors.textSecondaryLight,
                   fontWeight: FontWeight.bold,
                   fontSize: isTop3 ? 16 : 14,
                 ),
@@ -496,7 +573,7 @@ class _RankItemCard extends StatelessWidget {
           ),
           const SizedBox(width: AppSpacing.md),
 
-          // 图片 - 对标iOS 64x64 medium radius
+          // 图片
           Container(
             width: 64,
             height: 64,
@@ -535,10 +612,10 @@ class _RankItemCard extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                 ),
                 const SizedBox(height: 4),
-                // 投票统计行 - 对标iOS vote line
                 Row(
                   children: [
-                    const Icon(Icons.thumb_up, size: 12, color: AppColors.success),
+                    const Icon(Icons.thumb_up,
+                        size: 12, color: AppColors.success),
                     const SizedBox(width: 3),
                     Text(
                       '${item.upvotes}',
@@ -546,7 +623,8 @@ class _RankItemCard extends StatelessWidget {
                           .copyWith(color: AppColors.success),
                     ),
                     const SizedBox(width: 8),
-                    const Icon(Icons.thumb_down, size: 12, color: AppColors.error),
+                    const Icon(Icons.thumb_down,
+                        size: 12, color: AppColors.error),
                     const SizedBox(width: 3),
                     Text(
                       '${item.downvotes}',
@@ -554,14 +632,13 @@ class _RankItemCard extends StatelessWidget {
                           .copyWith(color: AppColors.error),
                     ),
                     const SizedBox(width: 8),
-                    Text(
-                      '·',
-                      style: AppTypography.caption
-                          .copyWith(color: AppColors.textTertiaryLight),
-                    ),
+                    Text('·',
+                        style: AppTypography.caption
+                            .copyWith(color: AppColors.textTertiaryLight)),
                     const SizedBox(width: 4),
                     Text(
-                      context.l10n.leaderboardNetVotesCount(item.netVotes),
+                      context.l10n
+                          .leaderboardNetVotesCount(item.netVotes),
                       style: AppTypography.caption.copyWith(
                         color: AppColors.textSecondaryLight,
                         fontWeight: FontWeight.w500,
@@ -573,7 +650,7 @@ class _RankItemCard extends StatelessWidget {
             ),
           ),
 
-          // 投票按钮 - 对标iOS 32px circle vote buttons
+          // 投票按钮 — 修正：分别传 upvote / downvote
           Column(
             children: [
               _VoteCircle(
@@ -582,9 +659,9 @@ class _RankItemCard extends StatelessWidget {
                 color: AppColors.success,
                 onTap: () {
                   HapticFeedback.selectionClick();
-                  context
-                      .read<LeaderboardBloc>()
-                      .add(LeaderboardVoteItem(item.id));
+                  context.read<LeaderboardBloc>().add(
+                        LeaderboardVoteItem(item.id, voteType: 'upvote'),
+                      );
                 },
               ),
               const SizedBox(height: 4),
@@ -594,9 +671,9 @@ class _RankItemCard extends StatelessWidget {
                 color: AppColors.error,
                 onTap: () {
                   HapticFeedback.selectionClick();
-                  context
-                      .read<LeaderboardBloc>()
-                      .add(LeaderboardVoteItem(item.id));
+                  context.read<LeaderboardBloc>().add(
+                        LeaderboardVoteItem(item.id, voteType: 'downvote'),
+                      );
                 },
               ),
             ],
@@ -641,7 +718,8 @@ class _VoteCircle extends StatelessWidget {
         width: 32,
         height: 32,
         decoration: BoxDecoration(
-          color: isActive ? color.withValues(alpha: 0.15) : Colors.transparent,
+          color:
+              isActive ? color.withValues(alpha: 0.15) : Colors.transparent,
           shape: BoxShape.circle,
           border: Border.all(
             color: isActive ? color : AppColors.textTertiaryLight,

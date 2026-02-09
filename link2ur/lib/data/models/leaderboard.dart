@@ -118,6 +118,9 @@ class LeaderboardItem extends Equatable {
     this.website,
     this.images,
     required this.submittedBy,
+    this.submitterName,
+    this.submitterAvatar,
+    this.submitterId,
     this.status = 'approved',
     this.upvotes = 0,
     this.downvotes = 0,
@@ -129,6 +132,7 @@ class LeaderboardItem extends Equatable {
     this.displayComment,
     this.displayCommentType,
     this.displayCommentInfo,
+    this.rank,
     this.createdAt,
     this.updatedAt,
   });
@@ -142,6 +146,9 @@ class LeaderboardItem extends Equatable {
   final String? website;
   final List<String>? images;
   final String submittedBy;
+  final String? submitterName;
+  final String? submitterAvatar;
+  final String? submitterId;
   final String status;
   final int upvotes;
   final int downvotes;
@@ -153,6 +160,7 @@ class LeaderboardItem extends Equatable {
   final String? displayComment;
   final String? displayCommentType; // user, top
   final Map<String, dynamic>? displayCommentInfo;
+  final int? rank;
   final DateTime? createdAt;
   final DateTime? updatedAt;
 
@@ -182,6 +190,9 @@ class LeaderboardItem extends Equatable {
           ?.map((e) => e as String)
           .toList(),
       submittedBy: json['submitted_by']?.toString() ?? '',
+      submitterName: json['submitter_name'] as String?,
+      submitterAvatar: json['submitter_avatar'] as String?,
+      submitterId: json['submitter_id']?.toString(),
       status: json['status'] as String? ?? 'approved',
       upvotes: json['upvotes'] as int? ?? 0,
       downvotes: json['downvotes'] as int? ?? 0,
@@ -194,6 +205,7 @@ class LeaderboardItem extends Equatable {
       displayCommentType: json['display_comment_type'] as String?,
       displayCommentInfo:
           json['display_comment_info'] as Map<String, dynamic>?,
+      rank: json['rank'] as int?,
       createdAt: json['created_at'] != null
           ? DateTime.parse(json['created_at'])
           : null,
@@ -214,6 +226,9 @@ class LeaderboardItem extends Equatable {
       'website': website,
       'images': images,
       'submitted_by': submittedBy,
+      'submitter_name': submitterName,
+      'submitter_avatar': submitterAvatar,
+      'submitter_id': submitterId,
       'status': status,
       'upvotes': upvotes,
       'downvotes': downvotes,
@@ -244,6 +259,9 @@ class LeaderboardItem extends Equatable {
       website: website,
       images: images,
       submittedBy: submittedBy,
+      submitterName: submitterName,
+      submitterAvatar: submitterAvatar,
+      submitterId: submitterId,
       status: status,
       upvotes: upvotes ?? this.upvotes,
       downvotes: downvotes ?? this.downvotes,
@@ -255,13 +273,14 @@ class LeaderboardItem extends Equatable {
       displayComment: displayComment,
       displayCommentType: displayCommentType,
       displayCommentInfo: displayCommentInfo,
+      rank: rank,
       createdAt: createdAt,
       updatedAt: updatedAt,
     );
   }
 
   @override
-  List<Object?> get props => [id, leaderboardId, name, netVotes, updatedAt];
+  List<Object?> get props => [id, leaderboardId, name, netVotes, userVote, updatedAt];
 }
 
 /// 排行榜列表响应

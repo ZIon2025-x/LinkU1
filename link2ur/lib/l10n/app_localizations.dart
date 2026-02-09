@@ -1041,6 +1041,12 @@ abstract class AppLocalizations {
   /// **'Reply'**
   String get forumReply;
 
+  /// No description provided for @forumReplyTo.
+  ///
+  /// In en, this message translates to:
+  /// **'Reply to'**
+  String get forumReplyTo;
+
   /// No description provided for @forumWriteReply.
   ///
   /// In en, this message translates to:
@@ -1550,6 +1556,36 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Anonymous User'**
   String get leaderboardAnonymousUser;
+
+  /// No description provided for @leaderboardConfirmSupport.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm Support'**
+  String get leaderboardConfirmSupport;
+
+  /// No description provided for @leaderboardConfirmOppose.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm Oppose'**
+  String get leaderboardConfirmOppose;
+
+  /// No description provided for @leaderboardCopied.
+  ///
+  /// In en, this message translates to:
+  /// **'Copied to clipboard'**
+  String get leaderboardCopied;
+
+  /// No description provided for @leaderboardComments.
+  ///
+  /// In en, this message translates to:
+  /// **'Vote Comments'**
+  String get leaderboardComments;
+
+  /// No description provided for @leaderboardContactInfoDetail.
+  ///
+  /// In en, this message translates to:
+  /// **'Contact Info'**
+  String get leaderboardContactInfoDetail;
 
   /// No description provided for @leaderboardNetScore.
   ///
