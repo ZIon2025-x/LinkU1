@@ -2,7 +2,7 @@
 安全监控相关的API路由
 """
 
-from fastapi import APIRouter, Request, Depends, HTTPException, status
+from fastapi import APIRouter, Request, Depends, HTTPException, status, Query
 from app.security_monitoring import security_monitor, get_client_ip
 from app.deps import get_current_user_secure_sync_csrf
 from typing import Dict, Any
@@ -119,7 +119,7 @@ async def get_my_ip_address(
 
 @router.get("/logs")
 async def get_security_logs(
-    limit: int = 100,
+    limit: int = Query(100, ge=1, le=500),
     current_user = Depends(get_current_user_secure_sync_csrf)
 ):
     """

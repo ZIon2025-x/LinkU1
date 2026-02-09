@@ -939,6 +939,7 @@ def create_task_payment(
             
             # 创建支付历史记录
             payment_history = models.PaymentHistory(
+                order_no=models.PaymentHistory.generate_order_no(),
                 task_id=task_id,
                 user_id=current_user.id,
                 payment_intent_id=None,
@@ -1274,6 +1275,7 @@ def create_task_payment(
         # 这里只创建 PaymentIntent 和支付历史记录，不更新任务状态（is_paid, status）
         # 任务状态更新只能由 Stripe Webhook 触发
         payment_history = models.PaymentHistory(
+            order_no=models.PaymentHistory.generate_order_no(),
             task_id=task_id,
             user_id=current_user.id,
             payment_intent_id=payment_intent.id,
@@ -1497,6 +1499,7 @@ async def create_wechat_checkout_session(
                 task.status = "in_progress"
             
             payment_history = models.PaymentHistory(
+                order_no=models.PaymentHistory.generate_order_no(),
                 task_id=task_id,
                 user_id=current_user.id,
                 payment_intent_id=None,
@@ -1616,6 +1619,7 @@ async def create_wechat_checkout_session(
         
         # 创建支付历史记录（待支付状态）
         payment_history = models.PaymentHistory(
+            order_no=models.PaymentHistory.generate_order_no(),
             task_id=task_id,
             user_id=current_user.id,
             payment_intent_id=session.payment_intent if session.payment_intent else session.id,

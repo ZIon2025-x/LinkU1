@@ -1296,13 +1296,13 @@ async def mark_messages_read(
 class ApplyTaskRequest(BaseModel):
     """申请任务请求体"""
     message: Optional[str] = Field(None, max_length=1000)
-    negotiated_price: Optional[float] = Field(None, ge=0)
+    negotiated_price: Optional[float] = Field(None, ge=0.01, le=50000.0)
     currency: Optional[str] = Field(None, max_length=3)
 
 
 class NegotiateRequest(BaseModel):
     """再次议价请求体"""
-    negotiated_price: float = Field(..., ge=0)
+    negotiated_price: float = Field(..., ge=0.01, le=50000.0)
     message: Optional[str] = Field(None, max_length=1000)
 
 
@@ -1315,7 +1315,7 @@ class RespondNegotiationRequest(BaseModel):
 class SendApplicationMessageRequest(BaseModel):
     """发送申请留言请求体"""
     message: str = Field(..., max_length=1000, description="留言内容")
-    negotiated_price: Optional[float] = Field(None, ge=0, description="议价金额（可选）")
+    negotiated_price: Optional[float] = Field(None, ge=0.01, le=50000.0, description="议价金额（可选）")
 
 
 class ReplyApplicationMessageRequest(BaseModel):

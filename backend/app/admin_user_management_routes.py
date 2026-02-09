@@ -10,6 +10,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request, Body
 from sqlalchemy.orm import Session
 
 from app import crud, models, schemas
+from app.audit_logger import log_admin_action
 from app.deps import get_db
 from app.separate_auth_deps import get_current_admin
 from app.security import get_client_ip
@@ -107,6 +108,14 @@ def admin_set_user_level(
     db: Session = Depends(get_db),
 ):
     """管理员设置用户等级"""
+    # 安全：验证等级值是否合法
+    ALLOWED_USER_LEVELS = {"normal", "vip", "super"}
+    if level not in ALLOWED_USER_LEVELS:
+        raise HTTPException(
+            status_code=400,
+            detail=f"无效的用户等级，允许的值: {', '.join(ALLOWED_USER_LEVELS)}"
+        )
+    
     user = crud.get_user_by_id(db, user_id)
     if not user:
         raise HTTPException(status_code=404, detail="User not found.")
@@ -185,6 +194,14 @@ def admin_set_user_status(
             new_value=new_values,
             reason=f"管理员 {current_user.id} ({current_user.name}) 修改了用户状态",
             ip_address=ip_address,
+        )
+        log_admin_action(
+            action="set_user_status",
+            admin_id=current_user.id,
+            request=request,
+            target_type="user",
+            target_id=user_id,
+            details={"old": old_values, "new": new_values},
         )
     
     return {"message": f"User {user_id} status updated."}

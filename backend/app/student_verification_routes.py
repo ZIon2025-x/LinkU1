@@ -7,7 +7,7 @@ import secrets
 import logging
 from datetime import datetime, timedelta, timezone
 from typing import Optional
-from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks, Request, status
+from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks, Request, status, Query
 from sqlalchemy.orm import Session
 from sqlalchemy import and_, or_
 
@@ -1032,15 +1032,17 @@ def get_user_verification_status(
 def get_universities(
     request: Request,
     search: Optional[str] = None,
-    page: int = 1,
-    page_size: int = 20,
+    page: int = Query(1, ge=1),
+    page_size: int = Query(20, ge=1, le=100),
     db: Session = Depends(get_sync_db),
 ):
     """获取支持的大学列表"""
     query = db.query(models.University).filter(models.University.is_active == True)
     
     if search:
-        search_term = f"%{search.lower()}%"
+        # 安全：转义 LIKE 通配符并限制长度
+        search_safe = search.strip()[:100].lower().replace('%', r'\%').replace('_', r'\_')
+        search_term = f"%{search_safe}%"
         query = query.filter(
             or_(
                 models.University.name.ilike(search_term),

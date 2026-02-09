@@ -193,6 +193,12 @@ def secure_login(
             response.headers["X-Auth-Status"] = "authenticated"
             response.headers["X-Mobile-Auth"] = "true"
 
+        # 记录登录成功事件
+        logger.info(
+            f"登录成功: user_id={user.id}, email={user.email}, "
+            f"IP={client_ip}, mobile={is_mobile}, ios_app={is_ios_app}"
+        )
+
         response_data = {
             "message": "登录成功",
             "user": {
@@ -221,7 +227,7 @@ def secure_login(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"安全登录失败: {e}")
+        logger.error(f"安全登录失败: {e}", exc_info=True)
         # 提供更详细的错误信息用于调试
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, 

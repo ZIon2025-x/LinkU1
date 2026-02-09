@@ -7,11 +7,12 @@ import logging
 from decimal import Decimal
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from sqlalchemy.orm import Session
 from sqlalchemy import func, and_, or_, select
 
 from app import crud, models, schemas
+from app.audit_logger import log_admin_action
 from app.deps import get_db
 from app.separate_auth_deps import get_current_admin
 from app.utils.time_utils import get_utc_time
@@ -23,8 +24,8 @@ router = APIRouter(prefix="/api", tags=["管理员-退款管理"])
 
 @router.get("/admin/refund-requests", response_model=dict)
 def get_admin_refund_requests(
-    skip: int = 0,
-    limit: int = 20,
+    skip: int = Query(0, ge=0),
+    limit: int = Query(20, ge=1, le=100),
     status: Optional[str] = None,
     keyword: Optional[str] = None,
     current_user=Depends(get_current_admin),
@@ -146,6 +147,7 @@ def approve_refund_request(
     refund_id: int,
     approve_data: schemas.RefundRequestApprove,
     current_user=Depends(get_current_admin),
+    request: Request = None,
     db: Session = Depends(get_db),
 ):
     """管理员批准退款申请"""
@@ -311,6 +313,14 @@ def approve_refund_request(
                 logger.error(f"Failed to send notification: {e}")
             
             db.commit()
+            log_admin_action(
+                action="approve_refund",
+                admin_id=current_user.id,
+                request=request,
+                target_type="refund_request",
+                target_id=str(refund_id),
+                details={"amount": refund_amount_float, "task_id": task.id, "admin_comment": approve_data.admin_comment},
+            )
         else:
             db.rollback()
             db.refresh(task)
@@ -347,6 +357,7 @@ def reject_refund_request(
     refund_id: int,
     reject_data: schemas.RefundRequestReject,
     current_user=Depends(get_current_admin),
+    request: Request = None,
     db: Session = Depends(get_db),
 ):
     """管理员拒绝退款申请"""
@@ -419,5 +430,14 @@ def reject_refund_request(
     
     db.commit()
     db.refresh(refund_request)
-    
+
+    log_admin_action(
+        action="reject_refund",
+        admin_id=current_user.id,
+        request=request,
+        target_type="refund_request",
+        target_id=str(refund_id),
+        details={"task_id": refund_request.task_id, "admin_comment": reject_data.admin_comment},
+    )
+
     return refund_request

@@ -750,7 +750,9 @@ def list_tasks(
     # 在数据库层面添加关键词搜索（使用 pg_trgm 优化）
     if keyword and keyword.strip():
         from sqlalchemy import func
-        keyword_clean = keyword.strip()
+        keyword_clean = keyword.strip()[:100]  # 限制关键词长度
+        # 安全：转义 LIKE 通配符，防止用户通过 % 和 _ 进行模式注入
+        keyword_escaped = keyword_clean.replace('%', r'\%').replace('_', r'\_')
         
         # 使用相似度匹配，阈值设为 0.2（可以根据需要调整）
         # 这样可以支持拼写错误和部分匹配
@@ -760,8 +762,8 @@ def list_tasks(
                 func.similarity(Task.description, keyword_clean) > 0.2,
                 func.similarity(Task.task_type, keyword_clean) > 0.2,
                 func.similarity(Task.location, keyword_clean) > 0.2,
-                Task.title.ilike(f"%{keyword_clean}%"),  # 保留原始搜索作为备选
-                Task.description.ilike(f"%{keyword_clean}%")
+                Task.title.ilike(f"%{keyword_escaped}%"),  # 保留原始搜索作为备选
+                Task.description.ilike(f"%{keyword_escaped}%")
             )
         )
     
@@ -889,12 +891,14 @@ def count_tasks(
     # 添加关键词搜索（使用 pg_trgm 优化）
     if keyword and keyword.strip():
         from sqlalchemy import func
-        keyword_clean = keyword.strip()
+        keyword_clean = keyword.strip()[:100]  # 限制关键词长度
+        # 安全：转义 LIKE 通配符
+        keyword_escaped = keyword_clean.replace('%', r'\%').replace('_', r'\_')
         query = query.filter(
             or_(
                 func.similarity(Task.title, keyword_clean) > 0.2,
                 func.similarity(Task.description, keyword_clean) > 0.2,
-                Task.title.ilike(f"%{keyword_clean}%")
+                Task.title.ilike(f"%{keyword_escaped}%")
             )
         )
 
@@ -3443,7 +3447,14 @@ def create_audit_log(
 
 
 def update_user_by_admin(db: Session, user_id: str, user_update: dict):
-    """管理员更新用户信息"""
+    """管理员更新用户信息（仅允许白名单字段）"""
+    # 安全：只允许管理员修改以下字段，防止越权修改敏感字段
+    ALLOWED_FIELDS = {
+        "user_level", "is_active", "is_banned", "is_suspended", "suspend_until",
+        "name", "avatar", "email", "phone", "bio", "residence_city",
+        "language_preference", "is_verified", "is_student_verified",
+    }
+    
     user = db.query(models.User).filter(models.User.id == user_id).first()
     if user:
         # 记录修改前的值
@@ -3451,6 +3462,8 @@ def update_user_by_admin(db: Session, user_id: str, user_update: dict):
         new_values = {}
         
         for field, value in user_update.items():
+            if field not in ALLOWED_FIELDS:
+                continue  # 安全：跳过不在白名单的字段
             if value is not None and hasattr(user, field):
                 old_value = getattr(user, field)
                 # 只记录有变更的字段
@@ -3853,7 +3866,7 @@ def create_admin_user(db: Session, admin_data: dict):
         username=admin_data["username"],
         email=admin_data["email"],
         hashed_password=hashed_password,
-        is_super_admin=admin_data.get("is_super_admin", 0),
+        is_super_admin=0,  # 安全：始终服务端设为0，不从请求体接受
     )
     db.add(admin)
     db.commit()

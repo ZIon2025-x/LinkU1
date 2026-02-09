@@ -358,6 +358,7 @@ async def register(
                 sync_db.close()
         
         # 开发环境：用户注册成功，无需邮箱验证
+        logger.info(f"用户注册成功（开发环境）: user_id={new_user.id}, email={validated_data['email']}")
         
         return {
             "message": "注册成功！（开发环境：已跳过邮箱验证）",
@@ -385,6 +386,8 @@ async def register(
         
         # 发送验证邮件（新用户注册，默认使用英文，因为还没有用户记录，user_id为None）
         send_verification_email_with_token(background_tasks, validated_data['email'], verification_token, language='en', db=None, user_id=None)
+        
+        logger.info(f"用户注册待验证（生产环境）: email={validated_data['email']}, 验证邮件已发送")
         
         return {
             "message": "注册成功！请检查您的邮箱并点击验证链接完成注册。",
@@ -1556,8 +1559,8 @@ def record_task_interaction(
         try:
             from app.recommendation_metrics import record_user_interaction
             record_user_interaction(interaction_type, is_rec)
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug(f"记录Prometheus推荐指标失败: {e}")
         
         return {"status": "success", "message": "交互记录成功"}
     except Exception as e:
@@ -1904,10 +1907,14 @@ def update_task_reward(
     return task
 
 
+class VisibilityUpdate(BaseModel):
+    is_public: int = Field(..., ge=0, le=1, description="0=私密, 1=公开")
+
+
 @router.patch("/tasks/{task_id}/visibility", response_model=schemas.TaskOut)
 def update_task_visibility(
     task_id: int,
-    visibility_update: dict = Body(...),
+    visibility_update: VisibilityUpdate = Body(...),
     current_user=Depends(check_user_status),
     db: Session = Depends(get_db),
 ):
@@ -1920,9 +1927,7 @@ def update_task_visibility(
             status_code=403, detail="Not authorized to update this task"
         )
 
-    is_public = visibility_update.get("is_public")
-    if is_public not in [0, 1]:
-        raise HTTPException(status_code=400, detail="is_public must be 0 or 1")
+    is_public = visibility_update.is_public
 
     task.is_public = is_public
     db.commit()
@@ -2445,13 +2450,10 @@ def create_refund_request(
                     detail="退款比例必须在0-100之间"
                 )
             calculated_amount = task_amount * refund_percentage / Decimal('100')
-            # 如果同时提供了金额，使用金额；否则使用计算出的金额
-            if refund_data.refund_amount is not None:
-                if refund_data.refund_amount != calculated_amount:
-                    logger.warning(f"退款金额（£{refund_data.refund_amount}）与退款比例计算出的金额（£{calculated_amount}）不一致，使用提供的金额")
-                final_refund_amount = Decimal(str(refund_data.refund_amount))
-            else:
-                final_refund_amount = calculated_amount
+            # 安全：当提供了退款比例时，始终以服务端计算的金额为准，忽略前端传入的金额
+            if refund_data.refund_amount is not None and refund_data.refund_amount != calculated_amount:
+                logger.warning(f"退款金额（£{refund_data.refund_amount}）与退款比例计算出的金额（£{calculated_amount}）不一致，使用服务端计算的金额")
+            final_refund_amount = calculated_amount
         else:
             # 只提供了金额
             final_refund_amount = Decimal(str(refund_data.refund_amount))
@@ -2719,7 +2721,8 @@ def get_refund_status(
         import json
         try:
             evidence_files = json.loads(refund_request.evidence_files)
-        except:
+        except (json.JSONDecodeError, TypeError, ValueError) as e:
+            logger.warning(f"解析退款请求证据文件JSON失败 (refund_request_id={refund_request.id}): {e}")
             evidence_files = []
     
     # 解析退款原因字段（格式：reason_type|refund_type|reason）
@@ -2984,8 +2987,8 @@ def get_task_dispute_timeline(
                             "url": attachment.url,
                             "file_id": attachment.blob_id
                         })
-            except:
-                pass
+            except Exception as e:
+                logger.warning(f"解析退款证据附件失败: {e}")
         
         timeline_items.append({
             "type": "refund_request",
@@ -3018,8 +3021,8 @@ def get_task_dispute_timeline(
                                 "url": attachment.url,
                                 "file_id": attachment.blob_id
                             })
-                except:
-                    pass
+                except Exception as e:
+                    logger.warning(f"解析反驳证据附件失败: {e}")
             
             timeline_items.append({
                 "type": "rebuttal",
@@ -3125,7 +3128,8 @@ def get_refund_history(
             import json
             try:
                 evidence_files = json.loads(refund_request.evidence_files)
-            except:
+            except (json.JSONDecodeError, TypeError, ValueError) as e:
+                logger.warning(f"解析退款请求证据文件JSON失败 (refund_request_id={refund_request.id}): {e}")
                 evidence_files = []
         
         # 解析退款原因字段（格式：reason_type|refund_type|reason）
@@ -3152,7 +3156,8 @@ def get_refund_history(
         if refund_request.rebuttal_evidence_files:
             try:
                 rebuttal_evidence_files = json.loads(refund_request.rebuttal_evidence_files)
-            except:
+            except (json.JSONDecodeError, TypeError, ValueError) as e:
+                logger.warning(f"解析反驳证据文件JSON失败 (refund_request_id={refund_request.id}): {e}")
                 rebuttal_evidence_files = []
         
         # 创建输出对象
@@ -3264,7 +3269,8 @@ def cancel_refund_request(
         import json
         try:
             evidence_files = json.loads(refund_request.evidence_files)
-        except:
+        except (json.JSONDecodeError, TypeError, ValueError) as e:
+            logger.warning(f"解析退款请求证据文件JSON失败 (refund_request_id={refund_request.id}): {e}")
             evidence_files = []
     
     # 解析退款原因字段
@@ -3523,7 +3529,8 @@ def submit_refund_rebuttal(
     if refund_request.evidence_files:
         try:
             evidence_files = json.loads(refund_request.evidence_files)
-        except:
+        except (json.JSONDecodeError, TypeError, ValueError) as e:
+            logger.warning(f"解析退款请求证据文件JSON失败 (refund_request_id={refund_request.id}): {e}")
             evidence_files = []
     
     # 处理反驳证据文件
@@ -3531,7 +3538,8 @@ def submit_refund_rebuttal(
     if refund_request.rebuttal_evidence_files:
         try:
             rebuttal_evidence_files = json.loads(refund_request.rebuttal_evidence_files)
-        except:
+        except (json.JSONDecodeError, TypeError, ValueError) as e:
+            logger.warning(f"解析反驳证据文件JSON失败 (refund_request_id={refund_request.id}): {e}")
             rebuttal_evidence_files = []
     
     # 解析退款原因字段
@@ -4262,7 +4270,18 @@ def delete_cancelled_task(
 @router.get("/tasks/{task_id}/history")
 @measure_api_performance("get_task_history")
 @cache_response(ttl=180, key_prefix="task_history")  # 缓存3分钟
-def get_task_history(task_id: int, db: Session = Depends(get_db)):
+def get_task_history(
+    task_id: int,
+    current_user=Depends(check_user_status),
+    db: Session = Depends(get_db),
+):
+    # 安全校验：只允许任务参与者查看任务历史
+    task = crud.get_task(db, task_id)
+    if not task:
+        raise HTTPException(status_code=404, detail="Task not found")
+    if task.poster_id != current_user.id and task.taker_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Not authorized to view this task's history")
+    
     history = crud.get_task_history(db, task_id)
     return [
         {
@@ -4928,7 +4947,7 @@ def update_avatar(
             from app.redis_cache import invalidate_user_cache
             invalidate_user_cache(current_user.id)
         except Exception as e:
-            pass  # 静默处理缓存清除失败
+            logger.warning(f"头像更新后清除用户缓存失败 (user_id={current_user.id}): {e}")
         
         return {"avatar": data.avatar}
         
@@ -5140,7 +5159,7 @@ def update_profile(
             from app.redis_cache import invalidate_user_cache
             invalidate_user_cache(current_user.id)
         except Exception as e:
-            pass  # 静默处理缓存清除失败
+            logger.warning(f"个人资料更新后清除用户缓存失败 (user_id={current_user.id}): {e}")
         
         return {"message": "个人资料更新成功", **update_data}
         
@@ -5183,8 +5202,8 @@ def get_chat_history_api(
     user_id: str,
     current_user=Depends(get_current_user_secure_sync_csrf),
     db: Session = Depends(get_db),
-    limit: int = 20,  # 增加默认加载数量
-    offset: int = 0,
+    limit: int = Query(20, ge=1, le=100),
+    offset: int = Query(0, ge=0),
     session_id: int = None,
 ):
     # 如果提供了session_id，直接使用它
@@ -5386,7 +5405,7 @@ def mark_chat_messages_read_api(
 def get_notifications_api(
     current_user=Depends(check_user_status),
     db: Session = Depends(get_db),
-    limit: int = 20,
+    limit: int = Query(20, ge=1, le=100),
 ):
     from app.utils.notification_utils import enrich_notifications_with_task_id_sync
     
@@ -5408,7 +5427,7 @@ def get_unread_notifications_api(
 def get_notifications_with_recent_read_api(
     current_user=Depends(check_user_status), 
     db: Session = Depends(get_db),
-    recent_read_limit: int = 10
+    recent_read_limit: int = Query(10, ge=1, le=100),
 ):
     """获取所有未读通知和最近N条已读通知"""
     from app.utils.notification_utils import enrich_notifications_with_task_id_sync
@@ -5443,7 +5462,7 @@ def mark_notification_read_api(
 @router.post("/users/device-token")
 def register_device_token(
     request: Request,
-    device_token_data: dict = Body(...),
+    device_token_data: schemas.DeviceTokenRegister,
     current_user=Depends(get_current_user_secure_sync_csrf),
     db: Session = Depends(get_db),
 ):
@@ -5452,11 +5471,11 @@ def register_device_token(
     from sqlalchemy.exc import IntegrityError
     logger = logging.getLogger(__name__)
     
-    device_token = device_token_data.get("device_token")
-    platform = device_token_data.get("platform", "ios")
-    device_id = device_token_data.get("device_id")  # 可能为 None 或空字符串
-    app_version = device_token_data.get("app_version")  # 可能为 None 或空字符串
-    device_language = device_token_data.get("device_language")  # 设备系统语言（zh 或 en）
+    device_token = device_token_data.device_token
+    platform = device_token_data.platform
+    device_id = device_token_data.device_id  # 可能为 None 或空字符串
+    app_version = device_token_data.app_version  # 可能为 None 或空字符串
+    device_language = device_token_data.device_language  # 设备系统语言（zh 或 en）
     
     # 验证和规范化设备语言
     # 只有中文使用中文推送，其他所有语言都使用英文推送
@@ -5608,7 +5627,7 @@ def register_device_token(
 
 @router.delete("/users/device-token")
 def unregister_device_token(
-    device_token_data: dict = Body(...),
+    device_token_data: schemas.DeviceTokenUnregister,
     current_user=Depends(get_current_user_secure_sync_csrf),
     db: Session = Depends(get_db),
 ):
@@ -5621,10 +5640,7 @@ def unregister_device_token(
     3. 避免删除后重新注册时的竞态条件
     """
     logger = logging.getLogger(__name__)
-    device_token = device_token_data.get("device_token")
-    
-    if not device_token:
-        raise HTTPException(status_code=400, detail="device_token is required")
+    device_token = device_token_data.device_token
     
     # 查找令牌并标记为不活跃（而不是删除）
     updated = db.query(models.DeviceToken).filter(
@@ -5764,7 +5780,7 @@ def mark_all_notifications_read_api(
 
 @router.post("/notifications/send-announcement")
 def send_announcement_api(
-    announcement: dict = Body(...),
+    announcement: schemas.AnnouncementCreate,
     current_user=Depends(get_current_admin),
     db: Session = Depends(get_db),
 ):
@@ -5796,8 +5812,8 @@ def send_announcement_api(
                     db,
                     user.id,
                     "announcement",
-                    announcement.get("title", "平台公告"),
-                    announcement.get("content", ""),
+                    announcement.title,
+                    announcement.content,
                     None,
                 )
                 processed_count += 1
@@ -5957,7 +5973,8 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
                     return {"status": "already_processed", "event_id": event_id}
                 raise
     else:
-        logger.warning(f"⚠️ [WEBHOOK] 事件没有 ID，无法进行 idempotency 检查: event_type={event_type}")
+        logger.error(f"❌ [WEBHOOK] 事件缺少 event_id，拒绝处理以保证幂等性: event_type={event_type}")
+        return {"error": "Missing event_id, cannot guarantee idempotency"}, 400
     
     # 标记事件开始处理
     processing_started = False
@@ -6163,10 +6180,12 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
                             ).first()
                             
                             if payment_history:
-                                # 更新现有记录
-                                payment_history.status = "succeeded"
+                                # 更新现有记录（状态机保护）
+                                try:
+                                    payment_history.transition_status("succeeded")
+                                except ValueError as e:
+                                    logger.warning(f"⚠️ [WEBHOOK] 状态转换被拒绝: {e}")
                                 payment_history.escrow_amount = task.escrow_amount
-                                payment_history.updated_at = get_utc_time()
                                 # 增强 metadata
                                 if not payment_history.extra_metadata:
                                     payment_history.extra_metadata = {}
@@ -6184,6 +6203,7 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
                                 # 创建新的支付历史记录（用于审计）
                                 from decimal import Decimal
                                 payment_history = models.PaymentHistory(
+                                    order_no=models.PaymentHistory.generate_order_no(),
                                     task_id=task_id,
                                     user_id=task.poster_id,
                                     payment_intent_id=payment_intent_id,
@@ -6205,7 +6225,7 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
                                     }
                                 )
                                 db.add(payment_history)
-                                logger.debug(f"✅ [WEBHOOK] 已创建支付历史记录: payment_history_id={payment_history.id}")
+                                logger.debug(f"✅ [WEBHOOK] 已创建支付历史记录: order_no={payment_history.order_no}")
                         except Exception as e:
                             logger.error(f"❌ [WEBHOOK] 创建/更新支付历史记录失败: {e}", exc_info=True)
                             # 支付历史记录失败不影响主流程
@@ -6223,6 +6243,7 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
                             # 创建新的支付历史记录
                             from decimal import Decimal
                             payment_history = models.PaymentHistory(
+                                order_no=models.PaymentHistory.generate_order_no(),
                                 task_id=task_id,
                                 user_id=task.poster_id,
                                 payment_intent_id=payment_intent_id,
@@ -6241,12 +6262,14 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
                                 }
                             )
                             db.add(payment_history)
-                            logger.debug(f"✅ [WEBHOOK] 已创建支付历史记录（非 pending_approval）: payment_history_id={payment_history.id}")
+                            logger.debug(f"✅ [WEBHOOK] 已创建支付历史记录（非 pending_approval）: order_no={payment_history.order_no}")
                         else:
-                            # 更新现有记录
-                            payment_history.status = "succeeded"
+                            # 更新现有记录（状态机保护）
+                            try:
+                                payment_history.transition_status("succeeded")
+                            except ValueError as e:
+                                logger.warning(f"⚠️ [WEBHOOK] 状态转换被拒绝: {e}")
                             payment_history.escrow_amount = task.escrow_amount
-                            payment_history.updated_at = get_utc_time()
                             if not payment_history.extra_metadata:
                                 payment_history.extra_metadata = {}
                             payment_history.extra_metadata.update({
@@ -6254,7 +6277,7 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
                                 "webhook_event_id": event_id,
                                 "approved_at": get_utc_time().isoformat()
                             })
-                            logger.debug(f"✅ [WEBHOOK] 已更新支付历史记录（非 pending_approval）: payment_history_id={payment_history.id}")
+                            logger.debug(f"✅ [WEBHOOK] 已更新支付历史记录（非 pending_approval）: order_no={payment_history.order_no}")
                     except Exception as e:
                         logger.error(f"❌ [WEBHOOK] 创建/更新支付历史记录失败（非 pending_approval）: {e}", exc_info=True)
                         # 支付历史记录失败不影响主流程
@@ -6340,8 +6363,10 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
                     models.PaymentHistory.payment_intent_id == payment_intent_id
                 ).first()
                 if payment_history:
-                    payment_history.status = "failed"
-                    payment_history.updated_at = get_utc_time()
+                    try:
+                        payment_history.transition_status("failed")
+                    except ValueError as e:
+                        logger.warning(f"⚠️ [WEBHOOK] 状态转换被拒绝: {e}")
                     if not payment_history.extra_metadata:
                         payment_history.extra_metadata = {}
                     payment_history.extra_metadata.update({
@@ -6351,7 +6376,7 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
                         "failed_at": get_utc_time().isoformat()
                     })
                     db.commit()
-                    logger.info(f"✅ [WEBHOOK] 已更新支付历史记录状态为失败: payment_history_id={payment_history.id}")
+                    logger.info(f"✅ [WEBHOOK] 已更新支付历史记录状态为失败: order_no={payment_history.order_no}")
             except Exception as e:
                 logger.error(f"❌ [WEBHOOK] 更新支付历史记录失败: {e}", exc_info=True)
         
@@ -6839,9 +6864,12 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
                         ).order_by(models.PaymentHistory.created_at.desc()).first()
                         
                         if payment_history:
-                            payment_history.status = "succeeded"
+                            try:
+                                payment_history.transition_status("succeeded")
+                            except ValueError as e:
+                                logger.warning(f"⚠️ [WEBHOOK] 状态转换被拒绝: {e}")
                             payment_history.payment_intent_id = session.get("payment_intent") or checkout_session_id
-                            logger.info(f"[WEBHOOK] 更新支付历史记录状态为 succeeded: payment_history_id={payment_history.id}")
+                            logger.info(f"[WEBHOOK] 更新支付历史记录状态为 succeeded: order_no={payment_history.order_no}")
                 except Exception as e:
                     logger.warning(f"[WEBHOOK] 更新支付历史记录失败: {e}")
                 

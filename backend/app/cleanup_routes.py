@@ -1,22 +1,24 @@
 """
 清理任务API路由
 提供手动清理过期数据的接口
+所有接口均需要管理员认证
 """
 
 import logging
-from fastapi import APIRouter, HTTPException, Depends, status
+from fastapi import APIRouter, HTTPException, Depends, status, Request
 from sqlalchemy.orm import Session
 
 from app.deps import get_sync_db
 from app.cleanup_tasks import cleanup_tasks
 from app.user_redis_cleanup import user_redis_cleanup
+from app.separate_auth_deps import get_current_admin
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
 @router.post("/cleanup/sessions")
-def cleanup_sessions(db: Session = Depends(get_sync_db)):
+def cleanup_sessions(current_admin=Depends(get_current_admin), db: Session = Depends(get_sync_db)):
     """手动清理过期会话
     
     注意: Redis 使用 TTL 自动过期，此接口仅保留兼容性
@@ -27,7 +29,7 @@ def cleanup_sessions(db: Session = Depends(get_sync_db)):
     }
 
 @router.post("/cleanup/cache")
-def cleanup_cache(db: Session = Depends(get_sync_db)):
+def cleanup_cache(current_admin=Depends(get_current_admin), db: Session = Depends(get_sync_db)):
     """手动清理过期缓存"""
     try:
         logger.info("开始手动清理过期缓存")
@@ -70,8 +72,8 @@ def cleanup_cache(db: Session = Depends(get_sync_db)):
         )
 
 @router.post("/cleanup/refresh-tokens")
-def cleanup_refresh_tokens(user_id: str = None, db: Session = Depends(get_sync_db)):
-    """清理过期refresh token"""
+def cleanup_refresh_tokens(user_id: str = None, current_admin=Depends(get_current_admin), db: Session = Depends(get_sync_db)):
+    """清理过期refresh token（需管理员认证）"""
     try:
         logger.info(f"开始清理过期refresh token: {user_id or '所有用户'}")
         
@@ -94,8 +96,8 @@ def cleanup_refresh_tokens(user_id: str = None, db: Session = Depends(get_sync_d
         )
 
 @router.post("/cleanup/user-data")
-def cleanup_user_data(user_id: str = None, db: Session = Depends(get_sync_db)):
-    """清理用户Redis数据"""
+def cleanup_user_data(user_id: str = None, current_admin=Depends(get_current_admin), db: Session = Depends(get_sync_db)):
+    """清理用户Redis数据（需管理员认证）"""
     try:
         logger.info(f"开始清理用户Redis数据: {user_id or '所有用户'}")
         
@@ -118,7 +120,7 @@ def cleanup_user_data(user_id: str = None, db: Session = Depends(get_sync_db)):
         )
 
 @router.get("/cleanup/user-stats")
-def get_user_data_stats(db: Session = Depends(get_sync_db)):
+def get_user_data_stats(current_admin=Depends(get_current_admin), db: Session = Depends(get_sync_db)):
     """获取用户数据统计"""
     try:
         stats = user_redis_cleanup.get_user_data_stats()
@@ -137,7 +139,7 @@ def get_user_data_stats(db: Session = Depends(get_sync_db)):
         )
 
 @router.post("/cleanup/all")
-def cleanup_all(db: Session = Depends(get_sync_db)):
+def cleanup_all(current_admin=Depends(get_current_admin), db: Session = Depends(get_sync_db)):
     """清理所有过期数据
     
     注意: 会话由 Redis TTL 自动过期，此接口仅清理缓存数据
@@ -172,7 +174,7 @@ def cleanup_all(db: Session = Depends(get_sync_db)):
         )
 
 @router.get("/cleanup/status")
-def get_cleanup_status():
+def get_cleanup_status(current_admin=Depends(get_current_admin)):
     """获取清理任务状态"""
     try:
         return {
@@ -188,7 +190,7 @@ def get_cleanup_status():
         )
 
 @router.post("/cleanup/start")
-def start_cleanup_tasks():
+def start_cleanup_tasks(current_admin=Depends(get_current_admin)):
     """启动清理任务"""
     try:
         if cleanup_tasks.running:
@@ -211,7 +213,7 @@ def start_cleanup_tasks():
         )
 
 @router.post("/cleanup/stop")
-def stop_cleanup_tasks():
+def stop_cleanup_tasks(current_admin=Depends(get_current_admin)):
     """停止清理任务"""
     try:
         cleanup_tasks.stop_cleanup_tasks()

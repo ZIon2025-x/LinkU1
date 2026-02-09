@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import or_, func
 
 from app import crud, models, schemas
+from app.audit_logger import log_admin_action
 from app.deps import get_db
 from app.separate_auth_deps import get_current_admin
 from app.security import get_client_ip
@@ -22,8 +23,8 @@ router = APIRouter(prefix="/api", tags=["管理员-任务管理"])
 
 @router.get("/admin/tasks")
 def admin_get_tasks(
-    skip: int = 0,
-    limit: int = 50,
+    skip: int = Query(0, ge=0),
+    limit: int = Query(50, ge=1, le=200),
     status: str = None,
     task_type: str = None,
     location: str = None,
@@ -217,6 +218,14 @@ def admin_delete_task(
             reason=f"管理员 {current_user.id} ({current_user.name}) 删除了任务",
             ip_address=ip_address,
         )
+        log_admin_action(
+            action="delete_task",
+            admin_id=current_user.id,
+            request=request,
+            target_type="task",
+            target_id=str(task_id),
+            details=task_data,
+        )
         return {"message": f"任务 {task_id} 已删除"}
     else:
         raise HTTPException(status_code=500, detail="删除任务失败")
@@ -281,6 +290,7 @@ def admin_batch_update_tasks(
 def admin_batch_delete_tasks(
     task_ids: list[int],
     current_user=Depends(get_current_admin),
+    request: Request = None,
     db: Session = Depends(get_db),
 ):
     """管理员批量删除任务"""
@@ -308,6 +318,16 @@ def admin_batch_delete_tasks(
         except Exception as e:
             failed_tasks.append({"task_id": task_id, "error": str(e)})
 
+    if deleted_tasks:
+        log_admin_action(
+            action="batch_delete_tasks",
+            admin_id=current_user.id,
+            request=request,
+            target_type="task",
+            target_id=",".join(str(t) for t in deleted_tasks),
+            details={"count": len(deleted_tasks), "task_ids": deleted_tasks},
+        )
+
     return {
         "message": f"批量删除完成，成功: {len(deleted_tasks)}, 失败: {len(failed_tasks)}",
         "deleted_tasks": deleted_tasks,
@@ -324,6 +344,14 @@ def admin_set_task_level(
     db: Session = Depends(get_db),
 ):
     """管理员设置任务等级"""
+    # 安全：验证等级值是否合法
+    ALLOWED_TASK_LEVELS = {"normal", "vip", "super", "expert"}
+    if level not in ALLOWED_TASK_LEVELS:
+        raise HTTPException(
+            status_code=400,
+            detail=f"无效的任务等级，允许的值: {', '.join(ALLOWED_TASK_LEVELS)}"
+        )
+    
     task = crud.get_task(db, task_id)
     if not task:
         raise HTTPException(status_code=404, detail="Task not found.")
@@ -366,6 +394,7 @@ def admin_review_cancel_request(
     decision: str = Body(..., pattern="^(approve|reject)$"),
     admin_comment: str = Body(None),
     current_user=Depends(get_current_admin),
+    request: Request = None,
     db: Session = Depends(get_db),
 ):
     """管理员审核取消请求"""
@@ -397,6 +426,15 @@ def admin_review_cancel_request(
     cancel_request.admin_comment = admin_comment
     
     db.commit()
+
+    log_admin_action(
+        action=f"cancel_request_{decision}",
+        admin_id=current_user.id,
+        request=request,
+        target_type="cancel_request",
+        target_id=str(request_id),
+        details={"task_id": cancel_request.task_id, "admin_comment": admin_comment},
+    )
     
     return {
         "message": f"Cancel request {decision}d",

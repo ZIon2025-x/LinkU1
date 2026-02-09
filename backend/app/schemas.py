@@ -86,6 +86,26 @@ class PasswordChange(BaseModel):
     new_password: str = Field(..., min_length=6)
 
 
+class DeviceTokenRegister(BaseModel):
+    """设备推送令牌注册"""
+    device_token: str = Field(..., min_length=10, max_length=500, description="设备推送令牌")
+    platform: str = Field("ios", pattern="^(ios|android|web)$", description="平台类型")
+    device_id: Optional[str] = Field(None, max_length=200, description="设备ID")
+    app_version: Optional[str] = Field(None, max_length=50, description="应用版本")
+    device_language: Optional[str] = Field(None, max_length=10, description="设备语言")
+
+
+class DeviceTokenUnregister(BaseModel):
+    """设备推送令牌注销"""
+    device_token: str = Field(..., min_length=10, max_length=500, description="设备推送令牌")
+
+
+class AnnouncementCreate(BaseModel):
+    """平台公告"""
+    title: str = Field(..., min_length=1, max_length=200, description="公告标题")
+    content: str = Field(..., min_length=1, max_length=5000, description="公告内容")
+
+
 class VIPActivationRequest(BaseModel):
     """VIP激活请求（通过IAP购买）"""
     product_id: str = Field(..., description="产品ID，如 com.link2ur.vip.monthly")
@@ -314,7 +334,7 @@ class TaskBase(BaseModel):
     description: str
     deadline: Optional[datetime.datetime] = None  # 允许为 NULL，支持灵活模式任务
     is_flexible: Optional[int] = 0  # 是否灵活时间（1=灵活，无截止日期；0=有截止日期）
-    reward: float = Field(..., ge=0.0, description="任务金额，最小值为0（创建新任务时要求>=1镑）")  # 允许0以兼容历史数据，创建时验证>=1
+    reward: float = Field(..., ge=0.0, le=50000.0, description="任务金额，最小值为0，最大值为50000（创建新任务时要求>=1镑）")  # 允许0以兼容历史数据，创建时验证>=1
     base_reward: Optional[float] = None  # 原始标价
     agreed_reward: Optional[float] = None  # 最终成交价
     currency: Optional[str] = "GBP"  # 货币类型
@@ -684,7 +704,7 @@ class TaskOut(TaskBase):
 
 
 class TaskUpdate(BaseModel):
-    reward: float = Field(..., gt=0)  # 价格必须大于0
+    reward: float = Field(..., gt=0, le=50000.0)  # 价格必须大于0，最大50000
 
 
 class ReviewBase(BaseModel):
@@ -1066,7 +1086,7 @@ class AdminUserCreate(BaseModel):
     username: str
     email: str
     password: str = Field(..., min_length=6)
-    is_super_admin: Optional[int] = 0
+    # 安全：is_super_admin 不从请求体接受，服务端强制为 0
 
 
 # 管理请求相关schemas

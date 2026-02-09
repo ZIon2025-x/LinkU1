@@ -256,15 +256,40 @@ async def delete_image(
     url: str = Query(..., description="图片 URL"),
     category: str = Query(..., description="图片类型"),
     resource_id: str = Query(..., description="资源ID"),
+    db: Session = Depends(get_db),
 ):
     """
-    删除单个图片
+    删除单个图片（需验证资源归属权）
     """
     try:
         user_id = get_current_user_id(request)
         
         if category not in CATEGORY_MAP:
             raise HTTPException(status_code=400, detail="无效的图片类型")
+        
+        # 安全校验：验证当前用户是否有权删除该资源的图片
+        if category in ("expert_avatar", "service_image"):
+            # 头像/服务图片：resource_id 必须是当前用户自己
+            if resource_id != user_id:
+                raise HTTPException(status_code=403, detail="无权删除他人的图片")
+        elif category == "task":
+            # 任务图片：验证当前用户是任务发布者
+            from app import models
+            task = db.query(models.Task).filter(models.Task.id == int(resource_id)).first() if resource_id.isdigit() else None
+            if not task or task.poster_id != user_id:
+                raise HTTPException(status_code=403, detail="无权删除该任务的图片")
+        elif category == "flea_market":
+            # 跳蚤市场图片：验证当前用户是商品卖家
+            from app import models
+            from app.flea_market_routes import parse_flea_market_id
+            try:
+                db_id = parse_flea_market_id(resource_id)
+                item = db.query(models.FleaMarketItem).filter(models.FleaMarketItem.id == db_id).first()
+                if not item or item.seller_id != user_id:
+                    raise HTTPException(status_code=403, detail="无权删除该商品的图片")
+            except (ValueError, HTTPException):
+                raise HTTPException(status_code=403, detail="无权删除该商品的图片")
+        # banner, leaderboard 等类型通常是管理员操作，由 get_current_user_id 已经验证了管理员身份
         
         image_category = CATEGORY_MAP[category]
         service = get_image_upload_service()

@@ -21,8 +21,8 @@ router = APIRouter(prefix="/api", tags=["管理员-任务争议管理"])
 
 @router.get("/admin/task-disputes", response_model=dict)
 def get_admin_task_disputes(
-    skip: int = 0,
-    limit: int = 20,
+    skip: int = Query(0, ge=0),
+    limit: int = Query(20, ge=1, le=100),
     status: Optional[str] = None,
     keyword: Optional[str] = None,
     current_user=Depends(get_current_admin),

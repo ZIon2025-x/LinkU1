@@ -1233,8 +1233,8 @@ def get_activities(
     expert_id: Optional[str] = None,
     status: Optional[str] = None,
     has_time_slots: Optional[bool] = Query(None, description="是否时间段活动：false=单人活动，true=多人活动"),
-    limit: int = 20,
-    offset: int = 0,
+    limit: int = Query(20, ge=1, le=100),
+    offset: int = Query(0, ge=0),
     db: Session = Depends(get_db),
 ):
     """

@@ -2822,7 +2822,20 @@ class PaymentHistory(Base):
     """支付历史记录表"""
     __tablename__ = "payment_history"
     
+    # ---- 允许的状态转换（状态机） ----
+    # pending  → succeeded / failed / canceled
+    # failed   → （终态，不可变更）
+    # succeeded→ （终态，不可变更）
+    # canceled → （终态，不可变更）
+    ALLOWED_STATUS_TRANSITIONS = {
+        "pending":   {"succeeded", "failed", "canceled"},
+        "succeeded": set(),   # 终态
+        "failed":    set(),   # 终态
+        "canceled":  set(),   # 终态
+    }
+    
     id = Column(BigInteger, primary_key=True, index=True)
+    order_no = Column(String(32), unique=True, nullable=False, index=True)  # 业务订单号（如 PAY20260209143052A3B7K）
     task_id = Column(Integer, ForeignKey("tasks.id", ondelete="CASCADE"), nullable=False)
     user_id = Column(String(8), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)  # 支付者ID
     payment_intent_id = Column(String(255), nullable=True)  # Stripe Payment Intent ID
@@ -2852,7 +2865,45 @@ class PaymentHistory(Base):
         Index("ix_payment_history_payment_intent", payment_intent_id),
         Index("ix_payment_history_status", status),
         Index("ix_payment_history_created", created_at),
+        Index("ix_payment_history_order_no", order_no),
     )
+    
+    def transition_status(self, new_status: str) -> bool:
+        """
+        状态机：只允许合法的单向状态转换。
+        返回 True 表示转换成功，False 表示当前状态已是目标状态（幂等），
+        抛出 ValueError 表示非法转换。
+        """
+        if self.status == new_status:
+            # 幂等：目标状态与当前一致，视为成功但无需变更
+            logger.info(f"[PaymentHistory] 状态已是 {new_status}，跳过 (order_no={self.order_no})")
+            return False
+        
+        allowed = self.ALLOWED_STATUS_TRANSITIONS.get(self.status, set())
+        if new_status not in allowed:
+            raise ValueError(
+                f"非法状态转换: {self.status} → {new_status} (order_no={self.order_no})"
+            )
+        
+        old_status = self.status
+        self.status = new_status
+        self.updated_at = get_utc_time()
+        logger.info(f"[PaymentHistory] 状态转换: {old_status} → {new_status} (order_no={self.order_no})")
+        return True
+    
+    @staticmethod
+    def generate_order_no() -> str:
+        """
+        生成唯一业务订单号。
+        格式: PAY{YYYYMMDDHHmmss}{5位随机字母数字} = 22 字符
+        例如: PAY20260209143052A3B7K
+        """
+        import string
+        import random
+        now = get_utc_time()
+        timestamp = now.strftime("%Y%m%d%H%M%S")
+        suffix = ''.join(random.choices(string.ascii_uppercase + string.digits, k=5))
+        return f"PAY{timestamp}{suffix}"
 
 
 # ==================== 支付转账记录模型 ====================

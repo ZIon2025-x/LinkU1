@@ -292,16 +292,19 @@ async def get_flea_market_items(
     pageSize: int = Query(20, ge=1, le=100, alias="page_size"),  # 支持 page_size 参数名
     category: Optional[str] = Query(None),
     keyword: Optional[str] = Query(None),
-    status_filter: Optional[str] = Query("active", alias="status"),
+    status_filter: Optional[str] = Query("active", alias="status", pattern="^(active)$"),
     seller_id: Optional[str] = Query(None, description="卖家ID，用于筛选特定卖家的商品"),
     db: AsyncSession = Depends(get_async_db_dependency),
 ):
     """获取商品列表（分页、搜索、筛选）- 带Redis缓存"""
     try:
+        # 安全：公共接口只允许查看 active 状态的商品
+        status_filter = "active"
+        
         # 尝试从缓存获取（如果有seller_id筛选，不使用缓存）
         if not seller_id:
             from app.redis_cache import redis_cache
-            cache_key = get_cache_key_for_items(page, pageSize, category, keyword, status_filter or "active")
+            cache_key = get_cache_key_for_items(page, pageSize, category, keyword, status_filter)
             cached_result = redis_cache.get(cache_key)
             if cached_result:
                 logger.debug(f"缓存命中: {cache_key}")
@@ -310,9 +313,8 @@ async def get_flea_market_items(
         # 构建查询
         query = select(models.FleaMarketItem)
         
-        # 状态筛选（默认只显示active）
-        if status_filter:
-            query = query.where(models.FleaMarketItem.status == status_filter)
+        # 状态筛选（公共接口只允许 active）
+        query = query.where(models.FleaMarketItem.status == status_filter)
         else:
             # ⚠️ 优化：只显示 active 状态且未被预留的商品（sold_task_id 为空）
             # 如果 sold_task_id 不为空，说明商品已被购买但等待支付，不应该在列表中显示
@@ -333,7 +335,9 @@ async def get_flea_market_items(
         
         # 关键词搜索（标题和描述）
         if keyword:
-            keyword_pattern = f"%{keyword}%"
+            # 安全：转义 LIKE 通配符并限制长度
+            keyword_safe = keyword.strip()[:100].replace('%', r'\%').replace('_', r'\_')
+            keyword_pattern = f"%{keyword_safe}%"
             query = query.where(
                 or_(
                     models.FleaMarketItem.title.ilike(keyword_pattern),
@@ -3058,7 +3062,9 @@ async def get_flea_market_items_admin(
         
         # 关键词搜索（标题和描述）
         if keyword:
-            keyword_pattern = f"%{keyword}%"
+            # 安全：转义 LIKE 通配符并限制长度
+            keyword_safe = keyword.strip()[:100].replace('%', r'\%').replace('_', r'\_')
+            keyword_pattern = f"%{keyword_safe}%"
             query = query.where(
                 or_(
                     models.FleaMarketItem.title.ilike(keyword_pattern),
@@ -3156,20 +3162,51 @@ async def update_flea_market_item_admin(
                 detail="商品不存在"
             )
         
-        # 更新字段
+        # 安全校验：只允许更新白名单内的字段
+        ALLOWED_FIELDS = {"title", "description", "price", "images", "location", "category", "status"}
+        ALLOWED_STATUSES = {"active", "inactive", "sold", "reserved", "deleted"}
+        
+        unknown_fields = set(item_data.keys()) - ALLOWED_FIELDS
+        if unknown_fields:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"不允许的字段: {', '.join(unknown_fields)}"
+            )
+        
+        # 更新字段（带验证）
         if "title" in item_data:
-            item.title = item_data["title"]
+            title = str(item_data["title"]).strip()
+            if not title or len(title) > 200:
+                raise HTTPException(status_code=400, detail="标题不能为空且不能超过200字符")
+            item.title = title
         if "description" in item_data:
-            item.description = item_data["description"]
+            desc = str(item_data["description"]).strip()
+            if len(desc) > 5000:
+                raise HTTPException(status_code=400, detail="描述不能超过5000字符")
+            item.description = desc
         if "price" in item_data:
-            item.price = Decimal(str(item_data["price"]))
+            try:
+                price = Decimal(str(item_data["price"]))
+                if price <= 0 or price > 100000:
+                    raise HTTPException(status_code=400, detail="价格必须在0-100000之间")
+                item.price = price
+            except (ValueError, TypeError):
+                raise HTTPException(status_code=400, detail="无效的价格格式")
         if "images" in item_data:
             item.images = json.dumps(item_data["images"]) if item_data["images"] else None
         if "location" in item_data:
-            item.location = item_data["location"]
+            location = str(item_data["location"]).strip()
+            if len(location) > 200:
+                raise HTTPException(status_code=400, detail="位置不能超过200字符")
+            item.location = location
         if "category" in item_data:
             item.category = item_data["category"]
         if "status" in item_data:
+            if item_data["status"] not in ALLOWED_STATUSES:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"无效的状态值，允许的值: {', '.join(ALLOWED_STATUSES)}"
+                )
             item.status = item_data["status"]
         
         await db.commit()

@@ -53,16 +53,16 @@ from app.error_handlers import (
 from app.utils.check_dependencies import check_translation_dependencies
 from app.error_handlers import SecurityError, ValidationError, BusinessError
 
-# 设置日志
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
-
-# 配置日志过滤器（401 错误降噪）
+# 设置日志（统一配置：结构化输出 + 日志轮转 + RequestID 注入）
 try:
     from app.logging_config import configure_logging
     configure_logging()
 except Exception as e:
-    logger.warning(f"配置日志过滤器时出错: {e}")
+    # 回退：确保最低限度的日志可用
+    logging.basicConfig(level=logging.INFO)
+    logging.getLogger(__name__).warning(f"日志系统配置失败，使用默认配置: {e}")
+
+logger = logging.getLogger(__name__)
 
 # 配置敏感信息日志过滤器
 try:
@@ -166,6 +166,10 @@ app.add_middleware(
 # P2 优化：添加 GZip 响应压缩中间件
 # 压缩大于 1000 字节的响应，减少带宽使用
 app.add_middleware(GZipMiddleware, minimum_size=1000)
+
+# 请求日志中间件 — 记录所有请求的方法、路径、状态码、响应时间，并生成 X-Request-ID
+from app.request_logging_middleware import RequestLoggingMiddleware
+app.add_middleware(RequestLoggingMiddleware)
 
 # 安全中间件 - 必须在CORS中间件之后
 from app.middleware.security import security_headers_middleware
@@ -1525,8 +1529,8 @@ async def websocket_chat(
             )
             record_websocket_connection("established")
             update_websocket_connections_active(len(ws_manager.connections))
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug(f"更新WebSocket Prometheus指标失败: {e}")
     except Exception as e:
         logger.error(f"Error during WebSocket connection setup for user {user_id}: {e}", exc_info=True)
         # 只有在连接已建立但后续出错时才需要清理
@@ -1537,8 +1541,8 @@ async def websocket_chat(
             del ws_manager.connections[user_id]
         try:
             await websocket.close(code=1011, reason="Connection setup failed")
-        except:
-            pass
+        except Exception as e:
+            logger.debug(f"关闭失败的WebSocket连接时出错 (user_id={user_id}): {e}")
         return
     
     # ⚠️ 注意：心跳已在业务循环中统一处理（方案B），不再单独启动心跳任务
@@ -1934,8 +1938,8 @@ async def websocket_chat(
         ws_manager.remove_connection(user_id)
         try:
             await websocket.close()
-        except:
-            pass
+        except Exception as e:
+            logger.debug(f"关闭异常WebSocket连接时出错 (user_id={user_id}): {e}")
     finally:
         # 确保连接被清理（防止异常情况下连接泄漏）
         # remove_connection 内部有检查，重复调用是安全的
@@ -1967,8 +1971,8 @@ async def health_check():
         response_time = health_status["summary"].get("response_time_ms", 0) / 1000
         status_code = 200 if health_status["status"] == "healthy" else 503
         record_http_request("GET", "/health", status_code, response_time)
-    except Exception:
-        pass
+    except Exception as e:
+        logger.debug(f"更新健康检查Prometheus指标失败: {e}")
     
     # 根据检查结果决定最终状态
     if health_status["status"] == "healthy":
