@@ -2,9 +2,30 @@
 文件处理工具函数
 提供通用的文件扩展名检测等功能
 """
+import re
 from pathlib import Path
 from typing import Optional
 from fastapi import UploadFile
+
+# 安全文件ID正则：只允许字母、数字、下划线和短横线
+_SAFE_FILE_ID_PATTERN = re.compile(r'^[a-zA-Z0-9_-]+$')
+
+
+def is_safe_file_id(file_id: str) -> bool:
+    """
+    验证文件ID是否安全（防止路径遍历攻击）
+    
+    只允许字母、数字、下划线和短横线，禁止 ../ 等路径遍历字符。
+    
+    Args:
+        file_id: 待验证的文件ID
+        
+    Returns:
+        True 如果文件ID安全，False 如果包含非法字符
+    """
+    if not file_id or len(file_id) > 255:
+        return False
+    return bool(_SAFE_FILE_ID_PATTERN.match(file_id))
 
 
 def detect_file_extension(

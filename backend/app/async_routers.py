@@ -606,10 +606,8 @@ async def create_task_async(
         raise
     except Exception as e:
         logger.debug("Exception in task creation: %s", e)
-        logger.error(f"Error creating task: {e}")
-        import traceback
-        traceback.print_exc()
-        raise HTTPException(status_code=500, detail=f"Failed to create task: {str(e)}")
+        logger.error(f"Error creating task: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to create task")
 
 
 @async_router.post("/tasks/{task_id}/apply-test", response_model=dict)
@@ -644,10 +642,8 @@ async def apply_for_task_test(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Test error: {e}")
-        import traceback
-        traceback.print_exc()
-        raise HTTPException(status_code=500, detail=f"Test error: {str(e)}")
+        logger.error(f"Test error: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @async_router.post("/tasks/{task_id}/apply", response_model=dict)
@@ -782,9 +778,7 @@ async def apply_for_task(
             finally:
                 sync_db.close()
         except Exception as e:
-            logger.error(f"发送申请通知和邮件失败: {e}")
-            import traceback
-            traceback.print_exc()
+            logger.error(f"发送申请通知和邮件失败: {e}", exc_info=True)
             # 通知和邮件发送失败不影响申请流程，申请记录已经成功提交
         
         return {
@@ -797,10 +791,8 @@ async def apply_for_task(
         raise
     except Exception as e:
         await db.rollback()
-        logger.error(f"申请任务失败: {e}")
-        import traceback
-        traceback.print_exc()
-        raise HTTPException(status_code=500, detail=f"申请任务失败: {str(e)}")
+        logger.error(f"申请任务失败: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="申请任务失败")
 
 
 
@@ -983,6 +975,10 @@ async def approve_application(
     
     if task.poster_id != current_user.id:
         raise HTTPException(status_code=403, detail="Only task poster can approve applications")
+    
+    # 🔒 安全修复：审批前验证任务是否已支付
+    if not task.is_paid:
+        raise HTTPException(status_code=400, detail="Task must be paid before approving applications")
     
     approved_task = await async_crud.async_task_crud.approve_application(
         db, task_id, applicant_id

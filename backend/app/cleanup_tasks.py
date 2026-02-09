@@ -230,6 +230,10 @@ class CleanupTasks:
                 if cleaned_count > 0:
                     logger.info(f"清理了 {cleaned_count} 个已完成任务的文件")
             finally:
+                try:
+                    db.rollback()
+                except Exception:
+                    pass
                 db.close()
             self.last_completed_tasks_cleanup_date = today
         except Exception as e:
@@ -256,6 +260,10 @@ class CleanupTasks:
                 if cleaned_count > 0:
                     logger.info(f"清理了 {cleaned_count} 个过期任务的文件")
             finally:
+                try:
+                    db.rollback()
+                except Exception:
+                    pass
                 db.close()
             self.last_expired_tasks_cleanup_date = today
         except Exception as e:
@@ -282,6 +290,10 @@ class CleanupTasks:
                 if cleaned_count > 0:
                     logger.info(f"清理了 {cleaned_count} 个过期跳蚤市场商品")
             finally:
+                try:
+                    db.rollback()
+                except Exception:
+                    pass
                 db.close()
             self.last_flea_cleanup_date = today
         except Exception as e:
@@ -1252,6 +1264,11 @@ class CleanupTasks:
                             logger.info(f"删除不存在客服聊天 {chat_dir.name} 的私密文件文件夹: {chat_dir}")
 
             finally:
+                # 🔒 安全修复：在关闭前 rollback 未提交的事务，防止行锁残留
+                try:
+                    db.rollback()
+                except Exception:
+                    pass
                 db.close()
             
             if cleaned_count > 0:

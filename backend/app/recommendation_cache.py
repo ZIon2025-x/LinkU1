@@ -144,9 +144,10 @@ def get_cache_key(
     # 如果键太长，使用哈希缩短
     key = ":".join(parts)
     if len(key) > 200:  # Redis键长度限制
-        # 对筛选条件部分进行哈希
+        # 🔒 安全修复：使用SHA256替代MD5[:8]，减少碰撞风险
+        # MD5[:8]只有2^32空间(~65K条目50%碰撞)，SHA256[:16]有2^64空间
         filter_part = ":".join(parts[4:])
-        filter_hash = hashlib.md5(filter_part.encode()).hexdigest()[:8]
+        filter_hash = hashlib.sha256(filter_part.encode()).hexdigest()[:16]
         key = ":".join(parts[:4] + [filter_hash])
     
     return key

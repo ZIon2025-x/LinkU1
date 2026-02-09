@@ -194,32 +194,46 @@ def redeem_coupon(
             detail=f"积分不足，需要 {points_required} 积分，当前余额 {points_account.balance} 积分"
         )
     
-    # 5. 领取优惠券
-    user_coupon, claim_error = claim_coupon(
-        db,
-        current_user.id,
-        coupon.id,
-        idempotency_key=request.idempotency_key
-    )
-    
-    if not user_coupon:
-        raise HTTPException(status_code=400, detail=claim_error or "领取失败，请检查优惠券是否可用或已达到领取限制")
-    
-    # 6. 扣除积分（使用幂等键防止重复扣除）
-    from app.utils.time_utils import get_utc_time
+    # 🔒 安全修复：使用 savepoint 确保优惠券领取和积分扣除的原子性
+    # 避免领取成功但积分扣除失败的情况
     import uuid
-    redeem_idempotency_key = request.idempotency_key or f"coupon_redeem_{current_user.id}_{request.coupon_id}_{uuid.uuid4()}"
-    add_points_transaction(
-        db,
-        current_user.id,
-        type="coupon_redeem",
-        amount=-points_required,
-        source="coupon_redeem",
-        related_id=request.coupon_id,
-        related_type="coupon",
-        description=f"积分兑换优惠券: {coupon.name}",
-        idempotency_key=redeem_idempotency_key
-    )
+    savepoint = db.begin_nested()
+    try:
+        # 5. 领取优惠券
+        user_coupon, claim_error = claim_coupon(
+            db,
+            current_user.id,
+            coupon.id,
+            idempotency_key=request.idempotency_key
+        )
+        
+        if not user_coupon:
+            savepoint.rollback()
+            raise HTTPException(status_code=400, detail=claim_error or "领取失败，请检查优惠券是否可用或已达到领取限制")
+        
+        # 6. 扣除积分（使用幂等键防止重复扣除）
+        redeem_idempotency_key = request.idempotency_key or f"coupon_redeem_{current_user.id}_{request.coupon_id}_{uuid.uuid4()}"
+        add_points_transaction(
+            db,
+            current_user.id,
+            type="coupon_redeem",
+            amount=-points_required,
+            source="coupon_redeem",
+            related_id=request.coupon_id,
+            related_type="coupon",
+            description=f"积分兑换优惠券: {coupon.name}",
+            idempotency_key=redeem_idempotency_key
+        )
+        
+        savepoint.commit()
+    except HTTPException:
+        raise  # 重新抛出 HTTP 异常
+    except Exception as e:
+        savepoint.rollback()
+        logger.error(f"积分兑换优惠券失败（已回滚）: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="兑换失败，请稍后重试")
+    
+    db.commit()  # 提交外层事务
     
     return {
         "success": True,
@@ -277,8 +291,10 @@ def get_available_coupons_list(
 
 
 @router.post("/coupons/claim")
+@rate_limit("coupon_claim", limit=10, window=3600)
 def claim_coupon_api(
-    request: schemas.CouponClaimRequest,
+    http_request: Request,
+    request: schemas.CouponClaimRequest = None,
     current_user: models.User = Depends(get_current_user_secure_sync_csrf),
     db: Session = Depends(get_db)
 ):

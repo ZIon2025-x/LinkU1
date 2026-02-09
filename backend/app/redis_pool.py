@@ -46,6 +46,21 @@ def get_shared_pool():
             socket_keepalive=True,
         )
         logger.info("Redis 共享连接池已创建 (max_connections=%d)", max_connections)
+
+        # 🔒 安全修复：确保 Redis 设置了 maxmemory-policy，防止缓存无限增长导致 OOM
+        try:
+            import redis as _redis
+            _temp_client = _redis.Redis(connection_pool=_pool)
+            current_policy = _temp_client.config_get("maxmemory-policy").get("maxmemory-policy", "")
+            if current_policy in ("noeviction", ""):
+                _temp_client.config_set("maxmemory-policy", "allkeys-lru")
+                logger.info("Redis maxmemory-policy 已设置为 allkeys-lru（防止 OOM）")
+            else:
+                logger.info("Redis maxmemory-policy 当前为: %s", current_policy)
+        except Exception as e:
+            # 某些托管 Redis（如 Railway）可能不允许 CONFIG SET
+            logger.debug("无法设置 Redis maxmemory-policy（可能是托管服务限制）: %s", e)
+
         return _pool
     except Exception as e:
         logger.error("创建 Redis 共享连接池失败: %s", e)

@@ -160,7 +160,8 @@ class VIPSubscriptionService:
             user = db.query(models.User).filter(
                 models.User.id == original_subscription.user_id
             ).first()
-            if user and user.user_level != "vip" and user.user_level != "super":
+            current_level = (user.user_level or "").lower() if user else ""
+            if user and current_level not in ("vip", "super"):
                 crud.update_user_vip_status(db, user.id, "vip")
             VIPSubscriptionService.invalidate_vip_cache(original_subscription.user_id)
             logger.info(

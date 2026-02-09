@@ -9,7 +9,7 @@ from fastapi import HTTPException, Request, status
 from fastapi.responses import JSONResponse, Response
 from fastapi.exceptions import RequestValidationError
 from starlette.exceptions import HTTPException as StarletteHTTPException
-import traceback
+
 
 logger = logging.getLogger(__name__)
 
@@ -366,8 +366,8 @@ async def business_exception_handler(request: Request, exc: BusinessError) -> JS
 
 async def general_exception_handler(request: Request, exc: Exception) -> JSONResponse:
     """通用异常处理器"""
-    # 记录详细错误信息到日志
-    logger.error(f"未处理的异常: {type(exc).__name__} - {str(exc)} - {traceback.format_exc()}")
+    # 记录详细错误信息到日志（使用 exc_info 让日志框架处理堆栈格式化）
+    logger.error(f"未处理的异常: {type(exc).__name__} - {str(exc)}", exc_info=True)
     
     # 返回通用错误信息
     safe_message = get_safe_error_message("SERVER_ERROR")

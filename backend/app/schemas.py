@@ -20,6 +20,13 @@ class UserCreate(UserBase):
     terms_agreed_at: Optional[str] = None
     invitation_code: Optional[str] = None  # 邀请码（注册时使用）
     phone_verification_code: Optional[str] = None  # 手机验证码（如果提供了手机号，则必填）
+    
+    @model_validator(mode='after')
+    def check_contact_method(self):
+        """至少需要提供一种联系方式（邮箱或手机号）"""
+        if not self.email and not self.phone:
+            raise ValueError('至少需要提供邮箱或手机号中的一种')
+        return self
 
 
 class UserUpdate(BaseModel):
@@ -354,6 +361,24 @@ class TaskCreate(TaskBase):
         if v < 1.0:
             raise ValueError('任务金额必须至少为1镑')
         return v
+    
+    @validator('deadline')
+    def validate_deadline_future(cls, v):
+        """截止时间必须在未来"""
+        if v is not None:
+            import datetime as _dt
+            now = _dt.datetime.now(_dt.timezone.utc)
+            deadline = v if v.tzinfo else v.replace(tzinfo=_dt.timezone.utc)
+            if deadline < now:
+                raise ValueError('截止时间必须在未来')
+        return v
+    
+    @validator('location')
+    def validate_location_not_empty(cls, v):
+        """位置不能为空字符串"""
+        if not v or not v.strip():
+            raise ValueError('位置信息不能为空')
+        return v.strip()
 
 
 class TaskOut(TaskBase):

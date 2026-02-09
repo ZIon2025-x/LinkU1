@@ -12,13 +12,10 @@ from sqlalchemy.orm import sessionmaker
 
 load_dotenv()
 
-# 异步数据库URL
-DATABASE_URL = os.getenv(
-    "DATABASE_URL", "postgresql+psycopg2://postgres:password@localhost:5432/linku_db"
-)
-ASYNC_DATABASE_URL = os.getenv(
-    "ASYNC_DATABASE_URL", "postgresql+asyncpg://postgres:password@localhost:5432/linku_db"
-)
+# 从统一配置导入数据库URL，避免重复定义
+from app.config import Config
+DATABASE_URL = Config.DATABASE_URL
+ASYNC_DATABASE_URL = Config.ASYNC_DATABASE_URL
 
 # 检查asyncpg是否可用
 try:

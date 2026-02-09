@@ -6,6 +6,7 @@ CSRF保护模块
 import secrets
 import hashlib
 import hmac
+import time
 from typing import Optional, Tuple
 from fastapi import HTTPException, Request, Response, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
@@ -18,6 +19,7 @@ logger = logging.getLogger(__name__)
 CSRF_TOKEN_LENGTH = 32
 CSRF_COOKIE_NAME = "csrf_token"
 CSRF_HEADER_NAME = "X-CSRF-Token"
+CSRF_TOKEN_MAX_AGE = 3600  # CSRF token 最大有效期（秒），默认1小时
 CSRF_COOKIE_MAX_AGE = 3600  # 1小时
 
 # 移动端应用签名密钥（用于验证请求来自真正的 App）
@@ -115,8 +117,12 @@ class CSRFProtection:
     
     @staticmethod
     def generate_csrf_token() -> str:
-        """生成CSRF token"""
-        return secrets.token_urlsafe(CSRF_TOKEN_LENGTH)
+        """生成CSRF token（包含时间戳用于过期检查）"""
+        random_part = secrets.token_urlsafe(CSRF_TOKEN_LENGTH)
+        timestamp = int(time.time())
+        # 格式: timestamp.random_part
+        token = f"{timestamp}.{random_part}"
+        return token
     
     @staticmethod
     def set_csrf_cookie(response: Response, token: str, user_agent: str = "", origin: str = "") -> None:
@@ -136,7 +142,7 @@ class CSRFProtection:
     
     @staticmethod
     def verify_csrf_token(request: Request) -> bool:
-        """验证CSRF token"""
+        """验证CSRF token（包含过期检查）"""
         cookie_token = CSRFProtection.get_csrf_token_from_cookie(request)
         header_token = CSRFProtection.get_csrf_token_from_header(request)
         
@@ -149,6 +155,19 @@ class CSRFProtection:
         if cookie_token != header_token:
             logger.warning("CSRF token mismatch between cookie and header")
             return False
+        
+        # 🔒 安全修复：检查token是否过期
+        try:
+            parts = cookie_token.split(".", 1)
+            if len(parts) == 2:
+                token_timestamp = int(parts[0])
+                current_time = int(time.time())
+                if current_time - token_timestamp > CSRF_TOKEN_MAX_AGE:
+                    logger.warning(f"CSRF token expired: age={current_time - token_timestamp}s, max={CSRF_TOKEN_MAX_AGE}s")
+                    return False
+        except (ValueError, TypeError):
+            # 兼容旧格式token（不含时间戳），允许通过
+            pass
         
         return True
 

@@ -610,6 +610,19 @@ class TranslationManager:
                             if emoji_text:
                                 translated = translated + ' ' + emoji_text
                         
+                        # 🔒 安全修复：验证翻译内容，防止缓存投毒（XSS/HTML注入）
+                        if translated:
+                            _dangerous_patterns = ['<script', 'javascript:', 'onerror=', 'onclick=', 'onload=', 'onmouseover=', '<iframe', '<object', '<embed']
+                            translated_lower = translated.lower()
+                            for pattern in _dangerous_patterns:
+                                if pattern in translated_lower:
+                                    logger.error(f"翻译内容包含可疑模式 '{pattern}'，已拒绝: {translated[:100]}")
+                                    translated = None
+                                    break
+                        
+                        if not translated:
+                            continue  # 翻译内容被拒绝或为空，尝试下一个服务
+                        
                         # 翻译成功，更新统计
                         if service not in self.service_stats:
                             self.service_stats[service] = {'success': 0, 'failure': 0}

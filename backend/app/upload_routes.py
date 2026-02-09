@@ -10,6 +10,7 @@ from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 
 from app.database import get_db
+from app.rate_limiting import rate_limit
 from app.services import (
     ImageUploadService,
     ImageCategory,
@@ -54,6 +55,7 @@ CATEGORY_MAP = {
 
 
 @router.post("/upload/image")
+@rate_limit("upload_file")
 async def upload_image_v2(
     request: Request,
     image: UploadFile = File(...),
@@ -162,6 +164,7 @@ async def upload_image_v2(
 
 
 @router.post("/upload/image/batch")
+@rate_limit("upload_file")
 async def upload_images_batch(
     request: Request,
     images: list[UploadFile] = File(...),

@@ -11,7 +11,7 @@ from typing import Dict, Optional, Set
 from fastapi import WebSocket
 from fastapi.websockets import WebSocketState
 
-from app.utils.time_utils import get_utc_time
+from app.utils.time_utils import get_utc_time, format_iso_utc
 
 logger = logging.getLogger(__name__)
 
@@ -70,6 +70,7 @@ class WebSocketManager:
         self.connection_locks: Dict[str, asyncio.Lock] = defaultdict(asyncio.Lock)
         self._cleanup_task: Optional[asyncio.Task] = None
         self._heartbeat_task: Optional[asyncio.Task] = None
+        self._task_creation_lock: asyncio.Lock = asyncio.Lock()  # 🔒 防止并发创建重复后台任务
         
         # 配置
         self.heartbeat_interval = 20  # 20秒发送一次 ping
@@ -90,12 +91,13 @@ class WebSocketManager:
         new_connection = WebSocketConnection(websocket, user_id)
         self.connections[user_id] = new_connection
         
-        # 启动清理和心跳任务（如果还没启动）
-        if self._cleanup_task is None or self._cleanup_task.done():
-            self._cleanup_task = asyncio.create_task(self._cleanup_loop())
-        
-        if self._heartbeat_task is None or self._heartbeat_task.done():
-            self._heartbeat_task = asyncio.create_task(self._heartbeat_loop())
+        # 🔒 启动清理和心跳任务（使用锁防止并发连接创建重复任务）
+        async with self._task_creation_lock:
+            if self._cleanup_task is None or self._cleanup_task.done():
+                self._cleanup_task = asyncio.create_task(self._cleanup_loop())
+            
+            if self._heartbeat_task is None or self._heartbeat_task.done():
+                self._heartbeat_task = asyncio.create_task(self._heartbeat_loop())
         
         logger.info(
             f"WebSocket 连接已添加: user={user_id}, "
@@ -190,6 +192,15 @@ class WebSocketManager:
         
         while True:
             try:
+                # 检查应用是否正在关闭
+                try:
+                    from app.state import is_app_shutting_down
+                    if is_app_shutting_down():
+                        logger.info("应用正在关闭，心跳循环退出")
+                        break
+                except ImportError:
+                    pass
+                
                 await asyncio.sleep(self.heartbeat_interval)
                 
                 current_time = get_utc_time()
@@ -239,6 +250,15 @@ class WebSocketManager:
         
         while True:
             try:
+                # 检查应用是否正在关闭
+                try:
+                    from app.state import is_app_shutting_down
+                    if is_app_shutting_down():
+                        logger.info("应用正在关闭，清理循环退出")
+                        break
+                except ImportError:
+                    pass
+                
                 await asyncio.sleep(self.cleanup_interval)
                 
                 current_time = get_utc_time()

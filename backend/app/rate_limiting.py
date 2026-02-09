@@ -294,12 +294,17 @@ def rate_limit(rate_type: str, limit: Optional[int] = None, window: Optional[int
         if asyncio.iscoroutinefunction(func):
             @functools.wraps(func)
             async def async_wrapper(*args, **kwargs):
-                # 获取request对象
+                # 获取request对象（从 args 和 kwargs 中查找）
                 request = None
                 for arg in args:
                     if isinstance(arg, Request):
                         request = arg
                         break
+                if not request:
+                    for val in kwargs.values():
+                        if isinstance(val, Request):
+                            request = val
+                            break
                 
                 if not request:
                     # 如果没有找到request，跳过速率限制
@@ -364,12 +369,17 @@ def rate_limit(rate_type: str, limit: Optional[int] = None, window: Optional[int
         else:
             @functools.wraps(func)
             def sync_wrapper(*args, **kwargs):
-                # 获取request对象
+                # 获取request对象（从 args 和 kwargs 中查找）
                 request = None
                 for arg in args:
                     if isinstance(arg, Request):
                         request = arg
                         break
+                if not request:
+                    for val in kwargs.values():
+                        if isinstance(val, Request):
+                            request = val
+                            break
                 
                 if not request:
                     # 如果没有找到request，跳过速率限制

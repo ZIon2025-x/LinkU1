@@ -7,6 +7,7 @@ GET /api/oauth/userinfo, GET /.well-known/openid-configuration
 import base64
 import html
 import logging
+import secrets
 import urllib.parse
 from typing import Any, Dict, Optional, Tuple
 
@@ -29,6 +30,8 @@ from app.oauth.oauth_service import (
     parse_scope,
     SUPPORTED_SCOPES,
     SCOPE_OPENID,
+    SCOPE_PROFILE,
+    SCOPE_EMAIL,
 )
 from app.secure_auth import validate_session
 from app.rate_limiting import rate_limit
@@ -144,6 +147,16 @@ def oauth_authorize(
     client_uri = getattr(client, "client_uri", None) or ""
     accept_lang = request.headers.get("Accept-Language", "") or ""
     lang = "zh" if "zh" in accept_lang.lower() else "en"
+    # 🔒 安全修复：生成 CSRF token 防止跨站请求伪造
+    csrf_token = secrets.token_urlsafe(32)
+    try:
+        from app.redis_cache import get_redis_client
+        redis_client = get_redis_client()
+        if redis_client:
+            redis_client.setex(f"oauth_csrf:{csrf_token}", 300, "1")  # 5分钟有效
+    except Exception as e:
+        logger.warning(f"无法存储 OAuth CSRF token: {e}")
+    
     consent_html = _consent_page_html(
         client_name=client_name,
         scope_str=scope_str,
@@ -156,6 +169,7 @@ def oauth_authorize(
         logo_uri=logo_uri,
         client_uri=client_uri,
         lang=lang,
+        csrf_token=csrf_token,
     )
     return HTMLResponse(content=consent_html)
 
@@ -172,6 +186,7 @@ def _consent_page_html(
     logo_uri: str = "",
     client_uri: str = "",
     lang: str = "en",
+    csrf_token: str = "",
 ) -> str:
     scope_descriptions = []
     for s in scope_str.split():
@@ -205,6 +220,7 @@ def _consent_page_html(
     <input type="hidden" name="nonce" value="{html.escape(nonce)}"/>
     <input type="hidden" name="code_challenge" value="{html.escape(code_challenge)}"/>
     <input type="hidden" name="code_challenge_method" value="{html.escape(code_challenge_method)}"/>
+    <input type="hidden" name="csrf_token" value="{html.escape(csrf_token)}"/>
     <button type="submit" name="confirm" value="yes">{allow_btn}</button>
     <button type="submit" name="confirm" value="no">{deny_btn}</button>
   </form>
@@ -223,9 +239,26 @@ def oauth_consent(
     code_challenge: Optional[str] = Form(None),
     code_challenge_method: Optional[str] = Form(None),
     confirm: Optional[str] = Form(None),
+    csrf_token: Optional[str] = Form(None),
     db: Session = Depends(get_sync_db),
 ):
     """同意页提交：同意则生成 code 并重定向到 redirect_uri?code=...&state=...；拒绝则 error=access_denied"""
+    # 🔒 安全修复：验证 CSRF token，防止跨站请求伪造
+    csrf_valid = False
+    if csrf_token:
+        try:
+            from app.redis_cache import get_redis_client
+            redis_client = get_redis_client()
+            if redis_client:
+                csrf_key = f"oauth_csrf:{csrf_token}"
+                if redis_client.get(csrf_key):
+                    redis_client.delete(csrf_key)  # 一次性使用
+                    csrf_valid = True
+        except Exception as e:
+            logger.warning(f"CSRF token 验证异常: {e}")
+    if not csrf_valid:
+        return HTMLResponse(content="<p>Invalid or expired CSRF token. Please try again.</p>", status_code=403)
+    
     session = validate_session(request)
     if not session:
         settings = get_settings()

@@ -12,6 +12,7 @@ from sqlalchemy.orm import Session
 from app import crud, models, schemas
 from app.audit_logger import log_admin_action
 from app.deps import get_db
+from app.rate_limiting import rate_limit
 from app.separate_auth_deps import get_current_admin
 from app.security import get_client_ip
 from app.performance_monitor import measure_api_performance
@@ -46,6 +47,7 @@ def get_dashboard_stats(
 
 
 @router.get("/admin/users")
+@rate_limit("admin_read", limit=100, window=60)
 def get_users_for_admin(
     page: int = 1,
     size: int = 20,

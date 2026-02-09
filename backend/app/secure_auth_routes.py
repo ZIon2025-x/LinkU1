@@ -23,7 +23,17 @@ from app.secure_auth import (
     validate_session
 )
 from app.cookie_manager import CookieManager
-from app.security import get_password_hash, verify_password, log_security_event, generate_strong_password
+from app.security import get_password_hash, verify_password, log_security_event, generate_strong_password, pwd_context
+
+# 🔒 预计算一个有效的bcrypt哈希，用于防止用户枚举的时序攻击
+# 在用户不存在时执行一次等效耗时的验证操作
+_DUMMY_BCRYPT_HASH: str = ""
+def _get_dummy_hash() -> str:
+    global _DUMMY_BCRYPT_HASH
+    if not _DUMMY_BCRYPT_HASH:
+        _DUMMY_BCRYPT_HASH = pwd_context.hash("timing_attack_defense_dummy")
+    return _DUMMY_BCRYPT_HASH
+
 from app.rate_limiting import rate_limit, rate_limiter
 from app.captcha import captcha_verifier
 from app.verification_code_manager import (
@@ -98,10 +108,17 @@ def secure_login(
                 logger.warning(f"通过邮箱未找到用户: {username_lower}")
         
         # 验证用户和密码
+        # 🔒 安全修复：统一错误消息，防止账户枚举攻击
+        _invalid_credentials_msg = "邮箱/ID或密码错误"
         if not user:
             logger.warning(f"用户不存在: {username}")
+            # 执行一次虚拟的密码验证，防止通过响应时间差异判断账户是否存在
+            try:
+                pwd_context.verify("dummy_password", _get_dummy_hash())
+            except Exception:
+                pass
             raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED, detail="用户不存在"
+                status_code=status.HTTP_401_UNAUTHORIZED, detail=_invalid_credentials_msg
             )
         
         if not verify_password(user_credentials.password, user.hashed_password):
@@ -111,7 +128,7 @@ def secure_login(
                 "LOGIN_FAILED", username, client_ip, "密码错误"
             )
             raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED, detail="密码错误"
+                status_code=status.HTTP_401_UNAUTHORIZED, detail=_invalid_credentials_msg
             )
 
         # 检查用户状态
@@ -280,8 +297,9 @@ def refresh_session(
                     # refresh_token有效，创建新session
                     user = crud.get_user_by_id(db, user_id)
                     if not user:
+                        # 🔒 安全修复：统一错误消息，防止账户枚举
                         raise HTTPException(
-                            status_code=status.HTTP_401_UNAUTHORIZED, detail="用户不存在"
+                            status_code=status.HTTP_401_UNAUTHORIZED, detail="认证信息无效"
                         )
                     
                     # 检查用户状态
@@ -356,8 +374,9 @@ def refresh_session(
         # 获取用户信息
         user = crud.get_user_by_id(db, session.user_id)
         if not user:
+            # 🔒 安全修复：统一错误消息，防止账户枚举
             raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED, detail="用户不存在"
+                status_code=status.HTTP_401_UNAUTHORIZED, detail="认证信息无效"
             )
         
         # 检查用户状态
@@ -450,9 +469,10 @@ def refresh_session_with_token(
         # 获取用户信息
         user = crud.get_user_by_id(db, user_id)
         if not user:
+            # 🔒 安全修复：统一错误消息，防止账户枚举
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED, 
-                detail="用户不存在"
+                detail="认证信息无效"
             )
         
         # 检查用户状态
@@ -771,9 +791,10 @@ def get_auth_status(
         # 获取用户信息
         user = crud.get_user_by_id(db, session.user_id)
         if not user:
+            # 🔒 安全修复：统一错误消息，防止账户枚举
             return {
                 "authenticated": False,
-                "message": "用户不存在"
+                "message": "认证信息无效"
             }
         
         return {
@@ -1416,6 +1437,25 @@ def login_with_phone_verification_code(
         
         phone_digits = phone  # 直接使用前端发送的完整号码
         
+        # 🔒 暴力破解保护：限制验证码尝试次数
+        try:
+            from app.redis_cache import redis_client
+            if redis_client:
+                attempt_key = f"verify_attempt:phone:{phone_digits}"
+                attempts = redis_client.incr(attempt_key)
+                if attempts == 1:
+                    redis_client.expire(attempt_key, 900)  # 15分钟窗口
+                if attempts > 5:
+                    logger.warning(f"手机验证码尝试次数超限: phone={phone_digits}, attempts={attempts}")
+                    raise HTTPException(
+                        status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                        detail="验证码尝试次数过多，请15分钟后重试"
+                    )
+        except HTTPException:
+            raise
+        except Exception as e:
+            logger.warning(f"验证码速率限制检查失败: {e}")
+        
         # 验证验证码（支持 Twilio Verify API 和自定义验证码）
         verification_success = False
         try:
@@ -1666,6 +1706,25 @@ def login_with_verification_code(
         
         email = login_data.email.strip().lower()
         verification_code = login_data.verification_code.strip()
+        
+        # 🔒 暴力破解保护：限制验证码尝试次数
+        try:
+            from app.redis_cache import redis_client
+            if redis_client:
+                attempt_key = f"verify_attempt:email:{email}"
+                attempts = redis_client.incr(attempt_key)
+                if attempts == 1:
+                    redis_client.expire(attempt_key, 900)  # 15分钟窗口
+                if attempts > 5:
+                    logger.warning(f"邮箱验证码尝试次数超限: email={email}, attempts={attempts}")
+                    raise HTTPException(
+                        status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                        detail="验证码尝试次数过多，请15分钟后重试"
+                    )
+        except HTTPException:
+            raise
+        except Exception as e:
+            logger.warning(f"验证码速率限制检查失败: {e}")
         
         # 验证验证码
         if not verify_and_delete_code(email, verification_code):

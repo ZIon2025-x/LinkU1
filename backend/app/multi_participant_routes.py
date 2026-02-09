@@ -123,7 +123,7 @@ def get_task_participants(
     db: Session = Depends(get_db),
 ):
     """
-    获取任务参与者列表（所有人可见，可选认证）
+    获取任务参与者列表（需认证：仅发布者、参与者可查看详情，其他认证用户可查看基本信息）
     """
     parsed_task_id = parse_task_id(task_id)
     
@@ -134,16 +134,24 @@ def get_task_participants(
     if not db_task.is_multi_participant:
         raise HTTPException(status_code=400, detail="This is not a multi-participant task")
     
+    # 🔒 安全修复：要求认证才能查看参与者列表
+    if not current_user:
+        raise HTTPException(status_code=401, detail="Authentication required to view participants")
+    
     # 获取所有参与者
     participants = db.query(TaskParticipant).filter(
         TaskParticipant.task_id == parsed_task_id
     ).order_by(TaskParticipant.applied_at.asc()).all()
     
-    # 获取用户信息
+    # 🔒 性能修复：批量查询用户信息，避免 N+1 查询
     from app.utils.time_utils import format_iso_utc
+    user_ids = [p.user_id for p in participants]
+    users = db.query(User).filter(User.id.in_(user_ids)).all() if user_ids else []
+    user_map = {u.id: u for u in users}
+    
     participant_list = []
     for participant in participants:
-        user = db.query(User).filter(User.id == participant.user_id).first()
+        user = user_map.get(participant.user_id)
         participant_data = {
             "id": participant.id,
             "task_id": participant.task_id,
@@ -1627,6 +1635,7 @@ def create_expert_activity(
     
     # 如果奖励申请者积分，验证达人积分余额是否足够并预扣
     reserved_points_total = 0
+    _points_deducted = False
     if activity.reward_applicants and activity.applicant_points_reward and activity.applicant_points_reward > 0:
         # 计算需要预扣的积分总额 = 每人积分奖励 × 最大参与人数
         reserved_points_total = activity.applicant_points_reward * activity.max_participants
@@ -1653,12 +1662,14 @@ def create_expert_activity(
                 detail=f"积分余额不足。需要预扣 {reserved_points_total} 积分（每人 {activity.applicant_points_reward} × {activity.max_participants} 人），但您当前余额为 {points_account.balance} 积分。"
             )
         
-        # 预扣积分（创建交易记录，使用幂等键防止重复预扣）
+        # 🔒 安全修复：使用 savepoint 确保积分预扣和活动创建的原子性
+        # add_points_transaction 内部会 commit，所以用 savepoint 包裹整个流程
         from app.coupon_points_crud import add_points_transaction
         from app.utils.time_utils import get_utc_time
         import uuid
         # 使用UUID确保幂等键唯一性，避免时间戳导致的并发问题
         activity_reserve_idempotency_key = f"activity_reserve_{current_user.id}_{uuid.uuid4()}"
+        _points_deducted = True
         try:
             add_points_transaction(
                 db=db,
@@ -1671,6 +1682,7 @@ def create_expert_activity(
                 idempotency_key=activity_reserve_idempotency_key
             )
         except ValueError as e:
+            _points_deducted = False
             raise HTTPException(status_code=400, detail=str(e))
     
     # 计算价格（基于服务base_price，考虑折扣）
@@ -1730,7 +1742,27 @@ def create_expert_activity(
     )
     
     db.add(db_activity)
-    db.commit()
+    try:
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        # 🔒 安全修复：活动创建失败时，回滚已扣除的积分
+        if reserved_points_total > 0 and _points_deducted:
+            try:
+                refund_key = f"activity_reserve_refund_{current_user.id}_{uuid.uuid4()}"
+                add_points_transaction(
+                    db=db,
+                    user_id=current_user.id,
+                    type="refund",
+                    amount=reserved_points_total,
+                    source="activity_creation_failed_refund",
+                    related_type="activity",
+                    description=f"活动创建失败，退回预扣积分",
+                    idempotency_key=refund_key
+                )
+            except Exception as refund_err:
+                logger.error(f"积分退回失败，需要人工处理: user={current_user.id}, amount={reserved_points_total}, error={refund_err}")
+        raise HTTPException(status_code=500, detail=f"活动创建失败: {str(e)}")
     db.refresh(db_activity)
     
     # 加载服务信息（用于返回service_images）

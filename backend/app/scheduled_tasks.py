@@ -40,13 +40,13 @@ def check_expired_coupons(db: Session):
                 models.Coupon.valid_until < now,
                 models.Coupon.status == "active"
             )
-        ).all()
+        ).limit(1000).all()
         
         for coupon in expired_coupons:
             coupon.status = "expired"
             logger.info(f"优惠券 {coupon.id} ({coupon.code}) 已过期")
         
-        # 更新用户优惠券状态
+        # 🔒 性能修复：添加 LIMIT 防止一次加载过多记录
         expired_user_coupons = db.query(models.UserCoupon).filter(
             and_(
                 models.UserCoupon.status == "unused",
@@ -56,7 +56,7 @@ def check_expired_coupons(db: Session):
                     )
                 )
             )
-        ).all()
+        ).limit(5000).all()
         
         for user_coupon in expired_user_coupons:
             user_coupon.status = "expired"
@@ -81,7 +81,7 @@ def check_expired_invitation_codes(db: Session):
                 models.InvitationCode.valid_until < now,
                 models.InvitationCode.is_active == True
             )
-        ).all()
+        ).limit(1000).all()
         
         for code in expired_codes:
             code.is_active = False
@@ -117,7 +117,7 @@ def check_expired_points(db: Session):
                 models.PointsTransaction.expires_at < get_utc_time(),
                 models.PointsTransaction.expired == False
             )
-        ).all()
+        ).limit(1000).all()
         
         for transaction in expired_transactions:
             # P1 #5: 使用原子 SQL 操作扣除过期积分，防止并发竞态导致余额为负

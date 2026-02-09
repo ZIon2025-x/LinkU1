@@ -131,6 +131,11 @@ class PrivateFileSystem:
     def get_file(self, file_id: str, user_id: str, db: Session) -> FileResponse:
         """获取文件（需要验证访问权限）"""
         try:
+            # 🔒 安全检查：防止路径遍历攻击
+            from app.file_utils import is_safe_file_id
+            if not is_safe_file_id(file_id):
+                raise HTTPException(status_code=400, detail="Invalid file ID")
+            
             # 优化：先从数据库查询附件，获取task_id或chat_id，直接定位文件夹
             file_path = None
             

@@ -377,6 +377,21 @@ async def get_flea_market_items(
                 if sid is not None:
                     seller_levels[sid] = (row[1] if len(row) > 1 else None) or "normal"
         
+        # 🔒 性能修复：批量查询所有商品的收藏计数，避免 N+1 查询
+        item_ids = [item.id for item in items]
+        favorite_counts_map = {}
+        if item_ids:
+            fav_result = await db.execute(
+                select(
+                    models.FleaMarketFavorite.item_id,
+                    func.count(models.FleaMarketFavorite.id)
+                ).where(
+                    models.FleaMarketFavorite.item_id.in_(item_ids)
+                ).group_by(models.FleaMarketFavorite.item_id)
+            )
+            for row in fav_result.all():
+                favorite_counts_map[row[0]] = row[1]
+        
         # 构建响应
         processed_items = []
         for item in items:
@@ -395,12 +410,8 @@ async def get_flea_market_items(
                 days_remaining = (expiry_date - now).days
                 days_until_auto_delist = max(0, days_remaining)
             
-            # 计算收藏数量
-            favorite_count_result = await db.execute(
-                select(func.count(models.FleaMarketFavorite.id))
-                .where(models.FleaMarketFavorite.item_id == item.id)
-            )
-            favorite_count = favorite_count_result.scalar() or 0
+            # 使用批量查询结果
+            favorite_count = favorite_counts_map.get(item.id, 0)
             
             processed_items.append(schemas.FleaMarketItemResponse(
                 id=format_flea_market_id(item.id),

@@ -243,11 +243,11 @@ def admin_cleanup_expired_tasks(
     
     cutoff_date = get_utc_time() - timedelta(days=days)
     
-    # 查找过期的已取消或已完成任务
+    # 🔒 性能修复：添加 LIMIT 限制，防止一次性加载过多记录导致 OOM
     expired_tasks = db.query(models.Task).filter(
         models.Task.status.in_(["cancelled", "completed", "expired"]),
         models.Task.updated_at < cutoff_date
-    ).all()
+    ).limit(1000).all()
     
     count = len(expired_tasks)
     task_ids = [t.id for t in expired_tasks]
@@ -345,6 +345,13 @@ def admin_get_audit_logs(
     """获取审计日志"""
     skip = (page - 1) * size
     
+    # 🔒 安全修复：非超级管理员只能查看自己的审计日志
+    if admin_id and admin_id != str(current_admin.id) and not getattr(current_admin, 'is_super_admin', 0):
+        raise HTTPException(
+            status_code=403,
+            detail="非超级管理员只能查看自己的审计日志"
+        )
+    
     query = db.query(models.AuditLog)
     
     if action_type:
@@ -353,7 +360,10 @@ def admin_get_audit_logs(
     if entity_type:
         query = query.filter(models.AuditLog.entity_type == entity_type)
     
-    if admin_id:
+    # 非超级管理员默认只查看自己的日志
+    if not getattr(current_admin, 'is_super_admin', 0):
+        query = query.filter(models.AuditLog.admin_id == str(current_admin.id))
+    elif admin_id:
         query = query.filter(models.AuditLog.admin_id == admin_id)
     
     total = query.count()

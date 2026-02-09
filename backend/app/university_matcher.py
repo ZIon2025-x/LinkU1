@@ -117,15 +117,20 @@ class UniversityMatcher:
                 key = f"{uni_id}:{match_type}:{pattern}"
                 return self.university_map.get(key)
         else:
-            # 回退到正则表达式匹配（如果没有Aho-Corasick）
-            import re
+            # 回退到精确字符串匹配（如果没有Aho-Corasick）
+            # 🔒 安全修复：不使用正则表达式，防止恶意 domain_pattern 注入
             for key, uni in self.university_map.items():
                 if ':wildcard:' in key:
-                    pattern = uni.domain_pattern.lower()
-                    regex_pattern = pattern.replace('@', '').replace('*', '.*').replace('.', r'\.')
-                    regex_pattern = f'^{regex_pattern}$'
-                    if re.match(regex_pattern, domain):
-                        return uni
+                    pattern = (uni.domain_pattern or "").lower().lstrip('@')
+                    if pattern.startswith('*'):
+                        # 通配符模式：*.example.ac.uk -> 匹配任何以 .example.ac.uk 结尾的域名
+                        suffix = pattern.lstrip('*')
+                        if domain == suffix.lstrip('.') or domain.endswith(suffix):
+                            return uni
+                    else:
+                        # 精确匹配
+                        if domain == pattern:
+                            return uni
         
         return None
 

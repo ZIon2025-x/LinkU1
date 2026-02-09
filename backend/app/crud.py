@@ -997,6 +997,16 @@ def accept_task(db: Session, task_id: int, taker_id: str):
         if task.taker_id is not None:
             logger.warning(f"任务 {task_id} 已被用户 {task.taker_id} 接受")
             return None
+        
+        # 🔒 在锁内检查截止时间（防止TOCTOU竞态条件）
+        from datetime import timezone
+        from app.utils.time_utils import get_utc_time as _get_utc
+        if task.deadline:
+            current_time = _get_utc()
+            deadline_utc = task.deadline if task.deadline.tzinfo else task.deadline.replace(tzinfo=timezone.utc)
+            if deadline_utc < current_time:
+                logger.warning(f"任务 {task_id} 已过期: deadline={deadline_utc}, now={current_time}")
+                return None
 
         # 更新任务（在锁内更新，确保原子性）
         task.taker_id = str(taker_id)
@@ -1579,54 +1589,59 @@ def get_unread_messages(db: Session, user_id: str):
     # 构建游标字典，过滤掉 NULL 值（游标存在但 last_read_message_id 为 NULL 时视为没有游标）
     cursor_dict = {c.task_id: c.last_read_message_id for c in cursors if c.last_read_message_id is not None}
     
-    # 查询任务消息的未读数
+    # 🔒 性能修复：批量查询未读消息，避免 N+1（将 task_ids 分为有游标和无游标两组）
     task_unread_messages = []
-    for task_id in task_ids:
-        cursor = cursor_dict.get(task_id)
-        
-        if cursor is not None:
-            # 有游标：查询ID大于游标的、不是自己发送的、非系统消息
-            # 添加 JOIN 验证任务是否存在（防止任务删除后遗留消息被误判为未读）
-            unread_msgs = (
-                db.query(Message)
-                .join(Task, Message.task_id == Task.id)  # 确保任务存在
-                .filter(
-                    Message.task_id == task_id,
-                    Message.id > cursor,
-                    Message.sender_id != user_id,
-                    Message.sender_id.notin_(['system', 'SYSTEM']),  # 排除系统消息
-                    Message.message_type != 'system',  # 排除系统类型消息
-                    Message.conversation_type == 'task',
-                    Task.status != 'cancelled'  # ⚠️ 修复：排除已取消任务的消息，与前端过滤逻辑一致
-                )
-                .all()
+    
+    # 公共过滤条件
+    common_filters = [
+        Message.sender_id != user_id,
+        Message.sender_id.notin_(['system', 'SYSTEM']),
+        Message.message_type != 'system',
+        Message.conversation_type == 'task',
+        Task.status != 'cancelled',
+    ]
+    
+    # 有游标的任务：批量查询 message.id > cursor
+    tasks_with_cursor = {tid: cid for tid, cid in cursor_dict.items() if tid in task_ids}
+    tasks_without_cursor = [tid for tid in task_ids if tid not in cursor_dict]
+    
+    if tasks_with_cursor:
+        # 构建 OR 条件：(task_id = X AND id > cursorX) OR (task_id = Y AND id > cursorY) ...
+        cursor_conditions = [
+            and_(Message.task_id == tid, Message.id > cid)
+            for tid, cid in tasks_with_cursor.items()
+        ]
+        unread_with_cursor = (
+            db.query(Message)
+            .join(Task, Message.task_id == Task.id)
+            .filter(
+                or_(*cursor_conditions),
+                *common_filters
             )
-        else:
-            # 没有游标：查询在MessageRead表中没有记录的消息（排除自己发送的和系统消息）
-            # 添加 JOIN 验证任务是否存在（防止任务删除后遗留消息被误判为未读）
-            unread_msgs = (
-                db.query(Message)
-                .join(Task, Message.task_id == Task.id)  # 确保任务存在
-                .filter(
-                    Message.task_id == task_id,
-                    Message.sender_id != user_id,
-                    Message.sender_id.notin_(['system', 'SYSTEM']),  # 排除系统消息
-                    Message.message_type != 'system',  # 排除系统类型消息
-                    Message.conversation_type == 'task',
-                    Task.status != 'cancelled',  # ⚠️ 修复：排除已取消任务的消息，与前端过滤逻辑一致
-                    ~exists(
-                        select(1).where(
-                            and_(
-                                MessageRead.message_id == Message.id,
-                                MessageRead.user_id == user_id
-                            )
+            .all()
+        )
+        task_unread_messages.extend(unread_with_cursor)
+    
+    if tasks_without_cursor:
+        # 没有游标的任务：批量查询 MessageRead 表中没有记录的消息
+        unread_without_cursor = (
+            db.query(Message)
+            .join(Task, Message.task_id == Task.id)
+            .filter(
+                Message.task_id.in_(tasks_without_cursor),
+                *common_filters,
+                ~exists(
+                    select(1).where(
+                        and_(
+                            MessageRead.message_id == Message.id,
+                            MessageRead.user_id == user_id
                         )
                     )
                 )
-                .all()
             )
-        
-        task_unread_messages.extend(unread_msgs)
+            .all()
+        )
+        task_unread_messages.extend(unread_without_cursor)
     
     # 只返回任务消息（不再包含普通消息）
     all_unread = task_unread_messages
@@ -1867,13 +1882,13 @@ def delete_task_safely(db: Session, task_id: int):
         db.query(TaskApplication).filter(TaskApplication.task_id == task_id).delete(synchronize_session=False)
 
         # 3. 删除相关的通知
-        db.query(Notification).filter(Notification.related_id == task_id).delete()
+        db.query(Notification).filter(Notification.related_id == task_id).delete(synchronize_session=False)
 
         # 4. 删除相关的评价
-        db.query(Review).filter(Review.task_id == task_id).delete()
+        db.query(Review).filter(Review.task_id == task_id).delete(synchronize_session=False)
 
         # 5. 删除相关的任务历史
-        db.query(TaskHistory).filter(TaskHistory.task_id == task_id).delete()
+        db.query(TaskHistory).filter(TaskHistory.task_id == task_id).delete(synchronize_session=False)
 
         # 5.3. 删除相关的任务取消请求（必须在删除任务之前）
         from app.models import TaskCancelRequest
@@ -3617,13 +3632,19 @@ def send_admin_notification(
     notifications = []
 
     if not user_ids:  # 发送给所有用户
-        # ⚠️ User模型没有is_customer_service字段，客服是单独的CustomerService模型
-        # 使用ID格式判断：客服ID格式为CS+4位数字，用户ID为8位数字
+        # 🔒 性能修复：使用分页查询代替 .all()，避免 OOM
         from app.id_generator import is_customer_service_id
-        all_users = db.query(models.User).all()
-        # 过滤掉客服用户（客服ID格式：CS+4位数字）
-        users = [user for user in all_users if not is_customer_service_id(user.id)]
-        user_ids = [user.id for user in users]
+        user_ids = []
+        page_size = 500
+        offset = 0
+        while True:
+            batch = db.query(models.User.id).limit(page_size).offset(offset).all()
+            if not batch:
+                break
+            for (uid,) in batch:
+                if not is_customer_service_id(uid):
+                    user_ids.append(uid)
+            offset += page_size
 
     for user_id in user_ids:
         notification = models.Notification(

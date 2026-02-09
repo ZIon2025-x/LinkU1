@@ -318,6 +318,11 @@ class PrivateImageSystem:
     def get_image(self, image_id: str, user_id: str, access_token: str, db: Session) -> FileResponse:
         """获取图片（需要验证访问权限）"""
         try:
+            # 🔒 安全检查：防止路径遍历攻击
+            from app.file_utils import is_safe_file_id
+            if not is_safe_file_id(image_id):
+                raise HTTPException(status_code=400, detail="Invalid image ID")
+            
             # 验证访问令牌（传入db用于任务聊天场景下的扩展验证）
             if not self.verify_access_token(access_token, image_id, user_id, db=db):
                 raise HTTPException(status_code=403, detail="无权访问此图片")

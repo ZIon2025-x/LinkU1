@@ -151,6 +151,18 @@ def approve_refund_request(
     db: Session = Depends(get_db),
 ):
     """管理员批准退款申请"""
+    # 🔒 安全修复：大额退款（>£100）需要超级管理员权限
+    # 先查询退款金额，在锁定前检查权限
+    refund_check = db.query(models.RefundRequest).filter(
+        models.RefundRequest.id == refund_id
+    ).first()
+    if refund_check and refund_check.refund_amount and float(refund_check.refund_amount) > 100.0:
+        if not getattr(current_user, 'is_super_admin', 0):
+            raise HTTPException(
+                status_code=403,
+                detail="大额退款（>£100）需要超级管理员权限"
+            )
+    
     # 🔒 并发安全：使用 SELECT FOR UPDATE 锁定退款申请记录
     refund_query = select(models.RefundRequest).where(
         models.RefundRequest.id == refund_id,

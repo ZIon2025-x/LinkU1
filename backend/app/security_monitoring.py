@@ -35,6 +35,13 @@ class SecurityMonitor:
         self.failed_attempts = {}  # IP -> count
         self.blocked_ips = set()
     
+    @staticmethod
+    def _sanitize_for_log(s: str) -> str:
+        """清理日志输入，防止CRLF注入攻击"""
+        if not s:
+            return ""
+        return s.replace('\n', '\\n').replace('\r', '\\r').replace('\x00', '')[:500]
+    
     def log_security_event(
         self,
         event_type: str,
@@ -46,6 +53,10 @@ class SecurityMonitor:
     ):
         """记录安全事件"""
         try:
+            # 🔒 安全修复：清理用户可控的HTTP头，防止日志注入
+            user_agent = self._sanitize_for_log(request.headers.get("User-Agent", "")) if request else None
+            referer = self._sanitize_for_log(request.headers.get("Referer", "")) if request else None
+            
             # 构建日志数据
             log_data = {
                 "timestamp": format_iso_utc(get_utc_time()),
@@ -54,8 +65,8 @@ class SecurityMonitor:
                 "ip_address": ip_address,
                 "details": details,
                 "severity": severity,
-                "user_agent": request.headers.get("User-Agent") if request else None,
-                "referer": request.headers.get("Referer") if request else None,
+                "user_agent": user_agent,
+                "referer": referer,
                 "path": request.url.path if request else None,
                 "method": request.method if request else None
             }

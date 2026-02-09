@@ -43,15 +43,27 @@ def create_transfer_record(
     commit: bool = True
 ) -> models.PaymentTransfer:
     """
-    创建转账记录
+    创建转账记录（带幂等性检查）
     
     Args:
         commit: 是否立即提交。设为 False 可在 SAVEPOINT 内使用 flush 代替 commit，
                 避免破坏外层事务隔离。调用方需自行提交。
     
     Returns:
-        PaymentTransfer: 创建的转账记录
+        PaymentTransfer: 创建的转账记录（可能返回已有记录）
     """
+    # 🔒 幂等性检查：避免重复创建转账记录
+    existing = db.query(models.PaymentTransfer).filter(
+        and_(
+            models.PaymentTransfer.task_id == task_id,
+            models.PaymentTransfer.taker_id == taker_id,
+            models.PaymentTransfer.status.in_(["pending", "retrying", "succeeded"])
+        )
+    ).first()
+    if existing:
+        logger.info(f"转账记录已存在: task_id={task_id}, taker_id={taker_id}, status={existing.status}, transfer_id={existing.id}")
+        return existing
+    
     transfer_record = models.PaymentTransfer(
         task_id=task_id,
         taker_id=taker_id,
@@ -523,19 +535,22 @@ def process_pending_transfers(db: Session) -> Dict[str, Any]:
                     # 修复：process_pending_transfers 完成转账后，必须更新 Task 的确认状态，
                     # 否则 auto_confirmed=1 但 is_confirmed=0 的任务会变成"僵尸"状态
                     try:
-                        task = db.query(models.Task).filter(
-                            models.Task.id == transfer_record.task_id
-                        ).first()
-                        if task and task.is_confirmed != 1:
-                            task.is_confirmed = 1
-                            task.confirmed_at = get_utc_time()
-                            task.paid_to_user_id = transfer_record.taker_id
-                            task.escrow_amount = Decimal('0.00')
+                        # 🔒 并发安全：使用 SELECT FOR UPDATE 锁定任务，防止并发转账更新
+                        locked_task = db.execute(
+                            select(models.Task).where(
+                                models.Task.id == transfer_record.task_id
+                            ).with_for_update()
+                        ).scalar_one_or_none()
+                        if locked_task and locked_task.is_confirmed != 1:
+                            locked_task.is_confirmed = 1
+                            locked_task.confirmed_at = get_utc_time()
+                            locked_task.paid_to_user_id = transfer_record.taker_id
+                            locked_task.escrow_amount = Decimal('0.00')
                             from app.transaction_utils import safe_commit
-                            if not safe_commit(db, f"更新任务确认状态 task_id={task.id}"):
-                                logger.error(f"更新任务确认状态失败: task_id={task.id}")
+                            if not safe_commit(db, f"更新任务确认状态 task_id={locked_task.id}"):
+                                logger.error(f"更新任务确认状态失败: task_id={locked_task.id}")
                             else:
-                                logger.info(f"✅ 转账成功后同步更新任务 {task.id} 确认状态: is_confirmed=1, escrow_amount=0")
+                                logger.info(f"✅ 转账成功后同步更新任务 {locked_task.id} 确认状态: is_confirmed=1, escrow_amount=0")
                     except Exception as task_err:
                         logger.error(f"转账成功但更新任务状态失败: task_id={transfer_record.task_id}, error={task_err}", exc_info=True)
                 else:

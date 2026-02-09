@@ -56,6 +56,13 @@ class ImageProcessor:
     def __init__(self):
         """初始化图片处理器"""
         self._pillow_available = None
+        
+        # 🔒 安全修复：设置图片最大像素限制，防止解压炸弹（decompression bomb）DoS
+        try:
+            from PIL import Image
+            Image.MAX_IMAGE_PIXELS = 25_000_000  # 25 megapixels max
+        except ImportError:
+            pass
     
     @property
     def pillow_available(self) -> bool:

@@ -154,19 +154,29 @@ def get_apns_key_file() -> Optional[str]:
             if _temp_key_file and Path(_temp_key_file).exists():
                 return _temp_key_file
             
-            # 创建临时文件存储密钥
-            temp_dir = Path(tempfile.gettempdir())
-            temp_key_file = temp_dir / "apns_key.p8"
+            # 🔒 安全修复：使用 mkstemp 创建不可预测的临时文件路径
+            # 避免使用固定文件名（如 apns_key.p8），防止竞态条件和路径猜测攻击
+            fd, temp_key_file = tempfile.mkstemp(suffix='.p8', prefix='apns_')
+            fd_owned = True  # 跟踪 fd 所有权，避免 double-close
+            try:
+                os.chmod(temp_key_file, 0o600)
+                f = os.fdopen(fd, 'w')
+                fd_owned = False  # os.fdopen 成功后，fd 由文件对象管理
+                try:
+                    f.write(key_content)
+                finally:
+                    f.close()
+            except Exception:
+                if fd_owned:
+                    os.close(fd)
+                raise
             
-            # 写入密钥内容
-            with open(temp_key_file, 'w') as f:
-                f.write(key_content)
+            # 注册退出时清理临时文件
+            import atexit
+            atexit.register(lambda p=temp_key_file: os.path.exists(p) and os.unlink(p))
             
-            # 设置文件权限（仅所有者可读）
-            os.chmod(temp_key_file, 0o600)
-            
-            _temp_key_file = str(temp_key_file)
-            logger.info("已从环境变量加载 APNs 密钥")
+            _temp_key_file = temp_key_file
+            logger.info("已从环境变量加载 APNs 密钥（使用安全临时文件）")
             return _temp_key_file
             
         except Exception as e:

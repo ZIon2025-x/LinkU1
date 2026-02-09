@@ -85,6 +85,16 @@ from app.config import Config
 router = APIRouter()
 
 
+def _safe_json_loads(s, default=None):
+    """安全的 JSON 解析，失败时返回默认值而非抛出异常"""
+    if not s:
+        return default
+    try:
+        return json.loads(s)
+    except (json.JSONDecodeError, TypeError, ValueError):
+        return default
+
+
 @router.post("/csp-report")
 async def csp_report(report: dict):
     """接收 CSP 违规报告"""
@@ -457,19 +467,31 @@ def verify_email(
     # 或者：在注册API中，将邀请码ID存储到Redis，key为email，在验证成功后从Redis获取
     
     # 尝试从Redis获取邀请码ID（如果注册时存储了）
+    # 🔒 使用原子操作 GETDEL 防止并发注册重复使用同一邀请码
     try:
         from app.redis_cache import redis_client
         if redis_client:
             invitation_code_key = f"registration_invitation_code:{user.email}"
-            invitation_code_id_str = redis_client.get(invitation_code_key)
+            # 原子操作：获取并删除，防止竞态条件导致双重使用
+            try:
+                invitation_code_id_str = redis_client.getdel(invitation_code_key)
+            except AttributeError:
+                # redis-py 版本过低，无 getdel 方法，回退到 Lua 脚本
+                lua_script = "local v = redis.call('GET', KEYS[1]); if v then redis.call('DEL', KEYS[1]); end; return v"
+                invitation_code_id_str = redis_client.eval(lua_script, 1, invitation_code_key)
+            except Exception as _redis_err:
+                # Redis Server < 6.2 不支持 GETDEL 等情况，回退到 Lua 脚本
+                if "unknown command" in str(_redis_err).lower() or "ERR" in str(_redis_err):
+                    lua_script = "local v = redis.call('GET', KEYS[1]); if v then redis.call('DEL', KEYS[1]); end; return v"
+                    invitation_code_id_str = redis_client.eval(lua_script, 1, invitation_code_key)
+                else:
+                    raise  # 非命令不支持的错误（如连接断开），向上抛出
             if invitation_code_id_str:
-                invitation_code_id = int(invitation_code_id_str.decode())
+                invitation_code_id = int(invitation_code_id_str if isinstance(invitation_code_id_str, (int, str)) else invitation_code_id_str.decode())
                 from app.coupon_points_crud import use_invitation_code
                 success, error_msg = use_invitation_code(db, user.id, invitation_code_id)
                 if success:
                     logger.info(f"邀请码奖励发放成功: 用户 {user.id}, 邀请码ID {invitation_code_id}")
-                    # 删除Redis中的临时数据
-                    redis_client.delete(invitation_code_key)
                 else:
                     logger.warning(f"邀请码奖励发放失败: {error_msg}")
     except Exception as e:
@@ -676,9 +698,6 @@ def debug_test_token(token: str, _: None = Depends(require_debug_environment)):
     
     result = {
         "token": token[:20] + "...",
-        "current_secret_key": Config.SECRET_KEY[:20] + "...",
-        "secret_key_length": len(Config.SECRET_KEY),
-        "is_default_secret": Config.SECRET_KEY == "change-this-secret-key-in-production"
     }
     
     # 测试当前配置
@@ -1280,21 +1299,23 @@ def get_task_detail(
                 elif url and not url.startswith("http"):
                     # 若存的是 file_id（私密文件），生成可访问的签名 URL
                     try:
+                        from app.file_utils import is_safe_file_id
                         from app.file_system import private_file_system
                         from app.signed_url import signed_url_manager
-                        task_dir = private_file_system.base_dir / "tasks" / str(task_id)
-                        if task_dir.exists():
-                            for f in task_dir.glob(f"{url}.*"):
-                                if f.is_file():
-                                    file_path_for_url = f"files/{f.name}"
-                                    if viewer_id:
-                                        url = signed_url_manager.generate_signed_url(
-                                            file_path=file_path_for_url,
-                                            user_id=viewer_id,
-                                            expiry_minutes=60,
-                                            one_time=False,
-                                        )
-                                    break
+                        if is_safe_file_id(url):
+                            task_dir = private_file_system.base_dir / "tasks" / str(task_id)
+                            if task_dir.exists():
+                                for f in task_dir.glob(f"{url}.*"):
+                                    if f.is_file():
+                                        file_path_for_url = f"files/{f.name}"
+                                        if viewer_id:
+                                            url = signed_url_manager.generate_signed_url(
+                                                file_path=file_path_for_url,
+                                                user_id=viewer_id,
+                                                expiry_minutes=60,
+                                                one_time=False,
+                                            )
+                                        break
                     except Exception as e:
                         logger.debug(f"生成完成证据文件签名 URL 失败 file_id={url}: {e}")
                 completion_evidence.append({
@@ -1325,7 +1346,7 @@ def get_recommendations(
     algorithm: str = Query("hybrid", pattern="^(content_based|collaborative|hybrid)$"),
     task_type: Optional[str] = Query(None),
     location: Optional[str] = Query(None),
-    keyword: Optional[str] = Query(None),
+    keyword: Optional[str] = Query(None, max_length=200),
     latitude: Optional[float] = Query(None, ge=-90, le=90),
     longitude: Optional[float] = Query(None, ge=-180, le=180),
     db: Session = Depends(get_db),
@@ -1359,20 +1380,16 @@ def get_recommendations(
             longitude=longitude
         )
         
-        # 获取所有任务的翻译
+        # 🔒 性能修复：批量获取所有任务的翻译，避免 N+1 查询
         task_ids = [item["task"].id for item in recommendations]
         translations_dict = {}
         if task_ids:
-            from app.crud import get_task_translation
-            for task_id in task_ids:
-                # 获取英文翻译
-                trans_en = get_task_translation(db, task_id, 'title', 'en', validate=False)
-                if trans_en:
-                    translations_dict[(task_id, 'en')] = trans_en.translated_text
-                # 获取中文翻译
-                trans_zh = get_task_translation(db, task_id, 'title', 'zh-CN', validate=False)
-                if trans_zh:
-                    translations_dict[(task_id, 'zh-CN')] = trans_zh.translated_text
+            translations = db.query(models.TaskTranslation).filter(
+                models.TaskTranslation.task_id.in_(task_ids),
+                models.TaskTranslation.field == 'title'
+            ).all()
+            for t in translations:
+                translations_dict[(t.task_id, t.language)] = t.translated_text
         
         # 对于没有翻译的任务，在后台触发翻译（不阻塞响应）
         missing_task_ids = [task_id for task_id in task_ids 
@@ -2494,9 +2511,14 @@ def create_refund_request(
     if refund_data.evidence_files:
         from app.models import MessageAttachment
         from app.file_system import PrivateFileSystem
+        from app.file_utils import is_safe_file_id
         
         file_system = PrivateFileSystem()
         for file_id in refund_data.evidence_files:
+            # 🔒 安全检查：防止路径遍历攻击
+            if not is_safe_file_id(file_id):
+                logger.warning(f"文件ID包含非法字符，跳过: {file_id[:50]}")
+                continue
             try:
                 # 检查文件是否存在于MessageAttachment中，且与当前任务相关
                 attachment = db.query(MessageAttachment).filter(
@@ -2777,7 +2799,7 @@ def get_refund_status(
         processed_at=refund_request.processed_at,
         completed_at=refund_request.completed_at,
         rebuttal_text=refund_request.rebuttal_text,
-        rebuttal_evidence_files=json.loads(refund_request.rebuttal_evidence_files) if refund_request.rebuttal_evidence_files else None,
+        rebuttal_evidence_files=_safe_json_loads(refund_request.rebuttal_evidence_files) if refund_request.rebuttal_evidence_files else None,
         rebuttal_submitted_at=refund_request.rebuttal_submitted_at,
         rebuttal_submitted_by=refund_request.rebuttal_submitted_by,
         created_at=refund_request.created_at,
@@ -2847,21 +2869,23 @@ def get_task_dispute_timeline(
                         logger.debug(f"争议时间线完成证据 private-image URL 失败 blob_id={att.blob_id}: {e}")
                 elif url and not url.startswith("http"):
                     try:
+                        from app.file_utils import is_safe_file_id
                         from app.file_system import private_file_system
                         from app.signed_url import signed_url_manager
-                        task_dir = private_file_system.base_dir / "tasks" / str(task_id)
-                        if task_dir.exists():
-                            for f in task_dir.glob(f"{url}.*"):
-                                if f.is_file():
-                                    file_path_for_url = f"files/{f.name}"
-                                    if viewer_id:
-                                        url = signed_url_manager.generate_signed_url(
-                                            file_path=file_path_for_url,
-                                            user_id=viewer_id,
-                                            expiry_minutes=60,
-                                            one_time=False,
-                                        )
-                                    break
+                        if is_safe_file_id(url):
+                            task_dir = private_file_system.base_dir / "tasks" / str(task_id)
+                            if task_dir.exists():
+                                for f in task_dir.glob(f"{url}.*"):
+                                    if f.is_file():
+                                        file_path_for_url = f"files/{f.name}"
+                                        if viewer_id:
+                                            url = signed_url_manager.generate_signed_url(
+                                                file_path=file_path_for_url,
+                                                user_id=viewer_id,
+                                                expiry_minutes=60,
+                                                one_time=False,
+                                            )
+                                        break
                     except Exception as e:
                         logger.debug(f"争议时间线完成证据文件签名 URL 失败 file_id={url}: {e}")
                 completion_evidence.append({
@@ -2930,21 +2954,23 @@ def get_task_dispute_timeline(
                         logger.debug(f"争议时间线确认证据 private-image URL 失败 blob_id={att.blob_id}: {e}")
                 elif url and not url.startswith("http"):
                     try:
+                        from app.file_utils import is_safe_file_id
                         from app.file_system import private_file_system
                         from app.signed_url import signed_url_manager
-                        task_dir = private_file_system.base_dir / "tasks" / str(task_id)
-                        if task_dir.exists():
-                            for f in task_dir.glob(f"{url}.*"):
-                                if f.is_file():
-                                    file_path_for_url = f"files/{f.name}"
-                                    if viewer_id:
-                                        url = signed_url_manager.generate_signed_url(
-                                            file_path=file_path_for_url,
-                                            user_id=viewer_id,
-                                            expiry_minutes=60,
-                                            one_time=False,
-                                        )
-                                    break
+                        if is_safe_file_id(url):
+                            task_dir = private_file_system.base_dir / "tasks" / str(task_id)
+                            if task_dir.exists():
+                                for f in task_dir.glob(f"{url}.*"):
+                                    if f.is_file():
+                                        file_path_for_url = f"files/{f.name}"
+                                        if viewer_id:
+                                            url = signed_url_manager.generate_signed_url(
+                                                file_path=file_path_for_url,
+                                                user_id=viewer_id,
+                                                expiry_minutes=60,
+                                                one_time=False,
+                                            )
+                                        break
                     except Exception as e:
                         logger.debug(f"争议时间线确认证据文件签名 URL 失败 file_id={url}: {e}")
                 confirmation_evidence.append({
@@ -3321,7 +3347,7 @@ def cancel_refund_request(
         processed_at=refund_request.processed_at,
         completed_at=refund_request.completed_at,
         rebuttal_text=refund_request.rebuttal_text,
-        rebuttal_evidence_files=json.loads(refund_request.rebuttal_evidence_files) if refund_request.rebuttal_evidence_files else None,
+        rebuttal_evidence_files=_safe_json_loads(refund_request.rebuttal_evidence_files) if refund_request.rebuttal_evidence_files else None,
         rebuttal_submitted_at=refund_request.rebuttal_submitted_at,
         rebuttal_submitted_by=refund_request.rebuttal_submitted_by,
         created_at=refund_request.created_at,
@@ -3391,9 +3417,14 @@ def submit_refund_rebuttal(
         
         from app.models import MessageAttachment
         from app.file_system import PrivateFileSystem
+        from app.file_utils import is_safe_file_id
         
         file_system = PrivateFileSystem()
         for file_id in rebuttal_data.evidence_files:
+            # 🔒 安全检查：防止路径遍历攻击
+            if not is_safe_file_id(file_id):
+                logger.warning(f"文件ID包含非法字符，跳过: {file_id[:50]}")
+                continue
             try:
                 # 检查文件是否存在于MessageAttachment中，且与当前任务相关
                 attachment = db.query(MessageAttachment).filter(
@@ -3805,7 +3836,7 @@ def confirm_task_completion(
                 if expire_days > 0:
                     expires_at = now + timedelta(days=expire_days)
                 
-                # 生成幂等键（防止重复发放）
+                # 生成幂等键（防止重复发放）- 必须是确定性的以确保幂等性
                 idempotency_key = f"task_complete_{task_id}_{task.taker_id}"
                 
                 # 检查是否已发放（通过幂等键）
@@ -4493,7 +4524,7 @@ def get_my_tasks(
     current_user=Depends(check_user_status), 
     db: Session = Depends(get_db),
     limit: int = Query(50, ge=1, le=100),
-    offset: int = Query(0, ge=0)
+    offset: int = Query(0, ge=0, le=100000)
 ):
     """获取当前用户的任务（发布的和接受的）"""
     tasks = crud.get_user_tasks(db, current_user.id, limit=limit, offset=offset)
@@ -5247,7 +5278,7 @@ def get_chat_history_api(
     current_user=Depends(get_current_user_secure_sync_csrf),
     db: Session = Depends(get_db),
     limit: int = Query(20, ge=1, le=100),
-    offset: int = Query(0, ge=0),
+    offset: int = Query(0, ge=0, le=100000),
     session_id: int = None,
 ):
     # 如果提供了session_id，直接使用它
@@ -5895,8 +5926,8 @@ def create_payment(
             }
         ],
         mode="payment",
-        success_url=f"http://localhost:8000/api/users/tasks/{task_id}/pay/success",
-        cancel_url=f"http://localhost:8000/api/users/tasks/{task_id}/pay/cancel",
+        success_url=f"{Config.BASE_URL}/api/users/tasks/{task_id}/pay/success",
+        cancel_url=f"{Config.BASE_URL}/api/users/tasks/{task_id}/pay/cancel",
         metadata={"task_id": task_id},
     )
     return {"checkout_url": session.url}
@@ -6067,15 +6098,17 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
                 # 获取任务金额（使用最终成交价或原始标价）
                 task_amount = float(task.agreed_reward) if task.agreed_reward is not None else float(task.base_reward) if task.base_reward is not None else 0.0
                 
-                # 计算平台服务费（从 metadata 获取或重新计算）
-                metadata = payment_intent.get("metadata", {})
-                application_fee_pence = int(metadata.get("application_fee", 0))
+                # 🔒 安全修复：始终使用后端计算的服务费，不信任metadata中的金额
+                # metadata仅作为交叉校验参考
+                from app.utils.fee_calculator import calculate_application_fee_pence
+                task_amount_pence = int(task_amount * 100)
+                application_fee_pence = calculate_application_fee_pence(task_amount_pence)
                 
-                # 如果没有 metadata，重新计算
-                if application_fee_pence == 0:
-                    from app.utils.fee_calculator import calculate_application_fee_pence
-                    task_amount_pence = int(task_amount * 100)
-                    application_fee_pence = calculate_application_fee_pence(task_amount_pence)
+                # 交叉校验metadata中的费用（仅记录差异，不使用metadata值）
+                metadata = payment_intent.get("metadata", {})
+                metadata_fee = int(metadata.get("application_fee", 0))
+                if metadata_fee > 0 and metadata_fee != application_fee_pence:
+                    logger.warning(f"⚠️ 服务费不一致: metadata={metadata_fee}, calculated={application_fee_pence}, task_id={task_id}")
                 
                 # escrow_amount = 任务金额 - 平台服务费（任务接受人获得的金额）
                 application_fee = application_fee_pence / 100.0
@@ -6111,7 +6144,9 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
                                 # 确保 sold_task_id 已设置（双重保险）
                                 if flea_item.sold_task_id != task_id:
                                     flea_item.sold_task_id = task_id
-                                db.commit()  # 立即提交，确保状态更新及时
+                                # 🔒 安全修复：不在中间提交，与任务更新一起在最终统一提交
+                                # 保持事务原子性，避免部分提交导致数据不一致
+                                db.flush()
                                 logger.info(f"✅ [WEBHOOK] 跳蚤市场商品 {flea_market_item_id} 支付成功，状态已更新为 sold (task_id: {task_id})")
                                 
                                 # 清除商品缓存（invalidate_item_cache 会自动清除列表缓存和详情缓存）
@@ -6131,6 +6166,7 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
                     application_id = int(application_id_str)
                     logger.debug(f"🔍 查找申请: application_id={application_id}, task_id={task_id}")
                     
+                    # 🔒 安全修复：使用 SELECT FOR UPDATE 防止并发 webhook 重复批准申请
                     application = db.execute(
                         select(models.TaskApplication).where(
                             and_(
@@ -6138,7 +6174,7 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
                                 models.TaskApplication.task_id == task_id,
                                 models.TaskApplication.status == "pending"
                             )
-                        )
+                        ).with_for_update()
                     ).scalar_one_or_none()
                     
                     logger.debug(f"🔍 找到申请: {application is not None}")
@@ -6884,14 +6920,15 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
                 # 获取任务金额（使用最终成交价或原始标价）
                 task_amount = float(task.agreed_reward) if task.agreed_reward is not None else float(task.base_reward) if task.base_reward is not None else 0.0
                 
-                # 计算平台服务费（从 metadata 获取或重新计算）
-                application_fee_pence = int(metadata.get("application_fee", 0))
+                # 🔒 安全修复：始终使用后端计算的服务费，不信任metadata中的金额
+                from app.utils.fee_calculator import calculate_application_fee_pence
+                task_amount_pence = int(task_amount * 100)
+                application_fee_pence = calculate_application_fee_pence(task_amount_pence)
                 
-                # 如果没有 metadata，重新计算
-                if application_fee_pence == 0:
-                    from app.utils.fee_calculator import calculate_application_fee_pence
-                    task_amount_pence = int(task_amount * 100)
-                    application_fee_pence = calculate_application_fee_pence(task_amount_pence)
+                # 交叉校验metadata中的费用（仅记录差异，不使用metadata值）
+                metadata_fee = int(metadata.get("application_fee", 0))
+                if metadata_fee > 0 and metadata_fee != application_fee_pence:
+                    logger.warning(f"⚠️ Checkout session 服务费不一致: metadata={metadata_fee}, calculated={application_fee_pence}, task_id={task_id}")
                 
                 # escrow_amount = 任务金额 - 平台服务费（任务接受人获得的金额）
                 application_fee = application_fee_pence / 100.0
@@ -9171,7 +9208,7 @@ def get_vip_history(
     current_user=Depends(get_current_user_secure_sync_csrf),
     db: Session = Depends(get_db),
     limit: int = Query(50, ge=1, le=100),
-    offset: int = Query(0, ge=0)
+    offset: int = Query(0, ge=0, le=100000)
 ):
     """获取当前用户的VIP订阅历史"""
     rows = crud.get_vip_subscription_history(db, current_user.id, limit=limit, offset=offset)
@@ -9803,6 +9840,7 @@ async def upload_image(
 
 
 @router.post("/upload/public-image")
+@rate_limit("upload_file")
 async def upload_public_image(
     request: Request,
     image: UploadFile = File(...),
@@ -11165,11 +11203,11 @@ def delete_expert_activity_admin(
         if not expert:
             raise HTTPException(status_code=404, detail="任务达人不存在")
         
-        # 验证活动是否存在且属于该任务达人
+        # 🔒 安全修复：使用 SELECT FOR UPDATE 锁定活动记录，防止并发删除导致重复积分退款
         activity = db.query(models.Activity).filter(
             models.Activity.id == activity_id,
             models.Activity.expert_id == expert_id
-        ).first()
+        ).with_for_update().first()
         if not activity:
             raise HTTPException(status_code=404, detail="活动不存在")
         
@@ -11459,7 +11497,7 @@ def batch_create_service_time_slots_admin(
 def get_public_task_experts(
     category: Optional[str] = None,
     location: Optional[str] = Query(None, description="城市筛选"),
-    keyword: Optional[str] = Query(None, description="关键词搜索（搜索名称、简介、技能）"),
+    keyword: Optional[str] = Query(None, max_length=200, description="关键词搜索（搜索名称、简介、技能）"),
     limit: Optional[int] = Query(None, ge=1, le=100, description="返回数量限制"),
     db: Session = Depends(get_db),
 ):
@@ -11514,27 +11552,41 @@ def get_public_task_experts(
         
         experts = query.all()
         
-        # ⚠️ 如果完成率为0，尝试实时计算（可能是数据未更新）
+        # 🔒 性能修复：批量计算完成率为0的专家，避免 N+1 查询
         from app.models import Task
+        zero_rate_ids = [e.id for e in experts if e.completion_rate == 0.0]
+        completion_rate_map = {}
+        if zero_rate_ids:
+            # 一次查询获取所有需要计算的专家的任务统计
+            from sqlalchemy import case
+            stats = db.query(
+                Task.taker_id,
+                func.count(Task.id).label('total'),
+                func.count(case((Task.status == 'completed', 1))).label('completed')
+            ).filter(
+                Task.taker_id.in_(zero_rate_ids)
+            ).group_by(Task.taker_id).all()
+            
+            for taker_id, total, completed in stats:
+                if total > 0:
+                    completion_rate_map[taker_id] = (completed / total) * 100.0
+            
+            # 批量更新数据库中的值
+            for expert in experts:
+                if expert.id in completion_rate_map:
+                    try:
+                        expert.completion_rate = completion_rate_map[expert.id]
+                    except Exception:
+                        pass
+            try:
+                db.commit()
+            except Exception as e:
+                logger.warning(f"批量更新任务达人完成率失败: {e}")
+                db.rollback()
+        
         result_experts = []
         for expert in experts:
-            completion_rate = expert.completion_rate
-            # 如果完成率为0，尝试实时计算
-            if completion_rate == 0.0:
-                taken_tasks = db.query(Task).filter(Task.taker_id == expert.id).count()
-                completed_taken_tasks = db.query(Task).filter(
-                    Task.taker_id == expert.id,
-                    Task.status == "completed"
-                ).count()
-                if taken_tasks > 0:
-                    completion_rate = (completed_taken_tasks / taken_tasks) * 100.0
-                    # 更新数据库中的值（异步，不阻塞返回）
-                    try:
-                        expert.completion_rate = completion_rate
-                        db.commit()
-                    except Exception as e:
-                        logger.warning(f"更新任务达人 {expert.id} 完成率失败: {e}")
-                        db.rollback()
+            completion_rate = completion_rate_map.get(expert.id, expert.completion_rate)
             
             result_experts.append({
                 "id": expert.id,  # id 现在就是 user_id

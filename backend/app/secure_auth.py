@@ -26,8 +26,9 @@ settings = get_settings()
 ACCESS_TOKEN_EXPIRE_MINUTES = settings.ACCESS_TOKEN_EXPIRE_MINUTES
 REFRESH_TOKEN_EXPIRE_HOURS = settings.REFRESH_TOKEN_EXPIRE_HOURS
 # 会话过期时间：移动端（非iOS原生应用）使用较长时间，Web端使用较短时间
-# iOS 原生应用会话在 create_session 和 get_session 中特殊处理，使用 365*24 小时（1年）
+# iOS 原生应用会话使用 IOS_SESSION_EXPIRE_DAYS 天（默认90天，可通过环境变量调整）
 SESSION_EXPIRE_HOURS = int(os.getenv("SESSION_EXPIRE_HOURS", "24"))  # 默认24小时（优化：从1小时改为24小时，提升用户体验）
+IOS_SESSION_EXPIRE_HOURS = int(os.getenv("IOS_SESSION_EXPIRE_DAYS", "90")) * 24  # 默认90天（从365天降低，平衡安全与体验）
 USER_SESSION_EXPIRE_HOURS = int(os.getenv("USER_SESSION_EXPIRE_HOURS", "168"))  # 默认7天（优化：从1小时改为168小时，减少频繁登出）
 MAX_ACTIVE_SESSIONS = int(os.getenv("MAX_ACTIVE_SESSIONS", "5"))
 
@@ -193,10 +194,10 @@ class SecureAuthManager:
     def _store_session(session: SessionInfo) -> None:
         """存储会话到Redis"""
         if USE_REDIS and redis_client:
-            # iOS 应用会话使用更长的过期时间（1年），其他会话使用默认过期时间
+            # iOS 应用会话使用更长的过期时间，其他会话使用默认过期时间
             if session.is_ios_app:
-                expire_hours = 365 * 24  # 1年
-                logger.info(f"[SECURE_AUTH] iOS 应用会话，设置长期过期时间: {expire_hours}小时")
+                expire_hours = IOS_SESSION_EXPIRE_HOURS
+                logger.info(f"[SECURE_AUTH] iOS 应用会话，过期时间: {expire_hours}小时（{expire_hours // 24}天）")
             else:
                 expire_hours = SESSION_EXPIRE_HOURS
             
@@ -326,7 +327,7 @@ class SecureAuthManager:
                     session.last_activity = get_utc_time()
                     data["last_activity"] = format_iso_utc(session.last_activity)
                     # iOS 应用会话使用更长的过期时间
-                    expire_hours = 365 * 24 if session.is_ios_app else SESSION_EXPIRE_HOURS
+                    expire_hours = IOS_SESSION_EXPIRE_HOURS if session.is_ios_app else SESSION_EXPIRE_HOURS
                     redis_client.setex(
                         f"session:{session_id}",
                         expire_hours * 3600,
@@ -359,9 +360,9 @@ class SecureAuthManager:
         """更新会话信息"""
         try:
             if USE_REDIS and redis_client:
-                # iOS 应用会话使用更长的过期时间（1年），其他会话使用默认过期时间
+                # iOS 应用会话使用更长的过期时间，其他会话使用默认过期时间
                 if session.is_ios_app:
-                    expire_hours = 365 * 24  # 1年
+                    expire_hours = IOS_SESSION_EXPIRE_HOURS
                 else:
                     expire_hours = SESSION_EXPIRE_HOURS
                 
@@ -631,7 +632,7 @@ def is_ios_app_request(request: Request) -> bool:
     # iOS 应用的 User-Agent 应该包含 "Link2Ur-iOS" 或 "link2ur-ios"
     # 不应该仅仅因为包含 "link2ur" 就认为是应用（可能是网页）
     if "link2ur-ios" in user_agent or "link2ur/ios" in user_agent:
-        logger.info(f"[iOS检测] ✅ 检测到 iOS 原生应用请求，将创建长期会话（1年）: platform={platform}, UA={user_agent[:80]}")
+        logger.info(f"[iOS检测] ✅ 检测到 iOS 原生应用请求，将创建长期会话（{IOS_SESSION_EXPIRE_HOURS // 24}天）: platform={platform}, UA={user_agent[:80]}")
         return True
     
     # 如果只有 X-Platform 头但没有应用标识，也不认为是应用
@@ -850,10 +851,10 @@ def create_user_refresh_token(user_id: str, ip_address: str = "", device_fingerp
     # 生成refresh token
     refresh_token = secrets.token_urlsafe(32)
     
-    # 设置过期时间：iOS应用1年，其他12小时
+    # 设置过期时间：iOS应用使用可配置的长期过期时间，其他12小时
     if is_ios_app:
-        expire_hours = 365 * 24  # 1年
-        logger.info(f"[SECURE_AUTH] iOS 应用 refresh token，设置长期过期时间: {expire_hours}小时（1年）")
+        expire_hours = IOS_SESSION_EXPIRE_HOURS
+        logger.info(f"[SECURE_AUTH] iOS 应用 refresh token，过期时间: {expire_hours}小时（{expire_hours // 24}天）")
     else:
         expire_hours = 12  # 12小时
     expire_time = get_utc_time() + timedelta(hours=expire_hours)
@@ -931,8 +932,8 @@ def verify_user_refresh_token(refresh_token: str, ip_address: str = "", device_f
     
     # 确定是否为iOS应用（优先使用存储的标志，其次使用传入的参数）
     token_is_ios_app = data.get('is_ios_app', False) or is_ios_app
-    # 计算正确的TTL（iOS应用1年，其他12小时）
-    token_ttl_seconds = 365 * 24 * 3600 if token_is_ios_app else 12 * 3600
+    # 计算正确的TTL（iOS应用使用可配置的过期时间，其他12小时）
+    token_ttl_seconds = IOS_SESSION_EXPIRE_HOURS * 3600 if token_is_ios_app else 12 * 3600
     
     # 检查是否过期
     expires_at_str = data.get('expires_at')

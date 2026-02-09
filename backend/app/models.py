@@ -181,7 +181,7 @@ class Task(Base):
     description = Column(Text, nullable=False)
     deadline = Column(DateTime(timezone=True), nullable=True)  # 允许为 NULL，支持灵活模式任务（无截止日期）
     is_flexible = Column(Integer, default=0)  # 是否灵活时间（1=灵活，无截止日期；0=有截止日期）
-    reward = Column(Float, nullable=False)  # 价格字段（与base_reward同步）
+    reward = Column(DECIMAL(12, 2), nullable=False)  # 价格字段（与base_reward同步，使用DECIMAL保持精度一致）
     base_reward = Column(DECIMAL(12, 2), nullable=False)  # 原始标价（发布时的价格）
     agreed_reward = Column(DECIMAL(12, 2), nullable=True)  # 最终成交价（如果有议价）
     currency = Column(String(3), default="GBP")  # 货币类型
@@ -242,7 +242,7 @@ class Task(Base):
     originating_user_id = Column(String(8), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
     # 任务来源：normal（普通任务）、expert_service（达人服务）、expert_activity（达人活动）、flea_market（跳蚤市场）
     task_source = Column(String(20), default="normal", nullable=False)
-    updated_at = Column(DateTime(timezone=True), default=get_utc_time, onupdate=get_utc_time, server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=get_utc_time)
     
     # 关系
     poster = relationship(
@@ -260,6 +260,9 @@ class Task(Base):
 
 class Review(Base):
     __tablename__ = "reviews"
+    __table_args__ = (
+        Index("ix_reviews_task_id_anonymous", "task_id", "is_anonymous"),
+    )
     id = Column(Integer, primary_key=True, index=True)
     task_id = Column(Integer, ForeignKey("tasks.id", ondelete="CASCADE"))
     user_id = Column(String(8), ForeignKey("users.id", ondelete="CASCADE"))

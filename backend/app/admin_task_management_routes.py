@@ -12,6 +12,7 @@ from sqlalchemy import or_, func
 from app import crud, models, schemas
 from app.audit_logger import log_admin_action
 from app.deps import get_db
+from app.rate_limiting import rate_limit
 from app.separate_auth_deps import get_current_admin
 from app.security import get_client_ip
 from app.services.task_service import TaskService
@@ -22,6 +23,7 @@ router = APIRouter(prefix="/api", tags=["管理员-任务管理"])
 
 
 @router.get("/admin/tasks")
+@rate_limit("admin_read", limit=100, window=60)
 def admin_get_tasks(
     skip: int = Query(0, ge=0),
     limit: int = Query(50, ge=1, le=200),
@@ -240,6 +242,10 @@ def admin_batch_update_tasks(
     db: Session = Depends(get_db),
 ):
     """管理员批量更新任务"""
+    # 🔒 安全修复：限制批量操作数组大小，防止 DoS
+    if len(task_ids) > 200:
+        raise HTTPException(status_code=400, detail=f"批量操作最多支持200个任务，当前提交{len(task_ids)}个")
+    
     updated_tasks = []
     failed_tasks = []
     ip_address = get_client_ip(request) if request else None
@@ -294,6 +300,10 @@ def admin_batch_delete_tasks(
     db: Session = Depends(get_db),
 ):
     """管理员批量删除任务"""
+    # 🔒 安全修复：限制批量操作数组大小，防止 DoS
+    if len(task_ids) > 200:
+        raise HTTPException(status_code=400, detail=f"批量操作最多支持200个任务，当前提交{len(task_ids)}个")
+    
     deleted_tasks = []
     failed_tasks = []
 

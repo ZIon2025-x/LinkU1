@@ -428,20 +428,45 @@ class S3StorageBackend(StorageBackend):
                 raise ImportError("请安装 boto3: pip install boto3")
         return self._client
     
+    # 🔒 安全修复：允许上传的 MIME 类型白名单
+    ALLOWED_CONTENT_TYPES = {
+        'image/jpeg', 'image/png', 'image/webp', 'image/gif',
+        'image/heic', 'image/heif', 'image/avif',  # iOS 常见格式
+        'application/pdf',
+        'audio/mpeg', 'audio/wav', 'audio/ogg',
+        'video/mp4', 'video/webm',
+        # 注意：不包含 application/octet-stream，因为它是兜底类型，
+        # 会导致任何未识别扩展名的文件都能通过白名单检查
+    }
+    
+    # 文件大小上限
+    MAX_FILE_SIZE = 50 * 1024 * 1024  # 50MB
+    
     def upload(self, content: bytes, path: str) -> str:
         """上传文件到 S3"""
         try:
             # 移除开头的斜杠
             path = path.lstrip('/')
             
+            # 🔒 安全修复：文件大小检查
+            if len(content) > self.MAX_FILE_SIZE:
+                raise ValueError(f"文件过大: {len(content)} 字节，上限 {self.MAX_FILE_SIZE} 字节")
+            
             # 根据文件扩展名设置 Content-Type
             content_type = self._get_content_type(path)
             
+            # 🔒 安全修复：Content-Type 白名单验证
+            if content_type not in self.ALLOWED_CONTENT_TYPES:
+                logger.warning(f"不允许的 Content-Type: {content_type}，文件: {path}")
+                raise ValueError(f"不允许的文件类型: {content_type}")
+            
+            # 🔒 安全修复：设置 ACL 为 private，防止 bucket 错误配置导致文件公开
             self.client.put_object(
                 Bucket=self.bucket_name,
                 Key=path,
                 Body=content,
-                ContentType=content_type
+                ContentType=content_type,
+                ACL='private'
             )
             
             logger.debug(f"S3 文件上传成功: {path}")
@@ -634,18 +659,18 @@ class S3StorageBackend(StorageBackend):
                 base = f"https://{base}"
             return f"{base}/{path}"
         else:
-            # ⚠️ 警告：没有配置 public_url，使用预签名 URL（1小时有效期）
-            # 这会导致图片 URL 在 1 小时后失效！
+            # ⚠️ 警告：没有配置 public_url，使用预签名 URL（15分钟有效期）
+            # 这会导致图片 URL 在 15 分钟后失效！
             # 建议配置 S3_PUBLIC_URL 或 R2_PUBLIC_URL 环境变量
             logger.warning(
-                f"S3 存储未配置 public_url，生成的预签名 URL 将在 1 小时后过期。"
+                f"S3 存储未配置 public_url，生成的预签名 URL 将在 15 分钟后过期。"
                 f"建议配置 S3_PUBLIC_URL 或 R2_PUBLIC_URL 环境变量以生成永久 URL。"
             )
-            # 生成预签名 URL（1小时有效期）
+            # 生成预签名 URL（15分钟有效期，降低泄露风险）
             return self.client.generate_presigned_url(
                 'get_object',
                 Params={'Bucket': self.bucket_name, 'Key': path},
-                ExpiresIn=3600  # 1小时有效期
+                ExpiresIn=900  # 15分钟有效期（从1小时降低，平衡安全与可用性）
             )
     
     def get_file_size(self, path: str) -> Optional[int]:

@@ -504,23 +504,6 @@ if CELERY_AVAILABLE:
             # 释放锁
             release_redis_distributed_lock(lock_key)
     
-        start_time = time.time()
-        task_name = 'update_all_users_statistics_task'
-        try:
-            update_all_users_statistics()
-            duration = time.time() - start_time
-            logger.info(f"更新所有用户统计信息完成 (耗时: {duration:.2f}秒)")
-            _record_task_metrics(task_name, "success", duration)
-            return {"status": "success", "message": "User statistics updated"}
-        except Exception as e:
-            duration = time.time() - start_time
-            logger.error(f"更新所有用户统计信息失败: {e}", exc_info=True)
-            _record_task_metrics(task_name, "error", duration)
-            if self.request.retries < self.max_retries:
-                logger.info(f"任务将重试 ({self.request.retries + 1}/{self.max_retries})")
-                raise self.retry(exc=e)
-            raise
-    
     @celery_app.task(
         name='app.celery_tasks.update_featured_task_experts_response_time_task',
         bind=True,

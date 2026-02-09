@@ -5,6 +5,10 @@
 import os
 import logging
 from typing import Optional
+from dotenv import load_dotenv
+
+# 确保 .env 文件中的环境变量已加载（无论哪个模块先导入 config）
+load_dotenv()
 
 logger = logging.getLogger(__name__)
 
@@ -22,7 +26,18 @@ class Config:
     )
 
     # JWT配置
-    SECRET_KEY = os.getenv("SECRET_KEY", "change-this-secret-key-in-production")
+    SECRET_KEY = os.getenv("SECRET_KEY", "")
+    if not SECRET_KEY:
+        import warnings
+        warnings.warn(
+            "SECRET_KEY environment variable is not set! "
+            "Using an insecure default for LOCAL DEVELOPMENT ONLY. "
+            "Set SECRET_KEY in production!",
+            RuntimeWarning,
+            stacklevel=2
+        )
+        # 使用固定的开发密钥（不用随机值，避免多进程/热重载时JWT失效）
+        SECRET_KEY = "linku-dev-only-insecure-key-do-not-use-in-production"
     ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "15"))
     REFRESH_TOKEN_EXPIRE_HOURS = int(os.getenv("REFRESH_TOKEN_EXPIRE_HOURS", "12"))  # 12小时
     CLOCK_SKEW_TOLERANCE = int(os.getenv("CLOCK_SKEW_TOLERANCE", "300"))
@@ -192,6 +207,20 @@ class Config:
     # 基础URL配置
     BASE_URL = os.getenv("BASE_URL", "https://api.link2ur.com")
     FRONTEND_URL = os.getenv("FRONTEND_URL", "https://www.link2ur.com")
+    
+    # 🔒 安全修复：验证 FRONTEND_URL 格式，防止开放重定向
+    if FRONTEND_URL and not FRONTEND_URL.startswith(("https://", "http://localhost")):
+        import logging as _logging
+        _logging.getLogger(__name__).warning(f"FRONTEND_URL 使用非 HTTPS 协议: {FRONTEND_URL}")
+    
+    # 允许的前端域名白名单（用于重定向验证）
+    ALLOWED_FRONTEND_ORIGINS = [
+        "https://www.link2ur.com",
+        "https://link2ur.com", 
+        "https://linktest.up.railway.app",
+        "http://localhost:3000",
+        "http://localhost:5173",
+    ]
 
     # OAuth 2.0 / OIDC Provider 配置
     OAUTH_ISSUER = os.getenv("OAUTH_ISSUER", "") or None  # 空则用 BASE_URL

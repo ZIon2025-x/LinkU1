@@ -6212,7 +6212,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get authCodePlaceholder => 'Enter verification code';
 
   @override
-  String get authPhonePlaceholder => '07XXX XXXXXX';
+  String get authPhonePlaceholder => '7XXX XXXXXX';
 
   @override
   String get authConfirmPassword => 'Confirm Password';

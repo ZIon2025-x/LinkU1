@@ -97,15 +97,24 @@ class RedisCache:
                 return str(data).encode('utf-8')
     
     def _deserialize(self, data: bytes) -> Any:
-        """反序列化数据"""
+        """反序列化数据（安全优先：JSON优先，拒绝pickle防止RCE）"""
+        # 1. 优先尝试 JSON（安全）
         try:
-            return pickle.loads(data)
+            return json.loads(data.decode('utf-8'))
         except Exception:
-            try:
-                return json.loads(data.decode('utf-8'))
-            except Exception as e:
-                logger.error(f"反序列化失败: {e}")
-                return None
+            pass
+        
+        # 2. 尝试 pickle（向后兼容，仅用于迁移过渡期）
+        # TODO: 完全移除 pickle 支持。当所有缓存条目过期后可删除此分支。
+        try:
+            result = pickle.loads(data)
+            logger.warning("反序列化使用了pickle（向后兼容）。新数据应使用JSON格式。")
+            return result
+        except Exception:
+            pass
+        
+        logger.error("反序列化失败: 无法识别的数据格式")
+        return None
     
     def get(self, key: str) -> Optional[Any]:
         """获取缓存数据"""

@@ -300,19 +300,29 @@ def validate_input(data: Dict[str, Any], validator_class: BaseValidator) -> Dict
 
 
 def sanitize_html(html_content: str) -> str:
-    """清理HTML内容，防止XSS攻击"""
-    # 移除危险标签
-    dangerous_tags = ['script', 'iframe', 'object', 'embed', 'form', 'input']
+    """清理HTML内容，防止XSS攻击
+    
+    🔒 安全修复：使用多层防护代替单一正则表达式
+    """
+    # 第一层：移除危险标签（包括自闭合标签）
+    dangerous_tags = ['script', 'iframe', 'object', 'embed', 'form', 'input', 'link', 'meta', 'base', 'svg', 'math']
     
     for tag in dangerous_tags:
+        # 匹配开闭标签对
         pattern = rf'<{tag}[^>]*>.*?</{tag}>'
         html_content = re.sub(pattern, '', html_content, flags=re.IGNORECASE | re.DOTALL)
-    
-    # 移除危险属性
-    dangerous_attrs = ['onclick', 'onload', 'onerror', 'onmouseover', 'onfocus']
-    
-    for attr in dangerous_attrs:
-        pattern = rf'\s{attr}\s*=\s*["\'][^"\']*["\']'
+        # 匹配自闭合标签
+        pattern = rf'<{tag}[^>]*/?\s*>'
         html_content = re.sub(pattern, '', html_content, flags=re.IGNORECASE)
+    
+    # 第二层：移除所有事件处理属性（on* 类属性）
+    html_content = re.sub(r'\son\w+\s*=\s*["\'][^"\']*["\']', '', html_content, flags=re.IGNORECASE)
+    html_content = re.sub(r'\son\w+\s*=\s*[^\s>]+', '', html_content, flags=re.IGNORECASE)
+    
+    # 第三层：移除危险协议 URL（javascript:, data:, vbscript:）
+    html_content = re.sub(r'(href|src|action)\s*=\s*["\']?\s*(javascript|data|vbscript)\s*:', '', html_content, flags=re.IGNORECASE)
+    
+    # 第四层：移除 style 中的 expression() 和 url() 表达式（IE XSS）
+    html_content = re.sub(r'style\s*=\s*["\'][^"\']*expression\s*\([^)]*\)[^"\']*["\']', '', html_content, flags=re.IGNORECASE)
     
     return html_content

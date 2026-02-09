@@ -696,23 +696,32 @@ def cancel_expired_tasks():
 
 
 def update_all_users_statistics():
-    """更新所有用户的统计信息"""
+    """更新所有用户的统计信息（使用分页批处理，避免一次性加载所有用户到内存）"""
     from app.database import SessionLocal
     from app.models import User
 
     db = None
     try:
         db = SessionLocal()
-        users = db.query(User).all()
         updated_count = 0
-
-        for user in users:
-            try:
-                crud.update_user_statistics(db, str(user.id))
-                updated_count += 1
-            except Exception as e:
-                logger.error(f"更新用户 {user.id} 统计信息时出错: {e}")
-                continue
+        page_size = 100
+        offset = 0
+        
+        while True:
+            # 分页查询，只获取用户ID，减少内存占用
+            user_ids = db.query(User.id).limit(page_size).offset(offset).all()
+            if not user_ids:
+                break
+            
+            for (user_id,) in user_ids:
+                try:
+                    crud.update_user_statistics(db, str(user_id))
+                    updated_count += 1
+                except Exception as e:
+                    logger.error(f"更新用户 {user_id} 统计信息时出错: {e}")
+                    continue
+            
+            offset += page_size
 
         if updated_count > 0:
             logger.info(f"成功更新 {updated_count} 个用户的统计信息")
@@ -736,6 +745,10 @@ def run_background_task():
     global _shutdown_flag
     last_bio_update_date = None  # 记录上次更新 bio 的日期
     
+    # 🔒 安全修复：使用事件等待替代阻塞 time.sleep，以便及时响应关闭信号
+    import threading
+    _bg_shutdown_event = threading.Event()
+    
     while not _shutdown_flag:
         try:
             # 更新所有任务达人的 bio（每天执行一次，Celery 未覆盖此任务）
@@ -746,11 +759,15 @@ def run_background_task():
                 last_bio_update_date = current_date
                 logger.info("任务达人 bio 更新完成")
 
-            # 每10分钟检查一次（降低频率，因为只需要每天执行一次）
-            time.sleep(600)  # 10分钟
+            # 每10分钟检查一次（使用事件等待，关闭时立即唤醒）
+            _bg_shutdown_event.wait(timeout=600)
+            if _shutdown_flag:
+                break
         except Exception as e:
             logger.error(f"后台任务循环出错: {e}")
-            time.sleep(600)  # 出错时等待10分钟后重试
+            _bg_shutdown_event.wait(timeout=600)
+            if _shutdown_flag:
+                break
 
 
 def cleanup_all_sessions_unified():
@@ -1309,10 +1326,8 @@ async def startup_event():
     background_thread = threading.Thread(target=run_background_task, daemon=True)
     background_thread.start()
     
-    # 启动会话清理任务
-    logger.info("启动后台任务：清理过期会话")
-    session_cleanup_thread = threading.Thread(target=run_session_cleanup_task, daemon=True)
-    session_cleanup_thread.start()
+    # 会话清理已废弃（Redis TTL 自动处理过期）
+    logger.debug("会话清理已废弃，Redis TTL 自动处理")
     
     # 启动定期清理任务
     logger.info("启动定期清理任务")

@@ -2,6 +2,30 @@
 平台服务费计算工具
 统一处理服务费计算逻辑
 """
+from decimal import Decimal, ROUND_HALF_UP
+
+
+def calculate_application_fee_decimal(task_amount: Decimal) -> Decimal:
+    """
+    计算平台服务费（使用Decimal精确计算，避免浮点精度损失）
+    
+    规则：
+    - 如果任务金额 < 10镑，固定收取1镑
+    - 如果任务金额 >= 10镑，按10%费率计算
+    
+    Args:
+        task_amount: 任务金额（英镑，Decimal类型）
+    
+    Returns:
+        平台服务费（英镑，Decimal类型，保留2位小数）
+    """
+    ten = Decimal('10')
+    if task_amount < ten:
+        return Decimal('1.00')
+    else:
+        fee = task_amount * Decimal('0.10')
+        return fee.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+
 
 def calculate_application_fee(task_amount: float) -> float:
     """

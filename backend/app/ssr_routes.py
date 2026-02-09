@@ -11,6 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 import logging
 import re
 import json
+from html import escape as html_escape
 from typing import Optional
 
 from app.database import get_db
@@ -183,6 +184,13 @@ def generate_html(
     if not image_url:
         image_url = 'https://www.link2ur.com/static/favicon.png'
     
+    # 🔒 安全修复：对所有用户可控数据进行 HTML 转义，防止 XSS
+    title = html_escape(title) if title else ""
+    description = html_escape(description) if description else ""
+    page_url = html_escape(page_url) if page_url else ""
+    image_url = html_escape(image_url) if image_url else ""
+    site_name = html_escape(site_name) if site_name else ""
+    
     # 清理描述（用于meta标签）
     meta_description = description
     if meta_description and len(meta_description) > 200:
@@ -192,12 +200,12 @@ def generate_html(
     if meta_description:
         meta_description = re.sub(r'<[^>]+>', '', meta_description)
     
-    # 生成结构化数据JSON
+    # 生成结构化数据JSON（json.dumps 已自动转义特殊字符）
     structured_data_json = ""
     if structured_data:
         structured_data_json = f'<script type="application/ld+json">{json.dumps(structured_data, ensure_ascii=False)}</script>'
     
-    # 如果没有提供body内容，生成默认内容
+    # 如果没有提供body内容，生成默认内容（title/description 已转义）
     if not body_content:
         body_content = f'''
     <main>
@@ -209,6 +217,10 @@ def generate_html(
             <p><a href="{page_url}">查看完整内容</a></p>
         </article>
     </main>'''
+    else:
+        # body_content 由调用方构建，也需要确保其中的用户数据已转义
+        # 注意：body_content 本身可以包含 HTML 结构标签，但不应包含未转义的用户数据
+        pass
     
     html = f'''<!DOCTYPE html>
 <html lang="zh">
@@ -559,25 +571,34 @@ async def ssr_task_detail(
         
         page_url = f"https://www.link2ur.com/zh/tasks/{task_id}"
         
+        # 🔒 安全修复：对用户可控数据进行 HTML 转义，防止 XSS
+        safe_title = html_escape(task.title or "")
+        safe_task_type = html_escape(task.task_type or "未指定")
+        safe_location = html_escape(task.location or "未指定")
+        safe_reward_text = html_escape(reward_text)
+        safe_clean_desc = html_escape(clean_description[:2000]) if clean_description else ""
+        safe_image_url = html_escape(image_url) if image_url else ""
+        safe_page_url = html_escape(page_url)
+        
         # 构建完整的HTML内容
         body_content = f'''
     <main>
         <article>
-            <h1>{task.title}</h1>
-            {f'<img src="{image_url}" alt="{task.title}" style="max-width: 100%; margin: 20px 0;">' if image_url else ''}
+            <h1>{safe_title}</h1>
+            {f'<img src="{safe_image_url}" alt="{safe_title}" style="max-width: 100%; margin: 20px 0;">' if image_url else ''}
             <div class="content">
-                <p><strong>任务类型：</strong>{task.task_type or "未指定"}</p>
-                <p><strong>位置：</strong>{task.location or "未指定"}</p>
-                <p><strong>奖励：</strong>{reward_text}</p>
+                <p><strong>任务类型：</strong>{safe_task_type}</p>
+                <p><strong>位置：</strong>{safe_location}</p>
+                <p><strong>奖励：</strong>{safe_reward_text}</p>
                 {f'<p><strong>截止时间：</strong>{task.deadline.strftime("%Y-%m-%d %H:%M") if task.deadline else "未指定"}</p>' if task.deadline else ''}
                 <div style="margin-top: 30px;">
                     <h2>任务描述</h2>
-                    <p style="white-space: pre-wrap;">{clean_description[:2000]}{"..." if len(clean_description) > 2000 else ""}</p>
+                    <p style="white-space: pre-wrap;">{safe_clean_desc}{"..." if len(clean_description) > 2000 else ""}</p>
                 </div>
             </div>
             <div class="meta-info">
                 <p>任务ID: {task.id} | 创建时间: {task.created_at.strftime("%Y-%m-%d") if task.created_at else "未知"}</p>
-                <p><a href="{page_url}">查看完整任务详情并申请</a></p>
+                <p><a href="{safe_page_url}">查看完整任务详情并申请</a></p>
             </div>
         </article>
     </main>'''
@@ -713,20 +734,26 @@ async def ssr_leaderboard_detail(
         image_url = leaderboard.cover_image or ""
         page_url = f"https://www.link2ur.com/zh/leaderboard/custom/{leaderboard_id}"
         
+        # 🔒 安全修复：对用户可控数据进行 HTML 转义，防止 XSS
+        safe_lb_name = html_escape(leaderboard.name or "")
+        safe_clean_desc = html_escape(clean_description[:2000]) if clean_description else ""
+        safe_image_url = html_escape(image_url) if image_url else ""
+        safe_page_url = html_escape(page_url)
+        
         # 构建完整的HTML内容
         body_content = f'''
     <main>
         <article>
-            <h1>{leaderboard.name}</h1>
-            {f'<img src="{image_url}" alt="{leaderboard.name}" style="max-width: 100%; margin: 20px 0;">' if image_url else ''}
+            <h1>{safe_lb_name}</h1>
+            {f'<img src="{safe_image_url}" alt="{safe_lb_name}" style="max-width: 100%; margin: 20px 0;">' if image_url else ''}
             <div class="content">
                 <p><strong>榜单描述：</strong></p>
-                <p style="white-space: pre-wrap;">{clean_description[:2000]}{"..." if len(clean_description) > 2000 else ""}</p>
+                <p style="white-space: pre-wrap;">{safe_clean_desc}{"..." if len(clean_description) > 2000 else ""}</p>
                 <p><strong>项目数量：</strong>{leaderboard.item_count or 0}</p>
             </div>
             <div class="meta-info">
                 <p>榜单ID: {leaderboard.id} | 创建时间: {leaderboard.created_at.strftime("%Y-%m-%d") if leaderboard.created_at else "未知"}</p>
-                <p><a href="{page_url}">查看完整榜单并参与投票</a></p>
+                <p><a href="{safe_page_url}">查看完整榜单并参与投票</a></p>
             </div>
         </article>
     </main>'''
@@ -824,18 +851,24 @@ async def ssr_forum_post_detail(
         
         page_url = f"https://www.link2ur.com/zh/forum/post/{post_id}"
         
+        # 🔒 安全修复：对用户可控数据进行 HTML 转义，防止 XSS
+        safe_post_title = html_escape(post.title or "")
+        safe_clean_desc = html_escape(clean_description[:2000]) if clean_description else ""
+        safe_image_url = html_escape(image_url) if image_url else ""
+        safe_page_url = html_escape(page_url)
+        
         # 构建完整的HTML内容
         body_content = f'''
     <main>
         <article>
-            <h1>{post.title}</h1>
-            {f'<img src="{image_url}" alt="{post.title}" style="max-width: 100%; margin: 20px 0;">' if image_url else ''}
+            <h1>{safe_post_title}</h1>
+            {f'<img src="{safe_image_url}" alt="{safe_post_title}" style="max-width: 100%; margin: 20px 0;">' if image_url else ''}
             <div class="content">
-                <p style="white-space: pre-wrap;">{clean_description[:2000]}{"..." if len(clean_description) > 2000 else ""}</p>
+                <p style="white-space: pre-wrap;">{safe_clean_desc}{"..." if len(clean_description) > 2000 else ""}</p>
             </div>
             <div class="meta-info">
                 <p>帖子ID: {post.id} | 创建时间: {post.created_at.strftime("%Y-%m-%d") if post.created_at else "未知"}</p>
-                <p><a href="{page_url}">查看完整帖子并参与讨论</a></p>
+                <p><a href="{safe_page_url}">查看完整帖子并参与讨论</a></p>
             </div>
         </article>
     </main>'''
@@ -973,26 +1006,35 @@ async def ssr_activity_detail(
         
         page_url = f"https://www.link2ur.com/zh/activities/{activity_id}"
         
+        # 🔒 安全修复：对用户可控数据进行 HTML 转义，防止 XSS
+        safe_activity_title = html_escape(activity.title or "")
+        safe_task_type = html_escape(activity.task_type or "未指定")
+        safe_location = html_escape(activity.location or "未指定")
+        safe_price_text = html_escape(price_text)
+        safe_clean_desc = html_escape(clean_description[:2000]) if clean_description else ""
+        safe_image_url = html_escape(image_url) if image_url else ""
+        safe_page_url = html_escape(page_url)
+        
         # 构建完整的HTML内容
         body_content = f'''
     <main>
         <article>
-            <h1>{activity.title}</h1>
-            {f'<img src="{image_url}" alt="{activity.title}" style="max-width: 100%; margin: 20px 0;">' if image_url else ''}
+            <h1>{safe_activity_title}</h1>
+            {f'<img src="{safe_image_url}" alt="{safe_activity_title}" style="max-width: 100%; margin: 20px 0;">' if image_url else ''}
             <div class="content">
-                <p><strong>活动类型：</strong>{activity.task_type or "未指定"}</p>
-                <p><strong>位置：</strong>{activity.location or "未指定"}</p>
-                <p><strong>价格：</strong>{price_text}/人</p>
+                <p><strong>活动类型：</strong>{safe_task_type}</p>
+                <p><strong>位置：</strong>{safe_location}</p>
+                <p><strong>价格：</strong>{safe_price_text}/人</p>
                 <p><strong>最小人数：</strong>{activity.min_participants or 1}人</p>
                 <p><strong>最大人数：</strong>{activity.max_participants or "不限"}人</p>
                 <div style="margin-top: 30px;">
                     <h2>活动描述</h2>
-                    <p style="white-space: pre-wrap;">{clean_description[:2000]}{"..." if len(clean_description) > 2000 else ""}</p>
+                    <p style="white-space: pre-wrap;">{safe_clean_desc}{"..." if len(clean_description) > 2000 else ""}</p>
                 </div>
             </div>
             <div class="meta-info">
                 <p>活动ID: {activity.id} | 创建时间: {activity.created_at.strftime("%Y-%m-%d") if activity.created_at else "未知"}</p>
-                <p><a href="{page_url}">查看完整活动详情并报名</a></p>
+                <p><a href="{safe_page_url}">查看完整活动详情并报名</a></p>
             </div>
         </article>
     </main>'''

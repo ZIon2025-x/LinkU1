@@ -45,6 +45,11 @@ class IAPVerificationService:
         # 是否使用沙盒环境
         self.use_sandbox = os.getenv("IAP_USE_SANDBOX", "false").lower() == "true"
         
+        # 🔒 安全检查：非沙盒环境（生产）必须启用完整验证
+        if not self.enable_full_verification and not self.use_sandbox:
+            logger.critical("IAP signature verification MUST be enabled in production! Forcing enable_full_verification=True")
+            self.enable_full_verification = True
+        
         self.api_base_url = self.SANDBOX_API_URL if self.use_sandbox else self.PRODUCTION_API_URL
     
     def verify_transaction_jws(self, transaction_jws: str) -> Dict[str, Any]:

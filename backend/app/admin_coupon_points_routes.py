@@ -44,6 +44,15 @@ def get_client_ip(request: Request) -> Optional[str]:
 router = APIRouter(prefix="/api/admin", tags=["管理员-优惠券和积分系统"])
 
 
+def _require_super_admin(admin: models.AdminUser, action: str = "此操作"):
+    """🔒 安全检查：要求超级管理员权限"""
+    if not getattr(admin, 'is_super_admin', 0):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=f"{action}需要超级管理员权限"
+        )
+
+
 # ==================== 优惠券管理 API ====================
 
 @router.post("/coupons", response_model=schemas.CouponAdminOut)
@@ -53,7 +62,10 @@ def create_coupon(
     current_admin: models.AdminUser = Depends(get_current_admin_secure_sync),
     db: Session = Depends(get_db)
 ):
-    """创建优惠券（管理员）"""
+    """创建优惠券（管理员，需超级管理员权限）"""
+    # 🔒 安全修复：创建优惠券需要超级管理员权限
+    _require_super_admin(current_admin, "创建优惠券")
+    
     from app.rate_limiting import rate_limiter, RATE_LIMITS
     
     # 频率限制检查
@@ -481,17 +493,7 @@ def delete_coupon(
             detail=f"优惠券已有 {used_count} 条使用记录，无法删除。如需删除，请设置 force=true"
         )
     
-    if force:
-        # 强制删除：删除所有相关记录
-        db.query(models.UserCoupon).filter(models.UserCoupon.coupon_id == coupon.id).delete()
-        db.query(models.CouponRedemption).filter(models.CouponRedemption.coupon_id == coupon.id).delete()
-        db.query(models.CouponUsageLog).filter(models.CouponUsageLog.coupon_id == coupon.id).delete()
-    
-    # 软删除：设置状态为inactive
-    coupon.status = "inactive"
-    db.commit()
-    
-    # 创建审计日志
+    # 🔒 安全修复：先创建审计日志（确保审计轨迹），再执行删除操作
     try:
         from app.crud import create_audit_log
         create_audit_log(
@@ -508,6 +510,20 @@ def delete_coupon(
         )
     except Exception as e:
         logger.error(f"创建优惠券删除审计日志失败: {e}", exc_info=True)
+    
+    if force:
+        # 🔒 安全修复：强制删除需要超级管理员权限
+        _require_super_admin(current_admin, "强制删除优惠券")
+        
+        # 强制删除：审计日志已在上方创建，现在删除相关记录
+        logger.warning(f"超级管理员 {current_admin.id} 强制删除优惠券 {coupon_id}，涉及 {used_count} 条使用记录")
+        db.query(models.UserCoupon).filter(models.UserCoupon.coupon_id == coupon.id).delete()
+        db.query(models.CouponRedemption).filter(models.CouponRedemption.coupon_id == coupon.id).delete()
+        db.query(models.CouponUsageLog).filter(models.CouponUsageLog.coupon_id == coupon.id).delete()
+    
+    # 软删除：设置状态为inactive
+    coupon.status = "inactive"
+    db.commit()
     
     return {
         "success": True,
@@ -1299,7 +1315,12 @@ def adjust_user_points(
     current_admin: models.AdminUser = Depends(get_current_admin_secure_sync),
     db: Session = Depends(get_db)
 ):
-    """调整用户积分（管理员）"""
+    """调整用户积分（管理员，大额调整需超级管理员权限）"""
+    # 🔒 安全修复：大额积分调整（>10000积分 = £100）需要超级管理员权限
+    LARGE_ADJUSTMENT_THRESHOLD = 1_000_000  # 10000积分（以分为单位）
+    if abs(adjust_data.amount) > LARGE_ADJUSTMENT_THRESHOLD:
+        _require_super_admin(current_admin, f"大额积分调整（>{LARGE_ADJUSTMENT_THRESHOLD // 100}积分）")
+    
     from app.rate_limiting import rate_limiter, RATE_LIMITS
     
     # 频率限制检查
@@ -1443,7 +1464,10 @@ def batch_reward_points(
     current_admin: models.AdminUser = Depends(get_current_admin_secure_sync),
     db: Session = Depends(get_db)
 ):
-    """批量发放积分（管理员）"""
+    """批量发放积分（管理员，需超级管理员权限）"""
+    # 🔒 安全修复：批量发放积分需要超级管理员权限
+    _require_super_admin(current_admin, "批量发放积分")
+    
     import json
     from app.rate_limiting import rate_limiter, RATE_LIMITS
     
@@ -1689,7 +1713,10 @@ def batch_reward_coupons(
     current_admin: models.AdminUser = Depends(get_current_admin_secure_sync),
     db: Session = Depends(get_db)
 ):
-    """批量发放优惠券（管理员）"""
+    """批量发放优惠券（管理员，需超级管理员权限）"""
+    # 🔒 安全修复：批量发放优惠券需要超级管理员权限
+    _require_super_admin(current_admin, "批量发放优惠券")
+    
     import json
     from app.rate_limiting import rate_limiter, RATE_LIMITS
     
