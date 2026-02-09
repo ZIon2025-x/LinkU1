@@ -82,6 +82,42 @@ PUSH_NOTIFICATION_TEMPLATES = {
         }
     },
     
+    # 任务自动确认完成（超时未确认，系统自动确认）
+    "task_auto_confirmed": {
+        "en": {
+            "title": "✅ Task Auto-Confirmed",
+            "body_template": "Task「{task_title}」has been auto-confirmed (unconfirmed for 5 days)"
+        },
+        "zh": {
+            "title": "✅ 任务已自动确认",
+            "body_template": "任务「{task_title}」已自动确认完成（5天未确认，系统自动确认）"
+        }
+    },
+    
+    # 自动转账提醒（确认截止前 1-2 天提醒发布者）
+    "auto_transfer_reminder": {
+        "en": {
+            "title": "⏰ Auto-Transfer Reminder",
+            "body_template": "Task「{task_title}」will be auto-confirmed in {days_remaining} day(s). Please confirm or dispute if needed"
+        },
+        "zh": {
+            "title": "⏰ 自动转账提醒",
+            "body_template": "任务「{task_title}」将在 {days_remaining} 天后自动确认转账，如有异议请及时处理"
+        }
+    },
+    
+    # 自动确认转账完成（3天后系统自动确认并转账）
+    "auto_confirm_transfer": {
+        "en": {
+            "title": "💰 Payment Auto-Transferred",
+            "body_template": "Task「{task_title}」has been auto-confirmed. Payment of {amount} has been transferred"
+        },
+        "zh": {
+            "title": "💰 报酬已自动发放",
+            "body_template": "任务「{task_title}」已自动确认完成，报酬 {amount} 已转账"
+        }
+    },
+    
     # 任务拒绝
     "task_rejected": {
         "en": {
