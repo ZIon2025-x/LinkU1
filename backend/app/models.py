@@ -206,6 +206,7 @@ class Task(Base):
     escrow_amount = Column(DECIMAL(12, 2), default=0.00)  # 托管金额（任务金额 - 平台服务费）
     is_confirmed = Column(Integer, default=0)  # 1=confirmed, 0=not
     paid_to_user_id = Column(String(8), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)  # 删除用户时设为NULL
+    stripe_dispute_frozen = Column(Integer, default=0)  # 1=因Stripe争议冻结，禁止转账; 0=正常
     is_public = Column(Integer, default=1)  # 1=public, 0=private (仅自己可见)
     visibility = Column(String(20), default="public")  # public, private
     images = Column(Text, nullable=True)  # JSON数组存储图片URL列表
