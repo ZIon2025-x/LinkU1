@@ -43,7 +43,7 @@ from datetime import datetime, timedelta, timezone
 from app.utils.time_utils import get_utc_time, format_iso_utc
 
 import stripe
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sqlalchemy import or_, and_, select, func
 
 from app.security import verify_password
