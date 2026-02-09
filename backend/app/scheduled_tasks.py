@@ -3,6 +3,7 @@
 """
 import logging
 from datetime import datetime, timedelta, timezone as tz
+from typing import Optional
 from sqlalchemy import and_
 from sqlalchemy.orm import Session
 
@@ -104,13 +105,22 @@ def check_expired_points(db: Session):
         ).all()
         
         for transaction in expired_transactions:
-            # 扣除过期积分
-            points_account = db.query(models.PointsAccount).filter(
-                models.PointsAccount.user_id == transaction.user_id
-            ).first()
+            # P1 #5: 使用原子 SQL 操作扣除过期积分，防止并发竞态导致余额为负
+            from sqlalchemy import update as sql_update
             
-            if points_account and points_account.balance >= transaction.amount:
-                points_account.balance -= transaction.amount
+            result = db.execute(
+                sql_update(models.PointsAccount)
+                .where(
+                    models.PointsAccount.user_id == transaction.user_id,
+                    models.PointsAccount.balance >= transaction.amount  # 原子条件：余额必须足够
+                )
+                .values(balance=models.PointsAccount.balance - transaction.amount)
+                .returning(models.PointsAccount.balance)
+            )
+            updated_row = result.fetchone()
+            
+            if updated_row:
+                new_balance = updated_row[0]
                 transaction.expired = True
                 
                 # 创建过期记录
@@ -118,7 +128,7 @@ def check_expired_points(db: Session):
                     user_id=transaction.user_id,
                     type="expire",
                     amount=transaction.amount,
-                    balance_after=points_account.balance,
+                    balance_after=new_balance,
                     source="points_expire",
                     description=f"积分过期（原始交易ID: {transaction.id}）",
                     batch_id=transaction.batch_id,
@@ -126,7 +136,14 @@ def check_expired_points(db: Session):
                     related_id=transaction.id
                 )
                 db.add(expire_transaction)
-                logger.info(f"用户 {transaction.user_id} 的 {transaction.amount} 积分已过期")
+                logger.info(f"用户 {transaction.user_id} 的 {transaction.amount} 积分已过期（余额: {new_balance}）")
+            else:
+                # 余额不足（可能被并发消费了），标记过期但不扣除
+                transaction.expired = True
+                logger.warning(
+                    f"用户 {transaction.user_id} 余额不足以扣除过期积分 {transaction.amount}，"
+                    f"已标记过期但未扣除"
+                )
         
         db.commit()
         
@@ -166,8 +183,9 @@ def auto_complete_expired_time_slot_tasks(db: Session):
             selectinload(models.Task.parent_activity).selectinload(models.Activity.time_slot_relations).selectinload(models.ActivityTimeSlotRelation.time_slot)
         )
         
-        tasks = tasks_query.all()
-        logger.info(f"找到 {len(tasks)} 个状态为 in_progress、taken 或 pending_confirmation 的达人任务")
+        # P1 #4: 加 LIMIT 防止全量加载导致 OOM（selectinload 会生成大 IN 查询）
+        tasks = tasks_query.limit(500).all()
+        logger.info(f"找到 {len(tasks)} 个状态为 in_progress、taken 或 pending_confirmation 的达人任务（上限500）")
         
         for task in tasks:
             max_end_time = None
@@ -222,6 +240,9 @@ def auto_complete_expired_time_slot_tasks(db: Session):
                 )
                 task.status = "completed"
                 task.completed_at = current_time
+                # Phase 1 微调：设置 confirmation_deadline = 时间段结束时间 + 3 天
+                # 用于 Phase 2（提醒）和 Phase 3（自动转账）的时间锚点
+                task.confirmation_deadline = max_end_time + timedelta(days=3)
                 completed_count += 1
         
         if completed_count > 0:
@@ -399,6 +420,18 @@ def send_expiry_reminders(db: Session, days_before: int):
         
         for verification in expiring_verifications:
             try:
+                # P1 #10: 防重发 — 查询 Notification 表是否已发送过此提醒
+                # 使用 idempotency key 格式: expiry_reminder_{verification_id}_{days_before}d
+                idempotency_key = f"expiry_reminder_{verification.id}_{days_before}d"
+                existing_notification = db.query(models.Notification).filter(
+                    models.Notification.type == "student_expiry_reminder",
+                    models.Notification.user_id == verification.user_id,
+                    models.Notification.content.contains(idempotency_key)
+                ).first()
+                
+                if existing_notification:
+                    continue  # 已发送过此提醒，跳过
+                
                 # 计算剩余天数和续期开始时间
                 days_remaining = calculate_days_remaining(verification.expires_at, now)
                 renewable_from = calculate_renewable_from(verification.expires_at)
@@ -421,12 +454,30 @@ def send_expiry_reminders(db: Session, days_before: int):
                 
                 # 发送邮件
                 send_email(verification.email, subject, body)
+                
+                # P1 #10: 记录发送记录，用于防重发
+                try:
+                    from app import crud as _crud
+                    _crud.create_notification(
+                        db=db,
+                        user_id=verification.user_id,
+                        type="student_expiry_reminder",
+                        title=f"学生认证过期提醒（{days_before}天）",
+                        content=f"[{idempotency_key}] 已发送邮件至 {verification.email}",
+                        auto_commit=False
+                    )
+                except Exception:
+                    pass  # 记录失败不影响主流程
+                
                 sent_count += 1
                 logger.info(f"已发送过期提醒邮件给 {verification.email}（{days_remaining}天后过期）")
                 
             except Exception as e:
                 failed_count += 1
                 logger.error(f"发送过期提醒邮件失败 {verification.email}: {e}", exc_info=True)
+        
+        if sent_count > 0:
+            db.commit()
         
         logger.info(f"过期提醒邮件发送完成：成功 {sent_count}，失败 {failed_count}（{days_before}天前提醒）")
         
@@ -827,7 +878,6 @@ def auto_confirm_expired_tasks(db: Session):
     try:
         from app import crud
         from app.task_notifications import send_auto_confirmation_notification
-        from fastapi import BackgroundTasks
         from app.coupon_points_crud import add_points_transaction
         from app.crud import get_system_setting
         import uuid
@@ -835,9 +885,12 @@ def auto_confirm_expired_tasks(db: Session):
         current_time = get_utc_time()
         
         # 查询所有 pending_confirmation 且已过期的任务
+        # P0 #6: 排除达人任务（expert_service_id 不为空的由 auto_transfer_expired_tasks 处理）
+        # 避免两个函数竞争处理同一批任务导致达人收不到转账
         expired_tasks = db.query(models.Task).filter(
             and_(
                 models.Task.status == "pending_confirmation",
+                models.Task.expert_service_id.is_(None),          # 仅处理非达人任务
                 models.Task.confirmation_deadline.isnot(None),
                 models.Task.confirmation_deadline < current_time
             )
@@ -877,8 +930,8 @@ def auto_confirm_expired_tasks(db: Session):
                     skipped_count += 1
                     continue
                 
-                # 检查是否处于 Stripe 争议冻结状态
-                if hasattr(task, 'stripe_dispute_frozen') and task.stripe_dispute_frozen == 1:
+                # P2 #12: 直接检查字段值，不用 hasattr
+                if task.stripe_dispute_frozen == 1:
                     logger.info(f"任务 {task.id} 处于 Stripe 争议冻结状态，跳过自动确认")
                     skipped_count += 1
                     continue
@@ -933,9 +986,9 @@ def auto_confirm_expired_tasks(db: Session):
                 except Exception as e:
                     logger.warning(f"发送系统消息失败（任务 {task.id}）: {e}")
                 
-                # 发送通知给双方
+                # P0 #11: 不创建无效的 BackgroundTasks()（在线程中不会被触发）
+                # send_auto_confirmation_notification 内部实际是同步调用 create_notification + send_push_notification
                 try:
-                    background_tasks = BackgroundTasks()
                     poster = crud.get_user_by_id(db, task.poster_id)
                     taker = None
                     if task.taker_id:
@@ -944,7 +997,7 @@ def auto_confirm_expired_tasks(db: Session):
                     if poster or taker:
                         send_auto_confirmation_notification(
                             db=db,
-                            background_tasks=background_tasks,
+                            background_tasks=None,
                             task=task,
                             poster=poster,
                             taker=taker
@@ -1063,7 +1116,6 @@ def send_confirmation_reminders(db: Session):
     try:
         from app import crud
         from app.task_notifications import send_confirmation_reminder_notification
-        from fastapi import BackgroundTasks
         
         current_time = get_utc_time()
         
@@ -1109,10 +1161,9 @@ def send_confirmation_reminders(db: Session):
                             if not poster:
                                 continue
                             
-                            background_tasks = BackgroundTasks()
                             send_confirmation_reminder_notification(
                                 db=db,
-                                background_tasks=background_tasks,
+                                background_tasks=None,
                                 task=task,
                                 poster=poster,
                                 hours_remaining=hours
@@ -1311,7 +1362,20 @@ def send_payment_reminders(db: Session, hours_before: int):
 
 
 def run_scheduled_tasks():
-    """运行所有定时任务"""
+    """
+    [已废弃] 旧版统一入口 — 所有任务在同一个 db session 中顺序执行。
+    
+    请勿直接调用此函数。定时任务现已由 TaskScheduler 独立调度（见 task_scheduler.py）。
+    如果需要手动执行某个任务，请直接调用对应的函数（如 auto_transfer_expired_tasks(db)）。
+    
+    此函数保留仅供向后兼容和 __main__ 入口使用。
+    """
+    import warnings
+    warnings.warn(
+        "run_scheduled_tasks() 已废弃，请使用 TaskScheduler 调度定时任务。",
+        DeprecationWarning,
+        stacklevel=2
+    )
     from app.state import is_app_shutting_down
     
     # 检查应用是否正在关停
@@ -1452,6 +1516,584 @@ def run_scheduled_tasks():
         db.rollback()
     finally:
         db.close()
+
+
+def send_auto_transfer_reminders(db: Session):
+    """
+    Phase 2：发送自动转账确认提醒通知
+    
+    针对已完成、已付款但未确认的达人任务，根据 confirmation_deadline 倒计时发送提醒：
+    - 过期第 1 天（剩余 2 天）：发送第一次提醒
+    - 过期第 2 天（剩余 1 天）：发送第二次提醒
+    
+    使用 confirmation_reminder_sent 位掩码跟踪发送状态（复用已有字段）：
+    - bit 0 (值 1)：第 1 天提醒已发送
+    - bit 1 (值 2)：第 2 天提醒已发送
+    
+    Args:
+        db: 数据库会话
+    
+    Returns:
+        dict: 处理结果统计
+    """
+    try:
+        from app import crud
+        
+        current_time = get_utc_time()
+        
+        # 查询条件：已完成、已付款、达人任务、未确认、有 confirmation_deadline
+        pending_tasks = db.query(models.Task).filter(
+            and_(
+                models.Task.status == "completed",
+                models.Task.expert_service_id.isnot(None),
+                models.Task.is_paid == 1,
+                models.Task.confirmed_at.is_(None),
+                models.Task.is_confirmed == 0,
+                models.Task.confirmation_deadline.isnot(None),
+                models.Task.confirmation_deadline > current_time  # 还未到自动转账时间
+            )
+        ).all()
+        
+        if not pending_tasks:
+            return {"count": 0, "sent": 0}
+        
+        sent_count = 0
+        
+        # 提醒配置：(距离 deadline 的天数, 位掩码位置, 提醒描述)
+        reminder_configs = [
+            (2, 0, "第1天"),   # deadline 前 2 天 = 过期后 1 天
+            (1, 1, "第2天"),   # deadline 前 1 天 = 过期后 2 天
+        ]
+        
+        for task in pending_tasks:
+            try:
+                remaining_time = task.confirmation_deadline - current_time
+                remaining_days = remaining_time.total_seconds() / 86400
+                
+                for days_before, bit_pos, desc in reminder_configs:
+                    # 在时间窗口内（±3小时，因为任务每小时检查一次）
+                    if days_before - 0.125 <= remaining_days <= days_before + 0.125:
+                        bit_mask = 1 << bit_pos
+                        current_reminder = task.confirmation_reminder_sent or 0
+                        
+                        if current_reminder & bit_mask:
+                            continue  # 已发送过
+                        
+                        # 发送提醒给发布者
+                        poster = crud.get_user_by_id(db, task.poster_id)
+                        if not poster:
+                            continue
+                        
+                        try:
+                            deadline_days = int(remaining_days)
+                            content_zh = (
+                                f"您的达人任务「{task.title}」已完成，还有 {deadline_days} 天将自动确认并转账给达人。"
+                                f"如有问题请尽快处理。"
+                            )
+                            content_en = (
+                                f"Your expert task '{task.title}' is completed. Auto-confirmation and payment transfer "
+                                f"to the expert will occur in {deadline_days} day(s). Please take action if needed."
+                            )
+                            
+                            crud.create_notification(
+                                db=db,
+                                user_id=poster.id,
+                                type="auto_transfer_reminder",
+                                title="任务即将自动确认转账",
+                                content=content_zh,
+                                title_en="Task Auto-Transfer Reminder",
+                                content_en=content_en,
+                                related_id=str(task.id),
+                                related_type="task_id"
+                            )
+                            
+                            # 发送推送通知
+                            try:
+                                from app.push_notification_service import send_push_notification
+                                send_push_notification(
+                                    db=db,
+                                    user_id=poster.id,
+                                    title=None,
+                                    body=None,
+                                    notification_type="auto_transfer_reminder",
+                                    data={
+                                        "task_id": task.id,
+                                        "days_remaining": deadline_days
+                                    },
+                                    template_vars={
+                                        "task_title": task.title,
+                                        "task_id": task.id,
+                                        "days_remaining": deadline_days
+                                    }
+                                )
+                            except Exception as e:
+                                logger.warning(f"发送自动转账推送通知失败（发布者 {poster.id}）: {e}")
+                            
+                            # 更新位掩码
+                            task.confirmation_reminder_sent = current_reminder | bit_mask
+                            sent_count += 1
+                            logger.info(f"✅ 已发送任务 {task.id} 的自动转账提醒（{desc}，剩余 {deadline_days} 天）")
+                            
+                        except Exception as e:
+                            logger.error(f"发送自动转账提醒失败（任务 {task.id}）: {e}")
+                
+            except Exception as e:
+                logger.error(f"处理任务 {task.id} 的自动转账提醒时出错: {e}", exc_info=True)
+                continue
+        
+        if sent_count > 0:
+            db.commit()
+        
+        result = {"count": len(pending_tasks), "sent": sent_count}
+        if sent_count > 0:
+            logger.info(f"自动转账提醒通知：检查 {len(pending_tasks)} 个任务，发送 {sent_count} 个提醒")
+        return result
+        
+    except Exception as e:
+        db.rollback()
+        logger.error(f"发送自动转账提醒失败: {e}", exc_info=True)
+        return {"count": 0, "sent": 0, "error": str(e)}
+
+
+def auto_transfer_expired_tasks(db: Session):
+    """
+    Phase 3：自动转账核心逻辑
+    
+    针对已完成、已付款、已过 confirmation_deadline（时间段过期 3 天后）的达人任务：
+    1. 校验安全条件（退款/争议/冻结）
+    2. 检查已有转账记录，防止重复
+    3. 使用行级锁防并发
+    4. 创建转账记录并尝试执行 Stripe Transfer
+    5. 更新任务确认状态
+    6. 发送通知给双方
+    
+    安全机制：
+    - 单次执行上限 20 笔（防止异常数据大规模误转）
+    - SELECT ... FOR UPDATE SKIP LOCKED 防止并发竞争
+    - 唯一约束 ix_payment_transfer_auto_confirm_unique 防止重复记录
+    - 多层金额校验（已转账总额、escrow_amount、Stripe 争议冻结）
+    
+    Args:
+        db: 数据库会话
+    
+    Returns:
+        dict: 处理结果统计
+    """
+    MAX_AUTO_TRANSFERS_PER_CYCLE = 20
+    
+    stats = {
+        "checked": 0,
+        "transferred": 0,
+        "skipped": 0,
+        "failed": 0,
+        "already_confirmed": 0,
+    }
+    
+    try:
+        from app import crud
+        from app.payment_transfer_service import create_transfer_record, execute_transfer
+        from decimal import Decimal
+        from sqlalchemy import func
+        from sqlalchemy.exc import IntegrityError
+        
+        current_time = get_utc_time()
+        
+        # 步骤 1：查询待自动转账的任务
+        candidate_tasks = db.query(models.Task).filter(
+            and_(
+                models.Task.status == "completed",
+                models.Task.expert_service_id.isnot(None),       # 达人任务
+                models.Task.is_paid == 1,                        # 已付款
+                models.Task.confirmed_at.is_(None),              # 未确认
+                models.Task.is_confirmed == 0,
+                models.Task.escrow_amount > 0,                   # 有托管金额
+                models.Task.confirmation_deadline.isnot(None),
+                models.Task.confirmation_deadline <= current_time # 已过 deadline（过期 3 天）
+            )
+        ).all()
+        
+        stats["checked"] = len(candidate_tasks)
+        
+        if not candidate_tasks:
+            return stats
+        
+        logger.info(f"🔍 自动转账检查：找到 {len(candidate_tasks)} 个候选任务")
+        
+        auto_transfer_count = 0
+        
+        for task in candidate_tasks:
+            if auto_transfer_count >= MAX_AUTO_TRANSFERS_PER_CYCLE:
+                logger.critical(
+                    f"🚨 自动转账达到单次上限 {MAX_AUTO_TRANSFERS_PER_CYCLE}，"
+                    f"剩余 {len(candidate_tasks) - auto_transfer_count} 个待处理，需人工确认"
+                )
+                break
+            
+            # P0 #1/#2: 使用 SAVEPOINT 隔离每个任务的事务
+            # 防止一个任务的 IntegrityError/Exception rollback 影响前面已成功的任务
+            savepoint = db.begin_nested()
+            try:
+                # ======== 安全校验 ========
+                
+                # P2 #12: 直接检查字段值，不用 hasattr（字段在 Model 上已定义）
+                if task.stripe_dispute_frozen == 1:
+                    logger.info(f"任务 {task.id} Stripe 争议冻结中，跳过自动转账")
+                    savepoint.rollback()
+                    stats["skipped"] += 1
+                    continue
+                
+                # 检查活跃退款申请
+                active_refund = db.query(models.RefundRequest).filter(
+                    and_(
+                        models.RefundRequest.task_id == task.id,
+                        models.RefundRequest.status.in_(["pending", "processing", "approved"])
+                    )
+                ).first()
+                
+                if active_refund:
+                    logger.info(f"任务 {task.id} 有活跃退款申请 {active_refund.id}，跳过自动转账")
+                    savepoint.rollback()
+                    stats["skipped"] += 1
+                    continue
+                
+                # 检查未解决争议
+                active_dispute = db.query(models.TaskDispute).filter(
+                    and_(
+                        models.TaskDispute.task_id == task.id,
+                        models.TaskDispute.status == "pending"
+                    )
+                ).first()
+                
+                if active_dispute:
+                    logger.info(f"任务 {task.id} 有未解决争议 {active_dispute.id}，跳过自动转账")
+                    savepoint.rollback()
+                    stats["skipped"] += 1
+                    continue
+                
+                # ======== 金额校验 ========
+                
+                escrow = Decimal(str(task.escrow_amount))
+                
+                # 查询已成功转账的总额
+                total_transferred = db.query(
+                    func.coalesce(func.sum(models.PaymentTransfer.amount), Decimal('0'))
+                ).filter(
+                    and_(
+                        models.PaymentTransfer.task_id == task.id,
+                        models.PaymentTransfer.status == "succeeded"
+                    )
+                ).scalar()
+                total_transferred = Decimal(str(total_transferred))
+                
+                # 计算应转金额
+                auto_transfer_amount = escrow - total_transferred
+                
+                if auto_transfer_amount <= Decimal('0'):
+                    # 已全额转账，只需更新确认状态
+                    logger.info(f"任务 {task.id} 已全额转账（£{total_transferred}），只更新确认状态")
+                    task.confirmed_at = current_time
+                    task.auto_confirmed = 1
+                    task.is_confirmed = 1
+                    task.paid_to_user_id = task.taker_id
+                    # 记录历史
+                    crud.add_task_history(db, task.id, None, "auto_confirmed_3days_already_transferred")
+                    savepoint.commit()
+                    stats["already_confirmed"] += 1
+                    continue
+                
+                if auto_transfer_amount != escrow:
+                    logger.warning(
+                        f"⚠️ 任务 {task.id} 自动转账金额 £{auto_transfer_amount} 与 escrow £{escrow} 不一致，"
+                        f"已有转账 £{total_transferred}"
+                    )
+                
+                # ======== 防重复转账 ========
+                
+                # 保护层 1：检查是否已有 pending/retrying 状态的转账记录
+                existing_pending = db.query(models.PaymentTransfer).filter(
+                    and_(
+                        models.PaymentTransfer.task_id == task.id,
+                        models.PaymentTransfer.status.in_(["pending", "retrying"])
+                    )
+                ).first()
+                
+                if existing_pending:
+                    logger.info(f"任务 {task.id} 已有待处理转账记录 {existing_pending.id}，跳过")
+                    savepoint.rollback()
+                    stats["skipped"] += 1
+                    continue
+                
+                # 保护层 2：SELECT ... FOR UPDATE SKIP LOCKED 锁定任务行
+                locked_task = db.query(models.Task).filter(
+                    models.Task.id == task.id
+                ).with_for_update(skip_locked=True).first()
+                
+                if not locked_task or locked_task.confirmed_at is not None:
+                    logger.info(f"任务 {task.id} 已被其他实例处理或已确认，跳过")
+                    savepoint.rollback()
+                    stats["skipped"] += 1
+                    continue
+                
+                # ======== 创建转账记录 ========
+                
+                # 确定 slot_end_time（用于审计 metadata）
+                slot_end_time = None
+                if task.confirmation_deadline:
+                    slot_end_time = task.confirmation_deadline - timedelta(days=3)
+                
+                try:
+                    transfer_record = create_transfer_record(
+                        db,
+                        task_id=task.id,
+                        taker_id=task.taker_id,
+                        poster_id=task.poster_id,
+                        amount=auto_transfer_amount,
+                        currency="GBP",
+                        metadata={
+                            "transfer_source": "auto_confirm_3days",
+                            "slot_end_time": str(slot_end_time) if slot_end_time else None,
+                            "original_escrow": str(escrow),
+                            "total_previously_transferred": str(total_transferred),
+                            "confirmation_deadline": str(task.confirmation_deadline),
+                        }
+                    )
+                except IntegrityError:
+                    # 唯一约束冲突 — 说明已有自动转账记录（并发保护层 3）
+                    # SAVEPOINT rollback 只回滚当前任务，不影响前面的
+                    savepoint.rollback()
+                    logger.info(f"任务 {task.id} 自动转账唯一约束冲突，跳过（已有记录）")
+                    stats["skipped"] += 1
+                    continue
+                
+                # ======== 执行 Stripe 转账 ========
+                
+                taker = crud.get_user_by_id(db, task.taker_id)
+                
+                if taker and taker.stripe_account_id:
+                    success, transfer_id, error = execute_transfer(
+                        db, transfer_record, taker.stripe_account_id
+                    )
+                    
+                    if success:
+                        # 更新任务确认状态
+                        locked_task.confirmed_at = current_time
+                        locked_task.auto_confirmed = 1
+                        locked_task.is_confirmed = 1
+                        locked_task.paid_to_user_id = task.taker_id
+                        
+                        # 记录历史
+                        crud.add_task_history(db, task.id, None, "auto_confirmed_3days")
+                        
+                        auto_transfer_count += 1
+                        stats["transferred"] += 1
+                        logger.info(
+                            f"✅ 任务 {task.id} 自动转账成功：£{auto_transfer_amount} → 达人 {task.taker_id}，"
+                            f"transfer_id={transfer_id}"
+                        )
+                    else:
+                        stats["failed"] += 1
+                        logger.error(
+                            f"❌ 任务 {task.id} 自动转账执行失败: {error}，"
+                            f"转账记录 {transfer_record.id} 保留待重试"
+                        )
+                else:
+                    # P0 #3: 达人无 Stripe 账户 — 不设 is_confirmed=1
+                    # 转账记录保留为 pending，由 process_pending_payment_transfers 在转账成功后设置 is_confirmed
+                    # 只标记 auto_confirmed=1 表示系统已决定自动确认
+                    auto_transfer_count += 1
+                    stats["transferred"] += 1
+                    
+                    locked_task.auto_confirmed = 1
+                    # 不设 is_confirmed=1 和 paid_to_user_id，等转账真正成功后再设
+                    crud.add_task_history(db, task.id, None, "auto_confirmed_3days_pending_transfer")
+                    
+                    logger.info(
+                        f"⏳ 任务 {task.id} 自动确认意图已记录：达人 {task.taker_id} 无 Stripe 账户，"
+                        f"转账记录 {transfer_record.id} 待后续处理（is_confirmed 待转账成功后更新）"
+                    )
+                
+                # 提交当前任务的 SAVEPOINT
+                savepoint.commit()
+                
+                # ======== 发送通知（在 SAVEPOINT 外，不影响事务安全）========
+                
+                try:
+                    _send_auto_transfer_notifications(
+                        db, task, auto_transfer_amount, taker
+                    )
+                except Exception as e:
+                    logger.warning(f"发送自动转账通知失败（任务 {task.id}）: {e}")
+                
+                # ======== 清除缓存 ========
+                
+                try:
+                    from app.services.task_service import TaskService
+                    TaskService.invalidate_cache(task.id)
+                    from app.redis_cache import invalidate_tasks_cache
+                    invalidate_tasks_cache()
+                except Exception:
+                    pass
+                
+            except Exception as e:
+                logger.error(f"处理任务 {task.id} 的自动转账时出错: {e}", exc_info=True)
+                # SAVEPOINT rollback 只回滚当前任务，不影响前面已成功的
+                savepoint.rollback()
+                stats["failed"] += 1
+                continue
+        
+        # 统一提交所有已成功的 SAVEPOINT
+        try:
+            db.commit()
+        except Exception as e:
+            logger.error(f"自动转账最终提交失败: {e}", exc_info=True)
+            db.rollback()
+        
+        logger.info(
+            f"✅ 自动转账完成：检查 {stats['checked']} 个任务，"
+            f"成功 {stats['transferred']}，跳过 {stats['skipped']}，"
+            f"失败 {stats['failed']}，已确认 {stats['already_confirmed']}"
+        )
+        return stats
+        
+    except Exception as e:
+        db.rollback()
+        logger.error(f"自动转账任务失败: {e}", exc_info=True)
+        return stats
+
+
+def _send_auto_transfer_notifications(
+    db: Session,
+    task: models.Task,
+    transfer_amount,
+    taker: Optional[models.User]
+):
+    """
+    发送自动转账相关通知给发布者和达人
+    
+    Args:
+        db: 数据库会话
+        task: 任务对象
+        transfer_amount: 转账金额 (Decimal)
+        taker: 达人用户对象（可为 None）
+    """
+    from app import crud
+    from decimal import Decimal
+    
+    amount_str = f"£{Decimal(str(transfer_amount)):.2f}"
+    
+    # 给发布者发通知
+    try:
+        content_zh = (
+            f"您的达人任务「{task.title}」已超过 3 天未确认，"
+            f"系统已自动确认并将报酬 {amount_str} 转给达人。"
+        )
+        content_en = (
+            f"Your expert task '{task.title}' was not confirmed within 3 days. "
+            f"The system has auto-confirmed and transferred {amount_str} to the expert."
+        )
+        
+        crud.create_notification(
+            db=db,
+            user_id=task.poster_id,
+            type="auto_confirm_transfer",
+            title="任务已自动确认转账",
+            content=content_zh,
+            title_en="Task Auto-Confirmed & Transferred",
+            content_en=content_en,
+            related_id=str(task.id),
+            related_type="task_id"
+        )
+        
+        # 推送通知
+        try:
+            from app.push_notification_service import send_push_notification
+            send_push_notification(
+                db=db,
+                user_id=task.poster_id,
+                title=None,
+                body=None,
+                notification_type="auto_confirm_transfer",
+                data={"task_id": task.id, "auto_confirmed": True, "amount": str(transfer_amount)},
+                template_vars={
+                    "task_title": task.title,
+                    "task_id": task.id,
+                    "amount": amount_str
+                }
+            )
+        except Exception as e:
+            logger.warning(f"发送自动转账推送通知失败（发布者 {task.poster_id}）: {e}")
+    except Exception as e:
+        logger.warning(f"发送自动转账通知给发布者失败（任务 {task.id}）: {e}")
+    
+    # 给达人发通知
+    if task.taker_id:
+        try:
+            content_zh = (
+                f"任务「{task.title}」已自动确认完成，"
+                f"报酬 {amount_str} 已转入您的账户。"
+            )
+            content_en = (
+                f"Task '{task.title}' has been auto-confirmed as completed. "
+                f"Payment of {amount_str} has been transferred to your account."
+            )
+            
+            crud.create_notification(
+                db=db,
+                user_id=task.taker_id,
+                type="auto_confirm_transfer",
+                title="任务报酬已自动发放",
+                content=content_zh,
+                title_en="Task Payment Auto-Transferred",
+                content_en=content_en,
+                related_id=str(task.id),
+                related_type="task_id"
+            )
+            
+            # 推送通知
+            try:
+                from app.push_notification_service import send_push_notification
+                send_push_notification(
+                    db=db,
+                    user_id=task.taker_id,
+                    title=None,
+                    body=None,
+                    notification_type="auto_confirm_transfer",
+                    data={"task_id": task.id, "auto_confirmed": True, "amount": str(transfer_amount)},
+                    template_vars={
+                        "task_title": task.title,
+                        "task_id": task.id,
+                        "amount": amount_str
+                    }
+                )
+            except Exception as e:
+                logger.warning(f"发送自动转账推送通知失败（达人 {task.taker_id}）: {e}")
+        except Exception as e:
+            logger.warning(f"发送自动转账通知给达人失败（任务 {task.id}）: {e}")
+    
+    # 发送系统消息到任务聊天框
+    try:
+        import json
+        
+        content_zh = f"系统已自动确认任务完成，报酬 {amount_str} 已转给达人（3天未确认，自动转账）。"
+        content_en = f"System auto-confirmed task completion. Payment of {amount_str} transferred to expert (3 days without confirmation)."
+        
+        system_message = models.Message(
+            sender_id=None,
+            receiver_id=None,
+            content=content_zh,
+            task_id=task.id,
+            message_type="system",
+            conversation_type="task",
+            meta=json.dumps({
+                "system_action": "auto_confirmed_3days_transfer",
+                "content_en": content_en,
+                "transfer_amount": str(transfer_amount)
+            }),
+            created_at=get_utc_time()
+        )
+        db.add(system_message)
+    except Exception as e:
+        logger.warning(f"发送自动转账系统消息失败（任务 {task.id}）: {e}")
 
 
 if __name__ == "__main__":

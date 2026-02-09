@@ -203,7 +203,7 @@ class Task(Base):
     is_paid = Column(Integer, default=0)  # 1=paid, 0=not paid
     payment_intent_id = Column(String(255), nullable=True)  # Stripe Payment Intent ID，用于关联支付记录
     payment_expires_at = Column(DateTime(timezone=True), nullable=True)  # 支付过期时间（待支付状态的任务）
-    escrow_amount = Column(Float, default=0.0)
+    escrow_amount = Column(DECIMAL(12, 2), default=0.00)  # 托管金额（任务金额 - 平台服务费）
     is_confirmed = Column(Integer, default=0)  # 1=confirmed, 0=not
     paid_to_user_id = Column(String(8), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)  # 删除用户时设为NULL
     is_public = Column(Integer, default=1)  # 1=public, 0=private (仅自己可见)
