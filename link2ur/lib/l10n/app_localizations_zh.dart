@@ -5951,7 +5951,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get authCodePlaceholder => '请输入验证码';
 
   @override
-  String get authPhonePlaceholder => '请输入手机号';
+  String get authPhonePlaceholder => '07XXX XXXXXX';
 
   @override
   String get authConfirmPassword => '确认密码';
@@ -13035,7 +13035,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get authCodePlaceholder => '請輸入驗證碼';
 
   @override
-  String get authPhonePlaceholder => '請輸入手機號碼';
+  String get authPhonePlaceholder => '07XXX XXXXXX';
 
   @override
   String get authConfirmPassword => '確認密碼';

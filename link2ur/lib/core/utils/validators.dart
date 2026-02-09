@@ -13,6 +13,10 @@ class Validators {
   /// 手机号正则（国际）
   static final RegExp _phoneRegexIntl = RegExp(r'^\+?[1-9]\d{6,14}$');
 
+  /// 手机号正则（英国 UK）— 用户只输入本地号码（不含 +44）
+  /// 英国手机号以 07 开头，共 11 位；或去掉前导 0 以 7 开头，共 10 位
+  static final RegExp _phoneRegexUK = RegExp(r'^0?7\d{9}$');
+
   /// 密码正则（至少8位，包含字母和数字）
   static final RegExp _passwordRegex = RegExp(r'^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d@$!%*#?&]{8,}$');
 
@@ -41,6 +45,17 @@ class Validators {
     final regex = international ? _phoneRegexIntl : _phoneRegexCN;
     if (!regex.hasMatch(value)) {
       return '请输入有效的手机号';
+    }
+    return null;
+  }
+
+  /// 验证英国手机号（用户只输入本地号码，不含 +44）
+  static String? validateUKPhone(String? value) {
+    if (value == null || value.isEmpty) {
+      return 'Please enter your phone number';
+    }
+    if (!_phoneRegexUK.hasMatch(value)) {
+      return 'Please enter a valid UK mobile number';
     }
     return null;
   }
@@ -188,6 +203,9 @@ class Validators {
     final regex = international ? _phoneRegexIntl : _phoneRegexCN;
     return regex.hasMatch(phone);
   }
+
+  /// 是否有效英国手机号
+  static bool isValidUKPhone(String phone) => _phoneRegexUK.hasMatch(phone);
 
   /// 是否有效密码
   static bool isValidPassword(String password) => _passwordRegex.hasMatch(password);

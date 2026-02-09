@@ -2998,7 +2998,7 @@
   "authPasswordLabel": "密码",
   "authPasswordPlaceholder": "请输入密码",
   "authCodePlaceholder": "请输入验证码",
-  "authPhonePlaceholder": "请输入手机号",
+  "authPhonePlaceholder": "07XXX XXXXXX",
   "authConfirmPassword": "确认密码",
   "authConfirmPasswordPlaceholder": "请再次输入密码",
   "authPasswordRequirement": "至少8位，包含字母和数字",

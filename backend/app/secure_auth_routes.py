@@ -41,6 +41,22 @@ from fastapi import BackgroundTasks
 
 logger = logging.getLogger(__name__)
 
+
+def normalize_phone_number(phone: str) -> str:
+    """标准化手机号码，确保同一个号码只有一种格式。
+    
+    主要处理英国号码的前导0问题：
+    - +4407123456789 → +447123456789（去掉区号后的前导0）
+    - +447123456789 → +447123456789（已是标准格式，不变）
+    
+    同时也通用处理其他国家号码中区号后紧跟的0。
+    """
+    import re
+    # 去掉英国区号 +44 后面的前导0（+440 → +44）
+    phone = re.sub(r'^\+44\s*0', '+44', phone)
+    return phone
+
+
 # 创建安全认证路由器
 secure_auth_router = APIRouter(prefix="/api/secure-auth", tags=["安全认证"])
 
@@ -1195,7 +1211,7 @@ def send_phone_verification_code(
         import re
         from app.validators import StringValidator
         
-        phone = request_data.phone.strip()
+        phone = normalize_phone_number(request_data.phone.strip())
         
         # 针对特定手机号的速率限制（更严格）
         phone_rate_key = f"rate_limit:send_code_per_phone:phone:{phone}"
@@ -1385,7 +1401,7 @@ def login_with_phone_verification_code(
         import re
         from app.validators import StringValidator
         
-        phone = login_data.phone.strip()
+        phone = normalize_phone_number(login_data.phone.strip())
         verification_code = login_data.verification_code.strip()
         
         # 验证手机号格式（前端已发送完整号码，如 +447700123456）

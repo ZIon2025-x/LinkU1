@@ -106,8 +106,12 @@ class _LoginViewState extends State<LoginView>
         ));
         break;
       case LoginMethod.phoneCode:
+        final rawPhone = _emailController.text.trim();
+        // 去掉前导0后拼接 +44（英国号码国际格式不含前导0）
+        final localNumber = rawPhone.startsWith('0') ? rawPhone.substring(1) : rawPhone;
+        final fullPhone = '+44$localNumber';
         bloc.add(AuthLoginWithPhoneRequested(
-          phone: _emailController.text.trim(),
+          phone: fullPhone,
           code: _codeController.text.trim(),
         ));
         break;
@@ -129,7 +133,10 @@ class _LoginViewState extends State<LoginView>
     if (_loginMethod == LoginMethod.emailCode) {
       context.read<AuthBloc>().add(AuthSendEmailCodeRequested(email: input));
     } else {
-      context.read<AuthBloc>().add(AuthSendPhoneCodeRequested(phone: input));
+      // 去掉前导0后拼接 +44（英国号码国际格式不含前导0）
+      final localNumber = input.startsWith('0') ? input.substring(1) : input;
+      final fullPhone = '+44$localNumber';
+      context.read<AuthBloc>().add(AuthSendPhoneCodeRequested(phone: fullPhone));
     }
   }
 
@@ -722,14 +729,127 @@ class _LoginViewState extends State<LoginView>
   Widget _buildPhoneCodeFields(bool isDark, AuthState state) {
     return Column(
       children: [
-        _StyledTextField(
-          controller: _emailController,
-          label: context.l10n.authPhone,
-          placeholder: context.l10n.authPhonePlaceholder,
-          icon: Icons.phone_outlined,
-          keyboardType: TextInputType.phone,
-          isDark: isDark,
-          validator: Validators.validatePhone,
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              context.l10n.authPhone,
+              style: AppTypography.subheadline.copyWith(
+                color: isDark
+                    ? AppColors.textSecondaryDark
+                    : AppColors.textSecondaryLight,
+              ),
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // 固定区号 +44
+                Container(
+                  height: 52,
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  decoration: BoxDecoration(
+                    color: isDark
+                        ? Colors.white.withValues(alpha: 0.06)
+                        : AppColors.backgroundLight,
+                    borderRadius: AppRadius.allMedium,
+                    border: Border.all(
+                      color: isDark
+                          ? Colors.white.withValues(alpha: 0.08)
+                          : AppColors.dividerLight,
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Text('🇬🇧', style: TextStyle(fontSize: 18)),
+                      const SizedBox(width: 6),
+                      Text(
+                        '+44',
+                        style: AppTypography.body.copyWith(
+                          color: isDark
+                              ? AppColors.textPrimaryDark
+                              : AppColors.textPrimaryLight,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.sm),
+                // 手机号输入框
+                Expanded(
+                  child: TextFormField(
+                    controller: _emailController,
+                    keyboardType: TextInputType.phone,
+                    style: AppTypography.body.copyWith(
+                      color: isDark
+                          ? AppColors.textPrimaryDark
+                          : AppColors.textPrimaryLight,
+                    ),
+                    decoration: InputDecoration(
+                      hintText: context.l10n.authPhonePlaceholder,
+                      hintStyle: AppTypography.body.copyWith(
+                        color: isDark
+                            ? AppColors.textPlaceholderDark
+                            : AppColors.textPlaceholderLight,
+                      ),
+                      prefixIcon: Icon(
+                        Icons.phone_outlined,
+                        size: 20,
+                        color: isDark
+                            ? AppColors.textSecondaryDark
+                            : AppColors.textSecondaryLight,
+                      ),
+                      filled: true,
+                      fillColor: isDark
+                          ? Colors.white.withValues(alpha: 0.06)
+                          : AppColors.backgroundLight,
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 14,
+                      ),
+                      border: OutlineInputBorder(
+                        borderRadius: AppRadius.allMedium,
+                        borderSide: BorderSide(
+                          color: isDark
+                              ? Colors.white.withValues(alpha: 0.08)
+                              : AppColors.dividerLight,
+                        ),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: AppRadius.allMedium,
+                        borderSide: BorderSide(
+                          color: isDark
+                              ? Colors.white.withValues(alpha: 0.08)
+                              : AppColors.dividerLight,
+                        ),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: AppRadius.allMedium,
+                        borderSide: const BorderSide(
+                          color: AppColors.primary,
+                          width: 1.5,
+                        ),
+                      ),
+                      errorBorder: OutlineInputBorder(
+                        borderRadius: AppRadius.allMedium,
+                        borderSide: const BorderSide(color: AppColors.error),
+                      ),
+                      focusedErrorBorder: OutlineInputBorder(
+                        borderRadius: AppRadius.allMedium,
+                        borderSide: const BorderSide(
+                          color: AppColors.error,
+                          width: 1.5,
+                        ),
+                      ),
+                    ),
+                    validator: Validators.validateUKPhone,
+                  ),
+                ),
+              ],
+            ),
+          ],
         ),
         const SizedBox(height: AppSpacing.md),
         Row(

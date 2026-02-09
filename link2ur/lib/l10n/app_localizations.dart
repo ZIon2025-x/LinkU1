@@ -11357,7 +11357,7 @@ abstract class AppLocalizations {
   /// No description provided for @authPhonePlaceholder.
   ///
   /// In en, this message translates to:
-  /// **'Enter phone number'**
+  /// **'07XXX XXXXXX'**
   String get authPhonePlaceholder;
 
   /// No description provided for @authConfirmPassword.
