@@ -314,7 +314,8 @@ async def get_flea_market_items(
         query = select(models.FleaMarketItem)
         
         # 状态筛选（公共接口只允许 active）
-        query = query.where(models.FleaMarketItem.status == status_filter)
+        if seller_id:
+            query = query.where(models.FleaMarketItem.status == status_filter)
         else:
             # ⚠️ 优化：只显示 active 状态且未被预留的商品（sold_task_id 为空）
             # 如果 sold_task_id 不为空，说明商品已被购买但等待支付，不应该在列表中显示
