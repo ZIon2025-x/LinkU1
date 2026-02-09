@@ -3631,6 +3631,7 @@ def confirm_task_completion(
     task.status = "completed"
     task.confirmed_at = get_utc_time()  # 记录确认时间
     task.auto_confirmed = 0  # 手动确认
+    task.is_confirmed = 1  # 标记为已确认（付费任务在转账成功后由转账逻辑再次确认，此处先统一设置）
     db.commit()
     crud.add_task_history(db, task_id, current_user.id, "confirmed_completion")
     db.refresh(task)

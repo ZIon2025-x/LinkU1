@@ -1012,7 +1012,9 @@ def auto_confirm_expired_tasks(db: Session):
                     savepoint = db.begin_nested()
                     try:
                         task.status = "completed"
-                        task.completed_at = current_time
+                        # 保留原始 completed_at（接单方标记完成时设置），只有为空时才设置
+                        if not task.completed_at:
+                            task.completed_at = current_time
                         task.confirmed_at = current_time
                         task.auto_confirmed = 1
                         task.is_confirmed = 1
@@ -1131,7 +1133,9 @@ def auto_confirm_expired_tasks(db: Session):
                     savepoint = db.begin_nested()
                     try:
                         task.status = "completed"
-                        task.completed_at = current_time
+                        # 保留原始 completed_at（接单方标记完成时设置），只有为空时才设置
+                        if not task.completed_at:
+                            task.completed_at = current_time
                         # 不设 is_confirmed、confirmed_at、auto_confirmed — 由 auto_transfer 在转账成功后设置
                         
                         _add_task_history_flush(db, task_id, None, "auto_promoted")
@@ -1916,6 +1920,28 @@ def auto_transfer_expired_tasks(db: Session):
                 
                 if existing_pending:
                     logger.info(f"任务 {task.id} 已有待处理转账记录 {existing_pending.id}，跳过")
+                    savepoint.rollback()
+                    stats["skipped"] += 1
+                    continue
+                
+                # 保护层 1.5：检查是否已有 failed 状态的自动转账记录（防无限循环）
+                # 当接单方无 Stripe 账户时，转账会被 process_pending_transfers 标记为 failed。
+                # 如果不检查 failed 记录，auto_transfer 会每轮新建一条 pending 记录，造成无限循环。
+                # 仅检查 transfer_source = 'auto_confirm_expired' 的记录，不影响手动转账的重试。
+                existing_failed_auto = db.query(models.PaymentTransfer).filter(
+                    and_(
+                        models.PaymentTransfer.task_id == task.id,
+                        models.PaymentTransfer.status == "failed",
+                        models.PaymentTransfer.extra_metadata['transfer_source'].astext == 'auto_confirm_expired'
+                    )
+                ).first()
+                
+                if existing_failed_auto:
+                    logger.info(
+                        f"任务 {task.id} 已有失败的自动转账记录 {existing_failed_auto.id}"
+                        f"（错误: {existing_failed_auto.last_error}），跳过重复创建。"
+                        f"接单方需设置 Stripe 账户后由 process_pending_transfers 重试"
+                    )
                     savepoint.rollback()
                     stats["skipped"] += 1
                     continue
