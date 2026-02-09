@@ -504,14 +504,17 @@ def init_scheduler():
     def precompute_recommendations():
         try:
             from app.task_recommendation import TaskRecommendationEngine
-            from app.models import User
+            from app.models import UserTaskInteraction
+            from sqlalchemy import distinct
             
             db = SessionLocal()
             try:
-                # 获取最近活跃的用户（最多100个）
+                # 通过最近有交互行为的用户来判断活跃用户（最多100个）
                 recent_time = get_utc_time() - timedelta(days=7)
-                active_users = db.query(User.id).filter(
-                    User.last_active >= recent_time
+                active_users = db.query(
+                    distinct(UserTaskInteraction.user_id)
+                ).filter(
+                    UserTaskInteraction.interaction_time >= recent_time
                 ).limit(100).all()
                 
                 engine = TaskRecommendationEngine(db)
