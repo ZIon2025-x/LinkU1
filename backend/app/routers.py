@@ -2058,7 +2058,12 @@ def complete_task(
             detail="文字证据说明不能超过500字符"
         )
 
-    db_task = crud.get_task(db, task_id)
+    # 🔒 并发安全：使用 SELECT FOR UPDATE 锁定任务，防止并发完成
+    locked_task_query = select(models.Task).where(
+        models.Task.id == task_id
+    ).with_for_update()
+    db_task = db.execute(locked_task_query).scalar_one_or_none()
+    
     if not db_task:
         raise HTTPException(status_code=404, detail="Task not found")
 
@@ -2071,8 +2076,6 @@ def complete_task(
         )
     
     # ⚠️ 安全修复：检查支付状态，确保只有已支付的任务才能完成
-    import logging
-    logger = logging.getLogger(__name__)
     if not db_task.is_paid:
         logger.warning(
             f"⚠️ 安全警告：用户 {current_user.id} 尝试完成未支付的任务 {task_id}"
@@ -2091,7 +2094,13 @@ def complete_task(
     db_task.confirmation_deadline = now + timedelta(days=5)
     # 清除之前的提醒状态
     db_task.confirmation_reminder_sent = 0
-    db.commit()
+    
+    try:
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        logger.error(f"完成任务状态更新失败: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="任务状态更新失败，请重试")
     db.refresh(db_task)
     
     # ⚠️ 清除任务缓存，确保前端立即看到更新后的状态
@@ -3606,7 +3615,12 @@ def confirm_task_completion(
     db: Session = Depends(get_db),
 ):
     """任务发布者确认任务完成，可上传完成证据文件"""
-    task = crud.get_task(db, task_id)
+    # 🔒 并发安全：使用 SELECT FOR UPDATE 锁定任务，防止并发确认
+    locked_task_query = select(models.Task).where(
+        models.Task.id == task_id
+    ).with_for_update()
+    task = db.execute(locked_task_query).scalar_one_or_none()
+    
     if not task or task.poster_id != current_user.id:
         raise HTTPException(status_code=404, detail="Task not found or no permission")
     
@@ -3621,7 +3635,7 @@ def confirm_task_completion(
             )
             # 将状态更新为 pending_confirmation 以便后续处理
             task.status = "pending_confirmation"
-            db.commit()
+            db.flush()  # flush而不是commit，保持在同一事务中
         else:
             # 如果 is_paid 被错误设置，记录安全警告
             if task.is_paid == 1 and task.status == "pending_payment":
@@ -3640,7 +3654,12 @@ def confirm_task_completion(
     task.confirmed_at = get_utc_time()  # 记录确认时间
     task.auto_confirmed = 0  # 手动确认
     task.is_confirmed = 1  # 标记为已确认（付费任务在转账成功后由转账逻辑再次确认，此处先统一设置）
-    db.commit()
+    try:
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        logger.error(f"确认任务完成提交失败: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="确认任务完成失败，请重试")
     crud.add_task_history(db, task_id, current_user.id, "confirmed_completion")
     db.refresh(task)
     
@@ -3750,8 +3769,10 @@ def confirm_task_completion(
     if task.taker_id:
         crud.update_user_statistics(db, task.taker_id)
     
+    # 🔒 使用 SAVEPOINT 包装所有奖励发放操作，确保原子性
     # 任务完成时自动发放积分奖励（平台赠送，非任务报酬）
     if task.taker_id:
+        rewards_savepoint = db.begin_nested()
         try:
             from app.coupon_points_crud import (
                 get_or_create_points_account,
@@ -3810,12 +3831,15 @@ def confirm_task_completion(
                     )
                     
                     logger.info(f"任务完成积分奖励已发放: 用户 {task.taker_id}, 任务 {task_id}, 积分 {points_amount}")
+            rewards_savepoint.commit()
         except Exception as e:
-            logger.error(f"发放任务完成积分奖励失败: {e}", exc_info=True)
+            rewards_savepoint.rollback()
+            logger.error(f"发放任务完成积分奖励失败，已回滚SAVEPOINT: {e}", exc_info=True)
             # 积分发放失败不影响任务完成流程
     
     # 检查任务是否关联活动，如果活动设置了奖励申请者，则发放奖励（积分和/或现金）
     if task.taker_id and task.parent_activity_id:
+        activity_rewards_savepoint = db.begin_nested()
         try:
             from app.coupon_points_crud import add_points_transaction
             from app.models import Activity
@@ -3913,7 +3937,28 @@ def confirm_task_completion(
                                 elif not account.charges_enabled:
                                     logger.warning(f"用户 {task.taker_id} 的 Stripe Connect 账户未启用收款，无法发放现金奖励")
                                 else:
-                                    # 执行 Stripe Transfer 转账现金奖励
+                                    # 🔒 安全修复：先创建DB记录（flush），再执行Stripe转账
+                                    # 如果Stripe失败，DB可以回滚；如果先Stripe后DB失败，钱已转出但无记录
+                                    from app.payment_transfer_service import create_transfer_record
+                                    from decimal import Decimal
+                                    
+                                    # 先创建待处理的转账记录（flush到DB但不提交）
+                                    transfer_record = create_transfer_record(
+                                        db=db,
+                                        task_id=task_id,
+                                        taker_id=task.taker_id,
+                                        poster_id=task.poster_id,
+                                        amount=Decimal(str(cash_amount)),
+                                        currency="GBP",
+                                        metadata={
+                                            "transfer_type": "activity_applicant_cash_reward",
+                                            "activity_id": str(task.parent_activity_id),
+                                            "idempotency_key": activity_cash_reward_idempotency_key,
+                                        },
+                                        commit=False  # 仅flush，不提交
+                                    )
+                                    
+                                    # 然后执行 Stripe Transfer 转账现金奖励
                                     cash_amount_pence = int(cash_amount * 100)
                                     transfer = stripe.Transfer.create(
                                         amount=cash_amount_pence,
@@ -3928,19 +3973,10 @@ def confirm_task_completion(
                                         description=f"活动 #{task.parent_activity_id} 任务 #{task_id} 现金奖励"
                                     )
                                     
-                                    # 创建转账记录
-                                    from app.payment_transfer_service import create_transfer_record
-                                    from decimal import Decimal
-                                    create_transfer_record(
-                                        db=db,
-                                        task_id=task_id,
-                                        taker_id=task.taker_id,
-                                        amount=Decimal(str(cash_amount)),
-                                        transfer_id=transfer.id,
-                                        status="succeeded",
-                                        idempotency_key=activity_cash_reward_idempotency_key,
-                                        auto_commit=False
-                                    )
+                                    # Stripe成功后更新转账记录状态
+                                    transfer_record.transfer_id = transfer.id
+                                    transfer_record.status = "succeeded"
+                                    transfer_record.succeeded_at = get_utc_time()
                                     
                                     logger.info(f"活动现金奖励已发放: 用户 {task.taker_id}, 活动 {task.parent_activity_id}, 金额 £{cash_amount:.2f}")
                                     
@@ -3977,11 +4013,12 @@ def confirm_task_completion(
                         else:
                             logger.warning(f"用户 {task.taker_id} 没有 Stripe Connect 账户，无法发放现金奖励")
                 
-                # 提交所有奖励发放的更改
-                db.commit()
+                # 提交SAVEPOINT内的所有奖励发放更改
+                activity_rewards_savepoint.commit()
                 
         except Exception as e:
-            logger.error(f"发放活动奖励失败: {e}", exc_info=True)
+            activity_rewards_savepoint.rollback()
+            logger.error(f"发放活动奖励失败，已回滚SAVEPOINT: {e}", exc_info=True)
             # 奖励发放失败不影响任务完成流程
     
     # 如果任务已支付且未确认，执行转账给任务接受人（支持部分转账）
@@ -3990,6 +4027,13 @@ def confirm_task_completion(
             from app.payment_transfer_service import create_transfer_record, execute_transfer
             from decimal import Decimal
             from sqlalchemy import and_, func
+            
+            # 🔒 并发安全：重新锁定任务，确保转账操作的原子性
+            locked_task_for_transfer = db.execute(
+                select(models.Task).where(models.Task.id == task_id).with_for_update()
+            ).scalar_one_or_none()
+            if locked_task_for_transfer:
+                task = locked_task_for_transfer
             
             # ✅ 支持部分转账：计算实际转账金额
             remaining_escrow = Decimal(str(task.escrow_amount))
@@ -6012,7 +6056,11 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
         logger.info(f"Payment intent succeeded: {payment_intent_id}, task_id: {task_id}, amount: {payment_intent.get('amount')}")
         
         if task_id:
-            task = crud.get_task(db, task_id)
+            # 🔒 并发安全：使用 SELECT FOR UPDATE 锁定任务，防止并发webhook更新
+            locked_task_query = select(models.Task).where(
+                models.Task.id == task_id
+            ).with_for_update()
+            task = db.execute(locked_task_query).scalar_one_or_none()
             if task and not task.is_paid:  # 幂等性检查
                 task.is_paid = 1
                 task.payment_intent_id = payment_intent_id  # 保存 Payment Intent ID 用于关联

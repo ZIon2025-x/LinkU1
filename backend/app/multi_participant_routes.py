@@ -572,10 +572,8 @@ def apply_to_activity(
             logger.error(f"创建支付意图失败: {e}")
             raise HTTPException(status_code=500, detail=f"创建支付意图失败: {str(e)}")
     
-    db.commit()
-    db.refresh(new_task)
-    
-    # 如果是多人任务，创建TaskParticipant记录
+    # 🔒 事务完整性：先创建参与者记录，然后与任务一起提交
+    # 确保任务和参与者在同一个事务中，避免任务存在但无参与者的不一致状态
     participant = None
     if is_multi_participant:
         # 对于有时间段的活动申请，参与者状态直接设为"accepted"，不需要审核
@@ -597,7 +595,16 @@ def apply_to_activity(
             idempotency_key=request.idempotency_key,
         )
         db.add(participant)
+    
+    try:
         db.commit()
+    except Exception as e:
+        db.rollback()
+        logger.error(f"创建任务和参与者提交失败: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="创建任务失败，请重试")
+    
+    db.refresh(new_task)
+    if participant:
         db.refresh(participant)
     
     # 如果是时间段服务，验证时间段

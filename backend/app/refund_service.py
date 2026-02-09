@@ -151,6 +151,15 @@ def process_refund(
                         refund_transfer_id = None
         
         # 3. 更新任务状态和托管金额
+        # 🔒 并发安全：使用 SELECT FOR UPDATE 锁定任务，防止并发退款操作修改 escrow
+        from sqlalchemy import func, and_, select as sa_select
+        locked_task_query = sa_select(models.Task).where(
+            models.Task.id == task.id
+        ).with_for_update()
+        task = db.execute(locked_task_query).scalar_one_or_none()
+        if not task:
+            return False, None, None, "任务记录不存在"
+        
         # ✅ 修复金额精度：使用Decimal进行金额比较
         # ✅ 支持部分退款：更新托管金额
         # ✅ 安全修复：考虑已转账的情况
@@ -158,7 +167,6 @@ def process_refund(
         refund_amount_decimal = Decimal(str(refund_amount))
         
         # ✅ 计算已转账的总金额
-        from sqlalchemy import func, and_
         total_transferred = db.query(
             func.sum(models.PaymentTransfer.amount).label('total_transferred')
         ).filter(

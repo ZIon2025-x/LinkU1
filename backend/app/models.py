@@ -2894,16 +2894,54 @@ class PaymentHistory(Base):
     @staticmethod
     def generate_order_no() -> str:
         """
-        生成唯一业务订单号。
-        格式: PAY{YYYYMMDDHHmmss}{5位随机字母数字} = 22 字符
-        例如: PAY20260209143052A3B7K
+        生成唯一业务订单号（带碰撞重试）。
+        格式: PAY{YYYYMMDDHHmmss}{8位随机字母数字} = 25 字符
+        例如: PAY20260209143052A3B7KX9M
+        
+        使用8位随机后缀（36^8 ≈ 2.8万亿种组合）大幅降低碰撞概率，
+        并在万一碰撞时自动重试。
         """
         import string
         import random
+        import uuid
+        
         now = get_utc_time()
         timestamp = now.strftime("%Y%m%d%H%M%S")
-        suffix = ''.join(random.choices(string.ascii_uppercase + string.digits, k=5))
+        # 使用8位随机后缀（较之前的5位），进一步降低碰撞概率
+        suffix = ''.join(random.choices(string.ascii_uppercase + string.digits, k=8))
         return f"PAY{timestamp}{suffix}"
+    
+    @staticmethod
+    def generate_unique_order_no(db_session) -> str:
+        """
+        生成唯一业务订单号，带数据库碰撞检测和重试。
+        在高并发场景下使用此方法替代 generate_order_no()。
+        
+        Args:
+            db_session: 数据库会话
+        
+        Returns:
+            唯一的订单号
+            
+        Raises:
+            RuntimeError: 多次重试后仍然碰撞
+        """
+        max_retries = 5
+        for attempt in range(max_retries):
+            order_no = PaymentHistory.generate_order_no()
+            # 检查是否已存在
+            existing = db_session.query(PaymentHistory).filter(
+                PaymentHistory.order_no == order_no
+            ).first()
+            if not existing:
+                return order_no
+            import logging
+            logging.getLogger(__name__).warning(
+                f"订单号碰撞，重试 ({attempt + 1}/{max_retries}): {order_no}"
+            )
+        # 兜底：使用UUID确保唯一
+        import uuid
+        return f"PAY{uuid.uuid4().hex[:20].upper()}"
 
 
 # ==================== 支付转账记录模型 ====================

@@ -33,9 +33,13 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/users/login")
 
 # 同步数据库依赖（向后兼容）
 def get_sync_db():
+    """获取同步数据库会话（异常时自动回滚）"""
     db = SessionLocal()
     try:
         yield db
+    except Exception:
+        db.rollback()
+        raise
     finally:
         db.close()
 

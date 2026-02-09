@@ -1030,7 +1030,12 @@ def update_task_reward(db: Session, task_id: int, poster_id: int, new_reward: fl
     # 同时更新 reward 和 base_reward
     task.reward = new_reward
     task.base_reward = Decimal(str(new_reward))
-    db.commit()
+    try:
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        logger.error(f"更新任务价格失败 task_id={task_id}: {e}", exc_info=True)
+        raise
     db.refresh(task)
     return task
 
@@ -1061,8 +1066,11 @@ def cleanup_task_files(db: Session, task_id: int):
 def cancel_task(db: Session, task_id: int, user_id: str, is_admin_review: bool = False):
     """取消任务 - 支持管理员审核后的取消，并清理相关文件"""
     from app.models import Task
+    from sqlalchemy import select
 
-    task = db.query(Task).filter(Task.id == task_id).first()
+    # 🔒 并发安全：使用 SELECT FOR UPDATE 锁定任务，防止并发取消
+    locked_query = select(Task).where(Task.id == task_id).with_for_update()
+    task = db.execute(locked_query).scalar_one_or_none()
     if not task:
         return None
 
@@ -1184,15 +1192,18 @@ def cancel_task(db: Session, task_id: int, user_id: str, is_admin_review: bool =
             logger.warning(f"发送任务取消推送通知失败（接受者）: {e}")
             # 推送通知失败不影响主流程
 
-    db.commit()
+    try:
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        logger.error(f"取消任务提交失败 task_id={task_id}: {e}", exc_info=True)
+        raise
     db.refresh(task)
 
     # 清理任务相关的所有图片和文件
     try:
         cleanup_task_files(db, task_id)
     except Exception as e:
-        import logging
-        logger = logging.getLogger(__name__)
         logger.error(f"清理任务文件失败 {task_id}: {e}")
         # 文件清理失败不影响任务取消流程
 

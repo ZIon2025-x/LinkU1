@@ -131,23 +131,33 @@ warnings.warn(
 
 # 异步数据库依赖
 async def get_async_db():
-    """获取异步数据库会话"""
+    """获取异步数据库会话（异常时自动回滚）"""
     if not ASYNC_AVAILABLE or not AsyncSessionLocal:
         raise RuntimeError("Async database not available. Please install asyncpg.")
 
     async with AsyncSessionLocal() as session:
         try:
             yield session
+        except Exception:
+            await session.rollback()
+            raise
         finally:
             await session.close()
 
 
 # 同步数据库依赖（向后兼容）
 def get_db():
-    """获取同步数据库会话（向后兼容）"""
+    """获取同步数据库会话（异常时自动回滚）
+    
+    🔒 安全机制：当请求处理中发生未捕获的异常时，
+    自动回滚所有未提交的数据库更改，防止部分提交导致数据不一致。
+    """
     db = SessionLocal()
     try:
         yield db
+    except Exception:
+        db.rollback()
+        raise
     finally:
         db.close()
 

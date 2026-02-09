@@ -799,8 +799,10 @@ class TaskDisputeOut(BaseModel):
 
 class TaskDisputeResolve(BaseModel):
     """解决争议"""
+    resolution_type: str = Field(..., description="裁决类型：refund_poster（全额退款给发布者）、partial_refund（部分退款）、pay_taker（支付给接单者）、dismiss（驳回争议）")
     resolution_note: str = Field(..., min_length=1, max_length=2000, description="处理备注")
-    auto_refund: Optional[bool] = Field(False, description="是否自动创建全额退款申请")
+    refund_amount: Optional[float] = Field(None, description="部分退款时的退款金额（仅 partial_refund 时使用）")
+    auto_refund: Optional[bool] = Field(False, description="是否自动创建全额退款申请（兼容旧接口）")
 
 
 class TaskDisputeDismiss(BaseModel):
