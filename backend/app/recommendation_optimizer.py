@@ -9,7 +9,7 @@ from datetime import datetime, timedelta
 from sqlalchemy.orm import Session
 from sqlalchemy import func, and_
 
-from app.models import UserTaskInteraction
+from app.models import UserTaskInteraction, Task
 from app.crud import get_utc_time
 
 logger = logging.getLogger(__name__)
