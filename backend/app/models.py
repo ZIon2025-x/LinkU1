@@ -1952,7 +1952,8 @@ class TaskTimeSlotRelation(Base):
         Index("ix_task_time_slot_relations_time_slot_id", time_slot_id),
         Index("ix_task_time_slot_relations_mode", relation_mode),
         Index("ix_task_time_slot_relations_end_date", activity_end_date),
-        # 注意：部分唯一索引（一个时间段只能被一个活动使用）在数据库迁移中创建
+        # 注意：部分唯一索引在数据库迁移中创建：
+        # - uq_task_time_slot_task_id: 一个任务只能关联一个固定时间段（迁移 088）
         # 约束：固定模式必须有time_slot_id，重复模式必须有recurring_rule
         CheckConstraint(
             "(relation_mode = 'fixed' AND time_slot_id IS NOT NULL) OR (relation_mode = 'recurring' AND recurring_rule IS NOT NULL)",
