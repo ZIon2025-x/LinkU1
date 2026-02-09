@@ -438,15 +438,15 @@ def init_scheduler():
         priority="high"
     )
     
-    # 自动完成已过期时间段的任务 - 每1分钟
+    # ========== 中频任务（每5-15分钟）==========
+    
+    # 自动完成已过期时间段的达人任务 - 每15分钟
     scheduler.register_task(
         'auto_complete_expired_time_slot_tasks',
         with_db(auto_complete_expired_time_slot_tasks),
-        interval_seconds=60,
-        description="自动完成已过期时间段的任务"
+        interval_seconds=900,
+        description="自动完成已过期时间段的达人任务（pending_confirmation + 时间段过期 → completed）"
     )
-    
-    # ========== 中频任务（每5-15分钟）==========
     
     # 检查支付过期的任务 - 每5分钟
     scheduler.register_task(
@@ -522,26 +522,26 @@ def init_scheduler():
         'send_auto_transfer_reminders',
         with_db(send_auto_transfer_reminders),
         interval_seconds=3600,
-        description="自动转账确认提醒（提醒发布者即将自动转账给达人）"
+        description="自动转账确认提醒（提醒发布者即将自动转账给接单方）"
     )
     
-    # Phase 3: 3天后自动转账 - 每15分钟
-    # 达人任务时间段过期 3 天后自动确认 + 转账给达人
+    # 自动转账 - 每15分钟
+    # 所有已完成、已付款、escrow>0、deadline已过期的任务 → Stripe Transfer
     scheduler.register_task(
         'auto_transfer_expired_tasks',
         with_db(auto_transfer_expired_tasks),
         interval_seconds=900,
-        description="自动转账（达人任务过期3天后自动确认并转账给达人）"
+        description="自动转账（已完成付费任务 deadline 过期后自动确认并转账）"
     )
     
-    # 自动确认超过5天未确认的 pending_confirmation 任务 - 每15分钟
-    # 注意：此任务处理 pending_confirmation 状态的任务（非达人任务的通用确认）
-    # 与 auto_transfer_expired_tasks 不同：此任务针对手动提交完成后 5 天未确认的场景
+    # 自动确认过期未确认的任务 - 每15分钟
+    # 统一处理所有 pending_confirmation + deadline 过期的任务（不分达人/非达人）
+    # escrow==0: 完整确认（最终状态）; escrow>0: 仅改状态为 completed，由 auto_transfer 处理转账
     scheduler.register_task(
         'auto_confirm_expired_tasks',
         with_db(auto_confirm_expired_tasks),
         interval_seconds=900,
-        description="自动确认超过5天未确认的任务"
+        description="自动确认过期未确认的任务（统一处理所有类型，按 escrow 分支）"
     )
     
     # 发送确认提醒通知（针对 pending_confirmation 状态的任务）- 每15分钟
