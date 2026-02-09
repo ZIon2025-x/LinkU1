@@ -40,7 +40,7 @@ class RecommendationDataCleanup:
             cleaned_count = 0
             
             # 1. 删除关联任务已不存在的交互记录
-            task_ids = self.db.query(Task.id).subquery()
+            task_ids = self.db.query(Task.id).scalar_subquery()
             orphan_interactions = self.db.query(UserTaskInteraction).filter(
                 ~UserTaskInteraction.task_id.in_(task_ids)
             ).all()
@@ -52,7 +52,7 @@ class RecommendationDataCleanup:
             logger.info(f"删除 {len(orphan_interactions)} 条关联任务不存在的交互记录")
             
             # 2. 删除关联用户已不存在的交互记录
-            user_ids = self.db.query(User.id).subquery()
+            user_ids = self.db.query(User.id).scalar_subquery()
             orphan_user_interactions = self.db.query(UserTaskInteraction).filter(
                 ~UserTaskInteraction.user_id.in_(user_ids)
             ).all()
@@ -158,7 +158,7 @@ class RecommendationDataCleanup:
             cleaned_count = 0
             
             # 删除关联任务已不存在的反馈记录
-            task_ids = self.db.query(Task.id).subquery()
+            task_ids = self.db.query(Task.id).scalar_subquery()
             orphan_feedbacks = self.db.query(RecommendationFeedback).filter(
                 ~RecommendationFeedback.task_id.in_(task_ids)
             ).all()
@@ -170,7 +170,7 @@ class RecommendationDataCleanup:
             logger.info(f"删除 {len(orphan_feedbacks)} 条关联任务不存在的反馈记录")
             
             # 删除关联用户已不存在的反馈记录
-            user_ids = self.db.query(User.id).subquery()
+            user_ids = self.db.query(User.id).scalar_subquery()
             orphan_user_feedbacks = self.db.query(RecommendationFeedback).filter(
                 ~RecommendationFeedback.user_id.in_(user_ids)
             ).all()

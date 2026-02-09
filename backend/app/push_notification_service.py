@@ -384,8 +384,8 @@ def send_push_notification(
                     # 不添加到 failed_tokens，保持令牌为活跃状态
                     
             except Exception as e:
-                logger.warning(f"发送推送通知到设备 {device_token.device_token[:20]}... 失败: {e}")
-                failed_tokens.append(device_token)
+                logger.error(f"发送推送通知到设备 {device_token.device_token[:20]}... 失败: {e}", exc_info=True)
+                # 🔒 安全修复：不添加到 failed_tokens，避免因非 token 原因的异常导致误停用
                 continue
         
         # 批量更新失败令牌和提交（性能优化：只提交一次）
@@ -517,28 +517,44 @@ def send_apns_notification(
         if not all(c in '0123456789abcdefABCDEF' for c in device_token):
             logger.warning(f"[APNs诊断] 设备令牌格式异常: 包含非十六进制字符")
         
-        try:
-            logger.debug(f"[APNs诊断] 调用 send_notification，device_token={device_token[:20]}..., topic={topic}")
-            response = apns_client.send_notification(device_token, payload, topic)
-            logger.debug(f"[APNs诊断] send_notification 返回: {response}")
-        except Exception as e:
-            import traceback
-            error_traceback = traceback.format_exc()
-            logger.error(f"[APNs诊断] 发送通知时发生异常: {str(e)}")
-            logger.error(f"[APNs诊断] 异常类型: {type(e).__name__}")
-            logger.error(f"[APNs诊断] 异常堆栈:\n{error_traceback}")
-            # 检查是否是设备令牌相关的错误（同时检查异常类型名，因为 str(e) 可能为空）
-            error_str = str(e).lower()
-            exc_name = type(e).__name__
-            token_invalid_keywords = ['baddevicetoken', 'unregistered', 'devicetokennotfortopic', 'invalid token']
-            if exc_name in ['BadDeviceToken', 'Unregistered', 'DeviceTokenNotForTopic'] or \
-               any(kw in error_str for kw in token_invalid_keywords):
-                logger.warning(f"设备令牌无效（异常: {exc_name}），应标记为不活跃")
-                if exc_name == 'BadDeviceToken':
-                    logger.info("[APNs诊断] 提示: BadDeviceToken 通常表示令牌无效、过期，或沙盒/生产环境不匹配（APNS_USE_SANDBOX 需与 App 分发渠道一致）")
-                return False
-            # 其他异常视为系统错误
-            return None
+        # 🔒 修复：添加瞬态网络错误重试逻辑
+        # 仅对 ConnectionError/TimeoutError/OSError 重试，APNs 业务错误不重试
+        import time
+        _TRANSIENT_EXCEPTIONS = (ConnectionError, TimeoutError, OSError, IOError)
+        _MAX_RETRIES = 2
+        _RETRY_DELAYS = [1, 3]  # 秒
+        
+        response = None
+        for _attempt in range(_MAX_RETRIES + 1):
+            try:
+                logger.debug(f"[APNs诊断] 调用 send_notification（第{_attempt+1}次），device_token={device_token[:20]}..., topic={topic}")
+                response = apns_client.send_notification(device_token, payload, topic)
+                logger.debug(f"[APNs诊断] send_notification 返回: {response}")
+                break  # 成功（无异常）则跳出重试循环
+            except _TRANSIENT_EXCEPTIONS as e:
+                if _attempt < _MAX_RETRIES:
+                    logger.warning(f"[APNs] 瞬态网络错误（第{_attempt+1}次），{_RETRY_DELAYS[_attempt]}秒后重试: {type(e).__name__}: {e}")
+                    time.sleep(_RETRY_DELAYS[_attempt])
+                    continue
+                # 重试耗尽，记录错误并返回 None（不停用 token）
+                logger.error(f"[APNs] 重试{_MAX_RETRIES}次后仍失败: {type(e).__name__}: {e}")
+                return None
+            except Exception as e:
+                # 非网络异常，走原有的 token 无效/系统错误判断逻辑
+                logger.error(f"[APNs诊断] 发送通知时发生异常: {str(e)}", exc_info=True)
+                logger.error(f"[APNs诊断] 异常类型: {type(e).__name__}")
+                # 检查是否是设备令牌相关的错误（同时检查异常类型名，因为 str(e) 可能为空）
+                error_str = str(e).lower()
+                exc_name = type(e).__name__
+                token_invalid_keywords = ['baddevicetoken', 'unregistered', 'devicetokennotfortopic', 'invalid token']
+                if exc_name in ['BadDeviceToken', 'Unregistered', 'DeviceTokenNotForTopic'] or \
+                   any(kw in error_str for kw in token_invalid_keywords):
+                    logger.warning(f"设备令牌无效（异常: {exc_name}），应标记为不活跃")
+                    if exc_name == 'BadDeviceToken':
+                        logger.info("[APNs诊断] 提示: BadDeviceToken 通常表示令牌无效、过期，或沙盒/生产环境不匹配（APNS_USE_SANDBOX 需与 App 分发渠道一致）")
+                    return False
+                # 其他异常视为系统错误
+                return None
         
         # 当 response 为 None 时不重试，避免同一条推送被发送两次。
         # 原因：apns2 在部分情况下（如异步/连接状态）可能已成功发送但返回 None，
