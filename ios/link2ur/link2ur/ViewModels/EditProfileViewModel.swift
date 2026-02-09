@@ -76,7 +76,8 @@ class EditProfileViewModel: ObservableObject {
         guard !phone.isEmpty, phone != (currentUser?.phone ?? "") else { return }
         
         isSendingPhoneCode = true
-        apiService.sendPhoneUpdateCode(newPhone: phone)
+        let normalizedPhone = ValidationHelper.normalizeUKPhoneNumber(phone)
+        apiService.sendPhoneUpdateCode(newPhone: normalizedPhone)
             .receive(on: DispatchQueue.main)
             .sink(
                 receiveCompletion: { [weak self] completion in
@@ -153,7 +154,7 @@ class EditProfileViewModel: ObservableObject {
         let currentPhone = currentUser?.phone ?? ""
         if phone != currentPhone {
             if !phone.isEmpty {
-                body["phone"] = phone
+                body["phone"] = ValidationHelper.normalizeUKPhoneNumber(phone)
                 if !phoneVerificationCode.isEmpty {
                     body["phone_verification_code"] = phoneVerificationCode
                 }

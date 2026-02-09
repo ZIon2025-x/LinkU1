@@ -4810,7 +4810,8 @@ def send_phone_update_code(
         from app.validators import StringValidator
         import os
         
-        new_phone = request_data.new_phone.strip()
+        # 标准化手机号（去掉英国号码前导0等）
+        new_phone = StringValidator.normalize_phone(request_data.new_phone.strip())
         
         # 验证手机号格式
         try:
@@ -5087,6 +5088,10 @@ def update_profile(
             # 如果手机号为空，允许设置为None（用于邮箱登录用户绑定手机号）
             if new_phone == "":
                 new_phone = None
+            
+            # 标准化手机号（去掉英国号码前导0等）
+            if new_phone:
+                new_phone = StringValidator.normalize_phone(new_phone)
             
             # 如果提供了新手机号且与当前手机号不同，需要验证码验证
             if new_phone and new_phone != current_user.phone:

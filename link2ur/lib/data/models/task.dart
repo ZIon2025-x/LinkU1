@@ -30,9 +30,16 @@ class Task extends Equatable {
     this.maxParticipants = 1,
     this.currentParticipants = 0,
     this.taskSource,
+    this.taskLevel,
     this.hasApplied = false,
     this.userApplicationStatus,
     this.completionEvidence,
+    this.paymentExpiresAt,
+    this.confirmationDeadline,
+    this.agreedReward,
+    this.baseReward,
+    this.originatingUserId,
+    this.hasReviewed = false,
     this.createdAt,
     this.updatedAt,
   });
@@ -61,9 +68,16 @@ class Task extends Equatable {
   final int maxParticipants;
   final int currentParticipants;
   final String? taskSource;
+  final String? taskLevel; // normal, vip, super
   final bool hasApplied;
   final String? userApplicationStatus;
   final String? completionEvidence;
+  final String? paymentExpiresAt;
+  final String? confirmationDeadline;
+  final double? agreedReward;
+  final double? baseReward;
+  final String? originatingUserId;
+  final bool hasReviewed;
   final DateTime? createdAt;
   final DateTime? updatedAt;
 
@@ -86,6 +100,72 @@ class Task extends Equatable {
       !isExpired && 
       currentParticipants < maxParticipants;
 
+  // ==================== 任务来源判断 ====================
+
+  /// 是否跳蚤市场任务
+  bool get isFleaMarketTask =>
+      taskSource == AppConstants.taskSourceFleaMarket;
+
+  /// 是否达人服务任务
+  bool get isExpertServiceTask =>
+      taskSource == AppConstants.taskSourceExpertService;
+
+  /// 是否达人活动任务
+  bool get isExpertActivityTask =>
+      taskSource == AppConstants.taskSourceExpertActivity;
+
+  /// 是否有特殊来源 (非普通任务)
+  bool get hasSpecialSource =>
+      isFleaMarketTask || isExpertServiceTask || isExpertActivityTask;
+
+  // ==================== 任务等级 ====================
+
+  /// 是否 VIP 任务
+  bool get isVipTask => taskLevel == 'vip';
+
+  /// 是否超级任务
+  bool get isSuperTask => taskLevel == 'super';
+
+  /// 是否有特殊等级
+  bool get hasSpecialLevel =>
+      taskLevel != null && taskLevel != 'normal';
+
+  // ==================== 实际金额 ====================
+
+  /// 实际显示金额 (协商价 > 基础价 > 奖励)
+  double get displayReward => agreedReward ?? baseReward ?? reward;
+
+  // ==================== 支付到期 ====================
+
+  /// 支付是否已过期
+  bool get isPaymentExpired {
+    if (paymentExpiresAt == null || paymentExpiresAt!.isEmpty) return false;
+    try {
+      final expiry = DateTime.parse(paymentExpiresAt!);
+      return DateTime.now().isAfter(expiry);
+    } catch (_) {
+      return false;
+    }
+  }
+
+  // ==================== 跳蚤市场分类提取 ====================
+
+  /// 从描述中提取跳蚤市场商品分类
+  /// 后端创建任务时在描述末尾追加 "Category: {分类}"
+  String? get fleaMarketCategory {
+    if (!isFleaMarketTask) return null;
+    final desc = displayDescription ?? '';
+    const prefix = 'Category: ';
+    final idx = desc.lastIndexOf(prefix);
+    if (idx < 0) return null;
+    final cat = desc.substring(idx + prefix.length).trim();
+    return cat.isEmpty ? null : cat;
+  }
+
+  /// Header 中显示的分类文本 (跳蚤市场用商品分类，其他用 taskType)
+  String get displayCategoryText =>
+      (isFleaMarketTask ? fleaMarketCategory : null) ?? taskTypeText;
+
   /// 状态显示文本
   String get statusText {
     switch (status) {
@@ -95,6 +175,8 @@ class Task extends Equatable {
         return '进行中';
       case AppConstants.taskStatusPendingConfirmation:
         return '待确认';
+      case AppConstants.taskStatusPendingPayment:
+        return '待支付';
       case AppConstants.taskStatusCompleted:
         return '已完成';
       case AppConstants.taskStatusCancelled:
@@ -176,9 +258,16 @@ class Task extends Equatable {
       maxParticipants: json['max_participants'] as int? ?? 1,
       currentParticipants: json['current_participants'] as int? ?? 0,
       taskSource: json['task_source'] as String?,
+      taskLevel: json['task_level'] as String?,
       hasApplied: json['has_applied'] as bool? ?? false,
       userApplicationStatus: json['user_application_status'] as String?,
       completionEvidence: json['completion_evidence'] as String?,
+      paymentExpiresAt: json['payment_expires_at'] as String?,
+      confirmationDeadline: json['confirmation_deadline'] as String?,
+      agreedReward: (json['agreed_reward'] as num?)?.toDouble(),
+      baseReward: (json['base_reward'] as num?)?.toDouble(),
+      originatingUserId: json['originating_user_id']?.toString(),
+      hasReviewed: json['has_reviewed'] as bool? ?? false,
       createdAt: json['created_at'] != null
           ? DateTime.parse(json['created_at'])
           : null,
@@ -212,9 +301,16 @@ class Task extends Equatable {
       'max_participants': maxParticipants,
       'current_participants': currentParticipants,
       'task_source': taskSource,
+      'task_level': taskLevel,
       'has_applied': hasApplied,
       'user_application_status': userApplicationStatus,
       'completion_evidence': completionEvidence,
+      'payment_expires_at': paymentExpiresAt,
+      'confirmation_deadline': confirmationDeadline,
+      'agreed_reward': agreedReward,
+      'base_reward': baseReward,
+      'originating_user_id': originatingUserId,
+      'has_reviewed': hasReviewed,
       'created_at': createdAt?.toIso8601String(),
       'updated_at': updatedAt?.toIso8601String(),
     };
@@ -245,9 +341,16 @@ class Task extends Equatable {
     int? maxParticipants,
     int? currentParticipants,
     String? taskSource,
+    String? taskLevel,
     bool? hasApplied,
     String? userApplicationStatus,
     String? completionEvidence,
+    String? paymentExpiresAt,
+    String? confirmationDeadline,
+    double? agreedReward,
+    double? baseReward,
+    String? originatingUserId,
+    bool? hasReviewed,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) {
@@ -276,9 +379,16 @@ class Task extends Equatable {
       maxParticipants: maxParticipants ?? this.maxParticipants,
       currentParticipants: currentParticipants ?? this.currentParticipants,
       taskSource: taskSource ?? this.taskSource,
+      taskLevel: taskLevel ?? this.taskLevel,
       hasApplied: hasApplied ?? this.hasApplied,
       userApplicationStatus: userApplicationStatus ?? this.userApplicationStatus,
       completionEvidence: completionEvidence ?? this.completionEvidence,
+      paymentExpiresAt: paymentExpiresAt ?? this.paymentExpiresAt,
+      confirmationDeadline: confirmationDeadline ?? this.confirmationDeadline,
+      agreedReward: agreedReward ?? this.agreedReward,
+      baseReward: baseReward ?? this.baseReward,
+      originatingUserId: originatingUserId ?? this.originatingUserId,
+      hasReviewed: hasReviewed ?? this.hasReviewed,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );

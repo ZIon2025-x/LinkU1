@@ -29,9 +29,16 @@ class AppConstants {
   static const String taskStatusOpen = 'open';
   static const String taskStatusInProgress = 'in_progress';
   static const String taskStatusPendingConfirmation = 'pending_confirmation';
+  static const String taskStatusPendingPayment = 'pending_payment';
   static const String taskStatusCompleted = 'completed';
   static const String taskStatusCancelled = 'cancelled';
   static const String taskStatusDisputed = 'disputed';
+
+  /// 任务来源
+  static const String taskSourceNormal = 'normal';
+  static const String taskSourceFleaMarket = 'flea_market';
+  static const String taskSourceExpertService = 'expert_service';
+  static const String taskSourceExpertActivity = 'expert_activity';
 
   /// 跳蚤市场商品状态
   static const String fleaMarketStatusActive = 'active';

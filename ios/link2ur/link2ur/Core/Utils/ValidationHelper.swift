@@ -12,6 +12,40 @@ public struct ValidationHelper {
         return emailPredicate.evaluate(with: email)
     }
     
+    // MARK: - 手机号标准化
+    
+    /// 标准化英国手机号为国际格式 +447XXXXXXXXX
+    /// - 输入 "07123456789" → "+447123456789"
+    /// - 输入 "7123456789"  → "+447123456789"
+    /// - 输入 "+4407123456789" → "+447123456789"
+    /// - 输入 "+447123456789" → "+447123456789"（不变）
+    /// - 输入空字符串 → ""（不变，用于解绑场景）
+    public static func normalizeUKPhoneNumber(_ phone: String) -> String {
+        if phone.isEmpty { return phone }
+        
+        // 清理空格、横杠、括号
+        var cleaned = phone
+            .replacingOccurrences(of: " ", with: "")
+            .replacingOccurrences(of: "-", with: "")
+            .replacingOccurrences(of: "(", with: "")
+            .replacingOccurrences(of: ")", with: "")
+        
+        // 如果已有 +44 前缀，去掉前缀后的前导0
+        if cleaned.hasPrefix("+44") {
+            var localPart = String(cleaned.dropFirst(3))
+            if localPart.hasPrefix("0") {
+                localPart = String(localPart.dropFirst())
+            }
+            return "+44" + localPart
+        }
+        
+        // 没有 + 前缀，当作英国本地号码处理
+        if cleaned.hasPrefix("0") {
+            cleaned = String(cleaned.dropFirst())
+        }
+        return "+44" + cleaned
+    }
+    
     // MARK: - 手机号验证
     
     /// 验证英国手机号

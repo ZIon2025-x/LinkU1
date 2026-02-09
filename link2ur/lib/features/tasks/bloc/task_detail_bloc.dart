@@ -2,7 +2,9 @@ import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../data/models/task.dart';
+import '../../../data/models/task_application.dart';
 import '../../../data/models/review.dart';
+import '../../../data/models/refund_request.dart';
 import '../../../data/repositories/task_repository.dart';
 import '../../../core/utils/logger.dart';
 
@@ -24,6 +26,22 @@ class TaskDetailLoadRequested extends TaskDetailEvent {
   List<Object?> get props => [taskId];
 }
 
+/// 加载申请列表 (发布者用)
+class TaskDetailLoadApplications extends TaskDetailEvent {
+  const TaskDetailLoadApplications({this.currentUserId});
+  final String? currentUserId;
+}
+
+/// 加载退款状态
+class TaskDetailLoadRefundStatus extends TaskDetailEvent {
+  const TaskDetailLoadRefundStatus();
+}
+
+/// 加载评价列表
+class TaskDetailLoadReviews extends TaskDetailEvent {
+  const TaskDetailLoadReviews();
+}
+
 class TaskDetailApplyRequested extends TaskDetailEvent {
   const TaskDetailApplyRequested({this.message});
 
@@ -38,12 +56,21 @@ class TaskDetailCancelApplicationRequested extends TaskDetailEvent {
 }
 
 class TaskDetailAcceptApplicant extends TaskDetailEvent {
-  const TaskDetailAcceptApplicant(this.applicantId);
+  const TaskDetailAcceptApplicant(this.applicationId);
 
-  final int applicantId;
+  final int applicationId;
 
   @override
-  List<Object?> get props => [applicantId];
+  List<Object?> get props => [applicationId];
+}
+
+class TaskDetailRejectApplicant extends TaskDetailEvent {
+  const TaskDetailRejectApplicant(this.applicationId);
+
+  final int applicationId;
+
+  @override
+  List<Object?> get props => [applicationId];
 }
 
 class TaskDetailCompleteRequested extends TaskDetailEvent {
@@ -77,6 +104,40 @@ class TaskDetailReviewRequested extends TaskDetailEvent {
   List<Object?> get props => [review];
 }
 
+/// 退款申请
+class TaskDetailRequestRefund extends TaskDetailEvent {
+  const TaskDetailRequestRefund({required this.reason, this.evidence});
+  final String reason;
+  final List<String>? evidence;
+
+  @override
+  List<Object?> get props => [reason, evidence];
+}
+
+/// 取消退款
+class TaskDetailCancelRefund extends TaskDetailEvent {
+  const TaskDetailCancelRefund(this.refundId);
+  final int refundId;
+
+  @override
+  List<Object?> get props => [refundId];
+}
+
+/// 提交退款反驳
+class TaskDetailSubmitRebuttal extends TaskDetailEvent {
+  const TaskDetailSubmitRebuttal({
+    required this.refundId,
+    required this.content,
+    this.evidence,
+  });
+  final int refundId;
+  final String content;
+  final List<String>? evidence;
+
+  @override
+  List<Object?> get props => [refundId, content, evidence];
+}
+
 // ==================== State ====================
 
 enum TaskDetailStatus { initial, loading, loaded, error }
@@ -88,13 +149,33 @@ class TaskDetailState extends Equatable {
     this.errorMessage,
     this.isSubmitting = false,
     this.actionMessage,
+    this.applications = const [],
+    this.isLoadingApplications = false,
+    this.userApplication,
+    this.refundRequest,
+    this.isLoadingRefundStatus = false,
+    this.reviews = const [],
+    this.isLoadingReviews = false,
   });
 
   final TaskDetailStatus status;
   final Task? task;
   final String? errorMessage;
   final bool isSubmitting;
-  final String? actionMessage; // 操作成功/失败消息
+  final String? actionMessage;
+
+  // 申请列表
+  final List<TaskApplication> applications;
+  final bool isLoadingApplications;
+  final TaskApplication? userApplication; // 当前用户的申请
+
+  // 退款
+  final RefundRequest? refundRequest;
+  final bool isLoadingRefundStatus;
+
+  // 评价
+  final List<Review> reviews;
+  final bool isLoadingReviews;
 
   bool get isLoading => status == TaskDetailStatus.loading;
   bool get isLoaded => status == TaskDetailStatus.loaded;
@@ -105,6 +186,15 @@ class TaskDetailState extends Equatable {
     String? errorMessage,
     bool? isSubmitting,
     String? actionMessage,
+    List<TaskApplication>? applications,
+    bool? isLoadingApplications,
+    TaskApplication? userApplication,
+    bool clearUserApplication = false,
+    RefundRequest? refundRequest,
+    bool clearRefundRequest = false,
+    bool? isLoadingRefundStatus,
+    List<Review>? reviews,
+    bool? isLoadingReviews,
   }) {
     return TaskDetailState(
       status: status ?? this.status,
@@ -112,12 +202,37 @@ class TaskDetailState extends Equatable {
       errorMessage: errorMessage,
       isSubmitting: isSubmitting ?? this.isSubmitting,
       actionMessage: actionMessage,
+      applications: applications ?? this.applications,
+      isLoadingApplications:
+          isLoadingApplications ?? this.isLoadingApplications,
+      userApplication: clearUserApplication
+          ? null
+          : (userApplication ?? this.userApplication),
+      refundRequest: clearRefundRequest
+          ? null
+          : (refundRequest ?? this.refundRequest),
+      isLoadingRefundStatus:
+          isLoadingRefundStatus ?? this.isLoadingRefundStatus,
+      reviews: reviews ?? this.reviews,
+      isLoadingReviews: isLoadingReviews ?? this.isLoadingReviews,
     );
   }
 
   @override
-  List<Object?> get props =>
-      [status, task, errorMessage, isSubmitting, actionMessage];
+  List<Object?> get props => [
+        status,
+        task,
+        errorMessage,
+        isSubmitting,
+        actionMessage,
+        applications,
+        isLoadingApplications,
+        userApplication,
+        refundRequest,
+        isLoadingRefundStatus,
+        reviews,
+        isLoadingReviews,
+      ];
 }
 
 // ==================== Bloc ====================
@@ -127,16 +242,25 @@ class TaskDetailBloc extends Bloc<TaskDetailEvent, TaskDetailState> {
       : _taskRepository = taskRepository,
         super(const TaskDetailState()) {
     on<TaskDetailLoadRequested>(_onLoadRequested);
+    on<TaskDetailLoadApplications>(_onLoadApplications);
+    on<TaskDetailLoadRefundStatus>(_onLoadRefundStatus);
+    on<TaskDetailLoadReviews>(_onLoadReviews);
     on<TaskDetailApplyRequested>(_onApplyRequested);
     on<TaskDetailCancelApplicationRequested>(_onCancelApplication);
     on<TaskDetailAcceptApplicant>(_onAcceptApplicant);
+    on<TaskDetailRejectApplicant>(_onRejectApplicant);
     on<TaskDetailCompleteRequested>(_onCompleteRequested);
     on<TaskDetailConfirmCompletionRequested>(_onConfirmCompletion);
     on<TaskDetailCancelRequested>(_onCancelRequested);
     on<TaskDetailReviewRequested>(_onReviewRequested);
+    on<TaskDetailRequestRefund>(_onRequestRefund);
+    on<TaskDetailCancelRefund>(_onCancelRefund);
+    on<TaskDetailSubmitRebuttal>(_onSubmitRebuttal);
   }
 
   final TaskRepository _taskRepository;
+
+  int? get _taskId => state.task?.id;
 
   Future<void> _onLoadRequested(
     TaskDetailLoadRequested event,
@@ -159,17 +283,90 @@ class TaskDetailBloc extends Bloc<TaskDetailEvent, TaskDetailState> {
     }
   }
 
+  Future<void> _onLoadApplications(
+    TaskDetailLoadApplications event,
+    Emitter<TaskDetailState> emit,
+  ) async {
+    if (_taskId == null) return;
+    emit(state.copyWith(isLoadingApplications: true));
+
+    try {
+      final raw = await _taskRepository.getTaskApplications(_taskId!);
+      final apps = raw.map((e) => TaskApplication.fromJson(e)).toList();
+
+      // 找出当前用户的申请
+      TaskApplication? userApp;
+      if (event.currentUserId != null) {
+        for (final app in apps) {
+          if (app.applicantId == event.currentUserId) {
+            userApp = app;
+            break;
+          }
+        }
+      }
+
+      emit(state.copyWith(
+        applications: apps,
+        isLoadingApplications: false,
+        userApplication: userApp,
+        clearUserApplication: userApp == null,
+      ));
+    } catch (e) {
+      AppLogger.error('Failed to load applications', e);
+      emit(state.copyWith(isLoadingApplications: false));
+    }
+  }
+
+  Future<void> _onLoadRefundStatus(
+    TaskDetailLoadRefundStatus event,
+    Emitter<TaskDetailState> emit,
+  ) async {
+    if (_taskId == null) return;
+    emit(state.copyWith(isLoadingRefundStatus: true));
+
+    try {
+      final raw = await _taskRepository.getRefundStatus(_taskId!);
+      final refund = RefundRequest.fromJson(raw);
+      emit(state.copyWith(
+        refundRequest: refund,
+        isLoadingRefundStatus: false,
+      ));
+    } catch (e) {
+      // 没有退款记录时可能 404 → 清空即可
+      emit(state.copyWith(
+        isLoadingRefundStatus: false,
+        clearRefundRequest: true,
+      ));
+    }
+  }
+
+  Future<void> _onLoadReviews(
+    TaskDetailLoadReviews event,
+    Emitter<TaskDetailState> emit,
+  ) async {
+    if (_taskId == null) return;
+    emit(state.copyWith(isLoadingReviews: true));
+
+    try {
+      final raw = await _taskRepository.getTaskReviews(_taskId!);
+      final reviews = raw.map((e) => Review.fromJson(e)).toList();
+      emit(state.copyWith(reviews: reviews, isLoadingReviews: false));
+    } catch (e) {
+      AppLogger.error('Failed to load reviews', e);
+      emit(state.copyWith(isLoadingReviews: false));
+    }
+  }
+
   Future<void> _onApplyRequested(
     TaskDetailApplyRequested event,
     Emitter<TaskDetailState> emit,
   ) async {
-    if (state.task == null) return;
+    if (_taskId == null) return;
     emit(state.copyWith(isSubmitting: true));
 
     try {
-      await _taskRepository.applyTask(state.task!.id, message: event.message);
-      // 重新加载任务详情
-      final task = await _taskRepository.getTaskDetail(state.task!.id);
+      await _taskRepository.applyTask(_taskId!, message: event.message);
+      final task = await _taskRepository.getTaskDetail(_taskId!);
       emit(state.copyWith(
         task: task,
         isSubmitting: false,
@@ -188,16 +385,19 @@ class TaskDetailBloc extends Bloc<TaskDetailEvent, TaskDetailState> {
     TaskDetailCancelApplicationRequested event,
     Emitter<TaskDetailState> emit,
   ) async {
-    if (state.task == null) return;
+    if (_taskId == null) return;
     emit(state.copyWith(isSubmitting: true));
 
     try {
-      await _taskRepository.cancelApplication(state.task!.id);
-      final task = await _taskRepository.getTaskDetail(state.task!.id);
+      final appId = state.userApplication?.id;
+      await _taskRepository.cancelApplication(_taskId!,
+          applicationId: appId);
+      final task = await _taskRepository.getTaskDetail(_taskId!);
       emit(state.copyWith(
         task: task,
         isSubmitting: false,
         actionMessage: '已取消申请',
+        clearUserApplication: true,
       ));
     } catch (e) {
       emit(state.copyWith(
@@ -211,12 +411,12 @@ class TaskDetailBloc extends Bloc<TaskDetailEvent, TaskDetailState> {
     TaskDetailAcceptApplicant event,
     Emitter<TaskDetailState> emit,
   ) async {
-    if (state.task == null) return;
+    if (_taskId == null) return;
     emit(state.copyWith(isSubmitting: true));
 
     try {
-      await _taskRepository.acceptApplicant(state.task!.id, event.applicantId);
-      final task = await _taskRepository.getTaskDetail(state.task!.id);
+      await _taskRepository.acceptApplication(_taskId!, event.applicationId);
+      final task = await _taskRepository.getTaskDetail(_taskId!);
       emit(state.copyWith(
         task: task,
         isSubmitting: false,
@@ -230,19 +430,46 @@ class TaskDetailBloc extends Bloc<TaskDetailEvent, TaskDetailState> {
     }
   }
 
+  Future<void> _onRejectApplicant(
+    TaskDetailRejectApplicant event,
+    Emitter<TaskDetailState> emit,
+  ) async {
+    if (_taskId == null) return;
+    emit(state.copyWith(isSubmitting: true));
+
+    try {
+      await _taskRepository.rejectApplication(_taskId!, event.applicationId);
+      final task = await _taskRepository.getTaskDetail(_taskId!);
+      // 重新加载申请列表
+      final raw = await _taskRepository.getTaskApplications(_taskId!);
+      final apps = raw.map((e) => TaskApplication.fromJson(e)).toList();
+      emit(state.copyWith(
+        task: task,
+        applications: apps,
+        isSubmitting: false,
+        actionMessage: '已拒绝申请',
+      ));
+    } catch (e) {
+      emit(state.copyWith(
+        isSubmitting: false,
+        actionMessage: '操作失败',
+      ));
+    }
+  }
+
   Future<void> _onCompleteRequested(
     TaskDetailCompleteRequested event,
     Emitter<TaskDetailState> emit,
   ) async {
-    if (state.task == null) return;
+    if (_taskId == null) return;
     emit(state.copyWith(isSubmitting: true));
 
     try {
       await _taskRepository.completeTask(
-        state.task!.id,
+        _taskId!,
         evidence: event.evidence,
       );
-      final task = await _taskRepository.getTaskDetail(state.task!.id);
+      final task = await _taskRepository.getTaskDetail(_taskId!);
       emit(state.copyWith(
         task: task,
         isSubmitting: false,
@@ -260,12 +487,12 @@ class TaskDetailBloc extends Bloc<TaskDetailEvent, TaskDetailState> {
     TaskDetailConfirmCompletionRequested event,
     Emitter<TaskDetailState> emit,
   ) async {
-    if (state.task == null) return;
+    if (_taskId == null) return;
     emit(state.copyWith(isSubmitting: true));
 
     try {
-      await _taskRepository.confirmCompletion(state.task!.id);
-      final task = await _taskRepository.getTaskDetail(state.task!.id);
+      await _taskRepository.confirmCompletion(_taskId!);
+      final task = await _taskRepository.getTaskDetail(_taskId!);
       emit(state.copyWith(
         task: task,
         isSubmitting: false,
@@ -283,15 +510,15 @@ class TaskDetailBloc extends Bloc<TaskDetailEvent, TaskDetailState> {
     TaskDetailCancelRequested event,
     Emitter<TaskDetailState> emit,
   ) async {
-    if (state.task == null) return;
+    if (_taskId == null) return;
     emit(state.copyWith(isSubmitting: true));
 
     try {
       await _taskRepository.cancelTask(
-        state.task!.id,
+        _taskId!,
         reason: event.reason,
       );
-      final task = await _taskRepository.getTaskDetail(state.task!.id);
+      final task = await _taskRepository.getTaskDetail(_taskId!);
       emit(state.copyWith(
         task: task,
         isSubmitting: false,
@@ -309,14 +536,18 @@ class TaskDetailBloc extends Bloc<TaskDetailEvent, TaskDetailState> {
     TaskDetailReviewRequested event,
     Emitter<TaskDetailState> emit,
   ) async {
-    if (state.task == null) return;
+    if (_taskId == null) return;
     emit(state.copyWith(isSubmitting: true));
 
     try {
-      await _taskRepository.reviewTask(state.task!.id, event.review);
-      final task = await _taskRepository.getTaskDetail(state.task!.id);
+      await _taskRepository.reviewTask(_taskId!, event.review);
+      final task = await _taskRepository.getTaskDetail(_taskId!);
+      // 重新加载评价
+      final raw = await _taskRepository.getTaskReviews(_taskId!);
+      final reviews = raw.map((e) => Review.fromJson(e)).toList();
       emit(state.copyWith(
         task: task,
+        reviews: reviews,
         isSubmitting: false,
         actionMessage: '评价已提交',
       ));
@@ -324,6 +555,89 @@ class TaskDetailBloc extends Bloc<TaskDetailEvent, TaskDetailState> {
       emit(state.copyWith(
         isSubmitting: false,
         actionMessage: '评价失败',
+      ));
+    }
+  }
+
+  Future<void> _onRequestRefund(
+    TaskDetailRequestRefund event,
+    Emitter<TaskDetailState> emit,
+  ) async {
+    if (_taskId == null) return;
+    emit(state.copyWith(isSubmitting: true));
+
+    try {
+      final raw = await _taskRepository.requestRefund(
+        _taskId!,
+        reason: event.reason,
+        evidence: event.evidence,
+      );
+      final refund = RefundRequest.fromJson(raw);
+      final task = await _taskRepository.getTaskDetail(_taskId!);
+      emit(state.copyWith(
+        task: task,
+        refundRequest: refund,
+        isSubmitting: false,
+        actionMessage: '退款申请已提交',
+      ));
+    } catch (e) {
+      emit(state.copyWith(
+        isSubmitting: false,
+        actionMessage: '退款申请失败',
+      ));
+    }
+  }
+
+  Future<void> _onCancelRefund(
+    TaskDetailCancelRefund event,
+    Emitter<TaskDetailState> emit,
+  ) async {
+    if (_taskId == null) return;
+    emit(state.copyWith(isSubmitting: true));
+
+    try {
+      await _taskRepository.cancelRefundRequest(_taskId!, event.refundId);
+      final task = await _taskRepository.getTaskDetail(_taskId!);
+      emit(state.copyWith(
+        task: task,
+        isSubmitting: false,
+        clearRefundRequest: true,
+        actionMessage: '退款申请已撤销',
+      ));
+    } catch (e) {
+      emit(state.copyWith(
+        isSubmitting: false,
+        actionMessage: '撤销失败',
+      ));
+    }
+  }
+
+  Future<void> _onSubmitRebuttal(
+    TaskDetailSubmitRebuttal event,
+    Emitter<TaskDetailState> emit,
+  ) async {
+    if (_taskId == null) return;
+    emit(state.copyWith(isSubmitting: true));
+
+    try {
+      await _taskRepository.submitRefundRebuttal(
+        _taskId!,
+        event.refundId,
+        content: event.content,
+        evidence: event.evidence,
+      );
+      // 重新加载退款状态
+      final raw = await _taskRepository.getRefundStatus(_taskId!);
+      final refund = RefundRequest.fromJson(raw);
+      emit(state.copyWith(
+        refundRequest: refund,
+        isSubmitting: false,
+        actionMessage: '反驳已提交',
+      ));
+    } catch (e) {
+      emit(state.copyWith(
+        isSubmitting: false,
+        actionMessage: '提交反驳失败',
       ));
     }
   }

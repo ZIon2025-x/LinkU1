@@ -20,10 +20,12 @@ import '../../../core/widgets/user_identity_badges.dart';
 import '../../../core/utils/l10n_extension.dart';
 import '../../../data/models/task.dart';
 import '../../../data/repositories/task_repository.dart';
+import '../../../features/auth/bloc/auth_bloc.dart';
 import '../bloc/task_detail_bloc.dart';
+import 'task_detail_components.dart';
 
 /// 任务详情页
-/// 参考iOS TaskDetailView.swift + TaskDetailContentView
+/// 三维条件显示：任务状态 x 用户身份 x 任务来源
 class TaskDetailView extends StatelessWidget {
   const TaskDetailView({super.key, required this.taskId});
 
@@ -45,6 +47,11 @@ class _TaskDetailContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // 获取当前用户 ID (响应式)
+    final currentUserId = context.select<AuthBloc, String?>(
+      (bloc) => bloc.state.user?.id,
+    );
+
     return BlocConsumer<TaskDetailBloc, TaskDetailState>(
       listenWhen: (prev, curr) =>
           curr.actionMessage != null &&
@@ -55,22 +62,63 @@ class _TaskDetailContent extends StatelessWidget {
             SnackBar(content: Text(state.actionMessage!)),
           );
         }
+
+        // 任务加载完成后，自动加载关联数据
+        if (state.isLoaded && state.task != null) {
+          _loadAssociatedData(context, state, currentUserId);
+        }
       },
       builder: (context, state) {
+        final task = state.task;
+        final isPoster = task != null && currentUserId == task.posterId;
+        final isTaker =
+            task != null && task.takerId != null && currentUserId == task.takerId;
+
         return Scaffold(
           extendBodyBehindAppBar: true,
           appBar: _buildAppBar(context, state),
-          body: _buildBody(context, state),
+          body: _buildBody(context, state, isPoster, isTaker, currentUserId),
           bottomNavigationBar:
-              state.isLoaded && state.task != null
-                  ? _buildBottomBar(context, state)
+              state.isLoaded && task != null
+                  ? _buildBottomBar(context, state, isPoster, isTaker)
                   : null,
         );
       },
     );
   }
 
-  /// 透明AppBar - 始终透明，按钮浮在图片/占位上方
+  /// 加载关联数据 (申请列表、退款状态、评价)
+  void _loadAssociatedData(
+    BuildContext context,
+    TaskDetailState state,
+    String? currentUserId,
+  ) {
+    final bloc = context.read<TaskDetailBloc>();
+    final task = state.task!;
+
+    // 加载申请列表 (发布者 + open 状态，或者所有已登录用户用于获取自己的申请状态)
+    if (currentUserId != null && !state.isLoadingApplications && state.applications.isEmpty) {
+      bloc.add(TaskDetailLoadApplications(currentUserId: currentUserId));
+    }
+
+    // 发布者 + pendingConfirmation 时加载退款状态
+    final isPoster = currentUserId == task.posterId;
+    if (isPoster &&
+        task.status == AppConstants.taskStatusPendingConfirmation &&
+        !state.isLoadingRefundStatus &&
+        state.refundRequest == null) {
+      bloc.add(const TaskDetailLoadRefundStatus());
+    }
+
+    // 已完成时加载评价
+    if (task.status == AppConstants.taskStatusCompleted &&
+        !state.isLoadingReviews &&
+        state.reviews.isEmpty) {
+      bloc.add(const TaskDetailLoadReviews());
+    }
+  }
+
+  /// 透明AppBar
   PreferredSizeWidget _buildAppBar(
       BuildContext context, TaskDetailState state) {
     return AppBar(
@@ -118,7 +166,6 @@ class _TaskDetailContent extends StatelessWidget {
     );
   }
 
-  /// AppBar上的圆形按钮
   Widget _buildAppBarButton({
     required IconData icon,
     required VoidCallback onPressed,
@@ -140,7 +187,13 @@ class _TaskDetailContent extends StatelessWidget {
     );
   }
 
-  Widget _buildBody(BuildContext context, TaskDetailState state) {
+  Widget _buildBody(
+    BuildContext context,
+    TaskDetailState state,
+    bool isPoster,
+    bool isTaker,
+    String? currentUserId,
+  ) {
     if (state.isLoading) {
       return const SkeletonDetail();
     }
@@ -166,24 +219,121 @@ class _TaskDetailContent extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // 图片轮播区域 (对齐iOS TaskImageCarouselView - 300pt)
+          // 图片轮播区域
           _TaskImageCarousel(task: task),
 
-          // 内容区域 - 上移重叠图片 (对齐iOS padding .top -20)
+          // 内容区域 - 上移重叠图片
           Transform.translate(
             offset: const Offset(0, -20),
             child: Column(
               children: [
-                // 标题和状态卡片 (对齐iOS TaskHeaderCard)
+                // 标题和状态卡片
                 _TaskHeaderCard(task: task, isDark: isDark),
                 const SizedBox(height: AppSpacing.md),
 
-                // 任务信息卡片 (对齐iOS TaskInfoCard)
+                // 任务信息卡片
                 _TaskInfoCard(task: task, isDark: isDark),
                 const SizedBox(height: AppSpacing.md),
 
+                // ========== 条件卡片区域 ==========
+
+                // 发布者提示 (isPoster && open)
+                if (isPoster && task.status == AppConstants.taskStatusOpen) ...[
+                  PosterInfoCard(isDark: isDark),
+                  const SizedBox(height: AppSpacing.md),
+                ],
+
+                // 确认截止提醒 (pendingConfirmation && isPoster)
+                if (task.status ==
+                        AppConstants.taskStatusPendingConfirmation &&
+                    isPoster &&
+                    task.confirmationDeadline != null) ...[
+                  ConfirmationReminderCard(
+                    deadline: task.confirmationDeadline!,
+                    isDark: isDark,
+                    onConfirm: () {
+                      context.read<TaskDetailBloc>().add(
+                          const TaskDetailConfirmCompletionRequested());
+                    },
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+                ],
+
+                // 等待确认卡片 (pendingConfirmation && isTaker)
+                if (task.status ==
+                        AppConstants.taskStatusPendingConfirmation &&
+                    isTaker) ...[
+                  WaitingConfirmationCard(isDark: isDark),
+                  const SizedBox(height: AppSpacing.md),
+                ],
+
+                // 完成证据 (pendingConfirmation || completed + evidence)
+                if ((task.status ==
+                            AppConstants.taskStatusPendingConfirmation ||
+                        task.status ==
+                            AppConstants.taskStatusCompleted) &&
+                    task.completionEvidence != null &&
+                    task.completionEvidence!.isNotEmpty) ...[
+                  CompletionEvidenceCard(
+                    evidence: task.completionEvidence!,
+                    isDark: isDark,
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+                ],
+
+                // 申请状态卡片 (非发布者 + 已申请)
+                if (!isPoster &&
+                    (task.hasApplied || state.userApplication != null) &&
+                    (state.userApplication?.status != 'pending' ||
+                        task.userApplicationStatus != 'pending')) ...[
+                  ApplicationStatusCard(
+                    task: task,
+                    application: state.userApplication,
+                    isDark: isDark,
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+                ],
+
+                // 申请列表 (isPoster && open)
+                if (isPoster &&
+                    task.status == AppConstants.taskStatusOpen) ...[
+                  ApplicationsListView(
+                    applications: state.applications,
+                    isLoading: state.isLoadingApplications,
+                    isDark: isDark,
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+                ],
+
+                // ========== 操作按钮区域 ==========
+                Padding(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+                  child: TaskActionButtonsView(
+                    task: task,
+                    isPoster: isPoster,
+                    isTaker: isTaker,
+                    isDark: isDark,
+                    state: state,
+                  ),
+                ),
+
+                // 评价区域 (已完成 + 有评价)
+                if (task.status == AppConstants.taskStatusCompleted &&
+                    state.reviews.isNotEmpty) ...[
+                  const SizedBox(height: AppSpacing.md),
+                  TaskReviewsSection(
+                    reviews: state.reviews,
+                    isDark: isDark,
+                  ),
+                ],
+
                 // 发布者信息卡片
-                _TaskPosterCard(task: task, isDark: isDark),
+                const SizedBox(height: AppSpacing.md),
+                _TaskPosterCard(
+                  task: task,
+                  isDark: isDark,
+                ),
                 const SizedBox(height: AppSpacing.xxl),
               ],
             ),
@@ -193,10 +343,19 @@ class _TaskDetailContent extends StatelessWidget {
     );
   }
 
-  Widget _buildBottomBar(BuildContext context, TaskDetailState state) {
+  Widget _buildBottomBar(
+    BuildContext context,
+    TaskDetailState state,
+    bool isPoster,
+    bool isTaker,
+  ) {
     final task = state.task!;
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
+    // 确定聊天目标
+    final chatTargetId = isPoster ? task.takerId : task.posterId;
+
+    // 底部按钮：快速操作栏 (简洁版)
     return ClipRect(
       child: BackdropFilter(
         filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
@@ -220,16 +379,19 @@ class _TaskDetailContent extends StatelessWidget {
                   horizontal: 16, vertical: 12),
               child: Row(
                 children: [
-                  IconActionButton(
-                    icon: Icons.chat_bubble_outline,
-                    onPressed: () {
-                      context.push('/chat/${task.posterId}');
-                    },
-                    backgroundColor: AppColors.skeletonBase,
-                  ),
-                  AppSpacing.hMd,
+                  // 聊天按钮 — 有目标时才显示
+                  if (chatTargetId != null)
+                    IconActionButton(
+                      icon: Icons.chat_bubble_outline,
+                      onPressed: () {
+                        context.push('/chat/$chatTargetId');
+                      },
+                      backgroundColor: AppColors.skeletonBase,
+                    ),
+                  if (chatTargetId != null) AppSpacing.hMd,
                   Expanded(
-                    child: _buildActionButton(context, state),
+                    child: _buildBottomActionButton(
+                        context, state, isPoster, isTaker),
                   ),
                 ],
               ),
@@ -240,7 +402,13 @@ class _TaskDetailContent extends StatelessWidget {
     );
   }
 
-  Widget _buildActionButton(BuildContext context, TaskDetailState state) {
+  /// 底部主操作按钮 — 根据状态 + 角色显示最重要的操作
+  Widget _buildBottomActionButton(
+    BuildContext context,
+    TaskDetailState state,
+    bool isPoster,
+    bool isTaker,
+  ) {
     final task = state.task!;
 
     if (state.isSubmitting) {
@@ -251,9 +419,19 @@ class _TaskDetailContent extends StatelessWidget {
       );
     }
 
-    if (task.canApply) {
+    // 发布者 + 待支付 → 支付按钮
+    if (isPoster && task.status == AppConstants.taskStatusPendingPayment) {
       return PrimaryButton(
-        text: context.l10n.taskDetailApplyForTask,
+        text: context.l10n.taskDetailPlatformServiceFee,
+        icon: Icons.credit_card,
+        onPressed: task.isPaymentExpired ? null : () {},
+      );
+    }
+
+    // 非发布者 + 可申请
+    if (!isPoster && task.canApply) {
+      return PrimaryButton(
+        text: context.l10n.actionsApplyForTask,
         onPressed: () {
           context
               .read<TaskDetailBloc>()
@@ -262,37 +440,60 @@ class _TaskDetailContent extends StatelessWidget {
       );
     }
 
-    if (task.hasApplied) {
+    // 非发布者 + 已申请 (pending)
+    if (!isPoster && task.hasApplied && task.userApplicationStatus == 'pending') {
       return PrimaryButton(
-        text: context.l10n.taskDetailCancelApplication,
-        onPressed: () {
-          context.read<TaskDetailBloc>().add(
-              const TaskDetailCancelApplicationRequested());
-        },
+        text: context.l10n.taskDetailWaitingPosterConfirm,
+        onPressed: null,
       );
     }
 
-    if (task.status == AppConstants.taskStatusInProgress) {
+    // 接单者 + 进行中 → 标记完成
+    if (isTaker && task.status == AppConstants.taskStatusInProgress) {
       return PrimaryButton(
-        text: context.l10n.taskDetailCompleteTask,
+        text: context.l10n.actionsMarkComplete,
         onPressed: () {
           context
               .read<TaskDetailBloc>()
               .add(const TaskDetailCompleteRequested());
         },
+        gradient: LinearGradient(
+          colors: [AppColors.success, AppColors.success.withValues(alpha: 0.8)],
+        ),
       );
     }
 
-    if (task.status == AppConstants.taskStatusPendingConfirmation) {
+    // 发布者 + 待确认 → 确认完成
+    if (isPoster &&
+        task.status == AppConstants.taskStatusPendingConfirmation) {
       return PrimaryButton(
-        text: context.l10n.taskDetailConfirmCompleteButton,
+        text: context.l10n.actionsConfirmComplete,
         onPressed: () {
           context.read<TaskDetailBloc>().add(
               const TaskDetailConfirmCompletionRequested());
         },
+        gradient: LinearGradient(
+          colors: [AppColors.success, AppColors.success.withValues(alpha: 0.8)],
+        ),
       );
     }
 
+    // 已完成 + 可评价
+    if (task.status == AppConstants.taskStatusCompleted &&
+        (isPoster || isTaker) &&
+        !task.hasReviewed) {
+      return PrimaryButton(
+        text: context.l10n.actionsRateTask,
+        onPressed: () {
+          // TODO: 打开评价弹窗
+        },
+        gradient: LinearGradient(
+          colors: [AppColors.warning, AppColors.warning.withValues(alpha: 0.8)],
+        ),
+      );
+    }
+
+    // 默认：显示状态文本
     return PrimaryButton(
       text: task.statusText,
       onPressed: null,
@@ -381,7 +582,7 @@ class _TaskImageCarouselState extends State<_TaskImageCarousel> {
             },
           ),
 
-          // 底部渐变过渡 (对标iOS - gradient transparent → background)
+          // 底部渐变过渡
           Positioned(
             left: 0,
             right: 0,
@@ -403,10 +604,10 @@ class _TaskImageCarouselState extends State<_TaskImageCarousel> {
             ),
           ),
 
-          // 自定义页面指示器 (对齐iOS - Capsule dots + 毛玻璃背景)
+          // 自定义页面指示器
           if (images.length > 1)
             Positioned(
-              bottom: 24, // 避开下方卡片的圆角
+              bottom: 24,
               child: ClipRRect(
                 borderRadius: AppRadius.allPill,
                 child: BackdropFilter(
@@ -446,7 +647,6 @@ class _TaskImageCarouselState extends State<_TaskImageCarousel> {
     );
   }
 
-  /// 无图片占位 (对齐iOS - gradient + icon + text)
   Widget _buildPlaceholder() {
     return Container(
       height: 300,
@@ -484,7 +684,7 @@ class _TaskImageCarouselState extends State<_TaskImageCarousel> {
 }
 
 // ============================================================
-// 标题卡片 (对齐iOS TaskHeaderCard)
+// 标题卡片 — 增强版: 来源标签 + 等级标签
 // ============================================================
 
 class _TaskHeaderCard extends StatelessWidget {
@@ -519,16 +719,19 @@ class _TaskHeaderCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // 状态标签行 (对齐iOS HStack: taskLevel + StatusBadge)
-          Row(
+          // 状态 + 等级 + 来源 标签行
+          Wrap(
+            spacing: AppSpacing.sm,
+            runSpacing: AppSpacing.xs,
             children: [
               _buildStatusBadge(),
-              const Spacer(),
+              TaskLevelBadge(task: task),
+              TaskSourceBadge(task: task),
             ],
           ),
           const SizedBox(height: AppSpacing.md),
 
-          // 标题 (对齐iOS AppTypography.title)
+          // 标题
           Text(
             task.displayTitle,
             style: AppTypography.title2.copyWith(
@@ -540,18 +743,20 @@ class _TaskHeaderCard extends StatelessWidget {
           ),
           const SizedBox(height: AppSpacing.sm),
 
-          // 价格 (对齐iOS TaskAmountView - 大号)
+          // 价格
           _buildAmountView(),
           const SizedBox(height: AppSpacing.md),
 
-          // 分类和位置标签 (对齐iOS HStack: TaskTagView)
+          // 分类和位置标签
           Wrap(
             spacing: AppSpacing.sm,
             runSpacing: AppSpacing.sm,
             children: [
               _buildTag(
-                text: task.taskTypeText,
-                icon: Icons.local_offer,
+                text: task.displayCategoryText,
+                icon: task.isFleaMarketTask
+                    ? Icons.shopping_bag
+                    : Icons.local_offer,
                 isPrimary: true,
               ),
               _buildTag(
@@ -568,7 +773,6 @@ class _TaskHeaderCard extends StatelessWidget {
     );
   }
 
-  /// 状态徽章 (对齐iOS StatusBadge)
   Widget _buildStatusBadge() {
     final color = AppColors.taskStatusColor(task.status);
     return Container(
@@ -601,14 +805,14 @@ class _TaskHeaderCard extends StatelessWidget {
     );
   }
 
-  /// 金额视图 (对齐iOS TaskAmountView)
   Widget _buildAmountView() {
-    if (task.reward <= 0) return const SizedBox.shrink();
+    final amount = task.displayReward;
+    if (amount <= 0) return const SizedBox.shrink();
 
     final currencySymbol = task.currency == 'GBP' ? '£' : '\$';
-    final priceText = task.reward.truncateToDouble() == task.reward
-        ? task.reward.toStringAsFixed(0)
-        : task.reward.toStringAsFixed(2);
+    final priceText = amount.truncateToDouble() == amount
+        ? amount.toStringAsFixed(0)
+        : amount.toStringAsFixed(2);
 
     return Row(
       crossAxisAlignment: CrossAxisAlignment.baseline,
@@ -634,7 +838,6 @@ class _TaskHeaderCard extends StatelessWidget {
     );
   }
 
-  /// 标签组件 (对齐iOS TaskTagView)
   Widget _buildTag({
     required String text,
     required IconData icon,
@@ -681,7 +884,7 @@ class _TaskHeaderCard extends StatelessWidget {
 }
 
 // ============================================================
-// 任务信息卡片 (对齐iOS TaskInfoCard)
+// 任务信息卡片
 // ============================================================
 
 class _TaskInfoCard extends StatelessWidget {
@@ -711,10 +914,9 @@ class _TaskInfoCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // 描述 (对齐iOS TaskInfoCard - 描述区域)
+          // 描述
           if (task.displayDescription != null &&
               task.displayDescription!.isNotEmpty) ...[
-            // 描述标题 (对齐iOS: icon + "任务描述")
             Row(
               children: [
                 const Icon(
@@ -752,7 +954,7 @@ class _TaskInfoCard extends StatelessWidget {
             const SizedBox(height: AppSpacing.md),
           ],
 
-          // 时间信息 (对齐iOS TaskTimeInfoView)
+          // 时间信息
           if (task.deadline != null)
             _buildInfoRow(
               icon: Icons.access_time,
@@ -789,7 +991,6 @@ class _TaskInfoCard extends StatelessWidget {
     );
   }
 
-  /// 信息行 (对齐iOS TaskInfoRow: circle icon + title/value)
   Widget _buildInfoRow({
     required IconData icon,
     required String title,
@@ -852,7 +1053,7 @@ class _TaskInfoCard extends StatelessWidget {
 }
 
 // ============================================================
-// 发布者信息卡片 (对齐iOS TaskPosterInfoView)
+// 发布者信息卡片 — 增强版: 来源感知角色称谓
 // ============================================================
 
 class _TaskPosterCard extends StatelessWidget {
@@ -862,6 +1063,8 @@ class _TaskPosterCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final roleTitle = getPosterRoleText(task, context);
+
     return Container(
       width: double.infinity,
       margin: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
@@ -888,7 +1091,7 @@ class _TaskPosterCard extends StatelessWidget {
             : null,
         child: Row(
           children: [
-            // 头像 (对齐iOS AvatarView 52 + gradient stroke ring)
+            // 头像
             Container(
               width: 52,
               height: 52,
@@ -930,7 +1133,7 @@ class _TaskPosterCard extends StatelessWidget {
                     children: [
                       Flexible(
                         child: Text(
-                          task.poster?.name ?? context.l10n.taskDetailPublisher,
+                          task.poster?.name ?? roleTitle,
                           style: AppTypography.bodyBold.copyWith(
                             color: isDark
                                 ? AppColors.textPrimaryDark
@@ -958,9 +1161,9 @@ class _TaskPosterCard extends StatelessWidget {
               ),
             ),
 
-            // 角色标签 + 箭头圆圈 (对标iOS chevron in circle)
+            // 角色标签 + 箭头
             Text(
-              context.l10n.taskDetailPublisher,
+              roleTitle,
               style: AppTypography.caption.copyWith(
                 color: isDark
                     ? AppColors.textSecondaryDark

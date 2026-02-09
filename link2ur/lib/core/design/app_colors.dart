@@ -157,6 +157,8 @@ class AppColors {
         return primary;
       case AppConstants.taskStatusPendingConfirmation:
         return warning;
+      case AppConstants.taskStatusPendingPayment:
+        return const Color(0xFF8B5CF6); // 紫色 - 待支付
       case AppConstants.taskStatusCompleted:
         return const Color(0xFF8E8E93);
       case AppConstants.taskStatusCancelled:

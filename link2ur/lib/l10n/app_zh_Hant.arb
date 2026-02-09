@@ -2910,7 +2910,7 @@
   "authPasswordLabel": "密碼",
   "authPasswordPlaceholder": "請輸入密碼",
   "authCodePlaceholder": "請輸入驗證碼",
-  "authPhonePlaceholder": "07XXX XXXXXX",
+  "authPhonePlaceholder": "7XXX XXXXXX",
   "authConfirmPassword": "確認密碼",
   "authConfirmPasswordPlaceholder": "請再次輸入密碼",
   "authPasswordRequirement": "至少8位，包含字母和數字",

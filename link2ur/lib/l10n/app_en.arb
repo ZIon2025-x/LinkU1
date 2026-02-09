@@ -2998,7 +2998,7 @@
   "authPasswordLabel": "Password",
   "authPasswordPlaceholder": "Enter password",
   "authCodePlaceholder": "Enter verification code",
-  "authPhonePlaceholder": "07XXX XXXXXX",
+  "authPhonePlaceholder": "7XXX XXXXXX",
   "authConfirmPassword": "Confirm Password",
   "authConfirmPasswordPlaceholder": "Enter password again",
   "authPasswordRequirement": "At least 8 characters with letters and numbers",

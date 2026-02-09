@@ -42,19 +42,9 @@ from fastapi import BackgroundTasks
 logger = logging.getLogger(__name__)
 
 
-def normalize_phone_number(phone: str) -> str:
-    """标准化手机号码，确保同一个号码只有一种格式。
-    
-    主要处理英国号码的前导0问题：
-    - +4407123456789 → +447123456789（去掉区号后的前导0）
-    - +447123456789 → +447123456789（已是标准格式，不变）
-    
-    同时也通用处理其他国家号码中区号后紧跟的0。
-    """
-    import re
-    # 去掉英国区号 +44 后面的前导0（+440 → +44）
-    phone = re.sub(r'^\+44\s*0', '+44', phone)
-    return phone
+# 从 validators 导入手机号标准化函数
+from app.validators import StringValidator
+normalize_phone_number = StringValidator.normalize_phone
 
 
 # 创建安全认证路由器

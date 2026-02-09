@@ -114,21 +114,44 @@ class StringValidator(BaseValidator):
         return username
     
     @staticmethod
+    def normalize_phone(phone: str) -> str:
+        """标准化手机号码，确保同一个号码只有一种格式。
+        
+        主要处理英国号码的前导0问题：
+        - +4407123456789 → +447123456789（去掉区号后的前导0）
+        - +447123456789  → +447123456789（已是标准格式，不变）
+        - 07123456789    → +447123456789（补上区号，去掉前导0）
+        - 空字符串       → ""（不变，用于解绑场景）
+        """
+        if not phone or phone.strip() == "":
+            return ""
+        phone = phone.strip()
+        # 去掉英国区号 +44 后面的前导0
+        phone = re.sub(r'^\+44\s*0', '+44', phone)
+        return phone
+
+    @staticmethod
     def validate_phone(phone: str) -> str:
-        """验证手机号（可选）"""
+        """验证手机号（可选），返回标准化后的完整号码（含 + 前缀）"""
         if not phone or phone.strip() == "":
             return ""  # 空值直接返回
         
-        phone = phone.strip()
+        # 先标准化
+        phone = StringValidator.normalize_phone(phone)
         
-        # 移除所有非数字字符
+        # 验证格式：必须以 + 开头，后面是 7-15 位数字
+        if phone.startswith('+'):
+            phone_digits = phone[1:]  # 去掉 + 号来检查数字部分
+            if not phone_digits.isdigit():
+                raise ValueError("手机号只能包含数字")
+            if len(phone_digits) < 7 or len(phone_digits) > 15:
+                raise ValueError("手机号长度不正确")
+            return phone  # 保留 + 前缀返回
+        
+        # 兼容无 + 前缀的旧格式输入
         phone_digits = re.sub(r'\D', '', phone)
-        
-        # 检查长度（中国手机号11位，国际号码7-15位）
         if len(phone_digits) < 7 or len(phone_digits) > 15:
             raise ValueError("手机号长度不正确")
-        
-        # 检查是否只包含数字
         if not phone_digits.isdigit():
             raise ValueError("手机号只能包含数字")
         
