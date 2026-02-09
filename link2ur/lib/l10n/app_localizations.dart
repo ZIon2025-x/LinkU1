@@ -333,6 +333,12 @@ abstract class AppLocalizations {
   /// **'Logout'**
   String get authLogout;
 
+  /// No description provided for @authSessionExpired.
+  ///
+  /// In en, this message translates to:
+  /// **'Your session has expired, please log in again'**
+  String get authSessionExpired;
+
   /// No description provided for @authForgotPassword.
   ///
   /// In en, this message translates to:

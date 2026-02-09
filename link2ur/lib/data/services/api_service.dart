@@ -23,6 +23,13 @@ class ApiService {
   bool _isRefreshing = false;
   final List<Completer<void>> _refreshCompleters = [];
 
+  /// 认证失败回调（token刷新失败时触发）
+  /// 由 app.dart 设置，用于通知 AuthBloc 进入未认证状态
+  void Function()? onAuthFailure;
+
+  /// 防止 onAuthFailure 被并发的 401 请求重复触发
+  bool _authFailureNotified = false;
+
   /// 基础配置
   BaseOptions get _baseOptions => BaseOptions(
         baseUrl: AppConfig.instance.baseUrl,
@@ -84,7 +91,16 @@ class ApiService {
     if (token != null && token.isNotEmpty) {
       options.headers['Authorization'] = 'Bearer $token';
       options.headers['X-Session-ID'] = token;
+
+      // 检测到有效 token（用户重新登录），自动重置认证失败标志
+      if (_authFailureNotified) {
+        _authFailureNotified = false;
+        AppLogger.info('Auth failure flag reset: valid token detected');
+      }
     }
+    // 注意：无 token 时不再短路拒绝请求。
+    // 公开接口（论坛、排行榜等）无需认证也可访问，
+    // 受保护接口会返回 401，由 _onError 正常处理。
 
     // 添加语言
     final language = StorageService.instance.getLanguage();
@@ -127,8 +143,12 @@ class ApiService {
       // 如果是refresh接口本身返回401，直接失败，避免无限循环
       if (error.requestOptions.path.contains('/api/secure-auth/refresh')) {
         AppLogger.warning('Refresh token expired or invalid');
-        // 清除token并触发登出
-        await StorageService.instance.clearTokens();
+        _notifyAuthFailure(); // Token 清理统一由 AuthForceLogout → clearLocalAuthData 处理
+        return handler.reject(error);
+      }
+
+      // 如果已经通知过认证失败，直接拒绝请求，不再重复处理
+      if (_authFailureNotified) {
         return handler.reject(error);
       }
 
@@ -163,6 +183,8 @@ class ApiService {
       _refreshCompleters.clear();
 
       if (refreshed) {
+        // 刷新成功，重置标志
+        _authFailureNotified = false;
         // 重试原请求
         try {
           final response = await _retry(error.requestOptions);
@@ -171,9 +193,22 @@ class ApiService {
           return handler.reject(error);
         }
       }
+
+      // Token 刷新失败，通知认证失败（Token 清理由 AuthForceLogout 统一处理）
+      AppLogger.warning('Token refresh failed for 401 response, forcing logout');
+      _notifyAuthFailure();
+      return handler.reject(error);
     }
 
     handler.next(error);
+  }
+
+  /// 通知认证失败（仅通知一次，防止并发 401 重复触发）
+  void _notifyAuthFailure() {
+    if (!_authFailureNotified) {
+      _authFailureNotified = true;
+      onAuthFailure?.call();
+    }
   }
 
   /// 刷新Token
@@ -218,6 +253,7 @@ class ApiService {
             refreshToken: newRefreshToken,
           );
           AppLogger.info('Token refresh successful');
+          _authFailureNotified = false; // 刷新成功，重置标志
           return true;
         } else {
           AppLogger.error('Invalid refresh response: missing session_id. Keys: ${data is Map ? data.keys.toList() : data}');
@@ -229,11 +265,7 @@ class ApiService {
       return false;
     } catch (e, stackTrace) {
       AppLogger.error('Token refresh failed', e, stackTrace);
-      // 如果是401或403，清除token
-      if (e is DioException &&
-          (e.response?.statusCode == 401 || e.response?.statusCode == 403)) {
-        await StorageService.instance.clearTokens();
-      }
+      // 注意：不在此处调用 onAuthFailure，统一由 _onError 在刷新失败后处理
       return false;
     }
   }

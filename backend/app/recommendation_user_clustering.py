@@ -434,12 +434,12 @@ class UserClusteringManager:
             if deleted_count > 0:
                 logger.info(f"清除聚类缓存: cluster_id={cluster_id}, count={deleted_count}")
         except AttributeError:
-            # 如果 redis_cache 不支持 scan，降级到 keys（开发环境）
+            # 降级：使用 redis_utils 的 SCAN 实现
             try:
-                keys = redis_cache.keys(pattern)
-                if keys:
-                    redis_cache.delete(*keys)
-                    logger.info(f"清除聚类缓存(keys): cluster_id={cluster_id}, count={len(keys)}")
+                from app.redis_utils import delete_by_pattern
+                deleted = delete_by_pattern(redis_cache, pattern)
+                if deleted > 0:
+                    logger.info(f"清除聚类缓存(scan): cluster_id={cluster_id}, count={deleted}")
             except Exception as e:
                 logger.warning(f"清除聚类缓存失败: {e}")
         except Exception as e:

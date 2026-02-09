@@ -81,8 +81,6 @@ from app.models import CustomerService, User
 from app.config import Config
 
 # 注意：Stripe API配置在应用启动时通过stripe_config模块统一配置（带超时）
-# 这里只设置api_key作为向后兼容，生产环境在startup中会校验 STRIPE_SECRET_KEY 必须正确配置
-stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
 
 router = APIRouter()
 
@@ -3899,8 +3897,6 @@ def confirm_task_completion(
                         taker = crud.get_user_by_id(db, task.taker_id)
                         if taker and taker.stripe_account_id:
                             try:
-                                stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
-                                
                                 # 验证 Stripe Connect 账户状态
                                 account = stripe.Account.retrieve(taker.stripe_account_id)
                                 if not account.details_submitted:
@@ -7025,8 +7021,7 @@ def confirm_task_complete(
     import logging
     
     logger = logging.getLogger(__name__)
-    stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
-    
+
     task = crud.get_task(db, task_id)
     if not task or task.poster_id != current_user.id:
         raise HTTPException(status_code=404, detail="Task not found or no permission.")

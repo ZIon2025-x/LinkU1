@@ -191,10 +191,9 @@ class AdminAuthManager:
         
         if USE_REDIS:
             # 从Redis删除
+            from app.redis_utils import delete_by_pattern
             pattern = f"admin_session:{admin_id}:*"
-            keys = redis_client.keys(pattern)
-            if keys:
-                deleted_count = redis_client.delete(*keys)
+            deleted_count = delete_by_pattern(redis_client, pattern)
         else:
             # 从内存删除
             keys_to_delete = [sid for sid, session in admin_active_sessions.items() 
@@ -236,9 +235,10 @@ class AdminAuthManager:
     def _get_session_data(session_id: str) -> Optional[dict]:
         """从Redis或内存获取会话数据"""
         if USE_REDIS:
-            # 从Redis查找
+            # 从Redis查找（使用 SCAN 替代 KEYS）
+            from app.redis_utils import scan_keys
             pattern = f"admin_session:*:{session_id}"
-            keys = redis_client.keys(pattern)
+            keys = scan_keys(redis_client, pattern)
             if keys:
                 return safe_redis_get(keys[0])
             return None
@@ -262,8 +262,9 @@ class AdminAuthManager:
     def _delete_session(session_id: str) -> bool:
         """删除会话"""
         if USE_REDIS:
+            from app.redis_utils import scan_keys
             pattern = f"admin_session:*:{session_id}"
-            keys = redis_client.keys(pattern)
+            keys = scan_keys(redis_client, pattern)
             if keys:
                 return safe_redis_delete(keys[0])
             return False
@@ -313,8 +314,9 @@ class AdminAuthManager:
         """清理特定管理员的过期会话（私有方法）"""
         if USE_REDIS:
             # Redis会自动过期，但我们可以手动清理标记为不活跃的会话
+            from app.redis_utils import scan_keys
             pattern = f"admin_session:{admin_id}:*"
-            keys = redis_client.keys(pattern)
+            keys = scan_keys(redis_client, pattern)
             cleaned_count = 0
             
             for key in keys:
@@ -359,9 +361,10 @@ class AdminAuthManager:
         active_sessions = []
         
         if USE_REDIS:
+            from app.redis_utils import scan_keys
             pattern = f"admin_session:{admin_id}:*"
-            keys = redis_client.keys(pattern)
-            
+            keys = scan_keys(redis_client, pattern)
+
             for key in keys:
                 key_str = key.decode() if isinstance(key, bytes) else key
                 data = safe_redis_get(key_str)
@@ -536,9 +539,10 @@ def verify_admin_refresh_token(refresh_token: str, ip_address: str = "", device_
     if not USE_REDIS:
         return None
     
-    # 查找refresh token
+    # 查找refresh token（使用 SCAN 替代 KEYS）
+    from app.redis_utils import scan_keys
     pattern = f"admin_refresh_token:*:{refresh_token}"
-    keys = redis_client.keys(pattern)
+    keys = scan_keys(redis_client, pattern)
     
     if not keys:
         return None
@@ -591,9 +595,10 @@ def revoke_admin_refresh_token(refresh_token: str) -> bool:
     if not refresh_token or not USE_REDIS:
         return False
     
-    # 查找并删除refresh token
+    # 查找并删除refresh token（使用 SCAN 替代 KEYS）
+    from app.redis_utils import scan_keys
     pattern = f"admin_refresh_token:*:{refresh_token}"
-    keys = redis_client.keys(pattern)
+    keys = scan_keys(redis_client, pattern)
     
     if keys:
         redis_client.delete(*keys)
@@ -608,8 +613,9 @@ def revoke_all_admin_refresh_tokens(admin_id: str) -> int:
     if not USE_REDIS:
         return 0
     
+    from app.redis_utils import scan_keys
     pattern = f"admin_refresh_token:{admin_id}:*"
-    keys = redis_client.keys(pattern)
+    keys = scan_keys(redis_client, pattern)
     
     if keys:
         count = redis_client.delete(*keys)

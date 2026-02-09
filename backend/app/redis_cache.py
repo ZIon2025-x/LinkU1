@@ -32,54 +32,42 @@ class RedisCache:
         
         if REDIS_AVAILABLE and settings.USE_REDIS:
             try:
-                # 优先使用REDIS_URL，如果不可用则使用单独的环境变量
-                if settings.REDIS_URL and not settings.REDIS_URL.startswith("redis://localhost"):
-                    # 使用REDIS_URL连接
-                    logger.info(f"[DEBUG] Redis连接 - 使用REDIS_URL: {settings.REDIS_URL[:20]}...")
-                    # 优化Redis连接池配置
-                    max_connections = int(os.getenv("REDIS_MAX_CONNECTIONS", "50"))
-                    self.redis_client = redis.from_url(
-                        settings.REDIS_URL,
-                        decode_responses=False,  # 使用二进制模式以支持pickle
-                        socket_connect_timeout=int(os.getenv("REDIS_CONNECT_TIMEOUT", "5")),
-                        socket_timeout=int(os.getenv("REDIS_SOCKET_TIMEOUT", "5")),
-                        retry_on_timeout=True,
-                        health_check_interval=int(os.getenv("REDIS_HEALTH_CHECK_INTERVAL", "30")),
-                        max_connections=max_connections,  # 连接池大小
-                        socket_keepalive=True,  # 保持连接活跃
-                        socket_keepalive_options={}  # TCP keepalive选项
-                    )
+                # 使用共享连接池（减少 Redis 连接数）
+                from app.redis_pool import get_client
+                self.redis_client = get_client(decode_responses=False)
+                if self.redis_client:
+                    self.enabled = True
+                    logger.info("Redis缓存已启用（共享连接池）")
                 else:
-                    # 使用单独的环境变量连接
-                    # 优化Redis连接池配置
-                    max_connections = int(os.getenv("REDIS_MAX_CONNECTIONS", "50"))
-                    self.redis_client = redis.Redis(
-                        host=settings.REDIS_HOST,
-                        port=settings.REDIS_PORT,
-                        db=settings.REDIS_DB,
-                        password=settings.REDIS_PASSWORD,
-                        decode_responses=False,  # 使用二进制模式以支持pickle
-                        socket_connect_timeout=int(os.getenv("REDIS_CONNECT_TIMEOUT", "5")),
-                        socket_timeout=int(os.getenv("REDIS_SOCKET_TIMEOUT", "5")),
-                        retry_on_timeout=True,
-                        health_check_interval=int(os.getenv("REDIS_HEALTH_CHECK_INTERVAL", "30")),
-                        max_connections=max_connections,  # 连接池大小
-                        socket_keepalive=True,  # 保持连接活跃
-                        socket_keepalive_options={}  # TCP keepalive选项
-                    )
-                # 测试连接
-                self.redis_client.ping()
-                self.enabled = True
-                logger.info("Redis缓存已启用")
+                    # 共享池不可用，回退到直接连接
+                    if settings.REDIS_URL and not settings.REDIS_URL.startswith("redis://localhost"):
+                        self.redis_client = redis.from_url(
+                            settings.REDIS_URL,
+                            decode_responses=False,
+                            socket_connect_timeout=int(os.getenv("REDIS_CONNECT_TIMEOUT", "5")),
+                            socket_timeout=int(os.getenv("REDIS_SOCKET_TIMEOUT", "5")),
+                            retry_on_timeout=True,
+                        )
+                    else:
+                        self.redis_client = redis.Redis(
+                            host=settings.REDIS_HOST,
+                            port=settings.REDIS_PORT,
+                            db=settings.REDIS_DB,
+                            password=settings.REDIS_PASSWORD,
+                            decode_responses=False,
+                            socket_connect_timeout=int(os.getenv("REDIS_CONNECT_TIMEOUT", "5")),
+                            socket_timeout=int(os.getenv("REDIS_SOCKET_TIMEOUT", "5")),
+                            retry_on_timeout=True,
+                        )
+                    self.redis_client.ping()
+                    self.enabled = True
+                    logger.info("Redis缓存已启用（直接连接）")
             except Exception as e:
                 logger.warning(f"Redis连接失败，使用内存缓存: {e}")
                 self.redis_client = None
                 self.enabled = False
-                # 在Railway环境中，如果Redis连接失败，记录详细信息
                 if settings.RAILWAY_ENVIRONMENT:
                     logger.error(f"Railway Redis连接失败 - REDIS_URL: {settings.REDIS_URL}")
-                    logger.error(f"Railway Redis连接失败 - USE_REDIS: {settings.USE_REDIS}")
-                    logger.error(f"Railway Redis连接失败 - REDIS_AVAILABLE: {REDIS_AVAILABLE}")
         else:
             logger.info("Redis未配置，使用内存缓存")
     
@@ -173,27 +161,26 @@ class RedisCache:
             return False
     
     def delete_pattern(self, pattern: str) -> int:
-        """删除匹配模式的所有键"""
+        """删除匹配模式的所有键（使用 SCAN 替代 KEYS）"""
         if not self.enabled:
             return 0
-        
+
         try:
-            keys = self.redis_client.keys(pattern)
-            if keys:
-                return self.redis_client.delete(*keys)
-            return 0
+            from app.redis_utils import delete_by_pattern
+            return delete_by_pattern(self.redis_client, pattern)
         except RedisError as e:
             logger.error(f"Redis批量删除失败: {e}")
             return 0
-    
+
     def keys(self, pattern: str) -> List[str]:
-        """获取匹配模式的所有键"""
+        """获取匹配模式的所有键（使用 SCAN 替代 KEYS）"""
         if not self.enabled:
             return []
-        
+
         try:
-            return [key.decode('utf-8') if isinstance(key, bytes) else key 
-                    for key in self.redis_client.keys(pattern)]
+            from app.redis_utils import scan_keys
+            return [key.decode('utf-8') if isinstance(key, bytes) else key
+                    for key in scan_keys(self.redis_client, pattern)]
         except RedisError as e:
             logger.error(f"Redis获取键列表失败: {e}")
             return []

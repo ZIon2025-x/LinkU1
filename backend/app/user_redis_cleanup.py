@@ -118,40 +118,42 @@ class UserRedisCleanup:
                 'expired_cache': 0,
             }
             
-            # 统计会话数据
-            session_keys = self.redis_client.keys("session:*")
+            from app.redis_utils import scan_keys
+
+            # 统计会话数据（使用 SCAN 替代 KEYS）
+            session_keys = scan_keys(self.redis_client, "session:*")
             stats['total_sessions'] = len(session_keys)
-            
+
             for key in session_keys:
                 key_str = key.decode() if isinstance(key, bytes) else key
                 data = self._get_redis_data(key_str)
                 # 如果数据无法解析，也计入过期（需要清理）
                 if data is None or self._is_session_expired(data):
                     stats['expired_sessions'] += 1
-            
+
             # 统计用户会话列表
-            user_session_keys = self.redis_client.keys("user_sessions:*")
+            user_session_keys = scan_keys(self.redis_client, "user_sessions:*")
             stats['total_user_sessions'] = len(user_session_keys)
-            
+
             # 统计refresh token数据
-            refresh_token_keys = self.redis_client.keys("refresh_token:*")
+            refresh_token_keys = scan_keys(self.redis_client, "refresh_token:*")
             stats['total_refresh_tokens'] = len(refresh_token_keys)
-            
+
             for key in refresh_token_keys:
                 key_str = key.decode() if isinstance(key, bytes) else key
                 data = self._get_redis_data(key_str)
                 # 如果数据无法解析，也计入过期（需要清理）
                 if data is None or self._is_refresh_token_expired(data):
                     stats['expired_refresh_tokens'] += 1
-            
+
             # 统计用户refresh token列表
-            user_refresh_token_keys = self.redis_client.keys("user_refresh_tokens:*")
+            user_refresh_token_keys = scan_keys(self.redis_client, "user_refresh_tokens:*")
             stats['total_user_refresh_tokens'] = len(user_refresh_token_keys)
-            
+
             # 统计用户缓存
             cache_patterns = ["user:*", "user_tasks:*", "user_profile:*", "user_notifications:*", "user_reviews:*"]
             for pattern in cache_patterns:
-                cache_keys = self.redis_client.keys(pattern)
+                cache_keys = scan_keys(self.redis_client, pattern)
                 stats['total_user_cache'] += len(cache_keys)
                 
                 for key in cache_keys:

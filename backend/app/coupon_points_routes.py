@@ -1014,8 +1014,6 @@ def create_task_payment(
     
     # 如果需要Stripe支付（优惠券抵扣后仍有余额）
     if final_amount > 0:
-        stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
-        
         # ⚠️ 重要：检查是否已有未完成的 PaymentIntent，避免重复创建
         # 若请求了 preferred_payment_method（仅用该方式），不复用已有 PI，必须新建仅含该方式的 PI
         # 这样 PaymentSheet 只显示该方式，不再弹支付方式选择窗
@@ -1370,9 +1368,7 @@ async def create_wechat_checkout_session(
     import os
     import stripe
     from sqlalchemy import and_
-    
-    stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
-    
+
     # 查找任务
     task = db.query(models.Task).filter(models.Task.id == task_id).first()
     if not task:
@@ -1798,7 +1794,6 @@ def get_task_payment_status(
     # 如果有 Payment Intent ID，从 Stripe 获取详细信息（只读）
     if task.payment_intent_id:
         try:
-            stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
             # 检索 Payment Intent（只读，不修改）
             payment_intent = stripe.PaymentIntent.retrieve(task.payment_intent_id)
             

@@ -537,8 +537,7 @@ def apply_to_activity(
         # 创建支付意图
         import stripe
         import os
-        stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
-        
+
         task_amount_pence = int(price * 100)
         from app.utils.fee_calculator import calculate_application_fee_pence
         application_fee_pence = calculate_application_fee_pence(task_amount_pence)

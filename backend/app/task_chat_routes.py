@@ -1431,7 +1431,6 @@ async def accept_application(
                 try:
                     import stripe
                     import os
-                    stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
                     payment_intent = stripe.PaymentIntent.retrieve(locked_task.payment_intent_id)
                     
                     # ⚠️ 安全验证：验证 PaymentIntent 是否属于当前申请者
@@ -1544,8 +1543,7 @@ async def accept_application(
         try:
             import stripe
             import os
-            stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
-            
+
             account = stripe.Account.retrieve(applicant.stripe_account_id)
             
             # 检查账户是否已完成 onboarding
@@ -1595,8 +1593,7 @@ async def accept_application(
         # 创建 Stripe Payment Intent
         import stripe
         import os
-        stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
-        
+
         # 获取接受者的 Stripe Connect 账户ID
         taker_stripe_account_id = applicant.stripe_account_id
         
@@ -2505,8 +2502,7 @@ async def respond_negotiation(
             # 创建 Stripe Payment Intent
             import stripe
             import os
-            stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
-            
+
             try:
                 from app.secure_auth import get_wechat_pay_payment_method_options
                 payment_method_options = get_wechat_pay_payment_method_options(http_request)

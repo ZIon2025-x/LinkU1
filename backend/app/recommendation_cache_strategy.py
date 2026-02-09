@@ -156,11 +156,9 @@ class RecommendationCacheStrategy:
                         if cursor == 0:
                             break
                 except AttributeError:
-                    # 降级到 keys（开发环境）
-                    keys = redis_cache.keys(pattern)
-                    if keys:
-                        redis_cache.delete(*keys)
-                        deleted_count = len(keys)
+                    # 降级：使用 redis_utils 的 SCAN 实现
+                    from app.redis_utils import delete_by_pattern
+                    deleted_count = delete_by_pattern(redis_cache, pattern)
                 
                 if deleted_count > 0:
                     self._cache_stats["invalidations"] += 1

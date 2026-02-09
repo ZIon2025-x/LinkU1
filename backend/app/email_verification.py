@@ -110,15 +110,15 @@ class EmailVerificationManager:
         invitation_code_text = None
         inviter_id = None
         invitation_code = getattr(user_data, 'invitation_code', None)
-        logger.info(f"[DEBUG] 创建待验证用户 - 原始邀请码输入: {invitation_code}, 类型: {type(invitation_code)}")
+        logger.debug("创建待验证用户 - 原始邀请码输入: %s, 类型: %s", invitation_code, type(invitation_code))
         if invitation_code and invitation_code.strip():
             from app.coupon_points_crud import process_invitation_input
             cleaned_code = invitation_code.strip()
-            logger.info(f"[DEBUG] 处理邀请码输入: '{cleaned_code}'")
+            logger.debug("处理邀请码输入: '%s'", cleaned_code)
             inviter_id, invitation_code_id, invitation_code_text, error_msg = process_invitation_input(
                 db, cleaned_code
             )
-            logger.info(f"[DEBUG] 处理结果 - inviter_id: {inviter_id}, invitation_code_id: {invitation_code_id}, invitation_code_text: {invitation_code_text}, error_msg: {error_msg}")
+            logger.debug("处理结果 - inviter_id: %s, invitation_code_id: %s, invitation_code_text: %s, error_msg: %s", inviter_id, invitation_code_id, invitation_code_text, error_msg)
             if inviter_id:
                 logger.info(f"邀请人ID验证成功: {inviter_id}")
             elif invitation_code_id:
@@ -127,7 +127,7 @@ class EmailVerificationManager:
                 logger.warning(f"邀请码/用户ID验证失败: {error_msg}")
                 # 邀请码/用户ID无效不影响注册，只记录警告
         else:
-            logger.info(f"[DEBUG] 未提供邀请码或邀请码为空")
+            logger.debug("未提供邀请码或邀请码为空")
         
         # 创建新的待验证用户
         logger.info(f"创建待验证用户: email={user_data.email}, inviter_id={inviter_id}, invitation_code_id={invitation_code_id}, invitation_code_text={invitation_code_text}")

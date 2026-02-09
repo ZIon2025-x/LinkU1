@@ -96,17 +96,18 @@ class SecureAuthManager:
     def _get_active_sessions(user_id: str) -> List[SessionInfo]:
         """获取指定用户的活跃会话"""
         active_sessions = []
-        
+
         if USE_REDIS and redis_client:
             try:
-                # 查找所有该用户的会话
-                pattern = f"session:*"
-                keys = redis_client.keys(pattern)
-                
-                for key in keys:
-                    key_str = key.decode() if isinstance(key, bytes) else key
+                # 使用 user_sessions 集合直接查找该用户的 session，避免扫描全部 session
+                user_sessions_key = f"user_sessions:{user_id}"
+                session_ids = redis_client.smembers(user_sessions_key)
+
+                for raw_id in session_ids:
+                    session_id = raw_id.decode() if isinstance(raw_id, bytes) else raw_id
+                    key_str = f"session:{session_id}"
                     data = safe_redis_get(key_str)
-                    if data and data.get('user_id') == user_id and data.get('is_active', True):
+                    if data and data.get('is_active', True):
                         # 检查是否过期
                         last_activity_str = data.get('last_activity', data.get('created_at'))
                         if last_activity_str:
@@ -166,8 +167,9 @@ class SecureAuthManager:
                     revoked_count += 1
 
                 # 清理该用户的所有refresh token，保留当前会话的refresh token（若提供）
+                from app.redis_utils import scan_keys
                 pattern = f"user_refresh_token:{user_id}:*"
-                keys = redis_client.keys(pattern)
+                keys = scan_keys(redis_client, pattern)
                 for key in keys:
                     key_str = key.decode() if isinstance(key, bytes) else key
                     # 如果提供了需要保留的refresh token，则跳过
@@ -433,8 +435,9 @@ class SecureAuthManager:
             redis_client.delete(user_sessions_key)
             
             # 删除用户的所有 refresh token
+            from app.redis_utils import scan_keys
             pattern = f"user_refresh_token:{user_id}:*"
-            refresh_keys = redis_client.keys(pattern)
+            refresh_keys = scan_keys(redis_client, pattern)
             for key in refresh_keys:
                 key_str = key.decode() if isinstance(key, bytes) else key
                 redis_client.delete(key_str)
@@ -858,8 +861,9 @@ def create_user_refresh_token(user_id: str, ip_address: str = "", device_fingerp
     # 存储到Redis，包含IP和设备指纹绑定
     if USE_REDIS and redis_client:
         # 删除该用户的所有旧refresh token（只允许一个设备）
+        from app.redis_utils import scan_keys
         old_token_pattern = f"user_refresh_token:{user_id}:*"
-        old_keys = redis_client.keys(old_token_pattern)
+        old_keys = scan_keys(redis_client, old_token_pattern)
         if old_keys:
             logger.info(f"[SECURE_AUTH] 删除用户 {user_id} 的旧refresh token，共 {len(old_keys)} 个")
             # 将 keys 转换为字符串（如果是从Redis返回的bytes）
@@ -905,9 +909,10 @@ def verify_user_refresh_token(refresh_token: str, ip_address: str = "", device_f
         logger.warning(f"[SECURE_AUTH] verify_user_refresh_token: Redis未启用或未连接")
         return None
     
-    # 查找refresh token
+    # 查找refresh token（使用 SCAN 替代 KEYS 避免阻塞 Redis）
+    from app.redis_utils import scan_keys
     pattern = f"user_refresh_token:*:{refresh_token}"
-    keys = redis_client.keys(pattern)
+    keys = scan_keys(redis_client, pattern)
     
     if not keys:
         # 诊断：检查Redis中该用户是否有任何refresh token
@@ -1033,15 +1038,16 @@ def revoke_user_refresh_token(refresh_token: str) -> bool:
     if not refresh_token or not USE_REDIS or not redis_client:
         return False
     
-    # 查找并删除refresh token
+    # 查找并删除refresh token（使用 SCAN 替代 KEYS）
+    from app.redis_utils import scan_keys
     pattern = f"user_refresh_token:*:{refresh_token}"
-    keys = redis_client.keys(pattern)
-    
+    keys = scan_keys(redis_client, pattern)
+
     if keys:
         redis_client.delete(*keys)
         logger.info(f"[SECURE_AUTH] 撤销用户refresh token: {refresh_token}")
         return True
-    
+
     return False
 
 
@@ -1049,9 +1055,10 @@ def revoke_all_user_refresh_tokens(user_id: str) -> int:
     """撤销用户所有refresh token"""
     if not USE_REDIS or not redis_client:
         return 0
-    
+
+    from app.redis_utils import scan_keys
     pattern = f"user_refresh_token:{user_id}:*"
-    keys = redis_client.keys(pattern)
+    keys = scan_keys(redis_client, pattern)
     
     if keys:
         count = redis_client.delete(*keys)

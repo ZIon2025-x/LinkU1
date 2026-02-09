@@ -46,55 +46,34 @@ public struct Constants {
     
     struct Stripe {
         // Stripe Publishable Key
-        // 
-        // 配置方式（推荐顺序）：
-        // 1. 通过 Xcode Scheme 配置（推荐）：
-        //    - Product → Scheme → Edit Scheme...
-        //    - Run → Arguments → Environment Variables
-        //    - 添加：Name = STRIPE_PUBLISHABLE_KEY, Value = pk_test_...
         //
-        // 2. 直接修改下面的默认值（快速测试，不推荐用于生产）
+        // publishable key 是公开的客户端密钥，可以安全地嵌入 app 中
+        // 如需在开发时覆盖（例如使用测试密钥），可通过 Xcode Scheme 环境变量：
+        //   Product → Scheme → Edit Scheme → Run → Environment Variables
+        //   添加：STRIPE_PUBLISHABLE_KEY = pk_test_xxx
         //
-        // 详细说明请查看：ios/配置Stripe密钥指南.md
+        // ⚠️ 注意：ProcessInfo.processInfo.environment 仅在 Xcode 启动时生效，
+        //    从设备主屏幕直接启动 app 时环境变量不可用，因此必须有正确的硬编码默认值！
         static let publishableKey: String = {
-            // 优先从环境变量读取
+            // 开发时可通过 Xcode Scheme 环境变量覆盖
             if let key = ProcessInfo.processInfo.environment["STRIPE_PUBLISHABLE_KEY"], !key.isEmpty {
                 return key
             }
-            
-            // 如果没有环境变量，使用默认值
-            // ⚠️ 请通过 Xcode Scheme 配置环境变量，或在这里填入你的密钥
-            #if DEBUG
-            return "pk_test_..." // 👈 测试环境：在这里填入你的测试密钥，或通过环境变量配置
-            #else
-            return "pk_live_..." // 👈 生产环境：在这里填入你的生产密钥，或通过环境变量配置
-            #endif
+            // 默认使用生产环境 publishable key（公开密钥，安全嵌入客户端）
+            return "pk_live_51SePW15vvXfvzqMhSEXu7QnduEi7axoPiUMc9gNiV8KFAa82b6rFrrbOFW3gmTiaOETlI3gA0SsAz18SSokFKGLx00bALMvCAg"
         }()
         
         // Apple Pay Merchant ID
-        // 
-        // 配置方式（推荐顺序）：
-        // 1. 通过 Xcode Scheme 配置（推荐）：
-        //    - Product → Scheme → Edit Scheme...
-        //    - Run → Arguments → Environment Variables
-        //    - 添加：Name = APPLE_PAY_MERCHANT_ID, Value = merchant.com.link2ur
         //
-        // 2. 直接修改下面的默认值（快速测试，不推荐用于生产）
-        //
-        // 详细说明请查看：stripe-sample-code/ios/APPLE_PAY_SETUP.md
+        // 与 publishable key 同理，必须硬编码默认值，不能仅依赖环境变量
+        // 开发时可通过 Xcode Scheme 环境变量 APPLE_PAY_MERCHANT_ID 覆盖
         static let applePayMerchantIdentifier: String? = {
-            // 优先从环境变量读取
+            // 开发时可通过 Xcode Scheme 环境变量覆盖
             if let merchantId = ProcessInfo.processInfo.environment["APPLE_PAY_MERCHANT_ID"], !merchantId.isEmpty {
                 return merchantId
             }
-            
-            // 如果没有环境变量，返回 nil（Apple Pay 将不可用）
-            // ⚠️ 请通过 Xcode Scheme 配置环境变量，或在这里填入你的 Merchant ID
-            #if DEBUG
-            return nil // 👈 测试环境：在这里填入你的 Merchant ID，或通过环境变量配置
-            #else
-            return nil // 👈 生产环境：在这里填入你的 Merchant ID，或通过环境变量配置
-            #endif
+            // 默认使用生产环境 Merchant ID
+            return "merchant.com.link2ur"
         }()
         
         // Stripe Connect Onboarding 自定义 URL

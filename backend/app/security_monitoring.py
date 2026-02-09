@@ -307,8 +307,5 @@ async def check_security_middleware(request: Request, call_next):
             request,
             "ERROR"
         )
-        return Response(
-            content=json.dumps({"error": "内部服务器错误"}),
-            status_code=500,
-            media_type="application/json"
-        )
+        # 重新抛出异常，让全局异常处理器处理
+        raise

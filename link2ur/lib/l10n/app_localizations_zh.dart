@@ -126,6 +126,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get authLogout => '退出登录';
 
   @override
+  String get authSessionExpired => '登录已过期，请重新登录';
+
+  @override
   String get authForgotPassword => '忘记密码';
 
   @override
@@ -7294,6 +7297,9 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get authLogout => '退出登入';
+
+  @override
+  String get authSessionExpired => '登入已過期，請重新登入';
 
   @override
   String get authForgotPassword => '忘記密碼';

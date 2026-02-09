@@ -39,6 +39,7 @@
   "authLogin": "Login",
   "authRegister": "Register",
   "authLogout": "Logout",
+  "authSessionExpired": "Your session has expired, please log in again",
   "authForgotPassword": "Forgot Password",
   "authEmail": "Email",
   "authEmailOrId": "Email/ID",

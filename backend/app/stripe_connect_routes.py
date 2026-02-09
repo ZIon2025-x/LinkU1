@@ -38,8 +38,6 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/stripe/connect", tags=["Stripe Connect"])
 
 # 注意：Stripe API配置在应用启动时通过stripe_config模块统一配置（带超时）
-# 这里只设置api_key作为向后兼容，实际超时配置在startup_event中完成
-stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
 
 # V2 API 辅助函数：由于 Python SDK 可能不支持 v2.core.accounts，
 # 我们使用 HTTP 请求直接调用 V2 API

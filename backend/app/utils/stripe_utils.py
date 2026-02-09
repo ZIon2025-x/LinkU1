@@ -94,8 +94,6 @@ def validate_user_stripe_account_for_receiving(
     
     # 验证收款账户是否有效且已完成设置
     try:
-        stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
-        
         # 优先使用 V2 API（支持 V2 账户），回退到 V1 API
         try:
             details_submitted, charges_enabled = _check_account_status_v2(user.stripe_account_id)
@@ -234,8 +232,6 @@ def get_user_stripe_account_status(user) -> dict:
         }
     
     try:
-        stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
-        
         # 优先使用 V2 API，回退到 V1 API
         try:
             details_submitted, charges_enabled = _check_account_status_v2(user.stripe_account_id)

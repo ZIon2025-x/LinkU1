@@ -52,6 +52,7 @@
   "authLogin": "登录",
   "authRegister": "注册",
   "authLogout": "退出登录",
+  "authSessionExpired": "登录已过期，请重新登录",
   "authForgotPassword": "忘记密码",
   "authEmail": "邮箱",
   "authEmailOrId": "邮箱/ID",

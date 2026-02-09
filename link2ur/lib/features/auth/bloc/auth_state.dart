@@ -35,6 +35,7 @@ class AuthState extends Equatable {
     this.codeSendStatus = CodeSendStatus.initial,
     this.resetPasswordStatus = ResetPasswordStatus.initial,
     this.resetPasswordMessage,
+    this.sessionExpired = false,
   });
 
   final AuthStatus status;
@@ -43,6 +44,9 @@ class AuthState extends Equatable {
   final CodeSendStatus codeSendStatus;
   final ResetPasswordStatus resetPasswordStatus;
   final String? resetPasswordMessage;
+
+  /// 是否因会话过期而登出（区分主动登出与被动过期）
+  final bool sessionExpired;
 
   /// 是否已认证
   bool get isAuthenticated => status == AuthStatus.authenticated && user != null;
@@ -60,6 +64,7 @@ class AuthState extends Equatable {
     CodeSendStatus? codeSendStatus,
     ResetPasswordStatus? resetPasswordStatus,
     String? resetPasswordMessage,
+    bool? sessionExpired,
   }) {
     return AuthState(
       status: status ?? this.status,
@@ -68,6 +73,7 @@ class AuthState extends Equatable {
       codeSendStatus: codeSendStatus ?? this.codeSendStatus,
       resetPasswordStatus: resetPasswordStatus ?? this.resetPasswordStatus,
       resetPasswordMessage: resetPasswordMessage,
+      sessionExpired: sessionExpired ?? false,
     );
   }
 
@@ -79,5 +85,6 @@ class AuthState extends Equatable {
         codeSendStatus,
         resetPasswordStatus,
         resetPasswordMessage,
+        sessionExpired,
       ];
 }

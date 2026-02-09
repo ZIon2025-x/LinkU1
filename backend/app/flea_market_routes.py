@@ -531,7 +531,6 @@ async def get_flea_market_item(
                 # 从Stripe获取支付信息
                 try:
                     import stripe
-                    stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
                     payment_intent = stripe.PaymentIntent.retrieve(task.payment_intent_id)
                     
                     if payment_intent.status in ["requires_payment_method", "requires_confirmation", "requires_action"]:
@@ -1416,8 +1415,7 @@ async def direct_purchase_item(
         # 创建 Payment Intent（与任务支付流程一致）
         # 注意：在提交事务之前创建 PaymentIntent，如果失败可以回滚
         import stripe
-        stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
-        
+
         task_amount_pence = int(float(item.price) * 100)
         from app.utils.fee_calculator import calculate_application_fee_pence
         application_fee_pence = calculate_application_fee_pence(task_amount_pence)
@@ -1817,8 +1815,7 @@ async def approve_purchase_request(
         
         # 创建支付意图
         import stripe
-        stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
-        
+
         task_amount_pence = int(float(final_price) * 100)
         from app.utils.fee_calculator import calculate_application_fee_pence
         application_fee_pence = calculate_application_fee_pence(task_amount_pence)
@@ -2117,8 +2114,7 @@ async def accept_purchase_request(
         # ⚠️ 安全修复：创建支付意图，确保跳蚤市场购买也需要支付
         # 注意：在提交事务之前创建 PaymentIntent，如果失败可以回滚
         import stripe
-        stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
-        
+
         task_amount_pence = int(float(final_price) * 100)
         from app.utils.fee_calculator import calculate_application_fee_pence
         application_fee_pence = calculate_application_fee_pence(task_amount_pence)

@@ -39,8 +39,6 @@ def process_refund(
         - error_message: 错误信息（如果失败）
     """
     try:
-        # 初始化 Stripe
-        stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
         if not stripe.api_key:
             return False, None, None, "Stripe API 未配置"
         

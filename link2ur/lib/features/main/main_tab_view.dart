@@ -42,6 +42,14 @@ class _MainTabViewState extends State<MainTabView> {
   final _desktopScaffoldKey = GlobalKey<ScaffoldState>();
   final Set<int> _loadedTabs = {0}; // 首页默认加载
 
+  // Tab 级别的 BLoC 实例（在 didChangeDependencies 中初始化）
+  // 提前创建并持有引用，避免通过 State.context 查找 MultiBlocProvider 内部的 Provider
+  late final HomeBloc _homeBloc;
+  late final ForumBloc _forumBloc;
+  late final LeaderboardBloc _leaderboardBloc;
+  late final MessageBloc _messageBloc;
+  bool _blocsInitialized = false;
+
   // 移动端底部导航栏的 tab 配置（包含中间 create 按钮）
   final List<_TabItem> _mobileTabs = const [
     _TabItem(
@@ -77,6 +85,37 @@ class _MainTabViewState extends State<MainTabView> {
     ),
   ];
 
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_blocsInitialized) {
+      _homeBloc = HomeBloc(
+        taskRepository: context.read<TaskRepository>(),
+      )..add(const HomeLoadRequested()); // 首页默认加载
+      _forumBloc = ForumBloc(
+        forumRepository: context.read<ForumRepository>(),
+      );
+      _leaderboardBloc = LeaderboardBloc(
+        leaderboardRepository: context.read<LeaderboardRepository>(),
+      );
+      _messageBloc = MessageBloc(
+        messageRepository: context.read<MessageRepository>(),
+      );
+      _blocsInitialized = true;
+    }
+  }
+
+  @override
+  void dispose() {
+    if (_blocsInitialized) {
+      _homeBloc.close();
+      _forumBloc.close();
+      _leaderboardBloc.close();
+      _messageBloc.close();
+    }
+    super.dispose();
+  }
+
   String get _currentRoute {
     if (_currentIndex == 2) return '/'; // center button
     if (_currentIndex < 2) return _mobileTabs[_currentIndex].route;
@@ -101,6 +140,7 @@ class _MainTabViewState extends State<MainTabView> {
   }
 
   /// 确保 Tab 对应的 BLoC 数据已加载（懒加载）
+  /// 直接使用 BLoC 引用，避免通过 State.context 查找 MultiBlocProvider 内部的 Provider
   void _ensureTabLoaded(int index) {
     if (_loadedTabs.contains(index)) return;
     _loadedTabs.add(index);
@@ -108,13 +148,13 @@ class _MainTabViewState extends State<MainTabView> {
     // 根据 tab index 触发对应 BLoC 数据加载
     switch (index) {
       case 0: // Home
-        context.read<HomeBloc>().add(const HomeLoadRequested());
+        _homeBloc.add(const HomeLoadRequested());
         break;
       case 1: // Community (Forum)
-        context.read<ForumBloc>().add(const ForumLoadPosts());
+        _forumBloc.add(const ForumLoadPosts());
         break;
       case 3: // Messages
-        context.read<MessageBloc>()
+        _messageBloc
           ..add(const MessageLoadContacts())
           ..add(const MessageLoadTaskChats());
         break;
@@ -155,32 +195,13 @@ class _MainTabViewState extends State<MainTabView> {
   @override
   Widget build(BuildContext context) {
     // 将 Tab 级别的 BLoC 提升到此处，切换 Tab 时不再重建
-    // 使用懒加载：仅首页立即加载，其余 Tab 在首次切换时触发
+    // BLoC 在 didChangeDependencies 中创建，此处用 .value 提供给子树
     return MultiBlocProvider(
       providers: [
-        BlocProvider<HomeBloc>(
-          create: (context) => HomeBloc(
-            taskRepository: context.read<TaskRepository>(),
-          )..add(const HomeLoadRequested()), // 首页默认加载
-        ),
-        BlocProvider<ForumBloc>(
-          lazy: true,
-          create: (context) => ForumBloc(
-            forumRepository: context.read<ForumRepository>(),
-          ), // 延迟到 Tab 切换时加载
-        ),
-        BlocProvider<LeaderboardBloc>(
-          lazy: true,
-          create: (context) => LeaderboardBloc(
-            leaderboardRepository: context.read<LeaderboardRepository>(),
-          ), // 延迟到需要时加载
-        ),
-        BlocProvider<MessageBloc>(
-          lazy: true,
-          create: (context) => MessageBloc(
-            messageRepository: context.read<MessageRepository>(),
-          ), // 延迟到 Tab 切换时加载
-        ),
+        BlocProvider<HomeBloc>.value(value: _homeBloc),
+        BlocProvider<ForumBloc>.value(value: _forumBloc),
+        BlocProvider<LeaderboardBloc>.value(value: _leaderboardBloc),
+        BlocProvider<MessageBloc>.value(value: _messageBloc),
       ],
       child: LayoutBuilder(
         builder: (context, constraints) {

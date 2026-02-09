@@ -128,11 +128,19 @@ class _ForumViewState extends State<ForumView> {
             ),
           ),
           const Spacer(),
-          // 发帖按钮
+          // 申请按钮（根据选中tab切换功能）
           _DesktopCreateButton(
-            label: context.l10n.forumCreatePostTitle,
+            label: _selectedTab == 0
+                ? context.l10n.forumRequestNewCategory
+                : context.l10n.leaderboardApplyNew,
             icon: Icons.edit_rounded,
-            onTap: () => context.push('/forum/posts/create'),
+            onTap: () {
+              if (_selectedTab == 0) {
+                context.push('/forum/category-request');
+              } else {
+                context.push('/leaderboard/apply');
+              }
+            },
           ),
         ],
       ),
@@ -161,7 +169,15 @@ class _ForumViewState extends State<ForumView> {
         ),
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: () => context.push('/forum/posts/create'),
+        onPressed: () {
+          if (_selectedTab == 0) {
+            // 论坛tab → 申请新版块
+            context.push('/forum/category-request');
+          } else {
+            // 排行榜tab → 申请新排行榜
+            context.push('/leaderboard/apply');
+          }
+        },
         backgroundColor: AppColors.primary,
         child: const Icon(Icons.edit, color: Colors.white),
       ),

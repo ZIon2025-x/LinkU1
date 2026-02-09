@@ -39,7 +39,7 @@ from app.csrf_routes import router as csrf_router
 from app.rate_limit_routes import router as rate_limit_router
 from app.security_monitoring_routes import router as security_monitoring_router
 from app.deps import get_db
-from app.routers import router as user_router, router as main_router
+from app.routers import router as main_router
 from app.sitemap_routes import sitemap_router
 from app.security import add_security_headers
 from app.security_monitoring import check_security_middleware
@@ -153,8 +153,6 @@ app = FastAPI(
 )
 
 # 添加CORS中间件 - 使用安全配置
-from app.config import Config
-
 app.add_middleware(
     CORSMiddleware,
     allow_origins=Config.ALLOWED_ORIGINS,
@@ -177,11 +175,11 @@ app.middleware("http")(security_headers_middleware)
 from app.admin_security_middleware import admin_security_middleware
 app.middleware("http")(admin_security_middleware)
 
-# 安全监控中间件（暂时禁用以解决异步/同步混用问题）
-# @app.middleware("http")
-# async def security_monitoring_middleware(request: Request, call_next):
-#     """安全监控中间件"""
-#     return await check_security_middleware(request, call_next)
+# 安全监控中间件（纯异步实现，仅使用内存数据结构，无 DB 依赖）
+@app.middleware("http")
+async def security_monitoring_middleware(request: Request, call_next):
+    """安全监控中间件"""
+    return await check_security_middleware(request, call_next)
 
 @app.middleware("http")
 async def add_noindex_header(request: Request, call_next):
@@ -251,7 +249,7 @@ async def custom_cors_middleware(request: Request, call_next):
 
 # DEBUG 中间件已移除 - 性能优化
 
-app.include_router(user_router, prefix="/api/users", tags=["users"])
+app.include_router(main_router, prefix="/api/users", tags=["users"])
 
 # ==================== 管理员子域名路由（优先于 main_router 注册以确保正确匹配） ====================
 # 管理员推荐系统路由
@@ -1722,7 +1720,7 @@ async def websocket_chat(
                     if msg["content"].startswith('[图片] '):
                         # 提取图片ID
                         image_id = msg["content"].replace('[图片] ', '')
-                        logger.info(f"🔍 [DEBUG] 客服消息检测到图片，image_id: {image_id}")
+                        logger.debug("客服消息检测到图片，image_id: %s", image_id)
                     
                     # 保存客服对话消息
                     message = crud.save_customer_service_message(

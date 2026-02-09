@@ -22,10 +22,16 @@ class RateLimiter:
         self.redis_client = None
         if settings.USE_REDIS:
             try:
-                self.redis_client = redis.from_url(settings.REDIS_URL, decode_responses=True)
-                # 测试连接
-                self.redis_client.ping()
-                logger.info("速率限制器Redis连接成功")
+                # 使用共享连接池（减少 Redis 连接数）
+                from app.redis_pool import get_client
+                self.redis_client = get_client(decode_responses=True)
+                if self.redis_client:
+                    logger.info("速率限制器Redis连接成功（共享连接池）")
+                else:
+                    # 回退到直接连接
+                    self.redis_client = redis.from_url(settings.REDIS_URL, decode_responses=True)
+                    self.redis_client.ping()
+                    logger.info("速率限制器Redis连接成功（直接连接）")
             except Exception as e:
                 logger.warning(f"速率限制器Redis连接失败: {e}")
                 self.redis_client = None
@@ -115,15 +121,24 @@ class RateLimiter:
             # Redis失败时回退到内存存储
             return self._memory_rate_limit(key, limit, window)
     
+    _MEMORY_STORE_MAX_KEYS = 10000
+    _MEMORY_CLEANUP_INTERVAL = 300  # 5 minutes
+
     def _memory_rate_limit(self, key: str, limit: int, window: int) -> tuple[bool, Dict[str, Any]]:
         """内存速率限制（单实例回退）"""
         if not hasattr(self, '_memory_store'):
             self._memory_store = {}
-        
+            self._last_cleanup = 0
+
         current_time = int(time.time())
         window_start = current_time - window
-        
-        # 清理过期数据
+
+        # 定期清理所有过期条目，防止内存泄漏
+        if current_time - self._last_cleanup > self._MEMORY_CLEANUP_INTERVAL:
+            self._cleanup_memory_store(current_time, window)
+            self._last_cleanup = current_time
+
+        # 清理当前 key 的过期数据
         if key in self._memory_store:
             self._memory_store[key] = [
                 req_time for req_time in self._memory_store[key]
@@ -146,6 +161,35 @@ class RateLimiter:
             "window": window
         }
     
+    def _cleanup_memory_store(self, current_time: int, default_window: int):
+        """清理内存存储中的过期条目，防止内存无限增长"""
+        window_start = current_time - default_window
+        keys_to_delete = []
+
+        for key, timestamps in self._memory_store.items():
+            # 移除过期的时间戳
+            active = [t for t in timestamps if t > window_start]
+            if not active:
+                keys_to_delete.append(key)
+            else:
+                self._memory_store[key] = active
+
+        for key in keys_to_delete:
+            del self._memory_store[key]
+
+        # 如果仍超过最大条目数，移除最旧的条目
+        if len(self._memory_store) > self._MEMORY_STORE_MAX_KEYS:
+            sorted_keys = sorted(
+                self._memory_store.keys(),
+                key=lambda k: max(self._memory_store[k]) if self._memory_store[k] else 0
+            )
+            excess = len(self._memory_store) - self._MEMORY_STORE_MAX_KEYS
+            for key in sorted_keys[:excess]:
+                del self._memory_store[key]
+
+        if keys_to_delete:
+            logger.debug("内存速率限制清理: 删除 %d 个过期条目, 剩余 %d 个", len(keys_to_delete), len(self._memory_store))
+
     def check_rate_limit(self, request: Request, rate_type: str, limit: int, window: int) -> Dict[str, Any]:
         """检查速率限制"""
         key = self._get_rate_limit_key(request, rate_type)

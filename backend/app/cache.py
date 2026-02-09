@@ -180,10 +180,10 @@ def invalidate_cache(pattern: str):
         return
     
     try:
-        keys = redis_client.keys(pattern)
-        if keys:
-            redis_client.delete(*keys)
-            logger.info(f"已清除缓存: {len(keys)} 个键匹配模式 {pattern}")
+        from app.redis_utils import delete_by_pattern
+        deleted = delete_by_pattern(redis_client, pattern)
+        if deleted > 0:
+            logger.info(f"已清除缓存: {deleted} 个键匹配模式 {pattern}")
     except Exception as e:
         logger.error(f"清除缓存失败: {e}", exc_info=True)
 

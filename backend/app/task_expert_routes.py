@@ -2991,8 +2991,7 @@ async def approve_service_application(
     # 注意：在提交事务之前创建 PaymentIntent，如果失败可以回滚
     import stripe
     import os
-    stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
-    
+
     task_amount_pence = int(price * 100)
     from app.utils.fee_calculator import calculate_application_fee_pence
     application_fee_pence = calculate_application_fee_pence(task_amount_pence)

@@ -48,6 +48,7 @@ class _Link2UrAppState extends State<Link2UrApp> {
   late final PaymentRepository _paymentRepository;
   late final StudentVerificationRepository _studentVerificationRepository;
   late final CommonRepository _commonRepository;
+  late final AuthBloc _authBloc;
   late final AppRouter _appRouter;
 
   @override
@@ -69,11 +70,21 @@ class _Link2UrAppState extends State<Link2UrApp> {
     _studentVerificationRepository =
         StudentVerificationRepository(apiService: _apiService);
     _commonRepository = CommonRepository(apiService: _apiService);
-    _appRouter = AppRouter();
+
+    // 创建 AuthBloc 并连接 Token 刷新失败回调
+    _authBloc = AuthBloc(authRepository: _authRepository)
+      ..add(AuthCheckRequested());
+    _apiService.onAuthFailure = () {
+      _authBloc.add(AuthForceLogout());
+    };
+
+    // 创建路由，传入 AuthBloc 的 refreshListenable 以监听认证状态变化
+    _appRouter = AppRouter(authBloc: _authBloc);
   }
 
   @override
   void dispose() {
+    _authBloc.close();
     _apiService.dispose();
     super.dispose();
   }
@@ -110,11 +121,7 @@ class _Link2UrAppState extends State<Link2UrApp> {
       ],
       child: MultiBlocProvider(
         providers: [
-          BlocProvider<AuthBloc>(
-            create: (context) => AuthBloc(
-              authRepository: _authRepository,
-            )..add(AuthCheckRequested()),
-          ),
+          BlocProvider<AuthBloc>.value(value: _authBloc),
           BlocProvider<SettingsBloc>(
             create: (context) => SettingsBloc()
               ..add(const SettingsLoadRequested()),

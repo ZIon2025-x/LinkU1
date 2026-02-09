@@ -74,6 +74,9 @@ class AuthRegisterRequested extends AuthEvent {
 /// 登出
 class AuthLogoutRequested extends AuthEvent {}
 
+/// 强制登出（Token刷新失败时由 ApiService 触发）
+class AuthForceLogout extends AuthEvent {}
+
 /// 发送邮箱验证码
 class AuthSendEmailCodeRequested extends AuthEvent {
   const AuthSendEmailCodeRequested({required this.email});

@@ -53,6 +53,7 @@
   "authRegister": "註冊",
   "authForgotPassword": "忘記密碼",
   "authLogout": "退出登入",
+  "authSessionExpired": "登入已過期，請重新登入",
   "authEmail": "郵箱",
   "authEmailOrId": "郵箱/ID",
   "authPassword": "密碼",

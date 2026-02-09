@@ -546,9 +546,9 @@ async def create_task_async(
             from app.redis_cache import invalidate_user_cache, invalidate_tasks_cache
             invalidate_user_cache(current_user.id)
             invalidate_tasks_cache()
-            print(f"DEBUG: 已清除用户 {current_user.id} 的任务缓存")
+            logger.debug("已清除用户 %s 的任务缓存", current_user.id)
         except Exception as e:
-            print(f"DEBUG: 清除缓存失败: {e}")
+            logger.debug("清除缓存失败: %s", e)
         
         # 额外清除特定格式的缓存键
         try:
@@ -596,7 +596,7 @@ async def create_task_async(
             "images": images_list  # 返回图片列表
         }
         
-        print(f"DEBUG: 准备返回结果: {result}")
+        logger.debug("准备返回结果: %s", result)
         return result
         
     except HTTPException as e:

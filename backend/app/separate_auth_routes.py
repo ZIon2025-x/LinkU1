@@ -506,9 +506,10 @@ def service_redis_test():
         except Exception as e:
             ping_status = f"failed: {e}"
         
-        # 查找现有的客服会话
+        # 查找现有的客服会话（使用 SCAN 替代 KEYS）
+        from app.redis_utils import scan_keys
         pattern = "service_session:CS8888:*"
-        existing_keys = redis_client.keys(pattern)
+        existing_keys = scan_keys(redis_client, pattern)
         
         # 测试存储和获取
         test_key = "service_test_key"

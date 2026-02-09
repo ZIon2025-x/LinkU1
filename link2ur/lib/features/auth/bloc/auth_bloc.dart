@@ -25,6 +25,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     on<AuthSendPhoneCodeRequested>(_onSendPhoneCodeRequested);
     on<AuthUserUpdated>(_onUserUpdated);
     on<AuthResetPasswordRequested>(_onResetPasswordRequested);
+    on<AuthForceLogout>(_onForceLogout);
   }
 
   final AuthRepository _authRepository;
@@ -264,6 +265,25 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     Emitter<AuthState> emit,
   ) {
     emit(state.copyWith(user: event.user));
+  }
+
+  /// 强制登出（Token过期/刷新失败）
+  /// 仅清除本地状态，不调用后端登出接口（因为token已经无效）
+  Future<void> _onForceLogout(
+    AuthForceLogout event,
+    Emitter<AuthState> emit,
+  ) async {
+    AppLogger.warning('Force logout: token refresh failed, clearing auth state');
+    try {
+      // 只断开WebSocket和清除本地数据，不调用后端API（token已无效）
+      await _authRepository.clearLocalAuthData();
+    } catch (e) {
+      AppLogger.error('Force logout cleanup failed', e);
+    }
+    emit(const AuthState(
+      status: AuthStatus.unauthenticated,
+      sessionExpired: true,
+    ));
   }
 
   /// 重置密码

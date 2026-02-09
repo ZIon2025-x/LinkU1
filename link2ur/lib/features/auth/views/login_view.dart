@@ -32,6 +32,7 @@ class _LoginViewState extends State<LoginView>
 
   bool _obscurePassword = true;
   LoginMethod _loginMethod = LoginMethod.password;
+  bool _showSessionExpiredBanner = false;
 
   // ---- 动画 ----
   late AnimationController _animController;
@@ -65,6 +66,15 @@ class _LoginViewState extends State<LoginView>
 
     // 启动
     _animController.forward();
+
+    // 如果是因为会话过期被重定向到登录页，显示横幅提示
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final authState = context.read<AuthBloc>().state;
+      if (authState.sessionExpired) {
+        setState(() => _showSessionExpiredBanner = true);
+      }
+    });
   }
 
   @override
@@ -175,6 +185,11 @@ class _LoginViewState extends State<LoginView>
         listener: (context, state) {
           if (state.status == AuthStatus.authenticated) {
             context.go(AppRoutes.main);
+          } else if (state.status == AuthStatus.loading) {
+            // 用户开始登录操作时隐藏过期横幅
+            if (_showSessionExpiredBanner) {
+              setState(() => _showSessionExpiredBanner = false);
+            }
           } else if (state.hasError) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
@@ -215,6 +230,10 @@ class _LoginViewState extends State<LoginView>
                             // Logo + 品牌名
                             _buildLogoSection(isDark),
                             const SizedBox(height: 36),
+
+                            // 会话过期横幅提示
+                            if (_showSessionExpiredBanner)
+                              _buildSessionExpiredBanner(isDark),
 
                             // 登录卡片
                             _buildFormCard(isDark, state),
@@ -412,6 +431,65 @@ class _LoginViewState extends State<LoginView>
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  // ==================== 会话过期横幅 ====================
+
+  Widget _buildSessionExpiredBanner(bool isDark) {
+    final l10n = context.l10n;
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(
+          color: isDark
+              ? Colors.orange.shade900.withValues(alpha: 0.4)
+              : Colors.orange.shade50,
+          borderRadius: BorderRadius.circular(AppRadius.medium),
+          border: Border.all(
+            color: isDark
+                ? Colors.orange.shade700.withValues(alpha: 0.5)
+                : Colors.orange.shade200,
+            width: 1,
+          ),
+        ),
+        child: Row(
+          children: [
+            Icon(
+              Icons.info_outline_rounded,
+              color: isDark
+                  ? Colors.orange.shade300
+                  : Colors.orange.shade700,
+              size: 20,
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                l10n.authSessionExpired,
+                style: TextStyle(
+                  fontSize: 13,
+                  color: isDark
+                      ? Colors.orange.shade200
+                      : Colors.orange.shade900,
+                  height: 1.3,
+                ),
+              ),
+            ),
+            GestureDetector(
+              onTap: () => setState(() => _showSessionExpiredBanner = false),
+              child: Icon(
+                Icons.close,
+                size: 18,
+                color: isDark
+                    ? Colors.orange.shade400
+                    : Colors.orange.shade600,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

@@ -930,9 +930,10 @@ def cleanup_old_refresh_tokens_endpoint(
                 "message": "Redis不可用"
             }
         
-        # 获取所有refresh token
+        # 获取所有refresh token（使用 SCAN 替代 KEYS）
+        from app.redis_utils import scan_keys
         pattern = "user_refresh_token:*"
-        all_keys = redis_client.keys(pattern)
+        all_keys = scan_keys(redis_client, pattern)
         
         if not all_keys:
             return {
@@ -1924,8 +1925,9 @@ def diagnose_session(request: Request):
     # 如果有 refresh_token，检查 Redis 中的状态
     if refresh_token and redis_client:
         try:
+            from app.redis_utils import scan_keys
             pattern = f"user_refresh_token:*:{refresh_token}"
-            keys = redis_client.keys(pattern)
+            keys = scan_keys(redis_client, pattern)
             if keys:
                 key = keys[0].decode() if isinstance(keys[0], bytes) else keys[0]
                 token_data = redis_client.get(key)

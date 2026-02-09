@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -42,6 +44,7 @@ import '../../features/info/views/info_views.dart';
 import '../../features/info/views/vip_purchase_view.dart';
 import '../../features/flea_market/views/edit_flea_market_item_view.dart';
 import '../../features/forum/views/forum_post_list_view.dart';
+import '../../features/forum/views/forum_category_request_view.dart';
 import '../../features/profile/views/user_profile_view.dart';
 import '../../features/profile/views/task_preferences_view.dart';
 import '../../features/profile/views/my_forum_posts_view.dart';
@@ -99,6 +102,7 @@ class AppRoutes {
   static const String forum = '/forum';
   static const String forumPostDetail = '/forum/posts/:id';
   static const String createPost = '/forum/posts/create';
+  static const String forumCategoryRequest = '/forum/category-request';
   static const String forumPostList = '/forum/category/:categoryId';
   static const String myForumPosts = '/forum/my-posts';
 
@@ -173,6 +177,7 @@ const _authRequiredRoutes = <String>{
   AppRoutes.createTask,
   AppRoutes.createFleaMarketItem,
   AppRoutes.createPost,
+  AppRoutes.forumCategoryRequest,
   AppRoutes.editProfile,
   AppRoutes.myTasks,
   AppRoutes.myPosts,
@@ -195,7 +200,9 @@ const _authRequiredRoutes = <String>{
 
 /// 应用路由配置
 class AppRouter {
-  AppRouter();
+  AppRouter({required AuthBloc authBloc}) : _authBloc = authBloc;
+
+  final AuthBloc _authBloc;
 
   /// 检查路径是否需要认证（支持参数化路径匹配）
   static bool _requiresAuth(String location) {
@@ -213,6 +220,8 @@ class AppRouter {
   late final GoRouter router = GoRouter(
     initialLocation: AppRoutes.main,
     debugLogDiagnostics: false,
+    // 监听 AuthBloc 状态变化，自动触发路由重定向（如 Token 失效时跳转登录页）
+    refreshListenable: _GoRouterBlocRefreshStream(_authBloc.stream),
     redirect: (BuildContext context, GoRouterState state) {
       final authState = context.read<AuthBloc>().state;
       final isAuthenticated = authState.isAuthenticated;
@@ -402,6 +411,14 @@ class AppRouter {
         pageBuilder: (context, state) => SlideUpTransitionPage(
           key: state.pageKey,
           child: const CreatePostView(),
+        ),
+      ),
+      GoRoute(
+        path: AppRoutes.forumCategoryRequest,
+        name: 'forumCategoryRequest',
+        pageBuilder: (context, state) => SlideUpTransitionPage(
+          key: state.pageKey,
+          child: const ForumCategoryRequestView(),
         ),
       ),
       GoRoute(
@@ -784,5 +801,24 @@ extension GoRouterExtension on BuildContext {
   /// 跳转到任务达人搜索
   void goToTaskExpertSearch() {
     push('/task-experts/search');
+  }
+}
+
+/// 将 Bloc Stream 转为 GoRouter 可监听的 ChangeNotifier
+/// 当 AuthBloc 状态变化时通知 GoRouter 重新评估 redirect
+class _GoRouterBlocRefreshStream extends ChangeNotifier {
+  _GoRouterBlocRefreshStream(Stream<dynamic> stream) {
+    notifyListeners();
+    _subscription = stream.asBroadcastStream().listen((_) {
+      notifyListeners();
+    });
+  }
+
+  late final StreamSubscription<dynamic> _subscription;
+
+  @override
+  void dispose() {
+    _subscription.cancel();
+    super.dispose();
   }
 }

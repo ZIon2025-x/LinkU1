@@ -609,9 +609,10 @@ if CELERY_AVAILABLE:
             
             db = SessionLocal()
             try:
-                # 获取所有论坛浏览数的 Redis key
+                # 获取所有论坛浏览数的 Redis key（使用 SCAN 替代 KEYS）
+                from app.redis_utils import scan_keys
                 pattern = "forum:post:view_count:*"
-                keys = redis_client.keys(pattern)
+                keys = scan_keys(redis_client, pattern)
                 
                 if not keys:
                     logger.info("ℹ️ 没有需要同步的论坛浏览数（Redis 中没有 forum:post:view_count:* keys）")
@@ -731,9 +732,10 @@ if CELERY_AVAILABLE:
             
             db = SessionLocal()
             try:
-                # 获取所有榜单浏览数的 Redis key
+                # 获取所有榜单浏览数的 Redis key（使用 SCAN 替代 KEYS）
+                from app.redis_utils import scan_keys
                 pattern = "leaderboard:view_count:*"
-                keys = redis_client.keys(pattern)
+                keys = scan_keys(redis_client, pattern)
                 
                 if not keys:
                     logger.info("ℹ️ 没有需要同步的榜单浏览数（Redis 中没有 leaderboard:view_count:* keys）")

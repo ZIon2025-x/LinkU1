@@ -134,9 +134,10 @@ class ServiceAuthManager:
         
         if USE_REDIS and redis_client:
             try:
-                # 查找所有该客服的会话
+                # 查找所有该客服的会话（使用 SCAN 替代 KEYS）
+                from app.redis_utils import scan_keys
                 pattern = f"service_session:{service_id}:*"
-                keys = redis_client.keys(pattern)
+                keys = scan_keys(redis_client, pattern)
                 
                 for key in keys:
                     key_str = key.decode() if isinstance(key, bytes) else key
@@ -169,9 +170,10 @@ class ServiceAuthManager:
         """撤销指定会话"""
         try:
             if USE_REDIS and redis_client:
-                # 查找并删除会话
+                # 查找并删除会话（使用 SCAN 替代 KEYS）
+                from app.redis_utils import scan_keys
                 pattern = f"service_session:*:{session_id}"
-                keys = redis_client.keys(pattern)
+                keys = scan_keys(redis_client, pattern)
                 
                 for key in keys:
                     key_str = key.decode() if isinstance(key, bytes) else key
@@ -276,11 +278,10 @@ class ServiceAuthManager:
         deleted_count = 0
         
         if USE_REDIS and redis_client:
-            # 从Redis删除
+            # 从Redis删除（使用 SCAN 替代 KEYS）
+            from app.redis_utils import delete_by_pattern
             pattern = f"service_session:{service_id}:*"
-            keys = redis_client.keys(pattern)
-            if keys:
-                deleted_count = redis_client.delete(*keys)
+            deleted_count = delete_by_pattern(redis_client, pattern)
         else:
             # 从内存删除
             keys_to_delete = [sid for sid, session in service_active_sessions.items() 
@@ -335,10 +336,11 @@ class ServiceAuthManager:
         """从Redis或内存获取会话数据"""
         try:
             if USE_REDIS and redis_client:
-                # 从Redis查找
+                # 从Redis查找（使用 SCAN 替代 KEYS）
+                from app.redis_utils import scan_keys
                 pattern = f"service_session:*:{session_id}"
                 logger.debug(f"[SERVICE_AUTH] 查找会话数据 - pattern: {pattern}")
-                keys = redis_client.keys(pattern)
+                keys = scan_keys(redis_client, pattern)
                 logger.debug(f"[SERVICE_AUTH] 找到的keys: {keys}")
                 if keys:
                     result = safe_redis_get(keys[0])
@@ -406,8 +408,9 @@ class ServiceAuthManager:
     def _delete_session(session_id: str) -> bool:
         """删除会话"""
         if USE_REDIS and redis_client:
+            from app.redis_utils import scan_keys
             pattern = f"service_session:*:{session_id}"
-            keys = redis_client.keys(pattern)
+            keys = scan_keys(redis_client, pattern)
             if keys:
                 return safe_redis_delete(keys[0])
             return False
@@ -738,8 +741,9 @@ def revoke_all_service_refresh_tokens(service_id: str) -> int:
         if not USE_REDIS or not redis_client:
             return 0
         
+        from app.redis_utils import scan_keys
         pattern = f"service_refresh_token:{service_id}:*"
-        keys = redis_client.keys(pattern)
+        keys = scan_keys(redis_client, pattern)
         
         if keys:
             count = redis_client.delete(*keys)

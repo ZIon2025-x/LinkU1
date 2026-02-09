@@ -224,12 +224,12 @@ def invalidate_user_recommendations(user_id: str):
         if deleted_count > 0:
             logger.info(f"清除用户推荐缓存: user_id={user_id}, count={deleted_count}")
     except AttributeError:
-        # 如果 redis_cache 不支持 scan，降级到 keys（开发环境）
+        # 降级：使用 redis_utils 的 SCAN 实现
         try:
-            keys = redis_cache.keys(pattern)
-            if keys:
-                redis_cache.delete(*keys)
-                logger.info(f"清除用户推荐缓存(keys): user_id={user_id}, count={len(keys)}")
+            from app.redis_utils import delete_by_pattern
+            deleted = delete_by_pattern(redis_cache, pattern)
+            if deleted > 0:
+                logger.info(f"清除用户推荐缓存(scan): user_id={user_id}, count={deleted}")
         except Exception as e:
             logger.warning(f"清除用户推荐缓存失败: {e}")
     except Exception as e:
@@ -265,9 +265,10 @@ def get_cache_stats() -> Dict[str, Any]:
         
         return stats
     except AttributeError:
-        # 如果不支持 scan，降级到 keys（开发环境）
+        # 降级：使用 redis_utils 的 SCAN 实现
         try:
-            keys = redis_cache.keys(pattern)
+            from app.redis_utils import scan_keys
+            keys = scan_keys(redis_cache, pattern)
             return {
                 "total_keys": len(keys) if keys else 0,
                 "sample_keys": (keys[:10] if keys else [])

@@ -214,13 +214,21 @@ class AuthRepository {
       AppLogger.warning('Logout API call failed', e);
     }
 
+    await clearLocalAuthData();
+
+    AppLogger.info('User logged out');
+  }
+
+  /// 清除本地认证数据（不调用后端API）
+  /// 用于 Token 刷新失败时的强制登出
+  Future<void> clearLocalAuthData() async {
     // 断开WebSocket
     WebSocketService.instance.disconnect();
 
     // 清除本地数据
     await StorageService.instance.clearAllOnLogout();
 
-    AppLogger.info('User logged out');
+    AppLogger.info('Local auth data cleared');
   }
 
   /// 获取当前用户
