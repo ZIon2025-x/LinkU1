@@ -277,7 +277,7 @@ class TaskHistory(Base):
     id = Column(Integer, primary_key=True, index=True)
     task_id = Column(Integer, ForeignKey("tasks.id", ondelete="CASCADE"))
     user_id = Column(String(8), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)  # 可空，用于管理员操作
-    action = Column(String(20), nullable=False)  # accepted, completed, cancelled
+    action = Column(String(50), nullable=False)  # accepted, completed, cancelled, auto_confirmed_3days 等
     timestamp = Column(DateTime(timezone=True), default=get_utc_time)
     remark = Column(Text, nullable=True)
 

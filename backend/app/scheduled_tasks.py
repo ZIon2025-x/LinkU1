@@ -14,6 +14,21 @@ from app.utils.time_utils import get_utc_time
 logger = logging.getLogger(__name__)
 
 
+def _add_task_history_flush(db: Session, task_id: int, user_id: str | None, action: str, remark: str = None):
+    """添加任务历史记录（仅 flush，不 commit）
+    
+    用于批量操作（如定时任务循环）中，避免 crud.add_task_history 内部的 db.commit()
+    在 SAVEPOINT 内调用 db.commit() 会提交根事务而非保存点，破坏事务隔离。
+    """
+    from app.models import TaskHistory
+    history = TaskHistory(
+        task_id=task_id, user_id=user_id, action=action, remark=remark
+    )
+    db.add(history)
+    db.flush()
+    return history
+
+
 def check_expired_coupons(db: Session):
     """检查并更新过期优惠券"""
     try:
@@ -903,96 +918,114 @@ def auto_confirm_expired_tasks(db: Session):
         skipped_count = 0
         
         for task in expired_tasks:
+            # 提前保存 task_id，避免 session 崩溃后 lazy load 失败
+            task_id = task.id
+            task_poster_id = task.poster_id
+            task_taker_id = task.taker_id
+            task_title = task.title
+            
             try:
+                # ======== 安全检查 ========
+                
                 # 检查是否有活跃的退款申请（包括 pending, processing, approved）
                 active_refund = db.query(models.RefundRequest).filter(
                     and_(
-                        models.RefundRequest.task_id == task.id,
+                        models.RefundRequest.task_id == task_id,
                         models.RefundRequest.status.in_(["pending", "processing", "approved"])
                     )
                 ).first()
                 
                 if active_refund:
-                    logger.info(f"任务 {task.id} 有活跃退款申请 {active_refund.id}（状态：{active_refund.status}），跳过自动确认")
+                    logger.info(f"任务 {task_id} 有活跃退款申请 {active_refund.id}（状态：{active_refund.status}），跳过自动确认")
                     skipped_count += 1
                     continue
                 
                 # 检查是否有未解决的争议
                 active_dispute = db.query(models.TaskDispute).filter(
                     and_(
-                        models.TaskDispute.task_id == task.id,
+                        models.TaskDispute.task_id == task_id,
                         models.TaskDispute.status == "pending"
                     )
                 ).first()
                 
                 if active_dispute:
-                    logger.info(f"任务 {task.id} 有未解决争议 {active_dispute.id}，跳过自动确认")
+                    logger.info(f"任务 {task_id} 有未解决争议 {active_dispute.id}，跳过自动确认")
                     skipped_count += 1
                     continue
                 
                 # P2 #12: 直接检查字段值，不用 hasattr
                 if task.stripe_dispute_frozen == 1:
-                    logger.info(f"任务 {task.id} 处于 Stripe 争议冻结状态，跳过自动确认")
+                    logger.info(f"任务 {task_id} 处于 Stripe 争议冻结状态，跳过自动确认")
                     skipped_count += 1
                     continue
                 
                 # 新增：检查任务是否已全额退款
                 if task.is_paid == 0:
-                    logger.info(f"任务 {task.id} 已全额退款（is_paid=0），跳过自动确认")
+                    logger.info(f"任务 {task_id} 已全额退款（is_paid=0），跳过自动确认")
                     skipped_count += 1
                     continue
                 
                 # 新增：检查托管金额是否为0
                 if task.escrow_amount <= 0:
-                    logger.info(f"任务 {task.id} 托管金额为0，跳过自动确认")
+                    logger.info(f"任务 {task_id} 托管金额为0，跳过自动确认")
                     skipped_count += 1
                     continue
                 
-                # 自动确认任务
-                task.status = "completed"
-                task.confirmed_at = current_time
-                task.auto_confirmed = 1  # 标记为自动确认
-                db.flush()
-                
-                # 记录任务历史
-                crud.add_task_history(db, task.id, None, "auto_confirmed_completion")
-                
-                # 发送系统消息到任务聊天框
+                # ======== 核心操作（SAVEPOINT 保护） ========
+                savepoint = db.begin_nested()
                 try:
-                    from app.models import Message
-                    from app.utils.notification_templates import get_notification_texts
-                    import json
+                    # 自动确认任务
+                    task.status = "completed"
+                    task.confirmed_at = current_time
+                    task.auto_confirmed = 1  # 标记为自动确认
                     
-                    _, content_zh, _, content_en = get_notification_texts(
-                        "task_auto_confirmed",
-                        task_title=task.title
-                    )
-                    if not content_zh:
-                        content_zh = "任务已自动确认完成（5天未确认，系统自动确认）。"
-                    if not content_en:
-                        content_en = "Task has been automatically confirmed as completed (5 days unconfirmed, system auto-confirmed)."
+                    # 记录任务历史（使用 flush 版本，避免 commit 破坏 SAVEPOINT 隔离）
+                    _add_task_history_flush(db, task_id, None, "auto_confirmed")
                     
-                    system_message = Message(
-                        sender_id=None,
-                        receiver_id=None,
-                        content=content_zh,
-                        task_id=task.id,
-                        message_type="system",
-                        conversation_type="task",
-                        meta=json.dumps({"system_action": "task_auto_confirmed", "content_en": content_en}),
-                        created_at=current_time
-                    )
-                    db.add(system_message)
+                    # 发送系统消息到任务聊天框
+                    try:
+                        from app.models import Message
+                        from app.utils.notification_templates import get_notification_texts
+                        import json
+                        
+                        _, content_zh, _, content_en = get_notification_texts(
+                            "task_auto_confirmed",
+                            task_title=task_title
+                        )
+                        if not content_zh:
+                            content_zh = "任务已自动确认完成（5天未确认，系统自动确认）。"
+                        if not content_en:
+                            content_en = "Task has been automatically confirmed as completed (5 days unconfirmed, system auto-confirmed)."
+                        
+                        system_message = Message(
+                            sender_id=None,
+                            receiver_id=None,
+                            content=content_zh,
+                            task_id=task_id,
+                            message_type="system",
+                            conversation_type="task",
+                            meta=json.dumps({"system_action": "task_auto_confirmed", "content_en": content_en}),
+                            created_at=current_time
+                        )
+                        db.add(system_message)
+                    except Exception as e:
+                        logger.warning(f"发送系统消息失败（任务 {task_id}）: {e}")
+                    
+                    savepoint.commit()
                 except Exception as e:
-                    logger.warning(f"发送系统消息失败（任务 {task.id}）: {e}")
+                    savepoint.rollback()
+                    logger.error(f"任务 {task_id} 核心操作失败，已回滚: {e}", exc_info=True)
+                    continue
+                
+                # ======== 辅助操作（SAVEPOINT 外，best-effort） ========
                 
                 # P0 #11: 不创建无效的 BackgroundTasks()（在线程中不会被触发）
                 # send_auto_confirmation_notification 内部实际是同步调用 create_notification + send_push_notification
                 try:
-                    poster = crud.get_user_by_id(db, task.poster_id)
+                    poster = crud.get_user_by_id(db, task_poster_id)
                     taker = None
-                    if task.taker_id:
-                        taker = crud.get_user_by_id(db, task.taker_id)
+                    if task_taker_id:
+                        taker = crud.get_user_by_id(db, task_taker_id)
                     
                     if poster or taker:
                         send_auto_confirmation_notification(
@@ -1003,18 +1036,18 @@ def auto_confirm_expired_tasks(db: Session):
                             taker=taker
                         )
                 except Exception as e:
-                    logger.warning(f"发送自动确认通知失败（任务 {task.id}）: {e}")
+                    logger.warning(f"发送自动确认通知失败（任务 {task_id}）: {e}")
                 
                 # 自动更新相关用户的统计信息
                 try:
-                    crud.update_user_statistics(db, task.poster_id)
-                    if task.taker_id:
-                        crud.update_user_statistics(db, task.taker_id)
+                    crud.update_user_statistics(db, task_poster_id)
+                    if task_taker_id:
+                        crud.update_user_statistics(db, task_taker_id)
                 except Exception as e:
-                    logger.warning(f"更新用户统计失败（任务 {task.id}）: {e}")
+                    logger.warning(f"更新用户统计失败（任务 {task_id}）: {e}")
                 
                 # 自动发放积分奖励
-                if task.taker_id:
+                if task_taker_id:
                     try:
                         # 获取任务完成奖励积分
                         points_amount = 0
@@ -1037,7 +1070,7 @@ def auto_confirm_expired_tasks(db: Session):
                                 expires_at = current_time + timedelta(days=expire_days)
                             
                             # 生成幂等键
-                            idempotency_key = f"task_auto_confirm_{task.id}_{task.taker_id}"
+                            idempotency_key = f"task_auto_confirm_{task_id}_{task_taker_id}"
                             
                             # 检查是否已发放
                             from app.models import PointsTransaction
@@ -1048,34 +1081,35 @@ def auto_confirm_expired_tasks(db: Session):
                             if not existing:
                                 add_points_transaction(
                                     db,
-                                    task.taker_id,
+                                    task_taker_id,
                                     type="earn",
                                     amount=points_amount,
                                     source="task_complete_bonus",
-                                    related_id=task.id,
+                                    related_id=task_id,
                                     related_type="task",
-                                    description=f"完成任务 #{task.id} 奖励（自动确认）",
+                                    description=f"完成任务 #{task_id} 奖励（自动确认）",
                                     batch_id=batch_id,
                                     expires_at=expires_at,
                                     idempotency_key=idempotency_key
                                 )
                     except Exception as e:
-                        logger.warning(f"发放积分奖励失败（任务 {task.id}）: {e}")
+                        logger.warning(f"发放积分奖励失败（任务 {task_id}）: {e}")
                 
                 # 清除任务缓存
                 try:
                     from app.services.task_service import TaskService
-                    TaskService.invalidate_cache(task.id)
+                    TaskService.invalidate_cache(task_id)
                     from app.redis_cache import invalidate_tasks_cache
                     invalidate_tasks_cache()
                 except Exception as e:
-                    logger.warning(f"清除任务缓存失败（任务 {task.id}）: {e}")
+                    logger.warning(f"清除任务缓存失败（任务 {task_id}）: {e}")
                 
                 confirmed_count += 1
-                logger.info(f"✅ 自动确认任务 {task.id} 完成")
+                logger.info(f"✅ 自动确认任务 {task_id} 完成")
                 
             except Exception as e:
-                logger.error(f"处理任务 {task.id} 的自动确认时出错: {e}", exc_info=True)
+                db.rollback()  # 重置 session 状态，防止 PendingRollbackError 传播到下一个任务
+                logger.error(f"处理任务 {task_id} 的自动确认时出错: {e}", exc_info=True)
                 continue
         
         if confirmed_count > 0:
@@ -1722,6 +1756,9 @@ def auto_transfer_expired_tasks(db: Session):
         auto_transfer_count = 0
         
         for task in candidate_tasks:
+            # 提前保存 ID，避免 session 崩溃后 lazy load 失败
+            task_id = task.id
+            
             if auto_transfer_count >= MAX_AUTO_TRANSFERS_PER_CYCLE:
                 logger.critical(
                     f"🚨 自动转账达到单次上限 {MAX_AUTO_TRANSFERS_PER_CYCLE}，"
@@ -1737,7 +1774,7 @@ def auto_transfer_expired_tasks(db: Session):
                 
                 # P2 #12: 直接检查字段值，不用 hasattr（字段在 Model 上已定义）
                 if task.stripe_dispute_frozen == 1:
-                    logger.info(f"任务 {task.id} Stripe 争议冻结中，跳过自动转账")
+                    logger.info(f"任务 {task_id} Stripe 争议冻结中，跳过自动转账")
                     savepoint.rollback()
                     stats["skipped"] += 1
                     continue
@@ -1795,8 +1832,8 @@ def auto_transfer_expired_tasks(db: Session):
                     task.auto_confirmed = 1
                     task.is_confirmed = 1
                     task.paid_to_user_id = task.taker_id
-                    # 记录历史
-                    crud.add_task_history(db, task.id, None, "auto_confirmed_3days_already_transferred")
+                    # 记录历史（使用 flush 版本，避免 commit 破坏 SAVEPOINT 隔离）
+                    _add_task_history_flush(db, task.id, None, "auto_3d_transferred")
                     savepoint.commit()
                     stats["already_confirmed"] += 1
                     continue
@@ -1881,8 +1918,8 @@ def auto_transfer_expired_tasks(db: Session):
                         locked_task.is_confirmed = 1
                         locked_task.paid_to_user_id = task.taker_id
                         
-                        # 记录历史
-                        crud.add_task_history(db, task.id, None, "auto_confirmed_3days")
+                        # 记录历史（使用 flush 版本，避免 commit 破坏 SAVEPOINT 隔离）
+                        _add_task_history_flush(db, task.id, None, "auto_3d_confirm")
                         
                         auto_transfer_count += 1
                         stats["transferred"] += 1
@@ -1905,7 +1942,8 @@ def auto_transfer_expired_tasks(db: Session):
                     
                     locked_task.auto_confirmed = 1
                     # 不设 is_confirmed=1 和 paid_to_user_id，等转账真正成功后再设
-                    crud.add_task_history(db, task.id, None, "auto_confirmed_3days_pending_transfer")
+                    # 使用 flush 版本，避免 commit 破坏 SAVEPOINT 隔离
+                    _add_task_history_flush(db, task.id, None, "auto_3d_pending")
                     
                     logger.info(
                         f"⏳ 任务 {task.id} 自动确认意图已记录：达人 {task.taker_id} 无 Stripe 账户，"
@@ -1935,9 +1973,12 @@ def auto_transfer_expired_tasks(db: Session):
                     pass
                 
             except Exception as e:
-                logger.error(f"处理任务 {task.id} 的自动转账时出错: {e}", exc_info=True)
+                logger.error(f"处理任务 {task_id} 的自动转账时出错: {e}", exc_info=True)
                 # SAVEPOINT rollback 只回滚当前任务，不影响前面已成功的
-                savepoint.rollback()
+                try:
+                    savepoint.rollback()
+                except Exception:
+                    db.rollback()  # SAVEPOINT 已失效时回滚整个 session
                 stats["failed"] += 1
                 continue
         
