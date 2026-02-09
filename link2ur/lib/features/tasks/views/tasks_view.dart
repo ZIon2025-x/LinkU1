@@ -11,6 +11,8 @@ import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_radius.dart';
 import '../../../core/design/app_typography.dart';
 import '../../../core/utils/l10n_extension.dart';
+import '../../../core/utils/responsive.dart';
+import '../../../core/utils/task_type_helper.dart';
 import '../../../core/widgets/async_image_view.dart';
 import '../../../core/widgets/animated_list_item.dart';
 import '../../../core/widgets/empty_state_view.dart';
@@ -333,8 +335,8 @@ class _TasksViewContentState extends State<_TasksViewContent> {
             controller: _scrollController,
             clipBehavior: Clip.none,
             padding: AppSpacing.allMd,
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 2,
+            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: ResponsiveUtils.gridColumnCount(context, type: GridItemType.task),
               mainAxisSpacing: 12,
               crossAxisSpacing: 12,
               childAspectRatio: 0.68,
@@ -425,28 +427,7 @@ class _TaskGridCard extends StatelessWidget {
   final Task task;
 
   // 任务类型 icon 映射 (对齐iOS taskTypeIcons SF Symbols)
-  static const Map<String, IconData> _taskTypeIcons = {
-    'Housekeeping': Icons.home,
-    'housekeeping': Icons.home,
-    'Campus Life': Icons.school,
-    'campus': Icons.school,
-    'Second-hand & Rental': Icons.shopping_bag,
-    'secondhand': Icons.shopping_bag,
-    'Errand Running': Icons.directions_run,
-    'delivery': Icons.directions_run,
-    'Skill Service': Icons.build,
-    'skill': Icons.build,
-    'Social Help': Icons.people,
-    'social': Icons.people,
-    'Transportation': Icons.directions_car,
-    'transport': Icons.directions_car,
-    'Pet Care': Icons.pets,
-    'pet': Icons.pets,
-    'Life Convenience': Icons.shopping_cart,
-    'life': Icons.shopping_cart,
-    'Other': Icons.apps,
-    'other': Icons.apps,
-  };
+  // 任务类型图标 — 使用统一映射（TaskTypeHelper）
 
   @override
   Widget build(BuildContext context) {
@@ -609,7 +590,7 @@ class _TaskGridCard extends StatelessWidget {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Icon(
-                      _taskTypeIcons[task.taskType] ?? Icons.apps,
+                      TaskTypeHelper.getIcon(task.taskType),
                       size: 11,
                       color: Colors.white,
                     ),
@@ -646,7 +627,7 @@ class _TaskGridCard extends StatelessWidget {
       ),
       child: Center(
         child: Icon(
-          _taskTypeIcons[task.taskType] ?? Icons.apps,
+          TaskTypeHelper.getIcon(task.taskType),
           size: 40,
           color: AppColors.primary.withValues(alpha: 0.3),
         ),

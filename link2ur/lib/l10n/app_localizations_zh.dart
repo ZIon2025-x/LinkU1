@@ -301,6 +301,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get homeRecommendedTasks => '推荐任务';
 
   @override
+  String get homeRecommendedBadge => '推荐';
+
+  @override
   String get homeMemberPublished => '会员发布';
 
   @override
@@ -1901,10 +1904,19 @@ class AppLocalizationsZh extends AppLocalizations {
   String get taskDetailPublisher => '发布者';
 
   @override
+  String get taskDetailRecipient => '接单者';
+
+  @override
   String get taskDetailBuyer => '买家';
 
   @override
   String get taskDetailSeller => '卖家';
+
+  @override
+  String get taskDetailParticipant => '参与者';
+
+  @override
+  String get taskDetailApplicant => '申请人';
 
   @override
   String get taskDetailEmailNotProvided => '未提供邮箱';
@@ -7175,6 +7187,18 @@ class AppLocalizationsZh extends AppLocalizations {
   @override
   String get infoCookieContent =>
       'Link²Ur Cookie 政策\n\n我们使用 Cookie 和类似技术来改善您的使用体验。\n\n1. 什么是 Cookie\nCookie 是存储在您设备上的小型文本文件。\n\n2. 我们如何使用 Cookie\n- 必要 Cookie：保持登录状态\n- 功能 Cookie：记住偏好设置\n- 分析 Cookie：改善服务质量\n\n3. 管理 Cookie\n您可以在设备设置中管理 Cookie 偏好。';
+
+  @override
+  String get serviceNegotiatePrice => '价格议价';
+
+  @override
+  String get serviceNegotiatePriceHint => '向达人提出不同的价格';
+
+  @override
+  String get serviceSelectDeadline => '选择期限';
+
+  @override
+  String get serviceApplyOtherSlot => '申请其他时间段';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -7472,6 +7496,9 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get homeRecommendedTasks => '推薦任務';
+
+  @override
+  String get homeRecommendedBadge => '推薦';
 
   @override
   String get homeMemberPublished => '會員發布';
@@ -9074,10 +9101,19 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get taskDetailPublisher => '發布者';
 
   @override
+  String get taskDetailRecipient => '接單者';
+
+  @override
   String get taskDetailBuyer => '買家';
 
   @override
   String get taskDetailSeller => '賣家';
+
+  @override
+  String get taskDetailParticipant => '參與者';
+
+  @override
+  String get taskDetailApplicant => '申請人';
 
   @override
   String get taskDetailEmailNotProvided => '未提供郵箱';
@@ -14259,4 +14295,16 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   @override
   String get infoCookieContent =>
       'Link²Ur Cookie 政策\n\n我們使用 Cookie 和類似技術來改善您的使用體驗。\n\n1. 什麼是 Cookie\nCookie 是儲存在您設備上的小型文字檔案。\n\n2. 我們如何使用 Cookie\n- 必要 Cookie：保持登入狀態\n- 功能 Cookie：記住偏好設定\n- 分析 Cookie：改善服務品質\n\n3. 管理 Cookie\n您可以在設備設定中管理 Cookie 偏好。';
+
+  @override
+  String get serviceNegotiatePrice => '價格議價';
+
+  @override
+  String get serviceNegotiatePriceHint => '向達人提出不同的價格';
+
+  @override
+  String get serviceSelectDeadline => '選擇期限';
+
+  @override
+  String get serviceApplyOtherSlot => '申請其他時間段';
 }

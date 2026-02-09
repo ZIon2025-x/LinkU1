@@ -98,6 +98,26 @@ class FleaMarketLoadDetailRequested extends FleaMarketEvent {
   List<Object?> get props => [itemId];
 }
 
+/// 刷新商品（重新上架）- 对标iOS refreshItem
+class FleaMarketRefreshItem extends FleaMarketEvent {
+  const FleaMarketRefreshItem(this.itemId);
+
+  final int itemId;
+
+  @override
+  List<Object?> get props => [itemId];
+}
+
+/// 加载购买申请列表 - 对标iOS loadPurchaseRequests
+class FleaMarketLoadPurchaseRequests extends FleaMarketEvent {
+  const FleaMarketLoadPurchaseRequests(this.itemId);
+
+  final int itemId;
+
+  @override
+  List<Object?> get props => [itemId];
+}
+
 class FleaMarketUploadImage extends FleaMarketEvent {
   const FleaMarketUploadImage({
     required this.imageBytes,
@@ -132,6 +152,8 @@ class FleaMarketState extends Equatable {
     this.detailStatus = FleaMarketStatus.initial,
     this.isUploadingImage = false,
     this.uploadedImageUrl,
+    this.purchaseRequests = const [],
+    this.isLoadingPurchaseRequests = false,
   });
 
   final FleaMarketStatus status;
@@ -149,6 +171,8 @@ class FleaMarketState extends Equatable {
   final FleaMarketStatus detailStatus;
   final bool isUploadingImage;
   final String? uploadedImageUrl;
+  final List<PurchaseRequest> purchaseRequests;
+  final bool isLoadingPurchaseRequests;
 
   bool get isLoading => status == FleaMarketStatus.loading;
   bool get isEmpty => items.isEmpty && status == FleaMarketStatus.loaded;
@@ -171,6 +195,8 @@ class FleaMarketState extends Equatable {
     FleaMarketStatus? detailStatus,
     bool? isUploadingImage,
     String? uploadedImageUrl,
+    List<PurchaseRequest>? purchaseRequests,
+    bool? isLoadingPurchaseRequests,
   }) {
     return FleaMarketState(
       status: status ?? this.status,
@@ -188,6 +214,8 @@ class FleaMarketState extends Equatable {
       detailStatus: detailStatus ?? this.detailStatus,
       isUploadingImage: isUploadingImage ?? this.isUploadingImage,
       uploadedImageUrl: uploadedImageUrl,
+      purchaseRequests: purchaseRequests ?? this.purchaseRequests,
+      isLoadingPurchaseRequests: isLoadingPurchaseRequests ?? this.isLoadingPurchaseRequests,
     );
   }
 
@@ -206,6 +234,8 @@ class FleaMarketState extends Equatable {
         actionMessage,
         selectedItem,
         detailStatus,
+        purchaseRequests,
+        isLoadingPurchaseRequests,
       ];
 }
 
@@ -224,6 +254,8 @@ class FleaMarketBloc extends Bloc<FleaMarketEvent, FleaMarketState> {
     on<FleaMarketPurchaseItem>(_onPurchaseItem);
     on<FleaMarketUpdateItem>(_onUpdateItem);
     on<FleaMarketLoadDetailRequested>(_onLoadDetailRequested);
+    on<FleaMarketRefreshItem>(_onRefreshItem);
+    on<FleaMarketLoadPurchaseRequests>(_onLoadPurchaseRequests);
     on<FleaMarketUploadImage>(_onUploadImage);
   }
 
@@ -483,6 +515,57 @@ class FleaMarketBloc extends Bloc<FleaMarketEvent, FleaMarketState> {
       emit(state.copyWith(
         detailStatus: FleaMarketStatus.error,
         errorMessage: e.toString(),
+      ));
+    }
+  }
+
+  /// 刷新商品（重新上架）- 对标iOS refreshItem
+  Future<void> _onRefreshItem(
+    FleaMarketRefreshItem event,
+    Emitter<FleaMarketState> emit,
+  ) async {
+    emit(state.copyWith(isSubmitting: true));
+
+    try {
+      await _fleaMarketRepository.refreshItem(event.itemId.toString());
+      emit(state.copyWith(
+        isSubmitting: false,
+        actionMessage: '刷新成功',
+      ));
+      // 重新加载详情以获取最新数据
+      add(FleaMarketLoadDetailRequested(event.itemId));
+    } catch (e) {
+      AppLogger.error('Failed to refresh flea market item', e);
+      emit(state.copyWith(
+        isSubmitting: false,
+        actionMessage: '刷新失败: ${e.toString()}',
+      ));
+    }
+  }
+
+  /// 加载购买申请列表 - 对标iOS loadPurchaseRequests
+  Future<void> _onLoadPurchaseRequests(
+    FleaMarketLoadPurchaseRequests event,
+    Emitter<FleaMarketState> emit,
+  ) async {
+    emit(state.copyWith(isLoadingPurchaseRequests: true));
+
+    try {
+      final rawRequests = await _fleaMarketRepository
+          .getItemPurchaseRequests(event.itemId.toString());
+
+      final requests = rawRequests
+          .map((e) => PurchaseRequest.fromJson(e))
+          .toList();
+
+      emit(state.copyWith(
+        isLoadingPurchaseRequests: false,
+        purchaseRequests: requests,
+      ));
+    } catch (e) {
+      AppLogger.error('Failed to load purchase requests', e);
+      emit(state.copyWith(
+        isLoadingPurchaseRequests: false,
       ));
     }
   }

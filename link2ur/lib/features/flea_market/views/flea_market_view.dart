@@ -8,6 +8,7 @@ import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_radius.dart';
 import '../../../core/utils/l10n_extension.dart';
+import '../../../core/utils/responsive.dart';
 import '../../../core/widgets/animated_list_item.dart';
 import '../../../core/widgets/skeleton_view.dart';
 import '../../../core/widgets/error_state_view.dart';
@@ -176,8 +177,8 @@ class _FleaMarketViewContentState extends State<_FleaMarketViewContent> {
                   child: GridView.builder(
                     clipBehavior: Clip.none,
                     padding: AppSpacing.allMd,
-                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 2,
+                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: ResponsiveUtils.gridColumnCount(context, type: GridItemType.fleaMarket),
                       childAspectRatio: 0.7,
                       crossAxisSpacing: 12,
                       mainAxisSpacing: 12,

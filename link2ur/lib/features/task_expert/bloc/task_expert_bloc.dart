@@ -51,12 +51,13 @@ class TaskExpertApplyService extends TaskExpertEvent {
 }
 
 class TaskExpertLoadServiceDetail extends TaskExpertEvent {
-  const TaskExpertLoadServiceDetail(this.serviceId);
+  const TaskExpertLoadServiceDetail(this.serviceId, {this.forceRefresh = false});
 
   final int serviceId;
+  final bool forceRefresh;
 
   @override
-  List<Object?> get props => [serviceId];
+  List<Object?> get props => [serviceId, forceRefresh];
 }
 
 class TaskExpertLoadMyApplications extends TaskExpertEvent {
@@ -70,6 +71,59 @@ class TaskExpertSearchRequested extends TaskExpertEvent {
 
   @override
   List<Object?> get props => [keyword];
+}
+
+/// 加载服务评价
+class TaskExpertLoadServiceReviews extends TaskExpertEvent {
+  const TaskExpertLoadServiceReviews(this.serviceId);
+
+  final int serviceId;
+
+  @override
+  List<Object?> get props => [serviceId];
+}
+
+/// 加载达人评价
+class TaskExpertLoadExpertReviews extends TaskExpertEvent {
+  const TaskExpertLoadExpertReviews(this.expertId);
+
+  final String expertId;
+
+  @override
+  List<Object?> get props => [expertId];
+}
+
+/// 加载服务时间段
+class TaskExpertLoadServiceTimeSlots extends TaskExpertEvent {
+  const TaskExpertLoadServiceTimeSlots(this.serviceId);
+
+  final int serviceId;
+
+  @override
+  List<Object?> get props => [serviceId];
+}
+
+/// 增强版申请服务事件（支持议价/时间段/期限/灵活时间）
+class TaskExpertApplyServiceEnhanced extends TaskExpertEvent {
+  const TaskExpertApplyServiceEnhanced(
+    this.serviceId, {
+    this.message,
+    this.counterPrice,
+    this.timeSlotId,
+    this.preferredDeadline,
+    this.isFlexibleTime = false,
+  });
+
+  final int serviceId;
+  final String? message;
+  final double? counterPrice;
+  final int? timeSlotId;
+  final String? preferredDeadline;
+  final bool isFlexibleTime;
+
+  @override
+  List<Object?> get props =>
+      [serviceId, message, counterPrice, timeSlotId, preferredDeadline, isFlexibleTime];
 }
 
 // ==================== State ====================
@@ -89,8 +143,13 @@ class TaskExpertState extends Equatable {
     this.isSubmitting = false,
     this.actionMessage,
     this.serviceDetail,
+    this.selectedService,
     this.applications = const [],
     this.searchResults = const [],
+    this.reviews = const [],
+    this.isLoadingReviews = false,
+    this.timeSlots = const [],
+    this.isLoadingTimeSlots = false,
   });
 
   final TaskExpertStatus status;
@@ -104,8 +163,13 @@ class TaskExpertState extends Equatable {
   final bool isSubmitting;
   final String? actionMessage;
   final Map<String, dynamic>? serviceDetail;
+  final TaskExpertService? selectedService;
   final List<Map<String, dynamic>> applications;
   final List<TaskExpert> searchResults;
+  final List<Map<String, dynamic>> reviews;
+  final bool isLoadingReviews;
+  final List<ServiceTimeSlot> timeSlots;
+  final bool isLoadingTimeSlots;
 
   bool get isLoading => status == TaskExpertStatus.loading;
 
@@ -121,8 +185,13 @@ class TaskExpertState extends Equatable {
     bool? isSubmitting,
     String? actionMessage,
     Map<String, dynamic>? serviceDetail,
+    TaskExpertService? selectedService,
     List<Map<String, dynamic>>? applications,
     List<TaskExpert>? searchResults,
+    List<Map<String, dynamic>>? reviews,
+    bool? isLoadingReviews,
+    List<ServiceTimeSlot>? timeSlots,
+    bool? isLoadingTimeSlots,
   }) {
     return TaskExpertState(
       status: status ?? this.status,
@@ -136,8 +205,13 @@ class TaskExpertState extends Equatable {
       isSubmitting: isSubmitting ?? this.isSubmitting,
       actionMessage: actionMessage,
       serviceDetail: serviceDetail,
+      selectedService: selectedService ?? this.selectedService,
       applications: applications ?? this.applications,
       searchResults: searchResults ?? this.searchResults,
+      reviews: reviews ?? this.reviews,
+      isLoadingReviews: isLoadingReviews ?? this.isLoadingReviews,
+      timeSlots: timeSlots ?? this.timeSlots,
+      isLoadingTimeSlots: isLoadingTimeSlots ?? this.isLoadingTimeSlots,
     );
   }
 
@@ -154,8 +228,13 @@ class TaskExpertState extends Equatable {
         isSubmitting,
         actionMessage,
         serviceDetail,
+        selectedService,
         applications,
         searchResults,
+        reviews,
+        isLoadingReviews,
+        timeSlots,
+        isLoadingTimeSlots,
       ];
 }
 
@@ -173,6 +252,10 @@ class TaskExpertBloc extends Bloc<TaskExpertEvent, TaskExpertState> {
     on<TaskExpertLoadServiceDetail>(_onLoadServiceDetail);
     on<TaskExpertLoadMyApplications>(_onLoadMyApplications);
     on<TaskExpertSearchRequested>(_onSearchRequested);
+    on<TaskExpertLoadServiceReviews>(_onLoadServiceReviews);
+    on<TaskExpertLoadExpertReviews>(_onLoadExpertReviews);
+    on<TaskExpertLoadServiceTimeSlots>(_onLoadServiceTimeSlots);
+    on<TaskExpertApplyServiceEnhanced>(_onApplyServiceEnhanced);
   }
 
   final TaskExpertRepository _taskExpertRepository;
@@ -303,12 +386,14 @@ class TaskExpertBloc extends Bloc<TaskExpertEvent, TaskExpertState> {
     emit(state.copyWith(status: TaskExpertStatus.loading));
 
     try {
-      final serviceDetail =
-          await _taskExpertRepository.getServiceDetail(event.serviceId);
+      final service = await _taskExpertRepository.getServiceDetailParsed(
+        event.serviceId,
+        forceRefresh: event.forceRefresh,
+      );
 
       emit(state.copyWith(
         status: TaskExpertStatus.loaded,
-        serviceDetail: serviceDetail,
+        selectedService: service,
       ));
     } catch (e) {
       AppLogger.error('Failed to load service detail', e);
@@ -362,6 +447,97 @@ class TaskExpertBloc extends Bloc<TaskExpertEvent, TaskExpertState> {
       emit(state.copyWith(
         status: TaskExpertStatus.error,
         errorMessage: e.toString(),
+      ));
+    }
+  }
+
+  Future<void> _onLoadServiceReviews(
+    TaskExpertLoadServiceReviews event,
+    Emitter<TaskExpertState> emit,
+  ) async {
+    emit(state.copyWith(isLoadingReviews: true));
+    try {
+      final reviews =
+          await _taskExpertRepository.getServiceReviews(event.serviceId);
+      emit(state.copyWith(
+        reviews: reviews,
+        isLoadingReviews: false,
+      ));
+    } catch (e) {
+      AppLogger.error('Failed to load service reviews', e);
+      emit(state.copyWith(isLoadingReviews: false));
+    }
+  }
+
+  Future<void> _onLoadExpertReviews(
+    TaskExpertLoadExpertReviews event,
+    Emitter<TaskExpertState> emit,
+  ) async {
+    emit(state.copyWith(isLoadingReviews: true));
+    try {
+      final reviews =
+          await _taskExpertRepository.getExpertReviews(event.expertId);
+      emit(state.copyWith(
+        reviews: reviews,
+        isLoadingReviews: false,
+      ));
+    } catch (e) {
+      AppLogger.error('Failed to load expert reviews', e);
+      emit(state.copyWith(isLoadingReviews: false));
+    }
+  }
+
+  Future<void> _onLoadServiceTimeSlots(
+    TaskExpertLoadServiceTimeSlots event,
+    Emitter<TaskExpertState> emit,
+  ) async {
+    emit(state.copyWith(isLoadingTimeSlots: true));
+    try {
+      final rawSlots =
+          await _taskExpertRepository.getServiceTimeSlots(event.serviceId);
+      final timeSlots =
+          rawSlots.map((e) => ServiceTimeSlot.fromJson(e)).toList();
+      emit(state.copyWith(
+        timeSlots: timeSlots,
+        isLoadingTimeSlots: false,
+      ));
+    } catch (e) {
+      AppLogger.error('Failed to load service time slots', e);
+      emit(state.copyWith(isLoadingTimeSlots: false));
+    }
+  }
+
+  Future<void> _onApplyServiceEnhanced(
+    TaskExpertApplyServiceEnhanced event,
+    Emitter<TaskExpertState> emit,
+  ) async {
+    emit(state.copyWith(isSubmitting: true));
+    try {
+      await _taskExpertRepository.applyService(
+        event.serviceId,
+        message: event.message,
+        counterPrice: event.counterPrice,
+        timeSlotId: event.timeSlotId,
+        preferredDeadline: event.preferredDeadline,
+        isFlexibleTime: event.isFlexibleTime,
+      );
+
+      // 刷新服务详情以获取最新申请状态
+      final service = await _taskExpertRepository.getServiceDetailParsed(
+        event.serviceId,
+        forceRefresh: true,
+      );
+
+      emit(state.copyWith(
+        isSubmitting: false,
+        actionMessage: '申请已提交',
+        selectedService: service,
+      ));
+    } catch (e) {
+      AppLogger.error('Failed to apply for service', e);
+      emit(state.copyWith(
+        isSubmitting: false,
+        actionMessage: '申请失败: ${e.toString()}',
       ));
     }
   }

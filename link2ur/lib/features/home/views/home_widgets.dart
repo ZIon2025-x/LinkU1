@@ -708,33 +708,8 @@ class _HorizontalTaskCard extends StatelessWidget {
 
   final Task task;
 
-  // 任务类型图标映射（对标iOS SF Symbols → Material Icons）
-  IconData _taskTypeIcon(String taskType) {
-    switch (taskType) {
-      case 'delivery':
-        return Icons.local_shipping_outlined;
-      case 'shopping':
-        return Icons.shopping_bag_outlined;
-      case 'tutoring':
-        return Icons.school_outlined;
-      case 'translation':
-        return Icons.translate;
-      case 'design':
-        return Icons.design_services_outlined;
-      case 'photography':
-        return Icons.camera_alt_outlined;
-      case 'moving':
-        return Icons.local_shipping_outlined;
-      case 'cleaning':
-        return Icons.cleaning_services_outlined;
-      case 'pet_care':
-        return Icons.pets_outlined;
-      case 'errand':
-        return Icons.directions_run;
-      default:
-        return Icons.task_alt;
-    }
-  }
+  // 任务类型图标 — 使用统一映射
+  IconData _taskTypeIcon(String taskType) => TaskTypeHelper.getIcon(taskType);
 
   String _formatDeadline(BuildContext context, DateTime deadline) {
     final now = DateTime.now();
@@ -929,6 +904,49 @@ class _HorizontalTaskCard extends StatelessWidget {
                             ],
                           ),
                         ),
+                      ),
+                    ),
+                  ),
+
+                  // 右上: 推荐徽章
+                  Positioned(
+                    top: 8,
+                    right: 8,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 7, vertical: 3),
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          colors: [Color(0xFFFF9500), Color(0xFFFF6B00)],
+                        ),
+                        borderRadius: AppRadius.allPill,
+                        boxShadow: [
+                          BoxShadow(
+                            color: const Color(0xFFFF9500)
+                                .withValues(alpha: 0.4),
+                            blurRadius: 6,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(
+                            Icons.auto_awesome,
+                            size: 10,
+                            color: Colors.white,
+                          ),
+                          const SizedBox(width: 3),
+                          Text(
+                            context.l10n.homeRecommendedBadge,
+                            style: const TextStyle(
+                              fontSize: 10,
+                              color: Colors.white,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ),
@@ -1199,32 +1217,8 @@ class _TaskCard extends StatelessWidget {
 
   final Task task;
 
-  IconData _taskTypeIcon(String taskType) {
-    switch (taskType) {
-      case 'delivery':
-        return Icons.local_shipping_outlined;
-      case 'shopping':
-        return Icons.shopping_bag_outlined;
-      case 'tutoring':
-        return Icons.school_outlined;
-      case 'translation':
-        return Icons.translate;
-      case 'design':
-        return Icons.design_services_outlined;
-      case 'photography':
-        return Icons.camera_alt_outlined;
-      case 'moving':
-        return Icons.local_shipping_outlined;
-      case 'cleaning':
-        return Icons.cleaning_services_outlined;
-      case 'pet_care':
-        return Icons.pets_outlined;
-      case 'errand':
-        return Icons.directions_run;
-      default:
-        return Icons.task_alt;
-    }
-  }
+  // 任务类型图标 — 使用统一映射
+  IconData _taskTypeIcon(String taskType) => TaskTypeHelper.getIcon(taskType);
 
   String _formatDeadline(BuildContext context, DateTime deadline) {
     final now = DateTime.now();

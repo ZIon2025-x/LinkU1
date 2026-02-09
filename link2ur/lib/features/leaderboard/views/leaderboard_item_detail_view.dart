@@ -8,6 +8,7 @@ import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_typography.dart';
 import '../../../core/utils/l10n_extension.dart';
+import '../../../core/utils/responsive.dart';
 import '../../../core/widgets/skeleton_view.dart';
 import '../../../core/widgets/error_state_view.dart';
 import '../../../core/widgets/async_image_view.dart';
@@ -50,7 +51,12 @@ class _ItemDetailContent extends StatelessWidget {
         return Scaffold(
           extendBodyBehindAppBar: hasImages,
           appBar: _buildAppBar(context, l10n, hasImages),
-          body: _buildBody(context, state),
+          body: Center(
+            child: ConstrainedBox(
+              constraints: BoxConstraints(maxWidth: ResponsiveUtils.detailMaxWidth(context)),
+              child: _buildBody(context, state),
+            ),
+          ),
           bottomNavigationBar:
               item != null ? _buildVoteBar(context, state) : null,
         );

@@ -2,7 +2,9 @@ import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../data/models/activity.dart';
+import '../../../data/models/task_expert.dart';
 import '../../../data/repositories/activity_repository.dart';
+import '../../../data/repositories/task_expert_repository.dart';
 import '../../../core/utils/logger.dart';
 
 // ==================== Events ====================
@@ -31,13 +33,23 @@ class ActivityRefreshRequested extends ActivityEvent {
   const ActivityRefreshRequested();
 }
 
+/// 增强版申请事件 - 对标iOS applyToActivity(activityId:timeSlotId:preferredDeadline:isFlexibleTime:)
 class ActivityApply extends ActivityEvent {
-  const ActivityApply(this.activityId);
+  const ActivityApply(
+    this.activityId, {
+    this.timeSlotId,
+    this.preferredDeadline,
+    this.isFlexibleTime = false,
+  });
 
   final int activityId;
+  final int? timeSlotId;
+  final String? preferredDeadline;
+  final bool isFlexibleTime;
 
   @override
-  List<Object?> get props => [activityId];
+  List<Object?> get props =>
+      [activityId, timeSlotId, preferredDeadline, isFlexibleTime];
 }
 
 class ActivityLoadDetail extends ActivityEvent {
@@ -47,6 +59,20 @@ class ActivityLoadDetail extends ActivityEvent {
 
   @override
   List<Object?> get props => [activityId];
+}
+
+/// 加载服务时间段 - 对标iOS loadTimeSlots(serviceId:activityId:)
+class ActivityLoadTimeSlots extends ActivityEvent {
+  const ActivityLoadTimeSlots({
+    required this.serviceId,
+    required this.activityId,
+  });
+
+  final int serviceId;
+  final int activityId;
+
+  @override
+  List<Object?> get props => [serviceId, activityId];
 }
 
 // ==================== State ====================
@@ -65,6 +91,8 @@ class ActivityState extends Equatable {
     this.actionMessage,
     this.activityDetail,
     this.detailStatus = ActivityStatus.initial,
+    this.timeSlots = const [],
+    this.isLoadingTimeSlots = false,
   });
 
   final ActivityStatus status;
@@ -77,6 +105,8 @@ class ActivityState extends Equatable {
   final String? actionMessage;
   final Activity? activityDetail;
   final ActivityStatus detailStatus;
+  final List<ServiceTimeSlot> timeSlots;
+  final bool isLoadingTimeSlots;
 
   bool get isLoading => status == ActivityStatus.loading;
   bool get isDetailLoading => detailStatus == ActivityStatus.loading;
@@ -92,6 +122,8 @@ class ActivityState extends Equatable {
     String? actionMessage,
     Activity? activityDetail,
     ActivityStatus? detailStatus,
+    List<ServiceTimeSlot>? timeSlots,
+    bool? isLoadingTimeSlots,
   }) {
     return ActivityState(
       status: status ?? this.status,
@@ -104,6 +136,8 @@ class ActivityState extends Equatable {
       actionMessage: actionMessage,
       activityDetail: activityDetail ?? this.activityDetail,
       detailStatus: detailStatus ?? this.detailStatus,
+      timeSlots: timeSlots ?? this.timeSlots,
+      isLoadingTimeSlots: isLoadingTimeSlots ?? this.isLoadingTimeSlots,
     );
   }
 
@@ -119,23 +153,30 @@ class ActivityState extends Equatable {
         actionMessage,
         activityDetail,
         detailStatus,
+        timeSlots,
+        isLoadingTimeSlots,
       ];
 }
 
 // ==================== Bloc ====================
 
 class ActivityBloc extends Bloc<ActivityEvent, ActivityState> {
-  ActivityBloc({required ActivityRepository activityRepository})
-      : _activityRepository = activityRepository,
+  ActivityBloc({
+    required ActivityRepository activityRepository,
+    TaskExpertRepository? taskExpertRepository,
+  })  : _activityRepository = activityRepository,
+        _taskExpertRepository = taskExpertRepository,
         super(const ActivityState()) {
     on<ActivityLoadRequested>(_onLoadRequested);
     on<ActivityLoadMore>(_onLoadMore);
     on<ActivityRefreshRequested>(_onRefresh);
     on<ActivityApply>(_onApply);
     on<ActivityLoadDetail>(_onLoadDetail);
+    on<ActivityLoadTimeSlots>(_onLoadTimeSlots);
   }
 
   final ActivityRepository _activityRepository;
+  final TaskExpertRepository? _taskExpertRepository;
 
   Future<void> _onLoadRequested(
     ActivityLoadRequested event,
@@ -207,6 +248,7 @@ class ActivityBloc extends Bloc<ActivityEvent, ActivityState> {
     }
   }
 
+  /// 申请参加活动 - 增强版，支持时间段/灵活时间
   Future<void> _onApply(
     ActivityApply event,
     Emitter<ActivityState> emit,
@@ -214,7 +256,12 @@ class ActivityBloc extends Bloc<ActivityEvent, ActivityState> {
     emit(state.copyWith(isSubmitting: true));
 
     try {
-      await _activityRepository.applyActivity(event.activityId);
+      await _activityRepository.applyActivity(
+        event.activityId,
+        timeSlotId: event.timeSlotId,
+        preferredDeadline: event.preferredDeadline,
+        isFlexibleTime: event.isFlexibleTime,
+      );
       emit(state.copyWith(
         isSubmitting: false,
         actionMessage: '报名成功',
@@ -227,7 +274,7 @@ class ActivityBloc extends Bloc<ActivityEvent, ActivityState> {
     } catch (e) {
       emit(state.copyWith(
         isSubmitting: false,
-        actionMessage: '报名失败',
+        actionMessage: '报名失败: ${e.toString()}',
       ));
     }
   }
@@ -239,7 +286,8 @@ class ActivityBloc extends Bloc<ActivityEvent, ActivityState> {
     emit(state.copyWith(detailStatus: ActivityStatus.loading));
 
     try {
-      final activity = await _activityRepository.getActivityById(event.activityId);
+      final activity =
+          await _activityRepository.getActivityById(event.activityId);
       emit(state.copyWith(
         detailStatus: ActivityStatus.loaded,
         activityDetail: activity,
@@ -249,6 +297,42 @@ class ActivityBloc extends Bloc<ActivityEvent, ActivityState> {
       emit(state.copyWith(
         detailStatus: ActivityStatus.error,
         errorMessage: e.toString(),
+      ));
+    }
+  }
+
+  /// 加载时间段 - 对标iOS loadTimeSlots
+  /// 只显示与该活动关联的时间段 (hasActivity == true && activityId 匹配)
+  Future<void> _onLoadTimeSlots(
+    ActivityLoadTimeSlots event,
+    Emitter<ActivityState> emit,
+  ) async {
+    final repo = _taskExpertRepository;
+    if (repo == null) return;
+
+    emit(state.copyWith(isLoadingTimeSlots: true));
+
+    try {
+      final rawSlots =
+          await repo.getServiceTimeSlots(event.serviceId);
+      final allSlots =
+          rawSlots.map((e) => ServiceTimeSlot.fromJson(e)).toList();
+
+      // 只保留与该活动关联的时间段 - 对标iOS filter
+      final activitySlots = allSlots
+          .where((slot) =>
+              slot.hasActivity == true && slot.activityId == event.activityId)
+          .toList();
+
+      emit(state.copyWith(
+        isLoadingTimeSlots: false,
+        timeSlots: activitySlots,
+      ));
+    } catch (e) {
+      AppLogger.error('Failed to load time slots', e);
+      emit(state.copyWith(
+        isLoadingTimeSlots: false,
+        timeSlots: const [],
       ));
     }
   }

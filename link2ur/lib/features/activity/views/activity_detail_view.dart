@@ -4,18 +4,22 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 
 import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_typography.dart';
 import '../../../core/design/app_radius.dart';
 import '../../../core/utils/l10n_extension.dart';
+import '../../../core/utils/responsive.dart';
 import '../../../core/widgets/loading_view.dart';
 import '../../../core/widgets/error_state_view.dart';
 import '../../../core/widgets/async_image_view.dart';
 import '../../../core/widgets/full_screen_image_view.dart';
 import '../../../data/models/activity.dart';
+import '../../../data/models/task_expert.dart';
 import '../../../data/repositories/activity_repository.dart';
+import '../../../data/repositories/task_expert_repository.dart';
 import '../bloc/activity_bloc.dart';
 
 /// 活动详情视图 - 对标iOS ActivityDetailView.swift
@@ -32,6 +36,8 @@ class ActivityDetailView extends StatelessWidget {
     return BlocProvider(
       create: (context) => ActivityBloc(
         activityRepository: context.read<ActivityRepository>(),
+        taskExpertRepository:
+            context.read<TaskExpertRepository>(),
       )..add(ActivityLoadDetail(activityId)),
       child: _ActivityDetailViewContent(activityId: activityId),
     );
@@ -72,7 +78,12 @@ class _ActivityDetailViewContent extends StatelessWidget {
           return Scaffold(
             extendBodyBehindAppBar: true,
             appBar: _buildAppBar(context, state, hasImages),
-            body: _buildBody(context, state),
+            body: Center(
+              child: ConstrainedBox(
+                constraints: BoxConstraints(maxWidth: ResponsiveUtils.detailMaxWidth(context)),
+                child: _buildBody(context, state),
+              ),
+            ),
             bottomNavigationBar: _buildBottomBar(context, state),
           );
         },
@@ -264,65 +275,98 @@ class _ActivityDetailViewContent extends StatelessWidget {
     );
   }
 
+  /// CTA 按钮 - 对标iOS ActivityBottomBar 的完整状态机
+  /// 状态优先级：已结束 > 已申请(含议价/支付子状态) > 已满 > 可申请
   Widget _buildCTAButton(
       BuildContext context, ActivityState state, Activity activity) {
-        if (activity.status != 'active') {
-      return Container(
-        height: 50,
-        decoration: BoxDecoration(
-          color: AppColors.textTertiaryLight,
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Center(
-          child: Text(
-            _getStatusText(activity.status, context),
-            style: AppTypography.bodyBold.copyWith(color: Colors.white),
-          ),
-        ),
-      );
+    // 1. 活动已结束/取消 - 对标iOS activity.isEnded
+    if (activity.status != 'active') {
+      return _buildDisabledButton(_getStatusText(activity.status, context));
     }
 
+    // 2. 已申请且有任务ID - 对标iOS hasApplied == true, let taskId = activity.userTaskId
+    if (activity.hasApplied == true && activity.userTaskId != null) {
+      // 2a. 有议价 + 待支付 → 等待达人回应 (灰色不可点击)
+      if (activity.userTaskHasNegotiation == true &&
+          activity.userTaskStatus == 'pending_payment') {
+        return _buildDisabledButton(context.l10n.activityWaitingExpertResponse);
+      }
+
+      // 2b. 待支付 + 未支付 → 继续支付 (可点击)
+      if (activity.userTaskStatus == 'pending_payment' &&
+          activity.userTaskIsPaid != true) {
+        return _buildPrimaryButton(
+          context,
+          text: context.l10n.activityContinuePayment,
+          isLoading: state.isSubmitting,
+          onTap: () {
+            HapticFeedback.selectionClick();
+            // TODO: 跳转支付页面
+          },
+        );
+      }
+
+      // 2c. 有议价但非待支付 → 等待达人回应
+      if (activity.userTaskHasNegotiation == true) {
+        return _buildDisabledButton(context.l10n.activityWaitingExpertResponse);
+      }
+
+      // 2d. 其他已申请状态 → 已申请 (灰色)
+      return _buildDisabledButton(context.l10n.activityApplied);
+    }
+
+    // 3. 已申请但无任务ID → 已申请 (灰色)
     if (activity.hasApplied == true) {
-      return Container(
-        height: 50,
-        decoration: BoxDecoration(
-          color: AppColors.textTertiaryLight,
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Center(
-          child: Text(
-            context.l10n.activityRegistered,
-            style: AppTypography.bodyBold.copyWith(color: Colors.white),
-          ),
-        ),
-      );
+      return _buildDisabledButton(context.l10n.activityApplied);
     }
 
+    // 4. 已满员
     if (activity.isFull) {
-      return Container(
-        height: 50,
-        decoration: BoxDecoration(
-          color: AppColors.textTertiaryLight,
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Center(
-          child: Text(
-            context.l10n.activityFullSlots,
-            style: AppTypography.bodyBold.copyWith(color: Colors.white),
-          ),
-        ),
-      );
+      return _buildDisabledButton(context.l10n.activityFullSlots);
     }
 
+    // 5. 可申请 → 弹出申请弹窗 - 对标iOS showPurchaseSheet / ActivityApplyView
+    return _buildPrimaryButton(
+      context,
+      text: context.l10n.activityRegisterNow,
+      isLoading: state.isSubmitting,
+      onTap: () {
+        HapticFeedback.selectionClick();
+        ActivityApplySheet.show(
+          context,
+          activityId: activityId,
+          activity: activity,
+        );
+      },
+    );
+  }
+
+  /// 禁用状态按钮 (灰色)
+  Widget _buildDisabledButton(String text) {
+    return Container(
+      height: 50,
+      decoration: BoxDecoration(
+        color: AppColors.textTertiaryLight,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Center(
+        child: Text(
+          text,
+          style: AppTypography.bodyBold.copyWith(color: Colors.white),
+        ),
+      ),
+    );
+  }
+
+  /// 主操作按钮 (渐变色)
+  Widget _buildPrimaryButton(
+    BuildContext context, {
+    required String text,
+    required bool isLoading,
+    required VoidCallback onTap,
+  }) {
     return GestureDetector(
-      onTap: state.isSubmitting
-          ? null
-          : () {
-              HapticFeedback.selectionClick();
-              context
-                  .read<ActivityBloc>()
-                  .add(ActivityApply(activityId));
-            },
+      onTap: isLoading ? null : onTap,
       child: Container(
         height: 50,
         decoration: BoxDecoration(
@@ -334,7 +378,7 @@ class _ActivityDetailViewContent extends StatelessWidget {
           borderRadius: BorderRadius.circular(12),
         ),
         child: Center(
-          child: state.isSubmitting
+          child: isLoading
               ? const SizedBox(
                   width: 20,
                   height: 20,
@@ -342,7 +386,7 @@ class _ActivityDetailViewContent extends StatelessWidget {
                       strokeWidth: 2, color: Colors.white),
                 )
               : Text(
-                  context.l10n.activityRegisterNow,
+                  text,
                   style: AppTypography.bodyBold.copyWith(color: Colors.white),
                 ),
         ),
@@ -1013,8 +1057,14 @@ class _ActivityInfoGrid extends StatelessWidget {
                 value: activity.taskType,
               ),
 
-            // 截止时间
-            if (activity.deadline != null)
+            // 时间安排 - 对标iOS hasTimeSlots条件
+            if (activity.hasTimeSlots)
+              _InfoRow(
+                icon: Icons.calendar_month,
+                label: context.l10n.activityTimeArrangement,
+                value: context.l10n.activityMultipleTimeSlots,
+              )
+            else if (activity.deadline != null)
               _InfoRow(
                 icon: Icons.calendar_today,
                 label: context.l10n.activityDeadline,
@@ -1254,5 +1304,671 @@ class _PosterInfoRow extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+// ============================================================
+// 活动申请弹窗 - 对标iOS ActivityApplyView
+// hasTimeSlots → 时间段选择视图
+// !hasTimeSlots → 灵活时间 / 日期选择视图
+// ============================================================
+
+class ActivityApplySheet extends StatefulWidget {
+  const ActivityApplySheet({
+    super.key,
+    required this.activityId,
+    required this.activity,
+  });
+
+  final int activityId;
+  final Activity activity;
+
+  /// 弹出申请弹窗
+  static Future<void> show(
+    BuildContext context, {
+    required int activityId,
+    required Activity activity,
+  }) {
+    return showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (_) => BlocProvider.value(
+        value: context.read<ActivityBloc>(),
+        child: ActivityApplySheet(
+          activityId: activityId,
+          activity: activity,
+        ),
+      ),
+    );
+  }
+
+  @override
+  State<ActivityApplySheet> createState() => _ActivityApplySheetState();
+}
+
+class _ActivityApplySheetState extends State<ActivityApplySheet> {
+  int? _selectedTimeSlotId;
+  bool _isFlexibleTime = false;
+  DateTime _preferredDate = DateTime.now().add(const Duration(days: 1));
+
+  bool get _hasTimeSlots => widget.activity.hasTimeSlots;
+
+  @override
+  void initState() {
+    super.initState();
+    // 有时间段时自动加载 - 对标iOS onAppear
+    if (_hasTimeSlots) {
+      context.read<ActivityBloc>().add(ActivityLoadTimeSlots(
+            serviceId: widget.activity.expertServiceId,
+            activityId: widget.activityId,
+          ));
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return BlocConsumer<ActivityBloc, ActivityState>(
+      listenWhen: (prev, curr) =>
+          curr.actionMessage != null &&
+          prev.actionMessage != curr.actionMessage,
+      listener: (context, state) {
+        if (state.actionMessage != null) {
+          Navigator.of(context).pop(); // 关闭弹窗
+          // snackbar 由外层 listener 处理
+        }
+      },
+      builder: (context, state) {
+        return DraggableScrollableSheet(
+          initialChildSize: 0.65,
+          minChildSize: 0.4,
+          maxChildSize: 0.9,
+          expand: false,
+          builder: (context, scrollController) {
+            return Container(
+              decoration: BoxDecoration(
+                color: isDark
+                    ? AppColors.cardBackgroundDark
+                    : AppColors.cardBackgroundLight,
+                borderRadius:
+                    const BorderRadius.vertical(top: Radius.circular(20)),
+              ),
+              child: Column(
+                children: [
+                  // 拖动手柄
+                  _buildHandle(),
+                  // 标题栏
+                  _buildTitleBar(context),
+                  const Divider(height: 1),
+                  // 内容区域
+                  Expanded(
+                    child: ListView(
+                      controller: scrollController,
+                      padding: const EdgeInsets.all(AppSpacing.md),
+                      children: [
+                        if (_hasTimeSlots)
+                          _buildTimeSlotSelection(context, state, isDark)
+                        else
+                          _buildFlexibleTimeSelection(context, isDark),
+                        const SizedBox(height: AppSpacing.lg),
+                      ],
+                    ),
+                  ),
+                  // 底部按钮
+                  _buildApplyButton(context, state, isDark),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Widget _buildHandle() {
+    return Center(
+      child: Container(
+        margin: const EdgeInsets.only(top: 10, bottom: 6),
+        width: 36,
+        height: 5,
+        decoration: BoxDecoration(
+          color: AppColors.textTertiaryLight.withValues(alpha: 0.3),
+          borderRadius: BorderRadius.circular(999),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTitleBar(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.md, vertical: AppSpacing.sm),
+      child: Row(
+        children: [
+          GestureDetector(
+            onTap: () => Navigator.of(context).pop(),
+            child: Text(
+              context.l10n.commonCancel,
+              style: AppTypography.body.copyWith(
+                color: AppColors.textSecondaryLight,
+              ),
+            ),
+          ),
+          const Spacer(),
+          Text(
+            context.l10n.activityApplyToJoin,
+            style: AppTypography.title3,
+          ),
+          const Spacer(),
+          const SizedBox(width: 50), // 平衡间距
+        ],
+      ),
+    );
+  }
+
+  // ==================== 时间段选择视图 ====================
+
+  Widget _buildTimeSlotSelection(
+      BuildContext context, ActivityState state, bool isDark) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Section Header
+        _buildSectionHeader(
+          icon: Icons.schedule,
+          title: context.l10n.activitySelectTimeSlot,
+        ),
+        const SizedBox(height: AppSpacing.md),
+
+        if (state.isLoadingTimeSlots)
+          const Center(
+            child: Padding(
+              padding: EdgeInsets.symmetric(vertical: 40),
+              child: CircularProgressIndicator(),
+            ),
+          )
+        else if (state.timeSlots.isEmpty)
+          _buildEmptyTimeSlots(context, isDark)
+        else
+          _buildTimeSlotsGrouped(state.timeSlots, isDark),
+      ],
+    );
+  }
+
+  Widget _buildEmptyTimeSlots(BuildContext context, bool isDark) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(AppSpacing.xl),
+      decoration: BoxDecoration(
+        color: isDark ? AppColors.backgroundDark : AppColors.backgroundLight,
+        borderRadius: AppRadius.allLarge,
+      ),
+      child: Column(
+        children: [
+          Icon(Icons.event_busy,
+              size: 48,
+              color: isDark
+                  ? AppColors.textTertiaryDark
+                  : AppColors.textTertiaryLight),
+          const SizedBox(height: AppSpacing.md),
+          Text(
+            context.l10n.activityNoAvailableTime,
+            style: AppTypography.bodyBold.copyWith(
+              color: isDark
+                  ? AppColors.textSecondaryDark
+                  : AppColors.textSecondaryLight,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            context.l10n.activityNoAvailableTimeMessage,
+            style: AppTypography.caption.copyWith(
+              color: isDark
+                  ? AppColors.textTertiaryDark
+                  : AppColors.textTertiaryLight,
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// 按日期分组显示时间段 - 对标iOS groupedTimeSlots + timeSlotsList
+  Widget _buildTimeSlotsGrouped(List<ServiceTimeSlot> slots, bool isDark) {
+    // 按日期分组
+    final grouped = <String, List<ServiceTimeSlot>>{};
+    for (final slot in slots) {
+      final dateKey = _parseSlotDateKey(slot.slotStartDatetime);
+      grouped.putIfAbsent(dateKey, () => []).add(slot);
+    }
+    final sortedKeys = grouped.keys.toList()..sort();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: sortedKeys.map((dateKey) {
+        final daySlots = grouped[dateKey]!;
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // 日期标题 - 对标iOS formatDate
+            Padding(
+              padding: const EdgeInsets.only(left: 4, bottom: AppSpacing.sm),
+              child: Text(
+                _formatDateHeader(dateKey),
+                style: AppTypography.bodyBold,
+              ),
+            ),
+            // 时间段网格 - 对标iOS LazyVGrid
+            Wrap(
+              spacing: AppSpacing.sm,
+              runSpacing: AppSpacing.sm,
+              children: daySlots
+                  .map((slot) => _ActivityTimeSlotCard(
+                        slot: slot,
+                        isSelected: _selectedTimeSlotId == slot.id,
+                        isDark: isDark,
+                        onSelect: () {
+                          if (slot.canSelect) {
+                            setState(() => _selectedTimeSlotId = slot.id);
+                            HapticFeedback.selectionClick();
+                          }
+                        },
+                      ))
+                  .toList(),
+            ),
+            const SizedBox(height: AppSpacing.md),
+          ],
+        );
+      }).toList(),
+    );
+  }
+
+  // ==================== 灵活时间选择视图 ====================
+
+  Widget _buildFlexibleTimeSelection(BuildContext context, bool isDark) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildSectionHeader(
+          icon: Icons.calendar_today,
+          title: context.l10n.activityParticipateTime,
+        ),
+        const SizedBox(height: AppSpacing.md),
+
+        // 灵活时间开关 - 对标iOS Toggle
+        Container(
+          padding: const EdgeInsets.all(AppSpacing.md),
+          decoration: BoxDecoration(
+            color: isDark
+                ? AppColors.backgroundDark
+                : AppColors.backgroundLight,
+            borderRadius: AppRadius.allLarge,
+          ),
+          child: Column(
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          context.l10n.activityTimeFlexible,
+                          style: AppTypography.bodyBold.copyWith(
+                            color: isDark
+                                ? AppColors.textPrimaryDark
+                                : AppColors.textPrimaryLight,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          context.l10n.activityTimeFlexibleMessage,
+                          style: AppTypography.caption.copyWith(
+                            color: isDark
+                                ? AppColors.textSecondaryDark
+                                : AppColors.textSecondaryLight,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Switch.adaptive(
+                    value: _isFlexibleTime,
+                    activeTrackColor: AppColors.primary,
+                    onChanged: (val) =>
+                        setState(() => _isFlexibleTime = val),
+                  ),
+                ],
+              ),
+
+              // 日期选择器 - 对标iOS DatePicker
+              if (!_isFlexibleTime) ...[
+                const Divider(height: 24),
+                GestureDetector(
+                  onTap: () => _showDatePicker(context),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.event, size: 20, color: AppColors.primary),
+                      const SizedBox(width: AppSpacing.sm),
+                      Text(
+                        context.l10n.activityPreferredDate,
+                        style: AppTypography.body.copyWith(
+                          color: isDark
+                              ? AppColors.textSecondaryDark
+                              : AppColors.textSecondaryLight,
+                        ),
+                      ),
+                      const Spacer(),
+                      Text(
+                        DateFormat('yyyy-MM-dd').format(_preferredDate),
+                        style: AppTypography.bodyBold.copyWith(
+                          color: AppColors.primary,
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      const Icon(Icons.chevron_right,
+                          size: 18, color: AppColors.textTertiaryLight),
+                    ],
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _showDatePicker(BuildContext context) async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _preferredDate,
+      firstDate: DateTime.now(),
+      lastDate: DateTime.now().add(const Duration(days: 365)),
+    );
+    if (picked != null) {
+      setState(() => _preferredDate = picked);
+    }
+  }
+
+  // ==================== 底部申请按钮 ====================
+
+  Widget _buildApplyButton(
+      BuildContext context, ActivityState state, bool isDark) {
+    final canApply = _hasTimeSlots
+        ? _selectedTimeSlotId != null
+        : true; // 非时间段模式总是可以申请
+
+    return Container(
+      decoration: BoxDecoration(
+        color: isDark
+            ? AppColors.cardBackgroundDark
+            : AppColors.cardBackgroundLight,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 10,
+            offset: const Offset(0, -5),
+          ),
+        ],
+      ),
+      child: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.md, vertical: 12),
+          child: GestureDetector(
+            onTap: (state.isSubmitting || !canApply) ? null : _onApply,
+            child: AnimatedOpacity(
+              opacity: canApply ? 1.0 : 0.5,
+              duration: const Duration(milliseconds: 200),
+              child: Container(
+                height: 50,
+                decoration: BoxDecoration(
+                  gradient: canApply
+                      ? const LinearGradient(
+                          colors: [AppColors.primary, Color(0xFF0059B3)])
+                      : null,
+                  color: canApply ? null : AppColors.textTertiaryLight,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Center(
+                  child: state.isSubmitting
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                              strokeWidth: 2, color: Colors.white),
+                        )
+                      : Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.send,
+                                size: 18, color: Colors.white),
+                            const SizedBox(width: 8),
+                            Text(
+                              context.l10n.activityConfirmApply,
+                              style: AppTypography.bodyBold
+                                  .copyWith(color: Colors.white),
+                            ),
+                          ],
+                        ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _onApply() {
+    HapticFeedback.selectionClick();
+
+    if (_hasTimeSlots) {
+      // 时间段模式 - 传 timeSlotId
+      context.read<ActivityBloc>().add(ActivityApply(
+            widget.activityId,
+            timeSlotId: _selectedTimeSlotId,
+          ));
+    } else {
+      // 灵活时间/日期模式
+      context.read<ActivityBloc>().add(ActivityApply(
+            widget.activityId,
+            preferredDeadline: _isFlexibleTime
+                ? null
+                : _preferredDate.toUtc().toIso8601String(),
+            isFlexibleTime: _isFlexibleTime,
+          ));
+    }
+  }
+
+  // ==================== 工具方法 ====================
+
+  Widget _buildSectionHeader({
+    required IconData icon,
+    required String title,
+  }) {
+    return Row(
+      children: [
+        Icon(icon, size: 18, color: AppColors.primary),
+        const SizedBox(width: AppSpacing.sm),
+        Text(title, style: AppTypography.title3),
+      ],
+    );
+  }
+
+  /// 解析ISO 8601时间戳为本地日期key (yyyy-MM-dd)
+  String _parseSlotDateKey(String isoDatetime) {
+    try {
+      final date = DateTime.parse(isoDatetime).toLocal();
+      return DateFormat('yyyy-MM-dd').format(date);
+    } catch (_) {
+      return isoDatetime.substring(0, 10);
+    }
+  }
+
+  /// 格式化日期标题 - 对标iOS formatDate
+  String _formatDateHeader(String dateKey) {
+    try {
+      final date = DateFormat('yyyy-MM-dd').parse(dateKey);
+      final locale = Localizations.localeOf(context).languageCode;
+      if (locale == 'zh') {
+        return DateFormat('MM月dd日 EEE', 'zh_CN').format(date);
+      }
+      return DateFormat('MMM dd, EEE', 'en').format(date);
+    } catch (_) {
+      return dateKey;
+    }
+  }
+}
+
+// ==================== 时间段卡片 ====================
+// 对标iOS ActivityTimeSlotCard
+
+class _ActivityTimeSlotCard extends StatelessWidget {
+  const _ActivityTimeSlotCard({
+    required this.slot,
+    required this.isSelected,
+    required this.isDark,
+    required this.onSelect,
+  });
+
+  final ServiceTimeSlot slot;
+  final bool isSelected;
+  final bool isDark;
+  final VoidCallback onSelect;
+
+  @override
+  Widget build(BuildContext context) {
+    final canSelect = slot.canSelect;
+    final opacity = canSelect ? 1.0 : 0.5;
+
+    return GestureDetector(
+      onTap: canSelect ? onSelect : null,
+      child: AnimatedOpacity(
+        opacity: opacity,
+        duration: const Duration(milliseconds: 200),
+        child: Container(
+          width: (MediaQuery.of(context).size.width - 48 - AppSpacing.sm) / 2,
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(
+            color: isSelected
+                ? AppColors.primary.withValues(alpha: 0.1)
+                : slot.userHasApplied
+                    ? (isDark
+                        ? AppColors.textTertiaryDark.withValues(alpha: 0.1)
+                        : AppColors.textTertiaryLight.withValues(alpha: 0.08))
+                    : (isDark
+                        ? AppColors.cardBackgroundDark
+                        : AppColors.cardBackgroundLight),
+            borderRadius: AppRadius.allMedium,
+            border: Border.all(
+              color: isSelected
+                  ? AppColors.primary
+                  : slot.userHasApplied
+                      ? (isDark
+                          ? AppColors.textTertiaryDark
+                          : AppColors.textTertiaryLight).withValues(alpha: 0.3)
+                      : (isDark
+                              ? AppColors.separatorDark
+                              : AppColors.separatorLight)
+                          .withValues(alpha: 0.3),
+              width: isSelected ? 2 : 1,
+            ),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // 已申请标签
+              if (slot.userHasApplied) ...[
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: isDark
+                        ? AppColors.textTertiaryDark.withValues(alpha: 0.2)
+                        : AppColors.textTertiaryLight.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Text(
+                    context.l10n.serviceApplied,
+                    style: TextStyle(
+                      fontSize: 9,
+                      fontWeight: FontWeight.bold,
+                      color: isDark
+                          ? AppColors.textTertiaryDark
+                          : AppColors.textTertiaryLight,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 4),
+              ],
+              // 时间范围 - 对标iOS formatTimeRange
+              Text(
+                _formatTimeRange(slot.slotStartDatetime, slot.slotEndDatetime),
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  color: isSelected
+                      ? AppColors.primary
+                      : slot.userHasApplied
+                          ? (isDark
+                              ? AppColors.textTertiaryDark
+                              : AppColors.textTertiaryLight)
+                          : (isDark
+                              ? AppColors.textPrimaryDark
+                              : AppColors.textPrimaryLight),
+                ),
+              ),
+              const SizedBox(height: 4),
+              // 人数 - 对标iOS currentParticipants/maxParticipants
+              Text(
+                context.l10n.activityPersonCount(
+                    slot.currentParticipants, slot.maxParticipants),
+                style: TextStyle(
+                  fontSize: 11,
+                  color: isSelected
+                      ? AppColors.primary
+                      : (isDark
+                          ? AppColors.textSecondaryDark
+                          : AppColors.textSecondaryLight),
+                ),
+              ),
+              // 价格
+              if (slot.displayPrice != null) ...[
+                const SizedBox(height: 4),
+                Text(
+                  '£${slot.displayPrice!.toStringAsFixed(0)}',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    color: slot.userHasApplied
+                        ? AppColors.textTertiaryLight
+                        : AppColors.primary,
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// 格式化时间范围 HH:mm-HH:mm - 对标iOS formatTimeRange
+  String _formatTimeRange(String startIso, String endIso) {
+    try {
+      final start = DateTime.parse(startIso).toLocal();
+      final end = DateTime.parse(endIso).toLocal();
+      final fmt = DateFormat('HH:mm');
+      return '${fmt.format(start)}-${fmt.format(end)}';
+    } catch (_) {
+      return '';
+    }
   }
 }

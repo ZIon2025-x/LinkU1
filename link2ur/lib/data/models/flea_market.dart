@@ -261,6 +261,53 @@ class FleaMarketListResponse {
   }
 }
 
+/// 购买申请模型
+/// 参考后端 PurchaseRequestResponse
+class PurchaseRequest extends Equatable {
+  const PurchaseRequest({
+    required this.id,
+    required this.buyerId,
+    this.buyerName,
+    this.buyerAvatar,
+    this.proposedPrice,
+    this.message,
+    this.status = 'pending',
+    this.sellerCounterPrice,
+    this.createdAt,
+  });
+
+  final String id;
+  final String buyerId;
+  final String? buyerName;
+  final String? buyerAvatar;
+  final double? proposedPrice;
+  final String? message;
+  final String status; // pending, seller_negotiating, accepted, rejected
+  final double? sellerCounterPrice;
+  final DateTime? createdAt;
+
+  factory PurchaseRequest.fromJson(Map<String, dynamic> json) {
+    return PurchaseRequest(
+      id: json['id']?.toString() ?? '',
+      buyerId: json['buyer_id']?.toString() ?? '',
+      buyerName: json['buyer_name'] as String? ??
+          json['buyer']?['name'] as String?,
+      buyerAvatar: json['buyer_avatar'] as String? ??
+          json['buyer']?['avatar'] as String?,
+      proposedPrice: (json['proposed_price'] as num?)?.toDouble(),
+      message: json['message'] as String?,
+      status: json['status'] as String? ?? 'pending',
+      sellerCounterPrice: (json['seller_counter_price'] as num?)?.toDouble(),
+      createdAt: json['created_at'] != null
+          ? DateTime.parse(json['created_at'])
+          : null,
+    );
+  }
+
+  @override
+  List<Object?> get props => [id, status, sellerCounterPrice];
+}
+
 /// 创建跳蚤市场商品请求
 class CreateFleaMarketRequest {
   const CreateFleaMarketRequest({

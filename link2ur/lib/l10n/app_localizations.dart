@@ -675,6 +675,12 @@ abstract class AppLocalizations {
   /// **'Recommended Tasks'**
   String get homeRecommendedTasks;
 
+  /// No description provided for @homeRecommendedBadge.
+  ///
+  /// In en, this message translates to:
+  /// **'Pick'**
+  String get homeRecommendedBadge;
+
   /// No description provided for @homeMemberPublished.
   ///
   /// In en, this message translates to:
@@ -3681,6 +3687,12 @@ abstract class AppLocalizations {
   /// **'Publisher'**
   String get taskDetailPublisher;
 
+  /// No description provided for @taskDetailRecipient.
+  ///
+  /// In en, this message translates to:
+  /// **'Recipient'**
+  String get taskDetailRecipient;
+
   /// No description provided for @taskDetailBuyer.
   ///
   /// In en, this message translates to:
@@ -3692,6 +3704,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Seller'**
   String get taskDetailSeller;
+
+  /// No description provided for @taskDetailParticipant.
+  ///
+  /// In en, this message translates to:
+  /// **'Participant'**
+  String get taskDetailParticipant;
+
+  /// No description provided for @taskDetailApplicant.
+  ///
+  /// In en, this message translates to:
+  /// **'Applicant'**
+  String get taskDetailApplicant;
 
   /// No description provided for @taskDetailEmailNotProvided.
   ///
@@ -13723,6 +13747,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Link²Ur Cookie Policy\n\nWe use cookies and similar technologies to improve your experience.\n\n1. What are Cookies\nCookies are small text files stored on your device.\n\n2. How We Use Cookies\n- Essential Cookies: Maintain login status\n- Functional Cookies: Remember preferences\n- Analytics Cookies: Improve service quality\n\n3. Managing Cookies\nYou can manage cookie preferences in your device settings.'**
   String get infoCookieContent;
+
+  /// No description provided for @serviceNegotiatePrice.
+  ///
+  /// In en, this message translates to:
+  /// **'Price Negotiation'**
+  String get serviceNegotiatePrice;
+
+  /// No description provided for @serviceNegotiatePriceHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Propose a different price to the expert'**
+  String get serviceNegotiatePriceHint;
+
+  /// No description provided for @serviceSelectDeadline.
+  ///
+  /// In en, this message translates to:
+  /// **'Select Deadline'**
+  String get serviceSelectDeadline;
+
+  /// No description provided for @serviceApplyOtherSlot.
+  ///
+  /// In en, this message translates to:
+  /// **'Apply for Another Slot'**
+  String get serviceApplyOtherSlot;
 }
 
 class _AppLocalizationsDelegate

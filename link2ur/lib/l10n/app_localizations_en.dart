@@ -307,6 +307,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get homeRecommendedTasks => 'Recommended Tasks';
 
   @override
+  String get homeRecommendedBadge => 'Pick';
+
+  @override
   String get homeMemberPublished => 'Member Published';
 
   @override
@@ -1989,10 +1992,19 @@ class AppLocalizationsEn extends AppLocalizations {
   String get taskDetailPublisher => 'Publisher';
 
   @override
+  String get taskDetailRecipient => 'Recipient';
+
+  @override
   String get taskDetailBuyer => 'Buyer';
 
   @override
   String get taskDetailSeller => 'Seller';
+
+  @override
+  String get taskDetailParticipant => 'Participant';
+
+  @override
+  String get taskDetailApplicant => 'Applicant';
 
   @override
   String get taskDetailEmailNotProvided => 'Email not provided';
@@ -7466,4 +7478,17 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get infoCookieContent =>
       'Link²Ur Cookie Policy\n\nWe use cookies and similar technologies to improve your experience.\n\n1. What are Cookies\nCookies are small text files stored on your device.\n\n2. How We Use Cookies\n- Essential Cookies: Maintain login status\n- Functional Cookies: Remember preferences\n- Analytics Cookies: Improve service quality\n\n3. Managing Cookies\nYou can manage cookie preferences in your device settings.';
+
+  @override
+  String get serviceNegotiatePrice => 'Price Negotiation';
+
+  @override
+  String get serviceNegotiatePriceHint =>
+      'Propose a different price to the expert';
+
+  @override
+  String get serviceSelectDeadline => 'Select Deadline';
+
+  @override
+  String get serviceApplyOtherSlot => 'Apply for Another Slot';
 }

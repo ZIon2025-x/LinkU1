@@ -15,15 +15,17 @@ class ActivityRepository {
   final CacheManager _cache = CacheManager.shared;
 
   /// 获取活动列表
+  /// 后端使用 limit/offset 分页，返回 JSON 数组 (List<ActivityOut>)
   Future<ActivityListResponse> getActivities({
     int page = 1,
     int pageSize = 20,
     String? status,
     String? keyword,
   }) async {
+    final offset = (page - 1) * pageSize;
     final params = {
-      'page': page,
-      'page_size': pageSize,
+      'limit': pageSize,
+      'offset': offset,
       if (status != null) 'status': status,
       if (keyword != null) 'keyword': keyword,
     };
@@ -33,12 +35,15 @@ class ActivityRepository {
         : null;
 
     if (cacheKey != null) {
-      final cached = _cache.get<Map<String, dynamic>>(cacheKey);
-      if (cached != null) return ActivityListResponse.fromJson(cached);
+      final cached = _cache.get<List<dynamic>>(cacheKey);
+      if (cached != null) {
+        return ActivityListResponse.fromList(cached, page: page, pageSize: pageSize);
+      }
     }
 
     try {
-      final response = await _apiService.get<Map<String, dynamic>>(
+      // 后端 /api/activities 返回 List<ActivityOut>（JSON 数组）
+      final response = await _apiService.get(
         ApiEndpoints.activities,
         queryParameters: params,
       );
@@ -47,15 +52,29 @@ class ActivityRepository {
         throw ActivityException(response.message ?? '获取活动列表失败');
       }
 
-      if (cacheKey != null) {
-        await _cache.set(cacheKey, response.data!, ttl: CacheManager.shortTTL);
+      final data = response.data;
+      final List<dynamic> listData;
+
+      if (data is List<dynamic>) {
+        listData = data;
+      } else if (data is Map<String, dynamic>) {
+        // 兼容：如果后端后续改为分页格式
+        return ActivityListResponse.fromJson(data, page: page, pageSize: pageSize);
+      } else {
+        throw ActivityException('活动列表返回格式异常');
       }
 
-      return ActivityListResponse.fromJson(response.data!);
+      if (cacheKey != null) {
+        await _cache.set(cacheKey, listData, ttl: CacheManager.shortTTL);
+      }
+
+      return ActivityListResponse.fromList(listData, page: page, pageSize: pageSize);
     } catch (e) {
       if (cacheKey != null) {
-        final stale = _cache.getStale<Map<String, dynamic>>(cacheKey);
-        if (stale != null) return ActivityListResponse.fromJson(stale);
+        final stale = _cache.getStale<List<dynamic>>(cacheKey);
+        if (stale != null) {
+          return ActivityListResponse.fromList(stale, page: page, pageSize: pageSize);
+        }
       }
       rethrow;
     }
@@ -86,16 +105,20 @@ class ActivityRepository {
     }
   }
 
-  /// 申请参加活动
+  /// 申请参加活动 - 对标iOS applyToActivity
   Future<Map<String, dynamic>> applyActivity(
     int activityId, {
-    String? preferredTimeSlot,
+    int? timeSlotId,
+    String? preferredDeadline,
+    bool isFlexibleTime = false,
   }) async {
     final response = await _apiService.post<Map<String, dynamic>>(
       ApiEndpoints.applyActivity(activityId),
       data: {
-        if (preferredTimeSlot != null)
-          'preferred_time_slot': preferredTimeSlot,
+        if (timeSlotId != null) 'time_slot_id': timeSlotId,
+        if (preferredDeadline != null)
+          'preferred_deadline': preferredDeadline,
+        'is_flexible_time': isFlexibleTime,
       },
     );
 
@@ -135,15 +158,17 @@ class ActivityRepository {
   }
 
   /// 获取我参与的活动
+  /// 后端返回 {"success": true, "data": {"activities": [...], "total": ..., ...}}
   Future<ActivityListResponse> getMyActivities({
     int page = 1,
     int pageSize = 20,
   }) async {
+    final offset = (page - 1) * pageSize;
     final response = await _apiService.get<Map<String, dynamic>>(
       ApiEndpoints.myActivities,
       queryParameters: {
-        'page': page,
-        'page_size': pageSize,
+        'limit': pageSize,
+        'offset': offset,
       },
     );
 
@@ -151,7 +176,10 @@ class ActivityRepository {
       throw ActivityException(response.message ?? '获取我的活动失败');
     }
 
-    return ActivityListResponse.fromJson(response.data!);
+    final data = response.data!;
+    // 后端嵌套在 data 字段中
+    final innerData = data['data'] as Map<String, dynamic>? ?? data;
+    return ActivityListResponse.fromJson(innerData, page: page, pageSize: pageSize);
   }
 }
 

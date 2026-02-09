@@ -17,8 +17,12 @@ import '../../../core/widgets/async_image_view.dart';
 import '../../../core/widgets/full_screen_image_view.dart';
 import '../../../core/widgets/custom_share_panel.dart';
 import '../../../core/widgets/user_identity_badges.dart';
+import '../../../core/router/app_router.dart';
+import '../../../core/utils/responsive.dart';
 import '../../../core/utils/l10n_extension.dart';
+import '../../../core/utils/task_type_helper.dart';
 import '../../../data/models/task.dart';
+import '../../../data/models/user.dart';
 import '../../../data/repositories/task_repository.dart';
 import '../../../features/auth/bloc/auth_bloc.dart';
 import '../bloc/task_detail_bloc.dart';
@@ -77,7 +81,12 @@ class _TaskDetailContent extends StatelessWidget {
         return Scaffold(
           extendBodyBehindAppBar: true,
           appBar: _buildAppBar(context, state),
-          body: _buildBody(context, state, isPoster, isTaker, currentUserId),
+          body: Center(
+            child: ConstrainedBox(
+              constraints: BoxConstraints(maxWidth: ResponsiveUtils.detailMaxWidth(context)),
+              child: _buildBody(context, state, isPoster, isTaker, currentUserId),
+            ),
+          ),
           bottomNavigationBar:
               state.isLoaded && task != null
                   ? _buildBottomBar(context, state, isPoster, isTaker)
@@ -328,12 +337,16 @@ class _TaskDetailContent extends StatelessWidget {
                   ),
                 ],
 
-                // 发布者信息卡片
-                const SizedBox(height: AppSpacing.md),
-                _TaskPosterCard(
-                  task: task,
-                  isDark: isDark,
-                ),
+                // 对方信息卡片 — 仅与任务相关的用户可见
+                if (isPoster || isTaker) ...[
+                  const SizedBox(height: AppSpacing.md),
+                  _CounterpartyCard(
+                    task: task,
+                    isPoster: isPoster,
+                    isTaker: isTaker,
+                    isDark: isDark,
+                  ),
+                ],
                 const SizedBox(height: AppSpacing.xxl),
               ],
             ),
@@ -352,8 +365,12 @@ class _TaskDetailContent extends StatelessWidget {
     final task = state.task!;
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    // 确定聊天目标
-    final chatTargetId = isPoster ? task.takerId : task.posterId;
+    // 聊天按钮仅在用户与任务相关，且任务在进行中/待确认/待支付状态时显示
+    final isRelated = isPoster || isTaker;
+    final showChat = isRelated &&
+        (task.status == AppConstants.taskStatusInProgress ||
+            task.status == AppConstants.taskStatusPendingConfirmation ||
+            task.status == AppConstants.taskStatusPendingPayment);
 
     // 底部按钮：快速操作栏 (简洁版)
     return ClipRect(
@@ -379,16 +396,16 @@ class _TaskDetailContent extends StatelessWidget {
                   horizontal: 16, vertical: 12),
               child: Row(
                 children: [
-                  // 聊天按钮 — 有目标时才显示
-                  if (chatTargetId != null)
+                  // 聊天按钮 — 任务聊天（非私聊）
+                  if (showChat)
                     IconActionButton(
                       icon: Icons.chat_bubble_outline,
                       onPressed: () {
-                        context.push('/chat/$chatTargetId');
+                        context.goToTaskChat(task.id);
                       },
                       backgroundColor: AppColors.skeletonBase,
                     ),
-                  if (chatTargetId != null) AppSpacing.hMd,
+                  if (showChat) AppSpacing.hMd,
                   Expanded(
                     child: _buildBottomActionButton(
                         context, state, isPoster, isTaker),
@@ -665,7 +682,7 @@ class _TaskImageCarouselState extends State<_TaskImageCarousel> {
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(
-              Icons.photo_library_outlined,
+              TaskTypeHelper.getIcon(widget.task.taskType),
               size: 60,
               color: AppColors.primary.withValues(alpha: 0.3),
             ),
@@ -1053,17 +1070,26 @@ class _TaskInfoCard extends StatelessWidget {
 }
 
 // ============================================================
-// 发布者信息卡片 — 增强版: 来源感知角色称谓
+// 对方信息卡片 — 基于用户身份和任务类型显示对应的人
 // ============================================================
 
-class _TaskPosterCard extends StatelessWidget {
-  const _TaskPosterCard({required this.task, required this.isDark});
+class _CounterpartyCard extends StatelessWidget {
+  const _CounterpartyCard({
+    required this.task,
+    required this.isPoster,
+    required this.isTaker,
+    required this.isDark,
+  });
   final Task task;
+  final bool isPoster;
+  final bool isTaker;
   final bool isDark;
 
   @override
   Widget build(BuildContext context) {
-    final roleTitle = getPosterRoleText(task, context);
+    // 计算要显示的对方信息
+    final info = _resolveCounterpartyInfo(context);
+    if (info == null) return const SizedBox.shrink();
 
     return Container(
       width: double.infinity,
@@ -1083,12 +1109,8 @@ class _TaskPosterCard extends StatelessWidget {
         ],
       ),
       child: GestureDetector(
-        onTap: task.poster != null
-            ? () {
-                HapticFeedback.selectionClick();
-                context.push('/chat/${task.posterId}');
-              }
-            : null,
+        behavior: HitTestBehavior.opaque,
+        onTap: info.onTap,
         child: Row(
           children: [
             // 头像
@@ -1097,14 +1119,19 @@ class _TaskPosterCard extends StatelessWidget {
               height: 52,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                gradient: const LinearGradient(
-                  colors: [AppColors.primary, Color(0xFF0059B3)],
+                gradient: LinearGradient(
+                  colors: info.isExpert
+                      ? [const Color(0xFFFF8C00), const Color(0xFFFF6B00)]
+                      : [AppColors.primary, const Color(0xFF0059B3)],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
                 boxShadow: [
                   BoxShadow(
-                    color: AppColors.primary.withValues(alpha: 0.2),
+                    color: (info.isExpert
+                            ? const Color(0xFFFF8C00)
+                            : AppColors.primary)
+                        .withValues(alpha: 0.2),
                     blurRadius: 4,
                     offset: const Offset(0, 2),
                   ),
@@ -1112,14 +1139,16 @@ class _TaskPosterCard extends StatelessWidget {
               ),
               child: Padding(
                 padding: const EdgeInsets.all(2),
-                child: task.poster?.avatar != null
+                child: info.avatar != null
                     ? CircleAvatar(
-                        backgroundImage:
-                            NetworkImage(task.poster!.avatar!),
+                        backgroundImage: NetworkImage(info.avatar!),
                         backgroundColor: Colors.transparent,
                       )
-                    : const Icon(Icons.person,
-                        size: 22, color: Colors.white),
+                    : Icon(
+                        info.isExpert ? Icons.star : Icons.person,
+                        size: 22,
+                        color: Colors.white,
+                      ),
               ),
             ),
             const SizedBox(width: AppSpacing.md),
@@ -1133,7 +1162,7 @@ class _TaskPosterCard extends StatelessWidget {
                     children: [
                       Flexible(
                         child: Text(
-                          task.poster?.name ?? roleTitle,
+                          info.name,
                           style: AppTypography.bodyBold.copyWith(
                             color: isDark
                                 ? AppColors.textPrimaryDark
@@ -1143,17 +1172,22 @@ class _TaskPosterCard extends StatelessWidget {
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
-                      if (task.poster?.isVerified == true) ...[
+                      if (info.isVerified) ...[
                         const SizedBox(width: 4),
                         const Icon(Icons.verified,
                             size: 16, color: Colors.blue),
                       ],
+                      if (info.isExpert) ...[
+                        const SizedBox(width: 4),
+                        const Icon(Icons.workspace_premium,
+                            size: 16, color: Color(0xFFFF8C00)),
+                      ],
                     ],
                   ),
-                  if (task.poster?.isVerified == true) ...[
+                  if (info.isVerified) ...[
                     const SizedBox(height: 4),
                     UserIdentityBadges(
-                      isStudentVerified: task.poster?.isVerified,
+                      isStudentVerified: info.isVerified,
                       compact: true,
                     ),
                   ],
@@ -1163,7 +1197,7 @@ class _TaskPosterCard extends StatelessWidget {
 
             // 角色标签 + 箭头
             Text(
-              roleTitle,
+              info.roleLabel,
               style: AppTypography.caption.copyWith(
                 color: isDark
                     ? AppColors.textSecondaryDark
@@ -1192,4 +1226,141 @@ class _TaskPosterCard extends StatelessWidget {
       ),
     );
   }
+
+  /// 根据身份和任务类型解析要显示的对方信息
+  _CounterpartyInfo? _resolveCounterpartyInfo(BuildContext context) {
+    final isExpertTask = task.isExpertServiceTask || task.isExpertActivityTask;
+
+    // ===== 达人服务/活动任务 =====
+    if (isExpertTask) {
+      final expertId = task.expertCreatorId;
+      // 当前用户是达人创建者 → 显示接单者/参与者（即 poster 是申请人）
+      if (isPoster && expertId != null && task.posterId == expertId) {
+        // 达人自己看任务，显示接单者（对方）
+        if (task.taker != null) {
+          return _CounterpartyInfo(
+            name: task.taker!.name,
+            avatar: task.taker!.avatar,
+            isVerified: task.taker!.isVerified,
+            isExpert: false,
+            roleLabel: task.isExpertActivityTask
+                ? context.l10n.taskDetailParticipant
+                : context.l10n.taskDetailApplicant,
+            onTap: () {
+              HapticFeedback.selectionClick();
+              context.goToUserProfile(task.takerId!);
+            },
+          );
+        }
+        return null; // 达人视角但还没有接单者
+      }
+      // 当前用户不是达人 → 显示达人信息
+      if (expertId != null) {
+        // 尝试从 taker 或 poster 中推断达人身份
+        final UserBrief? expertBrief;
+        if (task.taker?.id == expertId) {
+          expertBrief = task.taker;
+        } else if (task.poster?.id == expertId) {
+          expertBrief = task.poster;
+        } else {
+          expertBrief = null;
+        }
+        return _CounterpartyInfo(
+          name: expertBrief?.name ?? context.l10n.taskSourceExpertService,
+          avatar: expertBrief?.avatar,
+          isVerified: expertBrief?.isVerified ?? false,
+          isExpert: true,
+          roleLabel: context.l10n.taskSourceExpertService,
+          onTap: () {
+            HapticFeedback.selectionClick();
+            // 跳转到达人详情页
+            context.push('/task-experts/$expertId');
+          },
+        );
+      }
+    }
+
+    // ===== 跳蚤市场 =====
+    if (task.isFleaMarketTask) {
+      if (isPoster && task.taker != null) {
+        // 买家 → 看卖家
+        return _CounterpartyInfo(
+          name: task.taker!.name,
+          avatar: task.taker!.avatar,
+          isVerified: task.taker!.isVerified,
+          isExpert: false,
+          roleLabel: context.l10n.taskDetailSeller,
+          onTap: () {
+            HapticFeedback.selectionClick();
+            context.goToUserProfile(task.takerId!);
+          },
+        );
+      }
+      if (isTaker && task.poster != null) {
+        // 卖家 → 看买家
+        return _CounterpartyInfo(
+          name: task.poster!.name,
+          avatar: task.poster!.avatar,
+          isVerified: task.poster!.isVerified,
+          isExpert: false,
+          roleLabel: context.l10n.taskDetailBuyer,
+          onTap: () {
+            HapticFeedback.selectionClick();
+            context.goToUserProfile(task.posterId);
+          },
+        );
+      }
+      return null;
+    }
+
+    // ===== 普通任务 =====
+    if (isPoster && task.taker != null) {
+      // 发布者 → 看接单者
+      return _CounterpartyInfo(
+        name: task.taker!.name,
+        avatar: task.taker!.avatar,
+        isVerified: task.taker!.isVerified,
+        isExpert: false,
+        roleLabel: context.l10n.taskDetailRecipient,
+        onTap: () {
+          HapticFeedback.selectionClick();
+          context.goToUserProfile(task.takerId!);
+        },
+      );
+    }
+    if (isTaker && task.poster != null) {
+      // 接单者 → 看发布者
+      return _CounterpartyInfo(
+        name: task.poster!.name,
+        avatar: task.poster!.avatar,
+        isVerified: task.poster!.isVerified,
+        isExpert: false,
+        roleLabel: context.l10n.taskDetailPublisher,
+        onTap: () {
+          HapticFeedback.selectionClick();
+          context.goToUserProfile(task.posterId);
+        },
+      );
+    }
+
+    return null; // 没有对方信息可展示
+  }
+}
+
+/// 对方信息数据
+class _CounterpartyInfo {
+  const _CounterpartyInfo({
+    required this.name,
+    this.avatar,
+    this.isVerified = false,
+    this.isExpert = false,
+    required this.roleLabel,
+    this.onTap,
+  });
+  final String name;
+  final String? avatar;
+  final bool isVerified;
+  final bool isExpert;
+  final String roleLabel;
+  final VoidCallback? onTap;
 }

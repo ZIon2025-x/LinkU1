@@ -7,6 +7,7 @@ import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_typography.dart';
 import '../../../core/design/app_radius.dart';
+import '../../../core/router/app_router.dart';
 import '../../../core/widgets/buttons.dart';
 import '../../../core/utils/l10n_extension.dart';
 import '../../../data/models/task.dart';
@@ -1298,8 +1299,8 @@ class TaskActionButtonsView extends StatelessWidget {
         icon: Icons.message,
         onPressed: () {
           HapticFeedback.selectionClick();
-          // 导航到聊天 — 联系对方
-          // context.push(isPoster ? '/chat/${task.takerId}' : '/chat/${task.posterId}');
+          // 导航到任务聊天 (非私聊)
+          context.goToTaskChat(task.id);
         },
       ),
     );

@@ -8,6 +8,7 @@ import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_typography.dart';
 import '../../../core/design/app_radius.dart';
 import '../../../core/utils/l10n_extension.dart';
+import '../../../core/utils/responsive.dart';
 import '../../../core/widgets/skeleton_view.dart';
 import '../../../core/widgets/error_state_view.dart';
 import '../../../core/widgets/empty_state_view.dart';
@@ -50,7 +51,12 @@ class _LeaderboardDetailContent extends StatelessWidget {
         return Scaffold(
           extendBodyBehindAppBar: hasHero,
           appBar: _buildAppBar(context, state, hasHero),
-          body: _buildBody(context, state),
+          body: Center(
+            child: ConstrainedBox(
+              constraints: BoxConstraints(maxWidth: ResponsiveUtils.detailMaxWidth(context)),
+              child: _buildBody(context, state),
+            ),
+          ),
           floatingActionButton: lb != null
               ? FloatingActionButton.extended(
                   onPressed: () =>

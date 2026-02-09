@@ -110,6 +110,7 @@
   "homeNoExperts": "No task experts",
   "homeNoExpertsMessage": "No task experts yet, stay tuned...",
   "homeRecommendedTasks": "Recommended Tasks",
+  "homeRecommendedBadge": "Pick",
   "homeMemberPublished": "Member Published",
   "homeMemberSeller": "Member Seller",
   "homeNoRecommendedTasks": "No recommended tasks",
@@ -948,8 +949,11 @@
   "taskDetailPublishTime": "Publish Time",
   "taskDetailDeadline": "Deadline",
   "taskDetailPublisher": "Publisher",
+  "taskDetailRecipient": "Recipient",
   "taskDetailBuyer": "Buyer",
   "taskDetailSeller": "Seller",
+  "taskDetailParticipant": "Participant",
+  "taskDetailApplicant": "Applicant",
   "taskDetailEmailNotProvided": "Email not provided",
   "taskDetailYourTask": "This is your task",
   "taskDetailManageTask": "You can view applicants and manage the task below",
@@ -3512,5 +3516,10 @@
   "infoPrivacyContent": "Link²Ur Privacy Policy\n\nLast updated: January 1, 2024\n\n1. Information Collection\nWe collect the following types of information:\n- Registration information (name, email, etc.)\n- Location information (for nearby task recommendations)\n- Device information (for push notifications)\n\n2. Information Usage\nWe use your information to:\n- Provide and improve services\n- Personalized recommendations\n- Ensure transaction security\n\n3. Information Storage & Protection\n- Data is stored on secure servers\n- Encryption technology is used to protect data transmission\n- Regular security audits are conducted\n\n4. Information Sharing\nWe do not sell your personal information. We only share in the following cases:\n- With your consent\n- Legal requirements\n- Necessary for service provision\n\n5. Cookie Policy\nWe use cookies to improve user experience.\n\n6. Your Rights\n- Access and modify personal information\n- Delete account\n- Unsubscribe from notifications\n\nFor privacy-related questions, please contact privacy@link2ur.com",
   "infoCookieContent": "Link²Ur Cookie Policy\n\nWe use cookies and similar technologies to improve your experience.\n\n1. What are Cookies\nCookies are small text files stored on your device.\n\n2. How We Use Cookies\n- Essential Cookies: Maintain login status\n- Functional Cookies: Remember preferences\n- Analytics Cookies: Improve service quality\n\n3. Managing Cookies\nYou can manage cookie preferences in your device settings.",
 
-  "settingsUnknown": "Unknown"
+  "settingsUnknown": "Unknown",
+
+  "serviceNegotiatePrice": "Price Negotiation",
+  "serviceNegotiatePriceHint": "Propose a different price to the expert",
+  "serviceSelectDeadline": "Select Deadline",
+  "serviceApplyOtherSlot": "Apply for Another Slot"
 }

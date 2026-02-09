@@ -3,7 +3,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import '../../../core/constants/app_constants.dart';
+import 'package:go_router/go_router.dart';
 import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_typography.dart';
@@ -12,8 +12,10 @@ import '../../../core/widgets/error_state_view.dart';
 import '../../../core/widgets/async_image_view.dart';
 import '../../../core/widgets/full_screen_image_view.dart';
 import '../../../core/utils/l10n_extension.dart';
+import '../../../core/utils/responsive.dart';
 import '../../../data/repositories/flea_market_repository.dart';
 import '../../../data/models/flea_market.dart';
+import '../../../features/auth/bloc/auth_bloc.dart';
 import '../bloc/flea_market_bloc.dart';
 
 /// 跳蚤市场商品详情页 - 对标iOS FleaMarketDetailView.swift
@@ -43,18 +45,60 @@ class _FleaMarketDetailContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<FleaMarketBloc, FleaMarketState>(
+    // 获取当前用户 ID (响应式) - 对标iOS appState.currentUser?.id
+    final currentUserId = context.select<AuthBloc, String?>(
+      (bloc) => bloc.state.user?.id,
+    );
+
+    return BlocConsumer<FleaMarketBloc, FleaMarketState>(
+      listenWhen: (prev, curr) =>
+          // 详情加载完成时自动加载购买申请（卖家）
+          (prev.detailStatus != FleaMarketStatus.loaded &&
+              curr.detailStatus == FleaMarketStatus.loaded) ||
+          // 操作消息提示
+          (curr.actionMessage != null &&
+              prev.actionMessage != curr.actionMessage),
+      listener: (context, state) {
+        // 操作提示
+        if (state.actionMessage != null) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(state.actionMessage!)),
+          );
+        }
+
+        // 卖家自动加载购买申请列表 - 对标iOS onAppear loadPurchaseRequests
+        if (state.isDetailLoaded && state.selectedItem != null) {
+          final isSeller = currentUserId != null &&
+              state.selectedItem!.sellerId == currentUserId;
+          if (isSeller &&
+              state.selectedItem!.isActive &&
+              state.purchaseRequests.isEmpty &&
+              !state.isLoadingPurchaseRequests) {
+            context
+                .read<FleaMarketBloc>()
+                .add(FleaMarketLoadPurchaseRequests(itemId));
+          }
+        }
+      },
       builder: (context, state) {
         final hasImages =
             state.selectedItem != null && state.selectedItem!.images.isNotEmpty;
+        final isSeller = state.selectedItem != null &&
+            currentUserId != null &&
+            state.selectedItem!.sellerId == currentUserId;
 
         return Scaffold(
           extendBodyBehindAppBar: true,
           appBar: _buildAppBar(context, state, hasImages),
-          body: _buildBody(context, state),
+          body: Center(
+            child: ConstrainedBox(
+              constraints: BoxConstraints(maxWidth: ResponsiveUtils.detailMaxWidth(context)),
+              child: _buildBody(context, state, isSeller),
+            ),
+          ),
           bottomNavigationBar:
               state.isDetailLoaded && state.selectedItem != null
-                  ? _buildBottomBar(context, state)
+                  ? _buildBottomBar(context, state, isSeller)
                   : null,
         );
       },
@@ -117,7 +161,7 @@ class _FleaMarketDetailContent extends StatelessWidget {
     );
   }
 
-  Widget _buildBody(BuildContext context, FleaMarketState state) {
+  Widget _buildBody(BuildContext context, FleaMarketState state, bool isSeller) {
     if (state.isDetailLoading) return const LoadingView();
 
     if (state.detailStatus == FleaMarketStatus.error) {
@@ -173,6 +217,12 @@ class _FleaMarketDetailContent extends StatelessWidget {
                       _PriceTitleCard(item: item, isDark: isDark),
                       const SizedBox(height: AppSpacing.md),
 
+                      // 卖家视角：自动下架倒计时警告 - 对标iOS daysUntilExpiryView
+                      if (isSeller && item.isActive)
+                        _AutoDelistWarning(item: item, isDark: isDark),
+                      if (isSeller && item.isActive)
+                        const SizedBox(height: AppSpacing.md),
+
                       // 详情卡片
                       if (item.description != null &&
                           item.description!.isNotEmpty)
@@ -181,8 +231,18 @@ class _FleaMarketDetailContent extends StatelessWidget {
                           item.description!.isNotEmpty)
                         const SizedBox(height: AppSpacing.md),
 
-                      // 卖家卡片
-                      _SellerCard(item: item, isDark: isDark),
+                      // 卖家卡片（买家视角显示卖家信息）
+                      if (!isSeller)
+                        _SellerCard(item: item, isDark: isDark),
+                      if (!isSeller)
+                        const SizedBox(height: AppSpacing.md),
+
+                      // 卖家视角：购买申请列表 - 对标iOS purchaseRequestsCard
+                      if (isSeller && item.isActive)
+                        _PurchaseRequestsCard(
+                          state: state,
+                          isDark: isDark,
+                        ),
 
                       const SizedBox(height: 100),
                     ],
@@ -196,11 +256,12 @@ class _FleaMarketDetailContent extends StatelessWidget {
     );
   }
 
-  Widget _buildBottomBar(BuildContext context, FleaMarketState state) {
+  Widget _buildBottomBar(BuildContext context, FleaMarketState state, bool isSeller) {
     final item = state.selectedItem!;
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    if (item.status != AppConstants.fleaMarketStatusActive) return const SizedBox.shrink();
+    // 只有 active 状态才显示底部栏 - 对标iOS
+    if (!item.isActive) return const SizedBox.shrink();
 
     return ClipRect(
       child: BackdropFilter(
@@ -223,96 +284,231 @@ class _FleaMarketDetailContent extends StatelessWidget {
             child: Padding(
               padding: const EdgeInsets.symmetric(
                   horizontal: AppSpacing.md, vertical: 12),
-              child: Row(
-                children: [
-                  // 聊天按钮 - 对标iOS 小按钮
-                  GestureDetector(
-                    onTap: () {
-                      HapticFeedback.selectionClick();
-                    },
-                    child: Container(
-                      height: 50,
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [
-                            Colors.orange,
-                            Colors.orange.withValues(alpha: 0.8),
-                          ],
-                        ),
-                        borderRadius: BorderRadius.circular(25),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.orange.withValues(alpha: 0.4),
-                            blurRadius: 8,
-                            offset: const Offset(0, 4),
-                          ),
-                        ],
-                      ),
-                      child: Row(
-                        children: [
-                          const Icon(Icons.chat_bubble, size: 18, color: Colors.white),
-                          const SizedBox(width: 6),
-                          Text(context.l10n.fleaMarketChat,
-                              style: AppTypography.bodyBold
-                                  .copyWith(color: Colors.white)),
-                        ],
-                      ),
-                    ),
+              child: isSeller
+                  ? _buildSellerBottomBar(context, state, item)
+                  : _buildBuyerBottomBar(context, state, item),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// 卖家底部栏 - 对标iOS: 刷新按钮 + 编辑按钮
+  Widget _buildSellerBottomBar(
+      BuildContext context, FleaMarketState state, FleaMarketItem item) {
+    return Row(
+      children: [
+        // 刷新按钮 - 对标iOS orange gradient
+        GestureDetector(
+          onTap: state.isSubmitting
+              ? null
+              : () {
+                  HapticFeedback.selectionClick();
+                  context
+                      .read<FleaMarketBloc>()
+                      .add(FleaMarketRefreshItem(itemId));
+                },
+          child: Container(
+            height: 50,
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  Colors.orange,
+                  Colors.orange.withValues(alpha: 0.8),
+                ],
+              ),
+              borderRadius: BorderRadius.circular(25),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.orange.withValues(alpha: 0.4),
+                  blurRadius: 8,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (state.isSubmitting)
+                  const SizedBox(
+                    width: 15,
+                    height: 15,
+                    child: CircularProgressIndicator(
+                        strokeWidth: 2, color: Colors.white),
+                  )
+                else
+                  const Icon(Icons.refresh, size: 15, color: Colors.white),
+                const SizedBox(width: 6),
+                Text(
+                  state.isSubmitting
+                      ? context.l10n.fleaMarketRefreshing
+                      : context.l10n.fleaMarketRefresh,
+                  style: AppTypography.bodyBold.copyWith(color: Colors.white),
+                ),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(width: 12),
+        // 编辑按钮 - 对标iOS primary gradient
+        Expanded(
+          child: GestureDetector(
+            onTap: () {
+              HapticFeedback.selectionClick();
+              context.push('/flea-market/edit/$itemId');
+            },
+            child: Container(
+              height: 50,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    AppColors.primary,
+                    AppColors.primary.withValues(alpha: 0.8),
+                  ],
+                ),
+                borderRadius: BorderRadius.circular(25),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.primary.withValues(alpha: 0.4),
+                    blurRadius: 8,
+                    offset: const Offset(0, 4),
                   ),
-                  const SizedBox(width: 12),
-                  // 购买按钮 - 对标iOS red gradient CTA
-                  Expanded(
-                    child: GestureDetector(
-                      onTap: state.isSubmitting
-                          ? null
-                          : () {
-                              HapticFeedback.selectionClick();
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                    content: Text(context.l10n.fleaMarketPurchaseInDev)),
-                              );
-                            },
-                      child: Container(
-                        height: 50,
-                        decoration: BoxDecoration(
-                          gradient: const LinearGradient(
-                            colors: [
-                              Color(0xFFE64D4D),
-                              Color(0xFFFF6B6B),
-                            ],
-                          ),
-                          borderRadius: BorderRadius.circular(25),
-                          boxShadow: [
-                            BoxShadow(
-                              color: const Color(0xFFE64D4D)
-                                  .withValues(alpha: 0.4),
-                              blurRadius: 8,
-                              offset: const Offset(0, 4),
-                            ),
-                          ],
-                        ),
-                        child: Center(
-                          child: state.isSubmitting
-                              ? const SizedBox(
-                                  width: 20,
-                                  height: 20,
-                                  child: CircularProgressIndicator(
-                                      strokeWidth: 2, color: Colors.white),
-                                )
-                              : Text(
-                                  item.isSold ? context.l10n.fleaMarketSold : context.l10n.fleaMarketBuyNow,
-                                  style: AppTypography.bodyBold
-                                      .copyWith(color: Colors.white),
-                                ),
-                        ),
-                      ),
-                    ),
+                ],
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.edit, size: 16, color: Colors.white),
+                  const SizedBox(width: 8),
+                  Text(
+                    context.l10n.fleaMarketEditItemTitle,
+                    style:
+                        AppTypography.bodyBold.copyWith(color: Colors.white),
                   ),
                 ],
               ),
             ),
           ),
+        ),
+      ],
+    );
+  }
+
+  /// 买家底部栏 - 对标iOS: 聊天 + 继续支付/立即购买
+  Widget _buildBuyerBottomBar(
+      BuildContext context, FleaMarketState state, FleaMarketItem item) {
+    return Row(
+      children: [
+        // 聊天按钮 - 对标iOS 小按钮
+        GestureDetector(
+          onTap: () {
+            HapticFeedback.selectionClick();
+            context.push('/chat/${item.sellerId}');
+          },
+          child: Container(
+            height: 50,
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  Colors.orange,
+                  Colors.orange.withValues(alpha: 0.8),
+                ],
+              ),
+              borderRadius: BorderRadius.circular(25),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.orange.withValues(alpha: 0.4),
+                  blurRadius: 8,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.chat_bubble, size: 18, color: Colors.white),
+                const SizedBox(width: 6),
+                Text(context.l10n.fleaMarketChat,
+                    style:
+                        AppTypography.bodyBold.copyWith(color: Colors.white)),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(width: 12),
+        // 主操作按钮：继续支付 或 立即购买 - 对标iOS
+        Expanded(
+          child: _buildBuyerCTAButton(context, state, item),
+        ),
+      ],
+    );
+  }
+
+  /// 买家CTA按钮 - 对标iOS: pendingPayment → 继续支付, 否则 → 立即购买
+  Widget _buildBuyerCTAButton(
+      BuildContext context, FleaMarketState state, FleaMarketItem item) {
+    final hasPendingPayment = item.hasPendingPayment;
+    final buttonText = hasPendingPayment
+        ? context.l10n.fleaMarketContinuePayment
+        : context.l10n.fleaMarketBuyNow;
+    final buttonIcon =
+        hasPendingPayment ? Icons.credit_card : Icons.shopping_cart;
+
+    return GestureDetector(
+      onTap: state.isSubmitting
+          ? null
+          : () {
+              HapticFeedback.selectionClick();
+              if (hasPendingPayment) {
+                // TODO: 跳转支付页面 (Stripe)
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                      content: Text(context.l10n.fleaMarketProcessingPurchase)),
+                );
+              } else {
+                // 购买流程
+                context
+                    .read<FleaMarketBloc>()
+                    .add(FleaMarketPurchaseItem(itemId));
+              }
+            },
+      child: Container(
+        height: 50,
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            colors: [Color(0xFFE64D4D), Color(0xFFFF6B6B)],
+          ),
+          borderRadius: BorderRadius.circular(25),
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0xFFE64D4D).withValues(alpha: 0.4),
+              blurRadius: 8,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Center(
+          child: state.isSubmitting
+              ? const SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(
+                      strokeWidth: 2, color: Colors.white),
+                )
+              : Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(buttonIcon, size: 16, color: Colors.white),
+                    const SizedBox(width: 8),
+                    Text(
+                      buttonText,
+                      style: AppTypography.bodyBold
+                          .copyWith(color: Colors.white),
+                    ),
+                  ],
+                ),
         ),
       ),
     );
@@ -865,6 +1061,302 @@ class _SellerCard extends StatelessWidget {
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+// ==================== 自动下架倒计时警告 ====================
+
+class _AutoDelistWarning extends StatelessWidget {
+  const _AutoDelistWarning({required this.item, required this.isDark});
+  final FleaMarketItem item;
+  final bool isDark;
+
+  @override
+  Widget build(BuildContext context) {
+    final days = item.daysUntilAutoDelist;
+    if (days == null) return const SizedBox.shrink();
+
+    final isUrgent = days <= 3;
+    final color = isUrgent ? AppColors.error : Colors.orange;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: color.withValues(alpha: 0.3)),
+        ),
+        child: Row(
+          children: [
+            Icon(
+              isUrgent ? Icons.warning_amber_rounded : Icons.schedule,
+              size: 20,
+              color: color,
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                isUrgent
+                    ? context.l10n.fleaMarketAutoRemovalSoon
+                    : context.l10n.fleaMarketAutoRemovalDays(days),
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                  color: color,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ==================== 购买申请列表卡片（卖家可见） ====================
+
+class _PurchaseRequestsCard extends StatelessWidget {
+  const _PurchaseRequestsCard({
+    required this.state,
+    required this.isDark,
+  });
+  final FleaMarketState state;
+  final bool isDark;
+
+  @override
+  Widget build(BuildContext context) {
+    final requestCount = state.purchaseRequests.length;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: isDark
+              ? AppColors.cardBackgroundDark
+              : AppColors.cardBackgroundLight,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.04),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // 标题行
+            Row(
+              children: [
+                const Icon(Icons.people, size: 18, color: AppColors.primary),
+                const SizedBox(width: 8),
+                Text(
+                  context.l10n.fleaMarketPurchaseRequestsCount(requestCount),
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: isDark
+                        ? AppColors.textPrimaryDark
+                        : AppColors.textPrimaryLight,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+
+            if (state.isLoadingPurchaseRequests)
+              const Center(
+                child: Padding(
+                  padding: EdgeInsets.all(AppSpacing.xl),
+                  child: CircularProgressIndicator(),
+                ),
+              )
+            else if (state.purchaseRequests.isEmpty)
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(AppSpacing.xl),
+                decoration: BoxDecoration(
+                  color: (isDark
+                          ? AppColors.backgroundDark
+                          : AppColors.backgroundLight)
+                      .withValues(alpha: 0.5),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Column(
+                  children: [
+                    Icon(Icons.inbox,
+                        size: 40,
+                        color: isDark
+                            ? AppColors.textTertiaryDark
+                            : AppColors.textTertiaryLight),
+                    const SizedBox(height: AppSpacing.sm),
+                    Text(
+                      context.l10n.fleaMarketNoPurchaseRequests,
+                      style: AppTypography.body.copyWith(
+                        color: isDark
+                            ? AppColors.textTertiaryDark
+                            : AppColors.textTertiaryLight,
+                      ),
+                    ),
+                  ],
+                ),
+              )
+            else
+              ...state.purchaseRequests.map((request) =>
+                  _PurchaseRequestItem(
+                    request: request,
+                    isDark: isDark,
+                  )),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ==================== 单个购买申请项 ====================
+
+class _PurchaseRequestItem extends StatelessWidget {
+  const _PurchaseRequestItem({
+    required this.request,
+    required this.isDark,
+  });
+  final PurchaseRequest request;
+  final bool isDark;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(top: 8),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: isDark
+            ? AppColors.backgroundDark
+            : AppColors.backgroundLight,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // 买家信息行
+          Row(
+            children: [
+              Container(
+                width: 36,
+                height: 36,
+                decoration: const BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: AppColors.primary,
+                ),
+                child: const Icon(Icons.person, size: 18, color: Colors.white),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      request.buyerName ?? 'Buyer',
+                      style: AppTypography.bodyBold.copyWith(
+                        color: isDark
+                            ? AppColors.textPrimaryDark
+                            : AppColors.textPrimaryLight,
+                      ),
+                    ),
+                    if (request.proposedPrice != null)
+                      Text(
+                        '£${request.proposedPrice!.toStringAsFixed(2)}',
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFFE64D4D),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+              // 状态标签
+              _buildStatusLabel(context, request.status),
+            ],
+          ),
+          // 卖家议价显示
+          if (request.status == 'seller_negotiating' &&
+              request.sellerCounterPrice != null) ...[
+            const SizedBox(height: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              decoration: BoxDecoration(
+                color: Colors.orange.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.local_offer,
+                      size: 14, color: Colors.orange),
+                  const SizedBox(width: 4),
+                  Text(
+                    '${context.l10n.fleaMarketSellerNegotiateLabel} £${request.sellerCounterPrice!.toStringAsFixed(2)}',
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500,
+                      color: Colors.orange,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStatusLabel(BuildContext context, String status) {
+    Color color;
+    String text;
+    switch (status) {
+      case 'pending':
+        color = Colors.orange;
+        text = context.l10n.fleaMarketWaitingSellerConfirm;
+        break;
+      case 'seller_negotiating':
+        color = AppColors.primary;
+        text = context.l10n.fleaMarketRequestStatusSellerNegotiating;
+        break;
+      case 'accepted':
+        color = AppColors.success;
+        text = context.l10n.actionsConfirmComplete;
+        break;
+      case 'rejected':
+        color = AppColors.error;
+        text = context.l10n.actionsReject;
+        break;
+      default:
+        color = AppColors.textTertiaryLight;
+        text = status;
+    }
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Text(
+        text,
+        style: TextStyle(
+          fontSize: 11,
+          fontWeight: FontWeight.w600,
+          color: color,
         ),
       ),
     );

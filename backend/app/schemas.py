@@ -2239,6 +2239,7 @@ class ServiceTimeSlotOut(BaseModel):
     activity_original_price: Optional[float] = None  # 活动原价
     activity_discount_percentage: Optional[float] = None  # 折扣百分比
     has_activity: bool = False  # 是否有活动
+    user_has_applied: bool = False  # 当前用户是否已申请此时间段
     
     class Config:
         from_attributes = True

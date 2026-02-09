@@ -39,6 +39,7 @@ class Task extends Equatable {
     this.agreedReward,
     this.baseReward,
     this.originatingUserId,
+    this.expertCreatorId,
     this.hasReviewed = false,
     this.createdAt,
     this.updatedAt,
@@ -77,6 +78,7 @@ class Task extends Equatable {
   final double? agreedReward;
   final double? baseReward;
   final String? originatingUserId;
+  final String? expertCreatorId;
   final bool hasReviewed;
   final DateTime? createdAt;
   final DateTime? updatedAt;
@@ -267,6 +269,7 @@ class Task extends Equatable {
       agreedReward: (json['agreed_reward'] as num?)?.toDouble(),
       baseReward: (json['base_reward'] as num?)?.toDouble(),
       originatingUserId: json['originating_user_id']?.toString(),
+      expertCreatorId: json['expert_creator_id']?.toString(),
       hasReviewed: json['has_reviewed'] as bool? ?? false,
       createdAt: json['created_at'] != null
           ? DateTime.parse(json['created_at'])
@@ -310,6 +313,7 @@ class Task extends Equatable {
       'agreed_reward': agreedReward,
       'base_reward': baseReward,
       'originating_user_id': originatingUserId,
+      'expert_creator_id': expertCreatorId,
       'has_reviewed': hasReviewed,
       'created_at': createdAt?.toIso8601String(),
       'updated_at': updatedAt?.toIso8601String(),
@@ -350,6 +354,7 @@ class Task extends Equatable {
     double? agreedReward,
     double? baseReward,
     String? originatingUserId,
+    String? expertCreatorId,
     bool? hasReviewed,
     DateTime? createdAt,
     DateTime? updatedAt,
@@ -388,6 +393,7 @@ class Task extends Equatable {
       agreedReward: agreedReward ?? this.agreedReward,
       baseReward: baseReward ?? this.baseReward,
       originatingUserId: originatingUserId ?? this.originatingUserId,
+      expertCreatorId: expertCreatorId ?? this.expertCreatorId,
       hasReviewed: hasReviewed ?? this.hasReviewed,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,

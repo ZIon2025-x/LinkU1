@@ -449,8 +449,8 @@ class _ForumTab extends StatelessWidget {
         SliverPadding(
           padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 8),
           sliver: SliverGrid(
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 2,
+            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: ResponsiveUtils.gridColumnCount(context, type: GridItemType.forum),
               mainAxisSpacing: 16,
               crossAxisSpacing: 16,
               childAspectRatio: 1.6,

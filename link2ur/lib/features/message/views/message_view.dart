@@ -13,6 +13,7 @@ import '../../../core/widgets/skeleton_view.dart';
 import '../../../core/utils/date_formatter.dart';
 import '../../notification/bloc/notification_bloc.dart';
 import '../../../core/utils/l10n_extension.dart';
+import '../../../core/utils/task_type_helper.dart';
 import '../../../core/widgets/content_constraint.dart';
 import '../../../data/models/message.dart';
 import '../../auth/bloc/auth_bloc.dart';
@@ -345,19 +346,6 @@ class _TaskChatItem extends StatelessWidget {
 
   // ==================== iOS 对齐: taskTypeIcons ====================
 
-  static const Map<String, IconData> _taskTypeIcons = {
-    'Housekeeping': Icons.home_filled,
-    'Campus Life': Icons.school,
-    'Second-hand & Rental': Icons.shopping_bag,
-    'Errand Running': Icons.directions_run,
-    'Skill Service': Icons.build,
-    'Social Help': Icons.people,
-    'Transportation': Icons.directions_car,
-    'Pet Care': Icons.pets,
-    'Life Convenience': Icons.shopping_cart,
-    'Other': Icons.grid_view,
-  };
-
   /// 按 taskSource / taskType 获取图标 (对齐iOS getTaskIcon)
   IconData get _taskIcon {
     final source = taskChat.taskSource ?? 'normal';
@@ -370,7 +358,7 @@ class _TaskChatItem extends StatelessWidget {
         return Icons.groups;
       default:
         if (taskChat.taskType != null) {
-          return _taskTypeIcons[taskChat.taskType!] ?? Icons.chat_bubble;
+          return TaskTypeHelper.getIcon(taskChat.taskType!);
         }
         return Icons.chat_bubble;
     }

@@ -123,6 +123,7 @@
   "homeNoExperts": "暫無任務達人",
   "homeNoExpertsMessage": "還沒有任務達人，敬請期待...",
   "homeRecommendedTasks": "推薦任務",
+  "homeRecommendedBadge": "推薦",
   "homeMemberPublished": "會員發布",
   "homeMemberSeller": "會員賣家",
   "homeNoRecommendedTasks": "暫無推薦任務",
@@ -751,8 +752,11 @@
   "taskDetailPublishTime": "發布時間",
   "taskDetailDeadline": "截止時間",
   "taskDetailPublisher": "發布者",
+  "taskDetailRecipient": "接單者",
   "taskDetailBuyer": "買家",
   "taskDetailSeller": "賣家",
+  "taskDetailParticipant": "參與者",
+  "taskDetailApplicant": "申請人",
   "taskDetailEmailNotProvided": "未提供郵箱",
   "taskDetailYourTask": "這是您發布的任務",
   "taskDetailManageTask": "您可以在下方查看申請者並管理任務",
@@ -3424,5 +3428,10 @@
   "infoPrivacyContent": "Link²Ur 隱私政策\n\n最後更新日期：2024年1月1日\n\n1. 資訊收集\n我們收集以下類型的資訊：\n- 註冊資訊（姓名、電郵等）\n- 位置資訊（用於附近任務推薦）\n- 設備資訊（用於推送通知）\n\n2. 資訊使用\n我們使用您的資訊來：\n- 提供和改善服務\n- 個性化推薦\n- 保障交易安全\n\n3. 資訊儲存與保護\n- 數據儲存在安全的伺服器上\n- 採用加密技術保護數據傳輸\n- 定期進行安全審計\n\n4. 資訊共享\n我們不會出售您的個人資訊。僅在以下情況下共享：\n- 經您同意\n- 法律要求\n- 服務提供所必需\n\n5. Cookie 政策\n我們使用 Cookie 來改善用戶體驗。\n\n6. 您的權利\n- 存取和修改個人資訊\n- 刪除帳號\n- 退訂通知\n\n如有隱私相關問題，請聯繫 privacy@link2ur.com",
   "infoCookieContent": "Link²Ur Cookie 政策\n\n我們使用 Cookie 和類似技術來改善您的使用體驗。\n\n1. 什麼是 Cookie\nCookie 是儲存在您設備上的小型文字檔案。\n\n2. 我們如何使用 Cookie\n- 必要 Cookie：保持登入狀態\n- 功能 Cookie：記住偏好設定\n- 分析 Cookie：改善服務品質\n\n3. 管理 Cookie\n您可以在設備設定中管理 Cookie 偏好。",
 
-  "settingsUnknown": "未知"
+  "settingsUnknown": "未知",
+
+  "serviceNegotiatePrice": "價格議價",
+  "serviceNegotiatePriceHint": "向達人提出不同的價格",
+  "serviceSelectDeadline": "選擇期限",
+  "serviceApplyOtherSlot": "申請其他時間段"
 }

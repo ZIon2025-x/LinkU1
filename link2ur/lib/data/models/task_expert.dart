@@ -231,3 +231,70 @@ class TaskExpertListResponse {
     );
   }
 }
+
+/// 服务时间段模型
+/// 对标iOS ServiceTimeSlot
+class ServiceTimeSlot extends Equatable {
+  const ServiceTimeSlot({
+    required this.id,
+    required this.serviceId,
+    required this.slotStartDatetime,
+    required this.slotEndDatetime,
+    required this.currentParticipants,
+    required this.maxParticipants,
+    this.isAvailable = true,
+    this.activityId,
+    this.hasActivity,
+    this.activityPrice,
+    this.pricePerParticipant,
+    this.isExpired,
+    this.userHasApplied = false,
+  });
+
+  final int id;
+  final int serviceId;
+  final String slotStartDatetime;
+  final String slotEndDatetime;
+  final int currentParticipants;
+  final int maxParticipants;
+  final bool isAvailable;
+  final int? activityId;
+  final bool? hasActivity;
+  final double? activityPrice;
+  final double? pricePerParticipant;
+  final bool? isExpired;
+  final bool userHasApplied;
+
+  /// 是否可选：未过期 + 未满员 + 可用 + 用户未申请过
+  bool get canSelect =>
+      isExpired != true &&
+      currentParticipants < maxParticipants &&
+      isAvailable &&
+      !userHasApplied;
+
+  /// 显示价格（优先活动价格）
+  double? get displayPrice => activityPrice ?? pricePerParticipant;
+
+  factory ServiceTimeSlot.fromJson(Map<String, dynamic> json) {
+    return ServiceTimeSlot(
+      id: json['id'] as int,
+      serviceId: json['service_id'] as int? ?? 0,
+      slotStartDatetime: json['slot_start_datetime'] as String? ?? '',
+      slotEndDatetime: json['slot_end_datetime'] as String? ?? '',
+      currentParticipants: json['current_participants'] as int? ?? 0,
+      maxParticipants: json['max_participants'] as int? ?? 1,
+      isAvailable: json['is_available'] as bool? ?? true,
+      activityId: json['activity_id'] as int?,
+      hasActivity: json['has_activity'] as bool?,
+      activityPrice: (json['activity_price'] as num?)?.toDouble(),
+      pricePerParticipant:
+          (json['price_per_participant'] as num?)?.toDouble(),
+      isExpired: json['is_expired'] as bool?,
+      userHasApplied: json['user_has_applied'] as bool? ?? false,
+    );
+  }
+
+  @override
+  List<Object?> get props =>
+      [id, serviceId, isExpired, currentParticipants, userHasApplied];
+}

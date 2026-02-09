@@ -1887,9 +1887,10 @@ async def get_service_time_slots_public(
     service_id: int,
     start_date: Optional[str] = Query(None, description="开始日期，格式：YYYY-MM-DD"),
     end_date: Optional[str] = Query(None, description="结束日期，格式：YYYY-MM-DD"),
+    current_user: Optional[models.User] = Depends(get_current_user_optional),
     db: AsyncSession = Depends(get_async_db_dependency),
 ):
-    """获取服务的公开时间段列表（无需认证）"""
+    """获取服务的公开时间段列表（可选认证，登录用户会标记已申请的时间段）"""
     # 验证服务是否存在
     service = await db.execute(
         select(models.TaskExpertService)
@@ -2048,8 +2049,25 @@ async def get_service_time_slots_public(
         if slot_date_local not in closed_date_set:
             filtered_slots.append(slot)
     
-    # 转换为输出格式
-    return [schemas.ServiceTimeSlotOut.from_orm(slot) for slot in filtered_slots]
+    # 查询当前用户已申请的时间段ID集合
+    user_applied_slot_ids: set[int] = set()
+    if current_user:
+        applied_query = select(models.ServiceApplication.time_slot_id).where(
+            models.ServiceApplication.service_id == service_id,
+            models.ServiceApplication.applicant_id == current_user.id,
+            models.ServiceApplication.time_slot_id.isnot(None),
+            models.ServiceApplication.status.in_(["pending", "negotiating", "price_agreed", "approved"])
+        )
+        applied_result = await db.execute(applied_query)
+        user_applied_slot_ids = {row[0] for row in applied_result.all()}
+
+    # 转换为输出格式，标记用户已申请的时间段
+    result = []
+    for slot in filtered_slots:
+        slot_out = schemas.ServiceTimeSlotOut.from_orm(slot)
+        slot_out.user_has_applied = slot.id in user_applied_slot_ids
+        result.append(slot_out)
+    return result
 
 
 @task_expert_router.get("/services/{service_id}", response_model=schemas.TaskExpertServiceOut)

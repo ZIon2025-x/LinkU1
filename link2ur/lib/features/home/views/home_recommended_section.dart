@@ -81,7 +81,7 @@ class _RecommendedTab extends StatelessWidget {
               else ...[
                 // 推荐任务 — 桌面端 3 列 Grid，移动端横向滚动
                 if (isDesktop)
-                  _buildDesktopTaskGrid(state)
+                  _buildDesktopTaskGrid(context, state)
                 else
                   _buildMobileTaskScroll(state),
 
@@ -160,14 +160,14 @@ class _RecommendedTab extends StatelessWidget {
   }
 
   /// 桌面端 3 列 Grid 任务卡片
-  Widget _buildDesktopTaskGrid(HomeState state) {
+  Widget _buildDesktopTaskGrid(BuildContext context, HomeState state) {
     final tasks = state.recommendedTasks.take(9).toList();
 
     return SliverPadding(
       padding: const EdgeInsets.symmetric(horizontal: 40),
       sliver: SliverGrid(
-        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 3,
+        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: ResponsiveUtils.gridColumnCount(context, type: GridItemType.task),
           mainAxisSpacing: 14,
           crossAxisSpacing: 14,
           childAspectRatio: 0.82,
@@ -362,21 +362,8 @@ class _DesktopTaskCard extends StatefulWidget {
 class _DesktopTaskCardState extends State<_DesktopTaskCard> {
   bool _isHovered = false;
 
-  IconData _taskTypeIcon(String taskType) {
-    switch (taskType) {
-      case 'delivery': return Icons.local_shipping_outlined;
-      case 'shopping': return Icons.shopping_bag_outlined;
-      case 'tutoring': return Icons.school_outlined;
-      case 'translation': return Icons.translate;
-      case 'design': return Icons.design_services_outlined;
-      case 'photography': return Icons.camera_alt_outlined;
-      case 'moving': return Icons.local_shipping_outlined;
-      case 'cleaning': return Icons.cleaning_services_outlined;
-      case 'pet_care': return Icons.pets_outlined;
-      case 'errand': return Icons.directions_run;
-      default: return Icons.task_alt;
-    }
-  }
+  // 任务类型图标 — 使用统一映射
+  IconData _taskTypeIcon(String taskType) => TaskTypeHelper.getIcon(taskType);
 
   String _formatDeadline(BuildContext context, DateTime deadline) {
     final now = DateTime.now();
@@ -484,6 +471,39 @@ class _DesktopTaskCardState extends State<_DesktopTaskCard> {
                           ),
                         ),
                       ),
+                    // 右上: 推荐徽章
+                    Positioned(
+                      top: 8, right: 8,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            colors: [Color(0xFFFF9500), Color(0xFFFF6B00)],
+                          ),
+                          borderRadius: BorderRadius.circular(999),
+                          boxShadow: [
+                            BoxShadow(
+                              color: const Color(0xFFFF9500).withValues(alpha: 0.4),
+                              blurRadius: 6,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.auto_awesome, size: 10, color: Colors.white),
+                            const SizedBox(width: 3),
+                            Text(
+                              context.l10n.homeRecommendedBadge,
+                              style: const TextStyle(
+                                fontSize: 10, color: Colors.white, fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
                   ],
                 ),
               ),

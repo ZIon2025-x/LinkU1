@@ -1,17 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:intl/intl.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_radius.dart';
 import '../../../core/design/app_typography.dart';
+import '../../../core/router/app_router.dart';
 import '../../../core/utils/l10n_extension.dart';
+import '../../../core/utils/responsive.dart';
 import '../../../core/widgets/loading_view.dart';
 import '../../../core/widgets/error_state_view.dart';
 import '../../../core/widgets/empty_state_view.dart';
 import '../../../core/widgets/cards.dart';
-import '../../../core/widgets/buttons.dart';
 import '../../../core/widgets/async_image_view.dart';
 import '../../../data/repositories/task_expert_repository.dart';
 import '../../../data/models/task_expert.dart';
@@ -32,7 +34,9 @@ class TaskExpertDetailView extends StatelessWidget {
     return BlocProvider(
       create: (context) => TaskExpertBloc(
         taskExpertRepository: context.read<TaskExpertRepository>(),
-      )..add(TaskExpertLoadDetail(expertId)),
+      )
+        ..add(TaskExpertLoadDetail(expertId))
+        ..add(TaskExpertLoadExpertReviews(expertId.toString())),
       child: Scaffold(
         appBar: AppBar(
           title: BlocBuilder<TaskExpertBloc, TaskExpertState>(
@@ -63,7 +67,10 @@ class TaskExpertDetailView extends StatelessWidget {
             ),
           ],
         ),
-        body: BlocBuilder<TaskExpertBloc, TaskExpertState>(
+        body: Center(
+          child: ConstrainedBox(
+            constraints: BoxConstraints(maxWidth: ResponsiveUtils.detailMaxWidth(context)),
+            child: BlocBuilder<TaskExpertBloc, TaskExpertState>(
           builder: (context, state) {
             // Loading state
             if (state.status == TaskExpertStatus.loading &&
@@ -156,19 +163,55 @@ class TaskExpertDetailView extends StatelessWidget {
                       ),
                     ),
 
-                  // Services section
+                  // Reviews section
+                  Padding(
+                    padding: AppSpacing.allMd,
+                    child: _ReviewsSection(
+                      reviews: state.reviews,
+                      isLoading: state.isLoadingReviews,
+                    ),
+                  ),
+
+                  // Services section header
+                  Padding(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: AppSpacing.md),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 4,
+                          height: 18,
+                          decoration: BoxDecoration(
+                            color: AppColors.primary,
+                            borderRadius: BorderRadius.circular(2),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          context.l10n.taskExpertServiceMenu,
+                          style: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const Spacer(),
+                        Text(
+                          context.l10n.taskExpertServicesCount(
+                              state.services.length),
+                          style: AppTypography.caption.copyWith(
+                            color: AppColors.textTertiaryLight,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  AppSpacing.vMd,
+
+                  // Services list
                   Padding(
                     padding: AppSpacing.allMd,
                     child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          context.l10n.taskExpertProvidedServices,
-                          style: AppTypography.title2.copyWith(
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        AppSpacing.vMd,
                         if (state.services.isEmpty)
                           EmptyStateView.noData(
                             title: context.l10n.taskExpertNoServices,
@@ -178,16 +221,15 @@ class TaskExpertDetailView extends StatelessWidget {
                           ...state.services.map(
                             (service) => _ServiceItem(
                               service: service,
-                              onApply: () {
-                                context.read<TaskExpertBloc>().add(
-                                      TaskExpertApplyService(service.id),
-                                    );
-                              },
+                              onTap: () =>
+                                  context.goToServiceDetail(service.id),
                             ),
                           ),
                       ],
                     ),
                   ),
+
+                  const SizedBox(height: 40),
 
                   // Action message snackbar
                   BlocListener<TaskExpertBloc, TaskExpertState>(
@@ -211,6 +253,8 @@ class TaskExpertDetailView extends StatelessWidget {
               ),
             );
           },
+            ),
+          ),
         ),
       ),
     );
@@ -251,15 +295,26 @@ class _ProfileHeader extends StatelessWidget {
                 : null,
           ),
           AppSpacing.vMd,
-          // Name
-          Text(
-            expert.displayName,
-            style: AppTypography.title.copyWith(
-              fontWeight: FontWeight.bold,
-              color: isDark
-                  ? AppColors.textPrimaryDark
-                  : AppColors.textPrimaryLight,
-            ),
+          // Name with verification badge
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(
+                expert.displayName,
+                style: AppTypography.title.copyWith(
+                  fontWeight: FontWeight.bold,
+                  color: isDark
+                      ? AppColors.textPrimaryDark
+                      : AppColors.textPrimaryLight,
+                ),
+              ),
+              const SizedBox(width: 6),
+              const Icon(
+                Icons.verified,
+                size: 18,
+                color: AppColors.primary,
+              ),
+            ],
           ),
           AppSpacing.vSm,
           // Rating and stats
@@ -294,35 +349,52 @@ class _ProfileHeader extends StatelessWidget {
 class _ServiceItem extends StatelessWidget {
   const _ServiceItem({
     required this.service,
-    required this.onApply,
+    required this.onTap,
   });
 
   final TaskExpertService service;
-  final VoidCallback onApply;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    return AppCard(
-      margin: const EdgeInsets.only(bottom: 12),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Service image or icon
-          if (service.firstImage != null)
-            AsyncImageView(
-              imageUrl: service.firstImage,
-              width: 80,
-              height: 80,
-              fit: BoxFit.cover,
-              borderRadius: AppRadius.allSmall,
-              errorWidget: Container(
-                width: 80,
-                height: 80,
+    return GestureDetector(
+      onTap: onTap,
+      child: AppCard(
+        margin: const EdgeInsets.only(bottom: 12),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Service image or icon
+            if (service.firstImage != null)
+              AsyncImageView(
+                imageUrl: service.firstImage,
+                width: 100,
+                height: 100,
+                fit: BoxFit.cover,
+                borderRadius: AppRadius.allMedium,
+                errorWidget: Container(
+                  width: 100,
+                  height: 100,
+                  decoration: BoxDecoration(
+                    color: AppColors.primary.withValues(alpha: 0.1),
+                    borderRadius: AppRadius.allMedium,
+                  ),
+                  child: const Icon(
+                    Icons.work_outline,
+                    color: AppColors.primary,
+                    size: 40,
+                  ),
+                ),
+              )
+            else
+              Container(
+                width: 100,
+                height: 100,
                 decoration: BoxDecoration(
                   color: AppColors.primary.withValues(alpha: 0.1),
-                  borderRadius: AppRadius.allSmall,
+                  borderRadius: AppRadius.allMedium,
                 ),
                 child: const Icon(
                   Icons.work_outline,
@@ -330,112 +402,231 @@ class _ServiceItem extends StatelessWidget {
                   size: 40,
                 ),
               ),
-            )
-          else
-            Container(
-              width: 80,
-              height: 80,
-              decoration: BoxDecoration(
-                color: AppColors.primary.withValues(alpha: 0.1),
-                borderRadius: AppRadius.allSmall,
-              ),
-              child: const Icon(
-                Icons.work_outline,
-                color: AppColors.primary,
-                size: 40,
-              ),
-            ),
-          AppSpacing.hMd,
-          // Service info
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  service.serviceName,
-                  style: AppTypography.title3.copyWith(
-                    fontWeight: FontWeight.w500,
-                    color: isDark
-                        ? AppColors.textPrimaryDark
-                        : AppColors.textPrimaryLight,
-                  ),
-                ),
-                if (service.description.isNotEmpty) ...[
-                  const SizedBox(height: 4),
-                  Text(
-                    service.description,
-                    style: AppTypography.caption.copyWith(
-                      color: isDark
-                          ? AppColors.textSecondaryDark
-                          : AppColors.textSecondaryLight,
-                    ),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ],
-                const SizedBox(height: 8),
-                Row(
+            AppSpacing.hMd,
+            // Service info
+            Expanded(
+              child: SizedBox(
+                height: 100,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      service.priceDisplay,
-                      style: AppTypography.priceSmall.copyWith(
-                        color: AppColors.primary,
-                      ),
-                    ),
-                    if (service.viewCount > 0) ...[
-                      const SizedBox(width: 12),
-                      Icon(
-                        Icons.visibility_outlined,
-                        size: 14,
+                      service.serviceName,
+                      style: AppTypography.title3.copyWith(
+                        fontWeight: FontWeight.w600,
                         color: isDark
-                            ? AppColors.textTertiaryDark
-                            : AppColors.textTertiaryLight,
+                            ? AppColors.textPrimaryDark
+                            : AppColors.textPrimaryLight,
                       ),
-                      const SizedBox(width: 4),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    if (service.description.isNotEmpty) ...[
+                      const SizedBox(height: 4),
                       Text(
-                        '${service.viewCount}',
+                        service.description,
                         style: AppTypography.caption.copyWith(
+                          color: isDark
+                              ? AppColors.textSecondaryDark
+                              : AppColors.textSecondaryLight,
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                    const Spacer(),
+                    // 价格 + 箭头
+                    Row(
+                      children: [
+                        Text(
+                          service.priceDisplay,
+                          style: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.primary,
+                          ),
+                        ),
+                        const Spacer(),
+                        Icon(
+                          Icons.chevron_right,
+                          size: 16,
                           color: isDark
                               ? AppColors.textTertiaryDark
                               : AppColors.textTertiaryLight,
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ],
                 ),
-              ],
+              ),
             ),
-          ),
-          // Apply button
-          BlocBuilder<TaskExpertBloc, TaskExpertState>(
-            builder: (context, state) {
-              final isSubmitting = state.isSubmitting &&
-                  state.services.any((s) => s.id == service.id);
-              
-              if (service.hasApplied) {
-                return SmallActionButton(
-                  text: service.userApplicationStatus == 'accepted'
-                      ? context.l10n.taskExpertAccepted
-                      : service.userApplicationStatus == 'rejected'
-                          ? context.l10n.taskExpertRejected
-                          : context.l10n.taskExpertAppliedStatus,
-                  filled: true,
-                  color: service.userApplicationStatus == 'accepted'
-                      ? AppColors.success
-                      : AppColors.textTertiaryLight,
-                );
-              }
+          ],
+        ),
+      ),
+    );
+  }
+}
 
-              return SmallActionButton(
-                text: context.l10n.taskExpertBook,
-                onPressed: isSubmitting ? null : onApply,
-                filled: true,
-                color: AppColors.primary,
-              );
-            },
+// =============================================================
+// 评价区域 (对标iOS reviewsCard)
+// =============================================================
+
+class _ReviewsSection extends StatelessWidget {
+  const _ReviewsSection({
+    required this.reviews,
+    required this.isLoading,
+  });
+
+  final List<Map<String, dynamic>> reviews;
+  final bool isLoading;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
           ),
         ],
       ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // 标题行
+          Row(
+            children: [
+              Container(
+                width: 4,
+                height: 18,
+                decoration: BoxDecoration(
+                  color: AppColors.primary,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                context.l10n.taskExpertReviews,
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const Spacer(),
+              if (reviews.isNotEmpty)
+                Text(
+                  context.l10n.taskExpertReviewsCount(reviews.length),
+                  style: AppTypography.caption.copyWith(
+                    color: AppColors.textTertiaryLight,
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          if (isLoading && reviews.isEmpty)
+            const Center(
+              child: Padding(
+                padding: EdgeInsets.symmetric(vertical: 20),
+                child: CircularProgressIndicator(),
+              ),
+            )
+          else if (reviews.isEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 20),
+              child: Center(
+                child: Text(
+                  context.l10n.taskExpertNoReviews,
+                  style: AppTypography.caption.copyWith(
+                    color: AppColors.textTertiaryLight,
+                  ),
+                ),
+              ),
+            )
+          else
+            ...reviews.map((review) => _ExpertReviewRow(review: review)),
+        ],
+      ),
     );
+  }
+}
+
+class _ExpertReviewRow extends StatelessWidget {
+  const _ExpertReviewRow({required this.review});
+
+  final Map<String, dynamic> review;
+
+  @override
+  Widget build(BuildContext context) {
+    final rating = (review['rating'] as num?)?.toDouble() ?? 0;
+    final comment = review['comment'] as String?;
+    final createdAt = review['created_at'] as String?;
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              // 星级
+              ...List.generate(5, (i) {
+                final star = i + 1;
+                final fullStars = rating.floor();
+                final hasHalf = rating - fullStars >= 0.5;
+                IconData icon;
+                Color color;
+                if (star <= fullStars) {
+                  icon = Icons.star;
+                  color = AppColors.gold;
+                } else if (star == fullStars + 1 && hasHalf) {
+                  icon = Icons.star_half;
+                  color = AppColors.gold;
+                } else {
+                  icon = Icons.star_border;
+                  color = AppColors.textTertiaryLight;
+                }
+                return Icon(icon, size: 14, color: color);
+              }),
+              const Spacer(),
+              if (createdAt != null)
+                Text(
+                  _formatTime(createdAt),
+                  style: AppTypography.caption.copyWith(
+                    color: AppColors.textTertiaryLight,
+                    fontSize: 12,
+                  ),
+                ),
+            ],
+          ),
+          if (comment != null && comment.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Text(
+              comment,
+              style: const TextStyle(fontSize: 14, height: 1.5),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  String _formatTime(String dateStr) {
+    try {
+      final date = DateTime.parse(dateStr);
+      return DateFormat('yyyy-MM-dd').format(date);
+    } catch (_) {
+      return dateStr;
+    }
   }
 }

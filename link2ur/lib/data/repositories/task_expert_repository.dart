@@ -103,12 +103,15 @@ class TaskExpertRepository {
         .toList();
   }
 
-  /// 获取服务详情
-  Future<Map<String, dynamic>> getServiceDetail(int serviceId) async {
+  /// 获取服务详情（原始 Map 格式）
+  Future<Map<String, dynamic>> getServiceDetail(int serviceId,
+      {bool forceRefresh = false}) async {
     final cacheKey = '${CacheManager.prefixExpertDetail}service_$serviceId';
 
-    final cached = _cache.get<Map<String, dynamic>>(cacheKey);
-    if (cached != null) return cached;
+    if (!forceRefresh) {
+      final cached = _cache.get<Map<String, dynamic>>(cacheKey);
+      if (cached != null) return cached;
+    }
 
     final response = await _apiService.get<Map<String, dynamic>>(
       ApiEndpoints.taskExpertServiceDetail(serviceId),
@@ -121,6 +124,13 @@ class TaskExpertRepository {
     await _cache.set(cacheKey, response.data!, ttl: CacheManager.longTTL);
 
     return response.data!;
+  }
+
+  /// 获取服务详情（解析为 TaskExpertService 模型）
+  Future<TaskExpertService> getServiceDetailParsed(int serviceId,
+      {bool forceRefresh = false}) async {
+    final raw = await getServiceDetail(serviceId, forceRefresh: forceRefresh);
+    return TaskExpertService.fromJson(raw);
   }
 
   /// 获取服务评价
@@ -139,22 +149,32 @@ class TaskExpertRepository {
   }
 
   /// 申请达人服务
+  /// 对标iOS ServiceDetailView.applyService
   Future<Map<String, dynamic>> applyService(
     int serviceId, {
     String? message,
-    String? preferredTimeSlot,
+    double? counterPrice,
+    int? timeSlotId,
+    String? preferredDeadline,
+    bool isFlexibleTime = false,
   }) async {
     final response = await _apiService.post<Map<String, dynamic>>(
       ApiEndpoints.applyForService(serviceId),
       data: {
-        if (message != null) 'message': message,
-        if (preferredTimeSlot != null) 'preferred_time_slot': preferredTimeSlot,
+        if (message != null && message.isNotEmpty) 'message': message,
+        if (counterPrice != null) 'counter_price': counterPrice,
+        if (timeSlotId != null) 'time_slot_id': timeSlotId,
+        if (preferredDeadline != null) 'preferred_deadline': preferredDeadline,
+        'is_flexible_time': isFlexibleTime,
       },
     );
 
     if (!response.isSuccess || response.data == null) {
       throw TaskExpertException(response.message ?? '申请服务失败');
     }
+
+    // 清除相关缓存以便刷新服务详情
+    _cache.removeByPrefix('${CacheManager.prefixExpertDetail}service_$serviceId');
 
     return response.data!;
   }

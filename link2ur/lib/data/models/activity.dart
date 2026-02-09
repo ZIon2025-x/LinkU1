@@ -313,15 +313,39 @@ class ActivityListResponse {
 
   bool get hasMore => activities.length >= pageSize;
 
-  factory ActivityListResponse.fromJson(Map<String, dynamic> json) {
+  /// 从分页 JSON 对象解析（兼容后端分页格式）
+  factory ActivityListResponse.fromJson(
+    Map<String, dynamic> json, {
+    int page = 1,
+    int pageSize = 20,
+  }) {
+    final list = (json['items'] ?? json['activities']) as List<dynamic>?;
+    final activities = list
+            ?.map((e) => Activity.fromJson(e as Map<String, dynamic>))
+            .toList() ??
+        [];
     return ActivityListResponse(
-      activities: (json['items'] as List<dynamic>?)
-              ?.map((e) => Activity.fromJson(e as Map<String, dynamic>))
-              .toList() ??
-          [],
-      total: json['total'] as int? ?? 0,
-      page: json['page'] as int? ?? 1,
-      pageSize: json['page_size'] as int? ?? 20,
+      activities: activities,
+      total: json['total'] as int? ?? activities.length,
+      page: json['page'] as int? ?? page,
+      pageSize: json['page_size'] as int? ?? pageSize,
+    );
+  }
+
+  /// 从 JSON 数组解析（后端 /api/activities 返回 List<ActivityOut>）
+  factory ActivityListResponse.fromList(
+    List<dynamic> list, {
+    int page = 1,
+    int pageSize = 20,
+  }) {
+    final activities = list
+        .map((e) => Activity.fromJson(e as Map<String, dynamic>))
+        .toList();
+    return ActivityListResponse(
+      activities: activities,
+      total: activities.length,
+      page: page,
+      pageSize: pageSize,
     );
   }
 }

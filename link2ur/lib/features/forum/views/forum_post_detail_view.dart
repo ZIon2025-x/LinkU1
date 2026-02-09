@@ -6,6 +6,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../core/design/app_colors.dart';
 import '../../../core/utils/l10n_extension.dart';
+import '../../../core/utils/responsive.dart';
 import '../../../core/widgets/skeleton_view.dart';
 import '../../../core/widgets/error_state_view.dart';
 import '../../../data/repositories/forum_repository.dart';
@@ -54,7 +55,10 @@ class _ForumPostDetailViewState extends State<ForumPostDetailView> {
             ),
           ],
         ),
-        body: BlocBuilder<ForumBloc, ForumState>(
+        body: Center(
+          child: ConstrainedBox(
+            constraints: BoxConstraints(maxWidth: ResponsiveUtils.detailMaxWidth(context)),
+            child: BlocBuilder<ForumBloc, ForumState>(
           builder: (context, state) {
             if (state.status == ForumStatus.loading &&
                 state.selectedPost == null) {
@@ -122,6 +126,8 @@ class _ForumPostDetailViewState extends State<ForumPostDetailView> {
               ),
             );
           },
+            ),
+          ),
         ),
         // 底部回复栏 - 对标iOS bottomReplyBar with ultraThinMaterial
         bottomNavigationBar: _buildBottomReplyBar(context),
