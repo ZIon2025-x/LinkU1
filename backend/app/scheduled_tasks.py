@@ -269,7 +269,36 @@ def auto_complete_expired_time_slot_tasks(db: Session):
                 # 设置 confirmation_deadline = 时间段结束时间 + 5 天
                 # 用于提醒和自动转账的时间锚点
                 task.confirmation_deadline = max_end_time + timedelta(days=5)
+                # 修复 P1#5：重置提醒位掩码，避免 confirmation 阶段已设的 bit 与
+                # auto_transfer 阶段的 bit 冲突导致提醒被跳过
+                task.confirmation_reminder_sent = 0
                 completed_count += 1
+                
+                # 修复 P1#6：发送通知给发布者，告知任务已自动完成，5天内可确认
+                try:
+                    from app import crud as _crud_auto
+                    deadline_str = task.confirmation_deadline.strftime("%Y-%m-%d %H:%M")
+                    _crud_auto.create_notification(
+                        db=db,
+                        user_id=task.poster_id,
+                        type="task_auto_completed",
+                        title="任务已自动完成",
+                        content=(
+                            f"您的任务「{task.title or ''}」的服务时间已结束，系统已自动标记为完成。"
+                            f"请在 {deadline_str} 前确认，逾期将自动确认并转账给服务方。"
+                        ),
+                        title_en="Task Auto-Completed",
+                        content_en=(
+                            f"Your task '{task.title or ''}' service time has ended. "
+                            f"The system has auto-marked it as completed. "
+                            f"Please confirm before {deadline_str}, or it will be auto-confirmed "
+                            f"and the payment will be transferred to the service provider."
+                        ),
+                        related_id=str(task.id),
+                        related_type="task_id"
+                    )
+                except Exception as notify_err:
+                    logger.warning(f"发送自动完成通知失败（任务 {task.id}）: {notify_err}")
         
         if completed_count > 0:
             db.commit()
@@ -1770,7 +1799,10 @@ def auto_transfer_expired_tasks(db: Session):
                 models.Task.is_confirmed == 0,
                 models.Task.escrow_amount > 0,                   # 有托管金额
                 models.Task.confirmation_deadline.isnot(None),
-                models.Task.confirmation_deadline <= current_time # 已过 deadline
+                models.Task.confirmation_deadline <= current_time, # 已过 deadline
+                # 修复 P2#4：确保 taker_id 不为空，PaymentTransfer.taker_id 是 NOT NULL 字段，
+                # 若传 None 会触发 IntegrityError，日志也会误判为"唯一约束冲突"
+                models.Task.taker_id.isnot(None)
             )
         ).limit(500).all()
         
@@ -1914,7 +1946,8 @@ def auto_transfer_expired_tasks(db: Session):
                             "original_escrow": str(escrow),
                             "total_previously_transferred": str(total_transferred),
                             "confirmation_deadline": str(task.confirmation_deadline),
-                        }
+                        },
+                        commit=False  # 在 SAVEPOINT 内使用 flush，避免破坏事务隔离
                     )
                 except IntegrityError:
                     # 唯一约束冲突 — 说明已有自动转账记录（并发保护层 3）
@@ -1930,7 +1963,8 @@ def auto_transfer_expired_tasks(db: Session):
                 
                 if taker and taker.stripe_account_id:
                     success, transfer_id, error = execute_transfer(
-                        db, transfer_record, taker.stripe_account_id
+                        db, transfer_record, taker.stripe_account_id,
+                        commit=False  # 在 SAVEPOINT 内使用 flush，避免破坏事务隔离
                     )
                     
                     if success:

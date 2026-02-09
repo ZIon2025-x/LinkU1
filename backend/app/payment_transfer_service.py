@@ -39,10 +39,15 @@ def create_transfer_record(
     poster_id: str,
     amount: Decimal,
     currency: str = "GBP",
-    metadata: Optional[Dict[str, Any]] = None
+    metadata: Optional[Dict[str, Any]] = None,
+    commit: bool = True
 ) -> models.PaymentTransfer:
     """
     创建转账记录
+    
+    Args:
+        commit: 是否立即提交。设为 False 可在 SAVEPOINT 内使用 flush 代替 commit，
+                避免破坏外层事务隔离。调用方需自行提交。
     
     Returns:
         PaymentTransfer: 创建的转账记录
@@ -60,10 +65,14 @@ def create_transfer_record(
     )
     db.add(transfer_record)
     
-    # 使用安全提交，带错误处理和回滚
-    from app.transaction_utils import safe_commit
-    if not safe_commit(db, f"创建转账记录 task_id={task_id}"):
-        raise Exception("创建转账记录失败")
+    if commit:
+        # 使用安全提交，带错误处理和回滚
+        from app.transaction_utils import safe_commit
+        if not safe_commit(db, f"创建转账记录 task_id={task_id}"):
+            raise Exception("创建转账记录失败")
+    else:
+        # 仅 flush 到 DB（获取 id），不提交事务，保持 SAVEPOINT 隔离
+        db.flush()
     
     db.refresh(transfer_record)
     
@@ -74,7 +83,8 @@ def create_transfer_record(
 def execute_transfer(
     db: Session,
     transfer_record: models.PaymentTransfer,
-    taker_stripe_account_id: str
+    taker_stripe_account_id: str,
+    commit: bool = True
 ) -> tuple[bool, Optional[str], Optional[str]]:
     """
     执行 Stripe Transfer 转账
@@ -83,6 +93,8 @@ def execute_transfer(
         db: 数据库会话
         transfer_record: 转账记录
         taker_stripe_account_id: 接受人的 Stripe Connect 账户ID
+        commit: 是否立即提交。设为 False 可在 SAVEPOINT 内使用 flush 代替 commit，
+                避免破坏外层事务隔离。调用方需自行提交。
     
     Returns:
         (success, transfer_id, error_message)
@@ -135,7 +147,9 @@ def execute_transfer(
             return False, None, error_msg
         
         # 计算转账金额（便士）
-        transfer_amount_pence = int(float(transfer_record.amount) * 100)
+        # 修复 P1#7：使用 Decimal 运算避免浮点精度丢失
+        # 例如 float(10.15) * 100 = 1014.9999... → int() 截断为 1014（少1便士）
+        transfer_amount_pence = int(Decimal(str(transfer_record.amount)) * 100)
         
         if transfer_amount_pence <= 0:
             error_msg = "转账金额必须大于0"
@@ -202,10 +216,14 @@ def execute_transfer(
         transfer_record.last_error = None
         transfer_record.next_retry_at = None
         
-        # 使用安全提交，带错误处理和回滚
-        from app.transaction_utils import safe_commit
-        if not safe_commit(db, f"更新转账记录 transfer_id={transfer.id}"):
-            raise Exception("更新转账记录失败")
+        if commit:
+            # 使用安全提交，带错误处理和回滚
+            from app.transaction_utils import safe_commit
+            if not safe_commit(db, f"更新转账记录 transfer_id={transfer.id}"):
+                raise Exception("更新转账记录失败")
+        else:
+            # 仅 flush，保持 SAVEPOINT 隔离
+            db.flush()
         
         logger.info(f"✅ 任务 {transfer_record.task_id} Transfer 已创建并标记为成功: transfer_id={transfer.id}")
         return True, transfer.id, None
@@ -248,10 +266,14 @@ def execute_transfer(
                 transfer_record.status = "failed"
                 transfer_record.next_retry_at = None
                 logger.error(f"❌ 转账失败且已达到最大重试次数: transfer_record_id={transfer_record.id}")
-            # 使用安全提交，带错误处理和回滚
-            from app.transaction_utils import safe_commit
-            if not safe_commit(db, f"更新转账记录状态 transfer_record_id={transfer_record.id}"):
-                logger.error(f"更新转账记录状态失败: transfer_record_id={transfer_record.id}")
+            if commit:
+                # 使用安全提交，带错误处理和回滚
+                from app.transaction_utils import safe_commit
+                if not safe_commit(db, f"更新转账记录状态 transfer_record_id={transfer_record.id}"):
+                    logger.error(f"更新转账记录状态失败: transfer_record_id={transfer_record.id}")
+            else:
+                # 仅 flush，保持 SAVEPOINT 隔离
+                db.flush()
         
         return False, None, error_msg
     except Exception as e:
@@ -309,16 +331,12 @@ def retry_failed_transfer(
             logger.error(f"标记转账记录为失败时提交失败: transfer_record_id={transfer_record.id}")
         return False, error_msg
     
-    # 更新重试次数和状态
-    transfer_record.retry_count += 1
+    # 修复 P1#8：不在此处预增 retry_count，避免与 execute_transfer 中的增量重复。
+    # execute_transfer 在遇到可重试的 Stripe 错误时会自行增加 retry_count 并设置 next_retry_at。
+    # 若在此处也增加，同一次重试会导致 retry_count += 2，max_retries 提前耗尽。
     transfer_record.status = "retrying"
     
-    # 计算下次重试时间（指数退避）
-    retry_index = min(transfer_record.retry_count - 1, len(RETRY_DELAYS) - 1)
-    delay_seconds = RETRY_DELAYS[retry_index]
-    transfer_record.next_retry_at = get_utc_time() + timedelta(seconds=delay_seconds)
-    
-    logger.info(f"🔄 重试转账: transfer_record_id={transfer_record.id}, retry_count={transfer_record.retry_count}/{transfer_record.max_retries}, next_retry_at={transfer_record.next_retry_at}")
+    logger.info(f"🔄 重试转账: transfer_record_id={transfer_record.id}, retry_count={transfer_record.retry_count}/{transfer_record.max_retries}")
     
     # 执行转账
     success, transfer_id, error_msg = execute_transfer(db, transfer_record, taker.stripe_account_id)
@@ -500,6 +518,26 @@ def process_pending_transfers(db: Session) -> Dict[str, Any]:
                 
                 if success:
                     stats["succeeded"] += 1
+                    
+                    # 转账成功后同步更新 Task 字段
+                    # 修复：process_pending_transfers 完成转账后，必须更新 Task 的确认状态，
+                    # 否则 auto_confirmed=1 但 is_confirmed=0 的任务会变成"僵尸"状态
+                    try:
+                        task = db.query(models.Task).filter(
+                            models.Task.id == transfer_record.task_id
+                        ).first()
+                        if task and task.is_confirmed != 1:
+                            task.is_confirmed = 1
+                            task.confirmed_at = get_utc_time()
+                            task.paid_to_user_id = transfer_record.taker_id
+                            task.escrow_amount = Decimal('0.00')
+                            from app.transaction_utils import safe_commit
+                            if not safe_commit(db, f"更新任务确认状态 task_id={task.id}"):
+                                logger.error(f"更新任务确认状态失败: task_id={task.id}")
+                            else:
+                                logger.info(f"✅ 转账成功后同步更新任务 {task.id} 确认状态: is_confirmed=1, escrow_amount=0")
+                    except Exception as task_err:
+                        logger.error(f"转账成功但更新任务状态失败: task_id={transfer_record.task_id}, error={task_err}", exc_info=True)
                 else:
                     if transfer_record.status == "retrying":
                         stats["retrying"] += 1
