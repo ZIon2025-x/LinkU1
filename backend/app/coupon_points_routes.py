@@ -1428,7 +1428,8 @@ async def create_wechat_checkout_session(
             raise HTTPException(status_code=400, detail="任务尚未被接受，无法支付")
     
     # 计算 effective_taker_id（优先使用 task.taker_id，其次从 PaymentIntent metadata 获取）
-    effective_taker_id = task.taker_id or (int(taker_id_from_metadata) if taker_id_from_metadata else None)
+    # 注意：users.id 是 String(8) 类型，必须保持为字符串，不能转为 int
+    effective_taker_id = task.taker_id or (str(taker_id_from_metadata) if taker_id_from_metadata else None)
     
     # 计算金额（与任务支付逻辑一致：优先使用最终成交价，其次原始标价）
     if task.agreed_reward is not None:

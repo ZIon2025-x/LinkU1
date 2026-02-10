@@ -350,8 +350,9 @@ class TaskExpertListResponse {
   bool get hasMore => experts.length >= pageSize;
 
   factory TaskExpertListResponse.fromJson(Map<String, dynamic> json) {
-    // 兼容后端返回的不同 key
-    final rawList = (json['items'] as List<dynamic>?) ??
+    // 兼容后端返回的不同 key（后端实际返回 task_experts）
+    final rawList = (json['task_experts'] as List<dynamic>?) ??
+        (json['items'] as List<dynamic>?) ??
         (json['experts'] as List<dynamic>?) ??
         [];
     return TaskExpertListResponse(
