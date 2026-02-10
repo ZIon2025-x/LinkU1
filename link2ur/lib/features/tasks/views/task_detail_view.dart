@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 
 import '../../../core/constants/app_constants.dart';
 import '../../../core/design/app_colors.dart';
@@ -168,7 +169,10 @@ class _TaskDetailContent extends StatelessWidget {
           ),
           _buildAppBarButton(
             icon: Icons.more_horiz,
-            onPressed: () {},
+            onPressed: () {
+              HapticFeedback.selectionClick();
+              _showMoreMenu(context, state);
+            },
           ),
         ],
       ],
@@ -192,6 +196,88 @@ class _TaskDetailContent extends StatelessWidget {
           ),
           child: Icon(icon, size: 18, color: Colors.white),
         ),
+      ),
+    );
+  }
+
+  /// 更多菜单 - 对标iOS ellipsis.circle Menu（分享 + 争议详情）
+  void _showMoreMenu(BuildContext context, TaskDetailState state) {
+    final task = state.task;
+    if (task == null) return;
+    final l10n = context.l10n;
+    final hasDisputeOrRefund = state.refundRequest != null ||
+        task.status == 'pending_confirmation';
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (_) => Container(
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+        decoration: BoxDecoration(
+          color: Theme.of(context).brightness == Brightness.dark
+              ? AppColors.cardBackgroundDark
+              : Colors.white,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        child: SafeArea(
+          top: false,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // 拖拽指示器
+              Container(
+                width: 36,
+                height: 4,
+                margin: const EdgeInsets.only(bottom: 16),
+                decoration: BoxDecoration(
+                  color: AppColors.textTertiaryLight,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              // 争议详情（条件显示） - 对标iOS disputeDetail
+              if (hasDisputeOrRefund)
+                ListTile(
+                  leading: const Icon(Icons.history),
+                  title: Text(l10n.taskDetailDisputeDetail),
+                  onTap: () {
+                    Navigator.pop(context);
+                    _showDisputeTimeline(context, task);
+                  },
+                ),
+              // 分享 - 对标iOS share
+              ListTile(
+                leading: const Icon(Icons.share_outlined),
+                title: Text(l10n.taskDetailShare),
+                onTap: () {
+                  Navigator.pop(context);
+                  CustomSharePanel.show(
+                    context,
+                    title: task.displayTitle,
+                    description: task.displayDescription ?? '',
+                    url: 'https://link2ur.com/tasks/${task.id}',
+                  );
+                },
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// 显示争议时间线 - 对标iOS showDisputeTimeline
+  void _showDisputeTimeline(BuildContext context, Task task) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (ctx) => _DisputeTimelineSheet(
+        taskId: task.id,
+        taskTitle: task.displayTitle,
+        repository: context.read<TaskRepository>(),
       ),
     );
   }
@@ -1363,4 +1449,442 @@ class _CounterpartyInfo {
   final bool isExpert;
   final String roleLabel;
   final VoidCallback? onTap;
+}
+
+// ============================================================
+// 争议时间线弹窗 - 对标iOS DisputeTimelineView
+// ============================================================
+
+class _DisputeTimelineSheet extends StatefulWidget {
+  const _DisputeTimelineSheet({
+    required this.taskId,
+    required this.taskTitle,
+    required this.repository,
+  });
+
+  final int taskId;
+  final String taskTitle;
+  final TaskRepository repository;
+
+  @override
+  State<_DisputeTimelineSheet> createState() => _DisputeTimelineSheetState();
+}
+
+class _DisputeTimelineSheetState extends State<_DisputeTimelineSheet> {
+  bool _isLoading = true;
+  String? _errorMessage;
+  List<Map<String, dynamic>> _timelineItems = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadTimeline();
+  }
+
+  Future<void> _loadTimeline() async {
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+    try {
+      final data = await widget.repository.getDisputeTimeline(widget.taskId);
+      final items = (data['timeline'] as List<dynamic>?) ?? [];
+      setState(() {
+        _timelineItems =
+            items.map((e) => e as Map<String, dynamic>).toList();
+        _isLoading = false;
+      });
+    } catch (e) {
+      setState(() {
+        _errorMessage = e.toString();
+        _isLoading = false;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    return DraggableScrollableSheet(
+      initialChildSize: 0.85,
+      minChildSize: 0.5,
+      maxChildSize: 0.95,
+      expand: false,
+      builder: (context, scrollController) {
+        return Column(
+          children: [
+            // 标题栏
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 12, 8, 0),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      l10n.taskDetailDisputeDetail,
+                      style: AppTypography.title3,
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close),
+                    onPressed: () => Navigator.pop(context),
+                  ),
+                ],
+              ),
+            ),
+            // 任务标题
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  widget.taskTitle,
+                  style: AppTypography.body.copyWith(
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+              ),
+            ),
+            const Divider(height: 1),
+            // 内容
+            Expanded(
+              child: _isLoading
+                  ? const Center(child: CircularProgressIndicator())
+                  : _errorMessage != null
+                      ? Center(
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(_errorMessage!,
+                                  style: AppTypography.body),
+                              const SizedBox(height: 12),
+                              TextButton(
+                                onPressed: _loadTimeline,
+                                child: Text(l10n.commonRetry),
+                              ),
+                            ],
+                          ),
+                        )
+                      : _timelineItems.isEmpty
+                          ? Center(
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Icon(Icons.access_time,
+                                      size: 50,
+                                      color: AppColors.textTertiaryLight),
+                                  const SizedBox(height: 12),
+                                  Text(
+                                    l10n.disputeNoRecords,
+                                    style: AppTypography.body.copyWith(
+                                      color: AppColors.textSecondary,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            )
+                          : ListView.builder(
+                              controller: scrollController,
+                              padding: const EdgeInsets.all(16),
+                              itemCount: _timelineItems.length,
+                              itemBuilder: (context, index) {
+                                return _TimelineItemTile(
+                                  item: _timelineItems[index],
+                                  isLast:
+                                      index == _timelineItems.length - 1,
+                                );
+                              },
+                            ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+/// 时间线单项 - 对标iOS TimelineItemView
+class _TimelineItemTile extends StatelessWidget {
+  const _TimelineItemTile({
+    required this.item,
+    required this.isLast,
+  });
+
+  final Map<String, dynamic> item;
+  final bool isLast;
+
+  Color get _actorColor {
+    switch (item['actor'] as String? ?? '') {
+      case 'poster':
+        return AppColors.primary;
+      case 'taker':
+        return AppColors.success;
+      case 'admin':
+        return AppColors.warning;
+      default:
+        return AppColors.textSecondary;
+    }
+  }
+
+  String _actorName(BuildContext context) {
+    final l10n = context.l10n;
+    switch (item['actor'] as String? ?? '') {
+      case 'poster':
+        return l10n.disputeActorPoster;
+      case 'taker':
+        return l10n.disputeActorTaker;
+      case 'admin':
+        return (item['reviewer_name'] as String?) ??
+            (item['resolver_name'] as String?) ??
+            l10n.disputeActorAdmin;
+      default:
+        return l10n.commonUnknown;
+    }
+  }
+
+  IconData get _icon {
+    switch (item['type'] as String? ?? '') {
+      case 'task_completed':
+        return Icons.check_circle;
+      case 'task_confirmed':
+        return Icons.verified;
+      case 'refund_request':
+        return Icons.replay_circle_filled;
+      case 'rebuttal':
+        return Icons.chat_bubble;
+      case 'admin_review':
+        return Icons.admin_panel_settings;
+      case 'dispute':
+        return Icons.warning_amber_rounded;
+      case 'dispute_resolution':
+        return Icons.gavel;
+      default:
+        return Icons.circle;
+    }
+  }
+
+  String _formatTimestamp(String? ts) {
+    if (ts == null || ts.isEmpty) return '';
+    try {
+      final date = DateTime.parse(ts);
+      return DateFormat('MM/dd HH:mm').format(date.toLocal());
+    } catch (_) {
+      return ts;
+    }
+  }
+
+  Color _statusColor(String status) {
+    switch (status) {
+      case 'pending':
+        return AppColors.warning;
+      case 'processing':
+        return AppColors.primary;
+      case 'approved':
+      case 'completed':
+      case 'resolved':
+        return AppColors.success;
+      case 'rejected':
+      case 'cancelled':
+      case 'dismissed':
+        return AppColors.error;
+      default:
+        return AppColors.textSecondary;
+    }
+  }
+
+  String _statusText(BuildContext context, String status) {
+    final l10n = context.l10n;
+    switch (status) {
+      case 'pending':
+        return l10n.disputeStatusPending;
+      case 'processing':
+        return l10n.disputeStatusProcessing;
+      case 'approved':
+        return l10n.disputeStatusApproved;
+      case 'rejected':
+        return l10n.disputeStatusRejected;
+      case 'completed':
+        return l10n.disputeStatusCompleted;
+      case 'cancelled':
+        return l10n.disputeStatusCancelled;
+      case 'resolved':
+        return l10n.disputeStatusResolved;
+      case 'dismissed':
+        return l10n.disputeStatusDismissed;
+      default:
+        return status;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final title = item['title'] as String? ?? '';
+    final description = item['description'] as String? ?? '';
+    final timestamp = item['timestamp'] as String?;
+    final status = item['status'] as String?;
+    final evidence = item['evidence'] as List<dynamic>?;
+
+    return IntrinsicHeight(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // 时间线指示器
+          SizedBox(
+            width: 32,
+            child: Column(
+              children: [
+                Container(
+                  width: 32,
+                  height: 32,
+                  decoration: BoxDecoration(
+                    color: _actorColor,
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(_icon, size: 16, color: Colors.white),
+                ),
+                if (!isLast)
+                  Expanded(
+                    child: Container(
+                      width: 2,
+                      color: AppColors.dividerLight,
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 12),
+          // 内容卡片
+          Expanded(
+            child: Container(
+              margin: const EdgeInsets.only(bottom: 16),
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Theme.of(context).cardColor,
+                borderRadius: BorderRadius.circular(AppRadius.medium),
+                border: Border.all(color: AppColors.dividerLight),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // 标题 + 时间
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(title,
+                            style: AppTypography.body
+                                .copyWith(fontWeight: FontWeight.w600)),
+                      ),
+                      if (timestamp != null)
+                        Text(
+                          _formatTimestamp(timestamp),
+                          style: AppTypography.caption
+                              .copyWith(color: AppColors.textTertiaryLight),
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  // 操作人
+                  Text(
+                    _actorName(context),
+                    style: AppTypography.caption.copyWith(color: _actorColor),
+                  ),
+                  const SizedBox(height: 6),
+                  // 描述
+                  Text(
+                    description,
+                    style: AppTypography.body
+                        .copyWith(color: AppColors.textSecondary),
+                  ),
+                  // 状态标签
+                  if (status != null) ...[
+                    const SizedBox(height: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: _statusColor(status).withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: Text(
+                        _statusText(context, status),
+                        style: AppTypography.caption
+                            .copyWith(color: _statusColor(status)),
+                      ),
+                    ),
+                  ],
+                  // 证据
+                  if (evidence != null && evidence.isNotEmpty) ...[
+                    const SizedBox(height: 8),
+                    SizedBox(
+                      height: 80,
+                      child: ListView.separated(
+                        scrollDirection: Axis.horizontal,
+                        itemCount: evidence.length,
+                        separatorBuilder: (_, __) =>
+                            const SizedBox(width: 8),
+                        itemBuilder: (context, i) {
+                          final e = evidence[i] as Map<String, dynamic>;
+                          final type = e['type'] as String? ?? '';
+                          if (type == 'text') {
+                            return Container(
+                              width: 120,
+                              padding: const EdgeInsets.all(6),
+                              decoration: BoxDecoration(
+                                color: AppColors.secondaryBackgroundLight,
+                                borderRadius:
+                                    BorderRadius.circular(6),
+                              ),
+                              child: Text(
+                                e['content'] as String? ?? '',
+                                style: AppTypography.caption.copyWith(
+                                    color: AppColors.textSecondary),
+                                maxLines: 3,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            );
+                          }
+                          final url = e['url'] as String?;
+                          if (url != null && url.isNotEmpty) {
+                            return GestureDetector(
+                              onTap: () {
+                                FullScreenImageView.show(
+                                  context,
+                                  images: [url],
+                                  initialIndex: 0,
+                                );
+                              },
+                              child: ClipRRect(
+                                borderRadius:
+                                    BorderRadius.circular(6),
+                                child: Image.network(
+                                  url,
+                                  width: 80,
+                                  height: 80,
+                                  fit: BoxFit.cover,
+                                  errorBuilder:
+                                      (_, __, ___) => Container(
+                                    width: 80,
+                                    height: 80,
+                                    color: AppColors
+                                        .secondaryBackgroundLight,
+                                    child: const Icon(
+                                        Icons.broken_image,
+                                        size: 24),
+                                  ),
+                                ),
+                              ),
+                            );
+                          }
+                          return const SizedBox.shrink();
+                        },
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }

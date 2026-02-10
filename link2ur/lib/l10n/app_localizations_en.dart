@@ -36,6 +36,21 @@ class AppLocalizationsEn extends AppLocalizations {
   String get commonRetry => 'Retry';
 
   @override
+  String get commonReport => 'Report';
+
+  @override
+  String get commonReportReason => 'Please enter the reason for reporting';
+
+  @override
+  String get commonReportSubmitted => 'Report submitted';
+
+  @override
+  String get commonCopyLink => 'Copy Link';
+
+  @override
+  String get commonLinkCopied => 'Link copied';
+
+  @override
   String get commonReload => 'Reload';
 
   @override
@@ -5598,6 +5613,33 @@ class AppLocalizationsEn extends AppLocalizations {
   String get disputeActorAdmin => 'Admin';
 
   @override
+  String get disputeNoRecords => 'No dispute records';
+
+  @override
+  String get disputeStatusPending => 'Pending Review';
+
+  @override
+  String get disputeStatusProcessing => 'Processing';
+
+  @override
+  String get disputeStatusApproved => 'Approved';
+
+  @override
+  String get disputeStatusRejected => 'Rejected';
+
+  @override
+  String get disputeStatusCompleted => 'Completed';
+
+  @override
+  String get disputeStatusCancelled => 'Cancelled';
+
+  @override
+  String get disputeStatusResolved => 'Resolved';
+
+  @override
+  String get disputeStatusDismissed => 'Dismissed';
+
+  @override
   String get refundReasonCompletionTime => 'Unsatisfied with completion time';
 
   @override
@@ -7142,6 +7184,13 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get chatInProgress => 'In Progress';
+
+  @override
+  String get chatTaskClosed => 'Task Closed';
+
+  @override
+  String get chatTaskClosedHint =>
+      'This task has been closed, messages are disabled';
 
   @override
   String get chatTaskCompletedConfirm => 'Task completed, please confirm.';

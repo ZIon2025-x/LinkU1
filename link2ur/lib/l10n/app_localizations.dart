@@ -153,6 +153,36 @@ abstract class AppLocalizations {
   /// **'Retry'**
   String get commonRetry;
 
+  /// No description provided for @commonReport.
+  ///
+  /// In en, this message translates to:
+  /// **'Report'**
+  String get commonReport;
+
+  /// No description provided for @commonReportReason.
+  ///
+  /// In en, this message translates to:
+  /// **'Please enter the reason for reporting'**
+  String get commonReportReason;
+
+  /// No description provided for @commonReportSubmitted.
+  ///
+  /// In en, this message translates to:
+  /// **'Report submitted'**
+  String get commonReportSubmitted;
+
+  /// No description provided for @commonCopyLink.
+  ///
+  /// In en, this message translates to:
+  /// **'Copy Link'**
+  String get commonCopyLink;
+
+  /// No description provided for @commonLinkCopied.
+  ///
+  /// In en, this message translates to:
+  /// **'Link copied'**
+  String get commonLinkCopied;
+
   /// No description provided for @commonReload.
   ///
   /// In en, this message translates to:
@@ -10238,6 +10268,60 @@ abstract class AppLocalizations {
   /// **'Admin'**
   String get disputeActorAdmin;
 
+  /// No description provided for @disputeNoRecords.
+  ///
+  /// In en, this message translates to:
+  /// **'No dispute records'**
+  String get disputeNoRecords;
+
+  /// No description provided for @disputeStatusPending.
+  ///
+  /// In en, this message translates to:
+  /// **'Pending Review'**
+  String get disputeStatusPending;
+
+  /// No description provided for @disputeStatusProcessing.
+  ///
+  /// In en, this message translates to:
+  /// **'Processing'**
+  String get disputeStatusProcessing;
+
+  /// No description provided for @disputeStatusApproved.
+  ///
+  /// In en, this message translates to:
+  /// **'Approved'**
+  String get disputeStatusApproved;
+
+  /// No description provided for @disputeStatusRejected.
+  ///
+  /// In en, this message translates to:
+  /// **'Rejected'**
+  String get disputeStatusRejected;
+
+  /// No description provided for @disputeStatusCompleted.
+  ///
+  /// In en, this message translates to:
+  /// **'Completed'**
+  String get disputeStatusCompleted;
+
+  /// No description provided for @disputeStatusCancelled.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancelled'**
+  String get disputeStatusCancelled;
+
+  /// No description provided for @disputeStatusResolved.
+  ///
+  /// In en, this message translates to:
+  /// **'Resolved'**
+  String get disputeStatusResolved;
+
+  /// No description provided for @disputeStatusDismissed.
+  ///
+  /// In en, this message translates to:
+  /// **'Dismissed'**
+  String get disputeStatusDismissed;
+
   /// No description provided for @refundReasonCompletionTime.
   ///
   /// In en, this message translates to:
@@ -13147,6 +13231,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'In Progress'**
   String get chatInProgress;
+
+  /// No description provided for @chatTaskClosed.
+  ///
+  /// In en, this message translates to:
+  /// **'Task Closed'**
+  String get chatTaskClosed;
+
+  /// No description provided for @chatTaskClosedHint.
+  ///
+  /// In en, this message translates to:
+  /// **'This task has been closed, messages are disabled'**
+  String get chatTaskClosedHint;
 
   /// No description provided for @chatTaskCompletedConfirm.
   ///

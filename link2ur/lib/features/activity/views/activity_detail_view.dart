@@ -16,6 +16,7 @@ import '../../../core/widgets/loading_view.dart';
 import '../../../core/widgets/error_state_view.dart';
 import '../../../core/widgets/async_image_view.dart';
 import '../../../core/widgets/full_screen_image_view.dart';
+import '../../../core/widgets/custom_share_panel.dart';
 import '../../../data/models/activity.dart';
 import '../../../data/models/task_expert.dart';
 import '../../../data/repositories/activity_repository.dart';
@@ -122,8 +123,39 @@ class _ActivityDetailViewContent extends StatelessWidget {
             icon: Icons.share_outlined,
             onPressed: () {
               HapticFeedback.selectionClick();
+              final activity = state.activityDetail!;
+              CustomSharePanel.show(
+                context,
+                title: activity.title,
+                description: activity.description,
+                url: 'https://link2ur.com/activities/${activity.id}',
+              );
             },
           ),
+          // 达人头像按钮 - 对标iOS expert avatar NavigationLink
+          if (state.activityDetail!.expertId.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 4),
+              child: GestureDetector(
+                onTap: () {
+                  context.push('/task-experts/${state.activityDetail!.expertId}');
+                },
+                child: Container(
+                  width: 32,
+                  height: 32,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: AppColors.primary.withValues(alpha: 0.15),
+                    border: Border.all(
+                      color: AppColors.primary.withValues(alpha: 0.3),
+                      width: 1.5,
+                    ),
+                  ),
+                  child: const Icon(Icons.person,
+                      size: 14, color: AppColors.primary),
+                ),
+              ),
+            ),
         ],
       ],
     );

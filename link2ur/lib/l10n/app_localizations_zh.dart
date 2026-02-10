@@ -36,6 +36,21 @@ class AppLocalizationsZh extends AppLocalizations {
   String get commonRetry => '重试';
 
   @override
+  String get commonReport => '举报';
+
+  @override
+  String get commonReportReason => '请输入举报原因';
+
+  @override
+  String get commonReportSubmitted => '举报已提交';
+
+  @override
+  String get commonCopyLink => '复制链接';
+
+  @override
+  String get commonLinkCopied => '链接已复制';
+
+  @override
   String get commonReload => '重新加载';
 
   @override
@@ -5368,6 +5383,33 @@ class AppLocalizationsZh extends AppLocalizations {
   String get disputeActorAdmin => '管理员';
 
   @override
+  String get disputeNoRecords => '暂无争议记录';
+
+  @override
+  String get disputeStatusPending => '待审核';
+
+  @override
+  String get disputeStatusProcessing => '处理中';
+
+  @override
+  String get disputeStatusApproved => '已批准';
+
+  @override
+  String get disputeStatusRejected => '已拒绝';
+
+  @override
+  String get disputeStatusCompleted => '已完成';
+
+  @override
+  String get disputeStatusCancelled => '已取消';
+
+  @override
+  String get disputeStatusResolved => '已解决';
+
+  @override
+  String get disputeStatusDismissed => '已驳回';
+
+  @override
   String get refundReasonCompletionTime => '对完成时间不满意';
 
   @override
@@ -6872,6 +6914,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get chatInProgress => '进行中';
 
   @override
+  String get chatTaskClosed => '任务已关闭';
+
+  @override
+  String get chatTaskClosedHint => '该任务已关闭，无法发送消息';
+
+  @override
   String get chatTaskCompletedConfirm => '任务已完成，请确认。';
 
   @override
@@ -7249,6 +7297,21 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get commonRetry => '重試';
+
+  @override
+  String get commonReport => '舉報';
+
+  @override
+  String get commonReportReason => '請輸入舉報原因';
+
+  @override
+  String get commonReportSubmitted => '舉報已提交';
+
+  @override
+  String get commonCopyLink => '複製連結';
+
+  @override
+  String get commonLinkCopied => '連結已複製';
 
   @override
   String get commonReload => '重新加載';
@@ -12583,6 +12646,33 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get disputeActorAdmin => '管理員';
 
   @override
+  String get disputeNoRecords => '暫無爭議記錄';
+
+  @override
+  String get disputeStatusPending => '待審核';
+
+  @override
+  String get disputeStatusProcessing => '處理中';
+
+  @override
+  String get disputeStatusApproved => '已批准';
+
+  @override
+  String get disputeStatusRejected => '已拒絕';
+
+  @override
+  String get disputeStatusCompleted => '已完成';
+
+  @override
+  String get disputeStatusCancelled => '已取消';
+
+  @override
+  String get disputeStatusResolved => '已解決';
+
+  @override
+  String get disputeStatusDismissed => '已駁回';
+
+  @override
   String get refundReasonCompletionTime => '對完成時間不滿意';
 
   @override
@@ -13996,6 +14086,12 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get chatInProgress => '進行中';
+
+  @override
+  String get chatTaskClosed => '任務已關閉';
+
+  @override
+  String get chatTaskClosedHint => '該任務已關閉，無法發送訊息';
 
   @override
   String get chatTaskCompletedConfirm => '任務已完成，請確認。';

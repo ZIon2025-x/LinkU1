@@ -80,9 +80,11 @@ class ChatState extends Equatable {
     this.messages = const [],
     this.userId = '',
     this.taskId,
+    this.taskStatus,
     this.page = 1,
     this.hasMore = true,
     this.isSending = false,
+    this.isLoadingMore = false,
     this.errorMessage,
   });
 
@@ -90,21 +92,34 @@ class ChatState extends Equatable {
   final List<Message> messages;
   final String userId;
   final int? taskId;
+  final String? taskStatus;
   final int page;
   final bool hasMore;
   final bool isSending;
+  final bool isLoadingMore;
   final String? errorMessage;
 
   bool get isTaskChat => taskId != null;
+
+  /// 任务是否已关闭（对齐iOS: 已完成/已取消/已过期等禁用输入）
+  bool get isTaskClosed {
+    if (taskStatus == null) return false;
+    return taskStatus == 'completed' ||
+        taskStatus == 'cancelled' ||
+        taskStatus == 'expired' ||
+        taskStatus == 'closed';
+  }
 
   ChatState copyWith({
     ChatStatus? status,
     List<Message>? messages,
     String? userId,
     int? taskId,
+    String? taskStatus,
     int? page,
     bool? hasMore,
     bool? isSending,
+    bool? isLoadingMore,
     String? errorMessage,
   }) {
     return ChatState(
@@ -112,16 +127,28 @@ class ChatState extends Equatable {
       messages: messages ?? this.messages,
       userId: userId ?? this.userId,
       taskId: taskId ?? this.taskId,
+      taskStatus: taskStatus ?? this.taskStatus,
       page: page ?? this.page,
       hasMore: hasMore ?? this.hasMore,
       isSending: isSending ?? this.isSending,
+      isLoadingMore: isLoadingMore ?? this.isLoadingMore,
       errorMessage: errorMessage,
     );
   }
 
   @override
-  List<Object?> get props =>
-      [status, messages, userId, taskId, page, hasMore, isSending, errorMessage];
+  List<Object?> get props => [
+        status,
+        messages,
+        userId,
+        taskId,
+        taskStatus,
+        page,
+        hasMore,
+        isSending,
+        isLoadingMore,
+        errorMessage,
+      ];
 }
 
 // ==================== Bloc ====================
@@ -164,11 +191,13 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     try {
       List<Message> messages;
       if (event.taskId != null) {
+        // 任务聊天：使用任务聊天API
         messages = await _messageRepository.getTaskChatMessages(
           event.taskId!,
           page: 1,
         );
       } else {
+        // 私聊
         messages = await _messageRepository.getMessagesWith(
           event.userId,
           page: 1,
@@ -197,7 +226,9 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     ChatLoadMore event,
     Emitter<ChatState> emit,
   ) async {
-    if (!state.hasMore) return;
+    if (!state.hasMore || state.isLoadingMore) return;
+
+    emit(state.copyWith(isLoadingMore: true));
 
     try {
       final nextPage = state.page + 1;
@@ -219,10 +250,14 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
         messages: [...state.messages, ...messages],
         page: nextPage,
         hasMore: messages.length >= 50,
+        isLoadingMore: false,
       ));
     } catch (e) {
       AppLogger.error('Failed to load more messages', e);
-      emit(state.copyWith(hasMore: false));
+      emit(state.copyWith(
+        hasMore: false,
+        isLoadingMore: false,
+      ));
     }
   }
 
@@ -233,30 +268,43 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     emit(state.copyWith(isSending: true));
 
     try {
-      final message = await _messageRepository.sendMessage(
-        SendMessageRequest(
-          receiverId: state.userId,
+      Message message;
+
+      if (state.isTaskChat) {
+        // 任务聊天：使用任务聊天专用API
+        message = await _messageRepository.sendTaskChatMessage(
+          state.taskId!,
           content: event.content,
           messageType: event.messageType,
-          taskId: state.taskId,
-          imageUrl: event.imageUrl,
-        ),
-      );
+        );
+      } else {
+        // 私聊：使用私聊API
+        message = await _messageRepository.sendMessage(
+          SendMessageRequest(
+            receiverId: state.userId,
+            content: event.content,
+            messageType: event.messageType,
+            taskId: state.taskId,
+            imageUrl: event.imageUrl,
+          ),
+        );
 
+        // 私聊同时通过WebSocket发送
+        _messageRepository.sendMessageViaWebSocket(
+          SendMessageRequest(
+            receiverId: state.userId,
+            content: event.content,
+            messageType: event.messageType,
+            taskId: state.taskId,
+          ),
+        );
+      }
+
+      // 插入到消息列表末尾（最新的在最后）
       emit(state.copyWith(
-        messages: [message, ...state.messages],
+        messages: [...state.messages, message],
         isSending: false,
       ));
-
-      // 同时通过WebSocket发送
-      _messageRepository.sendMessageViaWebSocket(
-        SendMessageRequest(
-          receiverId: state.userId,
-          content: event.content,
-          messageType: event.messageType,
-          taskId: state.taskId,
-        ),
-      );
     } catch (e) {
       AppLogger.error('Failed to send message', e);
       emit(state.copyWith(isSending: false));
@@ -273,19 +321,28 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
       // 先上传图片获取URL
       final imageUrl = await _messageRepository.uploadImage(event.filePath);
 
-      // 然后发送图片消息
-      final message = await _messageRepository.sendMessage(
-        SendMessageRequest(
-          receiverId: state.userId,
+      Message message;
+      if (state.isTaskChat) {
+        // 任务聊天：先上传再发送文本消息（附带image_url）
+        message = await _messageRepository.sendTaskChatMessage(
+          state.taskId!,
           content: '[图片]',
           messageType: 'image',
-          taskId: state.taskId,
-          imageUrl: imageUrl,
-        ),
-      );
+        );
+      } else {
+        message = await _messageRepository.sendMessage(
+          SendMessageRequest(
+            receiverId: state.userId,
+            content: '[图片]',
+            messageType: 'image',
+            taskId: state.taskId,
+            imageUrl: imageUrl,
+          ),
+        );
+      }
 
       emit(state.copyWith(
-        messages: [message, ...state.messages],
+        messages: [...state.messages, message],
         isSending: false,
       ));
     } catch (e) {
@@ -298,12 +355,30 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     ChatMessageReceived event,
     Emitter<ChatState> emit,
   ) {
-    // 只处理当前聊天的消息
-    if (event.message.senderId == state.userId ||
-        event.message.receiverId == state.userId) {
-      emit(state.copyWith(
-        messages: [event.message, ...state.messages],
-      ));
+    final message = event.message;
+
+    // 去重检查 - 对齐iOS deduplication
+    if (state.messages.any((m) => m.id == message.id)) {
+      return;
+    }
+
+    if (state.isTaskChat) {
+      // 任务聊天：按taskId过滤 - 对齐iOS
+      if (message.taskId == state.taskId) {
+        emit(state.copyWith(
+          messages: [...state.messages, message],
+        ));
+        // 自动标记已读
+        add(const ChatMarkAsRead());
+      }
+    } else {
+      // 私聊：按userId过滤
+      if (message.senderId == state.userId ||
+          message.receiverId == state.userId) {
+        emit(state.copyWith(
+          messages: [...state.messages, message],
+        ));
+      }
     }
   }
 
@@ -312,7 +387,13 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     Emitter<ChatState> emit,
   ) async {
     try {
-      await _messageRepository.markMessagesRead(state.userId);
+      if (state.isTaskChat) {
+        // 任务聊天：使用任务聊天标记已读API
+        await _messageRepository.markTaskChatRead(state.taskId!);
+      } else {
+        // 私聊
+        await _messageRepository.markMessagesRead(state.userId);
+      }
     } catch (e) {
       AppLogger.warning('Failed to mark as read', e);
     }

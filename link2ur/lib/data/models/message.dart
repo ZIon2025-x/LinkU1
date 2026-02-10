@@ -36,35 +36,89 @@ class ChatContact extends Equatable {
   List<Object?> get props => [id, user, lastMessage, unreadCount];
 }
 
+/// 消息附件模型（对齐iOS MessageAttachment + 后端response）
+class MessageAttachment extends Equatable {
+  const MessageAttachment({
+    this.id,
+    this.attachmentType,
+    this.url,
+    this.blobId,
+    this.meta,
+  });
+
+  final int? id;
+  final String? attachmentType; // image, file
+  final String? url;
+  final String? blobId;
+  final Map<String, dynamic>? meta;
+
+  bool get isImage => attachmentType == 'image';
+
+  factory MessageAttachment.fromJson(Map<String, dynamic> json) {
+    return MessageAttachment(
+      id: json['id'] as int?,
+      attachmentType: json['attachment_type'] as String?,
+      url: json['url'] as String?,
+      blobId: json['blob_id'] as String?,
+      meta: json['meta'] as Map<String, dynamic>?,
+    );
+  }
+
+  @override
+  List<Object?> get props => [id, url, blobId];
+}
+
 /// 消息模型
 class Message extends Equatable {
   const Message({
     required this.id,
     required this.senderId,
-    required this.receiverId,
+    this.receiverId = '',
     required this.content,
     this.messageType = 'text',
     this.imageUrl,
+    this.senderName,
+    this.senderAvatar,
     this.taskId,
     this.isRead = false,
     this.createdAt,
+    this.attachments = const [],
   });
 
   final int id;
   final String senderId;
   final String receiverId;
   final String content;
-  final String messageType; // text, image, system
+  final String messageType; // text, normal, image, system, file
   final String? imageUrl;
+  final String? senderName;
+  final String? senderAvatar;
   final int? taskId;
   final bool isRead;
   final DateTime? createdAt;
+  final List<MessageAttachment> attachments;
 
   /// 是否是图片消息
   bool get isImage => messageType == 'image';
 
-  /// 是否是系统消息
-  bool get isSystem => messageType == 'system';
+  /// 是否是系统消息 - 对齐iOS: msgType == .system || senderId == nil
+  bool get isSystem => messageType == 'system' || senderId.isEmpty;
+
+  /// 是否有图片附件
+  bool get hasImageAttachments =>
+      attachments.any((a) => a.isImage && a.url != null);
+
+  /// 获取所有图片URL（包括imageUrl和附件中的图片）
+  List<String> get allImageUrls {
+    final urls = <String>[];
+    if (imageUrl != null && imageUrl!.isNotEmpty) urls.add(imageUrl!);
+    for (final a in attachments) {
+      if (a.isImage && a.url != null && a.url!.isNotEmpty) {
+        if (!urls.contains(a.url!)) urls.add(a.url!);
+      }
+    }
+    return urls;
+  }
 
   factory Message.fromJson(Map<String, dynamic> json) {
     return Message(
@@ -72,13 +126,22 @@ class Message extends Equatable {
       senderId: json['sender_id']?.toString() ?? '',
       receiverId: json['receiver_id']?.toString() ?? '',
       content: json['content'] as String? ?? '',
-      messageType: json['message_type'] as String? ?? 'text',
+      messageType: json['message_type'] as String? ??
+          json['msg_type'] as String? ??
+          'text',
       imageUrl: json['image_url'] as String?,
+      senderName: json['sender_name'] as String?,
+      senderAvatar: json['sender_avatar'] as String?,
       taskId: json['task_id'] as int?,
       isRead: json['is_read'] as bool? ?? false,
       createdAt: json['created_at'] != null
-          ? DateTime.parse(json['created_at'])
+          ? DateTime.tryParse(json['created_at'].toString())
           : null,
+      attachments: (json['attachments'] as List<dynamic>?)
+              ?.map((e) =>
+                  MessageAttachment.fromJson(e as Map<String, dynamic>))
+              .toList() ??
+          const [],
     );
   }
 
@@ -90,6 +153,8 @@ class Message extends Equatable {
       'content': content,
       'message_type': messageType,
       if (imageUrl != null) 'image_url': imageUrl,
+      if (senderName != null) 'sender_name': senderName,
+      if (senderAvatar != null) 'sender_avatar': senderAvatar,
       if (taskId != null) 'task_id': taskId,
       'is_read': isRead,
       'created_at': createdAt?.toIso8601String(),
@@ -103,9 +168,12 @@ class Message extends Equatable {
     String? content,
     String? messageType,
     String? imageUrl,
+    String? senderName,
+    String? senderAvatar,
     int? taskId,
     bool? isRead,
     DateTime? createdAt,
+    List<MessageAttachment>? attachments,
   }) {
     return Message(
       id: id ?? this.id,
@@ -114,9 +182,12 @@ class Message extends Equatable {
       content: content ?? this.content,
       messageType: messageType ?? this.messageType,
       imageUrl: imageUrl ?? this.imageUrl,
+      senderName: senderName ?? this.senderName,
+      senderAvatar: senderAvatar ?? this.senderAvatar,
       taskId: taskId ?? this.taskId,
       isRead: isRead ?? this.isRead,
       createdAt: createdAt ?? this.createdAt,
+      attachments: attachments ?? this.attachments,
     );
   }
 

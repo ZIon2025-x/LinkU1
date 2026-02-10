@@ -558,8 +558,8 @@ class TaskRepository {
     }
   }
 
-  /// 获取争议时间线
-  Future<List<Map<String, dynamic>>> getDisputeTimeline(int taskId) async {
+  /// 获取争议时间线（返回完整响应包含 task_id, task_title, timeline）
+  Future<Map<String, dynamic>> getDisputeTimeline(int taskId) async {
     final response = await _apiService.get<Map<String, dynamic>>(
       ApiEndpoints.disputeTimeline(taskId),
     );
@@ -568,8 +568,7 @@ class TaskRepository {
       throw TaskException(response.message ?? '获取争议时间线失败');
     }
 
-    final items = response.data!['items'] as List<dynamic>? ?? [];
-    return items.map((e) => e as Map<String, dynamic>).toList();
+    return response.data!;
   }
 
   // ==================== 多参与者 ====================

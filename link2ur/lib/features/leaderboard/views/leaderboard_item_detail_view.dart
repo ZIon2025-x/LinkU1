@@ -1078,7 +1078,7 @@ class _CommentCard extends StatelessWidget {
               // 时间
               if (createdAt != null)
                 Text(
-                  _formatTime(createdAt),
+                  _formatTime(context, createdAt),
                   style: AppTypography.caption
                       .copyWith(color: AppColors.textTertiaryLight, fontSize: 11),
                 ),
@@ -1139,14 +1139,16 @@ class _CommentCard extends StatelessWidget {
     );
   }
 
-  String _formatTime(String dateStr) {
+  String _formatTime(BuildContext context, String dateStr) {
     try {
+      final l10n = context.l10n;
       final date = DateTime.parse(dateStr).toLocal();
       final now = DateTime.now();
       final diff = now.difference(date);
-      if (diff.inMinutes < 60) return '${diff.inMinutes}分钟前';
-      if (diff.inHours < 24) return '${diff.inHours}小时前';
-      if (diff.inDays < 7) return '${diff.inDays}天前';
+      if (diff.inMinutes < 1) return l10n.timeJustNow;
+      if (diff.inMinutes < 60) return l10n.timeMinutesAgo(diff.inMinutes);
+      if (diff.inHours < 24) return l10n.timeHoursAgo(diff.inHours);
+      if (diff.inDays < 7) return l10n.timeDaysAgo(diff.inDays);
       return DateFormat('MM/dd').format(date);
     } catch (_) {
       return '';

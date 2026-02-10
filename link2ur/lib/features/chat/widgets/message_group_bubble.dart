@@ -23,6 +23,7 @@ class MessageGroup {
     this.senderId,
     this.senderName,
     this.senderAvatar,
+    this.isSystem = false,
   });
 
   final List<Message> messages;
@@ -30,11 +31,13 @@ class MessageGroup {
   final String? senderId;
   final String? senderName;
   final String? senderAvatar;
+  final bool isSystem;
 }
 
 /// 将消息按发送者和时间间隔分组
-/// 参考iOS groupMessages()
-List<MessageGroup> groupMessages(List<Message> messages, String? currentUserId) {
+/// 参考iOS groupMessages() + system message handling
+List<MessageGroup> groupMessages(
+    List<Message> messages, String? currentUserId) {
   if (messages.isEmpty) return [];
 
   final groups = <MessageGroup>[];
@@ -42,51 +45,64 @@ List<MessageGroup> groupMessages(List<Message> messages, String? currentUserId) 
   String? currentSenderId;
   BubbleDirection? currentDirection;
   DateTime? lastMessageTime;
+  String? currentSenderName;
+  String? currentSenderAvatar;
   const timeThreshold = Duration(minutes: 3);
 
+  void flushGroup() {
+    if (currentGroup.isNotEmpty && currentDirection != null) {
+      groups.add(MessageGroup(
+        messages: List.from(currentGroup),
+        direction: currentDirection,
+        senderId: currentSenderId,
+        senderName: currentSenderName,
+        senderAvatar: currentSenderAvatar,
+      ));
+      currentGroup = [];
+    }
+  }
+
   for (final message in messages) {
-    // 跳过系统消息
+    // 系统消息：作为独立组渲染（对齐iOS TaskChatSystemMessageBubble）
     if (message.isSystem) {
-      if (currentGroup.isNotEmpty) {
-        final dir = currentDirection;
-        if (dir != null) {
-          groups.add(MessageGroup(
-            messages: List.from(currentGroup),
-            direction: dir,
-            senderId: currentSenderId,
-          ));
-        }
-        currentGroup = [];
-      }
+      flushGroup();
+      groups.add(MessageGroup(
+        messages: [message],
+        direction: BubbleDirection.incoming,
+        isSystem: true,
+      ));
       continue;
     }
 
     final isMe = currentUserId != null && message.senderId == currentUserId;
-    final direction = isMe ? BubbleDirection.outgoing : BubbleDirection.incoming;
+    final direction =
+        isMe ? BubbleDirection.outgoing : BubbleDirection.incoming;
 
     bool shouldStartNewGroup;
     if (currentGroup.isEmpty) {
       shouldStartNewGroup = true;
     } else if (message.senderId != currentSenderId) {
       shouldStartNewGroup = true;
+    } else if (direction != currentDirection) {
+      shouldStartNewGroup = true;
+    } else if (message.isImage) {
+      // 图片消息独立成组（对齐iOS）
+      shouldStartNewGroup = true;
     } else if (message.createdAt != null && lastMessageTime != null) {
       shouldStartNewGroup =
-          message.createdAt!.difference(lastMessageTime).abs() > timeThreshold;
+          message.createdAt!.difference(lastMessageTime).abs() >
+              timeThreshold;
     } else {
       shouldStartNewGroup = false;
     }
 
     if (shouldStartNewGroup) {
-      if (currentGroup.isNotEmpty && currentDirection != null) {
-        groups.add(MessageGroup(
-          messages: List.from(currentGroup),
-          direction: currentDirection,
-          senderId: currentSenderId,
-        ));
-      }
+      flushGroup();
       currentGroup = [message];
       currentSenderId = message.senderId;
       currentDirection = direction;
+      currentSenderName = message.senderName;
+      currentSenderAvatar = message.senderAvatar;
       lastMessageTime = message.createdAt;
     } else {
       currentGroup.add(message);
@@ -94,14 +110,7 @@ List<MessageGroup> groupMessages(List<Message> messages, String? currentUserId) 
     }
   }
 
-  if (currentGroup.isNotEmpty && currentDirection != null) {
-    groups.add(MessageGroup(
-      messages: List.from(currentGroup),
-      direction: currentDirection,
-      senderId: currentSenderId,
-    ));
-  }
-
+  flushGroup();
   return groups;
 }
 
@@ -121,6 +130,14 @@ class MessageGroupBubbleView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // 系统消息：居中渲染
+    if (group.isSystem) {
+      return _SystemMessageBubble(
+        message: group.messages.first,
+        onImageTap: onImageTap,
+      );
+    }
+
     final isOutgoing = group.direction == BubbleDirection.outgoing;
 
     return Padding(
@@ -148,16 +165,16 @@ class MessageGroupBubbleView extends StatelessWidget {
                 maxWidth: MediaQuery.of(context).size.width * 0.72,
               ),
               child: Column(
-                crossAxisAlignment:
-                    isOutgoing ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+                crossAxisAlignment: isOutgoing
+                    ? CrossAxisAlignment.end
+                    : CrossAxisAlignment.start,
                 children: [
                   // 发送者名称
                   if (!isOutgoing &&
                       group.senderName != null &&
                       group.senderName!.isNotEmpty)
                     Padding(
-                      padding:
-                          const EdgeInsets.only(left: 4, bottom: 2),
+                      padding: const EdgeInsets.only(left: 4, bottom: 2),
                       child: Text(
                         group.senderName!,
                         style: const TextStyle(
@@ -170,7 +187,8 @@ class MessageGroupBubbleView extends StatelessWidget {
                   // 消息气泡
                   ...List.generate(group.messages.length, (index) {
                     final message = group.messages[index];
-                    final position = _piecePosition(index, group.messages.length);
+                    final position =
+                        _piecePosition(index, group.messages.length);
                     return _GroupBubbleItem(
                       message: message,
                       position: position,
@@ -182,7 +200,8 @@ class MessageGroupBubbleView extends StatelessWidget {
                   // 时间戳（仅最后一条显示）
                   if (group.messages.last.createdAt != null)
                     Padding(
-                      padding: const EdgeInsets.only(top: 2, left: 4, right: 4),
+                      padding:
+                          const EdgeInsets.only(top: 2, left: 4, right: 4),
                       child: Text(
                         DateFormatter.formatMessageTime(
                             group.messages.last.createdAt!),
@@ -210,6 +229,157 @@ class MessageGroupBubbleView extends StatelessWidget {
   }
 }
 
+// ==================== 系统消息气泡 ====================
+// 对齐iOS TaskChatSystemMessageBubble
+
+class _SystemMessageBubble extends StatelessWidget {
+  const _SystemMessageBubble({
+    required this.message,
+    this.onImageTap,
+  });
+
+  final Message message;
+  final void Function(String imageUrl)? onImageTap;
+
+  /// 是否是退款相关系统消息
+  bool get _isRefundMessage {
+    final content = message.content.toLowerCase();
+    return content.contains('refund') ||
+        content.contains('退款') ||
+        content.contains('dispute') ||
+        content.contains('争议');
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 8),
+      child: Column(
+        children: [
+          // 时间戳
+          if (message.createdAt != null)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 4),
+              child: Text(
+                DateFormatter.formatMessageTime(message.createdAt!),
+                style: const TextStyle(
+                  fontSize: 10,
+                  color: AppColors.textTertiaryLight,
+                ),
+              ),
+            ),
+          // 系统消息卡片
+          if (_isRefundMessage)
+            _buildRefundCard(context)
+          else
+            _buildInfoCard(context),
+          // 附件图片（证据）
+          if (message.hasImageAttachments) ...[
+            const SizedBox(height: 6),
+            _buildAttachmentImages(),
+          ],
+        ],
+      ),
+    );
+  }
+
+  /// 退款/争议相关消息 - 特殊卡片样式（对齐iOS）
+  Widget _buildRefundCard(BuildContext context) {
+    final isCompleted = message.content.contains('completed') ||
+        message.content.contains('已完成') ||
+        message.content.contains('resolved') ||
+        message.content.contains('已解决');
+    final color = isCompleted ? AppColors.success : AppColors.warning;
+
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.withValues(alpha: 0.2)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            isCompleted ? Icons.check_circle : Icons.monetization_on,
+            size: 16,
+            color: color,
+          ),
+          const SizedBox(width: 8),
+          Flexible(
+            child: Text(
+              message.content,
+              style: TextStyle(
+                fontSize: 13,
+                color: color,
+                fontWeight: FontWeight.w500,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// 普通系统消息 - info样式
+  Widget _buildInfoCard(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: AppColors.textTertiaryLight.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(
+            Icons.info_outline,
+            size: 14,
+            color: AppColors.textSecondaryLight,
+          ),
+          const SizedBox(width: 6),
+          Flexible(
+            child: Text(
+              message.content,
+              style: const TextStyle(
+                fontSize: 13,
+                color: AppColors.textSecondaryLight,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// 附件图片（证据）
+  Widget _buildAttachmentImages() {
+    final imageUrls = message.allImageUrls;
+    return Wrap(
+      spacing: 6,
+      runSpacing: 6,
+      alignment: WrapAlignment.center,
+      children: imageUrls.map((url) {
+        return GestureDetector(
+          onTap: () => onImageTap?.call(url),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: AsyncImageView(
+              imageUrl: url,
+              width: 80,
+              height: 80,
+              fit: BoxFit.cover,
+            ),
+          ),
+        );
+      }).toList(),
+    );
+  }
+}
+
 /// 单条气泡项（支持分组圆角）
 class _GroupBubbleItem extends StatelessWidget {
   const _GroupBubbleItem({
@@ -230,20 +400,25 @@ class _GroupBubbleItem extends StatelessWidget {
     final borderRadius = _getBorderRadius(position, direction);
 
     // 图片消息
-    if (message.isImage && message.imageUrl != null) {
-      return Padding(
-        padding: const EdgeInsets.symmetric(vertical: 1),
-        child: GestureDetector(
-          onTap: () => onImageTap?.call(message.imageUrl!),
-          child: AsyncImageView(
-            imageUrl: message.imageUrl,
-            width: 200,
-            height: 200,
-            fit: BoxFit.cover,
-            borderRadius: borderRadius,
+    if (message.isImage) {
+      final imageUrls = message.allImageUrls;
+      final displayUrl =
+          imageUrls.isNotEmpty ? imageUrls.first : message.imageUrl;
+      if (displayUrl != null && displayUrl.isNotEmpty) {
+        return Padding(
+          padding: const EdgeInsets.symmetric(vertical: 1),
+          child: GestureDetector(
+            onTap: () => onImageTap?.call(displayUrl),
+            child: AsyncImageView(
+              imageUrl: displayUrl,
+              width: 200,
+              height: 200,
+              fit: BoxFit.cover,
+              borderRadius: borderRadius,
+            ),
           ),
-        ),
-      );
+        );
+      }
     }
 
     // 文本消息

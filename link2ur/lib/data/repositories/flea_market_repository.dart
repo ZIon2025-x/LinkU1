@@ -168,15 +168,17 @@ class FleaMarketRepository {
     return response.data!;
   }
 
-  /// 收藏/取消收藏商品
-  Future<void> toggleFavorite(String id) async {
-    final response = await _apiService.post(
+  /// 收藏/取消收藏商品，返回新的收藏状态
+  Future<bool> toggleFavorite(String id) async {
+    final response = await _apiService.post<Map<String, dynamic>>(
       ApiEndpoints.fleaMarketItemFavorite(id),
     );
 
     if (!response.isSuccess) {
       throw FleaMarketException(response.message ?? '操作失败');
     }
+
+    return response.data?['is_favorited'] as bool? ?? false;
   }
 
   /// 刷新商品（重新上架）

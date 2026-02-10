@@ -11,6 +11,7 @@ import '../../../core/widgets/loading_view.dart';
 import '../../../core/widgets/error_state_view.dart';
 import '../../../core/widgets/async_image_view.dart';
 import '../../../core/widgets/full_screen_image_view.dart';
+import '../../../core/widgets/custom_share_panel.dart';
 import '../../../core/utils/l10n_extension.dart';
 import '../../../core/utils/responsive.dart';
 import '../../../data/repositories/flea_market_repository.dart';
@@ -126,13 +127,29 @@ class _FleaMarketDetailContent extends StatelessWidget {
             icon: Icons.share_outlined,
             onTap: () {
               HapticFeedback.selectionClick();
+              final item = state.selectedItem!;
+              CustomSharePanel.show(
+                context,
+                title: item.title,
+                description: item.description ?? '',
+                url: 'https://link2ur.com/flea-market/${item.id}',
+              );
             },
           ),
+        // 收藏按钮 - 对标iOS heart button
         _buildCircleButton(
           context,
-          icon: Icons.favorite_border,
+          icon: state.isFavorited
+              ? Icons.favorite
+              : Icons.favorite_border,
+          color: state.isFavorited ? AppColors.error : Colors.white,
           onTap: () {
             HapticFeedback.selectionClick();
+            if (state.selectedItem != null) {
+              context.read<FleaMarketBloc>().add(
+                    FleaMarketToggleFavorite(state.selectedItem!.id),
+                  );
+            }
           },
         ),
       ],
@@ -143,6 +160,7 @@ class _FleaMarketDetailContent extends StatelessWidget {
     BuildContext context, {
     required IconData icon,
     required VoidCallback onTap,
+    Color? color,
   }) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 4),
@@ -155,7 +173,7 @@ class _FleaMarketDetailContent extends StatelessWidget {
             color: Colors.black.withValues(alpha: 0.3),
             shape: BoxShape.circle,
           ),
-          child: Icon(icon, size: 14, color: Colors.white),
+          child: Icon(icon, size: 14, color: color ?? Colors.white),
         ),
       ),
     );

@@ -19,7 +19,7 @@ import '../widgets/task_chat_action_menu.dart';
 
 /// 任务聊天页
 /// 参考iOS TaskChatView.swift
-/// 增强版本：支持消息分组、操作菜单、图片发送
+/// 修复：WebSocket过滤、发送/已读API、系统消息、字符限制、分页、滚动
 class TaskChatView extends StatefulWidget {
   const TaskChatView({
     super.key,
@@ -39,10 +39,16 @@ class _TaskChatViewState extends State<TaskChatView> {
   String? _currentUserId;
   bool _showActionMenu = false;
 
+  /// 字符限制 - 对齐iOS (500字符)
+  static const int _maxCharacters = 500;
+  static const int _showCounterThreshold = 400;
+
   @override
   void initState() {
     super.initState();
     _currentUserId = StorageService.instance.getUserId();
+    _scrollController.addListener(_onScroll);
+    _messageController.addListener(_onTextChanged);
   }
 
   @override
@@ -50,6 +56,29 @@ class _TaskChatViewState extends State<TaskChatView> {
     _messageController.dispose();
     _scrollController.dispose();
     super.dispose();
+  }
+
+  /// 滚动到顶部时加载更多 + 滚动到底部时自动标记已读
+  void _onScroll() {
+    if (!_scrollController.hasClients) return;
+
+    // 滚动到顶部 → 加载更多历史消息
+    if (_scrollController.position.pixels <=
+        _scrollController.position.minScrollExtent + 50) {
+      context.read<ChatBloc>().add(const ChatLoadMore());
+    }
+  }
+
+  void _onTextChanged() {
+    // 强制限制字符数
+    if (_messageController.text.length > _maxCharacters) {
+      _messageController.text =
+          _messageController.text.substring(0, _maxCharacters);
+      _messageController.selection = TextSelection.fromPosition(
+        TextPosition(offset: _maxCharacters),
+      );
+    }
+    setState(() {}); // 刷新字符计数器
   }
 
   void _sendMessage() {
@@ -61,6 +90,9 @@ class _TaskChatViewState extends State<TaskChatView> {
         );
     _messageController.clear();
     setState(() => _showActionMenu = false);
+
+    // 发送后滚动到底部
+    _scrollToBottomDelayed();
   }
 
   void _scrollToBottom() {
@@ -73,10 +105,16 @@ class _TaskChatViewState extends State<TaskChatView> {
     }
   }
 
+  void _scrollToBottomDelayed() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _scrollToBottom();
+    });
+  }
+
   Future<void> _pickImage() async {
     final image = await _imagePicker.pickImage(
       source: ImageSource.gallery,
-      imageQuality: 80,
+      imageQuality: 70,
       maxWidth: 1200,
     );
     if (image != null && mounted) {
@@ -84,11 +122,16 @@ class _TaskChatViewState extends State<TaskChatView> {
             ChatSendImage(filePath: image.path),
           );
       setState(() => _showActionMenu = false);
+      _scrollToBottomDelayed();
     }
   }
 
   void _toggleActionMenu() {
     setState(() => _showActionMenu = !_showActionMenu);
+    // 对齐iOS：展开操作菜单时关闭键盘
+    if (_showActionMenu) {
+      FocusScope.of(context).unfocus();
+    }
   }
 
   @override
@@ -100,10 +143,13 @@ class _TaskChatViewState extends State<TaskChatView> {
         ..add(ChatLoadMessages(userId: '', taskId: widget.taskId)),
       child: BlocConsumer<ChatBloc, ChatState>(
         listener: (context, state) {
-          if (state.status == ChatStatus.loaded) {
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              _scrollToBottom();
-            });
+          // 首次加载完成 → 滚动到底部
+          if (state.status == ChatStatus.loaded && state.page == 1) {
+            _scrollToBottomDelayed();
+          }
+          // 有新消息且靠近底部 → 自动滚动
+          if (state.messages.isNotEmpty && _isNearBottom()) {
+            _scrollToBottomDelayed();
           }
         },
         builder: (context, state) {
@@ -111,11 +157,32 @@ class _TaskChatViewState extends State<TaskChatView> {
             appBar: AppBar(
               title: Text(context.l10n.chatTaskTitle(widget.taskId)),
               actions: [
+                // 任务详情按钮
                 IconButton(
                   icon: const Icon(Icons.info_outline),
                   onPressed: () {
                     context.push('/tasks/${widget.taskId}');
                   },
+                ),
+                // 更多菜单 - 对齐iOS toolbar menu
+                PopupMenuButton<String>(
+                  onSelected: (value) {
+                    if (value == 'task_detail') {
+                      context.push('/tasks/${widget.taskId}');
+                    }
+                  },
+                  itemBuilder: (context) => [
+                    PopupMenuItem(
+                      value: 'task_detail',
+                      child: Row(
+                        children: [
+                          const Icon(Icons.assignment_outlined, size: 20),
+                          const SizedBox(width: 8),
+                          Text(context.l10n.chatViewDetail),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -127,27 +194,38 @@ class _TaskChatViewState extends State<TaskChatView> {
                 // 消息列表（使用分组）
                 Expanded(child: _buildGroupedMessageList(state)),
 
-                // 快捷操作
-                _buildQuickActions(),
+                // 任务关闭状态提示 - 对齐iOS closedTaskBar
+                if (state.isTaskClosed) _buildClosedTaskBar(context),
+
+                // 快捷操作（仅任务进行中显示）
+                if (!state.isTaskClosed) _buildQuickActions(),
 
                 // 操作菜单（可展开）
-                TaskChatActionMenu(
-                  isExpanded: _showActionMenu,
-                  onImagePicker: _pickImage,
-                  onTaskDetail: () {
-                    context.push('/tasks/${widget.taskId}');
-                  },
-                  onViewLocation: null,
-                ),
+                if (!state.isTaskClosed)
+                  TaskChatActionMenu(
+                    isExpanded: _showActionMenu,
+                    onImagePicker: _pickImage,
+                    onTaskDetail: () {
+                      context.push('/tasks/${widget.taskId}');
+                    },
+                    onViewLocation: null,
+                  ),
 
                 // 输入区域
-                _buildInputArea(state),
+                if (!state.isTaskClosed) _buildInputArea(state),
               ],
             ),
           );
         },
       ),
     );
+  }
+
+  bool _isNearBottom() {
+    if (!_scrollController.hasClients) return true;
+    final maxScroll = _scrollController.position.maxScrollExtent;
+    final currentScroll = _scrollController.position.pixels;
+    return maxScroll - currentScroll < 150;
   }
 
   Widget _buildTaskInfoCard(ChatState state) {
@@ -168,7 +246,8 @@ class _TaskChatViewState extends State<TaskChatView> {
               color: AppColors.primary.withValues(alpha: 0.15),
               borderRadius: AppRadius.allSmall,
             ),
-            child: const Icon(Icons.task_alt, color: AppColors.primary, size: 20),
+            child:
+                const Icon(Icons.task_alt, color: AppColors.primary, size: 20),
           ),
           AppSpacing.hMd,
           Expanded(
@@ -181,10 +260,14 @@ class _TaskChatViewState extends State<TaskChatView> {
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  context.l10n.chatInProgress,
-                  style: const TextStyle(
+                  state.isTaskClosed
+                      ? context.l10n.chatTaskClosed
+                      : context.l10n.chatInProgress,
+                  style: TextStyle(
                     fontSize: 12,
-                    color: AppColors.success,
+                    color: state.isTaskClosed
+                        ? AppColors.textTertiaryLight
+                        : AppColors.success,
                   ),
                 ),
               ],
@@ -195,6 +278,29 @@ class _TaskChatViewState extends State<TaskChatView> {
             onPressed: () {
               context.push('/tasks/${widget.taskId}');
             },
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// 任务已关闭提示栏 - 对齐iOS closedTaskStatusBar
+  Widget _buildClosedTaskBar(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      color: AppColors.textTertiaryLight.withValues(alpha: 0.1),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Icon(Icons.info_outline,
+              size: 16, color: AppColors.textTertiaryLight),
+          const SizedBox(width: 6),
+          Text(
+            context.l10n.chatTaskClosedHint,
+            style: const TextStyle(
+              fontSize: 13,
+              color: AppColors.textTertiaryLight,
+            ),
           ),
         ],
       ),
@@ -212,7 +318,8 @@ class _TaskChatViewState extends State<TaskChatView> {
               label: context.l10n.chatTaskCompleted,
               icon: Icons.check_circle_outline,
               onTap: () {
-                _messageController.text = context.l10n.chatTaskCompletedConfirm;
+                _messageController.text =
+                    context.l10n.chatTaskCompletedConfirm;
               },
             ),
             AppSpacing.hSm,
@@ -282,9 +389,17 @@ class _TaskChatViewState extends State<TaskChatView> {
     return ListView.builder(
       controller: _scrollController,
       padding: const EdgeInsets.symmetric(vertical: 12),
-      itemCount: groups.length,
+      itemCount: groups.length + (state.isLoadingMore ? 1 : 0),
       itemBuilder: (context, index) {
-        final group = groups[index];
+        // 加载更多指示器（顶部）
+        if (state.isLoadingMore && index == 0) {
+          return const Padding(
+            padding: EdgeInsets.all(8),
+            child: Center(child: LoadingIndicator(size: 20)),
+          );
+        }
+        final groupIndex = state.isLoadingMore ? index - 1 : index;
+        final group = groups[groupIndex];
         return MessageGroupBubbleView(
           group: group,
           onAvatarTap: () {
@@ -305,6 +420,9 @@ class _TaskChatViewState extends State<TaskChatView> {
   }
 
   Widget _buildInputArea(ChatState state) {
+    final charCount = _messageController.text.length;
+    final showCounter = charCount >= _showCounterThreshold;
+
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -318,57 +436,84 @@ class _TaskChatViewState extends State<TaskChatView> {
         ],
       ),
       child: SafeArea(
-        child: Row(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.end,
           children: [
-            // 展开/收起操作菜单
-            IconButton(
-              icon: AnimatedRotation(
-                turns: _showActionMenu ? 0.125 : 0,
-                duration: const Duration(milliseconds: 200),
-                child: const Icon(Icons.add_circle_outline),
-              ),
-              onPressed: _toggleActionMenu,
-              color: _showActionMenu
-                  ? AppColors.primary
-                  : AppColors.textSecondaryLight,
-            ),
-            Expanded(
-              child: TextField(
-                controller: _messageController,
-                enabled: !state.isSending,
-                maxLines: 4,
-                minLines: 1,
-                decoration: InputDecoration(
-                  hintText: context.l10n.chatInputHint,
-                  filled: true,
-                  fillColor: AppColors.skeletonBase,
-                  contentPadding:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                  border: OutlineInputBorder(
-                    borderRadius: AppRadius.allPill,
-                    borderSide: BorderSide.none,
+            Row(
+              children: [
+                // 展开/收起操作菜单
+                IconButton(
+                  icon: AnimatedRotation(
+                    turns: _showActionMenu ? 0.125 : 0,
+                    duration: const Duration(milliseconds: 200),
+                    child: const Icon(Icons.add_circle_outline),
+                  ),
+                  onPressed: _toggleActionMenu,
+                  color: _showActionMenu
+                      ? AppColors.primary
+                      : AppColors.textSecondaryLight,
+                ),
+                Expanded(
+                  child: TextField(
+                    controller: _messageController,
+                    enabled: !state.isSending,
+                    maxLines: 5,
+                    minLines: 1,
+                    maxLength: _maxCharacters,
+                    buildCounter: (context,
+                            {required currentLength,
+                            required isFocused,
+                            required maxLength}) =>
+                        null, // 自定义计数器位置
+                    decoration: InputDecoration(
+                      hintText: context.l10n.chatInputHint,
+                      filled: true,
+                      fillColor: AppColors.skeletonBase,
+                      contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 10),
+                      border: OutlineInputBorder(
+                        borderRadius: AppRadius.allPill,
+                        borderSide: BorderSide.none,
+                      ),
+                    ),
+                    textInputAction: TextInputAction.send,
+                    onSubmitted: (_) => _sendMessage(),
+                    onTap: () {
+                      if (_showActionMenu) {
+                        setState(() => _showActionMenu = false);
+                      }
+                    },
                   ),
                 ),
-                textInputAction: TextInputAction.send,
-                onSubmitted: (_) => _sendMessage(),
-                onTap: () {
-                  if (_showActionMenu) {
-                    setState(() => _showActionMenu = false);
-                  }
-                },
-              ),
+                AppSpacing.hSm,
+                if (state.isSending)
+                  const Padding(
+                    padding: EdgeInsets.all(8.0),
+                    child: LoadingIndicator(size: 24),
+                  )
+                else
+                  IconButton(
+                    icon: const Icon(Icons.send),
+                    onPressed: _messageController.text.trim().isEmpty
+                        ? null
+                        : _sendMessage,
+                    color: AppColors.primary,
+                  ),
+              ],
             ),
-            AppSpacing.hSm,
-            if (state.isSending)
-              const Padding(
-                padding: EdgeInsets.all(8.0),
-                child: LoadingIndicator(size: 24),
-              )
-            else
-              IconButton(
-                icon: const Icon(Icons.send),
-                onPressed: _sendMessage,
-                color: AppColors.primary,
+            // 字符计数器 - 对齐iOS (400+显示)
+            if (showCounter)
+              Padding(
+                padding: const EdgeInsets.only(top: 4, right: 8),
+                child: Text(
+                  '$charCount/$_maxCharacters',
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: charCount >= _maxCharacters
+                        ? AppColors.error
+                        : AppColors.textTertiaryLight,
+                  ),
+                ),
               ),
           ],
         ),

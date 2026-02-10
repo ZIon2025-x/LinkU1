@@ -118,6 +118,16 @@ class FleaMarketLoadPurchaseRequests extends FleaMarketEvent {
   List<Object?> get props => [itemId];
 }
 
+/// 收藏/取消收藏 - 对标iOS toggleFavorite
+class FleaMarketToggleFavorite extends FleaMarketEvent {
+  const FleaMarketToggleFavorite(this.itemId);
+
+  final String itemId;
+
+  @override
+  List<Object?> get props => [itemId];
+}
+
 class FleaMarketUploadImage extends FleaMarketEvent {
   const FleaMarketUploadImage({
     required this.imageBytes,
@@ -154,6 +164,8 @@ class FleaMarketState extends Equatable {
     this.uploadedImageUrl,
     this.purchaseRequests = const [],
     this.isLoadingPurchaseRequests = false,
+    this.isFavorited = false,
+    this.isTogglingFavorite = false,
   });
 
   final FleaMarketStatus status;
@@ -173,6 +185,8 @@ class FleaMarketState extends Equatable {
   final String? uploadedImageUrl;
   final List<PurchaseRequest> purchaseRequests;
   final bool isLoadingPurchaseRequests;
+  final bool isFavorited;
+  final bool isTogglingFavorite;
 
   bool get isLoading => status == FleaMarketStatus.loading;
   bool get isEmpty => items.isEmpty && status == FleaMarketStatus.loaded;
@@ -197,6 +211,8 @@ class FleaMarketState extends Equatable {
     String? uploadedImageUrl,
     List<PurchaseRequest>? purchaseRequests,
     bool? isLoadingPurchaseRequests,
+    bool? isFavorited,
+    bool? isTogglingFavorite,
   }) {
     return FleaMarketState(
       status: status ?? this.status,
@@ -216,6 +232,8 @@ class FleaMarketState extends Equatable {
       uploadedImageUrl: uploadedImageUrl,
       purchaseRequests: purchaseRequests ?? this.purchaseRequests,
       isLoadingPurchaseRequests: isLoadingPurchaseRequests ?? this.isLoadingPurchaseRequests,
+      isFavorited: isFavorited ?? this.isFavorited,
+      isTogglingFavorite: isTogglingFavorite ?? this.isTogglingFavorite,
     );
   }
 
@@ -236,6 +254,8 @@ class FleaMarketState extends Equatable {
         detailStatus,
         purchaseRequests,
         isLoadingPurchaseRequests,
+        isFavorited,
+        isTogglingFavorite,
       ];
 }
 
@@ -257,6 +277,7 @@ class FleaMarketBloc extends Bloc<FleaMarketEvent, FleaMarketState> {
     on<FleaMarketRefreshItem>(_onRefreshItem);
     on<FleaMarketLoadPurchaseRequests>(_onLoadPurchaseRequests);
     on<FleaMarketUploadImage>(_onUploadImage);
+    on<FleaMarketToggleFavorite>(_onToggleFavorite);
   }
 
   final FleaMarketRepository _fleaMarketRepository;
@@ -510,12 +531,31 @@ class FleaMarketBloc extends Bloc<FleaMarketEvent, FleaMarketState> {
         detailStatus: FleaMarketStatus.loaded,
         selectedItem: item,
       ));
+      // 对标iOS checkFavoriteStatus：从收藏列表判断是否已收藏
+      _checkFavoriteStatus(item.id, emit);
     } catch (e) {
       AppLogger.error('Failed to load flea market item detail', e);
       emit(state.copyWith(
         detailStatus: FleaMarketStatus.error,
         errorMessage: e.toString(),
       ));
+    }
+  }
+
+  /// 检查商品是否已收藏 - 对标iOS checkFavoriteStatus
+  Future<void> _checkFavoriteStatus(
+    String itemId,
+    Emitter<FleaMarketState> emit,
+  ) async {
+    try {
+      final favResponse = await _fleaMarketRepository.getFavoriteItems(
+        page: 1,
+        pageSize: 100,
+      );
+      final favoriteIds = favResponse.items.map((e) => e.id).toSet();
+      emit(state.copyWith(isFavorited: favoriteIds.contains(itemId)));
+    } catch (e) {
+      AppLogger.error('Failed to check favorite status', e);
     }
   }
 
@@ -595,6 +635,26 @@ class FleaMarketBloc extends Bloc<FleaMarketEvent, FleaMarketState> {
         isUploadingImage: false,
         errorMessage: e.toString(),
       ));
+    }
+  }
+
+  /// 收藏/取消收藏 - 对标iOS toggleFavorite
+  Future<void> _onToggleFavorite(
+    FleaMarketToggleFavorite event,
+    Emitter<FleaMarketState> emit,
+  ) async {
+    if (state.isTogglingFavorite) return;
+    emit(state.copyWith(isTogglingFavorite: true));
+
+    try {
+      final isFavorited = await _fleaMarketRepository.toggleFavorite(event.itemId);
+      emit(state.copyWith(
+        isTogglingFavorite: false,
+        isFavorited: isFavorited,
+      ));
+    } catch (e) {
+      AppLogger.error('Failed to toggle favorite', e);
+      emit(state.copyWith(isTogglingFavorite: false));
     }
   }
 }
