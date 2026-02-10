@@ -383,10 +383,16 @@ async def get_experts_list(
 
 @task_expert_router.get("/{expert_id}")
 async def get_expert(
+    request: Request,
     expert_id: str,
     db: AsyncSession = Depends(get_async_db_dependency),
 ):
-    """获取任务达人信息（优先从 FeaturedTaskExpert 获取，与列表接口保持一致）"""
+    """获取任务达人信息（优先从 FeaturedTaskExpert 获取，与列表接口保持一致）
+    
+    响应格式与列表接口一致，包含完整的双语字段（_en/_zh）。
+    """
+    user_lang = _get_language_from_request(request)
+    
     # 优先从 FeaturedTaskExpert 获取数据（与列表接口保持一致）
     featured_expert = await db.execute(
         select(models.FeaturedTaskExpert).where(models.FeaturedTaskExpert.id == expert_id)
@@ -411,28 +417,25 @@ async def get_expert(
     # 优先使用 FeaturedTaskExpert 的数据（与列表接口保持一致）
     if featured_expert:
         import json
+        # 解析 JSON 字段
+        ea = json.loads(featured_expert.expertise_areas) if featured_expert.expertise_areas else []
+        ea_en = json.loads(featured_expert.expertise_areas_en) if featured_expert.expertise_areas_en else []
+        fs = json.loads(featured_expert.featured_skills) if featured_expert.featured_skills else []
+        fs_en = json.loads(featured_expert.featured_skills_en) if featured_expert.featured_skills_en else []
+        ach = json.loads(featured_expert.achievements) if featured_expert.achievements else []
+        ach_en = json.loads(featured_expert.achievements_en) if featured_expert.achievements_en else []
+        
         return {
+            # 基础字段（与 React 前端一致）
             "id": featured_expert.id,
-            "expert_name": featured_expert.name,
-            "name": featured_expert.name,  # 兼容前端
-            "bio": featured_expert.bio,
-            "bio_en": featured_expert.bio_en or "",
+            "name": featured_expert.name,
             "avatar": featured_expert.avatar or "",
             "user_level": featured_expert.user_level,
             "avg_rating": featured_expert.avg_rating or 0.0,
-            "rating": featured_expert.avg_rating or 0.0,  # 兼容前端
             "completed_tasks": featured_expert.completed_tasks or 0,
             "total_tasks": featured_expert.total_tasks or 0,
-            "completion_rate": round(featured_expert.completion_rate or 0.0, 1),  # 从数据库读取，保留1位小数
-            "expertise_areas": json.loads(featured_expert.expertise_areas) if featured_expert.expertise_areas else [],
-            "expertise_areas_en": json.loads(featured_expert.expertise_areas_en) if featured_expert.expertise_areas_en else [],
-            "featured_skills": json.loads(featured_expert.featured_skills) if featured_expert.featured_skills else [],
-            "featured_skills_en": json.loads(featured_expert.featured_skills_en) if featured_expert.featured_skills_en else [],
-            "achievements": json.loads(featured_expert.achievements) if featured_expert.achievements else [],
-            "achievements_en": json.loads(featured_expert.achievements_en) if featured_expert.achievements_en else [],
+            "completion_rate": round(featured_expert.completion_rate or 0.0, 1),
             "is_verified": bool(featured_expert.is_verified),
-            "response_time": featured_expert.response_time,
-            "response_time_en": featured_expert.response_time_en or "",
             "success_rate": featured_expert.success_rate or 0.0,
             "location": featured_expert.location or "Online",
             "category": featured_expert.category,
@@ -440,24 +443,49 @@ async def get_expert(
             "total_services": expert.total_services if expert else 0,
             "created_at": format_iso_utc(featured_expert.created_at) if featured_expert.created_at else None,
             "updated_at": format_iso_utc(featured_expert.updated_at) if featured_expert.updated_at else None,
+            # 双语：bio
+            "bio": featured_expert.bio_en if user_lang == 'en' and featured_expert.bio_en else (featured_expert.bio or ""),
+            "bio_en": featured_expert.bio_en or "",
+            "bio_zh": featured_expert.bio or "",
+            # 双语：expertise_areas
+            "expertise_areas": ea_en if user_lang == 'en' and ea_en else ea,
+            "expertise_areas_en": ea_en,
+            "specialties_zh": ea,
+            # 双语：featured_skills
+            "featured_skills": fs_en if user_lang == 'en' and fs_en else fs,
+            "featured_skills_en": fs_en,
+            "featured_skills_zh": fs,
+            # 双语：achievements
+            "achievements": ach_en if user_lang == 'en' and ach_en else ach,
+            "achievements_en": ach_en,
+            "achievements_zh": ach,
+            # 双语：response_time
+            "response_time": featured_expert.response_time_en if user_lang == 'en' and featured_expert.response_time_en else (featured_expert.response_time or ""),
+            "response_time_en": featured_expert.response_time_en or "",
+            "response_time_zh": featured_expert.response_time or "",
         }
     
     # 如果没有 FeaturedTaskExpert，使用 TaskExpert 的基础数据
     if expert:
         return {
             "id": expert.id,
-            "expert_name": expert.expert_name or (user.name if user else ""),
-            "name": expert.expert_name or (user.name if user else ""),  # 兼容前端
-            "bio": expert.bio,
+            "name": expert.expert_name or (user.name if user else ""),
             "avatar": expert.avatar or (user.avatar if user else "") or "",
-            "status": expert.status,
-            "rating": float(expert.rating) if expert.rating else 0.0,
+            "user_level": "normal",
             "avg_rating": float(expert.rating) if expert.rating else 0.0,
-            "total_services": expert.total_services,
             "completed_tasks": expert.completed_tasks or 0,
-            "total_tasks": 0,  # TaskExpert 没有 total_tasks 字段
-            "completion_rate": 0.0,  # TaskExpert 没有 completion_rate 字段
+            "total_tasks": 0,
+            "completion_rate": 0.0,
+            "is_verified": False,
+            "success_rate": 0.0,
             "location": user.residence_city if user and hasattr(user, 'residence_city') and user.residence_city else "Online",
+            "status": expert.status,
+            "total_services": expert.total_services,
+            "bio": expert.bio or "",
+            "expertise_areas": [],
+            "featured_skills": [],
+            "achievements": [],
+            "response_time": "",
             "created_at": format_iso_utc(expert.created_at),
             "updated_at": format_iso_utc(expert.updated_at) if expert.updated_at else None,
         }

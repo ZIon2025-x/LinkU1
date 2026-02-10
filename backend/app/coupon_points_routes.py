@@ -1400,9 +1400,35 @@ async def create_wechat_checkout_session(
     if task.is_paid:
         raise HTTPException(status_code=400, detail="任务已支付")
     
-    # 验证任务必须有接受人
+    # 验证任务必须有接受人 或 有待支付的 PaymentIntent（新流程：批准申请后 taker_id 尚未设置）
+    # 变量用于后续获取 taker 信息（当 taker_id 为空时从 PaymentIntent metadata 获取）
+    taker_id_from_metadata = None
+    taker_stripe_account_from_metadata = None
+    
     if not task.taker_id:
-        raise HTTPException(status_code=400, detail="任务尚未被接受，无法支付")
+        # 新流程：批准申请后，任务保持 open 状态，taker_id 未设置，但有 payment_intent_id
+        if task.payment_intent_id:
+            try:
+                pi = stripe.PaymentIntent.retrieve(task.payment_intent_id)
+                pi_metadata = pi.get("metadata", {})
+                taker_id_from_metadata = pi_metadata.get("taker_id")
+                taker_stripe_account_from_metadata = pi_metadata.get("taker_stripe_account_id")
+                
+                if not taker_id_from_metadata or not taker_stripe_account_from_metadata:
+                    logger.warning(f"PaymentIntent {task.payment_intent_id} 缺少 taker 信息: taker_id={taker_id_from_metadata}, stripe_account={taker_stripe_account_from_metadata}")
+                    raise HTTPException(status_code=400, detail="支付信息不完整，请重新批准申请")
+                
+                logger.info(f"微信支付：任务 {task_id} 状态为 {task.status}，从 PaymentIntent metadata 获取 taker_id={taker_id_from_metadata}")
+            except HTTPException:
+                raise
+            except Exception as e:
+                logger.error(f"微信支付：获取 PaymentIntent {task.payment_intent_id} 失败: {e}")
+                raise HTTPException(status_code=400, detail="无法获取支付信息，请稍后重试")
+        else:
+            raise HTTPException(status_code=400, detail="任务尚未被接受，无法支付")
+    
+    # 计算 effective_taker_id（优先使用 task.taker_id，其次从 PaymentIntent metadata 获取）
+    effective_taker_id = task.taker_id or (int(taker_id_from_metadata) if taker_id_from_metadata else None)
     
     # 计算金额（与任务支付逻辑一致：优先使用最终成交价，其次原始标价）
     if task.agreed_reward is not None:
@@ -1511,8 +1537,11 @@ async def create_wechat_checkout_session(
             task.payment_intent_id = None
             taker_amount = task_amount - (application_fee_pence / 100.0)
             task.escrow_amount = max(0.0, taker_amount)
-            if task.status == "pending_payment":
+            if task.status in ("pending_payment", "open"):
                 task.status = "in_progress"
+            # 新流程：如果 taker_id 尚未设置，从 metadata 设置
+            if not task.taker_id and effective_taker_id:
+                task.taker_id = effective_taker_id
             
             payment_history = models.PaymentHistory(
                 order_no=models.PaymentHistory.generate_order_no(),
@@ -1531,7 +1560,7 @@ async def create_wechat_checkout_session(
                 coupon_usage_log_id=coupon_usage_log.id if coupon_usage_log else None,
                 extra_metadata={
                     "task_title": task.title,
-                    "taker_id": str(task.taker_id),
+                    "taker_id": str(effective_taker_id),
                     "payment_type": "wechat_checkout_coupon_full"
                 }
             )
@@ -1550,8 +1579,20 @@ async def create_wechat_checkout_session(
             raise HTTPException(status_code=500, detail="支付处理失败，请稍后重试")
     
     # 获取任务接受人信息
-    taker = db.query(models.User).filter(models.User.id == task.taker_id).first()
-    if not taker or not taker.stripe_account_id:
+    # effective_taker_id 已在前面计算
+    effective_taker_stripe_account_id = taker_stripe_account_from_metadata  # 仅作为 fallback
+    
+    taker = None
+    if effective_taker_id:
+        taker = db.query(models.User).filter(models.User.id == effective_taker_id).first()
+    
+    if taker and taker.stripe_account_id:
+        # 正常路径：从数据库获取 taker 的 stripe_account_id
+        effective_taker_stripe_account_id = taker.stripe_account_id
+    elif effective_taker_stripe_account_id:
+        # Fallback：使用 PaymentIntent metadata 中的 stripe_account_id
+        logger.info(f"微信支付：使用 PaymentIntent metadata 中的 stripe_account_id={effective_taker_stripe_account_id}")
+    else:
         raise HTTPException(
             status_code=400,
             detail="任务接受人尚未设置 Stripe Connect 收款账户，无法进行支付"
@@ -1610,8 +1651,8 @@ async def create_wechat_checkout_session(
             "metadata": {
                 'task_id': str(task_id),
                 'user_id': str(current_user.id),
-                'taker_id': str(task.taker_id),
-                'taker_stripe_account_id': taker.stripe_account_id,
+                'taker_id': str(effective_taker_id),
+                'taker_stripe_account_id': effective_taker_stripe_account_id,
                 'task_amount': str(task_amount_pence),
                 'coupon_usage_log_id': str(coupon_usage_log.id) if coupon_usage_log else '',
                 'coupon_discount': str(coupon_discount) if coupon_discount > 0 else '',
@@ -1651,7 +1692,7 @@ async def create_wechat_checkout_session(
             coupon_usage_log_id=coupon_usage_log.id if coupon_usage_log else None,
             extra_metadata={
                 "task_title": task.title,
-                "taker_id": str(task.taker_id),
+                "taker_id": str(effective_taker_id),
                 "checkout_session_id": session.id,
                 "payment_type": "wechat_checkout"
             }

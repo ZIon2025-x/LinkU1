@@ -93,17 +93,29 @@ class TaskExpertRepository {
   }
 
   /// 获取达人服务列表
+  /// 后端实际返回: { "expert_id": ..., "expert_name": ..., "services": [...] }
   Future<List<TaskExpertService>> getExpertServices(String expertId) async {
     final cacheKey = '${CacheManager.prefixExpertDetail}${expertId}_services';
 
-    final cached = _cache.get<List<dynamic>>(cacheKey);
+    final cached = _cache.get<dynamic>(cacheKey);
     if (cached != null) {
-      return cached
-          .map((e) => TaskExpertService.fromJson(e as Map<String, dynamic>))
-          .toList();
+      final List<dynamic> items;
+      if (cached is Map<String, dynamic>) {
+        items = cached['services'] as List<dynamic>? ?? [];
+      } else if (cached is List) {
+        items = cached;
+      } else {
+        items = [];
+      }
+      if (items.isNotEmpty) {
+        return items
+            .map(
+                (e) => TaskExpertService.fromJson(e as Map<String, dynamic>))
+            .toList();
+      }
     }
 
-    final response = await _apiService.get<List<dynamic>>(
+    final response = await _apiService.get<dynamic>(
       ApiEndpoints.taskExpertServices(expertId),
     );
 
@@ -113,7 +125,18 @@ class TaskExpertRepository {
 
     await _cache.set(cacheKey, response.data!, ttl: CacheManager.longTTL);
 
-    return response.data!
+    // 后端返回 {expert_id, expert_name, services: [...]}
+    final List<dynamic> serviceItems;
+    if (response.data is Map<String, dynamic>) {
+      serviceItems =
+          (response.data as Map<String, dynamic>)['services'] as List<dynamic>? ?? [];
+    } else if (response.data is List) {
+      serviceItems = response.data as List<dynamic>;
+    } else {
+      serviceItems = [];
+    }
+
+    return serviceItems
         .map(
             (e) => TaskExpertService.fromJson(e as Map<String, dynamic>))
         .toList();
@@ -362,8 +385,9 @@ class TaskExpertRepository {
   }
 
   /// 获取服务时间段
+  /// 后端实际返回: 直接数组 List[ServiceTimeSlotOut]
   Future<List<Map<String, dynamic>>> getServiceTimeSlots(int serviceId) async {
-    final response = await _apiService.get<Map<String, dynamic>>(
+    final response = await _apiService.get<dynamic>(
       ApiEndpoints.serviceTimeSlots(serviceId),
     );
 
@@ -371,13 +395,25 @@ class TaskExpertRepository {
       throw TaskExpertException(response.message ?? '获取时间段失败');
     }
 
-    final items = response.data!['time_slots'] as List<dynamic>? ?? [];
+    // 后端直接返回数组，不是 {time_slots: [...]}
+    final List<dynamic> items;
+    if (response.data is List) {
+      items = response.data as List<dynamic>;
+    } else if (response.data is Map<String, dynamic>) {
+      // 兼容可能的包装格式
+      items = (response.data as Map<String, dynamic>)['time_slots']
+              as List<dynamic>? ??
+          [];
+    } else {
+      items = [];
+    }
     return items.map((e) => e as Map<String, dynamic>).toList();
   }
 
   /// 获取我的服务时间段（达人管理）
+  /// 后端实际返回: 直接数组 List[ServiceTimeSlotOut]
   Future<List<Map<String, dynamic>>> getMyServiceTimeSlots(int serviceId) async {
-    final response = await _apiService.get<Map<String, dynamic>>(
+    final response = await _apiService.get<dynamic>(
       ApiEndpoints.myServiceTimeSlots(serviceId),
     );
 
@@ -385,7 +421,18 @@ class TaskExpertRepository {
       throw TaskExpertException(response.message ?? '获取时间段失败');
     }
 
-    final items = response.data!['time_slots'] as List<dynamic>? ?? [];
+    // 后端直接返回数组，不是 {time_slots: [...]}
+    final List<dynamic> items;
+    if (response.data is List) {
+      items = response.data as List<dynamic>;
+    } else if (response.data is Map<String, dynamic>) {
+      // 兼容可能的包装格式
+      items = (response.data as Map<String, dynamic>)['time_slots']
+              as List<dynamic>? ??
+          [];
+    } else {
+      items = [];
+    }
     return items.map((e) => e as Map<String, dynamic>).toList();
   }
 

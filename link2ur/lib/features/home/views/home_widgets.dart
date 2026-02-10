@@ -1390,11 +1390,12 @@ class _ExpertCard extends StatelessWidget {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
-                  // 简介
-                  if (expert.bio != null && expert.bio!.isNotEmpty) ...[
+                  // 简介（双语）
+                  if (expert.displayBio != null &&
+                      expert.displayBio!.isNotEmpty) ...[
                     const SizedBox(height: 4),
                     Text(
-                      expert.bio!,
+                      expert.displayBio!,
                       style: AppTypography.caption.copyWith(
                         color: isDark
                             ? AppColors.textSecondaryDark
