@@ -20,7 +20,7 @@ import '../widgets/task_chat_action_menu.dart';
 /// 任务聊天页
 /// 参考iOS TaskChatView.swift
 /// 修复：WebSocket过滤、发送/已读API、系统消息、字符限制、分页、滚动
-class TaskChatView extends StatefulWidget {
+class TaskChatView extends StatelessWidget {
   const TaskChatView({
     super.key,
     required this.taskId,
@@ -29,10 +29,28 @@ class TaskChatView extends StatefulWidget {
   final int taskId;
 
   @override
-  State<TaskChatView> createState() => _TaskChatViewState();
+  Widget build(BuildContext context) {
+    final messageRepository = context.read<MessageRepository>();
+
+    return BlocProvider(
+      create: (_) => ChatBloc(messageRepository: messageRepository)
+        ..add(ChatLoadMessages(userId: '', taskId: taskId)),
+      child: _TaskChatContent(taskId: taskId),
+    );
+  }
 }
 
-class _TaskChatViewState extends State<TaskChatView> {
+/// 任务聊天内容（在 BlocProvider 内部，context 可访问 ChatBloc）
+class _TaskChatContent extends StatefulWidget {
+  const _TaskChatContent({required this.taskId});
+
+  final int taskId;
+
+  @override
+  State<_TaskChatContent> createState() => _TaskChatContentState();
+}
+
+class _TaskChatContentState extends State<_TaskChatContent> {
   final _messageController = TextEditingController();
   final _scrollController = ScrollController();
   final _imagePicker = ImagePicker();
@@ -75,7 +93,7 @@ class _TaskChatViewState extends State<TaskChatView> {
       _messageController.text =
           _messageController.text.substring(0, _maxCharacters);
       _messageController.selection = TextSelection.fromPosition(
-        TextPosition(offset: _maxCharacters),
+        const TextPosition(offset: _maxCharacters),
       );
     }
     setState(() {}); // 刷新字符计数器
@@ -136,88 +154,82 @@ class _TaskChatViewState extends State<TaskChatView> {
 
   @override
   Widget build(BuildContext context) {
-    final messageRepository = context.read<MessageRepository>();
+    return BlocConsumer<ChatBloc, ChatState>(
+      listener: (context, state) {
+        // 首次加载完成 → 滚动到底部
+        if (state.status == ChatStatus.loaded && state.page == 1) {
+          _scrollToBottomDelayed();
+        }
+        // 有新消息且靠近底部 → 自动滚动
+        if (state.messages.isNotEmpty && _isNearBottom()) {
+          _scrollToBottomDelayed();
+        }
+      },
+      builder: (context, state) {
+        return Scaffold(
+          appBar: AppBar(
+            title: Text(context.l10n.chatTaskTitle(widget.taskId)),
+            actions: [
+              // 任务详情按钮
+              IconButton(
+                icon: const Icon(Icons.info_outline),
+                onPressed: () {
+                  context.push('/tasks/${widget.taskId}');
+                },
+              ),
+              // 更多菜单 - 对齐iOS toolbar menu
+              PopupMenuButton<String>(
+                onSelected: (value) {
+                  if (value == 'task_detail') {
+                    context.push('/tasks/${widget.taskId}');
+                  }
+                },
+                itemBuilder: (context) => [
+                  PopupMenuItem(
+                    value: 'task_detail',
+                    child: Row(
+                      children: [
+                        const Icon(Icons.assignment_outlined, size: 20),
+                        const SizedBox(width: 8),
+                        Text(context.l10n.chatViewDetail),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+          body: Column(
+            children: [
+              // 任务信息卡片
+              _buildTaskInfoCard(state),
 
-    return BlocProvider(
-      create: (context) => ChatBloc(messageRepository: messageRepository)
-        ..add(ChatLoadMessages(userId: '', taskId: widget.taskId)),
-      child: BlocConsumer<ChatBloc, ChatState>(
-        listener: (context, state) {
-          // 首次加载完成 → 滚动到底部
-          if (state.status == ChatStatus.loaded && state.page == 1) {
-            _scrollToBottomDelayed();
-          }
-          // 有新消息且靠近底部 → 自动滚动
-          if (state.messages.isNotEmpty && _isNearBottom()) {
-            _scrollToBottomDelayed();
-          }
-        },
-        builder: (context, state) {
-          return Scaffold(
-            appBar: AppBar(
-              title: Text(context.l10n.chatTaskTitle(widget.taskId)),
-              actions: [
-                // 任务详情按钮
-                IconButton(
-                  icon: const Icon(Icons.info_outline),
-                  onPressed: () {
+              // 消息列表（使用分组）
+              Expanded(child: _buildGroupedMessageList(state)),
+
+              // 任务关闭状态提示 - 对齐iOS closedTaskBar
+              if (state.isTaskClosed) _buildClosedTaskBar(context),
+
+              // 快捷操作（仅任务进行中显示）
+              if (!state.isTaskClosed) _buildQuickActions(),
+
+              // 操作菜单（可展开）
+              if (!state.isTaskClosed)
+                TaskChatActionMenu(
+                  isExpanded: _showActionMenu,
+                  onImagePicker: _pickImage,
+                  onTaskDetail: () {
                     context.push('/tasks/${widget.taskId}');
                   },
+                  onViewLocation: null,
                 ),
-                // 更多菜单 - 对齐iOS toolbar menu
-                PopupMenuButton<String>(
-                  onSelected: (value) {
-                    if (value == 'task_detail') {
-                      context.push('/tasks/${widget.taskId}');
-                    }
-                  },
-                  itemBuilder: (context) => [
-                    PopupMenuItem(
-                      value: 'task_detail',
-                      child: Row(
-                        children: [
-                          const Icon(Icons.assignment_outlined, size: 20),
-                          const SizedBox(width: 8),
-                          Text(context.l10n.chatViewDetail),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-            body: Column(
-              children: [
-                // 任务信息卡片
-                _buildTaskInfoCard(state),
 
-                // 消息列表（使用分组）
-                Expanded(child: _buildGroupedMessageList(state)),
-
-                // 任务关闭状态提示 - 对齐iOS closedTaskBar
-                if (state.isTaskClosed) _buildClosedTaskBar(context),
-
-                // 快捷操作（仅任务进行中显示）
-                if (!state.isTaskClosed) _buildQuickActions(),
-
-                // 操作菜单（可展开）
-                if (!state.isTaskClosed)
-                  TaskChatActionMenu(
-                    isExpanded: _showActionMenu,
-                    onImagePicker: _pickImage,
-                    onTaskDetail: () {
-                      context.push('/tasks/${widget.taskId}');
-                    },
-                    onViewLocation: null,
-                  ),
-
-                // 输入区域
-                if (!state.isTaskClosed) _buildInputArea(state),
-              ],
-            ),
-          );
-        },
-      ),
+              // 输入区域
+              if (!state.isTaskClosed) _buildInputArea(state),
+            ],
+          ),
+        );
+      },
     );
   }
 

@@ -1,10 +1,10 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/constants/app_assets.dart';
+import '../../../core/utils/haptic_feedback.dart';
 import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_typography.dart';
@@ -142,7 +142,7 @@ class _LoginViewState extends State<LoginView>
 
   void _onMethodChanged(LoginMethod method) {
     if (method == _loginMethod) return;
-    HapticFeedback.selectionClick();
+    AppHaptics.selection();
     setState(() {
       _loginMethod = method;
       _emailController.clear();

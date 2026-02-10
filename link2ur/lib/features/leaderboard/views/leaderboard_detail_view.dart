@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/design/app_colors.dart';
+import '../../../core/utils/haptic_feedback.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_typography.dart';
 import '../../../core/design/app_radius.dart';
@@ -14,6 +14,8 @@ import '../../../core/widgets/error_state_view.dart';
 import '../../../core/widgets/empty_state_view.dart';
 import '../../../core/widgets/async_image_view.dart';
 import '../../../core/widgets/custom_share_panel.dart';
+import '../../../core/widgets/vote_comparison_bar.dart';
+import '../../../core/widgets/gradient_text.dart';
 import '../../../data/repositories/leaderboard_repository.dart';
 import '../../../data/models/leaderboard.dart';
 import '../bloc/leaderboard_bloc.dart';
@@ -146,7 +148,7 @@ class _LeaderboardDetailContent extends StatelessWidget {
   Widget _buildBody(BuildContext context, LeaderboardState state) {
     if (state.status == LeaderboardStatus.loading &&
         state.selectedLeaderboard == null) {
-      return const SkeletonDetail();
+      return const SkeletonLeaderboardDetail();
     }
 
     if (state.status == LeaderboardStatus.error &&
@@ -196,6 +198,60 @@ class _LeaderboardDetailContent extends StatelessWidget {
                         ? AppColors.textSecondaryDark
                         : AppColors.textSecondaryLight,
                     height: 1.5,
+                  ),
+                ),
+              ),
+            ),
+
+          // 排行榜规则
+          if (lb.rules != null && lb.rules!.isNotEmpty)
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(
+                    AppSpacing.md, AppSpacing.md, AppSpacing.md, 0),
+                child: Container(
+                  padding: const EdgeInsets.all(AppSpacing.md),
+                  decoration: BoxDecoration(
+                    color: isDark
+                        ? AppColors.primary.withValues(alpha: 0.08)
+                        : AppColors.primary.withValues(alpha: 0.04),
+                    borderRadius: BorderRadius.circular(AppRadius.medium),
+                    border: Border.all(
+                      color: AppColors.primary.withValues(alpha: 0.15),
+                      width: 0.5,
+                    ),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.rule_rounded,
+                            size: 16,
+                            color: AppColors.primary.withValues(alpha: 0.8),
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            context.l10n.leaderboardRules,
+                            style: AppTypography.caption.copyWith(
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.primary,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        lb.rules!,
+                        style: AppTypography.caption.copyWith(
+                          color: isDark
+                              ? AppColors.textSecondaryDark
+                              : AppColors.textSecondaryLight,
+                          height: 1.6,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ),
@@ -285,7 +341,7 @@ class _SortFilterRow extends StatelessWidget {
             padding: const EdgeInsets.only(right: 8),
             child: GestureDetector(
               onTap: () {
-                HapticFeedback.selectionClick();
+                AppHaptics.selection();
                 context.read<LeaderboardBloc>().add(
                       LeaderboardSortChanged(entry.$1,
                           leaderboardId: leaderboardId),
@@ -601,50 +657,30 @@ class _RankItemCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  item.name,
-                  style: AppTypography.bodyBold.copyWith(
-                    color: isDark
-                        ? AppColors.textPrimaryDark
-                        : AppColors.textPrimaryLight,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 4),
-                Row(
-                  children: [
-                    const Icon(Icons.thumb_up,
-                        size: 12, color: AppColors.success),
-                    const SizedBox(width: 3),
-                    Text(
-                      '${item.upvotes}',
-                      style: AppTypography.caption
-                          .copyWith(color: AppColors.success),
-                    ),
-                    const SizedBox(width: 8),
-                    const Icon(Icons.thumb_down,
-                        size: 12, color: AppColors.error),
-                    const SizedBox(width: 3),
-                    Text(
-                      '${item.downvotes}',
-                      style: AppTypography.caption
-                          .copyWith(color: AppColors.error),
-                    ),
-                    const SizedBox(width: 8),
-                    Text('·',
-                        style: AppTypography.caption
-                            .copyWith(color: AppColors.textTertiaryLight)),
-                    const SizedBox(width: 4),
-                    Text(
-                      context.l10n
-                          .leaderboardNetVotesCount(item.netVotes),
-                      style: AppTypography.caption.copyWith(
-                        color: AppColors.textSecondaryLight,
-                        fontWeight: FontWeight.w500,
+                isTop3
+                    ? GradientText.medal(
+                        text: item.name,
+                        style: AppTypography.bodyBold,
+                        rank: rank,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      )
+                    : Text(
+                        item.name,
+                        style: AppTypography.bodyBold.copyWith(
+                          color: isDark
+                              ? AppColors.textPrimaryDark
+                              : AppColors.textPrimaryLight,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
-                    ),
-                  ],
+                const SizedBox(height: 6),
+                VoteComparisonBar(
+                  upvotes: item.upvotes,
+                  downvotes: item.downvotes,
+                  height: 5,
+                  showLabels: true,
                 ),
               ],
             ),
@@ -658,7 +694,7 @@ class _RankItemCard extends StatelessWidget {
                 isActive: item.hasUpvoted,
                 color: AppColors.success,
                 onTap: () {
-                  HapticFeedback.selectionClick();
+                  AppHaptics.selection();
                   context.read<LeaderboardBloc>().add(
                         LeaderboardVoteItem(item.id, voteType: 'upvote'),
                       );
@@ -670,7 +706,7 @@ class _RankItemCard extends StatelessWidget {
                 isActive: item.hasDownvoted,
                 color: AppColors.error,
                 onTap: () {
-                  HapticFeedback.selectionClick();
+                  AppHaptics.selection();
                   context.read<LeaderboardBloc>().add(
                         LeaderboardVoteItem(item.id, voteType: 'downvote'),
                       );

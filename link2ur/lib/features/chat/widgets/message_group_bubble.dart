@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../../core/design/app_colors.dart';
+import '../../../core/utils/haptic_feedback.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/utils/date_formatter.dart';
 import '../../../core/utils/l10n_extension.dart';
@@ -380,8 +381,11 @@ class _SystemMessageBubble extends StatelessWidget {
   }
 }
 
-/// 单条气泡项（支持分组圆角）
-class _GroupBubbleItem extends StatelessWidget {
+/// 全局唯一选中消息 — 保证同一时刻只有一条消息处于选中态
+final ValueNotifier<int?> _selectedMessageId = ValueNotifier<int?>(null);
+
+/// 单条气泡项（支持分组圆角 + 长按反馈 + 内联操作栏）
+class _GroupBubbleItem extends StatefulWidget {
   const _GroupBubbleItem({
     required this.message,
     required this.position,
@@ -395,26 +399,121 @@ class _GroupBubbleItem extends StatelessWidget {
   final void Function(String imageUrl)? onImageTap;
 
   @override
+  State<_GroupBubbleItem> createState() => _GroupBubbleItemState();
+}
+
+class _GroupBubbleItemState extends State<_GroupBubbleItem>
+    with SingleTickerProviderStateMixin {
+  bool _isSelected = false;
+
+  late final AnimationController _scaleController;
+  late final Animation<double> _scaleAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _scaleController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 150),
+      reverseDuration: const Duration(milliseconds: 250),
+    );
+    _scaleAnimation = Tween<double>(begin: 1.0, end: 0.92).animate(
+      CurvedAnimation(
+        parent: _scaleController,
+        curve: Curves.easeInOut,
+        reverseCurve: Curves.elasticOut,
+      ),
+    );
+    _selectedMessageId.addListener(_onGlobalSelectionChanged);
+  }
+
+  @override
+  void dispose() {
+    _selectedMessageId.removeListener(_onGlobalSelectionChanged);
+    _scaleController.dispose();
+    super.dispose();
+  }
+
+  /// 监听全局选中变化 — 当其他消息被选中时自动取消自己
+  void _onGlobalSelectionChanged() {
+    final myId = widget.message.id;
+    if (_isSelected && _selectedMessageId.value != myId) {
+      setState(() => _isSelected = false);
+    }
+  }
+
+  void _onLongPressStart(LongPressStartDetails _) {
+    _scaleController.forward();
+  }
+
+  void _onLongPress() {
+    AppHaptics.medium();
+    _scaleController.reverse();
+    setState(() => _isSelected = true);
+    // 通知全局：我被选中了，其它消息应取消
+    _selectedMessageId.value = widget.message.id;
+  }
+
+  void _onLongPressCancel() {
+    _scaleController.reverse();
+  }
+
+  void _onLongPressEnd(LongPressEndDetails _) {
+    // 已在 onLongPress 中处理
+  }
+
+  void _dismiss() {
+    setState(() => _isSelected = false);
+    // 清除全局选中
+    if (_selectedMessageId.value == widget.message.id) {
+      _selectedMessageId.value = null;
+    }
+  }
+
+  void _handleCopy() {
+    Clipboard.setData(ClipboardData(text: widget.message.content));
+    AppHaptics.light();
+    _dismiss();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(context.l10n.chatCopied),
+        duration: const Duration(seconds: 1),
+      ),
+    );
+  }
+
+  void _handleTranslate() {
+    AppHaptics.light();
+    _dismiss();
+    // TODO: 接入翻译API并缓存结果
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final isOutgoing = direction == BubbleDirection.outgoing;
-    final borderRadius = _getBorderRadius(position, direction);
+    final isOutgoing = widget.direction == BubbleDirection.outgoing;
+    final borderRadius = _getBorderRadius(widget.position, widget.direction);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     // 图片消息
-    if (message.isImage) {
-      final imageUrls = message.allImageUrls;
+    if (widget.message.isImage) {
+      final imageUrls = widget.message.allImageUrls;
       final displayUrl =
-          imageUrls.isNotEmpty ? imageUrls.first : message.imageUrl;
+          imageUrls.isNotEmpty ? imageUrls.first : widget.message.imageUrl;
       if (displayUrl != null && displayUrl.isNotEmpty) {
-        return Padding(
-          padding: const EdgeInsets.symmetric(vertical: 1),
-          child: GestureDetector(
-            onTap: () => onImageTap?.call(displayUrl),
-            child: AsyncImageView(
-              imageUrl: displayUrl,
-              width: 200,
-              height: 200,
-              fit: BoxFit.cover,
-              borderRadius: borderRadius,
+        return _buildInteractiveWrapper(
+          isOutgoing: isOutgoing,
+          isDark: isDark,
+          child: ClipRRect(
+            borderRadius: borderRadius,
+            child: GestureDetector(
+              onTap: _isSelected ? _dismiss : () => widget.onImageTap?.call(displayUrl),
+              child: AsyncImageView(
+                imageUrl: displayUrl,
+                width: 200,
+                height: 200,
+                fit: BoxFit.cover,
+                borderRadius: borderRadius,
+              ),
             ),
           ),
         );
@@ -422,41 +521,117 @@ class _GroupBubbleItem extends StatelessWidget {
     }
 
     // 文本消息
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 1),
-      child: GestureDetector(
-        onLongPress: () {
-          // 复制消息
-          Clipboard.setData(ClipboardData(text: message.content));
-          HapticFeedback.lightImpact();
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(context.l10n.chatCopied),
-              duration: const Duration(seconds: 1),
-            ),
-          );
-        },
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-          decoration: BoxDecoration(
-            gradient: isOutgoing
-                ? const LinearGradient(
-                    colors: [AppColors.primary, Color(0xFF5A67D8)],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  )
-                : null,
-            color: isOutgoing ? null : AppColors.skeletonBase,
-            borderRadius: borderRadius,
-          ),
-          child: Text(
-            message.content,
-            style: TextStyle(
-              color: isOutgoing ? Colors.white : AppColors.textPrimaryLight,
-              fontSize: 15,
-            ),
+    return _buildInteractiveWrapper(
+      isOutgoing: isOutgoing,
+      isDark: isDark,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        decoration: BoxDecoration(
+          gradient: isOutgoing
+              ? const LinearGradient(
+                  colors: [AppColors.primary, Color(0xFF5A67D8)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                )
+              : null,
+          color: isOutgoing ? null : (isDark
+              ? Colors.white.withValues(alpha: 0.1)
+              : AppColors.skeletonBase),
+          borderRadius: borderRadius,
+        ),
+        child: Text(
+          widget.message.content,
+          style: TextStyle(
+            color: isOutgoing
+                ? Colors.white
+                : (isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight),
+            fontSize: 15,
           ),
         ),
+      ),
+    );
+  }
+
+  /// 交互包装器：缩放反馈 + 高亮遮罩 + 内联操作栏
+  Widget _buildInteractiveWrapper({
+    required bool isOutgoing,
+    required bool isDark,
+    required Widget child,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 1),
+      child: Column(
+        crossAxisAlignment:
+            isOutgoing ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+        children: [
+          // ── 气泡主体（缩放 + 高亮） ──
+          GestureDetector(
+            onLongPressStart: _onLongPressStart,
+            onLongPress: _onLongPress,
+            onLongPressCancel: _onLongPressCancel,
+            onLongPressEnd: _onLongPressEnd,
+            onTap: _isSelected ? _dismiss : null,
+            child: AnimatedBuilder(
+              animation: _scaleAnimation,
+              builder: (context, builtChild) {
+                return Transform.scale(
+                  scale: _scaleAnimation.value,
+                  child: builtChild,
+                );
+              },
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(20),
+                  boxShadow: _isSelected
+                      ? [
+                          BoxShadow(
+                            color: AppColors.primary.withValues(alpha: 0.25),
+                            blurRadius: 12,
+                            spreadRadius: 1,
+                          ),
+                        ]
+                      : null,
+                ),
+                child: Stack(
+                  children: [
+                    child,
+                    // 选中高亮遮罩
+                    if (_isSelected)
+                      Positioned.fill(
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: AppColors.primary.withValues(alpha: 0.08),
+                            borderRadius: BorderRadius.circular(18),
+                            border: Border.all(
+                              color: AppColors.primary.withValues(alpha: 0.3),
+                              width: 1.5,
+                            ),
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+
+          // ── 内联操作栏（选中后显示） ──
+          AnimatedSize(
+            duration: const Duration(milliseconds: 200),
+            curve: Curves.easeOutCubic,
+            alignment: isOutgoing ? Alignment.centerRight : Alignment.centerLeft,
+            child: _isSelected
+                ? _InlineActionBar(
+                    isDark: isDark,
+                    isOutgoing: isOutgoing,
+                    isImage: widget.message.isImage,
+                    onCopy: _handleCopy,
+                    onTranslate: _handleTranslate,
+                  )
+                : const SizedBox.shrink(),
+          ),
+        ],
       ),
     );
   }
@@ -492,5 +667,126 @@ class _GroupBubbleItem extends StatelessWidget {
           bottomRight: const Radius.circular(r),
         );
     }
+  }
+}
+
+// ==================== 内联操作栏 ====================
+
+class _InlineActionBar extends StatelessWidget {
+  const _InlineActionBar({
+    required this.isDark,
+    required this.isOutgoing,
+    required this.isImage,
+    required this.onCopy,
+    required this.onTranslate,
+  });
+
+  final bool isDark;
+  final bool isOutgoing;
+  final bool isImage;
+  final VoidCallback onCopy;
+  final VoidCallback onTranslate;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 6),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+        decoration: BoxDecoration(
+          color: isDark
+              ? Colors.grey[800]
+              : Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.1),
+              blurRadius: 12,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // 复制
+            _ActionButton(
+              icon: Icons.copy_rounded,
+              label: context.l10n.chatCopy,
+              onTap: onCopy,
+              isDark: isDark,
+            ),
+            // 翻译（仅文本消息）
+            if (!isImage) ...[
+              Container(
+                width: 1,
+                height: 20,
+                margin: const EdgeInsets.symmetric(horizontal: 2),
+                color: (isDark ? Colors.white : Colors.black)
+                    .withValues(alpha: 0.1),
+              ),
+              _ActionButton(
+                icon: Icons.translate_rounded,
+                label: context.l10n.chatTranslate,
+                onTap: onTranslate,
+                isDark: isDark,
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ActionButton extends StatelessWidget {
+  const _ActionButton({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+    required this.isDark,
+  });
+
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+  final bool isDark;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      borderRadius: BorderRadius.circular(8),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(8),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                icon,
+                size: 16,
+                color: isDark
+                    ? AppColors.textSecondaryDark
+                    : AppColors.textSecondaryLight,
+              ),
+              const SizedBox(width: 4),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w500,
+                  color: isDark
+                      ? AppColors.textPrimaryDark
+                      : AppColors.textPrimaryLight,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }

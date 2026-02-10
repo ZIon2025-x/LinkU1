@@ -1,10 +1,10 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/constants/app_constants.dart';
+import '../../../core/utils/haptic_feedback.dart';
 import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_radius.dart';
@@ -15,6 +15,7 @@ import '../../notification/bloc/notification_bloc.dart';
 import '../../../core/utils/l10n_extension.dart';
 import '../../../core/utils/task_type_helper.dart';
 import '../../../core/widgets/content_constraint.dart';
+import '../../../core/widgets/swipe_action_cell.dart';
 import '../../../data/models/message.dart';
 import '../../auth/bloc/auth_bloc.dart';
 import '../../customer_service/views/customer_service_view.dart';
@@ -82,6 +83,9 @@ class _MessageContent extends StatelessWidget {
 
     return BlocBuilder<MessageBloc, MessageState>(
       builder: (context, state) {
+        final displayChats = state.displayTaskChats;
+        final pinnedIds = state.pinnedTaskIds;
+
         return RefreshIndicator(
           onRefresh: () async {
             context.read<MessageBloc>()
@@ -96,25 +100,80 @@ class _MessageContent extends StatelessWidget {
               horizontal: horizontalPadding,
               vertical: AppSpacing.md,
             ),
-            itemCount: 2 + (state.taskChats.isNotEmpty
-                ? state.taskChats.length
+            itemCount: 2 + (displayChats.isNotEmpty
+                ? displayChats.length
                 : 1),
             itemBuilder: (context, index) {
               if (index == 0) return const _QuickActionBar();
               if (index == 1) return const SizedBox(height: 16);
 
-              if (state.taskChats.isNotEmpty) {
-                final taskChat = state.taskChats[index - 2];
-                return _TaskChatItem(
-                  taskChat: taskChat,
-                  currentUserId: currentUserId,
+              if (displayChats.isNotEmpty) {
+                final taskChat = displayChats[index - 2];
+                final isPinned = pinnedIds.contains(taskChat.taskId);
+
+                return RepaintBoundary(
+                  child: SwipeActionCell(
+                    key: ValueKey('swipe_${taskChat.taskId}'),
+                    actionMargin: const EdgeInsets.only(bottom: AppSpacing.sm),
+                    actions: [
+                      // 置顶/取消置顶
+                      SwipeAction(
+                        icon: Icons.push_pin_rounded,
+                        label: isPinned
+                            ? context.l10n.chatUnpin
+                            : context.l10n.chatPinToTop,
+                        color: AppColors.primary,
+                        onTap: () {
+                          final bloc = context.read<MessageBloc>();
+                          if (isPinned) {
+                            bloc.add(MessageUnpinTaskChat(taskChat.taskId));
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(context.l10n.chatUnpinnedHint),
+                                duration: const Duration(seconds: 1),
+                              ),
+                            );
+                          } else {
+                            bloc.add(MessagePinTaskChat(taskChat.taskId));
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(context.l10n.chatPinnedHint),
+                                duration: const Duration(seconds: 1),
+                              ),
+                            );
+                          }
+                        },
+                      ),
+                      // 删除（软隐藏）
+                      SwipeAction(
+                        icon: Icons.delete_outline_rounded,
+                        label: context.l10n.chatDeleteChat,
+                        color: AppColors.error,
+                        onTap: () {
+                          context.read<MessageBloc>()
+                              .add(MessageHideTaskChat(taskChat.taskId));
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(context.l10n.chatDeletedHint),
+                              duration: const Duration(seconds: 2),
+                            ),
+                          );
+                        },
+                      ),
+                    ],
+                    child: _TaskChatItem(
+                      taskChat: taskChat,
+                      currentUserId: currentUserId,
+                      isPinned: isPinned,
+                    ),
+                  ),
                 );
               }
 
               if (state.status == MessageStatus.loading) {
                 return const Padding(
                   padding: EdgeInsets.only(top: 40),
-                  child: SkeletonList(),
+                  child: SkeletonList(imageSize: 56),
                 );
               }
               return Column(
@@ -173,7 +232,7 @@ class _QuickActionBar extends StatelessWidget {
               unreadCount: systemUnread,
               isDark: isDark,
               onTap: () {
-                HapticFeedback.selectionClick();
+                AppHaptics.selection();
                 context.push('/notifications/system');
               },
             ),
@@ -185,7 +244,7 @@ class _QuickActionBar extends StatelessWidget {
               unreadCount: 0,
               isDark: isDark,
               onTap: () {
-                HapticFeedback.selectionClick();
+                AppHaptics.selection();
                 Navigator.push(
                   context,
                   MaterialPageRoute(
@@ -202,7 +261,7 @@ class _QuickActionBar extends StatelessWidget {
               unreadCount: interactionUnread,
               isDark: isDark,
               onTap: () {
-                HapticFeedback.selectionClick();
+                AppHaptics.selection();
                 context.push('/notifications/interaction');
               },
             ),
@@ -339,10 +398,12 @@ class _TaskChatItem extends StatelessWidget {
   const _TaskChatItem({
     required this.taskChat,
     this.currentUserId,
+    this.isPinned = false,
   });
 
   final TaskChat taskChat;
   final String? currentUserId;
+  final bool isPinned;
 
   // ==================== iOS 对齐: taskTypeIcons ====================
 
@@ -457,7 +518,7 @@ class _TaskChatItem extends StatelessWidget {
 
     return GestureDetector(
       onTap: () {
-        HapticFeedback.selectionClick();
+        AppHaptics.selection();
         context.push('/task-chat/${taskChat.taskId}');
       },
       child: Container(
@@ -498,9 +559,17 @@ class _TaskChatItem extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // 第一行: 标题 + 时间 + 未读数
+                  // 第一行: 置顶图标 + 标题 + 时间 + 未读数
                   Row(
                     children: [
+                      if (isPinned) ...[
+                        Icon(
+                          Icons.push_pin_rounded,
+                          size: 14,
+                          color: AppColors.primary.withValues(alpha: 0.6),
+                        ),
+                        const SizedBox(width: 4),
+                      ],
                       Expanded(
                         child: Text(
                           taskChat.displayTitle,

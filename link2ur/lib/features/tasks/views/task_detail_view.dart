@@ -1,7 +1,7 @@
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+import '../../../core/utils/haptic_feedback.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
@@ -18,6 +18,7 @@ import '../../../core/widgets/async_image_view.dart';
 import '../../../core/widgets/full_screen_image_view.dart';
 import '../../../core/widgets/custom_share_panel.dart';
 import '../../../core/widgets/user_identity_badges.dart';
+import '../../../core/widgets/animated_list_item.dart';
 import '../../../core/router/app_router.dart';
 import '../../../core/utils/responsive.dart';
 import '../../../core/utils/l10n_extension.dart';
@@ -158,7 +159,7 @@ class _TaskDetailContent extends StatelessWidget {
           _buildAppBarButton(
             icon: Icons.share_outlined,
             onPressed: () {
-              HapticFeedback.selectionClick();
+              AppHaptics.selection();
               CustomSharePanel.show(
                 context,
                 title: state.task!.displayTitle,
@@ -170,7 +171,7 @@ class _TaskDetailContent extends StatelessWidget {
           _buildAppBarButton(
             icon: Icons.more_horiz,
             onPressed: () {
-              HapticFeedback.selectionClick();
+              AppHaptics.selection();
               _showMoreMenu(context, state);
             },
           ),
@@ -400,18 +401,7 @@ class _TaskDetailContent extends StatelessWidget {
                   const SizedBox(height: AppSpacing.md),
                 ],
 
-                // ========== 操作按钮区域 ==========
-                Padding(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: AppSpacing.md),
-                  child: TaskActionButtonsView(
-                    task: task,
-                    isPoster: isPoster,
-                    isTaker: isTaker,
-                    isDark: isDark,
-                    state: state,
-                  ),
-                ),
+                // 操作按钮已移至 bottomNavigationBar，避免重复显示
 
                 // 评价区域 (已完成 + 有评价)
                 if (task.status == AppConstants.taskStatusCompleted &&
@@ -1328,7 +1318,7 @@ class _CounterpartyCard extends StatelessWidget {
                 ? context.l10n.taskDetailParticipant
                 : context.l10n.taskDetailApplicant,
             onTap: () {
-              HapticFeedback.selectionClick();
+              AppHaptics.selection();
               context.goToUserProfile(task.takerId!);
             },
           );
@@ -1353,7 +1343,7 @@ class _CounterpartyCard extends StatelessWidget {
           isExpert: true,
           roleLabel: context.l10n.taskSourceExpertService,
           onTap: () {
-            HapticFeedback.selectionClick();
+            AppHaptics.selection();
             // 跳转到达人详情页
             context.push('/task-experts/$expertId');
           },
@@ -1372,7 +1362,7 @@ class _CounterpartyCard extends StatelessWidget {
           isExpert: false,
           roleLabel: context.l10n.taskDetailSeller,
           onTap: () {
-            HapticFeedback.selectionClick();
+            AppHaptics.selection();
             context.goToUserProfile(task.takerId!);
           },
         );
@@ -1386,7 +1376,7 @@ class _CounterpartyCard extends StatelessWidget {
           isExpert: false,
           roleLabel: context.l10n.taskDetailBuyer,
           onTap: () {
-            HapticFeedback.selectionClick();
+            AppHaptics.selection();
             context.goToUserProfile(task.posterId);
           },
         );
@@ -1404,7 +1394,7 @@ class _CounterpartyCard extends StatelessWidget {
         isExpert: false,
         roleLabel: context.l10n.taskDetailRecipient,
         onTap: () {
-          HapticFeedback.selectionClick();
+          AppHaptics.selection();
           context.goToUserProfile(task.takerId!);
         },
       );
@@ -1418,7 +1408,7 @@ class _CounterpartyCard extends StatelessWidget {
         isExpert: false,
         roleLabel: context.l10n.taskDetailPublisher,
         onTap: () {
-          HapticFeedback.selectionClick();
+          AppHaptics.selection();
           context.goToUserProfile(task.posterId);
         },
       );
@@ -1582,10 +1572,16 @@ class _DisputeTimelineSheetState extends State<_DisputeTimelineSheet> {
                               padding: const EdgeInsets.all(16),
                               itemCount: _timelineItems.length,
                               itemBuilder: (context, index) {
-                                return _TimelineItemTile(
-                                  item: _timelineItems[index],
-                                  isLast:
-                                      index == _timelineItems.length - 1,
+                                // 交错入场动画
+                                return AnimatedListItem(
+                                  index: index,
+                                  direction: AnimatedListDirection.left,
+                                  staggerDelay: const Duration(milliseconds: 80),
+                                  child: _TimelineItemTile(
+                                    item: _timelineItems[index],
+                                    isLast:
+                                        index == _timelineItems.length - 1,
+                                  ),
                                 );
                               },
                             ),
@@ -1847,25 +1843,13 @@ class _TimelineItemTile extends StatelessWidget {
                                   initialIndex: 0,
                                 );
                               },
-                              child: ClipRRect(
+                              child: AsyncImageView(
+                                imageUrl: url,
+                                width: 80,
+                                height: 80,
+                                fit: BoxFit.cover,
                                 borderRadius:
                                     BorderRadius.circular(6),
-                                child: Image.network(
-                                  url,
-                                  width: 80,
-                                  height: 80,
-                                  fit: BoxFit.cover,
-                                  errorBuilder:
-                                      (_, __, ___) => Container(
-                                    width: 80,
-                                    height: 80,
-                                    color: AppColors
-                                        .secondaryBackgroundLight,
-                                    child: const Icon(
-                                        Icons.broken_image,
-                                        size: 24),
-                                  ),
-                                ),
                               ),
                             );
                           }

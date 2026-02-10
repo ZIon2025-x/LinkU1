@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+import '../utils/haptic_feedback.dart';
 import '../design/app_colors.dart';
 import '../design/app_typography.dart';
 import '../design/app_radius.dart';
@@ -7,10 +7,32 @@ import '../design/app_shadows.dart';
 import '../design/app_spacing.dart';
 import 'loading_view.dart';
 
+/// iOS 风格弹簧曲线
+/// 模拟 SwiftUI spring(response: 0.3, dampingFraction: 0.6)
+class _SpringCurve extends Curve {
+  const _SpringCurve({this.damping = 0.6, this.response = 0.3});
+
+  final double damping;
+  final double response;
+
+  @override
+  double transformInternal(double t) {
+    final omega = 2 * 3.14159 / response;
+    final decay = -omega * damping;
+    return 1 - (1 + decay * t) * (1 - t) * (1 - t) *
+        _expApprox(decay * t);
+  }
+
+  double _expApprox(double x) {
+    // Fast exp approximation for animation
+    if (x > 0) return 1.0;
+    return 1 + x + x * x / 2 + x * x * x / 6;
+  }
+}
+
 /// 按压缩放动画包装器
-/// 参考iOS PrimaryButtonStyle的按压效果
+/// 参考iOS BouncyButtonStyle的按压效果 (scale: 0.96, spring animation)
 /// scale: 按压时缩放比例 (默认0.96)
-/// duration: 动画时长
 /// 可在其他Widget中复用此组件实现iOS风格的按压反馈
 class ScaleTapWrapper extends StatefulWidget {
   const ScaleTapWrapper({
@@ -39,8 +61,8 @@ class ScaleTapWrapperState extends State<ScaleTapWrapper>
   void initState() {
     super.initState();
     _controller = AnimationController(
-      duration: const Duration(milliseconds: 150),
-      reverseDuration: const Duration(milliseconds: 200),
+      duration: const Duration(milliseconds: 120),
+      reverseDuration: const Duration(milliseconds: 350),
       vsync: this,
     );
     _scaleAnimation = Tween<double>(
@@ -49,7 +71,8 @@ class ScaleTapWrapperState extends State<ScaleTapWrapper>
     ).animate(CurvedAnimation(
       parent: _controller,
       curve: Curves.easeOutCubic,
-      reverseCurve: Curves.easeOutBack,
+      // iOS BouncyButtonStyle 弹簧回弹效果
+      reverseCurve: const _SpringCurve(damping: 0.6, response: 0.3),
     ));
   }
 
@@ -95,7 +118,7 @@ class ScaleTapWrapperState extends State<ScaleTapWrapper>
 
 /// 主要按钮
 /// 参考iOS PrimaryButtonStyle - 渐变背景 + 按压缩放(0.96) + 触觉反馈
-/// 加载态切换：文字/图标 ↔ loading 指示器平滑 crossfade
+/// 加载态动画：按钮宽度收缩为圆形 → loading 旋转 → 展开回全宽
 class PrimaryButton extends StatelessWidget {
   const PrimaryButton({
     super.key,
@@ -131,19 +154,23 @@ class PrimaryButton extends StatelessWidget {
     return ScaleTapWrapper(
       enabled: isActive,
       onTap: () {
-        HapticFeedback.lightImpact();
+        AppHaptics.buttonTap();
         onPressed?.call();
       },
       child: AnimatedContainer(
-        duration: const Duration(milliseconds: 250),
-        curve: Curves.easeInOut,
-        width: width,
+        duration: const Duration(milliseconds: 350),
+        curve: Curves.easeInOutCubic,
+        width: isLoading ? height : width, // 收缩为圆形
         height: height,
         decoration: BoxDecoration(
-          gradient: isActive ? effectiveGradient : null,
-          color: isActive ? null : AppColors.textTertiaryLight,
-          borderRadius: AppRadius.button,
-          boxShadow: isActive ? AppShadows.primary(opacity: 0.2) : null,
+          gradient: isActive || isLoading ? effectiveGradient : null,
+          color: isActive || isLoading ? null : AppColors.textTertiaryLight,
+          borderRadius: isLoading
+              ? BorderRadius.circular(height / 2) // 圆形
+              : AppRadius.button,
+          boxShadow: isActive || isLoading
+              ? AppShadows.primary(opacity: 0.2)
+              : null,
         ),
         child: Center(
           child: AnimatedSwitcher(
@@ -210,7 +237,7 @@ class SecondaryButton extends StatelessWidget {
     return ScaleTapWrapper(
       enabled: isActive,
       onTap: () {
-        HapticFeedback.lightImpact();
+        AppHaptics.buttonTap();
         onPressed?.call();
       },
       child: AnimatedContainer(
@@ -363,7 +390,7 @@ class FloatingButton extends StatelessWidget {
     return ScaleTapWrapper(
       scaleDown: 0.9,
       onTap: () {
-        HapticFeedback.mediumImpact();
+        AppHaptics.medium();
         onPressed?.call();
       },
       child: Container(

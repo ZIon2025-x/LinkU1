@@ -343,6 +343,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get homeNoMoreActivity => '以上为最新动态';
 
   @override
+  String get homeLoadMore => '加载更多';
+
+  @override
   String get homeHotEvents => '热门活动';
 
   @override
@@ -4247,6 +4250,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get leaderboardAddCoverImage => '添加封面图片';
 
   @override
+  String get leaderboardOptional => '可选';
+
+  @override
+  String get leaderboardChangeImage => '更换';
+
+  @override
   String get leaderboardLoading => '加载中...';
 
   @override
@@ -6087,7 +6096,31 @@ class AppLocalizationsZh extends AppLocalizations {
   String get chatViewDetail => '查看详情';
 
   @override
+  String get chatCopy => '复制';
+
+  @override
+  String get chatTranslate => '翻译';
+
+  @override
   String get chatCopied => '已复制';
+
+  @override
+  String get chatPinToTop => '置顶';
+
+  @override
+  String get chatUnpin => '取消置顶';
+
+  @override
+  String get chatDeleteChat => '删除';
+
+  @override
+  String get chatDeletedHint => '聊天已删除，有新消息时将自动恢复';
+
+  @override
+  String get chatPinnedHint => '已置顶';
+
+  @override
+  String get chatUnpinnedHint => '已取消置顶';
 
   @override
   String get chatTaskDetailLabel => '任务详情';
@@ -6732,6 +6765,39 @@ class AppLocalizationsZh extends AppLocalizations {
   String get createTaskCategoryOther => '其他';
 
   @override
+  String get taskTypeHousekeeping => '家政服务';
+
+  @override
+  String get taskTypeCampusLife => '校园生活';
+
+  @override
+  String get taskTypeSecondHandRental => '二手与租赁';
+
+  @override
+  String get taskTypeErrandRunning => '跑腿代办';
+
+  @override
+  String get taskTypeSkillService => '技能服务';
+
+  @override
+  String get taskTypeSocialHelp => '社交互助';
+
+  @override
+  String get taskTypeTransportation => '交通出行';
+
+  @override
+  String get taskTypePetCare => '宠物照料';
+
+  @override
+  String get taskTypeLifeConvenience => '生活便利';
+
+  @override
+  String get taskTypeOther => '其他';
+
+  @override
+  String get taskTypeCampusLifeNeedVerify => '发布「校园生活」任务需要先完成学生邮箱认证';
+
+  @override
   String get taskDetailNoImages => '暂无图片';
 
   @override
@@ -6807,6 +6873,15 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get walletTransactionHistory => '交易记录';
+
+  @override
+  String get walletTopUp => '充值';
+
+  @override
+  String get walletTransfer => '转账';
+
+  @override
+  String get walletViewAll => '查看全部';
 
   @override
   String get walletTransactionsDesc => '您的积分交易记录将显示在这里';
@@ -7268,6 +7343,18 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get serviceApplyOtherSlot => '申请其他时间段';
+
+  @override
+  String get publishTitle => '发布';
+
+  @override
+  String get publishTaskTab => '任务发布';
+
+  @override
+  String get publishFleaMarketTab => '闲置发布';
+
+  @override
+  String get publishPostTab => '帖子发布';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -7607,6 +7694,9 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get homeNoMoreActivity => '以上爲最新動態';
+
+  @override
+  String get homeLoadMore => '載入更多';
 
   @override
   String get homeHotEvents => '熱門活動';
@@ -11513,6 +11603,12 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get leaderboardAddCoverImage => '添加封面圖片';
 
   @override
+  String get leaderboardOptional => '可選';
+
+  @override
+  String get leaderboardChangeImage => '更換';
+
+  @override
   String get leaderboardLoading => '加載中...';
 
   @override
@@ -13264,7 +13360,31 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get chatViewDetail => '查看詳情';
 
   @override
+  String get chatCopy => '複製';
+
+  @override
+  String get chatTranslate => '翻譯';
+
+  @override
   String get chatCopied => '已複製';
+
+  @override
+  String get chatPinToTop => '置頂';
+
+  @override
+  String get chatUnpin => '取消置頂';
+
+  @override
+  String get chatDeleteChat => '刪除';
+
+  @override
+  String get chatDeletedHint => '聊天已刪除，有新訊息時將自動恢復';
+
+  @override
+  String get chatPinnedHint => '已置頂';
+
+  @override
+  String get chatUnpinnedHint => '已取消置頂';
 
   @override
   String get chatTaskDetailLabel => '任務詳情';
@@ -13909,6 +14029,39 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get createTaskCategoryOther => '其他';
 
   @override
+  String get taskTypeHousekeeping => '家政服務';
+
+  @override
+  String get taskTypeCampusLife => '校園生活';
+
+  @override
+  String get taskTypeSecondHandRental => '二手與租賃';
+
+  @override
+  String get taskTypeErrandRunning => '跑腿代辦';
+
+  @override
+  String get taskTypeSkillService => '技能服務';
+
+  @override
+  String get taskTypeSocialHelp => '社交互助';
+
+  @override
+  String get taskTypeTransportation => '交通出行';
+
+  @override
+  String get taskTypePetCare => '寵物照料';
+
+  @override
+  String get taskTypeLifeConvenience => '生活便利';
+
+  @override
+  String get taskTypeOther => '其他';
+
+  @override
+  String get taskTypeCampusLifeNeedVerify => '發布「校園生活」任務需要先完成學生郵箱認證';
+
+  @override
   String get taskDetailNoImages => '暫無圖片';
 
   @override
@@ -13984,6 +14137,15 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get walletTransactionHistory => '交易記錄';
+
+  @override
+  String get walletTopUp => '充值';
+
+  @override
+  String get walletTransfer => '轉帳';
+
+  @override
+  String get walletViewAll => '查看全部';
 
   @override
   String get walletTransactionsDesc => '您的積分交易記錄將顯示在這裡';
@@ -14445,4 +14607,16 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get serviceApplyOtherSlot => '申請其他時間段';
+
+  @override
+  String get publishTitle => '發佈';
+
+  @override
+  String get publishTaskTab => '任務發佈';
+
+  @override
+  String get publishFleaMarketTab => '閒置發佈';
+
+  @override
+  String get publishPostTab => '帖子發佈';
 }

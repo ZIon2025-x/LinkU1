@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+import '../../../core/utils/haptic_feedback.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../core/constants/app_constants.dart';
@@ -754,7 +754,7 @@ class _ApplicationItem extends StatelessWidget {
                     icon: Icons.check_circle,
                     color: AppColors.success,
                     onTap: () {
-                      HapticFeedback.mediumImpact();
+                      AppHaptics.medium();
                       context.read<TaskDetailBloc>().add(
                             TaskDetailAcceptApplicant(application.id),
                           );
@@ -765,7 +765,7 @@ class _ApplicationItem extends StatelessWidget {
                     icon: Icons.cancel,
                     color: AppColors.error,
                     onTap: () {
-                      HapticFeedback.mediumImpact();
+                      AppHaptics.medium();
                       context.read<TaskDetailBloc>().add(
                             TaskDetailRejectApplicant(application.id),
                           );
@@ -1295,7 +1295,7 @@ class TaskActionButtonsView extends StatelessWidget {
         text: contactText,
         icon: Icons.message,
         onPressed: () {
-          HapticFeedback.selectionClick();
+          AppHaptics.selection();
           // 导航到任务聊天 (非私聊)
           context.goToTaskChat(task.id);
         },

@@ -11,6 +11,7 @@ import '../../../core/widgets/loading_view.dart';
 import '../../../core/widgets/empty_state_view.dart';
 import '../../../core/widgets/error_state_view.dart';
 import '../../../core/widgets/async_image_view.dart';
+import '../../../core/widgets/swipe_action_cell.dart';
 import '../../../data/models/message.dart';
 import '../../../data/repositories/message_repository.dart';
 import '../../message/bloc/message_bloc.dart';
@@ -61,7 +62,10 @@ class _TaskChatListViewContent extends StatelessWidget {
       );
     }
 
-    if (state.taskChats.isEmpty) {
+    final displayChats = state.displayTaskChats;
+    final pinnedIds = state.pinnedTaskIds;
+
+    if (displayChats.isEmpty) {
       return EmptyStateView.noData(
         title: context.l10n.notificationNoTaskChat,
         description: context.l10n.notificationNoTaskChatDesc,
@@ -74,15 +78,65 @@ class _TaskChatListViewContent extends StatelessWidget {
       },
       child: ListView.separated(
         padding: AppSpacing.allMd,
-        itemCount: state.taskChats.length,
+        itemCount: displayChats.length,
         separatorBuilder: (_, __) => const Divider(height: 1),
         itemBuilder: (context, index) {
-          final chat = state.taskChats[index];
-          return _TaskChatRow(
-            chat: chat,
-            onTap: () {
-              context.push('/task-chat/${chat.taskId}');
-            },
+          final chat = displayChats[index];
+          final isPinned = pinnedIds.contains(chat.taskId);
+
+          return SwipeActionCell(
+            key: ValueKey('swipe_task_${chat.taskId}'),
+            actions: [
+              SwipeAction(
+                icon: Icons.push_pin_rounded,
+                label: isPinned
+                    ? context.l10n.chatUnpin
+                    : context.l10n.chatPinToTop,
+                color: AppColors.primary,
+                onTap: () {
+                  final bloc = context.read<MessageBloc>();
+                  if (isPinned) {
+                    bloc.add(MessageUnpinTaskChat(chat.taskId));
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(context.l10n.chatUnpinnedHint),
+                        duration: const Duration(seconds: 1),
+                      ),
+                    );
+                  } else {
+                    bloc.add(MessagePinTaskChat(chat.taskId));
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(context.l10n.chatPinnedHint),
+                        duration: const Duration(seconds: 1),
+                      ),
+                    );
+                  }
+                },
+              ),
+              SwipeAction(
+                icon: Icons.delete_outline_rounded,
+                label: context.l10n.chatDeleteChat,
+                color: AppColors.error,
+                onTap: () {
+                  context.read<MessageBloc>()
+                      .add(MessageHideTaskChat(chat.taskId));
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(context.l10n.chatDeletedHint),
+                      duration: const Duration(seconds: 2),
+                    ),
+                  );
+                },
+              ),
+            ],
+            child: _TaskChatRow(
+              chat: chat,
+              isPinned: isPinned,
+              onTap: () {
+                context.push('/task-chat/${chat.taskId}');
+              },
+            ),
           );
         },
       ),
@@ -94,10 +148,12 @@ class _TaskChatRow extends StatelessWidget {
   const _TaskChatRow({
     required this.chat,
     required this.onTap,
+    this.isPinned = false,
   });
 
   final TaskChat chat;
   final VoidCallback onTap;
+  final bool isPinned;
 
   String _formatTime(DateTime dateTime) {
     return DateFormatter.formatSmart(dateTime);
@@ -140,6 +196,14 @@ class _TaskChatRow extends StatelessWidget {
       ),
       title: Row(
         children: [
+          if (isPinned) ...[
+            Icon(
+              Icons.push_pin_rounded,
+              size: 13,
+              color: AppColors.primary.withValues(alpha: 0.6),
+            ),
+            const SizedBox(width: 3),
+          ],
           Expanded(
             child: Text(
               chat.taskTitle,

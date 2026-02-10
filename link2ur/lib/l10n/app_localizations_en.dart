@@ -350,6 +350,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get homeNoMoreActivity => 'Above are the latest activities';
 
   @override
+  String get homeLoadMore => 'Load More';
+
+  @override
   String get homeHotEvents => 'Hot Events';
 
   @override
@@ -4423,6 +4426,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get leaderboardAddCoverImage => 'Add Cover Image';
 
   @override
+  String get leaderboardOptional => 'Optional';
+
+  @override
+  String get leaderboardChangeImage => 'Change';
+
+  @override
   String get leaderboardLoading => 'Loading...';
 
   @override
@@ -6350,7 +6359,32 @@ class AppLocalizationsEn extends AppLocalizations {
   String get chatViewDetail => 'View Details';
 
   @override
+  String get chatCopy => 'Copy';
+
+  @override
+  String get chatTranslate => 'Translate';
+
+  @override
   String get chatCopied => 'Copied';
+
+  @override
+  String get chatPinToTop => 'Pin';
+
+  @override
+  String get chatUnpin => 'Unpin';
+
+  @override
+  String get chatDeleteChat => 'Delete';
+
+  @override
+  String get chatDeletedHint =>
+      'Chat deleted. It will reappear when new messages arrive.';
+
+  @override
+  String get chatPinnedHint => 'Chat pinned to top';
+
+  @override
+  String get chatUnpinnedHint => 'Chat unpinned';
 
   @override
   String get chatTaskDetailLabel => 'Task Details';
@@ -7001,6 +7035,40 @@ class AppLocalizationsEn extends AppLocalizations {
   String get createTaskCategoryOther => 'Other';
 
   @override
+  String get taskTypeHousekeeping => 'Housekeeping';
+
+  @override
+  String get taskTypeCampusLife => 'Campus Life';
+
+  @override
+  String get taskTypeSecondHandRental => 'Second-hand & Rental';
+
+  @override
+  String get taskTypeErrandRunning => 'Errand Running';
+
+  @override
+  String get taskTypeSkillService => 'Skill Service';
+
+  @override
+  String get taskTypeSocialHelp => 'Social Help';
+
+  @override
+  String get taskTypeTransportation => 'Transportation';
+
+  @override
+  String get taskTypePetCare => 'Pet Care';
+
+  @override
+  String get taskTypeLifeConvenience => 'Life Convenience';
+
+  @override
+  String get taskTypeOther => 'Other';
+
+  @override
+  String get taskTypeCampusLifeNeedVerify =>
+      'Publishing \"Campus Life\" tasks requires student email verification';
+
+  @override
   String get taskDetailNoImages => 'No images';
 
   @override
@@ -7077,6 +7145,15 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get walletTransactionHistory => 'Transaction History';
+
+  @override
+  String get walletTopUp => 'Top Up';
+
+  @override
+  String get walletTransfer => 'Transfer';
+
+  @override
+  String get walletViewAll => 'View All';
 
   @override
   String get walletTransactionsDesc =>
@@ -7561,4 +7638,16 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get serviceApplyOtherSlot => 'Apply for Another Slot';
+
+  @override
+  String get publishTitle => 'Publish';
+
+  @override
+  String get publishTaskTab => 'Post Task';
+
+  @override
+  String get publishFleaMarketTab => 'Sell Item';
+
+  @override
+  String get publishPostTab => 'Forum Post';
 }

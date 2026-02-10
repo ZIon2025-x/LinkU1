@@ -148,6 +148,7 @@ class ForumState extends Equatable {
     this.searchQuery = '',
     this.errorMessage,
     this.isRefreshing = false,
+    this.loadMoreError = false,
     this.selectedPost,
     this.replies = const [],
     this.isCreatingPost = false,
@@ -168,6 +169,8 @@ class ForumState extends Equatable {
   final String searchQuery;
   final String? errorMessage;
   final bool isRefreshing;
+  /// 分页加载更多失败标志，用于 UI 显示重试按钮
+  final bool loadMoreError;
   final ForumPost? selectedPost;
   final List<ForumReply> replies;
   final bool isCreatingPost;
@@ -191,6 +194,7 @@ class ForumState extends Equatable {
     String? searchQuery,
     String? errorMessage,
     bool? isRefreshing,
+    bool? loadMoreError,
     ForumPost? selectedPost,
     List<ForumReply>? replies,
     bool? isCreatingPost,
@@ -212,6 +216,7 @@ class ForumState extends Equatable {
       searchQuery: searchQuery ?? this.searchQuery,
       errorMessage: errorMessage,
       isRefreshing: isRefreshing ?? this.isRefreshing,
+      loadMoreError: loadMoreError ?? false,
       selectedPost: selectedPost ?? this.selectedPost,
       replies: replies ?? this.replies,
       isCreatingPost: isCreatingPost ?? this.isCreatingPost,
@@ -236,6 +241,7 @@ class ForumState extends Equatable {
         searchQuery,
         errorMessage,
         isRefreshing,
+        loadMoreError,
         selectedPost,
         replies,
         isCreatingPost,
@@ -283,7 +289,9 @@ class ForumBloc extends Bloc<ForumEvent, ForumState> {
     }
 
     try {
-      final categories = await _forumRepository.getCategories();
+      // 使用 getVisibleCategories() 对接后端权限过滤 API
+      // 后端 /api/forum/forums/visible 根据用户 token 返回可见板块
+      final categories = await _forumRepository.getVisibleCategories();
       emit(state.copyWith(
         status: ForumStatus.loaded,
         categories: categories,
@@ -352,10 +360,12 @@ class ForumBloc extends Bloc<ForumEvent, ForumState> {
         total: response.total,
         page: nextPage,
         hasMore: response.hasMore,
+        loadMoreError: false,
       ));
     } catch (e) {
       AppLogger.error('Failed to load more posts', e);
-      emit(state.copyWith(hasMore: false));
+      // 标记加载更多失败，UI 可显示重试按钮（不设 hasMore: false，允许用户重试）
+      emit(state.copyWith(loadMoreError: true));
     }
   }
 
@@ -366,8 +376,8 @@ class ForumBloc extends Bloc<ForumEvent, ForumState> {
     emit(state.copyWith(isRefreshing: true));
 
     try {
-      // 刷新板块列表（社区主页使用）
-      final categories = await _forumRepository.getCategories();
+      // 刷新板块列表（使用权限过滤 API）
+      final categories = await _forumRepository.getVisibleCategories();
 
       // 如果当前有选中分类，也刷新帖子
       if (state.selectedCategoryId != null) {

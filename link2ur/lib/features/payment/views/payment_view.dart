@@ -1,11 +1,11 @@
 import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/design/app_colors.dart';
+import '../../../core/utils/haptic_feedback.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_radius.dart';
 import '../../../core/utils/l10n_extension.dart';
@@ -371,7 +371,7 @@ class _PaymentContentState extends State<_PaymentContent> {
   // ==================== 支付成功 ====================
 
   void _showPaymentSuccess() {
-    HapticFeedback.heavyImpact();
+    AppHaptics.heavy();
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -895,7 +895,7 @@ class _PaymentMethodTile extends StatelessWidget {
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: () {
-        HapticFeedback.selectionClick();
+        AppHaptics.selection();
         onTap();
       },
       child: AnimatedContainer(

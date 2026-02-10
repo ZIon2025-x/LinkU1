@@ -63,6 +63,7 @@ import '../../features/notification/views/notification_list_view.dart';
 import '../../features/notification/views/task_chat_list_view.dart';
 import '../../features/auth/views/forgot_password_view.dart';
 import '../../features/info/views/vip_view.dart';
+import '../../features/publish/views/publish_view.dart';
 import '../../features/search/views/search_view.dart';
 
 /// 路由路径常量
@@ -77,6 +78,9 @@ class AppRoutes {
   // 主页
   static const String main = '/';
   static const String home = '/home';
+
+  // 发布（统一入口）
+  static const String publish = '/publish';
 
   // 任务
   static const String tasks = '/tasks';
@@ -174,6 +178,7 @@ class AppRoutes {
 
 /// 需要认证才能访问的路由（其余公开路由无需登录）
 const _authRequiredRoutes = <String>{
+  AppRoutes.publish,
   AppRoutes.createTask,
   AppRoutes.createFleaMarketItem,
   AppRoutes.createPost,
@@ -251,36 +256,58 @@ class AppRouter {
     },
     routes: [
       // 主页面（底部导航栏）
-      ShellRoute(
-        builder: (context, state, child) => MainTabView(child: child),
-        routes: [
-          GoRoute(
-            path: AppRoutes.main,
-            name: 'main',
-            pageBuilder: (context, state) => const NoTransitionPage(
-              child: HomeView(),
-            ),
+      // StatefulShellRoute.indexedStack 原生保持各分支 State，避免手动缓存导致 GlobalKey 冲突
+      StatefulShellRoute.indexedStack(
+        builder: (context, state, navigationShell) =>
+            MainTabView(navigationShell: navigationShell),
+        branches: [
+          // Branch 0: 首页
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: AppRoutes.main,
+                name: 'main',
+                pageBuilder: (context, state) => const NoTransitionPage(
+                  child: HomeView(),
+                ),
+              ),
+            ],
           ),
-          GoRoute(
-            path: '/community',
-            name: 'community',
-            pageBuilder: (context, state) => const NoTransitionPage(
-              child: ForumView(),
-            ),
+          // Branch 1: 社区
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: '/community',
+                name: 'community',
+                pageBuilder: (context, state) => const NoTransitionPage(
+                  child: ForumView(),
+                ),
+              ),
+            ],
           ),
-          GoRoute(
-            path: '/messages-tab',
-            name: 'messages-tab',
-            pageBuilder: (context, state) => const NoTransitionPage(
-              child: MessageView(),
-            ),
+          // Branch 2: 消息
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: '/messages-tab',
+                name: 'messages-tab',
+                pageBuilder: (context, state) => const NoTransitionPage(
+                  child: MessageView(),
+                ),
+              ),
+            ],
           ),
-          GoRoute(
-            path: '/profile-tab',
-            name: 'profile-tab',
-            pageBuilder: (context, state) => const NoTransitionPage(
-              child: ProfileView(),
-            ),
+          // Branch 3: 我的
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: '/profile-tab',
+                name: 'profile-tab',
+                pageBuilder: (context, state) => const NoTransitionPage(
+                  child: ProfileView(),
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -308,6 +335,16 @@ class AppRouter {
         pageBuilder: (context, state) => FadeScaleTransitionPage(
           key: state.pageKey,
           child: const ForgotPasswordView(),
+        ),
+      ),
+
+      // 统一发布页（从底部滑入）
+      GoRoute(
+        path: AppRoutes.publish,
+        name: 'publish',
+        pageBuilder: (context, state) => SlideUpTransitionPage(
+          key: state.pageKey,
+          child: const PublishView(),
         ),
       ),
 

@@ -1,41 +1,41 @@
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
-import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 
 import 'logger.dart';
 
 /// 崩溃报告服务
 /// 参考iOS CrashReporter.swift
-/// 集成 Firebase Crashlytics 进行崩溃和错误追踪
+/// 使用 Flutter 内置错误处理 + AppLogger 记录崩溃信息
+/// 可后续集成 Sentry 等第三方崩溃追踪服务
 class CrashReporter {
   CrashReporter._();
 
   static final CrashReporter instance = CrashReporter._();
 
   bool _isInitialized = false;
+  String? _userId;
 
   /// 初始化崩溃报告
   Future<void> initialize() async {
     try {
-      // 在 release 模式下启用 Crashlytics
-      await FirebaseCrashlytics.instance.setCrashlyticsCollectionEnabled(
-        !kDebugMode,
-      );
-
       // 捕获 Flutter 框架错误
       FlutterError.onError = (FlutterErrorDetails details) {
         if (kDebugMode) {
           FlutterError.dumpErrorToConsole(details);
         } else {
-          FirebaseCrashlytics.instance.recordFlutterFatalError(details);
+          AppLogger.error(
+            'Flutter fatal error',
+            details.exception,
+            details.stack,
+          );
         }
       };
 
       // 捕获异步错误
       PlatformDispatcher.instance.onError = (error, stack) {
         if (!kDebugMode) {
-          FirebaseCrashlytics.instance.recordError(error, stack, fatal: true);
+          AppLogger.error('Platform error (fatal)', error, stack);
         }
         return true;
       };
@@ -57,11 +57,10 @@ class CrashReporter {
     if (!_isInitialized || kDebugMode) return;
 
     try {
-      await FirebaseCrashlytics.instance.recordError(
+      AppLogger.error(
+        'CrashReporter${reason != null ? ' ($reason)' : ''}${fatal ? ' [FATAL]' : ''}',
         exception,
         stackTrace ?? StackTrace.current,
-        reason: reason,
-        fatal: fatal,
       );
     } catch (e) {
       AppLogger.error('CrashReporter - Record error failed', e);
@@ -71,31 +70,20 @@ class CrashReporter {
   /// 设置用户ID
   Future<void> setUserId(String userId) async {
     if (!_isInitialized) return;
-    try {
-      await FirebaseCrashlytics.instance.setUserIdentifier(userId);
-    } catch (e) {
-      AppLogger.error('CrashReporter - Set user ID failed', e);
-    }
+    _userId = userId;
+    AppLogger.info('CrashReporter - User ID set: $userId');
   }
 
   /// 设置自定义键值
   Future<void> setCustomKey(String key, Object value) async {
     if (!_isInitialized) return;
-    try {
-      await FirebaseCrashlytics.instance.setCustomKey(key, value);
-    } catch (e) {
-      AppLogger.error('CrashReporter - Set custom key failed', e);
-    }
+    AppLogger.info('CrashReporter - Custom key: $key = $value');
   }
 
   /// 记录日志消息
   Future<void> log(String message) async {
     if (!_isInitialized) return;
-    try {
-      FirebaseCrashlytics.instance.log(message);
-    } catch (e) {
-      AppLogger.error('CrashReporter - Log failed', e);
-    }
+    AppLogger.info('CrashReporter - $message');
   }
 
   /// 包装 Zone 运行，自动捕获未处理异常
@@ -106,7 +94,11 @@ class CrashReporter {
         if (kDebugMode) {
           AppLogger.error('Uncaught error', error, stackTrace);
         } else {
-          FirebaseCrashlytics.instance.recordError(error, stackTrace);
+          AppLogger.error(
+            'Uncaught error${_userId != null ? ' (user: $_userId)' : ''}',
+            error,
+            stackTrace,
+          );
         }
       },
     );

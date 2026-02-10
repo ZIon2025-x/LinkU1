@@ -1,6 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+import '../utils/haptic_feedback.dart';
 import '../design/app_colors.dart';
 import '../design/app_typography.dart';
 import '../design/app_radius.dart';
@@ -48,13 +48,13 @@ class AppFeedback {
 
   /// 成功提示
   static void showSuccess(BuildContext context, String message) {
-    HapticFeedback.lightImpact();
+    AppHaptics.success();
     showToast(context, message: message, type: FeedbackType.success);
   }
 
   /// 错误提示
   static void showError(BuildContext context, String message) {
-    HapticFeedback.heavyImpact();
+    AppHaptics.error();
     showToast(
       context,
       message: message,
@@ -65,7 +65,7 @@ class AppFeedback {
 
   /// 警告提示
   static void showWarning(BuildContext context, String message) {
-    HapticFeedback.mediumImpact();
+    AppHaptics.warning();
     showToast(context, message: message, type: FeedbackType.warning);
   }
 
@@ -91,9 +91,9 @@ class AppFeedback {
     Duration autoDismissDuration = const Duration(seconds: 2),
   }) async {
     if (type == FeedbackType.success) {
-      HapticFeedback.mediumImpact();
+      AppHaptics.success();
     } else if (type == FeedbackType.error) {
-      HapticFeedback.heavyImpact();
+      AppHaptics.error();
     }
 
     await showGeneralDialog(

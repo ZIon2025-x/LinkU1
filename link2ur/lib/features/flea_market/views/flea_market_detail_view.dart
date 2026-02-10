@@ -1,13 +1,13 @@
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/design/app_colors.dart';
+import '../../../core/utils/haptic_feedback.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_typography.dart';
-import '../../../core/widgets/loading_view.dart';
+import '../../../core/widgets/skeleton_view.dart';
 import '../../../core/widgets/error_state_view.dart';
 import '../../../core/widgets/async_image_view.dart';
 import '../../../core/widgets/full_screen_image_view.dart';
@@ -126,7 +126,7 @@ class _FleaMarketDetailContent extends StatelessWidget {
             context,
             icon: Icons.share_outlined,
             onTap: () {
-              HapticFeedback.selectionClick();
+              AppHaptics.selection();
               final item = state.selectedItem!;
               CustomSharePanel.show(
                 context,
@@ -144,7 +144,7 @@ class _FleaMarketDetailContent extends StatelessWidget {
               : Icons.favorite_border,
           color: state.isFavorited ? AppColors.error : Colors.white,
           onTap: () {
-            HapticFeedback.selectionClick();
+            AppHaptics.selection();
             if (state.selectedItem != null) {
               context.read<FleaMarketBloc>().add(
                     FleaMarketToggleFavorite(state.selectedItem!.id),
@@ -180,7 +180,7 @@ class _FleaMarketDetailContent extends StatelessWidget {
   }
 
   Widget _buildBody(BuildContext context, FleaMarketState state, bool isSeller) {
-    if (state.isDetailLoading) return const LoadingView();
+    if (state.isDetailLoading) return const SkeletonFleaMarketDetail();
 
     if (state.detailStatus == FleaMarketStatus.error) {
       return ErrorStateView.loadFailed(
@@ -322,7 +322,7 @@ class _FleaMarketDetailContent extends StatelessWidget {
           onTap: state.isSubmitting
               ? null
               : () {
-                  HapticFeedback.selectionClick();
+                  AppHaptics.selection();
                   context
                       .read<FleaMarketBloc>()
                       .add(FleaMarketRefreshItem(itemId));
@@ -374,7 +374,7 @@ class _FleaMarketDetailContent extends StatelessWidget {
         Expanded(
           child: GestureDetector(
             onTap: () {
-              HapticFeedback.selectionClick();
+              AppHaptics.selection();
               context.push('/flea-market/edit/$itemId');
             },
             child: Container(
@@ -422,7 +422,7 @@ class _FleaMarketDetailContent extends StatelessWidget {
         // 聊天按钮 - 对标iOS 小按钮
         GestureDetector(
           onTap: () {
-            HapticFeedback.selectionClick();
+            AppHaptics.selection();
             context.push('/chat/${item.sellerId}');
           },
           child: Container(
@@ -478,7 +478,7 @@ class _FleaMarketDetailContent extends StatelessWidget {
       onTap: state.isSubmitting
           ? null
           : () {
-              HapticFeedback.selectionClick();
+              AppHaptics.selection();
               if (hasPendingPayment) {
                 // TODO: 跳转支付页面 (Stripe)
                 ScaffoldMessenger.of(context).showSnackBar(
@@ -1054,30 +1054,7 @@ class _SellerCard extends StatelessWidget {
                 ],
               ),
             ),
-            // 联系按钮 - 对标iOS gradient capsule
-            GestureDetector(
-              onTap: () {
-                HapticFeedback.selectionClick();
-              },
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 14, vertical: 8),
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [
-                      AppColors.primary,
-                      AppColors.primary.withValues(alpha: 0.8),
-                    ],
-                  ),
-                  borderRadius: BorderRadius.circular(999),
-                ),
-                child: Text(
-                  context.l10n.fleaMarketContactSeller,
-                  style: AppTypography.caption
-                      .copyWith(color: Colors.white, fontWeight: FontWeight.w600),
-                ),
-              ),
-            ),
+            // 联系按钮已移至 bottomNavigationBar，避免重复
           ],
         ),
       ),

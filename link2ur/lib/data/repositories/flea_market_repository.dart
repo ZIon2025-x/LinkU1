@@ -1,12 +1,16 @@
-import 'dart:typed_data';
-
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 
 import '../models/flea_market.dart';
 import '../services/api_service.dart';
 import '../../core/constants/api_endpoints.dart';
 import '../../core/utils/cache_manager.dart';
 import '../../core/utils/app_exception.dart';
+
+/// 在 Isolate 中解析跳蚤市场列表 JSON
+FleaMarketListResponse _parseFleaMarketListResponse(Map<String, dynamic> json) {
+  return FleaMarketListResponse.fromJson(json);
+}
 
 /// 跳蚤市场仓库
 /// 与iOS FleaMarketViewModel + 后端 flea_market_routes 对齐
@@ -41,7 +45,7 @@ class FleaMarketRepository {
     if (cacheKey != null) {
       final cached = _cache.get<Map<String, dynamic>>(cacheKey);
       if (cached != null) {
-        return FleaMarketListResponse.fromJson(cached);
+        return compute(_parseFleaMarketListResponse, cached);
       }
     }
 
@@ -59,11 +63,11 @@ class FleaMarketRepository {
         await _cache.set(cacheKey, response.data!, ttl: CacheManager.shortTTL);
       }
 
-      return FleaMarketListResponse.fromJson(response.data!);
+      return compute(_parseFleaMarketListResponse, response.data!);
     } catch (e) {
       if (cacheKey != null) {
         final stale = _cache.getStale<Map<String, dynamic>>(cacheKey);
-        if (stale != null) return FleaMarketListResponse.fromJson(stale);
+        if (stale != null) return compute(_parseFleaMarketListResponse, stale);
       }
       rethrow;
     }

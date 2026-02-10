@@ -29,18 +29,22 @@ class AvatarPickerView extends StatefulWidget {
 class _AvatarPickerViewState extends State<AvatarPickerView> {
   String? _selectedAvatar;
 
+  /// 后端存储的预设头像路径（与 AppAssets.avatarPathMap 保持一致）
   static const _avatarOptions = [
     '/static/avatar1.png',
     '/static/avatar2.png',
     '/static/avatar3.png',
     '/static/avatar4.png',
+    '/static/avatar5.png',
   ];
 
+  /// 对应的本地 asset（用于离线显示）
   static const _localAssets = [
     AppAssets.avatar1,
     AppAssets.avatar2,
     AppAssets.avatar3,
     AppAssets.avatar4,
+    AppAssets.avatar5,
   ];
 
   @override

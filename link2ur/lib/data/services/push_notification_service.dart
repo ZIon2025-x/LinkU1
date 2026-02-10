@@ -1,21 +1,27 @@
 import 'dart:io';
-import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:go_router/go_router.dart';
+import 'package:device_info_plus/device_info_plus.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 
+import '../../core/constants/api_endpoints.dart';
 import '../../core/utils/logger.dart';
 import 'storage_service.dart';
 import 'api_service.dart';
 
 /// 推送通知服务
-/// 封装 Firebase Cloud Messaging 和本地通知
+/// 使用原生 APNs (iOS) / FCM (Android) + 本地通知
+/// 通过 MethodChannel 与原生端通信获取推送 Token 和消息
 class PushNotificationService {
   PushNotificationService._();
   static final PushNotificationService instance = PushNotificationService._();
 
-  final FirebaseMessaging _messaging = FirebaseMessaging.instance;
   final FlutterLocalNotificationsPlugin _localNotifications =
       FlutterLocalNotificationsPlugin();
+
+  /// MethodChannel 用于与原生推送交互
+  static const _channel = MethodChannel('com.link2ur/push');
 
   /// GoRouter 实例，用于通知导航
   GoRouter? _router;
@@ -35,79 +41,110 @@ class PushNotificationService {
 
   /// 初始化推送通知服务
   Future<void> init() async {
-    // 请求通知权限
-    await _requestPermission();
-
     // 初始化本地通知
     await _initLocalNotifications();
 
-    // 获取并保存 FCM Token
-    await _getFCMToken();
+    // 监听原生端推送事件
+    _channel.setMethodCallHandler(_handleNativeCall);
 
-    // 监听前台消息
-    FirebaseMessaging.onMessage.listen(_handleForegroundMessage);
-
-    // 监听后台消息点击
-    FirebaseMessaging.onMessageOpenedApp.listen(_handleMessageOpenedApp);
-
-    // 检查app是否从通知启动
-    final initialMessage = await _messaging.getInitialMessage();
-    if (initialMessage != null) {
-      _handleMessageOpenedApp(initialMessage);
+    // 获取已有的推送 Token（原生端注册后缓存）
+    try {
+      final token = await _channel.invokeMethod<String>('getDeviceToken');
+      if (token != null) {
+        AppLogger.info('Push token obtained from native');
+        await StorageService.instance.savePushToken(token);
+        await _uploadTokenToServer(token);
+      }
+    } catch (e) {
+      AppLogger.warning('Native push channel not ready: $e');
     }
-
-    // 监听 Token 刷新
-    _messaging.onTokenRefresh.listen((token) async {
-      AppLogger.info('FCM Token refreshed');
-      await StorageService.instance.savePushToken(token);
-      await _uploadTokenToServer(token);
-    });
 
     AppLogger.info('PushNotificationService initialized');
   }
 
+  /// 处理原生端回调
+  Future<dynamic> _handleNativeCall(MethodCall call) async {
+    switch (call.method) {
+      case 'onTokenRefresh':
+        final token = call.arguments as String;
+        AppLogger.info('Push token refreshed');
+        await StorageService.instance.savePushToken(token);
+        await _uploadTokenToServer(token);
+        break;
+      case 'onRemoteMessage':
+        final data = Map<String, dynamic>.from(call.arguments as Map);
+        _handleRemoteMessage(data);
+        break;
+      case 'onNotificationTapped':
+        final data = Map<String, dynamic>.from(call.arguments as Map);
+        _handleNotificationTapped(data);
+        break;
+    }
+  }
+
   /// 上传推送 Token 到服务器
+  /// 与原生 iOS 项目 APIService.registerDeviceToken 保持一致
   Future<void> _uploadTokenToServer(String token) async {
     try {
       if (_apiService == null) {
         AppLogger.warning('ApiService not set, skipping token upload');
         return;
       }
+
+      // 获取设备信息（与原生项目一致）
+      String deviceId = '';
+      final deviceInfo = DeviceInfoPlugin();
+      if (Platform.isIOS) {
+        final iosInfo = await deviceInfo.iosInfo;
+        deviceId = iosInfo.identifierForVendor ?? '';
+      } else if (Platform.isAndroid) {
+        final androidInfo = await deviceInfo.androidInfo;
+        deviceId = androidInfo.id;
+      }
+
+      final packageInfo = await PackageInfo.fromPlatform();
+      final locale = Platform.localeName;
+      final deviceLanguage = locale.startsWith('zh') ? 'zh' : 'en';
+
       await _apiService!.post(
-        '/api/users/me/device-token',
+        ApiEndpoints.deviceToken,
         data: {
-          'token': token,
+          'device_token': token,
           'platform': Platform.isIOS ? 'ios' : 'android',
-          'type': 'fcm',
+          'device_id': deviceId,
+          'app_version': packageInfo.version,
+          'device_language': deviceLanguage,
         },
       );
-      AppLogger.info('FCM Token uploaded to server');
+      AppLogger.info('Push token uploaded to server');
     } catch (e) {
-      AppLogger.error('Failed to upload FCM token to server', e);
+      AppLogger.error('Failed to upload push token to server', e);
     }
   }
 
-  /// 请求通知权限
-  Future<void> _requestPermission() async {
-    final settings = await _messaging.requestPermission(
-      alert: true,
-      badge: true,
-      sound: true,
-      provisional: false,
-    );
+  /// 注销推送 Token（登出时调用）
+  Future<void> unregisterToken() async {
+    try {
+      final token = await StorageService.instance.getPushToken();
+      if (token == null || _apiService == null) return;
 
-    AppLogger.info(
-      'Notification permission: ${settings.authorizationStatus}',
-    );
+      await _apiService!.delete(
+        ApiEndpoints.deviceToken,
+        data: {'device_token': token},
+      );
+      AppLogger.info('Push token unregistered from server');
+    } catch (e) {
+      AppLogger.error('Failed to unregister push token', e);
+    }
   }
 
   /// 初始化本地通知
   Future<void> _initLocalNotifications() async {
     const androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
     const iosSettings = DarwinInitializationSettings(
-      requestAlertPermission: false,
-      requestBadgePermission: false,
-      requestSoundPermission: false,
+      requestAlertPermission: true,
+      requestBadgePermission: true,
+      requestSoundPermission: true,
     );
     const settings = InitializationSettings(
       android: androidSettings,
@@ -135,42 +172,70 @@ class PushNotificationService {
     }
   }
 
-  /// 获取 FCM Token
-  Future<String?> _getFCMToken() async {
-    try {
-      final token = await _messaging.getToken();
-      if (token != null) {
-        AppLogger.info('FCM Token obtained');
-        await StorageService.instance.savePushToken(token);
-        await _uploadTokenToServer(token);
-      }
-      return token;
-    } catch (e) {
-      AppLogger.error('Failed to get FCM token', e);
-      return null;
+  /// 处理远程推送消息（前台收到时显示本地通知）
+  /// 支持双语 payload：后端可在 custom.localized 中发送多语言内容
+  /// 格式: {"localized": {"en": {"title": "...", "body": "..."}, "zh": {"title": "...", "body": "..."}}}
+  void _handleRemoteMessage(Map<String, dynamic> data) {
+    AppLogger.info('Remote message received');
+
+    String title;
+    String body;
+
+    // 尝试从 localized 字段提取当前语言内容
+    final localized = _extractLocalized(data);
+    if (localized != null) {
+      final lang = _getDeviceLanguage();
+      final content = (localized[lang] as Map<String, dynamic>?) ??
+          (localized['en'] as Map<String, dynamic>?) ??
+          <String, dynamic>{};
+      title = content['title'] as String? ?? '';
+      body = content['body'] as String? ?? '';
+    } else {
+      // 后端已按 device_language 发送单语言，直接使用
+      title = data['title'] as String? ?? '';
+      body = data['body'] as String? ?? '';
     }
-  }
 
-  /// 处理前台消息
-  void _handleForegroundMessage(RemoteMessage message) {
-    AppLogger.info('Foreground message: ${message.messageId}');
-
-    final notification = message.notification;
-    if (notification != null) {
+    if (title.isNotEmpty || body.isNotEmpty) {
       _showLocalNotification(
-        title: notification.title ?? '',
-        body: notification.body ?? '',
-        payload: message.data.toString(),
+        title: title,
+        body: body,
+        payload: data.toString(),
       );
     }
   }
 
-  /// 处理消息点击(后台/terminated)
-  void _handleMessageOpenedApp(RemoteMessage message) {
-    AppLogger.info('Message opened: ${message.messageId}');
-    final data = message.data;
+  /// 从 payload 中提取 localized 内容
+  /// 兼容 custom.localized 和 localized 两种格式
+  Map<String, dynamic>? _extractLocalized(Map<String, dynamic> data) {
+    // 格式1: data["localized"]
+    if (data['localized'] is Map) {
+      return Map<String, dynamic>.from(data['localized'] as Map);
+    }
+    // 格式2: data["custom"]["localized"]
+    if (data['custom'] is Map) {
+      final custom = Map<String, dynamic>.from(data['custom'] as Map);
+      if (custom['localized'] is Map) {
+        return Map<String, dynamic>.from(custom['localized'] as Map);
+      }
+    }
+    return null;
+  }
+
+  /// 获取设备语言（简化为 "en" 或 "zh"）
+  /// 与原生项目 PushNotificationLocalizer.deviceLanguage 逻辑一致
+  String _getDeviceLanguage() {
+    final locale = Platform.localeName;
+    return locale.startsWith('zh') ? 'zh' : 'en';
+  }
+
+  /// 处理通知点击（从原生端传来）
+  void _handleNotificationTapped(Map<String, dynamic> data) {
+    AppLogger.info('Notification tapped from native');
     if (data.containsKey('type')) {
-      _navigateByNotificationType(data['type'], data);
+      _navigateByNotificationType(data['type'] as String, data);
+    } else {
+      _router?.push('/notifications');
     }
   }
 
@@ -207,13 +272,11 @@ class PushNotificationService {
     );
   }
 
-  /// 通知点击回调
+  /// 通知点击回调（本地通知）
   void _onNotificationTapped(NotificationResponse response) {
     AppLogger.info('Notification tapped: ${response.payload}');
     if (response.payload != null && response.payload!.isNotEmpty) {
       try {
-        // payload 格式为 data.toString()，尝试解析
-        // 对于简单场景，直接导航到通知中心
         _router?.push('/notifications');
       } catch (e) {
         AppLogger.error('Failed to parse notification payload', e);
@@ -300,17 +363,5 @@ class PushNotificationService {
         _router!.push('/notifications');
         break;
     }
-  }
-
-  /// 订阅主题
-  Future<void> subscribeToTopic(String topic) async {
-    await _messaging.subscribeToTopic(topic);
-    AppLogger.info('Subscribed to topic: $topic');
-  }
-
-  /// 取消订阅主题
-  Future<void> unsubscribeFromTopic(String topic) async {
-    await _messaging.unsubscribeFromTopic(topic);
-    AppLogger.info('Unsubscribed from topic: $topic');
   }
 }

@@ -58,14 +58,12 @@ class ApiService {
     // 网络监控拦截器（NetworkLogger + PerformanceMonitor）
     _dio.interceptors.add(NetworkMonitorInterceptor());
 
-    // 日志拦截器
-    if (AppConfig.instance.enableDebugLog) {
-      _dio.interceptors.add(LogInterceptor(
-        requestBody: true,
-        responseBody: true,
-        logPrint: (obj) => AppLogger.network('DIO', obj.toString()),
-      ));
-    }
+    // 注意：不再使用 Dio LogInterceptor。
+    // 它会逐行打印每个请求头、响应头和完整 body，单个请求产生 40+ 行日志，
+    // 通过 debugPrint 节流后会造成严重的控制台 I/O 延迟，让页面看起来「一直在加载」。
+    // 网络日志已由上方两层拦截器覆盖：
+    //   1. _onRequest/_onResponse → 简洁的 method + URL + status
+    //   2. NetworkMonitorInterceptor → 结构化日志（内存存储 + RESPONSE 耗时）
   }
 
   /// 请求拦截

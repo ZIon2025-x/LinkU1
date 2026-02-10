@@ -1,7 +1,8 @@
+import 'dart:async';
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+import '../../../core/utils/haptic_feedback.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
@@ -21,6 +22,7 @@ import '../../../core/widgets/empty_state_view.dart';
 import 'package:geolocator/geolocator.dart';
 
 import '../../../core/widgets/content_constraint.dart';
+import '../../../core/widgets/gradient_text.dart';
 import '../../../data/models/task.dart';
 import '../../../data/models/task_expert.dart';
 import '../../../data/repositories/task_expert_repository.dart';
@@ -70,7 +72,7 @@ class _HomeViewContentState extends State<_HomeViewContent> {
 
   void _onTabChanged(int index) {
     if (_selectedTab != index) {
-      HapticFeedback.selectionClick();
+      AppHaptics.selection();
       setState(() {
         _selectedTab = index;
       });
@@ -176,33 +178,8 @@ class _HomeViewContentState extends State<_HomeViewContent> {
           Container(
             color: isDark ? AppColors.backgroundDark : AppColors.backgroundLight,
           ),
-          // 装饰性背景
-          Positioned(
-            right: -60, top: -100,
-            child: Container(
-              width: 300, height: 300,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: AppColors.primary.withValues(alpha: 0.12),
-              ),
-            ),
-          ),
-          Positioned(
-            left: -75, top: 200,
-            child: Container(
-              width: 250, height: 250,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: AppColors.accentPink.withValues(alpha: 0.08),
-              ),
-            ),
-          ),
-          Positioned.fill(
-            child: Container(
-              color: (isDark ? AppColors.backgroundDark : AppColors.backgroundLight)
-                  .withValues(alpha: 0.85),
-            ),
-          ),
+          // 装饰性背景 - 与iOS HomeView对齐：模糊彩色圆形
+          const RepaintBoundary(child: _DecorativeBackground()),
           SafeArea(
             child: Column(
               children: [
@@ -240,7 +217,7 @@ class _HomeViewContentState extends State<_HomeViewContent> {
         children: [
           GestureDetector(
             onTap: () {
-              HapticFeedback.selectionClick();
+              AppHaptics.selection();
               _showMenuSheet(context);
             },
             child: SizedBox(
@@ -279,8 +256,8 @@ class _HomeViewContentState extends State<_HomeViewContent> {
           const Spacer(),
           GestureDetector(
             onTap: () {
-              HapticFeedback.selectionClick();
-              _showSearchSheet(context);
+              AppHaptics.selection();
+              context.push('/search');
             },
             child: SizedBox(
               width: 44, height: 44,
@@ -306,15 +283,6 @@ class _HomeViewContentState extends State<_HomeViewContent> {
     );
   }
 
-  void _showSearchSheet(BuildContext context) {
-    showModalBottomSheet(
-      context: context, isScrollControlled: true, backgroundColor: Colors.transparent,
-      builder: (context) => DraggableScrollableSheet(
-        initialChildSize: 0.9, minChildSize: 0.5, maxChildSize: 0.95,
-        builder: (context, scrollController) => const _SearchView(),
-      ),
-    );
-  }
 }
 
 /// 桌面端分段按钮（Notion 风格）
@@ -386,7 +354,7 @@ class _DesktopSegmentButtonState extends State<_DesktopSegmentButton> {
   }
 }
 
-/// 移动端 TabButton（保持原样）
+/// 移动端 TabButton — 简化动画：去掉 AnimatedScale + BoxShadow 动画
 class _TabButton extends StatelessWidget {
   const _TabButton({
     required this.title,
@@ -410,37 +378,94 @@ class _TabButton extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            AnimatedScale(
-              scale: isSelected ? 1.05 : 1.0,
-              duration: const Duration(milliseconds: 250),
-              curve: Curves.easeOutBack,
-              child: Text(
-                title,
-                style: AppTypography.body.copyWith(
-                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
-                  color: isSelected
-                      ? (isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight)
-                      : (isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight),
-                ),
+            Text(
+              title,
+              style: AppTypography.body.copyWith(
+                fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                color: isSelected
+                    ? (isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight)
+                    : (isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight),
               ),
             ),
             const SizedBox(height: 6),
+            // 保留指示器宽度动画，去掉 BoxShadow 动画
             AnimatedContainer(
-              duration: const Duration(milliseconds: 280),
+              duration: const Duration(milliseconds: 200),
               curve: Curves.easeOut,
               height: 3,
               width: isSelected ? 28 : 0,
               decoration: BoxDecoration(
                 color: isSelected ? AppColors.primary : Colors.transparent,
                 borderRadius: AppRadius.allPill,
-                boxShadow: isSelected
-                    ? [BoxShadow(color: AppColors.primary.withValues(alpha: 0.3), blurRadius: 4, offset: const Offset(0, 2))]
-                    : [],
               ),
             ),
           ],
         ),
       ),
+    );
+  }
+}
+
+/// 装饰性背景 - 与iOS HomeView对齐
+/// 使用模糊彩色圆形营造柔和氛围感
+class _DecorativeBackground extends StatelessWidget {
+  const _DecorativeBackground();
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    // 深色模式下降低装饰透明度
+    final primaryAlpha = isDark ? 0.06 : 0.15;
+    final pinkAlpha = isDark ? 0.04 : 0.10;
+
+    return Stack(
+      children: [
+        // 背景底色
+        Positioned.fill(
+          child: ColoredBox(
+            color: isDark ? AppColors.backgroundDark : AppColors.backgroundLight,
+          ),
+        ),
+        // 主色模糊圆 (与iOS对齐: 300x300, blur=60, opacity=0.15)
+        Positioned(
+          right: -60,
+          top: -100,
+          child: ImageFiltered(
+            imageFilter: ImageFilter.blur(sigmaX: 60, sigmaY: 60),
+            child: Container(
+              width: 300,
+              height: 300,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: AppColors.primary.withValues(alpha: primaryAlpha),
+              ),
+            ),
+          ),
+        ),
+        // 粉色模糊圆 (与iOS对齐: 250x250, blur=50, opacity=0.1)
+        Positioned(
+          left: -75,
+          top: 200,
+          child: ImageFiltered(
+            imageFilter: ImageFilter.blur(sigmaX: 50, sigmaY: 50),
+            child: Container(
+              width: 250,
+              height: 250,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: AppColors.accentPink.withValues(alpha: pinkAlpha),
+              ),
+            ),
+          ),
+        ),
+        // 半透明覆盖层
+        Positioned.fill(
+          child: ColoredBox(
+            color: (isDark ? AppColors.backgroundDark : AppColors.backgroundLight)
+                .withValues(alpha: 0.85),
+          ),
+        ),
+      ],
     );
   }
 }

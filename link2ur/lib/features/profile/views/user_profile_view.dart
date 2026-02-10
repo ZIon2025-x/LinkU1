@@ -9,6 +9,9 @@ import '../../../core/widgets/loading_view.dart';
 import '../../../core/widgets/error_state_view.dart';
 import '../../../core/widgets/stat_item.dart';
 import '../../../core/widgets/async_image_view.dart';
+import '../../../core/widgets/animated_circular_progress.dart';
+import '../../../core/widgets/animated_star_rating.dart';
+import '../../../core/widgets/skill_radar_chart.dart';
 import '../../../data/models/user.dart';
 import '../../../data/repositories/user_repository.dart';
 import '../../../data/repositories/task_repository.dart';
@@ -71,6 +74,9 @@ class _UserProfileViewState extends State<UserProfileView> {
                                   _buildUserInfoCard(context, state.publicUser!),
                                   // 统计数据
                                   _buildStatsRow(context, state.publicUser!),
+                                  const SizedBox(height: AppSpacing.md),
+                                  // 技能雷达图
+                                  _buildSkillRadar(context, state.publicUser!),
                                   // 近期任务
                                   _buildRecentTasksSection(context),
                                   const SizedBox(height: AppSpacing.xl),
@@ -188,6 +194,26 @@ class _UserProfileViewState extends State<UserProfileView> {
       padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
       child: Row(
         children: [
+          // 任务完成率 — 环形进度条
+          Expanded(
+            child: AnimatedCircularProgress(
+              progress: user.completionRate,
+              size: 56,
+              strokeWidth: 5,
+              gradientColors: const [AppColors.primary, AppColors.primaryLight],
+              label: l10n.profileCompletedTasks,
+              centerWidget: Text(
+                '${user.completedTaskCount}',
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.primary,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: AppSpacing.md),
+          // 总任务数 — 保持 StatItem
           Expanded(
             child: StatItem(
               label: l10n.profileTaskCount,
@@ -196,19 +222,88 @@ class _UserProfileViewState extends State<UserProfileView> {
             ),
           ),
           const SizedBox(width: AppSpacing.md),
+          // 评分 — 星星动画
           Expanded(
-            child: StatItem(
-              label: l10n.profileCompletedTasks,
-              value: '${user.completedTaskCount}',
-              icon: Icons.check_circle,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                AnimatedStarRating(
+                  rating: user.avgRating ?? 0,
+                  size: 14,
+                  spacing: 2,
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  user.ratingDisplay,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.gold,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  l10n.profileRating,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: AppColors.textSecondaryLight,
+                  ),
+                ),
+              ],
             ),
           ),
-          const SizedBox(width: AppSpacing.md),
-          Expanded(
-            child: StatItem(
-              label: l10n.profileRating,
-              value: user.ratingDisplay,
-              icon: Icons.star,
+        ],
+      ),
+    );
+  }
+
+  /// 技能雷达图 — 展示用户多维能力
+  Widget _buildSkillRadar(BuildContext context, User user) {
+    final l10n = context.l10n;
+    // 根据用户数据构建雷达图维度
+    final rating = (user.avgRating ?? 0) / 5.0; // 归一化到 0-1
+    final completionRate = user.completionRate;
+    final taskVolume =
+        (user.taskCount / 50).clamp(0.0, 1.0); // 50个任务为满
+    final experience = user.completedTaskCount > 0
+        ? (user.completedTaskCount / 30).clamp(0.0, 1.0)
+        : 0.0;
+    // 如果数据太少，不显示雷达图
+    if (user.taskCount == 0 && (user.avgRating ?? 0) == 0) {
+      return const SizedBox.shrink();
+    }
+
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+      padding: const EdgeInsets.all(AppSpacing.md),
+      decoration: BoxDecoration(
+        color: Theme.of(context).cardColor,
+        borderRadius: BorderRadius.circular(AppRadius.large),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 10,
+            offset: const Offset(0, 5),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          Text(l10n.profileRating,
+              style: const TextStyle(
+                  fontSize: 14, fontWeight: FontWeight.w600)),
+          const SizedBox(height: 8),
+          Center(
+            child: SkillRadarChart(
+              data: {
+                '⭐': rating,
+                '✅': completionRate,
+                '📦': taskVolume,
+                '🏆': experience,
+              },
+              size: 160,
+              maxValue: 1.0,
+              color: AppColors.primary,
             ),
           ),
         ],

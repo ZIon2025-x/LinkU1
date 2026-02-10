@@ -1,0 +1,268 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context=".LocationPickerActivity">
+
+    <!-- Map Fragment -->
+    <fragment
+        android:id="@+id/map"
+        android:name="com.google.android.gms.maps.SupportMapFragment"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent" />
+
+    <!-- Search Bar (top) -->
+    <LinearLayout
+        android:id="@+id/searchContainer"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_alignParentTop="true"
+        android:orientation="vertical"
+        android:padding="12dp">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:background="@drawable/search_bg"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:paddingHorizontal="14dp">
+
+            <ImageView
+                android:layout_width="20dp"
+                android:layout_height="20dp"
+                android:contentDescription="Search"
+                android:src="@android:drawable/ic_menu_search"
+                android:tint="#8E8E93" />
+
+            <EditText
+                android:id="@+id/searchEditText"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_marginStart="10dp"
+                android:layout_weight="1"
+                android:background="@null"
+                android:hint="Search place"
+                android:imeOptions="actionSearch"
+                android:inputType="text"
+                android:singleLine="true"
+                android:textSize="15sp" />
+
+            <ImageView
+                android:id="@+id/clearSearch"
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:contentDescription="Clear"
+                android:src="@android:drawable/ic_menu_close_clear_cancel"
+                android:tint="#8E8E93"
+                android:visibility="gone" />
+        </LinearLayout>
+
+        <!-- Search Results List -->
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/searchResultsList"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:background="@drawable/search_bg"
+            android:maxHeight="300dp"
+            android:visibility="gone" />
+    </LinearLayout>
+
+    <!-- Center Pin (overlay on map center) -->
+    <ImageView
+        android:id="@+id/centerPin"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:layout_centerInParent="true"
+        android:contentDescription="Pin"
+        android:src="@android:drawable/ic_menu_myplaces"
+        android:tint="#547DFF" />
+
+    <!-- My Location Button (left bottom, above bottom panel) -->
+    <com.google.android.material.floatingactionbutton.FloatingActionButton
+        android:id="@+id/myLocationFab"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_above="@+id/bottomPanel"
+        android:layout_alignParentStart="true"
+        android:layout_marginStart="12dp"
+        android:layout_marginBottom="12dp"
+        android:contentDescription="My location"
+        android:src="@android:drawable/ic_menu_mylocation"
+        android:tint="#547DFF"
+        android:backgroundTint="@android:color/white"
+        app:fabSize="mini"
+        xmlns:app="http://schemas.android.com/apk/res-auto" />
+
+    <!-- Zoom Buttons (right bottom, above bottom panel) -->
+    <LinearLayout
+        android:id="@+id/zoomButtons"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_above="@+id/bottomPanel"
+        android:layout_alignParentEnd="true"
+        android:layout_marginEnd="12dp"
+        android:layout_marginBottom="12dp"
+        android:background="@drawable/search_bg"
+        android:orientation="horizontal"
+        android:elevation="4dp">
+
+        <ImageButton
+            android:id="@+id/zoomOutBtn"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:background="?android:attr/selectableItemBackground"
+            android:contentDescription="Zoom out"
+            android:src="@android:drawable/btn_minus" />
+
+        <View
+            android:layout_width="1dp"
+            android:layout_height="24dp"
+            android:layout_gravity="center_vertical"
+            android:background="#E0E0E0" />
+
+        <ImageButton
+            android:id="@+id/zoomInBtn"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:background="?android:attr/selectableItemBackground"
+            android:contentDescription="Zoom in"
+            android:src="@android:drawable/btn_plus" />
+    </LinearLayout>
+
+    <!-- Bottom Panel -->
+    <LinearLayout
+        android:id="@+id/bottomPanel"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_alignParentBottom="true"
+        android:background="@android:color/white"
+        android:elevation="8dp"
+        android:orientation="vertical"
+        android:padding="16dp">
+
+        <!-- Address Info -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:padding="12dp"
+            android:background="@drawable/address_card_bg">
+
+            <ImageView
+                android:id="@+id/addressIcon"
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:src="@android:drawable/ic_menu_myplaces"
+                android:tint="#547DFF" />
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="12dp"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/addressText"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:maxLines="2"
+                    android:text="Drag map to select"
+                    android:textColor="#8E8E93"
+                    android:textSize="15sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/coordinateText"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:textColor="#8E8E93"
+                    android:textSize="12sp" />
+            </LinearLayout>
+
+            <ProgressBar
+                android:id="@+id/addressLoading"
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:visibility="gone" />
+        </LinearLayout>
+
+        <!-- UK Cities Quick Select -->
+        <HorizontalScrollView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:scrollbars="none">
+
+            <LinearLayout
+                android:id="@+id/citiesContainer"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal" />
+        </HorizontalScrollView>
+
+        <!-- Action Buttons -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:orientation="horizontal">
+
+            <!-- Current Location Button -->
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/currentLocationBtn"
+                android:layout_width="0dp"
+                android:layout_height="48dp"
+                android:layout_marginEnd="6dp"
+                android:layout_weight="1"
+                android:backgroundTint="#547DFF"
+                android:text="Current Location"
+                android:textAllCaps="false"
+                android:textColor="@android:color/white"
+                android:textSize="13sp"
+                app:cornerRadius="12dp"
+                app:icon="@android:drawable/ic_menu_mylocation"
+                app:iconTint="@android:color/white"
+                xmlns:app="http://schemas.android.com/apk/res-auto" />
+
+            <!-- Online Button -->
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/onlineBtn"
+                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                android:layout_width="0dp"
+                android:layout_height="48dp"
+                android:layout_marginStart="6dp"
+                android:layout_weight="1"
+                android:text="Online"
+                android:textAllCaps="false"
+                android:textColor="#547DFF"
+                android:textSize="13sp"
+                app:cornerRadius="12dp"
+                app:icon="@android:drawable/ic_menu_manage"
+                app:iconTint="#547DFF"
+                app:strokeColor="#547DFF"
+                xmlns:app="http://schemas.android.com/apk/res-auto" />
+        </LinearLayout>
+
+        <!-- Confirm Button -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/confirmBtn"
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:layout_marginTop="8dp"
+            android:backgroundTint="#547DFF"
+            android:enabled="false"
+            android:text="Confirm"
+            android:textAllCaps="false"
+            android:textColor="@android:color/white"
+            android:textSize="15sp"
+            android:textStyle="bold"
+            app:cornerRadius="12dp"
+            xmlns:app="http://schemas.android.com/apk/res-auto" />
+    </LinearLayout>
+</RelativeLayout>

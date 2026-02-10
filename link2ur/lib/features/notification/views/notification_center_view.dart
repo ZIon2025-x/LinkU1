@@ -92,7 +92,7 @@ class _SystemNotificationListState extends State<_SystemNotificationList> {
 
         if (state.status == NotificationStatus.loading &&
             state.notifications.isEmpty) {
-          return const SkeletonList();
+          return const SkeletonList(imageSize: 44);
         }
 
         if (state.status == NotificationStatus.error &&
@@ -181,7 +181,7 @@ class _InteractionNotificationListState
 
         if (state.status == NotificationStatus.loading &&
             state.notifications.isEmpty) {
-          return const SkeletonList();
+          return const SkeletonList(imageSize: 44);
         }
 
         if (state.status == NotificationStatus.error &&

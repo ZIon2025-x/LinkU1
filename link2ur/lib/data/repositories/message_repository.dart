@@ -259,9 +259,26 @@ class MessageRepository {
   }
 
   /// 标记任务聊天已读
-  Future<void> markTaskChatRead(int taskId) async {
+  ///
+  /// [uptoMessageId] — 标记该消息及之前的所有消息为已读；
+  /// [messageIds] — 标记指定消息 ID 列表为已读。
+  /// 二者至少传一个，否则后端返回 422。
+  Future<void> markTaskChatRead(
+    int taskId, {
+    int? uptoMessageId,
+    List<int>? messageIds,
+  }) async {
+    final body = <String, dynamic>{};
+    if (uptoMessageId != null) {
+      body['upto_message_id'] = uptoMessageId;
+    }
+    if (messageIds != null && messageIds.isNotEmpty) {
+      body['message_ids'] = messageIds;
+    }
+
     final response = await _apiService.post(
       ApiEndpoints.taskChatRead(taskId),
+      data: body.isEmpty ? null : body,
     );
 
     if (!response.isSuccess) {

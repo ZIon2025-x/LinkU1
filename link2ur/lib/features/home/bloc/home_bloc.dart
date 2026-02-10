@@ -1,24 +1,43 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../data/models/task.dart';
+import '../../../data/models/user.dart';
 import '../../../data/repositories/task_repository.dart';
+import '../../../data/repositories/forum_repository.dart';
+import '../../../data/repositories/flea_market_repository.dart';
+import '../../../data/repositories/leaderboard_repository.dart';
 import '../../../core/utils/logger.dart';
+import '../../../core/utils/forum_permission_helper.dart';
 import 'home_event.dart';
 import 'home_state.dart';
 
 /// 首页Bloc
 class HomeBloc extends Bloc<HomeEvent, HomeState> {
-  HomeBloc({required TaskRepository taskRepository})
-      : _taskRepository = taskRepository,
+  HomeBloc({
+    required TaskRepository taskRepository,
+    ForumRepository? forumRepository,
+    FleaMarketRepository? fleaMarketRepository,
+    LeaderboardRepository? leaderboardRepository,
+  })  : _taskRepository = taskRepository,
+        _forumRepository = forumRepository,
+        _fleaMarketRepository = fleaMarketRepository,
+        _leaderboardRepository = leaderboardRepository,
         super(const HomeState()) {
     on<HomeLoadRequested>(_onLoadRequested);
     on<HomeRefreshRequested>(_onRefreshRequested);
     on<HomeLoadRecommended>(_onLoadRecommended);
     on<HomeLoadNearby>(_onLoadNearby);
     on<HomeTabChanged>(_onTabChanged);
+    on<HomeLoadRecentActivities>(_onLoadRecentActivities);
   }
 
   final TaskRepository _taskRepository;
+  final ForumRepository? _forumRepository;
+  final FleaMarketRepository? _fleaMarketRepository;
+  final LeaderboardRepository? _leaderboardRepository;
+
+  /// 当前用户（由外部设置，用于权限过滤）
+  User? currentUser;
 
   Future<void> _onLoadRequested(
     HomeLoadRequested event,
@@ -118,7 +137,13 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
       ));
     } catch (e) {
       AppLogger.error('Failed to refresh home data', e);
-      emit(state.copyWith(isRefreshing: false));
+      // 刷新失败：通知 UI 层显示 Toast，保持现有数据不变
+      emit(state.copyWith(
+        isRefreshing: false,
+        refreshError: e.toString(),
+      ));
+      // 立即清除 refreshError，避免重复触发 BlocListener
+      emit(state.copyWith(clearRefreshError: true));
     }
   }
 
@@ -214,5 +239,143 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
     Emitter<HomeState> emit,
   ) {
     emit(state.copyWith(currentTab: event.index));
+  }
+
+  /// 加载最新动态（对标 iOS RecentActivityViewModel）
+  ///
+  /// 并行获取三个数据源：
+  /// 1. 论坛帖子（按可见板块过滤）
+  /// 2. 跳蚤市场商品（仅 active 状态）
+  /// 3. 排行榜（仅 active 状态）
+  /// 然后合并、去重、按时间排序
+  Future<void> _onLoadRecentActivities(
+    HomeLoadRecentActivities event,
+    Emitter<HomeState> emit,
+  ) async {
+    if (state.isLoadingActivities) return;
+
+    emit(state.copyWith(isLoadingActivities: true));
+
+    try {
+      // 并行获取三个数据源（对标 iOS Publishers.Zip3）
+      // 使用独立 try-catch 包裹每个源，避免一个失败导致全部失败
+      final results = await Future.wait([
+        _fetchForumActivities().catchError((_) => <RecentActivityItem>[]),
+        _fetchFleaMarketActivities().catchError((_) => <RecentActivityItem>[]),
+        _fetchLeaderboardActivities().catchError((_) => <RecentActivityItem>[]),
+      ]);
+
+      // 合并所有动态（部分数据源失败时仍显示可用数据）
+      final allActivities = <RecentActivityItem>[];
+      for (final list in results) {
+        allActivities.addAll(list);
+      }
+
+      // 去重（按 id）
+      final seenIds = <String>{};
+      final uniqueActivities = <RecentActivityItem>[];
+      for (final activity in allActivities) {
+        if (seenIds.add(activity.id)) {
+          uniqueActivities.add(activity);
+        }
+      }
+
+      // 按时间排序（最新在前，对标 iOS sorted { $0.createdAt > $1.createdAt }）
+      uniqueActivities.sort((a, b) {
+        final aTime = a.createdAt ?? DateTime(2000);
+        final bTime = b.createdAt ?? DateTime(2000);
+        return bTime.compareTo(aTime);
+      });
+
+      // 最多显示 15 条（对标 iOS maxDisplayCount = 15）
+      final activities = uniqueActivities.take(15).toList();
+
+      emit(state.copyWith(
+        recentActivities: activities,
+        isLoadingActivities: false,
+      ));
+    } catch (e) {
+      AppLogger.error('Failed to load recent activities', e);
+      emit(state.copyWith(isLoadingActivities: false));
+    }
+  }
+
+  /// 获取论坛帖子动态（按权限过滤可见板块）
+  Future<List<RecentActivityItem>> _fetchForumActivities() async {
+    if (_forumRepository == null) return [];
+
+    try {
+      // 1. 获取可见板块（后端已按用户权限过滤）
+      final visibleCategories =
+          await _forumRepository.getVisibleCategories();
+
+      // 2. 客户端兜底过滤，获取可见板块 ID 集合
+      final visibleIds = ForumPermissionHelper.getVisibleCategoryIds(
+        visibleCategories,
+        currentUser,
+      );
+
+      // 3. 获取最新帖子
+      final postResponse = await _forumRepository.getPosts(
+        page: 1,
+        pageSize: 20,
+        sortBy: 'latest',
+      );
+
+      // 4. 过滤：只保留可见板块内的帖子
+      final filteredPosts = visibleIds.isNotEmpty
+          ? ForumPermissionHelper.filterPostsByVisibleCategories(
+              postResponse.posts,
+              visibleIds,
+            )
+          : postResponse.posts;
+
+      return filteredPosts
+          .map((post) => RecentActivityItem.fromForumPost(post))
+          .toList();
+    } catch (e) {
+      AppLogger.error('Failed to fetch forum activities', e);
+      return [];
+    }
+  }
+
+  /// 获取跳蚤市场动态（仅 active 状态，对标 iOS item.status == "active"）
+  Future<List<RecentActivityItem>> _fetchFleaMarketActivities() async {
+    if (_fleaMarketRepository == null) return [];
+
+    try {
+      final response = await _fleaMarketRepository.getItems(
+        page: 1,
+        pageSize: 20,
+      );
+
+      return response.items
+          .where((item) => item.isActive) // 只包含在售商品
+          .map((item) => RecentActivityItem.fromFleaMarketItem(item))
+          .toList();
+    } catch (e) {
+      AppLogger.error('Failed to fetch flea market activities', e);
+      return [];
+    }
+  }
+
+  /// 获取排行榜动态（仅 active 状态，对标 iOS leaderboard.status == "active"）
+  Future<List<RecentActivityItem>> _fetchLeaderboardActivities() async {
+    if (_leaderboardRepository == null) return [];
+
+    try {
+      final response = await _leaderboardRepository.getLeaderboards(
+        page: 1,
+        pageSize: 20,
+      );
+
+      return response.leaderboards
+          .where((lb) => lb.isActive) // 只包含活跃排行榜
+          .map((lb) => RecentActivityItem.fromLeaderboard(lb))
+          .toList();
+    } catch (e) {
+      AppLogger.error('Failed to fetch leaderboard activities', e);
+      return [];
+    }
   }
 }

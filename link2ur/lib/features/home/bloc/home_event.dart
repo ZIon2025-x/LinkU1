@@ -53,3 +53,8 @@ class HomeTabChanged extends HomeEvent {
   @override
   List<Object?> get props => [index];
 }
+
+/// 加载最新动态（论坛帖子，按权限过滤）
+class HomeLoadRecentActivities extends HomeEvent {
+  const HomeLoadRecentActivities();
+}

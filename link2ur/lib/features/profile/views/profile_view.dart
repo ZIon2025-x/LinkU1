@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+import '../../../core/utils/haptic_feedback.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
@@ -11,9 +11,10 @@ import '../../../core/design/app_radius.dart';
 import '../../../core/utils/l10n_extension.dart';
 import '../../../core/utils/responsive.dart';
 import '../../../core/widgets/user_identity_badges.dart';
-import '../../../core/widgets/stat_item.dart';
 import '../../../core/widgets/async_image_view.dart';
 import '../../../core/widgets/content_constraint.dart';
+import '../../../core/widgets/credit_score_gauge.dart';
+import '../../../core/widgets/animated_counter.dart';
 import '../../../data/models/user.dart';
 import '../../../data/repositories/user_repository.dart';
 import '../../../data/repositories/task_repository.dart';
@@ -184,7 +185,11 @@ class _ProfileContent extends StatelessWidget {
                 ..add(const ProfileLoadRequested())
                 ..add(const ProfileLoadMyTasks())
                 ..add(const ProfileLoadMyTasks(isPosted: true));
-              await Future.delayed(const Duration(milliseconds: 500));
+              // 等待 BLoC 状态变化而非人为延迟
+              await context.read<ProfileBloc>().stream.firstWhere(
+                    (s) => s.status != ProfileStatus.loading,
+                    orElse: () => profileState,
+                  );
             },
             child: isDesktop
                 ? ContentConstraint(
@@ -595,14 +600,30 @@ class _ProfileContent extends StatelessWidget {
           Expanded(
             child: GestureDetector(
               onTap: () {
-                HapticFeedback.selectionClick();
+                AppHaptics.selection();
                 context.push('/profile/my-tasks');
               },
               behavior: HitTestBehavior.opaque,
-              child: StatItem(
-                value: '$inProgressCount',
-                label: context.l10n.profileInProgress,
-                color: AppColors.primary,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  AnimatedCounter(
+                    value: inProgressCount,
+                    style: AppTypography.title3.copyWith(
+                      color: AppColors.primary,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  AppSpacing.vXs,
+                  Text(
+                    context.l10n.profileInProgress,
+                    style: AppTypography.caption.copyWith(
+                      color: isDark
+                          ? AppColors.textSecondaryDark
+                          : AppColors.textSecondaryLight,
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
@@ -610,23 +631,40 @@ class _ProfileContent extends StatelessWidget {
           Expanded(
             child: GestureDetector(
               onTap: () {
-                HapticFeedback.selectionClick();
+                AppHaptics.selection();
                 context.push('/profile/my-tasks');
               },
               behavior: HitTestBehavior.opaque,
-              child: StatItem(
-                value: '$completedCount',
-                label: context.l10n.profileCompleted,
-                color: AppColors.success,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  AnimatedCounter(
+                    value: completedCount,
+                    style: AppTypography.title3.copyWith(
+                      color: AppColors.success,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  AppSpacing.vXs,
+                  Text(
+                    context.l10n.profileCompleted,
+                    style: AppTypography.caption.copyWith(
+                      color: isDark
+                          ? AppColors.textSecondaryDark
+                          : AppColors.textSecondaryLight,
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
           Container(width: 1, height: 30, color: isDark ? AppColors.dividerDark : AppColors.dividerLight),
           Expanded(
-            child: StatItem(
-              value: user.creditScoreDisplay,
+            child: CreditScoreGauge(
+              score: (user.avgRating ?? 0) * 20, // 0-5 → 0-100
+              size: 72,
+              strokeWidth: 7,
               label: context.l10n.profileCreditScore,
-              color: AppColors.warning,
             ),
           ),
         ],
@@ -674,6 +712,7 @@ class _ProfileContent extends StatelessWidget {
                 _ProfileRow(
                   icon: Icons.format_list_bulleted,  // list.bullet.rectangle.fill
                   title: context.l10n.profileMyTasks,
+                  subtitle: context.l10n.profileMyTasksSubtitle,
                   color: AppColors.primary,
                   onTap: () => context.push('/profile/my-tasks'),
                 ),
@@ -681,6 +720,7 @@ class _ProfileContent extends StatelessWidget {
                 _ProfileRow(
                   icon: Icons.inventory_2,           // shippingbox.fill
                   title: context.l10n.profileMyPosts,
+                  subtitle: context.l10n.profileMyPostsSubtitle,
                   color: Colors.orange,
                   onTap: () => context.push('/profile/my-posts'),
                 ),
@@ -688,6 +728,7 @@ class _ProfileContent extends StatelessWidget {
                 _ProfileRow(
                   icon: Icons.description,           // doc.text.fill
                   title: context.l10n.profileMyForumPosts,
+                  subtitle: context.l10n.profileMyForumPostsSubtitle,
                   color: Colors.blue,
                   onTap: () => context.push('/forum/my-posts'),
                 ),
@@ -695,6 +736,7 @@ class _ProfileContent extends StatelessWidget {
                 _ProfileRow(
                   icon: Icons.credit_card,           // creditcard.fill
                   title: context.l10n.profileMyWallet,
+                  subtitle: context.l10n.profileMyWalletSubtitle,
                   color: AppColors.success,
                   onTap: () => context.push('/wallet'),
                 ),
@@ -702,6 +744,7 @@ class _ProfileContent extends StatelessWidget {
                 _ProfileRow(
                   icon: Icons.admin_panel_settings,  // bolt.shield.fill
                   title: context.l10n.profileMyApplications,
+                  subtitle: context.l10n.profileMyApplicationsSubtitle,
                   color: Colors.purple,
                   onTap: () => context.push('/profile/my-tasks'),
                 ),
@@ -809,7 +852,7 @@ class _ProfileContent extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(AppSpacing.md, 8, AppSpacing.md, 40),
       child: GestureDetector(
         onTap: () {
-          HapticFeedback.heavyImpact();
+          AppHaptics.heavy();
           _showLogoutDialog(context);
         },
         child: Container(
@@ -989,19 +1032,23 @@ class _DesktopEditButtonState extends State<_DesktopEditButton> {
   }
 }
 
-/// 个人中心行组件 - 对齐iOS ProfileRow
+/// 个人中心行组件 - 对齐iOS ProfileRow (含副标题支持)
 class _ProfileRow extends StatelessWidget {
   const _ProfileRow({
     required this.icon,
     required this.title,
     required this.color,
     required this.onTap,
+    this.subtitle,
+    this.trailing,
   });
 
   final IconData icon;
   final String title;
   final Color color;
   final VoidCallback onTap;
+  final String? subtitle;
+  final Widget? trailing;
 
   @override
   Widget build(BuildContext context) {
@@ -1009,7 +1056,7 @@ class _ProfileRow extends StatelessWidget {
 
     return GestureDetector(
       onTap: () {
-        HapticFeedback.selectionClick();
+        AppHaptics.selection();
         onTap();
       },
       behavior: HitTestBehavior.opaque,
@@ -1017,7 +1064,7 @@ class _ProfileRow extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         child: Row(
           children: [
-            // 图标背景 (对齐iOS: 38x38 rounded rect)
+            // 图标背景 (对齐iOS: 38x38 rounded rect with color opacity)
             Container(
               width: 38,
               height: 38,
@@ -1027,23 +1074,48 @@ class _ProfileRow extends StatelessWidget {
               ),
               child: Icon(
                 icon,
-                size: 16,
+                size: 18,
                 color: color,
               ),
             ),
             const SizedBox(width: 16),
             Expanded(
-              child: Text(
-                title,
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                  color: isDark
-                      ? AppColors.textPrimaryDark
-                      : AppColors.textPrimaryLight,
-                ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    title,
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: isDark
+                          ? AppColors.textPrimaryDark
+                          : AppColors.textPrimaryLight,
+                    ),
+                  ),
+                  // 副标题 (对齐iOS ProfileRow subtitle)
+                  if (subtitle != null) ...[
+                    const SizedBox(height: 2),
+                    Text(
+                      subtitle!,
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: isDark
+                            ? AppColors.textTertiaryDark
+                            : AppColors.textTertiaryLight,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ],
               ),
             ),
+            if (trailing != null) ...[
+              trailing!,
+              const SizedBox(width: 8),
+            ],
             Icon(
               Icons.chevron_right,
               size: 16,

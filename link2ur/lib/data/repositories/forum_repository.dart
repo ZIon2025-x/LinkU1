@@ -1,8 +1,15 @@
+import 'package:flutter/foundation.dart';
+
 import '../models/forum.dart';
 import '../services/api_service.dart';
 import '../../core/constants/api_endpoints.dart';
 import '../../core/utils/cache_manager.dart';
 import '../../core/utils/app_exception.dart';
+
+/// 在 Isolate 中解析论坛帖子列表 JSON
+ForumPostListResponse _parseForumPostListResponse(Map<String, dynamic> json) {
+  return ForumPostListResponse.fromJson(json);
+}
 
 /// 论坛仓库
 /// 与iOS ForumViewModel + 后端 forum_routes 对齐
@@ -77,7 +84,7 @@ class ForumRepository {
     if (cacheKey != null) {
       final cached = _cache.get<Map<String, dynamic>>(cacheKey);
       if (cached != null) {
-        return ForumPostListResponse.fromJson(cached);
+        return compute(_parseForumPostListResponse, cached);
       }
     }
 
@@ -95,11 +102,11 @@ class ForumRepository {
         await _cache.set(cacheKey, response.data!, ttl: CacheManager.shortTTL);
       }
 
-      return ForumPostListResponse.fromJson(response.data!);
+      return compute(_parseForumPostListResponse, response.data!);
     } catch (e) {
       if (cacheKey != null) {
         final stale = _cache.getStale<Map<String, dynamic>>(cacheKey);
-        if (stale != null) return ForumPostListResponse.fromJson(stale);
+        if (stale != null) return compute(_parseForumPostListResponse, stale);
       }
       rethrow;
     }

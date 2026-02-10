@@ -147,7 +147,13 @@ class _FleaMarketViewContentState extends State<_FleaMarketViewContent> {
               builder: (context, state) {
                 // Loading state
                 if (state.isLoading && state.items.isEmpty) {
-                  return const SkeletonList();
+                  return const SkeletonGrid(
+                    crossAxisCount: 2,
+                    itemCount: 6,
+                    aspectRatio: 0.7,
+                    imageFlex: 5,
+                    contentFlex: 3,
+                  );
                 }
 
                 // Error state

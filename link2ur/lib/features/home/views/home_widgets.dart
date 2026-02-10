@@ -22,14 +22,11 @@ class _GreetingSection extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  context.l10n.homeGreeting(userName),
-                  style: TextStyle(
+                GradientText.brand(
+                  text: context.l10n.homeGreeting(userName),
+                  style: const TextStyle(
                     fontSize: 28,
                     fontWeight: FontWeight.bold,
-                    color: isDark
-                        ? AppColors.textPrimaryDark
-                        : AppColors.textPrimaryLight,
                   ),
                 ),
                 const SizedBox(height: 4),
@@ -83,11 +80,29 @@ class _BannerCarousel extends StatefulWidget {
 
 class _BannerCarouselState extends State<_BannerCarousel> {
   final PageController _controller = PageController();
-  int _currentPage = 0;
+  // 使用 ValueNotifier 替代 setState，缩小重建范围
+  // 只有依赖这些值的子 Widget 会重建，而非整个 _BannerCarousel
+  final ValueNotifier<int> _currentPage = ValueNotifier<int>(0);
+  final ValueNotifier<double> _pageOffset = ValueNotifier<double>(0.0);
+
+  @override
+  void initState() {
+    super.initState();
+    _controller.addListener(_onScroll);
+  }
+
+  void _onScroll() {
+    if (_controller.hasClients) {
+      _pageOffset.value = _controller.page ?? 0.0;
+    }
+  }
 
   @override
   void dispose() {
+    _controller.removeListener(_onScroll);
     _controller.dispose();
+    _currentPage.dispose();
+    _pageOffset.dispose();
     super.dispose();
   }
 
@@ -99,63 +114,84 @@ class _BannerCarouselState extends State<_BannerCarousel> {
           padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
           child: SizedBox(
             height: 162,
-            child: PageView(
-              clipBehavior: Clip.none,
-            controller: _controller,
-            onPageChanged: (index) {
-              setState(() {
-                _currentPage = index;
-              });
-            },
-            children: [
-              // 对标iOS: 跳蚤市场Banner — 使用真实图片
-              _BannerItem(
-                title: context.l10n.homeSecondHandMarket,
-                subtitle: context.l10n.homeSecondHandSubtitle,
-                gradient: const [Color(0xFF34C759), Color(0xFF30D158)],
-                icon: Icons.storefront,
-                imagePath: AppAssets.fleaMarketBanner,
-                onTap: () => context.push('/flea-market'),
-              ),
-              // 对标iOS: 学生认证Banner — 使用真实图片
-              _BannerItem(
-                title: context.l10n.homeStudentVerification,
-                subtitle: context.l10n.homeStudentVerificationSubtitle,
-                gradient: const [Color(0xFF5856D6), Color(0xFF007AFF)],
-                icon: Icons.school,
-                imagePath: AppAssets.studentVerificationBanner,
-                onTap: () => context.push('/student-verification'),
-              ),
-              // 任务达人Banner
-              _BannerItem(
-                title: context.l10n.homeBecomeExpert,
-                subtitle: context.l10n.homeBecomeExpertSubtitle,
-                gradient: const [Color(0xFFFF9500), Color(0xFFFF6B00)],
-                icon: Icons.star,
-                onTap: () => context.push('/task-experts/intro'),
-              ),
-            ],
-          ),
+            // ValueListenableBuilder 仅在 _pageOffset 变化时重建 PageView 内容
+            child: ValueListenableBuilder<double>(
+              valueListenable: _pageOffset,
+              builder: (context, pageOffset, _) {
+                return PageView.builder(
+                  clipBehavior: Clip.none,
+                  controller: _controller,
+                  itemCount: 3,
+                  onPageChanged: (index) {
+                    _currentPage.value = index;
+                  },
+                  itemBuilder: (context, index) {
+                    // 视差偏移量：图片移动速度慢于卡片（0.3倍率）
+                    final parallaxOffset = (pageOffset - index) * 30;
+
+                    final banners = [
+                      // 跳蚤市场Banner
+                      _BannerItem(
+                        title: context.l10n.homeSecondHandMarket,
+                        subtitle: context.l10n.homeSecondHandSubtitle,
+                        gradient: const [Color(0xFF34C759), Color(0xFF30D158)],
+                        icon: Icons.storefront,
+                        imagePath: AppAssets.fleaMarketBanner,
+                        imageAlignment: const Alignment(0.0, 0.4),
+                        onTap: () => context.push('/flea-market'),
+                        parallaxOffset: parallaxOffset,
+                      ),
+                      // 学生认证Banner
+                      _BannerItem(
+                        title: context.l10n.homeStudentVerification,
+                        subtitle: context.l10n.homeStudentVerificationSubtitle,
+                        gradient: const [Color(0xFF5856D6), Color(0xFF007AFF)],
+                        icon: Icons.school,
+                        imagePath: AppAssets.studentVerificationBanner,
+                        onTap: () => context.push('/student-verification'),
+                        parallaxOffset: parallaxOffset,
+                      ),
+                      // 任务达人Banner
+                      _BannerItem(
+                        title: context.l10n.homeBecomeExpert,
+                        subtitle: context.l10n.homeBecomeExpertSubtitle,
+                        gradient: const [Color(0xFFFF9500), Color(0xFFFF6B00)],
+                        icon: Icons.star,
+                        onTap: () => context.push('/task-experts/intro'),
+                        parallaxOffset: parallaxOffset,
+                      ),
+                    ];
+
+                    return banners[index];
+                  },
+                );
+              },
+            ),
           ),
         ),
-        // 页面指示器
+        // 页面指示器 — 仅在 _currentPage 变化时重建
         const SizedBox(height: 8),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: List.generate(3, (index) {
-            return AnimatedContainer(
-              duration: const Duration(milliseconds: 300),
-              margin: const EdgeInsets.symmetric(horizontal: 3),
-              height: 6,
-              width: _currentPage == index ? 18 : 6,
-              decoration: BoxDecoration(
-                color: _currentPage == index
-                    ? AppColors.primary
-                    : AppColors.primary.withValues(alpha: 0.2),
-                borderRadius: AppRadius.allPill,
-              ),
+        ValueListenableBuilder<int>(
+          valueListenable: _currentPage,
+          builder: (context, currentPage, _) {
+            return Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: List.generate(3, (index) {
+                return AnimatedContainer(
+                  duration: const Duration(milliseconds: 300),
+                  margin: const EdgeInsets.symmetric(horizontal: 3),
+                  height: 6,
+                  width: currentPage == index ? 18 : 6,
+                  decoration: BoxDecoration(
+                    color: currentPage == index
+                        ? AppColors.primary
+                        : AppColors.primary.withValues(alpha: 0.2),
+                    borderRadius: AppRadius.allPill,
+                  ),
+                );
+              }),
             );
-          }),
+          },
         ),
       ],
     );
@@ -170,6 +206,8 @@ class _BannerItem extends StatelessWidget {
     required this.icon,
     required this.onTap,
     this.imagePath,
+    this.parallaxOffset = 0.0,
+    this.imageAlignment = Alignment.center,
   });
 
   final String title;
@@ -178,6 +216,8 @@ class _BannerItem extends StatelessWidget {
   final IconData icon;
   final VoidCallback onTap;
   final String? imagePath;
+  final double parallaxOffset;
+  final Alignment imageAlignment;
 
   @override
   Widget build(BuildContext context) {
@@ -197,12 +237,12 @@ class _BannerItem extends StatelessWidget {
           borderRadius: AppRadius.allLarge,
           boxShadow: [
             BoxShadow(
-              color: gradient.first.withValues(alpha: 0.25),
-              blurRadius: 12,
-              offset: const Offset(0, 6),
+              color: Colors.white.withValues(alpha: 0.08),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
             ),
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.05),
+              color: Colors.black.withValues(alpha: 0.04),
               blurRadius: 3,
               offset: const Offset(0, 1),
             ),
@@ -211,35 +251,45 @@ class _BannerItem extends StatelessWidget {
         child: Stack(
           fit: StackFit.expand,
           children: [
-            // 真实图片背景
+            // 真实图片背景 — 带视差效果
             if (imagePath != null)
-              Image.asset(
-                imagePath!,
-                fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) {
-                  // 图片加载失败时回退到渐变背景
-                  return Container(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: gradient,
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
+              Transform.translate(
+                offset: Offset(parallaxOffset, 0),
+                child: Image.asset(
+                  imagePath!,
+                  fit: BoxFit.cover,
+                  alignment: imageAlignment,
+                  errorBuilder: (context, error, stackTrace) {
+                    return Container(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: gradient,
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
                       ),
-                    ),
-                  );
-                },
+                    );
+                  },
+                ),
               ),
-            // 图片上的渐变遮罩，保证文字可读
+            // 底部渐变遮罩，仅覆盖下方保证文字可读（与 iOS 原生一致）
             if (imagePath != null)
-              Container(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [
-                      Colors.black.withValues(alpha: 0.55),
-                      Colors.black.withValues(alpha: 0.15),
-                    ],
-                    begin: Alignment.centerLeft,
-                    end: Alignment.centerRight,
+              Positioned(
+                left: 0,
+                right: 0,
+                bottom: 0,
+                height: 100,
+                child: Container(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        Colors.black.withValues(alpha: 0.6),
+                        Colors.black.withValues(alpha: 0.2),
+                        Colors.transparent,
+                      ],
+                      begin: Alignment.bottomCenter,
+                      end: Alignment.topCenter,
+                    ),
                   ),
                 ),
               ),
@@ -464,83 +514,258 @@ class _ActivityCard extends StatelessWidget {
 }
 
 /// 对标iOS: RecentActivitiesSection - 最新动态区域
-class _RecentActivitiesSection extends StatelessWidget {
+/// 从 HomeBloc 获取真实数据，无穷滚动加载（每次5条，最多15条）
+/// 对标 iOS batchSize=5, maxDisplayCount=15
+class _RecentActivitiesSection extends StatefulWidget {
+  @override
+  State<_RecentActivitiesSection> createState() =>
+      _RecentActivitiesSectionState();
+}
+
+class _RecentActivitiesSectionState extends State<_RecentActivitiesSection> {
+  /// 当前显示条数（每次递增5，对标 iOS batchSize = 5）
+  int _displayedCount = 5;
+
+  /// 每批加载数量
+  static const int _batchSize = 5;
+
+  /// 最大显示数量（对标 iOS maxDisplayCount = 15）
+  static const int _maxDisplayCount = 15;
+
+  void _loadMore(int totalAvailable) {
+    setState(() {
+      _displayedCount = (_displayedCount + _batchSize)
+          .clamp(0, totalAvailable.clamp(0, _maxDisplayCount));
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    // 模拟最新动态数据 (实际应从API获取)
-    final activities = [
-      _RecentActivityData(
-        icon: Icons.forum,
-        iconGradient: const [Color(0xFF34C759), Color(0xFF30D158)],
-        userName: context.l10n.homeDefaultUser,
-        actionText: context.l10n.homePostedNewPost,
-        title: context.l10n.homeCampusLife,
-        description: context.l10n.homeCampusLifeDesc,
-      ),
-      _RecentActivityData(
-        icon: Icons.shopping_bag,
-        iconGradient: const [Color(0xFFFF9500), Color(0xFFFF6B00)],
-        userName: context.l10n.homeDefaultUser,
-        actionText: context.l10n.homePostedNewProduct,
-        title: context.l10n.homeUsedBooks,
-      ),
-      _RecentActivityData(
-        icon: Icons.emoji_events,
-        iconGradient: const [Color(0xFF5856D6), Color(0xFF007AFF)],
-        userName: context.l10n.homeSystemUser,
-        actionText: context.l10n.homeCreatedLeaderboard,
-        title: context.l10n.homeWeeklyExperts,
-      ),
-    ];
+    return BlocBuilder<HomeBloc, HomeState>(
+      buildWhen: (prev, curr) =>
+          prev.recentActivities != curr.recentActivities ||
+          prev.isLoadingActivities != curr.isLoadingActivities,
+      builder: (context, state) {
+        // 加载中状态
+        if (state.isLoadingActivities && state.recentActivities.isEmpty) {
+          return const Padding(
+            padding: AppSpacing.allMd,
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
+            ),
+          );
+        }
 
-    if (activities.isEmpty) {
-      return Padding(
-        padding: AppSpacing.allMd,
-        child: Center(
-          child: Column(
-            children: [
-              Icon(
-                Icons.notifications_none,
-                size: 48,
-                color: isDark
-                    ? AppColors.textTertiaryDark
-                    : AppColors.textTertiaryLight,
-              ),
-              AppSpacing.vSm,
-              Text(
-                context.l10n.homeNoActivity,
-                style: AppTypography.body.copyWith(
-                  color: isDark
-                      ? AppColors.textSecondaryDark
-                      : AppColors.textSecondaryLight,
-                ),
-              ),
-              AppSpacing.vXs,
-              Text(
-                context.l10n.homeNoActivityMessage,
-                style: AppTypography.caption.copyWith(
+        final allItems = state.recentActivities;
+
+        if (allItems.isEmpty) {
+          return Padding(
+            padding: AppSpacing.allMd,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(
+                  Icons.notifications_none,
+                  size: 48,
                   color: isDark
                       ? AppColors.textTertiaryDark
                       : AppColors.textTertiaryLight,
                 ),
-              ),
+                AppSpacing.vSm,
+                Text(
+                  context.l10n.homeNoActivity,
+                  style: AppTypography.body.copyWith(
+                    color: isDark
+                        ? AppColors.textSecondaryDark
+                        : AppColors.textSecondaryLight,
+                  ),
+                ),
+                AppSpacing.vXs,
+                Text(
+                  context.l10n.homeNoActivityMessage,
+                  style: AppTypography.caption.copyWith(
+                    color: isDark
+                        ? AppColors.textTertiaryDark
+                        : AppColors.textTertiaryLight,
+                  ),
+                ),
+              ],
+            ),
+          );
+        }
+
+        // 取当前批次要显示的条目（最多 _maxDisplayCount）
+        final maxAvailable = allItems.length.clamp(0, _maxDisplayCount);
+        final showCount = _displayedCount.clamp(0, maxAvailable);
+        final displayedItems = allItems.take(showCount).toList();
+        final hasMore = showCount < maxAvailable;
+
+        // 转换为 UI 数据
+        final activities = displayedItems.map((item) {
+          return _RecentActivityData(
+            icon: _getIconForType(item.type),
+            iconGradient: _getGradientForType(item.type),
+            userName: item.userName.isNotEmpty
+                ? item.userName
+                : context.l10n.homeDefaultUser,
+            actionText: _getActionText(context, item.type),
+            title: item.title,
+            description: item.description,
+            itemId: item.itemId,
+            type: item.type,
+          );
+        }).toList();
+
+        return Padding(
+          padding: AppSpacing.horizontalMd,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // 动态列表（带错落入场动画）
+              ...activities.asMap().entries.map((entry) {
+                final index = entry.key;
+                final activity = entry.value;
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: AnimatedListItem(
+                    index: index,
+                    child: _ActivityRow(activity: activity),
+                  ),
+                );
+              }),
+
+              // "加载更多" 或 "没有更多了"
+              if (hasMore)
+                _LoadMoreButton(
+                  onTap: () => _loadMore(allItems.length),
+                  isDark: isDark,
+                )
+              else if (displayedItems.length >= _batchSize)
+                Center(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    child: Text(
+                      context.l10n.homeNoMoreActivity,
+                      style: AppTypography.caption.copyWith(
+                        color: isDark
+                            ? AppColors.textTertiaryDark
+                            : AppColors.textTertiaryLight,
+                      ),
+                    ),
+                  ),
+                ),
             ],
           ),
-        ),
-      );
-    }
+        );
+      },
+    );
+  }
 
-    return Padding(
-      padding: AppSpacing.horizontalMd,
-      child: Column(
-        children: activities.map((activity) {
-          return Padding(
-            padding: const EdgeInsets.only(bottom: 8),
-            child: _ActivityRow(activity: activity),
-          );
-        }).toList(),
+  // ==================== 类型 → 图标 / 颜色 / 文本 ====================
+
+  /// 根据动态类型获取图标
+  static IconData _getIconForType(String type) {
+    switch (type) {
+      case RecentActivityItem.typeForumPost:
+        return Icons.forum_rounded;
+      case RecentActivityItem.typeFleaMarketItem:
+        return Icons.shopping_bag_rounded;
+      case RecentActivityItem.typeLeaderboardCreated:
+        return Icons.emoji_events_rounded;
+      default:
+        return Icons.notifications_rounded;
+    }
+  }
+
+  /// 根据动态类型获取渐变色 — 三种类型颜色差异明显
+  static List<Color> _getGradientForType(String type) {
+    switch (type) {
+      // 论坛帖子 → 蓝紫色（primary 风格）
+      case RecentActivityItem.typeForumPost:
+        return const [Color(0xFF007AFF), Color(0xFF5856D6)];
+      // 跳蚤市场 → 橙色（warning 风格）
+      case RecentActivityItem.typeFleaMarketItem:
+        return const [Color(0xFFFF9500), Color(0xFFFF6B00)];
+      // 排行榜 → 绿色（success 风格）
+      case RecentActivityItem.typeLeaderboardCreated:
+        return const [Color(0xFF34C759), Color(0xFF30D158)];
+      default:
+        return const [Color(0xFF8E8E93), Color(0xFF636366)];
+    }
+  }
+
+  /// 根据动态类型获取动作文本
+  static String _getActionText(BuildContext context, String type) {
+    switch (type) {
+      case RecentActivityItem.typeForumPost:
+        return context.l10n.homePostedNewPost;
+      case RecentActivityItem.typeFleaMarketItem:
+        return context.l10n.homePostedNewProduct;
+      case RecentActivityItem.typeLeaderboardCreated:
+        return context.l10n.homeCreatedLeaderboard;
+      default:
+        return context.l10n.homePostedNewPost;
+    }
+  }
+}
+
+/// "加载更多" 按钮
+class _LoadMoreButton extends StatelessWidget {
+  const _LoadMoreButton({required this.onTap, required this.isDark});
+
+  final VoidCallback onTap;
+  final bool isDark;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(vertical: 14),
+        margin: const EdgeInsets.only(top: 4),
+        decoration: BoxDecoration(
+          color: isDark
+              ? Colors.white.withValues(alpha: 0.04)
+              : Colors.black.withValues(alpha: 0.02),
+          borderRadius: AppRadius.allLarge,
+          border: Border.all(
+            color: (isDark
+                    ? AppColors.separatorDark
+                    : AppColors.separatorLight)
+                .withValues(alpha: 0.3),
+            width: 0.5,
+          ),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.expand_more_rounded,
+              size: 18,
+              color: isDark
+                  ? AppColors.textSecondaryDark
+                  : AppColors.textSecondaryLight,
+            ),
+            const SizedBox(width: 4),
+            Text(
+              context.l10n.homeLoadMore,
+              style: AppTypography.caption.copyWith(
+                fontWeight: FontWeight.w500,
+                color: isDark
+                    ? AppColors.textSecondaryDark
+                    : AppColors.textSecondaryLight,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -554,6 +779,8 @@ class _RecentActivityData {
     required this.actionText,
     required this.title,
     this.description,
+    this.itemId,
+    this.type = RecentActivityItem.typeForumPost,
   });
 
   final IconData icon;
@@ -561,8 +788,9 @@ class _RecentActivityData {
   final String userName;
   final String actionText;
   final String title;
-
   final String? description;
+  final String? itemId; // 原始数据 ID，用于导航跳转
+  final String type;
 }
 
 /// 对标iOS: ActivityRow - 动态行组件（对标iOS .cardBackground + AppShadow.small）
@@ -575,7 +803,23 @@ class _ActivityRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    return Container(
+    return GestureDetector(
+      onTap: () {
+        if (activity.itemId == null) return;
+        // 根据动态类型跳转到对应详情页（对标 iOS ActivityRow NavigationLink）
+        switch (activity.type) {
+          case RecentActivityItem.typeForumPost:
+            context.push('/forum/posts/${activity.itemId}');
+            break;
+          case RecentActivityItem.typeFleaMarketItem:
+            context.push('/flea-market/${activity.itemId}');
+            break;
+          case RecentActivityItem.typeLeaderboardCreated:
+            context.push('/leaderboard/${activity.itemId}');
+            break;
+        }
+      },
+      child: Container(
       padding: const EdgeInsets.all(AppSpacing.md),
       decoration: BoxDecoration(
         color: isDark
@@ -697,6 +941,7 @@ class _ActivityRow extends StatelessWidget {
           ),
         ],
       ),
+      ),
     );
   }
 }
@@ -726,7 +971,7 @@ class _HorizontalTaskCard extends StatelessWidget {
 
     return GestureDetector(
       onTap: () {
-        HapticFeedback.selectionClick();
+        AppHaptics.selection();
         context.push('/tasks/${task.id}');
       },
       child: Container(
@@ -1132,13 +1377,17 @@ class _NearbyTabState extends State<_NearbyTab> {
   @override
   Widget build(BuildContext context) {
     if (_locationLoading) {
-      return const SkeletonList();
+      return const SkeletonTopImageCardList(itemCount: 3, imageHeight: 140);
     }
 
     return BlocBuilder<HomeBloc, HomeState>(
+      // 仅在附近任务数据或加载状态变化时重建
+      buildWhen: (prev, curr) =>
+          prev.nearbyTasks != curr.nearbyTasks ||
+          prev.isLoading != curr.isLoading,
       builder: (context, state) {
         if (state.isLoading && state.nearbyTasks.isEmpty) {
-          return const SkeletonList();
+          return const SkeletonTopImageCardList(itemCount: 3, imageHeight: 140);
         }
 
         if (state.nearbyTasks.isEmpty) {
@@ -1205,8 +1454,35 @@ class _ExpertsTab extends StatelessWidget {
   }
 }
 
-class _ExpertsTabContent extends StatelessWidget {
+class _ExpertsTabContent extends StatefulWidget {
   const _ExpertsTabContent();
+
+  @override
+  State<_ExpertsTabContent> createState() => _ExpertsTabContentState();
+}
+
+class _ExpertsTabContentState extends State<_ExpertsTabContent> {
+  final TextEditingController _searchController = TextEditingController();
+  Timer? _debounceTimer;
+
+  static const _debounceDuration = Duration(milliseconds: 400);
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    _debounceTimer?.cancel();
+    super.dispose();
+  }
+
+  void _onSearchChanged(String query) {
+    _debounceTimer?.cancel();
+    _debounceTimer = Timer(_debounceDuration, () {
+      if (!mounted) return;
+      context.read<TaskExpertBloc>().add(
+            TaskExpertLoadRequested(skill: query.isEmpty ? null : query),
+          );
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -1214,48 +1490,81 @@ class _ExpertsTabContent extends StatelessWidget {
 
     return Column(
       children: [
-        // 对标iOS: 搜索框（点击跳转到完整搜索页）
+        // 内联搜索框：直接输入，下方实时过滤
         Padding(
           padding: const EdgeInsets.symmetric(
             horizontal: AppSpacing.md,
             vertical: AppSpacing.sm,
           ),
-          child: GestureDetector(
-            onTap: () => context.push('/task-experts'),
-            child: Container(
-              padding: const EdgeInsets.symmetric(
-                horizontal: AppSpacing.md,
-                vertical: AppSpacing.sm + 2,
-              ),
-              decoration: BoxDecoration(
+          child: TextField(
+            controller: _searchController,
+            onChanged: _onSearchChanged,
+            style: AppTypography.subheadline.copyWith(
+              color: isDark
+                  ? AppColors.textPrimaryDark
+                  : AppColors.textPrimaryLight,
+            ),
+            decoration: InputDecoration(
+              hintText: context.l10n.homeSearchExperts,
+              hintStyle: AppTypography.subheadline.copyWith(
                 color: isDark
-                    ? AppColors.cardBackgroundDark
-                    : AppColors.cardBackgroundLight,
-                borderRadius: AppRadius.allMedium,
-                border: Border.all(
-                  color: (isDark ? AppColors.dividerDark : AppColors.dividerLight)
-                      .withValues(alpha: 0.3),
-                ),
+                    ? AppColors.textTertiaryDark
+                    : AppColors.textTertiaryLight,
               ),
-              child: Row(
-                children: [
-                  Icon(
-                    Icons.search,
-                    color: isDark
-                        ? AppColors.textTertiaryDark
-                        : AppColors.textTertiaryLight,
-                    size: 20,
-                  ),
-                  const SizedBox(width: AppSpacing.sm),
-                  Text(
-                    context.l10n.homeSearchExperts,
-                    style: AppTypography.subheadline.copyWith(
+              prefixIcon: Icon(
+                Icons.search,
+                color: isDark
+                    ? AppColors.textTertiaryDark
+                    : AppColors.textTertiaryLight,
+                size: 20,
+              ),
+              suffixIcon: ValueListenableBuilder<TextEditingValue>(
+                valueListenable: _searchController,
+                builder: (context, value, _) {
+                  if (value.text.isEmpty) return const SizedBox.shrink();
+                  return GestureDetector(
+                    onTap: () {
+                      _searchController.clear();
+                      _onSearchChanged('');
+                    },
+                    child: Icon(
+                      Icons.close,
+                      size: 18,
                       color: isDark
                           ? AppColors.textTertiaryDark
                           : AppColors.textTertiaryLight,
                     ),
-                  ),
-                ],
+                  );
+                },
+              ),
+              filled: true,
+              fillColor: isDark
+                  ? AppColors.cardBackgroundDark
+                  : AppColors.cardBackgroundLight,
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.md,
+                vertical: AppSpacing.sm,
+              ),
+              border: OutlineInputBorder(
+                borderRadius: AppRadius.allMedium,
+                borderSide: BorderSide(
+                  color: (isDark ? AppColors.dividerDark : AppColors.dividerLight)
+                      .withValues(alpha: 0.3),
+                ),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: AppRadius.allMedium,
+                borderSide: BorderSide(
+                  color: (isDark ? AppColors.dividerDark : AppColors.dividerLight)
+                      .withValues(alpha: 0.3),
+                ),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: AppRadius.allMedium,
+                borderSide: const BorderSide(
+                  color: AppColors.primary,
+                  width: 1,
+                ),
               ),
             ),
           ),
@@ -1267,7 +1576,7 @@ class _ExpertsTabContent extends StatelessWidget {
             builder: (context, state) {
               if (state.status == TaskExpertStatus.loading &&
                   state.experts.isEmpty) {
-                return const SkeletonList();
+                return const SkeletonList(imageSize: 68);
               }
 
               if (state.status == TaskExpertStatus.error &&
@@ -1327,7 +1636,7 @@ class _ExpertsTabContent extends StatelessWidget {
 }
 
 /// 达人卡片 - 对标iOS ExpertCard
-/// 头像(68) + 名称/简介/统计 + chevron
+/// 头像光晕(74背景+68头像) + 认证徽章 + 名称/简介/统计 + chevron
 class _ExpertCard extends StatelessWidget {
   const _ExpertCard({required this.expert});
 
@@ -1339,7 +1648,7 @@ class _ExpertCard extends StatelessWidget {
 
     return GestureDetector(
       onTap: () {
-        HapticFeedback.selectionClick();
+        AppHaptics.selection();
         final expertId = int.tryParse(expert.id) ?? 0;
         if (expertId > 0) {
           context.push('/task-experts/$expertId');
@@ -1357,21 +1666,31 @@ class _ExpertCard extends StatelessWidget {
                 .withValues(alpha: 0.3),
             width: 0.5,
           ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.03),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
-            ),
-          ],
         ),
         child: Row(
           children: [
-            // 头像 (对标iOS 68x68)
-            AvatarView(
-              imageUrl: expert.avatar,
-              name: expert.displayName,
-              size: 60,
+            // 头像 + 光晕 (对标iOS: 74背景圆 + 68头像 + shadow)
+            Container(
+              width: 74,
+              height: 74,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: AppColors.primary.withValues(alpha: 0.08),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.primary.withValues(alpha: 0.1),
+                    blurRadius: 8,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: Center(
+                child: AvatarView(
+                  imageUrl: expert.avatar,
+                  name: expert.displayName,
+                  size: 68,
+                ),
+              ),
             ),
             AppSpacing.hMd,
             // 信息
@@ -1379,81 +1698,102 @@ class _ExpertCard extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // 名称
+                  // 名称 + 认证徽章 (对标iOS checkmark.seal.fill)
+                  Row(
+                    children: [
+                      Flexible(
+                        child: Text(
+                          expert.displayName,
+                          style: AppTypography.bodyBold.copyWith(
+                            color: isDark
+                                ? AppColors.textPrimaryDark
+                                : AppColors.textPrimaryLight,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      const Icon(
+                        Icons.verified_rounded,
+                        size: 16,
+                        color: AppColors.primary,
+                      ),
+                    ],
+                  ),
+                  // 简介（双语）— 为空时显示占位文本 (对标iOS)
+                  const SizedBox(height: 4),
                   Text(
-                    expert.displayName,
-                    style: AppTypography.bodyBold.copyWith(
-                      color: isDark
-                          ? AppColors.textPrimaryDark
-                          : AppColors.textPrimaryLight,
+                    (expert.displayBio != null && expert.displayBio!.isNotEmpty)
+                        ? expert.displayBio!
+                        : context.l10n.taskExpertNoIntro,
+                    style: AppTypography.caption.copyWith(
+                      color: (expert.displayBio != null && expert.displayBio!.isNotEmpty)
+                          ? (isDark
+                              ? AppColors.textSecondaryDark
+                              : AppColors.textSecondaryLight)
+                          : (isDark
+                              ? AppColors.textTertiaryDark
+                              : AppColors.textTertiaryLight),
                     ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
-                  // 简介（双语）
-                  if (expert.displayBio != null &&
-                      expert.displayBio!.isNotEmpty) ...[
-                    const SizedBox(height: 4),
-                    Text(
-                      expert.displayBio!,
-                      style: AppTypography.caption.copyWith(
-                        color: isDark
-                            ? AppColors.textSecondaryDark
-                            : AppColors.textSecondaryLight,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ],
-                  const SizedBox(height: 6),
-                  // 统计：评分 + 完成数 + 完成率
+                  const SizedBox(height: 8),
+                  // 统计行 (对标iOS: 胶囊评分 + 完成数·完成率)
                   Row(
                     children: [
-                      // 评分
+                      // 评分胶囊
                       Container(
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 6, vertical: 2),
+                            horizontal: 8, vertical: 3),
                         decoration: BoxDecoration(
-                          color: AppColors.gold.withValues(alpha: 0.1),
+                          color: AppColors.warning.withValues(alpha: 0.12),
                           borderRadius: AppRadius.allPill,
                         ),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            const Icon(Icons.star,
-                                size: 12, color: AppColors.gold),
-                            const SizedBox(width: 2),
+                            const Icon(Icons.star_rounded,
+                                size: 12, color: AppColors.warning),
+                            const SizedBox(width: 3),
                             Text(
                               expert.ratingDisplay,
                               style: AppTypography.caption2.copyWith(
-                                fontWeight: FontWeight.w600,
-                                color: AppColors.gold,
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.warning,
                               ),
                             ),
                           ],
                         ),
                       ),
-                      const SizedBox(width: 8),
-                      // 完成单数
+                      const SizedBox(width: 10),
+                      // 完成单数 · 完成率
                       Text(
                         context.l10n
                             .leaderboardCompletedCount(expert.completedTasks),
                         style: AppTypography.caption2.copyWith(
                           color: isDark
-                              ? AppColors.textTertiaryDark
-                              : AppColors.textTertiaryLight,
+                              ? AppColors.textSecondaryDark
+                              : AppColors.textSecondaryLight,
                         ),
                       ),
                       if (expert.totalServices > 0) ...[
-                        const SizedBox(width: 8),
-                        // 服务数
+                        Text(
+                          ' · ',
+                          style: AppTypography.caption2.copyWith(
+                            color: isDark
+                                ? AppColors.textTertiaryDark
+                                : AppColors.textTertiaryLight,
+                          ),
+                        ),
                         Text(
                           context.l10n.taskExpertServiceCount(
                               expert.totalServices),
                           style: AppTypography.caption2.copyWith(
                             color: isDark
-                                ? AppColors.textTertiaryDark
-                                : AppColors.textTertiaryLight,
+                                ? AppColors.textSecondaryDark
+                                : AppColors.textSecondaryLight,
                           ),
                         ),
                       ],
@@ -1464,7 +1804,7 @@ class _ExpertCard extends StatelessWidget {
             ),
             // Chevron
             Icon(
-              Icons.chevron_right,
+              Icons.chevron_right_rounded,
               size: 20,
               color: isDark
                   ? AppColors.textTertiaryDark
@@ -1501,7 +1841,7 @@ class _TaskCard extends StatelessWidget {
 
     return GestureDetector(
       onTap: () {
-        HapticFeedback.selectionClick();
+        AppHaptics.selection();
         context.push('/tasks/${task.id}');
       },
       child: Container(

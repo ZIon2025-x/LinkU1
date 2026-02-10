@@ -7,6 +7,7 @@ import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/design/app_colors.dart';
+import '../../../core/utils/haptic_feedback.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_typography.dart';
 import '../../../core/router/app_router.dart';
@@ -138,7 +139,7 @@ class _ItemDetailContent extends StatelessWidget {
 
   Widget _buildBody(BuildContext context, LeaderboardState state) {
     if (state.isLoading && state.itemDetail == null) {
-      return const SkeletonDetail();
+      return const SkeletonLeaderboardItemDetail();
     }
 
     if (state.status == LeaderboardStatus.error && state.itemDetail == null) {
@@ -313,7 +314,7 @@ class _ItemDetailContent extends StatelessWidget {
 
   void _showVoteSheet(
       BuildContext context, String voteType, LeaderboardItem item) {
-    HapticFeedback.selectionClick();
+    AppHaptics.selection();
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -490,7 +491,7 @@ class _VoteCommentSheetState extends State<_VoteCommentSheet> {
   }
 
   void _submit() {
-    HapticFeedback.mediumImpact();
+    AppHaptics.medium();
     final comment = _controller.text.trim();
     context.read<LeaderboardBloc>().add(
           LeaderboardVoteItem(
@@ -873,7 +874,7 @@ class _ContactRow extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       onLongPress: () {
-        HapticFeedback.mediumImpact();
+        AppHaptics.medium();
         onLongPress();
       },
       child: Padding(
@@ -1095,7 +1096,7 @@ class _CommentCard extends StatelessWidget {
             child: GestureDetector(
               onTap: () {
                 if (voteId != null) {
-                  HapticFeedback.selectionClick();
+                  AppHaptics.selection();
                   context
                       .read<LeaderboardBloc>()
                       .add(LeaderboardLikeVote(voteId));

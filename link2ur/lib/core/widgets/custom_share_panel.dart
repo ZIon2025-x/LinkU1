@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 // ignore: depend_on_referenced_packages
 import 'package:share_plus/share_plus.dart';
+import '../utils/haptic_feedback.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../design/app_colors.dart';
 import '../design/app_spacing.dart';
@@ -282,7 +283,7 @@ class CustomSharePanel extends StatelessWidget {
 
   Future<void> _shareToPlatform(
       BuildContext context, SharePlatform platform) async {
-    HapticFeedback.selectionClick();
+    AppHaptics.share();
 
     switch (platform) {
       case SharePlatform.copyLink:

@@ -1,0 +1,14 @@
+/* 
+  InfoPlist.strings
+  Runner (Link²Ur Flutter)
+
+  Localized permission descriptions for Info.plist
+*/
+
+"NSLocationWhenInUseUsageDescription" = "我们需要获取您的位置信息，以便在地图上选择任务/商品位置，或使用您当前位置。您也可以选择手动输入位置。";
+
+"NSFaceIDUsageDescription" = "我们使用 Face ID 来安全地验证您的身份并登录您的账户。这为您提供了一种快速且安全的方式来访问您的账户，无需输入密码。";
+
+"NSCameraUsageDescription" = "该应用程序将使用相机拍摄您的身份证件照片，以设置您的支付账户。";
+
+"NSPhotoLibraryUsageDescription" = "该应用需要访问您的相册，以上传个人头像、任务图片和帖子图片。";

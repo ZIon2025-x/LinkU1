@@ -68,7 +68,7 @@ class _NotificationListViewContent extends StatelessWidget {
             ],
           ),
           body: state.isLoading
-              ? const SkeletonList()
+              ? const SkeletonList(imageSize: 44)
               : notifications.isEmpty
                   ? EmptyStateView(
                       icon: Icons.notifications_none,

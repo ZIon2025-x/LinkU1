@@ -95,14 +95,16 @@ class LeaderboardApplyRequested extends LeaderboardEvent {
     required this.title,
     required this.description,
     this.rules,
+    this.coverImagePath,
   });
 
   final String title;
   final String description;
   final String? rules;
+  final String? coverImagePath; // 本地图片路径，会先上传再提交
 
   @override
-  List<Object?> get props => [title, description, rules];
+  List<Object?> get props => [title, description, rules, coverImagePath];
 }
 
 class LeaderboardSubmitItem extends LeaderboardEvent {
@@ -520,10 +522,18 @@ class LeaderboardBloc extends Bloc<LeaderboardEvent, LeaderboardState> {
     emit(state.copyWith(isSubmitting: true, actionMessage: null));
 
     try {
+      // 如果有封面图片，先上传获取 URL
+      String? coverImageUrl;
+      if (event.coverImagePath != null) {
+        coverImageUrl =
+            await _leaderboardRepository.uploadImage(event.coverImagePath!);
+      }
+
       await _leaderboardRepository.applyLeaderboard(
         title: event.title,
         description: event.description,
         rules: event.rules,
+        coverImage: coverImageUrl,
       );
 
       emit(state.copyWith(

@@ -178,6 +178,28 @@ class LeaderboardRepository {
     return items.map((e) => e as Map<String, dynamic>).toList();
   }
 
+  /// 上传图片（返回 URL）
+  Future<String> uploadImage(String filePath) async {
+    final response = await _apiService.uploadFile<Map<String, dynamic>>(
+      ApiEndpoints.uploadImage,
+      filePath: filePath,
+      fieldName: 'file',
+    );
+
+    if (!response.isSuccess || response.data == null) {
+      throw LeaderboardException(response.message ?? '图片上传失败');
+    }
+
+    // 后端返回 { url: "..." } 或 { image_url: "..." }
+    final url = response.data!['url'] as String? ??
+        response.data!['image_url'] as String? ??
+        '';
+    if (url.isEmpty) {
+      throw const LeaderboardException('图片上传返回了空 URL');
+    }
+    return url;
+  }
+
   /// 申请创建排行榜
   Future<Leaderboard> applyLeaderboard({
     required String title,

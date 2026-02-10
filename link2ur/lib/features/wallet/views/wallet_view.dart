@@ -11,6 +11,7 @@ import '../../../core/widgets/error_state_view.dart';
 import '../../../core/widgets/empty_state_view.dart';
 import '../../../core/widgets/cards.dart';
 import '../../../core/widgets/buttons.dart';
+import '../../../core/widgets/sparkline_chart.dart';
 import '../../../data/models/coupon_points.dart';
 import '../../../data/models/payment.dart';
 import '../../../data/repositories/coupon_points_repository.dart';
@@ -82,6 +83,9 @@ class _WalletContent extends StatelessWidget {
                               if (state.pointsAccount != null)
                                 _PointsCard(account: state.pointsAccount!),
                               AppSpacing.vLg,
+                              // 快捷操作卡片 - 与iOS对齐
+                              const _QuickActionCards(),
+                              AppSpacing.vLg,
                               _CheckInButton(
                                 isCheckingIn: state.isCheckingIn,
                                 onPressed: () => context
@@ -121,38 +125,81 @@ class _PointsCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return AppCard(
+    return Container(
+      padding: AppSpacing.allLg,
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            AppColors.primary,
+            AppColors.primary.withValues(alpha: 0.85),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: AppRadius.allLarge,
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.primary.withValues(alpha: 0.25),
+            blurRadius: 15,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(context.l10n.walletPointsBalance,
-              style: const TextStyle(
-                  fontSize: 14, color: AppColors.textSecondaryLight)),
+          Text(
+            context.l10n.walletPointsBalance,
+            style: TextStyle(
+              fontSize: 14,
+              color: Colors.white.withValues(alpha: 0.8),
+            ),
+          ),
           AppSpacing.vSm,
+          // 余额大字体 - 与iOS对齐使用48pt
           Row(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              Text(account.balanceDisplay,
-                  style: const TextStyle(
-                      fontSize: 36,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.primary)),
+              Text(
+                account.balanceDisplay,
+                style: const TextStyle(
+                  fontSize: 48,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                  height: 1.1,
+                ),
+              ),
               AppSpacing.hSm,
               Padding(
-                padding: const EdgeInsets.only(bottom: 8),
-                child: Text(account.currency,
-                    style: const TextStyle(
-                        fontSize: 16, color: AppColors.textSecondaryLight)),
+                padding: const EdgeInsets.only(bottom: 10),
+                child: Text(
+                  account.currency,
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: Colors.white.withValues(alpha: 0.7),
+                  ),
+                ),
               ),
             ],
           ),
-          AppSpacing.vMd,
+          AppSpacing.vLg,
+          // 统计项 - 白色文字
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
-              _StatItem(label: context.l10n.walletTotalEarned, value: account.totalEarned.toString()),
-              Container(width: 1, height: 30, color: AppColors.dividerLight),
-              _StatItem(label: context.l10n.walletTotalSpent, value: account.totalSpent.toString()),
+              _BalanceStatItem(
+                label: context.l10n.walletTotalEarned,
+                value: account.totalEarned.toString(),
+              ),
+              Container(
+                width: 1,
+                height: 30,
+                color: Colors.white.withValues(alpha: 0.2),
+              ),
+              _BalanceStatItem(
+                label: context.l10n.walletTotalSpent,
+                value: account.totalSpent.toString(),
+              ),
             ],
           ),
         ],
@@ -161,8 +208,114 @@ class _PointsCard extends StatelessWidget {
   }
 }
 
-class _StatItem extends StatelessWidget {
-  const _StatItem({required this.label, required this.value});
+/// 快捷操作卡片 - 与iOS QuickActionCard对齐
+class _QuickActionCards extends StatelessWidget {
+  const _QuickActionCards();
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Expanded(
+          child: _QuickActionCard(
+            icon: Icons.account_balance_wallet_outlined,
+            title: context.l10n.walletTopUp,
+            gradientColors: const [Color(0xFF2659F2), Color(0xFF4088FF)],
+            onTap: () => context.push('/wallet/top-up'),
+          ),
+        ),
+        AppSpacing.hMd,
+        Expanded(
+          child: _QuickActionCard(
+            icon: Icons.send_rounded,
+            title: context.l10n.walletTransfer,
+            gradientColors: const [Color(0xFF26BF73), Color(0xFF4DD99B)],
+            onTap: () => context.push('/wallet/transfer'),
+          ),
+        ),
+        AppSpacing.hMd,
+        Expanded(
+          child: _QuickActionCard(
+            icon: Icons.history_rounded,
+            title: context.l10n.walletTransactionHistory,
+            gradientColors: const [Color(0xFFFFA600), Color(0xFFFFBF4D)],
+            onTap: () => context.push('/wallet/transactions'),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _QuickActionCard extends StatelessWidget {
+  const _QuickActionCard({
+    required this.icon,
+    required this.title,
+    required this.gradientColors,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String title;
+  final List<Color> gradientColors;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return GestureDetector(
+      onTap: onTap,
+      child: AppCard(
+        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // 渐变图标背景
+            Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: gradientColors,
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: [
+                  BoxShadow(
+                    color: gradientColors.first.withValues(alpha: 0.25),
+                    blurRadius: 8,
+                    offset: const Offset(0, 3),
+                  ),
+                ],
+              ),
+              child: Icon(icon, color: Colors.white, size: 22),
+            ),
+            const SizedBox(height: 10),
+            Text(
+              title,
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w500,
+                color: isDark
+                    ? AppColors.textPrimaryDark
+                    : AppColors.textPrimaryLight,
+              ),
+              textAlign: TextAlign.center,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// 余额卡片内统计项 (白色文字)
+class _BalanceStatItem extends StatelessWidget {
+  const _BalanceStatItem({required this.label, required this.value});
   final String label;
   final String value;
 
@@ -170,16 +323,28 @@ class _StatItem extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        Text(value,
-            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
+        Text(
+          value,
+          style: TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.w600,
+            color: Colors.white.withValues(alpha: 0.95),
+          ),
+        ),
         const SizedBox(height: 4),
-        Text(label,
-            style:
-                const TextStyle(fontSize: 12, color: AppColors.textSecondaryLight)),
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 12,
+            color: Colors.white.withValues(alpha: 0.6),
+          ),
+        ),
       ],
     );
   }
 }
+
+// _StatItem 已被 _BalanceStatItem 替代
 
 class _CheckInButton extends StatelessWidget {
   const _CheckInButton({required this.isCheckingIn, required this.onPressed});
@@ -294,9 +459,44 @@ class _TransactionsSection extends StatelessWidget {
       children: [
         Padding(
           padding: AppSpacing.horizontalMd,
-          child: Text(context.l10n.walletTransactionHistory,
-              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(context.l10n.walletTransactionHistory,
+                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+              if (transactions.isNotEmpty)
+                GestureDetector(
+                  onTap: () => context.push('/wallet/transactions'),
+                  child: Text(
+                    context.l10n.walletViewAll,
+                    style: const TextStyle(
+                      fontSize: 14,
+                      color: AppColors.primary,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+            ],
+          ),
         ),
+        AppSpacing.vSm,
+        // 积分趋势迷你折线图
+        if (transactions.length >= 3)
+          Padding(
+            padding: AppSpacing.horizontalMd,
+            child: SparklineChart(
+              data: transactions
+                  .take(20)
+                  .toList()
+                  .reversed
+                  .map((t) => t.balanceAfter.toDouble())
+                  .toList(),
+              height: 50,
+              color: AppColors.primary,
+              fillGradient: true,
+              lineWidth: 1.5,
+            ),
+          ),
         AppSpacing.vSm,
         if (transactions.isEmpty)
           EmptyStateView.noData(

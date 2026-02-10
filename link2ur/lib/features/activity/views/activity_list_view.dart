@@ -12,6 +12,7 @@ import '../../../core/widgets/skeleton_view.dart';
 import '../../../core/widgets/error_state_view.dart';
 import '../../../core/widgets/empty_state_view.dart';
 import '../../../core/widgets/async_image_view.dart';
+import '../../../core/widgets/animated_progress_bar.dart';
 import '../../../data/repositories/activity_repository.dart';
 import '../../../data/models/activity.dart';
 import '../bloc/activity_bloc.dart';
@@ -37,7 +38,10 @@ class ActivityListView extends StatelessWidget {
           builder: (context, state) {
             if (state.status == ActivityStatus.loading &&
                 state.activities.isEmpty) {
-              return const SkeletonList();
+              return const SkeletonTopImageCardList(
+                itemCount: 3,
+                imageHeight: 200,
+              );
             }
 
             if (state.status == ActivityStatus.error &&
@@ -227,17 +231,16 @@ class _ActivityCard extends StatelessWidget {
               ],
             ),
 
-            // 进度条
+            // 进度条 — 自定义动画版
             if (activity.maxParticipants > 0) ...[
               AppSpacing.vSm,
-              ClipRRect(
-                borderRadius: BorderRadius.circular(4),
-                child: LinearProgressIndicator(
-                  value: activity.participationProgress,
-                  backgroundColor: AppColors.skeletonBase,
-                  valueColor: const AlwaysStoppedAnimation<Color>(AppColors.primary),
-                  minHeight: 4,
-                ),
+              AnimatedProgressBar(
+                progress: activity.participationProgress,
+                height: 5,
+                showLabel: true,
+                label:
+                    '${activity.currentParticipants ?? 0}/${activity.maxParticipants}',
+                warningThreshold: 0.85,
               ),
             ],
 

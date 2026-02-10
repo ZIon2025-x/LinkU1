@@ -2,7 +2,7 @@ import 'dart:async';
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+import '../../../core/utils/haptic_feedback.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
@@ -220,7 +220,7 @@ class _TasksViewContentState extends State<_TasksViewContent> {
 
               return GestureDetector(
                 onTap: () {
-                  HapticFeedback.selectionClick();
+                  AppHaptics.selection();
                   context.read<TaskListBloc>().add(
                         TaskListCategoryChanged(
                             category['key'] as String),
@@ -301,7 +301,13 @@ class _TasksViewContentState extends State<_TasksViewContent> {
     return BlocBuilder<TaskListBloc, TaskListState>(
       builder: (context, state) {
         if (state.isLoading && state.tasks.isEmpty) {
-          return const SkeletonList();
+          return const SkeletonGrid(
+            crossAxisCount: 2,
+            itemCount: 6,
+            aspectRatio: 0.68,
+            imageFlex: 5,
+            contentFlex: 3,
+          );
         }
 
         if (state.hasError && state.tasks.isEmpty) {
@@ -329,7 +335,11 @@ class _TasksViewContentState extends State<_TasksViewContent> {
             context
                 .read<TaskListBloc>()
                 .add(const TaskListRefreshRequested());
-            await Future.delayed(const Duration(milliseconds: 500));
+            // 等待 BLoC 状态变化而非人为延迟
+            await context.read<TaskListBloc>().stream.firstWhere(
+                  (s) => !s.isLoading,
+                  orElse: () => state,
+                );
           },
           child: GridView.builder(
             controller: _scrollController,
@@ -435,7 +445,7 @@ class _TaskGridCard extends StatelessWidget {
 
     return GestureDetector(
       onTap: () {
-        HapticFeedback.selectionClick();
+        AppHaptics.selection();
         context.push('/tasks/${task.id}');
       },
       child: Container(

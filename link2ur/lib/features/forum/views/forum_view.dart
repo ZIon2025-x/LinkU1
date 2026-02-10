@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/utils/haptic_feedback.dart';
 import '../../../core/utils/l10n_extension.dart';
 import '../../../core/utils/responsive.dart';
+import '../../../core/utils/forum_permission_helper.dart';
 import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_radius.dart';
@@ -19,6 +20,7 @@ import '../../../core/widgets/content_constraint.dart';
 import '../../../data/models/forum.dart';
 import '../../../data/models/leaderboard.dart';
 import '../bloc/forum_bloc.dart';
+import '../../auth/bloc/auth_bloc.dart';
 import '../../leaderboard/bloc/leaderboard_bloc.dart';
 
 /// 社区页 (论坛 + 排行榜)
@@ -47,7 +49,7 @@ class _ForumViewState extends State<ForumView> {
 
   void _onTabChanged(int index) {
     if (_selectedTab != index) {
-      HapticFeedback.selectionClick();
+      AppHaptics.selection();
       setState(() {
         _selectedTab = index;
       });
@@ -332,7 +334,7 @@ class _DesktopCreateButtonState extends State<_DesktopCreateButton> {
   }
 }
 
-/// 对标iOS TabButton - 与首页风格一致
+/// 对标iOS TabButton — 简化动画：去掉 AnimatedScale + BoxShadow 动画
 class _CommunityTabButton extends StatelessWidget {
   const _CommunityTabButton({
     required this.title,
@@ -356,42 +358,28 @@ class _CommunityTabButton extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            AnimatedScale(
-              scale: isSelected ? 1.05 : 1.0,
-              duration: const Duration(milliseconds: 250),
-              curve: Curves.easeOutBack,
-              child: Text(
-                title,
-                style: AppTypography.body.copyWith(
-                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
-                  color: isSelected
-                      ? (isDark
-                          ? AppColors.textPrimaryDark
-                          : AppColors.textPrimaryLight)
-                      : (isDark
-                          ? AppColors.textSecondaryDark
-                          : AppColors.textSecondaryLight),
-                ),
+            Text(
+              title,
+              style: AppTypography.body.copyWith(
+                fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                color: isSelected
+                    ? (isDark
+                        ? AppColors.textPrimaryDark
+                        : AppColors.textPrimaryLight)
+                    : (isDark
+                        ? AppColors.textSecondaryDark
+                        : AppColors.textSecondaryLight),
               ),
             ),
             const SizedBox(height: 6),
             AnimatedContainer(
-              duration: const Duration(milliseconds: 280),
+              duration: const Duration(milliseconds: 200),
               curve: Curves.easeOut,
               height: 3,
               width: isSelected ? 28 : 0,
               decoration: BoxDecoration(
                 color: isSelected ? AppColors.primary : Colors.transparent,
                 borderRadius: AppRadius.allPill,
-                boxShadow: isSelected
-                    ? [
-                        BoxShadow(
-                          color: AppColors.primary.withValues(alpha: 0.3),
-                          blurRadius: 4,
-                          offset: const Offset(0, 2),
-                        ),
-                      ]
-                    : [],
               ),
             ),
           ],
@@ -403,57 +391,77 @@ class _CommunityTabButton extends StatelessWidget {
 
 /// 论坛Tab - 显示板块(分类)列表，对标iOS ForumView
 /// BLoC 在 MainTabView 中创建
+/// 客户端兜底过滤：后端已根据用户 token 过滤，此处做二次防护
 class _ForumTab extends StatelessWidget {
   const _ForumTab();
 
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<ForumBloc, ForumState>(
-      builder: (context, state) {
-        if (state.status == ForumStatus.loading && state.categories.isEmpty) {
-          return const SkeletonList();
-        }
+    return BlocBuilder<AuthBloc, AuthState>(
+      builder: (context, authState) {
+        return BlocBuilder<ForumBloc, ForumState>(
+          builder: (context, state) {
+            if (state.status == ForumStatus.loading &&
+                state.categories.isEmpty) {
+              return const SkeletonList(imageSize: 64);
+            }
 
-        if (state.status == ForumStatus.error && state.categories.isEmpty) {
-          return ErrorStateView.loadFailed(
-            message: state.errorMessage ?? context.l10n.tasksLoadFailed,
-            onRetry: () {
-              context.read<ForumBloc>().add(const ForumLoadCategories());
-            },
-          );
-        }
-
-        if (state.categories.isEmpty) {
-          return EmptyStateView.noData(
-            title: context.l10n.forumNoPosts,
-            description: context.l10n.forumNoPostsHint,
-          );
-        }
-
-        // 收藏板块优先，对标iOS
-        final sorted = List<ForumCategory>.from(state.categories);
-        sorted.sort((a, b) {
-          if (a.isFavorited && !b.isFavorited) return -1;
-          if (!a.isFavorited && b.isFavorited) return 1;
-          return a.sortOrder.compareTo(b.sortOrder);
-        });
-
-        return RefreshIndicator(
-          onRefresh: () async {
-            context.read<ForumBloc>().add(const ForumRefreshRequested());
-          },
-          child: ListView.separated(
-            clipBehavior: Clip.none,
-            padding: AppSpacing.allMd,
-            itemCount: sorted.length,
-            separatorBuilder: (context, index) => AppSpacing.vMd,
-            itemBuilder: (context, index) {
-              return AnimatedListItem(
-                index: index,
-                child: _CategoryCard(category: sorted[index]),
+            if (state.status == ForumStatus.error &&
+                state.categories.isEmpty) {
+              return ErrorStateView.loadFailed(
+                message:
+                    state.errorMessage ?? context.l10n.tasksLoadFailed,
+                onRetry: () {
+                  context
+                      .read<ForumBloc>()
+                      .add(const ForumLoadCategories());
+                },
               );
-            },
-          ),
+            }
+
+            // 客户端兜底过滤：根据用户身份过滤板块可见性
+            // 对标 iOS ForumView.visibleCategories
+            final user = authState.isAuthenticated ? authState.user : null;
+            final visible = ForumPermissionHelper.filterVisibleCategories(
+              state.categories,
+              user,
+            );
+
+            if (visible.isEmpty) {
+              return EmptyStateView.noData(
+                title: context.l10n.forumNoPosts,
+                description: context.l10n.forumNoPostsHint,
+              );
+            }
+
+            // 收藏板块优先，对标iOS
+            final sorted = List<ForumCategory>.from(visible);
+            sorted.sort((a, b) {
+              if (a.isFavorited && !b.isFavorited) return -1;
+              if (!a.isFavorited && b.isFavorited) return 1;
+              return a.sortOrder.compareTo(b.sortOrder);
+            });
+
+            return RefreshIndicator(
+              onRefresh: () async {
+                context
+                    .read<ForumBloc>()
+                    .add(const ForumRefreshRequested());
+              },
+              child: ListView.separated(
+                clipBehavior: Clip.none,
+                padding: AppSpacing.allMd,
+                itemCount: sorted.length,
+                separatorBuilder: (context, index) => AppSpacing.vMd,
+                itemBuilder: (context, index) {
+                  return AnimatedListItem(
+                    index: index,
+                    child: _CategoryCard(category: sorted[index]),
+                  );
+                },
+              ),
+            );
+          },
         );
       },
     );
@@ -470,7 +478,7 @@ class _LeaderboardTab extends StatelessWidget {
       builder: (context, state) {
         if (state.status == LeaderboardStatus.loading &&
             state.leaderboards.isEmpty) {
-          return const SkeletonList();
+          return const SkeletonList(imageSize: 90);
         }
 
         if (state.status == LeaderboardStatus.error &&
@@ -537,18 +545,9 @@ class _CategoryCard extends StatelessWidget {
 
   final ForumCategory category;
 
-  // 根据分类ID提供不同渐变色
-  List<Color> get _gradient {
-    final hash = category.id.hashCode;
-    final gradients = [
-      [const Color(0xFF007AFF), const Color(0xFF5856D6)],
-      [const Color(0xFFFF6B6B), const Color(0xFFFF4757)],
-      [const Color(0xFF7C5CFC), const Color(0xFF5F27CD)],
-      [const Color(0xFF2ED573), const Color(0xFF00B894)],
-      [const Color(0xFFFF9500), const Color(0xFFFF6B00)],
-    ];
-    return gradients[hash.abs() % gradients.length];
-  }
+  // 统一使用项目主题蓝色渐变
+  List<Color> get _gradient =>
+      const [AppColors.primary, Color(0xFF4A7AF5)];
 
   @override
   Widget build(BuildContext context) {
@@ -557,7 +556,7 @@ class _CategoryCard extends StatelessWidget {
 
     return GestureDetector(
       onTap: () {
-        HapticFeedback.selectionClick();
+        AppHaptics.selection();
         context.push('/forum/category/${category.id}',
             extra: category);
       },
@@ -845,7 +844,7 @@ class _LeaderboardCard extends StatelessWidget {
 
     return GestureDetector(
       onTap: () {
-        HapticFeedback.selectionClick();
+        AppHaptics.selection();
         context.push('/leaderboard/${leaderboard.id}');
       },
       child: Container(

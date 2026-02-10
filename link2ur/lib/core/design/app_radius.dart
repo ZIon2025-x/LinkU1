@@ -9,20 +9,20 @@ class AppRadius {
   /// 4pt - 超小圆角
   static const double tiny = 4.0;
 
-  /// 8pt - 小圆角
-  static const double small = 8.0;
+  /// 10pt - 小圆角 (与iOS对齐)
+  static const double small = 10.0;
 
-  /// 12pt - 中圆角（默认）
-  static const double medium = 12.0;
+  /// 16pt - 中圆角（与iOS对齐）
+  static const double medium = 16.0;
 
-  /// 16pt - 大圆角
-  static const double large = 16.0;
+  /// 24pt - 大圆角 (与iOS对齐)
+  static const double large = 24.0;
 
-  /// 20pt - 超大圆角
-  static const double xlarge = 20.0;
+  /// 32pt - 超大圆角 (与iOS对齐)
+  static const double xlarge = 32.0;
 
-  /// 24pt - 特大圆角
-  static const double xxlarge = 24.0;
+  /// 36pt - 特大圆角
+  static const double xxlarge = 36.0;
 
   /// 999pt - 胶囊/圆形
   static const double pill = 999.0;

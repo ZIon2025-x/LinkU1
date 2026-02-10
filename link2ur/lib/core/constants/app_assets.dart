@@ -40,6 +40,36 @@ class AppAssets {
     avatar5,
   ];
 
+  /// 后端预设头像路径 -> 本地 asset 映射
+  /// 后端存储格式: /static/avatar1.png
+  static const Map<String, String> avatarPathMap = {
+    '/static/avatar1.png': avatar1,
+    '/static/avatar2.png': avatar2,
+    '/static/avatar3.png': avatar3,
+    '/static/avatar4.png': avatar4,
+    '/static/avatar5.png': avatar5,
+  };
+
+  /// 判断是否为预设头像路径（后端格式）
+  static bool isPresetAvatar(String? path) {
+    if (path == null || path.isEmpty) return false;
+    return avatarPathMap.containsKey(path);
+  }
+
+  /// 获取预设头像对应的本地 asset 路径
+  static String? getLocalAvatarAsset(String? path) {
+    if (path == null || path.isEmpty) return null;
+    return avatarPathMap[path];
+  }
+
+  /// 判断是否为官方/系统头像（显示 logo）
+  static bool isOfficialAvatar(String? path) {
+    if (path == null || path.isEmpty) return false;
+    return path == '/static/logo.png' ||
+        path == 'official' ||
+        path == 'system';
+  }
+
   // ==================== 社交媒体图标 ====================
   static const String wechat = 'assets/images/social/wechat.png';
   static const String wechatPay = 'assets/images/social/wechat_pay.png';

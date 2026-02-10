@@ -25,12 +25,12 @@ class AppShadows {
         ),
       ];
 
-  /// 中阴影 - 浮动卡片
+  /// 中阴影 - 浮动卡片 (与iOS对齐 y-offset: 6)
   static List<BoxShadow> get medium => [
         BoxShadow(
           color: AppColors.shadowLight.withValues(alpha: 0.08),
           blurRadius: 12,
-          offset: const Offset(0, 4),
+          offset: const Offset(0, 6),
         ),
       ];
 
@@ -43,18 +43,18 @@ class AppShadows {
         ),
       ];
 
-  /// 特大阴影 - 底部Sheet
+  /// 特大阴影 - 浮动元素 (与iOS floating对齐 y-offset: 12)
   static List<BoxShadow> get xlarge => [
         BoxShadow(
           color: AppColors.shadowLight.withValues(alpha: 0.15),
-          blurRadius: 20,
-          offset: const Offset(0, -4),
+          blurRadius: 25,
+          offset: const Offset(0, 12),
         ),
       ];
 
   // ==================== 彩色阴影 ====================
-  /// 主色阴影
-  static List<BoxShadow> primary({double opacity = 0.3}) => [
+  /// 主色阴影 (与iOS对齐 opacity: 0.25)
+  static List<BoxShadow> primary({double opacity = 0.25}) => [
         BoxShadow(
           color: AppColors.primary.withValues(alpha: opacity),
           blurRadius: 12,
@@ -79,6 +79,40 @@ class AppShadows {
           offset: const Offset(0, 4),
         ),
       ];
+
+  // ==================== 卡片双阴影 ====================
+  /// 卡片双阴影 - 与iOS对齐: 主色阴影 + 黑色轻阴影
+  static List<BoxShadow> get cardDual => [
+        BoxShadow(
+          color: AppColors.primary.withValues(alpha: 0.08),
+          blurRadius: 12,
+          offset: const Offset(0, 4),
+        ),
+        BoxShadow(
+          color: Colors.black.withValues(alpha: 0.02),
+          blurRadius: 2,
+          offset: const Offset(0, 1),
+        ),
+      ];
+
+  /// 深色模式卡片双阴影
+  static List<BoxShadow> get cardDualDark => [
+        BoxShadow(
+          color: AppColors.primary.withValues(alpha: 0.12),
+          blurRadius: 12,
+          offset: const Offset(0, 4),
+        ),
+        BoxShadow(
+          color: Colors.black.withValues(alpha: 0.06),
+          blurRadius: 2,
+          offset: const Offset(0, 1),
+        ),
+      ];
+
+  /// 根据亮度获取卡片双阴影
+  static List<BoxShadow> cardDualForBrightness(Brightness brightness) {
+    return brightness == Brightness.light ? cardDual : cardDualDark;
+  }
 
   // ==================== 特殊阴影 ====================
   /// 底部导航栏阴影

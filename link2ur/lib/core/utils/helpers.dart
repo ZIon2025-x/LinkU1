@@ -1,6 +1,7 @@
 import 'package:flutter/services.dart';
 
 import '../config/app_config.dart';
+import 'haptic_feedback.dart';
 
 /// 通用工具方法
 class Helpers {
@@ -114,24 +115,24 @@ class Helpers {
     return '#${color.toARGB32().toRadixString(16).substring(2).padLeft(6, '0')}';
   }
 
-  // ==================== 触觉反馈 ====================
+  // ==================== 触觉反馈（委托到 AppHaptics 统一管理） ====================
   /// 轻触反馈
-  static void hapticLight() => HapticFeedback.lightImpact();
+  static void hapticLight() => AppHaptics.light();
 
   /// 中等反馈
-  static void hapticMedium() => HapticFeedback.mediumImpact();
+  static void hapticMedium() => AppHaptics.medium();
 
   /// 重触反馈
-  static void hapticHeavy() => HapticFeedback.heavyImpact();
+  static void hapticHeavy() => AppHaptics.heavy();
 
   /// 选择反馈
-  static void hapticSelection() => HapticFeedback.selectionClick();
+  static void hapticSelection() => AppHaptics.selection();
 
   /// 成功反馈
-  static void hapticSuccess() => HapticFeedback.mediumImpact();
+  static void hapticSuccess() => AppHaptics.success();
 
   /// 错误反馈
-  static void hapticError() => HapticFeedback.heavyImpact();
+  static void hapticError() => AppHaptics.error();
 
   // ==================== 复制到剪贴板 ====================
   static Future<void> copyToClipboard(String text) async {

@@ -1,9 +1,16 @@
+import 'package:flutter/foundation.dart';
+
 import '../models/task.dart';
 import '../models/review.dart';
 import '../services/api_service.dart';
 import '../../core/constants/api_endpoints.dart';
 import '../../core/utils/cache_manager.dart';
 import '../../core/utils/app_exception.dart';
+
+/// 在 Isolate 中解析任务列表 JSON，避免大数据量时阻塞主线程
+TaskListResponse _parseTaskListResponse(Map<String, dynamic> json) {
+  return TaskListResponse.fromJson(json);
+}
 
 /// 任务仓库
 /// 与iOS TasksViewModel/TaskDetailViewModel + 后端路由对齐
@@ -41,7 +48,7 @@ class TaskRepository {
     if (cacheKey != null) {
       final cached = _cache.get<Map<String, dynamic>>(cacheKey);
       if (cached != null) {
-        return TaskListResponse.fromJson(cached);
+        return compute(_parseTaskListResponse, cached);
       }
     }
 
@@ -61,13 +68,13 @@ class TaskRepository {
         await _cache.set(cacheKey, response.data!, ttl: CacheManager.shortTTL);
       }
 
-      return TaskListResponse.fromJson(response.data!);
+      return compute(_parseTaskListResponse, response.data!);
     } catch (e) {
       // 3. 网络失败 → 回退到过期缓存
       if (cacheKey != null) {
         final stale = _cache.getStale<Map<String, dynamic>>(cacheKey);
         if (stale != null) {
-          return TaskListResponse.fromJson(stale);
+          return compute(_parseTaskListResponse, stale);
         }
       }
       rethrow;
@@ -87,7 +94,7 @@ class TaskRepository {
     // 1. 检查未过期缓存
     final cached = _cache.get<Map<String, dynamic>>(cacheKey);
     if (cached != null) {
-      return TaskListResponse.fromJson(cached);
+      return compute(_parseTaskListResponse, cached);
     }
 
     // 2. 请求网络
@@ -102,12 +109,12 @@ class TaskRepository {
       }
 
       await _cache.set(cacheKey, response.data!, ttl: CacheManager.shortTTL);
-      return TaskListResponse.fromJson(response.data!);
+      return compute(_parseTaskListResponse, response.data!);
     } catch (e) {
       // 3. 网络失败 → 回退到过期缓存
       final stale = _cache.getStale<Map<String, dynamic>>(cacheKey);
       if (stale != null) {
-        return TaskListResponse.fromJson(stale);
+        return compute(_parseTaskListResponse, stale);
       }
       rethrow;
     }

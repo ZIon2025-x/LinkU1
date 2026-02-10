@@ -2,25 +2,34 @@ import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../../data/services/location_picker_service.dart';
 import '../design/app_colors.dart';
 import '../design/app_spacing.dart';
 import '../design/app_radius.dart';
 import '../utils/permission_manager.dart';
 
 /// 位置输入组件
-/// 参考iOS LocationInputField.swift
-/// 支持手动输入地址、获取当前位置、选择"线上"
+/// 支持手动输入地址、获取当前位置、选择"线上"、地图选点
 class LocationInputField extends StatefulWidget {
   const LocationInputField({
     super.key,
     this.initialValue,
+    this.initialLatitude,
+    this.initialLongitude,
     this.onChanged,
+    this.onLocationPicked,
     this.hintText = '输入地址或选择当前位置',
     this.showOnlineOption = true,
   });
 
   final String? initialValue;
+  final double? initialLatitude;
+  final double? initialLongitude;
   final ValueChanged<String>? onChanged;
+
+  /// 地图选点回调，返回完整的位置信息（地址、纬度、经度）
+  final void Function(String address, double? latitude, double? longitude)?
+      onLocationPicked;
   final String hintText;
   final bool showOnlineOption;
 
@@ -31,11 +40,15 @@ class LocationInputField extends StatefulWidget {
 class _LocationInputFieldState extends State<LocationInputField> {
   late TextEditingController _controller;
   bool _isLoadingLocation = false;
+  double? _latitude;
+  double? _longitude;
 
   @override
   void initState() {
     super.initState();
     _controller = TextEditingController(text: widget.initialValue);
+    _latitude = widget.initialLatitude;
+    _longitude = widget.initialLongitude;
   }
 
   @override
@@ -68,7 +81,11 @@ class _LocationInputFieldState extends State<LocationInputField> {
         final locationText =
             '${position.latitude.toStringAsFixed(4)}, ${position.longitude.toStringAsFixed(4)}';
         _controller.text = locationText;
+        _latitude = position.latitude;
+        _longitude = position.longitude;
         widget.onChanged?.call(locationText);
+        widget.onLocationPicked
+            ?.call(locationText, position.latitude, position.longitude);
       }
     } catch (e) {
       if (mounted) {
@@ -83,7 +100,38 @@ class _LocationInputFieldState extends State<LocationInputField> {
 
   void _selectOnline() {
     _controller.text = 'Online';
+    _latitude = null;
+    _longitude = null;
     widget.onChanged?.call('Online');
+    widget.onLocationPicked?.call('Online', null, null);
+  }
+
+  /// 打开原生地图选点页面
+  Future<void> _openMapPicker() async {
+    final result = await LocationPickerService.instance.openLocationPicker(
+      initialLatitude: _latitude,
+      initialLongitude: _longitude,
+      initialAddress: _controller.text,
+    );
+
+    if (result != null && mounted) {
+      setState(() {
+        _controller.text = result.address;
+        if (result.isOnline) {
+          _latitude = null;
+          _longitude = null;
+        } else {
+          _latitude = result.latitude;
+          _longitude = result.longitude;
+        }
+      });
+      widget.onChanged?.call(result.address);
+      widget.onLocationPicked?.call(
+        result.address,
+        result.isOnline ? null : result.latitude,
+        result.isOnline ? null : result.longitude,
+      );
+    }
   }
 
   @override
@@ -126,20 +174,33 @@ class _LocationInputFieldState extends State<LocationInputField> {
               borderSide: const BorderSide(color: AppColors.primary),
             ),
           ),
-          onChanged: widget.onChanged,
+          onChanged: (value) {
+            // 手动输入时清除坐标
+            _latitude = null;
+            _longitude = null;
+            widget.onChanged?.call(value);
+          },
         ),
 
         // 快捷选项
         AppSpacing.vSm,
         Row(
           children: [
-            if (widget.showOnlineOption)
+            // 地图选点按钮
+            _LocationChip(
+              icon: Icons.map_outlined,
+              label: '地图选点',
+              onTap: _openMapPicker,
+            ),
+            AppSpacing.hSm,
+            if (widget.showOnlineOption) ...[
               _LocationChip(
                 icon: Icons.wifi,
                 label: '线上',
                 onTap: _selectOnline,
               ),
-            AppSpacing.hSm,
+              AppSpacing.hSm,
+            ],
             _LocationChip(
               icon: Icons.my_location,
               label: '当前位置',
@@ -190,7 +251,6 @@ class _LocationChip extends StatelessWidget {
 }
 
 /// 任务位置详情页
-/// 参考iOS TaskLocationDetailView.swift
 /// 显示任务的详细地址信息，支持跳转到地图应用导航
 class TaskLocationDetailView extends StatelessWidget {
   const TaskLocationDetailView({
@@ -214,16 +274,34 @@ class TaskLocationDetailView extends StatelessWidget {
         padding: AppSpacing.allLg,
         child: Column(
           children: [
-            // 地图占位（可后续集成 google_maps_flutter）
-            Container(
-              height: 200,
-              width: double.infinity,
-              decoration: BoxDecoration(
-                color: AppColors.skeletonBase,
-                borderRadius: AppRadius.allMedium,
-              ),
-              child: const Center(
-                child: Icon(Icons.map, size: 64, color: AppColors.textTertiaryLight),
+            // 地图预览 — 点击打开原生地图查看
+            GestureDetector(
+              onTap: () => _openInNativeMap(context),
+              child: Container(
+                height: 200,
+                width: double.infinity,
+                decoration: BoxDecoration(
+                  color: AppColors.skeletonBase,
+                  borderRadius: AppRadius.allMedium,
+                  border: Border.all(
+                    color: AppColors.dividerLight,
+                    width: 1,
+                  ),
+                ),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.map, size: 48, color: AppColors.primary.withValues(alpha: 0.6)),
+                    AppSpacing.vSm,
+                    Text(
+                      '点击在地图中查看',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: AppColors.primary.withValues(alpha: 0.8),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
             AppSpacing.vLg,
@@ -275,7 +353,7 @@ class TaskLocationDetailView extends StatelessWidget {
                   if (latitude != null && longitude != null) ...[
                     AppSpacing.vSm,
                     Text(
-                      '坐标: $latitude, $longitude',
+                      '坐标: ${latitude!.toStringAsFixed(6)}, ${longitude!.toStringAsFixed(6)}',
                       style: const TextStyle(
                         fontSize: 12,
                         color: AppColors.textTertiaryLight,
@@ -292,10 +370,7 @@ class TaskLocationDetailView extends StatelessWidget {
               children: [
                 Expanded(
                   child: OutlinedButton.icon(
-                    onPressed: () {
-                      // 打开 Google Maps
-                      _openMaps(context, 'google');
-                    },
+                    onPressed: () => _openMaps(context, 'google'),
                     icon: const Icon(Icons.map_outlined),
                     label: const Text('Google Maps'),
                   ),
@@ -303,9 +378,7 @@ class TaskLocationDetailView extends StatelessWidget {
                 AppSpacing.hMd,
                 Expanded(
                   child: OutlinedButton.icon(
-                    onPressed: () {
-                      _openMaps(context, 'apple');
-                    },
+                    onPressed: () => _openMaps(context, 'apple'),
                     icon: const Icon(Icons.navigation_outlined),
                     label: const Text('Apple Maps'),
                   ),
@@ -318,18 +391,25 @@ class TaskLocationDetailView extends StatelessWidget {
     );
   }
 
-  Future<void> _openMaps(BuildContext context, String provider) async {
-    // 获取当前位置作为地图中心
-    Position? position;
-    try {
-      position = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.medium,
-        timeLimit: const Duration(seconds: 5),
-      );
-    } catch (_) {}
+  /// 打开原生地图查看位置
+  Future<void> _openInNativeMap(BuildContext context) async {
+    if (latitude == null || longitude == null) return;
 
-    final lat = position?.latitude ?? 51.5074; // 默认伦敦
-    final lng = position?.longitude ?? -0.1278;
+    // 使用 LocationPickerService 打开只读地图
+    final result = await LocationPickerService.instance.openLocationPicker(
+      initialLatitude: latitude,
+      initialLongitude: longitude,
+      initialAddress: address,
+    );
+    // 结果可忽略（只是查看位置）
+    if (result != null) {
+      // 如果用户选了新位置，不做任何事（这里只是查看）
+    }
+  }
+
+  Future<void> _openMaps(BuildContext context, String provider) async {
+    final lat = latitude ?? 51.5074;
+    final lng = longitude ?? -0.1278;
 
     Uri url;
     if (provider == 'google') {
@@ -337,9 +417,8 @@ class TaskLocationDetailView extends StatelessWidget {
         'https://www.google.com/maps/search/?api=1&query=$lat,$lng',
       );
     } else {
-      // Apple Maps
       url = Uri.parse(
-        'https://maps.apple.com/?ll=$lat,$lng&q=当前位置',
+        'https://maps.apple.com/?ll=$lat,$lng&q=${Uri.encodeComponent(address)}',
       );
     }
 
@@ -349,7 +428,9 @@ class TaskLocationDetailView extends StatelessWidget {
       } else {
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('无法打开${provider == 'google' ? 'Google' : 'Apple'} Maps')),
+            SnackBar(
+                content: Text(
+                    '无法打开${provider == 'google' ? 'Google' : 'Apple'} Maps')),
           );
         }
       }

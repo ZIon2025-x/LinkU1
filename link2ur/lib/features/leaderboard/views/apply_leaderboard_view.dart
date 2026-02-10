@@ -1,10 +1,15 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:image_picker/image_picker.dart';
 
 import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_radius.dart';
+import '../../../core/utils/haptic_feedback.dart';
 import '../../../core/utils/l10n_extension.dart';
+import '../../../core/widgets/app_feedback.dart';
+import '../../../core/widgets/buttons.dart';
 import '../../../data/repositories/leaderboard_repository.dart';
 import '../bloc/leaderboard_bloc.dart';
 
@@ -21,7 +26,8 @@ class _ApplyLeaderboardViewState extends State<ApplyLeaderboardView> {
   final _titleController = TextEditingController();
   final _descriptionController = TextEditingController();
   final _rulesController = TextEditingController();
-  String? _errorMessage;
+  final _imagePicker = ImagePicker();
+  File? _coverImage;
 
   @override
   void dispose() {
@@ -31,19 +37,46 @@ class _ApplyLeaderboardViewState extends State<ApplyLeaderboardView> {
     super.dispose();
   }
 
+  Future<void> _pickCoverImage() async {
+    AppHaptics.selection();
+    try {
+      final picked = await _imagePicker.pickImage(
+        source: ImageSource.gallery,
+        maxWidth: 1920,
+        maxHeight: 1080,
+        imageQuality: 85,
+      );
+      if (picked != null) {
+        setState(() => _coverImage = File(picked.path));
+      }
+    } catch (e) {
+      if (mounted) {
+        AppFeedback.showError(context, e.toString());
+      }
+    }
+  }
+
+  void _removeCoverImage() {
+    AppHaptics.light();
+    setState(() => _coverImage = null);
+  }
+
   void _submit() {
-    if (_titleController.text.isEmpty || _descriptionController.text.isEmpty) {
-      setState(() => _errorMessage = context.l10n.leaderboardFillRequired);
+    if (_titleController.text.trim().isEmpty ||
+        _descriptionController.text.trim().isEmpty) {
+      AppFeedback.showWarning(context, context.l10n.leaderboardFillRequired);
       return;
     }
 
-    setState(() => _errorMessage = null);
-
+    AppHaptics.medium();
     context.read<LeaderboardBloc>().add(
           LeaderboardApplyRequested(
-            title: _titleController.text,
-            description: _descriptionController.text,
-            rules: _rulesController.text.isEmpty ? null : _rulesController.text,
+            title: _titleController.text.trim(),
+            description: _descriptionController.text.trim(),
+            rules: _rulesController.text.trim().isEmpty
+                ? null
+                : _rulesController.text.trim(),
+            coverImagePath: _coverImage?.path,
           ),
         );
   }
@@ -51,128 +84,229 @@ class _ApplyLeaderboardViewState extends State<ApplyLeaderboardView> {
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return BlocProvider(
       create: (context) => LeaderboardBloc(
         leaderboardRepository: context.read<LeaderboardRepository>(),
       ),
-      child: BlocListener<LeaderboardBloc, LeaderboardState>(
+      child: BlocConsumer<LeaderboardBloc, LeaderboardState>(
         listener: (context, state) {
           if (state.actionMessage != null) {
             if (state.actionMessage!.contains('成功') ||
                 state.actionMessage!.contains('已提交')) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text(context.l10n.leaderboardApplySuccess)),
-              );
+              AppFeedback.showSuccess(context, l10n.leaderboardApplySuccess);
               Navigator.of(context).pop();
-            } else {
-              setState(() {
-                _errorMessage = state.actionMessage;
-              });
+            } else if (state.actionMessage!.contains('失败')) {
+              AppFeedback.showError(context, state.actionMessage!);
             }
           }
         },
-        child: Scaffold(
-          appBar: AppBar(
-            title: Text(l10n.leaderboardApply),
-          ),
-          body: BlocBuilder<LeaderboardBloc, LeaderboardState>(
-            builder: (context, state) {
-              return SingleChildScrollView(
-                padding: const EdgeInsets.all(AppSpacing.md),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    // 标题
-                    _buildField(
-                      label: l10n.leaderboardTitle,
-                      controller: _titleController,
-                      hint: l10n.leaderboardTitleHint,
-                      isRequired: true,
-                    ),
-                    const SizedBox(height: AppSpacing.lg),
+        builder: (context, state) {
+          return Scaffold(
+            appBar: AppBar(title: Text(l10n.leaderboardApply)),
+            body: SingleChildScrollView(
+              padding: const EdgeInsets.all(AppSpacing.md),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // ── 封面图片（可选） ──
+                  _buildCoverImagePicker(isDark),
+                  const SizedBox(height: AppSpacing.lg),
 
-                    // 描述
-                    _buildField(
-                      label: l10n.leaderboardDescription,
-                      controller: _descriptionController,
-                      hint: l10n.leaderboardDescriptionHint,
-                      maxLines: 4,
-                      isRequired: true,
-                    ),
-                    const SizedBox(height: AppSpacing.lg),
+                  // ── 标题 * ──
+                  _buildField(
+                    label: l10n.leaderboardTitle,
+                    controller: _titleController,
+                    hint: l10n.leaderboardTitleHint,
+                    icon: Icons.title_rounded,
+                    isRequired: true,
+                    isDark: isDark,
+                  ),
+                  const SizedBox(height: AppSpacing.lg),
 
-                    // 规则
-                    _buildField(
-                      label: l10n.leaderboardRules,
-                      controller: _rulesController,
-                      hint: l10n.leaderboardRulesHint,
-                      maxLines: 4,
-                    ),
-                    const SizedBox(height: AppSpacing.lg),
+                  // ── 描述 * ──
+                  _buildField(
+                    label: l10n.leaderboardDescription,
+                    controller: _descriptionController,
+                    hint: l10n.leaderboardDescriptionHint,
+                    icon: Icons.description_outlined,
+                    maxLines: 4,
+                    isRequired: true,
+                    isDark: isDark,
+                  ),
+                  const SizedBox(height: AppSpacing.lg),
 
-                    // 错误
-                    if (_errorMessage != null || state.actionMessage != null)
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: AppSpacing.md),
-                        child: Text(
-                            _errorMessage ?? state.actionMessage ?? '',
-                            style: const TextStyle(
-                                color: AppColors.error, fontSize: 13)),
-                      ),
+                  // ── 排行榜规则 ──
+                  _buildField(
+                    label: l10n.leaderboardRules,
+                    controller: _rulesController,
+                    hint: l10n.leaderboardRulesHint,
+                    icon: Icons.rule_rounded,
+                    maxLines: 5,
+                    isDark: isDark,
+                  ),
+                  const SizedBox(height: AppSpacing.xl),
 
-                    // 提交
-                    SizedBox(
-                      height: 52,
-                      child: ElevatedButton(
-                        onPressed: state.isSubmitting ? null : _submit,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.primary,
-                          foregroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(AppRadius.large),
-                          ),
-                        ),
-                        child: state.isSubmitting
-                            ? const SizedBox(
-                                width: 24,
-                                height: 24,
-                                child: CircularProgressIndicator(
-                                    color: Colors.white, strokeWidth: 2))
-                            : Text(l10n.leaderboardSubmitApply,
-                                style: const TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w600)),
-                      ),
-                    ),
-                  ],
-                ),
-              );
-            },
-          ),
-        ),
+                  // ── 提交 ──
+                  PrimaryButton(
+                    text: l10n.leaderboardSubmitApply,
+                    onPressed: state.isSubmitting ? null : _submit,
+                    isLoading: state.isSubmitting,
+                  ),
+                  const SizedBox(height: AppSpacing.lg),
+                ],
+              ),
+            ),
+          );
+        },
       ),
     );
   }
 
+  // ==================== 封面图片选择器 ====================
+  Widget _buildCoverImagePicker(bool isDark) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Text(
+              context.l10n.leaderboardCoverImage,
+              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+            ),
+            const SizedBox(width: 4),
+            Text(
+              '(${context.l10n.leaderboardOptional})',
+              style: TextStyle(
+                fontSize: 12,
+                color: isDark ? AppColors.textTertiaryDark : AppColors.textTertiaryLight,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        if (_coverImage != null)
+          // 已选图片预览
+          Stack(
+            children: [
+              ClipRRect(
+                borderRadius: BorderRadius.circular(AppRadius.medium),
+                child: Image.file(
+                  _coverImage!,
+                  width: double.infinity,
+                  height: 180,
+                  fit: BoxFit.cover,
+                ),
+              ),
+              Positioned(
+                top: 8,
+                right: 8,
+                child: GestureDetector(
+                  onTap: _removeCoverImage,
+                  child: Container(
+                    width: 32,
+                    height: 32,
+                    decoration: BoxDecoration(
+                      color: Colors.black.withValues(alpha: 0.5),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Icons.close, color: Colors.white, size: 18),
+                  ),
+                ),
+              ),
+              // 重新选择按钮
+              Positioned(
+                bottom: 8,
+                right: 8,
+                child: GestureDetector(
+                  onTap: _pickCoverImage,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withValues(alpha: 0.5),
+                      borderRadius: BorderRadius.circular(AppRadius.small),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.refresh_rounded, color: Colors.white, size: 16),
+                        const SizedBox(width: 4),
+                        Text(
+                          context.l10n.leaderboardChangeImage,
+                          style: const TextStyle(color: Colors.white, fontSize: 12),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          )
+        else
+          // 空白选择区域
+          GestureDetector(
+            onTap: _pickCoverImage,
+            child: Container(
+              width: double.infinity,
+              height: 140,
+              decoration: BoxDecoration(
+                color: isDark
+                    ? Colors.white.withValues(alpha: 0.06)
+                    : AppColors.backgroundLight,
+                borderRadius: BorderRadius.circular(AppRadius.medium),
+                border: Border.all(
+                  color: isDark
+                      ? Colors.white.withValues(alpha: 0.12)
+                      : AppColors.separatorLight.withValues(alpha: 0.5),
+                  style: BorderStyle.solid,
+                ),
+              ),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.add_photo_alternate_outlined,
+                    size: 40,
+                    color: isDark ? AppColors.textTertiaryDark : AppColors.textTertiaryLight,
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    context.l10n.leaderboardAddCoverImage,
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: isDark ? AppColors.textTertiaryDark : AppColors.textTertiaryLight,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+
+  // ==================== 表单字段 ====================
   Widget _buildField({
     required String label,
     required TextEditingController controller,
     String? hint,
+    IconData? icon,
     int maxLines = 1,
     bool isRequired = false,
+    required bool isDark,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
           children: [
-            Text(label,
-                style: const TextStyle(
-                    fontSize: 14, fontWeight: FontWeight.w600)),
+            Text(
+              label,
+              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+            ),
             if (isRequired)
-              const Text(' *',
-                  style: TextStyle(color: AppColors.error)),
+              const Text(' *', style: TextStyle(color: AppColors.error)),
           ],
         ),
         const SizedBox(height: 8),
@@ -181,11 +315,32 @@ class _ApplyLeaderboardViewState extends State<ApplyLeaderboardView> {
           maxLines: maxLines,
           decoration: InputDecoration(
             hintText: hint,
+            prefixIcon: icon != null ? Icon(icon, size: 20) : null,
+            filled: true,
+            fillColor: isDark
+                ? Colors.white.withValues(alpha: 0.06)
+                : AppColors.backgroundLight,
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(AppRadius.medium),
+              borderSide: BorderSide(
+                color: isDark
+                    ? Colors.white.withValues(alpha: 0.1)
+                    : AppColors.separatorLight.withValues(alpha: 0.5),
+              ),
             ),
-            contentPadding: const EdgeInsets.symmetric(
-                horizontal: 14, vertical: 12),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(AppRadius.medium),
+              borderSide: BorderSide(
+                color: isDark
+                    ? Colors.white.withValues(alpha: 0.1)
+                    : AppColors.separatorLight.withValues(alpha: 0.5),
+              ),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(AppRadius.medium),
+              borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
+            ),
+            contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
           ),
         ),
       ],

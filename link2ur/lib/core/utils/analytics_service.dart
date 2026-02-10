@@ -1,22 +1,19 @@
-import 'package:firebase_analytics/firebase_analytics.dart';
-
 import 'logger.dart';
 
 /// 分析服务
 /// 参考iOS Analytics.swift
 /// 封装事件追踪和用户行为分析
+/// 当前使用 AppLogger 记录事件，可后续集成第三方分析 SDK
 class AnalyticsService {
   AnalyticsService._();
 
   static final AnalyticsService instance = AnalyticsService._();
 
-  FirebaseAnalytics? _analytics;
   bool _isInitialized = false;
 
   /// 初始化分析服务
   Future<void> initialize() async {
     try {
-      _analytics = FirebaseAnalytics.instance;
       _isInitialized = true;
       AppLogger.info('Analytics - Initialized');
     } catch (e) {
@@ -30,15 +27,7 @@ class AnalyticsService {
     String? screenClass,
   }) async {
     if (!_isInitialized) return;
-
-    try {
-      await _analytics?.logScreenView(
-        screenName: screenName,
-        screenClass: screenClass,
-      );
-    } catch (e) {
-      AppLogger.error('Analytics - logScreenView failed', e);
-    }
+    AppLogger.info('Analytics - Screen: $screenName${screenClass != null ? ' ($screenClass)' : ''}');
   }
 
   /// 记录自定义事件
@@ -47,26 +36,13 @@ class AnalyticsService {
     Map<String, Object>? parameters,
   }) async {
     if (!_isInitialized) return;
-
-    try {
-      await _analytics?.logEvent(
-        name: name,
-        parameters: parameters,
-      );
-    } catch (e) {
-      AppLogger.error('Analytics - logEvent failed', e);
-    }
+    AppLogger.info('Analytics - Event: $name${parameters != null ? ' $parameters' : ''}');
   }
 
   /// 设置用户ID
   Future<void> setUserId(String? userId) async {
     if (!_isInitialized) return;
-
-    try {
-      await _analytics?.setUserId(id: userId);
-    } catch (e) {
-      AppLogger.error('Analytics - setUserId failed', e);
-    }
+    AppLogger.info('Analytics - User ID: $userId');
   }
 
   /// 设置用户属性
@@ -75,12 +51,7 @@ class AnalyticsService {
     required String? value,
   }) async {
     if (!_isInitialized) return;
-
-    try {
-      await _analytics?.setUserProperty(name: name, value: value);
-    } catch (e) {
-      AppLogger.error('Analytics - setUserProperty failed', e);
-    }
+    AppLogger.info('Analytics - User property: $name = $value');
   }
 
   // ==================== 业务事件 ====================
@@ -145,21 +116,17 @@ class AnalyticsService {
     required String itemId,
     String? method,
   }) async {
-    await _analytics?.logShare(
-      contentType: contentType,
-      itemId: itemId,
-      method: method ?? 'unknown',
-    );
+    await logEvent(name: 'share', parameters: {
+      'content_type': contentType,
+      'item_id': itemId,
+      'method': method ?? 'unknown',
+    });
   }
 
   /// 搜索
   Future<void> logSearch({required String searchTerm}) async {
-    await _analytics?.logSearch(searchTerm: searchTerm);
-  }
-
-  /// 获取 Firebase Analytics Observer（用于 GoRouter）
-  FirebaseAnalyticsObserver? get observer {
-    if (_analytics == null) return null;
-    return FirebaseAnalyticsObserver(analytics: _analytics!);
+    await logEvent(name: 'search', parameters: {
+      'search_term': searchTerm,
+    });
   }
 }

@@ -190,9 +190,30 @@ class Task extends Equatable {
     }
   }
 
-  /// 任务类型显示文本
+  /// 任务类型显示文本（对齐后端 TASK_TYPES）
   String get taskTypeText {
     switch (taskType) {
+      case 'Housekeeping':
+        return '家政服务';
+      case 'Campus Life':
+        return '校园生活';
+      case 'Second-hand & Rental':
+        return '二手与租赁';
+      case 'Errand Running':
+        return '跑腿代办';
+      case 'Skill Service':
+        return '技能服务';
+      case 'Social Help':
+        return '社交互助';
+      case 'Transportation':
+        return '交通出行';
+      case 'Pet Care':
+        return '宠物照料';
+      case 'Life Convenience':
+        return '生活便利';
+      case 'Other':
+        return '其他';
+      // 兼容旧数据
       case 'delivery':
         return '代取代送';
       case 'shopping':
@@ -207,14 +228,6 @@ class Task extends Equatable {
         return '编程';
       case 'writing':
         return '写作';
-      case 'photography':
-        return '摄影';
-      case 'moving':
-        return '搬家';
-      case 'cleaning':
-        return '清洁';
-      case 'repair':
-        return '维修';
       case 'other':
         return '其他';
       default:

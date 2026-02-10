@@ -35,7 +35,7 @@ class LeaderboardView extends StatelessWidget {
           builder: (context, state) {
             if (state.status == LeaderboardStatus.loading &&
                 state.leaderboards.isEmpty) {
-              return const SkeletonList();
+              return const SkeletonList(imageSize: 90);
             }
 
             if (state.status == LeaderboardStatus.error &&

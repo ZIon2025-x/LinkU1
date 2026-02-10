@@ -9,8 +9,6 @@ import 'app.dart';
 import 'core/config/app_config.dart';
 import 'core/utils/logger.dart';
 import 'core/utils/network_monitor.dart';
-import 'data/services/api_service.dart';
-import 'data/services/iap_service.dart';
 import 'data/services/storage_service.dart';
 
 void main() async {
@@ -41,32 +39,31 @@ void main() async {
     ),
   );
 
-  // 设置屏幕方向
-  await SystemChrome.setPreferredOrientations([
-    DeviceOrientation.portraitUp,
-    DeviceOrientation.portraitDown,
+  // 并行化无依赖的初始化操作，减少冷启动时间
+  // 屏幕方向 和 Hive 初始化互不依赖，可并行执行
+  await Future.wait([
+    SystemChrome.setPreferredOrientations([
+      DeviceOrientation.portraitUp,
+      DeviceOrientation.portraitDown,
+    ]),
+    Hive.initFlutter(),
   ]);
 
-  // 初始化Hive
-  await Hive.initFlutter();
-
-  // 初始化存储服务
+  // StorageService 依赖 Hive，必须在 Hive.initFlutter 之后
+  // 内部已并行化 SharedPreferences + Hive.openBox + CacheManager
   await StorageService.instance.init();
 
-  // 初始化应用配置
+  // AppConfig 依赖 StorageService，必须在其之后
   await AppConfig.instance.init();
 
-  // 初始化网络监测
-  await NetworkMonitor.instance.initialize();
+  // 网络监测：非阻塞初始化，不影响启动速度
+  NetworkMonitor.instance.initialize();
 
   // 初始化Bloc观察者
   Bloc.observer = AppBlocObserver();
 
-  // 初始化 IAP 内购服务（Web 平台不支持 in_app_purchase）
-  if (!kIsWeb) {
-    final apiService = ApiService();
-    await IAPService.instance.initialize(apiService: apiService);
-  }
+  // IAP 内购服务：延迟到首次进入支付/VIP页面时懒初始化
+  // 避免阻塞启动流程（详见 IAPService.ensureInitialized）
 
   // 注意：不在这里 remove 原生启动画面
   // 原生启动画面会保持到 app.dart 中认证检查完成后再移除
@@ -75,29 +72,37 @@ void main() async {
   runApp(const Link2UrApp());
 }
 
-/// Bloc观察者，用于调试
+/// Bloc观察者，用于调试和错误追踪
 class AppBlocObserver extends BlocObserver {
   @override
   void onCreate(BlocBase bloc) {
     super.onCreate(bloc);
-    AppLogger.debug('Bloc created: ${bloc.runtimeType}');
+    if (kDebugMode) {
+      AppLogger.debug('Bloc created: ${bloc.runtimeType}');
+    }
   }
 
   @override
   void onChange(BlocBase bloc, Change change) {
     super.onChange(bloc, change);
-    AppLogger.debug('Bloc ${bloc.runtimeType} changed: $change');
+    // Release 模式下跳过状态变更日志，避免性能开销
+    if (kDebugMode) {
+      AppLogger.debug('Bloc ${bloc.runtimeType} changed: $change');
+    }
   }
 
   @override
   void onError(BlocBase bloc, Object error, StackTrace stackTrace) {
     super.onError(bloc, error, stackTrace);
+    // 错误日志在所有模式下保留
     AppLogger.error('Bloc ${bloc.runtimeType} error: $error', stackTrace);
   }
 
   @override
   void onClose(BlocBase bloc) {
     super.onClose(bloc);
-    AppLogger.debug('Bloc closed: ${bloc.runtimeType}');
+    if (kDebugMode) {
+      AppLogger.debug('Bloc closed: ${bloc.runtimeType}');
+    }
   }
 }

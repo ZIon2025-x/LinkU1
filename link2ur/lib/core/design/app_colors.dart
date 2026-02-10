@@ -7,52 +7,52 @@ class AppColors {
   AppColors._();
 
   // ==================== 主色调 ====================
-  /// 主色 - 系统蓝色
-  static const Color primary = Color(0xFF007AFF);
+  /// 主色 - 与iOS DesignSystem对齐 (#2659F2)
+  static const Color primary = Color(0xFF2659F2);
 
   /// 主色变体
-  static const Color primaryLight = Color(0xFF4DA3FF);
-  static const Color primaryDark = Color(0xFF0055CC);
+  static const Color primaryLight = Color(0xFF4088FF);
+  static const Color primaryDark = Color(0xFF1A3FBF);
 
-  /// 渐变主色
+  /// 渐变主色 - 与iOS对齐 [#2659F2, #4088FF]
   static const List<Color> gradientPrimary = [
-    Color(0xFF007AFF),
-    Color(0xFF0055CC),
+    Color(0xFF2659F2),
+    Color(0xFF4088FF),
   ];
 
   // ==================== 辅助色 ====================
-  /// 橙色 - 强调色
-  static const Color accent = Color(0xFFFF9500);
+  /// 橙色 - 强调色 (与iOS accentOrange对齐)
+  static const Color accent = Color(0xFFFF8033);
   static const Color accentLight = Color(0xFFFFB84D);
 
   /// 金色 - VIP/特殊
   static const Color gold = Color(0xFFFFD700);
 
-  /// 粉色 - 点赞/喜欢
-  static const Color accentPink = Color(0xFFFF2D55);
+  /// 粉色 - 点赞/喜欢 (与iOS accentPink对齐)
+  static const Color accentPink = Color(0xFFFF4D80);
 
   /// 青色 - 消息/在线
   static const Color teal = Color(0xFF5AC8FA);
 
-  /// 紫色 - 特殊标签
-  static const Color purple = Color(0xFFAF52DE);
+  /// 紫色 - 特殊标签 (与iOS accentPurple对齐)
+  static const Color purple = Color(0xFF7359F2);
 
   // ==================== 语义化颜色 ====================
-  /// 成功
-  static const Color success = Color(0xFF34C759);
-  static const Color successLight = Color(0xFFE8F8EC);
+  /// 成功 (与iOS对齐 #26BF73)
+  static const Color success = Color(0xFF26BF73);
+  static const Color successLight = Color(0xFFE5F8EE);
 
-  /// 警告
-  static const Color warning = Color(0xFFFF9500);
+  /// 警告 (与iOS对齐 #FFA600)
+  static const Color warning = Color(0xFFFFA600);
   static const Color warningLight = Color(0xFFFFF4E5);
 
-  /// 错误
-  static const Color error = Color(0xFFFF3B30);
+  /// 错误 (与iOS对齐 #F24D4D)
+  static const Color error = Color(0xFFF24D4D);
   static const Color errorLight = Color(0xFFFFE5E5);
 
   /// 信息
-  static const Color info = Color(0xFF007AFF);
-  static const Color infoLight = Color(0xFFE5F2FF);
+  static const Color info = Color(0xFF2659F2);
+  static const Color infoLight = Color(0xFFE5EDFF);
 
   // ==================== 背景色 ====================
   /// 主背景色（浅色模式）

@@ -759,6 +759,12 @@ abstract class AppLocalizations {
   /// **'Above are the latest activities'**
   String get homeNoMoreActivity;
 
+  /// No description provided for @homeLoadMore.
+  ///
+  /// In en, this message translates to:
+  /// **'Load More'**
+  String get homeLoadMore;
+
   /// No description provided for @homeHotEvents.
   ///
   /// In en, this message translates to:
@@ -8181,6 +8187,18 @@ abstract class AppLocalizations {
   /// **'Add Cover Image'**
   String get leaderboardAddCoverImage;
 
+  /// No description provided for @leaderboardOptional.
+  ///
+  /// In en, this message translates to:
+  /// **'Optional'**
+  String get leaderboardOptional;
+
+  /// No description provided for @leaderboardChangeImage.
+  ///
+  /// In en, this message translates to:
+  /// **'Change'**
+  String get leaderboardChangeImage;
+
   /// No description provided for @leaderboardLoading.
   ///
   /// In en, this message translates to:
@@ -11618,11 +11636,59 @@ abstract class AppLocalizations {
   /// **'View Details'**
   String get chatViewDetail;
 
+  /// No description provided for @chatCopy.
+  ///
+  /// In en, this message translates to:
+  /// **'Copy'**
+  String get chatCopy;
+
+  /// No description provided for @chatTranslate.
+  ///
+  /// In en, this message translates to:
+  /// **'Translate'**
+  String get chatTranslate;
+
   /// No description provided for @chatCopied.
   ///
   /// In en, this message translates to:
   /// **'Copied'**
   String get chatCopied;
+
+  /// No description provided for @chatPinToTop.
+  ///
+  /// In en, this message translates to:
+  /// **'Pin'**
+  String get chatPinToTop;
+
+  /// No description provided for @chatUnpin.
+  ///
+  /// In en, this message translates to:
+  /// **'Unpin'**
+  String get chatUnpin;
+
+  /// No description provided for @chatDeleteChat.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete'**
+  String get chatDeleteChat;
+
+  /// No description provided for @chatDeletedHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Chat deleted. It will reappear when new messages arrive.'**
+  String get chatDeletedHint;
+
+  /// No description provided for @chatPinnedHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Chat pinned to top'**
+  String get chatPinnedHint;
+
+  /// No description provided for @chatUnpinnedHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Chat unpinned'**
+  String get chatUnpinnedHint;
 
   /// No description provided for @chatTaskDetailLabel.
   ///
@@ -12872,6 +12938,72 @@ abstract class AppLocalizations {
   /// **'Other'**
   String get createTaskCategoryOther;
 
+  /// No description provided for @taskTypeHousekeeping.
+  ///
+  /// In en, this message translates to:
+  /// **'Housekeeping'**
+  String get taskTypeHousekeeping;
+
+  /// No description provided for @taskTypeCampusLife.
+  ///
+  /// In en, this message translates to:
+  /// **'Campus Life'**
+  String get taskTypeCampusLife;
+
+  /// No description provided for @taskTypeSecondHandRental.
+  ///
+  /// In en, this message translates to:
+  /// **'Second-hand & Rental'**
+  String get taskTypeSecondHandRental;
+
+  /// No description provided for @taskTypeErrandRunning.
+  ///
+  /// In en, this message translates to:
+  /// **'Errand Running'**
+  String get taskTypeErrandRunning;
+
+  /// No description provided for @taskTypeSkillService.
+  ///
+  /// In en, this message translates to:
+  /// **'Skill Service'**
+  String get taskTypeSkillService;
+
+  /// No description provided for @taskTypeSocialHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'Social Help'**
+  String get taskTypeSocialHelp;
+
+  /// No description provided for @taskTypeTransportation.
+  ///
+  /// In en, this message translates to:
+  /// **'Transportation'**
+  String get taskTypeTransportation;
+
+  /// No description provided for @taskTypePetCare.
+  ///
+  /// In en, this message translates to:
+  /// **'Pet Care'**
+  String get taskTypePetCare;
+
+  /// No description provided for @taskTypeLifeConvenience.
+  ///
+  /// In en, this message translates to:
+  /// **'Life Convenience'**
+  String get taskTypeLifeConvenience;
+
+  /// No description provided for @taskTypeOther.
+  ///
+  /// In en, this message translates to:
+  /// **'Other'**
+  String get taskTypeOther;
+
+  /// No description provided for @taskTypeCampusLifeNeedVerify.
+  ///
+  /// In en, this message translates to:
+  /// **'Publishing \"Campus Life\" tasks requires student email verification'**
+  String get taskTypeCampusLifeNeedVerify;
+
   /// No description provided for @taskDetailNoImages.
   ///
   /// In en, this message translates to:
@@ -13021,6 +13153,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Transaction History'**
   String get walletTransactionHistory;
+
+  /// No description provided for @walletTopUp.
+  ///
+  /// In en, this message translates to:
+  /// **'Top Up'**
+  String get walletTopUp;
+
+  /// No description provided for @walletTransfer.
+  ///
+  /// In en, this message translates to:
+  /// **'Transfer'**
+  String get walletTransfer;
+
+  /// No description provided for @walletViewAll.
+  ///
+  /// In en, this message translates to:
+  /// **'View All'**
+  String get walletViewAll;
 
   /// No description provided for @walletTransactionsDesc.
   ///
@@ -13909,6 +14059,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Apply for Another Slot'**
   String get serviceApplyOtherSlot;
+
+  /// No description provided for @publishTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Publish'**
+  String get publishTitle;
+
+  /// No description provided for @publishTaskTab.
+  ///
+  /// In en, this message translates to:
+  /// **'Post Task'**
+  String get publishTaskTab;
+
+  /// No description provided for @publishFleaMarketTab.
+  ///
+  /// In en, this message translates to:
+  /// **'Sell Item'**
+  String get publishFleaMarketTab;
+
+  /// No description provided for @publishPostTab.
+  ///
+  /// In en, this message translates to:
+  /// **'Forum Post'**
+  String get publishPostTab;
 }
 
 class _AppLocalizationsDelegate

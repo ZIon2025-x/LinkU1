@@ -47,5 +47,56 @@
 		<true/>
 		<key>UIStatusBarHidden</key>
 		<false/>
+		<!-- Privacy - Permission Descriptions -->
+		<key>NSCameraUsageDescription</key>
+		<string>This app will use the camera to take photos of your ID documents for setting up your payment account.</string>
+		<key>NSLocationWhenInUseUsageDescription</key>
+		<string>We need to access your location information to select task/item locations on the map, or use your current location. You can also choose to manually enter locations.</string>
+		<key>NSFaceIDUsageDescription</key>
+		<string>We use Face ID to securely authenticate and log you into your account.</string>
+		<key>NSPhotoLibraryUsageDescription</key>
+		<string>This app needs access to your photo library to upload images for your profile, tasks, and posts.</string>
+		<!-- URL Schemes -->
+		<key>CFBundleURLTypes</key>
+		<array>
+			<dict>
+				<key>CFBundleTypeRole</key>
+				<string>Editor</string>
+				<key>CFBundleURLName</key>
+				<string>com.link2ur</string>
+				<key>CFBundleURLSchemes</key>
+				<array>
+					<string>link2ur</string>
+				</array>
+			</dict>
+		</array>
+		<!-- Query Schemes - WeChat, QQ, Social -->
+		<key>LSApplicationQueriesSchemes</key>
+		<array>
+			<string>weixin</string>
+			<string>weixinULAPI</string>
+			<string>mqq</string>
+			<string>mqqapi</string>
+			<string>mqqopensdkapiV2</string>
+			<string>mqqopensdkapiV3</string>
+			<string>mqqopensdkapiV4</string>
+			<string>mqqopensdknopasteboard</string>
+			<string>mqqopensdknopasteboardios16</string>
+			<string>mqzone</string>
+			<string>mqqopensdklaunchminiapp</string>
+			<string>tim</string>
+			<string>instagram</string>
+			<string>fb</string>
+			<string>twitter</string>
+			<string>weibosdk</string>
+		</array>
+		<!-- Background Modes -->
+		<key>UIBackgroundModes</key>
+		<array>
+			<string>remote-notification</string>
+		</array>
+		<!-- Encryption -->
+		<key>ITSAppUsesNonExemptEncryption</key>
+		<false/>
 	</dict>
 </plist>

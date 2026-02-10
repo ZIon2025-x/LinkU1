@@ -47,6 +47,13 @@ class StorageKeys {
   static const String taskDraft = 'task_draft';
   static const String postDraft = 'post_draft';
 
+  // ==================== 聊天偏好 ====================
+  /// 置顶的任务聊天ID列表 (JSON数组)
+  static const String pinnedTaskChatIds = 'pinned_task_chat_ids';
+
+  /// 隐藏的任务聊天 (JSON map: {taskId: isoTimestamp})
+  static const String hiddenTaskChats = 'hidden_task_chats';
+
   // ==================== Hive Box名称 ====================
   /// 缓存Box
   static const String cacheBox = 'cache_box';

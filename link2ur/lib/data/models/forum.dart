@@ -15,10 +15,36 @@ class ForumCategory extends Equatable {
     this.postCount = 0,
     this.sortOrder = 0,
     this.type,
+    this.country,
+    this.universityCode,
     this.isFavorited = false,
     this.lastPostAt,
     this.latestPost,
   });
+
+  // ==================== 板块类型常量 ====================
+
+  /// 普通公开板块 — 所有用户可见
+  static const String typeGeneral = 'general';
+
+  /// 国家/地区级板块 — 需要学生认证（如"英国留学生"）
+  static const String typeRoot = 'root';
+
+  /// 学校专属板块 — 需要学生认证且匹配学校
+  static const String typeUniversity = 'university';
+
+  // ---- 预留未来权限类型 ----
+
+  /// 达人专属板块
+  static const String typeExpert = 'expert';
+
+  /// 会员专属板块（VIP）
+  static const String typeVip = 'vip';
+
+  /// 超级会员专属板块
+  static const String typeSuperVip = 'super_vip';
+
+  // ==================== 字段 ====================
 
   final int id;
   final String name;
@@ -30,16 +56,34 @@ class ForumCategory extends Equatable {
   final String? icon;
   final int postCount;
   final int sortOrder;
-  final String? type; // general, root, university
+  final String? type; // general, root, university, expert, vip, super_vip
+  final String? country; // 国家代码，如 "UK"（type=root 时使用）
+  final String? universityCode; // 学校代码，如 "UOB"（type=university 时使用）
   final bool isFavorited;
   final DateTime? lastPostAt;
   final LatestPostInfo? latestPost;
+
+  // ==================== 权限辅助 ====================
+
+  /// 是否需要学生认证才可见（对标iOS requiresStudentVerification）
+  bool get requiresStudentVerification =>
+      type == typeRoot || type == typeUniversity;
+
+  /// 是否需要特殊权限（学生/达人/会员）才可见
+  bool get requiresSpecialPermission =>
+      requiresStudentVerification ||
+      type == typeExpert ||
+      type == typeVip ||
+      type == typeSuperVip;
+
+  // ==================== 显示辅助 ====================
 
   /// 显示名称
   String get displayName => nameZh ?? nameEn ?? name;
 
   /// 显示描述
-  String? get displayDescription => descriptionZh ?? descriptionEn ?? description;
+  String? get displayDescription =>
+      descriptionZh ?? descriptionEn ?? description;
 
   factory ForumCategory.fromJson(Map<String, dynamic> json) {
     return ForumCategory(
@@ -54,6 +98,8 @@ class ForumCategory extends Equatable {
       postCount: json['post_count'] as int? ?? 0,
       sortOrder: json['sort_order'] as int? ?? 0,
       type: json['type'] as String?,
+      country: json['country'] as String?,
+      universityCode: json['university_code'] as String?,
       isFavorited: json['is_favorited'] as bool? ?? false,
       lastPostAt: json['last_post_at'] != null
           ? DateTime.tryParse(json['last_post_at'].toString())
@@ -66,7 +112,7 @@ class ForumCategory extends Equatable {
   }
 
   @override
-  List<Object?> get props => [id, name, isFavorited];
+  List<Object?> get props => [id, name, type, isFavorited];
 }
 
 /// 板块最新帖子摘要（对标iOS LatestPostInfo）

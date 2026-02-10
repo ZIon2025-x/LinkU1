@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:in_app_purchase/in_app_purchase.dart';
 
@@ -6,6 +7,7 @@ import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_radius.dart';
 import '../../../core/utils/l10n_extension.dart';
+import '../../../data/services/api_service.dart';
 import '../../../data/services/iap_service.dart';
 
 /// VIP 购买页
@@ -46,6 +48,10 @@ class _VIPPurchaseViewState extends State<VIPPurchaseView> {
     });
 
     final iapService = IAPService.instance;
+
+    // 懒初始化 IAP 服务（首次进入时才初始化，不阻塞 App 启动）
+    final apiService = context.read<ApiService>();
+    await iapService.ensureInitialized(apiService: apiService);
 
     // 如果产品尚未加载，重新加载
     if (iapService.products.isEmpty) {

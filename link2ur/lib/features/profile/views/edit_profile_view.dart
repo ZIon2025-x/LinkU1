@@ -4,6 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 
+import '../../../core/constants/app_assets.dart';
 import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_radius.dart';
@@ -163,21 +164,7 @@ class _EditProfileContentState extends State<_EditProfileContent> {
                   Center(
                     child: Stack(
                       children: [
-                        CircleAvatar(
-                          radius: 50,
-                          backgroundColor:
-                              AppColors.primary.withValues(alpha: 0.1),
-                          backgroundImage: _selectedImageFile != null
-                              ? FileImage(_selectedImageFile!)
-                              : (avatarUrl != null
-                                  ? NetworkImage(Helpers.getImageUrl(avatarUrl))
-                                  : null),
-                          child:
-                              _selectedImageFile == null && avatarUrl == null
-                                  ? const Icon(Icons.person,
-                                      size: 50, color: AppColors.primary)
-                                  : null,
-                        ),
+                        _buildEditAvatar(avatarUrl),
                         if (state.isUpdating && _selectedImageFile != null)
                           Positioned.fill(
                             child: Container(
@@ -282,6 +269,54 @@ class _EditProfileContentState extends State<_EditProfileContent> {
           ),
         );
       },
+    );
+  }
+
+  /// 编辑页头像：支持本地文件、预设头像（本地asset）、网络URL
+  Widget _buildEditAvatar(String? avatarUrl) {
+    const double radius = 50;
+
+    // 1. 用户刚选了本地图片文件
+    if (_selectedImageFile != null) {
+      return CircleAvatar(
+        radius: radius,
+        backgroundColor: AppColors.primary.withValues(alpha: 0.1),
+        backgroundImage: FileImage(_selectedImageFile!),
+      );
+    }
+
+    // 2. 预设头像 → 本地 asset
+    final localAsset = AppAssets.getLocalAvatarAsset(avatarUrl);
+    if (localAsset != null) {
+      return ClipOval(
+        child: Image.asset(
+          localAsset,
+          width: radius * 2,
+          height: radius * 2,
+          fit: BoxFit.cover,
+          errorBuilder: (_, __, ___) => CircleAvatar(
+            radius: radius,
+            backgroundColor: AppColors.primary.withValues(alpha: 0.1),
+            child: const Icon(Icons.person, size: 50, color: AppColors.primary),
+          ),
+        ),
+      );
+    }
+
+    // 3. 网络 URL
+    if (avatarUrl != null && avatarUrl.isNotEmpty) {
+      return CircleAvatar(
+        radius: radius,
+        backgroundColor: AppColors.primary.withValues(alpha: 0.1),
+        backgroundImage: NetworkImage(Helpers.getImageUrl(avatarUrl)),
+      );
+    }
+
+    // 4. 无头像
+    return CircleAvatar(
+      radius: radius,
+      backgroundColor: AppColors.primary.withValues(alpha: 0.1),
+      child: const Icon(Icons.person, size: 50, color: AppColors.primary),
     );
   }
 }

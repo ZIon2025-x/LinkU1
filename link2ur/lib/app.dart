@@ -146,8 +146,17 @@ class _Link2UrAppState extends State<Link2UrApp> {
             FlutterNativeSplash.remove();
           },
           child: BlocBuilder<SettingsBloc, SettingsState>(
+            // 仅在主题或语言变化时重建 MaterialApp，避免其他设置变更触发全局重建
+            buildWhen: (prev, curr) =>
+                prev.themeMode != curr.themeMode ||
+                prev.locale != curr.locale,
             builder: (context, settingsState) {
-              return MaterialApp.router(
+              // 全局键盘收起：点击空白区域自动收起键盘
+              return GestureDetector(
+                onTap: () {
+                  FocusManager.instance.primaryFocus?.unfocus();
+                },
+                child: MaterialApp.router(
                 title: 'Link²Ur',
                 debugShowCheckedModeBanner: false,
                 theme: AppTheme.lightTheme,
@@ -166,6 +175,7 @@ class _Link2UrAppState extends State<Link2UrApp> {
                   Locale('en', 'US'),
                 ],
                 locale: _localeFromString(settingsState.locale),
+              ),
               );
             },
           ),

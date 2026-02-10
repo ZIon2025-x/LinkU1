@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import '../../../core/constants/app_assets.dart';
 import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_typography.dart';
@@ -554,13 +555,12 @@ class _CustomerServiceContentState extends State<_CustomerServiceContent> {
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
           if (!isFromUser) ...[
-            CircleAvatar(
-              radius: 16,
-              backgroundColor: AppColors.primary.withValues(alpha: 0.1),
-              child: const Icon(
-                Icons.support_agent,
-                size: 18,
-                color: AppColors.primary,
+            ClipOval(
+              child: Image.asset(
+                AppAssets.logo,
+                width: 32,
+                height: 32,
+                fit: BoxFit.cover,
               ),
             ),
             AppSpacing.hSm,

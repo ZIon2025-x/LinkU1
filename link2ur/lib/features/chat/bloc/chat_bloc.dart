@@ -388,8 +388,14 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
   ) async {
     try {
       if (state.isTaskChat) {
-        // 任务聊天：使用任务聊天标记已读API
-        await _messageRepository.markTaskChatRead(state.taskId!);
+        // 任务聊天：使用任务聊天标记已读API，传入最新消息ID
+        final latestId = state.messages.isNotEmpty ? state.messages.last.id : null;
+        if (latestId != null) {
+          await _messageRepository.markTaskChatRead(
+            state.taskId!,
+            uptoMessageId: latestId,
+          );
+        }
       } else {
         // 私聊
         await _messageRepository.markMessagesRead(state.userId);

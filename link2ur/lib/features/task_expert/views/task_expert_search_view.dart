@@ -5,6 +5,8 @@ import 'package:go_router/go_router.dart';
 import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_radius.dart';
+import '../../../core/design/app_typography.dart';
+import '../../../core/utils/haptic_feedback.dart';
 import '../../../core/utils/l10n_extension.dart';
 import '../../../core/widgets/skeleton_view.dart';
 import '../../../core/widgets/empty_state_view.dart';
@@ -139,58 +141,121 @@ class _ExpertCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return GestureDetector(
-      onTap: onTap,
+      onTap: () {
+        AppHaptics.selection();
+        onTap?.call();
+      },
       child: Container(
         padding: const EdgeInsets.all(AppSpacing.md),
         decoration: BoxDecoration(
-          color: Theme.of(context).cardColor,
-          borderRadius: BorderRadius.circular(AppRadius.large),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.04),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
-            ),
-          ],
+          color: isDark
+              ? AppColors.cardBackgroundDark
+              : AppColors.cardBackgroundLight,
+          borderRadius: AppRadius.allLarge,
+          border: Border.all(
+            color: (isDark ? AppColors.separatorDark : AppColors.separatorLight)
+                .withValues(alpha: 0.3),
+            width: 0.5,
+          ),
         ),
         child: Row(
           children: [
-            AvatarView(
-              imageUrl: expert.avatar,
-              name: expert.displayName,
-              size: 56,
+            // 头像 + 光晕
+            Container(
+              width: 60,
+              height: 60,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: AppColors.primary.withValues(alpha: 0.08),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.primary.withValues(alpha: 0.08),
+                    blurRadius: 6,
+                    offset: const Offset(0, 3),
+                  ),
+                ],
+              ),
+              child: Center(
+                child: AvatarView(
+                  imageUrl: expert.avatar,
+                  name: expert.displayName,
+                  size: 54,
+                ),
+              ),
             ),
             const SizedBox(width: AppSpacing.md),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(expert.name,
-                      style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600)),
+                  // 名称 + 认证徽章
+                  Row(
+                    children: [
+                      Flexible(
+                        child: Text(
+                          expert.displayName,
+                          style: AppTypography.bodyBold.copyWith(
+                            color: isDark
+                                ? AppColors.textPrimaryDark
+                                : AppColors.textPrimaryLight,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      const Icon(
+                        Icons.verified_rounded,
+                        size: 14,
+                        color: AppColors.primary,
+                      ),
+                    ],
+                  ),
                   const SizedBox(height: 4),
+                  // 专长标签
                   if (expert.displaySpecialties != null &&
                       expert.displaySpecialties!.isNotEmpty)
                     Text(
                       expert.displaySpecialties!.join(' · '),
-                      style: const TextStyle(
-                          fontSize: 13,
-                          color: AppColors.textSecondary),
+                      style: AppTypography.caption.copyWith(
+                        color: isDark
+                            ? AppColors.textSecondaryDark
+                            : AppColors.textSecondaryLight,
+                      ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
                 ],
               ),
             ),
-            if (expert.avgRating != null) ...[
-              const Icon(Icons.star, size: 16, color: Colors.amber),
-              const SizedBox(width: 4),
-              Text(expert.avgRating!.toStringAsFixed(1),
-                  style: const TextStyle(
-                      fontSize: 14, fontWeight: FontWeight.w600)),
-            ],
+            // 评分胶囊
+            if (expert.avgRating != null)
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: AppColors.warning.withValues(alpha: 0.12),
+                  borderRadius: AppRadius.allPill,
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.star_rounded,
+                        size: 12, color: AppColors.warning),
+                    const SizedBox(width: 3),
+                    Text(
+                      expert.avgRating!.toStringAsFixed(1),
+                      style: AppTypography.caption2.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.warning,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
           ],
         ),
       ),

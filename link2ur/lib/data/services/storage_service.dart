@@ -19,8 +19,8 @@ class StorageService {
   Box? _cacheBox;
 
   /// 初始化
+  /// SharedPreferences、Hive.openBox、CacheManager 互不依赖，并行执行以减少启动时间
   Future<void> init() async {
-    _prefs = await SharedPreferences.getInstance();
     _secureStorage = const FlutterSecureStorage(
       aOptions: AndroidOptions(
         encryptedSharedPreferences: true,
@@ -30,11 +30,16 @@ class StorageService {
       ),
     );
 
-    // 初始化Hive缓存
-    _cacheBox = await Hive.openBox(StorageKeys.cacheBox);
-
-    // 初始化 CacheManager（内存+磁盘双层缓存）
-    await CacheManager.shared.init();
+    // 并行初始化三个独立的异步操作
+    late final SharedPreferences prefs;
+    late final Box cacheBox;
+    await Future.wait([
+      SharedPreferences.getInstance().then((p) => prefs = p),
+      Hive.openBox(StorageKeys.cacheBox).then((b) => cacheBox = b),
+      CacheManager.shared.init(),
+    ]);
+    _prefs = prefs;
+    _cacheBox = cacheBox;
 
     AppLogger.info('StorageService initialized');
   }
@@ -208,6 +213,56 @@ class StorageService {
   /// 清除搜索历史
   Future<void> clearSearchHistory() async {
     await _prefs.remove(StorageKeys.searchHistory);
+  }
+
+  // ==================== 任务聊天偏好（置顶/隐藏） ====================
+
+  /// 获取置顶的任务聊天ID列表
+  Set<int> getPinnedTaskChatIds() {
+    final json = _prefs.getString(StorageKeys.pinnedTaskChatIds);
+    if (json == null) return {};
+    return Set<int>.from(jsonDecode(json) as List);
+  }
+
+  /// 置顶任务聊天
+  Future<void> pinTaskChat(int taskId) async {
+    final ids = getPinnedTaskChatIds();
+    ids.add(taskId);
+    await _prefs.setString(StorageKeys.pinnedTaskChatIds, jsonEncode(ids.toList()));
+  }
+
+  /// 取消置顶任务聊天
+  Future<void> unpinTaskChat(int taskId) async {
+    final ids = getPinnedTaskChatIds();
+    ids.remove(taskId);
+    await _prefs.setString(StorageKeys.pinnedTaskChatIds, jsonEncode(ids.toList()));
+  }
+
+  /// 获取隐藏的任务聊天 (taskId -> 隐藏时间)
+  Map<int, DateTime> getHiddenTaskChats() {
+    final json = _prefs.getString(StorageKeys.hiddenTaskChats);
+    if (json == null) return {};
+    final raw = jsonDecode(json) as Map<String, dynamic>;
+    return raw.map((key, value) =>
+        MapEntry(int.parse(key), DateTime.parse(value as String)));
+  }
+
+  /// 隐藏（软删除）任务聊天
+  Future<void> hideTaskChat(int taskId) async {
+    final hidden = getHiddenTaskChats();
+    hidden[taskId] = DateTime.now();
+    final raw = hidden.map((key, value) =>
+        MapEntry(key.toString(), value.toIso8601String()));
+    await _prefs.setString(StorageKeys.hiddenTaskChats, jsonEncode(raw));
+  }
+
+  /// 移除隐藏记录（恢复显示）
+  Future<void> unhideTaskChat(int taskId) async {
+    final hidden = getHiddenTaskChats();
+    hidden.remove(taskId);
+    final raw = hidden.map((key, value) =>
+        MapEntry(key.toString(), value.toIso8601String()));
+    await _prefs.setString(StorageKeys.hiddenTaskChats, jsonEncode(raw));
   }
 
   // ==================== 缓存（Hive） ====================

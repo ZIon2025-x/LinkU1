@@ -13,6 +13,7 @@ class Leaderboard extends Equatable {
     this.description,
     this.descriptionEn,
     this.descriptionZh,
+    this.rules,
     this.coverImage,
     required this.applicantId,
     this.applicant,
@@ -32,6 +33,7 @@ class Leaderboard extends Equatable {
   final String? description;
   final String? descriptionEn;
   final String? descriptionZh;
+  final String? rules;
   final String? coverImage;
   final String applicantId;
   final UserBrief? applicant;
@@ -62,6 +64,7 @@ class Leaderboard extends Equatable {
       description: json['description'] as String?,
       descriptionEn: json['description_en'] as String?,
       descriptionZh: json['description_zh'] as String?,
+      rules: json['rules'] as String?,
       coverImage: json['cover_image'] as String?,
       applicantId: json['applicant_id']?.toString() ?? '',
       applicant: json['applicant'] != null
@@ -90,6 +93,7 @@ class Leaderboard extends Equatable {
       'description': description,
       'description_en': descriptionEn,
       'description_zh': descriptionZh,
+      'rules': rules,
       'cover_image': coverImage,
       'applicant_id': applicantId,
       'status': status,

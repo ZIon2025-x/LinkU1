@@ -238,22 +238,10 @@ class _TaskCard extends StatelessWidget {
           // 头部：用户信息和状态
           Row(
             children: [
-              CircleAvatar(
-                radius: 18,
-                backgroundColor: AppColors.primary,
-                child: task.poster?.avatar != null
-                    ? ClipOval(
-                        child: AsyncImageView(
-                          imageUrl: task.poster!.avatar!,
-                          width: 36,
-                          height: 36,
-                        ),
-                      )
-                    : const Icon(
-                        Icons.person,
-                        color: Colors.white,
-                        size: 20,
-                      ),
+              AvatarView(
+                imageUrl: task.poster?.avatar,
+                name: task.poster?.name,
+                size: 36,
               ),
               AppSpacing.hSm,
               Expanded(

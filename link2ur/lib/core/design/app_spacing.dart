@@ -16,14 +16,14 @@ class AppSpacing {
   /// 16pt - 中间距（默认）
   static const double md = 16.0;
 
-  /// 20pt - 大间距
-  static const double lg = 20.0;
+  /// 24pt - 大间距 (与iOS对齐)
+  static const double lg = 24.0;
 
-  /// 24pt - 超大间距
-  static const double xl = 24.0;
+  /// 32pt - 超大间距 (与iOS对齐)
+  static const double xl = 32.0;
 
-  /// 32pt - 特大间距
-  static const double xxl = 32.0;
+  /// 48pt - 特大间距 (与iOS对齐)
+  static const double xxl = 48.0;
 
   /// 40pt - 区块间距
   static const double section = 40.0;

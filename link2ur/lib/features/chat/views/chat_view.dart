@@ -18,7 +18,7 @@ import '../widgets/message_group_bubble.dart';
 /// 私信聊天页
 /// 参考iOS ChatView.swift
 /// 增强版本：支持消息分组、图片发送、头像点击
-class ChatView extends StatefulWidget {
+class ChatView extends StatelessWidget {
   const ChatView({
     super.key,
     required this.userId,
@@ -27,10 +27,28 @@ class ChatView extends StatefulWidget {
   final String userId;
 
   @override
-  State<ChatView> createState() => _ChatViewState();
+  Widget build(BuildContext context) {
+    final messageRepository = context.read<MessageRepository>();
+
+    return BlocProvider(
+      create: (_) => ChatBloc(messageRepository: messageRepository)
+        ..add(ChatLoadMessages(userId: userId)),
+      child: _ChatContent(userId: userId),
+    );
+  }
 }
 
-class _ChatViewState extends State<ChatView> {
+/// 私信聊天内容（在 BlocProvider 内部，context 可访问 ChatBloc）
+class _ChatContent extends StatefulWidget {
+  const _ChatContent({required this.userId});
+
+  final String userId;
+
+  @override
+  State<_ChatContent> createState() => _ChatContentState();
+}
+
+class _ChatContentState extends State<_ChatContent> {
   final _messageController = TextEditingController();
   final _scrollController = ScrollController();
   final _imagePicker = ImagePicker();
@@ -87,45 +105,39 @@ class _ChatViewState extends State<ChatView> {
 
   @override
   Widget build(BuildContext context) {
-    final messageRepository = context.read<MessageRepository>();
+    return BlocConsumer<ChatBloc, ChatState>(
+      listener: (context, state) {
+        if (state.status == ChatStatus.loaded) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            _scrollToBottom();
+          });
+        }
+      },
+      builder: (context, state) {
+        return Scaffold(
+          appBar: AppBar(
+            title: Text(context.l10n.chatUserTitle(widget.userId)),
+            actions: [
+              IconButton(
+                icon: const Icon(Icons.person_outline),
+                onPressed: () => context.push('/user/${widget.userId}'),
+              ),
+            ],
+          ),
+          body: Column(
+            children: [
+              // 消息列表（使用分组气泡）
+              Expanded(child: _buildGroupedMessageList(state)),
 
-    return BlocProvider(
-      create: (context) => ChatBloc(messageRepository: messageRepository)
-        ..add(ChatLoadMessages(userId: widget.userId)),
-      child: BlocConsumer<ChatBloc, ChatState>(
-        listener: (context, state) {
-          if (state.status == ChatStatus.loaded) {
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              _scrollToBottom();
-            });
-          }
-        },
-        builder: (context, state) {
-          return Scaffold(
-            appBar: AppBar(
-              title: Text(context.l10n.chatUserTitle(widget.userId)),
-              actions: [
-                IconButton(
-                  icon: const Icon(Icons.person_outline),
-                  onPressed: () => context.push('/user/${widget.userId}'),
-                ),
-              ],
-            ),
-            body: Column(
-              children: [
-                // 消息列表（使用分组气泡）
-                Expanded(child: _buildGroupedMessageList(state)),
+              // 附件选项
+              if (_showAttachMenu) _buildAttachMenu(),
 
-                // 附件选项
-                if (_showAttachMenu) _buildAttachMenu(),
-
-                // 输入区域
-                _buildInputArea(state),
-              ],
-            ),
-          );
-        },
-      ),
+              // 输入区域
+              _buildInputArea(state),
+            ],
+          ),
+        );
+      },
     );
   }
 
@@ -169,20 +181,26 @@ class _ChatViewState extends State<ChatView> {
       itemCount: groups.length,
       itemBuilder: (context, index) {
         final group = groups[index];
-        return MessageGroupBubbleView(
-          group: group,
-          onAvatarTap: () {
-            if (group.senderId != null) {
-              context.push('/user/${group.senderId}');
-            }
-          },
-          onImageTap: (url) {
-            FullScreenImageView.show(
-              context,
-              images: [url],
-              initialIndex: 0,
-            );
-          },
+        final isOutgoing = group.direction == BubbleDirection.outgoing;
+
+        return _MessageBubbleAnimation(
+          index: index,
+          isOutgoing: isOutgoing,
+          child: MessageGroupBubbleView(
+            group: group,
+            onAvatarTap: () {
+              if (group.senderId != null) {
+                context.push('/user/${group.senderId}');
+              }
+            },
+            onImageTap: (url) {
+              FullScreenImageView.show(
+                context,
+                images: [url],
+                initialIndex: 0,
+              );
+            },
+          ),
         );
       },
     );
@@ -290,10 +308,33 @@ class _ChatViewState extends State<ChatView> {
                 child: LoadingIndicator(size: 24),
               )
             else
-              IconButton(
-                icon: const Icon(Icons.send),
-                onPressed: _sendMessage,
-                color: AppColors.primary,
+              // 渐变发送按钮 - 与iOS对齐
+              GestureDetector(
+                onTap: _sendMessage,
+                child: Container(
+                  width: 36,
+                  height: 36,
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: AppColors.gradientPrimary,
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppColors.primary.withValues(alpha: 0.25),
+                        blurRadius: 8,
+                        offset: const Offset(0, 3),
+                      ),
+                    ],
+                  ),
+                  child: const Icon(
+                    Icons.arrow_upward_rounded,
+                    color: Colors.white,
+                    size: 20,
+                  ),
+                ),
               ),
           ],
         ),
@@ -341,6 +382,95 @@ class _AttachOption extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// 消息气泡入场动画
+/// 自己的消息从右侧滑入，对方的从左侧滑入，带弹簧效果
+class _MessageBubbleAnimation extends StatefulWidget {
+  const _MessageBubbleAnimation({
+    required this.index,
+    required this.isOutgoing,
+    required this.child,
+  });
+
+  final int index;
+  final bool isOutgoing;
+  final Widget child;
+
+  @override
+  State<_MessageBubbleAnimation> createState() =>
+      _MessageBubbleAnimationState();
+}
+
+class _MessageBubbleAnimationState extends State<_MessageBubbleAnimation>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+  late final Animation<double> _fadeAnimation;
+  late final Animation<Offset> _slideAnimation;
+  late final Animation<double> _scaleAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      duration: const Duration(milliseconds: 400),
+      vsync: this,
+    );
+
+    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _controller,
+        curve: const Interval(0.0, 0.5, curve: Curves.easeOut),
+      ),
+    );
+
+    final slideX = widget.isOutgoing ? 30.0 : -30.0;
+    _slideAnimation = Tween<Offset>(
+      begin: Offset(slideX, 10),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(
+      parent: _controller,
+      curve: Curves.easeOutBack,
+    ));
+
+    _scaleAnimation = Tween<double>(begin: 0.9, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _controller,
+        curve: const Interval(0.2, 1.0, curve: Curves.easeOutCubic),
+      ),
+    );
+
+    // 限制动画只对最近的消息播放
+    final clampedIndex = widget.index.clamp(0, 10);
+    final delay = Duration(milliseconds: clampedIndex * 30);
+    Future.delayed(delay, () {
+      if (mounted) _controller.forward();
+    });
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, child) => Transform.translate(
+        offset: _slideAnimation.value,
+        child: Transform.scale(
+          scale: _scaleAnimation.value,
+          child: Opacity(
+            opacity: _fadeAnimation.value,
+            child: child,
+          ),
+        ),
+      ),
+      child: widget.child,
     );
   }
 }

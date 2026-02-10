@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 
 import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_radius.dart';
+import '../../../core/utils/haptic_feedback.dart';
 import '../../../core/utils/l10n_extension.dart';
 
 /// 任务聊天功能菜单
@@ -93,7 +93,7 @@ class _ChatActionButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: () {
-        HapticFeedback.lightImpact();
+        AppHaptics.buttonTap();
         onTap();
       },
       child: Column(

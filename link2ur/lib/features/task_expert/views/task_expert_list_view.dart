@@ -5,13 +5,14 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/design/app_colors.dart';
+import '../../../core/design/app_radius.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_typography.dart';
+import '../../../core/utils/haptic_feedback.dart';
 import '../../../core/utils/l10n_extension.dart';
 import '../../../core/widgets/loading_view.dart';
 import '../../../core/widgets/error_state_view.dart';
 import '../../../core/widgets/empty_state_view.dart';
-import '../../../core/widgets/cards.dart';
 import '../../../core/widgets/async_image_view.dart';
 import '../../../data/repositories/task_expert_repository.dart';
 import '../../../data/models/task_expert.dart';
@@ -174,95 +175,169 @@ class _ExpertCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    return AppCard(
+    return GestureDetector(
       onTap: () {
-        // Convert String id to int for navigation
+        AppHaptics.selection();
         final expertId = int.tryParse(expert.id) ?? 0;
         if (expertId > 0) {
           context.push('/task-experts/$expertId');
         }
       },
-      child: Row(
-        children: [
-          // Avatar（使用 AvatarView 正确处理相对路径）
-          AvatarView(
-            imageUrl: expert.avatar,
-            name: expert.displayName,
-            size: 60,
+      child: Container(
+        padding: AppSpacing.allMd,
+        decoration: BoxDecoration(
+          color: isDark
+              ? AppColors.cardBackgroundDark
+              : AppColors.cardBackgroundLight,
+          borderRadius: AppRadius.allLarge,
+          border: Border.all(
+            color: (isDark ? AppColors.separatorDark : AppColors.separatorLight)
+                .withValues(alpha: 0.3),
+            width: 0.5,
           ),
-          AppSpacing.hMd,
-          // Expert info
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  expert.displayName,
-                  style: AppTypography.title3.copyWith(
-                    fontWeight: FontWeight.w600,
-                    color: isDark
-                        ? AppColors.textPrimaryDark
-                        : AppColors.textPrimaryLight,
+        ),
+        child: Row(
+          children: [
+            // 头像 + 光晕 (对标iOS: 74背景圆 + 68头像 + shadow)
+            Container(
+              width: 74,
+              height: 74,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: AppColors.primary.withValues(alpha: 0.08),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.primary.withValues(alpha: 0.1),
+                    blurRadius: 8,
+                    offset: const Offset(0, 4),
                   ),
+                ],
+              ),
+              child: Center(
+                child: AvatarView(
+                  imageUrl: expert.avatar,
+                  name: expert.displayName,
+                  size: 68,
                 ),
-                if (expert.displayBio != null && expert.displayBio!.isNotEmpty) ...[
+              ),
+            ),
+            AppSpacing.hMd,
+            // 信息
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // 名称 + 认证徽章
+                  Row(
+                    children: [
+                      Flexible(
+                        child: Text(
+                          expert.displayName,
+                          style: AppTypography.bodyBold.copyWith(
+                            color: isDark
+                                ? AppColors.textPrimaryDark
+                                : AppColors.textPrimaryLight,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      const Icon(
+                        Icons.verified_rounded,
+                        size: 16,
+                        color: AppColors.primary,
+                      ),
+                    ],
+                  ),
+                  // 简介 — 为空时显示占位文本
                   const SizedBox(height: 4),
                   Text(
-                    expert.displayBio!,
-                    style: AppTypography.subheadline.copyWith(
-                      color: isDark
-                          ? AppColors.textSecondaryDark
-                          : AppColors.textSecondaryLight,
+                    (expert.displayBio != null && expert.displayBio!.isNotEmpty)
+                        ? expert.displayBio!
+                        : context.l10n.taskExpertNoIntro,
+                    style: AppTypography.caption.copyWith(
+                      color: (expert.displayBio != null && expert.displayBio!.isNotEmpty)
+                          ? (isDark
+                              ? AppColors.textSecondaryDark
+                              : AppColors.textSecondaryLight)
+                          : (isDark
+                              ? AppColors.textTertiaryDark
+                              : AppColors.textTertiaryLight),
                     ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
-                ],
-                const SizedBox(height: 4),
-                Row(
-                  children: [
-                    // Rating
-                    const Icon(Icons.star, size: 14, color: AppColors.gold),
-                    const SizedBox(width: 4),
-                    Text(
-                      expert.ratingDisplay,
-                      style: AppTypography.caption.copyWith(
-                        color: isDark
-                            ? AppColors.textSecondaryDark
-                            : AppColors.textSecondaryLight,
+                  const SizedBox(height: 8),
+                  // 统计行: 评分胶囊 + 完成数·服务数
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: AppColors.warning.withValues(alpha: 0.12),
+                          borderRadius: AppRadius.allPill,
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.star_rounded,
+                                size: 12, color: AppColors.warning),
+                            const SizedBox(width: 3),
+                            Text(
+                              expert.ratingDisplay,
+                              style: AppTypography.caption2.copyWith(
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.warning,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
-                    ),
-                    const SizedBox(width: 12),
-                    // Completed tasks
-                    Text(
-                      context.l10n.leaderboardCompletedCount(expert.completedTasks),
-                      style: AppTypography.caption.copyWith(
-                        color: isDark
-                            ? AppColors.textSecondaryDark
-                            : AppColors.textSecondaryLight,
-                      ),
-                    ),
-                    if (expert.totalServices > 0) ...[
-                      const SizedBox(width: 12),
+                      const SizedBox(width: 10),
                       Text(
-                        context.l10n.taskExpertServiceCount(expert.totalServices),
-                        style: AppTypography.caption.copyWith(
+                        context.l10n.leaderboardCompletedCount(
+                            expert.completedTasks),
+                        style: AppTypography.caption2.copyWith(
                           color: isDark
                               ? AppColors.textSecondaryDark
                               : AppColors.textSecondaryLight,
                         ),
                       ),
+                      if (expert.totalServices > 0) ...[
+                        Text(
+                          ' · ',
+                          style: AppTypography.caption2.copyWith(
+                            color: isDark
+                                ? AppColors.textTertiaryDark
+                                : AppColors.textTertiaryLight,
+                          ),
+                        ),
+                        Text(
+                          context.l10n.taskExpertServiceCount(
+                              expert.totalServices),
+                          style: AppTypography.caption2.copyWith(
+                            color: isDark
+                                ? AppColors.textSecondaryDark
+                                : AppColors.textSecondaryLight,
+                          ),
+                        ),
+                      ],
                     ],
-                  ],
-                ),
-              ],
+                  ),
+                ],
+              ),
             ),
-          ),
-          const Icon(
-            Icons.chevron_right,
-            color: AppColors.textTertiaryLight,
-          ),
-        ],
+            Icon(
+              Icons.chevron_right_rounded,
+              size: 20,
+              color: isDark
+                  ? AppColors.textTertiaryDark
+                  : AppColors.textTertiaryLight,
+            ),
+          ],
+        ),
       ),
     );
   }

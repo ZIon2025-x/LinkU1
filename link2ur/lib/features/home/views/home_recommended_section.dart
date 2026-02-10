@@ -9,6 +9,11 @@ class _RecommendedTab extends StatelessWidget {
     final isDesktop = ResponsiveUtils.isDesktop(context);
 
     return BlocBuilder<HomeBloc, HomeState>(
+      // 仅在推荐任务数据或状态变化时重建，避免其他字段（如 nearbyTasks）变更触发重建
+      buildWhen: (prev, curr) =>
+          prev.status != curr.status ||
+          prev.recommendedTasks != curr.recommendedTasks ||
+          prev.isRefreshing != curr.isRefreshing,
       builder: (context, state) {
         return RefreshIndicator(
           onRefresh: () async {
@@ -60,7 +65,13 @@ class _RecommendedTab extends StatelessWidget {
               // 推荐任务内容
               if (state.isLoading && state.recommendedTasks.isEmpty)
                 const SliverFillRemaining(
-                  child: SkeletonList(),
+                  child: SkeletonGrid(
+                    crossAxisCount: 2,
+                    itemCount: 4,
+                    aspectRatio: 0.82,
+                    imageFlex: 5,
+                    contentFlex: 3,
+                  ),
                 )
               else if (state.hasError && state.recommendedTasks.isEmpty)
                 SliverFillRemaining(
@@ -385,25 +396,23 @@ class _DesktopTaskCardState extends State<_DesktopTaskCard> {
       cursor: SystemMouseCursors.click,
       child: GestureDetector(
         onTap: () => context.push('/tasks/${task.id}'),
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 180),
+        // 简化：去掉 AnimatedContainer + BoxShadow 动画 + Matrix4 transform
+        // 改为静态容器 + Opacity 控制 hover 效果（成本远低于 shadow 动画）
+        child: Opacity(
+          opacity: _isHovered ? 0.85 : 1.0,
+          child: Container(
           clipBehavior: Clip.antiAlias,
           decoration: BoxDecoration(
             color: isDark ? AppColors.cardBackgroundDark : Colors.white,
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
-              color: _isHovered
-                  ? (isDark ? Colors.white.withValues(alpha: 0.12) : const Color(0xFFCCCCCC))
-                  : (isDark ? Colors.white.withValues(alpha: 0.06) : const Color(0xFFE8E8E5)),
+              color: isDark ? Colors.white.withValues(alpha: 0.06) : const Color(0xFFE8E8E5),
               width: 1,
             ),
-            boxShadow: _isHovered
-                ? [BoxShadow(color: Colors.black.withValues(alpha: 0.08), blurRadius: 16, offset: const Offset(0, 6))]
-                : [BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 4, offset: const Offset(0, 2))],
+            boxShadow: [
+              BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 6, offset: const Offset(0, 2)),
+            ],
           ),
-          transform: _isHovered
-              ? Matrix4.translationValues(0.0, -2.0, 0.0)
-              : Matrix4.identity(),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -572,6 +581,7 @@ class _DesktopTaskCardState extends State<_DesktopTaskCard> {
             ],
           ),
         ),
+      ),
       ),
     );
   }

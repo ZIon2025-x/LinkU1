@@ -1,10 +1,10 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/constants/app_assets.dart';
+import '../../../core/utils/haptic_feedback.dart';
 import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_typography.dart';
@@ -108,7 +108,7 @@ class _RegisterViewState extends State<RegisterView>
       );
       return;
     }
-    HapticFeedback.selectionClick();
+    AppHaptics.selection();
     context.read<AuthBloc>().add(AuthSendEmailCodeRequested(email: email));
   }
 
@@ -681,7 +681,7 @@ class _RegisterViewState extends State<RegisterView>
   Widget _buildTermsCheckbox(bool isDark) {
     return GestureDetector(
       onTap: () {
-        HapticFeedback.selectionClick();
+        AppHaptics.selection();
         setState(() => _agreeTerms = !_agreeTerms);
       },
       behavior: HitTestBehavior.opaque,

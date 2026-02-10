@@ -1,10 +1,10 @@
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../core/design/app_colors.dart';
+import '../../../core/utils/haptic_feedback.dart';
 import '../../../core/router/app_router.dart';
 import '../../../core/utils/l10n_extension.dart';
 import '../../../core/utils/responsive.dart';
@@ -13,6 +13,7 @@ import '../../../core/widgets/error_state_view.dart';
 import '../../../core/widgets/async_image_view.dart';
 import '../../../core/widgets/full_screen_image_view.dart';
 import '../../../core/widgets/custom_share_panel.dart';
+import '../../../core/widgets/animated_like_button.dart';
 import '../../../data/repositories/forum_repository.dart';
 import '../../../data/models/forum.dart';
 import '../bloc/forum_bloc.dart';
@@ -72,7 +73,7 @@ class _ForumPostDetailViewState extends State<ForumPostDetailView> {
             IconButton(
               icon: const Icon(Icons.share_outlined),
               onPressed: () {
-                HapticFeedback.selectionClick();
+                AppHaptics.selection();
                 CustomSharePanel.show(
                   context,
                   title: context.l10n.forumPostDetail,
@@ -90,7 +91,7 @@ class _ForumPostDetailViewState extends State<ForumPostDetailView> {
           builder: (context, state) {
             if (state.status == ForumStatus.loading &&
                 state.selectedPost == null) {
-              return const SkeletonDetail();
+              return const SkeletonPostDetail();
             }
 
             if (state.status == ForumStatus.error &&
@@ -225,30 +226,17 @@ class _ForumPostDetailViewState extends State<ForumPostDetailView> {
                         ),
                       Row(
                         children: [
-                          // 点赞按钮
+                          // 点赞按钮 — 带粒子爆炸动画
                           if (post != null)
-                            GestureDetector(
+                            AnimatedLikeButton(
+                              isLiked: post.isLiked,
+                              size: 22,
+                              likedColor: AppColors.accentPink,
                               onTap: () {
-                                HapticFeedback.selectionClick();
                                 context
                                     .read<ForumBloc>()
                                     .add(ForumLikePost(widget.postId));
                               },
-                              child: SizedBox(
-                                width: 44,
-                                height: 44,
-                                child: Icon(
-                                  post.isLiked
-                                      ? Icons.favorite
-                                      : Icons.favorite_border,
-                                  size: 22,
-                                  color: post.isLiked
-                                      ? AppColors.error
-                                      : (isDark
-                                          ? AppColors.textTertiaryDark
-                                          : AppColors.textTertiaryLight),
-                                ),
-                              ),
                             ),
 
                           // 回复输入框
@@ -289,7 +277,7 @@ class _ForumPostDetailViewState extends State<ForumPostDetailView> {
                                         onTap: state.isReplying
                                             ? null
                                             : () {
-                                                HapticFeedback.selectionClick();
+                                                AppHaptics.selection();
                                                 context.read<ForumBloc>().add(
                                                       ForumReplyPost(
                                                         postId: widget.postId,
@@ -574,24 +562,18 @@ class _PostStats extends StatelessWidget {
             label: context.l10n.forumBrowse,
           ),
           const SizedBox(width: 24),
-          // 点赞 (交互)
-          GestureDetector(
-            onTap: () {
-              HapticFeedback.selectionClick();
-              context.read<ForumBloc>().add(ForumLikePost(postId));
-            },
-            child: _StatLabel(
-              icon: post.isLiked ? Icons.thumb_up : Icons.thumb_up_outlined,
-              value: '${post.likeCount}',
-              label: context.l10n.forumLike,
-              color: post.isLiked ? AppColors.error : null,
-            ),
+          // 点赞已移至底部回复栏，此处仅显示计数
+          _StatLabel(
+            icon: post.isLiked ? Icons.thumb_up : Icons.thumb_up_outlined,
+            value: '${post.likeCount}',
+            label: context.l10n.forumLike,
+            color: post.isLiked ? AppColors.accentPink : null,
           ),
           const SizedBox(width: 24),
           // 收藏 (交互)
           GestureDetector(
             onTap: () {
-              HapticFeedback.selectionClick();
+              AppHaptics.selection();
               context.read<ForumBloc>().add(ForumFavoritePost(postId));
             },
             child: _StatLabel(
@@ -925,7 +907,7 @@ class _ReplyCard extends StatelessWidget {
                 // 回复按钮
                 GestureDetector(
                   onTap: () {
-                    HapticFeedback.selectionClick();
+                    AppHaptics.selection();
                     onReplyTo(
                       reply.id,
                       reply.author?.name ?? reply.authorId.toString(),

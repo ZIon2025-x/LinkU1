@@ -1,12 +1,12 @@
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../../core/design/app_colors.dart';
+import '../../../core/utils/haptic_feedback.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_typography.dart';
 import '../../../core/design/app_radius.dart';
@@ -122,7 +122,7 @@ class _ActivityDetailViewContent extends StatelessWidget {
           _buildAppBarButton(
             icon: Icons.share_outlined,
             onPressed: () {
-              HapticFeedback.selectionClick();
+              AppHaptics.selection();
               final activity = state.activityDetail!;
               CustomSharePanel.show(
                 context,
@@ -332,7 +332,7 @@ class _ActivityDetailViewContent extends StatelessWidget {
           text: context.l10n.activityContinuePayment,
           isLoading: state.isSubmitting,
           onTap: () {
-            HapticFeedback.selectionClick();
+            AppHaptics.selection();
             // TODO: 跳转支付页面
           },
         );
@@ -363,7 +363,7 @@ class _ActivityDetailViewContent extends StatelessWidget {
       text: context.l10n.activityRegisterNow,
       isLoading: state.isSubmitting,
       onTap: () {
-        HapticFeedback.selectionClick();
+        AppHaptics.selection();
         ActivityApplySheet.show(
           context,
           activityId: activityId,
@@ -1245,7 +1245,7 @@ class _PosterInfoRow extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
       child: GestureDetector(
         onTap: () {
-          HapticFeedback.selectionClick();
+          AppHaptics.selection();
           if (activity.expertId.isNotEmpty) {
             context.push('/task-experts/${activity.expertId}');
           }
@@ -1607,7 +1607,7 @@ class _ActivityApplySheetState extends State<ActivityApplySheet> {
                         onSelect: () {
                           if (slot.canSelect) {
                             setState(() => _selectedTimeSlotId = slot.id);
-                            HapticFeedback.selectionClick();
+                            AppHaptics.selection();
                           }
                         },
                       ))
@@ -1799,7 +1799,7 @@ class _ActivityApplySheetState extends State<ActivityApplySheet> {
   }
 
   void _onApply() {
-    HapticFeedback.selectionClick();
+    AppHaptics.selection();
 
     if (_hasTimeSlots) {
       // 时间段模式 - 传 timeSlotId

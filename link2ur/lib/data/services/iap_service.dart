@@ -37,11 +37,22 @@ class IAPService {
   /// 错误信息
   String? errorMessage;
 
+  /// 是否已初始化
+  bool _initialized = false;
+
   /// 购买完成回调
   void Function(bool success, String? error)? onPurchaseComplete;
 
+  /// 懒初始化：首次进入支付/VIP 页面时调用
+  /// 如果已经初始化过则直接返回，避免重复初始化
+  Future<void> ensureInitialized({required ApiService apiService}) async {
+    if (_initialized) return;
+    await initialize(apiService: apiService);
+  }
+
   /// 初始化
   Future<void> initialize({required ApiService apiService}) async {
+    _initialized = true;
     _apiService = apiService;
 
     final available = await _iap.isAvailable();
