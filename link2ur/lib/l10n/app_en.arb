@@ -3448,6 +3448,7 @@
   "taskExpertExpertNotExist": "Expert not found",
   "taskExpertExpertNotExistDesc": "This expert does not exist or has been removed",
   "taskExpertBio": "Bio",
+  "taskExpertSpecialties": "Specialties",
   "taskExpertProvidedServices": "Services Provided",
   "taskExpertNoServicesDesc": "This expert hasn't listed any services yet",
   "taskExpertAccepted": "Accepted",

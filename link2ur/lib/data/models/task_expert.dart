@@ -1,37 +1,108 @@
 import 'package:equatable/equatable.dart';
 
 /// 任务达人模型
-/// 参考后端 TaskExpertOut
+/// 后端实际返回格式参考 React 前端 TaskExperts.tsx 的 interface TaskExpert
+/// 双语模式与 ForumCategory / LeaderboardItem 一致：
+///   display* getter 优先 zh → en → 默认字段（后端已根据语言选择默认字段值）
 class TaskExpert extends Equatable {
   const TaskExpert({
     required this.id,
     this.expertName,
     this.bio,
+    this.bioEn,
+    this.bioZh,
     this.avatar,
     this.status = 'active',
     this.rating = 0.0,
     this.totalServices = 0,
     this.completedTasks = 0,
     this.specialties,
+    this.specialtiesEn,
+    this.specialtiesZh,
+    this.featuredSkills,
+    this.featuredSkillsEn,
+    this.featuredSkillsZh,
+    this.achievements,
+    this.achievementsEn,
+    this.achievementsZh,
+    this.responseTime,
+    this.responseTimeEn,
+    this.responseTimeZh,
+    this.location,
+    this.isVerified = false,
+    this.userLevel,
+    this.completionRate,
+    this.successRate,
+    this.category,
+    this.totalTasks = 0,
     this.createdAt,
   });
 
   final String id;
   final String? expertName;
-  final String? bio;
+  // 双语：bio
+  final String? bio;       // 后端根据语言选择的显示值
+  final String? bioEn;
+  final String? bioZh;
   final String? avatar;
   final String status;
-  final double rating;
+  final double rating;     // 兼容 rating 和 avg_rating
   final int totalServices;
   final int completedTasks;
-  final List<String>? specialties;
+  // 双语：specialties / expertise_areas（专业领域）
+  final List<String>? specialties;    // 后端根据语言选择的显示值
+  final List<String>? specialtiesEn;
+  final List<String>? specialtiesZh;
+  // 双语：featured_skills（特色技能）
+  final List<String>? featuredSkills;  // 后端根据语言选择的显示值
+  final List<String>? featuredSkillsEn;
+  final List<String>? featuredSkillsZh;
+  // 双语：achievements（成就）
+  final List<String>? achievements;    // 后端根据语言选择的显示值
+  final List<String>? achievementsEn;
+  final List<String>? achievementsZh;
+  // 双语：response_time
+  final String? responseTime;          // 后端根据语言选择的显示值
+  final String? responseTimeEn;
+  final String? responseTimeZh;
+  // 扩展字段
+  final String? location;
+  final bool isVerified;
+  final String? userLevel;
+  final double? completionRate;
+  final double? successRate;
+  final String? category;
+  final int totalTasks;
   final DateTime? createdAt;
+
+  // ==================== 双语 display 访问器 ====================
+  // 模式：zh → en → 默认字段（与 ForumCategory.displayName 一致）
+  // 默认字段已由后端根据 Accept-Language 选择，作为最终回退
 
   /// 显示名称
   String get displayName => expertName ?? '达人$id';
 
   /// name 别名（兼容视图层）
   String get name => displayName;
+
+  /// 显示简介（双语）
+  String? get displayBio => bioZh ?? bioEn ?? bio;
+
+  /// 显示专业领域（双语）
+  List<String>? get displaySpecialties =>
+      specialtiesZh ?? specialtiesEn ?? specialties;
+
+  /// 显示特色技能（双语）
+  List<String>? get displayFeaturedSkills =>
+      featuredSkillsZh ?? featuredSkillsEn ?? featuredSkills;
+
+  /// 显示成就（双语）
+  List<String>? get displayAchievements =>
+      achievementsZh ?? achievementsEn ?? achievements;
+
+  /// 显示响应时间（双语）
+  String? get displayResponseTime =>
+      responseTimeZh ?? responseTimeEn ?? responseTime;
 
   /// 平均评分（可空版本，兼容视图层）
   double? get avgRating => rating > 0 ? rating : null;
@@ -42,39 +113,98 @@ class TaskExpert extends Equatable {
   factory TaskExpert.fromJson(Map<String, dynamic> json) {
     return TaskExpert(
       id: json['id']?.toString() ?? '',
-      expertName: json['expert_name'] as String?,
+      // 后端实际返回 name（FeaturedTaskExpert），兼容 expert_name（TaskExpertOut）
+      expertName: json['name'] as String? ?? json['expert_name'] as String?,
+      // 双语 bio
       bio: json['bio'] as String?,
+      bioEn: json['bio_en'] as String?,
+      bioZh: json['bio_zh'] as String?,
       avatar: json['avatar'] as String?,
       status: json['status'] as String? ?? 'active',
-      rating: (json['rating'] as num?)?.toDouble() ?? 0.0,
+      // 后端实际返回 avg_rating（FeaturedTaskExpert），兼容 rating（TaskExpertOut）
+      rating: (json['avg_rating'] as num?)?.toDouble() ??
+          (json['rating'] as num?)?.toDouble() ??
+          0.0,
       totalServices: json['total_services'] as int? ?? 0,
       completedTasks: json['completed_tasks'] as int? ?? 0,
-      specialties: (json['specialties'] as List<dynamic>?)
-          ?.map((e) => e as String)
-          .toList(),
+      // 双语 specialties / expertise_areas（专业领域）
+      specialties: _parseStringList(json['expertise_areas']) ??
+          _parseStringList(json['specialties']),
+      specialtiesEn: _parseStringList(json['expertise_areas_en']) ??
+          _parseStringList(json['specialties_en']),
+      specialtiesZh: _parseStringList(json['specialties_zh']),
+      // 双语 featured_skills
+      featuredSkills: _parseStringList(json['featured_skills']),
+      featuredSkillsEn: _parseStringList(json['featured_skills_en']),
+      featuredSkillsZh: _parseStringList(json['featured_skills_zh']),
+      // 双语 achievements
+      achievements: _parseStringList(json['achievements']),
+      achievementsEn: _parseStringList(json['achievements_en']),
+      achievementsZh: _parseStringList(json['achievements_zh']),
+      // 双语 response_time
+      responseTime: json['response_time'] as String?,
+      responseTimeEn: json['response_time_en'] as String?,
+      responseTimeZh: json['response_time_zh'] as String?,
+      // 扩展字段（与 React 前端 TaskExpert interface 一致）
+      location: json['location'] as String?,
+      isVerified: json['is_verified'] as bool? ?? false,
+      userLevel: json['user_level'] as String?,
+      completionRate: (json['completion_rate'] as num?)?.toDouble(),
+      successRate: (json['success_rate'] as num?)?.toDouble(),
+      category: json['category'] as String?,
+      totalTasks: json['total_tasks'] as int? ?? 0,
       createdAt: json['created_at'] != null
           ? DateTime.parse(json['created_at'])
           : null,
     );
   }
 
+  /// 安全解析字符串列表（兼容 null 和非列表类型）
+  static List<String>? _parseStringList(dynamic value) {
+    if (value == null) return null;
+    if (value is List) {
+      return value.map((e) => e.toString()).toList();
+    }
+    return null;
+  }
+
   Map<String, dynamic> toJson() {
     return {
       'id': id,
-      'expert_name': expertName,
+      'name': expertName,
       'bio': bio,
+      'bio_en': bioEn,
+      'bio_zh': bioZh,
       'avatar': avatar,
       'status': status,
-      'rating': rating,
+      'avg_rating': rating,
       'total_services': totalServices,
       'completed_tasks': completedTasks,
-      'specialties': specialties,
+      'expertise_areas': specialties,
+      'expertise_areas_en': specialtiesEn,
+      'specialties_zh': specialtiesZh,
+      'featured_skills': featuredSkills,
+      'featured_skills_en': featuredSkillsEn,
+      'featured_skills_zh': featuredSkillsZh,
+      'achievements': achievements,
+      'achievements_en': achievementsEn,
+      'achievements_zh': achievementsZh,
+      'response_time': responseTime,
+      'response_time_en': responseTimeEn,
+      'response_time_zh': responseTimeZh,
+      'location': location,
+      'is_verified': isVerified,
+      'user_level': userLevel,
+      'completion_rate': completionRate,
+      'success_rate': successRate,
+      'category': category,
+      'total_tasks': totalTasks,
       'created_at': createdAt?.toIso8601String(),
     };
   }
 
   @override
-  List<Object?> get props => [id, expertName, rating, status];
+  List<Object?> get props => [id, expertName, rating, status, bio, specialties];
 }
 
 /// 任务达人服务模型

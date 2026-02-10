@@ -139,8 +139,8 @@ class TaskExpertDetailView extends StatelessWidget {
                     ),
                   ),
 
-                  // Bio section
-                  if (expert.bio != null && expert.bio!.isNotEmpty)
+                  // Bio section（使用双语 displayBio）
+                  if (expert.displayBio != null && expert.displayBio!.isNotEmpty)
                     Padding(
                       padding: AppSpacing.allMd,
                       child: AppCard(
@@ -155,8 +155,42 @@ class TaskExpertDetailView extends StatelessWidget {
                             ),
                             AppSpacing.vSm,
                             Text(
-                              expert.bio!,
+                              expert.displayBio!,
                               style: AppTypography.body,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+
+                  // Specialties section（专业领域标签）
+                  if (expert.displaySpecialties != null &&
+                      expert.displaySpecialties!.isNotEmpty)
+                    Padding(
+                      padding: AppSpacing.allMd,
+                      child: AppCard(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              context.l10n.taskExpertSpecialties,
+                              style: AppTypography.title3.copyWith(
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            AppSpacing.vSm,
+                            Wrap(
+                              spacing: 8,
+                              runSpacing: 8,
+                              children: expert.displaySpecialties!
+                                  .map((s) => Chip(
+                                        label: Text(s, style: AppTypography.caption),
+                                        backgroundColor: AppColors.primary.withValues(alpha: 0.1),
+                                        side: BorderSide.none,
+                                        padding: const EdgeInsets.symmetric(horizontal: 4),
+                                        materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                      ))
+                                  .toList(),
                             ),
                           ],
                         ),

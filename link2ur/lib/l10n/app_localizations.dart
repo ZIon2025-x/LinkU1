@@ -13448,6 +13448,12 @@ abstract class AppLocalizations {
   /// **'Bio'**
   String get taskExpertBio;
 
+  /// No description provided for @taskExpertSpecialties.
+  ///
+  /// In en, this message translates to:
+  /// **'Specialties'**
+  String get taskExpertSpecialties;
+
   /// No description provided for @taskExpertProvidedServices.
   ///
   /// In en, this message translates to:

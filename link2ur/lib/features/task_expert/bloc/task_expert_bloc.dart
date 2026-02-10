@@ -315,7 +315,10 @@ class TaskExpertBloc extends Bloc<TaskExpertEvent, TaskExpertState> {
     Emitter<TaskExpertState> emit,
   ) async {
     try {
-      final response = await _taskExpertRepository.getExperts(page: 1);
+      final response = await _taskExpertRepository.getExperts(
+        page: 1,
+        forceRefresh: true,
+      );
 
       emit(state.copyWith(
         status: TaskExpertStatus.loaded,

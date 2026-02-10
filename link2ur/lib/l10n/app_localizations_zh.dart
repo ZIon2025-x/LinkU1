@@ -7028,6 +7028,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get taskExpertBio => '简介';
 
   @override
+  String get taskExpertSpecialties => '专业领域';
+
+  @override
   String get taskExpertProvidedServices => '提供的服务';
 
   @override
@@ -14200,6 +14203,9 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get taskExpertBio => '簡介';
+
+  @override
+  String get taskExpertSpecialties => '專業領域';
 
   @override
   String get taskExpertProvidedServices => '提供的服務';

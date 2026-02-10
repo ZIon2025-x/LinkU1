@@ -3448,6 +3448,7 @@
   "taskExpertExpertNotExist": "达人不存在",
   "taskExpertExpertNotExistDesc": "该达人不存在或已被删除",
   "taskExpertBio": "简介",
+  "taskExpertSpecialties": "专业领域",
   "taskExpertProvidedServices": "提供的服务",
   "taskExpertNoServicesDesc": "该达人还没有提供服务",
   "taskExpertAccepted": "已接受",

@@ -205,10 +205,10 @@ class _ExpertCard extends StatelessWidget {
                         : AppColors.textPrimaryLight,
                   ),
                 ),
-                if (expert.bio != null && expert.bio!.isNotEmpty) ...[
+                if (expert.displayBio != null && expert.displayBio!.isNotEmpty) ...[
                   const SizedBox(height: 4),
                   Text(
-                    expert.bio!,
+                    expert.displayBio!,
                     style: AppTypography.subheadline.copyWith(
                       color: isDark
                           ? AppColors.textSecondaryDark

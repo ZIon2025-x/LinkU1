@@ -7304,6 +7304,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get taskExpertBio => 'Bio';
 
   @override
+  String get taskExpertSpecialties => 'Specialties';
+
+  @override
   String get taskExpertProvidedServices => 'Services Provided';
 
   @override

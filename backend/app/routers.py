@@ -1386,10 +1386,10 @@ def get_recommendations(
         if task_ids:
             translations = db.query(models.TaskTranslation).filter(
                 models.TaskTranslation.task_id.in_(task_ids),
-                models.TaskTranslation.field == 'title'
+                models.TaskTranslation.field_type == 'title'
             ).all()
             for t in translations:
-                translations_dict[(t.task_id, t.language)] = t.translated_text
+                translations_dict[(t.task_id, t.target_language)] = t.translated_text
         
         # 对于没有翻译的任务，在后台触发翻译（不阻塞响应）
         missing_task_ids = [task_id for task_id in task_ids 

@@ -33,6 +33,23 @@ logger = logging.getLogger(__name__)
 task_expert_router = APIRouter(prefix="/api/task-experts", tags=["task-experts"])
 
 
+def _get_language_from_request(request: Request) -> str:
+    """从 Accept-Language 请求头获取语言偏好
+    
+    与 forum_routes.get_user_language_preference 逻辑一致，
+    简化版本（公开接口无需检查用户设置）。
+    """
+    accept_language = request.headers.get("Accept-Language", "")
+    if accept_language:
+        for lang in accept_language.split(','):
+            lang = lang.split(';')[0].strip().lower()
+            if lang.startswith('zh'):
+                return 'zh'
+            elif lang.startswith('en'):
+                return 'en'
+    return 'en'
+
+
 # 认证依赖
 async def get_current_user_secure_async_csrf(
     request: Request,
@@ -151,8 +168,9 @@ async def get_my_application(
 
 # ==================== 任务达人管理接口 ====================
 
-@task_expert_router.get("", response_model=List[schemas.TaskExpertOut])
+@task_expert_router.get("")
 async def get_experts_list(
+    request: Request,
     category: Optional[str] = Query(None, description="分类筛选"),
     status_filter: Optional[str] = Query("active", alias="status"),
     limit: int = Query(50, ge=1, le=100),
@@ -161,9 +179,13 @@ async def get_experts_list(
 ):
     """获取任务达人列表（公开接口）
     
-    优先从 FeaturedTaskExpert 表获取精选任务达人，如果没有则从 TaskExpert 表获取
+    优先从 FeaturedTaskExpert 表获取精选任务达人，如果没有则从 TaskExpert 表获取。
+    根据 Accept-Language 请求头自动返回对应语言的双语字段。
     """
     import json
+    
+    # 获取用户语言偏好（从 Accept-Language 请求头）
+    user_lang = _get_language_from_request(request)
     
     # 首先尝试从 FeaturedTaskExpert 表获取（精选任务达人）
     featured_query = select(models.FeaturedTaskExpert).where(
@@ -187,9 +209,41 @@ async def get_experts_list(
     if featured_experts:
         items = []
         for expert in featured_experts:
+            # 解析 JSON 字段（中文 + 英文版本）
+            expertise_areas = json.loads(expert.expertise_areas) if expert.expertise_areas else []
+            expertise_areas_en = json.loads(expert.expertise_areas_en) if expert.expertise_areas_en else []
+            featured_skills = json.loads(expert.featured_skills) if expert.featured_skills else []
+            featured_skills_en = json.loads(expert.featured_skills_en) if expert.featured_skills_en else []
+            achievements = json.loads(expert.achievements) if expert.achievements else []
+            achievements_en = json.loads(expert.achievements_en) if expert.achievements_en else []
+            
+            # 根据语言选择显示字段（与论坛双语模式一致）
+            display_bio = expert.bio or ""
+            if user_lang == 'en' and expert.bio_en:
+                display_bio = expert.bio_en
+            
+            display_specialties = expertise_areas
+            if user_lang == 'en' and expertise_areas_en:
+                display_specialties = expertise_areas_en
+            
+            display_featured_skills = featured_skills
+            if user_lang == 'en' and featured_skills_en:
+                display_featured_skills = featured_skills_en
+            
+            display_achievements = achievements
+            if user_lang == 'en' and achievements_en:
+                display_achievements = achievements_en
+            
+            display_response_time = expert.response_time or ""
+            if user_lang == 'en' and expert.response_time_en:
+                display_response_time = expert.response_time_en
+            
             # 从 FeaturedTaskExpert 转换为前端需要的格式
+            # 字段名以 React 前端 TaskExperts.tsx interface TaskExpert 为准
+            # 同时增加双语字段（_en/_zh）供 Flutter 使用
             expert_dict = {
-                "id": expert.id,  # id 就是 user_id
+                # === 基础字段（与 React 前端 interface 一致） ===
+                "id": expert.id,
                 "name": expert.name,
                 "avatar": expert.avatar,
                 "user_level": expert.user_level,
@@ -197,22 +251,32 @@ async def get_experts_list(
                 "completed_tasks": expert.completed_tasks or 0,
                 "total_tasks": expert.total_tasks or 0,
                 "completion_rate": round(expert.completion_rate or 0, 1),
-                "expertise_areas": json.loads(expert.expertise_areas) if expert.expertise_areas else [],
-                "expertise_areas_en": json.loads(expert.expertise_areas_en) if expert.expertise_areas_en else [],
-                "featured_skills": json.loads(expert.featured_skills) if expert.featured_skills else [],
-                "featured_skills_en": json.loads(expert.featured_skills_en) if expert.featured_skills_en else [],
-                "achievements": json.loads(expert.achievements) if expert.achievements else [],
-                "achievements_en": json.loads(expert.achievements_en) if expert.achievements_en else [],
                 "is_verified": bool(expert.is_verified),
-                "bio": expert.bio or "",
-                "bio_en": expert.bio_en or "",
-                "response_time": expert.response_time or "",
-                "response_time_en": expert.response_time_en or "",
                 "success_rate": expert.success_rate or 0,
                 "location": expert.location if expert.location and expert.location.strip() else "Online",
-                "category": expert.category,  # 添加类别字段
+                "category": expert.category,
                 "created_at": format_iso_utc(expert.created_at) if expert.created_at else None,
                 "updated_at": format_iso_utc(expert.updated_at) if expert.updated_at else None,
+                # === 双语字段：bio ===
+                "bio": display_bio,
+                "bio_en": expert.bio_en or "",
+                "bio_zh": expert.bio or "",
+                # === 双语字段：expertise_areas（专业领域） ===
+                "expertise_areas": display_specialties,
+                "expertise_areas_en": expertise_areas_en,
+                "specialties_zh": expertise_areas,  # Flutter 使用
+                # === 双语字段：featured_skills（特色技能） ===
+                "featured_skills": display_featured_skills,
+                "featured_skills_en": featured_skills_en,
+                "featured_skills_zh": featured_skills,
+                # === 双语字段：achievements（成就） ===
+                "achievements": display_achievements,
+                "achievements_en": achievements_en,
+                "achievements_zh": achievements,
+                # === 双语字段：response_time ===
+                "response_time": display_response_time,
+                "response_time_en": expert.response_time_en or "",
+                "response_time_zh": expert.response_time or "",
             }
             items.append(expert_dict)
         return items
@@ -230,40 +294,87 @@ async def get_experts_list(
     result = await db.execute(query)
     experts = result.scalars().all()
     
-    # 加载关联的用户信息
+    # 加载关联的用户信息，构建与 FeaturedTaskExpert 路径相同格式的响应
     items = []
     for expert in experts:
-        expert_dict = schemas.TaskExpertOut.model_validate(expert).model_dump()
-        # 加载用户信息以获取名称和头像
         from app import async_crud
         user = await async_crud.async_user_crud.get_user_by_id(db, expert.id)
         
-        # 获取location和头像：优先从FeaturedTaskExpert获取，如果没有则从用户表获取
+        # 获取 FeaturedTaskExpert（如果存在），用于补充头像/location/双语字段
         featured_expert_result = await db.execute(
             select(models.FeaturedTaskExpert).where(models.FeaturedTaskExpert.id == expert.id)
         )
         featured_expert = featured_expert_result.scalar_one_or_none()
         
-        # 重要：头像优先使用精选任务达人的头像，如果没有才使用用户头像
+        # 确定各字段值
+        display_name = user.name if user else (expert.expert_name or "")
+        avatar = ""
         if featured_expert and featured_expert.avatar:
-            expert_dict["avatar"] = featured_expert.avatar
+            avatar = featured_expert.avatar
         elif user:
-            expert_dict["avatar"] = user.avatar or ""
-        else:
-            expert_dict["avatar"] = ""
+            avatar = user.avatar or ""
         
-        if user:
-            expert_dict["name"] = user.name
-            expert_dict["user_name"] = user.name
-            expert_dict["user_avatar"] = user.avatar or ""
-        
-        # 获取location：优先从FeaturedTaskExpert获取，如果没有则从用户表获取，最后使用默认值
+        location_val = "Online"
         if featured_expert and featured_expert.location:
-            expert_dict["location"] = featured_expert.location
+            location_val = featured_expert.location
         elif user and hasattr(user, 'residence_city') and user.residence_city:
-            expert_dict["location"] = user.residence_city
-        else:
-            expert_dict["location"] = "Online"  # 默认值
+            location_val = user.residence_city
+        
+        # 使用与 FeaturedTaskExpert 路径一致的字段名（React 前端格式）
+        expert_dict = {
+            "id": expert.id,
+            "name": display_name,
+            "avatar": avatar,
+            "user_level": "normal",
+            "avg_rating": float(expert.rating) if expert.rating else 0,
+            "completed_tasks": expert.completed_tasks or 0,
+            "total_tasks": expert.total_services or 0,
+            "completion_rate": 0,
+            "is_verified": False,
+            "bio": expert.bio or "",
+            "success_rate": 0,
+            "location": location_val,
+            "expertise_areas": [],
+            "featured_skills": [],
+            "achievements": [],
+            "response_time": "",
+            "created_at": format_iso_utc(expert.created_at) if expert.created_at else None,
+        }
+        
+        # 如果有 FeaturedTaskExpert 关联，补充双语字段和扩展数据
+        if featured_expert:
+            bio_zh = featured_expert.bio or ""
+            bio_en = featured_expert.bio_en or ""
+            expert_dict["bio"] = bio_en if user_lang == 'en' and bio_en else bio_zh
+            expert_dict["bio_en"] = bio_en
+            expert_dict["bio_zh"] = bio_zh
+            expert_dict["user_level"] = featured_expert.user_level or "normal"
+            expert_dict["is_verified"] = bool(featured_expert.is_verified)
+            expert_dict["success_rate"] = featured_expert.success_rate or 0
+            expert_dict["completion_rate"] = round(featured_expert.completion_rate or 0, 1)
+            expert_dict["total_tasks"] = featured_expert.total_tasks or expert_dict["total_tasks"]
+            
+            ea = json.loads(featured_expert.expertise_areas) if featured_expert.expertise_areas else []
+            ea_en = json.loads(featured_expert.expertise_areas_en) if featured_expert.expertise_areas_en else []
+            expert_dict["expertise_areas"] = ea_en if user_lang == 'en' and ea_en else ea
+            expert_dict["expertise_areas_en"] = ea_en
+            expert_dict["specialties_zh"] = ea
+            
+            fs = json.loads(featured_expert.featured_skills) if featured_expert.featured_skills else []
+            fs_en = json.loads(featured_expert.featured_skills_en) if featured_expert.featured_skills_en else []
+            expert_dict["featured_skills"] = fs_en if user_lang == 'en' and fs_en else fs
+            expert_dict["featured_skills_en"] = fs_en
+            expert_dict["featured_skills_zh"] = fs
+            
+            ach = json.loads(featured_expert.achievements) if featured_expert.achievements else []
+            ach_en = json.loads(featured_expert.achievements_en) if featured_expert.achievements_en else []
+            expert_dict["achievements"] = ach_en if user_lang == 'en' and ach_en else ach
+            expert_dict["achievements_en"] = ach_en
+            expert_dict["achievements_zh"] = ach
+            
+            expert_dict["response_time"] = featured_expert.response_time_en if user_lang == 'en' and featured_expert.response_time_en else (featured_expert.response_time or "")
+            expert_dict["response_time_en"] = featured_expert.response_time_en or ""
+            expert_dict["response_time_zh"] = featured_expert.response_time or ""
         
         items.append(expert_dict)
     

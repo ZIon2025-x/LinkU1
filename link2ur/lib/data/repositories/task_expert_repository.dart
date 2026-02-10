@@ -19,6 +19,7 @@ class TaskExpertRepository {
     int page = 1,
     int pageSize = 50,
     String? keyword,
+    bool forceRefresh = false,
   }) async {
     // 后端使用 limit/offset 分页，不支持 keyword（task_expert_routes.py）
     final offset = (page - 1) * pageSize;
@@ -27,15 +28,19 @@ class TaskExpertRepository {
       'offset': offset,
     };
 
-    // 无搜索时使用缓存（达人列表变动少，使用长TTL）
-    if (keyword == null) {
-      final cacheKey =
-          CacheManager.buildKey(CacheManager.prefixTaskExperts, params);
+    final cacheKey =
+        CacheManager.buildKey(CacheManager.prefixTaskExperts, params);
+
+    // 无搜索且非强制刷新时使用缓存（达人列表变动少，使用长TTL）
+    if (keyword == null && !forceRefresh) {
       final cached = _cache.get<dynamic>(cacheKey);
       if (cached != null) {
         if (cached is List) {
-          return TaskExpertListResponse.fromList(cached,
-              page: page, pageSize: pageSize);
+          // 跳过缓存的空列表（可能是暂时性问题导致的空数据）
+          if (cached.isNotEmpty) {
+            return TaskExpertListResponse.fromList(cached,
+                page: page, pageSize: pageSize);
+          }
         } else if (cached is Map<String, dynamic>) {
           return TaskExpertListResponse.fromJson(cached);
         }
@@ -53,8 +58,6 @@ class TaskExpertRepository {
     }
 
     if (keyword == null) {
-      final cacheKey =
-          CacheManager.buildKey(CacheManager.prefixTaskExperts, params);
       await _cache.set(cacheKey, response.data!, ttl: CacheManager.longTTL);
     }
 

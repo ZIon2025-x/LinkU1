@@ -171,10 +171,10 @@ class _ExpertCard extends StatelessWidget {
                           fontSize: 16,
                           fontWeight: FontWeight.w600)),
                   const SizedBox(height: 4),
-                  if (expert.specialties != null &&
-                      expert.specialties!.isNotEmpty)
+                  if (expert.displaySpecialties != null &&
+                      expert.displaySpecialties!.isNotEmpty)
                     Text(
-                      expert.specialties!.join(' · '),
+                      expert.displaySpecialties!.join(' · '),
                       style: const TextStyle(
                           fontSize: 13,
                           color: AppColors.textSecondary),

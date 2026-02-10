@@ -3360,6 +3360,7 @@
   "taskExpertExpertNotExist": "達人不存在",
   "taskExpertExpertNotExistDesc": "該達人不存在或已被刪除",
   "taskExpertBio": "簡介",
+  "taskExpertSpecialties": "專業領域",
   "taskExpertProvidedServices": "提供的服務",
   "taskExpertNoServicesDesc": "該達人還沒有提供服務",
   "taskExpertAccepted": "已接受",
