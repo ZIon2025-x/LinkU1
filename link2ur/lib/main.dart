@@ -63,8 +63,10 @@ void main() async {
   PaintingBinding.instance.imageCache.maximumSize = 200; // 默认 1000 → 200（控制数量）
   PaintingBinding.instance.imageCache.maximumSizeBytes = 100 << 20; // 100MB
 
-  // 初始化Bloc观察者
-  Bloc.observer = AppBlocObserver();
+  // 初始化Bloc观察者（仅调试模式，避免 release 构建中拦截每个事件/状态变更的开销）
+  if (kDebugMode) {
+    Bloc.observer = AppBlocObserver();
+  }
 
   // IAP 内购服务：延迟到首次进入支付/VIP页面时懒初始化
   // 避免阻塞启动流程（详见 IAPService.ensureInitialized）

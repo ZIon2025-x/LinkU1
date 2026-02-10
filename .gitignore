@@ -77,3 +77,6 @@ stripe-sample-code (1)/
 *.tmp
 *.temp
 
+# Windows reserved names
+nul
+
