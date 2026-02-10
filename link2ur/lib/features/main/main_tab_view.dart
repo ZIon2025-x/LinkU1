@@ -150,8 +150,9 @@ class _MainTabViewState extends State<MainTabView> {
       case 0: // Home
         _homeBloc.add(const HomeLoadRequested());
         break;
-      case 1: // Community (Forum)
-        _forumBloc.add(const ForumLoadPosts());
+      case 1: // Community (Forum) — 加载板块列表（对标iOS ForumView）
+        _forumBloc.add(const ForumLoadCategories());
+        _leaderboardBloc.add(const LeaderboardLoadRequested());
         break;
       case 3: // Messages
         _messageBloc

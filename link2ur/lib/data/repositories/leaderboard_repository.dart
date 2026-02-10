@@ -21,9 +21,11 @@ class LeaderboardRepository {
     String? keyword,
     String? location,
   }) async {
+    // 后端使用 limit/offset 分页（custom_leaderboard_routes.py）
+    final offset = (page - 1) * pageSize;
     final params = {
-      'page': page,
-      'page_size': pageSize,
+      'limit': pageSize,
+      'offset': offset,
       if (keyword != null) 'keyword': keyword,
       if (location != null) 'location': location,
     };
@@ -83,14 +85,16 @@ class LeaderboardRepository {
   Future<List<LeaderboardItem>> getLeaderboardItems(
     int leaderboardId, {
     int page = 1,
-    int pageSize = 20,
+    int pageSize = 50,
     String? sortBy,
   }) async {
+    // 后端使用 limit/offset 分页 + sort 参数
+    final offset = (page - 1) * pageSize;
     final params = {
       'lb_id': leaderboardId,
-      'page': page,
-      'page_size': pageSize,
-      if (sortBy != null) 'sort_by': sortBy,
+      'limit': pageSize,
+      'offset': offset,
+      if (sortBy != null) 'sort': sortBy,
     };
     final cacheKey =
         CacheManager.buildKey('${CacheManager.prefixLeaderboard}items_', params);
@@ -106,9 +110,9 @@ class LeaderboardRepository {
     final response = await _apiService.get<Map<String, dynamic>>(
       ApiEndpoints.leaderboardItems(leaderboardId),
       queryParameters: {
-        'page': page,
-        'page_size': pageSize,
-        if (sortBy != null) 'sort_by': sortBy,
+        'limit': pageSize,
+        'offset': offset,
+        if (sortBy != null) 'sort': sortBy,
       },
     );
 

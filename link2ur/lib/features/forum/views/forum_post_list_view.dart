@@ -11,6 +11,7 @@ import '../../../core/utils/l10n_extension.dart';
 import '../../../core/widgets/skeleton_view.dart';
 import '../../../core/widgets/empty_state_view.dart';
 import '../../../core/widgets/error_state_view.dart';
+import '../../../core/widgets/async_image_view.dart';
 import '../../../data/models/forum.dart';
 import '../../../data/repositories/forum_repository.dart';
 import '../bloc/forum_bloc.dart';
@@ -218,11 +219,11 @@ class _PostCard extends StatelessWidget {
               overflow: TextOverflow.ellipsis,
             ),
 
-            // 内容预览
-            if (post.content != null && post.content!.isNotEmpty) ...[
+            // 内容预览（后端列表接口返回 content_preview，非 content）
+            if (post.displayContent != null && post.displayContent!.isNotEmpty) ...[
               const SizedBox(height: 6),
               Text(
-                post.content!,
+                post.displayContent!,
                 style: const TextStyle(
                     fontSize: 14, color: AppColors.textSecondary),
                 maxLines: 2,
@@ -237,14 +238,10 @@ class _PostCard extends StatelessWidget {
               children: [
                 // 作者
                 if (post.author != null) ...[
-                  CircleAvatar(
-                    radius: 10,
-                    backgroundImage: post.author!.avatar != null
-                        ? NetworkImage(post.author!.avatar!)
-                        : null,
-                    child: post.author!.avatar == null
-                        ? const Icon(Icons.person, size: 12)
-                        : null,
+                  AvatarView(
+                    imageUrl: post.author!.avatar,
+                    name: post.author!.name,
+                    size: 20,
                   ),
                   const SizedBox(width: 6),
                   Text(

@@ -1,7 +1,7 @@
 import 'package:equatable/equatable.dart';
 import 'user.dart';
 
-/// 论坛分类
+/// 论坛分类（对标iOS ForumCategory）
 class ForumCategory extends Equatable {
   const ForumCategory({
     required this.id,
@@ -9,9 +9,15 @@ class ForumCategory extends Equatable {
     this.nameEn,
     this.nameZh,
     this.description,
+    this.descriptionEn,
+    this.descriptionZh,
     this.icon,
     this.postCount = 0,
     this.sortOrder = 0,
+    this.type,
+    this.isFavorited = false,
+    this.lastPostAt,
+    this.latestPost,
   });
 
   final int id;
@@ -19,12 +25,21 @@ class ForumCategory extends Equatable {
   final String? nameEn;
   final String? nameZh;
   final String? description;
+  final String? descriptionEn;
+  final String? descriptionZh;
   final String? icon;
   final int postCount;
   final int sortOrder;
+  final String? type; // general, root, university
+  final bool isFavorited;
+  final DateTime? lastPostAt;
+  final LatestPostInfo? latestPost;
 
   /// 显示名称
   String get displayName => nameZh ?? nameEn ?? name;
+
+  /// 显示描述
+  String? get displayDescription => descriptionZh ?? descriptionEn ?? description;
 
   factory ForumCategory.fromJson(Map<String, dynamic> json) {
     return ForumCategory(
@@ -33,22 +48,90 @@ class ForumCategory extends Equatable {
       nameEn: json['name_en'] as String?,
       nameZh: json['name_zh'] as String?,
       description: json['description'] as String?,
+      descriptionEn: json['description_en'] as String?,
+      descriptionZh: json['description_zh'] as String?,
       icon: json['icon'] as String?,
       postCount: json['post_count'] as int? ?? 0,
       sortOrder: json['sort_order'] as int? ?? 0,
+      type: json['type'] as String?,
+      isFavorited: json['is_favorited'] as bool? ?? false,
+      lastPostAt: json['last_post_at'] != null
+          ? DateTime.tryParse(json['last_post_at'].toString())
+          : null,
+      latestPost: json['latest_post'] != null
+          ? LatestPostInfo.fromJson(
+              json['latest_post'] as Map<String, dynamic>)
+          : null,
     );
   }
 
   @override
-  List<Object?> get props => [id, name];
+  List<Object?> get props => [id, name, isFavorited];
 }
 
-/// 论坛帖子
+/// 板块最新帖子摘要（对标iOS LatestPostInfo）
+class LatestPostInfo {
+  const LatestPostInfo({
+    required this.id,
+    required this.title,
+    this.titleEn,
+    this.titleZh,
+    this.contentPreview,
+    this.contentPreviewEn,
+    this.contentPreviewZh,
+    this.author,
+    this.lastReplyAt,
+    this.replyCount = 0,
+    this.viewCount = 0,
+  });
+
+  final int id;
+  final String title;
+  final String? titleEn;
+  final String? titleZh;
+  final String? contentPreview;
+  final String? contentPreviewEn;
+  final String? contentPreviewZh;
+  final UserBrief? author;
+  final DateTime? lastReplyAt;
+  final int replyCount;
+  final int viewCount;
+
+  /// 显示标题
+  String get displayTitle => titleZh ?? titleEn ?? title;
+
+  /// 显示内容预览
+  String? get displayContentPreview =>
+      contentPreviewZh ?? contentPreviewEn ?? contentPreview;
+
+  factory LatestPostInfo.fromJson(Map<String, dynamic> json) {
+    return LatestPostInfo(
+      id: json['id'] as int,
+      title: json['title'] as String? ?? '',
+      titleEn: json['title_en'] as String?,
+      titleZh: json['title_zh'] as String?,
+      contentPreview: json['content_preview'] as String?,
+      contentPreviewEn: json['content_preview_en'] as String?,
+      contentPreviewZh: json['content_preview_zh'] as String?,
+      author: json['author'] != null
+          ? UserBrief.fromJson(json['author'] as Map<String, dynamic>)
+          : null,
+      lastReplyAt: json['last_reply_at'] != null
+          ? DateTime.tryParse(json['last_reply_at'].toString())
+          : null,
+      replyCount: json['reply_count'] as int? ?? 0,
+      viewCount: json['view_count'] as int? ?? 0,
+    );
+  }
+}
+
+/// 论坛帖子（对标iOS ForumPost）
 class ForumPost extends Equatable {
   const ForumPost({
     required this.id,
     required this.title,
     this.content,
+    this.contentPreview,
     this.images = const [],
     required this.categoryId,
     this.category,
@@ -60,13 +143,17 @@ class ForumPost extends Equatable {
     this.isLiked = false,
     this.isFavorited = false,
     this.isPinned = false,
+    this.isFeatured = false,
+    this.isLocked = false,
     this.createdAt,
     this.updatedAt,
+    this.lastReplyAt,
   });
 
   final int id;
   final String title;
-  final String? content;
+  final String? content; // 完整内容（详情接口返回）
+  final String? contentPreview; // 内容预览（列表接口返回 content_preview）
   final List<String> images;
   final int categoryId;
   final ForumCategory? category;
@@ -78,8 +165,14 @@ class ForumPost extends Equatable {
   final bool isLiked;
   final bool isFavorited;
   final bool isPinned;
+  final bool isFeatured;
+  final bool isLocked;
   final DateTime? createdAt;
   final DateTime? updatedAt;
+  final DateTime? lastReplyAt;
+
+  /// 显示内容：优先用完整内容，其次用预览
+  String? get displayContent => content ?? contentPreview;
 
   /// 第一张图片
   String? get firstImage => images.isNotEmpty ? images.first : null;
@@ -88,19 +181,34 @@ class ForumPost extends Equatable {
   bool get hasImages => images.isNotEmpty;
 
   factory ForumPost.fromJson(Map<String, dynamic> json) {
+    // 后端列表接口返回 content_preview/content_preview_en/content_preview_zh
+    // 详情接口返回 content/content_en/content_zh
+    final contentPreview = (json['content_preview_zh'] as String?) ??
+        (json['content_preview_en'] as String?) ??
+        (json['content_preview'] as String?);
+
     return ForumPost(
       id: json['id'] as int,
-      title: json['title'] as String? ?? '',
+      title: json['title_zh'] as String? ??
+          json['title_en'] as String? ??
+          json['title'] as String? ??
+          '',
       content: json['content'] as String?,
+      contentPreview: contentPreview,
       images: (json['images'] as List<dynamic>?)
               ?.map((e) => e as String)
               .toList() ??
           [],
-      categoryId: json['category_id'] as int? ?? 0,
+      categoryId: json['category_id'] as int? ??
+          (json['category'] as Map<String, dynamic>?)?['id'] as int? ??
+          0,
       category: json['category'] != null
           ? ForumCategory.fromJson(json['category'] as Map<String, dynamic>)
           : null,
-      authorId: (json['author_id'] ?? '').toString(),
+      authorId: (json['author_id'] ??
+              (json['author'] as Map<String, dynamic>?)?['id'] ??
+              '')
+          .toString(),
       author: json['author'] != null
           ? UserBrief.fromJson(json['author'] as Map<String, dynamic>)
           : null,
@@ -110,11 +218,16 @@ class ForumPost extends Equatable {
       isLiked: json['is_liked'] as bool? ?? false,
       isFavorited: json['is_favorited'] as bool? ?? false,
       isPinned: json['is_pinned'] as bool? ?? false,
+      isFeatured: json['is_featured'] as bool? ?? false,
+      isLocked: json['is_locked'] as bool? ?? false,
       createdAt: json['created_at'] != null
-          ? DateTime.parse(json['created_at'])
+          ? DateTime.tryParse(json['created_at'].toString())
           : null,
       updatedAt: json['updated_at'] != null
-          ? DateTime.parse(json['updated_at'])
+          ? DateTime.tryParse(json['updated_at'].toString())
+          : null,
+      lastReplyAt: json['last_reply_at'] != null
+          ? DateTime.tryParse(json['last_reply_at'].toString())
           : null,
     );
   }
@@ -143,11 +256,13 @@ class ForumPost extends Equatable {
     bool? isLiked,
     bool? isFavorited,
     int? replyCount,
+    String? content,
   }) {
     return ForumPost(
       id: id,
       title: title,
-      content: content,
+      content: content ?? this.content,
+      contentPreview: contentPreview,
       images: images,
       categoryId: categoryId,
       category: category,
@@ -159,8 +274,11 @@ class ForumPost extends Equatable {
       isLiked: isLiked ?? this.isLiked,
       isFavorited: isFavorited ?? this.isFavorited,
       isPinned: isPinned,
+      isFeatured: isFeatured,
+      isLocked: isLocked,
       createdAt: createdAt,
       updatedAt: updatedAt,
+      lastReplyAt: lastReplyAt,
     );
   }
 
@@ -240,11 +358,14 @@ class ForumPostListResponse {
   bool get hasMore => posts.length >= pageSize;
 
   factory ForumPostListResponse.fromJson(Map<String, dynamic> json) {
+    // 后端返回 "posts" key（forum_routes.py）
+    final rawList = (json['posts'] as List<dynamic>?) ??
+        (json['items'] as List<dynamic>?) ??
+        [];
     return ForumPostListResponse(
-      posts: (json['items'] as List<dynamic>?)
-              ?.map((e) => ForumPost.fromJson(e as Map<String, dynamic>))
-              .toList() ??
-          [],
+      posts: rawList
+          .map((e) => ForumPost.fromJson(e as Map<String, dynamic>))
+          .toList(),
       total: json['total'] as int? ?? 0,
       page: json['page'] as int? ?? 1,
       pageSize: json['page_size'] as int? ?? 20,

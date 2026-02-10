@@ -1639,6 +1639,7 @@ async def get_visible_forums(
 @measure_api_performance("get_categories")
 @cache_response(ttl=300, key_prefix="forum_categories")  # 缓存5分钟
 async def get_categories(
+    request: Request,
     include_latest_post: bool = Query(False, description="是否包含每个板块的最新帖子信息"),
     db: AsyncSession = Depends(get_async_db_dependency),
 ):
@@ -1702,10 +1703,6 @@ async def get_categories(
             # 添加最新帖子信息（如果存在）
             latest_post_info = None
             if latest_post:
-                # 使用统一的作者信息获取函数（支持管理员和普通用户）
-                # 注意：这里不传入 request，因为只是显示作者信息，不需要检查管理员会话
-                author_info = await get_post_author_info(db, latest_post, None)
-                
                 latest_post_info = await create_latest_post_info(
                     latest_post, db, request, None
                 )

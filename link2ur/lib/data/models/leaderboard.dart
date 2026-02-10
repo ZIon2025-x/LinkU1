@@ -290,24 +290,31 @@ class LeaderboardListResponse {
     required this.total,
     required this.page,
     required this.pageSize,
+    this.hasMoreFromServer,
   });
 
   final List<Leaderboard> leaderboards;
   final int total;
   final int page;
   final int pageSize;
+  final bool? hasMoreFromServer;
 
-  bool get hasMore => leaderboards.length >= pageSize;
+  /// 后端返回 has_more 字段时优先使用，否则通过长度判断
+  bool get hasMore => hasMoreFromServer ?? leaderboards.length >= pageSize;
 
   factory LeaderboardListResponse.fromJson(Map<String, dynamic> json) {
+    // 后端公开接口返回 "items" key，收藏列表返回 "leaderboards" key
+    final rawList = (json['items'] as List<dynamic>?) ??
+        (json['leaderboards'] as List<dynamic>?) ??
+        [];
     return LeaderboardListResponse(
-      leaderboards: (json['items'] as List<dynamic>?)
-              ?.map((e) => Leaderboard.fromJson(e as Map<String, dynamic>))
-              .toList() ??
-          [],
+      leaderboards: rawList
+          .map((e) => Leaderboard.fromJson(e as Map<String, dynamic>))
+          .toList(),
       total: json['total'] as int? ?? 0,
       page: json['page'] as int? ?? 1,
-      pageSize: json['page_size'] as int? ?? 20,
+      pageSize: json['page_size'] as int? ?? json['limit'] as int? ?? 20,
+      hasMoreFromServer: json['has_more'] as bool?,
     );
   }
 }

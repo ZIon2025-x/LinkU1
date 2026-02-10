@@ -1052,14 +1052,96 @@ class _HorizontalTaskCard extends StatelessWidget {
 }
 
 /// 对标iOS: NearbyTasksView (附近Tab)
-class _NearbyTab extends StatelessWidget {
+/// 使用 Geolocator 获取设备位置，加载附近任务
+class _NearbyTab extends StatefulWidget {
   const _NearbyTab();
 
   @override
+  State<_NearbyTab> createState() => _NearbyTabState();
+}
+
+class _NearbyTabState extends State<_NearbyTab> {
+  bool _locationLoading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadLocation();
+  }
+
+  Future<void> _loadLocation() async {
+    setState(() {
+      _locationLoading = true;
+    });
+
+    try {
+      // 检查位置服务是否启用
+      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        // 位置服务未开启，使用默认坐标（伦敦）
+        _loadWithCoordinates(51.5074, -0.1278);
+        return;
+      }
+
+      // 检查权限
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+        if (permission == LocationPermission.denied) {
+          // 权限被拒绝，使用默认坐标
+          _loadWithCoordinates(51.5074, -0.1278);
+          return;
+        }
+      }
+
+      if (permission == LocationPermission.deniedForever) {
+        // 永久拒绝，使用默认坐标
+        _loadWithCoordinates(51.5074, -0.1278);
+        return;
+      }
+
+      // 获取位置
+      final position = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.medium,
+      ).timeout(
+        const Duration(seconds: 10),
+        onTimeout: () async {
+          // 超时使用最后已知位置
+          final last = await Geolocator.getLastKnownPosition();
+          if (last != null) return last;
+          throw Exception('Location timeout');
+        },
+      );
+
+      _loadWithCoordinates(position.latitude, position.longitude);
+    } catch (e) {
+      // 获取位置失败，使用默认坐标
+      _loadWithCoordinates(51.5074, -0.1278);
+    }
+  }
+
+  void _loadWithCoordinates(double lat, double lng) {
+    if (!mounted) return;
+    setState(() => _locationLoading = false);
+    context.read<HomeBloc>().add(HomeLoadNearby(
+          latitude: lat,
+          longitude: lng,
+        ));
+  }
+
+  @override
   Widget build(BuildContext context) {
+    if (_locationLoading) {
+      return const SkeletonList();
+    }
+
     return BlocBuilder<HomeBloc, HomeState>(
       builder: (context, state) {
-        if (state.nearbyTasks.isEmpty && !state.isLoading) {
+        if (state.isLoading && state.nearbyTasks.isEmpty) {
+          return const SkeletonList();
+        }
+
+        if (state.nearbyTasks.isEmpty) {
           return Center(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -1076,14 +1158,7 @@ class _NearbyTab extends StatelessWidget {
                 ),
                 AppSpacing.vMd,
                 TextButton.icon(
-                  onPressed: () {
-                    context.read<HomeBloc>().add(
-                          const HomeLoadNearby(
-                            latitude: 51.5074,
-                            longitude: -0.1278,
-                          ),
-                        );
-                  },
+                  onPressed: _loadLocation,
                   icon: const Icon(Icons.refresh),
                   label: Text(context.l10n.homeLoadNearbyTasks),
                 ),
@@ -1094,12 +1169,7 @@ class _NearbyTab extends StatelessWidget {
 
         return RefreshIndicator(
           onRefresh: () async {
-            context.read<HomeBloc>().add(
-                  const HomeLoadNearby(
-                    latitude: 51.5074,
-                    longitude: -0.1278,
-                  ),
-                );
+            await _loadLocation();
             await Future.delayed(const Duration(milliseconds: 500));
           },
           child: ListView.separated(
@@ -1107,7 +1177,10 @@ class _NearbyTab extends StatelessWidget {
             itemCount: state.nearbyTasks.length,
             separatorBuilder: (_, __) => AppSpacing.vMd,
             itemBuilder: (context, index) {
-              return _TaskCard(task: state.nearbyTasks[index]);
+              return AnimatedListItem(
+                index: index,
+                child: _TaskCard(task: state.nearbyTasks[index]),
+              );
             },
           ),
         );
@@ -1117,8 +1190,23 @@ class _NearbyTab extends StatelessWidget {
 }
 
 /// 对标iOS: TaskExpertListContentView (达人Tab)
+/// 内嵌达人列表，点击搜索框跳转到完整搜索页
 class _ExpertsTab extends StatelessWidget {
   const _ExpertsTab();
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocProvider(
+      create: (context) => TaskExpertBloc(
+        taskExpertRepository: context.read<TaskExpertRepository>(),
+      )..add(const TaskExpertLoadRequested()),
+      child: const _ExpertsTabContent(),
+    );
+  }
+}
+
+class _ExpertsTabContent extends StatelessWidget {
+  const _ExpertsTabContent();
 
   @override
   Widget build(BuildContext context) {
@@ -1126,7 +1214,7 @@ class _ExpertsTab extends StatelessWidget {
 
     return Column(
       children: [
-        // 对标iOS: 搜索框
+        // 对标iOS: 搜索框（点击跳转到完整搜索页）
         Padding(
           padding: const EdgeInsets.symmetric(
             horizontal: AppSpacing.md,
@@ -1173,40 +1261,217 @@ class _ExpertsTab extends StatelessWidget {
           ),
         ),
 
-        // 对标iOS: 达人列表
+        // 对标iOS: 达人卡片列表
         Expanded(
-          child: Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(
-                  Icons.star_outline,
-                  size: 64,
-                  color: isDark
-                      ? AppColors.textTertiaryDark
-                      : AppColors.textTertiaryLight,
-                ),
-                AppSpacing.vMd,
-                Text(
-                  context.l10n.homeExperts,
-                  style: TextStyle(
-                    color: isDark
-                        ? AppColors.textSecondaryDark
-                        : AppColors.textSecondaryLight,
-                  ),
-                ),
-                AppSpacing.vMd,
-                TextButton(
-                  onPressed: () {
-                    context.push('/task-experts');
+          child: BlocBuilder<TaskExpertBloc, TaskExpertState>(
+            builder: (context, state) {
+              if (state.status == TaskExpertStatus.loading &&
+                  state.experts.isEmpty) {
+                return const SkeletonList();
+              }
+
+              if (state.status == TaskExpertStatus.error &&
+                  state.experts.isEmpty) {
+                return ErrorStateView.loadFailed(
+                  message: state.errorMessage,
+                  onRetry: () {
+                    context.read<TaskExpertBloc>().add(
+                          const TaskExpertLoadRequested(),
+                        );
                   },
-                  child: Text(context.l10n.homeBrowseExperts),
+                );
+              }
+
+              if (state.experts.isEmpty) {
+                return EmptyStateView.noData(
+                  title: context.l10n.homeExperts,
+                );
+              }
+
+              return RefreshIndicator(
+                onRefresh: () async {
+                  context.read<TaskExpertBloc>().add(
+                        const TaskExpertRefreshRequested(),
+                      );
+                  await Future.delayed(const Duration(milliseconds: 500));
+                },
+                child: ListView.separated(
+                  padding: AppSpacing.allMd,
+                  itemCount: state.experts.length + (state.hasMore ? 1 : 0),
+                  separatorBuilder: (_, __) => AppSpacing.vMd,
+                  itemBuilder: (context, index) {
+                    if (index == state.experts.length) {
+                      context.read<TaskExpertBloc>().add(
+                            const TaskExpertLoadMore(),
+                          );
+                      return const Center(
+                        child: Padding(
+                          padding: EdgeInsets.all(16.0),
+                          child: CircularProgressIndicator.adaptive(),
+                        ),
+                      );
+                    }
+                    return AnimatedListItem(
+                      index: index,
+                      child: _ExpertCard(expert: state.experts[index]),
+                    );
+                  },
                 ),
-              ],
-            ),
+              );
+            },
           ),
         ),
       ],
+    );
+  }
+}
+
+/// 达人卡片 - 对标iOS ExpertCard
+/// 头像(68) + 名称/简介/统计 + chevron
+class _ExpertCard extends StatelessWidget {
+  const _ExpertCard({required this.expert});
+
+  final TaskExpert expert;
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return GestureDetector(
+      onTap: () {
+        HapticFeedback.selectionClick();
+        final expertId = int.tryParse(expert.id) ?? 0;
+        if (expertId > 0) {
+          context.push('/task-experts/$expertId');
+        }
+      },
+      child: Container(
+        padding: AppSpacing.allMd,
+        decoration: BoxDecoration(
+          color: isDark
+              ? AppColors.cardBackgroundDark
+              : AppColors.cardBackgroundLight,
+          borderRadius: AppRadius.allLarge,
+          border: Border.all(
+            color: (isDark ? AppColors.separatorDark : AppColors.separatorLight)
+                .withValues(alpha: 0.3),
+            width: 0.5,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.03),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            // 头像 (对标iOS 68x68)
+            AvatarView(
+              imageUrl: expert.avatar,
+              name: expert.displayName,
+              size: 60,
+            ),
+            AppSpacing.hMd,
+            // 信息
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // 名称
+                  Text(
+                    expert.displayName,
+                    style: AppTypography.bodyBold.copyWith(
+                      color: isDark
+                          ? AppColors.textPrimaryDark
+                          : AppColors.textPrimaryLight,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  // 简介
+                  if (expert.bio != null && expert.bio!.isNotEmpty) ...[
+                    const SizedBox(height: 4),
+                    Text(
+                      expert.bio!,
+                      style: AppTypography.caption.copyWith(
+                        color: isDark
+                            ? AppColors.textSecondaryDark
+                            : AppColors.textSecondaryLight,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                  const SizedBox(height: 6),
+                  // 统计：评分 + 完成数 + 完成率
+                  Row(
+                    children: [
+                      // 评分
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: AppColors.gold.withValues(alpha: 0.1),
+                          borderRadius: AppRadius.allPill,
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.star,
+                                size: 12, color: AppColors.gold),
+                            const SizedBox(width: 2),
+                            Text(
+                              expert.ratingDisplay,
+                              style: AppTypography.caption2.copyWith(
+                                fontWeight: FontWeight.w600,
+                                color: AppColors.gold,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      // 完成单数
+                      Text(
+                        context.l10n
+                            .leaderboardCompletedCount(expert.completedTasks),
+                        style: AppTypography.caption2.copyWith(
+                          color: isDark
+                              ? AppColors.textTertiaryDark
+                              : AppColors.textTertiaryLight,
+                        ),
+                      ),
+                      if (expert.totalServices > 0) ...[
+                        const SizedBox(width: 8),
+                        // 服务数
+                        Text(
+                          context.l10n.taskExpertServiceCount(
+                              expert.totalServices),
+                          style: AppTypography.caption2.copyWith(
+                            color: isDark
+                                ? AppColors.textTertiaryDark
+                                : AppColors.textTertiaryLight,
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            // Chevron
+            Icon(
+              Icons.chevron_right,
+              size: 20,
+              color: isDark
+                  ? AppColors.textTertiaryDark
+                  : AppColors.textTertiaryLight,
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

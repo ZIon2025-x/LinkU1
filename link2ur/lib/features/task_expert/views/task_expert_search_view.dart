@@ -8,6 +8,7 @@ import '../../../core/design/app_radius.dart';
 import '../../../core/utils/l10n_extension.dart';
 import '../../../core/widgets/skeleton_view.dart';
 import '../../../core/widgets/empty_state_view.dart';
+import '../../../core/widgets/async_image_view.dart';
 import '../../../data/models/task_expert.dart';
 import '../../../data/repositories/task_expert_repository.dart';
 import '../bloc/task_expert_bloc.dart';
@@ -155,14 +156,10 @@ class _ExpertCard extends StatelessWidget {
         ),
         child: Row(
           children: [
-            CircleAvatar(
-              radius: 28,
-              backgroundImage: expert.avatar != null
-                  ? NetworkImage(expert.avatar!)
-                  : null,
-              child: expert.avatar == null
-                  ? const Icon(Icons.person, size: 28)
-                  : null,
+            AvatarView(
+              imageUrl: expert.avatar,
+              name: expert.displayName,
+              size: 56,
             ),
             const SizedBox(width: AppSpacing.md),
             Expanded(

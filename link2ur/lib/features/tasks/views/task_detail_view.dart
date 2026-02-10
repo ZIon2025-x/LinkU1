@@ -1225,16 +1225,11 @@ class _CounterpartyCard extends StatelessWidget {
               ),
               child: Padding(
                 padding: const EdgeInsets.all(2),
-                child: info.avatar != null
-                    ? CircleAvatar(
-                        backgroundImage: NetworkImage(info.avatar!),
-                        backgroundColor: Colors.transparent,
-                      )
-                    : Icon(
-                        info.isExpert ? Icons.star : Icons.person,
-                        size: 22,
-                        color: Colors.white,
-                      ),
+                child: AvatarView(
+                  imageUrl: info.avatar,
+                  name: info.name,
+                  size: 48,
+                ),
               ),
             ),
             const SizedBox(width: AppSpacing.md),

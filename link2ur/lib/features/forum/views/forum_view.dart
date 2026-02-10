@@ -401,96 +401,59 @@ class _CommunityTabButton extends StatelessWidget {
   }
 }
 
-/// 论坛Tab - BLoC 在 MainTabView 中创建
+/// 论坛Tab - 显示板块(分类)列表，对标iOS ForumView
+/// BLoC 在 MainTabView 中创建
 class _ForumTab extends StatelessWidget {
   const _ForumTab();
 
   @override
   Widget build(BuildContext context) {
-    final isDesktop = ResponsiveUtils.isDesktop(context);
-
     return BlocBuilder<ForumBloc, ForumState>(
       builder: (context, state) {
-        if (state.status == ForumStatus.loading && state.posts.isEmpty) {
+        if (state.status == ForumStatus.loading && state.categories.isEmpty) {
           return const SkeletonList();
         }
 
-        if (state.status == ForumStatus.error && state.posts.isEmpty) {
+        if (state.status == ForumStatus.error && state.categories.isEmpty) {
           return ErrorStateView.loadFailed(
             message: state.errorMessage ?? context.l10n.tasksLoadFailed,
             onRetry: () {
-              context.read<ForumBloc>().add(const ForumLoadPosts());
+              context.read<ForumBloc>().add(const ForumLoadCategories());
             },
           );
         }
 
-        if (state.posts.isEmpty) {
+        if (state.categories.isEmpty) {
           return EmptyStateView.noData(
             title: context.l10n.forumNoPosts,
             description: context.l10n.forumNoPostsHint,
           );
         }
 
+        // 收藏板块优先，对标iOS
+        final sorted = List<ForumCategory>.from(state.categories);
+        sorted.sort((a, b) {
+          if (a.isFavorited && !b.isFavorited) return -1;
+          if (!a.isFavorited && b.isFavorited) return 1;
+          return a.sortOrder.compareTo(b.sortOrder);
+        });
+
         return RefreshIndicator(
           onRefresh: () async {
             context.read<ForumBloc>().add(const ForumRefreshRequested());
           },
-          child: isDesktop
-              ? _buildDesktopGrid(context, state)
-              : _buildMobileList(context, state),
-        );
-      },
-    );
-  }
-
-  Widget _buildDesktopGrid(BuildContext context, ForumState state) {
-    return CustomScrollView(
-      slivers: [
-        SliverPadding(
-          padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 8),
-          sliver: SliverGrid(
-            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: ResponsiveUtils.gridColumnCount(context, type: GridItemType.forum),
-              mainAxisSpacing: 16,
-              crossAxisSpacing: 16,
-              childAspectRatio: 1.6,
-            ),
-            delegate: SliverChildBuilderDelegate(
-              (context, index) {
-                if (index == state.posts.length) {
-                  context.read<ForumBloc>().add(const ForumLoadMorePosts());
-                  return const Center(child: Padding(
-                    padding: EdgeInsets.all(16), child: LoadingIndicator()));
-                }
-                return _PostCard(post: state.posts[index]);
-              },
-              childCount: state.posts.length + (state.hasMore ? 1 : 0),
-            ),
+          child: ListView.separated(
+            clipBehavior: Clip.none,
+            padding: AppSpacing.allMd,
+            itemCount: sorted.length,
+            separatorBuilder: (context, index) => AppSpacing.vMd,
+            itemBuilder: (context, index) {
+              return AnimatedListItem(
+                index: index,
+                child: _CategoryCard(category: sorted[index]),
+              );
+            },
           ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildMobileList(BuildContext context, ForumState state) {
-    return ListView.separated(
-      clipBehavior: Clip.none,
-      padding: AppSpacing.allMd,
-      itemCount: state.posts.length + (state.hasMore ? 1 : 0),
-      separatorBuilder: (context, index) => AppSpacing.vMd,
-      itemBuilder: (context, index) {
-        if (index == state.posts.length) {
-          context.read<ForumBloc>().add(const ForumLoadMorePosts());
-          return const Center(
-            child: Padding(
-              padding: EdgeInsets.all(16.0),
-              child: LoadingIndicator(),
-            ),
-          );
-        }
-        return AnimatedListItem(
-          index: index,
-          child: _PostCard(post: state.posts[index]),
         );
       },
     );
@@ -567,20 +530,36 @@ class _LeaderboardTab extends StatelessWidget {
   }
 }
 
-/// 帖子卡片 - 对齐iOS ForumPostCard样式
-class _PostCard extends StatelessWidget {
-  const _PostCard({required this.post});
+/// 板块卡片 - 对标iOS CategoryCard
+/// 图标(64x64) + 名称 + 描述 + 最新帖子预览 + chevron
+class _CategoryCard extends StatelessWidget {
+  const _CategoryCard({required this.category});
 
-  final ForumPost post;
+  final ForumCategory category;
+
+  // 根据分类ID提供不同渐变色
+  List<Color> get _gradient {
+    final hash = category.id.hashCode;
+    final gradients = [
+      [const Color(0xFF007AFF), const Color(0xFF5856D6)],
+      [const Color(0xFFFF6B6B), const Color(0xFFFF4757)],
+      [const Color(0xFF7C5CFC), const Color(0xFF5F27CD)],
+      [const Color(0xFF2ED573), const Color(0xFF00B894)],
+      [const Color(0xFFFF9500), const Color(0xFFFF6B00)],
+    ];
+    return gradients[hash.abs() % gradients.length];
+  }
 
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final colors = _gradient;
 
     return GestureDetector(
       onTap: () {
         HapticFeedback.selectionClick();
-        context.push('/forum/posts/${post.id}');
+        context.push('/forum/category/${category.id}',
+            extra: category);
       },
       child: Container(
         padding: AppSpacing.allMd,
@@ -596,7 +575,7 @@ class _PostCard extends StatelessWidget {
           ),
           boxShadow: [
             BoxShadow(
-              color: AppColors.primary.withValues(alpha: 0.04),
+              color: colors.first.withValues(alpha: 0.06),
               blurRadius: 12,
               offset: const Offset(0, 4),
             ),
@@ -607,155 +586,218 @@ class _PostCard extends StatelessWidget {
             ),
           ],
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        child: Row(
           children: [
-            // 用户信息 - 对齐iOS: avatar + name + time + category tag
-            Row(
-              children: [
-                // 头像 (带白色边框 + 阴影)
-                Container(
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.08),
-                        blurRadius: 4,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
-                  ),
-                  child: CircleAvatar(
-                    radius: 20,
-                    backgroundColor: AppColors.primary.withValues(alpha: 0.1),
-                    backgroundImage: post.author?.avatar != null
-                        ? NetworkImage(post.author!.avatar!)
-                        : null,
-                    child: post.author?.avatar == null
-                        ? Icon(Icons.person,
-                            color: AppColors.primary.withValues(alpha: 0.5),
-                            size: 22)
-                        : null,
-                  ),
-                ),
-                const SizedBox(width: AppSpacing.sm),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        post.author?.name ?? context.l10n.forumUserFallback(post.authorId.toString()),
-                        style: AppTypography.body.copyWith(
-                          fontWeight: FontWeight.w600,
-                          color: isDark
-                              ? AppColors.textPrimaryDark
-                              : AppColors.textPrimaryLight,
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        _formatTime(context, post.createdAt),
-                        style: AppTypography.caption.copyWith(
-                          color: isDark
-                              ? AppColors.textTertiaryDark
-                              : AppColors.textTertiaryLight,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                // 分类标签 (胶囊)
-                if (post.category != null)
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 10, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: AppColors.primary.withValues(alpha: 0.08),
-                      borderRadius: AppRadius.allPill,
+            // 图标容器 - 对标iOS 64x64 渐变背景
+            _buildIconArea(colors),
+            const SizedBox(width: AppSpacing.md),
+
+            // 信息区域
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // 标题（对标iOS body bold）
+                  Text(
+                    category.displayName,
+                    style: AppTypography.bodyBold.copyWith(
+                      color: isDark
+                          ? AppColors.textPrimaryDark
+                          : AppColors.textPrimaryLight,
                     ),
-                    child: Text(
-                      post.category!.displayName,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+
+                  // 描述（对标iOS subheadline）
+                  if (category.displayDescription != null &&
+                      category.displayDescription!.isNotEmpty) ...[
+                    const SizedBox(height: 4),
+                    Text(
+                      category.displayDescription!,
                       style: AppTypography.caption.copyWith(
-                        color: AppColors.primary,
-                        fontWeight: FontWeight.w600,
-                        fontSize: 11,
+                        color: isDark
+                            ? AppColors.textSecondaryDark
+                            : AppColors.textSecondaryLight,
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+
+                  // 最新帖子预览（对标iOS latestPost section）
+                  if (category.latestPost != null) ...[
+                    const SizedBox(height: 8),
+                    _buildLatestPostPreview(context, isDark),
+                  ] else if (category.postCount == 0) ...[
+                    const SizedBox(height: 8),
+                    Text(
+                      context.l10n.forumNoPosts,
+                      style: AppTypography.caption.copyWith(
+                        color: isDark
+                            ? AppColors.textTertiaryDark
+                            : AppColors.textTertiaryLight,
                       ),
                     ),
-                  ),
-              ],
-            ),
-            const SizedBox(height: AppSpacing.md),
-
-            // 标题
-            Text(
-              post.title,
-              style: AppTypography.bodyBold.copyWith(
-                fontSize: 16,
-                color: isDark
-                    ? AppColors.textPrimaryDark
-                    : AppColors.textPrimaryLight,
+                  ],
+                ],
               ),
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
             ),
 
-            // 内容预览
-            if (post.content != null) ...[
-              const SizedBox(height: AppSpacing.sm),
-              Text(
-                post.content!,
-                style: AppTypography.subheadline.copyWith(
-                  color: isDark
-                      ? AppColors.textSecondaryDark
-                      : AppColors.textSecondaryLight,
-                  height: 1.4,
-                ),
-                maxLines: 3,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ],
-
-            const SizedBox(height: AppSpacing.md),
-
-            // 分隔线
-            Divider(
-              height: 1,
-              color: (isDark ? AppColors.separatorDark : AppColors.separatorLight)
-                  .withValues(alpha: 0.3),
-            ),
-
-            const SizedBox(height: AppSpacing.sm),
-
-            // 互动栏 - 对齐iOS: 点赞 + 评论 + 浏览
-            Row(
-              children: [
-                _InteractionItem(
-                  icon: post.isLiked
-                      ? Icons.thumb_up
-                      : Icons.thumb_up_outlined,
-                  count: post.likeCount,
-                  color: post.isLiked ? AppColors.primary : null,
-                  isDark: isDark,
-                ),
-                const SizedBox(width: 20),
-                _InteractionItem(
-                  icon: Icons.chat_bubble_outline,
-                  count: post.replyCount,
-                  isDark: isDark,
-                ),
-                const Spacer(),
-                Icon(
-                  Icons.more_horiz,
-                  size: 16,
-                  color: isDark
-                      ? AppColors.textTertiaryDark
-                      : AppColors.textTertiaryLight,
-                ),
-              ],
+            // Chevron
+            Icon(
+              Icons.chevron_right,
+              size: 20,
+              color: isDark
+                  ? AppColors.textTertiaryDark
+                  : AppColors.textTertiaryLight,
             ),
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildIconArea(List<Color> colors) {
+    final hasIcon = category.icon != null && category.icon!.isNotEmpty;
+    final isUrl = hasIcon &&
+        (category.icon!.startsWith('http://') ||
+            category.icon!.startsWith('https://'));
+
+    return Container(
+      width: 64,
+      height: 64,
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: colors,
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: colors.first.withValues(alpha: 0.2),
+            blurRadius: 8,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Center(
+        child: isUrl
+            ? AsyncImageView(
+                imageUrl: category.icon,
+                width: 36,
+                height: 36,
+                fit: BoxFit.contain,
+                errorWidget: const Icon(Icons.folder,
+                    color: Colors.white, size: 28),
+              )
+            : hasIcon
+                ? Text(
+                    category.icon!,
+                    style: const TextStyle(fontSize: 32),
+                  )
+                : const Icon(Icons.folder,
+                    color: Colors.white, size: 28),
+      ),
+    );
+  }
+
+  Widget _buildLatestPostPreview(BuildContext context, bool isDark) {
+    final post = category.latestPost!;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // 帖子标题
+        Row(
+          children: [
+            const Icon(
+              Icons.message,
+              size: 11,
+              color: AppColors.primary,
+            ),
+            const SizedBox(width: 4),
+            Expanded(
+              child: Text(
+                post.displayTitle,
+                style: AppTypography.caption.copyWith(
+                  fontWeight: FontWeight.w500,
+                  color: isDark
+                      ? AppColors.textPrimaryDark
+                      : AppColors.textPrimaryLight,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 4),
+        // 元信息：作者 + 回复 + 浏览 + 时间
+        Row(
+          children: [
+            if (post.author != null) ...[
+              Icon(Icons.person, size: 10,
+                  color: isDark
+                      ? AppColors.textSecondaryDark
+                      : AppColors.textSecondaryLight),
+              const SizedBox(width: 2),
+              Text(
+                post.author!.name,
+                style: AppTypography.caption2.copyWith(
+                  color: isDark
+                      ? AppColors.textSecondaryDark
+                      : AppColors.textSecondaryLight,
+                ),
+              ),
+              const SizedBox(width: 8),
+            ],
+            Icon(Icons.chat_bubble, size: 10,
+                color: isDark
+                    ? AppColors.textTertiaryDark
+                    : AppColors.textTertiaryLight),
+            const SizedBox(width: 2),
+            Text(
+              '${post.replyCount}',
+              style: AppTypography.caption2.copyWith(
+                color: isDark
+                    ? AppColors.textTertiaryDark
+                    : AppColors.textTertiaryLight,
+              ),
+            ),
+            const SizedBox(width: 8),
+            Icon(Icons.visibility, size: 10,
+                color: isDark
+                    ? AppColors.textTertiaryDark
+                    : AppColors.textTertiaryLight),
+            const SizedBox(width: 2),
+            Text(
+              '${post.viewCount}',
+              style: AppTypography.caption2.copyWith(
+                color: isDark
+                    ? AppColors.textTertiaryDark
+                    : AppColors.textTertiaryLight,
+              ),
+            ),
+            if (post.lastReplyAt != null) ...[
+              const SizedBox(width: 8),
+              Icon(Icons.access_time, size: 10,
+                  color: isDark
+                      ? AppColors.textTertiaryDark
+                      : AppColors.textTertiaryLight),
+              const SizedBox(width: 2),
+              Text(
+                _formatTime(context, post.lastReplyAt),
+                style: AppTypography.caption2.copyWith(
+                  color: isDark
+                      ? AppColors.textTertiaryDark
+                      : AppColors.textTertiaryLight,
+                ),
+              ),
+            ],
+          ],
+        ),
+      ],
     );
   }
 
@@ -773,43 +815,6 @@ class _PostCard extends StatelessWidget {
     } else {
       return context.l10n.timeJustNow;
     }
-  }
-}
-
-/// 互动项组件 (点赞/评论)
-class _InteractionItem extends StatelessWidget {
-  const _InteractionItem({
-    required this.icon,
-    required this.count,
-    required this.isDark,
-    this.color,
-  });
-
-  final IconData icon;
-  final int count;
-  final bool isDark;
-  final Color? color;
-
-  @override
-  Widget build(BuildContext context) {
-    final defaultColor = isDark
-        ? AppColors.textTertiaryDark
-        : AppColors.textTertiaryLight;
-
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(icon, size: 16, color: color ?? defaultColor),
-        const SizedBox(width: 4),
-        Text(
-          count > 0 ? '$count' : '',
-          style: AppTypography.caption.copyWith(
-            color: color ?? defaultColor,
-            fontWeight: color != null ? FontWeight.w600 : null,
-          ),
-        ),
-      ],
-    );
   }
 }
 

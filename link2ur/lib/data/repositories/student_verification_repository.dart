@@ -23,7 +23,10 @@ class StudentVerificationRepository {
           response.message ?? '获取认证状态失败');
     }
 
-    return StudentVerification.fromJson(response.data!);
+    // 后端返回 {"code": 200, "data": {...}}，需要解包 data
+    final raw = response.data!;
+    final data = raw['data'] as Map<String, dynamic>? ?? raw;
+    return StudentVerification.fromJson(data);
   }
 
   /// 提交学生认证

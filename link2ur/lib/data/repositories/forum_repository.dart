@@ -18,16 +18,19 @@ class ForumRepository {
   Future<List<ForumCategory>> getVisibleCategories() async {
     const cacheKey = '${CacheManager.prefixForumCategories}visible';
 
-    final cached = _cache.get<List<dynamic>>(cacheKey);
+    final cached = _cache.get<dynamic>(cacheKey);
     if (cached != null) {
-      return cached
+      final list = _extractCategoryList(cached);
+      return list
           .map((e) => ForumCategory.fromJson(e as Map<String, dynamic>))
           .toList();
     }
 
     try {
-      final response = await _apiService.get<List<dynamic>>(
+      // 后端返回 {"categories": [...]} 或 [...]
+      final response = await _apiService.get<dynamic>(
         ApiEndpoints.forumVisibleCategories,
+        queryParameters: {'include_latest_post': true},
       );
 
       if (!response.isSuccess || response.data == null) {
@@ -36,13 +39,15 @@ class ForumRepository {
 
       await _cache.set(cacheKey, response.data!, ttl: CacheManager.staticTTL);
 
-      return response.data!
+      final list = _extractCategoryList(response.data!);
+      return list
           .map((e) => ForumCategory.fromJson(e as Map<String, dynamic>))
           .toList();
     } catch (e) {
-      final stale = _cache.getStale<List<dynamic>>(cacheKey);
+      final stale = _cache.getStale<dynamic>(cacheKey);
       if (stale != null) {
-        return stale
+        final list = _extractCategoryList(stale);
+        return list
             .map((e) => ForumCategory.fromJson(e as Map<String, dynamic>))
             .toList();
       }
@@ -100,20 +105,23 @@ class ForumRepository {
     }
   }
 
-  /// 获取所有论坛分类
+  /// 获取所有论坛分类（含最新帖子摘要）
   Future<List<ForumCategory>> getCategories() async {
     const cacheKey = '${CacheManager.prefixForumCategories}all';
 
-    final cached = _cache.get<List<dynamic>>(cacheKey);
+    final cached = _cache.get<dynamic>(cacheKey);
     if (cached != null) {
-      return cached
+      final list = _extractCategoryList(cached);
+      return list
           .map((e) => ForumCategory.fromJson(e as Map<String, dynamic>))
           .toList();
     }
 
     try {
-      final response = await _apiService.get<List<dynamic>>(
+      // 后端返回 {"categories": [...]} 或 [...]
+      final response = await _apiService.get<dynamic>(
         ApiEndpoints.forumCategories,
+        queryParameters: {'include_latest_post': true},
       );
 
       if (!response.isSuccess || response.data == null) {
@@ -122,18 +130,29 @@ class ForumRepository {
 
       await _cache.set(cacheKey, response.data!, ttl: CacheManager.staticTTL);
 
-      return response.data!
+      final list = _extractCategoryList(response.data!);
+      return list
           .map((e) => ForumCategory.fromJson(e as Map<String, dynamic>))
           .toList();
     } catch (e) {
-      final stale = _cache.getStale<List<dynamic>>(cacheKey);
+      final stale = _cache.getStale<dynamic>(cacheKey);
       if (stale != null) {
-        return stale
+        final list = _extractCategoryList(stale);
+        return list
             .map((e) => ForumCategory.fromJson(e as Map<String, dynamic>))
             .toList();
       }
       rethrow;
     }
+  }
+
+  /// 从后端响应中提取分类列表（兼容 List 和 {"categories": [...]} 两种格式）
+  List<dynamic> _extractCategoryList(dynamic data) {
+    if (data is List) return data;
+    if (data is Map<String, dynamic>) {
+      return data['categories'] as List<dynamic>? ?? [];
+    }
+    return [];
   }
 
   /// 获取帖子详情

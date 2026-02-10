@@ -9,6 +9,7 @@ import '../../../core/design/app_typography.dart';
 import '../../../core/design/app_radius.dart';
 import '../../../core/router/app_router.dart';
 import '../../../core/widgets/buttons.dart';
+import '../../../core/widgets/async_image_view.dart';
 import '../../../core/utils/l10n_extension.dart';
 import '../../../data/models/task.dart';
 import '../../../data/models/task_application.dart';
@@ -672,14 +673,10 @@ class _ApplicationItem extends StatelessWidget {
           children: [
             Row(
               children: [
-                CircleAvatar(
-                  radius: 20,
-                  backgroundImage: application.applicantAvatar != null
-                      ? NetworkImage(application.applicantAvatar!)
-                      : null,
-                  child: application.applicantAvatar == null
-                      ? const Icon(Icons.person, size: 20)
-                      : null,
+                AvatarView(
+                  imageUrl: application.applicantAvatar,
+                  name: application.applicantName,
+                  size: 40,
                 ),
                 const SizedBox(width: AppSpacing.sm),
                 Expanded(

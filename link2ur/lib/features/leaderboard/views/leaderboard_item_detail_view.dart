@@ -559,14 +559,10 @@ class _NameCard extends StatelessWidget {
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      CircleAvatar(
-                        radius: 12,
-                        backgroundImage: item.submitterAvatar != null
-                            ? NetworkImage(item.submitterAvatar!)
-                            : null,
-                        child: item.submitterAvatar == null
-                            ? const Icon(Icons.person, size: 12)
-                            : null,
+                      AvatarView(
+                        imageUrl: item.submitterAvatar,
+                        name: item.submitterName,
+                        size: 24,
                       ),
                       const SizedBox(width: 6),
                       Text(
@@ -1028,14 +1024,10 @@ class _CommentCard extends StatelessWidget {
           Row(
             children: [
               // 头像
-              CircleAvatar(
-                radius: 14,
-                backgroundImage: !isAnonymous && vote['voter_avatar'] != null
-                    ? NetworkImage(vote['voter_avatar'] as String)
-                    : null,
-                child: (isAnonymous || vote['voter_avatar'] == null)
-                    ? const Icon(Icons.person, size: 14)
-                    : null,
+              AvatarView(
+                imageUrl: !isAnonymous ? vote['voter_avatar'] as String? : null,
+                name: !isAnonymous ? vote['voter_name'] as String? : null,
+                size: 28,
               ),
               const SizedBox(width: 8),
               // 名称

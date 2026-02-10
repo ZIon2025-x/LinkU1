@@ -17,26 +17,33 @@ class TaskExpertRepository {
   /// 获取任务达人列表
   Future<TaskExpertListResponse> getExperts({
     int page = 1,
-    int pageSize = 20,
+    int pageSize = 50,
     String? keyword,
   }) async {
+    // 后端使用 limit/offset 分页，不支持 keyword（task_expert_routes.py）
+    final offset = (page - 1) * pageSize;
     final params = {
-      'page': page,
-      'page_size': pageSize,
-      if (keyword != null) 'keyword': keyword,
+      'limit': pageSize,
+      'offset': offset,
     };
 
     // 无搜索时使用缓存（达人列表变动少，使用长TTL）
     if (keyword == null) {
       final cacheKey =
           CacheManager.buildKey(CacheManager.prefixTaskExperts, params);
-      final cached = _cache.get<Map<String, dynamic>>(cacheKey);
+      final cached = _cache.get<dynamic>(cacheKey);
       if (cached != null) {
-        return TaskExpertListResponse.fromJson(cached);
+        if (cached is List) {
+          return TaskExpertListResponse.fromList(cached,
+              page: page, pageSize: pageSize);
+        } else if (cached is Map<String, dynamic>) {
+          return TaskExpertListResponse.fromJson(cached);
+        }
       }
     }
 
-    final response = await _apiService.get<Map<String, dynamic>>(
+    // 后端返回原始数组（List），非分页对象
+    final response = await _apiService.get<dynamic>(
       ApiEndpoints.taskExperts,
       queryParameters: params,
     );
@@ -51,7 +58,13 @@ class TaskExpertRepository {
       await _cache.set(cacheKey, response.data!, ttl: CacheManager.longTTL);
     }
 
-    return TaskExpertListResponse.fromJson(response.data!);
+    // 处理后端返回的数组或对象
+    if (response.data is List) {
+      return TaskExpertListResponse.fromList(response.data as List<dynamic>,
+          page: page, pageSize: pageSize);
+    }
+    return TaskExpertListResponse.fromJson(
+        response.data as Map<String, dynamic>);
   }
 
   /// 获取达人详情

@@ -256,7 +256,8 @@ class FleaMarketListResponse {
           [],
       total: json['total'] as int? ?? 0,
       page: json['page'] as int? ?? 1,
-      pageSize: json['page_size'] as int? ?? 20,
+      // 后端 Pydantic 可能返回 pageSize 或 page_size
+      pageSize: json['page_size'] as int? ?? json['pageSize'] as int? ?? 20,
     );
   }
 }

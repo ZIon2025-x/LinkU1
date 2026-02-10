@@ -8,6 +8,7 @@ import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_radius.dart';
 import '../../../core/utils/l10n_extension.dart';
+import '../../../core/utils/helpers.dart';
 import '../../../core/widgets/app_feedback.dart';
 import '../../../core/widgets/buttons.dart';
 import '../../../data/repositories/user_repository.dart';
@@ -169,7 +170,7 @@ class _EditProfileContentState extends State<_EditProfileContent> {
                           backgroundImage: _selectedImageFile != null
                               ? FileImage(_selectedImageFile!)
                               : (avatarUrl != null
-                                  ? NetworkImage(avatarUrl)
+                                  ? NetworkImage(Helpers.getImageUrl(avatarUrl))
                                   : null),
                           child:
                               _selectedImageFile == null && avatarUrl == null

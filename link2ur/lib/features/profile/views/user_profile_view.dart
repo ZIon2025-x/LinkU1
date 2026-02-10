@@ -8,6 +8,7 @@ import '../../../core/utils/l10n_extension.dart';
 import '../../../core/widgets/loading_view.dart';
 import '../../../core/widgets/error_state_view.dart';
 import '../../../core/widgets/stat_item.dart';
+import '../../../core/widgets/async_image_view.dart';
 import '../../../data/models/user.dart';
 import '../../../data/repositories/user_repository.dart';
 import '../../../data/repositories/task_repository.dart';
@@ -100,15 +101,11 @@ class _UserProfileViewState extends State<UserProfileView> {
       ),
       child: Column(
         children: [
-          // 头像
-          CircleAvatar(
-            radius: 44,
-            backgroundImage: user.avatar != null
-                ? NetworkImage(user.avatar!)
-                : null,
-            child: user.avatar == null
-                ? const Icon(Icons.person, size: 44)
-                : null,
+          // 头像（使用 AvatarView 正确处理相对路径）
+          AvatarView(
+            imageUrl: user.avatar,
+            name: user.displayName,
+            size: 88,
           ),
           const SizedBox(height: AppSpacing.md),
 

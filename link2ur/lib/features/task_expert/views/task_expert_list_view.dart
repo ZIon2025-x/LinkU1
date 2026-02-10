@@ -12,6 +12,7 @@ import '../../../core/widgets/loading_view.dart';
 import '../../../core/widgets/error_state_view.dart';
 import '../../../core/widgets/empty_state_view.dart';
 import '../../../core/widgets/cards.dart';
+import '../../../core/widgets/async_image_view.dart';
 import '../../../data/repositories/task_expert_repository.dart';
 import '../../../data/models/task_expert.dart';
 import '../bloc/task_expert_bloc.dart';
@@ -183,16 +184,11 @@ class _ExpertCard extends StatelessWidget {
       },
       child: Row(
         children: [
-          // Avatar
-          CircleAvatar(
-            radius: 30,
-            backgroundColor: AppColors.primary.withValues(alpha: 0.1),
-            backgroundImage: expert.avatar != null
-                ? NetworkImage(expert.avatar!)
-                : null,
-            child: expert.avatar == null
-                ? const Icon(Icons.person, color: AppColors.primary, size: 32)
-                : null,
+          // Avatar（使用 AvatarView 正确处理相对路径）
+          AvatarView(
+            imageUrl: expert.avatar,
+            name: expert.displayName,
+            size: 60,
           ),
           AppSpacing.hMd,
           // Expert info

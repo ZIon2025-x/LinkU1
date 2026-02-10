@@ -1,5 +1,7 @@
 import 'package:flutter/services.dart';
 
+import '../config/app_config.dart';
+
 /// 通用工具方法
 class Helpers {
   Helpers._();
@@ -144,7 +146,8 @@ class Helpers {
     if (path.startsWith('http://') || path.startsWith('https://')) {
       return path;
     }
-    final base = baseUrl ?? 'https://api.link2ur.com';
+    // 使用 AppConfig 的 baseUrl，不再硬编码，确保测试/生产环境都能正确加载图片
+    final base = baseUrl ?? AppConfig.instance.baseUrl;
     return '$base$path';
   }
 

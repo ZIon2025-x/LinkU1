@@ -423,16 +423,10 @@ class _PostHeader extends StatelessWidget {
                       ),
                     ],
                   ),
-                  child: CircleAvatar(
-                    radius: 22,
-                    backgroundColor: AppColors.primary,
-                    backgroundImage: post.author?.avatar != null
-                        ? NetworkImage(post.author!.avatar!)
-                        : null,
-                    child: post.author?.avatar == null
-                        ? const Icon(Icons.person,
-                            color: Colors.white, size: 20)
-                        : null,
+                  child: AvatarView(
+                    imageUrl: post.author?.avatar,
+                    name: post.author?.name,
+                    size: 44,
                   ),
                 ),
               ),
@@ -807,17 +801,10 @@ class _ReplyCard extends StatelessWidget {
                   ),
                 ],
               ),
-              child: CircleAvatar(
-                radius: isSubReply ? 14 : 16,
-                backgroundColor: AppColors.skeletonBase,
-                backgroundImage: reply.author?.avatar != null
-                    ? NetworkImage(reply.author!.avatar!)
-                    : null,
-                child: reply.author?.avatar == null
-                    ? Icon(Icons.person,
-                        size: isSubReply ? 12 : 14,
-                        color: AppColors.textTertiaryLight)
-                    : null,
+              child: AvatarView(
+                imageUrl: reply.author?.avatar,
+                name: reply.author?.name,
+                size: isSubReply ? 28 : 32,
               ),
             ),
           ),

@@ -220,14 +220,34 @@ class TaskExpertListResponse {
   bool get hasMore => experts.length >= pageSize;
 
   factory TaskExpertListResponse.fromJson(Map<String, dynamic> json) {
+    // 兼容后端返回的不同 key
+    final rawList = (json['items'] as List<dynamic>?) ??
+        (json['experts'] as List<dynamic>?) ??
+        [];
     return TaskExpertListResponse(
-      experts: (json['items'] as List<dynamic>?)
-              ?.map((e) => TaskExpert.fromJson(e as Map<String, dynamic>))
-              .toList() ??
-          [],
+      experts: rawList
+          .map((e) => TaskExpert.fromJson(e as Map<String, dynamic>))
+          .toList(),
       total: json['total'] as int? ?? 0,
       page: json['page'] as int? ?? 1,
-      pageSize: json['page_size'] as int? ?? 20,
+      pageSize: json['page_size'] as int? ?? json['limit'] as int? ?? 20,
+    );
+  }
+
+  /// 从原始列表构造（后端 GET /api/task-experts 返回的是数组）
+  factory TaskExpertListResponse.fromList(
+    List<dynamic> list, {
+    int page = 1,
+    int pageSize = 50,
+  }) {
+    final experts = list
+        .map((e) => TaskExpert.fromJson(e as Map<String, dynamic>))
+        .toList();
+    return TaskExpertListResponse(
+      experts: experts,
+      total: experts.length,
+      page: page,
+      pageSize: pageSize,
     );
   }
 }

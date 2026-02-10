@@ -275,9 +275,19 @@ class ForumBloc extends Bloc<ForumEvent, ForumState> {
     ForumLoadCategories event,
     Emitter<ForumState> emit,
   ) async {
+    // 防止重复加载
+    if (state.status == ForumStatus.loading) return;
+    final hasData = state.categories.isNotEmpty;
+    if (!hasData) {
+      emit(state.copyWith(status: ForumStatus.loading));
+    }
+
     try {
       final categories = await _forumRepository.getCategories();
-      emit(state.copyWith(categories: categories));
+      emit(state.copyWith(
+        status: ForumStatus.loaded,
+        categories: categories,
+      ));
     } catch (e) {
       AppLogger.error('Failed to load forum categories', e);
       if (state.categories.isEmpty) {
@@ -356,19 +366,31 @@ class ForumBloc extends Bloc<ForumEvent, ForumState> {
     emit(state.copyWith(isRefreshing: true));
 
     try {
-      final response = await _forumRepository.getPosts(
-        page: 1,
-        categoryId: state.selectedCategoryId,
-      );
+      // 刷新板块列表（社区主页使用）
+      final categories = await _forumRepository.getCategories();
 
-      emit(state.copyWith(
-        status: ForumStatus.loaded,
-        posts: response.posts,
-        total: response.total,
-        page: 1,
-        hasMore: response.hasMore,
-        isRefreshing: false,
-      ));
+      // 如果当前有选中分类，也刷新帖子
+      if (state.selectedCategoryId != null) {
+        final response = await _forumRepository.getPosts(
+          page: 1,
+          categoryId: state.selectedCategoryId,
+        );
+        emit(state.copyWith(
+          status: ForumStatus.loaded,
+          categories: categories,
+          posts: response.posts,
+          total: response.total,
+          page: 1,
+          hasMore: response.hasMore,
+          isRefreshing: false,
+        ));
+      } else {
+        emit(state.copyWith(
+          status: ForumStatus.loaded,
+          categories: categories,
+          isRefreshing: false,
+        ));
+      }
     } catch (e) {
       emit(state.copyWith(isRefreshing: false));
     }

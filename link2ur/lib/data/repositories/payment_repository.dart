@@ -61,13 +61,16 @@ class PaymentRepository {
     int page = 1,
     int pageSize = 20,
   }) async {
-    final params = {'page': page, 'page_size': pageSize};
+    // 后端使用 skip/limit 分页（coupon_points_routes.py）
+    final skip = (page - 1) * pageSize;
+    final params = {'skip': skip, 'limit': pageSize};
     final cacheKey =
         CacheManager.buildKey('${CacheManager.prefixPayment}history_', params);
 
     final cached = _cache.get<Map<String, dynamic>>(cacheKey);
     if (cached != null) {
-      final items = cached['items'] as List<dynamic>? ?? [];
+      // 后端返回 "payments" key
+      final items = cached['payments'] as List<dynamic>? ?? [];
       return items.map((e) => e as Map<String, dynamic>).toList();
     }
 
@@ -83,7 +86,8 @@ class PaymentRepository {
     // 支付数据使用个人TTL
     await _cache.set(cacheKey, response.data!, ttl: CacheManager.personalTTL);
 
-    final items = response.data!['items'] as List<dynamic>? ?? [];
+    // 后端返回 "payments" key（非 "items"）
+    final items = response.data!['payments'] as List<dynamic>? ?? [];
     return items.map((e) => e as Map<String, dynamic>).toList();
   }
 

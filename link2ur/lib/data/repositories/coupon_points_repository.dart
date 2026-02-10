@@ -33,11 +33,12 @@ class CouponPointsRepository {
     int pageSize = 20,
     String? type,
   }) async {
+    // 后端使用 page + limit 分页（coupon_points_routes.py）
     final response = await _apiService.get<Map<String, dynamic>>(
       ApiEndpoints.pointsTransactions,
       queryParameters: {
         'page': page,
-        'page_size': pageSize,
+        'limit': pageSize,
         if (type != null) 'type': type,
       },
     );
@@ -46,7 +47,8 @@ class CouponPointsRepository {
       throw CouponPointsException(response.message ?? '获取交易记录失败');
     }
 
-    final items = response.data!['items'] as List<dynamic>? ?? [];
+    // 后端返回 "data" key（非 "items"）
+    final items = response.data!['data'] as List<dynamic>? ?? [];
     return items
         .map((e) => PointsTransaction.fromJson(e as Map<String, dynamic>))
         .toList();
@@ -111,7 +113,8 @@ class CouponPointsRepository {
 
   /// 获取可用优惠券列表
   Future<List<Coupon>> getAvailableCoupons() async {
-    final response = await _apiService.get<List<dynamic>>(
+    // 后端返回 {"data": [...]}（coupon_points_routes.py）
+    final response = await _apiService.get<Map<String, dynamic>>(
       ApiEndpoints.availableCoupons,
     );
 
@@ -119,7 +122,8 @@ class CouponPointsRepository {
       throw CouponPointsException(response.message ?? '获取优惠券失败');
     }
 
-    return response.data!
+    final items = response.data!['data'] as List<dynamic>? ?? [];
+    return items
         .map((e) => Coupon.fromJson(e as Map<String, dynamic>))
         .toList();
   }
@@ -128,7 +132,8 @@ class CouponPointsRepository {
   Future<List<UserCoupon>> getMyCoupons({
     String? status,
   }) async {
-    final response = await _apiService.get<List<dynamic>>(
+    // 后端返回 {"data": [...]}（coupon_points_routes.py）
+    final response = await _apiService.get<Map<String, dynamic>>(
       ApiEndpoints.myCoupons,
       queryParameters: {
         if (status != null) 'status': status,
@@ -139,7 +144,8 @@ class CouponPointsRepository {
       throw CouponPointsException(response.message ?? '获取我的优惠券失败');
     }
 
-    return response.data!
+    final items = response.data!['data'] as List<dynamic>? ?? [];
+    return items
         .map((e) => UserCoupon.fromJson(e as Map<String, dynamic>))
         .toList();
   }

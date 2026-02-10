@@ -284,15 +284,11 @@ class _ProfileHeader extends StatelessWidget {
       ),
       child: Column(
         children: [
-          // Avatar
-          CircleAvatar(
-            radius: 50,
-            backgroundColor: AppColors.primary.withValues(alpha: 0.2),
-            backgroundImage:
-                expert.avatar != null ? NetworkImage(expert.avatar!) : null,
-            child: expert.avatar == null
-                ? const Icon(Icons.person, color: AppColors.primary, size: 50)
-                : null,
+          // Avatar（使用 AvatarView 正确处理相对路径）
+          AvatarView(
+            imageUrl: expert.avatar,
+            name: expert.displayName,
+            size: 100,
           ),
           AppSpacing.vMd,
           // Name with verification badge
