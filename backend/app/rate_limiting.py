@@ -54,9 +54,26 @@ class RateLimiter:
         return "unknown"
     
     def _get_user_id(self, request: Request) -> Optional[str]:
-        """从请求中获取用户ID（如果已认证）"""
+        """从请求中获取用户ID（如果已认证）
+        
+        优先通过 session_id cookie 获取（主认证方式），
+        其次尝试 access_token cookie 和 Authorization Bearer header。
+        """
         try:
-            # 1. 尝试从 access_token cookie 中解析用户ID（Web端）
+            # 1. 尝试从 session_id cookie 获取用户ID（主要认证方式，Web端和iOS端共用）
+            session_id = request.cookies.get("session_id")
+            if not session_id:
+                session_id = request.headers.get("X-Session-ID")
+            if session_id:
+                try:
+                    from app.secure_auth import SecureAuthManager
+                    session = SecureAuthManager.get_session(session_id, update_activity=False)
+                    if session and hasattr(session, 'user_id') and session.user_id:
+                        return session.user_id
+                except Exception:
+                    pass
+            
+            # 2. 回退：尝试从 access_token cookie 中解析用户ID
             access_token = request.cookies.get("access_token")
             if access_token:
                 from app.security import decode_token
@@ -64,7 +81,7 @@ class RateLimiter:
                 if payload and "sub" in payload:
                     return payload["sub"]
             
-            # 2. 尝试从 Authorization Bearer header 中解析用户ID（iOS/移动端）
+            # 3. 回退：尝试从 Authorization Bearer header 中解析用户ID
             auth_header = request.headers.get("Authorization")
             if auth_header and auth_header.startswith("Bearer "):
                 token = auth_header[7:]
