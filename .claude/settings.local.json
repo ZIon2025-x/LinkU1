@@ -10,7 +10,11 @@
       "Bash(flutter analyze:*)",
       "Bash(find:*)",
       "Bash(sort:*)",
-      "Bash(wc:*)"
+      "Bash(wc:*)",
+      "Bash(dir:*)",
+      "Bash(python:*)",
+      "Bash(del \"F:\\\\python_work\\\\LinkU\\\\link2ur\\\\assets\\\\images\\\\service.png\")",
+      "Bash(del \"F:\\\\python_work\\\\LinkU\\\\link2ur\\\\assets\\\\images\\\\student_verification_banner.png\")"
     ]
   }
 }

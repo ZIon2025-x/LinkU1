@@ -17,13 +17,13 @@ class AppAssets {
   static const String fleaMarketBanner = 'assets/images/flea_market_banner.jpeg';
 
   /// 学生认证Banner
-  static const String studentVerificationBanner = 'assets/images/student_verification_banner.png';
+  static const String studentVerificationBanner = 'assets/images/student_verification_banner.webp';
 
   /// 通用图片
   static const String any = 'assets/images/any.png';
 
   /// 服务图片
-  static const String service = 'assets/images/service.png';
+  static const String service = 'assets/images/service.webp';
 
   // ==================== 预设头像 ====================
   static const String avatar1 = 'assets/images/avatars/avatar1.png';
