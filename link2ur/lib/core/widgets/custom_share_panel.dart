@@ -9,8 +9,10 @@ import '../design/app_spacing.dart';
 import '../design/app_typography.dart';
 import '../design/app_radius.dart';
 import '../constants/app_assets.dart';
+import '../utils/l10n_extension.dart';
 import '../utils/wechat_share_manager.dart';
 import '../utils/qq_share_manager.dart';
+import '../../l10n/app_localizations.dart';
 
 /// 分享平台枚举
 enum SharePlatform {
@@ -30,18 +32,19 @@ enum SharePlatform {
 
 /// 分享平台扩展
 extension SharePlatformExtension on SharePlatform {
-  String get displayName {
+  /// 获取本地化的显示名称
+  String getDisplayName(AppLocalizations l10n) {
     switch (this) {
       case SharePlatform.wechat:
-        return '微信';
+        return l10n.shareWechat;
       case SharePlatform.wechatMoments:
-        return '朋友圈';
+        return l10n.shareWechatMoments;
       case SharePlatform.qq:
         return 'QQ';
       case SharePlatform.qzone:
-        return 'QQ空间';
+        return l10n.shareQzone;
       case SharePlatform.weibo:
-        return '微博';
+        return l10n.shareWeibo;
       case SharePlatform.facebook:
         return 'Facebook';
       case SharePlatform.instagram:
@@ -49,13 +52,13 @@ extension SharePlatformExtension on SharePlatform {
       case SharePlatform.twitter:
         return 'X';
       case SharePlatform.sms:
-        return '短信';
+        return l10n.shareSms;
       case SharePlatform.copyLink:
-        return '复制链接';
+        return l10n.shareCopyLink;
       case SharePlatform.generateImage:
-        return '生成图片';
+        return l10n.shareGenerateImage;
       case SharePlatform.more:
-        return '更多';
+        return l10n.shareMore;
     }
   }
 
@@ -63,20 +66,20 @@ extension SharePlatformExtension on SharePlatform {
     switch (this) {
       case SharePlatform.wechat:
       case SharePlatform.wechatMoments:
-        return const Color(0xFF07C160);
+        return AppColors.wechatGreen;
       case SharePlatform.qq:
       case SharePlatform.qzone:
-        return const Color(0xFF1296DB);
+        return AppColors.qqBlue;
       case SharePlatform.weibo:
-        return const Color(0xFFE6162D);
+        return AppColors.weiboRed;
       case SharePlatform.facebook:
-        return const Color(0xFF1877F2);
+        return AppColors.facebookBlue;
       case SharePlatform.instagram:
-        return const Color(0xFFE4405F);
+        return AppColors.instagramPink;
       case SharePlatform.twitter:
-        return const Color(0xFF000000);
+        return Colors.black;
       case SharePlatform.sms:
-        return const Color(0xFF34C759);
+        return AppColors.online;
       case SharePlatform.copyLink:
         return AppColors.primary;
       case SharePlatform.generateImage:
@@ -221,7 +224,7 @@ class CustomSharePanel extends StatelessWidget {
               child: Row(
                 children: [
                   Text(
-                    '分享到',
+                    context.l10n.shareTitle,
                     style: AppTypography.title3.copyWith(
                       color: isDark
                           ? AppColors.textPrimaryDark
@@ -291,9 +294,9 @@ class CustomSharePanel extends StatelessWidget {
           await Clipboard.setData(ClipboardData(text: url!));
           if (context.mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('链接已复制'),
-                duration: Duration(seconds: 2),
+              SnackBar(
+                content: Text(context.l10n.shareLinkCopied),
+                duration: const Duration(seconds: 2),
               ),
             );
           }
@@ -479,7 +482,7 @@ class _SharePlatformButton extends StatelessWidget {
           const SizedBox(height: 6),
           // 平台名称
           Text(
-            platform.displayName,
+            platform.getDisplayName(context.l10n),
             style: AppTypography.caption.copyWith(
               color: isDark
                   ? AppColors.textPrimaryDark

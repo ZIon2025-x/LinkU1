@@ -170,13 +170,14 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
         pointsAccount: account,
         transactions: [transaction, ...state.transactions],
         isCheckingIn: false,
-        actionMessage: '签到成功！',
+        actionMessage: 'check_in_success',
       ));
     } catch (e) {
       AppLogger.error('Failed to check in', e);
       emit(state.copyWith(
         isCheckingIn: false,
-        actionMessage: '签到失败: ${e.toString()}',
+        actionMessage: 'check_in_failed',
+        errorMessage: e.toString(),
       ));
     }
   }

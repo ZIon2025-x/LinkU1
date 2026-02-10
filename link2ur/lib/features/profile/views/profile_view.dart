@@ -20,7 +20,6 @@ import '../../../data/repositories/user_repository.dart';
 import '../../../data/repositories/task_repository.dart';
 import '../../../data/repositories/forum_repository.dart';
 import '../../auth/bloc/auth_bloc.dart';
-import '../../coupon_points/views/coupon_points_view.dart';
 import 'avatar_picker_view.dart';
 import '../bloc/profile_bloc.dart';
 
@@ -44,8 +43,8 @@ class ProfileView extends StatelessWidget {
             forumRepository: context.read<ForumRepository>(),
           )
             ..add(const ProfileLoadRequested())
-            ..add(const ProfileLoadMyTasks())
-            ..add(const ProfileLoadMyTasks(isPosted: true)),
+            ..add(const ProfileLoadMyTasks(pageSize: 100)) // Load enough for stats count
+            ..add(const ProfileLoadMyTasks(isPosted: true, pageSize: 100)),
           child: _ProfileContent(authState: authState),
         );
       },
@@ -175,20 +174,42 @@ class _ProfileContent extends StatelessWidget {
                 ),
               ],
             ),
-      body: BlocBuilder<ProfileBloc, ProfileState>(
+      body: BlocListener<ProfileBloc, ProfileState>(
+        listenWhen: (prev, curr) => prev.actionMessage != curr.actionMessage && curr.actionMessage != null,
+        listener: (context, state) {
+          final actionType = state.actionMessage;
+          if (actionType == null) return;
+          final l10n = context.l10n;
+          final message = switch (actionType) {
+            'profile_updated' => l10n.profileUpdated,
+            'update_failed' => l10n.profileUpdateFailed,
+            'avatar_updated' => l10n.profileAvatarUpdated,
+            'upload_failed' => l10n.profileUploadFailed,
+            'preferences_updated' => l10n.profilePreferencesUpdated,
+            _ => actionType,
+          };
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(message)),
+          );
+        },
+        child: BlocBuilder<ProfileBloc, ProfileState>(
         builder: (context, profileState) {
           final user = authState.user!;
 
           return RefreshIndicator(
             onRefresh: () async {
-              context.read<ProfileBloc>()
+              final bloc = context.read<ProfileBloc>();
+              bloc
                 ..add(const ProfileLoadRequested())
-                ..add(const ProfileLoadMyTasks())
-                ..add(const ProfileLoadMyTasks(isPosted: true));
-              // 等待 BLoC 状态变化而非人为延迟
-              await context.read<ProfileBloc>().stream.firstWhere(
-                    (s) => s.status != ProfileStatus.loading,
-                    orElse: () => profileState,
+                ..add(const ProfileLoadMyTasks(pageSize: 100))
+                ..add(const ProfileLoadMyTasks(isPosted: true, pageSize: 100));
+              // 等待 BLoC 状态变为非 loading（使用 where + first 避免 orElse 缺陷）
+              await bloc.stream
+                  .where((s) => s.status != ProfileStatus.loading)
+                  .first
+                  .timeout(
+                    const Duration(seconds: 10),
+                    onTimeout: () => bloc.state,
                   );
             },
             child: isDesktop
@@ -198,6 +219,7 @@ class _ProfileContent extends StatelessWidget {
                 : _buildMobileProfile(context, profileState, user, isDark),
           );
         },
+      ),
       ),
     );
   }
@@ -220,7 +242,7 @@ class _ProfileContent extends StatelessWidget {
                   fontWeight: FontWeight.w700,
                   color: isDark
                       ? AppColors.textPrimaryDark
-                      : const Color(0xFF37352F),
+                      : AppColors.desktopTextLight,
                 ),
               ),
               const Spacer(),
@@ -278,7 +300,7 @@ class _ProfileContent extends StatelessWidget {
         border: Border.all(
           color: isDark
               ? Colors.white.withValues(alpha: 0.06)
-              : const Color(0xFFE8E8E5),
+              : AppColors.desktopBorderLight,
         ),
         boxShadow: [
           BoxShadow(
@@ -298,7 +320,10 @@ class _ProfileContent extends StatelessWidget {
                 MaterialPageRoute(
                   builder: (_) => AvatarPickerView(
                     currentAvatar: user.avatar,
-                    onSelected: (newAvatar) {},
+                    onSelected: (newAvatar) {
+                      // 头像更新后刷新 Profile
+                      context.read<ProfileBloc>().add(const ProfileLoadRequested());
+                    },
                   ),
                 ),
               );
@@ -307,24 +332,31 @@ class _ProfileContent extends StatelessWidget {
               alignment: Alignment.bottomRight,
               children: [
                 Container(
-                  width: 80,
-                  height: 80,
+                  width: 86,
+                  height: 86,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: Colors.white,
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.08),
-                        blurRadius: 8,
-                        offset: const Offset(0, 3),
-                      ),
-                    ],
+                    gradient: const LinearGradient(
+                      colors: AppColors.gradientPrimary,
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
                   ),
-                  child: Center(
-                    child: AvatarView(
-                      imageUrl: user.avatar,
-                      name: user.name,
-                      size: 72,
+                  padding: const EdgeInsets.all(3),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: isDark
+                          ? AppColors.cardBackgroundDark
+                          : AppColors.cardBackgroundLight,
+                    ),
+                    padding: const EdgeInsets.all(2),
+                    child: Center(
+                      child: AvatarView(
+                        imageUrl: user.avatar,
+                        name: user.name,
+                        size: 72,
+                      ),
                     ),
                   ),
                 ),
@@ -352,7 +384,7 @@ class _ProfileContent extends StatelessWidget {
                           fontWeight: FontWeight.bold,
                           color: isDark
                               ? AppColors.textPrimaryDark
-                              : const Color(0xFF37352F),
+                              : AppColors.desktopTextLight,
                         ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
@@ -378,7 +410,7 @@ class _ProfileContent extends StatelessWidget {
                     fontSize: 13,
                     color: isDark
                         ? AppColors.textSecondaryDark
-                        : const Color(0xFF9B9A97),
+                        : AppColors.desktopPlaceholderLight,
                   ),
                 ),
               ],
@@ -422,12 +454,22 @@ class _ProfileContent extends StatelessWidget {
             height: 300,
             decoration: BoxDecoration(
               gradient: LinearGradient(
-                colors: [
-                  AppColors.primary.withValues(alpha: 0.15),
-                  Colors.transparent,
-                ],
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: isDark
+                    ? [
+                        AppColors.primary.withValues(alpha: 0.20),
+                        AppColors.purple.withValues(alpha: 0.15),
+                        AppColors.teal.withValues(alpha: 0.12),
+                        AppColors.primary.withValues(alpha: 0.10),
+                      ]
+                    : [
+                        AppColors.primary.withValues(alpha: 0.15),
+                        AppColors.purple.withValues(alpha: 0.12),
+                        AppColors.teal.withValues(alpha: 0.10),
+                        AppColors.primary.withValues(alpha: 0.08),
+                      ],
+                stops: const [0.0, 0.3, 0.6, 1.0],
               ),
             ),
           ),
@@ -469,7 +511,8 @@ class _ProfileContent extends StatelessWidget {
                   builder: (_) => AvatarPickerView(
                     currentAvatar: user.avatar,
                     onSelected: (newAvatar) {
-                      // 刷新页面
+                      // 头像更新后刷新 Profile
+                      context.read<ProfileBloc>().add(const ProfileLoadRequested());
                     },
                   ),
                 ),
@@ -478,26 +521,33 @@ class _ProfileContent extends StatelessWidget {
             child: Stack(
               alignment: Alignment.bottomRight,
               children: [
-                // 白色外圈 + 阴影
+                // 渐变环 + 头像
                 Container(
-                  width: 104,
-                  height: 104,
+                  width: 110,
+                  height: 110,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: Colors.white,
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.08),
-                        blurRadius: 10,
-                        offset: const Offset(0, 5),
-                      ),
-                    ],
+                    gradient: const LinearGradient(
+                      colors: AppColors.gradientPrimary,
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
                   ),
-                  child: Center(
-                    child: AvatarView(
-                      imageUrl: user.avatar,
-                      name: user.name,
-                      size: 96,
+                  padding: const EdgeInsets.all(3),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: isDark
+                          ? AppColors.cardBackgroundDark
+                          : AppColors.cardBackgroundLight,
+                    ),
+                    padding: const EdgeInsets.all(2),
+                    child: Center(
+                      child: AvatarView(
+                        imageUrl: user.avatar,
+                        name: user.name,
+                        size: 96,
+                      ),
                     ),
                   ),
                 ),
@@ -609,9 +659,9 @@ class _ProfileContent extends StatelessWidget {
                 children: [
                   AnimatedCounter(
                     value: inProgressCount,
-                    style: AppTypography.title3.copyWith(
+                    style: AppTypography.title2.copyWith(
                       color: AppColors.primary,
-                      fontWeight: FontWeight.bold,
+                      fontWeight: FontWeight.w700,
                     ),
                   ),
                   AppSpacing.vXs,
@@ -640,9 +690,9 @@ class _ProfileContent extends StatelessWidget {
                 children: [
                   AnimatedCounter(
                     value: completedCount,
-                    style: AppTypography.title3.copyWith(
+                    style: AppTypography.title2.copyWith(
                       color: AppColors.success,
-                      fontWeight: FontWeight.bold,
+                      fontWeight: FontWeight.w700,
                     ),
                   ),
                   AppSpacing.vXs,
@@ -746,7 +796,7 @@ class _ProfileContent extends StatelessWidget {
                   title: context.l10n.profileMyApplications,
                   subtitle: context.l10n.profileMyApplicationsSubtitle,
                   color: Colors.purple,
-                  onTap: () => context.push('/profile/my-tasks'),
+                  onTap: () => context.push('/my-service-applications'),
                 ),
               ],
             ),
@@ -804,7 +854,7 @@ class _ProfileContent extends StatelessWidget {
                   icon: Icons.credit_card,           // creditcard.fill
                   title: context.l10n.profilePaymentAccount,
                   color: AppColors.primary,
-                  onTap: () => context.push('/wallet'),
+                  onTap: () => context.push('/payment/stripe-connect/payments'),
                 ),
                 _divider(isDark),
                 _ProfileRow(
@@ -825,11 +875,7 @@ class _ProfileContent extends StatelessWidget {
                   icon: Icons.local_activity,        // ticket.fill
                   title: context.l10n.profilePointsCoupons,
                   color: Colors.pink,
-                  onTap: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                        builder: (_) => const CouponPointsView()),
-                  ),
+                  onTap: () => context.push('/coupon-points'),
                 ),
                 _divider(isDark),
                 _ProfileRow(
@@ -954,7 +1000,7 @@ class _DesktopStatItem extends StatelessWidget {
             fontSize: 12,
             color: isDark
                 ? AppColors.textSecondaryDark
-                : const Color(0xFF9B9A97),
+                : AppColors.desktopPlaceholderLight,
           ),
         ),
       ],
@@ -994,13 +1040,13 @@ class _DesktopEditButtonState extends State<_DesktopEditButton> {
             color: _isHovered
                 ? (widget.isDark
                     ? Colors.white.withValues(alpha: 0.08)
-                    : const Color(0xFFF0F0EE))
+                    : AppColors.desktopHoverLight)
                 : Colors.transparent,
             borderRadius: BorderRadius.circular(8),
             border: Border.all(
               color: widget.isDark
                   ? Colors.white.withValues(alpha: 0.1)
-                  : const Color(0xFFE8E8E5),
+                  : AppColors.desktopBorderLight,
             ),
           ),
           child: Row(
@@ -1011,7 +1057,7 @@ class _DesktopEditButtonState extends State<_DesktopEditButton> {
                 size: 16,
                 color: widget.isDark
                     ? AppColors.textSecondaryDark
-                    : const Color(0xFF37352F),
+                    : AppColors.desktopTextLight,
               ),
               const SizedBox(width: 6),
               Text(
@@ -1021,7 +1067,7 @@ class _DesktopEditButtonState extends State<_DesktopEditButton> {
                   fontWeight: FontWeight.w500,
                   color: widget.isDark
                       ? AppColors.textPrimaryDark
-                      : const Color(0xFF37352F),
+                      : AppColors.desktopTextLight,
                 ),
               ),
             ],
@@ -1064,12 +1110,19 @@ class _ProfileRow extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         child: Row(
           children: [
-            // 图标背景 (对齐iOS: 38x38 rounded rect with color opacity)
+            // 图标背景 (对齐iOS: 38x38 rounded rect with gradient)
             Container(
               width: 38,
               height: 38,
               decoration: BoxDecoration(
-                color: color.withValues(alpha: 0.12),
+                gradient: LinearGradient(
+                  colors: [
+                    color.withValues(alpha: 0.18),
+                    color.withValues(alpha: 0.12),
+                  ],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Icon(

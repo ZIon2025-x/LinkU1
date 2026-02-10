@@ -57,12 +57,18 @@ class _ServiceDetailContent extends StatelessWidget {
         listenWhen: (prev, curr) => prev.actionMessage != curr.actionMessage,
         listener: (context, state) {
           if (state.actionMessage != null) {
+            final isError = state.actionMessage!.contains('failed');
+            final message = switch (state.actionMessage) {
+              'application_submitted' => context.l10n.actionApplicationSubmitted,
+              'application_failed' => state.errorMessage != null
+                  ? '${context.l10n.actionApplicationFailed}: ${state.errorMessage}'
+                  : context.l10n.actionApplicationFailed,
+              _ => state.actionMessage!,
+            };
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content: Text(state.actionMessage!),
-                backgroundColor: state.actionMessage!.contains('失败')
-                    ? AppColors.error
-                    : AppColors.success,
+                content: Text(message),
+                backgroundColor: isError ? AppColors.error : AppColors.success,
               ),
             );
           }
@@ -474,7 +480,7 @@ class _ReviewsCard extends StatelessWidget {
             const Center(
               child: Padding(
                 padding: EdgeInsets.symmetric(vertical: 20),
-                child: CircularProgressIndicator(),
+                child: LoadingView(),
               ),
             )
           else if (reviews.isEmpty)
@@ -631,7 +637,7 @@ class _TimeSlotsCard extends StatelessWidget {
             const Center(
               child: Padding(
                 padding: EdgeInsets.symmetric(vertical: 12),
-                child: CircularProgressIndicator(),
+                child: LoadingView(),
               ),
             )
           else if (timeSlots.isEmpty)

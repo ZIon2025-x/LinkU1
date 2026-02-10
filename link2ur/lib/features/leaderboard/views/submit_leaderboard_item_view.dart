@@ -80,13 +80,21 @@ class _SubmitLeaderboardItemContentState
           prev.isSubmitting != curr.isSubmitting,
       listener: (context, state) {
         if (state.actionMessage != null && !state.isSubmitting) {
-          final isSuccess = state.actionMessage!.contains('成功') ||
-              state.actionMessage!.contains('success');
-          if (isSuccess) {
+          if (state.actionMessage == 'leaderboard_submitted') {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(content: Text(l10n.leaderboardSubmitSuccess)),
             );
             Navigator.of(context).pop(true);
+          } else if (state.actionMessage == 'submit_failed') {
+            final msg = state.errorMessage != null
+                ? '${l10n.actionSubmitFailed}: ${state.errorMessage}'
+                : l10n.actionSubmitFailed;
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(msg),
+                backgroundColor: AppColors.error,
+              ),
+            );
           }
         }
       },

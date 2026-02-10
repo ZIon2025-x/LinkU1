@@ -714,7 +714,7 @@ class _PaymentContentState extends State<_PaymentContent> {
             width: 24,
             height: 24,
             decoration: BoxDecoration(
-              color: const Color(0xFF07C160),
+              color: AppColors.wechatGreen,
               borderRadius: BorderRadius.circular(4),
             ),
             child:
@@ -731,7 +731,7 @@ class _PaymentContentState extends State<_PaymentContent> {
             width: 24,
             height: 24,
             decoration: BoxDecoration(
-              color: const Color(0xFF1677FF),
+              color: AppColors.alipayBlue,
               borderRadius: BorderRadius.circular(4),
             ),
             child: const Center(

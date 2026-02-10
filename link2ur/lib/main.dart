@@ -59,6 +59,10 @@ void main() async {
   // 网络监测：非阻塞初始化，不影响启动速度
   NetworkMonitor.instance.initialize();
 
+  // 配置全局 ImageCache 大小：扩大缓存以减少重复解码
+  PaintingBinding.instance.imageCache.maximumSize = 200; // 默认 1000 → 200（控制数量）
+  PaintingBinding.instance.imageCache.maximumSizeBytes = 100 << 20; // 100MB
+
   // 初始化Bloc观察者
   Bloc.observer = AppBlocObserver();
 

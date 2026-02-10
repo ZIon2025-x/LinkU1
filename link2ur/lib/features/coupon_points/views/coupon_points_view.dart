@@ -80,8 +80,31 @@ class _CouponPointsContentState extends State<_CouponPointsContent>
       listenWhen: (prev, curr) => curr.actionMessage != null,
       listener: (context, state) {
         if (state.actionMessage != null) {
+          final isError = state.actionMessage!.contains('failed');
+          final message = switch (state.actionMessage) {
+            'check_in_success' => context.l10n.actionCheckInSuccess,
+            'check_in_failed' => state.errorMessage != null
+                ? '${context.l10n.actionCheckInFailed}: ${state.errorMessage}'
+                : context.l10n.actionCheckInFailed,
+            'coupon_claimed' => context.l10n.actionCouponClaimed,
+            'coupon_redeemed' => context.l10n.actionCouponRedeemed,
+            'invite_code_used' => context.l10n.actionInviteCodeUsed,
+            'claim_failed' => state.errorMessage != null
+                ? '${context.l10n.actionSubmitFailed}: ${state.errorMessage}'
+                : context.l10n.actionSubmitFailed,
+            'redeem_failed' => state.errorMessage != null
+                ? '${context.l10n.actionSubmitFailed}: ${state.errorMessage}'
+                : context.l10n.actionSubmitFailed,
+            'invite_code_failed' => state.errorMessage != null
+                ? '${context.l10n.actionSubmitFailed}: ${state.errorMessage}'
+                : context.l10n.actionSubmitFailed,
+            _ => state.actionMessage ?? '',
+          };
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(state.actionMessage!)),
+            SnackBar(
+              content: Text(message),
+              backgroundColor: isError ? AppColors.error : AppColors.success,
+            ),
           );
         }
       },
@@ -161,7 +184,7 @@ class _PointsTab extends StatelessWidget {
                   padding: AppSpacing.allLg,
                   decoration: BoxDecoration(
                     gradient: const LinearGradient(
-                      colors: [Color(0xFFFFD700), Color(0xFFFF9500)],
+                      colors: AppColors.gradientGold,
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
                     ),
@@ -230,7 +253,7 @@ class _PointsTab extends StatelessWidget {
                 AppSpacing.vMd,
 
                 if (state.transactions.isEmpty)
-                  EmptyStateView.noData(title: context.l10n.couponNoPointsRecords)
+                  EmptyStateView.noData(context, title: context.l10n.couponNoPointsRecords)
                 else
                   ListView.builder(
                     shrinkWrap: true,
@@ -460,7 +483,7 @@ class _CouponsTab extends StatelessWidget {
                 AppSpacing.vMd,
 
                 if (state.myCoupons.isEmpty)
-                  EmptyStateView.noData(title: context.l10n.couponNoCoupons)
+                  EmptyStateView.noData(context, title: context.l10n.couponNoCoupons)
                 else
                   ...state.myCoupons
                       .map((coupon) => _MyCouponCard(coupon: coupon)),

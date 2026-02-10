@@ -108,7 +108,7 @@ class _ForumViewState extends State<ForumView> {
             decoration: BoxDecoration(
               color: isDark
                   ? Colors.white.withValues(alpha: 0.06)
-                  : const Color(0xFFF2F2F7),
+                  : AppColors.backgroundLight,
               borderRadius: BorderRadius.circular(9),
             ),
             child: Row(
@@ -253,7 +253,7 @@ class _DesktopSegmentState extends State<_DesktopSegment> {
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
           decoration: BoxDecoration(
             color: widget.isSelected
-                ? (widget.isDark ? const Color(0xFF2C2C2E) : Colors.white)
+                ? (widget.isDark ? AppColors.secondaryBackgroundDark : Colors.white)
                 : (_isHovered
                     ? (widget.isDark
                         ? Colors.white.withValues(alpha: 0.04)
@@ -270,8 +270,8 @@ class _DesktopSegmentState extends State<_DesktopSegment> {
               fontSize: 13,
               fontWeight: widget.isSelected ? FontWeight.w600 : FontWeight.w500,
               color: widget.isSelected
-                  ? (widget.isDark ? Colors.white : const Color(0xFF37352F))
-                  : (widget.isDark ? AppColors.textSecondaryDark : const Color(0xFF9B9A97)),
+                  ? (widget.isDark ? Colors.white : AppColors.desktopTextLight)
+                  : (widget.isDark ? AppColors.textSecondaryDark : AppColors.desktopPlaceholderLight),
             ),
           ),
         ),
@@ -398,8 +398,14 @@ class _ForumTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return BlocBuilder<AuthBloc, AuthState>(
+      buildWhen: (prev, curr) =>
+          prev.isAuthenticated != curr.isAuthenticated ||
+          prev.user?.id != curr.user?.id,
       builder: (context, authState) {
         return BlocBuilder<ForumBloc, ForumState>(
+          buildWhen: (prev, curr) =>
+              prev.categories != curr.categories ||
+              prev.status != curr.status,
           builder: (context, state) {
             if (state.status == ForumStatus.loading &&
                 state.categories.isEmpty) {
@@ -429,6 +435,7 @@ class _ForumTab extends StatelessWidget {
 
             if (visible.isEmpty) {
               return EmptyStateView.noData(
+                context,
                 title: context.l10n.forumNoPosts,
                 description: context.l10n.forumNoPostsHint,
               );
@@ -475,6 +482,10 @@ class _LeaderboardTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return BlocBuilder<LeaderboardBloc, LeaderboardState>(
+      buildWhen: (prev, curr) =>
+          prev.leaderboards != curr.leaderboards ||
+          prev.status != curr.status ||
+          prev.hasMore != curr.hasMore,
       builder: (context, state) {
         if (state.status == LeaderboardStatus.loading &&
             state.leaderboards.isEmpty) {
@@ -495,6 +506,7 @@ class _LeaderboardTab extends StatelessWidget {
 
         if (state.leaderboards.isEmpty) {
           return EmptyStateView.noData(
+            context,
             title: context.l10n.forumNoLeaderboard,
             description: context.l10n.forumNoLeaderboardMessage,
           );
@@ -828,11 +840,11 @@ class _LeaderboardCard extends StatelessWidget {
   List<Color> get _gradient {
     final hash = leaderboard.id.hashCode;
     final gradients = [
-      [const Color(0xFFFF6B6B), const Color(0xFFFF4757)],
-      [const Color(0xFF7C5CFC), const Color(0xFF5F27CD)],
-      [const Color(0xFF2ED573), const Color(0xFF00B894)],
-      [const Color(0xFFFF9500), const Color(0xFFFF6B00)],
-      [const Color(0xFF5856D6), const Color(0xFF007AFF)],
+      AppColors.gradientCoral,
+      AppColors.gradientPurple,
+      AppColors.gradientEmerald,
+      AppColors.gradientOrange,
+      AppColors.gradientIndigo,
     ];
     return gradients[hash.abs() % gradients.length];
   }

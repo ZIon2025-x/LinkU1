@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -297,39 +299,46 @@ class _MainTabViewState extends State<MainTabView> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
+      extendBody: true,
       body: widget.navigationShell,
-      bottomNavigationBar: Container(
-        decoration: BoxDecoration(
-          color: isDark
-              ? AppColors.cardBackgroundDark
-              : AppColors.cardBackgroundLight,
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.05),
-              blurRadius: 10,
-              offset: const Offset(0, -2),
+      bottomNavigationBar: ClipRect(
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+          child: Container(
+            decoration: BoxDecoration(
+              color: isDark
+                  ? AppColors.cardBackgroundDark.withValues(alpha: 0.85)
+                  : AppColors.cardBackgroundLight.withValues(alpha: 0.88),
+              border: Border(
+                top: BorderSide(
+                  color: isDark
+                      ? Colors.white.withValues(alpha: 0.06)
+                      : Colors.black.withValues(alpha: 0.04),
+                  width: 0.5,
+                ),
+              ),
             ),
-          ],
-        ),
-        child: SafeArea(
-          child: SizedBox(
-            height: 60,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: List.generate(_mobileTabs.length, (index) {
-                final tab = _mobileTabs[index];
-                final isSelected = index == _currentIndex;
+            child: SafeArea(
+              child: SizedBox(
+                height: 60,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+                  children: List.generate(_mobileTabs.length, (index) {
+                    final tab = _mobileTabs[index];
+                    final isSelected = index == _currentIndex;
 
-                if (tab.isCenter) {
-                  return _buildCenterButton();
-                }
+                    if (tab.isCenter) {
+                      return _buildCenterButton();
+                    }
 
-                return _buildMobileTabItem(
-                  tab: tab,
-                  isSelected: isSelected,
-                  index: index,
-                );
-              }),
+                    return _buildMobileTabItem(
+                      tab: tab,
+                      isSelected: isSelected,
+                      index: index,
+                    );
+                  }),
+                ),
+              ),
             ),
           ),
         ),
@@ -343,10 +352,40 @@ class _MainTabViewState extends State<MainTabView> {
     required int index,
   }) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    const selectedColor = AppColors.primary;
     final unselectedColor = isDark
         ? AppColors.textSecondaryDark
         : AppColors.textSecondaryLight;
+
+    Widget iconWidget;
+    if (index == 3) {
+      // 通知 Tab — 独立 RepaintBoundary 隔离徽章重建
+      iconWidget = RepaintBoundary(
+        child: _NotificationTabIcon(
+          tab: tab,
+          isSelected: isSelected,
+          selectedColor: AppColors.primary,
+          unselectedColor: unselectedColor,
+        ),
+      );
+    } else {
+      final icon = Icon(
+        isSelected ? tab.activeIcon : tab.icon,
+        size: 24,
+        color: isSelected ? Colors.white : unselectedColor,
+      );
+      // 选中态：渐变图标
+      iconWidget = isSelected
+          ? ShaderMask(
+              shaderCallback: (bounds) => const LinearGradient(
+                colors: AppColors.gradientPrimary,
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ).createShader(bounds),
+              blendMode: BlendMode.srcIn,
+              child: icon,
+            )
+          : icon;
+    }
 
     return Expanded(
       child: GestureDetector(
@@ -355,32 +394,31 @@ class _MainTabViewState extends State<MainTabView> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            // 简化：去掉 AnimatedScale + AnimatedSwitcher，直接切换图标颜色
-            // 对标 iOS UITabBar 原生行为（无缩放动画，仅颜色切换）
-            index == 3
-                // 提取为独立组件 + RepaintBoundary，避免通知徽章变化导致整个 tab bar 重建
-                ? RepaintBoundary(
-                    child: _NotificationTabIcon(
-                      tab: tab,
-                      isSelected: isSelected,
-                      selectedColor: selectedColor,
-                      unselectedColor: unselectedColor,
-                    ),
-                  )
-                : Icon(
-                    isSelected ? tab.activeIcon : tab.icon,
-                    size: 24,
-                    color: isSelected ? selectedColor : unselectedColor,
-                  ),
+            iconWidget,
             const SizedBox(height: 4),
-            Text(
-              _getTabLabel(context, tab.label),
-              style: TextStyle(
-                fontSize: 10,
-                fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
-                color: isSelected ? selectedColor : unselectedColor,
+            // 选中态：小圆点指示器代替文字颜色变化
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              curve: Curves.easeOutCubic,
+              width: isSelected ? 4 : 0,
+              height: isSelected ? 4 : 0,
+              decoration: BoxDecoration(
+                gradient: isSelected
+                    ? const LinearGradient(colors: AppColors.gradientPrimary)
+                    : null,
+                shape: BoxShape.circle,
               ),
             ),
+            if (!isSelected) ...[
+              Text(
+                _getTabLabel(context, tab.label),
+                style: TextStyle(
+                  fontSize: 10,
+                  fontWeight: FontWeight.normal,
+                  color: unselectedColor,
+                ),
+              ),
+            ],
           ],
         ),
       ),

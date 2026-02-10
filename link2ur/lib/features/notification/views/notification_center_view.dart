@@ -9,6 +9,7 @@ import '../../../core/widgets/animated_list_item.dart';
 import '../../../core/widgets/skeleton_view.dart';
 import '../../../core/widgets/error_state_view.dart';
 import '../../../core/widgets/empty_state_view.dart';
+import '../../../core/widgets/loading_view.dart';
 import '../bloc/notification_bloc.dart';
 import '../../../data/models/notification.dart' as models;
 
@@ -108,7 +109,7 @@ class _SystemNotificationListState extends State<_SystemNotificationList> {
         }
 
         if (state.notifications.isEmpty) {
-          return EmptyStateView.noNotifications();
+          return EmptyStateView.noNotifications(context);
         }
 
         return RefreshIndicator(
@@ -129,7 +130,7 @@ class _SystemNotificationListState extends State<_SystemNotificationList> {
                 return const Center(
                   child: Padding(
                     padding: EdgeInsets.all(16.0),
-                    child: CircularProgressIndicator(),
+                    child: LoadingIndicator(),
                   ),
                 );
               }
@@ -197,7 +198,7 @@ class _InteractionNotificationListState
         }
 
         if (state.notifications.isEmpty) {
-          return EmptyStateView.noNotifications();
+          return EmptyStateView.noNotifications(context);
         }
 
         return RefreshIndicator(
@@ -218,7 +219,7 @@ class _InteractionNotificationListState
                 return const Center(
                   child: Padding(
                     padding: EdgeInsets.all(16.0),
-                    child: CircularProgressIndicator(),
+                    child: LoadingIndicator(),
                   ),
                 );
               }

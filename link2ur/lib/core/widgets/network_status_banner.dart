@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import '../design/app_colors.dart';
 import '../design/app_typography.dart';
+import '../utils/l10n_extension.dart';
 import '../utils/network_monitor.dart';
 
 /// 网络状态横幅
@@ -109,7 +110,7 @@ class _NetworkStatusBannerState extends State<NetworkStatusBanner>
                         ),
                         const SizedBox(width: 8),
                         Text(
-                          _isOffline ? '网络已断开' : '网络已恢复',
+                          _isOffline ? context.l10n.networkDisconnected : context.l10n.networkRestored,
                           style: AppTypography.caption.copyWith(
                             color: Colors.white,
                             fontWeight: FontWeight.w500,

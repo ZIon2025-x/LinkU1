@@ -4,6 +4,28 @@ part of 'home_view.dart';
 class _RecommendedTab extends StatelessWidget {
   const _RecommendedTab();
 
+  /// 区块间渐变分隔线
+  static Widget _sectionDivider() {
+    return SliverToBoxAdapter(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        child: Container(
+          height: 1,
+          margin: const EdgeInsets.symmetric(horizontal: 32),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [
+                Colors.transparent,
+                AppColors.primary.withValues(alpha: 0.1),
+                Colors.transparent,
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDesktop = ResponsiveUtils.isDesktop(context);
@@ -27,12 +49,16 @@ class _RecommendedTab extends StatelessWidget {
                 child: _GreetingSection(),
               ),
 
+              _sectionDivider(),
+
               // Banner 区域 — 桌面端并排，移动端轮播
               SliverToBoxAdapter(
                 child: isDesktop
                     ? const _DesktopBannerRow()
                     : const _BannerCarousel(),
               ),
+
+              _sectionDivider(),
 
               // 推荐任务标题
               SliverToBoxAdapter(
@@ -51,7 +77,7 @@ class _RecommendedTab extends StatelessWidget {
                         style: AppTypography.title3.copyWith(
                           color: Theme.of(context).brightness == Brightness.dark
                               ? AppColors.textPrimaryDark
-                              : const Color(0xFF37352F),
+                              : AppColors.desktopTextLight,
                         ),
                       ),
                       _ViewAllButton(
@@ -85,6 +111,7 @@ class _RecommendedTab extends StatelessWidget {
               else if (state.recommendedTasks.isEmpty)
                 SliverFillRemaining(
                   child: EmptyStateView.noTasks(
+                    context,
                     actionText: context.l10n.homePublishTask,
                     onAction: () => context.push('/tasks/create'),
                   ),
@@ -95,6 +122,8 @@ class _RecommendedTab extends StatelessWidget {
                   _buildDesktopTaskGrid(context, state)
                 else
                   _buildMobileTaskScroll(state),
+
+                _sectionDivider(),
 
                 // 热门活动标题
                 SliverToBoxAdapter(
@@ -113,7 +142,7 @@ class _RecommendedTab extends StatelessWidget {
                           style: AppTypography.title3.copyWith(
                             color: Theme.of(context).brightness == Brightness.dark
                                 ? AppColors.textPrimaryDark
-                                : const Color(0xFF37352F),
+                                : AppColors.desktopTextLight,
                           ),
                         ),
                         _ViewAllButton(
@@ -131,6 +160,8 @@ class _RecommendedTab extends StatelessWidget {
                       : _PopularActivitiesSection(),
                 ),
 
+                _sectionDivider(),
+
                 // 最新动态标题
                 SliverToBoxAdapter(
                   child: Padding(
@@ -145,7 +176,7 @@ class _RecommendedTab extends StatelessWidget {
                       style: AppTypography.title3.copyWith(
                         color: Theme.of(context).brightness == Brightness.dark
                             ? AppColors.textPrimaryDark
-                            : const Color(0xFF37352F),
+                            : AppColors.desktopTextLight,
                       ),
                     ),
                   ),
@@ -279,7 +310,7 @@ class _DesktopBannerRow extends StatelessWidget {
               child: _BannerItem(
                 title: context.l10n.homeSecondHandMarket,
                 subtitle: context.l10n.homeSecondHandSubtitle,
-                gradient: const [Color(0xFF34C759), Color(0xFF30D158)],
+                gradient: AppColors.gradientGreen,
                 icon: Icons.storefront,
                 imagePath: AppAssets.fleaMarketBanner,
                 onTap: () => context.push('/flea-market'),
@@ -290,7 +321,7 @@ class _DesktopBannerRow extends StatelessWidget {
               child: _BannerItem(
                 title: context.l10n.homeStudentVerification,
                 subtitle: context.l10n.homeStudentVerificationSubtitle,
-                gradient: const [Color(0xFF5856D6), Color(0xFF007AFF)],
+                gradient: AppColors.gradientIndigo,
                 icon: Icons.school,
                 imagePath: AppAssets.studentVerificationBanner,
                 onTap: () => context.push('/student-verification'),
@@ -301,7 +332,7 @@ class _DesktopBannerRow extends StatelessWidget {
               child: _BannerItem(
                 title: context.l10n.homeBecomeExpert,
                 subtitle: context.l10n.homeBecomeExpertSubtitle,
-                gradient: const [Color(0xFFFF9500), Color(0xFFFF6B00)],
+                gradient: AppColors.gradientOrange,
                 icon: Icons.star,
                 onTap: () => context.push('/task-experts/intro'),
               ),
@@ -329,7 +360,7 @@ class _DesktopActivitiesRow extends StatelessWidget {
               child: _ActivityCard(
                 title: context.l10n.homeNewUserReward,
                 subtitle: context.l10n.homeNewUserRewardSubtitle,
-                gradient: const [Color(0xFFFF6B6B), Color(0xFFFF4757)],
+                gradient: AppColors.gradientCoral,
                 icon: Icons.card_giftcard,
                 onTap: () => context.push('/activities'),
               ),
@@ -339,7 +370,7 @@ class _DesktopActivitiesRow extends StatelessWidget {
               child: _ActivityCard(
                 title: context.l10n.homeInviteFriends,
                 subtitle: context.l10n.homeInviteFriendsSubtitle,
-                gradient: const [Color(0xFF7C5CFC), Color(0xFF5F27CD)],
+                gradient: AppColors.gradientPurple,
                 icon: Icons.people,
                 onTap: () => context.push('/activities'),
               ),
@@ -349,7 +380,7 @@ class _DesktopActivitiesRow extends StatelessWidget {
               child: _ActivityCard(
                 title: context.l10n.homeDailyCheckIn,
                 subtitle: context.l10n.homeDailyCheckInSubtitle,
-                gradient: const [Color(0xFF2ED573), Color(0xFF00B894)],
+                gradient: AppColors.gradientEmerald,
                 icon: Icons.calendar_today,
                 onTap: () => context.push('/activities'),
               ),
@@ -406,7 +437,7 @@ class _DesktopTaskCardState extends State<_DesktopTaskCard> {
             color: isDark ? AppColors.cardBackgroundDark : Colors.white,
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
-              color: isDark ? Colors.white.withValues(alpha: 0.06) : const Color(0xFFE8E8E5),
+              color: isDark ? Colors.white.withValues(alpha: 0.06) : AppColors.desktopBorderLight,
               width: 1,
             ),
             boxShadow: [
@@ -462,7 +493,7 @@ class _DesktopTaskCardState extends State<_DesktopTaskCard> {
                             children: [
                               Icon(
                                 task.isOnline ? Icons.language : Icons.location_on,
-                                size: 11, color: isDark ? Colors.white : const Color(0xFF37352F),
+                                size: 11, color: isDark ? Colors.white : AppColors.desktopTextLight,
                               ),
                               const SizedBox(width: 3),
                               ConstrainedBox(
@@ -471,7 +502,7 @@ class _DesktopTaskCardState extends State<_DesktopTaskCard> {
                                   task.location!,
                                   style: TextStyle(
                                     fontSize: 11, fontWeight: FontWeight.w500,
-                                    color: isDark ? Colors.white : const Color(0xFF37352F),
+                                    color: isDark ? Colors.white : AppColors.desktopTextLight,
                                   ),
                                   maxLines: 1, overflow: TextOverflow.ellipsis,
                                 ),
@@ -487,12 +518,12 @@ class _DesktopTaskCardState extends State<_DesktopTaskCard> {
                         padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
                         decoration: BoxDecoration(
                           gradient: const LinearGradient(
-                            colors: [Color(0xFFFF9500), Color(0xFFFF6B00)],
+                            colors: AppColors.gradientOrange,
                           ),
                           borderRadius: BorderRadius.circular(999),
                           boxShadow: [
                             BoxShadow(
-                              color: const Color(0xFFFF9500).withValues(alpha: 0.4),
+                              color: AppColors.busy.withValues(alpha: 0.4),
                               blurRadius: 6,
                               offset: const Offset(0, 2),
                             ),
@@ -528,7 +559,7 @@ class _DesktopTaskCardState extends State<_DesktopTaskCard> {
                         task.displayTitle,
                         style: TextStyle(
                           fontSize: 14, fontWeight: FontWeight.w600,
-                          color: isDark ? AppColors.textPrimaryDark : const Color(0xFF37352F),
+                          color: isDark ? AppColors.textPrimaryDark : AppColors.desktopTextLight,
                         ),
                         maxLines: 1, overflow: TextOverflow.ellipsis,
                       ),
@@ -537,7 +568,7 @@ class _DesktopTaskCardState extends State<_DesktopTaskCard> {
                         Text(
                           task.displayDescription!,
                           style: TextStyle(
-                            fontSize: 12, color: isDark ? AppColors.textSecondaryDark : const Color(0xFF9B9A97),
+                            fontSize: 12, color: isDark ? AppColors.textSecondaryDark : AppColors.desktopPlaceholderLight,
                             height: 1.4,
                           ),
                           maxLines: 2, overflow: TextOverflow.ellipsis,
@@ -548,13 +579,13 @@ class _DesktopTaskCardState extends State<_DesktopTaskCard> {
                         children: [
                           if (task.deadline != null) ...[
                             Icon(Icons.schedule, size: 12,
-                                color: isDark ? AppColors.textSecondaryDark : const Color(0xFF9B9A97)),
+                                color: isDark ? AppColors.textSecondaryDark : AppColors.desktopPlaceholderLight),
                             const SizedBox(width: 3),
                             Expanded(
                               child: Text(
                                 _formatDeadline(context, task.deadline!),
                                 style: TextStyle(fontSize: 11,
-                                    color: isDark ? AppColors.textSecondaryDark : const Color(0xFF9B9A97)),
+                                    color: isDark ? AppColors.textSecondaryDark : AppColors.desktopPlaceholderLight),
                                 maxLines: 1, overflow: TextOverflow.ellipsis,
                               ),
                             ),

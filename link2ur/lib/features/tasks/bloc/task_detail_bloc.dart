@@ -262,6 +262,9 @@ class TaskDetailBloc extends Bloc<TaskDetailEvent, TaskDetailState> {
 
   int? get _taskId => state.task?.id;
 
+  /// 刷新任务详情 — 复用于各操作完成后
+  Future<Task> _refreshTask() => _taskRepository.getTaskDetail(_taskId!);
+
   Future<void> _onLoadRequested(
     TaskDetailLoadRequested event,
     Emitter<TaskDetailState> emit,
@@ -366,17 +369,18 @@ class TaskDetailBloc extends Bloc<TaskDetailEvent, TaskDetailState> {
 
     try {
       await _taskRepository.applyTask(_taskId!, message: event.message);
-      final task = await _taskRepository.getTaskDetail(_taskId!);
+      final task = await _refreshTask();
       emit(state.copyWith(
         task: task,
         isSubmitting: false,
-        actionMessage: '申请已提交',
+        actionMessage: 'application_submitted',
       ));
     } catch (e) {
       AppLogger.error('Failed to apply task', e);
       emit(state.copyWith(
         isSubmitting: false,
-        actionMessage: '申请失败: ${e.toString()}',
+        actionMessage: 'application_failed',
+        errorMessage: e.toString(),
       ));
     }
   }
@@ -392,17 +396,17 @@ class TaskDetailBloc extends Bloc<TaskDetailEvent, TaskDetailState> {
       final appId = state.userApplication?.id;
       await _taskRepository.cancelApplication(_taskId!,
           applicationId: appId);
-      final task = await _taskRepository.getTaskDetail(_taskId!);
+      final task = await _refreshTask();
       emit(state.copyWith(
         task: task,
         isSubmitting: false,
-        actionMessage: '已取消申请',
+        actionMessage: 'application_cancelled',
         clearUserApplication: true,
       ));
     } catch (e) {
       emit(state.copyWith(
         isSubmitting: false,
-        actionMessage: '取消申请失败',
+        actionMessage: 'cancel_failed',
       ));
     }
   }
@@ -416,16 +420,16 @@ class TaskDetailBloc extends Bloc<TaskDetailEvent, TaskDetailState> {
 
     try {
       await _taskRepository.acceptApplication(_taskId!, event.applicationId);
-      final task = await _taskRepository.getTaskDetail(_taskId!);
+      final task = await _refreshTask();
       emit(state.copyWith(
         task: task,
         isSubmitting: false,
-        actionMessage: '已接受申请',
+        actionMessage: 'application_accepted',
       ));
     } catch (e) {
       emit(state.copyWith(
         isSubmitting: false,
-        actionMessage: '操作失败',
+        actionMessage: 'operation_failed',
       ));
     }
   }
@@ -439,20 +443,24 @@ class TaskDetailBloc extends Bloc<TaskDetailEvent, TaskDetailState> {
 
     try {
       await _taskRepository.rejectApplication(_taskId!, event.applicationId);
-      final task = await _taskRepository.getTaskDetail(_taskId!);
-      // 重新加载申请列表
-      final raw = await _taskRepository.getTaskApplications(_taskId!);
+      // 并行刷新任务详情和申请列表，减少等待时间
+      final results = await Future.wait([
+        _refreshTask(),
+        _taskRepository.getTaskApplications(_taskId!),
+      ]);
+      final task = results[0] as Task;
+      final raw = results[1] as List<Map<String, dynamic>>;
       final apps = raw.map((e) => TaskApplication.fromJson(e)).toList();
       emit(state.copyWith(
         task: task,
         applications: apps,
         isSubmitting: false,
-        actionMessage: '已拒绝申请',
+        actionMessage: 'application_rejected',
       ));
     } catch (e) {
       emit(state.copyWith(
         isSubmitting: false,
-        actionMessage: '操作失败',
+        actionMessage: 'operation_failed',
       ));
     }
   }
@@ -469,16 +477,16 @@ class TaskDetailBloc extends Bloc<TaskDetailEvent, TaskDetailState> {
         _taskId!,
         evidence: event.evidence,
       );
-      final task = await _taskRepository.getTaskDetail(_taskId!);
+      final task = await _refreshTask();
       emit(state.copyWith(
         task: task,
         isSubmitting: false,
-        actionMessage: '已提交完成',
+        actionMessage: 'task_completed',
       ));
     } catch (e) {
       emit(state.copyWith(
         isSubmitting: false,
-        actionMessage: '提交失败',
+        actionMessage: 'submit_failed',
       ));
     }
   }
@@ -492,16 +500,16 @@ class TaskDetailBloc extends Bloc<TaskDetailEvent, TaskDetailState> {
 
     try {
       await _taskRepository.confirmCompletion(_taskId!);
-      final task = await _taskRepository.getTaskDetail(_taskId!);
+      final task = await _refreshTask();
       emit(state.copyWith(
         task: task,
         isSubmitting: false,
-        actionMessage: '已确认完成',
+        actionMessage: 'completion_confirmed',
       ));
     } catch (e) {
       emit(state.copyWith(
         isSubmitting: false,
-        actionMessage: '确认失败',
+        actionMessage: 'confirm_failed',
       ));
     }
   }
@@ -518,16 +526,16 @@ class TaskDetailBloc extends Bloc<TaskDetailEvent, TaskDetailState> {
         _taskId!,
         reason: event.reason,
       );
-      final task = await _taskRepository.getTaskDetail(_taskId!);
+      final task = await _refreshTask();
       emit(state.copyWith(
         task: task,
         isSubmitting: false,
-        actionMessage: '任务已取消',
+        actionMessage: 'task_cancelled',
       ));
     } catch (e) {
       emit(state.copyWith(
         isSubmitting: false,
-        actionMessage: '取消失败',
+        actionMessage: 'cancel_failed',
       ));
     }
   }
@@ -541,20 +549,24 @@ class TaskDetailBloc extends Bloc<TaskDetailEvent, TaskDetailState> {
 
     try {
       await _taskRepository.reviewTask(_taskId!, event.review);
-      final task = await _taskRepository.getTaskDetail(_taskId!);
-      // 重新加载评价
-      final raw = await _taskRepository.getTaskReviews(_taskId!);
+      // 并行刷新任务详情和评价列表，减少等待时间
+      final results = await Future.wait([
+        _refreshTask(),
+        _taskRepository.getTaskReviews(_taskId!),
+      ]);
+      final task = results[0] as Task;
+      final raw = results[1] as List<Map<String, dynamic>>;
       final reviews = raw.map((e) => Review.fromJson(e)).toList();
       emit(state.copyWith(
         task: task,
         reviews: reviews,
         isSubmitting: false,
-        actionMessage: '评价已提交',
+        actionMessage: 'review_submitted',
       ));
     } catch (e) {
       emit(state.copyWith(
         isSubmitting: false,
-        actionMessage: '评价失败',
+        actionMessage: 'review_failed',
       ));
     }
   }
@@ -573,17 +585,18 @@ class TaskDetailBloc extends Bloc<TaskDetailEvent, TaskDetailState> {
         evidence: event.evidence,
       );
       final refund = RefundRequest.fromJson(raw);
-      final task = await _taskRepository.getTaskDetail(_taskId!);
+      // 退款请求已返回 refund 数据，仅刷新任务状态
+      final task = await _refreshTask();
       emit(state.copyWith(
         task: task,
         refundRequest: refund,
         isSubmitting: false,
-        actionMessage: '退款申请已提交',
+        actionMessage: 'refund_submitted',
       ));
     } catch (e) {
       emit(state.copyWith(
         isSubmitting: false,
-        actionMessage: '退款申请失败',
+        actionMessage: 'refund_failed',
       ));
     }
   }
@@ -597,17 +610,17 @@ class TaskDetailBloc extends Bloc<TaskDetailEvent, TaskDetailState> {
 
     try {
       await _taskRepository.cancelRefundRequest(_taskId!, event.refundId);
-      final task = await _taskRepository.getTaskDetail(_taskId!);
+      final task = await _refreshTask();
       emit(state.copyWith(
         task: task,
         isSubmitting: false,
         clearRefundRequest: true,
-        actionMessage: '退款申请已撤销',
+        actionMessage: 'refund_revoked',
       ));
     } catch (e) {
       emit(state.copyWith(
         isSubmitting: false,
-        actionMessage: '撤销失败',
+        actionMessage: 'revoke_failed',
       ));
     }
   }
@@ -632,12 +645,12 @@ class TaskDetailBloc extends Bloc<TaskDetailEvent, TaskDetailState> {
       emit(state.copyWith(
         refundRequest: refund,
         isSubmitting: false,
-        actionMessage: '反驳已提交',
+        actionMessage: 'dispute_submitted',
       ));
     } catch (e) {
       emit(state.copyWith(
         isSubmitting: false,
-        actionMessage: '提交反驳失败',
+        actionMessage: 'dispute_failed',
       ));
     }
   }

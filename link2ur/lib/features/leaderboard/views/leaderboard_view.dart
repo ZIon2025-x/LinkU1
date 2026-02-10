@@ -52,6 +52,7 @@ class LeaderboardView extends StatelessWidget {
 
             if (state.leaderboards.isEmpty) {
               return EmptyStateView.noData(
+                context,
                 title: context.l10n.leaderboardNoLeaderboards,
                 description: context.l10n.leaderboardNoLeaderboardsMessage,
               );
@@ -103,11 +104,11 @@ class _LeaderboardCard extends StatelessWidget {
   List<Color> get _gradient {
     final hash = leaderboard.id.hashCode;
     final gradients = [
-      [const Color(0xFFFF6B6B), const Color(0xFFFF4757)],
-      [const Color(0xFF7C5CFC), const Color(0xFF5F27CD)],
-      [const Color(0xFF2ED573), const Color(0xFF00B894)],
-      [const Color(0xFFFF9500), const Color(0xFFFF6B00)],
-      [const Color(0xFF5856D6), const Color(0xFF007AFF)],
+      AppColors.gradientCoral,
+      AppColors.gradientPurple,
+      AppColors.gradientEmerald,
+      AppColors.gradientOrange,
+      AppColors.gradientIndigo,
     ];
     return gradients[hash.abs() % gradients.length];
   }

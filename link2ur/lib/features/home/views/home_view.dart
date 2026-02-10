@@ -19,6 +19,7 @@ import '../../../core/widgets/animated_list_item.dart';
 import '../../../core/widgets/skeleton_view.dart';
 import '../../../core/widgets/error_state_view.dart';
 import '../../../core/widgets/empty_state_view.dart';
+import '../../../core/widgets/loading_view.dart';
 import 'package:geolocator/geolocator.dart';
 
 import '../../../core/widgets/content_constraint.dart';
@@ -136,7 +137,7 @@ class _HomeViewContentState extends State<_HomeViewContent> {
             decoration: BoxDecoration(
               color: isDark
                   ? Colors.white.withValues(alpha: 0.06)
-                  : const Color(0xFFF2F2F7),
+                  : AppColors.backgroundLight,
               borderRadius: BorderRadius.circular(9),
             ),
             child: Row(

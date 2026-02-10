@@ -48,14 +48,35 @@ class AsyncImageView extends StatelessWidget {
       return _buildPlaceholder(context);
     }
 
-    // 自动计算内存缓存尺寸：按实际显示尺寸 × 设备像素比，避免缓存超大原图
-    // 注意：width/height 可能是 double.infinity（如 StackFit.expand 场景），此时跳过缓存尺寸计算
     final dpr = MediaQuery.devicePixelRatioOf(context);
-    final effectiveMemCacheWidth = memCacheWidth ??
+
+    // 优先使用显式 memCacheWidth/Height；如果 width/height 有限，按 DPR 计算
+    final knownCacheWidth = memCacheWidth ??
         (width != null && width!.isFinite ? (width! * dpr).round() : null);
-    final effectiveMemCacheHeight = memCacheHeight ??
+    final knownCacheHeight = memCacheHeight ??
         (height != null && height!.isFinite ? (height! * dpr).round() : null);
 
+    // 如果已经有有效的缓存尺寸，直接构建图片（最常见路径）
+    if (knownCacheWidth != null || knownCacheHeight != null) {
+      return _buildImage(url, knownCacheWidth, knownCacheHeight);
+    }
+
+    // width/height 为 null 或 infinity 时，使用 LayoutBuilder 获取实际约束尺寸
+    // 避免全分辨率原图被解码到内存
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final constraintWidth = constraints.maxWidth.isFinite
+            ? (constraints.maxWidth * dpr).round()
+            : null;
+        final constraintHeight = constraints.maxHeight.isFinite
+            ? (constraints.maxHeight * dpr).round()
+            : null;
+        return _buildImage(url, constraintWidth, constraintHeight);
+      },
+    );
+  }
+
+  Widget _buildImage(String url, int? effectiveMemCacheWidth, int? effectiveMemCacheHeight) {
     Widget image = CachedNetworkImage(
       imageUrl: url,
       width: width,

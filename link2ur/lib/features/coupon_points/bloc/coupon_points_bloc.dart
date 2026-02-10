@@ -305,12 +305,14 @@ class CouponPointsBloc extends Bloc<CouponPointsEvent, CouponPointsState> {
         checkInStatus: checkInData,
         isCheckedInToday: true,
         consecutiveDays: checkInData['consecutive_days'] as int? ?? 0,
-        actionMessage: '签到成功',
+        actionMessage: 'check_in_success',
       ));
     } catch (e) {
+      final errMsg = e.toString().replaceAll('CouponPointsException: ', '');
       emit(state.copyWith(
         isSubmitting: false,
-        actionMessage: e.toString().replaceAll('CouponPointsException: ', ''),
+        actionMessage: 'check_in_failed',
+        errorMessage: errMsg,
       ));
     }
   }
@@ -377,15 +379,17 @@ class CouponPointsBloc extends Bloc<CouponPointsEvent, CouponPointsState> {
       await _repository.claimCoupon(event.couponId);
       emit(state.copyWith(
         isSubmitting: false,
-        actionMessage: '领取成功',
+        actionMessage: 'coupon_claimed',
       ));
       // 刷新优惠券列表
       add(const CouponPointsLoadMyCoupons());
       add(const CouponPointsLoadAvailableCoupons());
     } catch (e) {
+      final errMsg = e.toString().replaceAll('CouponPointsException: ', '');
       emit(state.copyWith(
         isSubmitting: false,
-        actionMessage: e.toString().replaceAll('CouponPointsException: ', ''),
+        actionMessage: 'claim_failed',
+        errorMessage: errMsg,
       ));
     }
   }
@@ -401,14 +405,16 @@ class CouponPointsBloc extends Bloc<CouponPointsEvent, CouponPointsState> {
       await _repository.redeemCoupon(event.couponId);
       emit(state.copyWith(
         isSubmitting: false,
-        actionMessage: '兑换成功',
+        actionMessage: 'coupon_redeemed',
       ));
       // 刷新数据
       add(const CouponPointsLoadRequested());
     } catch (e) {
+      final errMsg = e.toString().replaceAll('CouponPointsException: ', '');
       emit(state.copyWith(
         isSubmitting: false,
-        actionMessage: e.toString().replaceAll('CouponPointsException: ', ''),
+        actionMessage: 'redeem_failed',
+        errorMessage: errMsg,
       ));
     }
   }
@@ -424,14 +430,16 @@ class CouponPointsBloc extends Bloc<CouponPointsEvent, CouponPointsState> {
       await _repository.useInvitationCode(event.code);
       emit(state.copyWith(
         isSubmitting: false,
-        actionMessage: '邀请码使用成功',
+        actionMessage: 'invite_code_used',
       ));
       // 刷新积分
       add(const CouponPointsLoadRequested());
     } catch (e) {
+      final errMsg = e.toString().replaceAll('CouponPointsException: ', '');
       emit(state.copyWith(
         isSubmitting: false,
-        actionMessage: e.toString().replaceAll('CouponPointsException: ', ''),
+        actionMessage: 'invite_code_failed',
+        errorMessage: errMsg,
       ));
     }
   }

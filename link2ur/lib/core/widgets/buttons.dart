@@ -284,7 +284,7 @@ class SecondaryButton extends StatelessWidget {
   }
 }
 
-/// 文字按钮
+/// 文字按钮（带缩放反馈 + 触觉反馈）
 class TextActionButton extends StatelessWidget {
   const TextActionButton({
     super.key,
@@ -303,14 +303,21 @@ class TextActionButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onPressed,
-      child: Text(
-        text,
-        style: TextStyle(
-          color: color,
-          fontSize: fontSize,
-          fontWeight: fontWeight,
+    return ScaleTapWrapper(
+      scaleDown: 0.97,
+      onTap: () {
+        AppHaptics.selection();
+        onPressed?.call();
+      },
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+        child: Text(
+          text,
+          style: TextStyle(
+            color: color,
+            fontSize: fontSize,
+            fontWeight: fontWeight,
+          ),
         ),
       ),
     );
@@ -418,7 +425,7 @@ class FloatingButton extends StatelessWidget {
   }
 }
 
-/// 小型操作按钮
+/// 小型操作按钮（带缩放反馈 + 触觉反馈）
 class SmallActionButton extends StatelessWidget {
   const SmallActionButton({
     super.key,
@@ -435,8 +442,12 @@ class SmallActionButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onPressed,
+    return ScaleTapWrapper(
+      scaleDown: 0.95,
+      onTap: () {
+        AppHaptics.selection();
+        onPressed?.call();
+      },
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         decoration: BoxDecoration(

@@ -67,6 +67,7 @@ class _TaskChatListViewContent extends StatelessWidget {
 
     if (displayChats.isEmpty) {
       return EmptyStateView.noData(
+        context,
         title: context.l10n.notificationNoTaskChat,
         description: context.l10n.notificationNoTaskChatDesc,
       );

@@ -35,18 +35,24 @@ class ActivityListView extends StatelessWidget {
           ),
         ),
         body: BlocBuilder<ActivityBloc, ActivityState>(
+          buildWhen: (prev, curr) =>
+              prev.activities != curr.activities ||
+              prev.status != curr.status ||
+              prev.hasMore != curr.hasMore,
           builder: (context, state) {
+            // AnimatedSwitcher 实现 skeleton → 内容的平滑过渡
+            Widget content;
+
             if (state.status == ActivityStatus.loading &&
                 state.activities.isEmpty) {
-              return const SkeletonTopImageCardList(
+              content = const SkeletonTopImageCardList(
+                key: ValueKey('skeleton'),
                 itemCount: 3,
                 imageHeight: 200,
               );
-            }
-
-            if (state.status == ActivityStatus.error &&
+            } else if (state.status == ActivityStatus.error &&
                 state.activities.isEmpty) {
-              return ErrorStateView.loadFailed(
+              content = ErrorStateView.loadFailed(
                 message: state.errorMessage ?? context.l10n.activityLoadFailed,
                 onRetry: () {
                   context.read<ActivityBloc>().add(
@@ -54,16 +60,14 @@ class ActivityListView extends StatelessWidget {
                       );
                 },
               );
-            }
-
-            if (state.activities.isEmpty) {
-              return EmptyStateView.noData(
+            } else if (state.activities.isEmpty) {
+              content = EmptyStateView.noData(
+                context,
                 title: context.l10n.activityNoActivities,
                 description: context.l10n.activityNoAvailableActivities,
               );
-            }
-
-            return RefreshIndicator(
+            } else {
+            content = RefreshIndicator(
               onRefresh: () async {
                 context.read<ActivityBloc>().add(
                       const ActivityRefreshRequested(),
@@ -95,6 +99,14 @@ class ActivityListView extends StatelessWidget {
                   );
                 },
               ),
+            );
+            }
+
+            return AnimatedSwitcher(
+              duration: const Duration(milliseconds: 300),
+              switchInCurve: Curves.easeOut,
+              switchOutCurve: Curves.easeIn,
+              child: content,
             );
           },
         ),

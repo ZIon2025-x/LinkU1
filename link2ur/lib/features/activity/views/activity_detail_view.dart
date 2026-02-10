@@ -54,18 +54,20 @@ class _ActivityDetailViewContent extends StatelessWidget {
   Widget build(BuildContext context) {
     return BlocListener<ActivityBloc, ActivityState>(
       listener: (context, state) {
-        if (state.actionMessage == context.l10n.activityRegisterSuccess) {
+        if (state.actionMessage == 'registration_success') {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(context.l10n.activityRegisterSuccess),
+              content: Text(context.l10n.actionRegistrationSuccess),
               backgroundColor: AppColors.success,
             ),
           );
-        } else if (state.actionMessage != null &&
-            state.actionMessage!.startsWith(context.l10n.activityRegisterFailed)) {
+        } else if (state.actionMessage == 'registration_failed') {
+          final message = state.errorMessage != null
+              ? '${context.l10n.actionRegistrationFailed}: ${state.errorMessage}'
+              : context.l10n.actionRegistrationFailed;
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(state.actionMessage!),
+              content: Text(message),
               backgroundColor: AppColors.error,
             ),
           );
@@ -403,7 +405,7 @@ class _ActivityDetailViewContent extends StatelessWidget {
         height: 50,
         decoration: BoxDecoration(
           gradient: const LinearGradient(
-            colors: [AppColors.primary, Color(0xFF0059B3)],
+            colors: AppColors.gradientDeepBlue,
             begin: Alignment.centerLeft,
             end: Alignment.centerRight,
           ),
@@ -1274,7 +1276,7 @@ class _PosterInfoRow extends StatelessWidget {
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   gradient: const LinearGradient(
-                    colors: [AppColors.primary, Color(0xFF0059B3)],
+                    colors: AppColors.gradientDeepBlue,
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                   ),
@@ -1520,7 +1522,7 @@ class _ActivityApplySheetState extends State<ActivityApplySheet> {
           const Center(
             child: Padding(
               padding: EdgeInsets.symmetric(vertical: 40),
-              child: CircularProgressIndicator(),
+              child: LoadingView(),
             ),
           )
         else if (state.timeSlots.isEmpty)
@@ -1763,7 +1765,7 @@ class _ActivityApplySheetState extends State<ActivityApplySheet> {
                 decoration: BoxDecoration(
                   gradient: canApply
                       ? const LinearGradient(
-                          colors: [AppColors.primary, Color(0xFF0059B3)])
+                          colors: AppColors.gradientDeepBlue)
                       : null,
                   color: canApply ? null : AppColors.textTertiaryLight,
                   borderRadius: BorderRadius.circular(12),

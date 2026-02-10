@@ -273,10 +273,7 @@ class _SettingsViewState extends State<SettingsView> {
                                 horizontal: 8, vertical: 2),
                             decoration: BoxDecoration(
                               gradient: const LinearGradient(
-                                colors: [
-                                  Color(0xFFFFD700),
-                                  Color(0xFFFF9500)
-                                ],
+                                colors: AppColors.gradientGold,
                               ),
                               borderRadius: BorderRadius.circular(10),
                             ),

@@ -7,6 +7,7 @@ import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_radius.dart';
 import '../../../core/utils/l10n_extension.dart';
+import '../../../core/widgets/loading_view.dart';
 import '../../../data/services/api_service.dart';
 import '../../../data/services/iap_service.dart';
 
@@ -95,7 +96,7 @@ class _VIPPurchaseViewState extends State<VIPPurchaseView> {
               height: 64,
               decoration: const BoxDecoration(
                 gradient: LinearGradient(
-                  colors: [Color(0xFFFFD700), Color(0xFFFF9500)],
+                  colors: AppColors.gradientGold,
                 ),
                 shape: BoxShape.circle,
               ),
@@ -214,9 +215,11 @@ class _VIPPurchaseViewState extends State<VIPPurchaseView> {
 
             // 加载状态
             if (_isLoadingProducts)
-              const Padding(
-                padding: EdgeInsets.all(40),
-                child: CircularProgressIndicator(),
+              const Center(
+                child: Padding(
+                  padding: EdgeInsets.all(40),
+                  child: LoadingView(),
+                ),
               )
             else if (_products.isEmpty)
               Padding(

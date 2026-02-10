@@ -47,7 +47,7 @@ class MessageView extends StatelessWidget {
                   fontWeight: FontWeight.w700,
                   color: isDark
                       ? AppColors.textPrimaryDark
-                      : const Color(0xFF37352F),
+                      : AppColors.desktopTextLight,
                 ),
               ),
             ),
@@ -429,15 +429,15 @@ class _TaskChatItem extends StatelessWidget {
   List<Color> get _statusGradient {
     switch (taskChat.taskStatus) {
       case AppConstants.taskStatusOpen:
-        return [AppColors.primary, const Color(0xFF5AC8FA)];
+        return AppColors.gradientBlueTeal;
       case 'assigned':
       case AppConstants.taskStatusInProgress:
-        return [const Color(0xFFFF9500), const Color(0xFFFF6B00)];
+        return AppColors.gradientOrange;
       case AppConstants.taskStatusCompleted:
         return [AppColors.success, const Color(0xFF30D158)];
       case AppConstants.taskStatusPendingConfirmation:
       case 'pending_payment':
-        return [const Color(0xFFFF9500), const Color(0xFFFF6B00)];
+        return AppColors.gradientOrange;
       default:
         return [AppColors.primary, const Color(0xFF5856D6)];
     }

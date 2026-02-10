@@ -44,10 +44,17 @@ class _WalletContent extends StatelessWidget {
       listenWhen: (prev, curr) => prev.actionMessage != curr.actionMessage,
       listener: (context, state) {
         if (state.actionMessage != null) {
-          final isError = state.actionMessage!.contains('失败');
+          final isError = state.actionMessage!.contains('failed');
+          final message = switch (state.actionMessage) {
+            'check_in_success' => context.l10n.actionCheckInSuccess,
+            'check_in_failed' => state.errorMessage != null
+                ? '${context.l10n.actionCheckInFailed}: ${state.errorMessage}'
+                : context.l10n.actionCheckInFailed,
+            _ => state.actionMessage ?? '',
+          };
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(state.actionMessage!),
+              content: Text(message),
               backgroundColor: isError ? AppColors.error : AppColors.success,
             ),
           );
@@ -119,91 +126,142 @@ class _WalletContent extends StatelessWidget {
 
 // ==================== 子组件 ====================
 
-class _PointsCard extends StatelessWidget {
+class _PointsCard extends StatefulWidget {
   const _PointsCard({required this.account});
   final PointsAccount account;
 
   @override
+  State<_PointsCard> createState() => _PointsCardState();
+}
+
+class _PointsCardState extends State<_PointsCard> {
+  // 3D 倾斜角度（弧度），范围 ±0.03 rad ≈ ±1.7°
+  double _rotateX = 0;
+  double _rotateY = 0;
+
+  void _onPanUpdate(DragUpdateDetails d) {
+    setState(() {
+      _rotateY = (d.localPosition.dx / context.size!.width - 0.5) * 0.06;
+      _rotateX = -(d.localPosition.dy / context.size!.height - 0.5) * 0.06;
+    });
+  }
+
+  void _onPanEnd(DragEndDetails _) {
+    setState(() { _rotateX = 0; _rotateY = 0; });
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: AppSpacing.allLg,
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            AppColors.primary,
-            AppColors.primary.withValues(alpha: 0.85),
-          ],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: AppRadius.allLarge,
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.primary.withValues(alpha: 0.25),
-            blurRadius: 15,
-            offset: const Offset(0, 8),
+    return GestureDetector(
+      onPanUpdate: _onPanUpdate,
+      onPanEnd: _onPanEnd,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeOutCubic,
+        transformAlignment: Alignment.center,
+        transform: Matrix4.identity()
+          ..setEntry(3, 2, 0.001) // 透视
+          ..rotateX(_rotateX)
+          ..rotateY(_rotateY),
+        padding: AppSpacing.allLg,
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            colors: AppColors.gradientPrimary,
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
           ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            context.l10n.walletPointsBalance,
-            style: TextStyle(
-              fontSize: 14,
-              color: Colors.white.withValues(alpha: 0.8),
+          borderRadius: AppRadius.allLarge,
+          boxShadow: [
+            BoxShadow(
+              color: AppColors.primary.withValues(alpha: 0.25),
+              blurRadius: 15,
+              offset: const Offset(0, 8),
             ),
-          ),
-          AppSpacing.vSm,
-          // 余额大字体 - 与iOS对齐使用48pt
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Text(
-                account.balanceDisplay,
-                style: const TextStyle(
-                  fontSize: 48,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                  height: 1.1,
-                ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              context.l10n.walletPointsBalance,
+              style: TextStyle(
+                fontSize: 14,
+                color: Colors.white.withValues(alpha: 0.8),
               ),
-              AppSpacing.hSm,
-              Padding(
-                padding: const EdgeInsets.only(bottom: 10),
-                child: Text(
-                  account.currency,
-                  style: TextStyle(
-                    fontSize: 16,
-                    color: Colors.white.withValues(alpha: 0.7),
+            ),
+            AppSpacing.vSm,
+            // 余额 — 滚动数字动画
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                _RollingNumber(
+                  value: widget.account.balance,
+                  display: widget.account.balanceDisplay,
+                ),
+                AppSpacing.hSm,
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 10),
+                  child: Text(
+                    widget.account.currency,
+                    style: TextStyle(
+                      fontSize: 16,
+                      color: Colors.white.withValues(alpha: 0.7),
+                    ),
                   ),
                 ),
-              ),
-            ],
-          ),
-          AppSpacing.vLg,
-          // 统计项 - 白色文字
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: [
-              _BalanceStatItem(
-                label: context.l10n.walletTotalEarned,
-                value: account.totalEarned.toString(),
-              ),
-              Container(
-                width: 1,
-                height: 30,
-                color: Colors.white.withValues(alpha: 0.2),
-              ),
-              _BalanceStatItem(
-                label: context.l10n.walletTotalSpent,
-                value: account.totalSpent.toString(),
-              ),
-            ],
-          ),
-        ],
+              ],
+            ),
+            AppSpacing.vLg,
+            // 统计项 - 白色文字
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: [
+                _BalanceStatItem(
+                  label: context.l10n.walletTotalEarned,
+                  value: widget.account.totalEarned.toString(),
+                ),
+                Container(
+                  width: 1,
+                  height: 30,
+                  color: Colors.white.withValues(alpha: 0.2),
+                ),
+                _BalanceStatItem(
+                  label: context.l10n.walletTotalSpent,
+                  value: widget.account.totalSpent.toString(),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
+    );
+  }
+}
+
+/// 余额滚动数字 — TweenAnimationBuilder + Curves.easeOutExpo
+class _RollingNumber extends StatelessWidget {
+  const _RollingNumber({required this.value, required this.display});
+  final int value;
+  final String display;
+
+  @override
+  Widget build(BuildContext context) {
+    return TweenAnimationBuilder<double>(
+      tween: Tween(begin: 0, end: value.toDouble()),
+      duration: const Duration(milliseconds: 900),
+      curve: Curves.easeOutExpo,
+      builder: (context, v, _) {
+        return Text(
+          v.toInt().toString(),
+          style: const TextStyle(
+            fontSize: 48,
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+            height: 1.1,
+            fontFeatures: [FontFeature.tabularFigures()],
+          ),
+        );
+      },
     );
   }
 }
@@ -220,7 +278,7 @@ class _QuickActionCards extends StatelessWidget {
           child: _QuickActionCard(
             icon: Icons.account_balance_wallet_outlined,
             title: context.l10n.walletTopUp,
-            gradientColors: const [Color(0xFF2659F2), Color(0xFF4088FF)],
+            gradientColors: AppColors.gradientPrimary,
             onTap: () => context.push('/wallet/top-up'),
           ),
         ),
@@ -229,7 +287,7 @@ class _QuickActionCards extends StatelessWidget {
           child: _QuickActionCard(
             icon: Icons.send_rounded,
             title: context.l10n.walletTransfer,
-            gradientColors: const [Color(0xFF26BF73), Color(0xFF4DD99B)],
+            gradientColors: AppColors.gradientEmerald,
             onTap: () => context.push('/wallet/transfer'),
           ),
         ),
@@ -238,7 +296,7 @@ class _QuickActionCards extends StatelessWidget {
           child: _QuickActionCard(
             icon: Icons.history_rounded,
             title: context.l10n.walletTransactionHistory,
-            gradientColors: const [Color(0xFFFFA600), Color(0xFFFFBF4D)],
+            gradientColors: AppColors.gradientOrange,
             onTap: () => context.push('/wallet/transactions'),
           ),
         ),
@@ -500,6 +558,7 @@ class _TransactionsSection extends StatelessWidget {
         AppSpacing.vSm,
         if (transactions.isEmpty)
           EmptyStateView.noData(
+            context,
             title: context.l10n.walletNoTransactions,
             description: context.l10n.walletTransactionsDesc,
           )
@@ -603,6 +662,7 @@ class _CouponsSection extends StatelessWidget {
         AppSpacing.vSm,
         if (coupons.isEmpty)
           EmptyStateView.noData(
+            context,
             title: context.l10n.walletNoCoupons,
             description: context.l10n.walletNoCouponsDesc,
           )

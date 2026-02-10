@@ -134,7 +134,7 @@ class _CreateTaskContentState extends State<_CreateTaskContent> {
                   controller: _titleController,
                   decoration: InputDecoration(hintText: context.l10n.createTaskTitleHint),
                   maxLength: 100,
-                  validator: Validators.validateTitle,
+                  validator: (v) => Validators.validateTitle(v, l10n: context.l10n),
                 ),
                 AppSpacing.vMd,
 
@@ -145,7 +145,7 @@ class _CreateTaskContentState extends State<_CreateTaskContent> {
                       InputDecoration(hintText: context.l10n.createTaskDescHint),
                   maxLines: 5,
                   maxLength: 2000,
-                  validator: (value) => Validators.validateDescription(value),
+                  validator: (value) => Validators.validateDescription(value, l10n: context.l10n),
                 ),
                 AppSpacing.vMd,
 
@@ -161,7 +161,7 @@ class _CreateTaskContentState extends State<_CreateTaskContent> {
                         ),
                         keyboardType: const TextInputType.numberWithOptions(
                             decimal: true),
-                        validator: Validators.validateAmount,
+                        validator: (v) => Validators.validateAmount(v, l10n: context.l10n),
                       ),
                     ),
                     AppSpacing.hMd,

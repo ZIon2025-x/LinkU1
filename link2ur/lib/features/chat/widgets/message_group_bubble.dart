@@ -529,7 +529,7 @@ class _GroupBubbleItemState extends State<_GroupBubbleItem>
         decoration: BoxDecoration(
           gradient: isOutgoing
               ? const LinearGradient(
-                  colors: [AppColors.primary, Color(0xFF5A67D8)],
+                  colors: AppColors.gradientPrimary,
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 )

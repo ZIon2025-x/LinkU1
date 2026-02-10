@@ -504,7 +504,7 @@ class _PublishContentState extends State<_PublishContent>
               isDark: isDark,
             ),
             maxLength: 100,
-            validator: Validators.validateTitle,
+            validator: (v) => Validators.validateTitle(v, l10n: context.l10n),
           ),
           AppSpacing.vMd,
 
@@ -518,7 +518,7 @@ class _PublishContentState extends State<_PublishContent>
             ),
             maxLines: 4,
             maxLength: 2000,
-            validator: (value) => Validators.validateDescription(value),
+            validator: (value) => Validators.validateDescription(value, l10n: context.l10n),
           ),
           AppSpacing.vMd,
 
@@ -535,7 +535,7 @@ class _PublishContentState extends State<_PublishContent>
                     prefix: '£ ',
                   ),
                   keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                  validator: Validators.validateAmount,
+                  validator: (v) => Validators.validateAmount(v, l10n: context.l10n),
                 ),
               ),
               const SizedBox(width: AppSpacing.sm),

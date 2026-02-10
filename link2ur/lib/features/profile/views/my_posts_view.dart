@@ -6,17 +6,17 @@ import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_radius.dart';
 import '../../../core/utils/l10n_extension.dart';
+import '../../../core/utils/haptic_feedback.dart';
 import '../../../core/widgets/skeleton_view.dart';
 import '../../../core/widgets/error_state_view.dart';
 import '../../../core/widgets/empty_state_view.dart';
-import '../../../data/repositories/forum_repository.dart';
-import '../../../data/repositories/user_repository.dart';
-import '../../../data/repositories/task_repository.dart';
-import '../../../data/models/forum.dart';
-import '../bloc/profile_bloc.dart';
+import '../../../core/widgets/animated_list_item.dart';
+import '../../../core/widgets/async_image_view.dart';
+import '../../../data/models/flea_market.dart';
+import '../../../data/repositories/flea_market_repository.dart';
 
-/// 我的帖子视图
-/// 参考iOS MyForumPostsView.swift
+/// 我的闲置商品视图（对齐iOS MyPostsView.swift）
+/// 4个分类Tab：出售中 / 收的闲置 / 收藏的 / 已售出
 class MyPostsView extends StatefulWidget {
   const MyPostsView({super.key});
 
@@ -24,206 +24,462 @@ class MyPostsView extends StatefulWidget {
   State<MyPostsView> createState() => _MyPostsViewState();
 }
 
-class _MyPostsViewState extends State<MyPostsView> {
-  final ScrollController _scrollController = ScrollController();
-  ProfileState? _currentState;
-  bool _scrollListenerAttached = false;
+/// 闲置商品分类
+enum _MyItemsCategory {
+  selling,
+  purchased,
+  favorites,
+  sold,
+}
+
+class _MyPostsViewState extends State<MyPostsView>
+    with SingleTickerProviderStateMixin {
+  late TabController _tabController;
+
+  // 各分类数据
+  List<FleaMarketItem> _sellingItems = [];
+  List<FleaMarketItem> _purchasedItems = [];
+  List<FleaMarketItem> _favoriteItems = [];
+  List<FleaMarketItem> _soldItems = [];
+
+  // 各分类加载状态
+  bool _isLoadingSelling = true;
+  bool _isLoadingPurchased = true;
+  bool _isLoadingFavorites = true;
+  bool _isLoadingSold = true;
+
+  // 各分类错误状态
+  final Map<_MyItemsCategory, String?> _categoryErrors = {};
+
 
   @override
   void initState() {
     super.initState();
+    _tabController = TabController(length: 4, vsync: this);
+    _tabController.addListener(() {
+      if (!_tabController.indexIsChanging) {
+        AppHaptics.tabSwitch();
+      }
+    });
+    // 延迟加载，确保context可用
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadAllCategories();
+    });
   }
 
   @override
   void dispose() {
-    _scrollController.dispose();
+    _tabController.dispose();
     super.dispose();
   }
 
-  void _onScroll() {
-    if (_currentState == null) return;
-    if (_scrollController.position.pixels >=
-        _scrollController.position.maxScrollExtent - 200) {
-      if (_currentState!.forumPostsHasMore) {
-        context.read<ProfileBloc>().add(
-              ProfileLoadMyForumPosts(
-                page: _currentState!.forumPostsPage + 1,
-              ),
-            );
+  Future<void> _loadAllCategories({bool forceRefresh = false}) async {
+    if (!mounted) return;
+    final repo = context.read<FleaMarketRepository>();
+
+    // 并行加载所有分类
+    await Future.wait([
+      _loadSellingItems(repo),
+      _loadPurchasedItems(repo),
+      _loadFavoriteItems(repo),
+      _loadSoldItems(repo),
+    ]);
+  }
+
+  Future<void> _loadSellingItems(FleaMarketRepository repo) async {
+    setState(() => _isLoadingSelling = true);
+    try {
+      final response = await repo.getMyItems(page: 1, pageSize: 100);
+      if (mounted) {
+        setState(() {
+          _sellingItems = response.items;
+          _isLoadingSelling = false;
+          _categoryErrors[_MyItemsCategory.selling] = null;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isLoadingSelling = false;
+          _categoryErrors[_MyItemsCategory.selling] = e.toString();
+        });
       }
     }
   }
 
+  Future<void> _loadPurchasedItems(FleaMarketRepository repo) async {
+    setState(() => _isLoadingPurchased = true);
+    try {
+      final rawItems = await repo.getMyPurchases(page: 1, pageSize: 100);
+      if (mounted) {
+        setState(() {
+          _purchasedItems = rawItems
+              .map((e) => FleaMarketItem.fromJson(e))
+              .toList();
+          _isLoadingPurchased = false;
+          _categoryErrors[_MyItemsCategory.purchased] = null;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isLoadingPurchased = false;
+          _categoryErrors[_MyItemsCategory.purchased] = e.toString();
+        });
+      }
+    }
+  }
+
+  Future<void> _loadFavoriteItems(FleaMarketRepository repo) async {
+    setState(() => _isLoadingFavorites = true);
+    try {
+      final response = await repo.getFavoriteItems(page: 1, pageSize: 100);
+      if (mounted) {
+        setState(() {
+          _favoriteItems = response.items;
+          _isLoadingFavorites = false;
+          _categoryErrors[_MyItemsCategory.favorites] = null;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isLoadingFavorites = false;
+          _categoryErrors[_MyItemsCategory.favorites] = e.toString();
+        });
+      }
+    }
+  }
+
+  Future<void> _loadSoldItems(FleaMarketRepository repo) async {
+    setState(() => _isLoadingSold = true);
+    try {
+      final rawItems = await repo.getMySales(page: 1, pageSize: 100);
+      if (mounted) {
+        setState(() {
+          _soldItems = rawItems
+              .map((e) => FleaMarketItem.fromJson(e))
+              .toList();
+          _isLoadingSold = false;
+          _categoryErrors[_MyItemsCategory.sold] = null;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isLoadingSold = false;
+          _categoryErrors[_MyItemsCategory.sold] = e.toString();
+        });
+      }
+    }
+  }
+
+  List<FleaMarketItem> _getItems(_MyItemsCategory category) {
+    switch (category) {
+      case _MyItemsCategory.selling:
+        return _sellingItems;
+      case _MyItemsCategory.purchased:
+        return _purchasedItems;
+      case _MyItemsCategory.favorites:
+        return _favoriteItems;
+      case _MyItemsCategory.sold:
+        return _soldItems;
+    }
+  }
+
+  bool _isLoading(_MyItemsCategory category) {
+    switch (category) {
+      case _MyItemsCategory.selling:
+        return _isLoadingSelling;
+      case _MyItemsCategory.purchased:
+        return _isLoadingPurchased;
+      case _MyItemsCategory.favorites:
+        return _isLoadingFavorites;
+      case _MyItemsCategory.sold:
+        return _isLoadingSold;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    return BlocProvider(
-      create: (context) => ProfileBloc(
-        userRepository: context.read<UserRepository>(),
-        taskRepository: context.read<TaskRepository>(),
-        forumRepository: context.read<ForumRepository>(),
-      )..add(const ProfileLoadMyForumPosts(page: 1)),
-      child: Scaffold(
-        appBar: AppBar(
-          title: Text(context.l10n.myPostsTitle),
-        ),
-        body: BlocBuilder<ProfileBloc, ProfileState>(
-          builder: (context, state) {
-            // Update current state for scroll listener
-            _currentState = state;
-            // Ensure scroll listener is attached once
-            if (!_scrollListenerAttached) {
-              _scrollListenerAttached = true;
-              _scrollController.addListener(_onScroll);
-            }
+    final l10n = context.l10n;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
-            return _buildBody(context, state);
-          },
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(l10n.myPostsTitle),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.add_circle, size: 28),
+            color: AppColors.primary,
+            onPressed: () => context.push('/flea-market/create'),
+          ),
+        ],
+        bottom: TabBar(
+          controller: _tabController,
+          isScrollable: true,
+          tabAlignment: TabAlignment.start,
+          labelColor: AppColors.primary,
+          unselectedLabelColor: isDark
+              ? AppColors.textSecondaryDark
+              : AppColors.textSecondaryLight,
+          indicatorColor: AppColors.primary,
+          indicatorSize: TabBarIndicatorSize.label,
+          tabs: [
+            Tab(
+              icon: const Icon(Icons.sell, size: 18),
+              text: l10n.myItemsSelling,
+            ),
+            Tab(
+              icon: const Icon(Icons.shopping_bag, size: 18),
+              text: l10n.myItemsPurchased,
+            ),
+            Tab(
+              icon: const Icon(Icons.favorite, size: 18),
+              text: l10n.myItemsFavorites,
+            ),
+            Tab(
+              icon: const Icon(Icons.check_circle, size: 18),
+              text: l10n.myItemsSold,
+            ),
+          ],
         ),
+      ),
+      body: TabBarView(
+        controller: _tabController,
+        children: [
+          _buildCategoryContent(_MyItemsCategory.selling),
+          _buildCategoryContent(_MyItemsCategory.purchased),
+          _buildCategoryContent(_MyItemsCategory.favorites),
+          _buildCategoryContent(_MyItemsCategory.sold),
+        ],
       ),
     );
   }
 
-  Widget _buildBody(BuildContext context, ProfileState state) {
-    final isLoading = state.myForumPosts.isEmpty && state.status == ProfileStatus.loading;
+  Widget _buildCategoryContent(_MyItemsCategory category) {
+    final items = _getItems(category);
+    final loading = _isLoading(category);
+    final error = _categoryErrors[category];
+    final l10n = context.l10n;
 
-    if (isLoading) {
+    if (loading && items.isEmpty) {
       return const SkeletonList();
     }
 
-    if (state.errorMessage != null && state.myForumPosts.isEmpty) {
-      return ErrorStateView.loadFailed(
-        message: state.errorMessage!,
-        onRetry: () {
-          context.read<ProfileBloc>().add(
-                const ProfileLoadMyForumPosts(page: 1),
-              );
-        },
+    if (error != null && items.isEmpty) {
+      return ErrorStateView(
+        message: error,
+        onRetry: () => _loadAllCategories(forceRefresh: true),
       );
     }
 
-    if (state.myForumPosts.isEmpty) {
-      return EmptyStateView.noData(
-        title: context.l10n.myPostsEmpty,
-        description: context.l10n.myPostsEmptyDesc,
+    if (items.isEmpty) {
+      String emptyTitle;
+      String emptyMessage;
+      switch (category) {
+        case _MyItemsCategory.selling:
+          emptyTitle = l10n.myItemsEmptySelling;
+          emptyMessage = l10n.myItemsEmptySellingMessage;
+        case _MyItemsCategory.purchased:
+          emptyTitle = l10n.myItemsEmptyPurchased;
+          emptyMessage = l10n.myItemsEmptyPurchasedMessage;
+        case _MyItemsCategory.favorites:
+          emptyTitle = l10n.myItemsEmptyFavorites;
+          emptyMessage = l10n.myItemsEmptyFavoritesMessage;
+        case _MyItemsCategory.sold:
+          emptyTitle = l10n.myItemsEmptySold;
+          emptyMessage = l10n.myItemsEmptySoldMessage;
+      }
+      return EmptyStateView(
+        icon: _categoryIcon(category),
+        title: emptyTitle,
+        message: emptyMessage,
       );
     }
 
     return RefreshIndicator(
-      onRefresh: () async {
-        context.read<ProfileBloc>().add(
-              const ProfileLoadMyForumPosts(page: 1),
-            );
-      },
+      onRefresh: () => _loadAllCategories(forceRefresh: true),
       child: ListView.separated(
-        controller: _scrollController,
         clipBehavior: Clip.none,
-        padding: AppSpacing.allMd,
-        itemCount: state.myForumPosts.length + (state.forumPostsHasMore ? 1 : 0),
-        separatorBuilder: (context, index) => AppSpacing.vMd,
+        padding: const EdgeInsets.all(AppSpacing.md),
+        itemCount: items.length,
+        separatorBuilder: (_, __) => const SizedBox(height: AppSpacing.md),
         itemBuilder: (context, index) {
-          if (index >= state.myForumPosts.length) {
-            return const Center(
-              child: Padding(
-                padding: EdgeInsets.all(16.0),
-                child: CircularProgressIndicator(),
-              ),
-            );
-          }
-          return _PostCard(post: state.myForumPosts[index]);
+          final item = items[index];
+          return AnimatedListItem(
+            index: index,
+            child: _FleaMarketItemCard(
+              item: item,
+              category: category,
+              onTap: () => context.push('/flea-market/${item.id}'),
+            ),
+          );
         },
       ),
     );
   }
+
+  IconData _categoryIcon(_MyItemsCategory category) {
+    switch (category) {
+      case _MyItemsCategory.selling:
+        return Icons.sell;
+      case _MyItemsCategory.purchased:
+        return Icons.shopping_bag;
+      case _MyItemsCategory.favorites:
+        return Icons.favorite;
+      case _MyItemsCategory.sold:
+        return Icons.check_circle;
+    }
+  }
 }
 
-class _PostCard extends StatelessWidget {
-  const _PostCard({required this.post});
+/// 闲置商品卡片（对齐iOS MyItemCard）
+class _FleaMarketItemCard extends StatelessWidget {
+  const _FleaMarketItemCard({
+    required this.item,
+    required this.category,
+    required this.onTap,
+  });
 
-  final ForumPost post;
+  final FleaMarketItem item;
+  final _MyItemsCategory category;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return GestureDetector(
-      onTap: () {
-        context.push('/forum/posts/${post.id}');
-      },
+      onTap: onTap,
       child: Container(
-        padding: AppSpacing.allMd,
         decoration: BoxDecoration(
-          color: Theme.of(context).cardColor,
-          borderRadius: AppRadius.allMedium,
+          color: isDark
+              ? AppColors.cardBackgroundDark
+              : AppColors.cardBackgroundLight,
+          borderRadius: AppRadius.allLarge,
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.05),
+              color: Colors.black.withValues(alpha: 0.06),
               blurRadius: 8,
-              offset: const Offset(0, 2),
+              offset: const Offset(0, 3),
             ),
           ],
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // 标题
-            Text(
-              post.title,
-              style: const TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            AppSpacing.vSm,
-
-            // 内容预览
-            if (post.content != null)
-              Text(
-                post.content!,
-                style: const TextStyle(color: AppColors.textSecondaryLight),
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-              ),
-            AppSpacing.vMd,
-
-            // 互动统计
-            Row(
+            // 图片区域 + 状态标签
+            Stack(
               children: [
-                Icon(
-                  post.isLiked ? Icons.thumb_up : Icons.thumb_up_outlined,
-                  size: 16,
-                  color: post.isLiked
-                      ? AppColors.primary
-                      : AppColors.textTertiaryLight,
-                ),
-                const SizedBox(width: 4),
-                Text(
-                  '${post.likeCount}',
-                  style: const TextStyle(
-                    fontSize: 12,
-                    color: AppColors.textTertiaryLight,
+                ClipRRect(
+                  borderRadius: const BorderRadius.vertical(
+                    top: Radius.circular(12),
                   ),
+                  child: item.hasImages
+                      ? AsyncImageView(
+                          imageUrl: item.firstImage!,
+                          width: double.infinity,
+                          height: 200,
+                        )
+                      : Container(
+                          width: double.infinity,
+                          height: 200,
+                          color: isDark
+                              ? Colors.grey[800]
+                              : Colors.grey[200],
+                          child: Icon(
+                            Icons.photo,
+                            size: 48,
+                            color: isDark
+                                ? Colors.grey[600]
+                                : Colors.grey[400],
+                          ),
+                        ),
                 ),
-                const SizedBox(width: 16),
-                const Icon(
-                  Icons.comment_outlined,
-                  size: 16,
-                  color: AppColors.textTertiaryLight,
-                ),
-                const SizedBox(width: 4),
-                Text(
-                  '${post.replyCount}',
-                  style: const TextStyle(
-                    fontSize: 12,
-                    color: AppColors.textTertiaryLight,
-                  ),
-                ),
-                const Spacer(),
-                Text(
-                  _formatTime(context, post.createdAt),
-                  style: const TextStyle(
-                    fontSize: 12,
-                    color: AppColors.textTertiaryLight,
-                  ),
+                // 状态标签
+                Positioned(
+                  top: 8,
+                  right: 8,
+                  child: _buildStatusBadge(context),
                 ),
               ],
+            ),
+
+            // 内容区域
+            Padding(
+              padding: const EdgeInsets.all(AppSpacing.md),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // 标题
+                  Text(
+                    item.title,
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: isDark
+                          ? AppColors.textPrimaryDark
+                          : AppColors.textPrimaryLight,
+                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
+
+                  // 价格
+                  Text(
+                    item.priceDisplay,
+                    style: const TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.primary,
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
+
+                  // 收藏数和浏览量
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.favorite,
+                        size: 14,
+                        color: isDark
+                            ? AppColors.textTertiaryDark
+                            : AppColors.textTertiaryLight,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        '${item.favoriteCount}',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: isDark
+                              ? AppColors.textTertiaryDark
+                              : AppColors.textTertiaryLight,
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Icon(
+                        Icons.visibility,
+                        size: 14,
+                        color: isDark
+                            ? AppColors.textTertiaryDark
+                            : AppColors.textTertiaryLight,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        '${item.viewCount}',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: isDark
+                              ? AppColors.textTertiaryDark
+                              : AppColors.textTertiaryLight,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
             ),
           ],
         ),
@@ -231,19 +487,39 @@ class _PostCard extends StatelessWidget {
     );
   }
 
-  String _formatTime(BuildContext context, DateTime? time) {
-    if (time == null) return '';
-    final now = DateTime.now();
-    final difference = now.difference(time);
+  Widget _buildStatusBadge(BuildContext context) {
+    final l10n = context.l10n;
+    String? text;
+    Color color;
 
-    if (difference.inDays > 0) {
-      return context.l10n.timeDaysAgo(difference.inDays);
-    } else if (difference.inHours > 0) {
-      return context.l10n.timeHoursAgo(difference.inHours);
-    } else if (difference.inMinutes > 0) {
-      return context.l10n.timeMinutesAgo(difference.inMinutes);
-    } else {
-      return context.l10n.timeJustNow;
+    switch (category) {
+      case _MyItemsCategory.selling:
+        text = l10n.myItemsStatusSelling;
+        color = AppColors.success;
+      case _MyItemsCategory.purchased:
+        text = l10n.myItemsStatusPurchased;
+        color = AppColors.primary;
+      case _MyItemsCategory.favorites:
+        return const SizedBox.shrink();
+      case _MyItemsCategory.sold:
+        text = l10n.myItemsStatusSold;
+        color = AppColors.textTertiaryLight;
     }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: color,
+        borderRadius: BorderRadius.circular(4),
+      ),
+      child: Text(
+        text,
+        style: const TextStyle(
+          fontSize: 11,
+          fontWeight: FontWeight.w600,
+          color: Colors.white,
+        ),
+      ),
+    );
   }
 }

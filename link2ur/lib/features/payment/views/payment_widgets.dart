@@ -62,9 +62,11 @@ class _CouponSelectorSheetState extends State<_CouponSelectorSheet> {
           ),
           const SizedBox(height: 16),
           if (_isLoading)
-            const Padding(
-              padding: EdgeInsets.all(40),
-              child: CircularProgressIndicator(),
+            const Center(
+              child: Padding(
+                padding: EdgeInsets.all(40),
+                child: LoadingView(),
+              ),
             )
           else if (_coupons.isEmpty)
             Padding(

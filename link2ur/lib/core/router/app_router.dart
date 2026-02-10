@@ -370,9 +370,12 @@ class AppRouter {
       GoRoute(
         path: AppRoutes.taskDetail,
         name: 'taskDetail',
-        builder: (context, state) {
+        pageBuilder: (context, state) {
           final id = int.tryParse(state.pathParameters['id'] ?? '') ?? 0;
-          return TaskDetailView(taskId: id);
+          return SpringSlideTransitionPage(
+            key: state.pageKey,
+            child: TaskDetailView(taskId: id),
+          );
         },
       ),
 
@@ -405,9 +408,12 @@ class AppRouter {
       GoRoute(
         path: AppRoutes.fleaMarketDetail,
         name: 'fleaMarketDetail',
-        builder: (context, state) {
+        pageBuilder: (context, state) {
           final id = int.tryParse(state.pathParameters['id'] ?? '') ?? 0;
-          return FleaMarketDetailView(itemId: id);
+          return SpringSlideTransitionPage(
+            key: state.pageKey,
+            child: FleaMarketDetailView(itemId: id),
+          );
         },
       ),
 
@@ -430,9 +436,12 @@ class AppRouter {
       GoRoute(
         path: AppRoutes.taskExpertDetail,
         name: 'taskExpertDetail',
-        builder: (context, state) {
+        pageBuilder: (context, state) {
           final id = int.tryParse(state.pathParameters['id'] ?? '') ?? 0;
-          return TaskExpertDetailView(expertId: id);
+          return SpringSlideTransitionPage(
+            key: state.pageKey,
+            child: TaskExpertDetailView(expertId: id),
+          );
         },
       ),
 
@@ -466,9 +475,12 @@ class AppRouter {
       GoRoute(
         path: AppRoutes.forumPostDetail,
         name: 'forumPostDetail',
-        builder: (context, state) {
+        pageBuilder: (context, state) {
           final id = int.tryParse(state.pathParameters['id'] ?? '') ?? 0;
-          return ForumPostDetailView(postId: id);
+          return SpringSlideTransitionPage(
+            key: state.pageKey,
+            child: ForumPostDetailView(postId: id),
+          );
         },
       ),
 
@@ -508,9 +520,12 @@ class AppRouter {
       GoRoute(
         path: AppRoutes.leaderboardDetail,
         name: 'leaderboardDetail',
-        builder: (context, state) {
+        pageBuilder: (context, state) {
           final id = int.tryParse(state.pathParameters['id'] ?? '') ?? 0;
-          return LeaderboardDetailView(leaderboardId: id);
+          return SpringSlideTransitionPage(
+            key: state.pageKey,
+            child: LeaderboardDetailView(leaderboardId: id),
+          );
         },
       ),
 
@@ -592,9 +607,12 @@ class AppRouter {
       GoRoute(
         path: AppRoutes.activityDetail,
         name: 'activityDetail',
-        builder: (context, state) {
+        pageBuilder: (context, state) {
           final id = int.tryParse(state.pathParameters['id'] ?? '') ?? 0;
-          return ActivityDetailView(activityId: id);
+          return SpringSlideTransitionPage(
+            key: state.pageKey,
+            child: ActivityDetailView(activityId: id),
+          );
         },
       ),
 

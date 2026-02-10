@@ -3,10 +3,11 @@ import '../design/app_colors.dart';
 import '../design/app_radius.dart';
 import '../design/app_shadows.dart';
 import '../design/app_spacing.dart';
+import '../utils/haptic_feedback.dart';
 
-/// 基础卡片
-/// 参考iOS cardStyle modifier
-class AppCard extends StatelessWidget {
+/// 基础卡片 — 带按压缩放反馈 + 增强阴影
+/// 参考iOS cardStyle modifier + BouncyButtonStyle
+class AppCard extends StatefulWidget {
   const AppCard({
     super.key,
     required this.child,
@@ -18,6 +19,7 @@ class AppCard extends StatelessWidget {
     this.hasShadow = true,
     this.hasBorder = false,
     this.borderColor,
+    this.enableScaleTap = true,
   });
 
   final Widget child;
@@ -29,57 +31,117 @@ class AppCard extends StatelessWidget {
   final bool hasShadow;
   final bool hasBorder;
   final Color? borderColor;
+  /// 是否启用按压缩放反馈（默认开启，onTap 非空时生效）
+  final bool enableScaleTap;
+
+  @override
+  State<AppCard> createState() => _AppCardState();
+}
+
+class _AppCardState extends State<AppCard>
+    with SingleTickerProviderStateMixin {
+  // 懒创建：仅当 onTap 非空且启用缩放反馈时才分配 AnimationController
+  // 列表中大量纯展示 AppCard 不会产生额外开销
+  AnimationController? _scaleController;
+  Animation<double>? _scaleAnimation;
+
+  bool get _needsAnimation =>
+      widget.onTap != null && widget.enableScaleTap;
+
+  void _ensureController() {
+    if (_scaleController != null) return;
+    _scaleController = AnimationController(
+      duration: const Duration(milliseconds: 100),
+      reverseDuration: const Duration(milliseconds: 300),
+      vsync: this,
+    );
+    _scaleAnimation = Tween<double>(begin: 1.0, end: 0.97).animate(
+      CurvedAnimation(
+        parent: _scaleController!,
+        curve: Curves.easeOutCubic,
+        reverseCurve: Curves.elasticOut,
+      ),
+    );
+  }
+
+  @override
+  void dispose() {
+    _scaleController?.dispose();
+    super.dispose();
+  }
+
+  void _onTapDown(TapDownDetails _) {
+    _ensureController();
+    _scaleController!.forward();
+  }
+
+  void _onTapUp(TapUpDetails _) => _scaleController?.reverse();
+  void _onTapCancel() => _scaleController?.reverse();
 
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final bgColor = backgroundColor ?? 
+    final bgColor = widget.backgroundColor ??
         (isDark ? AppColors.cardBackgroundDark : AppColors.cardBackgroundLight);
-    final effectiveBorderRadius = borderRadius ?? AppRadius.card;
+    final effectiveBorderRadius = widget.borderRadius ?? AppRadius.card;
 
-    // 与iOS cardBackground()对齐：默认添加微妙边框 separator.opacity(0.3), 0.5pt
     final defaultBorder = Border.all(
-      color: (isDark ? AppColors.separatorDark : AppColors.separatorLight).withValues(alpha: 0.3),
+      color: (isDark ? AppColors.separatorDark : AppColors.separatorLight)
+          .withValues(alpha: 0.3),
       width: 0.5,
     );
 
-    // 对齐iOS: 双层阴影 - 一层柔和扩散 + 一层紧密底部
-    final effectiveShadow = hasShadow
-        ? [
-            ...AppShadows.smallForBrightness(isDark ? Brightness.dark : Brightness.light),
-            BoxShadow(
-              color: Colors.black.withValues(alpha: isDark ? 0.06 : 0.02),
-              blurRadius: 2,
-              offset: const Offset(0, 1),
-            ),
-          ]
+    final effectiveShadow = widget.hasShadow
+        ? AppShadows.cardDualForBrightness(
+            isDark ? Brightness.dark : Brightness.light)
         : null;
 
     Widget card = Container(
-      margin: margin,
-      padding: padding ?? AppSpacing.allMd,
+      margin: widget.margin,
+      padding: widget.padding ?? AppSpacing.allMd,
       decoration: BoxDecoration(
         color: bgColor,
         borderRadius: effectiveBorderRadius,
         boxShadow: effectiveShadow,
-        border: hasBorder 
+        border: widget.hasBorder
             ? Border.all(
-                color: borderColor ?? (isDark ? AppColors.dividerDark : AppColors.dividerLight),
+                color: widget.borderColor ??
+                    (isDark ? AppColors.dividerDark : AppColors.dividerLight),
               )
             : defaultBorder,
       ),
-      child: child,
+      child: widget.child,
     );
 
-    if (onTap != null) {
-      card = Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: effectiveBorderRadius,
+    if (widget.onTap != null) {
+      if (_needsAnimation) {
+        _ensureController();
+        card = GestureDetector(
+          onTapDown: _onTapDown,
+          onTapUp: _onTapUp,
+          onTapCancel: _onTapCancel,
+          onTap: () {
+            AppHaptics.selection();
+            widget.onTap?.call();
+          },
+          child: AnimatedBuilder(
+            animation: _scaleAnimation!,
+            builder: (context, child) => Transform.scale(
+              scale: _scaleAnimation!.value,
+              child: child,
+            ),
+            child: card,
+          ),
+        );
+      } else {
+        card = GestureDetector(
+          onTap: () {
+            AppHaptics.selection();
+            widget.onTap?.call();
+          },
           child: card,
-        ),
-      );
+        );
+      }
     }
 
     return card;

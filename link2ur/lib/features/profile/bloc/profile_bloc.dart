@@ -45,14 +45,16 @@ class ProfileLoadMyTasks extends ProfileEvent {
     this.isPosted = false,
     this.page = 1,
     this.pageSize = 20,
+    this.status,
   });
 
   final bool isPosted;
   final int page;
   final int pageSize;
+  final String? status;
 
   @override
-  List<Object?> get props => [isPosted, page, pageSize];
+  List<Object?> get props => [isPosted, page, pageSize, status];
 }
 
 class ProfileLoadPublicProfile extends ProfileEvent {
@@ -131,6 +133,11 @@ class ProfileState extends Equatable {
     // Pagination for forum posts
     this.forumPostsPage = 1,
     this.forumPostsHasMore = false,
+    // Pagination for favorited/liked posts (independent)
+    this.favoritedPostsPage = 1,
+    this.favoritedPostsHasMore = false,
+    this.likedPostsPage = 1,
+    this.likedPostsHasMore = false,
   });
 
   final ProfileStatus status;
@@ -153,6 +160,11 @@ class ProfileState extends Equatable {
   // Pagination for forum posts
   final int forumPostsPage;
   final bool forumPostsHasMore;
+  // Pagination for favorited/liked posts (independent)
+  final int favoritedPostsPage;
+  final bool favoritedPostsHasMore;
+  final int likedPostsPage;
+  final bool likedPostsHasMore;
 
   bool get isLoading => status == ProfileStatus.loading;
 
@@ -175,6 +187,10 @@ class ProfileState extends Equatable {
     bool? postedTasksHasMore,
     int? forumPostsPage,
     bool? forumPostsHasMore,
+    int? favoritedPostsPage,
+    bool? favoritedPostsHasMore,
+    int? likedPostsPage,
+    bool? likedPostsHasMore,
   }) {
     return ProfileState(
       status: status ?? this.status,
@@ -195,6 +211,10 @@ class ProfileState extends Equatable {
       postedTasksHasMore: postedTasksHasMore ?? this.postedTasksHasMore,
       forumPostsPage: forumPostsPage ?? this.forumPostsPage,
       forumPostsHasMore: forumPostsHasMore ?? this.forumPostsHasMore,
+      favoritedPostsPage: favoritedPostsPage ?? this.favoritedPostsPage,
+      favoritedPostsHasMore: favoritedPostsHasMore ?? this.favoritedPostsHasMore,
+      likedPostsPage: likedPostsPage ?? this.likedPostsPage,
+      likedPostsHasMore: likedPostsHasMore ?? this.likedPostsHasMore,
     );
   }
 
@@ -218,6 +238,10 @@ class ProfileState extends Equatable {
         postedTasksHasMore,
         forumPostsPage,
         forumPostsHasMore,
+        favoritedPostsPage,
+        favoritedPostsHasMore,
+        likedPostsPage,
+        likedPostsHasMore,
       ];
 }
 
@@ -286,13 +310,13 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
       emit(state.copyWith(
         user: user,
         isUpdating: false,
-        actionMessage: '资料已更新',
+        actionMessage: 'profile_updated',
       ));
     } catch (e) {
       AppLogger.error('Failed to update profile', e);
       emit(state.copyWith(
         isUpdating: false,
-        actionMessage: '更新失败',
+        actionMessage: 'update_failed',
         errorMessage: e.toString(),
       ));
     }
@@ -309,13 +333,14 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
       emit(state.copyWith(
         user: updatedUser,
         isUpdating: false,
-        actionMessage: '头像已更新',
+        actionMessage: 'avatar_updated',
       ));
     } catch (e) {
       AppLogger.error('Failed to upload avatar', e);
       emit(state.copyWith(
         isUpdating: false,
-        actionMessage: '上传失败',
+        actionMessage: 'upload_failed',
+        errorMessage: e.toString(),
       ));
     }
   }
@@ -329,6 +354,7 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
         final response = await _taskRepository.getMyPostedTasks(
           page: event.page,
           pageSize: event.pageSize,
+          status: event.status,
         );
         final updatedTasks = event.page == 1
             ? response.tasks
@@ -342,6 +368,7 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
         final response = await _taskRepository.getMyTasks(
           page: event.page,
           pageSize: event.pageSize,
+          status: event.status,
         );
         final updatedTasks = event.page == 1
             ? response.tasks
@@ -419,8 +446,8 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
             : [...state.favoritedPosts, ...response.posts];
         emit(state.copyWith(
           favoritedPosts: updatedPosts,
-          forumPostsPage: response.page,
-          forumPostsHasMore: response.hasMore,
+          favoritedPostsPage: response.page,
+          favoritedPostsHasMore: response.hasMore,
         ));
       } else if (event.type == 'liked') {
         response = await _forumRepository.getLikedPosts(
@@ -432,8 +459,8 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
             : [...state.likedPosts, ...response.posts];
         emit(state.copyWith(
           likedPosts: updatedPosts,
-          forumPostsPage: response.page,
-          forumPostsHasMore: response.hasMore,
+          likedPostsPage: response.page,
+          likedPostsHasMore: response.hasMore,
         ));
       } else {
         // 'posts' - same as ProfileLoadMyForumPosts
@@ -481,13 +508,13 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
       emit(state.copyWith(
         preferences: updatedPreferences,
         isUpdating: false,
-        actionMessage: '偏好设置已更新',
+        actionMessage: 'preferences_updated',
       ));
     } catch (e) {
       AppLogger.error('Failed to update preferences', e);
       emit(state.copyWith(
         isUpdating: false,
-        actionMessage: '更新失败',
+        actionMessage: 'update_failed',
       ));
     }
   }

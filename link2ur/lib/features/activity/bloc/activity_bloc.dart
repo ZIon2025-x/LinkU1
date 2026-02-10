@@ -93,6 +93,7 @@ class ActivityState extends Equatable {
     this.detailStatus = ActivityStatus.initial,
     this.timeSlots = const [],
     this.isLoadingTimeSlots = false,
+    this.isLoadingMore = false,
   });
 
   final ActivityStatus status;
@@ -107,6 +108,7 @@ class ActivityState extends Equatable {
   final ActivityStatus detailStatus;
   final List<ServiceTimeSlot> timeSlots;
   final bool isLoadingTimeSlots;
+  final bool isLoadingMore;
 
   bool get isLoading => status == ActivityStatus.loading;
   bool get isDetailLoading => detailStatus == ActivityStatus.loading;
@@ -124,6 +126,7 @@ class ActivityState extends Equatable {
     ActivityStatus? detailStatus,
     List<ServiceTimeSlot>? timeSlots,
     bool? isLoadingTimeSlots,
+    bool? isLoadingMore,
   }) {
     return ActivityState(
       status: status ?? this.status,
@@ -138,6 +141,7 @@ class ActivityState extends Equatable {
       detailStatus: detailStatus ?? this.detailStatus,
       timeSlots: timeSlots ?? this.timeSlots,
       isLoadingTimeSlots: isLoadingTimeSlots ?? this.isLoadingTimeSlots,
+      isLoadingMore: isLoadingMore ?? this.isLoadingMore,
     );
   }
 
@@ -155,6 +159,7 @@ class ActivityState extends Equatable {
         detailStatus,
         timeSlots,
         isLoadingTimeSlots,
+        isLoadingMore,
       ];
 }
 
@@ -210,7 +215,9 @@ class ActivityBloc extends Bloc<ActivityEvent, ActivityState> {
     ActivityLoadMore event,
     Emitter<ActivityState> emit,
   ) async {
-    if (!state.hasMore) return;
+    // 防重复：正在加载中或无更多数据时跳过
+    if (!state.hasMore || state.isLoadingMore) return;
+    emit(state.copyWith(isLoadingMore: true));
 
     try {
       final nextPage = state.page + 1;
@@ -222,10 +229,11 @@ class ActivityBloc extends Bloc<ActivityEvent, ActivityState> {
         activities: [...state.activities, ...response.activities],
         page: nextPage,
         hasMore: response.hasMore,
+        isLoadingMore: false,
       ));
     } catch (e) {
       AppLogger.error('Failed to load more activities', e);
-      emit(state.copyWith(hasMore: false));
+      emit(state.copyWith(hasMore: false, isLoadingMore: false));
     }
   }
 
@@ -264,7 +272,7 @@ class ActivityBloc extends Bloc<ActivityEvent, ActivityState> {
       );
       emit(state.copyWith(
         isSubmitting: false,
-        actionMessage: '报名成功',
+        actionMessage: 'registration_success',
       ));
       // 刷新列表和详情
       add(const ActivityRefreshRequested());
@@ -274,7 +282,8 @@ class ActivityBloc extends Bloc<ActivityEvent, ActivityState> {
     } catch (e) {
       emit(state.copyWith(
         isSubmitting: false,
-        actionMessage: '报名失败: ${e.toString()}',
+        actionMessage: 'registration_failed',
+        errorMessage: e.toString(),
       ));
     }
   }

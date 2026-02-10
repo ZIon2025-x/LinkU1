@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../design/app_colors.dart';
+import '../utils/l10n_extension.dart';
 
 /// 用户身份标识组件 - 显示VIP、super、达人、学生等标识
 /// 参考iOS UserIdentityBadges.swift
@@ -18,6 +20,7 @@ class UserIdentityBadges extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     return Wrap(
       spacing: 6,
       runSpacing: 4,
@@ -25,36 +28,36 @@ class UserIdentityBadges extends StatelessWidget {
         // VIP标识
         if (userLevel == 'vip')
           IdentityBadge(
-            text: 'VIP',
+            text: l10n.badgeVip,
             icon: Icons.workspace_premium,
-            gradientColors: const [Color(0xFFFFD700), Color(0xFFFF9500)],
+            gradientColors: AppColors.gradientGold,
             compact: compact,
           ),
 
         // Super标识
         if (userLevel == 'super')
           IdentityBadge(
-            text: 'Super',
+            text: l10n.badgeSuper,
             icon: Icons.local_fire_department,
-            gradientColors: const [Color(0xFFAF52DE), Color(0xFFFF2D55)],
+            gradientColors: AppColors.gradientPinkPurple,
             compact: compact,
           ),
 
         // 达人标识
         if (isExpert == true)
           IdentityBadge(
-            text: '达人',
+            text: l10n.badgeExpert,
             icon: Icons.star,
-            gradientColors: const [Color(0xFF007AFF), Color(0xFF5AC8FA)],
+            gradientColors: AppColors.gradientBlueTeal,
             compact: compact,
           ),
 
         // 学生标识
         if (isStudentVerified == true)
           IdentityBadge(
-            text: '学生',
+            text: l10n.badgeStudent,
             icon: Icons.school,
-            gradientColors: const [Color(0xFF5856D6), Color(0xFF007AFF)],
+            gradientColors: AppColors.gradientIndigo,
             compact: compact,
           ),
       ],

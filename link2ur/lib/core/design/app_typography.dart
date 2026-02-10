@@ -1,13 +1,20 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 /// 应用文字样式系统
 /// 参考iOS DesignSystem.swift - AppTypography
+/// 英文使用 Inter 品牌字体，中文自动回退系统字体
 class AppTypography {
   AppTypography._();
 
+  /// 品牌字体名称（Inter — 现代感 + 高可读性）
+  /// Google Fonts 自动缓存，首次下载后不再请求网络
+  static String? get _fontFamily => GoogleFonts.inter().fontFamily;
+
   // ==================== 标题样式 ====================
   /// 大标题 - 34pt Bold
-  static const TextStyle largeTitle = TextStyle(
+  static TextStyle get largeTitle => TextStyle(
+    fontFamily: _fontFamily,
     fontSize: 34,
     fontWeight: FontWeight.bold,
     height: 1.2,
@@ -15,7 +22,8 @@ class AppTypography {
   );
 
   /// 标题1 - 28pt Bold
-  static const TextStyle title = TextStyle(
+  static TextStyle get title => TextStyle(
+    fontFamily: _fontFamily,
     fontSize: 28,
     fontWeight: FontWeight.bold,
     height: 1.2,
@@ -23,7 +31,8 @@ class AppTypography {
   );
 
   /// 标题2 - 22pt Bold
-  static const TextStyle title2 = TextStyle(
+  static TextStyle get title2 => TextStyle(
+    fontFamily: _fontFamily,
     fontSize: 22,
     fontWeight: FontWeight.bold,
     height: 1.3,
@@ -31,7 +40,8 @@ class AppTypography {
   );
 
   /// 标题3 - 20pt Semibold
-  static const TextStyle title3 = TextStyle(
+  static TextStyle get title3 => TextStyle(
+    fontFamily: _fontFamily,
     fontSize: 20,
     fontWeight: FontWeight.w600,
     height: 1.3,
@@ -40,7 +50,8 @@ class AppTypography {
 
   // ==================== 正文样式 ====================
   /// 正文 - 17pt Regular
-  static const TextStyle body = TextStyle(
+  static TextStyle get body => TextStyle(
+    fontFamily: _fontFamily,
     fontSize: 17,
     fontWeight: FontWeight.normal,
     height: 1.4,
@@ -48,7 +59,8 @@ class AppTypography {
   );
 
   /// 正文加粗 - 17pt Semibold
-  static const TextStyle bodyBold = TextStyle(
+  static TextStyle get bodyBold => TextStyle(
+    fontFamily: _fontFamily,
     fontSize: 17,
     fontWeight: FontWeight.w600,
     height: 1.4,
@@ -56,7 +68,8 @@ class AppTypography {
   );
 
   /// 标注 - 16pt Regular
-  static const TextStyle callout = TextStyle(
+  static TextStyle get callout => TextStyle(
+    fontFamily: _fontFamily,
     fontSize: 16,
     fontWeight: FontWeight.normal,
     height: 1.4,
@@ -64,7 +77,8 @@ class AppTypography {
   );
 
   /// 副标题 - 15pt Regular
-  static const TextStyle subheadline = TextStyle(
+  static TextStyle get subheadline => TextStyle(
+    fontFamily: _fontFamily,
     fontSize: 15,
     fontWeight: FontWeight.normal,
     height: 1.4,
@@ -72,7 +86,8 @@ class AppTypography {
   );
 
   /// 副标题加粗 - 15pt Semibold
-  static const TextStyle subheadlineBold = TextStyle(
+  static TextStyle get subheadlineBold => TextStyle(
+    fontFamily: _fontFamily,
     fontSize: 15,
     fontWeight: FontWeight.w600,
     height: 1.4,
@@ -81,7 +96,8 @@ class AppTypography {
 
   // ==================== 辅助样式 ====================
   /// 脚注 - 13pt Regular
-  static const TextStyle footnote = TextStyle(
+  static TextStyle get footnote => TextStyle(
+    fontFamily: _fontFamily,
     fontSize: 13,
     fontWeight: FontWeight.normal,
     height: 1.4,
@@ -89,7 +105,8 @@ class AppTypography {
   );
 
   /// 说明文字 - 12pt Regular
-  static const TextStyle caption = TextStyle(
+  static TextStyle get caption => TextStyle(
+    fontFamily: _fontFamily,
     fontSize: 12,
     fontWeight: FontWeight.normal,
     height: 1.3,
@@ -97,7 +114,8 @@ class AppTypography {
   );
 
   /// 说明文字2 - 11pt Regular
-  static const TextStyle caption2 = TextStyle(
+  static TextStyle get caption2 => TextStyle(
+    fontFamily: _fontFamily,
     fontSize: 11,
     fontWeight: FontWeight.normal,
     height: 1.3,
@@ -106,7 +124,8 @@ class AppTypography {
 
   // ==================== 特殊样式 ====================
   /// 按钮文字 - 17pt Semibold
-  static const TextStyle button = TextStyle(
+  static TextStyle get button => TextStyle(
+    fontFamily: _fontFamily,
     fontSize: 17,
     fontWeight: FontWeight.w600,
     height: 1.2,
@@ -114,7 +133,8 @@ class AppTypography {
   );
 
   /// 小按钮文字 - 15pt Medium
-  static const TextStyle buttonSmall = TextStyle(
+  static TextStyle get buttonSmall => TextStyle(
+    fontFamily: _fontFamily,
     fontSize: 15,
     fontWeight: FontWeight.w500,
     height: 1.2,
@@ -122,7 +142,8 @@ class AppTypography {
   );
 
   /// 标签文字 - 12pt Medium
-  static const TextStyle tag = TextStyle(
+  static TextStyle get tag => TextStyle(
+    fontFamily: _fontFamily,
     fontSize: 12,
     fontWeight: FontWeight.w500,
     height: 1.2,
@@ -130,35 +151,41 @@ class AppTypography {
   );
 
   /// 徽章文字 - 10pt Bold
-  static const TextStyle badge = TextStyle(
+  static TextStyle get badge => TextStyle(
+    fontFamily: _fontFamily,
     fontSize: 10,
     fontWeight: FontWeight.bold,
     height: 1.2,
     letterSpacing: 0,
   );
 
-  /// 价格文字 - 24pt Bold
-  static const TextStyle price = TextStyle(
+  /// 价格文字 - 24pt Bold + tabular figures
+  static TextStyle get price => TextStyle(
+    fontFamily: _fontFamily,
     fontSize: 24,
     fontWeight: FontWeight.bold,
     height: 1.2,
     letterSpacing: 0,
+    fontFeatures: const [FontFeature.tabularFigures()],
   );
 
-  /// 小价格文字 - 17pt Semibold
-  static const TextStyle priceSmall = TextStyle(
+  /// 小价格文字 - 17pt Semibold + tabular figures
+  static TextStyle get priceSmall => TextStyle(
+    fontFamily: _fontFamily,
     fontSize: 17,
     fontWeight: FontWeight.w600,
     height: 1.2,
     letterSpacing: 0,
+    fontFeatures: const [FontFeature.tabularFigures()],
   );
 
   /// 数字文字 - 使用等宽数字
-  static const TextStyle number = TextStyle(
+  static TextStyle get number => TextStyle(
+    fontFamily: _fontFamily,
     fontSize: 17,
     fontWeight: FontWeight.w600,
     height: 1.2,
-    fontFeatures: [FontFeature.tabularFigures()],
+    fontFeatures: const [FontFeature.tabularFigures()],
   );
 
   // ==================== 工具方法 ====================

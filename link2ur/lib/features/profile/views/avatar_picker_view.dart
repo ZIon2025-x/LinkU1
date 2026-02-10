@@ -65,14 +65,15 @@ class _AvatarPickerViewState extends State<AvatarPickerView> {
       ),
       child: BlocConsumer<ProfileBloc, ProfileState>(
         listener: (context, state) {
-          if (state.actionMessage != null &&
-              state.actionMessage!.contains('更新') &&
+          if (state.actionMessage == 'profile_updated' &&
               state.user != null) {
             widget.onSelected(state.user!.avatar ?? '');
             Navigator.of(context).pop();
-          } else if (state.errorMessage != null) {
+          } else if (state.actionMessage == 'update_failed' ||
+              state.errorMessage != null) {
+            final l10n = context.l10n;
             ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(state.errorMessage!)),
+              SnackBar(content: Text(state.errorMessage ?? l10n.profileUpdateFailed)),
             );
           }
         },

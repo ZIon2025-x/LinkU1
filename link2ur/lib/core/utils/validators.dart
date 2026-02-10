@@ -1,4 +1,7 @@
+import '../../l10n/app_localizations.dart';
+
 /// 表单验证工具
+/// 所有方法接受可选的 [l10n] 参数，传入时返回本地化文本，否则返回英文默认值。
 class Validators {
   Validators._();
 
@@ -14,11 +17,11 @@ class Validators {
   static final RegExp _phoneRegexIntl = RegExp(r'^\+?[1-9]\d{6,14}$');
 
   /// 手机号正则（英国 UK）— 用户只输入本地号码（不含 +44）
-  /// 英国手机号以 07 开头，共 11 位；或去掉前导 0 以 7 开头，共 10 位
   static final RegExp _phoneRegexUK = RegExp(r'^0?7\d{9}$');
 
   /// 密码正则（至少8位，包含字母和数字）
-  static final RegExp _passwordRegex = RegExp(r'^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d@$!%*#?&]{8,}$');
+  static final RegExp _passwordRegex =
+      RegExp(r'^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d@$!%*#?&]{8,}$');
 
   /// URL正则
   static final RegExp _urlRegex = RegExp(
@@ -27,150 +30,172 @@ class Validators {
 
   // ==================== 验证方法 ====================
   /// 验证邮箱
-  static String? validateEmail(String? value) {
+  static String? validateEmail(String? value, {AppLocalizations? l10n}) {
     if (value == null || value.isEmpty) {
-      return '请输入邮箱地址';
+      return l10n?.validatorEmailRequired ?? 'Please enter email address';
     }
     if (!_emailRegex.hasMatch(value)) {
-      return '请输入有效的邮箱地址';
+      return l10n?.validatorEmailInvalid ?? 'Please enter a valid email address';
     }
     return null;
   }
 
   /// 验证手机号
-  static String? validatePhone(String? value, {bool international = false}) {
+  static String? validatePhone(String? value,
+      {bool international = false, AppLocalizations? l10n}) {
     if (value == null || value.isEmpty) {
-      return '请输入手机号';
+      return l10n?.validatorPhoneRequired ?? 'Please enter phone number';
     }
     final regex = international ? _phoneRegexIntl : _phoneRegexCN;
     if (!regex.hasMatch(value)) {
-      return '请输入有效的手机号';
+      return l10n?.validatorPhoneInvalid ?? 'Please enter a valid phone number';
     }
     return null;
   }
 
   /// 验证英国手机号（用户只输入本地号码，不含 +44）
-  static String? validateUKPhone(String? value) {
+  static String? validateUKPhone(String? value, {AppLocalizations? l10n}) {
     if (value == null || value.isEmpty) {
-      return 'Please enter your phone number';
+      return l10n?.validatorUKPhoneRequired ?? 'Please enter your phone number';
     }
     if (!_phoneRegexUK.hasMatch(value)) {
-      return 'Please enter a valid UK mobile number';
+      return l10n?.validatorUKPhoneInvalid ??
+          'Please enter a valid UK mobile number';
     }
     return null;
   }
 
   /// 验证密码
-  static String? validatePassword(String? value) {
+  static String? validatePassword(String? value, {AppLocalizations? l10n}) {
     if (value == null || value.isEmpty) {
-      return '请输入密码';
+      return l10n?.validatorPasswordRequired ?? 'Please enter password';
     }
     if (value.length < 8) {
-      return '密码长度至少8位';
+      return l10n?.validatorPasswordMinLength ??
+          'Password must be at least 8 characters';
     }
     if (!_passwordRegex.hasMatch(value)) {
-      return '密码需包含字母和数字';
+      return l10n?.validatorPasswordFormat ??
+          'Password must contain both letters and numbers';
     }
     return null;
   }
 
   /// 验证确认密码
-  static String? validateConfirmPassword(String? value, String password) {
+  static String? validateConfirmPassword(String? value, String password,
+      {AppLocalizations? l10n}) {
     if (value == null || value.isEmpty) {
-      return '请确认密码';
+      return l10n?.validatorConfirmPasswordRequired ??
+          'Please confirm password';
     }
     if (value != password) {
-      return '两次输入的密码不一致';
+      return l10n?.validatorPasswordMismatch ?? 'Passwords do not match';
     }
     return null;
   }
 
   /// 验证验证码
-  static String? validateVerificationCode(String? value, {int length = 6}) {
+  static String? validateVerificationCode(String? value,
+      {int length = 6, AppLocalizations? l10n}) {
     if (value == null || value.isEmpty) {
-      return '请输入验证码';
+      return l10n?.validatorCodeRequired ?? 'Please enter verification code';
     }
     if (value.length != length) {
-      return '验证码应为$length位';
+      return l10n?.validatorCodeLength(length) ??
+          'Verification code must be $length digits';
     }
     if (!RegExp(r'^\d+$').hasMatch(value)) {
-      return '验证码只能包含数字';
+      return l10n?.validatorCodeDigitsOnly ??
+          'Verification code must contain only digits';
     }
     return null;
   }
 
   /// 验证用户名
-  static String? validateUsername(String? value) {
+  static String? validateUsername(String? value, {AppLocalizations? l10n}) {
     if (value == null || value.isEmpty) {
-      return '请输入用户名';
+      return l10n?.validatorUsernameRequired ?? 'Please enter username';
     }
     if (value.length < 2) {
-      return '用户名至少2个字符';
+      return l10n?.validatorUsernameMinLength ??
+          'Username must be at least 2 characters';
     }
     if (value.length > 20) {
-      return '用户名最多20个字符';
+      return l10n?.validatorUsernameMaxLength ??
+          'Username must be at most 20 characters';
     }
     return null;
   }
 
   /// 验证标题
-  static String? validateTitle(String? value, {int maxLength = 100}) {
+  static String? validateTitle(String? value,
+      {int maxLength = 100, AppLocalizations? l10n}) {
     if (value == null || value.isEmpty) {
-      return '请输入标题';
+      return l10n?.validatorTitleRequired ?? 'Please enter title';
     }
     if (value.length > maxLength) {
-      return '标题最多$maxLength个字符';
+      return l10n?.validatorTitleMaxLength(maxLength) ??
+          'Title must be at most $maxLength characters';
     }
     return null;
   }
 
   /// 验证描述
-  static String? validateDescription(String? value, {int maxLength = 2000, bool required = true}) {
+  static String? validateDescription(String? value,
+      {int maxLength = 2000, bool required = true, AppLocalizations? l10n}) {
     if (required && (value == null || value.isEmpty)) {
-      return '请输入描述';
+      return l10n?.validatorDescriptionRequired ?? 'Please enter description';
     }
     if (value != null && value.length > maxLength) {
-      return '描述最多$maxLength个字符';
+      return l10n?.validatorDescriptionMaxLength(maxLength) ??
+          'Description must be at most $maxLength characters';
     }
     return null;
   }
 
   /// 验证金额
-  static String? validateAmount(String? value, {double? min, double? max}) {
+  static String? validateAmount(String? value,
+      {double? min, double? max, AppLocalizations? l10n}) {
     if (value == null || value.isEmpty) {
-      return '请输入金额';
+      return l10n?.validatorAmountRequired ?? 'Please enter amount';
     }
     final amount = double.tryParse(value);
     if (amount == null) {
-      return '请输入有效的金额';
+      return l10n?.validatorAmountInvalid ?? 'Please enter a valid amount';
     }
     if (amount <= 0) {
-      return '金额必须大于0';
+      return l10n?.validatorAmountPositive ?? 'Amount must be greater than 0';
     }
     if (min != null && amount < min) {
-      return '金额不能小于$min';
+      return l10n?.validatorAmountMin(min) ?? 'Amount cannot be less than $min';
     }
     if (max != null && amount > max) {
-      return '金额不能大于$max';
+      return l10n?.validatorAmountMax(max) ??
+          'Amount cannot be greater than $max';
     }
     return null;
   }
 
   /// 验证URL
-  static String? validateUrl(String? value, {bool required = false}) {
+  static String? validateUrl(String? value,
+      {bool required = false, AppLocalizations? l10n}) {
     if (value == null || value.isEmpty) {
-      return required ? '请输入URL' : null;
+      return required
+          ? (l10n?.validatorUrlRequired ?? 'Please enter URL')
+          : null;
     }
     if (!_urlRegex.hasMatch(value)) {
-      return '请输入有效的URL';
+      return l10n?.validatorUrlInvalid ?? 'Please enter a valid URL';
     }
     return null;
   }
 
   /// 验证非空
-  static String? validateRequired(String? value, {String fieldName = '此项'}) {
+  static String? validateRequired(String? value,
+      {String fieldName = 'This field', AppLocalizations? l10n}) {
     if (value == null || value.trim().isEmpty) {
-      return '$fieldName不能为空';
+      return l10n?.validatorFieldRequired(fieldName) ??
+          '$fieldName is required';
     }
     return null;
   }
@@ -181,15 +206,18 @@ class Validators {
     required String fieldName,
     int? min,
     int? max,
+    AppLocalizations? l10n,
   }) {
     if (value == null || value.isEmpty) {
       return null;
     }
     if (min != null && value.length < min) {
-      return '$fieldName至少$min个字符';
+      return l10n?.validatorFieldMinLength(fieldName, min) ??
+          '$fieldName must be at least $min characters';
     }
     if (max != null && value.length > max) {
-      return '$fieldName最多$max个字符';
+      return l10n?.validatorFieldMaxLength(fieldName, max) ??
+          '$fieldName must be at most $max characters';
     }
     return null;
   }
@@ -208,7 +236,8 @@ class Validators {
   static bool isValidUKPhone(String phone) => _phoneRegexUK.hasMatch(phone);
 
   /// 是否有效密码
-  static bool isValidPassword(String password) => _passwordRegex.hasMatch(password);
+  static bool isValidPassword(String password) =>
+      _passwordRegex.hasMatch(password);
 
   /// 是否有效URL
   static bool isValidUrl(String url) => _urlRegex.hasMatch(url);

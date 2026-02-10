@@ -123,6 +123,7 @@ class _TaskExpertListViewContentState extends State<_TaskExpertListViewContent> 
             // Empty state
             if (state.experts.isEmpty) {
               return EmptyStateView.noData(
+                context,
                 title: context.l10n.taskExpertNoExperts,
                 description: context.l10n.taskExpertNoExpertsMessage,
               );

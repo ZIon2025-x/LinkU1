@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -247,17 +249,24 @@ class _ChatContentState extends State<_ChatContent> {
   }
 
   Widget _buildInputArea(ChatState state) {
-    return Container(
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return ClipRect(
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+        child: Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Theme.of(context).scaffoldBackgroundColor,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 10,
-            offset: const Offset(0, -2),
+        color: isDark
+            ? AppColors.cardBackgroundDark.withValues(alpha: 0.85)
+            : AppColors.cardBackgroundLight.withValues(alpha: 0.92),
+        border: Border(
+          top: BorderSide(
+            color: isDark
+                ? Colors.white.withValues(alpha: 0.06)
+                : Colors.black.withValues(alpha: 0.04),
+            width: 0.5,
           ),
-        ],
+        ),
       ),
       child: SafeArea(
         child: Row(
@@ -338,6 +347,8 @@ class _ChatContentState extends State<_ChatContent> {
               ),
           ],
         ),
+      ),
+    ),
       ),
     );
   }

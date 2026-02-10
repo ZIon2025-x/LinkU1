@@ -2,9 +2,11 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/design/app_colors.dart';
+import '../../../core/utils/haptic_feedback.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_radius.dart';
 import '../../../core/utils/l10n_extension.dart';
@@ -13,6 +15,7 @@ import '../../../core/widgets/animated_list_item.dart';
 import '../../../core/widgets/skeleton_view.dart';
 import '../../../core/widgets/error_state_view.dart';
 import '../../../core/widgets/empty_state_view.dart';
+import '../../../core/widgets/loading_view.dart';
 import '../../../core/widgets/async_image_view.dart';
 import '../../../data/repositories/flea_market_repository.dart';
 import '../../../data/models/flea_market.dart';
@@ -101,6 +104,7 @@ class _FleaMarketViewContentState extends State<_FleaMarketViewContent> {
           BlocBuilder<FleaMarketBloc, FleaMarketState>(
             buildWhen: (prev, curr) => prev.selectedCategory != curr.selectedCategory,
             builder: (context, state) {
+              final isDark = Theme.of(context).brightness == Brightness.dark;
               final categories = _getCategories(context);
               return SizedBox(
                 height: 48,
@@ -112,28 +116,64 @@ class _FleaMarketViewContentState extends State<_FleaMarketViewContent> {
                   itemBuilder: (context, index) {
                     final (value, label) = categories[index];
                     final isSelected = state.selectedCategory == value;
-                    return FilterChip(
-                      label: Text(label),
-                      selected: isSelected,
-                      onSelected: (_) {
+                    return GestureDetector(
+                      onTap: () {
+                        AppHaptics.selection();
                         context.read<FleaMarketBloc>().add(
                               FleaMarketCategoryChanged(value),
                             );
                       },
-                      selectedColor: AppColors.primary.withValues(alpha: 0.15),
-                      checkmarkColor: AppColors.primary,
-                      labelStyle: TextStyle(
-                        color: isSelected ? AppColors.primary : null,
-                        fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
-                        fontSize: 13,
-                      ),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: AppRadius.allPill,
-                        side: BorderSide(
-                          color: isSelected ? AppColors.primary : Colors.transparent,
+                      child: TweenAnimationBuilder<double>(
+                        tween: Tween(
+                          begin: isSelected ? 1.0 : 1.03,
+                          end: isSelected ? 1.03 : 1.0,
+                        ),
+                        duration: const Duration(milliseconds: 300),
+                        curve: Curves.easeOutCubic,
+                        builder: (context, scale, child) {
+                          return Transform.scale(scale: scale, child: child);
+                        },
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 250),
+                          curve: Curves.easeOutCubic,
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                          decoration: BoxDecoration(
+                            gradient: isSelected
+                                ? const LinearGradient(
+                                    colors: AppColors.gradientPrimary,
+                                  )
+                                : null,
+                            color: isSelected
+                                ? null
+                                : (isDark
+                                    ? AppColors.surface2(Brightness.dark)
+                                    : AppColors.surface1(Brightness.light)),
+                            borderRadius: BorderRadius.circular(20),
+                            border: isSelected
+                                ? null
+                                : Border.all(
+                                    color: (isDark
+                                            ? AppColors.separatorDark
+                                            : AppColors.separatorLight)
+                                        .withValues(alpha: 0.3),
+                                  ),
+                          ),
+                          alignment: Alignment.center,
+                          child: Text(
+                            label,
+                            style: TextStyle(
+                              color: isSelected
+                                  ? Colors.white
+                                  : (isDark
+                                      ? AppColors.textPrimaryDark
+                                      : AppColors.textPrimaryLight),
+                              fontWeight:
+                                  isSelected ? FontWeight.w600 : FontWeight.normal,
+                              fontSize: 14,
+                            ),
+                          ),
                         ),
                       ),
-                      padding: const EdgeInsets.symmetric(horizontal: 4),
                     );
                   },
                 ),
@@ -144,10 +184,38 @@ class _FleaMarketViewContentState extends State<_FleaMarketViewContent> {
           // 商品列表
           Expanded(
             child: BlocBuilder<FleaMarketBloc, FleaMarketState>(
+              buildWhen: (prev, curr) =>
+                  prev.items != curr.items ||
+                  prev.status != curr.status ||
+                  prev.hasMore != curr.hasMore ||
+                  prev.isEmpty != curr.isEmpty,
               builder: (context, state) {
+                return AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 300),
+                  switchInCurve: Curves.easeOut,
+                  switchOutCurve: Curves.easeIn,
+                  child: _buildFleaMarketContent(context, state),
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {
+          context.push('/flea-market/create');
+        },
+        backgroundColor: AppColors.primary,
+        child: const Icon(Icons.add, color: Colors.white),
+      ),
+    );
+  }
+
+  Widget _buildFleaMarketContent(BuildContext context, FleaMarketState state) {
                 // Loading state
                 if (state.isLoading && state.items.isEmpty) {
                   return const SkeletonGrid(
+                    key: ValueKey('skeleton'),
                     crossAxisCount: 2,
                     itemCount: 6,
                     aspectRatio: 0.7,
@@ -169,26 +237,25 @@ class _FleaMarketViewContentState extends State<_FleaMarketViewContent> {
                 // Empty state
                 if (state.isEmpty) {
                   return EmptyStateView.noData(
+                    context,
                     title: context.l10n.fleaMarketNoItems,
                     description: context.l10n.fleaMarketNoItemsHint,
                   );
                 }
 
                 // Content with pull-to-refresh
+                final columnCount = ResponsiveUtils.gridColumnCount(context, type: GridItemType.fleaMarket);
                 return RefreshIndicator(
+                  key: const ValueKey('content'),
                   onRefresh: () async {
                     context.read<FleaMarketBloc>().add(const FleaMarketRefreshRequested());
                     await Future.delayed(const Duration(milliseconds: 500));
                   },
-                  child: GridView.builder(
-                    clipBehavior: Clip.none,
+                  child: MasonryGridView.count(
+                    crossAxisCount: columnCount,
+                    mainAxisSpacing: 12,
+                    crossAxisSpacing: 12,
                     padding: AppSpacing.allMd,
-                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: ResponsiveUtils.gridColumnCount(context, type: GridItemType.fleaMarket),
-                      childAspectRatio: 0.7,
-                      crossAxisSpacing: 12,
-                      mainAxisSpacing: 12,
-                    ),
                     itemCount: state.items.length + (state.hasMore ? 1 : 0),
                     itemBuilder: (context, index) {
                       if (index == state.items.length) {
@@ -196,7 +263,7 @@ class _FleaMarketViewContentState extends State<_FleaMarketViewContent> {
                         return const Center(
                           child: Padding(
                             padding: EdgeInsets.all(16.0),
-                            child: CircularProgressIndicator(strokeWidth: 2),
+                            child: LoadingIndicator(),
                           ),
                         );
                       }
@@ -208,19 +275,6 @@ class _FleaMarketViewContentState extends State<_FleaMarketViewContent> {
                     },
                   ),
                 );
-              },
-            ),
-          ),
-        ],
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          context.push('/flea-market/create');
-        },
-        backgroundColor: AppColors.primary,
-        child: const Icon(Icons.add, color: Colors.white),
-      ),
-    );
   }
 }
 
@@ -248,7 +302,7 @@ class _FleaMarketItemCard extends StatelessWidget {
           color: isDark
               ? AppColors.cardBackgroundDark
               : AppColors.cardBackgroundLight,
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: AppRadius.allLarge,
           boxShadow: [
             BoxShadow(
               color: Colors.black.withValues(alpha: 0.05),
@@ -263,36 +317,42 @@ class _FleaMarketItemCard extends StatelessWidget {
           ],
         ),
         child: Column(
+          mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // 图片区域 - 对齐iOS: 渐变遮罩 + 分类标签 + 状态标签
-            Expanded(
-              child: Stack(
-                fit: StackFit.expand,
-                children: [
-                  // 商品图片
-                  ClipRRect(
-                    borderRadius:
-                        const BorderRadius.vertical(top: Radius.circular(16)),
-                    child: item.firstImage != null
-                        ? Hero(
-                            tag: 'flea_market_image_${item.id}',
-                            child: AsyncImageView(
-                              imageUrl: item.firstImage!,
-                              width: double.infinity,
-                              height: double.infinity,
-                              fit: BoxFit.cover,
-                            ),
-                          )
-                        : Container(
-                            color: AppColors.primary.withValues(alpha: 0.05),
-                            child: Icon(
-                              Icons.image_outlined,
-                              color: AppColors.primary.withValues(alpha: 0.3),
-                              size: 40,
-                            ),
-                          ),
-                  ),
+            // 图片区域 - 可变高度以配合瀑布流
+            LayoutBuilder(
+              builder: (context, constraints) {
+                final imageHeight = 140.0 + (item.id.hashCode.abs() % 100);
+                return SizedBox(
+                  height: imageHeight,
+                  width: constraints.maxWidth,
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      // 商品图片
+                      ClipRRect(
+                        borderRadius:
+                            const BorderRadius.vertical(top: Radius.circular(24)),
+                        child: item.firstImage != null
+                            ? Hero(
+                                tag: 'flea_market_image_${item.id}',
+                                child: AsyncImageView(
+                                  imageUrl: item.firstImage!,
+                                  width: double.infinity,
+                                  height: double.infinity,
+                                  fit: BoxFit.cover,
+                                ),
+                              )
+                            : Container(
+                                color: AppColors.primary.withValues(alpha: 0.05),
+                                child: Icon(
+                                  Icons.image_outlined,
+                                  color: AppColors.primary.withValues(alpha: 0.3),
+                                  size: 40,
+                                ),
+                              ),
+                      ),
                   // 底部渐变遮罩 (iOS style)
                   Positioned(
                     bottom: 0,
@@ -369,12 +429,12 @@ class _FleaMarketItemCard extends StatelessWidget {
                             horizontal: 8, vertical: 3),
                         decoration: BoxDecoration(
                           gradient: const LinearGradient(
-                            colors: [Color(0xFFFF9500), Color(0xFFFF6B00)],
+                            colors: AppColors.gradientOrange,
                           ),
                           borderRadius: AppRadius.allPill,
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.orange.withValues(alpha: 0.4),
+                              color: AppColors.gradientOrange[0].withValues(alpha: 0.4),
                               blurRadius: 4,
                               offset: const Offset(0, 2),
                             ),
@@ -402,6 +462,8 @@ class _FleaMarketItemCard extends StatelessWidget {
                     ),
                 ],
               ),
+            );
+              },
             ),
             // 内容区域 - 对齐iOS: title + price (red) + stats
             Padding(
@@ -436,7 +498,7 @@ class _FleaMarketItemCard extends StatelessWidget {
                         style: const TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
-                          color: Color(0xFFE64D3D), // iOS red price
+                          color: AppColors.priceRed, // iOS red price
                         ),
                       ),
                       const Spacer(),

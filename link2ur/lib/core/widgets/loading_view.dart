@@ -48,7 +48,7 @@ class LoadingView extends StatelessWidget {
   }
 }
 
-/// 全屏加载遮罩
+/// 全屏加载遮罩（带淡入淡出动画）
 class LoadingOverlay extends StatelessWidget {
   const LoadingOverlay({
     super.key,
@@ -66,13 +66,23 @@ class LoadingOverlay extends StatelessWidget {
     return Stack(
       children: [
         child,
-        if (isLoading)
-          Positioned.fill(
-            child: Container(
-              color: Colors.black.withValues(alpha: 0.3),
-              child: LoadingView(message: message),
+        // 使用 AnimatedSwitcher 实现淡入淡出，避免突兀的出现/消失
+        Positioned.fill(
+          child: IgnorePointer(
+            ignoring: !isLoading,
+            child: AnimatedOpacity(
+              opacity: isLoading ? 1.0 : 0.0,
+              duration: const Duration(milliseconds: 200),
+              curve: Curves.easeOut,
+              child: isLoading
+                  ? Container(
+                      color: Colors.black.withValues(alpha: 0.3),
+                      child: LoadingView(message: message),
+                    )
+                  : const SizedBox.shrink(),
             ),
           ),
+        ),
       ],
     );
   }

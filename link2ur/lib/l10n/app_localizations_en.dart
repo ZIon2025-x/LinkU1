@@ -1725,12 +1725,12 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String timeMinutesAgo(int minutes) {
-    return '${minutes}m ago';
+    return '$minutes min ago';
   }
 
   @override
   String timeHoursAgo(int hours) {
-    return '${hours}h ago';
+    return '$hours hr ago';
   }
 
   @override
@@ -3842,7 +3842,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get shareQq => 'QQ';
 
   @override
-  String get shareQzone => 'QZone';
+  String get shareQzone => 'QQ Zone';
 
   @override
   String get shareWeibo => 'Weibo';
@@ -3854,7 +3854,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get shareCopyLink => 'Copy Link';
 
   @override
-  String get shareGenerateImage => 'Generate Share Image';
+  String get shareGenerateImage => 'Generate Image';
 
   @override
   String get shareShareTo => 'Share To';
@@ -3997,6 +3997,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get myTasksTabPending => 'Pending';
+
+  @override
+  String get myTasksTabInProgress => 'In Progress';
 
   @override
   String get myTasksTabCompleted => 'Completed';
@@ -6872,7 +6875,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get homeDefaultUser => 'User';
 
   @override
-  String get homeClassmate => 'Student';
+  String get homeClassmate => 'Linker';
 
   @override
   String get homePostedNewPost => 'posted a new topic';
@@ -7650,4 +7653,352 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get publishPostTab => 'Forum Post';
+
+  @override
+  String get profileUpdateFailed => 'Update failed';
+
+  @override
+  String get profileAvatarUpdated => 'Avatar updated';
+
+  @override
+  String get profileUploadFailed => 'Upload failed';
+
+  @override
+  String get profilePreferencesUpdated => 'Preferences updated';
+
+  @override
+  String get commonSuccess => 'Success';
+
+  @override
+  String get commonError => 'Error';
+
+  @override
+  String get commonSaved => 'Saved';
+
+  @override
+  String get validatorEmailRequired => 'Please enter email address';
+
+  @override
+  String get validatorEmailInvalid => 'Please enter a valid email address';
+
+  @override
+  String get validatorPhoneRequired => 'Please enter phone number';
+
+  @override
+  String get validatorPhoneInvalid => 'Please enter a valid phone number';
+
+  @override
+  String get validatorUKPhoneRequired => 'Please enter your phone number';
+
+  @override
+  String get validatorUKPhoneInvalid => 'Please enter a valid UK mobile number';
+
+  @override
+  String get validatorPasswordRequired => 'Please enter password';
+
+  @override
+  String get validatorPasswordMinLength =>
+      'Password must be at least 8 characters';
+
+  @override
+  String get validatorPasswordFormat =>
+      'Password must contain both letters and numbers';
+
+  @override
+  String get validatorConfirmPasswordRequired => 'Please confirm password';
+
+  @override
+  String get validatorPasswordMismatch => 'Passwords do not match';
+
+  @override
+  String get validatorCodeRequired => 'Please enter verification code';
+
+  @override
+  String validatorCodeLength(int length) {
+    return 'Verification code must be $length digits';
+  }
+
+  @override
+  String get validatorCodeDigitsOnly =>
+      'Verification code must contain only digits';
+
+  @override
+  String get validatorUsernameRequired => 'Please enter username';
+
+  @override
+  String get validatorUsernameMinLength =>
+      'Username must be at least 2 characters';
+
+  @override
+  String get validatorUsernameMaxLength =>
+      'Username must be at most 20 characters';
+
+  @override
+  String get validatorTitleRequired => 'Please enter title';
+
+  @override
+  String validatorTitleMaxLength(int maxLength) {
+    return 'Title must be at most $maxLength characters';
+  }
+
+  @override
+  String get validatorDescriptionRequired => 'Please enter description';
+
+  @override
+  String validatorDescriptionMaxLength(int maxLength) {
+    return 'Description must be at most $maxLength characters';
+  }
+
+  @override
+  String get validatorAmountRequired => 'Please enter amount';
+
+  @override
+  String get validatorAmountInvalid => 'Please enter a valid amount';
+
+  @override
+  String get validatorAmountPositive => 'Amount must be greater than 0';
+
+  @override
+  String validatorAmountMin(double min) {
+    return 'Amount cannot be less than $min';
+  }
+
+  @override
+  String validatorAmountMax(double max) {
+    return 'Amount cannot be greater than $max';
+  }
+
+  @override
+  String get validatorUrlRequired => 'Please enter URL';
+
+  @override
+  String get validatorUrlInvalid => 'Please enter a valid URL';
+
+  @override
+  String validatorFieldRequired(String fieldName) {
+    return '$fieldName is required';
+  }
+
+  @override
+  String validatorFieldMinLength(String fieldName, int min) {
+    return '$fieldName must be at least $min characters';
+  }
+
+  @override
+  String validatorFieldMaxLength(String fieldName, int max) {
+    return '$fieldName must be at most $max characters';
+  }
+
+  @override
+  String get timeYesterday => 'Yesterday';
+
+  @override
+  String get timeDayBeforeYesterday => 'Day before yesterday';
+
+  @override
+  String timeDeadlineMinutes(int minutes) {
+    return 'Due in $minutes min';
+  }
+
+  @override
+  String timeDeadlineHours(int hours) {
+    return 'Due in $hours hr';
+  }
+
+  @override
+  String timeDeadlineDays(int days) {
+    return 'Due in $days days';
+  }
+
+  @override
+  String timeDeadlineDate(String date) {
+    return 'Due $date';
+  }
+
+  @override
+  String get badgeVip => 'VIP';
+
+  @override
+  String get badgeSuper => 'Super';
+
+  @override
+  String get notificationPermTitle => 'Enable Push Notifications';
+
+  @override
+  String get notificationPermDesc =>
+      'Stay updated with:\n\n• Task status updates\n• New message alerts\n• Task match recommendations\n• Deals & promotions';
+
+  @override
+  String get notificationPermEnable => 'Enable Notifications';
+
+  @override
+  String get notificationPermSkip => 'Skip for Now';
+
+  @override
+  String get notificationPermSettingsTitle =>
+      'Notification Permission Required';
+
+  @override
+  String get notificationPermSettingsDesc =>
+      'You have denied notification permission. Please enable it manually in system settings.';
+
+  @override
+  String get notificationPermSettingsLater => 'Later';
+
+  @override
+  String get notificationPermSettingsGo => 'Go to Settings';
+
+  @override
+  String get shareTitle => 'Share to';
+
+  @override
+  String get shareLinkCopied => 'Link copied';
+
+  @override
+  String get shareQQ => 'QQ';
+
+  @override
+  String get shareMore => 'More';
+
+  @override
+  String get actionItemPublished => 'Item published';
+
+  @override
+  String get actionPublishFailed => 'Publish failed';
+
+  @override
+  String get actionPurchaseSuccess => 'Purchase successful';
+
+  @override
+  String get actionPurchaseFailed => 'Purchase failed';
+
+  @override
+  String get actionItemUpdated => 'Item updated';
+
+  @override
+  String get actionUpdateFailed => 'Update failed';
+
+  @override
+  String get actionRefreshSuccess => 'Refreshed';
+
+  @override
+  String get actionRefreshFailed => 'Refresh failed';
+
+  @override
+  String get actionApplicationSubmitted => 'Application submitted';
+
+  @override
+  String get actionApplicationFailed => 'Application failed';
+
+  @override
+  String get actionApplicationCancelled => 'Application cancelled';
+
+  @override
+  String get actionCancelFailed => 'Cancel failed';
+
+  @override
+  String get actionApplicationAccepted => 'Application accepted';
+
+  @override
+  String get actionApplicationRejected => 'Application rejected';
+
+  @override
+  String get actionOperationFailed => 'Operation failed';
+
+  @override
+  String get actionTaskCompleted => 'Completion submitted';
+
+  @override
+  String get actionSubmitFailed => 'Submit failed';
+
+  @override
+  String get actionCompletionConfirmed => 'Completion confirmed';
+
+  @override
+  String get actionConfirmFailed => 'Confirm failed';
+
+  @override
+  String get actionTaskCancelled => 'Task cancelled';
+
+  @override
+  String get actionReviewSubmitted => 'Review submitted';
+
+  @override
+  String get actionReviewFailed => 'Review failed';
+
+  @override
+  String get actionRefundSubmitted => 'Refund request submitted';
+
+  @override
+  String get actionRefundFailed => 'Refund request failed';
+
+  @override
+  String get actionRefundRevoked => 'Refund request revoked';
+
+  @override
+  String get actionRevokeFailed => 'Revoke failed';
+
+  @override
+  String get actionDisputeSubmitted => 'Dispute submitted';
+
+  @override
+  String get actionDisputeFailed => 'Dispute submission failed';
+
+  @override
+  String get actionCheckInSuccess => 'Check-in successful!';
+
+  @override
+  String get actionCheckInFailed => 'Check-in failed';
+
+  @override
+  String get actionVoteFailed => 'Vote failed';
+
+  @override
+  String get actionLeaderboardApplied => 'Application submitted';
+
+  @override
+  String get actionLeaderboardSubmitted => 'Submitted successfully';
+
+  @override
+  String get actionVerificationSubmitted =>
+      'Submitted, please check your email for verification';
+
+  @override
+  String get actionVerificationSuccess => 'Verification successful';
+
+  @override
+  String get actionVerificationFailed => 'Verification failed';
+
+  @override
+  String get actionRenewalSuccess => 'Renewal successful';
+
+  @override
+  String get actionRenewalFailed => 'Renewal failed';
+
+  @override
+  String get actionRegistrationSuccess => 'Registration successful';
+
+  @override
+  String get actionRegistrationFailed => 'Registration failed';
+
+  @override
+  String get actionConversationEnded => 'Conversation ended';
+
+  @override
+  String get actionEndConversationFailed => 'Failed to end conversation';
+
+  @override
+  String get actionFeedbackSuccess => 'Thank you for your feedback';
+
+  @override
+  String get actionFeedbackFailed => 'Feedback failed';
+
+  @override
+  String get actionCouponClaimed => 'Coupon claimed';
+
+  @override
+  String get actionCouponRedeemed => 'Redeemed successfully';
+
+  @override
+  String get actionInviteCodeUsed => 'Invite code applied';
 }

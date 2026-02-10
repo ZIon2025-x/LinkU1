@@ -1,12 +1,15 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import '../design/app_colors.dart';
 import '../design/app_spacing.dart';
 import '../design/app_typography.dart';
 import '../design/app_radius.dart';
+import '../utils/l10n_extension.dart';
 
-/// 空状态视图
+/// 空状态视图 — 图标带轻微浮动动画
 /// 参考iOS EmptyStateView.swift
-class EmptyStateView extends StatelessWidget {
+class EmptyStateView extends StatefulWidget {
   const EmptyStateView({
     super.key,
     required this.icon,
@@ -28,85 +31,115 @@ class EmptyStateView extends StatelessWidget {
   final double iconSize;
   final Color? iconColor;
 
-  /// 无数据
-  factory EmptyStateView.noData({
-    String title = '暂无数据',
+  /// 无数据 (localized)
+  static EmptyStateView noData(BuildContext context, {
+    String? title,
     String? description,
     String? actionText,
     VoidCallback? onAction,
   }) {
+    final l10n = context.l10n;
     return EmptyStateView(
       icon: Icons.inbox_outlined,
-      title: title,
+      title: title ?? l10n.emptyNoData,
       description: description,
       actionText: actionText,
       onAction: onAction,
     );
   }
 
-  /// 无任务
-  factory EmptyStateView.noTasks({
+  /// 无任务 (localized)
+  static EmptyStateView noTasks(BuildContext context, {
     String? title,
     String? description,
     String? actionText,
     VoidCallback? onAction,
   }) {
+    final l10n = context.l10n;
     return EmptyStateView(
       icon: Icons.task_alt_outlined,
-      title: title ?? '暂无任务',
-      description: description ?? '还没有相关任务，点击下方按钮发布新任务',
+      title: title ?? l10n.emptyNoTasks,
+      description: description ?? l10n.emptyNoTasksDescription,
       actionText: actionText,
       onAction: onAction,
     );
   }
 
-  /// 无消息
-  factory EmptyStateView.noMessages({
+  /// 无消息 (localized)
+  static EmptyStateView noMessages(BuildContext context, {
     String? title,
     String? description,
   }) {
+    final l10n = context.l10n;
     return EmptyStateView(
       icon: Icons.chat_bubble_outline,
-      title: title ?? '暂无消息',
-      description: description ?? '还没有收到任何消息',
+      title: title ?? l10n.emptyNoMessages,
+      description: description ?? l10n.emptyNoMessagesDescription,
     );
   }
 
-  /// 无搜索结果
-  factory EmptyStateView.noSearchResults({
+  /// 无搜索结果 (localized)
+  static EmptyStateView noSearchResults(BuildContext context, {
     String? title,
     String? description,
     String? keyword,
   }) {
+    final l10n = context.l10n;
     return EmptyStateView(
       icon: Icons.search_off,
-      title: title ?? '未找到结果',
-      description: description ?? (keyword != null ? '没有找到与"$keyword"相关的内容' : '没有找到相关内容'),
+      title: title ?? l10n.emptyNoSearchResultsTitle,
+      description: description ?? l10n.emptyNoSearchResultsDescription,
     );
   }
 
-  /// 无收藏
-  factory EmptyStateView.noFavorites({
+  /// 无收藏 (localized)
+  static EmptyStateView noFavorites(BuildContext context, {
     String? title,
     String? description,
   }) {
+    final l10n = context.l10n;
     return EmptyStateView(
       icon: Icons.favorite_outline,
-      title: title ?? '暂无收藏',
-      description: description ?? '收藏的内容将显示在这里',
+      title: title ?? l10n.emptyNoData,
+      description: description ?? l10n.emptyNoFavoritesDescription,
     );
   }
 
-  /// 无通知
-  factory EmptyStateView.noNotifications({
+  /// 无通知 (localized)
+  static EmptyStateView noNotifications(BuildContext context, {
     String? title,
     String? description,
   }) {
+    final l10n = context.l10n;
     return EmptyStateView(
       icon: Icons.notifications_none_outlined,
-      title: title ?? '暂无通知',
-      description: description ?? '您的通知将显示在这里',
+      title: title ?? l10n.emptyNoNotifications,
+      description: description ?? l10n.emptyNoNotificationsDescription,
     );
+  }
+
+  @override
+  State<EmptyStateView> createState() => _EmptyStateViewState();
+}
+
+class _EmptyStateViewState extends State<EmptyStateView>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _floatController;
+
+  @override
+  void initState() {
+    super.initState();
+    // 缓慢浮动：3 秒一个周期，低帧率开销
+    _floatController = AnimationController(
+      duration: const Duration(seconds: 3),
+      vsync: this,
+    )..repeat(reverse: true);
+  }
+
+  @override
+  void dispose() {
+    _floatController.dispose();
+    super.dispose();
   }
 
   @override
@@ -119,45 +152,62 @@ class EmptyStateView extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // 图标
-            Container(
-              width: iconSize + 40,
-              height: iconSize + 40,
-              decoration: BoxDecoration(
-                color: (iconColor ?? AppColors.textSecondaryLight).withValues(alpha: 0.1),
-                shape: BoxShape.circle,
-              ),
-              child: Icon(
-                icon,
-                size: iconSize,
-                color: iconColor ?? (isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight),
+            // 图标 — 轻微浮动动画（上下 6px）
+            AnimatedBuilder(
+              animation: _floatController,
+              builder: (context, child) {
+                final offset = math.sin(_floatController.value * math.pi) * 6;
+                return Transform.translate(
+                  offset: Offset(0, -offset),
+                  child: child,
+                );
+              },
+              child: Container(
+                width: widget.iconSize + 40,
+                height: widget.iconSize + 40,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      (widget.iconColor ?? AppColors.primary).withValues(alpha: 0.12),
+                      (widget.iconColor ?? AppColors.primary).withValues(alpha: 0.06),
+                    ],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  widget.icon,
+                  size: widget.iconSize,
+                  color: widget.iconColor ?? (isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight),
+                ),
               ),
             ),
             AppSpacing.vLg,
             // 标题
             Text(
-              title,
+              widget.title,
               style: AppTypography.title3.copyWith(
                 color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
               ),
               textAlign: TextAlign.center,
             ),
-            if (description != null || message != null) ...[
+            if (widget.description != null || widget.message != null) ...[
               AppSpacing.vSm,
               // 描述
               Text(
-                description ?? message!,
+                widget.description ?? widget.message!,
                 style: AppTypography.subheadline.copyWith(
                   color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
                 ),
                 textAlign: TextAlign.center,
               ),
             ],
-            if (actionText != null && onAction != null) ...[
+            if (widget.actionText != null && widget.onAction != null) ...[
               AppSpacing.vLg,
               // 操作按钮
               ElevatedButton(
-                onPressed: onAction,
+                onPressed: widget.onAction,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.primary,
                   foregroundColor: Colors.white,
@@ -166,7 +216,7 @@ class EmptyStateView extends StatelessWidget {
                     borderRadius: AppRadius.button,
                   ),
                 ),
-                child: Text(actionText!),
+                child: Text(widget.actionText!),
               ),
             ],
           ],

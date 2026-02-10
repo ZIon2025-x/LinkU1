@@ -6,6 +6,7 @@ import '../design/app_colors.dart';
 import '../design/app_spacing.dart';
 import '../design/app_typography.dart';
 import '../design/app_radius.dart';
+import '../utils/l10n_extension.dart';
 
 /// 通知权限引导视图
 /// 参考iOS NotificationPermissionView.swift
@@ -47,9 +48,9 @@ class NotificationPermissionView extends StatelessWidget {
               AppSpacing.vXl,
 
               // 标题
-              const Text(
-                '开启推送通知',
-                style: TextStyle(
+              Text(
+                context.l10n.notificationPermTitle,
+                style: const TextStyle(
                   fontSize: 24,
                   fontWeight: FontWeight.bold,
                 ),
@@ -59,11 +60,7 @@ class NotificationPermissionView extends StatelessWidget {
 
               // 说明
               Text(
-                '开启通知后，您可以及时收到：\n\n'
-                '• 任务状态更新\n'
-                '• 新消息提醒\n'
-                '• 任务匹配推荐\n'
-                '• 优惠活动通知',
+                context.l10n.notificationPermDesc,
                 style: AppTypography.body.copyWith(
                   color: Theme.of(context).brightness == Brightness.dark
                       ? AppColors.textSecondaryDark
@@ -88,9 +85,9 @@ class NotificationPermissionView extends StatelessWidget {
                       borderRadius: AppRadius.allMedium,
                     ),
                   ),
-                  child: const Text(
-                    '开启通知',
-                    style: TextStyle(
+                  child: Text(
+                    context.l10n.notificationPermEnable,
+                    style: const TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
                     ),
@@ -103,7 +100,7 @@ class NotificationPermissionView extends StatelessWidget {
               TextButton(
                 onPressed: () => _skip(context),
                 child: Text(
-                  '暂时跳过',
+                  context.l10n.notificationPermSkip,
                   style: AppTypography.body.copyWith(
                     color: Theme.of(context).brightness == Brightness.dark
                         ? AppColors.textSecondaryDark
@@ -146,18 +143,19 @@ class NotificationPermissionView extends StatelessWidget {
   }
 
   void _showSettingsDialog(BuildContext context) {
+    final l10n = context.l10n;
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('需要通知权限'),
-        content: const Text('您已拒绝通知权限，请在系统设置中手动开启。'),
+        title: Text(l10n.notificationPermSettingsTitle),
+        content: Text(l10n.notificationPermSettingsDesc),
         actions: [
           TextButton(
             onPressed: () {
               Navigator.pop(ctx);
               onComplete();
             },
-            child: const Text('稍后再说'),
+            child: Text(l10n.notificationPermSettingsLater),
           ),
           TextButton(
             onPressed: () {
@@ -165,7 +163,7 @@ class NotificationPermissionView extends StatelessWidget {
               openAppSettings();
               onComplete();
             },
-            child: const Text('去设置'),
+            child: Text(l10n.notificationPermSettingsGo),
           ),
         ],
       ),

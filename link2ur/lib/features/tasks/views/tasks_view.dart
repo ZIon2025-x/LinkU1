@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import '../../../core/utils/haptic_feedback.dart';
@@ -18,6 +17,7 @@ import '../../../core/widgets/animated_list_item.dart';
 import '../../../core/widgets/empty_state_view.dart';
 import '../../../core/widgets/skeleton_view.dart';
 import '../../../core/widgets/error_state_view.dart';
+import '../../../core/widgets/loading_view.dart';
 import '../../../data/models/task.dart';
 import '../../../data/repositories/task_repository.dart';
 import '../bloc/task_list_bloc.dart';
@@ -206,6 +206,7 @@ class _TasksViewContentState extends State<_TasksViewContent> {
       buildWhen: (prev, curr) =>
           prev.selectedCategory != curr.selectedCategory,
       builder: (context, state) {
+        final isDark = Theme.of(context).brightness == Brightness.dark;
         return SizedBox(
           height: 40,
           child: ListView.separated(
@@ -217,6 +218,7 @@ class _TasksViewContentState extends State<_TasksViewContent> {
               final category = _categories[index];
               final isSelected =
                   state.selectedCategory == category['key'];
+              final label = _categoryLabel(context, category['key'] as String);
 
               return GestureDetector(
                 onTap: () {
@@ -226,35 +228,54 @@ class _TasksViewContentState extends State<_TasksViewContent> {
                             category['key'] as String),
                       );
                 },
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 14),
-                  decoration: BoxDecoration(
-                    color: isSelected
-                        ? AppColors.primary
-                        : Colors.transparent,
-                    borderRadius: AppRadius.allPill,
-                    border: Border.all(
-                      color: isSelected
-                          ? AppColors.primary
-                          : (Theme.of(context).brightness ==
-                                  Brightness.dark
-                              ? AppColors.dividerDark
-                              : AppColors.dividerLight),
-                    ),
+                child: TweenAnimationBuilder<double>(
+                  tween: Tween(
+                    begin: isSelected ? 1.0 : 1.03,
+                    end: isSelected ? 1.03 : 1.0,
                   ),
-                  alignment: Alignment.center,
-                  child: Text(
-                    _categoryLabel(context, category['key'] as String),
-                    style: TextStyle(
-                      fontSize: 13,
+                  duration: const Duration(milliseconds: 300),
+                  curve: Curves.easeOutCubic,
+                  builder: (context, scale, child) {
+                    return Transform.scale(scale: scale, child: child);
+                  },
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 300),
+                    curve: Curves.easeOutCubic,
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    decoration: BoxDecoration(
+                      gradient: isSelected
+                          ? const LinearGradient(
+                              colors: AppColors.gradientPrimary,
+                            )
+                          : null,
                       color: isSelected
-                          ? Colors.white
-                          : (Theme.of(context).brightness ==
-                                  Brightness.dark
-                              ? AppColors.textSecondaryDark
-                              : AppColors.textSecondaryLight),
-                      fontWeight:
-                          isSelected ? FontWeight.w600 : FontWeight.normal,
+                          ? null
+                          : (isDark
+                              ? AppColors.surface2(Brightness.dark)
+                              : AppColors.surface1(Brightness.light)),
+                      borderRadius: BorderRadius.circular(20),
+                      border: isSelected
+                          ? null
+                          : Border.all(
+                              color: (isDark
+                                      ? AppColors.separatorDark
+                                      : AppColors.separatorLight)
+                                  .withValues(alpha: 0.3),
+                            ),
+                    ),
+                    alignment: Alignment.center,
+                    child: Text(
+                      label,
+                      style: TextStyle(
+                        color: isSelected
+                            ? Colors.white
+                            : (isDark
+                                ? AppColors.textPrimaryDark
+                                : AppColors.textPrimaryLight),
+                        fontWeight:
+                            isSelected ? FontWeight.w600 : FontWeight.normal,
+                        fontSize: 14,
+                      ),
                     ),
                   ),
                 ),
@@ -299,9 +320,28 @@ class _TasksViewContentState extends State<_TasksViewContent> {
   /// Grid任务列表 (对齐iOS LazyVGrid)
   Widget _buildTaskGrid() {
     return BlocBuilder<TaskListBloc, TaskListState>(
+      buildWhen: (prev, curr) =>
+          prev.tasks != curr.tasks ||
+          prev.isLoading != curr.isLoading ||
+          prev.hasMore != curr.hasMore ||
+          prev.hasError != curr.hasError ||
+          prev.isEmpty != curr.isEmpty,
       builder: (context, state) {
+        // AnimatedSwitcher 实现 skeleton → 内容的平滑淡出淡入过渡
+        return AnimatedSwitcher(
+          duration: const Duration(milliseconds: 300),
+          switchInCurve: Curves.easeOut,
+          switchOutCurve: Curves.easeIn,
+          child: _buildTaskGridContent(context, state),
+        );
+      },
+    );
+  }
+
+  Widget _buildTaskGridContent(BuildContext context, TaskListState state) {
         if (state.isLoading && state.tasks.isEmpty) {
           return const SkeletonGrid(
+            key: ValueKey('skeleton'),
             crossAxisCount: 2,
             itemCount: 6,
             aspectRatio: 0.68,
@@ -312,6 +352,7 @@ class _TasksViewContentState extends State<_TasksViewContent> {
 
         if (state.hasError && state.tasks.isEmpty) {
           return ErrorStateView(
+            key: const ValueKey('error'),
             message: state.errorMessage ?? context.l10n.tasksLoadFailed,
             onRetry: () {
               context
@@ -322,11 +363,15 @@ class _TasksViewContentState extends State<_TasksViewContent> {
         }
 
         if (state.isEmpty) {
-          return EmptyStateView.noTasks(
-            actionText: context.l10n.homePublishTask,
-            onAction: () {
-              context.push('/tasks/create');
-            },
+          return KeyedSubtree(
+            key: const ValueKey('empty'),
+            child: EmptyStateView.noTasks(
+              context,
+              actionText: context.l10n.homePublishTask,
+              onAction: () {
+                context.push('/tasks/create');
+              },
+            ),
           );
         }
 
@@ -341,6 +386,7 @@ class _TasksViewContentState extends State<_TasksViewContent> {
                   orElse: () => state,
                 );
           },
+          key: const ValueKey('content'),
           child: GridView.builder(
             controller: _scrollController,
             clipBehavior: Clip.none,
@@ -357,7 +403,7 @@ class _TasksViewContentState extends State<_TasksViewContent> {
                 return const Center(
                   child: Padding(
                     padding: EdgeInsets.all(16),
-                    child: CircularProgressIndicator(),
+                    child: LoadingIndicator(),
                   ),
                 );
               }
@@ -368,8 +414,6 @@ class _TasksViewContentState extends State<_TasksViewContent> {
             },
           ),
         );
-      },
-    );
   }
 
   void _showSortOptions(BuildContext context) {
@@ -528,93 +572,81 @@ class _TaskGridCard extends StatelessWidget {
           ),
         ),
 
-        // 左上角：位置标签 (对齐iOS - 毛玻璃 Capsule + 边框)
+        // 左上角：位置标签 (半透明胶囊，替代 BackdropFilter 以提升滚动性能)
         Positioned(
           top: 8,
           left: 8,
-          child: ClipRRect(
-            borderRadius: AppRadius.allPill,
-            child: BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
-              child: Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.18),
-                  borderRadius: AppRadius.allPill,
-                  border: Border.all(
-                    color: Colors.white.withValues(alpha: 0.2),
-                    width: 0.5,
+          child: Container(
+            padding:
+                const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            decoration: BoxDecoration(
+              color: Colors.black.withValues(alpha: 0.35),
+              borderRadius: AppRadius.allPill,
+              border: Border.all(
+                color: Colors.white.withValues(alpha: 0.15),
+                width: 0.5,
+              ),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  task.isOnline
+                      ? Icons.language
+                      : Icons.location_on,
+                  size: 12,
+                  color: Colors.white,
+                ),
+                const SizedBox(width: 3),
+                ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 80),
+                  child: Text(
+                    task.location ?? 'Online',
+                    style: AppTypography.caption.copyWith(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w600,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      task.isOnline
-                          ? Icons.language
-                          : Icons.location_on,
-                      size: 12,
-                      color: Colors.white,
-                    ),
-                    const SizedBox(width: 3),
-                    ConstrainedBox(
-                      constraints: const BoxConstraints(maxWidth: 80),
-                      child: Text(
-                        task.location ?? 'Online',
-                        style: AppTypography.caption.copyWith(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w600,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
+              ],
             ),
           ),
         ),
 
-        // 右下角：任务类型标签 (对齐iOS - 毛玻璃 Capsule + icon + 边框)
+        // 右下角：任务类型标签 (半透明胶囊，替代 BackdropFilter 以提升滚动性能)
         Positioned(
           bottom: 8,
           right: 8,
-          child: ClipRRect(
-            borderRadius: AppRadius.allPill,
-            child: BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
-              child: Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.18),
-                  borderRadius: AppRadius.allPill,
-                  border: Border.all(
-                    color: Colors.white.withValues(alpha: 0.2),
-                    width: 0.5,
+          child: Container(
+            padding:
+                const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            decoration: BoxDecoration(
+              color: Colors.black.withValues(alpha: 0.35),
+              borderRadius: AppRadius.allPill,
+              border: Border.all(
+                color: Colors.white.withValues(alpha: 0.15),
+                width: 0.5,
+              ),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  TaskTypeHelper.getIcon(task.taskType),
+                  size: 11,
+                  color: Colors.white,
+                ),
+                const SizedBox(width: 3),
+                Text(
+                  task.taskTypeText,
+                  style: AppTypography.caption.copyWith(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      TaskTypeHelper.getIcon(task.taskType),
-                      size: 11,
-                      color: Colors.white,
-                    ),
-                    const SizedBox(width: 3),
-                    Text(
-                      task.taskTypeText,
-                      style: AppTypography.caption.copyWith(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
+              ],
             ),
           ),
         ),
@@ -705,7 +737,7 @@ class _TaskGridCard extends StatelessWidget {
     );
   }
 
-  /// 价格标签 (对齐iOS priceBadge - success颜色胶囊)
+  /// 价格标签 (对齐iOS priceBadge - success渐变胶囊)
   Widget _buildPriceBadge() {
     if (task.reward <= 0) return const SizedBox.shrink();
 
@@ -717,7 +749,12 @@ class _TaskGridCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: AppColors.success,
+        gradient: LinearGradient(
+          colors: [
+            AppColors.success,
+            AppColors.success.withValues(alpha: 0.85),
+          ],
+        ),
         borderRadius: AppRadius.allPill,
       ),
       child: Row(

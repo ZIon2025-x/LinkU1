@@ -1854,6 +1854,7 @@
   "myTasksTabPosted": "Posted",
   "myTasksTabTaken": "Taken",
   "myTasksTabPending": "Pending",
+  "myTasksTabInProgress": "In Progress",
   "myTasksTabCompleted": "Completed",
   "myTasksTabCancelled": "Cancelled",
   "myTasksEmptyAll": "You haven't posted or accepted any tasks yet",
@@ -3264,7 +3265,7 @@
   "homeDeadlineMinutes": "{minutes}m left",
   "@homeDeadlineMinutes": { "placeholders": { "minutes": { "type": "int" } } },
   "homeDefaultUser": "User",
-  "homeClassmate": "Student",
+  "homeClassmate": "Linker",
   "homePostedNewPost": "posted a new topic",
   "homePostedNewProduct": "listed a new item",
   "homeSystemUser": "System",
@@ -3574,5 +3575,212 @@
   "publishTitle": "Publish",
   "publishTaskTab": "Post Task",
   "publishFleaMarketTab": "Sell Item",
-  "publishPostTab": "Forum Post"
+  "publishPostTab": "Forum Post",
+
+  "profileUpdateFailed": "Update failed",
+  "profileAvatarUpdated": "Avatar updated",
+  "profileUploadFailed": "Upload failed",
+  "profilePreferencesUpdated": "Preferences updated",
+  "commonSuccess": "Success",
+  "commonError": "Error",
+  "commonSaved": "Saved",
+
+  "validatorEmailRequired": "Please enter email address",
+  "validatorEmailInvalid": "Please enter a valid email address",
+  "validatorPhoneRequired": "Please enter phone number",
+  "validatorPhoneInvalid": "Please enter a valid phone number",
+  "validatorUKPhoneRequired": "Please enter your phone number",
+  "validatorUKPhoneInvalid": "Please enter a valid UK mobile number",
+  "validatorPasswordRequired": "Please enter password",
+  "validatorPasswordMinLength": "Password must be at least 8 characters",
+  "validatorPasswordFormat": "Password must contain both letters and numbers",
+  "validatorConfirmPasswordRequired": "Please confirm password",
+  "validatorPasswordMismatch": "Passwords do not match",
+  "validatorCodeRequired": "Please enter verification code",
+  "validatorCodeLength": "Verification code must be {length} digits",
+  "@validatorCodeLength": {
+    "placeholders": {
+      "length": {"type": "int"}
+    }
+  },
+  "validatorCodeDigitsOnly": "Verification code must contain only digits",
+  "validatorUsernameRequired": "Please enter username",
+  "validatorUsernameMinLength": "Username must be at least 2 characters",
+  "validatorUsernameMaxLength": "Username must be at most 20 characters",
+  "validatorTitleRequired": "Please enter title",
+  "validatorTitleMaxLength": "Title must be at most {maxLength} characters",
+  "@validatorTitleMaxLength": {
+    "placeholders": {
+      "maxLength": {"type": "int"}
+    }
+  },
+  "validatorDescriptionRequired": "Please enter description",
+  "validatorDescriptionMaxLength": "Description must be at most {maxLength} characters",
+  "@validatorDescriptionMaxLength": {
+    "placeholders": {
+      "maxLength": {"type": "int"}
+    }
+  },
+  "validatorAmountRequired": "Please enter amount",
+  "validatorAmountInvalid": "Please enter a valid amount",
+  "validatorAmountPositive": "Amount must be greater than 0",
+  "validatorAmountMin": "Amount cannot be less than {min}",
+  "@validatorAmountMin": {
+    "placeholders": {
+      "min": {"type": "double"}
+    }
+  },
+  "validatorAmountMax": "Amount cannot be greater than {max}",
+  "@validatorAmountMax": {
+    "placeholders": {
+      "max": {"type": "double"}
+    }
+  },
+  "validatorUrlRequired": "Please enter URL",
+  "validatorUrlInvalid": "Please enter a valid URL",
+  "validatorFieldRequired": "{fieldName} is required",
+  "@validatorFieldRequired": {
+    "placeholders": {
+      "fieldName": {"type": "String"}
+    }
+  },
+  "validatorFieldMinLength": "{fieldName} must be at least {min} characters",
+  "@validatorFieldMinLength": {
+    "placeholders": {
+      "fieldName": {"type": "String"},
+      "min": {"type": "int"}
+    }
+  },
+  "validatorFieldMaxLength": "{fieldName} must be at most {max} characters",
+  "@validatorFieldMaxLength": {
+    "placeholders": {
+      "fieldName": {"type": "String"},
+      "max": {"type": "int"}
+    }
+  },
+
+  "timeJustNow": "Just now",
+  "timeMinutesAgo": "{minutes} min ago",
+  "@timeMinutesAgo": {
+    "placeholders": {
+      "minutes": {"type": "int"}
+    }
+  },
+  "timeHoursAgo": "{hours} hr ago",
+  "@timeHoursAgo": {
+    "placeholders": {
+      "hours": {"type": "int"}
+    }
+  },
+  "timeYesterday": "Yesterday",
+  "timeDayBeforeYesterday": "Day before yesterday",
+  "timeExpired": "Expired",
+  "timeDeadlineMinutes": "Due in {minutes} min",
+  "@timeDeadlineMinutes": {
+    "placeholders": {
+      "minutes": {"type": "int"}
+    }
+  },
+  "timeDeadlineHours": "Due in {hours} hr",
+  "@timeDeadlineHours": {
+    "placeholders": {
+      "hours": {"type": "int"}
+    }
+  },
+  "timeDeadlineDays": "Due in {days} days",
+  "@timeDeadlineDays": {
+    "placeholders": {
+      "days": {"type": "int"}
+    }
+  },
+  "timeDeadlineDate": "Due {date}",
+  "@timeDeadlineDate": {
+    "placeholders": {
+      "date": {"type": "String"}
+    }
+  },
+
+  "badgeExpert": "Expert",
+  "badgeStudent": "Student",
+  "badgeVip": "VIP",
+  "badgeSuper": "Super",
+
+  "notificationPermTitle": "Enable Push Notifications",
+  "notificationPermDesc": "Stay updated with:\n\n• Task status updates\n• New message alerts\n• Task match recommendations\n• Deals & promotions",
+  "notificationPermEnable": "Enable Notifications",
+  "notificationPermSkip": "Skip for Now",
+  "notificationPermSettingsTitle": "Notification Permission Required",
+  "notificationPermSettingsDesc": "You have denied notification permission. Please enable it manually in system settings.",
+  "notificationPermSettingsLater": "Later",
+  "notificationPermSettingsGo": "Go to Settings",
+
+  "networkDisconnected": "Network disconnected",
+  "networkRestored": "Network restored",
+
+  "shareTitle": "Share to",
+  "shareLinkCopied": "Link copied",
+  "shareWechat": "WeChat",
+  "shareWechatMoments": "Moments",
+  "shareQQ": "QQ",
+  "shareQzone": "QQ Zone",
+  "shareWeibo": "Weibo",
+  "shareSms": "SMS",
+  "shareCopyLink": "Copy Link",
+  "shareGenerateImage": "Generate Image",
+  "shareMore": "More",
+
+  "actionItemPublished": "Item published",
+  "actionPublishFailed": "Publish failed",
+  "actionPurchaseSuccess": "Purchase successful",
+  "actionPurchaseFailed": "Purchase failed",
+  "actionItemUpdated": "Item updated",
+  "actionUpdateFailed": "Update failed",
+  "actionRefreshSuccess": "Refreshed",
+  "actionRefreshFailed": "Refresh failed",
+
+  "actionApplicationSubmitted": "Application submitted",
+  "actionApplicationFailed": "Application failed",
+  "actionApplicationCancelled": "Application cancelled",
+  "actionCancelFailed": "Cancel failed",
+  "actionApplicationAccepted": "Application accepted",
+  "actionApplicationRejected": "Application rejected",
+  "actionOperationFailed": "Operation failed",
+  "actionTaskCompleted": "Completion submitted",
+  "actionSubmitFailed": "Submit failed",
+  "actionCompletionConfirmed": "Completion confirmed",
+  "actionConfirmFailed": "Confirm failed",
+  "actionTaskCancelled": "Task cancelled",
+  "actionReviewSubmitted": "Review submitted",
+  "actionReviewFailed": "Review failed",
+  "actionRefundSubmitted": "Refund request submitted",
+  "actionRefundFailed": "Refund request failed",
+  "actionRefundRevoked": "Refund request revoked",
+  "actionRevokeFailed": "Revoke failed",
+  "actionDisputeSubmitted": "Dispute submitted",
+  "actionDisputeFailed": "Dispute submission failed",
+
+  "actionCheckInSuccess": "Check-in successful!",
+  "actionCheckInFailed": "Check-in failed",
+
+  "actionVoteFailed": "Vote failed",
+  "actionLeaderboardApplied": "Application submitted",
+  "actionLeaderboardSubmitted": "Submitted successfully",
+
+  "actionVerificationSubmitted": "Submitted, please check your email for verification",
+  "actionVerificationSuccess": "Verification successful",
+  "actionVerificationFailed": "Verification failed",
+  "actionRenewalSuccess": "Renewal successful",
+  "actionRenewalFailed": "Renewal failed",
+
+  "actionRegistrationSuccess": "Registration successful",
+  "actionRegistrationFailed": "Registration failed",
+
+  "actionConversationEnded": "Conversation ended",
+  "actionEndConversationFailed": "Failed to end conversation",
+  "actionFeedbackSuccess": "Thank you for your feedback",
+  "actionFeedbackFailed": "Feedback failed",
+
+  "actionCouponClaimed": "Coupon claimed",
+  "actionCouponRedeemed": "Redeemed successfully",
+  "actionInviteCodeUsed": "Invite code applied"
 }

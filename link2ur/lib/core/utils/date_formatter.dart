@@ -1,4 +1,5 @@
 import 'package:intl/intl.dart';
+import '../../l10n/app_localizations.dart';
 
 /// 日期格式化工具
 /// 参考iOS DateFormatterHelper.swift
@@ -42,27 +43,31 @@ class DateFormatter {
 
   // ==================== 智能格式化 ====================
   /// 智能时间显示（几分钟前、几小时前、昨天、日期）
-  static String formatSmart(DateTime date, {bool showTime = false}) {
+  static String formatSmart(DateTime date,
+      {bool showTime = false, AppLocalizations? l10n}) {
     final now = DateTime.now();
     final diff = now.difference(date);
 
     if (diff.inMinutes < 1) {
-      return '刚刚';
+      return l10n?.timeJustNow ?? 'Just now';
     } else if (diff.inMinutes < 60) {
-      return '${diff.inMinutes}分钟前';
+      return l10n?.timeMinutesAgo(diff.inMinutes) ?? '${diff.inMinutes} min ago';
     } else if (diff.inHours < 24) {
-      return '${diff.inHours}小时前';
+      return l10n?.timeHoursAgo(diff.inHours) ?? '${diff.inHours} hr ago';
     } else if (diff.inDays == 1) {
-      return showTime ? '昨天 ${formatTime(date)}' : '昨天';
+      final yesterday = l10n?.timeYesterday ?? 'Yesterday';
+      return showTime ? '$yesterday ${formatTime(date)}' : yesterday;
     } else if (diff.inDays == 2) {
-      return showTime ? '前天 ${formatTime(date)}' : '前天';
+      final dayBefore =
+          l10n?.timeDayBeforeYesterday ?? 'Day before yesterday';
+      return showTime ? '$dayBefore ${formatTime(date)}' : dayBefore;
     } else if (diff.inDays < 7) {
-      return showTime 
-          ? '${formatShortWeekday(date)} ${formatTime(date)}' 
+      return showTime
+          ? '${formatShortWeekday(date)} ${formatTime(date)}'
           : formatShortWeekday(date);
     } else if (date.year == now.year) {
-      return showTime 
-          ? '${formatMonthDay(date)} ${formatTime(date)}' 
+      return showTime
+          ? '${formatMonthDay(date)} ${formatTime(date)}'
           : formatMonthDay(date);
     } else {
       return showTime ? formatDateTime(date) : formatDate(date);
@@ -70,18 +75,19 @@ class DateFormatter {
   }
 
   /// 消息时间格式化
-  static String formatMessageTime(DateTime date) {
+  static String formatMessageTime(DateTime date, {AppLocalizations? l10n}) {
     final now = DateTime.now();
     final diff = now.difference(date);
 
     if (diff.inMinutes < 1) {
-      return '刚刚';
+      return l10n?.timeJustNow ?? 'Just now';
     } else if (diff.inHours < 1) {
-      return '${diff.inMinutes}分钟前';
+      return l10n?.timeMinutesAgo(diff.inMinutes) ?? '${diff.inMinutes} min ago';
     } else if (_isSameDay(date, now)) {
       return formatTime(date);
     } else if (_isSameDay(date, now.subtract(const Duration(days: 1)))) {
-      return '昨天 ${formatTime(date)}';
+      final yesterday = l10n?.timeYesterday ?? 'Yesterday';
+      return '$yesterday ${formatTime(date)}';
     } else if (diff.inDays < 7) {
       return '${formatShortWeekday(date)} ${formatTime(date)}';
     } else if (date.year == now.year) {
@@ -92,20 +98,24 @@ class DateFormatter {
   }
 
   /// 截止时间格式化
-  static String formatDeadline(DateTime deadline) {
+  static String formatDeadline(DateTime deadline, {AppLocalizations? l10n}) {
     final now = DateTime.now();
     final diff = deadline.difference(now);
 
     if (diff.isNegative) {
-      return '已过期';
+      return l10n?.timeExpired ?? 'Expired';
     } else if (diff.inHours < 1) {
-      return '${diff.inMinutes}分钟后截止';
+      return l10n?.timeDeadlineMinutes(diff.inMinutes) ??
+          'Due in ${diff.inMinutes} min';
     } else if (diff.inHours < 24) {
-      return '${diff.inHours}小时后截止';
+      return l10n?.timeDeadlineHours(diff.inHours) ??
+          'Due in ${diff.inHours} hr';
     } else if (diff.inDays < 7) {
-      return '${diff.inDays}天后截止';
+      return l10n?.timeDeadlineDays(diff.inDays) ??
+          'Due in ${diff.inDays} days';
     } else {
-      return '${formatDate(deadline)} 截止';
+      return l10n?.timeDeadlineDate(formatDate(deadline)) ??
+          '${formatDate(deadline)} due';
     }
   }
 
@@ -141,7 +151,8 @@ class DateFormatter {
   }
 
   /// 解析日期字符串
-  static DateTime? parse(String? dateString, {String format = 'yyyy-MM-dd HH:mm:ss'}) {
+  static DateTime? parse(String? dateString,
+      {String format = 'yyyy-MM-dd HH:mm:ss'}) {
     if (dateString == null || dateString.isEmpty) return null;
     try {
       return DateFormat(format).parse(dateString);

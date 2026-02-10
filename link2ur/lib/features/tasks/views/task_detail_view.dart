@@ -1,5 +1,3 @@
-import 'dart:ui';
-
 import 'package:flutter/material.dart';
 import '../../../core/utils/haptic_feedback.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -14,6 +12,7 @@ import '../../../core/design/app_radius.dart';
 import '../../../core/widgets/buttons.dart';
 import '../../../core/widgets/skeleton_view.dart';
 import '../../../core/widgets/error_state_view.dart';
+import '../../../core/widgets/loading_view.dart';
 import '../../../core/widgets/async_image_view.dart';
 import '../../../core/widgets/full_screen_image_view.dart';
 import '../../../core/widgets/custom_share_panel.dart';
@@ -60,12 +59,48 @@ class _TaskDetailContent extends StatelessWidget {
 
     return BlocConsumer<TaskDetailBloc, TaskDetailState>(
       listenWhen: (prev, curr) =>
-          curr.actionMessage != null &&
-          prev.actionMessage != curr.actionMessage,
+          // 操作消息提示
+          (curr.actionMessage != null &&
+              prev.actionMessage != curr.actionMessage) ||
+          // 首次加载完成时触发关联数据加载
+          (!prev.isLoaded && curr.isLoaded && curr.task != null),
       listener: (context, state) {
         if (state.actionMessage != null) {
+          final l10n = context.l10n;
+          final message = switch (state.actionMessage) {
+            'application_submitted' => l10n.actionApplicationSubmitted,
+            'application_failed' => l10n.actionApplicationFailed,
+            'application_cancelled' => l10n.actionApplicationCancelled,
+            'cancel_failed' => l10n.actionCancelFailed,
+            'application_accepted' => l10n.actionApplicationAccepted,
+            'application_rejected' => l10n.actionApplicationRejected,
+            'operation_failed' => l10n.actionOperationFailed,
+            'task_completed' => l10n.actionTaskCompleted,
+            'submit_failed' => l10n.actionSubmitFailed,
+            'completion_confirmed' => l10n.actionCompletionConfirmed,
+            'confirm_failed' => l10n.actionConfirmFailed,
+            'task_cancelled' => l10n.actionTaskCancelled,
+            'review_submitted' => l10n.actionReviewSubmitted,
+            'review_failed' => l10n.actionReviewFailed,
+            'refund_submitted' => l10n.actionRefundSubmitted,
+            'refund_failed' => l10n.actionRefundFailed,
+            'refund_revoked' => l10n.actionRefundRevoked,
+            'revoke_failed' => l10n.actionRevokeFailed,
+            'dispute_submitted' => l10n.actionDisputeSubmitted,
+            'dispute_failed' => l10n.actionDisputeFailed,
+            _ => state.actionMessage ?? '',
+          };
+          final isError = state.actionMessage!.contains('failed') ||
+              state.actionMessage == 'cancel_failed' ||
+              state.actionMessage == 'operation_failed';
+          final displayMessage = isError && state.errorMessage != null
+              ? '$message: ${state.errorMessage}'
+              : message;
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(state.actionMessage!)),
+            SnackBar(
+              content: Text(displayMessage),
+              backgroundColor: isError ? AppColors.error : null,
+            ),
           );
         }
 
@@ -141,7 +176,10 @@ class _TaskDetailContent extends StatelessWidget {
       leading: Padding(
         padding: const EdgeInsets.all(4),
         child: GestureDetector(
-          onTap: () => Navigator.of(context).pop(),
+          onTap: () {
+            AppHaptics.selection();
+            Navigator.of(context).pop();
+          },
           child: Container(
             width: 36,
             height: 36,
@@ -311,12 +349,19 @@ class _TaskDetailContent extends StatelessWidget {
 
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    return SingleChildScrollView(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // 图片轮播区域
-          _TaskImageCarousel(task: task),
+    return RefreshIndicator(
+      onRefresh: () async {
+        final bloc = context.read<TaskDetailBloc>();
+        bloc.add(TaskDetailLoadRequested(task.id));
+        await bloc.stream.firstWhere((s) => s.isLoaded || s.status == TaskDetailStatus.error);
+      },
+      child: SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // 图片轮播区域
+            _TaskImageCarousel(task: task),
 
           // 内容区域 - 上移重叠图片
           Transform.translate(
@@ -429,6 +474,7 @@ class _TaskDetailContent extends StatelessWidget {
           ),
         ],
       ),
+      ),
     );
   }
 
@@ -448,47 +494,42 @@ class _TaskDetailContent extends StatelessWidget {
             task.status == AppConstants.taskStatusPendingConfirmation ||
             task.status == AppConstants.taskStatusPendingPayment);
 
-    // 底部按钮：快速操作栏 (简洁版)
-    return ClipRect(
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
-        child: Container(
-          decoration: BoxDecoration(
-            color: (isDark
-                    ? AppColors.cardBackgroundDark
-                    : AppColors.cardBackgroundLight)
-                .withValues(alpha: 0.85),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.05),
-                blurRadius: 10,
-                offset: const Offset(0, -5),
+    // 底部按钮：快速操作栏 (高性能半透明背景，替代 BackdropFilter)
+    return Container(
+      decoration: BoxDecoration(
+        color: (isDark
+                ? AppColors.cardBackgroundDark
+                : AppColors.cardBackgroundLight)
+            .withValues(alpha: 0.95),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.08),
+            blurRadius: 10,
+            offset: const Offset(0, -5),
+          ),
+        ],
+      ),
+      child: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(
+              horizontal: 16, vertical: 12),
+          child: Row(
+            children: [
+              // 聊天按钮 — 任务聊天（非私聊）
+              if (showChat)
+                IconActionButton(
+                  icon: Icons.chat_bubble_outline,
+                  onPressed: () {
+                    context.goToTaskChat(task.id);
+                  },
+                  backgroundColor: AppColors.skeletonBase,
+                ),
+              if (showChat) AppSpacing.hMd,
+              Expanded(
+                child: _buildBottomActionButton(
+                    context, state, isPoster, isTaker),
               ),
             ],
-          ),
-          child: SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(
-                  horizontal: 16, vertical: 12),
-              child: Row(
-                children: [
-                  // 聊天按钮 — 任务聊天（非私聊）
-                  if (showChat)
-                    IconActionButton(
-                      icon: Icons.chat_bubble_outline,
-                      onPressed: () {
-                        context.goToTaskChat(task.id);
-                      },
-                      backgroundColor: AppColors.skeletonBase,
-                    ),
-                  if (showChat) AppSpacing.hMd,
-                  Expanded(
-                    child: _buildBottomActionButton(
-                        context, state, isPoster, isTaker),
-                  ),
-                ],
-              ),
-            ),
           ),
         ),
       ),
@@ -697,38 +738,32 @@ class _TaskImageCarouselState extends State<_TaskImageCarousel> {
             ),
           ),
 
-          // 自定义页面指示器
+          // 自定义页面指示器 (半透明背景，替代 BackdropFilter)
           if (images.length > 1)
             Positioned(
               bottom: 24,
-              child: ClipRRect(
-                borderRadius: AppRadius.allPill,
-                child: BackdropFilter(
-                  filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 10, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.15),
-                      borderRadius: AppRadius.allPill,
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: List.generate(
-                        images.length,
-                        (index) => AnimatedContainer(
-                          duration: const Duration(milliseconds: 200),
-                          margin:
-                              const EdgeInsets.symmetric(horizontal: 3),
-                          width: _currentPage == index ? 16 : 6,
-                          height: 6,
-                          decoration: BoxDecoration(
-                            color: _currentPage == index
-                                ? Colors.white
-                                : Colors.white.withValues(alpha: 0.4),
-                            borderRadius: AppRadius.allPill,
-                          ),
-                        ),
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 10, vertical: 6),
+                decoration: BoxDecoration(
+                  color: Colors.black.withValues(alpha: 0.3),
+                  borderRadius: AppRadius.allPill,
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: List.generate(
+                    images.length,
+                    (index) => AnimatedContainer(
+                      duration: const Duration(milliseconds: 200),
+                      margin:
+                          const EdgeInsets.symmetric(horizontal: 3),
+                      width: _currentPage == index ? 16 : 6,
+                      height: 6,
+                      decoration: BoxDecoration(
+                        color: _currentPage == index
+                            ? Colors.white
+                            : Colors.white.withValues(alpha: 0.4),
+                        borderRadius: AppRadius.allPill,
                       ),
                     ),
                   ),
@@ -1197,15 +1232,15 @@ class _CounterpartyCard extends StatelessWidget {
                 shape: BoxShape.circle,
                 gradient: LinearGradient(
                   colors: info.isExpert
-                      ? [const Color(0xFFFF8C00), const Color(0xFFFF6B00)]
-                      : [AppColors.primary, const Color(0xFF0059B3)],
+                      ? AppColors.gradientGold
+                      : AppColors.gradientDeepBlue,
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
                 boxShadow: [
                   BoxShadow(
                     color: (info.isExpert
-                            ? const Color(0xFFFF8C00)
+                            ? AppColors.gradientGold[1]
                             : AppColors.primary)
                         .withValues(alpha: 0.2),
                     blurRadius: 4,
@@ -1250,8 +1285,8 @@ class _CounterpartyCard extends StatelessWidget {
                       ],
                       if (info.isExpert) ...[
                         const SizedBox(width: 4),
-                        const Icon(Icons.workspace_premium,
-                            size: 16, color: Color(0xFFFF8C00)),
+                        Icon(Icons.workspace_premium,
+                            size: 16, color: AppColors.gradientGold[1]),
                       ],
                     ],
                   ),
@@ -1533,7 +1568,7 @@ class _DisputeTimelineSheetState extends State<_DisputeTimelineSheet> {
             // 内容
             Expanded(
               child: _isLoading
-                  ? const Center(child: CircularProgressIndicator())
+                  ? const LoadingView()
                   : _errorMessage != null
                       ? Center(
                           child: Column(

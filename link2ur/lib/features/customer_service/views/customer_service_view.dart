@@ -255,8 +255,15 @@ class _CustomerServiceContentState extends State<_CustomerServiceContent> {
           prev.messages.length != curr.messages.length,
       listener: (context, state) {
         if (state.actionMessage != null) {
+          final message = switch (state.actionMessage) {
+            'conversation_ended' => context.l10n.actionConversationEnded,
+            'end_conversation_failed' => context.l10n.actionEndConversationFailed,
+            'feedback_success' => context.l10n.actionFeedbackSuccess,
+            'feedback_failed' => context.l10n.actionFeedbackFailed,
+            _ => state.actionMessage!,
+          };
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(state.actionMessage!)),
+            SnackBar(content: Text(message)),
           );
         }
         _scrollToBottom();

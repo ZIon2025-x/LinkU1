@@ -3228,13 +3228,13 @@ abstract class AppLocalizations {
   /// No description provided for @timeMinutesAgo.
   ///
   /// In en, this message translates to:
-  /// **'{minutes}m ago'**
+  /// **'{minutes} min ago'**
   String timeMinutesAgo(int minutes);
 
   /// No description provided for @timeHoursAgo.
   ///
   /// In en, this message translates to:
-  /// **'{hours}h ago'**
+  /// **'{hours} hr ago'**
   String timeHoursAgo(int hours);
 
   /// No description provided for @timeDaysAgo.
@@ -7092,7 +7092,7 @@ abstract class AppLocalizations {
   /// No description provided for @shareQzone.
   ///
   /// In en, this message translates to:
-  /// **'QZone'**
+  /// **'QQ Zone'**
   String get shareQzone;
 
   /// No description provided for @shareWeibo.
@@ -7116,7 +7116,7 @@ abstract class AppLocalizations {
   /// No description provided for @shareGenerateImage.
   ///
   /// In en, this message translates to:
-  /// **'Generate Share Image'**
+  /// **'Generate Image'**
   String get shareGenerateImage;
 
   /// No description provided for @shareShareTo.
@@ -7394,6 +7394,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Pending'**
   String get myTasksTabPending;
+
+  /// No description provided for @myTasksTabInProgress.
+  ///
+  /// In en, this message translates to:
+  /// **'In Progress'**
+  String get myTasksTabInProgress;
 
   /// No description provided for @myTasksTabCompleted.
   ///
@@ -12635,7 +12641,7 @@ abstract class AppLocalizations {
   /// No description provided for @homeClassmate.
   ///
   /// In en, this message translates to:
-  /// **'Student'**
+  /// **'Linker'**
   String get homeClassmate;
 
   /// No description provided for @homePostedNewPost.
@@ -14083,6 +14089,636 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Forum Post'**
   String get publishPostTab;
+
+  /// No description provided for @profileUpdateFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Update failed'**
+  String get profileUpdateFailed;
+
+  /// No description provided for @profileAvatarUpdated.
+  ///
+  /// In en, this message translates to:
+  /// **'Avatar updated'**
+  String get profileAvatarUpdated;
+
+  /// No description provided for @profileUploadFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Upload failed'**
+  String get profileUploadFailed;
+
+  /// No description provided for @profilePreferencesUpdated.
+  ///
+  /// In en, this message translates to:
+  /// **'Preferences updated'**
+  String get profilePreferencesUpdated;
+
+  /// No description provided for @commonSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Success'**
+  String get commonSuccess;
+
+  /// No description provided for @commonError.
+  ///
+  /// In en, this message translates to:
+  /// **'Error'**
+  String get commonError;
+
+  /// No description provided for @commonSaved.
+  ///
+  /// In en, this message translates to:
+  /// **'Saved'**
+  String get commonSaved;
+
+  /// No description provided for @validatorEmailRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Please enter email address'**
+  String get validatorEmailRequired;
+
+  /// No description provided for @validatorEmailInvalid.
+  ///
+  /// In en, this message translates to:
+  /// **'Please enter a valid email address'**
+  String get validatorEmailInvalid;
+
+  /// No description provided for @validatorPhoneRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Please enter phone number'**
+  String get validatorPhoneRequired;
+
+  /// No description provided for @validatorPhoneInvalid.
+  ///
+  /// In en, this message translates to:
+  /// **'Please enter a valid phone number'**
+  String get validatorPhoneInvalid;
+
+  /// No description provided for @validatorUKPhoneRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Please enter your phone number'**
+  String get validatorUKPhoneRequired;
+
+  /// No description provided for @validatorUKPhoneInvalid.
+  ///
+  /// In en, this message translates to:
+  /// **'Please enter a valid UK mobile number'**
+  String get validatorUKPhoneInvalid;
+
+  /// No description provided for @validatorPasswordRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Please enter password'**
+  String get validatorPasswordRequired;
+
+  /// No description provided for @validatorPasswordMinLength.
+  ///
+  /// In en, this message translates to:
+  /// **'Password must be at least 8 characters'**
+  String get validatorPasswordMinLength;
+
+  /// No description provided for @validatorPasswordFormat.
+  ///
+  /// In en, this message translates to:
+  /// **'Password must contain both letters and numbers'**
+  String get validatorPasswordFormat;
+
+  /// No description provided for @validatorConfirmPasswordRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Please confirm password'**
+  String get validatorConfirmPasswordRequired;
+
+  /// No description provided for @validatorPasswordMismatch.
+  ///
+  /// In en, this message translates to:
+  /// **'Passwords do not match'**
+  String get validatorPasswordMismatch;
+
+  /// No description provided for @validatorCodeRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Please enter verification code'**
+  String get validatorCodeRequired;
+
+  /// No description provided for @validatorCodeLength.
+  ///
+  /// In en, this message translates to:
+  /// **'Verification code must be {length} digits'**
+  String validatorCodeLength(int length);
+
+  /// No description provided for @validatorCodeDigitsOnly.
+  ///
+  /// In en, this message translates to:
+  /// **'Verification code must contain only digits'**
+  String get validatorCodeDigitsOnly;
+
+  /// No description provided for @validatorUsernameRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Please enter username'**
+  String get validatorUsernameRequired;
+
+  /// No description provided for @validatorUsernameMinLength.
+  ///
+  /// In en, this message translates to:
+  /// **'Username must be at least 2 characters'**
+  String get validatorUsernameMinLength;
+
+  /// No description provided for @validatorUsernameMaxLength.
+  ///
+  /// In en, this message translates to:
+  /// **'Username must be at most 20 characters'**
+  String get validatorUsernameMaxLength;
+
+  /// No description provided for @validatorTitleRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Please enter title'**
+  String get validatorTitleRequired;
+
+  /// No description provided for @validatorTitleMaxLength.
+  ///
+  /// In en, this message translates to:
+  /// **'Title must be at most {maxLength} characters'**
+  String validatorTitleMaxLength(int maxLength);
+
+  /// No description provided for @validatorDescriptionRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Please enter description'**
+  String get validatorDescriptionRequired;
+
+  /// No description provided for @validatorDescriptionMaxLength.
+  ///
+  /// In en, this message translates to:
+  /// **'Description must be at most {maxLength} characters'**
+  String validatorDescriptionMaxLength(int maxLength);
+
+  /// No description provided for @validatorAmountRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Please enter amount'**
+  String get validatorAmountRequired;
+
+  /// No description provided for @validatorAmountInvalid.
+  ///
+  /// In en, this message translates to:
+  /// **'Please enter a valid amount'**
+  String get validatorAmountInvalid;
+
+  /// No description provided for @validatorAmountPositive.
+  ///
+  /// In en, this message translates to:
+  /// **'Amount must be greater than 0'**
+  String get validatorAmountPositive;
+
+  /// No description provided for @validatorAmountMin.
+  ///
+  /// In en, this message translates to:
+  /// **'Amount cannot be less than {min}'**
+  String validatorAmountMin(double min);
+
+  /// No description provided for @validatorAmountMax.
+  ///
+  /// In en, this message translates to:
+  /// **'Amount cannot be greater than {max}'**
+  String validatorAmountMax(double max);
+
+  /// No description provided for @validatorUrlRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Please enter URL'**
+  String get validatorUrlRequired;
+
+  /// No description provided for @validatorUrlInvalid.
+  ///
+  /// In en, this message translates to:
+  /// **'Please enter a valid URL'**
+  String get validatorUrlInvalid;
+
+  /// No description provided for @validatorFieldRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'{fieldName} is required'**
+  String validatorFieldRequired(String fieldName);
+
+  /// No description provided for @validatorFieldMinLength.
+  ///
+  /// In en, this message translates to:
+  /// **'{fieldName} must be at least {min} characters'**
+  String validatorFieldMinLength(String fieldName, int min);
+
+  /// No description provided for @validatorFieldMaxLength.
+  ///
+  /// In en, this message translates to:
+  /// **'{fieldName} must be at most {max} characters'**
+  String validatorFieldMaxLength(String fieldName, int max);
+
+  /// No description provided for @timeYesterday.
+  ///
+  /// In en, this message translates to:
+  /// **'Yesterday'**
+  String get timeYesterday;
+
+  /// No description provided for @timeDayBeforeYesterday.
+  ///
+  /// In en, this message translates to:
+  /// **'Day before yesterday'**
+  String get timeDayBeforeYesterday;
+
+  /// No description provided for @timeDeadlineMinutes.
+  ///
+  /// In en, this message translates to:
+  /// **'Due in {minutes} min'**
+  String timeDeadlineMinutes(int minutes);
+
+  /// No description provided for @timeDeadlineHours.
+  ///
+  /// In en, this message translates to:
+  /// **'Due in {hours} hr'**
+  String timeDeadlineHours(int hours);
+
+  /// No description provided for @timeDeadlineDays.
+  ///
+  /// In en, this message translates to:
+  /// **'Due in {days} days'**
+  String timeDeadlineDays(int days);
+
+  /// No description provided for @timeDeadlineDate.
+  ///
+  /// In en, this message translates to:
+  /// **'Due {date}'**
+  String timeDeadlineDate(String date);
+
+  /// No description provided for @badgeVip.
+  ///
+  /// In en, this message translates to:
+  /// **'VIP'**
+  String get badgeVip;
+
+  /// No description provided for @badgeSuper.
+  ///
+  /// In en, this message translates to:
+  /// **'Super'**
+  String get badgeSuper;
+
+  /// No description provided for @notificationPermTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Enable Push Notifications'**
+  String get notificationPermTitle;
+
+  /// No description provided for @notificationPermDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Stay updated with:\n\n• Task status updates\n• New message alerts\n• Task match recommendations\n• Deals & promotions'**
+  String get notificationPermDesc;
+
+  /// No description provided for @notificationPermEnable.
+  ///
+  /// In en, this message translates to:
+  /// **'Enable Notifications'**
+  String get notificationPermEnable;
+
+  /// No description provided for @notificationPermSkip.
+  ///
+  /// In en, this message translates to:
+  /// **'Skip for Now'**
+  String get notificationPermSkip;
+
+  /// No description provided for @notificationPermSettingsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Notification Permission Required'**
+  String get notificationPermSettingsTitle;
+
+  /// No description provided for @notificationPermSettingsDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'You have denied notification permission. Please enable it manually in system settings.'**
+  String get notificationPermSettingsDesc;
+
+  /// No description provided for @notificationPermSettingsLater.
+  ///
+  /// In en, this message translates to:
+  /// **'Later'**
+  String get notificationPermSettingsLater;
+
+  /// No description provided for @notificationPermSettingsGo.
+  ///
+  /// In en, this message translates to:
+  /// **'Go to Settings'**
+  String get notificationPermSettingsGo;
+
+  /// No description provided for @shareTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Share to'**
+  String get shareTitle;
+
+  /// No description provided for @shareLinkCopied.
+  ///
+  /// In en, this message translates to:
+  /// **'Link copied'**
+  String get shareLinkCopied;
+
+  /// No description provided for @shareQQ.
+  ///
+  /// In en, this message translates to:
+  /// **'QQ'**
+  String get shareQQ;
+
+  /// No description provided for @shareMore.
+  ///
+  /// In en, this message translates to:
+  /// **'More'**
+  String get shareMore;
+
+  /// No description provided for @actionItemPublished.
+  ///
+  /// In en, this message translates to:
+  /// **'Item published'**
+  String get actionItemPublished;
+
+  /// No description provided for @actionPublishFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Publish failed'**
+  String get actionPublishFailed;
+
+  /// No description provided for @actionPurchaseSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Purchase successful'**
+  String get actionPurchaseSuccess;
+
+  /// No description provided for @actionPurchaseFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Purchase failed'**
+  String get actionPurchaseFailed;
+
+  /// No description provided for @actionItemUpdated.
+  ///
+  /// In en, this message translates to:
+  /// **'Item updated'**
+  String get actionItemUpdated;
+
+  /// No description provided for @actionUpdateFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Update failed'**
+  String get actionUpdateFailed;
+
+  /// No description provided for @actionRefreshSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Refreshed'**
+  String get actionRefreshSuccess;
+
+  /// No description provided for @actionRefreshFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Refresh failed'**
+  String get actionRefreshFailed;
+
+  /// No description provided for @actionApplicationSubmitted.
+  ///
+  /// In en, this message translates to:
+  /// **'Application submitted'**
+  String get actionApplicationSubmitted;
+
+  /// No description provided for @actionApplicationFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Application failed'**
+  String get actionApplicationFailed;
+
+  /// No description provided for @actionApplicationCancelled.
+  ///
+  /// In en, this message translates to:
+  /// **'Application cancelled'**
+  String get actionApplicationCancelled;
+
+  /// No description provided for @actionCancelFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel failed'**
+  String get actionCancelFailed;
+
+  /// No description provided for @actionApplicationAccepted.
+  ///
+  /// In en, this message translates to:
+  /// **'Application accepted'**
+  String get actionApplicationAccepted;
+
+  /// No description provided for @actionApplicationRejected.
+  ///
+  /// In en, this message translates to:
+  /// **'Application rejected'**
+  String get actionApplicationRejected;
+
+  /// No description provided for @actionOperationFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Operation failed'**
+  String get actionOperationFailed;
+
+  /// No description provided for @actionTaskCompleted.
+  ///
+  /// In en, this message translates to:
+  /// **'Completion submitted'**
+  String get actionTaskCompleted;
+
+  /// No description provided for @actionSubmitFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Submit failed'**
+  String get actionSubmitFailed;
+
+  /// No description provided for @actionCompletionConfirmed.
+  ///
+  /// In en, this message translates to:
+  /// **'Completion confirmed'**
+  String get actionCompletionConfirmed;
+
+  /// No description provided for @actionConfirmFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm failed'**
+  String get actionConfirmFailed;
+
+  /// No description provided for @actionTaskCancelled.
+  ///
+  /// In en, this message translates to:
+  /// **'Task cancelled'**
+  String get actionTaskCancelled;
+
+  /// No description provided for @actionReviewSubmitted.
+  ///
+  /// In en, this message translates to:
+  /// **'Review submitted'**
+  String get actionReviewSubmitted;
+
+  /// No description provided for @actionReviewFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Review failed'**
+  String get actionReviewFailed;
+
+  /// No description provided for @actionRefundSubmitted.
+  ///
+  /// In en, this message translates to:
+  /// **'Refund request submitted'**
+  String get actionRefundSubmitted;
+
+  /// No description provided for @actionRefundFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Refund request failed'**
+  String get actionRefundFailed;
+
+  /// No description provided for @actionRefundRevoked.
+  ///
+  /// In en, this message translates to:
+  /// **'Refund request revoked'**
+  String get actionRefundRevoked;
+
+  /// No description provided for @actionRevokeFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Revoke failed'**
+  String get actionRevokeFailed;
+
+  /// No description provided for @actionDisputeSubmitted.
+  ///
+  /// In en, this message translates to:
+  /// **'Dispute submitted'**
+  String get actionDisputeSubmitted;
+
+  /// No description provided for @actionDisputeFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Dispute submission failed'**
+  String get actionDisputeFailed;
+
+  /// No description provided for @actionCheckInSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Check-in successful!'**
+  String get actionCheckInSuccess;
+
+  /// No description provided for @actionCheckInFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Check-in failed'**
+  String get actionCheckInFailed;
+
+  /// No description provided for @actionVoteFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Vote failed'**
+  String get actionVoteFailed;
+
+  /// No description provided for @actionLeaderboardApplied.
+  ///
+  /// In en, this message translates to:
+  /// **'Application submitted'**
+  String get actionLeaderboardApplied;
+
+  /// No description provided for @actionLeaderboardSubmitted.
+  ///
+  /// In en, this message translates to:
+  /// **'Submitted successfully'**
+  String get actionLeaderboardSubmitted;
+
+  /// No description provided for @actionVerificationSubmitted.
+  ///
+  /// In en, this message translates to:
+  /// **'Submitted, please check your email for verification'**
+  String get actionVerificationSubmitted;
+
+  /// No description provided for @actionVerificationSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Verification successful'**
+  String get actionVerificationSuccess;
+
+  /// No description provided for @actionVerificationFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Verification failed'**
+  String get actionVerificationFailed;
+
+  /// No description provided for @actionRenewalSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Renewal successful'**
+  String get actionRenewalSuccess;
+
+  /// No description provided for @actionRenewalFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Renewal failed'**
+  String get actionRenewalFailed;
+
+  /// No description provided for @actionRegistrationSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Registration successful'**
+  String get actionRegistrationSuccess;
+
+  /// No description provided for @actionRegistrationFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Registration failed'**
+  String get actionRegistrationFailed;
+
+  /// No description provided for @actionConversationEnded.
+  ///
+  /// In en, this message translates to:
+  /// **'Conversation ended'**
+  String get actionConversationEnded;
+
+  /// No description provided for @actionEndConversationFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to end conversation'**
+  String get actionEndConversationFailed;
+
+  /// No description provided for @actionFeedbackSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Thank you for your feedback'**
+  String get actionFeedbackSuccess;
+
+  /// No description provided for @actionFeedbackFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Feedback failed'**
+  String get actionFeedbackFailed;
+
+  /// No description provided for @actionCouponClaimed.
+  ///
+  /// In en, this message translates to:
+  /// **'Coupon claimed'**
+  String get actionCouponClaimed;
+
+  /// No description provided for @actionCouponRedeemed.
+  ///
+  /// In en, this message translates to:
+  /// **'Redeemed successfully'**
+  String get actionCouponRedeemed;
+
+  /// No description provided for @actionInviteCodeUsed.
+  ///
+  /// In en, this message translates to:
+  /// **'Invite code applied'**
+  String get actionInviteCodeUsed;
 }
 
 class _AppLocalizationsDelegate

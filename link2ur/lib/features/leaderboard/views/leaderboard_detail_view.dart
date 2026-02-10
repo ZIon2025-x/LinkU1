@@ -274,6 +274,7 @@ class _LeaderboardDetailContent extends StatelessWidget {
           if (items.isEmpty)
             SliverFillRemaining(
               child: EmptyStateView.noData(
+                context,
                 title: context.l10n.leaderboardNoItems,
                 description: context.l10n.leaderboardNoCompetitorsHint,
               ),
@@ -724,9 +725,9 @@ class _RankItemCard extends StatelessWidget {
       case 1:
         return AppColors.gold;
       case 2:
-        return const Color(0xFFC0C0C0);
+        return AppColors.silver;
       case 3:
-        return const Color(0xFFCD7F32);
+        return AppColors.bronze;
       default:
         return AppColors.textSecondaryLight;
     }

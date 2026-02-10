@@ -27,7 +27,7 @@ class VipView extends StatelessWidget {
               background: Container(
                 decoration: const BoxDecoration(
                   gradient: LinearGradient(
-                    colors: [Color(0xFFFFD700), Color(0xFFFF8C00)],
+                    colors: AppColors.gradientGold,
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                   ),
@@ -111,13 +111,13 @@ class VipView extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFFFD700).withValues(alpha: 0.2),
+                  color: AppColors.gold.withValues(alpha: 0.2),
                   borderRadius: AppRadius.allPill,
                 ),
                 child: Text(
                   context.l10n.vipRegularUser,
                   style: const TextStyle(
-                    color: Color(0xFFFFD700),
+                    color: AppColors.gold,
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
                   ),
@@ -148,7 +148,7 @@ class VipView extends StatelessWidget {
             child: ElevatedButton(
               onPressed: () => context.push('/vip/purchase'),
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFFFFD700),
+                backgroundColor: AppColors.gold,
                 foregroundColor: Colors.black,
                 shape: RoundedRectangleBorder(
                   borderRadius: AppRadius.allMedium,
@@ -179,7 +179,7 @@ class VipView extends StatelessWidget {
         icon: Icons.verified,
         title: l10n.infoVipBadgeLabel,
         description: l10n.vipExclusiveBadgeDesc,
-        color: const Color(0xFFFFD700),
+        color: AppColors.gold,
       ),
       _BenefitItem(
         icon: Icons.discount,

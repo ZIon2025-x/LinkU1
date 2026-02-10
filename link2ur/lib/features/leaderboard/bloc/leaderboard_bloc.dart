@@ -404,7 +404,7 @@ class LeaderboardBloc extends Bloc<LeaderboardEvent, LeaderboardState> {
       ));
     } catch (e) {
       AppLogger.error('Failed to vote', e);
-      emit(state.copyWith(actionMessage: '投票失败'));
+      emit(state.copyWith(actionMessage: 'vote_failed'));
     }
   }
 
@@ -538,13 +538,14 @@ class LeaderboardBloc extends Bloc<LeaderboardEvent, LeaderboardState> {
 
       emit(state.copyWith(
         isSubmitting: false,
-        actionMessage: '申请已提交',
+        actionMessage: 'leaderboard_applied',
       ));
     } catch (e) {
       AppLogger.error('Failed to apply leaderboard', e);
       emit(state.copyWith(
         isSubmitting: false,
-        actionMessage: '申请失败: ${e.toString()}',
+        actionMessage: 'application_failed',
+        errorMessage: e.toString(),
       ));
     }
   }
@@ -565,13 +566,14 @@ class LeaderboardBloc extends Bloc<LeaderboardEvent, LeaderboardState> {
 
       emit(state.copyWith(
         isSubmitting: false,
-        actionMessage: '提交成功',
+        actionMessage: 'leaderboard_submitted',
       ));
     } catch (e) {
       AppLogger.error('Failed to submit item', e);
       emit(state.copyWith(
         isSubmitting: false,
-        actionMessage: '提交失败: ${e.toString()}',
+        actionMessage: 'submit_failed',
+        errorMessage: e.toString(),
       ));
     }
   }

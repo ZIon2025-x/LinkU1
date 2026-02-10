@@ -423,7 +423,7 @@ class _ResultDialogState extends State<_ResultDialog>
               width: 260,
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
               decoration: BoxDecoration(
-                color: isDark ? const Color(0xFF2C2C2E) : Colors.white,
+                color: isDark ? AppColors.secondaryBackgroundDark : Colors.white,
                 borderRadius: AppRadius.allLarge,
                 boxShadow: [
                   BoxShadow(

@@ -24,7 +24,7 @@ class LoginView extends StatefulWidget {
 }
 
 class _LoginViewState extends State<LoginView>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
@@ -38,6 +38,8 @@ class _LoginViewState extends State<LoginView>
   late AnimationController _animController;
   late Animation<double> _logoScale;
   late Animation<double> _fadeIn;
+  // 背景流动渐变 — 缓慢循环，极低开销
+  late AnimationController _bgAnimController;
 
   @override
   void initState() {
@@ -47,6 +49,11 @@ class _LoginViewState extends State<LoginView>
       vsync: this,
       duration: const Duration(milliseconds: 1000),
     );
+
+    _bgAnimController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 6),
+    )..repeat(reverse: true);
 
     // Logo: 0.8→1.0 弹簧缩放
     _logoScale = Tween<double>(begin: 0.8, end: 1.0).animate(
@@ -80,6 +87,7 @@ class _LoginViewState extends State<LoginView>
   @override
   void dispose() {
     _animController.dispose();
+    _bgAnimController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
     _codeController.dispose();
@@ -260,90 +268,92 @@ class _LoginViewState extends State<LoginView>
 
   // ==================== 背景 ====================
 
-  /// 对标iOS: 品牌渐变 + 装饰性弥散圆
+  /// 对标iOS: 品牌渐变 + 缓慢流动装饰圆
   Widget _buildBackground(bool isDark) {
-    return Container(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: isDark
-              ? [
-                  AppColors.backgroundDark,
-                  const Color(0xFF0A0A14),
-                ]
-              : [
-                  AppColors.primary.withValues(alpha: 0.12),
-                  AppColors.primary.withValues(alpha: 0.06),
-                  AppColors.primary.withValues(alpha: 0.02),
-                  AppColors.backgroundLight,
-                ],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-      ),
-      child: Stack(
-        children: [
-          // 左上装饰圆
-          Positioned(
-            left: -180,
-            top: -350,
-            child: Container(
-              width: 400,
-              height: 400,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: RadialGradient(
-                  colors: [
-                    AppColors.primary.withValues(alpha: isDark ? 0.06 : 0.08),
-                    AppColors.primary.withValues(alpha: 0.02),
-                    Colors.transparent,
-                  ],
-                ),
-              ),
-            ),
-          ),
-          // 右下装饰圆
-          Positioned(
-            right: -80,
-            bottom: -100,
-            child: Container(
-              width: 300,
-              height: 300,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: RadialGradient(
-                  colors: [
-                    AppColors.primary.withValues(alpha: isDark ? 0.04 : 0.06),
-                    AppColors.primary.withValues(alpha: 0.01),
-                    Colors.transparent,
-                  ],
-                ),
-              ),
-            ),
-          ),
-          // 中间装饰圆
-          Positioned(
-            left: 0,
-            right: 0,
-            top: -100,
-            child: Center(
-              child: Container(
-                width: 200,
-                height: 200,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: RadialGradient(
-                    colors: [
-                      AppColors.primary
-                          .withValues(alpha: isDark ? 0.03 : 0.04),
-                      Colors.transparent,
+    return AnimatedBuilder(
+      animation: _bgAnimController,
+      builder: (context, child) {
+        final t = _bgAnimController.value; // 0→1→0 (reverse)
+        return Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: isDark
+                  ? [AppColors.backgroundDark, AppColors.authDark]
+                  : [
+                      AppColors.primary.withValues(alpha: 0.12),
+                      AppColors.primary.withValues(alpha: 0.06),
+                      AppColors.primary.withValues(alpha: 0.02),
+                      AppColors.backgroundLight,
                     ],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+          ),
+          child: Stack(
+            children: [
+              // 左上装饰圆 — 缓慢漂移
+              Positioned(
+                left: -180 + t * 30,
+                top: -350 + t * 20,
+                child: Container(
+                  width: 400,
+                  height: 400,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: RadialGradient(
+                      colors: [
+                        AppColors.primary.withValues(alpha: isDark ? 0.06 : 0.08),
+                        AppColors.primary.withValues(alpha: 0.02),
+                        Colors.transparent,
+                      ],
+                    ),
                   ),
                 ),
               ),
-            ),
+              // 右下装饰圆 — 反向漂移
+              Positioned(
+                right: -80 - t * 25,
+                bottom: -100 + t * 15,
+                child: Container(
+                  width: 300,
+                  height: 300,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: RadialGradient(
+                      colors: [
+                        AppColors.primary.withValues(alpha: isDark ? 0.04 : 0.06),
+                        AppColors.primary.withValues(alpha: 0.01),
+                        Colors.transparent,
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              // 中间装饰圆
+              Positioned(
+                left: 0,
+                right: 0,
+                top: -100 + t * 10,
+                child: Center(
+                  child: Container(
+                    width: 200 + t * 20,
+                    height: 200 + t * 20,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: RadialGradient(
+                        colors: [
+                          AppColors.primary.withValues(alpha: isDark ? 0.03 : 0.04),
+                          Colors.transparent,
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 
@@ -660,7 +670,7 @@ class _LoginViewState extends State<LoginView>
           icon: Icons.person_outlined,
           keyboardType: TextInputType.emailAddress,
           isDark: isDark,
-          validator: Validators.validateEmail,
+          validator: (v) => Validators.validateEmail(v, l10n: context.l10n),
         ),
         const SizedBox(height: AppSpacing.md),
         _StyledTextField(
@@ -670,7 +680,7 @@ class _LoginViewState extends State<LoginView>
           icon: Icons.lock_outlined,
           obscureText: _obscurePassword,
           isDark: isDark,
-          validator: Validators.validatePassword,
+          validator: (v) => Validators.validatePassword(v, l10n: context.l10n),
           suffixIcon: IconButton(
             icon: Icon(
               _obscurePassword
@@ -700,7 +710,7 @@ class _LoginViewState extends State<LoginView>
           icon: Icons.email_outlined,
           keyboardType: TextInputType.emailAddress,
           isDark: isDark,
-          validator: Validators.validateEmail,
+          validator: (v) => Validators.validateEmail(v, l10n: context.l10n),
         ),
         const SizedBox(height: AppSpacing.md),
         Row(
@@ -714,7 +724,7 @@ class _LoginViewState extends State<LoginView>
                 icon: Icons.pin_outlined,
                 keyboardType: TextInputType.number,
                 isDark: isDark,
-                validator: Validators.validateVerificationCode,
+                validator: (v) => Validators.validateVerificationCode(v, l10n: context.l10n),
               ),
             ),
             const SizedBox(width: AppSpacing.sm),
@@ -844,7 +854,7 @@ class _LoginViewState extends State<LoginView>
                         ),
                       ),
                     ),
-                    validator: Validators.validateUKPhone,
+                    validator: (v) => Validators.validateUKPhone(v, l10n: context.l10n),
                   ),
                 ),
               ],
@@ -863,7 +873,7 @@ class _LoginViewState extends State<LoginView>
                 icon: Icons.pin_outlined,
                 keyboardType: TextInputType.number,
                 isDark: isDark,
-                validator: Validators.validateVerificationCode,
+                validator: (v) => Validators.validateVerificationCode(v, l10n: context.l10n),
               ),
             ),
             const SizedBox(width: AppSpacing.sm),

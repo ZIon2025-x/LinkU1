@@ -26,42 +26,44 @@ class MyForumPostsView extends StatefulWidget {
 class _MyForumPostsViewState extends State<MyForumPostsView>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
-
-  bool _tabListenerAttached = false;
+  final _blocProviderKey = GlobalKey();
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
+    _tabController.addListener(_onTabChanged);
   }
 
   @override
   void dispose() {
+    _tabController.removeListener(_onTabChanged);
     _tabController.dispose();
     super.dispose();
   }
 
-  void _onTabChanged(BuildContext context) {
-    if (!_tabController.indexIsChanging) {
-      final bloc = context.read<ProfileBloc>();
-      final state = bloc.state;
-      switch (_tabController.index) {
-        case 0:
-          if (state.myForumPosts.isEmpty) {
-            bloc.add(const ProfileLoadMyForumActivity(type: 'posts', page: 1));
-          }
-          break;
-        case 1:
-          if (state.favoritedPosts.isEmpty) {
-            bloc.add(const ProfileLoadMyForumActivity(type: 'favorited', page: 1));
-          }
-          break;
-        case 2:
-          if (state.likedPosts.isEmpty) {
-            bloc.add(const ProfileLoadMyForumActivity(type: 'liked', page: 1));
-          }
-          break;
-      }
+  void _onTabChanged() {
+    if (_tabController.indexIsChanging) return;
+    final context = _blocProviderKey.currentContext;
+    if (context == null) return;
+    final bloc = context.read<ProfileBloc>();
+    final state = bloc.state;
+    switch (_tabController.index) {
+      case 0:
+        if (state.myForumPosts.isEmpty) {
+          bloc.add(const ProfileLoadMyForumActivity(type: 'posts', page: 1));
+        }
+        break;
+      case 1:
+        if (state.favoritedPosts.isEmpty) {
+          bloc.add(const ProfileLoadMyForumActivity(type: 'favorited', page: 1));
+        }
+        break;
+      case 2:
+        if (state.likedPosts.isEmpty) {
+          bloc.add(const ProfileLoadMyForumActivity(type: 'liked', page: 1));
+        }
+        break;
     }
   }
 
@@ -76,13 +78,8 @@ class _MyForumPostsViewState extends State<MyForumPostsView>
         forumRepository: context.read<ForumRepository>(),
       )..add(const ProfileLoadMyForumActivity(type: 'posts', page: 1)),
       child: BlocBuilder<ProfileBloc, ProfileState>(
+        key: _blocProviderKey,
         builder: (context, state) {
-          // Ensure tab listener is attached once
-          if (!_tabListenerAttached) {
-            _tabListenerAttached = true;
-            _tabController.addListener(() => _onTabChanged(context));
-          }
-
           return Scaffold(
             appBar: AppBar(
               title: Text(l10n.forumMyPosts),

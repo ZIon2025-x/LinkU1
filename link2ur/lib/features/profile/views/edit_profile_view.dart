@@ -11,6 +11,7 @@ import '../../../core/design/app_radius.dart';
 import '../../../core/utils/l10n_extension.dart';
 import '../../../core/utils/helpers.dart';
 import '../../../core/widgets/app_feedback.dart';
+import '../../../core/widgets/loading_view.dart';
 import '../../../core/widgets/buttons.dart';
 import '../../../data/repositories/user_repository.dart';
 import '../../../data/repositories/task_repository.dart';
@@ -116,12 +117,20 @@ class _EditProfileContentState extends State<_EditProfileContent> {
         _initControllers(state);
 
         if (state.actionMessage != null) {
-          final isSuccess = state.actionMessage!.contains('成功') ||
-              state.actionMessage!.contains('保存');
+          final l10n = context.l10n;
+          final isSuccess = state.actionMessage == 'profile_updated' ||
+              state.actionMessage == 'avatar_updated';
+          final message = switch (state.actionMessage) {
+            'profile_updated' => l10n.profileUpdated,
+            'update_failed' => l10n.profileUpdateFailed,
+            'avatar_updated' => l10n.profileAvatarUpdated,
+            'upload_failed' => l10n.profileUploadFailed,
+            _ => state.actionMessage!,
+          };
           if (isSuccess) {
-            AppFeedback.showSuccess(context, state.actionMessage!);
+            AppFeedback.showSuccess(context, message);
           } else {
-            AppFeedback.showError(context, state.actionMessage!);
+            AppFeedback.showError(context, message);
           }
           if (isSuccess && !state.isUpdating) {
             context.pop();
@@ -132,7 +141,7 @@ class _EditProfileContentState extends State<_EditProfileContent> {
         if (state.isLoading && state.user == null) {
           return Scaffold(
             appBar: AppBar(title: Text(context.l10n.profileEditProfile)),
-            body: const Center(child: CircularProgressIndicator()),
+            body: const LoadingView(),
           );
         }
 

@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 
 import '../models/task.dart';
+import '../models/task_application.dart';
 import '../models/review.dart';
 import '../services/api_service.dart';
 import '../../core/constants/api_endpoints.dart';
@@ -226,6 +227,24 @@ class TaskRepository {
     // 失效相关缓存
     await _cache.invalidateTaskDetailCache(taskId);
     await _cache.invalidateMyTasksCache();
+  }
+
+  /// 获取我的所有申请（pending applications）
+  Future<List<TaskApplication>> getMyApplications() async {
+    final response = await _apiService.get<Map<String, dynamic>>(
+      ApiEndpoints.myApplications,
+    );
+
+    if (!response.isSuccess || response.data == null) {
+      throw TaskException(response.message ?? 'Failed to load applications');
+    }
+
+    final items = response.data!['items'] as List<dynamic>? ??
+        response.data!['applications'] as List<dynamic>? ??
+        [];
+    return items
+        .map((e) => TaskApplication.fromJson(e as Map<String, dynamic>))
+        .toList();
   }
 
   /// 获取任务申请列表

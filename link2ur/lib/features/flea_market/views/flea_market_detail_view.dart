@@ -1,5 +1,3 @@
-import 'dart:ui';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -9,6 +7,7 @@ import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_typography.dart';
 import '../../../core/widgets/skeleton_view.dart';
 import '../../../core/widgets/error_state_view.dart';
+import '../../../core/widgets/loading_view.dart';
 import '../../../core/widgets/async_image_view.dart';
 import '../../../core/widgets/full_screen_image_view.dart';
 import '../../../core/widgets/custom_share_panel.dart';
@@ -62,8 +61,30 @@ class _FleaMarketDetailContent extends StatelessWidget {
       listener: (context, state) {
         // 操作提示
         if (state.actionMessage != null) {
+          final l10n = context.l10n;
+          final message = switch (state.actionMessage) {
+            'item_published' => l10n.actionItemPublished,
+            'publish_failed' => l10n.actionPublishFailed,
+            'purchase_success' => l10n.actionPurchaseSuccess,
+            'purchase_failed' => l10n.actionPurchaseFailed,
+            'item_updated' => l10n.actionItemUpdated,
+            'update_failed' => l10n.actionUpdateFailed,
+            'refresh_success' => l10n.actionRefreshSuccess,
+            'refresh_failed' => l10n.actionRefreshFailed,
+            _ => state.actionMessage ?? '',
+          };
+          final displayMessage = state.errorMessage != null
+              ? '$message: ${state.errorMessage}'
+              : message;
+          final isSuccess = state.actionMessage == 'item_published' ||
+              state.actionMessage == 'purchase_success' ||
+              state.actionMessage == 'item_updated' ||
+              state.actionMessage == 'refresh_success';
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(state.actionMessage!)),
+            SnackBar(
+              content: Text(displayMessage),
+              backgroundColor: isSuccess ? AppColors.success : AppColors.error,
+            ),
           );
         }
 
@@ -118,7 +139,10 @@ class _FleaMarketDetailContent extends StatelessWidget {
       leading: _buildCircleButton(
         context,
         icon: Icons.arrow_back_ios_new,
-        onTap: () => Navigator.of(context).pop(),
+        onTap: () {
+          AppHaptics.selection();
+          Navigator.of(context).pop();
+        },
       ),
       actions: [
         if (state.selectedItem != null)
@@ -198,12 +222,20 @@ class _FleaMarketDetailContent extends StatelessWidget {
 
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    return SingleChildScrollView(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // 图片轮播 - 对标iOS image gallery (10:9 ratio)
-          _ImageGallery(item: item),
+    return RefreshIndicator(
+      onRefresh: () async {
+        final bloc = context.read<FleaMarketBloc>();
+        bloc.add(FleaMarketLoadDetailRequested(int.parse(item.id)));
+        await bloc.stream.firstWhere((s) =>
+            s.isDetailLoaded || s.detailStatus == FleaMarketStatus.error);
+      },
+      child: SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // 图片轮播 - 对标iOS image gallery (10:9 ratio)
+            _ImageGallery(item: item),
 
           // 内容区域 - 上移重叠图片 - 对标iOS padding(.top, -20)
           Transform.translate(
@@ -271,6 +303,7 @@ class _FleaMarketDetailContent extends StatelessWidget {
           ),
         ],
       ),
+      ),
     );
   }
 
@@ -281,32 +314,27 @@ class _FleaMarketDetailContent extends StatelessWidget {
     // 只有 active 状态才显示底部栏 - 对标iOS
     if (!item.isActive) return const SizedBox.shrink();
 
-    return ClipRect(
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
-        child: Container(
-          decoration: BoxDecoration(
-            color: (isDark
-                    ? AppColors.cardBackgroundDark
-                    : AppColors.cardBackgroundLight)
-                .withValues(alpha: 0.85),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.05),
-                blurRadius: 10,
-                offset: const Offset(0, -5),
-              ),
-            ],
+    return Container(
+      decoration: BoxDecoration(
+        color: (isDark
+                ? AppColors.cardBackgroundDark
+                : AppColors.cardBackgroundLight)
+            .withValues(alpha: 0.95),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.08),
+            blurRadius: 10,
+            offset: const Offset(0, -5),
           ),
-          child: SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(
-                  horizontal: AppSpacing.md, vertical: 12),
-              child: isSeller
-                  ? _buildSellerBottomBar(context, state, item)
-                  : _buildBuyerBottomBar(context, state, item),
-            ),
-          ),
+        ],
+      ),
+      child: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.md, vertical: 12),
+          child: isSeller
+              ? _buildSellerBottomBar(context, state, item)
+              : _buildBuyerBottomBar(context, state, item),
         ),
       ),
     );
@@ -496,12 +524,12 @@ class _FleaMarketDetailContent extends StatelessWidget {
         height: 50,
         decoration: BoxDecoration(
           gradient: const LinearGradient(
-            colors: [Color(0xFFE64D4D), Color(0xFFFF6B6B)],
+            colors: AppColors.gradientRed,
           ),
           borderRadius: BorderRadius.circular(25),
           boxShadow: [
             BoxShadow(
-              color: const Color(0xFFE64D4D).withValues(alpha: 0.4),
+              color: AppColors.priceRed.withValues(alpha: 0.4),
               blurRadius: 8,
               offset: const Offset(0, 4),
             ),
@@ -720,7 +748,7 @@ class _PriceTitleCard extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
-                    color: Color(0xFFE64D4D),
+                    color: AppColors.priceRed,
                     height: 1.5,
                   ),
                 ),
@@ -729,7 +757,7 @@ class _PriceTitleCard extends StatelessWidget {
                   style: const TextStyle(
                     fontSize: 32,
                     fontWeight: FontWeight.bold,
-                    color: Color(0xFFE64D4D),
+                    color: AppColors.priceRed,
                     height: 1.1,
                   ),
                 ),
@@ -1172,7 +1200,7 @@ class _PurchaseRequestsCard extends StatelessWidget {
               const Center(
                 child: Padding(
                   padding: EdgeInsets.all(AppSpacing.xl),
-                  child: CircularProgressIndicator(),
+                  child: LoadingView(),
                 ),
               )
             else if (state.purchaseRequests.isEmpty)
@@ -1273,7 +1301,7 @@ class _PurchaseRequestItem extends StatelessWidget {
                         style: const TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.w600,
-                          color: Color(0xFFE64D4D),
+                          color: AppColors.priceRed,
                         ),
                       ),
                   ],

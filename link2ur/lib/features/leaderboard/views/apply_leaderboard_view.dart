@@ -93,12 +93,14 @@ class _ApplyLeaderboardViewState extends State<ApplyLeaderboardView> {
       child: BlocConsumer<LeaderboardBloc, LeaderboardState>(
         listener: (context, state) {
           if (state.actionMessage != null) {
-            if (state.actionMessage!.contains('成功') ||
-                state.actionMessage!.contains('已提交')) {
+            if (state.actionMessage == 'leaderboard_applied') {
               AppFeedback.showSuccess(context, l10n.leaderboardApplySuccess);
               Navigator.of(context).pop();
-            } else if (state.actionMessage!.contains('失败')) {
-              AppFeedback.showError(context, state.actionMessage!);
+            } else if (state.actionMessage == 'application_failed') {
+              final msg = state.errorMessage != null
+                  ? '${l10n.actionApplicationFailed}: ${state.errorMessage}'
+                  : l10n.actionApplicationFailed;
+              AppFeedback.showError(context, msg);
             }
           }
         },

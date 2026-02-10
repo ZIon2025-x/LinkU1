@@ -166,6 +166,7 @@ class FleaMarketState extends Equatable {
     this.isLoadingPurchaseRequests = false,
     this.isFavorited = false,
     this.isTogglingFavorite = false,
+    this.isLoadingMore = false,
   });
 
   final FleaMarketStatus status;
@@ -187,6 +188,7 @@ class FleaMarketState extends Equatable {
   final bool isLoadingPurchaseRequests;
   final bool isFavorited;
   final bool isTogglingFavorite;
+  final bool isLoadingMore;
 
   bool get isLoading => status == FleaMarketStatus.loading;
   bool get isEmpty => items.isEmpty && status == FleaMarketStatus.loaded;
@@ -213,6 +215,7 @@ class FleaMarketState extends Equatable {
     bool? isLoadingPurchaseRequests,
     bool? isFavorited,
     bool? isTogglingFavorite,
+    bool? isLoadingMore,
   }) {
     return FleaMarketState(
       status: status ?? this.status,
@@ -234,6 +237,7 @@ class FleaMarketState extends Equatable {
       isLoadingPurchaseRequests: isLoadingPurchaseRequests ?? this.isLoadingPurchaseRequests,
       isFavorited: isFavorited ?? this.isFavorited,
       isTogglingFavorite: isTogglingFavorite ?? this.isTogglingFavorite,
+      isLoadingMore: isLoadingMore ?? this.isLoadingMore,
     );
   }
 
@@ -256,6 +260,7 @@ class FleaMarketState extends Equatable {
         isLoadingPurchaseRequests,
         isFavorited,
         isTogglingFavorite,
+        isLoadingMore,
       ];
 }
 
@@ -340,7 +345,9 @@ class FleaMarketBloc extends Bloc<FleaMarketEvent, FleaMarketState> {
     FleaMarketLoadMore event,
     Emitter<FleaMarketState> emit,
   ) async {
-    if (!state.hasMore) return;
+    // 防重复：正在加载中或无更多数据时跳过
+    if (!state.hasMore || state.isLoadingMore) return;
+    emit(state.copyWith(isLoadingMore: true));
 
     try {
       final nextPage = state.page + 1;
@@ -354,9 +361,11 @@ class FleaMarketBloc extends Bloc<FleaMarketEvent, FleaMarketState> {
         items: [...state.items, ...response.items],
         page: nextPage,
         hasMore: response.hasMore,
+        isLoadingMore: false,
       ));
     } catch (e) {
       AppLogger.error('Failed to load more items', e);
+      emit(state.copyWith(isLoadingMore: false));
     }
   }
 
@@ -431,14 +440,15 @@ class FleaMarketBloc extends Bloc<FleaMarketEvent, FleaMarketState> {
       await _fleaMarketRepository.createItem(event.request);
       emit(state.copyWith(
         isSubmitting: false,
-        actionMessage: '商品发布成功',
+        actionMessage: 'item_published',
       ));
       // 刷新列表
       add(const FleaMarketRefreshRequested());
     } catch (e) {
       emit(state.copyWith(
         isSubmitting: false,
-        actionMessage: '发布失败: ${e.toString()}',
+        actionMessage: 'publish_failed',
+        errorMessage: e.toString(),
       ));
     }
   }
@@ -469,13 +479,13 @@ class FleaMarketBloc extends Bloc<FleaMarketEvent, FleaMarketState> {
       emit(state.copyWith(
         items: updatedItems,
         isSubmitting: false,
-        actionMessage: '购买成功',
+        actionMessage: 'purchase_success',
       ));
     } catch (e) {
       AppLogger.error('Failed to purchase item', e);
       emit(state.copyWith(
         isSubmitting: false,
-        actionMessage: '购买失败',
+        actionMessage: 'purchase_failed',
         errorMessage: e.toString(),
       ));
     }
@@ -508,13 +518,14 @@ class FleaMarketBloc extends Bloc<FleaMarketEvent, FleaMarketState> {
         items: updatedItems,
         selectedItem:
             state.selectedItem?.id == updatedItem.id ? updatedItem : null,
-        actionMessage: '商品更新成功',
+        actionMessage: 'item_updated',
       ));
     } catch (e) {
       AppLogger.error('Failed to update flea market item', e);
       emit(state.copyWith(
         isSubmitting: false,
-        actionMessage: '更新失败: ${e.toString()}',
+        actionMessage: 'update_failed',
+        errorMessage: e.toString(),
       ));
     }
   }
@@ -570,7 +581,7 @@ class FleaMarketBloc extends Bloc<FleaMarketEvent, FleaMarketState> {
       await _fleaMarketRepository.refreshItem(event.itemId.toString());
       emit(state.copyWith(
         isSubmitting: false,
-        actionMessage: '刷新成功',
+        actionMessage: 'refresh_success',
       ));
       // 重新加载详情以获取最新数据
       add(FleaMarketLoadDetailRequested(event.itemId));
@@ -578,7 +589,8 @@ class FleaMarketBloc extends Bloc<FleaMarketEvent, FleaMarketState> {
       AppLogger.error('Failed to refresh flea market item', e);
       emit(state.copyWith(
         isSubmitting: false,
-        actionMessage: '刷新失败: ${e.toString()}',
+        actionMessage: 'refresh_failed',
+        errorMessage: e.toString(),
       ));
     }
   }

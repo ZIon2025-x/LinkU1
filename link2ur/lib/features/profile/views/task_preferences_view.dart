@@ -8,6 +8,7 @@ import '../../../core/utils/l10n_extension.dart';
 import '../../../data/repositories/user_repository.dart';
 import '../../../data/repositories/task_repository.dart';
 import '../../../data/repositories/forum_repository.dart';
+import '../../../core/widgets/loading_view.dart';
 import '../bloc/profile_bloc.dart';
 
 /// 任务偏好设置页
@@ -93,7 +94,10 @@ class _TaskPreferencesViewState extends State<TaskPreferencesView> {
           }
 
           // Handle save success
-          if (state.actionMessage == '偏好设置已更新') {
+          if (state.actionMessage == 'preferences_updated') {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text(l10n.profilePreferencesUpdated)),
+            );
             Navigator.of(context).pop();
           }
 
@@ -116,7 +120,7 @@ class _TaskPreferencesViewState extends State<TaskPreferencesView> {
               ],
             ),
             body: state.preferences == null && state.status == ProfileStatus.loading
-                ? const Center(child: CircularProgressIndicator())
+                ? const LoadingView()
                 : SingleChildScrollView(
               padding: const EdgeInsets.all(AppSpacing.md),
               child: Column(

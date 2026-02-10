@@ -9,6 +9,7 @@ import '../../../core/design/app_typography.dart';
 import '../../../core/design/app_radius.dart';
 import '../../../core/router/app_router.dart';
 import '../../../core/widgets/buttons.dart';
+import '../../../core/widgets/loading_view.dart';
 import '../../../core/widgets/async_image_view.dart';
 import '../../../core/utils/l10n_extension.dart';
 import '../../../data/models/task.dart';
@@ -121,7 +122,7 @@ class TaskSourceBadge extends StatelessWidget {
         return (
           Icons.groups,
           context.l10n.taskSourceExpertActivity,
-          const Color(0xFF8B5CF6)
+          AppColors.pendingPurple
         );
       default:
         return (Icons.tag, context.l10n.taskSourceNormal, AppColors.primary);
@@ -142,7 +143,7 @@ class TaskLevelBadge extends StatelessWidget {
     if (!task.hasSpecialLevel) return const SizedBox.shrink();
 
     final isVip = task.isVipTask;
-    final color = isVip ? const Color(0xFFFF9500) : const Color(0xFF8B5CF6);
+    final color = isVip ? AppColors.busy : AppColors.pendingPurple;
     final icon = isVip ? Icons.star : Icons.local_fire_department;
     final text =
         isVip ? context.l10n.taskDetailVipTask : context.l10n.taskDetailSuperTask;
@@ -514,7 +515,7 @@ class ApplicationStatusCard extends StatelessWidget {
         } else if (task.status ==
             AppConstants.taskStatusPendingConfirmation) {
           return (
-            const Color(0xFF8B5CF6),
+            AppColors.pendingPurple,
             Icons.verified,
             context.l10n.taskDetailTaskCompleted,
             context.l10n.taskDetailTaskCompletedMessage,
@@ -599,10 +600,11 @@ class ApplicationsListView extends StatelessWidget {
           const SizedBox(height: AppSpacing.md),
           if (isLoading)
             const Center(
-                child: Padding(
-              padding: EdgeInsets.all(AppSpacing.xl),
-              child: CircularProgressIndicator(),
-            ))
+              child: Padding(
+                padding: EdgeInsets.all(AppSpacing.xl),
+                child: LoadingView(),
+              ),
+            )
           else if (applications.isEmpty)
             Padding(
               padding: const EdgeInsets.all(AppSpacing.xl),

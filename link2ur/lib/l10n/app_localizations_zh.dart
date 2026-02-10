@@ -3500,7 +3500,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get networkOffline => '网络已断开';
 
   @override
-  String get networkDisconnected => '网络连接已断开';
+  String get networkDisconnected => '网络已断开';
 
   @override
   String get networkCheckSettings => '请检查您的网络设置';
@@ -3705,7 +3705,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get shareCopyLink => '复制链接';
 
   @override
-  String get shareGenerateImage => '生成分享图';
+  String get shareGenerateImage => '生成图片';
 
   @override
   String get shareShareTo => '分享到';
@@ -3844,6 +3844,9 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get myTasksTabPending => '待处理申请';
+
+  @override
+  String get myTasksTabInProgress => '进行中';
 
   @override
   String get myTasksTabCompleted => '已完成';
@@ -6602,7 +6605,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get homeDefaultUser => '用户';
 
   @override
-  String get homeClassmate => '同学';
+  String get homeClassmate => 'Linker';
 
   @override
   String get homePostedNewPost => '发布了新帖子';
@@ -7355,6 +7358,346 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get publishPostTab => '帖子发布';
+
+  @override
+  String get profileUpdateFailed => '更新失败';
+
+  @override
+  String get profileAvatarUpdated => '头像已更新';
+
+  @override
+  String get profileUploadFailed => '上传失败';
+
+  @override
+  String get profilePreferencesUpdated => '偏好设置已更新';
+
+  @override
+  String get commonSuccess => '成功';
+
+  @override
+  String get commonError => '错误';
+
+  @override
+  String get commonSaved => '已保存';
+
+  @override
+  String get validatorEmailRequired => '请输入邮箱地址';
+
+  @override
+  String get validatorEmailInvalid => '请输入有效的邮箱地址';
+
+  @override
+  String get validatorPhoneRequired => '请输入手机号';
+
+  @override
+  String get validatorPhoneInvalid => '请输入有效的手机号';
+
+  @override
+  String get validatorUKPhoneRequired => '请输入您的手机号';
+
+  @override
+  String get validatorUKPhoneInvalid => '请输入有效的英国手机号';
+
+  @override
+  String get validatorPasswordRequired => '请输入密码';
+
+  @override
+  String get validatorPasswordMinLength => '密码长度至少8位';
+
+  @override
+  String get validatorPasswordFormat => '密码需包含字母和数字';
+
+  @override
+  String get validatorConfirmPasswordRequired => '请确认密码';
+
+  @override
+  String get validatorPasswordMismatch => '两次输入的密码不一致';
+
+  @override
+  String get validatorCodeRequired => '请输入验证码';
+
+  @override
+  String validatorCodeLength(int length) {
+    return '验证码应为$length位';
+  }
+
+  @override
+  String get validatorCodeDigitsOnly => '验证码只能包含数字';
+
+  @override
+  String get validatorUsernameRequired => '请输入用户名';
+
+  @override
+  String get validatorUsernameMinLength => '用户名至少2个字符';
+
+  @override
+  String get validatorUsernameMaxLength => '用户名最多20个字符';
+
+  @override
+  String get validatorTitleRequired => '请输入标题';
+
+  @override
+  String validatorTitleMaxLength(int maxLength) {
+    return '标题最多$maxLength个字符';
+  }
+
+  @override
+  String get validatorDescriptionRequired => '请输入描述';
+
+  @override
+  String validatorDescriptionMaxLength(int maxLength) {
+    return '描述最多$maxLength个字符';
+  }
+
+  @override
+  String get validatorAmountRequired => '请输入金额';
+
+  @override
+  String get validatorAmountInvalid => '请输入有效的金额';
+
+  @override
+  String get validatorAmountPositive => '金额必须大于0';
+
+  @override
+  String validatorAmountMin(double min) {
+    return '金额不能小于$min';
+  }
+
+  @override
+  String validatorAmountMax(double max) {
+    return '金额不能大于$max';
+  }
+
+  @override
+  String get validatorUrlRequired => '请输入URL';
+
+  @override
+  String get validatorUrlInvalid => '请输入有效的URL';
+
+  @override
+  String validatorFieldRequired(String fieldName) {
+    return '$fieldName不能为空';
+  }
+
+  @override
+  String validatorFieldMinLength(String fieldName, int min) {
+    return '$fieldName至少$min个字符';
+  }
+
+  @override
+  String validatorFieldMaxLength(String fieldName, int max) {
+    return '$fieldName最多$max个字符';
+  }
+
+  @override
+  String get timeYesterday => '昨天';
+
+  @override
+  String get timeDayBeforeYesterday => '前天';
+
+  @override
+  String timeDeadlineMinutes(int minutes) {
+    return '$minutes分钟后截止';
+  }
+
+  @override
+  String timeDeadlineHours(int hours) {
+    return '$hours小时后截止';
+  }
+
+  @override
+  String timeDeadlineDays(int days) {
+    return '$days天后截止';
+  }
+
+  @override
+  String timeDeadlineDate(String date) {
+    return '$date 截止';
+  }
+
+  @override
+  String get badgeVip => 'VIP';
+
+  @override
+  String get badgeSuper => 'Super';
+
+  @override
+  String get notificationPermTitle => '开启推送通知';
+
+  @override
+  String get notificationPermDesc =>
+      '开启通知后，您可以及时收到：\n\n• 任务状态更新\n• 新消息提醒\n• 任务匹配推荐\n• 优惠活动通知';
+
+  @override
+  String get notificationPermEnable => '开启通知';
+
+  @override
+  String get notificationPermSkip => '暂时跳过';
+
+  @override
+  String get notificationPermSettingsTitle => '需要通知权限';
+
+  @override
+  String get notificationPermSettingsDesc => '您已拒绝通知权限，请在系统设置中手动开启。';
+
+  @override
+  String get notificationPermSettingsLater => '稍后再说';
+
+  @override
+  String get notificationPermSettingsGo => '去设置';
+
+  @override
+  String get shareTitle => '分享到';
+
+  @override
+  String get shareLinkCopied => '链接已复制';
+
+  @override
+  String get shareQQ => 'QQ';
+
+  @override
+  String get shareMore => '更多';
+
+  @override
+  String get actionItemPublished => '商品发布成功';
+
+  @override
+  String get actionPublishFailed => '发布失败';
+
+  @override
+  String get actionPurchaseSuccess => '购买成功';
+
+  @override
+  String get actionPurchaseFailed => '购买失败';
+
+  @override
+  String get actionItemUpdated => '商品更新成功';
+
+  @override
+  String get actionUpdateFailed => '更新失败';
+
+  @override
+  String get actionRefreshSuccess => '刷新成功';
+
+  @override
+  String get actionRefreshFailed => '刷新失败';
+
+  @override
+  String get actionApplicationSubmitted => '申请已提交';
+
+  @override
+  String get actionApplicationFailed => '申请失败';
+
+  @override
+  String get actionApplicationCancelled => '已取消申请';
+
+  @override
+  String get actionCancelFailed => '取消失败';
+
+  @override
+  String get actionApplicationAccepted => '已接受申请';
+
+  @override
+  String get actionApplicationRejected => '已拒绝申请';
+
+  @override
+  String get actionOperationFailed => '操作失败';
+
+  @override
+  String get actionTaskCompleted => '已提交完成';
+
+  @override
+  String get actionSubmitFailed => '提交失败';
+
+  @override
+  String get actionCompletionConfirmed => '已确认完成';
+
+  @override
+  String get actionConfirmFailed => '确认失败';
+
+  @override
+  String get actionTaskCancelled => '任务已取消';
+
+  @override
+  String get actionReviewSubmitted => '评价已提交';
+
+  @override
+  String get actionReviewFailed => '评价失败';
+
+  @override
+  String get actionRefundSubmitted => '退款申请已提交';
+
+  @override
+  String get actionRefundFailed => '退款申请失败';
+
+  @override
+  String get actionRefundRevoked => '退款申请已撤销';
+
+  @override
+  String get actionRevokeFailed => '撤销失败';
+
+  @override
+  String get actionDisputeSubmitted => '反驳已提交';
+
+  @override
+  String get actionDisputeFailed => '提交反驳失败';
+
+  @override
+  String get actionCheckInSuccess => '签到成功！';
+
+  @override
+  String get actionCheckInFailed => '签到失败';
+
+  @override
+  String get actionVoteFailed => '投票失败';
+
+  @override
+  String get actionLeaderboardApplied => '申请已提交';
+
+  @override
+  String get actionLeaderboardSubmitted => '提交成功';
+
+  @override
+  String get actionVerificationSubmitted => '提交成功，请查收邮箱验证';
+
+  @override
+  String get actionVerificationSuccess => '验证成功';
+
+  @override
+  String get actionVerificationFailed => '验证失败';
+
+  @override
+  String get actionRenewalSuccess => '续期成功';
+
+  @override
+  String get actionRenewalFailed => '续期失败';
+
+  @override
+  String get actionRegistrationSuccess => '报名成功';
+
+  @override
+  String get actionRegistrationFailed => '报名失败';
+
+  @override
+  String get actionConversationEnded => '对话已结束';
+
+  @override
+  String get actionEndConversationFailed => '结束对话失败';
+
+  @override
+  String get actionFeedbackSuccess => '评价成功，感谢您的反馈';
+
+  @override
+  String get actionFeedbackFailed => '评价失败';
+
+  @override
+  String get actionCouponClaimed => '领取成功';
+
+  @override
+  String get actionCouponRedeemed => '兑换成功';
+
+  @override
+  String get actionInviteCodeUsed => '邀请码使用成功';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -10853,13 +11196,13 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get networkOffline => '網路已斷開';
 
   @override
-  String get networkDisconnected => '網絡連接已斷開';
+  String get networkDisconnected => '網路已斷開';
 
   @override
   String get networkCheckSettings => '請檢查您的網絡設置';
 
   @override
-  String get networkRestored => '網絡已恢復';
+  String get networkRestored => '網路已恢復';
 
   @override
   String get networkConnectedWifi => '已連接到 Wi-Fi';
@@ -11052,13 +11395,13 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get shareWeibo => '微博';
 
   @override
-  String get shareSms => '短信';
+  String get shareSms => '簡訊';
 
   @override
-  String get shareCopyLink => '複製鏈接';
+  String get shareCopyLink => '複製連結';
 
   @override
-  String get shareGenerateImage => '生成分享圖';
+  String get shareGenerateImage => '生成圖片';
 
   @override
   String get shareShareTo => '分享到';
@@ -11197,6 +11540,9 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get myTasksTabPending => '待處理申請';
+
+  @override
+  String get myTasksTabInProgress => '進行中';
 
   @override
   String get myTasksTabCompleted => '已完成';
@@ -13866,7 +14212,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get homeDefaultUser => '用戶';
 
   @override
-  String get homeClassmate => '同學';
+  String get homeClassmate => 'Linker';
 
   @override
   String get homePostedNewPost => '發佈了新帖子';
@@ -14619,4 +14965,344 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get publishPostTab => '帖子發佈';
+
+  @override
+  String get profileUpdateFailed => '更新失敗';
+
+  @override
+  String get profileAvatarUpdated => '頭像已更新';
+
+  @override
+  String get profileUploadFailed => '上傳失敗';
+
+  @override
+  String get profilePreferencesUpdated => '偏好設定已更新';
+
+  @override
+  String get commonSuccess => '成功';
+
+  @override
+  String get commonError => '錯誤';
+
+  @override
+  String get commonSaved => '已儲存';
+
+  @override
+  String get validatorEmailRequired => '請輸入電子郵件地址';
+
+  @override
+  String get validatorEmailInvalid => '請輸入有效的電子郵件地址';
+
+  @override
+  String get validatorPhoneRequired => '請輸入手機號碼';
+
+  @override
+  String get validatorPhoneInvalid => '請輸入有效的手機號碼';
+
+  @override
+  String get validatorUKPhoneRequired => '請輸入您的手機號碼';
+
+  @override
+  String get validatorUKPhoneInvalid => '請輸入有效的英國手機號碼';
+
+  @override
+  String get validatorPasswordRequired => '請輸入密碼';
+
+  @override
+  String get validatorPasswordMinLength => '密碼長度至少8位';
+
+  @override
+  String get validatorPasswordFormat => '密碼需包含字母和數字';
+
+  @override
+  String get validatorConfirmPasswordRequired => '請確認密碼';
+
+  @override
+  String get validatorPasswordMismatch => '兩次輸入的密碼不一致';
+
+  @override
+  String get validatorCodeRequired => '請輸入驗證碼';
+
+  @override
+  String validatorCodeLength(int length) {
+    return '驗證碼應為$length位';
+  }
+
+  @override
+  String get validatorCodeDigitsOnly => '驗證碼只能包含數字';
+
+  @override
+  String get validatorUsernameRequired => '請輸入使用者名稱';
+
+  @override
+  String get validatorUsernameMinLength => '使用者名稱至少2個字元';
+
+  @override
+  String get validatorUsernameMaxLength => '使用者名稱最多20個字元';
+
+  @override
+  String get validatorTitleRequired => '請輸入標題';
+
+  @override
+  String validatorTitleMaxLength(int maxLength) {
+    return '標題最多$maxLength個字元';
+  }
+
+  @override
+  String get validatorDescriptionRequired => '請輸入描述';
+
+  @override
+  String validatorDescriptionMaxLength(int maxLength) {
+    return '描述最多$maxLength個字元';
+  }
+
+  @override
+  String get validatorAmountRequired => '請輸入金額';
+
+  @override
+  String get validatorAmountInvalid => '請輸入有效的金額';
+
+  @override
+  String get validatorAmountPositive => '金額必須大於0';
+
+  @override
+  String validatorAmountMin(double min) {
+    return '金額不能小於$min';
+  }
+
+  @override
+  String validatorAmountMax(double max) {
+    return '金額不能大於$max';
+  }
+
+  @override
+  String get validatorUrlRequired => '請輸入URL';
+
+  @override
+  String get validatorUrlInvalid => '請輸入有效的URL';
+
+  @override
+  String validatorFieldRequired(String fieldName) {
+    return '$fieldName不能為空';
+  }
+
+  @override
+  String validatorFieldMinLength(String fieldName, int min) {
+    return '$fieldName至少$min個字元';
+  }
+
+  @override
+  String validatorFieldMaxLength(String fieldName, int max) {
+    return '$fieldName最多$max個字元';
+  }
+
+  @override
+  String get timeYesterday => '昨天';
+
+  @override
+  String get timeDayBeforeYesterday => '前天';
+
+  @override
+  String timeDeadlineMinutes(int minutes) {
+    return '$minutes分鐘後截止';
+  }
+
+  @override
+  String timeDeadlineHours(int hours) {
+    return '$hours小時後截止';
+  }
+
+  @override
+  String timeDeadlineDays(int days) {
+    return '$days天後截止';
+  }
+
+  @override
+  String timeDeadlineDate(String date) {
+    return '$date 截止';
+  }
+
+  @override
+  String get badgeVip => 'VIP';
+
+  @override
+  String get badgeSuper => 'Super';
+
+  @override
+  String get notificationPermTitle => '開啟推送通知';
+
+  @override
+  String get notificationPermDesc =>
+      '開啟通知後，您可以即時收到：\n\n• 任務狀態更新\n• 新訊息提醒\n• 任務匹配推薦\n• 優惠活動通知';
+
+  @override
+  String get notificationPermEnable => '開啟通知';
+
+  @override
+  String get notificationPermSkip => '暫時跳過';
+
+  @override
+  String get notificationPermSettingsTitle => '需要通知權限';
+
+  @override
+  String get notificationPermSettingsDesc => '您已拒絕通知權限，請在系統設定中手動開啟。';
+
+  @override
+  String get notificationPermSettingsLater => '稍後再說';
+
+  @override
+  String get notificationPermSettingsGo => '前往設定';
+
+  @override
+  String get shareTitle => '分享到';
+
+  @override
+  String get shareLinkCopied => '連結已複製';
+
+  @override
+  String get shareQQ => 'QQ';
+
+  @override
+  String get shareMore => '更多';
+
+  @override
+  String get actionItemPublished => '商品發佈成功';
+
+  @override
+  String get actionPublishFailed => '發佈失敗';
+
+  @override
+  String get actionPurchaseSuccess => '購買成功';
+
+  @override
+  String get actionPurchaseFailed => '購買失敗';
+
+  @override
+  String get actionItemUpdated => '商品更新成功';
+
+  @override
+  String get actionUpdateFailed => '更新失敗';
+
+  @override
+  String get actionRefreshSuccess => '重新整理成功';
+
+  @override
+  String get actionRefreshFailed => '重新整理失敗';
+
+  @override
+  String get actionApplicationSubmitted => '申請已提交';
+
+  @override
+  String get actionApplicationFailed => '申請失敗';
+
+  @override
+  String get actionApplicationCancelled => '已取消申請';
+
+  @override
+  String get actionCancelFailed => '取消失敗';
+
+  @override
+  String get actionApplicationAccepted => '已接受申請';
+
+  @override
+  String get actionApplicationRejected => '已拒絕申請';
+
+  @override
+  String get actionOperationFailed => '操作失敗';
+
+  @override
+  String get actionTaskCompleted => '已提交完成';
+
+  @override
+  String get actionSubmitFailed => '提交失敗';
+
+  @override
+  String get actionCompletionConfirmed => '已確認完成';
+
+  @override
+  String get actionConfirmFailed => '確認失敗';
+
+  @override
+  String get actionTaskCancelled => '任務已取消';
+
+  @override
+  String get actionReviewSubmitted => '評價已提交';
+
+  @override
+  String get actionReviewFailed => '評價失敗';
+
+  @override
+  String get actionRefundSubmitted => '退款申請已提交';
+
+  @override
+  String get actionRefundFailed => '退款申請失敗';
+
+  @override
+  String get actionRefundRevoked => '退款申請已撤銷';
+
+  @override
+  String get actionRevokeFailed => '撤銷失敗';
+
+  @override
+  String get actionDisputeSubmitted => '反駁已提交';
+
+  @override
+  String get actionDisputeFailed => '提交反駁失敗';
+
+  @override
+  String get actionCheckInSuccess => '簽到成功！';
+
+  @override
+  String get actionCheckInFailed => '簽到失敗';
+
+  @override
+  String get actionVoteFailed => '投票失敗';
+
+  @override
+  String get actionLeaderboardApplied => '申請已提交';
+
+  @override
+  String get actionLeaderboardSubmitted => '提交成功';
+
+  @override
+  String get actionVerificationSubmitted => '提交成功，請查收郵箱驗證';
+
+  @override
+  String get actionVerificationSuccess => '驗證成功';
+
+  @override
+  String get actionVerificationFailed => '驗證失敗';
+
+  @override
+  String get actionRenewalSuccess => '續期成功';
+
+  @override
+  String get actionRenewalFailed => '續期失敗';
+
+  @override
+  String get actionRegistrationSuccess => '報名成功';
+
+  @override
+  String get actionRegistrationFailed => '報名失敗';
+
+  @override
+  String get actionConversationEnded => '對話已結束';
+
+  @override
+  String get actionEndConversationFailed => '結束對話失敗';
+
+  @override
+  String get actionFeedbackSuccess => '評價成功，感謝您的回饋';
+
+  @override
+  String get actionFeedbackFailed => '評價失敗';
+
+  @override
+  String get actionCouponClaimed => '領取成功';
+
+  @override
+  String get actionCouponRedeemed => '兌換成功';
+
+  @override
+  String get actionInviteCodeUsed => '邀請碼使用成功';
 }

@@ -147,14 +147,16 @@ class StudentVerificationBloc
       );
       emit(state.copyWith(
         isSubmitting: false,
-        actionMessage: '提交成功，请查收邮箱验证',
+        actionMessage: 'verification_submitted',
       ));
       // 重新加载状态
       add(const StudentVerificationLoadRequested());
     } catch (e) {
+      final errMsg = e.toString().replaceAll('StudentVerificationException: ', '');
       emit(state.copyWith(
         isSubmitting: false,
-        actionMessage: '提交失败: ${e.toString().replaceAll('StudentVerificationException: ', '')}',
+        actionMessage: 'submit_failed',
+        errorMessage: errMsg,
       ));
     }
   }
@@ -169,13 +171,15 @@ class StudentVerificationBloc
       await _repository.verifyStudentEmail(code: event.code);
       emit(state.copyWith(
         isSubmitting: false,
-        actionMessage: '验证成功',
+        actionMessage: 'verification_success',
       ));
       add(const StudentVerificationLoadRequested());
     } catch (e) {
+      final errMsg = e.toString().replaceAll('StudentVerificationException: ', '');
       emit(state.copyWith(
         isSubmitting: false,
-        actionMessage: '验证失败: ${e.toString().replaceAll('StudentVerificationException: ', '')}',
+        actionMessage: 'verification_failed',
+        errorMessage: errMsg,
       ));
     }
   }
@@ -190,13 +194,13 @@ class StudentVerificationBloc
       await _repository.renewVerification();
       emit(state.copyWith(
         isSubmitting: false,
-        actionMessage: '续期成功',
+        actionMessage: 'renewal_success',
       ));
       add(const StudentVerificationLoadRequested());
     } catch (e) {
       emit(state.copyWith(
         isSubmitting: false,
-        actionMessage: '续期失败',
+        actionMessage: 'renewal_failed',
       ));
     }
   }

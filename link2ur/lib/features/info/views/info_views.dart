@@ -447,7 +447,7 @@ class VIPView extends StatelessWidget {
               padding: AppSpacing.allLg,
               decoration: BoxDecoration(
                 gradient: const LinearGradient(
-                  colors: [Color(0xFF2C2C2E), Color(0xFF1C1C1E)],
+                  colors: [AppColors.secondaryBackgroundDark, AppColors.cardBackgroundDark],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
@@ -466,7 +466,7 @@ class VIPView extends StatelessWidget {
                   Row(
                     children: [
                       const Icon(Icons.workspace_premium,
-                          color: Color(0xFFFFD700), size: 32),
+                          color: AppColors.gold, size: 32),
                       AppSpacing.hSm,
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -474,7 +474,7 @@ class VIPView extends StatelessWidget {
                           Text(
                             'Link²Ur VIP',
                             style: AppTypography.title2.copyWith(
-                              color: const Color(0xFFFFD700),
+                              color: AppColors.gold,
                             ),
                           ),
                           Text(
@@ -551,7 +551,7 @@ class VIPView extends StatelessWidget {
                   context.goToVIPPurchase();
                 },
                 gradient: const LinearGradient(
-                  colors: [Color(0xFFFFD700), Color(0xFFFF9500)],
+                  colors: AppColors.gradientGold,
                 ),
               ),
             ),

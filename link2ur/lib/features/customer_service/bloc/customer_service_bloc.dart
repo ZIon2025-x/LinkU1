@@ -298,11 +298,11 @@ class CustomerServiceBloc
       await _repository.endCustomerServiceChat(state.chat!.chatId);
       emit(state.copyWith(
         status: CustomerServiceStatus.ended,
-        actionMessage: '对话已结束',
+        actionMessage: 'conversation_ended',
       ));
     } catch (e) {
       emit(state.copyWith(
-        actionMessage: '结束对话失败',
+        actionMessage: 'end_conversation_failed',
       ));
     }
   }
@@ -324,12 +324,12 @@ class CustomerServiceBloc
       );
       emit(state.copyWith(
         isRating: false,
-        actionMessage: '评价成功，感谢您的反馈',
+        actionMessage: 'feedback_success',
       ));
     } catch (e) {
       emit(state.copyWith(
         isRating: false,
-        actionMessage: '评价失败',
+        actionMessage: 'feedback_failed',
       ));
     }
   }

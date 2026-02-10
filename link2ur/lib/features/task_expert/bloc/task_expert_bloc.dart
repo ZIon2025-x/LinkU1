@@ -372,12 +372,13 @@ class TaskExpertBloc extends Bloc<TaskExpertEvent, TaskExpertState> {
 
       emit(state.copyWith(
         isSubmitting: false,
-        actionMessage: '申请已提交',
+        actionMessage: 'application_submitted',
       ));
     } catch (e) {
       emit(state.copyWith(
         isSubmitting: false,
-        actionMessage: '申请失败',
+        actionMessage: 'application_failed',
+        errorMessage: e.toString(),
       ));
     }
   }
@@ -533,14 +534,15 @@ class TaskExpertBloc extends Bloc<TaskExpertEvent, TaskExpertState> {
 
       emit(state.copyWith(
         isSubmitting: false,
-        actionMessage: '申请已提交',
+        actionMessage: 'application_submitted',
         selectedService: service,
       ));
     } catch (e) {
       AppLogger.error('Failed to apply for service', e);
       emit(state.copyWith(
         isSubmitting: false,
-        actionMessage: '申请失败: ${e.toString()}',
+        actionMessage: 'application_failed',
+        errorMessage: e.toString(),
       ));
     }
   }

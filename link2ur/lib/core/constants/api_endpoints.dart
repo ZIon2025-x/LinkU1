@@ -87,6 +87,7 @@ class ApiEndpoints {
 
   // --- 申请管理 ---
   // 后端: task_chat_routes.py (prefix: /api)
+  static const String myApplications = '/api/my-applications';
   static String taskApplications(int taskId) =>
       '/api/tasks/$taskId/applications';
   static String acceptApplication(int taskId, int applicationId) =>

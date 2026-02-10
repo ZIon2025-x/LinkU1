@@ -1,5 +1,35 @@
 part of 'home_view.dart';
 
+/// Returns subtle gradient colors for greeting background based on time of day.
+/// Alpha ~0.08–0.12 for a soft background.
+List<Color> _greetingGradientColorsForHour(int hour) {
+  const alpha = 0.10;
+  // Morning (6–12): warm orange-pink
+  if (hour >= 6 && hour < 12) {
+    return [
+      AppColors.accentPink.withValues(alpha: alpha),
+      AppColors.accent.withValues(alpha: alpha),
+    ];
+  }
+  // Afternoon (12–18): blue (primary)
+  if (hour >= 12 && hour < 18) {
+    return AppColors.gradientPrimary
+        .map((c) => c.withValues(alpha: alpha))
+        .toList();
+  }
+  // Evening (18–22): purple-indigo
+  if (hour >= 18 && hour < 22) {
+    return AppColors.gradientIndigo
+        .map((c) => c.withValues(alpha: alpha))
+        .toList();
+  }
+  // Night (22–6): dark blue-purple
+  return [
+    AppColors.primaryDark.withValues(alpha: alpha),
+    AppColors.purple.withValues(alpha: alpha),
+  ];
+}
+
 /// 对标iOS: GreetingSection - 个性化问候语
 class _GreetingSection extends StatelessWidget {
   @override
@@ -12,59 +42,73 @@ class _GreetingSection extends StatelessWidget {
         : context.l10n.homeClassmate;
 
     final horizontalPadding = isDesktop ? 40.0 : AppSpacing.md;
+    final gradientColors = _greetingGradientColorsForHour(DateTime.now().hour);
 
     return Padding(
       padding: EdgeInsets.fromLTRB(
           horizontalPadding, AppSpacing.lg, horizontalPadding, AppSpacing.md),
-      child: Row(
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                GradientText.brand(
-                  text: context.l10n.homeGreeting(userName),
-                  style: const TextStyle(
-                    fontSize: 28,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  context.l10n.homeWhatToDo,
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w500,
-                    color: isDark
-                        ? AppColors.textSecondaryDark
-                        : AppColors.textSecondaryLight,
-                  ),
-                ),
-              ],
-            ),
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(16),
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: gradientColors,
           ),
-          // 对标iOS: Image(systemName: "sparkles") + .ultraThinMaterial + Circle
-          Container(
-            width: 48,
-            height: 48,
-            decoration: BoxDecoration(
-              color: (isDark ? Colors.white : Colors.black).withValues(alpha: 0.05),
-              shape: BoxShape.circle,
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.05),
-                  blurRadius: 5,
-                  offset: const Offset(0, 2),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+          child: Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    GradientText.brand(
+                      text: context.l10n.homeGreeting(userName),
+                      style: const TextStyle(
+                        fontSize: 28,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      context.l10n.homeWhatToDo,
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w500,
+                        color: isDark
+                            ? AppColors.textSecondaryDark
+                            : AppColors.textSecondaryLight,
+                      ),
+                    ),
+                  ],
                 ),
-              ],
-            ),
-            child: const Icon(
-              Icons.auto_awesome,
-              color: AppColors.primary,
-              size: 24,
-            ),
+              ),
+              // 对标iOS: Image(systemName: "sparkles") + .ultraThinMaterial + Circle
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  color: (isDark ? Colors.white : Colors.black).withValues(alpha: 0.05),
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.05),
+                      blurRadius: 5,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: const Icon(
+                  Icons.auto_awesome,
+                  color: AppColors.primary,
+                  size: 24,
+                ),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
@@ -79,7 +123,7 @@ class _BannerCarousel extends StatefulWidget {
 }
 
 class _BannerCarouselState extends State<_BannerCarousel> {
-  final PageController _controller = PageController();
+  final PageController _controller = PageController(viewportFraction: 0.88);
   // 使用 ValueNotifier 替代 setState，缩小重建范围
   // 只有依赖这些值的子 Widget 会重建，而非整个 _BannerCarousel
   final ValueNotifier<int> _currentPage = ValueNotifier<int>(0);
@@ -128,13 +172,16 @@ class _BannerCarouselState extends State<_BannerCarousel> {
                   itemBuilder: (context, index) {
                     // 视差偏移量：图片移动速度慢于卡片（0.3倍率）
                     final parallaxOffset = (pageOffset - index) * 30;
+                    // 当前页略大，相邻页略小
+                    final offset = (pageOffset - index).abs();
+                    final scale = (1.0 - (offset * 0.05)).clamp(0.92, 1.0);
 
                     final banners = [
                       // 跳蚤市场Banner
                       _BannerItem(
                         title: context.l10n.homeSecondHandMarket,
                         subtitle: context.l10n.homeSecondHandSubtitle,
-                        gradient: const [Color(0xFF34C759), Color(0xFF30D158)],
+                        gradient: AppColors.gradientGreen,
                         icon: Icons.storefront,
                         imagePath: AppAssets.fleaMarketBanner,
                         imageAlignment: const Alignment(0.0, 0.4),
@@ -145,7 +192,7 @@ class _BannerCarouselState extends State<_BannerCarousel> {
                       _BannerItem(
                         title: context.l10n.homeStudentVerification,
                         subtitle: context.l10n.homeStudentVerificationSubtitle,
-                        gradient: const [Color(0xFF5856D6), Color(0xFF007AFF)],
+                        gradient: AppColors.gradientIndigo,
                         icon: Icons.school,
                         imagePath: AppAssets.studentVerificationBanner,
                         onTap: () => context.push('/student-verification'),
@@ -155,14 +202,18 @@ class _BannerCarouselState extends State<_BannerCarousel> {
                       _BannerItem(
                         title: context.l10n.homeBecomeExpert,
                         subtitle: context.l10n.homeBecomeExpertSubtitle,
-                        gradient: const [Color(0xFFFF9500), Color(0xFFFF6B00)],
+                        gradient: AppColors.gradientOrange,
                         icon: Icons.star,
                         onTap: () => context.push('/task-experts/intro'),
                         parallaxOffset: parallaxOffset,
                       ),
                     ];
 
-                    return banners[index];
+                    return Transform.scale(
+                      scale: scale,
+                      alignment: Alignment.center,
+                      child: banners[index],
+                    );
                   },
                 );
               },
@@ -177,15 +228,21 @@ class _BannerCarouselState extends State<_BannerCarousel> {
             return Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: List.generate(3, (index) {
+                final isActive = currentPage == index;
                 return AnimatedContainer(
                   duration: const Duration(milliseconds: 300),
                   margin: const EdgeInsets.symmetric(horizontal: 3),
                   height: 6,
-                  width: currentPage == index ? 18 : 6,
+                  width: isActive ? 18 : 6,
                   decoration: BoxDecoration(
-                    color: currentPage == index
-                        ? AppColors.primary
-                        : AppColors.primary.withValues(alpha: 0.2),
+                    gradient: isActive
+                        ? const LinearGradient(
+                            colors: AppColors.gradientPrimary,
+                            begin: Alignment.centerLeft,
+                            end: Alignment.centerRight,
+                          )
+                        : null,
+                    color: isActive ? null : AppColors.primary.withValues(alpha: 0.2),
                     borderRadius: AppRadius.allPill,
                   ),
                 );
@@ -370,7 +427,7 @@ class _PopularActivitiesSection extends StatelessWidget {
           _ActivityCard(
             title: context.l10n.homeNewUserReward,
             subtitle: context.l10n.homeNewUserRewardSubtitle,
-            gradient: const [Color(0xFFFF6B6B), Color(0xFFFF4757)],
+            gradient: AppColors.gradientCoral,
             icon: Icons.card_giftcard,
             onTap: () => context.push('/activities'),
           ),
@@ -378,7 +435,7 @@ class _PopularActivitiesSection extends StatelessWidget {
           _ActivityCard(
             title: context.l10n.homeInviteFriends,
             subtitle: context.l10n.homeInviteFriendsSubtitle,
-            gradient: const [Color(0xFF7C5CFC), Color(0xFF5F27CD)],
+            gradient: AppColors.gradientPurple,
             icon: Icons.people,
             onTap: () => context.push('/activities'),
           ),
@@ -386,7 +443,7 @@ class _PopularActivitiesSection extends StatelessWidget {
           _ActivityCard(
             title: context.l10n.homeDailyCheckIn,
             subtitle: context.l10n.homeDailyCheckInSubtitle,
-            gradient: const [Color(0xFF2ED573), Color(0xFF00B894)],
+            gradient: AppColors.gradientEmerald,
             icon: Icons.calendar_today,
             onTap: () => context.push('/activities'),
           ),
@@ -568,35 +625,39 @@ class _RecentActivitiesSectionState extends State<_RecentActivitiesSection> {
         if (allItems.isEmpty) {
           return Padding(
             padding: AppSpacing.allMd,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Icon(
-                  Icons.notifications_none,
-                  size: 48,
-                  color: isDark
-                      ? AppColors.textTertiaryDark
-                      : AppColors.textTertiaryLight,
-                ),
-                AppSpacing.vSm,
-                Text(
-                  context.l10n.homeNoActivity,
-                  style: AppTypography.body.copyWith(
-                    color: isDark
-                        ? AppColors.textSecondaryDark
-                        : AppColors.textSecondaryLight,
-                  ),
-                ),
-                AppSpacing.vXs,
-                Text(
-                  context.l10n.homeNoActivityMessage,
-                  style: AppTypography.caption.copyWith(
+            child: Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.notifications_none,
+                    size: 48,
                     color: isDark
                         ? AppColors.textTertiaryDark
                         : AppColors.textTertiaryLight,
                   ),
-                ),
-              ],
+                  AppSpacing.vSm,
+                  Text(
+                    context.l10n.homeNoActivity,
+                    style: AppTypography.body.copyWith(
+                      color: isDark
+                          ? AppColors.textSecondaryDark
+                          : AppColors.textSecondaryLight,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  AppSpacing.vXs,
+                  Text(
+                    context.l10n.homeNoActivityMessage,
+                    style: AppTypography.caption.copyWith(
+                      color: isDark
+                          ? AppColors.textTertiaryDark
+                          : AppColors.textTertiaryLight,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
+              ),
             ),
           );
         }
@@ -689,7 +750,7 @@ class _RecentActivitiesSectionState extends State<_RecentActivitiesSection> {
     switch (type) {
       // 论坛帖子 → 蓝紫色（primary 风格）
       case RecentActivityItem.typeForumPost:
-        return const [Color(0xFF007AFF), Color(0xFF5856D6)];
+        return AppColors.gradientBlueTeal;
       // 跳蚤市场 → 橙色（warning 风格）
       case RecentActivityItem.typeFleaMarketItem:
         return const [Color(0xFFFF9500), Color(0xFFFF6B00)];
@@ -697,7 +758,7 @@ class _RecentActivitiesSectionState extends State<_RecentActivitiesSection> {
       case RecentActivityItem.typeLeaderboardCreated:
         return const [Color(0xFF34C759), Color(0xFF30D158)];
       default:
-        return const [Color(0xFF8E8E93), Color(0xFF636366)];
+        return const [AppColors.offline, AppColors.textPlaceholderDark];
     }
   }
 
@@ -1162,12 +1223,12 @@ class _HorizontalTaskCard extends StatelessWidget {
                           horizontal: 7, vertical: 3),
                       decoration: BoxDecoration(
                         gradient: const LinearGradient(
-                          colors: [Color(0xFFFF9500), Color(0xFFFF6B00)],
+                          colors: AppColors.gradientOrange,
                         ),
                         borderRadius: AppRadius.allPill,
                         boxShadow: [
                           BoxShadow(
-                            color: const Color(0xFFFF9500)
+                            color: AppColors.busy
                                 .withValues(alpha: 0.4),
                             blurRadius: 6,
                             offset: const Offset(0, 2),
@@ -1593,6 +1654,7 @@ class _ExpertsTabContentState extends State<_ExpertsTabContent> {
 
               if (state.experts.isEmpty) {
                 return EmptyStateView.noData(
+                  context,
                   title: context.l10n.homeExperts,
                 );
               }
@@ -1616,7 +1678,7 @@ class _ExpertsTabContentState extends State<_ExpertsTabContent> {
                       return const Center(
                         child: Padding(
                           padding: EdgeInsets.all(16.0),
-                          child: CircularProgressIndicator.adaptive(),
+                          child: LoadingIndicator(),
                         ),
                       );
                     }

@@ -126,6 +126,100 @@ class AppColors {
     Color(0xFFFF8C00),
   ];
 
+  // ==================== 渐变预设 ====================
+  /// 紫色渐变 - 特殊标签/排行榜
+  static const List<Color> gradientPurple = [
+    Color(0xFF7C5CFC),
+    Color(0xFF5F27CD),
+  ];
+
+  /// 靛蓝渐变 - 导航/徽章
+  static const List<Color> gradientIndigo = [
+    Color(0xFF5856D6),
+    Color(0xFF007AFF),
+  ];
+
+  /// 橙色渐变 - 警告/推荐
+  static const List<Color> gradientOrange = [
+    Color(0xFFFF9500),
+    Color(0xFFFF6B00),
+  ];
+
+  /// 绿色渐变 - 成功/在线
+  static const List<Color> gradientGreen = [
+    Color(0xFF34C759),
+    Color(0xFF30D158),
+  ];
+
+  /// 翡翠渐变 - 成功变体
+  static const List<Color> gradientEmerald = [
+    Color(0xFF2ED573),
+    Color(0xFF00B894),
+  ];
+
+  /// 红色/珊瑚渐变 - 错误/热门
+  static const List<Color> gradientCoral = [
+    Color(0xFFFF6B6B),
+    Color(0xFFFF4757),
+  ];
+
+  /// 粉紫渐变 - VIP Super
+  static const List<Color> gradientPinkPurple = [
+    Color(0xFFAF52DE),
+    Color(0xFFFF2D55),
+  ];
+
+  /// 蓝青渐变 - 消息/在线
+  static const List<Color> gradientBlueTeal = [
+    Color(0xFF007AFF),
+    Color(0xFF5AC8FA),
+  ];
+
+  /// 日落渐变 - 装饰
+  static const List<Color> gradientSunset = [
+    Color(0xFFFF6B6B),
+    Color(0xFFFF9500),
+  ];
+
+  /// 购买按钮渐变 - 红色
+  static const List<Color> gradientRed = [
+    Color(0xFFE64D4D),
+    Color(0xFFFF6B6B),
+  ];
+
+  /// 深蓝渐变 - 按钮变体
+  static const List<Color> gradientDeepBlue = [
+    Color(0xFF2659F2),
+    Color(0xFF0059B3),
+  ];
+
+  // ==================== 扩展单色 ====================
+  /// 深橙
+  static const Color deepOrange = Color(0xFFFF6B00);
+
+  /// 浅紫 - 待支付状态
+  static const Color pendingPurple = Color(0xFF8B5CF6);
+
+  /// 靛蓝紫
+  static const Color indigo = Color(0xFF5A67D8);
+
+  /// 深暗背景 - Auth页面
+  static const Color authDark = Color(0xFF0A0A14);
+
+  /// 银色 - 奖牌
+  static const Color silver = Color(0xFFC0C0C0);
+
+  /// 铜色 - 奖牌
+  static const Color bronze = Color(0xFFCD7F32);
+
+  // ==================== 社交平台品牌色 ====================
+  static const Color wechatGreen = Color(0xFF07C160);
+  static const Color qqBlue = Color(0xFF1296DB);
+  static const Color weiboRed = Color(0xFFE6162D);
+  static const Color facebookBlue = Color(0xFF1877F2);
+  static const Color instagramPink = Color(0xFFE4405F);
+  static const Color alipayBlue = Color(0xFF1677FF);
+
   // ==================== 特殊颜色 ====================
   /// 遮罩层
   static const Color overlay = Color(0x80000000);
@@ -134,9 +228,9 @@ class AppColors {
   static const Color shadowLight = Color(0x1A000000);
   static const Color shadowDark = Color(0x40000000);
 
-  /// 骨架屏
-  static const Color skeletonBase = Color(0xFFE0E0E0);
-  static const Color skeletonHighlight = Color(0xFFF5F5F5);
+  /// 骨架屏 - 品牌色调 shimmer
+  static const Color skeletonBase = Color(0xFFE8EAF0);
+  static const Color skeletonHighlight = Color(0xFFF2F4FA);
 
   // ==================== 状态颜色 ====================
   /// 在线状态
@@ -158,9 +252,9 @@ class AppColors {
       case AppConstants.taskStatusPendingConfirmation:
         return warning;
       case AppConstants.taskStatusPendingPayment:
-        return const Color(0xFF8B5CF6); // 紫色 - 待支付
+        return pendingPurple;
       case AppConstants.taskStatusCompleted:
-        return const Color(0xFF8E8E93);
+        return offline;
       case AppConstants.taskStatusCancelled:
         return error;
       case AppConstants.taskStatusDisputed:
@@ -188,6 +282,19 @@ class AppColors {
 
   /// 分隔线色
   static const Color separator = separatorLight;
+
+  // ==================== 表面色层次 ====================
+  /// 表面色1 - 最浅，用于微妙的背景区分
+  static Color surface1(Brightness brightness) =>
+      primary.withValues(alpha: brightness == Brightness.dark ? 0.05 : 0.03);
+
+  /// 表面色2 - 中等，用于卡片/区块高亮
+  static Color surface2(Brightness brightness) =>
+      primary.withValues(alpha: brightness == Brightness.dark ? 0.08 : 0.05);
+
+  /// 表面色3 - 较深，用于选中态/强调区域
+  static Color surface3(Brightness brightness) =>
+      primary.withValues(alpha: brightness == Brightness.dark ? 0.12 : 0.08);
 
   // ==================== 工具方法 ====================
   /// 根据亮度获取背景色

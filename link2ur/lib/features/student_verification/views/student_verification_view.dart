@@ -55,12 +55,24 @@ class _StudentVerificationContentState
       listenWhen: (prev, curr) => curr.actionMessage != null,
       listener: (context, state) {
         if (state.actionMessage != null) {
+          final isError = state.actionMessage!.contains('failed');
+          final message = switch (state.actionMessage) {
+            'verification_submitted' => context.l10n.actionVerificationSubmitted,
+            'verification_success' => context.l10n.actionVerificationSuccess,
+            'renewal_success' => context.l10n.actionRenewalSuccess,
+            'renewal_failed' => context.l10n.actionRenewalFailed,
+            'submit_failed' => state.errorMessage != null
+                ? '${context.l10n.actionSubmitFailed}: ${state.errorMessage}'
+                : context.l10n.actionSubmitFailed,
+            'verification_failed' => state.errorMessage != null
+                ? '${context.l10n.actionVerificationFailed}: ${state.errorMessage}'
+                : context.l10n.actionVerificationFailed,
+            _ => state.actionMessage!,
+          };
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(state.actionMessage!),
-              backgroundColor: state.actionMessage!.contains('成功')
-                  ? AppColors.success
-                  : AppColors.error,
+              content: Text(message),
+              backgroundColor: isError ? AppColors.error : AppColors.success,
             ),
           );
         }

@@ -16,20 +16,20 @@ class AppShadows {
         ),
       ];
 
-  /// 小阴影 - 卡片默认（与iOS对齐offset改为(0,4)）
+  /// 小阴影 - 卡片默认（增强层次感）
   static List<BoxShadow> get small => [
         BoxShadow(
-          color: AppColors.shadowLight.withValues(alpha: 0.06),
-          blurRadius: 8,
+          color: AppColors.shadowLight.withValues(alpha: 0.10),
+          blurRadius: 10,
           offset: const Offset(0, 4),
         ),
       ];
 
-  /// 中阴影 - 浮动卡片 (与iOS对齐 y-offset: 6)
+  /// 中阴影 - 浮动卡片
   static List<BoxShadow> get medium => [
         BoxShadow(
-          color: AppColors.shadowLight.withValues(alpha: 0.08),
-          blurRadius: 12,
+          color: AppColors.shadowLight.withValues(alpha: 0.12),
+          blurRadius: 16,
           offset: const Offset(0, 6),
         ),
       ];
@@ -81,31 +81,31 @@ class AppShadows {
       ];
 
   // ==================== 卡片双阴影 ====================
-  /// 卡片双阴影 - 与iOS对齐: 主色阴影 + 黑色轻阴影
+  /// 卡片双阴影 - 品牌色阴影 + 黑色基础阴影（增强层次）
   static List<BoxShadow> get cardDual => [
         BoxShadow(
-          color: AppColors.primary.withValues(alpha: 0.08),
-          blurRadius: 12,
+          color: AppColors.primary.withValues(alpha: 0.10),
+          blurRadius: 14,
           offset: const Offset(0, 4),
         ),
         BoxShadow(
-          color: Colors.black.withValues(alpha: 0.02),
-          blurRadius: 2,
-          offset: const Offset(0, 1),
+          color: Colors.black.withValues(alpha: 0.04),
+          blurRadius: 4,
+          offset: const Offset(0, 2),
         ),
       ];
 
   /// 深色模式卡片双阴影
   static List<BoxShadow> get cardDualDark => [
         BoxShadow(
-          color: AppColors.primary.withValues(alpha: 0.12),
-          blurRadius: 12,
+          color: AppColors.primary.withValues(alpha: 0.15),
+          blurRadius: 14,
           offset: const Offset(0, 4),
         ),
         BoxShadow(
-          color: Colors.black.withValues(alpha: 0.06),
-          blurRadius: 2,
-          offset: const Offset(0, 1),
+          color: Colors.black.withValues(alpha: 0.08),
+          blurRadius: 4,
+          offset: const Offset(0, 2),
         ),
       ];
 
@@ -167,6 +167,30 @@ class AppShadows {
           color: AppColors.shadowDark.withValues(alpha: 0.3),
           blurRadius: 12,
           offset: const Offset(0, 4),
+        ),
+      ];
+
+  // ==================== 交互阴影 ====================
+  /// 卡片按压态阴影（缩小的阴影 → 贴近表面的感觉）
+  static List<BoxShadow> get cardPressed => [
+        BoxShadow(
+          color: AppColors.primary.withValues(alpha: 0.06),
+          blurRadius: 6,
+          offset: const Offset(0, 2),
+        ),
+      ];
+
+  /// 卡片悬浮态阴影（放大的品牌色阴影）
+  static List<BoxShadow> get cardHover => [
+        BoxShadow(
+          color: AppColors.primary.withValues(alpha: 0.15),
+          blurRadius: 20,
+          offset: const Offset(0, 8),
+        ),
+        BoxShadow(
+          color: Colors.black.withValues(alpha: 0.04),
+          blurRadius: 4,
+          offset: const Offset(0, 2),
         ),
       ];
 

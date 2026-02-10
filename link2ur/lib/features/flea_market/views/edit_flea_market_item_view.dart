@@ -170,9 +170,33 @@ class _EditFleaMarketItemViewContentState
 
     return BlocListener<FleaMarketBloc, FleaMarketState>(
       listener: (context, state) {
-        if (state.actionMessage == '商品更新成功') {
+        if (state.actionMessage == 'item_updated') {
           Navigator.of(context).pop(true);
-        } else if (state.errorMessage != null && state.actionMessage == null) {
+        } else if (state.actionMessage != null) {
+          final l10n = context.l10n;
+          final message = switch (state.actionMessage) {
+            'item_published' => l10n.actionItemPublished,
+            'publish_failed' => l10n.actionPublishFailed,
+            'purchase_success' => l10n.actionPurchaseSuccess,
+            'purchase_failed' => l10n.actionPurchaseFailed,
+            'item_updated' => l10n.actionItemUpdated,
+            'update_failed' => l10n.actionUpdateFailed,
+            'refresh_success' => l10n.actionRefreshSuccess,
+            'refresh_failed' => l10n.actionRefreshFailed,
+            _ => state.actionMessage ?? '',
+          };
+          final displayMessage = state.errorMessage != null
+              ? '$message: ${state.errorMessage}'
+              : message;
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(displayMessage),
+              backgroundColor: state.actionMessage == 'item_updated'
+                  ? AppColors.success
+                  : AppColors.error,
+            ),
+          );
+        } else if (state.errorMessage != null) {
           // Show error for upload/update failures
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(

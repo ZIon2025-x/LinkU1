@@ -24,7 +24,7 @@ class RegisterView extends StatefulWidget {
 }
 
 class _RegisterViewState extends State<RegisterView>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
@@ -40,6 +40,8 @@ class _RegisterViewState extends State<RegisterView>
   late AnimationController _animController;
   late Animation<double> _logoScale;
   late Animation<double> _fadeIn;
+  // 背景流动渐变
+  late AnimationController _bgAnimController;
 
   @override
   void initState() {
@@ -49,6 +51,11 @@ class _RegisterViewState extends State<RegisterView>
       vsync: this,
       duration: const Duration(milliseconds: 1000),
     );
+
+    _bgAnimController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 6),
+    )..repeat(reverse: true);
 
     _logoScale = Tween<double>(begin: 0.8, end: 1.0).animate(
       CurvedAnimation(
@@ -70,6 +77,7 @@ class _RegisterViewState extends State<RegisterView>
   @override
   void dispose() {
     _animController.dispose();
+    _bgAnimController.dispose();
     _nameController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
@@ -200,85 +208,87 @@ class _RegisterViewState extends State<RegisterView>
   // ==================== 背景 ====================
 
   Widget _buildBackground(bool isDark) {
-    return Container(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: isDark
-              ? [
-                  AppColors.backgroundDark,
-                  const Color(0xFF0A0A14),
-                ]
-              : [
-                  AppColors.primary.withValues(alpha: 0.12),
-                  AppColors.primary.withValues(alpha: 0.06),
-                  AppColors.primary.withValues(alpha: 0.02),
-                  AppColors.backgroundLight,
-                ],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-      ),
-      child: Stack(
-        children: [
-          Positioned(
-            left: -180,
-            top: -350,
-            child: Container(
-              width: 400,
-              height: 400,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: RadialGradient(
-                  colors: [
-                    AppColors.primary.withValues(alpha: isDark ? 0.06 : 0.08),
-                    AppColors.primary.withValues(alpha: 0.02),
-                    Colors.transparent,
-                  ],
-                ),
-              ),
-            ),
-          ),
-          Positioned(
-            right: -80,
-            bottom: -100,
-            child: Container(
-              width: 300,
-              height: 300,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: RadialGradient(
-                  colors: [
-                    AppColors.primary.withValues(alpha: isDark ? 0.04 : 0.06),
-                    AppColors.primary.withValues(alpha: 0.01),
-                    Colors.transparent,
-                  ],
-                ),
-              ),
-            ),
-          ),
-          Positioned(
-            left: 0,
-            right: 0,
-            top: -100,
-            child: Center(
-              child: Container(
-                width: 200,
-                height: 200,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: RadialGradient(
-                    colors: [
-                      AppColors.primary
-                          .withValues(alpha: isDark ? 0.03 : 0.04),
-                      Colors.transparent,
+    return AnimatedBuilder(
+      animation: _bgAnimController,
+      builder: (context, child) {
+        final t = _bgAnimController.value;
+        return Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: isDark
+                  ? [AppColors.backgroundDark, AppColors.authDark]
+                  : [
+                      AppColors.primary.withValues(alpha: 0.12),
+                      AppColors.primary.withValues(alpha: 0.06),
+                      AppColors.primary.withValues(alpha: 0.02),
+                      AppColors.backgroundLight,
                     ],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+          ),
+          child: Stack(
+            children: [
+              Positioned(
+                left: -180 + t * 30,
+                top: -350 + t * 20,
+                child: Container(
+                  width: 400,
+                  height: 400,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: RadialGradient(
+                      colors: [
+                        AppColors.primary.withValues(alpha: isDark ? 0.06 : 0.08),
+                        AppColors.primary.withValues(alpha: 0.02),
+                        Colors.transparent,
+                      ],
+                    ),
                   ),
                 ),
               ),
-            ),
+              Positioned(
+                right: -80 - t * 25,
+                bottom: -100 + t * 15,
+                child: Container(
+                  width: 300,
+                  height: 300,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: RadialGradient(
+                      colors: [
+                        AppColors.primary.withValues(alpha: isDark ? 0.04 : 0.06),
+                        AppColors.primary.withValues(alpha: 0.01),
+                        Colors.transparent,
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              Positioned(
+                left: 0,
+                right: 0,
+                top: -100 + t * 10,
+                child: Center(
+                  child: Container(
+                    width: 200 + t * 20,
+                    height: 200 + t * 20,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: RadialGradient(
+                        colors: [
+                          AppColors.primary.withValues(alpha: isDark ? 0.03 : 0.04),
+                          Colors.transparent,
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 
@@ -416,7 +426,7 @@ class _RegisterViewState extends State<RegisterView>
                   placeholder: context.l10n.authEnterUsername,
                   icon: Icons.person_outlined,
                   isDark: isDark,
-                  validator: Validators.validateUsername,
+                  validator: (v) => Validators.validateUsername(v, l10n: context.l10n),
                 ),
                 const SizedBox(height: AppSpacing.md),
 
@@ -428,7 +438,7 @@ class _RegisterViewState extends State<RegisterView>
                   icon: Icons.email_outlined,
                   keyboardType: TextInputType.emailAddress,
                   isDark: isDark,
-                  validator: Validators.validateEmail,
+                  validator: (v) => Validators.validateEmail(v, l10n: context.l10n),
                 ),
                 const SizedBox(height: AppSpacing.md),
 
@@ -460,7 +470,8 @@ class _RegisterViewState extends State<RegisterView>
                   icon: Icons.lock_outlined,
                   obscureText: _obscurePassword,
                   isDark: isDark,
-                  validator: Validators.validatePassword,
+                  validator: (v) => Validators.validatePassword(v, l10n: context.l10n),
+                  onChanged: (_) => setState(() {}),
                   suffixIcon: IconButton(
                     icon: Icon(
                       _obscurePassword
@@ -475,6 +486,12 @@ class _RegisterViewState extends State<RegisterView>
                         setState(() => _obscurePassword = !_obscurePassword),
                   ),
                 ),
+                // 密码强度条
+                if (_passwordController.text.isNotEmpty)
+                  _PasswordStrengthBar(
+                    password: _passwordController.text,
+                    isDark: isDark,
+                  ),
                 const SizedBox(height: AppSpacing.md),
 
                 // 确认密码
@@ -488,6 +505,7 @@ class _RegisterViewState extends State<RegisterView>
                   validator: (value) => Validators.validateConfirmPassword(
                     value,
                     _passwordController.text,
+                    l10n: context.l10n,
                   ),
                   suffixIcon: IconButton(
                     icon: Icon(
@@ -535,6 +553,7 @@ class _RegisterViewState extends State<RegisterView>
     bool obscureText = false,
     String? Function(String?)? validator,
     Widget? suffixIcon,
+    ValueChanged<String>? onChanged,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -552,6 +571,7 @@ class _RegisterViewState extends State<RegisterView>
           controller: controller,
           keyboardType: keyboardType,
           obscureText: obscureText,
+          onChanged: onChanged,
           style: AppTypography.body.copyWith(
             color: isDark
                 ? AppColors.textPrimaryDark
@@ -866,6 +886,93 @@ class _RegisterViewState extends State<RegisterView>
           ),
         ),
       ],
+    );
+  }
+}
+
+/// 密码强度指示条 — 渐变色 + 动画宽度
+class _PasswordStrengthBar extends StatelessWidget {
+  const _PasswordStrengthBar({
+    required this.password,
+    required this.isDark,
+  });
+
+  final String password;
+  final bool isDark;
+
+  /// 0 = 弱, 1 = 中, 2 = 强, 3 = 非常强
+  int get _strength {
+    int score = 0;
+    if (password.length >= 8) score++;
+    if (RegExp(r'[A-Z]').hasMatch(password)) score++;
+    if (RegExp(r'[0-9]').hasMatch(password)) score++;
+    if (RegExp(r'[!@#\$%^&*(),.?":{}|<>]').hasMatch(password)) score++;
+    return (score - 1).clamp(0, 3);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final strength = _strength;
+    final labels = ['弱', '中', '强', '很强'];
+    final gradients = [
+      AppColors.gradientRed,
+      AppColors.gradientOrange,
+      AppColors.gradientPrimary,
+      AppColors.gradientEmerald,
+    ];
+    final fraction = (strength + 1) / 4;
+
+    return Padding(
+      padding: const EdgeInsets.only(top: 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // 进度条
+          ClipRRect(
+            borderRadius: AppRadius.allSmall,
+            child: SizedBox(
+              height: 4,
+              child: Stack(
+                children: [
+                  // 背景
+                  Container(
+                    color: isDark
+                        ? Colors.white.withValues(alpha: 0.08)
+                        : AppColors.dividerLight,
+                  ),
+                  // 填充 — 动画宽度
+                  TweenAnimationBuilder<double>(
+                    tween: Tween(end: fraction),
+                    duration: const Duration(milliseconds: 300),
+                    curve: Curves.easeOutCubic,
+                    builder: (context, value, child) {
+                      return FractionallySizedBox(
+                        alignment: Alignment.centerLeft,
+                        widthFactor: value,
+                        child: child,
+                      );
+                    },
+                    child: Container(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(colors: gradients[strength]),
+                        borderRadius: AppRadius.allSmall,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            labels[strength],
+            style: AppTypography.caption2.copyWith(
+              color: gradients[strength].first,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
