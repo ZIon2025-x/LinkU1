@@ -56,11 +56,20 @@ class RateLimiter:
     def _get_user_id(self, request: Request) -> Optional[str]:
         """从请求中获取用户ID（如果已认证）"""
         try:
-            # 尝试从access_token中解析用户ID
+            # 1. 尝试从 access_token cookie 中解析用户ID（Web端）
             access_token = request.cookies.get("access_token")
             if access_token:
                 from app.security import decode_token
                 payload = decode_token(access_token)
+                if payload and "sub" in payload:
+                    return payload["sub"]
+            
+            # 2. 尝试从 Authorization Bearer header 中解析用户ID（iOS/移动端）
+            auth_header = request.headers.get("Authorization")
+            if auth_header and auth_header.startswith("Bearer "):
+                token = auth_header[7:]
+                from app.security import decode_token
+                payload = decode_token(token)
                 if payload and "sub" in payload:
                     return payload["sub"]
         except Exception:
