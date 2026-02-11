@@ -1,4 +1,3 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -9,6 +8,7 @@ import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_radius.dart';
 import '../../../core/utils/responsive.dart';
+import '../../../core/widgets/async_image_view.dart';
 import '../../../core/widgets/skeleton_view.dart';
 import '../../../core/utils/date_formatter.dart';
 import '../../notification/bloc/notification_bloc.dart';
@@ -441,7 +441,7 @@ class _TaskChatItem extends StatelessWidget {
       case AppConstants.taskStatusCompleted:
         return [AppColors.success, const Color(0xFF30D158)];
       case AppConstants.taskStatusPendingConfirmation:
-      case 'pending_payment':
+      case AppConstants.taskStatusPendingPayment:
         return AppColors.gradientOrange;
       default:
         return [AppColors.primary, const Color(0xFF5856D6)];
@@ -463,7 +463,7 @@ class _TaskChatItem extends StatelessWidget {
         return l10n.taskStatusCancelled;
       case AppConstants.taskStatusPendingConfirmation:
         return l10n.taskStatusPendingConfirmation;
-      case 'pending_payment':
+      case AppConstants.taskStatusPendingPayment:
         return l10n.taskStatusPendingPayment;
       default:
         return taskChat.taskStatus ?? '';
@@ -654,39 +654,37 @@ class _TaskChatItem extends StatelessWidget {
       children: [
         // 有图片: 显示第一张任务图片 (对齐iOS AsyncImageView)
         if (taskChat.images.isNotEmpty)
-          ClipRRect(
+          AsyncImageView(
+            imageUrl: taskChat.images.first,
+            width: imageSize,
+            height: imageSize,
+            fit: BoxFit.cover,
             borderRadius: BorderRadius.circular(16),
-            child: CachedNetworkImage(
-              imageUrl: taskChat.images.first,
+            placeholder: Container(
               width: imageSize,
               height: imageSize,
-              fit: BoxFit.cover,
-              placeholder: (_, __) => Container(
-                width: imageSize,
-                height: imageSize,
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: gradient,
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                  borderRadius: BorderRadius.circular(16),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: gradient,
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
                 ),
-                child: Icon(_taskIcon, color: Colors.white, size: 24),
+                borderRadius: BorderRadius.circular(16),
               ),
-              errorWidget: (_, __, ___) => Container(
-                width: imageSize,
-                height: imageSize,
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: gradient,
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                  borderRadius: BorderRadius.circular(16),
+              child: Icon(_taskIcon, color: Colors.white, size: 24),
+            ),
+            errorWidget: Container(
+              width: imageSize,
+              height: imageSize,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: gradient,
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
                 ),
-                child: Icon(_taskIcon, color: Colors.white, size: 24),
+                borderRadius: BorderRadius.circular(16),
               ),
+              child: Icon(_taskIcon, color: Colors.white, size: 24),
             ),
           )
         else

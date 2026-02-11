@@ -37,6 +37,9 @@ import '../bloc/home_state.dart';
 
 part 'home_recommended_section.dart';
 part 'home_widgets.dart';
+part 'home_activities_section.dart';
+part 'home_task_cards.dart';
+part 'home_experts_search.dart';
 
 /// 首页
 /// BLoC 在 MainTabView 中创建，此处直接使用

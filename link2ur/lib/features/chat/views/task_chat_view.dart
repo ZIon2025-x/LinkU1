@@ -142,9 +142,18 @@ class _TaskChatContentState extends State<_TaskChatContent> {
   @override
   Widget build(BuildContext context) {
     return BlocConsumer<ChatBloc, ChatState>(
+      listenWhen: (prev, curr) =>
+          prev.status != curr.status ||
+          prev.errorMessage != curr.errorMessage,
       listener: (context, state) {
         // reverse: true 模式下，最新消息始终在底部（position 0），无需手动滚动
       },
+      buildWhen: (prev, curr) =>
+          prev.status != curr.status ||
+          prev.messages != curr.messages ||
+          prev.isSending != curr.isSending ||
+          prev.isLoadingMore != curr.isLoadingMore ||
+          prev.taskStatus != curr.taskStatus,
       builder: (context, state) {
         return Scaffold(
           appBar: AppBar(

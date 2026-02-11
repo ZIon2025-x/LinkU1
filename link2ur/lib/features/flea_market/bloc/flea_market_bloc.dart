@@ -4,6 +4,7 @@ import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../core/constants/app_constants.dart';
+import '../../../core/utils/cache_manager.dart';
 import '../../../data/models/flea_market.dart';
 import '../../../data/repositories/flea_market_repository.dart';
 import '../../../core/utils/logger.dart';
@@ -321,6 +322,9 @@ class FleaMarketBloc extends Bloc<FleaMarketEvent, FleaMarketState> {
     Emitter<FleaMarketState> emit,
   ) async {
     emit(state.copyWith(isRefreshing: true));
+
+    // 下拉刷新前失效缓存，确保获取最新数据
+    await CacheManager.shared.invalidateFleaMarketCache();
 
     try {
       final response = await _fleaMarketRepository.getItems(

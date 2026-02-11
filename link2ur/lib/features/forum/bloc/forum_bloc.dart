@@ -1,6 +1,7 @@
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../../../core/utils/cache_manager.dart';
 import '../../../data/models/forum.dart';
 import '../../../data/repositories/forum_repository.dart';
 import '../../../core/utils/logger.dart';
@@ -374,6 +375,9 @@ class ForumBloc extends Bloc<ForumEvent, ForumState> {
     Emitter<ForumState> emit,
   ) async {
     emit(state.copyWith(isRefreshing: true));
+
+    // 下拉刷新前失效缓存，确保获取最新数据
+    await CacheManager.shared.invalidateForumCache();
 
     try {
       // 刷新板块列表（使用权限过滤 API）

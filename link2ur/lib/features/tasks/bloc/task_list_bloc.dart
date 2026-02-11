@@ -1,5 +1,6 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../../../core/utils/cache_manager.dart';
 import '../../../data/repositories/task_repository.dart';
 import '../../../core/utils/logger.dart';
 import 'task_list_event.dart';
@@ -24,35 +25,62 @@ class TaskListBloc extends Bloc<TaskListEvent, TaskListState> {
   /// 获取当前城市筛选参数，'all' 时返回 null
   String? _cityParam(String city) => city == 'all' ? null : city;
 
+  /// 共享的任务列表请求方法，消除重复代码
+  Future<void> _fetchTasks({
+    required Emitter<TaskListState> emit,
+    String? category,
+    String? keyword,
+    String? sortBy,
+    String? city,
+    int page = 1,
+  }) async {
+    try {
+      final response = await _taskRepository.getTasks(
+        page: page,
+        taskType: category == 'all' ? null : category,
+        keyword: (keyword?.isEmpty ?? true) ? null : keyword,
+        sortBy: sortBy,
+        location: _cityParam(city ?? state.selectedCity),
+      );
+
+      emit(state.copyWith(
+        status: TaskListStatus.loaded,
+        tasks: page == 1
+            ? response.tasks
+            : [...state.tasks, ...response.tasks],
+        total: response.total,
+        page: page,
+        hasMore: response.hasMore,
+        isRefreshing: false,
+        isLoadingMore: false,
+      ));
+    } catch (e) {
+      AppLogger.error('Failed to fetch tasks (page=$page)', e);
+      // LoadMore 失败不改变整体状态，仅重置 isLoadingMore
+      if (page > 1) {
+        emit(state.copyWith(isLoadingMore: false));
+      } else {
+        emit(state.copyWith(
+          status: TaskListStatus.error,
+          errorMessage: e.toString(),
+          isRefreshing: false,
+        ));
+      }
+    }
+  }
+
   Future<void> _onLoadRequested(
     TaskListLoadRequested event,
     Emitter<TaskListState> emit,
   ) async {
     emit(state.copyWith(status: TaskListStatus.loading));
 
-    try {
-      final response = await _taskRepository.getTasks(
-        page: 1,
-        taskType: state.selectedCategory == 'all' ? null : state.selectedCategory,
-        keyword: state.searchQuery.isEmpty ? null : state.searchQuery,
-        sortBy: state.sortBy,
-        location: _cityParam(state.selectedCity),
-      );
-
-      emit(state.copyWith(
-        status: TaskListStatus.loaded,
-        tasks: response.tasks,
-        total: response.total,
-        page: 1,
-        hasMore: response.hasMore,
-      ));
-    } catch (e) {
-      AppLogger.error('Failed to load tasks', e);
-      emit(state.copyWith(
-        status: TaskListStatus.error,
-        errorMessage: e.toString(),
-      ));
-    }
+    await _fetchTasks(
+      emit: emit,
+      category: state.selectedCategory,
+      keyword: state.searchQuery,
+      sortBy: state.sortBy,
+    );
   }
 
   Future<void> _onRefreshRequested(
@@ -61,54 +89,32 @@ class TaskListBloc extends Bloc<TaskListEvent, TaskListState> {
   ) async {
     emit(state.copyWith(isRefreshing: true));
 
-    try {
-      final response = await _taskRepository.getTasks(
-        page: 1,
-        taskType: state.selectedCategory == 'all' ? null : state.selectedCategory,
-        keyword: state.searchQuery.isEmpty ? null : state.searchQuery,
-        sortBy: state.sortBy,
-        location: _cityParam(state.selectedCity),
-      );
+    // 下拉刷新前失效缓存，确保获取最新数据
+    await CacheManager.shared.invalidateTasksCache();
 
-      emit(state.copyWith(
-        status: TaskListStatus.loaded,
-        tasks: response.tasks,
-        total: response.total,
-        page: 1,
-        hasMore: response.hasMore,
-        isRefreshing: false,
-      ));
-    } catch (e) {
-      AppLogger.error('Failed to refresh tasks', e);
-      emit(state.copyWith(isRefreshing: false));
-    }
+    await _fetchTasks(
+      emit: emit,
+      category: state.selectedCategory,
+      keyword: state.searchQuery,
+      sortBy: state.sortBy,
+    );
   }
 
   Future<void> _onLoadMore(
     TaskListLoadMore event,
     Emitter<TaskListState> emit,
   ) async {
-    if (!state.hasMore || state.isLoading) return;
+    if (!state.hasMore || state.isLoadingMore) return;
 
-    try {
-      final nextPage = state.page + 1;
-      final response = await _taskRepository.getTasks(
-        page: nextPage,
-        taskType: state.selectedCategory == 'all' ? null : state.selectedCategory,
-        keyword: state.searchQuery.isEmpty ? null : state.searchQuery,
-        sortBy: state.sortBy,
-        location: _cityParam(state.selectedCity),
-      );
+    emit(state.copyWith(isLoadingMore: true));
 
-      emit(state.copyWith(
-        tasks: [...state.tasks, ...response.tasks],
-        total: response.total,
-        page: nextPage,
-        hasMore: response.hasMore,
-      ));
-    } catch (e) {
-      AppLogger.error('Failed to load more tasks', e);
-    }
+    await _fetchTasks(
+      emit: emit,
+      category: state.selectedCategory,
+      keyword: state.searchQuery,
+      sortBy: state.sortBy,
+      page: state.page + 1,
+    );
   }
 
   Future<void> _onSearchChanged(
@@ -120,29 +126,12 @@ class TaskListBloc extends Bloc<TaskListEvent, TaskListState> {
       status: TaskListStatus.loading,
     ));
 
-    try {
-      final response = await _taskRepository.getTasks(
-        page: 1,
-        taskType: state.selectedCategory == 'all' ? null : state.selectedCategory,
-        keyword: event.query.isEmpty ? null : event.query,
-        sortBy: state.sortBy,
-        location: _cityParam(state.selectedCity),
-      );
-
-      emit(state.copyWith(
-        status: TaskListStatus.loaded,
-        tasks: response.tasks,
-        total: response.total,
-        page: 1,
-        hasMore: response.hasMore,
-      ));
-    } catch (e) {
-      AppLogger.error('Failed to search tasks', e);
-      emit(state.copyWith(
-        status: TaskListStatus.error,
-        errorMessage: e.toString(),
-      ));
-    }
+    await _fetchTasks(
+      emit: emit,
+      category: state.selectedCategory,
+      keyword: event.query,
+      sortBy: state.sortBy,
+    );
   }
 
   Future<void> _onCategoryChanged(
@@ -154,29 +143,12 @@ class TaskListBloc extends Bloc<TaskListEvent, TaskListState> {
       status: TaskListStatus.loading,
     ));
 
-    try {
-      final response = await _taskRepository.getTasks(
-        page: 1,
-        taskType: event.category == 'all' ? null : event.category,
-        keyword: state.searchQuery.isEmpty ? null : state.searchQuery,
-        sortBy: state.sortBy,
-        location: _cityParam(state.selectedCity),
-      );
-
-      emit(state.copyWith(
-        status: TaskListStatus.loaded,
-        tasks: response.tasks,
-        total: response.total,
-        page: 1,
-        hasMore: response.hasMore,
-      ));
-    } catch (e) {
-      AppLogger.error('Failed to filter tasks', e);
-      emit(state.copyWith(
-        status: TaskListStatus.error,
-        errorMessage: e.toString(),
-      ));
-    }
+    await _fetchTasks(
+      emit: emit,
+      category: event.category,
+      keyword: state.searchQuery,
+      sortBy: state.sortBy,
+    );
   }
 
   Future<void> _onSortChanged(
@@ -188,29 +160,12 @@ class TaskListBloc extends Bloc<TaskListEvent, TaskListState> {
       status: TaskListStatus.loading,
     ));
 
-    try {
-      final response = await _taskRepository.getTasks(
-        page: 1,
-        taskType: state.selectedCategory == 'all' ? null : state.selectedCategory,
-        keyword: state.searchQuery.isEmpty ? null : state.searchQuery,
-        sortBy: event.sortBy,
-        location: _cityParam(state.selectedCity),
-      );
-
-      emit(state.copyWith(
-        status: TaskListStatus.loaded,
-        tasks: response.tasks,
-        total: response.total,
-        page: 1,
-        hasMore: response.hasMore,
-      ));
-    } catch (e) {
-      AppLogger.error('Failed to sort tasks', e);
-      emit(state.copyWith(
-        status: TaskListStatus.error,
-        errorMessage: e.toString(),
-      ));
-    }
+    await _fetchTasks(
+      emit: emit,
+      category: state.selectedCategory,
+      keyword: state.searchQuery,
+      sortBy: event.sortBy,
+    );
   }
 
   Future<void> _onCityChanged(
@@ -222,28 +177,12 @@ class TaskListBloc extends Bloc<TaskListEvent, TaskListState> {
       status: TaskListStatus.loading,
     ));
 
-    try {
-      final response = await _taskRepository.getTasks(
-        page: 1,
-        taskType: state.selectedCategory == 'all' ? null : state.selectedCategory,
-        keyword: state.searchQuery.isEmpty ? null : state.searchQuery,
-        sortBy: state.sortBy,
-        location: _cityParam(event.city),
-      );
-
-      emit(state.copyWith(
-        status: TaskListStatus.loaded,
-        tasks: response.tasks,
-        total: response.total,
-        page: 1,
-        hasMore: response.hasMore,
-      ));
-    } catch (e) {
-      AppLogger.error('Failed to filter tasks by city', e);
-      emit(state.copyWith(
-        status: TaskListStatus.error,
-        errorMessage: e.toString(),
-      ));
-    }
+    await _fetchTasks(
+      emit: emit,
+      category: state.selectedCategory,
+      keyword: state.searchQuery,
+      sortBy: state.sortBy,
+      city: event.city,
+    );
   }
 }

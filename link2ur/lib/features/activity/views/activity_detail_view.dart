@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
 
+import '../../../core/constants/app_constants.dart';
 import '../../../core/design/app_colors.dart';
 import '../../../core/utils/haptic_feedback.dart';
 import '../../../core/design/app_spacing.dart';
@@ -355,12 +356,12 @@ class _ActivityDetailViewContent extends StatelessWidget {
     if (activity.hasApplied == true && activity.userTaskId != null) {
       // 2a. 有议价 + 待支付 → 等待达人回应 (灰色不可点击)
       if (activity.userTaskHasNegotiation == true &&
-          activity.userTaskStatus == 'pending_payment') {
+          activity.userTaskStatus == AppConstants.taskStatusPendingPayment) {
         return _buildDisabledButton(context.l10n.activityWaitingExpertResponse);
       }
 
       // 2b. 待支付 + 未支付 → 继续支付 (可点击)
-      if (activity.userTaskStatus == 'pending_payment' &&
+      if (activity.userTaskStatus == AppConstants.taskStatusPendingPayment &&
           activity.userTaskIsPaid != true) {
         return _buildPrimaryButton(
           context,

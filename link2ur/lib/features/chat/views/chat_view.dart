@@ -108,6 +108,8 @@ class _ChatContentState extends State<_ChatContent> {
   @override
   Widget build(BuildContext context) {
     return BlocConsumer<ChatBloc, ChatState>(
+      listenWhen: (prev, curr) =>
+          prev.status != curr.status,
       listener: (context, state) {
         if (state.status == ChatStatus.loaded) {
           WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -115,6 +117,11 @@ class _ChatContentState extends State<_ChatContent> {
           });
         }
       },
+      buildWhen: (prev, curr) =>
+          prev.status != curr.status ||
+          prev.messages != curr.messages ||
+          prev.isSending != curr.isSending ||
+          prev.isLoadingMore != curr.isLoadingMore,
       builder: (context, state) {
         return Scaffold(
           appBar: AppBar(

@@ -291,23 +291,29 @@ class ForumRepository {
     final cacheKey =
         CacheManager.buildKey('${CacheManager.prefixMyForumPosts}posts_', params);
 
-    final cached = _cache.get<Map<String, dynamic>>(cacheKey);
+    final cached = _cache.getWithOfflineFallback<Map<String, dynamic>>(cacheKey);
     if (cached != null) {
       return ForumPostListResponse.fromJson(cached);
     }
 
-    final response = await _apiService.get<Map<String, dynamic>>(
-      ApiEndpoints.myForumPosts,
-      queryParameters: params,
-    );
+    try {
+      final response = await _apiService.get<Map<String, dynamic>>(
+        ApiEndpoints.myForumPosts,
+        queryParameters: params,
+      );
 
-    if (!response.isSuccess || response.data == null) {
-      throw ForumException(response.message ?? '获取我的帖子失败');
+      if (!response.isSuccess || response.data == null) {
+        throw ForumException(response.message ?? '获取我的帖子失败');
+      }
+
+      await _cache.set(cacheKey, response.data!, ttl: CacheManager.personalTTL);
+
+      return ForumPostListResponse.fromJson(response.data!);
+    } catch (e) {
+      final stale = _cache.getStale<Map<String, dynamic>>(cacheKey);
+      if (stale != null) return ForumPostListResponse.fromJson(stale);
+      rethrow;
     }
-
-    await _cache.set(cacheKey, response.data!, ttl: CacheManager.personalTTL);
-
-    return ForumPostListResponse.fromJson(response.data!);
   }
 
   /// 获取我的回复

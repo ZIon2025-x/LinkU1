@@ -145,6 +145,10 @@ class _RegisterViewState extends State<RegisterView>
             : null,
       ),
       body: BlocConsumer<AuthBloc, AuthState>(
+        listenWhen: (prev, curr) =>
+            prev.status != curr.status ||
+            prev.errorMessage != curr.errorMessage ||
+            prev.codeSendStatus != curr.codeSendStatus,
         listener: (context, state) {
           if (state.status == AuthStatus.authenticated) {
             context.go(AppRoutes.main);
@@ -161,6 +165,9 @@ class _RegisterViewState extends State<RegisterView>
             );
           }
         },
+        buildWhen: (prev, curr) =>
+            prev.status != curr.status ||
+            prev.codeSendStatus != curr.codeSendStatus,
         builder: (context, state) {
           return GestureDetector(
             onTap: () => FocusScope.of(context).unfocus(),

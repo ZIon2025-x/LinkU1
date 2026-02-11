@@ -3,6 +3,7 @@ import '../../../core/utils/haptic_feedback.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/constants/app_constants.dart';
 import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_radius.dart';
@@ -249,7 +250,7 @@ class _TasksViewContentState extends State<_TasksViewContent> {
                       );
                 },
                 child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 300),
+                  duration: AppConstants.animationDuration,
                   curve: Curves.easeOutCubic,
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                   decoration: BoxDecoration(
@@ -338,7 +339,7 @@ class _TasksViewContentState extends State<_TasksViewContent> {
       builder: (context, state) {
         // AnimatedSwitcher 实现 skeleton → 内容的平滑淡出淡入过渡
         return AnimatedSwitcher(
-          duration: const Duration(milliseconds: 300),
+          duration: AppConstants.animationDuration,
           switchInCurve: Curves.easeOut,
           switchOutCurve: Curves.easeIn,
           child: _buildTaskGridContent(context, state),

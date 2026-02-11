@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/constants/app_constants.dart';
 import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_radius.dart';
@@ -187,7 +188,7 @@ class _ActivityListContentState extends State<_ActivityListContent> {
                 }
 
                 return AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 300),
+                  duration: AppConstants.animationDuration,
                   switchInCurve: Curves.easeOut,
                   switchOutCurve: Curves.easeIn,
                   child: content,

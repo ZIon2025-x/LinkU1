@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../../../core/constants/app_constants.dart';
 import '../../../data/models/message.dart';
 import '../../../data/repositories/message_repository.dart';
 import '../../../data/services/websocket_service.dart';
@@ -104,8 +105,8 @@ class ChatState extends Equatable {
   /// 任务是否已关闭（对齐iOS: 已完成/已取消/已过期等禁用输入）
   bool get isTaskClosed {
     if (taskStatus == null) return false;
-    return taskStatus == 'completed' ||
-        taskStatus == 'cancelled' ||
+    return taskStatus == AppConstants.taskStatusCompleted ||
+        taskStatus == AppConstants.taskStatusCancelled ||
         taskStatus == 'expired' ||
         taskStatus == 'closed';
   }

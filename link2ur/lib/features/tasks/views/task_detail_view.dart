@@ -209,7 +209,7 @@ class _TaskDetailContent extends StatelessWidget {
     if (task == null) return;
     final l10n = context.l10n;
     final hasDisputeOrRefund = state.refundRequest != null ||
-        task.status == 'pending_confirmation';
+        task.status == AppConstants.taskStatusPendingConfirmation;
 
     showModalBottomSheet(
       context: context,

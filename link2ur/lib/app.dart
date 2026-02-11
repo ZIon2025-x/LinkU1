@@ -5,6 +5,8 @@ import 'package:flutter_native_splash/flutter_native_splash.dart';
 
 import 'core/design/app_theme.dart';
 import 'core/router/app_router.dart';
+import 'core/utils/deep_link_handler.dart';
+import 'data/services/websocket_service.dart';
 import 'features/auth/bloc/auth_bloc.dart';
 import 'features/notification/bloc/notification_bloc.dart';
 import 'features/settings/bloc/settings_bloc.dart';
@@ -86,6 +88,8 @@ class _Link2UrAppState extends State<Link2UrApp> {
   void dispose() {
     _authBloc.close();
     _apiService.dispose();
+    DeepLinkHandler.instance.dispose();
+    WebSocketService.instance.dispose();
     super.dispose();
   }
 

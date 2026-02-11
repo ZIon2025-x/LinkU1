@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 
 /// 视频播放器组件
@@ -73,7 +74,7 @@ class _VideoPlayerViewState extends State<VideoPlayerView> {
           borderRadius: BorderRadius.circular(widget.borderRadius),
           image: widget.thumbnailUrl != null
               ? DecorationImage(
-                  image: NetworkImage(widget.thumbnailUrl!),
+                  image: CachedNetworkImageProvider(widget.thumbnailUrl!),
                   fit: BoxFit.cover,
                 )
               : null,

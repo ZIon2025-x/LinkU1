@@ -18,6 +18,7 @@ class TaskListState extends Equatable {
     this.sortBy = 'latest',
     this.errorMessage,
     this.isRefreshing = false,
+    this.isLoadingMore = false,
   });
 
   final TaskListStatus status;
@@ -33,6 +34,9 @@ class TaskListState extends Equatable {
   final String sortBy;
   final String? errorMessage;
   final bool isRefreshing;
+
+  /// 是否正在加载更多（防止快速滚动触发多次 LoadMore）
+  final bool isLoadingMore;
 
   bool get isLoading => status == TaskListStatus.loading;
   bool get isLoaded => status == TaskListStatus.loaded;
@@ -54,6 +58,7 @@ class TaskListState extends Equatable {
     String? sortBy,
     String? errorMessage,
     bool? isRefreshing,
+    bool? isLoadingMore,
   }) {
     return TaskListState(
       status: status ?? this.status,
@@ -67,6 +72,7 @@ class TaskListState extends Equatable {
       sortBy: sortBy ?? this.sortBy,
       errorMessage: errorMessage ?? this.errorMessage,
       isRefreshing: isRefreshing ?? this.isRefreshing,
+      isLoadingMore: isLoadingMore ?? this.isLoadingMore,
     );
   }
 
@@ -83,5 +89,6 @@ class TaskListState extends Equatable {
         sortBy,
         errorMessage,
         isRefreshing,
+        isLoadingMore,
       ];
 }

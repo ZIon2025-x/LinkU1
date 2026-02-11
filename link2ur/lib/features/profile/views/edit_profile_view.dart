@@ -11,6 +11,7 @@ import '../../../core/design/app_radius.dart';
 import '../../../core/utils/l10n_extension.dart';
 import '../../../core/utils/helpers.dart';
 import '../../../core/widgets/app_feedback.dart';
+import '../../../core/widgets/async_image_view.dart';
 import '../../../core/widgets/loading_view.dart';
 import '../../../core/widgets/buttons.dart';
 import '../../../data/repositories/user_repository.dart';
@@ -312,12 +313,11 @@ class _EditProfileContentState extends State<_EditProfileContent> {
       );
     }
 
-    // 3. 网络 URL
+    // 3. 网络 URL → 使用 AvatarView（带 memCacheWidth/Height 优化）
     if (avatarUrl != null && avatarUrl.isNotEmpty) {
-      return CircleAvatar(
-        radius: radius,
-        backgroundColor: AppColors.primary.withValues(alpha: 0.1),
-        backgroundImage: NetworkImage(Helpers.getImageUrl(avatarUrl)),
+      return AvatarView(
+        imageUrl: avatarUrl,
+        size: radius * 2,
       );
     }
 

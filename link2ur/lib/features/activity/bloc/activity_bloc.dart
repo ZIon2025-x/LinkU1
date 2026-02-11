@@ -5,6 +5,7 @@ import '../../../data/models/activity.dart';
 import '../../../data/models/task_expert.dart';
 import '../../../data/repositories/activity_repository.dart';
 import '../../../data/repositories/task_expert_repository.dart';
+import '../../../core/utils/cache_manager.dart';
 import '../../../core/utils/logger.dart';
 
 // ==================== Events ====================
@@ -248,6 +249,9 @@ class ActivityBloc extends Bloc<ActivityEvent, ActivityState> {
     ActivityRefreshRequested event,
     Emitter<ActivityState> emit,
   ) async {
+    // 下拉刷新前失效缓存，确保获取最新数据
+    await CacheManager.shared.invalidateActivitiesCache();
+
     try {
       final response = await _activityRepository.getActivities(page: 1);
 

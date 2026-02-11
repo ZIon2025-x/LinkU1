@@ -197,6 +197,10 @@ class _LoginViewState extends State<LoginView>
         ],
       ),
       body: BlocConsumer<AuthBloc, AuthState>(
+        listenWhen: (prev, curr) =>
+            prev.status != curr.status ||
+            prev.errorMessage != curr.errorMessage ||
+            prev.codeSendStatus != curr.codeSendStatus,
         listener: (context, state) {
           if (state.status == AuthStatus.authenticated) {
             context.go(AppRoutes.main);
@@ -218,6 +222,9 @@ class _LoginViewState extends State<LoginView>
             );
           }
         },
+        buildWhen: (prev, curr) =>
+            prev.status != curr.status ||
+            prev.codeSendStatus != curr.codeSendStatus,
         builder: (context, state) {
           return GestureDetector(
             onTap: () => FocusScope.of(context).unfocus(),

@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 
+import '../../core/constants/app_constants.dart';
 import '../models/flea_market.dart';
 import '../services/api_service.dart';
 import '../services/storage_service.dart';
@@ -80,22 +81,28 @@ class FleaMarketRepository {
   Future<List<Map<String, dynamic>>> getCategories() async {
     const cacheKey = '${CacheManager.prefixFleaMarketCategories}all';
 
-    final cached = _cache.get<List<dynamic>>(cacheKey);
+    final cached = _cache.getWithOfflineFallback<List<dynamic>>(cacheKey);
     if (cached != null) {
       return cached.map((e) => e as Map<String, dynamic>).toList();
     }
 
-    final response = await _apiService.get<List<dynamic>>(
-      ApiEndpoints.fleaMarketCategories,
-    );
+    try {
+      final response = await _apiService.get<List<dynamic>>(
+        ApiEndpoints.fleaMarketCategories,
+      );
 
-    if (!response.isSuccess || response.data == null) {
-      throw FleaMarketException(response.message ?? '获取分类失败');
+      if (!response.isSuccess || response.data == null) {
+        throw FleaMarketException(response.message ?? '获取分类失败');
+      }
+
+      await _cache.set(cacheKey, response.data!, ttl: CacheManager.staticTTL);
+
+      return response.data!.map((e) => e as Map<String, dynamic>).toList();
+    } catch (e) {
+      final stale = _cache.getStale<List<dynamic>>(cacheKey);
+      if (stale != null) return stale.map((e) => e as Map<String, dynamic>).toList();
+      rethrow;
     }
-
-    await _cache.set(cacheKey, response.data!, ttl: CacheManager.staticTTL);
-
-    return response.data!.map((e) => e as Map<String, dynamic>).toList();
   }
 
   /// 获取商品详情
@@ -296,7 +303,7 @@ class FleaMarketRepository {
       'page': page,
       'page_size': pageSize,
       'seller_id': userId,
-      'status': 'active',
+      'status': AppConstants.fleaMarketStatusActive,
     };
     final cacheKey =
         CacheManager.buildKey('${CacheManager.prefixMyFleaMarket}items_', params);
@@ -378,7 +385,7 @@ class FleaMarketRepository {
       'page': page,
       'page_size': pageSize,
       'seller_id': userId,
-      'status': 'sold',
+      'status': AppConstants.fleaMarketStatusSold,
     };
     final cacheKey = CacheManager.buildKey(
       '${CacheManager.prefixMyFleaMarket}sales_',

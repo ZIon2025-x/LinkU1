@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
 
+import '../../../core/constants/app_constants.dart';
 import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_radius.dart';
 import '../../../core/design/app_typography.dart';
@@ -841,7 +842,7 @@ class _BottomApplyBar extends StatelessWidget {
         }
 
         // 待支付 + 未支付 + 有taskId → 继续支付
-        if (service.userTaskStatus == 'pending_payment' &&
+        if (service.userTaskStatus == AppConstants.taskStatusPendingPayment &&
             service.userTaskIsPaid == false &&
             service.userTaskId != null) {
           return _buildPrimaryButton(
@@ -863,7 +864,7 @@ class _BottomApplyBar extends StatelessWidget {
 
       // 分支1: 有议价 + 任务状态为待支付 → 等待达人回应
       if (service.userApplicationHasNegotiation == true &&
-          service.userTaskStatus == 'pending_payment') {
+          service.userTaskStatus == AppConstants.taskStatusPendingPayment) {
         return _buildDisabledButton(
           context,
           context.l10n.serviceWaitingExpertResponse,
@@ -871,7 +872,7 @@ class _BottomApplyBar extends StatelessWidget {
       }
 
       // 分支2: 待支付 + 未支付 + 有taskId → 继续支付
-      if (service.userTaskStatus == 'pending_payment' &&
+      if (service.userTaskStatus == AppConstants.taskStatusPendingPayment &&
           service.userTaskIsPaid == false &&
           service.userTaskId != null) {
         return _buildPrimaryButton(

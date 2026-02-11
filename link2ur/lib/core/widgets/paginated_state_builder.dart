@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../utils/l10n_extension.dart';
 import 'empty_state_view.dart';
 import 'error_state_view.dart';
 import 'skeleton_view.dart';
@@ -79,7 +80,7 @@ class PaginatedStateBuilder extends StatelessWidget {
     // 错误且无数据 → 错误视图
     if (hasError && isEmpty) {
       return ErrorStateView(
-        message: errorMessage ?? '加载失败',
+        message: errorMessage ?? context.l10n.errorLoadFailedTitle,
         onRetry: onRetry,
       );
     }
@@ -89,7 +90,7 @@ class PaginatedStateBuilder extends StatelessWidget {
       return emptyBuilder?.call() ??
           EmptyStateView(
             icon: emptyIcon ?? Icons.inbox_outlined,
-            title: emptyTitle ?? '暂无数据',
+            title: emptyTitle ?? context.l10n.emptyStateNoContent,
             message: emptyDescription,
           );
     }

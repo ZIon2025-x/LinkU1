@@ -8,6 +8,7 @@ import '../../../data/repositories/task_repository.dart';
 import '../../../data/repositories/forum_repository.dart';
 import '../../../data/repositories/flea_market_repository.dart';
 import '../../../data/repositories/leaderboard_repository.dart';
+import '../../../core/utils/cache_manager.dart';
 import '../../../core/utils/logger.dart';
 import '../../../core/utils/forum_permission_helper.dart';
 import 'home_event.dart';
@@ -115,6 +116,9 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
     Emitter<HomeState> emit,
   ) async {
     emit(state.copyWith(isRefreshing: true));
+
+    // 下拉刷新前失效缓存，确保获取最新数据
+    await CacheManager.shared.invalidateTasksCache();
 
     try {
       TaskListResponse result;

@@ -1,11 +1,11 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:go_router/go_router.dart';
 import '../router/app_router.dart';
 
 import '../design/app_colors.dart';
 import '../utils/helpers.dart';
+import 'async_image_view.dart';
 
 /// 横幅轮播组件
 /// 参考iOS BannerCarouselView.swift
@@ -144,17 +144,17 @@ class _BannerCarouselState extends State<BannerCarousel> {
 
                 return GestureDetector(
                   onTap: () => _handleBannerTap(banner),
-                  child: CachedNetworkImage(
+                  child: AsyncImageView(
                     imageUrl: imageUrl,
                     fit: BoxFit.cover,
                     width: double.infinity,
-                    placeholder: (_, __) => Container(
+                    placeholder: Container(
                       color: AppColors.skeletonBase,
                       child: const Center(
                         child: CircularProgressIndicator(strokeWidth: 2),
                       ),
                     ),
-                    errorWidget: (_, __, ___) => Container(
+                    errorWidget: Container(
                       color: AppColors.skeletonBase,
                       child: const Icon(Icons.image, size: 40),
                     ),
