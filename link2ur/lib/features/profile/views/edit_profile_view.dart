@@ -9,7 +9,6 @@ import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_radius.dart';
 import '../../../core/utils/l10n_extension.dart';
-import '../../../core/utils/helpers.dart';
 import '../../../core/widgets/app_feedback.dart';
 import '../../../core/widgets/async_image_view.dart';
 import '../../../core/widgets/loading_view.dart';
