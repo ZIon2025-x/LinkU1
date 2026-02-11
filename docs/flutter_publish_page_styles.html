@@ -1,0 +1,645 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Link2Ur 统一发布页 - 多种样式选择</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700&family=Noto+Sans+SC:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --primary: #2659F2;
+      --primary-light: #4088FF;
+      --accent: #FF8033;
+      --bg: #F2F2F7;
+      --card: #FFFFFF;
+      --text: #000000;
+      --text-secondary: #3C3C43;
+      --text-tertiary: #8E8E93;
+      --radius-sm: 8px;
+      --radius-md: 12px;
+      --radius-lg: 16px;
+      --shadow: 0 2px 12px rgba(0,0,0,0.06);
+      --shadow-lg: 0 8px 24px rgba(0,0,0,0.08);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'DM Sans', 'Noto Sans SC', system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+      padding: 24px 16px 48px;
+    }
+
+    h1 {
+      font-size: 1.5rem;
+      font-weight: 700;
+      margin-bottom: 8px;
+      color: var(--text);
+    }
+    .subtitle {
+      color: var(--text-secondary);
+      font-size: 0.9rem;
+      margin-bottom: 32px;
+    }
+
+    .style-section {
+      margin-bottom: 48px;
+    }
+    .style-section h2 {
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--text-secondary);
+      margin-bottom: 12px;
+      padding-bottom: 6px;
+      border-bottom: 2px solid var(--primary);
+      display: inline-block;
+    }
+
+    /* 模拟手机容器 */
+    .phone {
+      max-width: 390px;
+      margin: 0 auto;
+      background: var(--card);
+      border-radius: 24px;
+      overflow: hidden;
+      box-shadow: var(--shadow-lg);
+      min-height: 520px;
+    }
+
+    /* ========== 样式 A：分段式（与现有接近）========== */
+    .style-a .header {
+      padding: 16px 20px 12px;
+      text-align: center;
+    }
+    .style-a .drag-bar {
+      width: 40px;
+      height: 4px;
+      background: rgba(0,0,0,0.12);
+      border-radius: 2px;
+      margin: 0 auto 16px;
+    }
+    .style-a .title { font-size: 18px; font-weight: 700; }
+    .style-a .segments {
+      display: flex;
+      gap: 3px;
+      padding: 3px 16px;
+      background: rgba(0,0,0,0.05);
+      margin: 0 16px;
+      border-radius: 12px;
+      height: 44px;
+    }
+    .style-a .seg {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      border-radius: 10px;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text-tertiary);
+    }
+    .style-a .seg.active {
+      background: #fff;
+      color: var(--primary);
+      font-weight: 600;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+    }
+    .style-a .seg svg { width: 16px; height: 16px; opacity: 0.8; }
+    .style-a .form-area {
+      padding: 20px 16px;
+      min-height: 280px;
+    }
+    .style-a .field-label {
+      font-size: 15px;
+      font-weight: 600;
+      margin-bottom: 8px;
+      color: var(--text);
+    }
+    .style-a .field {
+      background: var(--bg);
+      border: 1px solid rgba(0,0,0,0.06);
+      border-radius: var(--radius-md);
+      padding: 14px 16px;
+      margin-bottom: 16px;
+      font-size: 15px;
+    }
+    .style-a .field::placeholder { color: var(--text-tertiary); }
+    .style-a .bottom-bar {
+      padding: 16px 20px 24px;
+      border-top: 1px solid rgba(0,0,0,0.06);
+    }
+    .style-a .btn-primary {
+      width: 100%;
+      padding: 14px;
+      background: linear-gradient(135deg, var(--primary), var(--primary-light));
+      color: #fff;
+      border: none;
+      border-radius: var(--radius-md);
+      font-size: 16px;
+      font-weight: 600;
+      margin-bottom: 12px;
+    }
+    .style-a .btn-close {
+      width: 44px;
+      height: 44px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(0,0,0,0.05);
+      border-radius: 50%;
+      border: none;
+      color: var(--text-secondary);
+    }
+
+    /* ========== 样式 B：大卡片网格 ========== */
+    .style-b .header {
+      padding: 20px 20px 24px;
+      text-align: center;
+    }
+    .style-b .drag-bar {
+      width: 40px;
+      height: 4px;
+      background: rgba(0,0,0,0.12);
+      border-radius: 2px;
+      margin: 0 auto 16px;
+    }
+    .style-b .title { font-size: 18px; font-weight: 700; }
+    .style-b .sub { font-size: 14px; color: var(--text-tertiary); margin-top: 4px; }
+    .style-b .cards {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      padding: 0 16px 24px;
+    }
+    .style-b .card {
+      aspect-ratio: 1;
+      border-radius: var(--radius-lg);
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      font-weight: 600;
+      font-size: 15px;
+      color: #fff;
+      border: none;
+      cursor: pointer;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .style-b .card:hover { transform: translateY(-2px); box-shadow: var(--shadow-lg); }
+    .style-b .card.task {
+      background: linear-gradient(145deg, #2659F2, #4088FF);
+      box-shadow: 0 4px 14px rgba(38,89,242,0.35);
+    }
+    .style-b .card.flea {
+      background: linear-gradient(145deg, #26BF73, #34D399);
+      box-shadow: 0 4px 14px rgba(38,191,115,0.35);
+    }
+    .style-b .card.post {
+      background: linear-gradient(145deg, #7359F2, #A78BFA);
+      box-shadow: 0 4px 14px rgba(115,89,242,0.35);
+      grid-column: 1 / -1;
+      aspect-ratio: auto;
+      min-height: 72px;
+      flex-direction: row;
+      gap: 16px;
+      justify-content: center;
+    }
+    .style-b .card svg { width: 32px; height: 32px; margin-bottom: 8px; }
+    .style-b .card.post svg { margin-bottom: 0; }
+
+    /* ========== 样式 C：列表式 ========== */
+    .style-c .header {
+      padding: 20px 20px 16px;
+    }
+    .style-c .drag-bar {
+      width: 40px;
+      height: 4px;
+      background: rgba(0,0,0,0.12);
+      border-radius: 2px;
+      margin-bottom: 16px;
+    }
+    .style-c .title { font-size: 18px; font-weight: 700; }
+    .style-c .list {
+      padding: 0 16px;
+    }
+    .style-c .list-item {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 16px 0;
+      border-bottom: 1px solid rgba(0,0,0,0.06);
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .style-c .list-item:last-child { border-bottom: none; }
+    .style-c .list-item:hover { background: var(--bg); }
+    .style-c .list-item.active .icon-wrap { background: rgba(38,89,242,0.12); color: var(--primary); }
+    .style-c .list-item.active .label { color: var(--primary); font-weight: 600; }
+    .style-c .icon-wrap {
+      width: 48px;
+      height: 48px;
+      border-radius: 12px;
+      background: var(--bg);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-secondary);
+    }
+    .style-c .icon-wrap svg { width: 24px; height: 24px; }
+    .style-c .label { font-size: 16px; font-weight: 500; color: var(--text); }
+    .style-c .hint { font-size: 13px; color: var(--text-tertiary); margin-top: 2px; }
+    .style-c .arrow { margin-left: auto; color: var(--text-tertiary); }
+
+    /* ========== 样式 D：底部抽屉 / 圆角浮层 ========== */
+    .style-d {
+      background: transparent;
+      padding: 40px 16px 0;
+    }
+    .style-d .sheet {
+      background: var(--card);
+      border-radius: 24px 24px 0 0;
+      padding: 12px 20px 24px;
+      box-shadow: 0 -4px 24px rgba(0,0,0,0.08);
+      min-height: 420px;
+    }
+    .style-d .drag-bar {
+      width: 40px;
+      height: 4px;
+      background: rgba(0,0,0,0.15);
+      border-radius: 2px;
+      margin: 0 auto 20px;
+    }
+    .style-d .title { font-size: 20px; font-weight: 700; text-align: center; margin-bottom: 24px; }
+    .style-d .chips {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      justify-content: center;
+      margin-bottom: 28px;
+    }
+    .style-d .chip {
+      padding: 12px 20px;
+      border-radius: 24px;
+      font-size: 14px;
+      font-weight: 500;
+      border: 2px solid transparent;
+      background: var(--bg);
+      color: var(--text-secondary);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.2s;
+    }
+    .style-d .chip.active {
+      background: rgba(38,89,242,0.1);
+      border-color: var(--primary);
+      color: var(--primary);
+    }
+    .style-d .chip svg { width: 18px; height: 18px; }
+    .style-d .form-area {
+      padding: 0 4px;
+    }
+    .style-d .field {
+      background: var(--bg);
+      border-radius: var(--radius-md);
+      padding: 14px 16px;
+      margin-bottom: 14px;
+      font-size: 15px;
+      border: 1px solid transparent;
+    }
+
+    /* ========== 样式 E：图标优先 / 仪表盘 ========== */
+    .style-e .header {
+      padding: 24px 20px 20px;
+      text-align: center;
+    }
+    .style-e .title { font-size: 20px; font-weight: 700; }
+    .style-e .sub { font-size: 14px; color: var(--text-tertiary); margin-top: 6px; }
+    .style-e .grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+      padding: 0 20px 24px;
+    }
+    .style-e .tile {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 20px 12px;
+      background: var(--bg);
+      border-radius: var(--radius-lg);
+      cursor: pointer;
+      transition: all 0.2s;
+      border: 2px solid transparent;
+    }
+    .style-e .tile:hover, .style-e .tile.active {
+      border-color: var(--primary);
+      background: rgba(38,89,242,0.06);
+    }
+    .style-e .tile .icon-circle {
+      width: 56px;
+      height: 56px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 10px;
+    }
+    .style-e .tile.task .icon-circle { background: linear-gradient(135deg, #2659F2, #4088FF); }
+    .style-e .tile.flea .icon-circle { background: linear-gradient(135deg, #26BF73, #34D399); }
+    .style-e .tile.post .icon-circle { background: linear-gradient(135deg, #7359F2, #A78BFA); }
+    .style-e .tile .icon-circle svg { width: 28px; height: 28px; color: #fff; }
+    .style-e .tile .name { font-size: 13px; font-weight: 600; color: var(--text); text-align: center; }
+
+    /* ========== 样式 F：极简单入口 + 展开 ========== */
+    .style-f .header {
+      padding: 20px 20px 16px;
+    }
+    .style-f .drag-bar {
+      width: 40px;
+      height: 4px;
+      background: rgba(0,0,0,0.12);
+      border-radius: 2px;
+      margin-bottom: 16px;
+    }
+    .style-f .title { font-size: 18px; font-weight: 700; }
+    .style-f .single-cta {
+      margin: 24px 16px;
+      padding: 20px;
+      background: linear-gradient(135deg, var(--primary), var(--primary-light));
+      border-radius: var(--radius-lg);
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      box-shadow: 0 6px 20px rgba(38,89,242,0.3);
+      cursor: pointer;
+    }
+    .style-f .single-cta .big-icon {
+      width: 48px;
+      height: 48px;
+      background: rgba(255,255,255,0.2);
+      border-radius: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .style-f .single-cta .big-icon svg { width: 26px; height: 26px; }
+    .style-f .single-cta .text { font-size: 17px; font-weight: 600; }
+    .style-f .single-cta .sub { font-size: 13px; opacity: 0.9; margin-top: 2px; }
+    .style-f .expand-hint {
+      font-size: 13px;
+      color: var(--text-tertiary);
+      text-align: center;
+      margin-top: 12px;
+    }
+    .style-f .types-row {
+      display: flex;
+      justify-content: center;
+      gap: 24px;
+      margin-top: 20px;
+      padding-top: 20px;
+      border-top: 1px solid rgba(0,0,0,0.06);
+    }
+    .style-f .mini-type {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      color: var(--text-tertiary);
+      cursor: pointer;
+    }
+    .style-f .mini-type svg { width: 20px; height: 20px; }
+
+    /* 通用图标 */
+    .icon-task { fill: currentColor; }
+    .icon-flea { fill: currentColor; }
+    .icon-post { fill: currentColor; }
+  </style>
+</head>
+<body>
+  <h1>Link2Ur 统一发布页</h1>
+  <p class="subtitle">多种 UI 样式，选一个你喜欢的再在 Flutter 里实现</p>
+
+  <!-- 样式 A：分段式（与现有接近）-->
+  <section class="style-section">
+    <h2>A. 分段式 Segmented</h2>
+    <p style="font-size: 13px; color: var(--text-tertiary); margin-bottom: 12px;">顶部三段 Tab 切换，和当前 Flutter 实现最接近，信息密度高。</p>
+    <div class="phone style-a">
+      <div class="header">
+        <div class="drag-bar"></div>
+        <div class="title">发布</div>
+      </div>
+      <div class="segments">
+        <div class="seg active">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>
+          任务
+        </div>
+        <div class="seg">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><path d="M9 22V12h6v10"/></svg>
+          闲置
+        </div>
+        <div class="seg">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6M16 13H8M16 17H8M10 9H8"/></svg>
+          帖子
+        </div>
+      </div>
+      <div class="form-area">
+        <div class="field-label">任务类型</div>
+        <div class="field">选择类型</div>
+        <div class="field-label">标题</div>
+        <div class="field" style="margin-bottom: 8px;">输入任务标题</div>
+        <div class="field-label">描述</div>
+        <div class="field">简要描述任务内容…</div>
+      </div>
+      <div class="bottom-bar">
+        <button class="btn-primary">发布任务</button>
+        <button class="btn-close">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <!-- 样式 B：大卡片网格 -->
+  <section class="style-section">
+    <h2>B. 大卡片网格 Card Grid</h2>
+    <p style="font-size: 13px; color: var(--text-tertiary); margin-bottom: 12px;">先选类型再填表单，视觉突出、适合强调「发布什么」。</p>
+    <div class="phone style-b">
+      <div class="header">
+        <div class="drag-bar"></div>
+        <div class="title">发布</div>
+        <div class="sub">选择你要发布的内容类型</div>
+      </div>
+      <div class="cards">
+        <button class="card task">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>
+          发布任务
+        </button>
+        <button class="card flea">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><path d="M9 22V12h6v10"/></svg>
+          发布闲置
+        </button>
+        <button class="card post">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6M16 13H8M16 17H8M10 9H8"/></svg>
+          发帖子
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <!-- 样式 C：列表式 -->
+  <section class="style-section">
+    <h2>C. 列表式 List</h2>
+    <p style="font-size: 13px; color: var(--text-tertiary); margin-bottom: 12px;">每行一个类型，可带副标题，点击进入对应表单。</p>
+    <div class="phone style-c">
+      <div class="header">
+        <div class="drag-bar"></div>
+        <div class="title">发布</div>
+      </div>
+      <div class="list">
+        <div class="list-item active">
+          <div class="icon-wrap">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>
+          </div>
+          <div>
+            <div class="label">发布任务</div>
+            <div class="hint">求助、跑腿、技能服务</div>
+          </div>
+          <span class="arrow">›</span>
+        </div>
+        <div class="list-item">
+          <div class="icon-wrap">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><path d="M9 22V12h6v10"/></svg>
+          </div>
+          <div>
+            <div class="label">发布闲置</div>
+            <div class="hint">二手物品、闲置转卖</div>
+          </div>
+          <span class="arrow">›</span>
+        </div>
+        <div class="list-item">
+          <div class="icon-wrap">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6M16 13H8M16 17H8M10 9H8"/></svg>
+          </div>
+          <div>
+            <div class="label">发帖子</div>
+            <div class="hint">讨论、分享、问答</div>
+          </div>
+          <span class="arrow">›</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 样式 D：底部抽屉 + Chip 选择 -->
+  <section class="style-section">
+    <h2>D. 底部抽屉 + Chip</h2>
+    <p style="font-size: 13px; color: var(--text-tertiary); margin-bottom: 12px;">从底部滑出的圆角浮层，用 Chip 切换类型，更轻量。</p>
+    <div class="phone style-d">
+      <div class="sheet">
+        <div class="drag-bar"></div>
+        <div class="title">发布</div>
+        <div class="chips">
+          <button class="chip active">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>
+            任务
+          </button>
+          <button class="chip">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><path d="M9 22V12h6v10"/></svg>
+            闲置
+          </button>
+          <button class="chip">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6M16 13H8M16 17H8M10 9H8"/></svg>
+            帖子
+          </button>
+        </div>
+        <div class="form-area">
+          <div class="field">任务类型</div>
+          <div class="field">标题</div>
+          <div class="field">描述、报酬…</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 样式 E：图标优先 / 仪表盘 -->
+  <section class="style-section">
+    <h2>E. 图标优先 Dashboard</h2>
+    <p style="font-size: 13px; color: var(--text-tertiary); margin-bottom: 12px;">三列等分，大图标 + 短文案，适合首屏快速选择。</p>
+    <div class="phone style-e">
+      <div class="header">
+        <div class="title">发布</div>
+        <div class="sub">选择发布类型</div>
+      </div>
+      <div class="grid">
+        <div class="tile task active">
+          <div class="icon-circle">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>
+          </div>
+          <span class="name">任务</span>
+        </div>
+        <div class="tile flea">
+          <div class="icon-circle">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><path d="M9 22V12h6v10"/></svg>
+          </div>
+          <span class="name">闲置</span>
+        </div>
+        <div class="tile post">
+          <div class="icon-circle">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6M16 13H8M16 17H8M10 9H8"/></svg>
+          </div>
+          <span class="name">帖子</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 样式 F：极简单入口 -->
+  <section class="style-section">
+    <h2>F. 极简单入口 + 展开</h2>
+    <p style="font-size: 13px; color: var(--text-tertiary); margin-bottom: 12px;">默认突出「发布任务」，下方可切换其他类型，减少首屏选项。</p>
+    <div class="phone style-f">
+      <div class="header">
+        <div class="drag-bar"></div>
+        <div class="title">发布</div>
+      </div>
+      <div class="single-cta">
+        <div class="big-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+        </div>
+        <div>
+          <div class="text">发布任务</div>
+          <div class="sub">求助、跑腿、技能服务</div>
+        </div>
+      </div>
+      <div class="expand-hint">也可以发布闲置或发帖子</div>
+      <div class="types-row">
+        <div class="mini-type">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>
+          任务
+        </div>
+        <div class="mini-type">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><path d="M9 22V12h6v10"/></svg>
+          闲置
+        </div>
+        <div class="mini-type">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6M16 13H8M16 17H8M10 9H8"/></svg>
+          帖子
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <p style="text-align: center; color: var(--text-tertiary); font-size: 13px; margin-top: 32px;">选好样式后，可在 link2ur/lib/features/publish/views/publish_view.dart 中按对应风格调整 UI。</p>
+</body>
+</html>

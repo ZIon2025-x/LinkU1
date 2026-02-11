@@ -374,7 +374,27 @@ class _PostCard extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _FeedTypeBadge(feedType: 'forum_post'),
+                  Row(
+                    children: [
+                      _FeedTypeBadge(feedType: 'forum_post'),
+                      if (item.extraData?['category_name'] != null) ...[
+                        const SizedBox(width: 6),
+                        Flexible(
+                          child: Text(
+                            item.extraData!['category_name'] as String,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: 10,
+                              color: isDark
+                                  ? AppColors.textTertiaryDark
+                                  : AppColors.textTertiaryLight,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
                   const SizedBox(height: 6),
                   if (item.title != null)
                     Text(

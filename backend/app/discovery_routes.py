@@ -17,6 +17,7 @@ from sqlalchemy.orm import selectinload
 
 from app import models, schemas
 from app.deps import get_async_db_dependency
+from app.forum_routes import get_current_user_optional, visible_forums
 
 logger = logging.getLogger(__name__)
 
@@ -30,21 +31,39 @@ async def get_discovery_feed(
     page: int = Query(1, ge=1, description="页码"),
     limit: int = Query(20, ge=1, le=50, description="每页数量"),
     request: Request = None,
+    current_user: Optional[models.User] = Depends(get_current_user_optional),
     db: AsyncSession = Depends(get_async_db_dependency),
 ):
     """获取发现 Feed — 混排多种内容类型
     
     加权随机策略：低频类型（评价、排行榜）权重更高，确保曝光
     同一类型不连续出现超过 2 条
+    
+    帖子仅展示当前用户可见板块下的（普通板块 + 已认证学校板块）
     """
     # 每种类型获取的数量（多取一些用于混排）
     fetch_limit = limit * 2
     
+    # 计算当前用户可见的板块 ID（普通板块 + 学校板块）
+    # 与论坛列表的权限逻辑一致
+    general_result = await db.execute(
+        select(models.ForumCategory.id).where(
+            models.ForumCategory.type == "general",
+            models.ForumCategory.is_visible == True,
+        )
+    )
+    visible_category_ids = [row[0] for row in general_result.all()]
+    
+    # 已登录用户额外获取学校板块
+    if current_user:
+        school_ids = await visible_forums(current_user, db)
+        visible_category_ids.extend(school_ids)
+    
     all_items = []
     
-    # 1. 帖子
+    # 1. 帖子（仅可见板块）
     try:
-        posts = await _fetch_forum_posts(db, fetch_limit)
+        posts = await _fetch_forum_posts(db, fetch_limit, visible_category_ids)
         all_items.extend(posts)
     except Exception as e:
         logger.warning(f"Failed to fetch forum posts for feed: {e}")
@@ -120,8 +139,8 @@ def _first_image(images_value) -> Optional[str]:
 
 # ==================== 数据获取函数 ====================
 
-async def _fetch_forum_posts(db: AsyncSession, limit: int) -> list:
-    """获取最新帖子"""
+async def _fetch_forum_posts(db: AsyncSession, limit: int, visible_category_ids: List[int] = None) -> list:
+    """获取最新帖子（仅用户可见板块：普通板块 + 已认证学校板块）"""
     query = (
         select(
             models.ForumPost.id,
@@ -137,15 +156,24 @@ async def _fetch_forum_posts(db: AsyncSession, limit: int) -> list:
             models.ForumPost.author_id,
             models.User.name.label("author_name"),
             models.User.avatar.label("author_avatar"),
+            models.ForumCategory.name.label("category_name"),
         )
+        .join(models.ForumCategory, models.ForumPost.category_id == models.ForumCategory.id)
         .outerjoin(models.User, models.ForumPost.author_id == models.User.id)
         .where(
             models.ForumPost.is_deleted == False,
             models.ForumPost.is_visible == True,
+            models.ForumCategory.is_visible == True,
         )
-        .order_by(desc(models.ForumPost.created_at))
-        .limit(limit)
     )
+    # 按可见板块 ID 过滤（普通板块 + 当前用户的学校板块）
+    if visible_category_ids:
+        query = query.where(models.ForumPost.category_id.in_(visible_category_ids))
+    else:
+        # 兜底：无可见板块时只返回普通板块
+        query = query.where(models.ForumCategory.type == "general")
+    
+    query = query.order_by(desc(models.ForumPost.created_at)).limit(limit)
     result = await db.execute(query)
     items = []
     for row in result:
@@ -179,7 +207,7 @@ async def _fetch_forum_posts(db: AsyncSession, limit: int) -> list:
             "target_item": None,
             "activity_info": None,
             "is_experienced": None,
-            "extra_data": None,
+            "extra_data": {"category_name": row.category_name} if row.category_name else None,
             "created_at": row.created_at.isoformat() if row.created_at else None,
         })
     return items

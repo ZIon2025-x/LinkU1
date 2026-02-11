@@ -3574,9 +3574,13 @@
   "serviceApplyOtherSlot": "Apply for Another Slot",
 
   "publishTitle": "Publish",
+  "publishTypeSubtitle": "Choose what you want to publish",
   "publishTaskTab": "Post Task",
   "publishFleaMarketTab": "Sell Item",
   "publishPostTab": "Forum Post",
+  "publishTaskCardLabel": "Post Task",
+  "publishFleaCardLabel": "Sell Item",
+  "publishPostCardLabel": "Forum Post",
 
   "profileUpdateFailed": "Update failed",
   "profileAvatarUpdated": "Avatar updated",

@@ -7354,6 +7354,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get publishTitle => '发布';
 
   @override
+  String get publishTypeSubtitle => '选择你要发布的内容类型';
+
+  @override
   String get publishTaskTab => '任务发布';
 
   @override
@@ -7361,6 +7364,15 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get publishPostTab => '帖子发布';
+
+  @override
+  String get publishTaskCardLabel => '发布任务';
+
+  @override
+  String get publishFleaCardLabel => '发布闲置';
+
+  @override
+  String get publishPostCardLabel => '发帖子';
 
   @override
   String get profileUpdateFailed => '更新失败';
@@ -15053,6 +15065,9 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get publishTitle => '發佈';
 
   @override
+  String get publishTypeSubtitle => '選擇你要發佈的內容類型';
+
+  @override
   String get publishTaskTab => '任務發佈';
 
   @override
@@ -15060,6 +15075,15 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get publishPostTab => '帖子發佈';
+
+  @override
+  String get publishTaskCardLabel => '發佈任務';
+
+  @override
+  String get publishFleaCardLabel => '發佈閒置';
+
+  @override
+  String get publishPostCardLabel => '發帖子';
 
   @override
   String get profileUpdateFailed => '更新失敗';

@@ -14078,6 +14078,12 @@ abstract class AppLocalizations {
   /// **'Publish'**
   String get publishTitle;
 
+  /// No description provided for @publishTypeSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose what you want to publish'**
+  String get publishTypeSubtitle;
+
   /// No description provided for @publishTaskTab.
   ///
   /// In en, this message translates to:
@@ -14095,6 +14101,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Forum Post'**
   String get publishPostTab;
+
+  /// No description provided for @publishTaskCardLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Post Task'**
+  String get publishTaskCardLabel;
+
+  /// No description provided for @publishFleaCardLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Sell Item'**
+  String get publishFleaCardLabel;
+
+  /// No description provided for @publishPostCardLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Forum Post'**
+  String get publishPostCardLabel;
 
   /// No description provided for @profileUpdateFailed.
   ///

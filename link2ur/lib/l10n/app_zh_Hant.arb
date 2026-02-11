@@ -3513,9 +3513,13 @@
   "serviceApplyOtherSlot": "申請其他時間段",
 
   "publishTitle": "發佈",
+  "publishTypeSubtitle": "選擇你要發佈的內容類型",
   "publishTaskTab": "任務發佈",
   "publishFleaMarketTab": "閒置發佈",
   "publishPostTab": "帖子發佈",
+  "publishTaskCardLabel": "發佈任務",
+  "publishFleaCardLabel": "發佈閒置",
+  "publishPostCardLabel": "發帖子",
 
   "profileUpdateFailed": "更新失敗",
   "profileAvatarUpdated": "頭像已更新",

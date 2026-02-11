@@ -7649,6 +7649,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get publishTitle => 'Publish';
 
   @override
+  String get publishTypeSubtitle => 'Choose what you want to publish';
+
+  @override
   String get publishTaskTab => 'Post Task';
 
   @override
@@ -7656,6 +7659,15 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get publishPostTab => 'Forum Post';
+
+  @override
+  String get publishTaskCardLabel => 'Post Task';
+
+  @override
+  String get publishFleaCardLabel => 'Sell Item';
+
+  @override
+  String get publishPostCardLabel => 'Forum Post';
 
   @override
   String get profileUpdateFailed => 'Update failed';

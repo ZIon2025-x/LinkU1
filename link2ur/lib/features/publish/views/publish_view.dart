@@ -27,9 +27,8 @@ import '../../forum/bloc/forum_bloc.dart';
 import '../../tasks/bloc/create_task_bloc.dart';
 import '../../../core/utils/forum_permission_helper.dart';
 
-/// 统一发布页面
-/// 从底部滑入，底部有关闭按钮。
-/// 默认「任务发布」，可切换为「闲置发布」或「帖子发布」。
+/// 统一发布页面（样式 B：大卡片网格）
+/// 从底部滑入。先选类型（任务 / 闲置 / 帖子），再进入对应表单；支持返回重选。
 class PublishView extends StatelessWidget {
   const PublishView({super.key});
 
@@ -70,7 +69,8 @@ class _PublishContent extends StatefulWidget {
 
 class _PublishContentState extends State<_PublishContent>
     with TickerProviderStateMixin {
-  _PublishType _type = _PublishType.task;
+  /// null = 展示类型选择卡片；非 null = 已选类型，展示对应表单
+  _PublishType? _selectedType;
 
   // ── 任务表单 ──
   final _taskFormKey = GlobalKey<FormState>();
@@ -233,8 +233,10 @@ class _PublishContentState extends State<_PublishContent>
   }
 
   void _submit() {
+    final type = _selectedType;
+    if (type == null) return;
     AppHaptics.medium();
-    switch (_type) {
+    switch (type) {
       case _PublishType.task:
         _submitTask();
       case _PublishType.fleaMarket:
@@ -276,7 +278,9 @@ class _PublishContentState extends State<_PublishContent>
   void _removeImage(int index) => setState(() => _fleaImages.removeAt(index));
 
   String get _submitButtonText {
-    switch (_type) {
+    final type = _selectedType;
+    if (type == null) return context.l10n.createTaskPublishTask;
+    switch (type) {
       case _PublishType.task:
         return context.l10n.createTaskPublishTask;
       case _PublishType.fleaMarket:
@@ -354,51 +358,93 @@ class _PublishContentState extends State<_PublishContent>
         backgroundColor: isDark ? AppColors.backgroundDark : AppColors.backgroundLight,
         body: SafeArea(
           bottom: false,
-          child: Column(
-            children: [
-              // ── 顶部：拖拽指示器 + 标题 ──
-              _buildHeader(isDark),
-
-              // ── 类型切换（三段） ──
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-                child: _SegmentControl(
-                  isDark: isDark,
-                  selected: _type,
-                  onChanged: (type) {
-                    AppHaptics.selection();
-                    setState(() => _type = type);
-                  },
-                ),
-              ),
-
-              const SizedBox(height: AppSpacing.md),
-
-              // ── 表单内容（可滚动）──
-              Expanded(
-                child: AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 250),
-                  switchInCurve: Curves.easeOutCubic,
-                  switchOutCurve: Curves.easeInCubic,
-                  child: switch (_type) {
-                    _PublishType.task => _buildTaskForm(isDark),
-                    _PublishType.fleaMarket => _buildFleaMarketForm(isDark),
-                    _PublishType.post => _buildPostForm(isDark),
-                  },
-                ),
-              ),
-
-              // ── 底部：提交按钮 + 关闭按钮 ──
-              _buildBottomBar(isDark, bottomPadding),
-            ],
-          ),
+          child: _selectedType == null
+              ? _buildTypePicker(isDark, bottomPadding)
+              : _buildFormView(isDark, bottomPadding),
         ),
       ),
     );
   }
 
-  // ==================== Header ====================
-  Widget _buildHeader(bool isDark) {
+  // ==================== 类型选择页（样式 B：大卡片网格）====================
+  Widget _buildTypePicker(bool isDark, double bottomPadding) {
+    return Column(
+      children: [
+        _buildPickerHeader(isDark),
+        Expanded(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                const gap = 12.0;
+                final width = (constraints.maxWidth - gap) / 2;
+                return SingleChildScrollView(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          SizedBox(
+                            width: width,
+                            height: width,
+                            child: _PublishTypeCard(
+                              isDark: isDark,
+                              type: _PublishType.task,
+                              label: context.l10n.publishTaskCardLabel,
+                              icon: Icons.task_alt_rounded,
+                              gradient: const [Color(0xFF2659F2), Color(0xFF4088FF)],
+                              onTap: () {
+                                AppHaptics.selection();
+                                setState(() => _selectedType = _PublishType.task);
+                              },
+                            ),
+                          ),
+                          const SizedBox(width: gap),
+                          SizedBox(
+                            width: width,
+                            height: width,
+                            child: _PublishTypeCard(
+                              isDark: isDark,
+                              type: _PublishType.fleaMarket,
+                              label: context.l10n.publishFleaCardLabel,
+                              icon: Icons.storefront_rounded,
+                              gradient: const [Color(0xFF26BF73), Color(0xFF34D399)],
+                              onTap: () {
+                                AppHaptics.selection();
+                                setState(() => _selectedType = _PublishType.fleaMarket);
+                              },
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: gap),
+                      _PublishTypeCard(
+                        isDark: isDark,
+                        type: _PublishType.post,
+                        label: context.l10n.publishPostCardLabel,
+                        icon: Icons.article_rounded,
+                        gradient: const [Color(0xFF7359F2), Color(0xFFA78BFA)],
+                        fullWidth: true,
+                        onTap: () {
+                          AppHaptics.selection();
+                          setState(() => _selectedType = _PublishType.post);
+                        },
+                      ),
+                      SizedBox(height: bottomPadding + 24),
+                    ],
+                  ),
+                );
+              },
+            ),
+          ),
+        ),
+        _buildCloseButton(isDark, bottomPadding),
+      ],
+    );
+  }
+
+  Widget _buildPickerHeader(bool isDark) {
     return Padding(
       padding: const EdgeInsets.only(top: AppSpacing.md, bottom: AppSpacing.sm),
       child: Column(
@@ -422,8 +468,137 @@ class _PublishContentState extends State<_PublishContent>
               color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
             ),
           ),
+          const SizedBox(height: 4),
+          Text(
+            context.l10n.publishTypeSubtitle,
+            style: TextStyle(
+              fontSize: 14,
+              color: isDark ? AppColors.textTertiaryDark : AppColors.textTertiaryLight,
+            ),
+          ),
           const SizedBox(height: AppSpacing.sm),
         ],
+      ),
+    );
+  }
+
+  // ==================== 表单页（含返回 + 表单 + 底部栏）====================
+  Widget _buildFormView(bool isDark, double bottomPadding) {
+    final type = _selectedType!;
+    return Column(
+      children: [
+        _buildFormHeader(isDark, type),
+        Expanded(
+          child: AnimatedSwitcher(
+            duration: const Duration(milliseconds: 250),
+            switchInCurve: Curves.easeOutCubic,
+            switchOutCurve: Curves.easeInCubic,
+            child: switch (type) {
+              _PublishType.task => _buildTaskForm(isDark),
+              _PublishType.fleaMarket => _buildFleaMarketForm(isDark),
+              _PublishType.post => _buildPostForm(isDark),
+            },
+          ),
+        ),
+        _buildBottomBar(isDark, bottomPadding),
+      ],
+    );
+  }
+
+  Widget _buildFormHeader(bool isDark, _PublishType type) {
+    String title;
+    switch (type) {
+      case _PublishType.task:
+        title = context.l10n.publishTaskTab;
+        break;
+      case _PublishType.fleaMarket:
+        title = context.l10n.publishFleaMarketTab;
+        break;
+      case _PublishType.post:
+        title = context.l10n.publishPostTab;
+        break;
+    }
+    return Padding(
+      padding: const EdgeInsets.only(
+        top: AppSpacing.sm,
+        bottom: AppSpacing.sm,
+        left: AppSpacing.sm,
+        right: AppSpacing.lg,
+      ),
+      child: Row(
+        children: [
+          GestureDetector(
+            onTap: () {
+              AppHaptics.light();
+              setState(() => _selectedType = null);
+            },
+            behavior: HitTestBehavior.opaque,
+            child: Container(
+              width: 44,
+              height: 44,
+              alignment: Alignment.center,
+              child: Icon(
+                Icons.arrow_back_ios_new_rounded,
+                size: 20,
+                color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+              ),
+            ),
+          ),
+          Expanded(
+            child: Text(
+              title,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w700,
+                color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+              ),
+            ),
+          ),
+          const SizedBox(width: 44),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCloseButton(bool isDark, double bottomPadding) {
+    return Container(
+      padding: EdgeInsets.only(
+        left: AppSpacing.lg,
+        right: AppSpacing.lg,
+        top: AppSpacing.sm,
+        bottom: bottomPadding + AppSpacing.md,
+      ),
+      decoration: BoxDecoration(
+        color: isDark ? AppColors.cardBackgroundDark : Colors.white,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 10,
+            offset: const Offset(0, -2),
+          ),
+        ],
+      ),
+      child: Center(
+        child: GestureDetector(
+          onTap: _dismiss,
+          behavior: HitTestBehavior.opaque,
+          child: Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: isDark
+                  ? Colors.white.withValues(alpha: 0.08)
+                  : Colors.black.withValues(alpha: 0.05),
+            ),
+            child: Icon(
+              Icons.close_rounded,
+              size: 22,
+              color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -1097,106 +1272,84 @@ class _PublishContentState extends State<_PublishContent>
   }
 }
 
-// ==================== 三段切换器 ====================
-class _SegmentControl extends StatelessWidget {
-  const _SegmentControl({
+// ==================== 发布类型卡片（样式 B）====================
+class _PublishTypeCard extends StatelessWidget {
+  const _PublishTypeCard({
     required this.isDark,
-    required this.selected,
-    required this.onChanged,
+    required this.type,
+    required this.label,
+    required this.icon,
+    required this.gradient,
+    required this.onTap,
+    this.fullWidth = false,
   });
 
   final bool isDark;
-  final _PublishType selected;
-  final ValueChanged<_PublishType> onChanged;
+  final _PublishType type;
+  final String label;
+  final IconData icon;
+  final List<Color> gradient;
+  final VoidCallback onTap;
+  final bool fullWidth;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      height: 44,
-      padding: const EdgeInsets.all(3),
-      decoration: BoxDecoration(
-        color: isDark
-            ? Colors.white.withValues(alpha: 0.08)
-            : Colors.black.withValues(alpha: 0.05),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Row(
-        children: [
-          _buildTab(
-            context,
-            type: _PublishType.task,
-            label: context.l10n.publishTaskTab,
-            icon: Icons.task_alt_rounded,
-          ),
-          _buildTab(
-            context,
-            type: _PublishType.fleaMarket,
-            label: context.l10n.publishFleaMarketTab,
-            icon: Icons.storefront_rounded,
-          ),
-          _buildTab(
-            context,
-            type: _PublishType.post,
-            label: context.l10n.publishPostTab,
-            icon: Icons.article_rounded,
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildTab(
-    BuildContext context, {
-    required _PublishType type,
-    required String label,
-    required IconData icon,
-  }) {
-    final isActive = selected == type;
-
-    return Expanded(
-      child: GestureDetector(
-        onTap: () => onChanged(type),
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
-          curve: Curves.easeOutCubic,
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: AppRadius.allLarge,
+        child: Container(
+          padding: fullWidth
+              ? const EdgeInsets.symmetric(horizontal: 20, vertical: 20)
+              : const EdgeInsets.all(20),
           decoration: BoxDecoration(
-            color: isActive
-                ? (isDark ? AppColors.cardBackgroundDark : Colors.white)
-                : Colors.transparent,
-            borderRadius: BorderRadius.circular(10),
-            boxShadow: isActive
-                ? [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.06),
-                      blurRadius: 6,
-                      offset: const Offset(0, 2),
-                    ),
-                  ]
-                : null,
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                icon,
-                size: 16,
-                color: isActive
-                    ? AppColors.primary
-                    : (isDark ? AppColors.textTertiaryDark : AppColors.textTertiaryLight),
-              ),
-              const SizedBox(width: 4),
-              Text(
-                label,
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: isActive ? FontWeight.w600 : FontWeight.w500,
-                  color: isActive
-                      ? AppColors.primary
-                      : (isDark ? AppColors.textTertiaryDark : AppColors.textTertiaryLight),
-                ),
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: gradient,
+            ),
+            borderRadius: AppRadius.allLarge,
+            boxShadow: [
+              BoxShadow(
+                color: gradient.first.withValues(alpha: 0.35),
+                blurRadius: 14,
+                offset: const Offset(0, 4),
               ),
             ],
           ),
+          child: fullWidth
+              ? Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(icon, size: 32, color: Colors.white),
+                    const SizedBox(width: 16),
+                    Text(
+                      label,
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ],
+                )
+              : Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(icon, size: 32, color: Colors.white),
+                    const SizedBox(height: 8),
+                    Text(
+                      label,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ],
+                ),
         ),
       ),
     );

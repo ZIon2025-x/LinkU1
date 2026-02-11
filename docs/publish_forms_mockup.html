@@ -1,0 +1,660 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Link2Ur 发布表单页面 - 任务 / 闲置 / 帖子</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --primary: #2659F2;
+      --primary-light: #4088FF;
+      --success: #26BF73;
+      --success-light: #34D399;
+      --purple: #7359F2;
+      --purple-light: #A78BFA;
+      --bg: #F2F2F7;
+      --card: #FFFFFF;
+      --text: #000000;
+      --text-secondary: #3C3C43;
+      --text-tertiary: #8E8E93;
+      --border: rgba(0,0,0,0.06);
+      --radius-sm: 8px;
+      --radius-md: 12px;
+      --radius-lg: 16px;
+      --shadow: 0 2px 8px rgba(0,0,0,0.04);
+      --shadow-md: 0 4px 12px rgba(0,0,0,0.06);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'DM Sans', -apple-system, sans-serif;
+      background: linear-gradient(180deg, #E8ECF4 0%, var(--bg) 20%);
+      color: var(--text);
+      line-height: 1.5;
+      padding: 24px 16px 48px;
+      min-height: 100vh;
+    }
+
+    h1 {
+      font-size: 1.35rem;
+      font-weight: 700;
+      margin-bottom: 6px;
+      color: var(--text);
+    }
+    .page-subtitle {
+      color: var(--text-secondary);
+      font-size: 0.9rem;
+      margin-bottom: 20px;
+    }
+
+    .nav-tabs {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 24px;
+      flex-wrap: wrap;
+    }
+    .nav-tabs a {
+      display: inline-block;
+      padding: 10px 16px;
+      border-radius: var(--radius-md);
+      font-size: 14px;
+      font-weight: 600;
+      text-decoration: none;
+      color: var(--text-secondary);
+      background: var(--card);
+      box-shadow: var(--shadow);
+      transition: all 0.2s;
+    }
+    .nav-tabs a:hover {
+      color: var(--primary);
+      background: rgba(38, 89, 242, 0.08);
+    }
+    .nav-tabs a.active {
+      color: var(--primary);
+      background: rgba(38, 89, 242, 0.12);
+      box-shadow: 0 2px 8px rgba(38, 89, 242, 0.15);
+    }
+
+    .version-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+    }
+    .version-label {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-tertiary);
+    }
+    .version-tabs {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+    .version-tabs a {
+      display: inline-block;
+      padding: 8px 12px;
+      border-radius: var(--radius-sm);
+      font-size: 13px;
+      font-weight: 500;
+      text-decoration: none;
+      color: var(--text-secondary);
+      background: var(--card);
+      border: 1px solid var(--border);
+      transition: all 0.2s;
+    }
+    .version-tabs a:hover {
+      color: var(--primary);
+      border-color: rgba(38, 89, 242, 0.3);
+    }
+    .version-tabs a.active {
+      color: var(--primary);
+      background: rgba(38, 89, 242, 0.1);
+      border-color: var(--primary);
+    }
+
+    .phone {
+      max-width: 390px;
+      margin: 0 auto 48px;
+      background: var(--card);
+      border-radius: 24px;
+      overflow: hidden;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.08), 0 2px 8px rgba(0,0,0,0.04);
+      min-height: 560px;
+    }
+
+    .form-page { display: none; padding: 0 0 120px; }
+    .form-page.active { display: block; }
+
+    .form-header {
+      padding: 12px 16px 16px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .form-header .back {
+      width: 44px;
+      height: 44px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text);
+      border-radius: 12px;
+      background: var(--bg);
+    }
+    .form-header .title {
+      flex: 1;
+      text-align: center;
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--text);
+    }
+    .form-header .placeholder { width: 44px; }
+
+    .form-body { padding: 20px 20px 24px; }
+
+    .section-label {
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 8px;
+      display: block;
+    }
+    .field {
+      width: 100%;
+      padding: 14px 16px 14px 44px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      font-size: 15px;
+      font-family: inherit;
+      background: var(--bg);
+      margin-bottom: 16px;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    .field:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(38, 89, 242, 0.12);
+    }
+    .field::placeholder { color: var(--text-tertiary); }
+    .field-wrap { position: relative; margin-bottom: 16px; }
+    .field-wrap .icon {
+      position: absolute;
+      left: 14px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 20px;
+      height: 20px;
+      color: var(--text-tertiary);
+      pointer-events: none;
+    }
+    .field-wrap .field { padding-left: 44px; }
+    .field-wrap textarea.field {
+      min-height: 100px;
+      resize: vertical;
+      padding-top: 14px;
+    }
+    .field-wrap textarea.field + .icon { top: 20px; transform: none; }
+
+    .row { display: flex; gap: 12px; align-items: stretch; margin-bottom: 16px; }
+    .row .field-wrap { flex: 1; margin-bottom: 0; }
+    .currency-chip {
+      padding: 12px 14px;
+      border-radius: var(--radius-md);
+      background: rgba(38, 89, 242, 0.08);
+      color: var(--primary);
+      font-size: 14px;
+      font-weight: 600;
+      border: 1px solid transparent;
+      min-width: 72px;
+      text-align: center;
+    }
+
+    .select-field {
+      display: flex;
+      align-items: center;
+      padding: 14px 16px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      background: var(--bg);
+      margin-bottom: 16px;
+      font-size: 15px;
+      color: var(--text-secondary);
+      cursor: pointer;
+      transition: border-color 0.2s;
+    }
+    .select-field:hover { border-color: rgba(0,0,0,0.12); }
+    .select-field .icon { margin-right: 12px; color: var(--text-tertiary); }
+
+    .date-field {
+      display: flex;
+      align-items: center;
+      padding: 14px 16px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      background: var(--bg);
+      margin-bottom: 16px;
+      font-size: 15px;
+      color: var(--text-tertiary);
+    }
+    .date-field .icon { margin-right: 12px; }
+
+    .bottom-bar {
+      padding: 16px 20px 24px;
+      border-top: 1px solid var(--border);
+      background: var(--card);
+      box-shadow: 0 -4px 12px rgba(0,0,0,0.04);
+    }
+    .btn-primary {
+      width: 100%;
+      padding: 14px 20px;
+      border: none;
+      border-radius: var(--radius-md);
+      font-size: 16px;
+      font-weight: 600;
+      color: #fff;
+      cursor: pointer;
+      font-family: inherit;
+      margin-bottom: 12px;
+      transition: opacity 0.2s, transform 0.02s;
+    }
+    .btn-primary:active { transform: scale(0.99); }
+    .task .btn-primary { background: linear-gradient(135deg, var(--primary), var(--primary-light)); box-shadow: 0 4px 14px rgba(38, 89, 242, 0.35); }
+    .flea .btn-primary { background: linear-gradient(135deg, var(--success), var(--success-light)); box-shadow: 0 4px 14px rgba(38, 191, 115, 0.35); }
+    .post .btn-primary { background: linear-gradient(135deg, var(--purple), var(--purple-light)); box-shadow: 0 4px 14px rgba(115, 89, 242, 0.35); }
+    .btn-close {
+      width: 44px;
+      height: 44px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--bg);
+      border: none;
+      border-radius: 50%;
+      color: var(--text-secondary);
+      cursor: pointer;
+    }
+
+    /* 任务页强调色 */
+    .task .form-header .title { color: var(--primary); }
+    .task .section-label.highlight { color: var(--primary); }
+
+    /* 闲置页：图片区 */
+    .image-upload {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-bottom: 20px;
+    }
+    .image-slot {
+      width: 80px;
+      height: 80px;
+      border-radius: var(--radius-sm);
+      background: var(--bg);
+      border: 1px dashed var(--text-tertiary);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-tertiary);
+      font-size: 11px;
+      cursor: pointer;
+      transition: border-color 0.2s, background 0.2s;
+    }
+    .image-slot:hover { border-color: var(--success); background: rgba(38, 191, 115, 0.06); color: var(--success); }
+    .image-slot svg { width: 28px; height: 28px; margin-bottom: 4px; }
+    .image-slot.filled {
+      border-style: solid;
+      border-color: transparent;
+      background: linear-gradient(135deg, var(--success), var(--success-light));
+      color: #fff;
+    }
+
+    /* 帖子页：多行内容 */
+    .post .form-header .title { color: var(--purple); }
+    .post .field-wrap textarea.field { min-height: 140px; }
+
+    /* 图标用 SVG 占位 */
+    .icon svg { width: 20px; height: 20px; display: block; }
+
+    /* ========== 版本二：卡片分区 ========== */
+    #version-wrap.version-2 .form-body {
+      padding: 12px 16px 20px;
+      background: var(--bg);
+    }
+    #version-wrap.version-2 .section-label {
+      margin-top: 16px;
+      margin-bottom: 10px;
+      padding: 0 0 6px 10px;
+      border-left: 3px solid var(--primary);
+      font-size: 14px;
+    }
+    #version-wrap.version-2 .task .section-label { border-left-color: var(--primary); }
+    #version-wrap.version-2 .flea .section-label { border-left-color: var(--success); }
+    #version-wrap.version-2 .post .section-label { border-left-color: var(--purple); }
+    #version-wrap.version-2 .section-label:first-of-type { margin-top: 0; }
+    #version-wrap.version-2 .field,
+    #version-wrap.version-2 .select-field,
+    #version-wrap.version-2 .date-field {
+      background: var(--card);
+      border-radius: var(--radius-sm);
+      box-shadow: var(--shadow);
+      border-color: rgba(0,0,0,0.06);
+    }
+    #version-wrap.version-2 .form-header {
+      background: var(--card);
+      border-bottom: 1px solid var(--border);
+    }
+    #version-wrap.version-2 .phone {
+      box-shadow: 0 12px 40px rgba(0,0,0,0.1);
+    }
+
+    /* ========== 版本三：极简线框 ========== */
+    #version-wrap.version-3 .form-body { padding: 28px 20px 32px; }
+    #version-wrap.version-3 .section-label {
+      font-weight: 500;
+      color: var(--text-secondary);
+      font-size: 14px;
+      margin-bottom: 6px;
+    }
+    #version-wrap.version-3 .field,
+    #version-wrap.version-3 .select-field,
+    #version-wrap.version-3 .date-field {
+      border-radius: 6px;
+      border: 1px solid rgba(0,0,0,0.08);
+      background: #fafafa;
+    }
+    #version-wrap.version-3 .field-wrap .icon,
+    #version-wrap.version-3 .select-field .icon { color: var(--text-tertiary); opacity: 0.8; }
+    #version-wrap.version-3 .form-header {
+      border-bottom: 1px solid rgba(0,0,0,0.06);
+    }
+    #version-wrap.version-3 .btn-primary {
+      border-radius: 8px;
+      font-weight: 600;
+    }
+    #version-wrap.version-3 .phone {
+      border-radius: 20px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.06);
+    }
+
+    /* ========== 版本四：强调色块 ========== */
+    #version-wrap.version-4 .form-header {
+      padding: 16px 20px;
+    }
+    #version-wrap.version-4 .task .form-header { border-left: 4px solid var(--primary); }
+    #version-wrap.version-4 .flea .form-header { border-left: 4px solid var(--success); }
+    #version-wrap.version-4 .post .form-header { border-left: 4px solid var(--purple); }
+    #version-wrap.version-4 .field-wrap .icon {
+      width: 36px;
+      height: 36px;
+      left: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    #version-wrap.version-4 .task .field-wrap .icon { background: rgba(38, 89, 242, 0.12); color: var(--primary); }
+    #version-wrap.version-4 .flea .field-wrap .icon { background: rgba(38, 191, 115, 0.12); color: var(--success); }
+    #version-wrap.version-4 .post .field-wrap .icon { background: rgba(115, 89, 242, 0.12); color: var(--purple); }
+    #version-wrap.version-4 .field-wrap .field { padding-left: 54px; }
+    #version-wrap.version-4 .select-field .icon {
+      width: 36px;
+      height: 36px;
+      margin-right: 12px;
+      border-radius: 10px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+    #version-wrap.version-4 .task .select-field .icon { background: rgba(38, 89, 242, 0.12); color: var(--primary); }
+    #version-wrap.version-4 .flea .select-field .icon { background: rgba(38, 191, 115, 0.12); color: var(--success); }
+    #version-wrap.version-4 .post .select-field .icon { background: rgba(115, 89, 242, 0.12); color: var(--purple); }
+    #version-wrap.version-4 .section-label {
+      font-size: 14px;
+      letter-spacing: 0.02em;
+    }
+    #version-wrap.version-4 .currency-chip {
+      background: rgba(38, 89, 242, 0.15);
+      font-weight: 700;
+    }
+    #version-wrap.version-4 .phone {
+      overflow: hidden;
+      border: 1px solid rgba(0,0,0,0.04);
+    }
+    #version-wrap.version-4 .field-wrap:has(textarea) .icon {
+      top: 20px;
+      transform: none;
+    }
+  </style>
+</head>
+<body>
+  <h1>Link2Ur 发布表单</h1>
+  <p class="page-subtitle">多版样式，可切换「版本」与「页面类型」对比选择</p>
+
+  <div class="version-row">
+    <span class="version-label">版本</span>
+    <div class="version-tabs">
+      <a href="#" data-version="1" class="active">一 · 圆角图标</a>
+      <a href="#" data-version="2">二 · 卡片分区</a>
+      <a href="#" data-version="3">三 · 极简线框</a>
+      <a href="#" data-version="4">四 · 强调色块</a>
+    </div>
+  </div>
+  <div class="nav-tabs">
+    <a href="#task" class="active">任务发布</a>
+    <a href="#flea">闲置发布</a>
+    <a href="#post">帖子发布</a>
+  </div>
+
+  <div id="version-wrap" class="version-1">
+  <div class="phone task">
+    <div id="task" class="form-page active">
+      <div class="form-header">
+        <div class="back">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
+        </div>
+        <span class="title">任务发布</span>
+        <div class="placeholder"></div>
+      </div>
+      <div class="form-body">
+        <label class="section-label">任务类型</label>
+        <div class="select-field">
+          <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h16"/></svg></span>
+          选择类型
+        </div>
+
+        <label class="section-label">标题</label>
+        <div class="field-wrap">
+          <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h7"/></svg></span>
+          <input type="text" class="field" placeholder="简要描述你的任务需求" />
+        </div>
+
+        <label class="section-label">描述</label>
+        <div class="field-wrap">
+          <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6M16 13H8M16 17H8M10 9H8"/></svg></span>
+          <textarea class="field" placeholder="详细说明任务内容、要求等（选填）" rows="4"></textarea>
+        </div>
+
+        <label class="section-label highlight">报酬</label>
+        <div class="row">
+          <div class="field-wrap">
+            <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg></span>
+            <input type="text" class="field" placeholder="0.00" />
+          </div>
+          <div class="currency-chip">GBP</div>
+        </div>
+
+        <label class="section-label">地点</label>
+        <div class="select-field">
+          <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg></span>
+          输入或选择地点（选填）
+        </div>
+
+        <label class="section-label">截止日期</label>
+        <div class="date-field">
+          <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg></span>
+          选择截止日期
+        </div>
+      </div>
+      <div class="bottom-bar">
+        <button type="button" class="btn-primary">发布任务</button>
+        <button type="button" class="btn-close">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div class="phone flea">
+    <div id="flea" class="form-page">
+      <div class="form-header">
+        <div class="back">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
+        </div>
+        <span class="title">闲置发布</span>
+        <div class="placeholder"></div>
+      </div>
+      <div class="form-body">
+        <label class="section-label">商品图片</label>
+        <div class="image-upload">
+          <div class="image-slot filled"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>1/9</div>
+          <div class="image-slot"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>添加</div>
+          <div class="image-slot"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>添加</div>
+        </div>
+
+        <label class="section-label">商品标题</label>
+        <div class="field-wrap">
+          <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h7"/></svg></span>
+          <input type="text" class="field" placeholder="例如：九成新 iPad Air 4" />
+        </div>
+
+        <label class="section-label">描述（选填）</label>
+        <div class="field-wrap">
+          <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6M16 13H8M16 17H8M10 9H8"/></svg></span>
+          <textarea class="field" placeholder="成色、配件、使用情况等" rows="3"></textarea>
+        </div>
+
+        <label class="section-label">价格</label>
+        <div class="field-wrap">
+          <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg></span>
+          <input type="text" class="field" placeholder="0.00" />
+        </div>
+
+        <label class="section-label">分类</label>
+        <div class="select-field">
+          <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h16"/></svg></span>
+          选择分类
+        </div>
+
+        <label class="section-label">地点（选填）</label>
+        <div class="select-field">
+          <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg></span>
+          输入或选择交易地点
+        </div>
+      </div>
+      <div class="bottom-bar">
+        <button type="button" class="btn-primary">发布闲置</button>
+        <button type="button" class="btn-close">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div class="phone post">
+    <div id="post" class="form-page">
+      <div class="form-header">
+        <div class="back">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
+        </div>
+        <span class="title">帖子发布</span>
+        <div class="placeholder"></div>
+      </div>
+      <div class="form-body">
+        <label class="section-label">选择板块</label>
+        <div class="select-field">
+          <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg></span>
+          选择发帖板块
+        </div>
+
+        <label class="section-label">标题</label>
+        <div class="field-wrap">
+          <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h7"/></svg></span>
+          <input type="text" class="field" placeholder="输入标题" />
+        </div>
+
+        <label class="section-label">内容</label>
+        <div class="field-wrap">
+          <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></span>
+          <textarea class="field" placeholder="分享你的想法、问题或经历…" rows="6"></textarea>
+        </div>
+      </div>
+      <div class="bottom-bar">
+        <button type="button" class="btn-primary">发布帖子</button>
+        <button type="button" class="btn-close">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+        </button>
+      </div>
+    </div>
+  </div>
+  </div><!-- #version-wrap -->
+
+  <script>
+    (function() {
+      var versionWrap = document.getElementById('version-wrap');
+      var versionTabs = document.querySelectorAll('.version-tabs a');
+      var tabs = document.querySelectorAll('.nav-tabs a');
+      var phones = document.querySelectorAll('.phone');
+      var formPages = document.querySelectorAll('.form-page');
+
+      function setVersion(v) {
+        versionWrap.className = 'version-' + v;
+        versionTabs.forEach(function(t) { t.classList.toggle('active', t.getAttribute('data-version') === String(v)); });
+      }
+
+      function showForm(index) {
+        tabs.forEach(function(t, i) { t.classList.toggle('active', i === index); });
+        phones.forEach(function(p, i) { p.style.display = i === index ? 'block' : 'none'; });
+        formPages.forEach(function(p, i) { p.classList.toggle('active', i === index); });
+        window.location.hash = ['task', 'flea', 'post'][index];
+      }
+
+      versionTabs.forEach(function(tab) {
+        tab.addEventListener('click', function(e) {
+          e.preventDefault();
+          setVersion(tab.getAttribute('data-version'));
+        });
+      });
+
+      tabs.forEach(function(tab, i) {
+        tab.addEventListener('click', function(e) {
+          e.preventDefault();
+          showForm(i);
+        });
+      });
+
+      var hash = (window.location.hash || '#task').slice(1);
+      var idx = ['task', 'flea', 'post'].indexOf(hash);
+      showForm(idx >= 0 ? idx : 0);
+
+      var v = (window.location.search.match(/[?&]v=(\d)/) || [])[1] || '1';
+      setVersion(v);
+
+      window.addEventListener('hashchange', function() {
+        var h = (window.location.hash || '#task').slice(1);
+        var i = ['task', 'flea', 'post'].indexOf(h);
+        if (i >= 0) showForm(i);
+      });
+    })();
+  </script>
+</body>
+</html>

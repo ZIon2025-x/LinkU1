@@ -3574,9 +3574,13 @@
   "serviceApplyOtherSlot": "申请其他时间段",
 
   "publishTitle": "发布",
+  "publishTypeSubtitle": "选择你要发布的内容类型",
   "publishTaskTab": "任务发布",
   "publishFleaMarketTab": "闲置发布",
   "publishPostTab": "帖子发布",
+  "publishTaskCardLabel": "发布任务",
+  "publishFleaCardLabel": "发布闲置",
+  "publishPostCardLabel": "发帖子",
 
   "profileUpdateFailed": "更新失败",
   "profileAvatarUpdated": "头像已更新",
