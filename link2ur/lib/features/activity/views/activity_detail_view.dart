@@ -2,7 +2,6 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../../core/design/app_colors.dart';
@@ -17,6 +16,7 @@ import '../../../core/widgets/error_state_view.dart';
 import '../../../core/widgets/async_image_view.dart';
 import '../../../core/widgets/full_screen_image_view.dart';
 import '../../../core/widgets/custom_share_panel.dart';
+import '../../../core/router/app_router.dart';
 import '../../../data/models/activity.dart';
 import '../../../data/models/task_expert.dart';
 import '../../../data/repositories/activity_repository.dart';
@@ -140,7 +140,7 @@ class _ActivityDetailViewContent extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 4),
               child: GestureDetector(
                 onTap: () {
-                  context.push('/task-experts/${state.activityDetail!.expertId}');
+                  context.safePush('/task-experts/${state.activityDetail!.expertId}');
                 },
                 child: Container(
                   width: 32,
@@ -1249,7 +1249,7 @@ class _PosterInfoRow extends StatelessWidget {
         onTap: () {
           AppHaptics.selection();
           if (activity.expertId.isNotEmpty) {
-            context.push('/task-experts/${activity.expertId}');
+            context.safePush('/task-experts/${activity.expertId}');
           }
         },
         child: Container(

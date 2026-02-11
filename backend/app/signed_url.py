@@ -8,6 +8,7 @@ import hashlib
 import time
 import base64
 import json
+import os
 from datetime import datetime, timedelta
 from typing import Optional, Dict, Any
 from urllib.parse import quote, unquote
@@ -19,9 +20,50 @@ class SignedURLManager:
     """签名URL管理器"""
     
     def __init__(self, secret_key: str = None):
-        # 使用环境变量或默认密钥
-        self.secret_key = secret_key or "your-secret-key-change-in-production"
+        # 密钥优先级：参数 > SIGNED_URL_SECRET > SECRET_KEY
+        self.secret_key = self._resolve_secret_key(secret_key)
         self.default_expiry_minutes = None  # 无过期时间
+
+    def _resolve_secret_key(self, provided_key: Optional[str]) -> str:
+        """解析签名密钥，生产环境禁止使用默认/空密钥。"""
+        if provided_key:
+            return provided_key
+
+        signed_secret = os.getenv("SIGNED_URL_SECRET", "").strip()
+        app_secret = os.getenv("SECRET_KEY", "").strip()
+        is_production = os.getenv("ENVIRONMENT", "development") == "production"
+
+        try:
+            from app.config import Config
+            if not signed_secret:
+                signed_secret = getattr(Config, "SIGNED_URL_SECRET", "").strip()
+            if not app_secret:
+                app_secret = getattr(Config, "SECRET_KEY", "").strip()
+            is_production = is_production or bool(getattr(Config, "IS_PRODUCTION", False))
+        except Exception:
+            # 配置模块不可用时，回退到环境变量，不中断开发流程
+            pass
+
+        resolved = signed_secret or app_secret
+        insecure_values = {
+            "",
+            "your-secret-key-change-in-production",
+            "change-this-secret-key-in-production",
+            "linku-dev-only-insecure-key-do-not-use-in-production",
+        }
+
+        if is_production and resolved in insecure_values:
+            raise RuntimeError(
+                "SIGNED_URL_SECRET (or SECRET_KEY) must be configured with a secure value in production"
+            )
+
+        if not resolved:
+            resolved = "linku-signed-url-dev-only-insecure-key"
+            logger.warning(
+                "SIGNED_URL_SECRET is not configured; using development fallback key."
+            )
+
+        return resolved
     
     def generate_signed_url(
         self, 

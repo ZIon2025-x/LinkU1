@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:go_router/go_router.dart';
 
 import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_spacing.dart';
@@ -11,6 +10,7 @@ import '../../../core/utils/l10n_extension.dart';
 import '../../../core/widgets/skeleton_view.dart';
 import '../../../core/widgets/empty_state_view.dart';
 import '../../../core/widgets/async_image_view.dart';
+import '../../../core/router/app_router.dart';
 import '../../../data/models/task_expert.dart';
 import '../../../data/repositories/task_expert_repository.dart';
 import '../bloc/task_expert_bloc.dart';
@@ -123,7 +123,7 @@ class _TaskExpertSearchContentState
               return _ExpertCard(
                 expert: expert,
                 onTap: () =>
-                    context.push('/task-experts/${expert.id}'),
+                    context.safePush('/task-experts/${expert.id}'),
               );
             },
           );

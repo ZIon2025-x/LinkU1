@@ -9,6 +9,7 @@ class ApiConfig {
   static const Map<String, String> defaultHeaders = {
     'Content-Type': 'application/json',
     'Accept': 'application/json',
+    'Accept-Encoding': 'gzip, deflate',
     'X-App-Platform': 'flutter',
     'X-App-Version': '1.0.0',
   };

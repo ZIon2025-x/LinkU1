@@ -2,7 +2,6 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:go_router/go_router.dart';
 
 import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_radius.dart';
@@ -13,6 +12,7 @@ import '../../../core/utils/l10n_extension.dart';
 import '../../../core/widgets/loading_view.dart';
 import '../../../core/widgets/error_state_view.dart';
 import '../../../core/widgets/empty_state_view.dart';
+import '../../../core/router/app_router.dart';
 import '../../../core/widgets/async_image_view.dart';
 import '../../../data/repositories/task_expert_repository.dart';
 import '../../../data/models/task_expert.dart';
@@ -181,7 +181,7 @@ class _ExpertCard extends StatelessWidget {
         AppHaptics.selection();
         final expertId = int.tryParse(expert.id) ?? 0;
         if (expertId > 0) {
-          context.push('/task-experts/$expertId');
+          context.safePush('/task-experts/$expertId');
         }
       },
       child: Container(

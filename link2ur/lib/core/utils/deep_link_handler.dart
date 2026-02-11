@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:app_links/app_links.dart';
+import '../router/app_router.dart';
 
 import 'logger.dart';
 
@@ -66,15 +67,15 @@ class DeepLinkHandler {
       switch (_getRouteType(path)) {
         case _DeepLinkRoute.task:
           final id = _extractId(path);
-          if (id != null) context.push('/tasks/$id');
+          if (id != null) context.safePush('/tasks/$id');
           break;
         case _DeepLinkRoute.forumPost:
           final id = _extractId(path);
-          if (id != null) context.push('/forum/posts/$id');
+          if (id != null) context.safePush('/forum/posts/$id');
           break;
         case _DeepLinkRoute.fleaMarketItem:
           final id = _extractId(path);
-          if (id != null) context.push('/flea-market/$id');
+          if (id != null) context.safePush('/flea-market/$id');
           break;
         case _DeepLinkRoute.userProfile:
           final id = _extractId(path);
@@ -90,7 +91,7 @@ class DeepLinkHandler {
           break;
         case _DeepLinkRoute.taskExpert:
           final id = _extractId(path);
-          if (id != null) context.push('/task-experts/$id');
+          if (id != null) context.safePush('/task-experts/$id');
           break;
         case _DeepLinkRoute.unknown:
           AppLogger.warning('Deep link - Unknown route: $path');

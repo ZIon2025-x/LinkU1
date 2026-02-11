@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 
 import '../models/task.dart';
@@ -32,6 +33,7 @@ class TaskRepository {
     String? status,
     String? keyword,
     String? sortBy,
+    CancelToken? cancelToken,
   }) async {
     final params = {
       'page': page,
@@ -58,6 +60,7 @@ class TaskRepository {
       final response = await _apiService.get<Map<String, dynamic>>(
         ApiEndpoints.tasks,
         queryParameters: params,
+        cancelToken: cancelToken,
       );
 
       if (!response.isSuccess || response.data == null) {
@@ -87,6 +90,7 @@ class TaskRepository {
   Future<TaskListResponse> getRecommendedTasks({
     int page = 1,
     int pageSize = 20,
+    CancelToken? cancelToken,
   }) async {
     final params = {'page': page, 'page_size': pageSize};
     final cacheKey =
@@ -103,6 +107,7 @@ class TaskRepository {
       final response = await _apiService.get<Map<String, dynamic>>(
         ApiEndpoints.recommendations,
         queryParameters: params,
+        cancelToken: cancelToken,
       );
 
       if (!response.isSuccess || response.data == null) {
@@ -159,7 +164,7 @@ class TaskRepository {
   }
 
   /// 获取任务详情
-  Future<Task> getTaskById(int id) async {
+  Future<Task> getTaskById(int id, {CancelToken? cancelToken}) async {
     final cacheKey = '${CacheManager.prefixTaskDetail}$id';
 
     // 1. 检查未过期缓存
@@ -172,6 +177,7 @@ class TaskRepository {
     try {
       final response = await _apiService.get<Map<String, dynamic>>(
         ApiEndpoints.taskById(id),
+        cancelToken: cancelToken,
       );
 
       if (!response.isSuccess || response.data == null) {
@@ -191,7 +197,8 @@ class TaskRepository {
   }
 
   /// 获取任务详情（别名）
-  Future<Task> getTaskDetail(int id) => getTaskById(id);
+  Future<Task> getTaskDetail(int id, {CancelToken? cancelToken}) =>
+      getTaskById(id, cancelToken: cancelToken);
 
   /// 创建任务
   Future<Task> createTask(CreateTaskRequest request) async {

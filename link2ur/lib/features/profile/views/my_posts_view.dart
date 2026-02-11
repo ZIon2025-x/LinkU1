@@ -6,6 +6,7 @@ import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_radius.dart';
 import '../../../core/utils/l10n_extension.dart';
+import '../../../core/router/app_router.dart';
 import '../../../core/utils/haptic_feedback.dart';
 import '../../../core/widgets/skeleton_view.dart';
 import '../../../core/widgets/error_state_view.dart';
@@ -312,7 +313,7 @@ class _MyPostsViewState extends State<MyPostsView>
             child: _FleaMarketItemCard(
               item: item,
               category: category,
-              onTap: () => context.push('/flea-market/${item.id}'),
+              onTap: () => context.safePush('/flea-market/${item.id}'),
             ),
           );
         },

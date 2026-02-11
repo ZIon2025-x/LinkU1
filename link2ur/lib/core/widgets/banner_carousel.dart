@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:go_router/go_router.dart';
+import '../router/app_router.dart';
 
 import '../design/app_colors.dart';
 import '../utils/helpers.dart';
@@ -91,13 +92,13 @@ class _BannerCarouselState extends State<BannerCarousel> {
 
     switch (linkType) {
       case 'task':
-        context.push('/tasks/$linkValue');
+        context.safePush('/tasks/$linkValue');
         break;
       case 'forum_post':
-        context.push('/forum/posts/$linkValue');
+        context.safePush('/forum/posts/$linkValue');
         break;
       case 'flea_market':
-        context.push('/flea-market/$linkValue');
+        context.safePush('/flea-market/$linkValue');
         break;
       case 'activity':
         context.push('/activities/$linkValue');
@@ -106,7 +107,7 @@ class _BannerCarouselState extends State<BannerCarousel> {
         context.push('/leaderboard/$linkValue');
         break;
       case 'task_expert':
-        context.push('/task-experts/$linkValue');
+        context.safePush('/task-experts/$linkValue');
         break;
       case 'url':
         // 外部URL - 可使用 url_launcher
@@ -130,6 +131,7 @@ class _BannerCarouselState extends State<BannerCarousel> {
             borderRadius: BorderRadius.circular(widget.borderRadius),
             child: PageView.builder(
               controller: _pageController,
+              allowImplicitScrolling: true,
               itemCount: widget.banners.length,
               onPageChanged: (index) {
                 setState(() => _currentIndex = index);

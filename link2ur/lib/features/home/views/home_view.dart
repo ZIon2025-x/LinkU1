@@ -24,6 +24,7 @@ import 'package:geolocator/geolocator.dart';
 
 import '../../../core/widgets/content_constraint.dart';
 import '../../../core/widgets/gradient_text.dart';
+import '../../../core/router/app_router.dart';
 import '../../../data/models/task.dart';
 import '../../../data/models/task_expert.dart';
 import '../../../data/repositories/task_expert_repository.dart';

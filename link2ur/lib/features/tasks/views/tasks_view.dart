@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 import '../../../core/utils/haptic_feedback.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -9,11 +7,13 @@ import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_radius.dart';
 import '../../../core/design/app_typography.dart';
+import '../../../core/utils/debouncer.dart';
 import '../../../core/utils/l10n_extension.dart';
 import '../../../core/utils/responsive.dart';
 import '../../../core/utils/task_type_helper.dart';
 import '../../../core/widgets/async_image_view.dart';
 import '../../../core/widgets/animated_list_item.dart';
+import '../../../core/router/app_router.dart';
 import '../../../core/widgets/empty_state_view.dart';
 import '../../../core/widgets/skeleton_view.dart';
 import '../../../core/widgets/error_state_view.dart';
@@ -50,8 +50,7 @@ class _TasksViewContent extends StatefulWidget {
 class _TasksViewContentState extends State<_TasksViewContent> {
   final TextEditingController _searchController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
-  Timer? _debounceTimer;
-  static const _debounceDuration = Duration(milliseconds: 400);
+  final Debouncer _debouncer = Debouncer();
 
   // 11个分类 (对齐iOS TasksView - SF Symbols)
   final List<Map<String, dynamic>> _categories = [
@@ -90,7 +89,7 @@ class _TasksViewContentState extends State<_TasksViewContent> {
   void dispose() {
     _searchController.dispose();
     _scrollController.dispose();
-    _debounceTimer?.cancel();
+    _debouncer.dispose();
     super.dispose();
   }
 
@@ -168,8 +167,7 @@ class _TasksViewContentState extends State<_TasksViewContent> {
                   contentPadding: const EdgeInsets.symmetric(vertical: 12),
                 ),
                 onChanged: (value) {
-                  _debounceTimer?.cancel();
-                  _debounceTimer = Timer(_debounceDuration, () {
+                  _debouncer.call(() {
                     if (!mounted) return;
                     context
                         .read<TaskListBloc>()
@@ -183,7 +181,7 @@ class _TasksViewContentState extends State<_TasksViewContent> {
                 icon: const Icon(Icons.clear, size: 18),
                 onPressed: () {
                   _searchController.clear();
-                  _debounceTimer?.cancel();
+                  _debouncer.cancel();
                   context
                       .read<TaskListBloc>()
                       .add(const TaskListSearchChanged(''));
@@ -228,54 +226,43 @@ class _TasksViewContentState extends State<_TasksViewContent> {
                             category['key'] as String),
                       );
                 },
-                child: TweenAnimationBuilder<double>(
-                  tween: Tween(
-                    begin: isSelected ? 1.0 : 1.03,
-                    end: isSelected ? 1.03 : 1.0,
-                  ),
+                child: AnimatedContainer(
                   duration: const Duration(milliseconds: 300),
                   curve: Curves.easeOutCubic,
-                  builder: (context, scale, child) {
-                    return Transform.scale(scale: scale, child: child);
-                  },
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 300),
-                    curve: Curves.easeOutCubic,
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                    decoration: BoxDecoration(
-                      gradient: isSelected
-                          ? const LinearGradient(
-                              colors: AppColors.gradientPrimary,
-                            )
-                          : null,
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  decoration: BoxDecoration(
+                    gradient: isSelected
+                        ? const LinearGradient(
+                            colors: AppColors.gradientPrimary,
+                          )
+                        : null,
+                    color: isSelected
+                        ? null
+                        : (isDark
+                            ? AppColors.surface2(Brightness.dark)
+                            : AppColors.surface1(Brightness.light)),
+                    borderRadius: BorderRadius.circular(20),
+                    border: isSelected
+                        ? null
+                        : Border.all(
+                            color: (isDark
+                                    ? AppColors.separatorDark
+                                    : AppColors.separatorLight)
+                                .withValues(alpha: 0.3),
+                          ),
+                  ),
+                  alignment: Alignment.center,
+                  child: Text(
+                    label,
+                    style: TextStyle(
                       color: isSelected
-                          ? null
+                          ? Colors.white
                           : (isDark
-                              ? AppColors.surface2(Brightness.dark)
-                              : AppColors.surface1(Brightness.light)),
-                      borderRadius: BorderRadius.circular(20),
-                      border: isSelected
-                          ? null
-                          : Border.all(
-                              color: (isDark
-                                      ? AppColors.separatorDark
-                                      : AppColors.separatorLight)
-                                  .withValues(alpha: 0.3),
-                            ),
-                    ),
-                    alignment: Alignment.center,
-                    child: Text(
-                      label,
-                      style: TextStyle(
-                        color: isSelected
-                            ? Colors.white
-                            : (isDark
-                                ? AppColors.textPrimaryDark
-                                : AppColors.textPrimaryLight),
-                        fontWeight:
-                            isSelected ? FontWeight.w600 : FontWeight.normal,
-                        fontSize: 14,
-                      ),
+                              ? AppColors.textPrimaryDark
+                              : AppColors.textPrimaryLight),
+                      fontWeight:
+                          isSelected ? FontWeight.w600 : FontWeight.normal,
+                      fontSize: 14,
                     ),
                   ),
                 ),
@@ -389,6 +376,7 @@ class _TasksViewContentState extends State<_TasksViewContent> {
           key: const ValueKey('content'),
           child: GridView.builder(
             controller: _scrollController,
+            cacheExtent: 500,
             clipBehavior: Clip.none,
             padding: AppSpacing.allMd,
             gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
@@ -407,9 +395,11 @@ class _TasksViewContentState extends State<_TasksViewContent> {
                   ),
                 );
               }
+              final task = state.tasks[index];
               return AnimatedListItem(
+                key: ValueKey(task.id),
                 index: index,
-                child: _TaskGridCard(task: state.tasks[index]),
+                child: _TaskGridCard(task: task),
               );
             },
           ),
@@ -490,7 +480,7 @@ class _TaskGridCard extends StatelessWidget {
     return GestureDetector(
       onTap: () {
         AppHaptics.selection();
-        context.push('/tasks/${task.id}');
+        context.safePush('/tasks/${task.id}');
       },
       child: Container(
         decoration: BoxDecoration(

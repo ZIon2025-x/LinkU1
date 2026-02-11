@@ -53,8 +53,8 @@ void main() async {
   // 内部已并行化 SharedPreferences + Hive.openBox + CacheManager
   await StorageService.instance.init();
 
-  // AppConfig 依赖 StorageService，必须在其之后
-  await AppConfig.instance.init();
+  // AppConfig 依赖 StorageService，必须在其之后（同步初始化，无需 await）
+  AppConfig.instance.init();
 
   // 网络监测：非阻塞初始化，不影响启动速度
   NetworkMonitor.instance.initialize();

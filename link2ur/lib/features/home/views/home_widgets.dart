@@ -1,114 +1,78 @@
 part of 'home_view.dart';
 
-/// Returns subtle gradient colors for greeting background based on time of day.
-/// Alpha ~0.08–0.12 for a soft background.
-List<Color> _greetingGradientColorsForHour(int hour) {
-  const alpha = 0.10;
-  // Morning (6–12): warm orange-pink
-  if (hour >= 6 && hour < 12) {
-    return [
-      AppColors.accentPink.withValues(alpha: alpha),
-      AppColors.accent.withValues(alpha: alpha),
-    ];
-  }
-  // Afternoon (12–18): blue (primary)
-  if (hour >= 12 && hour < 18) {
-    return AppColors.gradientPrimary
-        .map((c) => c.withValues(alpha: alpha))
-        .toList();
-  }
-  // Evening (18–22): purple-indigo
-  if (hour >= 18 && hour < 22) {
-    return AppColors.gradientIndigo
-        .map((c) => c.withValues(alpha: alpha))
-        .toList();
-  }
-  // Night (22–6): dark blue-purple
-  return [
-    AppColors.primaryDark.withValues(alpha: alpha),
-    AppColors.purple.withValues(alpha: alpha),
-  ];
-}
-
-/// 对标iOS: GreetingSection - 个性化问候语
+/// 对标iOS: headerSection — 两行问候 + 右侧通知按钮
 class _GreetingSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final isDesktop = ResponsiveUtils.isDesktop(context);
-    final authState = context.watch<AuthBloc>().state;
-    final userName = authState.isAuthenticated
-        ? (authState.user?.name ?? context.l10n.homeDefaultUser)
+    // 使用 select 只监听用户名变化，避免 AuthBloc 任何状态变更都触发重建
+    final isAuthenticated = context.select<AuthBloc, bool>((bloc) => bloc.state.isAuthenticated);
+    final userNameFromState = context.select<AuthBloc, String?>((bloc) => bloc.state.user?.name);
+    final userName = isAuthenticated
+        ? (userNameFromState ?? context.l10n.homeDefaultUser)
         : context.l10n.homeClassmate;
 
     final horizontalPadding = isDesktop ? 40.0 : AppSpacing.md;
-    final gradientColors = _greetingGradientColorsForHour(DateTime.now().hour);
 
     return Padding(
       padding: EdgeInsets.fromLTRB(
-          horizontalPadding, AppSpacing.lg, horizontalPadding, AppSpacing.md),
-      child: Container(
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(16),
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: gradientColors,
+          horizontalPadding, AppSpacing.sm, horizontalPadding, 0),
+      child: Row(
+        children: [
+          // 左侧：两行问候文字（对标iOS headerSection）
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // 小字副标题
+                Text(
+                  context.l10n.homeWhatToDo,
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w500,
+                    color: isDark
+                        ? AppColors.textSecondaryDark
+                        : AppColors.textSecondaryLight,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                // 大字用户名
+                Text(
+                  context.l10n.homeGreeting(userName),
+                  style: TextStyle(
+                    fontSize: 26,
+                    fontWeight: FontWeight.w900,
+                    color: isDark
+                        ? AppColors.textPrimaryDark
+                        : AppColors.textPrimaryLight,
+                  ),
+                ),
+              ],
+            ),
           ),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
-          child: Row(
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    GradientText.brand(
-                      text: context.l10n.homeGreeting(userName),
-                      style: const TextStyle(
-                        fontSize: 28,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      context.l10n.homeWhatToDo,
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w500,
-                        color: isDark
-                            ? AppColors.textSecondaryDark
-                            : AppColors.textSecondaryLight,
-                      ),
-                    ),
-                  ],
+          // 右侧：AI 助手按钮（后续接入 AI 对话功能）
+          GestureDetector(
+            onTap: () => context.push('/ai-chat'),
+            child: Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: AppColors.gradientPrimary,
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
                 ),
+                shape: BoxShape.circle,
               ),
-              // 对标iOS: Image(systemName: "sparkles") + .ultraThinMaterial + Circle
-              Container(
-                width: 48,
-                height: 48,
-                decoration: BoxDecoration(
-                  color: (isDark ? Colors.white : Colors.black).withValues(alpha: 0.05),
-                  shape: BoxShape.circle,
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.05),
-                      blurRadius: 5,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
-                ),
-                child: const Icon(
-                  Icons.auto_awesome,
-                  color: AppColors.primary,
-                  size: 24,
-                ),
+              child: const Icon(
+                Icons.auto_awesome,
+                color: Colors.white,
+                size: 20,
               ),
-            ],
+            ),
           ),
-        ),
+        ],
       ),
     );
   }
@@ -123,16 +87,20 @@ class _BannerCarousel extends StatefulWidget {
 }
 
 class _BannerCarouselState extends State<_BannerCarousel> {
+  static const _bannerCount = 3;
+  static const _autoPlayInterval = Duration(seconds: 4);
+
   final PageController _controller = PageController(viewportFraction: 0.88);
-  // 使用 ValueNotifier 替代 setState，缩小重建范围
-  // 只有依赖这些值的子 Widget 会重建，而非整个 _BannerCarousel
   final ValueNotifier<int> _currentPage = ValueNotifier<int>(0);
   final ValueNotifier<double> _pageOffset = ValueNotifier<double>(0.0);
+
+  Timer? _autoPlayTimer;
 
   @override
   void initState() {
     super.initState();
     _controller.addListener(_onScroll);
+    _startAutoPlay();
   }
 
   void _onScroll() {
@@ -141,8 +109,27 @@ class _BannerCarouselState extends State<_BannerCarousel> {
     }
   }
 
+  void _startAutoPlay() {
+    _autoPlayTimer?.cancel();
+    _autoPlayTimer = Timer.periodic(_autoPlayInterval, (_) {
+      if (!_controller.hasClients) return;
+      final next = (_currentPage.value + 1) % _bannerCount;
+      _controller.animateToPage(
+        next,
+        duration: const Duration(milliseconds: 400),
+        curve: Curves.easeInOut,
+      );
+    });
+  }
+
+  void _stopAutoPlay() {
+    _autoPlayTimer?.cancel();
+    _autoPlayTimer = null;
+  }
+
   @override
   void dispose() {
+    _stopAutoPlay();
     _controller.removeListener(_onScroll);
     _controller.dispose();
     _currentPage.dispose();
@@ -162,10 +149,15 @@ class _BannerCarouselState extends State<_BannerCarousel> {
             child: ValueListenableBuilder<double>(
               valueListenable: _pageOffset,
               builder: (context, pageOffset, _) {
-                return PageView.builder(
+                return GestureDetector(
+                  // 手指按下时暂停自动轮播，抬起后恢复
+                  onPanDown: (_) => _stopAutoPlay(),
+                  onPanEnd: (_) => _startAutoPlay(),
+                  onPanCancel: () => _startAutoPlay(),
+                  child: PageView.builder(
                   clipBehavior: Clip.none,
                   controller: _controller,
-                  itemCount: 3,
+                  itemCount: _bannerCount,
                   onPageChanged: (index) {
                     _currentPage.value = index;
                   },
@@ -215,6 +207,7 @@ class _BannerCarouselState extends State<_BannerCarousel> {
                       child: banners[index],
                     );
                   },
+                ),
                 );
               },
             ),
@@ -227,7 +220,7 @@ class _BannerCarouselState extends State<_BannerCarousel> {
           builder: (context, currentPage, _) {
             return Row(
               mainAxisAlignment: MainAxisAlignment.center,
-              children: List.generate(3, (index) {
+              children: List.generate(_bannerCount, (index) {
                 final isActive = currentPage == index;
                 return AnimatedContainer(
                   duration: const Duration(milliseconds: 300),
@@ -350,49 +343,49 @@ class _BannerItem extends StatelessWidget {
                   ),
                 ),
               ),
-            // 装饰图标（无图片时显示）
+            // 装饰图标（无图片时显示）— 右上角，避免与底部文字重叠
             if (imagePath == null)
               Positioned(
-                right: 20,
-                bottom: 10,
+                right: 16,
+                top: 12,
                 child: Icon(
                   icon,
-                  size: 80,
-                  color: Colors.white.withValues(alpha: 0.2),
+                  size: 64,
+                  color: Colors.white.withValues(alpha: 0.25),
                 ),
               ),
-            // 文字内容
+            // 文字内容 — 底部对齐，配合渐变遮罩保证可读性
             Padding(
-              padding: const EdgeInsets.all(20),
+              padding: const EdgeInsets.all(16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.center,
+                mainAxisAlignment: MainAxisAlignment.end,
                 children: [
                   Text(
                     title,
                     style: const TextStyle(
                       color: Colors.white,
-                      fontSize: 22,
+                      fontSize: 20,
                       fontWeight: FontWeight.bold,
                       shadows: [
                         Shadow(
-                          color: Colors.black26,
-                          blurRadius: 4,
+                          color: Colors.black38,
+                          blurRadius: 6,
                           offset: Offset(0, 1),
                         ),
                       ],
                     ),
                   ),
-                  const SizedBox(height: 6),
+                  const SizedBox(height: 4),
                   Text(
                     subtitle,
                     style: TextStyle(
                       color: Colors.white.withValues(alpha: 0.9),
-                      fontSize: 14,
+                      fontSize: 13,
                       shadows: const [
                         Shadow(
-                          color: Colors.black26,
-                          blurRadius: 4,
+                          color: Colors.black38,
+                          blurRadius: 6,
                           offset: Offset(0, 1),
                         ),
                       ],
@@ -870,10 +863,10 @@ class _ActivityRow extends StatelessWidget {
         // 根据动态类型跳转到对应详情页（对标 iOS ActivityRow NavigationLink）
         switch (activity.type) {
           case RecentActivityItem.typeForumPost:
-            context.push('/forum/posts/${activity.itemId}');
+            context.safePush('/forum/posts/${activity.itemId}');
             break;
           case RecentActivityItem.typeFleaMarketItem:
-            context.push('/flea-market/${activity.itemId}');
+            context.safePush('/flea-market/${activity.itemId}');
             break;
           case RecentActivityItem.typeLeaderboardCreated:
             context.push('/leaderboard/${activity.itemId}');
@@ -1033,7 +1026,7 @@ class _HorizontalTaskCard extends StatelessWidget {
     return GestureDetector(
       onTap: () {
         AppHaptics.selection();
-        context.push('/tasks/${task.id}');
+        context.safePush('/tasks/${task.id}');
       },
       child: Container(
         width: 220,
@@ -1119,97 +1112,85 @@ class _HorizontalTaskCard extends StatelessWidget {
                     ),
                   ),
 
-                  // 左上: 位置标签 (对标iOS .ultraThinMaterial + Capsule)
+                  // 左上: 位置标签 (半透明容器，避免 BackdropFilter 在列表中的性能开销)
                   if (task.location != null)
                     Positioned(
                       top: 8,
                       left: 8,
-                      child: ClipRRect(
-                        borderRadius: AppRadius.allPill,
-                        child: BackdropFilter(
-                          filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 8, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: Colors.white.withValues(alpha: 0.18),
-                              borderRadius: AppRadius.allPill,
-                              border: Border.all(
-                                color: Colors.white.withValues(alpha: 0.2),
-                                width: 0.5,
-                              ),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(
-                                  task.isOnline
-                                      ? Icons.language
-                                      : Icons.location_on,
-                                  size: 12,
-                                  color: Colors.white,
-                                ),
-                                const SizedBox(width: 3),
-                                ConstrainedBox(
-                                  constraints:
-                                      const BoxConstraints(maxWidth: 80),
-                                  child: Text(
-                                    task.location!,
-                                    style: const TextStyle(
-                                      fontSize: 11,
-                                      color: Colors.white,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ),
-                              ],
-                            ),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: Colors.black.withValues(alpha: 0.35),
+                          borderRadius: AppRadius.allPill,
+                          border: Border.all(
+                            color: Colors.white.withValues(alpha: 0.2),
+                            width: 0.5,
                           ),
                         ),
-                      ),
-                    ),
-
-                  // 右下: 任务类型标签 (对标iOS taskType capsule + .ultraThinMaterial)
-                  Positioned(
-                    bottom: 8,
-                    right: 8,
-                    child: ClipRRect(
-                      borderRadius: AppRadius.allPill,
-                      child: BackdropFilter(
-                        filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 8, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.18),
-                            borderRadius: AppRadius.allPill,
-                            border: Border.all(
-                              color: Colors.white.withValues(alpha: 0.2),
-                              width: 0.5,
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              task.isOnline
+                                  ? Icons.language
+                                  : Icons.location_on,
+                              size: 12,
+                              color: Colors.white,
                             ),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                _taskTypeIcon(task.taskType),
-                                size: 12,
-                                color: Colors.white,
-                              ),
-                              const SizedBox(width: 3),
-                              Text(
-                                task.taskTypeText,
+                            const SizedBox(width: 3),
+                            ConstrainedBox(
+                              constraints:
+                                  const BoxConstraints(maxWidth: 80),
+                              child: Text(
+                                task.location!,
                                 style: const TextStyle(
                                   fontSize: 11,
                                   color: Colors.white,
                                   fontWeight: FontWeight.w600,
                                 ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
                               ),
-                            ],
-                          ),
+                            ),
+                          ],
                         ),
+                      ),
+                    ),
+
+                  // 右下: 任务类型标签 (半透明容器，避免 BackdropFilter 在列表中的性能开销)
+                  Positioned(
+                    bottom: 8,
+                    right: 8,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: Colors.black.withValues(alpha: 0.35),
+                        borderRadius: AppRadius.allPill,
+                        border: Border.all(
+                          color: Colors.white.withValues(alpha: 0.2),
+                          width: 0.5,
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            _taskTypeIcon(task.taskType),
+                            size: 12,
+                            color: Colors.white,
+                          ),
+                          const SizedBox(width: 3),
+                          Text(
+                            task.taskTypeText,
+                            style: const TextStyle(
+                              fontSize: 11,
+                              color: Colors.white,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ),
@@ -1713,7 +1694,7 @@ class _ExpertCard extends StatelessWidget {
         AppHaptics.selection();
         final expertId = int.tryParse(expert.id) ?? 0;
         if (expertId > 0) {
-          context.push('/task-experts/$expertId');
+          context.safePush('/task-experts/$expertId');
         }
       },
       child: Container(
@@ -1904,7 +1885,7 @@ class _TaskCard extends StatelessWidget {
     return GestureDetector(
       onTap: () {
         AppHaptics.selection();
-        context.push('/tasks/${task.id}');
+        context.safePush('/tasks/${task.id}');
       },
       child: Container(
         clipBehavior: Clip.antiAlias,
@@ -1991,92 +1972,80 @@ class _TaskCard extends StatelessWidget {
                     Positioned(
                       top: 8,
                       left: 8,
-                      child: ClipRRect(
-                        borderRadius: AppRadius.allPill,
-                        child: BackdropFilter(
-                          filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 8, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: Colors.white.withValues(alpha: 0.18),
-                              borderRadius: AppRadius.allPill,
-                              border: Border.all(
-                                color: Colors.white.withValues(alpha: 0.2),
-                                width: 0.5,
-                              ),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(
-                                  task.isOnline
-                                      ? Icons.language
-                                      : Icons.location_on,
-                                  size: 12,
-                                  color: Colors.white,
-                                ),
-                                const SizedBox(width: 3),
-                                ConstrainedBox(
-                                  constraints:
-                                      const BoxConstraints(maxWidth: 140),
-                                  child: Text(
-                                    task.location!,
-                                    style: const TextStyle(
-                                      fontSize: 11,
-                                      color: Colors.white,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ),
-                              ],
-                            ),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: Colors.black.withValues(alpha: 0.35),
+                          borderRadius: AppRadius.allPill,
+                          border: Border.all(
+                            color: Colors.white.withValues(alpha: 0.2),
+                            width: 0.5,
                           ),
                         ),
-                      ),
-                    ),
-
-                  // 右下: 任务类型标签 (毛玻璃)
-                  Positioned(
-                    bottom: 8,
-                    right: 8,
-                    child: ClipRRect(
-                      borderRadius: AppRadius.allPill,
-                      child: BackdropFilter(
-                        filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 8, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.18),
-                            borderRadius: AppRadius.allPill,
-                            border: Border.all(
-                              color: Colors.white.withValues(alpha: 0.2),
-                              width: 0.5,
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              task.isOnline
+                                  ? Icons.language
+                                  : Icons.location_on,
+                              size: 12,
+                              color: Colors.white,
                             ),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                _taskTypeIcon(task.taskType),
-                                size: 12,
-                                color: Colors.white,
-                              ),
-                              const SizedBox(width: 3),
-                              Text(
-                                task.taskTypeText,
+                            const SizedBox(width: 3),
+                            ConstrainedBox(
+                              constraints:
+                                  const BoxConstraints(maxWidth: 140),
+                              child: Text(
+                                task.location!,
                                 style: const TextStyle(
                                   fontSize: 11,
                                   color: Colors.white,
                                   fontWeight: FontWeight.w600,
                                 ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
                               ),
-                            ],
-                          ),
+                            ),
+                          ],
                         ),
+                      ),
+                    ),
+
+                  // 右下: 任务类型标签 (半透明容器)
+                  Positioned(
+                    bottom: 8,
+                    right: 8,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: Colors.black.withValues(alpha: 0.35),
+                        borderRadius: AppRadius.allPill,
+                        border: Border.all(
+                          color: Colors.white.withValues(alpha: 0.2),
+                          width: 0.5,
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            _taskTypeIcon(task.taskType),
+                            size: 12,
+                            color: Colors.white,
+                          ),
+                          const SizedBox(width: 3),
+                          Text(
+                            task.taskTypeText,
+                            style: const TextStyle(
+                              fontSize: 11,
+                              color: Colors.white,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ),

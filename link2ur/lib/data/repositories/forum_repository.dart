@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 
 import '../models/forum.dart';
@@ -69,6 +70,7 @@ class ForumRepository {
     int? categoryId,
     String? keyword,
     String? sortBy,
+    CancelToken? cancelToken,
   }) async {
     final params = {
       'page': page,
@@ -92,6 +94,7 @@ class ForumRepository {
       final response = await _apiService.get<Map<String, dynamic>>(
         ApiEndpoints.forumPosts,
         queryParameters: params,
+        cancelToken: cancelToken,
       );
 
       if (!response.isSuccess || response.data == null) {
@@ -113,7 +116,7 @@ class ForumRepository {
   }
 
   /// 获取所有论坛分类（含最新帖子摘要）
-  Future<List<ForumCategory>> getCategories() async {
+  Future<List<ForumCategory>> getCategories({CancelToken? cancelToken}) async {
     const cacheKey = '${CacheManager.prefixForumCategories}all';
 
     final cached = _cache.get<dynamic>(cacheKey);
@@ -129,6 +132,7 @@ class ForumRepository {
       final response = await _apiService.get<dynamic>(
         ApiEndpoints.forumCategories,
         queryParameters: {'include_latest_post': true},
+        cancelToken: cancelToken,
       );
 
       if (!response.isSuccess || response.data == null) {
@@ -163,7 +167,7 @@ class ForumRepository {
   }
 
   /// 获取帖子详情
-  Future<ForumPost> getPostById(int id) async {
+  Future<ForumPost> getPostById(int id, {CancelToken? cancelToken}) async {
     final cacheKey = '${CacheManager.prefixForumPostDetail}$id';
 
     final cached = _cache.get<Map<String, dynamic>>(cacheKey);
@@ -174,6 +178,7 @@ class ForumRepository {
     try {
       final response = await _apiService.get<Map<String, dynamic>>(
         ApiEndpoints.forumPostById(id),
+        cancelToken: cancelToken,
       );
 
       if (!response.isSuccess || response.data == null) {

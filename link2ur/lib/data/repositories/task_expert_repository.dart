@@ -1,3 +1,5 @@
+import 'package:dio/dio.dart';
+
 import '../models/task_expert.dart';
 import '../services/api_service.dart';
 import '../../core/constants/api_endpoints.dart';
@@ -20,6 +22,7 @@ class TaskExpertRepository {
     int pageSize = 50,
     String? keyword,
     bool forceRefresh = false,
+    CancelToken? cancelToken,
   }) async {
     // 后端使用 limit/offset 分页，不支持 keyword（task_expert_routes.py）
     final offset = (page - 1) * pageSize;
@@ -51,6 +54,7 @@ class TaskExpertRepository {
     final response = await _apiService.get<dynamic>(
       ApiEndpoints.taskExperts,
       queryParameters: params,
+      cancelToken: cancelToken,
     );
 
     if (!response.isSuccess || response.data == null) {
@@ -71,7 +75,7 @@ class TaskExpertRepository {
   }
 
   /// 获取达人详情
-  Future<TaskExpert> getExpertById(String id) async {
+  Future<TaskExpert> getExpertById(String id, {CancelToken? cancelToken}) async {
     final cacheKey = '${CacheManager.prefixExpertDetail}$id';
 
     final cached = _cache.get<Map<String, dynamic>>(cacheKey);
@@ -81,6 +85,7 @@ class TaskExpertRepository {
 
     final response = await _apiService.get<Map<String, dynamic>>(
       ApiEndpoints.taskExpertById(id),
+      cancelToken: cancelToken,
     );
 
     if (!response.isSuccess || response.data == null) {

@@ -6,21 +6,19 @@ import 'package:share_plus/share_plus.dart';
 import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_radius.dart';
-import '../../../core/design/app_typography.dart';
 import '../../../core/router/app_router.dart';
 import '../../../core/utils/l10n_extension.dart';
 import '../../../core/utils/responsive.dart';
 import '../../../core/widgets/loading_view.dart';
 import '../../../core/widgets/error_state_view.dart';
 import '../../../core/widgets/empty_state_view.dart';
-import '../../../core/widgets/cards.dart';
 import '../../../core/widgets/async_image_view.dart';
 import '../../../data/repositories/task_expert_repository.dart';
 import '../../../data/models/task_expert.dart';
 import '../bloc/task_expert_bloc.dart';
 
 /// 任务达人详情页
-/// 参考iOS TaskExpertDetailView.swift
+/// 对标 iOS link2ur/TaskExpertDetailView.swift — 顶部渐变背景 + 浮动卡片
 class TaskExpertDetailView extends StatelessWidget {
   const TaskExpertDetailView({
     super.key,
@@ -38,14 +36,12 @@ class TaskExpertDetailView extends StatelessWidget {
         ..add(TaskExpertLoadDetail(expertId))
         ..add(TaskExpertLoadExpertReviews(expertId.toString())),
       child: Scaffold(
+        extendBodyBehindAppBar: true,
         appBar: AppBar(
-          title: BlocBuilder<TaskExpertBloc, TaskExpertState>(
-            builder: (context, state) {
-              return Text(
-                state.selectedExpert?.displayName ?? context.l10n.taskExpertDetailTitle,
-              );
-            },
-          ),
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          scrolledUnderElevation: 0,
+          foregroundColor: Colors.white,
           actions: [
             BlocBuilder<TaskExpertBloc, TaskExpertState>(
               builder: (context, state) {
@@ -56,8 +52,10 @@ class TaskExpertDetailView extends StatelessWidget {
                     if (expert != null) {
                       SharePlus.instance.share(
                         ShareParams(
-                          text: '${context.l10n.taskExpertShareText(expert.displayName)}\nhttps://link2ur.com/task-experts/${expert.id}',
-                          subject: context.l10n.taskExpertShareTitle(expert.displayName),
+                          text:
+                              '${context.l10n.taskExpertShareText(expert.displayName)}\nhttps://link2ur.com/task-experts/${expert.id}',
+                          subject: context.l10n
+                              .taskExpertShareTitle(expert.displayName),
                         ),
                       );
                     }
@@ -69,232 +67,44 @@ class TaskExpertDetailView extends StatelessWidget {
         ),
         body: Center(
           child: ConstrainedBox(
-            constraints: BoxConstraints(maxWidth: ResponsiveUtils.detailMaxWidth(context)),
+            constraints: BoxConstraints(
+                maxWidth: ResponsiveUtils.detailMaxWidth(context)),
             child: BlocBuilder<TaskExpertBloc, TaskExpertState>(
-          builder: (context, state) {
-            // Loading state
-            if (state.status == TaskExpertStatus.loading &&
-                state.selectedExpert == null) {
-              return const LoadingView();
-            }
+              builder: (context, state) {
+                if (state.status == TaskExpertStatus.loading &&
+                    state.selectedExpert == null) {
+                  return const LoadingView();
+                }
 
-            // Error state
-            if (state.status == TaskExpertStatus.error &&
-                state.selectedExpert == null) {
-              return ErrorStateView.loadFailed(
-                message: state.errorMessage ?? context.l10n.taskExpertLoadFailed,
-                onRetry: () {
-                  context.read<TaskExpertBloc>().add(
-                        TaskExpertLoadDetail(expertId),
-                      );
-                },
-              );
-            }
-
-            final expert = state.selectedExpert;
-            if (expert == null) {
-              return EmptyStateView.noData(
-                context,
-                title: context.l10n.taskExpertExpertNotExist,
-                description: context.l10n.taskExpertExpertNotExistDesc,
-              );
-            }
-
-            return SingleChildScrollView(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Profile header
-                  _ProfileHeader(expert: expert),
-                  
-                  // Stats section
-                  Padding(
-                    padding: AppSpacing.allMd,
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: StatCard(
-                            value: expert.ratingDisplay,
-                            label: context.l10n.taskExpertRating,
-                            icon: Icons.star,
-                            iconColor: AppColors.gold,
-                          ),
-                        ),
-                        AppSpacing.hMd,
-                        Expanded(
-                          child: StatCard(
-                            value: '${expert.completedTasks}',
-                            label: context.l10n.taskExpertCompletedOrders,
-                            icon: Icons.check_circle_outline,
-                          ),
-                        ),
-                        AppSpacing.hMd,
-                        Expanded(
-                          child: StatCard(
-                            value: '${expert.totalServices}',
-                            label: context.l10n.taskExpertServices,
-                            icon: Icons.work_outline,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  // Bio section（使用双语 displayBio）
-                  if (expert.displayBio != null && expert.displayBio!.isNotEmpty)
-                    Padding(
-                      padding: AppSpacing.allMd,
-                      child: AppCard(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              context.l10n.taskExpertBio,
-                              style: AppTypography.title3.copyWith(
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                            AppSpacing.vSm,
-                            Text(
-                              expert.displayBio!,
-                              style: AppTypography.body,
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-
-                  // Specialties section（专业领域标签）
-                  if (expert.displaySpecialties != null &&
-                      expert.displaySpecialties!.isNotEmpty)
-                    Padding(
-                      padding: AppSpacing.allMd,
-                      child: AppCard(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              context.l10n.taskExpertSpecialties,
-                              style: AppTypography.title3.copyWith(
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                            AppSpacing.vSm,
-                            Wrap(
-                              spacing: 8,
-                              runSpacing: 8,
-                              children: expert.displaySpecialties!
-                                  .map((s) => Chip(
-                                        label: Text(s, style: AppTypography.caption),
-                                        backgroundColor: AppColors.primary.withValues(alpha: 0.1),
-                                        side: BorderSide.none,
-                                        padding: const EdgeInsets.symmetric(horizontal: 4),
-                                        materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                                      ))
-                                  .toList(),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-
-                  // Reviews section
-                  Padding(
-                    padding: AppSpacing.allMd,
-                    child: _ReviewsSection(
-                      reviews: state.reviews,
-                      isLoading: state.isLoadingReviews,
-                    ),
-                  ),
-
-                  // Services section header
-                  Padding(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: AppSpacing.md),
-                    child: Row(
-                      children: [
-                        Container(
-                          width: 4,
-                          height: 18,
-                          decoration: BoxDecoration(
-                            color: AppColors.primary,
-                            borderRadius: BorderRadius.circular(2),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          context.l10n.taskExpertServiceMenu,
-                          style: const TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        const Spacer(),
-                        Text(
-                          context.l10n.taskExpertServicesCount(
-                              state.services.length),
-                          style: AppTypography.caption.copyWith(
-                            color: AppColors.textTertiaryLight,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  AppSpacing.vMd,
-
-                  // Services list
-                  Padding(
-                    padding: AppSpacing.allMd,
-                    child: Column(
-                      children: [
-                        if (state.services.isEmpty)
-                          EmptyStateView.noData(
-                            context,
-                            title: context.l10n.taskExpertNoServices,
-                            description: context.l10n.taskExpertNoServicesDesc,
-                          )
-                        else
-                          ...state.services.map(
-                            (service) => _ServiceItem(
-                              service: service,
-                              onTap: () =>
-                                  context.goToServiceDetail(service.id),
-                            ),
-                          ),
-                      ],
-                    ),
-                  ),
-
-                  const SizedBox(height: 40),
-
-                  // Action message snackbar
-                  BlocListener<TaskExpertBloc, TaskExpertState>(
-                    listenWhen: (previous, current) =>
-                        previous.actionMessage != current.actionMessage,
-                    listener: (context, state) {
-                      if (state.actionMessage != null) {
-                        final isError = state.actionMessage!.contains('failed');
-                        final message = switch (state.actionMessage) {
-                          'application_submitted' => context.l10n.actionApplicationSubmitted,
-                          'application_failed' => state.errorMessage != null
-                              ? '${context.l10n.actionApplicationFailed}: ${state.errorMessage}'
-                              : context.l10n.actionApplicationFailed,
-                          _ => state.actionMessage!,
-                        };
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text(message),
-                            backgroundColor: isError ? AppColors.error : AppColors.success,
-                          ),
-                        );
-                      }
+                if (state.status == TaskExpertStatus.error &&
+                    state.selectedExpert == null) {
+                  return ErrorStateView.loadFailed(
+                    message: state.errorMessage ??
+                        context.l10n.taskExpertLoadFailed,
+                    onRetry: () {
+                      context
+                          .read<TaskExpertBloc>()
+                          .add(TaskExpertLoadDetail(expertId));
                     },
-                    child: const SizedBox.shrink(),
-                  ),
-                ],
-              ),
-            );
-          },
+                  );
+                }
+
+                final expert = state.selectedExpert;
+                if (expert == null) {
+                  return EmptyStateView.noData(
+                    context,
+                    title: context.l10n.taskExpertExpertNotExist,
+                    description: context.l10n.taskExpertExpertNotExistDesc,
+                  );
+                }
+
+                return _DetailBody(
+                  expert: expert,
+                  reviews: state.reviews,
+                  isLoadingReviews: state.isLoadingReviews,
+                  services: state.services,
+                );
+              },
             ),
           ),
         ),
@@ -303,8 +113,142 @@ class TaskExpertDetailView extends StatelessWidget {
   }
 }
 
-class _ProfileHeader extends StatelessWidget {
-  const _ProfileHeader({required this.expert});
+// =============================================================
+// Body — ScrollView with header background + floating card
+// =============================================================
+
+class _DetailBody extends StatelessWidget {
+  const _DetailBody({
+    required this.expert,
+    required this.reviews,
+    required this.isLoadingReviews,
+    required this.services,
+  });
+
+  final TaskExpert expert;
+  final List<Map<String, dynamic>> reviews;
+  final bool isLoadingReviews;
+  final List<TaskExpertService> services;
+
+  @override
+  Widget build(BuildContext context) {
+    return SingleChildScrollView(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // 1. 顶部渐变背景（对标iOS topHeaderBackground）
+          const _TopHeaderBackground(),
+
+          // 2. 浮动个人信息卡片（对标iOS expertProfileCard, padding.top = -60）
+          Transform.translate(
+            offset: const Offset(0, -60),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+              child: _ProfileCard(expert: expert),
+            ),
+          ),
+
+          // 以下内容上移 -60 的间距补偿
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // 3. 专业领域标签
+                if (expert.displaySpecialties != null &&
+                    expert.displaySpecialties!.isNotEmpty) ...[
+                  _SpecialtiesSection(
+                      specialties: expert.displaySpecialties!),
+                  const SizedBox(height: 24),
+                ],
+
+                // 4. 评价
+                _ReviewsSection(
+                  reviews: reviews,
+                  isLoading: isLoadingReviews,
+                ),
+                const SizedBox(height: 24),
+
+                // 5. 服务菜单
+                _ServicesSection(services: services),
+
+                const SizedBox(height: 100),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// =============================================================
+// Top Header Background — 对标iOS topHeaderBackground()
+// 180px primary渐变 + 两个装饰圆
+// =============================================================
+
+class _TopHeaderBackground extends StatelessWidget {
+  const _TopHeaderBackground();
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 180 + MediaQuery.of(context).padding.top,
+      width: double.infinity,
+      child: Stack(
+        children: [
+          // 渐变背景
+          Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  AppColors.primary,
+                  AppColors.primary.withValues(alpha: 0.6),
+                ],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+            ),
+          ),
+          // 装饰圆 1（右上）
+          Positioned(
+            right: -25,
+            top: -25,
+            child: Container(
+              width: 150,
+              height: 150,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: Colors.white.withValues(alpha: 0.1),
+              ),
+            ),
+          ),
+          // 装饰圆 2（左下）
+          Positioned(
+            left: -60,
+            bottom: -40,
+            child: Container(
+              width: 200,
+              height: 200,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: Colors.white.withValues(alpha: 0.05),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// =============================================================
+// Profile Card — 对标iOS expertProfileCard
+// 白色卡片，头像带白色边框+阴影，名称+认证+简介+统计
+// =============================================================
+
+class _ProfileCard extends StatelessWidget {
+  const _ProfileCard({required this.expert});
 
   final TaskExpert expert;
 
@@ -313,37 +257,57 @@ class _ProfileHeader extends StatelessWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Container(
-      padding: AppSpacing.allXl,
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(vertical: 24, horizontal: AppSpacing.md),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [
-            AppColors.primary.withValues(alpha: 0.1),
-            Colors.transparent,
-          ],
-        ),
+        color: isDark
+            ? AppColors.cardBackgroundDark
+            : AppColors.cardBackgroundLight,
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.08),
+            blurRadius: 20,
+            offset: const Offset(0, 10),
+          ),
+        ],
       ),
       child: Column(
         children: [
-          // Avatar（使用 AvatarView 正确处理相对路径）
-          AvatarView(
-            imageUrl: expert.avatar,
-            name: expert.displayName,
-            size: 100,
+          // 头像（对标iOS: 90 size, white stroke, shadow）
+          Container(
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              border: Border.all(color: Colors.white, width: 4),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.1),
+                  blurRadius: 10,
+                  offset: const Offset(0, 5),
+                ),
+              ],
+            ),
+            child: AvatarView(
+              imageUrl: expert.avatar,
+              name: expert.displayName,
+              size: 90,
+            ),
           ),
-          AppSpacing.vMd,
-          // Name with verification badge
+          const SizedBox(height: 20),
+
+          // 名字 + 认证徽章（对标iOS: checkmark.seal.fill）
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Text(
-                expert.displayName,
-                style: AppTypography.title.copyWith(
-                  fontWeight: FontWeight.bold,
-                  color: isDark
-                      ? AppColors.textPrimaryDark
-                      : AppColors.textPrimaryLight,
+              Flexible(
+                child: Text(
+                  expert.displayName,
+                  style: const TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
               const SizedBox(width: 6),
@@ -354,159 +318,178 @@ class _ProfileHeader extends StatelessWidget {
               ),
             ],
           ),
-          AppSpacing.vSm,
-          // Rating and stats
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Icon(Icons.star, size: 16, color: AppColors.gold),
-              const SizedBox(width: 4),
-              Text(
-                expert.ratingDisplay,
-                style: AppTypography.subheadline.copyWith(
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-              const SizedBox(width: 16),
-              Text(
-                context.l10n.leaderboardCompletedCount(expert.completedTasks),
-                style: AppTypography.subheadline.copyWith(
+
+          // 简介（对标iOS: font 14, textSecondary, centered, lineLimit 3）
+          if (expert.displayBio != null &&
+              expert.displayBio!.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: Text(
+                expert.displayBio!,
+                style: TextStyle(
+                  fontSize: 14,
                   color: isDark
                       ? AppColors.textSecondaryDark
                       : AppColors.textSecondaryLight,
                 ),
+                textAlign: TextAlign.center,
+                maxLines: 3,
+                overflow: TextOverflow.ellipsis,
               ),
-            ],
+            ),
+          ],
+
+          // 统计网格（对标iOS: HStack(spacing:0) + divider）
+          const SizedBox(height: 16),
+          IntrinsicHeight(
+            child: Row(
+              children: [
+                Expanded(
+                  child: _StatItem(
+                    icon: Icons.star,
+                    iconColor: Colors.orange,
+                    value: expert.ratingDisplay,
+                    label: context.l10n.taskExpertRating,
+                  ),
+                ),
+                _verticalDivider(isDark),
+                Expanded(
+                  child: _StatItem(
+                    icon: Icons.check_circle,
+                    iconColor: AppColors.primary,
+                    value: '${expert.completedTasks}',
+                    label: context.l10n.taskExpertCompletedOrders,
+                  ),
+                ),
+                _verticalDivider(isDark),
+                Expanded(
+                  child: _StatItem(
+                    icon: Icons.bar_chart,
+                    iconColor: Colors.green,
+                    value: '${expert.totalServices}',
+                    label: context.l10n.taskExpertServices,
+                  ),
+                ),
+              ],
+            ),
           ),
         ],
       ),
     );
   }
+
+  Widget _verticalDivider(bool isDark) {
+    return Container(
+      width: 1,
+      height: 24,
+      color: (isDark ? Colors.white : Colors.black).withValues(alpha: 0.1),
+    );
+  }
 }
 
-class _ServiceItem extends StatelessWidget {
-  const _ServiceItem({
-    required this.service,
-    required this.onTap,
+/// 统计项（对标iOS statItem: icon + value + label）
+class _StatItem extends StatelessWidget {
+  const _StatItem({
+    required this.icon,
+    required this.iconColor,
+    required this.value,
+    required this.label,
   });
 
-  final TaskExpertService service;
-  final VoidCallback onTap;
+  final IconData icon;
+  final Color iconColor;
+  final String value;
+  final String label;
 
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    return GestureDetector(
-      onTap: onTap,
-      child: AppCard(
-        margin: const EdgeInsets.only(bottom: 12),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Row(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            // Service image or icon
-            if (service.firstImage != null)
-              AsyncImageView(
-                imageUrl: service.firstImage,
-                width: 100,
-                height: 100,
-                fit: BoxFit.cover,
-                borderRadius: AppRadius.allMedium,
-                errorWidget: Container(
-                  width: 100,
-                  height: 100,
-                  decoration: BoxDecoration(
-                    color: AppColors.primary.withValues(alpha: 0.1),
-                    borderRadius: AppRadius.allMedium,
-                  ),
-                  child: const Icon(
-                    Icons.work_outline,
-                    color: AppColors.primary,
-                    size: 40,
-                  ),
-                ),
-              )
-            else
-              Container(
-                width: 100,
-                height: 100,
-                decoration: BoxDecoration(
-                  color: AppColors.primary.withValues(alpha: 0.1),
-                  borderRadius: AppRadius.allMedium,
-                ),
-                child: const Icon(
-                  Icons.work_outline,
-                  color: AppColors.primary,
-                  size: 40,
-                ),
-              ),
-            AppSpacing.hMd,
-            // Service info
-            Expanded(
-              child: SizedBox(
-                height: 100,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      service.serviceName,
-                      style: AppTypography.title3.copyWith(
-                        fontWeight: FontWeight.w600,
-                        color: isDark
-                            ? AppColors.textPrimaryDark
-                            : AppColors.textPrimaryLight,
-                      ),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    if (service.description.isNotEmpty) ...[
-                      const SizedBox(height: 4),
-                      Text(
-                        service.description,
-                        style: AppTypography.caption.copyWith(
-                          color: isDark
-                              ? AppColors.textSecondaryDark
-                              : AppColors.textSecondaryLight,
-                        ),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ],
-                    const Spacer(),
-                    // 价格 + 箭头
-                    Row(
-                      children: [
-                        Text(
-                          service.priceDisplay,
-                          style: const TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: AppColors.primary,
-                          ),
-                        ),
-                        const Spacer(),
-                        Icon(
-                          Icons.chevron_right,
-                          size: 16,
-                          color: isDark
-                              ? AppColors.textTertiaryDark
-                              : AppColors.textTertiaryLight,
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
+            Icon(icon, size: 10, color: iconColor),
+            const SizedBox(width: 4),
+            Text(
+              value,
+              style: const TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
               ),
             ),
           ],
         ),
-      ),
+        const SizedBox(height: 6),
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 12,
+            color: isDark
+                ? AppColors.textTertiaryDark
+                : AppColors.textTertiaryLight,
+          ),
+        ),
+      ],
     );
   }
 }
 
 // =============================================================
-// 评价区域 (对标iOS reviewsCard)
+// Specialties — 胶囊标签（对标iOS infoSection + FlowLayout）
+// =============================================================
+
+class _SpecialtiesSection extends StatelessWidget {
+  const _SpecialtiesSection({required this.specialties});
+
+  final List<String> specialties;
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _SectionHeader(title: context.l10n.taskExpertSpecialties),
+        const SizedBox(height: AppSpacing.sm),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: specialties
+              .map((s) => Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 14, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: AppColors.primary
+                          .withValues(alpha: isDark ? 0.15 : 0.12),
+                      borderRadius: BorderRadius.circular(18),
+                      border: Border.all(
+                        color: AppColors.primary.withValues(alpha: 0.2),
+                        width: 0.5,
+                      ),
+                    ),
+                    child: Text(
+                      s,
+                      style: const TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                        color: AppColors.primary,
+                      ),
+                    ),
+                  ))
+              .toList(),
+        ),
+      ],
+    );
+  }
+}
+
+// =============================================================
+// Reviews — 卡片列表（对标iOS reviewsCard）
 // =============================================================
 
 class _ReviewsSection extends StatelessWidget {
@@ -520,11 +503,15 @@ class _ReviewsSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
+        color: isDark
+            ? AppColors.cardBackgroundDark
+            : AppColors.cardBackgroundLight,
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
@@ -537,31 +524,18 @@ class _ReviewsSection extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // 标题行
           Row(
             children: [
-              Container(
-                width: 4,
-                height: 18,
-                decoration: BoxDecoration(
-                  color: AppColors.primary,
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-              const SizedBox(width: 8),
-              Text(
-                context.l10n.taskExpertReviews,
-                style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
+              _SectionHeader(title: context.l10n.taskExpertReviews),
               const Spacer(),
               if (reviews.isNotEmpty)
                 Text(
                   context.l10n.taskExpertReviewsCount(reviews.length),
-                  style: AppTypography.caption.copyWith(
-                    color: AppColors.textTertiaryLight,
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: isDark
+                        ? AppColors.textTertiaryDark
+                        : AppColors.textTertiaryLight,
                   ),
                 ),
             ],
@@ -575,32 +549,36 @@ class _ReviewsSection extends StatelessWidget {
               ),
             )
           else if (reviews.isEmpty)
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 20),
-              child: Center(
+            Center(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 20),
                 child: Text(
                   context.l10n.taskExpertNoReviews,
-                  style: AppTypography.caption.copyWith(
-                    color: AppColors.textTertiaryLight,
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: isDark
+                        ? AppColors.textTertiaryDark
+                        : AppColors.textTertiaryLight,
                   ),
                 ),
               ),
             )
           else
-            ...reviews.map((review) => _ExpertReviewRow(review: review)),
+            ...reviews.map((review) => _ReviewRow(review: review)),
         ],
       ),
     );
   }
 }
 
-class _ExpertReviewRow extends StatelessWidget {
-  const _ExpertReviewRow({required this.review});
+class _ReviewRow extends StatelessWidget {
+  const _ReviewRow({required this.review});
 
   final Map<String, dynamic> review;
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final rating = (review['rating'] as num?)?.toDouble() ?? 0;
     final comment = review['comment'] as String?;
     final createdAt = review['created_at'] as String?;
@@ -609,15 +587,17 @@ class _ExpertReviewRow extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surfaceContainerHighest,
+        color: isDark
+            ? Colors.white.withValues(alpha: 0.04)
+            : Colors.grey.withValues(alpha: 0.06),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // 星级 + 日期
           Row(
             children: [
-              // 星级
               ...List.generate(5, (i) {
                 final star = i + 1;
                 final fullStars = rating.floor();
@@ -632,7 +612,9 @@ class _ExpertReviewRow extends StatelessWidget {
                   color = AppColors.gold;
                 } else {
                   icon = Icons.star_border;
-                  color = AppColors.textTertiaryLight;
+                  color = isDark
+                      ? AppColors.textTertiaryDark
+                      : AppColors.textTertiaryLight;
                 }
                 return Icon(icon, size: 14, color: color);
               }),
@@ -640,9 +622,11 @@ class _ExpertReviewRow extends StatelessWidget {
               if (createdAt != null)
                 Text(
                   _formatTime(createdAt),
-                  style: AppTypography.caption.copyWith(
-                    color: AppColors.textTertiaryLight,
+                  style: TextStyle(
                     fontSize: 12,
+                    color: isDark
+                        ? AppColors.textTertiaryDark
+                        : AppColors.textTertiaryLight,
                   ),
                 ),
             ],
@@ -651,7 +635,13 @@ class _ExpertReviewRow extends StatelessWidget {
             const SizedBox(height: 8),
             Text(
               comment,
-              style: const TextStyle(fontSize: 14, height: 1.5),
+              style: TextStyle(
+                fontSize: 14,
+                height: 1.5,
+                color: isDark
+                    ? AppColors.textPrimaryDark
+                    : AppColors.textPrimaryLight,
+              ),
             ),
           ],
         ],
@@ -666,5 +656,261 @@ class _ExpertReviewRow extends StatelessWidget {
     } catch (_) {
       return dateStr;
     }
+  }
+}
+
+// =============================================================
+// Services — 对标iOS ServiceCard (100x100)
+// =============================================================
+
+class _ServicesSection extends StatelessWidget {
+  const _ServicesSection({required this.services});
+
+  final List<TaskExpertService> services;
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            _SectionHeader(title: context.l10n.taskExpertServiceMenu),
+            const Spacer(),
+            Text(
+              context.l10n.taskExpertServicesCount(services.length),
+              style: TextStyle(
+                fontSize: 13,
+                color: isDark
+                    ? AppColors.textTertiaryDark
+                    : AppColors.textTertiaryLight,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: AppSpacing.md),
+        if (services.isEmpty)
+          _buildEmptyServices(context, isDark)
+        else
+          ...services.map(
+            (service) => _ServiceCard(
+              service: service,
+              onTap: () => context.goToServiceDetail(service.id),
+            ),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildEmptyServices(BuildContext context, bool isDark) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(vertical: 60),
+      decoration: BoxDecoration(
+        color: isDark
+            ? Colors.white.withValues(alpha: 0.03)
+            : Colors.grey.withValues(alpha: 0.05),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Column(
+        children: [
+          Icon(
+            Icons.shopping_bag_outlined,
+            size: 48,
+            color: isDark
+                ? AppColors.textTertiaryDark
+                : AppColors.textTertiaryLight,
+          ),
+          const SizedBox(height: 12),
+          Text(
+            context.l10n.taskExpertNoServices,
+            style: TextStyle(
+              fontSize: 14,
+              color: isDark
+                  ? AppColors.textTertiaryDark
+                  : AppColors.textTertiaryLight,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// 服务卡片（对标iOS ServiceCard: 100x100图 + semibold title + caption + price + chevron）
+class _ServiceCard extends StatelessWidget {
+  const _ServiceCard({
+    required this.service,
+    required this.onTap,
+  });
+
+  final TaskExpertService service;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 16),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: isDark
+              ? AppColors.cardBackgroundDark
+              : AppColors.cardBackgroundLight,
+          borderRadius: AppRadius.allLarge,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.05),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: IntrinsicHeight(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // 100x100 圆角图片（对标iOS: 100x100）
+              if (service.firstImage != null)
+                ClipRRect(
+                  borderRadius: AppRadius.allMedium,
+                  child: AsyncImageView(
+                    imageUrl: service.firstImage,
+                    width: 100,
+                    height: 100,
+                    fit: BoxFit.cover,
+                    errorWidget: _buildPlaceholder(isDark),
+                  ),
+                )
+              else
+                _buildPlaceholder(isDark),
+              const SizedBox(width: 16),
+              // 服务信息
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // 标题（对标iOS: .semibold, size 16, lineLimit 2）
+                    Text(
+                      service.serviceName,
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: isDark
+                            ? AppColors.textPrimaryDark
+                            : AppColors.textPrimaryLight,
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    if (service.description.isNotEmpty) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        service.description,
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: isDark
+                              ? AppColors.textSecondaryDark
+                              : AppColors.textSecondaryLight,
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                    const Spacer(),
+                    // 价格 + chevron（对标iOS: size 18, bold, primary）
+                    Row(
+                      children: [
+                        Text(
+                          service.priceDisplay,
+                          style: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.primary,
+                          ),
+                        ),
+                        const Spacer(),
+                        Icon(
+                          Icons.chevron_right,
+                          size: 12,
+                          color: isDark
+                              ? AppColors.textTertiaryDark
+                              : AppColors.textTertiaryLight,
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPlaceholder(bool isDark) {
+    return Container(
+      width: 100,
+      height: 100,
+      decoration: BoxDecoration(
+        color: isDark
+            ? Colors.white.withValues(alpha: 0.05)
+            : AppColors.primary.withValues(alpha: 0.06),
+        borderRadius: AppRadius.allMedium,
+      ),
+      child: Icon(
+        Icons.photo,
+        color: isDark
+            ? AppColors.textTertiaryDark
+            : AppColors.textTertiaryLight,
+        size: 24,
+      ),
+    );
+  }
+}
+
+// =============================================================
+// Shared: Section Header — 对标iOS竖线 + 标题
+// =============================================================
+
+class _SectionHeader extends StatelessWidget {
+  const _SectionHeader({required this.title});
+
+  final String title;
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 4,
+          height: 18,
+          decoration: BoxDecoration(
+            color: AppColors.primary,
+            borderRadius: BorderRadius.circular(2),
+          ),
+        ),
+        const SizedBox(width: 8),
+        Text(
+          title,
+          style: TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+            color: isDark
+                ? AppColors.textPrimaryDark
+                : AppColors.textPrimaryLight,
+          ),
+        ),
+      ],
+    );
   }
 }

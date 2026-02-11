@@ -57,6 +57,16 @@ android {
         }
     }
 
+    // ABI 分包：为每种架构生成独立 APK，减少单个 APK 体积 30-50%
+    splits {
+        abi {
+            isEnable = true
+            reset()
+            include("armeabi-v7a", "arm64-v8a")
+            isUniversalApk = true // 同时生成包含所有架构的通用 APK
+        }
+    }
+
     buildTypes {
         release {
             // R8 代码压缩 + 资源压缩：减少 APK 体积 30-50%，提升启动速度

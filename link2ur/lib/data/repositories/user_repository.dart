@@ -1,8 +1,11 @@
+import 'package:dio/dio.dart';
+
 import '../models/user.dart';
 import '../models/payment.dart';
 import '../services/api_service.dart';
 import '../services/storage_service.dart';
 import '../../core/constants/api_endpoints.dart';
+import '../../core/utils/cache_manager.dart';
 import '../../core/utils/app_exception.dart';
 
 /// 用户仓库
@@ -13,11 +16,23 @@ class UserRepository {
   }) : _apiService = apiService;
 
   final ApiService _apiService;
+  final CacheManager _cache = CacheManager.shared;
 
-  /// 获取当前用户资料
-  Future<User> getProfile() async {
+  /// 获取当前用户资料（带内存+磁盘缓存，30分钟TTL）
+  Future<User> getProfile({CancelToken? cancelToken, bool forceRefresh = false}) async {
+    const cacheKey = 'user_profile_me';
+
+    // 非强制刷新时先查缓存
+    if (!forceRefresh) {
+      final cached = _cache.get<Map<String, dynamic>>(cacheKey);
+      if (cached != null) {
+        return User.fromJson(cached);
+      }
+    }
+
     final response = await _apiService.get<Map<String, dynamic>>(
       ApiEndpoints.userProfile,
+      cancelToken: cancelToken,
     );
 
     if (!response.isSuccess || response.data == null) {
@@ -25,7 +40,8 @@ class UserRepository {
     }
 
     final user = User.fromJson(response.data!);
-    // 缓存用户信息
+    // 缓存用户信息（CacheManager 双层缓存 + StorageService 持久化）
+    await _cache.set(cacheKey, response.data!, ttl: CacheManager.personalTTL);
     await StorageService.instance.saveUserInfo(user.toJson());
     return user;
   }
@@ -48,14 +64,15 @@ class UserRepository {
   }
 
   /// 获取其他用户资料
-  Future<User> getUserProfile(String userId) async {
-    return getUserPublicProfile(userId);
+  Future<User> getUserProfile(String userId, {CancelToken? cancelToken}) async {
+    return getUserPublicProfile(userId, cancelToken: cancelToken);
   }
 
   /// 获取其他用户公开资料
-  Future<User> getUserPublicProfile(String userId) async {
+  Future<User> getUserPublicProfile(String userId, {CancelToken? cancelToken}) async {
     final response = await _apiService.get<Map<String, dynamic>>(
       ApiEndpoints.userById(userId),
+      cancelToken: cancelToken,
     );
 
     if (!response.isSuccess || response.data == null) {

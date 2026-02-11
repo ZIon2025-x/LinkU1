@@ -3,6 +3,7 @@ import json
 import logging
 import os
 import uuid
+from decimal import Decimal
 from pathlib import Path
 from urllib.parse import quote
 
@@ -36,6 +37,7 @@ from app.push_notification_service import send_push_notification
 from app.task_recommendation import get_task_recommendations, calculate_task_match_score
 from app.user_behavior_tracker import UserBehaviorTracker, record_task_view, record_task_click
 from app.recommendation_monitor import get_recommendation_metrics, RecommendationMonitor
+from app.utils.translation_metrics import TranslationTimer
 
 logger = logging.getLogger(__name__)
 import os
@@ -93,6 +95,111 @@ def _safe_json_loads(s, default=None):
         return json.loads(s)
     except (json.JSONDecodeError, TypeError, ValueError):
         return default
+
+
+def _resolve_legacy_private_file_path(base_private_dir: Path, file_path_str: str) -> Path:
+    """解析旧存储路径并阻止目录越界。"""
+    base_dir = base_private_dir.resolve()
+    resolved_path = (base_dir / file_path_str).resolve()
+    try:
+        resolved_path.relative_to(base_dir)
+    except ValueError:
+        raise HTTPException(status_code=403, detail="非法文件路径")
+    return resolved_path
+
+
+async def _translate_missing_tasks_async(
+    db: Session,
+    task_ids: List[int],
+    field_type: str,
+    target_lang: str,
+) -> None:
+    """后台补齐缺失翻译（best-effort，不阻塞主请求）。"""
+    if not task_ids:
+        return
+
+    from app.utils.translation_prefetch import prefetch_task_by_id
+
+    db_gen = None
+    worker_db = db
+    using_fresh_session = False
+
+    # 优先使用独立会话，避免请求结束后 session 失效。
+    try:
+        db_gen = get_db()
+        worker_db = next(db_gen)
+        using_fresh_session = True
+    except Exception as e:
+        logger.debug("后台翻译获取独立数据库会话失败，回退当前会话: %s", e)
+
+    try:
+        for task_id in task_ids:
+            try:
+                await prefetch_task_by_id(worker_db, task_id, target_languages=[target_lang])
+            except Exception as e:
+                logger.warning(
+                    "后台翻译任务失败: task_id=%s, field=%s, target=%s, error=%s",
+                    task_id,
+                    field_type,
+                    target_lang,
+                    e,
+                )
+    finally:
+        if using_fresh_session and db_gen is not None:
+            try:
+                db_gen.close()
+            except Exception:
+                try:
+                    worker_db.close()
+                except Exception:
+                    pass
+
+
+def _trigger_background_translation_prefetch(
+    task_ids: List[int],
+    target_languages: Optional[List[str]] = None,
+    label: str = "后台翻译任务",
+) -> None:
+    """在线程中预翻译任务（best-effort，不阻塞主流程）。"""
+    if not task_ids:
+        return
+
+    import threading
+    from app.utils.translation_prefetch import prefetch_task_by_id
+
+    targets = target_languages or ["en", "zh-CN"]
+
+    def _worker():
+        db_gen = None
+        try:
+            db_gen = get_db()
+            sync_db = next(db_gen)
+            try:
+                for task_id in task_ids:
+                    try:
+                        loop = asyncio.new_event_loop()
+                        asyncio.set_event_loop(loop)
+                        try:
+                            loop.run_until_complete(
+                                prefetch_task_by_id(sync_db, task_id, target_languages=targets)
+                            )
+                        finally:
+                            loop.close()
+                    except Exception as e:
+                        logger.warning("%s %s 失败: %s", label, task_id, e)
+            finally:
+                try:
+                    db_gen.close()
+                except Exception:
+                    try:
+                        sync_db.close()
+                    except Exception:
+                        pass
+        except Exception as e:
+            logger.error("%s失败: %s", label, e)
+
+    thread = threading.Thread(target=_worker, daemon=True)
+    thread.start()
 
 
 @router.post("/csp-report")
@@ -1395,34 +1502,11 @@ def get_recommendations(
         missing_task_ids = [task_id for task_id in task_ids 
                            if (task_id, 'en') not in translations_dict or (task_id, 'zh-CN') not in translations_dict]
         if missing_task_ids:
-            import threading
-            from app.utils.translation_prefetch import prefetch_task_by_id
-            import asyncio
-            
-            def trigger_translations_sync():
-                """在后台线程中触发翻译任务"""
-                try:
-                    sync_db = next(get_db())
-                    try:
-                        for task_id in missing_task_ids:
-                            try:
-                                loop = asyncio.new_event_loop()
-                                asyncio.set_event_loop(loop)
-                                try:
-                                    loop.run_until_complete(
-                                        prefetch_task_by_id(sync_db, task_id, target_languages=['en', 'zh-CN'])
-                                    )
-                                finally:
-                                    loop.close()
-                            except Exception as e:
-                                logger.warning(f"后台翻译任务 {task_id} 标题失败: {e}")
-                    finally:
-                        sync_db.close()
-                except Exception as e:
-                    logger.error(f"后台翻译任务标题失败: {e}")
-            
-            thread = threading.Thread(target=trigger_translations_sync, daemon=True)
-            thread.start()
+            _trigger_background_translation_prefetch(
+                missing_task_ids,
+                target_languages=["en", "zh-CN"],
+                label="后台翻译任务标题",
+            )
         
         # 转换为响应格式
         result = []
@@ -4568,34 +4652,11 @@ def get_my_tasks(
         missing_task_ids = list(set(missing_title_task_ids + missing_desc_task_ids))
         
         if missing_task_ids:
-            import threading
-            from app.utils.translation_prefetch import prefetch_task_by_id
-            import asyncio
-            
-            def trigger_translations_sync():
-                """在后台线程中触发翻译任务"""
-                try:
-                    sync_db = next(get_db())
-                    try:
-                        for task_id in missing_task_ids:
-                            try:
-                                loop = asyncio.new_event_loop()
-                                asyncio.set_event_loop(loop)
-                                try:
-                                    loop.run_until_complete(
-                                        prefetch_task_by_id(sync_db, task_id, target_languages=['en', 'zh-CN'])
-                                    )
-                                finally:
-                                    loop.close()
-                            except Exception as e:
-                                logger.warning(f"后台翻译任务 {task_id} 失败: {e}")
-                    finally:
-                        sync_db.close()
-                except Exception as e:
-                    logger.error(f"后台翻译任务失败: {e}")
-            
-            thread = threading.Thread(target=trigger_translations_sync, daemon=True)
-            thread.start()
+            _trigger_background_translation_prefetch(
+                missing_task_ids,
+                target_languages=["en", "zh-CN"],
+                label="后台翻译任务",
+            )
     
     return tasks
 
@@ -4685,34 +4746,11 @@ def user_profile(
         missing_task_ids = [task_id for task_id in task_ids 
                            if (task_id, 'en') not in translations_dict or (task_id, 'zh-CN') not in translations_dict]
         if missing_task_ids:
-            import threading
-            from app.utils.translation_prefetch import prefetch_task_by_id
-            import asyncio
-            
-            def trigger_translations_sync():
-                """在后台线程中触发翻译任务"""
-                try:
-                    sync_db = next(get_db())
-                    try:
-                        for task_id in missing_task_ids:
-                            try:
-                                loop = asyncio.new_event_loop()
-                                asyncio.set_event_loop(loop)
-                                try:
-                                    loop.run_until_complete(
-                                        prefetch_task_by_id(sync_db, task_id, target_languages=['en', 'zh-CN'])
-                                    )
-                                finally:
-                                    loop.close()
-                            except Exception as e:
-                                logger.warning(f"后台翻译任务 {task_id} 标题失败: {e}")
-                    finally:
-                        sync_db.close()
-                except Exception as e:
-                    logger.error(f"后台翻译任务标题失败: {e}")
-            
-            thread = threading.Thread(target=trigger_translations_sync, daemon=True)
-            thread.start()
+            _trigger_background_translation_prefetch(
+                missing_task_ids,
+                target_languages=["en", "zh-CN"],
+                label="后台翻译任务标题",
+            )
 
     # 获取用户收到的评价
     reviews = crud.get_reviews_received_by_user(
@@ -10358,7 +10396,8 @@ async def get_private_file(
         try:
             # 使用文件系统查找文件（会从数据库查询优化路径）
             from app.file_system import private_file_system
-            db = next(get_db())
+            db_gen = get_db()
+            db = next(db_gen)
             try:
                 file_response = private_file_system.get_file(file_id, parsed_params["user_id"], db)
                 # 如果找到了，直接返回
@@ -10370,7 +10409,10 @@ async def get_private_file(
                 else:
                     raise
             finally:
-                db.close()
+                try:
+                    db_gen.close()
+                except Exception:
+                    db.close()
         except Exception as e:
             logger.debug(f"从新文件系统查找文件失败，尝试旧路径: {e}")
         
@@ -10380,7 +10422,7 @@ async def get_private_file(
         else:
             base_private_dir = Path("uploads/private")
         
-        file_path = base_private_dir / file_path_str
+        file_path = _resolve_legacy_private_file_path(base_private_dir, file_path_str)
         
         if not file_path.exists():
             raise HTTPException(status_code=404, detail="文件不存在")

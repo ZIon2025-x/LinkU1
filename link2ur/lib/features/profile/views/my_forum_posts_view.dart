@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:go_router/go_router.dart';
 
 import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_radius.dart';
 import '../../../core/utils/l10n_extension.dart';
+import '../../../core/router/app_router.dart';
 import '../../../core/widgets/skeleton_view.dart';
 import '../../../core/widgets/empty_state_view.dart';
 import '../../../data/models/forum.dart';
@@ -167,7 +167,7 @@ class _MyForumPostsViewState extends State<MyForumPostsView>
           final post = posts[index];
           return _MyPostCard(
             post: post,
-            onTap: () => context.push('/forum/posts/${post.id}'),
+            onTap: () => context.safePush('/forum/posts/${post.id}'),
           );
         },
       ),

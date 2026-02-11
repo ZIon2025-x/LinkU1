@@ -291,10 +291,65 @@ class ApiService {
   /// 创建一个新的 CancelToken，调用方可在 BLoC close 时取消
   CancelToken createCancelToken() => CancelToken();
 
+  // ==================== GET 请求去重 ====================
+
+  /// 正在进行中的 GET 请求（防止重复请求）
+  final Map<String, Future<ApiResponse>> _pendingGetRequests = {};
+
+  /// 构建去重键（path + queryParameters）
+  String _buildDeduplicationKey(String path, Map<String, dynamic>? queryParameters) {
+    if (queryParameters == null || queryParameters.isEmpty) return path;
+    final sortedKeys = queryParameters.keys.toList()..sort();
+    final paramStr = sortedKeys.map((k) => '$k=${queryParameters[k]}').join('&');
+    return '$path?$paramStr';
+  }
+
   // ==================== HTTP方法 ====================
 
-  /// GET请求
+  /// GET请求（自动去重：相同 path + queryParameters 的并发请求共享同一个 Future）
   Future<ApiResponse<T>> get<T>(
+    String path, {
+    Map<String, dynamic>? queryParameters,
+    T Function(dynamic)? fromJson,
+    Options? options,
+    CancelToken? cancelToken,
+  }) async {
+    final deduplicationKey = _buildDeduplicationKey(path, queryParameters);
+
+    // 如果有相同的请求正在进行中，直接复用其 Future
+    final pending = _pendingGetRequests[deduplicationKey];
+    if (pending != null) {
+      AppLogger.debug('GET request deduplicated: $deduplicationKey');
+      final result = await pending;
+      // 对复用的结果重新应用 fromJson（因为泛型 T 可能不同）
+      if (result.isSuccess && fromJson != null) {
+        return ApiResponse.success(
+          data: fromJson(result.data),
+          statusCode: result.statusCode,
+        );
+      }
+      return result as ApiResponse<T>;
+    }
+
+    // 创建新请求并注册到去重 Map
+    final future = _executeGet<T>(path,
+      queryParameters: queryParameters,
+      fromJson: fromJson,
+      options: options,
+      cancelToken: cancelToken,
+    );
+    _pendingGetRequests[deduplicationKey] = future;
+
+    try {
+      final result = await future;
+      return result;
+    } finally {
+      _pendingGetRequests.remove(deduplicationKey);
+    }
+  }
+
+  /// 实际执行 GET 请求
+  Future<ApiResponse<T>> _executeGet<T>(
     String path, {
     Map<String, dynamic>? queryParameters,
     T Function(dynamic)? fromJson,

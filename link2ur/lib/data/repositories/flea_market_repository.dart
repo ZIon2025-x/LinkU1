@@ -29,6 +29,7 @@ class FleaMarketRepository {
     String? category,
     String? keyword,
     String? sortBy,
+    CancelToken? cancelToken,
   }) async {
     final params = {
       'page': page,
@@ -53,6 +54,7 @@ class FleaMarketRepository {
       final response = await _apiService.get<Map<String, dynamic>>(
         ApiEndpoints.fleaMarketItems,
         queryParameters: params,
+        cancelToken: cancelToken,
       );
 
       if (!response.isSuccess || response.data == null) {
@@ -96,7 +98,7 @@ class FleaMarketRepository {
   }
 
   /// 获取商品详情
-  Future<FleaMarketItem> getItemById(String id) async {
+  Future<FleaMarketItem> getItemById(String id, {CancelToken? cancelToken}) async {
     final cacheKey = '${CacheManager.prefixFleaMarketDetail}$id';
 
     final cached = _cache.get<Map<String, dynamic>>(cacheKey);
@@ -105,6 +107,7 @@ class FleaMarketRepository {
     try {
       final response = await _apiService.get<Map<String, dynamic>>(
         ApiEndpoints.fleaMarketItemById(id),
+        cancelToken: cancelToken,
       );
 
       if (!response.isSuccess || response.data == null) {

@@ -2,7 +2,6 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:go_router/go_router.dart';
 
 import '../../../core/constants/app_constants.dart';
 import '../../../core/design/app_colors.dart';
@@ -11,6 +10,7 @@ import '../../../core/design/app_radius.dart';
 import '../../../core/utils/l10n_extension.dart';
 import '../../../core/utils/haptic_feedback.dart';
 import '../../../core/widgets/error_state_view.dart';
+import '../../../core/router/app_router.dart';
 import '../../../core/widgets/empty_state_view.dart';
 import '../../../core/widgets/animated_list_item.dart';
 import '../../../core/widgets/skeleton_view.dart';
@@ -406,7 +406,7 @@ class _TaskCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return AppCard(
       onTap: () {
-        context.push('/tasks/${task.id}');
+        context.safePush('/tasks/${task.id}');
       },
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -562,7 +562,7 @@ class _ApplicationCard extends StatelessWidget {
 
     return AppCard(
       onTap: () {
-        context.push('/tasks/${application.taskId}');
+        context.safePush('/tasks/${application.taskId}');
       },
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

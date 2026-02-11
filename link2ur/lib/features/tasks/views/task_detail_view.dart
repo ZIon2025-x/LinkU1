@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../core/utils/haptic_feedback.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../../core/constants/app_constants.dart';
@@ -27,6 +26,9 @@ import '../../../data/models/user.dart';
 import '../../../data/repositories/task_repository.dart';
 import '../../../features/auth/bloc/auth_bloc.dart';
 import '../bloc/task_detail_bloc.dart';
+import '../../../core/widgets/glass_button.dart';
+import '../../../core/widgets/bouncing_widget.dart';
+import '../../../core/design/app_shadows.dart';
 import 'task_detail_components.dart';
 
 /// 任务详情页
@@ -174,44 +176,42 @@ class _TaskDetailContent extends StatelessWidget {
       scrolledUnderElevation: 0,
       forceMaterialTransparency: true,
       leading: Padding(
-        padding: const EdgeInsets.all(4),
-        child: GestureDetector(
+        padding: const EdgeInsets.all(8),
+        child: GlassButton(
           onTap: () {
             AppHaptics.selection();
             Navigator.of(context).pop();
           },
-          child: Container(
-            width: 36,
-            height: 36,
-            decoration: BoxDecoration(
-              color: Colors.black.withValues(alpha: 0.3),
-              shape: BoxShape.circle,
-            ),
-            child: const Icon(Icons.arrow_back_ios_new,
-                size: 18, color: Colors.white),
-          ),
+          child: const Icon(Icons.arrow_back_ios_new,
+              size: 18, color: Colors.white),
         ),
       ),
       actions: [
         if (state.task != null) ...[
-          _buildAppBarButton(
-            icon: Icons.share_outlined,
-            onPressed: () {
-              AppHaptics.selection();
-              CustomSharePanel.show(
-                context,
-                title: state.task!.displayTitle,
-                description: state.task!.displayDescription ?? '',
-                url: 'https://link2ur.com/tasks/${state.task!.id}',
-              );
-            },
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 4),
+            child: GlassButton(
+              onTap: () {
+                AppHaptics.selection();
+                CustomSharePanel.show(
+                  context,
+                  title: state.task!.displayTitle,
+                  description: state.task!.displayDescription ?? '',
+                  url: 'https://link2ur.com/tasks/${state.task!.id}',
+                );
+              },
+              child: const Icon(Icons.share_outlined, size: 20, color: Colors.white),
+            ),
           ),
-          _buildAppBarButton(
-            icon: Icons.more_horiz,
-            onPressed: () {
-              AppHaptics.selection();
-              _showMoreMenu(context, state);
-            },
+          Padding(
+            padding: const EdgeInsets.only(left: 4, right: 12),
+            child: GlassButton(
+              onTap: () {
+                AppHaptics.selection();
+                _showMoreMenu(context, state);
+              },
+              child: const Icon(Icons.more_horiz, size: 20, color: Colors.white),
+            ),
           ),
         ],
       ],
@@ -369,18 +369,27 @@ class _TaskDetailContent extends StatelessWidget {
             child: Column(
               children: [
                 // 标题和状态卡片
-                _TaskHeaderCard(task: task, isDark: isDark),
+                AnimatedListItem(
+                  index: 0,
+                  child: _TaskHeaderCard(task: task, isDark: isDark),
+                ),
                 const SizedBox(height: AppSpacing.md),
 
                 // 任务信息卡片
-                _TaskInfoCard(task: task, isDark: isDark),
+                AnimatedListItem(
+                  index: 1,
+                  child: _TaskInfoCard(task: task, isDark: isDark),
+                ),
                 const SizedBox(height: AppSpacing.md),
 
                 // ========== 条件卡片区域 ==========
 
                 // 发布者提示 (isPoster && open)
                 if (isPoster && task.status == AppConstants.taskStatusOpen) ...[
-                  PosterInfoCard(isDark: isDark),
+                  AnimatedListItem(
+                    index: 2,
+                    child: PosterInfoCard(isDark: isDark),
+                  ),
                   const SizedBox(height: AppSpacing.md),
                 ],
 
@@ -389,13 +398,16 @@ class _TaskDetailContent extends StatelessWidget {
                         AppConstants.taskStatusPendingConfirmation &&
                     isPoster &&
                     task.confirmationDeadline != null) ...[
-                  ConfirmationReminderCard(
-                    deadline: task.confirmationDeadline!,
-                    isDark: isDark,
-                    onConfirm: () {
-                      context.read<TaskDetailBloc>().add(
+                  AnimatedListItem(
+                    index: 2,
+                    child: ConfirmationReminderCard(
+                      deadline: task.confirmationDeadline!,
+                      isDark: isDark,
+                      onConfirm: () {
+                        context.read<TaskDetailBloc>().add(
                           const TaskDetailConfirmCompletionRequested());
-                    },
+                      },
+                    ),
                   ),
                   const SizedBox(height: AppSpacing.md),
                 ],
@@ -404,7 +416,10 @@ class _TaskDetailContent extends StatelessWidget {
                 if (task.status ==
                         AppConstants.taskStatusPendingConfirmation &&
                     isTaker) ...[
-                  WaitingConfirmationCard(isDark: isDark),
+                  AnimatedListItem(
+                    index: 2,
+                    child: WaitingConfirmationCard(isDark: isDark),
+                  ),
                   const SizedBox(height: AppSpacing.md),
                 ],
 
@@ -415,9 +430,12 @@ class _TaskDetailContent extends StatelessWidget {
                             AppConstants.taskStatusCompleted) &&
                     task.completionEvidence != null &&
                     task.completionEvidence!.isNotEmpty) ...[
-                  CompletionEvidenceCard(
-                    evidence: task.completionEvidence!,
-                    isDark: isDark,
+                  AnimatedListItem(
+                    index: 3,
+                    child: CompletionEvidenceCard(
+                      evidence: task.completionEvidence!,
+                      isDark: isDark,
+                    ),
                   ),
                   const SizedBox(height: AppSpacing.md),
                 ],
@@ -427,10 +445,13 @@ class _TaskDetailContent extends StatelessWidget {
                     (task.hasApplied || state.userApplication != null) &&
                     (state.userApplication?.status != 'pending' ||
                         task.userApplicationStatus != 'pending')) ...[
-                  ApplicationStatusCard(
-                    task: task,
-                    application: state.userApplication,
-                    isDark: isDark,
+                  AnimatedListItem(
+                    index: 3,
+                    child: ApplicationStatusCard(
+                      task: task,
+                      application: state.userApplication,
+                      isDark: isDark,
+                    ),
                   ),
                   const SizedBox(height: AppSpacing.md),
                 ],
@@ -438,10 +459,13 @@ class _TaskDetailContent extends StatelessWidget {
                 // 申请列表 (isPoster && open)
                 if (isPoster &&
                     task.status == AppConstants.taskStatusOpen) ...[
-                  ApplicationsListView(
-                    applications: state.applications,
-                    isLoading: state.isLoadingApplications,
-                    isDark: isDark,
+                  AnimatedListItem(
+                    index: 3,
+                    child: ApplicationsListView(
+                      applications: state.applications,
+                      isLoading: state.isLoadingApplications,
+                      isDark: isDark,
+                    ),
                   ),
                   const SizedBox(height: AppSpacing.md),
                 ],
@@ -452,20 +476,26 @@ class _TaskDetailContent extends StatelessWidget {
                 if (task.status == AppConstants.taskStatusCompleted &&
                     state.reviews.isNotEmpty) ...[
                   const SizedBox(height: AppSpacing.md),
-                  TaskReviewsSection(
-                    reviews: state.reviews,
-                    isDark: isDark,
+                  AnimatedListItem(
+                    index: 4,
+                    child: TaskReviewsSection(
+                      reviews: state.reviews,
+                      isDark: isDark,
+                    ),
                   ),
                 ],
 
                 // 对方信息卡片 — 仅与任务相关的用户可见
                 if (isPoster || isTaker) ...[
                   const SizedBox(height: AppSpacing.md),
-                  _CounterpartyCard(
-                    task: task,
-                    isPoster: isPoster,
-                    isTaker: isTaker,
-                    isDark: isDark,
+                  AnimatedListItem(
+                    index: 5,
+                    child: _CounterpartyCard(
+                      task: task,
+                      isPoster: isPoster,
+                      isTaker: isTaker,
+                      isDark: isDark,
+                    ),
                   ),
                 ],
                 const SizedBox(height: AppSpacing.xxl),
@@ -830,19 +860,24 @@ class _TaskHeaderCard extends StatelessWidget {
         color: isDark
             ? AppColors.cardBackgroundDark
             : AppColors.cardBackgroundLight,
+        // 极淡的渐变背景
+        gradient: isDark
+            ? null
+            : LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  Colors.white,
+                  AppColors.primary.withValues(alpha: 0.03),
+                ],
+              ),
         borderRadius: const BorderRadius.only(
           topLeft: Radius.circular(AppRadius.xlarge),
           topRight: Radius.circular(AppRadius.xlarge),
           bottomLeft: Radius.circular(AppRadius.large),
           bottomRight: Radius.circular(AppRadius.large),
         ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.06),
-            blurRadius: 10,
-            offset: const Offset(0, -5),
-          ),
-        ],
+        boxShadow: AppShadows.card(isDark),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -903,24 +938,33 @@ class _TaskHeaderCard extends StatelessWidget {
 
   Widget _buildStatusBadge() {
     final color = AppColors.taskStatusColor(task.status);
+    final isPulse = task.status == AppConstants.taskStatusInProgress;
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.15),
-        borderRadius: AppRadius.allSmall,
+        borderRadius: AppRadius.allPill, // 胶囊样式
+        border: Border.all(color: color.withValues(alpha: 0.2)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Container(
-            width: 6,
-            height: 6,
-            decoration: BoxDecoration(
-              color: color,
-              shape: BoxShape.circle,
+          // 脉冲动画点
+          if (isPulse) ...[
+             _PulseDot(color: color),
+             const SizedBox(width: 6),
+          ] else ...[
+             Container(
+              width: 6,
+              height: 6,
+              decoration: BoxDecoration(
+                color: color,
+                shape: BoxShape.circle,
+              ),
             ),
-          ),
-          const SizedBox(width: 4),
+            const SizedBox(width: 6),
+          ],
           Text(
             task.statusText,
             style: AppTypography.caption.copyWith(
@@ -942,6 +986,8 @@ class _TaskHeaderCard extends StatelessWidget {
         ? amount.toStringAsFixed(0)
         : amount.toStringAsFixed(2);
 
+    const goldColor = Color(0xFFD4A017); // 金色
+
     return Row(
       crossAxisAlignment: CrossAxisAlignment.baseline,
       textBaseline: TextBaseline.alphabetic,
@@ -949,17 +995,18 @@ class _TaskHeaderCard extends StatelessWidget {
         Text(
           currencySymbol,
           style: AppTypography.title3.copyWith(
-            color: AppColors.primary,
+            color: goldColor,
             fontWeight: FontWeight.bold,
           ),
         ),
+        const SizedBox(width: 2),
         Text(
           priceText,
           style: const TextStyle(
             fontSize: 32,
             fontWeight: FontWeight.bold,
-            color: AppColors.primary,
             height: 1.1,
+            color: goldColor,
           ),
         ),
       ],
@@ -975,11 +1022,14 @@ class _TaskHeaderCard extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
         color: isPrimary
-            ? AppColors.primaryLight.withValues(alpha: 0.3)
+            ? AppColors.primaryLight.withValues(alpha: 0.1)
             : (isDark
                 ? AppColors.backgroundDark
                 : AppColors.backgroundLight),
         borderRadius: AppRadius.allPill,
+        border: isPrimary
+            ? Border.all(color: AppColors.primary.withValues(alpha: 0.2))
+            : null,
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -1011,6 +1061,57 @@ class _TaskHeaderCard extends StatelessWidget {
   }
 }
 
+class _PulseDot extends StatefulWidget {
+  const _PulseDot({required this.color});
+  final Color color;
+
+  @override
+  State<_PulseDot> createState() => _PulseDotState();
+}
+
+class _PulseDotState extends State<_PulseDot> with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _animation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 2),
+    )..repeat(reverse: true);
+    _animation = Tween<double>(begin: 0.4, end: 1.0).animate(_controller);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FadeTransition(
+      opacity: _animation,
+      child: Container(
+        width: 8,
+        height: 8,
+        decoration: BoxDecoration(
+          color: widget.color,
+          shape: BoxShape.circle,
+          boxShadow: [
+            BoxShadow(
+              color: widget.color.withValues(alpha: 0.4),
+              blurRadius: 4,
+              spreadRadius: 1,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 // ============================================================
 // 任务信息卡片
 // ============================================================
@@ -1031,13 +1132,7 @@ class _TaskInfoCard extends StatelessWidget {
             ? AppColors.cardBackgroundDark
             : AppColors.cardBackgroundLight,
         borderRadius: AppRadius.allLarge,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 8,
-            offset: const Offset(0, 4),
-          ),
-        ],
+        boxShadow: AppShadows.card(isDark),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1082,91 +1177,111 @@ class _TaskInfoCard extends StatelessWidget {
             const SizedBox(height: AppSpacing.md),
           ],
 
-          // 时间信息
-          if (task.deadline != null)
-            _buildInfoRow(
-              icon: Icons.access_time,
-              title: context.l10n.taskDetailDeadline,
-              value: _formatDate(task.deadline!),
-              iconColor: _isDeadlineUrgent(task.deadline!)
-                  ? AppColors.error
-                  : AppColors.primary,
-            ),
-          if (task.deadline != null)
-            const SizedBox(height: AppSpacing.md),
-
-          if (task.createdAt != null)
-            _buildInfoRow(
-              icon: Icons.calendar_today,
-              title: context.l10n.taskDetailPublishTime,
-              value: _formatDate(task.createdAt!),
-              iconColor: AppColors.primary,
-            ),
-
-          // 参与人数 (多人任务)
-          if (task.isMultiParticipant) ...[
-            const SizedBox(height: AppSpacing.md),
-            _buildInfoRow(
-              icon: Icons.people_outline,
-              title: context.l10n.taskDetailParticipantCount,
-              value:
-                  '${task.currentParticipants}/${task.maxParticipants}',
-              iconColor: AppColors.primary,
-            ),
-          ],
+          // 2x2 网格布局展示信息
+          LayoutBuilder(
+            builder: (context, constraints) {
+              // 简单网格：每行2个
+              return Wrap(
+                spacing: AppSpacing.md,
+                runSpacing: AppSpacing.md,
+                children: [
+                  if (task.deadline != null)
+                    _buildGridItem(
+                      icon: Icons.access_time,
+                      title: context.l10n.taskDetailDeadline,
+                      value: _formatDate(task.deadline!),
+                      iconColor: _isDeadlineUrgent(task.deadline!)
+                          ? AppColors.error
+                          : AppColors.primary,
+                      width: (constraints.maxWidth - AppSpacing.md) / 2,
+                    ),
+                  if (task.createdAt != null)
+                    _buildGridItem(
+                      icon: Icons.calendar_today,
+                      title: context.l10n.taskDetailPublishTime,
+                      value: _formatDate(task.createdAt!),
+                      iconColor: AppColors.primary,
+                      width: (constraints.maxWidth - AppSpacing.md) / 2,
+                    ),
+                  if (task.isMultiParticipant)
+                    _buildGridItem(
+                      icon: Icons.people_outline,
+                      title: context.l10n.taskDetailParticipantCount,
+                      value: '${task.currentParticipants}/${task.maxParticipants}',
+                      iconColor: AppColors.primary,
+                      width: (constraints.maxWidth - AppSpacing.md) / 2,
+                    ),
+                  // 可以在这里添加更多信息，如浏览量等
+                ],
+              );
+            },
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildInfoRow({
+  Widget _buildGridItem({
     required IconData icon,
     required String title,
     required String value,
+    required double width,
     Color? iconColor,
   }) {
-    return Row(
-      children: [
-        Container(
-          width: 36,
-          height: 36,
-          decoration: BoxDecoration(
-            color:
-                (iconColor ?? AppColors.primary).withValues(alpha: 0.1),
-            shape: BoxShape.circle,
-          ),
-          child: Icon(
-            icon,
-            size: 16,
-            color: iconColor ?? AppColors.primary,
-          ),
+    final effectiveIconColor = iconColor ?? AppColors.primary;
+    
+    return Container(
+      width: width,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: effectiveIconColor.withValues(alpha: 0.05),
+        borderRadius: AppRadius.allMedium,
+        border: Border.all(
+          color: effectiveIconColor.withValues(alpha: 0.1),
+          width: 0.5,
         ),
-        const SizedBox(width: AppSpacing.md),
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              title,
-              style: AppTypography.caption.copyWith(
-                color: isDark
-                    ? AppColors.textSecondaryDark
-                    : AppColors.textSecondaryLight,
-              ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(6),
+            decoration: BoxDecoration(
+              color: effectiveIconColor.withValues(alpha: 0.1),
+              shape: BoxShape.circle,
             ),
-            const SizedBox(height: 2),
-            Text(
-              value,
-              style: AppTypography.body.copyWith(
-                fontWeight: FontWeight.w500,
-                color: isDark
-                    ? AppColors.textPrimaryDark
-                    : AppColors.textPrimaryLight,
-              ),
+            child: Icon(
+              icon,
+              size: 16,
+              color: effectiveIconColor,
             ),
-          ],
-        ),
-        const Spacer(),
-      ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            title,
+            style: AppTypography.caption.copyWith(
+              color: isDark
+                  ? AppColors.textSecondaryDark
+                  : AppColors.textSecondaryLight,
+              fontSize: 11,
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+          const SizedBox(height: 4),
+          Text(
+            value,
+            style: AppTypography.bodyBold.copyWith(
+              fontSize: 14,
+              color: isDark
+                  ? AppColors.textPrimaryDark
+                  : AppColors.textPrimaryLight,
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ],
+      ),
     );
   }
 
@@ -1202,26 +1317,19 @@ class _CounterpartyCard extends StatelessWidget {
     final info = _resolveCounterpartyInfo(context);
     if (info == null) return const SizedBox.shrink();
 
-    return Container(
-      width: double.infinity,
-      margin: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
-      padding: const EdgeInsets.all(AppSpacing.md),
-      decoration: BoxDecoration(
-        color: isDark
-            ? AppColors.cardBackgroundDark
-            : AppColors.cardBackgroundLight,
-        borderRadius: AppRadius.allMedium,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 8,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: info.onTap,
+    return BouncingWidget(
+      onTap: info.onTap,
+      child: Container(
+        width: double.infinity,
+        margin: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+        padding: const EdgeInsets.all(AppSpacing.md),
+        decoration: BoxDecoration(
+          color: isDark
+              ? AppColors.cardBackgroundDark
+              : AppColors.cardBackgroundLight,
+          borderRadius: AppRadius.allMedium,
+          boxShadow: AppShadows.card(isDark),
+        ),
         child: Row(
           children: [
             // 头像
@@ -1380,7 +1488,7 @@ class _CounterpartyCard extends StatelessWidget {
           onTap: () {
             AppHaptics.selection();
             // 跳转到达人详情页
-            context.push('/task-experts/$expertId');
+            context.safePush('/task-experts/$expertId');
           },
         );
       }

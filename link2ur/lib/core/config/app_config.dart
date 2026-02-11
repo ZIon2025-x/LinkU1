@@ -61,8 +61,8 @@ class AppConfig {
   /// 是否启用调试日志
   bool get enableDebugLog => kDebugMode || _environment != AppEnvironment.production;
 
-  /// 初始化配置
-  Future<void> init() async {
+  /// 初始化配置（同步，无异步操作）
+  void init() {
     // 从环境变量读取环境类型
     const envString = String.fromEnvironment('ENV', defaultValue: 'production');
     _environment = AppEnvironment.values.firstWhere(
@@ -70,7 +70,8 @@ class AppConfig {
       orElse: () => AppEnvironment.production,
     );
 
-    if (kDebugMode) {
+    // debug 和 profile 模式均使用开发环境（仅 release 走生产）
+    if (!kReleaseMode) {
       _environment = AppEnvironment.development;
     }
 

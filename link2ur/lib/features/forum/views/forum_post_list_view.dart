@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -7,11 +5,13 @@ import 'package:go_router/go_router.dart';
 import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_radius.dart';
+import '../../../core/utils/debouncer.dart';
 import '../../../core/utils/l10n_extension.dart';
 import '../../../core/widgets/skeleton_view.dart';
 import '../../../core/widgets/empty_state_view.dart';
 import '../../../core/widgets/error_state_view.dart';
 import '../../../core/widgets/async_image_view.dart';
+import '../../../core/router/app_router.dart';
 import '../../../data/models/forum.dart';
 import '../../../data/repositories/forum_repository.dart';
 import '../bloc/forum_bloc.dart';
@@ -48,13 +48,12 @@ class _ForumPostListViewContent extends StatefulWidget {
 class _ForumPostListViewContentState
     extends State<_ForumPostListViewContent> {
   final TextEditingController _searchController = TextEditingController();
-  Timer? _debounceTimer;
-  static const _debounceDuration = Duration(milliseconds: 400);
+  final Debouncer _debouncer = Debouncer();
 
   @override
   void dispose() {
     _searchController.dispose();
-    _debounceTimer?.cancel();
+    _debouncer.dispose();
     super.dispose();
   }
 
@@ -92,8 +91,7 @@ class _ForumPostListViewContentState
                 contentPadding: const EdgeInsets.symmetric(vertical: 12),
               ),
               onChanged: (value) {
-                _debounceTimer?.cancel();
-                _debounceTimer = Timer(_debounceDuration, () {
+                _debouncer.call(() {
                   if (!mounted) return;
                   context
                       .read<ForumBloc>()
@@ -106,6 +104,10 @@ class _ForumPostListViewContentState
           // 内容
           Expanded(
             child: BlocBuilder<ForumBloc, ForumState>(
+              buildWhen: (prev, curr) =>
+                  prev.posts != curr.posts ||
+                  prev.status != curr.status ||
+                  prev.errorMessage != curr.errorMessage,
               builder: (context, state) {
                 final posts = state.posts;
                 final isLoading = state.status == ForumStatus.loading;
@@ -143,9 +145,10 @@ class _ForumPostListViewContentState
                     itemBuilder: (context, index) {
                       final post = posts[index];
                       return _PostCard(
+                        key: ValueKey(post.id),
                         post: post,
                         onTap: () =>
-                            context.push('/forum/posts/${post.id}'),
+                            context.safePush('/forum/posts/${post.id}'),
                       );
                     },
                   ),
@@ -160,7 +163,7 @@ class _ForumPostListViewContentState
 }
 
 class _PostCard extends StatelessWidget {
-  const _PostCard({required this.post, this.onTap});
+  const _PostCard({super.key, required this.post, this.onTap});
 
   final ForumPost post;
   final VoidCallback? onTap;

@@ -35,8 +35,8 @@ class CommonRepository {
       throw CommonException(response.message ?? '获取横幅失败');
     }
 
-    // Banner 变动少，使用长TTL
-    await _cache.set(cacheKey, response.data!, ttl: CacheManager.longTTL);
+    // Banner 变动少，使用静态TTL（1小时）
+    await _cache.set(cacheKey, response.data!, ttl: CacheManager.staticTTL);
 
     final banners = response.data!['banners'] as List<dynamic>? ?? [];
     return banners

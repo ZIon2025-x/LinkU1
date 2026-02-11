@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:go_router/go_router.dart';
 
 import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_spacing.dart';
@@ -9,6 +8,7 @@ import '../../../core/design/app_radius.dart';
 import '../../../core/utils/l10n_extension.dart';
 import '../../../core/widgets/loading_view.dart';
 import '../../../core/widgets/empty_state_view.dart';
+import '../../../core/router/app_router.dart';
 import '../../../data/repositories/task_repository.dart';
 import '../../../data/repositories/forum_repository.dart';
 import '../../../data/repositories/flea_market_repository.dart';
@@ -215,7 +215,7 @@ class _SearchContentState extends State<_SearchContent> {
                   result: result,
                   onTap: () {
                     final id = result['id'];
-                    if (id != null) context.push('/tasks/$id');
+                    if (id != null) context.safePush('/tasks/$id');
                   },
                 )),
             AppSpacing.vLg,
@@ -234,7 +234,7 @@ class _SearchContentState extends State<_SearchContent> {
                   result: result,
                   onTap: () {
                     final id = result['id'];
-                    if (id != null) context.push('/forum/posts/$id');
+                    if (id != null) context.safePush('/forum/posts/$id');
                   },
                 )),
             AppSpacing.vLg,
@@ -253,7 +253,7 @@ class _SearchContentState extends State<_SearchContent> {
                   result: result,
                   onTap: () {
                     final id = result['id'];
-                    if (id != null) context.push('/flea-market/$id');
+                    if (id != null) context.safePush('/flea-market/$id');
                   },
                 )),
           ],

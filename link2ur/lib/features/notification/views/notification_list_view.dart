@@ -6,6 +6,7 @@ import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_radius.dart';
 import '../../../core/utils/l10n_extension.dart';
+import '../../../core/router/app_router.dart';
 import '../../../core/widgets/skeleton_view.dart';
 import '../../../core/widgets/empty_state_view.dart';
 import '../../../data/models/notification.dart' as model;
@@ -133,7 +134,7 @@ class _NotificationListViewContent extends StatelessWidget {
     if (type.startsWith('forum_')) {
       final postId = relatedId;
       if (postId != null) {
-        context.push('/forum/posts/$postId');
+        context.safePush('/forum/posts/$postId');
       }
       return;
     }
@@ -156,7 +157,7 @@ class _NotificationListViewContent extends StatelessWidget {
       } else {
         final id = taskId ?? relatedId;
         if (id != null) {
-          context.push('/tasks/$id');
+          context.safePush('/tasks/$id');
         }
       }
       return;
@@ -176,7 +177,7 @@ class _NotificationListViewContent extends StatelessWidget {
         break;
       case 'flea_market':
         if (relatedId != null) {
-          context.push('/flea-market/$relatedId');
+          context.safePush('/flea-market/$relatedId');
         }
         break;
       case 'activity':

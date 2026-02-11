@@ -251,7 +251,7 @@ def get_client_ip(request: Request) -> str:
         return real_ip
     
     # 回退到直接连接IP
-    if hasattr(request.client, 'host'):
+    if request.client and hasattr(request.client, 'host'):
         return request.client.host
     
     return "unknown"

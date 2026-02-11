@@ -27,6 +27,7 @@ class Config:
 
     # JWT配置
     SECRET_KEY = os.getenv("SECRET_KEY", "")
+    SIGNED_URL_SECRET = os.getenv("SIGNED_URL_SECRET", "")
     if not SECRET_KEY:
         import warnings
         warnings.warn(

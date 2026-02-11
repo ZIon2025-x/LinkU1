@@ -123,16 +123,16 @@ class _Link2UrAppState extends State<Link2UrApp> {
         providers: [
           BlocProvider<AuthBloc>.value(value: _authBloc),
           BlocProvider<SettingsBloc>(
-            create: (context) => SettingsBloc()
-              ..add(const SettingsLoadRequested()),
+            create: (context) => SettingsBloc(),
           ),
           BlocProvider<NotificationBloc>(
             create: (context) => NotificationBloc(
               notificationRepository: _notificationRepository,
-            )..add(const NotificationLoadUnreadNotificationCount()),
+            ),
           ),
         ],
-        child: BlocListener<AuthBloc, AuthState>(
+        child: _DeferredBlocLoader(
+          child: BlocListener<AuthBloc, AuthState>(
           listenWhen: (prev, curr) {
             // 当认证检查完成时触发（从 initial/checking 变为其他状态）
             final wasChecking = prev.status == AuthStatus.initial ||
@@ -180,9 +180,37 @@ class _Link2UrAppState extends State<Link2UrApp> {
             },
           ),
         ),
+        ),
       ),
     );
   }
+}
+
+/// 延迟加载非关键 BLoC 数据，避免阻塞首帧渲染
+class _DeferredBlocLoader extends StatefulWidget {
+  const _DeferredBlocLoader({required this.child});
+  final Widget child;
+
+  @override
+  State<_DeferredBlocLoader> createState() => _DeferredBlocLoaderState();
+}
+
+class _DeferredBlocLoaderState extends State<_DeferredBlocLoader> {
+  @override
+  void initState() {
+    super.initState();
+    // 延迟到首帧渲染完成后再触发非关键数据加载
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      context.read<SettingsBloc>().add(const SettingsLoadRequested());
+      context.read<NotificationBloc>().add(
+        const NotificationLoadUnreadNotificationCount(),
+      );
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) => widget.child;
 }
 
 Locale _localeFromString(String s) {

@@ -116,8 +116,8 @@ class CacheManager {
   Future<void> init() async {
     try {
       _diskBox = await Hive.openBox(_diskBoxName);
-      // 启动时清理过期缓存
-      await clearExpired();
+      // 延迟清理过期缓存，不阻塞启动流程
+      Future.microtask(() => clearExpired());
       AppLogger.info('CacheManager initialized');
     } catch (e) {
       AppLogger.error('CacheManager init failed', e);

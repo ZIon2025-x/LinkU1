@@ -25,6 +25,13 @@ subprojects {
             }
         }
     }
+    // 强制所有子项目（含第三方插件）使用 Java 17，消除 "源值 8 已过时" 警告
+    afterEvaluate {
+        tasks.withType<JavaCompile>().configureEach {
+            sourceCompatibility = JavaVersion.VERSION_17.toString()
+            targetCompatibility = JavaVersion.VERSION_17.toString()
+        }
+    }
     project.evaluationDependsOn(":app")
 }
 

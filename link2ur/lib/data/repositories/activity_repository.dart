@@ -1,3 +1,5 @@
+import 'package:dio/dio.dart';
+
 import '../models/activity.dart';
 import '../services/api_service.dart';
 import '../../core/constants/api_endpoints.dart';
@@ -21,6 +23,7 @@ class ActivityRepository {
     int pageSize = 20,
     String? status,
     String? keyword,
+    CancelToken? cancelToken,
   }) async {
     final offset = (page - 1) * pageSize;
     final params = {
@@ -46,6 +49,7 @@ class ActivityRepository {
       final response = await _apiService.get(
         ApiEndpoints.activities,
         queryParameters: params,
+        cancelToken: cancelToken,
       );
 
       if (!response.isSuccess || response.data == null) {
@@ -81,7 +85,7 @@ class ActivityRepository {
   }
 
   /// 获取活动详情
-  Future<Activity> getActivityById(int id) async {
+  Future<Activity> getActivityById(int id, {CancelToken? cancelToken}) async {
     final cacheKey = '${CacheManager.prefixActivityDetail}$id';
 
     final cached = _cache.get<Map<String, dynamic>>(cacheKey);
@@ -90,6 +94,7 @@ class ActivityRepository {
     try {
       final response = await _apiService.get<Map<String, dynamic>>(
         ApiEndpoints.activityById(id),
+        cancelToken: cancelToken,
       );
 
       if (!response.isSuccess || response.data == null) {

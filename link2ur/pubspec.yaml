@@ -51,10 +51,6 @@ dependencies:
   # 支付
   flutter_stripe: ^11.0.0
   
-  # JSON序列化
-  json_annotation: ^4.9.0
-  freezed_annotation: ^2.4.4
-  
   # 位置服务
   geolocator: ^12.0.0
   geocoding: ^3.0.0
@@ -103,9 +99,6 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^4.0.0
-  build_runner: ^2.4.11
-  json_serializable: ^6.8.0
-  freezed: ^2.5.2
   flutter_launcher_icons: ^0.14.3
 
   # 测试工具

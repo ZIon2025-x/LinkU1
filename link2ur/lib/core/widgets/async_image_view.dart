@@ -192,8 +192,8 @@ class AvatarView extends StatelessWidget {
       );
     }
 
-    // 4. 无头像 → 首字母占位符
-    return _buildPlaceholder(context);
+    // 4. 无头像 → 显示预设头像 avatar1（对标后端默认值）
+    return _buildLocalAsset(AppAssets.avatar1);
   }
 
   Widget _buildLocalAsset(String assetPath) {

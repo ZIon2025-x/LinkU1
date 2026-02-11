@@ -1,13 +1,13 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/design/app_colors.dart';
+import '../../../core/utils/debouncer.dart';
 import '../../../core/utils/haptic_feedback.dart';
 import '../../../core/design/app_spacing.dart';
+import '../../../core/router/app_router.dart';
 import '../../../core/design/app_radius.dart';
 import '../../../core/utils/l10n_extension.dart';
 import '../../../core/utils/responsive.dart';
@@ -46,8 +46,7 @@ class _FleaMarketViewContent extends StatefulWidget {
 }
 
 class _FleaMarketViewContentState extends State<_FleaMarketViewContent> {
-  Timer? _debounceTimer;
-  static const _debounceDuration = Duration(milliseconds: 400);
+  final Debouncer _debouncer = Debouncer();
 
   List<(String, String)> _getCategories(BuildContext context) => [
     ('all', context.l10n.fleaMarketCategoryAll),
@@ -61,7 +60,7 @@ class _FleaMarketViewContentState extends State<_FleaMarketViewContent> {
 
   @override
   void dispose() {
-    _debounceTimer?.cancel();
+    _debouncer.dispose();
     super.dispose();
   }
 
@@ -91,8 +90,7 @@ class _FleaMarketViewContentState extends State<_FleaMarketViewContent> {
                 ),
               ),
               onChanged: (query) {
-                _debounceTimer?.cancel();
-                _debounceTimer = Timer(_debounceDuration, () {
+                _debouncer.call(() {
                   if (!mounted) return;
                   context.read<FleaMarketBloc>().add(FleaMarketSearchChanged(query));
                 });
@@ -123,54 +121,43 @@ class _FleaMarketViewContentState extends State<_FleaMarketViewContent> {
                               FleaMarketCategoryChanged(value),
                             );
                       },
-                      child: TweenAnimationBuilder<double>(
-                        tween: Tween(
-                          begin: isSelected ? 1.0 : 1.03,
-                          end: isSelected ? 1.03 : 1.0,
-                        ),
-                        duration: const Duration(milliseconds: 300),
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 250),
                         curve: Curves.easeOutCubic,
-                        builder: (context, scale, child) {
-                          return Transform.scale(scale: scale, child: child);
-                        },
-                        child: AnimatedContainer(
-                          duration: const Duration(milliseconds: 250),
-                          curve: Curves.easeOutCubic,
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                          decoration: BoxDecoration(
-                            gradient: isSelected
-                                ? const LinearGradient(
-                                    colors: AppColors.gradientPrimary,
-                                  )
-                                : null,
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                        decoration: BoxDecoration(
+                          gradient: isSelected
+                              ? const LinearGradient(
+                                  colors: AppColors.gradientPrimary,
+                                )
+                              : null,
+                          color: isSelected
+                              ? null
+                              : (isDark
+                                  ? AppColors.surface2(Brightness.dark)
+                                  : AppColors.surface1(Brightness.light)),
+                          borderRadius: BorderRadius.circular(20),
+                          border: isSelected
+                              ? null
+                              : Border.all(
+                                  color: (isDark
+                                          ? AppColors.separatorDark
+                                          : AppColors.separatorLight)
+                                      .withValues(alpha: 0.3),
+                                ),
+                        ),
+                        alignment: Alignment.center,
+                        child: Text(
+                          label,
+                          style: TextStyle(
                             color: isSelected
-                                ? null
+                                ? Colors.white
                                 : (isDark
-                                    ? AppColors.surface2(Brightness.dark)
-                                    : AppColors.surface1(Brightness.light)),
-                            borderRadius: BorderRadius.circular(20),
-                            border: isSelected
-                                ? null
-                                : Border.all(
-                                    color: (isDark
-                                            ? AppColors.separatorDark
-                                            : AppColors.separatorLight)
-                                        .withValues(alpha: 0.3),
-                                  ),
-                          ),
-                          alignment: Alignment.center,
-                          child: Text(
-                            label,
-                            style: TextStyle(
-                              color: isSelected
-                                  ? Colors.white
-                                  : (isDark
-                                      ? AppColors.textPrimaryDark
-                                      : AppColors.textPrimaryLight),
-                              fontWeight:
-                                  isSelected ? FontWeight.w600 : FontWeight.normal,
-                              fontSize: 14,
-                            ),
+                                    ? AppColors.textPrimaryDark
+                                    : AppColors.textPrimaryLight),
+                            fontWeight:
+                                isSelected ? FontWeight.w600 : FontWeight.normal,
+                            fontSize: 14,
                           ),
                         ),
                       ),
@@ -255,6 +242,7 @@ class _FleaMarketViewContentState extends State<_FleaMarketViewContent> {
                     crossAxisCount: columnCount,
                     mainAxisSpacing: 12,
                     crossAxisSpacing: 12,
+                    cacheExtent: 500,
                     padding: AppSpacing.allMd,
                     itemCount: state.items.length + (state.hasMore ? 1 : 0),
                     itemBuilder: (context, index) {
@@ -269,6 +257,7 @@ class _FleaMarketViewContentState extends State<_FleaMarketViewContent> {
                       }
                       final item = state.items[index];
                       return AnimatedListItem(
+                        key: ValueKey(item.id),
                         index: index,
                         child: _FleaMarketItemCard(item: item),
                       );
@@ -293,7 +282,7 @@ class _FleaMarketItemCard extends StatelessWidget {
       onTap: () {
         final itemId = int.tryParse(item.id);
         if (itemId != null) {
-          context.push('/flea-market/$itemId');
+          context.safePush('/flea-market/$itemId');
         }
       },
       child: Container(

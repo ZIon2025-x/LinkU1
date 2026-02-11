@@ -4,28 +4,6 @@ part of 'home_view.dart';
 class _RecommendedTab extends StatelessWidget {
   const _RecommendedTab();
 
-  /// 区块间渐变分隔线
-  static Widget _sectionDivider() {
-    return SliverToBoxAdapter(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 12),
-        child: Container(
-          height: 1,
-          margin: const EdgeInsets.symmetric(horizontal: 32),
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: [
-                Colors.transparent,
-                AppColors.primary.withValues(alpha: 0.1),
-                Colors.transparent,
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final isDesktop = ResponsiveUtils.isDesktop(context);
@@ -49,25 +27,24 @@ class _RecommendedTab extends StatelessWidget {
                 child: _GreetingSection(),
               ),
 
-              _sectionDivider(),
-
-              // Banner 区域 — 桌面端并排，移动端轮播
+              // Banner 区域 — 紧跟问候语，无分隔线（对标iOS VStack spacing）
               SliverToBoxAdapter(
-                child: isDesktop
-                    ? const _DesktopBannerRow()
-                    : const _BannerCarousel(),
+                child: Padding(
+                  padding: const EdgeInsets.only(top: AppSpacing.sm),
+                  child: isDesktop
+                      ? const _DesktopBannerRow()
+                      : const _BannerCarousel(),
+                ),
               ),
 
-              _sectionDivider(),
-
-              // 推荐任务标题
+              // 推荐任务标题 — 与 Banner 紧凑衔接
               SliverToBoxAdapter(
                 child: Padding(
                   padding: EdgeInsets.fromLTRB(
                     isDesktop ? 40 : AppSpacing.md,
-                    AppSpacing.lg,
-                    isDesktop ? 40 : AppSpacing.md,
                     AppSpacing.md,
+                    isDesktop ? 40 : AppSpacing.md,
+                    AppSpacing.sm,
                   ),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -90,13 +67,10 @@ class _RecommendedTab extends StatelessWidget {
 
               // 推荐任务内容
               if (state.isLoading && state.recommendedTasks.isEmpty)
-                const SliverFillRemaining(
-                  child: SkeletonGrid(
-                    crossAxisCount: 2,
-                    itemCount: 4,
-                    aspectRatio: 0.82,
-                    imageFlex: 5,
-                    contentFlex: 3,
+                SliverToBoxAdapter(
+                  child: SizedBox(
+                    height: 256,
+                    child: _SkeletonHorizontalCards(isDesktop: isDesktop),
                   ),
                 )
               else if (state.hasError && state.recommendedTasks.isEmpty)
@@ -123,8 +97,6 @@ class _RecommendedTab extends StatelessWidget {
                 else
                   _buildMobileTaskScroll(state),
 
-                _sectionDivider(),
-
                 // 热门活动标题
                 SliverToBoxAdapter(
                   child: Padding(
@@ -132,7 +104,7 @@ class _RecommendedTab extends StatelessWidget {
                       isDesktop ? 40 : AppSpacing.md,
                       AppSpacing.lg,
                       isDesktop ? 40 : AppSpacing.md,
-                      AppSpacing.md,
+                      AppSpacing.sm,
                     ),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -160,8 +132,6 @@ class _RecommendedTab extends StatelessWidget {
                       : _PopularActivitiesSection(),
                 ),
 
-                _sectionDivider(),
-
                 // 最新动态标题
                 SliverToBoxAdapter(
                   child: Padding(
@@ -169,7 +139,7 @@ class _RecommendedTab extends StatelessWidget {
                       isDesktop ? 40 : AppSpacing.md,
                       AppSpacing.lg,
                       isDesktop ? 40 : AppSpacing.md,
-                      AppSpacing.md,
+                      AppSpacing.sm,
                     ),
                     child: Text(
                       context.l10n.homeLatestActivity,
@@ -215,7 +185,7 @@ class _RecommendedTab extends StatelessWidget {
           childAspectRatio: 0.82,
         ),
         delegate: SliverChildBuilderDelegate(
-          (context, index) => _DesktopTaskCard(task: tasks[index]),
+          (context, index) => _DesktopTaskCard(key: ValueKey(tasks[index].id), task: tasks[index]),
           childCount: tasks.length,
         ),
       ),
@@ -240,6 +210,7 @@ class _RecommendedTab extends StatelessWidget {
           itemBuilder: (context, index) {
             final task = state.recommendedTasks[index];
             return AnimatedListItem(
+              key: ValueKey(task.id),
               index: index,
               child: _HorizontalTaskCard(task: task),
             );
@@ -394,7 +365,7 @@ class _DesktopActivitiesRow extends StatelessWidget {
 
 /// 桌面端任务卡片（自适应宽度，带 hover 效果）
 class _DesktopTaskCard extends StatefulWidget {
-  const _DesktopTaskCard({required this.task});
+  const _DesktopTaskCard({super.key, required this.task});
   final Task task;
 
   @override
@@ -426,7 +397,7 @@ class _DesktopTaskCardState extends State<_DesktopTaskCard> {
       onExit: (_) => setState(() => _isHovered = false),
       cursor: SystemMouseCursors.click,
       child: GestureDetector(
-        onTap: () => context.push('/tasks/${task.id}'),
+        onTap: () => context.safePush('/tasks/${task.id}'),
         // 简化：去掉 AnimatedContainer + BoxShadow 动画 + Matrix4 transform
         // 改为静态容器 + Opacity 控制 hover 效果（成本远低于 shadow 动画）
         child: Opacity(
@@ -614,6 +585,104 @@ class _DesktopTaskCardState extends State<_DesktopTaskCard> {
         ),
       ),
       ),
+    );
+  }
+}
+
+/// 推荐任务骨架屏 — 匹配横向滚动卡片布局
+class _SkeletonHorizontalCards extends StatelessWidget {
+  const _SkeletonHorizontalCards({required this.isDesktop});
+
+  final bool isDesktop;
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final baseColor = isDark
+        ? Colors.white.withValues(alpha: 0.06)
+        : Colors.black.withValues(alpha: 0.06);
+
+    // 桌面端用 Grid 骨架，移动端用横向滚动骨架
+    if (isDesktop) {
+      return const SkeletonGrid(
+        crossAxisCount: 3,
+        itemCount: 6,
+        aspectRatio: 0.82,
+        imageFlex: 5,
+        contentFlex: 3,
+      );
+    }
+
+    return ListView.separated(
+      scrollDirection: Axis.horizontal,
+      clipBehavior: Clip.none,
+      padding: const EdgeInsets.only(
+        left: AppSpacing.md, right: AppSpacing.lg, top: 4, bottom: 10,
+      ),
+      itemCount: 3,
+      separatorBuilder: (_, __) => const SizedBox(width: 12),
+      itemBuilder: (context, index) {
+        return Container(
+          width: 220,
+          clipBehavior: Clip.antiAlias,
+          decoration: BoxDecoration(
+            color: isDark
+                ? AppColors.cardBackgroundDark
+                : AppColors.cardBackgroundLight,
+            borderRadius: AppRadius.allLarge,
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // 图片占位
+              Container(
+                height: 170,
+                width: double.infinity,
+                color: baseColor,
+              ),
+              // 内容占位
+              Padding(
+                padding: const EdgeInsets.fromLTRB(10, 8, 10, 8),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      height: 14,
+                      width: double.infinity,
+                      decoration: BoxDecoration(
+                        color: baseColor,
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        Container(
+                          height: 12,
+                          width: 80,
+                          decoration: BoxDecoration(
+                            color: baseColor,
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                        ),
+                        const Spacer(),
+                        Container(
+                          height: 22,
+                          width: 48,
+                          decoration: BoxDecoration(
+                            color: baseColor,
+                            borderRadius: BorderRadius.circular(11),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 }

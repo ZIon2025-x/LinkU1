@@ -9,6 +9,7 @@ import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_radius.dart';
 import '../../../core/utils/l10n_extension.dart';
+import '../../../core/router/app_router.dart';
 import '../../../core/widgets/buttons.dart';
 import '../../../core/widgets/full_screen_image_view.dart';
 import '../../../core/widgets/loading_view.dart';
@@ -176,14 +177,14 @@ class _TaskChatContentState extends State<_TaskChatContent> {
               IconButton(
                 icon: const Icon(Icons.info_outline),
                 onPressed: () {
-                  context.push('/tasks/${widget.taskId}');
+                  context.safePush('/tasks/${widget.taskId}');
                 },
               ),
               // 更多菜单 - 对齐iOS toolbar menu
               PopupMenuButton<String>(
                 onSelected: (value) {
                   if (value == 'task_detail') {
-                    context.push('/tasks/${widget.taskId}');
+                    context.safePush('/tasks/${widget.taskId}');
                   }
                 },
                 itemBuilder: (context) => [
@@ -221,7 +222,7 @@ class _TaskChatContentState extends State<_TaskChatContent> {
                   isExpanded: _showActionMenu,
                   onImagePicker: _pickImage,
                   onTaskDetail: () {
-                    context.push('/tasks/${widget.taskId}');
+                    context.safePush('/tasks/${widget.taskId}');
                   },
                   onViewLocation: null,
                 ),
@@ -290,7 +291,7 @@ class _TaskChatContentState extends State<_TaskChatContent> {
           SmallActionButton(
             text: context.l10n.chatViewDetail,
             onPressed: () {
-              context.push('/tasks/${widget.taskId}');
+              context.safePush('/tasks/${widget.taskId}');
             },
           ),
         ],

@@ -48,7 +48,7 @@ class RateLimiter:
             return real_ip
         
         # 回退到直接连接IP
-        if hasattr(request.client, 'host'):
+        if request.client and hasattr(request.client, 'host'):
             return request.client.host
         
         return "unknown"
@@ -59,38 +59,41 @@ class RateLimiter:
         优先通过 session_id cookie 获取（主认证方式），
         其次尝试 access_token cookie 和 Authorization Bearer header。
         """
-        try:
-            # 1. 尝试从 session_id cookie 获取用户ID（主要认证方式，Web端和iOS端共用）
-            session_id = request.cookies.get("session_id")
-            if not session_id:
-                session_id = request.headers.get("X-Session-ID")
-            if session_id:
-                try:
-                    from app.secure_auth import SecureAuthManager
-                    session = SecureAuthManager.get_session(session_id, update_activity=False)
-                    if session and hasattr(session, 'user_id') and session.user_id:
-                        return session.user_id
-                except Exception:
-                    pass
-            
-            # 2. 回退：尝试从 access_token cookie 中解析用户ID
-            access_token = request.cookies.get("access_token")
-            if access_token:
+        # 1. 尝试从 session_id cookie 获取用户ID（主要认证方式，Web端和iOS端共用）
+        session_id = request.cookies.get("session_id")
+        if not session_id:
+            session_id = request.headers.get("X-Session-ID")
+        if session_id:
+            try:
+                from app.secure_auth import SecureAuthManager
+                session = SecureAuthManager.get_session(session_id, update_activity=False)
+                if session and hasattr(session, 'user_id') and session.user_id:
+                    return session.user_id
+            except (ImportError, AttributeError, TypeError, ValueError) as e:
+                logger.debug("通过 session_id 解析用户ID失败: %s", e)
+        
+        # 2. 回退：尝试从 access_token cookie 中解析用户ID
+        access_token = request.cookies.get("access_token")
+        if access_token:
+            try:
                 from app.security import decode_token
                 payload = decode_token(access_token)
                 if payload and "sub" in payload:
                     return payload["sub"]
-            
-            # 3. 回退：尝试从 Authorization Bearer header 中解析用户ID
-            auth_header = request.headers.get("Authorization")
-            if auth_header and auth_header.startswith("Bearer "):
-                token = auth_header[7:]
+            except (ImportError, TypeError, ValueError, KeyError) as e:
+                logger.debug("通过 access_token 解析用户ID失败: %s", e)
+        
+        # 3. 回退：尝试从 Authorization Bearer header 中解析用户ID
+        auth_header = request.headers.get("Authorization")
+        if auth_header and auth_header.startswith("Bearer "):
+            token = auth_header[7:]
+            try:
                 from app.security import decode_token
                 payload = decode_token(token)
                 if payload and "sub" in payload:
                     return payload["sub"]
-        except Exception:
-            pass
+            except (ImportError, TypeError, ValueError, KeyError) as e:
+                logger.debug("通过 Authorization 解析用户ID失败: %s", e)
         return None
     
     def _get_rate_limit_key(self, request: Request, rate_type: str) -> str:

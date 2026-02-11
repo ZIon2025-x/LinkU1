@@ -68,6 +68,7 @@ class AppTheme {
       cardTheme: CardThemeData(
         elevation: 0,
         color: AppColors.cardBackgroundLight,
+        surfaceTintColor: AppColors.primary.withValues(alpha: 0.05), // 微妙的色调
         shape: RoundedRectangleBorder(
           borderRadius: AppRadius.card,
           side: BorderSide(
@@ -277,6 +278,7 @@ class AppTheme {
       cardTheme: CardThemeData(
         elevation: 0,
         color: AppColors.cardBackgroundDark,
+        surfaceTintColor: AppColors.primary.withValues(alpha: 0.05), // 微妙的色调
         shape: RoundedRectangleBorder(
           borderRadius: AppRadius.card,
           side: BorderSide(

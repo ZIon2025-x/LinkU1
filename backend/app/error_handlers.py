@@ -28,8 +28,11 @@ def set_cors_headers(response: Response, request: Request = None):
             response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, PATCH, DELETE, OPTIONS"
             response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization, X-Requested-With, Accept, Origin, Cache-Control, Pragma, Expires, X-CSRF-Token, X-Session-ID"
     else:
-        # 如果没有request，设置默认的CORS头
-        response.headers["Access-Control-Allow-Origin"] = "*"
+        # 如果没有request，回退到受控来源（避免 "*"）
+        default_origin = Config.ALLOWED_ORIGINS[0] if Config.ALLOWED_ORIGINS else None
+        if default_origin:
+            response.headers["Access-Control-Allow-Origin"] = default_origin
+            response.headers["Access-Control-Allow-Credentials"] = "true"
         response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, PATCH, DELETE, OPTIONS"
         response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization, X-Requested-With, Accept, Origin, Cache-Control, Pragma, X-CSRF-Token, X-Session-ID"
 

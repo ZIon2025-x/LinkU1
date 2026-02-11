@@ -19,8 +19,10 @@ class _SpringCurve extends Curve {
   double transformInternal(double t) {
     final omega = 2 * 3.14159 / response;
     final decay = -omega * damping;
-    return 1 - (1 + decay * t) * (1 - t) * (1 - t) *
+    final value = 1 - (1 + decay * t) * (1 - t) * (1 - t) *
         _expApprox(decay * t);
+    // clamp 到 [0, 1]，防止弹簧过冲导致 scale 超过原始大小
+    return value.clamp(0.0, 1.0);
   }
 
   double _expApprox(double x) {

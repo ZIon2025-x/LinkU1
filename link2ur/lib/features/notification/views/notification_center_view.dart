@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:go_router/go_router.dart';
 
 import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_spacing.dart';
@@ -8,6 +7,7 @@ import '../../../core/utils/l10n_extension.dart';
 import '../../../core/widgets/animated_list_item.dart';
 import '../../../core/widgets/skeleton_view.dart';
 import '../../../core/widgets/error_state_view.dart';
+import '../../../core/router/app_router.dart';
 import '../../../core/widgets/empty_state_view.dart';
 import '../../../core/widgets/loading_view.dart';
 import '../bloc/notification_bloc.dart';
@@ -337,13 +337,13 @@ class _NotificationItem extends StatelessWidget {
 
     switch (notification.relatedType) {
       case 'task_id':
-        context.push('/tasks/$relatedId');
+        context.safePush('/tasks/$relatedId');
         break;
       case 'forum_post_id':
-        context.push('/forum/posts/$relatedId');
+        context.safePush('/forum/posts/$relatedId');
         break;
       case 'flea_market_id':
-        context.push('/flea-market/$relatedId');
+        context.safePush('/flea-market/$relatedId');
         break;
       default:
         break;

@@ -1,3 +1,5 @@
+import 'package:dio/dio.dart';
+
 import '../models/notification.dart';
 import '../services/api_service.dart';
 import '../../core/constants/api_endpoints.dart';
@@ -37,6 +39,7 @@ class NotificationRepository {
     int page = 1,
     int pageSize = 20,
     String? type,
+    CancelToken? cancelToken,
   }) async {
     final params = {
       'page': page,
@@ -54,6 +57,7 @@ class NotificationRepository {
     final response = await _apiService.get<dynamic>(
       ApiEndpoints.notifications,
       queryParameters: params,
+      cancelToken: cancelToken,
     );
 
     if (!response.isSuccess || response.data == null) {
@@ -110,9 +114,10 @@ class NotificationRepository {
   }
 
   /// 获取未读通知数量
-  Future<UnreadNotificationCount> getUnreadCount() async {
+  Future<UnreadNotificationCount> getUnreadCount({CancelToken? cancelToken}) async {
     final response = await _apiService.get<Map<String, dynamic>>(
       ApiEndpoints.unreadNotificationCount,
+      cancelToken: cancelToken,
     );
 
     if (!response.isSuccess || response.data == null) {

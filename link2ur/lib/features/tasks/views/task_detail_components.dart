@@ -11,6 +11,7 @@ import '../../../core/router/app_router.dart';
 import '../../../core/widgets/buttons.dart';
 import '../../../core/widgets/loading_view.dart';
 import '../../../core/widgets/async_image_view.dart';
+import '../../../core/widgets/bouncing_widget.dart';
 import '../../../core/utils/l10n_extension.dart';
 import '../../../data/models/task.dart';
 import '../../../data/models/task_application.dart';
@@ -804,7 +805,7 @@ class _ActionCircleButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
+    return BouncingWidget(
       onTap: onTap,
       child: Container(
         width: 44,
