@@ -14,14 +14,17 @@ class DiscoveryRepository {
     int page = 1,
     int limit = 20,
   }) async {
-    final response = await _apiService.get(
+    final response = await _apiService.get<Map<String, dynamic>>(
       ApiEndpoints.discoveryFeed,
       queryParameters: {
         'page': page,
         'limit': limit,
       },
     );
-    return DiscoveryFeedResponse.fromJson(response.data);
+    if (!response.isSuccess || response.data == null) {
+      throw Exception(response.message ?? '获取发现 Feed 失败');
+    }
+    return DiscoveryFeedResponse.fromJson(response.data!);
   }
 
   /// 搜索可关联内容（用于发帖关联功能）
@@ -29,14 +32,17 @@ class DiscoveryRepository {
     required String query,
     String type = 'all',
   }) async {
-    final response = await _apiService.get(
+    final response = await _apiService.get<Map<String, dynamic>>(
       ApiEndpoints.forumSearchLinkable,
       queryParameters: {
         'q': query,
         'type': type,
       },
     );
-    final results = response.data['results'] as List<dynamic>? ?? [];
+    if (!response.isSuccess || response.data == null) {
+      throw Exception(response.message ?? '搜索可关联内容失败');
+    }
+    final results = response.data!['results'] as List<dynamic>? ?? [];
     return results.cast<Map<String, dynamic>>();
   }
 }

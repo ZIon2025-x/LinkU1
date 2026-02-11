@@ -132,22 +132,90 @@ class _RecommendedTab extends StatelessWidget {
                       : _PopularActivitiesSection(),
                 ),
 
-                // 发现更多标题
+                // 发现更多标题（与 discovery_feed_prototype 一致：左侧标题 + 右侧筛选）
                 SliverToBoxAdapter(
                   child: Padding(
                     padding: EdgeInsets.fromLTRB(
-                      isDesktop ? 40 : AppSpacing.md,
+                      isDesktop ? 40 : 20,
                       AppSpacing.lg,
-                      isDesktop ? 40 : AppSpacing.md,
-                      AppSpacing.sm,
+                      isDesktop ? 40 : 20,
+                      12,
                     ),
-                    child: Text(
-                      '发现更多',
-                      style: AppTypography.title3.copyWith(
-                        color: Theme.of(context).brightness == Brightness.dark
-                            ? AppColors.textPrimaryDark
-                            : AppColors.desktopTextLight,
-                      ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Row(
+                          children: [
+                            Icon(
+                              Icons.auto_awesome,
+                              size: 22,
+                              color: Theme.of(context).brightness == Brightness.dark
+                                  ? const Color(0xFFA29BFE)
+                                  : const Color(0xFF6C5CE7),
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              '发现更多',
+                              style: AppTypography.title3.copyWith(
+                                fontWeight: FontWeight.w700,
+                                fontSize: 18,
+                                color: Theme.of(context).brightness == Brightness.dark
+                                    ? AppColors.textPrimaryDark
+                                    : AppColors.desktopTextLight,
+                              ),
+                            ),
+                          ],
+                        ),
+                        Container(
+                          decoration: BoxDecoration(
+                            color: Theme.of(context).brightness == Brightness.dark
+                                ? AppColors.cardBackgroundDark
+                                : Colors.white,
+                            borderRadius: BorderRadius.circular(999),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.06),
+                                blurRadius: 3,
+                                offset: const Offset(0, 1),
+                              ),
+                            ],
+                          ),
+                          child: InkWell(
+                            onTap: () {
+                              // TODO: 打开筛选（类型/排序）
+                            },
+                            borderRadius: BorderRadius.circular(999),
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 6,
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    Icons.tune,
+                                    size: 16,
+                                    color: Theme.of(context).brightness == Brightness.dark
+                                        ? AppColors.textSecondaryDark
+                                        : AppColors.textSecondaryLight,
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    '筛选',
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      color: Theme.of(context).brightness == Brightness.dark
+                                          ? AppColors.textSecondaryDark
+                                          : AppColors.textSecondaryLight,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ),

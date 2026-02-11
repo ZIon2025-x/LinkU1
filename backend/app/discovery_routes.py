@@ -163,6 +163,7 @@ async def _fetch_forum_posts(db: AsyncSession, limit: int) -> list:
             "title": row.title,
             "description": content_preview,
             "images": post_images if post_images else None,
+            "user_id": str(row.author_id) if row.author_id else None,
             "user_name": row.author_name or "匿名用户",
             "user_avatar": row.author_avatar,
             "price": None,
@@ -258,16 +259,21 @@ async def _fetch_competitor_reviews(db: AsyncSession, limit: int) -> list:
     """
     query = (
         select(
-            models.LeaderboardVote.id,
+            models.LeaderboardVote.id.label("vote_id"),
+            models.LeaderboardVote.user_id,
             models.LeaderboardVote.vote_type,
             models.LeaderboardVote.comment,
             models.LeaderboardVote.like_count,
             models.LeaderboardVote.created_at,
             models.LeaderboardVote.is_anonymous,
+            models.LeaderboardVote.item_id.label("vote_item_id"),
             models.User.name.label("reviewer_name"),
             models.User.avatar.label("reviewer_avatar"),
+            models.LeaderboardItem.id.label("leaderboard_item_id"),
             models.LeaderboardItem.name.label("item_name"),
             models.LeaderboardItem.images.label("item_images"),
+            models.LeaderboardItem.upvotes.label("item_upvotes"),
+            models.LeaderboardItem.downvotes.label("item_downvotes"),
             models.CustomLeaderboard.name.label("leaderboard_name"),
         )
         .join(models.User, models.LeaderboardVote.user_id == models.User.id)
@@ -276,6 +282,8 @@ async def _fetch_competitor_reviews(db: AsyncSession, limit: int) -> list:
         .where(
             models.LeaderboardVote.comment.isnot(None),
             models.LeaderboardVote.comment != "",
+            models.LeaderboardItem.status == "approved",
+            models.CustomLeaderboard.status == "active",
         )
         .order_by(desc(models.LeaderboardVote.created_at))
         .limit(limit)
@@ -290,10 +298,11 @@ async def _fetch_competitor_reviews(db: AsyncSession, limit: int) -> list:
         
         items.append({
             "feed_type": "competitor_review",
-            "id": f"creview_{row.id}",
+            "id": f"creview_{row.vote_id}",
             "title": None,
             "description": row.comment,
             "images": None,
+            "user_id": None if row.is_anonymous else str(row.user_id),
             "user_name": reviewer_name,
             "user_avatar": reviewer_avatar,
             "price": None,
@@ -303,12 +312,12 @@ async def _fetch_competitor_reviews(db: AsyncSession, limit: int) -> list:
             "rating": None,
             "like_count": row.like_count or 0,
             "comment_count": None,
-            "upvote_count": 1 if row.vote_type == "upvote" else 0,
-            "downvote_count": 1 if row.vote_type == "downvote" else 0,
+            "upvote_count": row.item_upvotes or 0,
+            "downvote_count": row.item_downvotes or 0,
             "linked_item": None,
             "target_item": {
                 "item_type": "competitor",
-                "item_id": str(row.id),
+                "item_id": str(row.vote_item_id),
                 "name": row.item_name,
                 "subtitle": row.leaderboard_name,
                 "thumbnail": item_thumb,
@@ -388,6 +397,7 @@ async def _fetch_service_reviews(db: AsyncSession, limit: int) -> list:
             "title": None,
             "description": row.comment,
             "images": None,
+            "user_id": None if is_anon else str(row.user_id),
             "user_name": reviewer_name,
             "user_avatar": reviewer_avatar,
             "price": None,
@@ -512,6 +522,7 @@ async def _fetch_expert_services(db: AsyncSession, limit: int) -> list:
             models.TaskExpertService.base_price,
             models.TaskExpertService.currency,
             models.TaskExpertService.created_at,
+            models.TaskExpert.id.label("expert_user_id"),
             models.TaskExpert.rating.label("expert_rating"),
             models.User.name.label("expert_name"),
             models.User.avatar.label("expert_avatar"),
@@ -533,6 +544,7 @@ async def _fetch_expert_services(db: AsyncSession, limit: int) -> list:
             "title": row.service_name,
             "description": (row.description or "")[:80],
             "images": [service_thumb] if service_thumb else None,
+            "user_id": str(row.expert_user_id) if row.expert_user_id else None,
             "user_name": row.expert_name,
             "user_avatar": row.expert_avatar,
             "price": float(row.base_price) if row.base_price else None,

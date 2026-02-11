@@ -92,7 +92,7 @@ class _LeaderboardDetailContent extends StatelessWidget {
     if (!hasHero) {
       return AppBar(
         title: Text(state.selectedLeaderboard?.displayName ??
-            context.l10n.leaderboardItemDetail),
+            context.l10n.leaderboardLeaderboard),
         actions: [
           IconButton(
             icon: const Icon(Icons.share_outlined),

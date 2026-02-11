@@ -5,6 +5,7 @@
 
 from typing import List, Optional
 from datetime import datetime, timezone, timedelta
+import json
 import re
 import logging
 
@@ -7062,7 +7063,6 @@ async def search_linkable_content(
                 )
                 is_experienced = (exp_check.scalar() or 0) > 0
             # 解析 images JSONB 获取第一张图
-            import json as _json
             svc_images = row.images
             svc_thumb = None
             if svc_images:
@@ -7070,7 +7070,7 @@ async def search_linkable_content(
                     svc_thumb = svc_images[0] if svc_images else None
                 elif isinstance(svc_images, str):
                     try:
-                        parsed = _json.loads(svc_images)
+                        parsed = json.loads(svc_images)
                         svc_thumb = parsed[0] if isinstance(parsed, list) and parsed else None
                     except Exception:
                         pass
@@ -7104,7 +7104,6 @@ async def search_linkable_content(
         )
         product_result = await db.execute(product_query)
         for row in product_result:
-            import json as _json
             prod_images = row.images
             first_image = None
             if prod_images:
@@ -7112,7 +7111,7 @@ async def search_linkable_content(
                     first_image = prod_images[0] if prod_images else None
                 elif isinstance(prod_images, str):
                     try:
-                        parsed = _json.loads(prod_images)
+                        parsed = json.loads(prod_images)
                         first_image = parsed[0] if isinstance(parsed, list) and parsed else None
                     except Exception:
                         pass
@@ -7161,7 +7160,6 @@ async def search_linkable_content(
                     )
                 )
                 is_experienced = (exp_check.scalar() or 0) > 0
-            import json as _json
             act_images = row.activity_images
             act_thumb = None
             if act_images:
@@ -7169,7 +7167,7 @@ async def search_linkable_content(
                     act_thumb = act_images[0] if act_images else None
                 elif isinstance(act_images, str):
                     try:
-                        parsed = _json.loads(act_images)
+                        parsed = json.loads(act_images)
                         act_thumb = parsed[0] if isinstance(parsed, list) and parsed else None
                     except Exception:
                         pass

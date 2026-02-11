@@ -139,10 +139,11 @@ class AsyncImageView extends StatelessWidget {
 /// 头像视图
 ///
 /// 统一头像显示逻辑:
-/// - 预设头像 (/static/avatarX.png) → 使用本地 asset（更快、离线可用）
+/// - 匿名用户 → 使用 assets/images/any.png 统一匿名头像（不请求网络）
 /// - 官方头像 (/static/logo.png, official, system) → 显示 logo
+/// - 预设头像 (/static/avatarX.png) → 使用本地 asset（更快、离线可用）
 /// - 网络URL (http/https) → CachedNetworkImage 加载
-/// - 无头像 → 显示首字母占位符
+/// - 无头像 → 显示预设头像 avatar1（对标后端默认值）
 class AvatarView extends StatelessWidget {
   const AvatarView({
     super.key,
@@ -151,6 +152,7 @@ class AvatarView extends StatelessWidget {
     this.size = 40,
     this.backgroundColor,
     this.isOfficial = false,
+    this.isAnonymous = false,
   });
 
   final String? imageUrl;
@@ -159,21 +161,28 @@ class AvatarView extends StatelessWidget {
   final Color? backgroundColor;
   /// 强制使用官方 logo 头像（用于客服、系统消息等）
   final bool isOfficial;
+  /// 匿名用户：使用 assets/images/any.png，不请求网络头像
+  final bool isAnonymous;
 
   @override
   Widget build(BuildContext context) {
-    // 1. 官方头像 → 显示 logo
+    // 1. 匿名用户 → 统一匿名头像 any.png
+    if (isAnonymous) {
+      return _buildLocalAsset(AppAssets.any);
+    }
+
+    // 2. 官方头像 → 显示 logo
     if (isOfficial || AppAssets.isOfficialAvatar(imageUrl)) {
       return _buildLocalAsset(AppAssets.logo);
     }
 
-    // 2. 预设头像 → 使用本地 asset
+    // 3. 预设头像 → 使用本地 asset
     final localAsset = AppAssets.getLocalAvatarAsset(imageUrl);
     if (localAsset != null) {
       return _buildLocalAsset(localAsset);
     }
 
-    // 3. 网络 URL → CachedNetworkImage（按头像实际尺寸缓存，避免缓存全尺寸大图）
+    // 4. 网络 URL → CachedNetworkImage（按头像实际尺寸缓存，避免缓存全尺寸大图）
     final url = Helpers.getImageUrl(imageUrl);
     if (url.isNotEmpty) {
       final dpr = MediaQuery.devicePixelRatioOf(context);
@@ -192,7 +201,7 @@ class AvatarView extends StatelessWidget {
       );
     }
 
-    // 4. 无头像 → 显示预设头像 avatar1（对标后端默认值）
+    // 5. 无头像 → 显示预设头像 avatar1（对标后端默认值）
     return _buildLocalAsset(AppAssets.avatar1);
   }
 

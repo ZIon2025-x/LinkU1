@@ -1029,6 +1029,7 @@ class _CommentCard extends StatelessWidget {
                 imageUrl: !isAnonymous ? vote['voter_avatar'] as String? : null,
                 name: !isAnonymous ? vote['voter_name'] as String? : null,
                 size: 28,
+                isAnonymous: isAnonymous,
               ),
               const SizedBox(width: 8),
               // 名称

@@ -9,6 +9,7 @@ class DiscoveryFeedItem extends Equatable {
     this.title,
     this.description,
     this.images,
+    this.userId,
     this.userName,
     this.userAvatar,
     this.price,
@@ -33,6 +34,7 @@ class DiscoveryFeedItem extends Equatable {
   final String? title;
   final String? description;
   final List<String>? images;
+  final String? userId;
   final String? userName;
   final String? userAvatar;
   final double? price;
@@ -90,6 +92,7 @@ class DiscoveryFeedItem extends Equatable {
       title: json['title'] as String?,
       description: json['description'] as String?,
       images: (json['images'] as List<dynamic>?)?.map((e) => e as String).toList(),
+      userId: json['user_id'] as String?,
       userName: json['user_name'] as String?,
       userAvatar: json['user_avatar'] as String?,
       price: (json['price'] as num?)?.toDouble(),
