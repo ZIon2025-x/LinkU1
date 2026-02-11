@@ -46,15 +46,18 @@ class CreateReviewRequest {
   const CreateReviewRequest({
     required this.rating,
     this.comment,
+    this.isAnonymous = false,
   });
 
   final int rating;
   final String? comment;
+  final bool isAnonymous;
 
   Map<String, dynamic> toJson() {
     return {
       'rating': rating,
       if (comment != null) 'comment': comment,
+      'is_anonymous': isAnonymous,
     };
   }
 }

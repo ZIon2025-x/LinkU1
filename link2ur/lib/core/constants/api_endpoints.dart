@@ -419,6 +419,13 @@ class ApiEndpoints {
   static String translateTask(int taskId) => '/api/translate/task/$taskId';
   static const String translateTasksBatch = '/api/translate/tasks/batch';
 
+  // ==================== Discovery Feed ====================
+  // 后端: discovery_routes.py (prefix: /api/discovery)
+  static const String discoveryFeed = '/api/discovery/feed';
+
+  // ==================== 论坛关联搜索 ====================
+  static const String forumSearchLinkable = '/api/forum/search-linkable';
+
   // ==================== 通用/其他 ====================
   static const String uploadImage = '/api/upload/image';
   static const String uploadPublicImage = '/api/upload/public-image';

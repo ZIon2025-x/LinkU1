@@ -24,6 +24,7 @@ import 'data/repositories/coupon_points_repository.dart';
 import 'data/repositories/payment_repository.dart';
 import 'data/repositories/student_verification_repository.dart';
 import 'data/repositories/common_repository.dart';
+import 'data/repositories/discovery_repository.dart';
 import 'data/services/api_service.dart';
 import 'l10n/app_localizations.dart';
 
@@ -50,6 +51,7 @@ class _Link2UrAppState extends State<Link2UrApp> {
   late final PaymentRepository _paymentRepository;
   late final StudentVerificationRepository _studentVerificationRepository;
   late final CommonRepository _commonRepository;
+  late final DiscoveryRepository _discoveryRepository;
   late final AuthBloc _authBloc;
   late final AppRouter _appRouter;
 
@@ -72,6 +74,7 @@ class _Link2UrAppState extends State<Link2UrApp> {
     _studentVerificationRepository =
         StudentVerificationRepository(apiService: _apiService);
     _commonRepository = CommonRepository(apiService: _apiService);
+    _discoveryRepository = DiscoveryRepository(apiService: _apiService);
 
     // 创建 AuthBloc 并连接 Token 刷新失败回调
     _authBloc = AuthBloc(authRepository: _authRepository)
@@ -122,6 +125,8 @@ class _Link2UrAppState extends State<Link2UrApp> {
             value: _studentVerificationRepository),
         RepositoryProvider<CommonRepository>.value(
             value: _commonRepository),
+        RepositoryProvider<DiscoveryRepository>.value(
+            value: _discoveryRepository),
       ],
       child: MultiBlocProvider(
         providers: [

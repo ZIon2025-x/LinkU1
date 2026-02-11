@@ -179,6 +179,8 @@ class ForumPost extends Equatable {
     this.content,
     this.contentPreview,
     this.images = const [],
+    this.linkedItemType,
+    this.linkedItemId,
     required this.categoryId,
     this.category,
     required this.authorId,
@@ -198,9 +200,11 @@ class ForumPost extends Equatable {
 
   final int id;
   final String title;
-  final String? content; // 完整内容（详情接口返回）
-  final String? contentPreview; // 内容预览（列表接口返回 content_preview）
+  final String? content;
+  final String? contentPreview;
   final List<String> images;
+  final String? linkedItemType; // service/expert/activity/product/ranking/forum_post
+  final String? linkedItemId;
   final int categoryId;
   final ForumCategory? category;
   final String authorId;
@@ -245,6 +249,8 @@ class ForumPost extends Equatable {
               ?.map((e) => e as String)
               .toList() ??
           [],
+      linkedItemType: json['linked_item_type'] as String?,
+      linkedItemId: json['linked_item_id']?.toString(),
       categoryId: json['category_id'] as int? ??
           (json['category'] as Map<String, dynamic>?)?['id'] as int? ??
           0,
@@ -284,6 +290,8 @@ class ForumPost extends Equatable {
       'title': title,
       'content': content,
       'images': images,
+      if (linkedItemType != null) 'linked_item_type': linkedItemType,
+      if (linkedItemId != null) 'linked_item_id': linkedItemId,
       'category_id': categoryId,
       'author_id': authorId,
       'like_count': likeCount,
@@ -426,19 +434,25 @@ class CreatePostRequest {
     required this.content,
     required this.categoryId,
     this.images = const [],
+    this.linkedItemType,
+    this.linkedItemId,
   });
 
   final String title;
   final String content;
   final int categoryId;
   final List<String> images;
+  final String? linkedItemType;
+  final String? linkedItemId;
 
   Map<String, dynamic> toJson() {
     return {
       'title': title,
       'content': content,
       'category_id': categoryId,
-      'images': images,
+      if (images.isNotEmpty) 'images': images,
+      if (linkedItemType != null) 'linked_item_type': linkedItemType,
+      if (linkedItemId != null) 'linked_item_id': linkedItemId,
     };
   }
 }

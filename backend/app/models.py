@@ -2238,6 +2238,11 @@ class ForumPost(Base):
     updated_at = Column(DateTime(timezone=True), default=get_utc_time, onupdate=get_utc_time, server_default=func.now())
     last_reply_at = Column(DateTime(timezone=True), nullable=True)
     
+    # 图片和关联内容（Discovery Feed 功能）
+    images = Column(JSON, nullable=True)  # JSON数组，最多5张图片URL
+    linked_item_type = Column(String(30), nullable=True)  # service/expert/activity/product/ranking/forum_post
+    linked_item_id = Column(String(50), nullable=True)  # 关联目标的ID
+    
     # 关系
     category = relationship("ForumCategory", back_populates="posts")
     author = relationship("User", foreign_keys=[author_id])

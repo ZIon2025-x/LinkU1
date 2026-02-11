@@ -2745,6 +2745,9 @@ async def get_posts(
             is_locked=post.is_locked,
             is_visible=post.is_visible,
             is_deleted=post.is_deleted,
+            images=post.images,
+            linked_item_type=post.linked_item_type,
+            linked_item_id=post.linked_item_id,
             created_at=post.created_at,
             last_reply_at=post.last_reply_at
         ))
@@ -2864,6 +2867,9 @@ async def get_post(
         is_locked=post.is_locked,
         is_liked=is_liked,
         is_favorited=is_favorited,
+        images=post.images,
+        linked_item_type=post.linked_item_type,
+        linked_item_id=post.linked_item_id,
         created_at=post.created_at,
         updated_at=post.updated_at,
         last_reply_at=post.last_reply_at
@@ -3015,7 +3021,11 @@ async def create_post(
     # 注意：内容已经是编码格式（\n 和 \c 标记），翻译服务会保留这些标记
     # 不需要尝试恢复换行符，因为内容已经是编码格式了
     
-    # 创建帖子
+    # 创建帖子（包含图片和关联内容）
+    post_images = post.images if hasattr(post, 'images') else None
+    post_linked_type = post.linked_item_type if hasattr(post, 'linked_item_type') else None
+    post_linked_id = post.linked_item_id if hasattr(post, 'linked_item_id') else None
+    
     if admin_user:
         # 管理员发帖：使用 admin_author_id
         db_post = models.ForumPost(
@@ -3027,7 +3037,10 @@ async def create_post(
             content_zh=content_zh,
             category_id=post.category_id,
             admin_author_id=admin_user.id,
-            author_id=None  # 管理员发帖时，author_id 为空
+            author_id=None,
+            images=post_images,
+            linked_item_type=post_linked_type,
+            linked_item_id=post_linked_id,
         )
     else:
         # 普通用户发帖：使用 author_id
@@ -3040,10 +3053,29 @@ async def create_post(
             content_zh=content_zh,
             category_id=post.category_id,
             author_id=current_user.id,
-            admin_author_id=None
+            admin_author_id=None,
+            images=post_images,
+            linked_item_type=post_linked_type,
+            linked_item_id=post_linked_id,
         )
     db.add(db_post)
     await db.flush()
+    
+    # 如果有图片，移动临时图片到永久路径
+    if post_images:
+        try:
+            from app.services.image_upload_service import ImageUploadService, ImageCategory
+            upload_service = ImageUploadService()
+            uploader_id = admin_user.id if admin_user else current_user.id
+            moved_urls = upload_service.move_from_temp(
+                ImageCategory.FORUM_POST, uploader_id, str(db_post.id), post_images
+            )
+            if moved_urls:
+                db_post.images = moved_urls
+                await db.flush()
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).warning(f"Failed to move forum post images: {e}")
     
     # 更新板块统计（仅当帖子可见时）
     if db_post.is_deleted == False and db_post.is_visible == True:
@@ -3083,6 +3115,9 @@ async def create_post(
         is_locked=db_post.is_locked,
         is_liked=False,
         is_favorited=False,
+        images=db_post.images,
+        linked_item_type=db_post.linked_item_type,
+        linked_item_id=db_post.linked_item_id,
         created_at=db_post.created_at,
         updated_at=db_post.updated_at,
         last_reply_at=db_post.last_reply_at
@@ -3236,6 +3271,22 @@ async def update_post(
     db_post.updated_at = get_utc_time()
     await db.flush()
     
+    # 如果更新了图片，将临时图片移动到永久存储
+    if "images" in update_data and update_data["images"]:
+        try:
+            from app.services.image_upload_service import ImageUploadService, ImageCategory
+            upload_service = ImageUploadService()
+            uploader_id = admin_user.id if admin_user else current_user.id
+            moved_urls = upload_service.move_from_temp(
+                ImageCategory.FORUM_POST, uploader_id, str(db_post.id), update_data["images"]
+            )
+            if moved_urls:
+                db_post.images = moved_urls
+                await db.flush()
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).warning(f"Failed to move updated forum post images: {e}")
+    
     # 如果板块改变或可见性改变，更新统计
     if "category_id" in update_data or "is_visible" in update_data:
         # 更新旧板块统计
@@ -3292,6 +3343,9 @@ async def update_post(
         is_locked=db_post.is_locked,
         is_liked=is_liked,
         is_favorited=is_favorited,
+        images=db_post.images,
+        linked_item_type=db_post.linked_item_type,
+        linked_item_id=db_post.linked_item_id,
         created_at=db_post.created_at,
         updated_at=db_post.updated_at,
         last_reply_at=db_post.last_reply_at
@@ -4993,6 +5047,9 @@ async def search_posts(
             is_locked=post.is_locked,
             is_visible=post.is_visible,
             is_deleted=post.is_deleted,
+            images=post.images,
+            linked_item_type=post.linked_item_type,
+            linked_item_id=post.linked_item_id,
             created_at=post.created_at,
             last_reply_at=post.last_reply_at
         ))
@@ -5624,6 +5681,9 @@ async def get_my_posts(
             is_locked=post.is_locked,
             is_visible=post.is_visible,
             is_deleted=post.is_deleted,
+            images=post.images,
+            linked_item_type=post.linked_item_type,
+            linked_item_id=post.linked_item_id,
             created_at=post.created_at,
             last_reply_at=post.last_reply_at
         ))
@@ -5805,6 +5865,9 @@ async def get_my_favorites(
                     is_locked=post.is_locked,
                     is_visible=post.is_visible,
                     is_deleted=post.is_deleted,
+                    images=post.images,
+                    linked_item_type=post.linked_item_type,
+                    linked_item_id=post.linked_item_id,
                     created_at=post.created_at,
                     last_reply_at=post.last_reply_at
                 ),
@@ -6395,6 +6458,9 @@ async def get_hot_posts(
             is_locked=post.is_locked,
             is_visible=post.is_visible,
             is_deleted=post.is_deleted,
+            images=post.images,
+            linked_item_type=post.linked_item_type,
+            linked_item_id=post.linked_item_id,
             created_at=post.created_at,
             last_reply_at=post.last_reply_at
         ))
@@ -6613,6 +6679,9 @@ async def get_user_hot_posts(
             is_locked=post.is_locked,
             is_visible=post.is_visible,
             is_deleted=post.is_deleted,
+            images=post.images,
+            linked_item_type=post.linked_item_type,
+            linked_item_id=post.linked_item_id,
             created_at=post.created_at,
             last_reply_at=post.last_reply_at
         ))
@@ -6930,4 +6999,242 @@ async def get_category_stats(
         "users_count": users_count,
         "last_post_at": category.last_post_at
     }
+
+
+# ==================== 关联内容搜索（Discovery Feed） ====================
+
+@router.get("/search-linkable")
+async def search_linkable_content(
+    q: str = Query(..., min_length=1, max_length=100, description="搜索关键词"),
+    type: str = Query("all", description="内容类型: all/service/expert/activity/product/ranking/forum_post"),
+    request: Request = None,
+    db: AsyncSession = Depends(get_async_db_dependency),
+):
+    """搜索可关联的公开内容（用于帖子关联功能）
+    
+    混合方案：所有公开内容都可搜索，但标注用户是否参与过
+    """
+    from app.auth import get_current_user_secure_async_csrf
+    
+    # 获取当前用户（用于判断 is_experienced）
+    current_user = None
+    try:
+        current_user = await get_current_user_secure_async_csrf(request, db)
+    except Exception:
+        pass
+    
+    results = []
+    search_term = f"%{q}%"
+    limit_per_type = 5
+    
+    # 搜索达人服务
+    if type in ("all", "service"):
+        service_query = (
+            select(
+                models.TaskExpertService.id,
+                models.TaskExpertService.service_name,
+                models.TaskExpertService.description,
+                models.TaskExpertService.images,
+                models.TaskExpertService.expert_id,
+                models.User.name.label("expert_name"),
+            )
+            .join(models.TaskExpert, models.TaskExpertService.expert_id == models.TaskExpert.id)
+            .join(models.User, models.TaskExpert.id == models.User.id)
+            .where(
+                models.TaskExpertService.status == "active",
+                or_(
+                    models.TaskExpertService.service_name.ilike(search_term),
+                    models.TaskExpertService.description.ilike(search_term),
+                )
+            )
+            .limit(limit_per_type)
+        )
+        service_result = await db.execute(service_query)
+        for row in service_result:
+            is_experienced = False
+            if current_user:
+                exp_check = await db.execute(
+                    select(func.count(models.Task.id)).where(
+                        models.Task.expert_service_id == row.id,
+                        or_(models.Task.poster_id == current_user.id, models.Task.taker_id == current_user.id),
+                        models.Task.status == "completed",
+                    )
+                )
+                is_experienced = (exp_check.scalar() or 0) > 0
+            # 解析 images JSONB 获取第一张图
+            import json as _json
+            svc_images = row.images
+            svc_thumb = None
+            if svc_images:
+                if isinstance(svc_images, list):
+                    svc_thumb = svc_images[0] if svc_images else None
+                elif isinstance(svc_images, str):
+                    try:
+                        parsed = _json.loads(svc_images)
+                        svc_thumb = parsed[0] if isinstance(parsed, list) and parsed else None
+                    except Exception:
+                        pass
+            results.append({
+                "item_type": "service",
+                "item_id": str(row.id),
+                "title": row.service_name,
+                "subtitle": f"{row.expert_name}",
+                "thumbnail": svc_thumb,
+                "is_experienced": is_experienced,
+            })
+    
+    # 搜索跳蚤市场商品
+    if type in ("all", "product"):
+        product_query = (
+            select(
+                models.FleaMarketItem.id,
+                models.FleaMarketItem.title,
+                models.FleaMarketItem.price,
+                models.FleaMarketItem.images,
+                models.FleaMarketItem.currency,
+            )
+            .where(
+                models.FleaMarketItem.status == "active",
+                or_(
+                    models.FleaMarketItem.title.ilike(search_term),
+                    models.FleaMarketItem.description.ilike(search_term),
+                )
+            )
+            .limit(limit_per_type)
+        )
+        product_result = await db.execute(product_query)
+        for row in product_result:
+            import json as _json
+            prod_images = row.images
+            first_image = None
+            if prod_images:
+                if isinstance(prod_images, list):
+                    first_image = prod_images[0] if prod_images else None
+                elif isinstance(prod_images, str):
+                    try:
+                        parsed = _json.loads(prod_images)
+                        first_image = parsed[0] if isinstance(parsed, list) and parsed else None
+                    except Exception:
+                        pass
+            is_experienced = False
+            if current_user:
+                fav_check = await db.execute(
+                    select(func.count()).select_from(models.FleaMarketFavorite).where(
+                        models.FleaMarketFavorite.item_id == row.id,
+                        models.FleaMarketFavorite.user_id == current_user.id,
+                    )
+                )
+                is_experienced = (fav_check.scalar() or 0) > 0
+            results.append({
+                "item_type": "product",
+                "item_id": str(row.id),
+                "title": row.title,
+                "subtitle": f"{row.currency} {row.price:.2f}" if row.price else None,
+                "thumbnail": first_image,
+                "is_experienced": is_experienced,
+            })
+    
+    # 搜索活动
+    if type in ("all", "activity"):
+        activity_query = (
+            select(
+                models.Activity.id,
+                models.Activity.title,
+                models.Activity.images.label("activity_images"),
+                models.User.name.label("expert_name"),
+            )
+            .join(models.User, models.Activity.expert_id == models.User.id)
+            .where(
+                models.Activity.status.in_(["published", "registration_open"]),
+                models.Activity.title.ilike(search_term),
+            )
+            .limit(limit_per_type)
+        )
+        activity_result = await db.execute(activity_query)
+        for row in activity_result:
+            is_experienced = False
+            if current_user:
+                exp_check = await db.execute(
+                    select(func.count(models.Task.id)).where(
+                        models.Task.parent_activity_id == row.id,
+                        or_(models.Task.poster_id == current_user.id, models.Task.taker_id == current_user.id),
+                    )
+                )
+                is_experienced = (exp_check.scalar() or 0) > 0
+            import json as _json
+            act_images = row.activity_images
+            act_thumb = None
+            if act_images:
+                if isinstance(act_images, list):
+                    act_thumb = act_images[0] if act_images else None
+                elif isinstance(act_images, str):
+                    try:
+                        parsed = _json.loads(act_images)
+                        act_thumb = parsed[0] if isinstance(parsed, list) and parsed else None
+                    except Exception:
+                        pass
+            results.append({
+                "item_type": "activity",
+                "item_id": str(row.id),
+                "title": row.title,
+                "subtitle": row.expert_name,
+                "thumbnail": act_thumb,
+                "is_experienced": is_experienced,
+            })
+    
+    # 搜索排行榜
+    if type in ("all", "ranking"):
+        ranking_query = (
+            select(
+                models.CustomLeaderboard.id,
+                models.CustomLeaderboard.name,
+                models.CustomLeaderboard.cover_image,
+            )
+            .where(
+                models.CustomLeaderboard.status == "active",
+                models.CustomLeaderboard.name.ilike(search_term),
+            )
+            .limit(limit_per_type)
+        )
+        ranking_result = await db.execute(ranking_query)
+        for row in ranking_result:
+            results.append({
+                "item_type": "ranking",
+                "item_id": str(row.id),
+                "title": row.name,
+                "subtitle": "排行榜",
+                "thumbnail": row.cover_image,
+                "is_experienced": False,
+            })
+    
+    # 搜索帖子
+    if type in ("all", "forum_post"):
+        post_query = (
+            select(
+                models.ForumPost.id,
+                models.ForumPost.title,
+            )
+            .where(
+                models.ForumPost.is_deleted == False,
+                models.ForumPost.is_visible == True,
+                models.ForumPost.title.ilike(search_term),
+            )
+            .order_by(desc(models.ForumPost.created_at))
+            .limit(limit_per_type)
+        )
+        post_result = await db.execute(post_query)
+        for row in post_result:
+            results.append({
+                "item_type": "forum_post",
+                "item_id": str(row.id),
+                "title": row.title,
+                "subtitle": "帖子",
+                "thumbnail": None,
+                "is_experienced": False,
+            })
+    
+    # 排序：已体验的排前面
+    results.sort(key=lambda x: (not x["is_experienced"], x["item_type"]))
+    
+    return {"results": results}
 

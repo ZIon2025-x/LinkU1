@@ -2,7 +2,7 @@ import datetime
 from typing import List, Literal, Optional, Dict, Any
 from decimal import Decimal
 
-from pydantic import BaseModel, Field, validator, model_validator
+from pydantic import BaseModel, Field, validator, field_validator, model_validator
 from pydantic import condecimal
 
 
@@ -3089,6 +3089,9 @@ class ForumCategoryListResponse(BaseModel):
 
 
 # 帖子相关 Schemas
+ALLOWED_LINKED_ITEM_TYPES = {"service", "expert", "activity", "product", "ranking", "forum_post"}
+
+
 class ForumPostBase(BaseModel):
     title: str = Field(..., min_length=1, max_length=200, description="帖子标题，1-200字符")
     title_en: Optional[str] = Field(None, max_length=200, description="帖子标题（英文）")
@@ -3100,7 +3103,23 @@ class ForumPostBase(BaseModel):
 
 
 class ForumPostCreate(ForumPostBase):
-    pass
+    images: Optional[List[str]] = Field(None, max_length=5, description="帖子图片URL列表，最多5张")
+    linked_item_type: Optional[str] = Field(None, description="关联内容类型: service/expert/activity/product/ranking/forum_post")
+    linked_item_id: Optional[str] = Field(None, description="关联内容ID")
+
+    @field_validator('images')
+    @classmethod
+    def validate_images(cls, v):
+        if v is not None and len(v) > 5:
+            raise ValueError('最多上传5张图片')
+        return v
+
+    @field_validator('linked_item_type')
+    @classmethod
+    def validate_linked_item_type(cls, v):
+        if v is not None and v not in ALLOWED_LINKED_ITEM_TYPES:
+            raise ValueError(f'关联类型必须是: {", ".join(ALLOWED_LINKED_ITEM_TYPES)}')
+        return v
 
 
 class ForumPostUpdate(BaseModel):
@@ -3111,6 +3130,9 @@ class ForumPostUpdate(BaseModel):
     content_en: Optional[str] = Field(None, max_length=50000, description="帖子内容（英文）")
     content_zh: Optional[str] = Field(None, max_length=50000, description="帖子内容（中文）")
     category_id: Optional[int] = None
+    images: Optional[List[str]] = Field(None, max_length=5, description="帖子图片URL列表，最多5张")
+    linked_item_type: Optional[str] = Field(None, description="关联内容类型")
+    linked_item_id: Optional[str] = Field(None, description="关联内容ID")
 
 
 class UserInfo(BaseModel):
@@ -3170,8 +3192,11 @@ class ForumPostOut(BaseModel):
     is_pinned: bool
     is_featured: bool
     is_locked: bool
-    is_liked: Optional[bool] = False  # 当前用户是否已点赞（动态计算）
-    is_favorited: Optional[bool] = False  # 当前用户是否已收藏（动态计算）
+    is_liked: Optional[bool] = False
+    is_favorited: Optional[bool] = False
+    images: Optional[List[str]] = None
+    linked_item_type: Optional[str] = None
+    linked_item_id: Optional[str] = None
     created_at: datetime.datetime
     updated_at: datetime.datetime
     last_reply_at: Optional[datetime.datetime] = None
@@ -3187,18 +3212,21 @@ class ForumPostListItem(BaseModel):
     title_en: Optional[str] = None
     title_zh: Optional[str] = None
     content_preview: str  # 内容预览（前200字符）
-    content_preview_en: Optional[str] = None  # 内容预览（英文）
-    content_preview_zh: Optional[str] = None  # 内容预览（中文）
+    content_preview_en: Optional[str] = None
+    content_preview_zh: Optional[str] = None
     category: CategoryInfo
     author: UserInfo
-    view_count: int  # 浏览量（前端负责格式化显示）
+    view_count: int
     reply_count: int
     like_count: int
     is_pinned: bool
     is_featured: bool
     is_locked: bool
-    is_visible: bool  # 是否可见（管理员需要此字段）
-    is_deleted: bool  # 是否已删除（管理员需要此字段）
+    is_visible: bool
+    is_deleted: bool
+    images: Optional[List[str]] = None
+    linked_item_type: Optional[str] = None
+    linked_item_id: Optional[str] = None
     created_at: datetime.datetime
     last_reply_at: Optional[datetime.datetime] = None
     

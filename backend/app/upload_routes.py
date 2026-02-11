@@ -51,6 +51,7 @@ CATEGORY_MAP = {
     "leaderboard_item": ImageCategory.LEADERBOARD_ITEM,
     "leaderboard_cover": ImageCategory.LEADERBOARD_COVER,
     "flea_market": ImageCategory.FLEA_MARKET,
+    "forum_post": ImageCategory.FORUM_POST,
 }
 
 

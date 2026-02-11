@@ -32,6 +32,9 @@ class ImageCategory(Enum):
     EXPERT_AVATAR = "public/images/expert_avatars"  # 任务达人头像
     SERVICE_IMAGE = "public/images/service_images"  # 服务图片
     
+    # 论坛帖子
+    FORUM_POST = "public/images/forum_posts"  # 帖子图片
+    
     # 跳蚤市场
     FLEA_MARKET = "flea_market"  # 商品图片
     
@@ -98,6 +101,12 @@ CATEGORY_CONFIGS: Dict[ImageCategory, UploadConfig] = {
         compress=True,
         compress_quality=85,
         max_dimension=1280
+    ),
+    ImageCategory.FORUM_POST: UploadConfig(
+        max_size=5 * 1024 * 1024,
+        compress=True,
+        compress_quality=85,
+        max_dimension=1920
     ),
     ImageCategory.FLEA_MARKET: UploadConfig(
         max_size=10 * 1024 * 1024,

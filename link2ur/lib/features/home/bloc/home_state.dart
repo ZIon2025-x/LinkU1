@@ -4,6 +4,7 @@ import '../../../data/models/task.dart';
 import '../../../data/models/forum.dart';
 import '../../../data/models/flea_market.dart';
 import '../../../data/models/leaderboard.dart';
+import '../../../data/models/discovery_feed.dart';
 
 /// 首页状态
 enum HomeStatus { initial, loading, loaded, error }
@@ -120,6 +121,10 @@ class HomeState extends Equatable {
     this.refreshError,
     this.recentActivities = const [],
     this.isLoadingActivities = false,
+    this.discoveryItems = const [],
+    this.isLoadingDiscovery = false,
+    this.hasMoreDiscovery = true,
+    this.discoveryPage = 1,
   });
 
   final HomeStatus status;
@@ -134,8 +139,16 @@ class HomeState extends Equatable {
   final bool isRefreshing;
   /// 刷新失败错误信息，用于 UI 层通过 BlocListener 显示 Toast
   final String? refreshError;
+  @Deprecated('Use discoveryItems instead')
   final List<RecentActivityItem> recentActivities;
+  @Deprecated('Use isLoadingDiscovery instead')
   final bool isLoadingActivities;
+
+  // Discovery Feed
+  final List<DiscoveryFeedItem> discoveryItems;
+  final bool isLoadingDiscovery;
+  final bool hasMoreDiscovery;
+  final int discoveryPage;
 
   bool get isLoading => status == HomeStatus.loading;
   bool get isLoaded => status == HomeStatus.loaded;
@@ -156,6 +169,10 @@ class HomeState extends Equatable {
     bool clearRefreshError = false,
     List<RecentActivityItem>? recentActivities,
     bool? isLoadingActivities,
+    List<DiscoveryFeedItem>? discoveryItems,
+    bool? isLoadingDiscovery,
+    bool? hasMoreDiscovery,
+    int? discoveryPage,
   }) {
     return HomeState(
       status: status ?? this.status,
@@ -171,6 +188,10 @@ class HomeState extends Equatable {
       refreshError: clearRefreshError ? null : (refreshError ?? this.refreshError),
       recentActivities: recentActivities ?? this.recentActivities,
       isLoadingActivities: isLoadingActivities ?? this.isLoadingActivities,
+      discoveryItems: discoveryItems ?? this.discoveryItems,
+      isLoadingDiscovery: isLoadingDiscovery ?? this.isLoadingDiscovery,
+      hasMoreDiscovery: hasMoreDiscovery ?? this.hasMoreDiscovery,
+      discoveryPage: discoveryPage ?? this.discoveryPage,
     );
   }
 
@@ -189,5 +210,9 @@ class HomeState extends Equatable {
         refreshError,
         recentActivities,
         isLoadingActivities,
+        discoveryItems,
+        isLoadingDiscovery,
+        hasMoreDiscovery,
+        discoveryPage,
       ];
 }

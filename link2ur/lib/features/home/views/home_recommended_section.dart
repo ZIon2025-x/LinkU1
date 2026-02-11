@@ -132,7 +132,7 @@ class _RecommendedTab extends StatelessWidget {
                       : _PopularActivitiesSection(),
                 ),
 
-                // 最新动态标题
+                // 发现更多标题
                 SliverToBoxAdapter(
                   child: Padding(
                     padding: EdgeInsets.fromLTRB(
@@ -142,7 +142,7 @@ class _RecommendedTab extends StatelessWidget {
                       AppSpacing.sm,
                     ),
                     child: Text(
-                      context.l10n.homeLatestActivity,
+                      '发现更多',
                       style: AppTypography.title3.copyWith(
                         color: Theme.of(context).brightness == Brightness.dark
                             ? AppColors.textPrimaryDark
@@ -152,11 +152,11 @@ class _RecommendedTab extends StatelessWidget {
                   ),
                 ),
 
-                // 最新动态列表
+                // 发现更多瀑布流
                 SliverToBoxAdapter(
                   child: Padding(
                     padding: EdgeInsets.symmetric(
-                      horizontal: isDesktop ? 40 : AppSpacing.md,
+                      horizontal: isDesktop ? 40 : 0,
                     ),
                     child: _RecentActivitiesSection(),
                   ),

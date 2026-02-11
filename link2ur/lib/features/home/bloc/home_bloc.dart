@@ -8,6 +8,7 @@ import '../../../data/repositories/task_repository.dart';
 import '../../../data/repositories/forum_repository.dart';
 import '../../../data/repositories/flea_market_repository.dart';
 import '../../../data/repositories/leaderboard_repository.dart';
+import '../../../data/repositories/discovery_repository.dart';
 import '../../../core/utils/cache_manager.dart';
 import '../../../core/utils/logger.dart';
 import '../../../core/utils/forum_permission_helper.dart';
@@ -21,10 +22,12 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
     ForumRepository? forumRepository,
     FleaMarketRepository? fleaMarketRepository,
     LeaderboardRepository? leaderboardRepository,
+    DiscoveryRepository? discoveryRepository,
   })  : _taskRepository = taskRepository,
         _forumRepository = forumRepository,
         _fleaMarketRepository = fleaMarketRepository,
         _leaderboardRepository = leaderboardRepository,
+        _discoveryRepository = discoveryRepository,
         super(const HomeState()) {
     on<HomeLoadRequested>(_onLoadRequested);
     on<HomeRefreshRequested>(_onRefreshRequested);
@@ -32,12 +35,15 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
     on<HomeLoadNearby>(_onLoadNearby);
     on<HomeTabChanged>(_onTabChanged);
     on<HomeLoadRecentActivities>(_onLoadRecentActivities);
+    on<HomeLoadDiscoveryFeed>(_onLoadDiscoveryFeed);
+    on<HomeLoadMoreDiscovery>(_onLoadMoreDiscovery);
   }
 
   final TaskRepository _taskRepository;
   final ForumRepository? _forumRepository;
   final FleaMarketRepository? _fleaMarketRepository;
   final LeaderboardRepository? _leaderboardRepository;
+  final DiscoveryRepository? _discoveryRepository;
 
   /// 当前用户（由外部设置，用于权限过滤）
   User? currentUser;
@@ -432,4 +438,56 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
   }
 
   static double _toRadians(double degrees) => degrees * math.pi / 180;
+
+  // ==================== Discovery Feed ====================
+
+  Future<void> _onLoadDiscoveryFeed(
+    HomeLoadDiscoveryFeed event,
+    Emitter<HomeState> emit,
+  ) async {
+    if (_discoveryRepository == null) return;
+    if (state.isLoadingDiscovery) return;
+
+    emit(state.copyWith(isLoadingDiscovery: true));
+
+    try {
+      final response = await _discoveryRepository.getFeed(page: 1, limit: 20);
+      emit(state.copyWith(
+        discoveryItems: response.items,
+        hasMoreDiscovery: response.hasMore,
+        discoveryPage: 1,
+        isLoadingDiscovery: false,
+      ));
+    } catch (e) {
+      AppLogger.error('Failed to load discovery feed', e);
+      emit(state.copyWith(isLoadingDiscovery: false));
+    }
+  }
+
+  Future<void> _onLoadMoreDiscovery(
+    HomeLoadMoreDiscovery event,
+    Emitter<HomeState> emit,
+  ) async {
+    if (_discoveryRepository == null) return;
+    if (state.isLoadingDiscovery || !state.hasMoreDiscovery) return;
+
+    emit(state.copyWith(isLoadingDiscovery: true));
+
+    try {
+      final nextPage = state.discoveryPage + 1;
+      final response = await _discoveryRepository.getFeed(
+        page: nextPage,
+        limit: 20,
+      );
+      emit(state.copyWith(
+        discoveryItems: [...state.discoveryItems, ...response.items],
+        hasMoreDiscovery: response.hasMore,
+        discoveryPage: nextPage,
+        isLoadingDiscovery: false,
+      ));
+    } catch (e) {
+      AppLogger.error('Failed to load more discovery feed', e);
+      emit(state.copyWith(isLoadingDiscovery: false));
+    }
+  }
 }

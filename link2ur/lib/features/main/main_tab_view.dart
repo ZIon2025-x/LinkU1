@@ -12,6 +12,7 @@ import '../../core/widgets/badge_view.dart';
 import '../../core/widgets/buttons.dart';
 import '../../core/widgets/content_constraint.dart';
 import '../../core/widgets/desktop_sidebar.dart';
+import '../../data/repositories/discovery_repository.dart';
 import '../../data/repositories/flea_market_repository.dart';
 import '../../data/repositories/forum_repository.dart';
 import '../../data/repositories/leaderboard_repository.dart';
@@ -114,10 +115,11 @@ class _MainTabViewState extends State<MainTabView> {
         forumRepository: context.read<ForumRepository>(),
         fleaMarketRepository: context.read<FleaMarketRepository>(),
         leaderboardRepository: context.read<LeaderboardRepository>(),
+        discoveryRepository: context.read<DiscoveryRepository>(),
       )
         ..currentUser = authState.isAuthenticated ? authState.user : null
-        ..add(const HomeLoadRequested()) // 首页默认加载
-        ..add(const HomeLoadRecentActivities()); // 加载最新动态
+        ..add(const HomeLoadRequested())
+        ..add(const HomeLoadDiscoveryFeed());
       // 其他 Tab BLoC 也在此创建，通过字段引用访问，避免 context.read 找不到 Provider
       _forumBloc = ForumBloc(
         forumRepository: context.read<ForumRepository>(),
@@ -202,7 +204,7 @@ class _MainTabViewState extends State<MainTabView> {
     switch (index) {
       case 0: // Home
         _homeBloc.add(const HomeLoadRequested());
-        _homeBloc.add(const HomeLoadRecentActivities());
+        _homeBloc.add(const HomeLoadDiscoveryFeed());
         break;
       case 1: // Community (Forum) — 首次切到社区 Tab 时触发加载
         _forumBloc.add(const ForumLoadCategories());

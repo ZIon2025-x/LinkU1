@@ -408,6 +408,10 @@ app.include_router(multi_participant_router)
 from app.forum_routes import router as forum_router
 app.include_router(forum_router)
 
+# Discovery Feed 路由
+from app.discovery_routes import router as discovery_router
+app.include_router(discovery_router)
+
 # 学生认证路由
 from app.student_verification_routes import router as student_verification_router
 app.include_router(student_verification_router, prefix="/api/student-verification", tags=["学生认证"])

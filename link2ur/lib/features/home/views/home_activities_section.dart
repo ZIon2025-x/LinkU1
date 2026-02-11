@@ -74,7 +74,6 @@ class _ActivityCard extends StatelessWidget {
             end: Alignment.bottomRight,
           ),
           borderRadius: AppRadius.allLarge,
-          // 对标iOS: 彩色阴影，更有深度感
           boxShadow: [
             BoxShadow(
               color: gradient.first.withValues(alpha: 0.35),
@@ -90,7 +89,6 @@ class _ActivityCard extends StatelessWidget {
         ),
         child: Stack(
           children: [
-            // 装饰性大圆 (右下角，增加层次感)
             Positioned(
               right: -20,
               bottom: -20,
@@ -103,7 +101,6 @@ class _ActivityCard extends StatelessWidget {
                 ),
               ),
             ),
-            // 装饰性小圆 (右上角)
             Positioned(
               right: 20,
               top: -10,
@@ -116,11 +113,9 @@ class _ActivityCard extends StatelessWidget {
                 ),
               ),
             ),
-            // 主内容
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // 毛玻璃效果图标容器（对标iOS Material风格）
                 Container(
                   width: 38,
                   height: 38,
@@ -162,259 +157,242 @@ class _ActivityCard extends StatelessWidget {
   }
 }
 
-/// 对标iOS: RecentActivitiesSection - 最新动态区域
-/// 从 HomeBloc 获取真实数据，无穷滚动加载（每次5条，最多15条）
-/// 对标 iOS batchSize=5, maxDisplayCount=15
-class _RecentActivitiesSection extends StatefulWidget {
+// =============================================================================
+// Discovery Feed 瀑布流 — 替代旧的 _RecentActivitiesSection
+// =============================================================================
+
+/// 发现更多 — 小红书风格瀑布流（6 种卡片类型混排）
+class _RecentActivitiesSection extends StatelessWidget {
   @override
-  State<_RecentActivitiesSection> createState() =>
-      _RecentActivitiesSectionState();
+  Widget build(BuildContext context) {
+    return BlocBuilder<HomeBloc, HomeState>(
+      buildWhen: (prev, curr) =>
+          prev.discoveryItems != curr.discoveryItems ||
+          prev.isLoadingDiscovery != curr.isLoadingDiscovery,
+      builder: (context, state) {
+        if (state.isLoadingDiscovery && state.discoveryItems.isEmpty) {
+          return const Padding(
+            padding: AppSpacing.allMd,
+            child: Center(child: CircularProgressIndicator()),
+          );
+        }
+
+        if (state.discoveryItems.isEmpty) {
+          return Padding(
+            padding: const EdgeInsets.symmetric(vertical: 32),
+            child: Center(
+              child: Text(
+                '暂无内容',
+                style: TextStyle(
+                  color: Theme.of(context).brightness == Brightness.dark
+                      ? AppColors.textSecondaryDark
+                      : AppColors.textSecondaryLight,
+                ),
+              ),
+            ),
+          );
+        }
+
+        return Column(
+          children: [
+            MasonryGridView.count(
+              crossAxisCount: 2,
+              mainAxisSpacing: 8,
+              crossAxisSpacing: 8,
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: state.discoveryItems.length,
+              itemBuilder: (context, index) {
+                final item = state.discoveryItems[index];
+                return _DiscoveryFeedCard(item: item);
+              },
+            ),
+            if (state.hasMoreDiscovery)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                child: state.isLoadingDiscovery
+                    ? const SizedBox(
+                        width: 24,
+                        height: 24,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : TextButton(
+                        onPressed: () => context
+                            .read<HomeBloc>()
+                            .add(const HomeLoadMoreDiscovery()),
+                        child: const Text('加载更多'),
+                      ),
+              ),
+          ],
+        );
+      },
+    );
+  }
 }
 
-class _RecentActivitiesSectionState extends State<_RecentActivitiesSection> {
-  /// 当前显示条数（每次递增5，对标 iOS batchSize = 5）
-  int _displayedCount = 5;
+/// 发现 Feed 卡片路由 — 根据 feedType 选择展示
+class _DiscoveryFeedCard extends StatelessWidget {
+  const _DiscoveryFeedCard({required this.item});
 
-  /// 每批加载数量
-  static const int _batchSize = 5;
+  final DiscoveryFeedItem item;
 
-  /// 最大显示数量（对标 iOS maxDisplayCount = 15）
-  static const int _maxDisplayCount = 15;
-
-  void _loadMore(int totalAvailable) {
-    setState(() {
-      _displayedCount = (_displayedCount + _batchSize)
-          .clamp(0, totalAvailable.clamp(0, _maxDisplayCount));
-    });
+  @override
+  Widget build(BuildContext context) {
+    switch (item.feedType) {
+      case 'forum_post':
+        return _PostCard(item: item);
+      case 'product':
+        return _ProductCard(item: item);
+      case 'competitor_review':
+        return _CompetitorReviewCard(item: item);
+      case 'service_review':
+        return _ServiceReviewCard(item: item);
+      case 'ranking':
+        return _RankingCard(item: item);
+      case 'service':
+        return _ServiceCard(item: item);
+      default:
+        return const SizedBox.shrink();
+    }
   }
+}
+
+// =============================================================================
+// 卡片类型 1: 帖子卡片
+// =============================================================================
+
+class _PostCard extends StatelessWidget {
+  const _PostCard({required this.item});
+  final DiscoveryFeedItem item;
 
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    return BlocBuilder<HomeBloc, HomeState>(
-      buildWhen: (prev, curr) =>
-          prev.recentActivities != curr.recentActivities ||
-          prev.isLoadingActivities != curr.isLoadingActivities,
-      builder: (context, state) {
-        // 加载中状态
-        if (state.isLoadingActivities && state.recentActivities.isEmpty) {
-          return const Padding(
-            padding: AppSpacing.allMd,
-            child: Align(
-              alignment: Alignment.centerLeft,
-              child: SizedBox(
-                width: 20,
-                height: 20,
-                child: CircularProgressIndicator(strokeWidth: 2),
-              ),
+    return GestureDetector(
+      onTap: () {
+        final postId = item.id.replaceFirst('post_', '');
+        context.push('/forum/post/$postId');
+      },
+      child: Container(
+        decoration: BoxDecoration(
+          color: isDark ? AppColors.cardBackgroundDark : Colors.white,
+          borderRadius: AppRadius.allMedium,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.06),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
             ),
-          );
-        }
-
-        final allItems = state.recentActivities;
-
-        if (allItems.isEmpty) {
-          return Padding(
-            padding: AppSpacing.allMd,
-            child: Center(
+          ],
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // 图片
+            if (item.hasImages)
+              AspectRatio(
+                aspectRatio: 4 / 3,
+                child: AsyncImageView(
+                  imageUrl: item.firstImage!,
+                  fit: BoxFit.cover,
+                ),
+              ),
+            // 文字内容
+            Padding(
+              padding: const EdgeInsets.all(10),
               child: Column(
-                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Icon(
-                    Icons.notifications_none,
-                    size: 48,
-                    color: isDark
-                        ? AppColors.textTertiaryDark
-                        : AppColors.textTertiaryLight,
-                  ),
-                  AppSpacing.vSm,
-                  Text(
-                    context.l10n.homeNoActivity,
-                    style: AppTypography.body.copyWith(
-                      color: isDark
-                          ? AppColors.textSecondaryDark
-                          : AppColors.textSecondaryLight,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                  AppSpacing.vXs,
-                  Text(
-                    context.l10n.homeNoActivityMessage,
-                    style: AppTypography.caption.copyWith(
-                      color: isDark
-                          ? AppColors.textTertiaryDark
-                          : AppColors.textTertiaryLight,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                ],
-              ),
-            ),
-          );
-        }
-
-        // 取当前批次要显示的条目（最多 _maxDisplayCount）
-        final maxAvailable = allItems.length.clamp(0, _maxDisplayCount);
-        final showCount = _displayedCount.clamp(0, maxAvailable);
-        final displayedItems = allItems.take(showCount).toList();
-        final hasMore = showCount < maxAvailable;
-
-        // 转换为 UI 数据
-        final activities = displayedItems.map((item) {
-          return _RecentActivityData(
-            icon: _getIconForType(item.type),
-            iconGradient: _getGradientForType(item.type),
-            userName: item.userName.isNotEmpty
-                ? item.userName
-                : context.l10n.homeDefaultUser,
-            actionText: _getActionText(context, item.type),
-            title: item.title,
-            description: item.description,
-            itemId: item.itemId,
-            type: item.type,
-          );
-        }).toList();
-
-        return Padding(
-          padding: AppSpacing.horizontalMd,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // 动态列表（带错落入场动画）
-              ...activities.asMap().entries.map((entry) {
-                final index = entry.key;
-                final activity = entry.value;
-                return Padding(
-                  padding: const EdgeInsets.only(bottom: 8),
-                  child: AnimatedListItem(
-                    index: index,
-                    child: _ActivityRow(activity: activity),
-                  ),
-                );
-              }),
-
-              // "加载更多" 或 "没有更多了"
-              if (hasMore)
-                _LoadMoreButton(
-                  onTap: () => _loadMore(allItems.length),
-                  isDark: isDark,
-                )
-              else if (displayedItems.length >= _batchSize)
-                Center(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    child: Text(
-                      context.l10n.homeNoMoreActivity,
-                      style: AppTypography.caption.copyWith(
+                  if (item.title != null)
+                    Text(
+                      item.title!,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
                         color: isDark
-                            ? AppColors.textTertiaryDark
-                            : AppColors.textTertiaryLight,
+                            ? AppColors.textPrimaryDark
+                            : AppColors.textPrimaryLight,
                       ),
                     ),
+                  if (item.description != null) ...[
+                    const SizedBox(height: 4),
+                    Text(
+                      item.description!,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: isDark
+                            ? AppColors.textSecondaryDark
+                            : AppColors.textSecondaryLight,
+                      ),
+                    ),
+                  ],
+                  // 关联内容标签
+                  if (item.linkedItem != null) ...[
+                    const SizedBox(height: 6),
+                    _LinkedItemTag(linkedItem: item.linkedItem!),
+                  ],
+                  const SizedBox(height: 8),
+                  // 底部：用户 + 互动
+                  Row(
+                    children: [
+                      if (item.userAvatar != null)
+                        CircleAvatar(
+                          radius: 10,
+                          backgroundImage: NetworkImage(item.userAvatar!),
+                        )
+                      else
+                        CircleAvatar(
+                          radius: 10,
+                          backgroundColor: isDark
+                              ? AppColors.secondaryBackgroundDark
+                              : AppColors.backgroundLight,
+                          child: const Icon(Icons.person, size: 12),
+                        ),
+                      const SizedBox(width: 4),
+                      Expanded(
+                        child: Text(
+                          item.userName ?? '匿名用户',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: isDark
+                                ? AppColors.textTertiaryDark
+                                : AppColors.textTertiaryLight,
+                          ),
+                        ),
+                      ),
+                      if (item.likeCount != null && item.likeCount! > 0)
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.favorite_border,
+                                size: 12,
+                                color: isDark
+                                    ? AppColors.textTertiaryDark
+                                    : AppColors.textTertiaryLight),
+                            const SizedBox(width: 2),
+                            Text(
+                              '${item.likeCount}',
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: isDark
+                                    ? AppColors.textTertiaryDark
+                                    : AppColors.textTertiaryLight,
+                              ),
+                            ),
+                          ],
+                        ),
+                    ],
                   ),
-                ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
-  // ==================== 类型 → 图标 / 颜色 / 文本 ====================
-
-  /// 根据动态类型获取图标
-  static IconData _getIconForType(String type) {
-    switch (type) {
-      case RecentActivityItem.typeForumPost:
-        return Icons.forum_rounded;
-      case RecentActivityItem.typeFleaMarketItem:
-        return Icons.shopping_bag_rounded;
-      case RecentActivityItem.typeLeaderboardCreated:
-        return Icons.emoji_events_rounded;
-      default:
-        return Icons.notifications_rounded;
-    }
-  }
-
-  /// 根据动态类型获取渐变色 — 三种类型颜色差异明显
-  static List<Color> _getGradientForType(String type) {
-    switch (type) {
-      // 论坛帖子 → 蓝紫色（primary 风格）
-      case RecentActivityItem.typeForumPost:
-        return AppColors.gradientBlueTeal;
-      // 跳蚤市场 → 橙色（warning 风格）
-      case RecentActivityItem.typeFleaMarketItem:
-        return const [Color(0xFFFF9500), Color(0xFFFF6B00)];
-      // 排行榜 → 绿色（success 风格）
-      case RecentActivityItem.typeLeaderboardCreated:
-        return const [Color(0xFF34C759), Color(0xFF30D158)];
-      default:
-        return const [AppColors.offline, AppColors.textPlaceholderDark];
-    }
-  }
-
-  /// 根据动态类型获取动作文本
-  static String _getActionText(BuildContext context, String type) {
-    switch (type) {
-      case RecentActivityItem.typeForumPost:
-        return context.l10n.homePostedNewPost;
-      case RecentActivityItem.typeFleaMarketItem:
-        return context.l10n.homePostedNewProduct;
-      case RecentActivityItem.typeLeaderboardCreated:
-        return context.l10n.homeCreatedLeaderboard;
-      default:
-        return context.l10n.homePostedNewPost;
-    }
-  }
-}
-
-/// "加载更多" 按钮
-class _LoadMoreButton extends StatelessWidget {
-  const _LoadMoreButton({required this.onTap, required this.isDark});
-
-  final VoidCallback onTap;
-  final bool isDark;
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.symmetric(vertical: 14),
-        margin: const EdgeInsets.only(top: 4),
-        decoration: BoxDecoration(
-          color: isDark
-              ? Colors.white.withValues(alpha: 0.04)
-              : Colors.black.withValues(alpha: 0.02),
-          borderRadius: AppRadius.allLarge,
-          border: Border.all(
-            color: (isDark
-                    ? AppColors.separatorDark
-                    : AppColors.separatorLight)
-                .withValues(alpha: 0.3),
-            width: 0.5,
-          ),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.expand_more_rounded,
-              size: 18,
-              color: isDark
-                  ? AppColors.textSecondaryDark
-                  : AppColors.textSecondaryLight,
-            ),
-            const SizedBox(width: 4),
-            Text(
-              context.l10n.homeLoadMore,
-              style: AppTypography.caption.copyWith(
-                fontWeight: FontWeight.w500,
-                color: isDark
-                    ? AppColors.textSecondaryDark
-                    : AppColors.textSecondaryLight,
+                ],
               ),
             ),
           ],
@@ -424,33 +402,13 @@ class _LoadMoreButton extends StatelessWidget {
   }
 }
 
-class _RecentActivityData {
-  _RecentActivityData({
-    required this.icon,
-    required this.iconGradient,
-    required this.userName,
-    required this.actionText,
-    required this.title,
-    this.description,
-    this.itemId,
-    this.type = RecentActivityItem.typeForumPost,
-  });
+// =============================================================================
+// 卡片类型 2: 商品卡片（跳蚤市场风格）
+// =============================================================================
 
-  final IconData icon;
-  final List<Color> iconGradient;
-  final String userName;
-  final String actionText;
-  final String title;
-  final String? description;
-  final String? itemId; // 原始数据 ID，用于导航跳转
-  final String type;
-}
-
-/// 对标iOS: ActivityRow - 动态行组件（对标iOS .cardBackground + AppShadow.small）
-class _ActivityRow extends StatelessWidget {
-  const _ActivityRow({required this.activity});
-
-  final _RecentActivityData activity;
+class _ProductCard extends StatelessWidget {
+  const _ProductCard({required this.item});
+  final DiscoveryFeedItem item;
 
   @override
   Widget build(BuildContext context) {
@@ -458,143 +416,822 @@ class _ActivityRow extends StatelessWidget {
 
     return GestureDetector(
       onTap: () {
-        if (activity.itemId == null) return;
-        // 根据动态类型跳转到对应详情页（对标 iOS ActivityRow NavigationLink）
-        switch (activity.type) {
-          case RecentActivityItem.typeForumPost:
-            context.safePush('/forum/posts/${activity.itemId}');
-            break;
-          case RecentActivityItem.typeFleaMarketItem:
-            context.safePush('/flea-market/${activity.itemId}');
-            break;
-          case RecentActivityItem.typeLeaderboardCreated:
-            context.push('/leaderboard/${activity.itemId}');
-            break;
+        final id = item.id.replaceFirst('product_', '');
+        context.push('/flea-market/$id');
+      },
+      child: Container(
+        decoration: BoxDecoration(
+          color: isDark ? AppColors.cardBackgroundDark : Colors.white,
+          borderRadius: AppRadius.allMedium,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.06),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (item.hasImages)
+              AspectRatio(
+                aspectRatio: 1,
+                child: AsyncImageView(
+                  imageUrl: item.firstImage!,
+                  fit: BoxFit.cover,
+                ),
+              ),
+            Padding(
+              padding: const EdgeInsets.all(10),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (item.title != null)
+                    Text(
+                      item.title!,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: isDark
+                            ? AppColors.textPrimaryDark
+                            : AppColors.textPrimaryLight,
+                      ),
+                    ),
+                  if (item.description != null) ...[
+                    const SizedBox(height: 2),
+                    Text(
+                      item.description!,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: isDark
+                            ? AppColors.textSecondaryDark
+                            : AppColors.textSecondaryLight,
+                      ),
+                    ),
+                  ],
+                  const SizedBox(height: 6),
+                  Row(
+                    children: [
+                      if (item.price != null)
+                        Text(
+                          '${item.currency ?? "£"}${item.price!.toStringAsFixed(2)}',
+                          style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.priceRed,
+                          ),
+                        ),
+                      const Spacer(),
+                      if (item.likeCount != null)
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.favorite_border,
+                                size: 12,
+                                color: isDark
+                                    ? AppColors.textTertiaryDark
+                                    : AppColors.textTertiaryLight),
+                            const SizedBox(width: 2),
+                            Text(
+                              '${item.likeCount}',
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: isDark
+                                    ? AppColors.textTertiaryDark
+                                    : AppColors.textTertiaryLight,
+                              ),
+                            ),
+                          ],
+                        ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// =============================================================================
+// 卡片类型 3: 竞品评论卡片
+// =============================================================================
+
+class _CompetitorReviewCard extends StatelessWidget {
+  const _CompetitorReviewCard({required this.item});
+  final DiscoveryFeedItem item;
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return GestureDetector(
+      onTap: () {
+        // 跳转到竞品详情
+        if (item.targetItem != null) {
+          context.push('/leaderboards/item/${item.targetItem!.itemId}');
         }
       },
       child: Container(
-      padding: const EdgeInsets.all(AppSpacing.md),
-      decoration: BoxDecoration(
-        color: isDark
-            ? AppColors.cardBackgroundDark
-            : AppColors.cardBackgroundLight,
-        borderRadius: AppRadius.allLarge,
-        // 对标iOS: 0.5pt separator边框
-        border: Border.all(
-          color: (isDark ? AppColors.separatorDark : AppColors.separatorLight)
-              .withValues(alpha: 0.3),
-          width: 0.5,
+        decoration: BoxDecoration(
+          color: isDark ? AppColors.cardBackgroundDark : Colors.white,
+          borderRadius: AppRadius.allMedium,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.06),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
         ),
-        // 对标iOS: 双层阴影
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 8,
-            offset: const Offset(0, 4),
-          ),
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.02),
-            blurRadius: 2,
-            offset: const Offset(0, 1),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          // 对标iOS: 渐变图标 + 圆形 + 彩色阴影
-          Container(
-            width: 44,
-            height: 44,
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: activity.iconGradient,
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-              shape: BoxShape.circle,
-              boxShadow: [
-                BoxShadow(
-                  color: activity.iconGradient.first.withValues(alpha: 0.35),
-                  blurRadius: 6,
-                  offset: const Offset(0, 3),
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // 用户行
+            Row(
+              children: [
+                if (item.userAvatar != null)
+                  CircleAvatar(radius: 14, backgroundImage: NetworkImage(item.userAvatar!))
+                else
+                  CircleAvatar(
+                    radius: 14,
+                    backgroundColor: isDark
+                        ? AppColors.secondaryBackgroundDark
+                        : AppColors.backgroundLight,
+                    child: const Icon(Icons.person, size: 14),
+                  ),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    item.userName ?? '匿名用户',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: isDark
+                          ? AppColors.textPrimaryDark
+                          : AppColors.textPrimaryLight,
+                    ),
+                  ),
                 ),
               ],
             ),
-            child: Icon(
-              activity.icon,
-              color: Colors.white,
-              size: 22,
-            ),
-          ),
-          const SizedBox(width: AppSpacing.md),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            const SizedBox(height: 8),
+            // 评分
+            if (item.rating != null) ...[
+              _StarRating(rating: item.rating!),
+              const SizedBox(height: 6),
+            ],
+            // 评论内容
+            if (item.description != null)
+              Text(
+                item.description!,
+                maxLines: 4,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 13,
+                  color: isDark
+                      ? AppColors.textSecondaryDark
+                      : AppColors.textSecondaryLight,
+                ),
+              ),
+            const SizedBox(height: 8),
+            // 评论的目标竞品
+            if (item.targetItem != null) _TargetItemTag(target: item.targetItem!),
+            const SizedBox(height: 6),
+            // 赞/踩
+            Row(
               children: [
-                // 对标iOS: 合并用户名和动作文本 (body + semibold + secondary)
-                RichText(
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  text: TextSpan(
-                    children: [
-                      TextSpan(
-                        text: activity.userName,
-                        style: AppTypography.body.copyWith(
+                Icon(Icons.thumb_up_outlined, size: 14,
+                    color: isDark ? AppColors.textTertiaryDark : AppColors.textTertiaryLight),
+                const SizedBox(width: 2),
+                Text('${item.upvoteCount ?? 0}',
+                    style: TextStyle(fontSize: 11,
+                        color: isDark ? AppColors.textTertiaryDark : AppColors.textTertiaryLight)),
+                const SizedBox(width: 10),
+                Icon(Icons.thumb_down_outlined, size: 14,
+                    color: isDark ? AppColors.textTertiaryDark : AppColors.textTertiaryLight),
+                const SizedBox(width: 2),
+                Text('${item.downvoteCount ?? 0}',
+                    style: TextStyle(fontSize: 11,
+                        color: isDark ? AppColors.textTertiaryDark : AppColors.textTertiaryLight)),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// =============================================================================
+// 卡片类型 4: 达人服务评价卡片（含活动信息）
+// =============================================================================
+
+class _ServiceReviewCard extends StatelessWidget {
+  const _ServiceReviewCard({required this.item});
+  final DiscoveryFeedItem item;
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final hasActivity = item.activityInfo != null;
+
+    return GestureDetector(
+      onTap: () {
+        if (item.targetItem != null) {
+          context.push('/expert-service/${item.targetItem!.itemId}');
+        }
+      },
+      child: Container(
+        decoration: BoxDecoration(
+          color: isDark ? AppColors.cardBackgroundDark : Colors.white,
+          borderRadius: AppRadius.allMedium,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.06),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // 活动标签
+            if (hasActivity)
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      const Color(0xFFFF6B6B).withValues(alpha: 0.1),
+                      const Color(0xFFFF8E53).withValues(alpha: 0.05),
+                    ],
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.local_fire_department,
+                        size: 14, color: Color(0xFFFF6B6B)),
+                    const SizedBox(width: 4),
+                    Expanded(
+                      child: Text(
+                        '来自 ${item.activityInfo!.activityTitle ?? "活动"}',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 11,
+                          color: Color(0xFFFF6B6B),
                           fontWeight: FontWeight.w600,
-                          color: isDark
-                              ? AppColors.textPrimaryDark
-                              : AppColors.textPrimaryLight,
                         ),
                       ),
-                      TextSpan(
-                        text: ' ${activity.actionText}',
-                        style: AppTypography.body.copyWith(
-                          color: isDark
-                              ? AppColors.textSecondaryDark
-                              : AppColors.textSecondaryLight,
+                    ),
+                  ],
+                ),
+              ),
+            Padding(
+              padding: const EdgeInsets.all(12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // 用户行
+                  Row(
+                    children: [
+                      if (item.userAvatar != null)
+                        CircleAvatar(radius: 14, backgroundImage: NetworkImage(item.userAvatar!))
+                      else
+                        CircleAvatar(
+                          radius: 14,
+                          backgroundColor: isDark
+                              ? AppColors.secondaryBackgroundDark
+                              : AppColors.backgroundLight,
+                          child: const Icon(Icons.person, size: 14),
+                        ),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          item.userName ?? '匿名用户',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: isDark
+                                ? AppColors.textPrimaryDark
+                                : AppColors.textPrimaryLight,
+                          ),
                         ),
                       ),
                     ],
                   ),
+                  const SizedBox(height: 8),
+                  if (item.rating != null) ...[
+                    _StarRating(rating: item.rating!),
+                    const SizedBox(height: 6),
+                  ],
+                  if (item.description != null)
+                    Text(
+                      item.description!,
+                      maxLines: 4,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: isDark
+                            ? AppColors.textSecondaryDark
+                            : AppColors.textSecondaryLight,
+                      ),
+                    ),
+                  const SizedBox(height: 8),
+                  // 服务信息
+                  if (item.targetItem != null) _TargetItemTag(target: item.targetItem!),
+                  // 活动价格
+                  if (hasActivity && item.activityInfo!.hasDiscount) ...[
+                    const SizedBox(height: 6),
+                    _ActivityPriceRow(activityInfo: item.activityInfo!),
+                  ],
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// =============================================================================
+// 卡片类型 5: 排行榜卡片
+// =============================================================================
+
+class _RankingCard extends StatelessWidget {
+  const _RankingCard({required this.item});
+  final DiscoveryFeedItem item;
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final top3 = item.top3;
+
+    return GestureDetector(
+      onTap: () {
+        final id = item.id.replaceFirst('ranking_', '');
+        context.push('/leaderboards/$id');
+      },
+      child: Container(
+        decoration: BoxDecoration(
+          color: isDark ? AppColors.cardBackgroundDark : Colors.white,
+          borderRadius: AppRadius.allMedium,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.06),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // 封面
+            if (item.hasImages)
+              AspectRatio(
+                aspectRatio: 16 / 9,
+                child: AsyncImageView(
+                  imageUrl: item.firstImage!,
+                  fit: BoxFit.cover,
                 ),
-                const SizedBox(height: 3),
+              ),
+            Padding(
+              padding: const EdgeInsets.all(10),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      const Icon(Icons.emoji_events,
+                          size: 16, color: Color(0xFFFFB300)),
+                      const SizedBox(width: 4),
+                      Expanded(
+                        child: Text(
+                          item.title ?? '',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            color: isDark
+                                ? AppColors.textPrimaryDark
+                                : AppColors.textPrimaryLight,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  // TOP 3 列表
+                  if (top3 != null && top3.isNotEmpty) ...[
+                    const SizedBox(height: 8),
+                    ...top3.take(3).toList().asMap().entries.map((entry) {
+                      final i = entry.key;
+                      final data = entry.value;
+                      final medals = ['🥇', '🥈', '🥉'];
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 4),
+                        child: Row(
+                          children: [
+                            Text(medals[i], style: const TextStyle(fontSize: 14)),
+                            const SizedBox(width: 4),
+                            Expanded(
+                              child: Text(
+                                data['name']?.toString() ?? '',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: isDark
+                                      ? AppColors.textSecondaryDark
+                                      : AppColors.textSecondaryLight,
+                                ),
+                              ),
+                            ),
+                            Text(
+                              '⭐ ${(data['rating'] as num?)?.toStringAsFixed(1) ?? '0'}',
+                              style: const TextStyle(fontSize: 11),
+                            ),
+                          ],
+                        ),
+                      );
+                    }),
+                  ],
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// =============================================================================
+// 卡片类型 6: 达人服务推荐卡片
+// =============================================================================
+
+class _ServiceCard extends StatelessWidget {
+  const _ServiceCard({required this.item});
+  final DiscoveryFeedItem item;
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return GestureDetector(
+      onTap: () {
+        final id = item.id.replaceFirst('service_', '');
+        context.push('/expert-service/$id');
+      },
+      child: Container(
+        decoration: BoxDecoration(
+          color: isDark ? AppColors.cardBackgroundDark : Colors.white,
+          borderRadius: AppRadius.allMedium,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.06),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (item.hasImages)
+              AspectRatio(
+                aspectRatio: 4 / 3,
+                child: AsyncImageView(
+                  imageUrl: item.firstImage!,
+                  fit: BoxFit.cover,
+                ),
+              ),
+            Padding(
+              padding: const EdgeInsets.all(10),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (item.title != null)
+                    Text(
+                      item.title!,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: isDark
+                            ? AppColors.textPrimaryDark
+                            : AppColors.textPrimaryLight,
+                      ),
+                    ),
+                  const SizedBox(height: 4),
+                  // 达人信息
+                  Row(
+                    children: [
+                      if (item.userAvatar != null)
+                        CircleAvatar(radius: 10, backgroundImage: NetworkImage(item.userAvatar!))
+                      else
+                        CircleAvatar(
+                          radius: 10,
+                          backgroundColor: isDark
+                              ? AppColors.secondaryBackgroundDark
+                              : AppColors.backgroundLight,
+                          child: const Icon(Icons.person, size: 12),
+                        ),
+                      const SizedBox(width: 4),
+                      Expanded(
+                        child: Text(
+                          item.userName ?? '',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: isDark
+                                ? AppColors.textTertiaryDark
+                                : AppColors.textTertiaryLight,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  // 价格 + 评分
+                  Row(
+                    children: [
+                      if (item.price != null)
+                        Text(
+                          '${item.currency ?? "£"}${item.price!.toStringAsFixed(0)}起',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.priceRed,
+                          ),
+                        ),
+                      const Spacer(),
+                      if (item.rating != null)
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.star,
+                                size: 12, color: Color(0xFFFFB300)),
+                            const SizedBox(width: 2),
+                            Text(
+                              item.rating!.toStringAsFixed(1),
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: isDark
+                                    ? AppColors.textSecondaryDark
+                                    : AppColors.textSecondaryLight,
+                              ),
+                            ),
+                          ],
+                        ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// =============================================================================
+// 共用组件
+// =============================================================================
+
+/// 星级评分
+class _StarRating extends StatelessWidget {
+  const _StarRating({required this.rating});
+  final double rating;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: List.generate(5, (i) {
+        if (i < rating.floor()) {
+          return const Icon(Icons.star, size: 14, color: Color(0xFFFFB300));
+        } else if (i < rating.ceil() && rating % 1 >= 0.5) {
+          return const Icon(Icons.star_half, size: 14, color: Color(0xFFFFB300));
+        }
+        return Icon(Icons.star_border, size: 14,
+            color: Colors.grey.withValues(alpha: 0.4));
+      }),
+    );
+  }
+}
+
+/// 帖子关联内容标签
+class _LinkedItemTag extends StatelessWidget {
+  const _LinkedItemTag({required this.linkedItem});
+  final LinkedItemBrief linkedItem;
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final typeLabel = _typeLabel(linkedItem.itemType);
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: (isDark ? AppColors.primaryDark : AppColors.primaryLight)
+            .withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.link, size: 12,
+              color: isDark ? AppColors.primaryDark : AppColors.primaryLight),
+          const SizedBox(width: 4),
+          Flexible(
+            child: Text(
+              '$typeLabel: ${linkedItem.name ?? ""}',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: 11,
+                color: isDark ? AppColors.primaryDark : AppColors.primaryLight,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _typeLabel(String type) {
+    switch (type) {
+      case 'service':
+        return '服务';
+      case 'activity':
+        return '活动';
+      case 'product':
+        return '商品';
+      case 'ranking':
+        return '排行榜';
+      case 'forum_post':
+        return '帖子';
+      case 'expert':
+        return '达人';
+      default:
+        return '关联';
+    }
+  }
+}
+
+/// 评论目标标签（竞品/服务）
+class _TargetItemTag extends StatelessWidget {
+  const _TargetItemTag({required this.target});
+  final TargetItemBrief target;
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return Container(
+      padding: const EdgeInsets.all(8),
+      decoration: BoxDecoration(
+        color: isDark
+            ? AppColors.secondaryBackgroundDark
+            : AppColors.backgroundLight.withValues(alpha: 0.5),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        children: [
+          if (target.thumbnail != null)
+            ClipRRect(
+              borderRadius: BorderRadius.circular(4),
+              child: SizedBox(
+                width: 28,
+                height: 28,
+                child: AsyncImageView(
+                  imageUrl: target.thumbnail!,
+                  fit: BoxFit.cover,
+                ),
+              ),
+            )
+          else
+            Container(
+              width: 28,
+              height: 28,
+              decoration: BoxDecoration(
+                color: isDark
+                    ? AppColors.cardBackgroundDark
+                    : Colors.grey.withValues(alpha: 0.2),
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: const Icon(Icons.inventory_2, size: 14),
+            ),
+          const SizedBox(width: 6),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
                 Text(
-                  activity.title,
-                  style: AppTypography.caption.copyWith(
+                  target.name ?? '',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 12,
                     fontWeight: FontWeight.w500,
                     color: isDark
                         ? AppColors.textPrimaryDark
                         : AppColors.textPrimaryLight,
                   ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
                 ),
-                if (activity.description != null) ...[
-                  const SizedBox(height: 2),
+                if (target.subtitle != null)
                   Text(
-                    activity.description!,
-                    style: AppTypography.caption.copyWith(
-                      color: isDark
-                          ? AppColors.textSecondaryDark
-                          : AppColors.textSecondaryLight,
-                    ),
+                    target.subtitle!,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 10,
+                      color: isDark
+                          ? AppColors.textTertiaryDark
+                          : AppColors.textTertiaryLight,
+                    ),
                   ),
-                ],
               ],
             ),
           ),
-          Icon(
-            Icons.chevron_right,
-            size: 16,
-            color: isDark
-                ? AppColors.textTertiaryDark
-                : AppColors.textTertiaryLight,
-          ),
         ],
       ),
-      ),
+    );
+  }
+}
+
+/// 活动价格行（原价划线 + 折后价高亮）
+class _ActivityPriceRow extends StatelessWidget {
+  const _ActivityPriceRow({required this.activityInfo});
+  final ActivityBrief activityInfo;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        // 折后价
+        Text(
+          '${activityInfo.currency} ${activityInfo.discountedPrice?.toStringAsFixed(2) ?? ""}',
+          style: TextStyle(
+            fontSize: 15,
+            fontWeight: FontWeight.bold,
+            color: AppColors.priceRed,
+          ),
+        ),
+        const SizedBox(width: 6),
+        // 原价（划线）
+        Text(
+          '${activityInfo.currency} ${activityInfo.originalPrice?.toStringAsFixed(2) ?? ""}',
+          style: TextStyle(
+            fontSize: 12,
+            color: Colors.grey,
+            decoration: TextDecoration.lineThrough,
+          ),
+        ),
+        const SizedBox(width: 4),
+        // 折扣标签
+        if (activityInfo.discountLabel != null)
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+            decoration: BoxDecoration(
+              color: const Color(0xFFFF6B6B).withValues(alpha: 0.15),
+              borderRadius: BorderRadius.circular(4),
+            ),
+            child: Text(
+              activityInfo.discountLabel!,
+              style: const TextStyle(
+                fontSize: 10,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFFFF6B6B),
+              ),
+            ),
+          ),
+      ],
     );
   }
 }
