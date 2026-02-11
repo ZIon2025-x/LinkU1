@@ -94,6 +94,7 @@ class ActivityState extends Equatable {
     this.timeSlots = const [],
     this.isLoadingTimeSlots = false,
     this.isLoadingMore = false,
+    this.expert,
   });
 
   final ActivityStatus status;
@@ -109,6 +110,9 @@ class ActivityState extends Equatable {
   final List<ServiceTimeSlot> timeSlots;
   final bool isLoadingTimeSlots;
   final bool isLoadingMore;
+
+  /// 活动发布者的达人信息（对齐iOS viewModel.expert）
+  final TaskExpert? expert;
 
   bool get isLoading => status == ActivityStatus.loading;
   bool get isDetailLoading => detailStatus == ActivityStatus.loading;
@@ -127,6 +131,7 @@ class ActivityState extends Equatable {
     List<ServiceTimeSlot>? timeSlots,
     bool? isLoadingTimeSlots,
     bool? isLoadingMore,
+    TaskExpert? expert,
   }) {
     return ActivityState(
       status: status ?? this.status,
@@ -142,6 +147,7 @@ class ActivityState extends Equatable {
       timeSlots: timeSlots ?? this.timeSlots,
       isLoadingTimeSlots: isLoadingTimeSlots ?? this.isLoadingTimeSlots,
       isLoadingMore: isLoadingMore ?? this.isLoadingMore,
+      expert: expert ?? this.expert,
     );
   }
 
@@ -160,6 +166,7 @@ class ActivityState extends Equatable {
         timeSlots,
         isLoadingTimeSlots,
         isLoadingMore,
+        expert,
       ];
 }
 
@@ -301,6 +308,18 @@ class ActivityBloc extends Bloc<ActivityEvent, ActivityState> {
         detailStatus: ActivityStatus.loaded,
         activityDetail: activity,
       ));
+
+      // 对齐iOS loadExpertInfo: 加载达人信息（名字、头像）
+      if (activity.expertId.isNotEmpty && _taskExpertRepository != null) {
+        try {
+          final expert =
+              await _taskExpertRepository.getExpertById(activity.expertId);
+          emit(state.copyWith(expert: expert));
+        } catch (e) {
+          AppLogger.warning('Failed to load expert info', e);
+          // 达人信息加载失败不影响活动详情展示
+        }
+      }
     } catch (e) {
       AppLogger.error('Failed to load activity detail', e);
       emit(state.copyWith(

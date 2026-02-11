@@ -163,7 +163,7 @@ class MessageGroupBubbleView extends StatelessWidget {
           Flexible(
             child: ConstrainedBox(
               constraints: BoxConstraints(
-                maxWidth: MediaQuery.of(context).size.width * 0.72,
+                maxWidth: MediaQuery.sizeOf(context).width * 0.72,
               ),
               child: Column(
                 crossAxisAlignment: isOutgoing

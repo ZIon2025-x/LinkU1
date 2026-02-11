@@ -41,6 +41,10 @@ class _TaskChatListViewContent extends StatelessWidget {
         title: Text(context.l10n.notificationTaskChat),
       ),
       body: BlocBuilder<MessageBloc, MessageState>(
+        buildWhen: (previous, current) =>
+            previous.status != current.status ||
+            previous.displayTaskChats != current.displayTaskChats ||
+            previous.pinnedTaskIds != current.pinnedTaskIds,
         builder: (context, state) {
           return _buildBody(context, state);
         },
@@ -135,7 +139,14 @@ class _TaskChatListViewContent extends StatelessWidget {
               chat: chat,
               isPinned: isPinned,
               onTap: () {
-                context.push('/task-chat/${chat.taskId}');
+                // 先导航，再异步清零未读计数
+                context.push('/task-chat/${chat.taskId}').then((_) {
+                  if (context.mounted && chat.unreadCount > 0) {
+                    context
+                        .read<MessageBloc>()
+                        .add(MessageMarkTaskChatRead(chat.taskId));
+                  }
+                });
               },
             ),
           );

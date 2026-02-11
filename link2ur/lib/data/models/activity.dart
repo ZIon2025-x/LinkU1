@@ -40,6 +40,8 @@ class Activity extends Equatable {
     this.userTaskStatus,
     this.userTaskIsPaid,
     this.userTaskHasNegotiation,
+    this.type, // "applied", "favorited", "both" — 我的活动列表用
+    this.participantStatus, // 参与状态
     this.createdAt,
     this.updatedAt,
   });
@@ -82,6 +84,12 @@ class Activity extends Equatable {
   final String? userTaskStatus;
   final bool? userTaskIsPaid;
   final bool? userTaskHasNegotiation;
+
+  /// 活动类型标记（我的活动列表）: "applied", "favorited", "both"
+  final String? type;
+
+  /// 参与状态（已申请时的状态）
+  final String? participantStatus;
 
   final DateTime? createdAt;
   final DateTime? updatedAt;
@@ -171,6 +179,8 @@ class Activity extends Equatable {
       userTaskStatus: json['user_task_status'] as String?,
       userTaskIsPaid: json['user_task_is_paid'] as bool?,
       userTaskHasNegotiation: json['user_task_has_negotiation'] as bool?,
+      type: json['type'] as String?,
+      participantStatus: json['participant_status'] as String?,
       createdAt: json['created_at'] != null
           ? DateTime.parse(json['created_at'])
           : null,
@@ -248,6 +258,8 @@ class Activity extends Equatable {
     String? userTaskStatus,
     bool? userTaskIsPaid,
     bool? userTaskHasNegotiation,
+    String? type,
+    String? participantStatus,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) {
@@ -288,6 +300,8 @@ class Activity extends Equatable {
       userTaskStatus: userTaskStatus ?? this.userTaskStatus,
       userTaskIsPaid: userTaskIsPaid ?? this.userTaskIsPaid,
       userTaskHasNegotiation: userTaskHasNegotiation ?? this.userTaskHasNegotiation,
+      type: type ?? this.type,
+      participantStatus: participantStatus ?? this.participantStatus,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );

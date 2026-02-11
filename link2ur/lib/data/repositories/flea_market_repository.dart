@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 
 import '../models/flea_market.dart';
 import '../services/api_service.dart';
+import '../services/storage_service.dart';
 import '../../core/constants/api_endpoints.dart';
 import '../../core/utils/cache_manager.dart';
 import '../../core/utils/app_exception.dart';
@@ -151,6 +152,9 @@ class FleaMarketRepository {
       throw FleaMarketException(response.message ?? '购买失败');
     }
 
+    // 购买后失效我的购买/销售缓存
+    await _cache.invalidateMyFleaMarketCache();
+
     return response.data!;
   }
 
@@ -171,6 +175,9 @@ class FleaMarketRepository {
     if (!response.isSuccess || response.data == null) {
       throw FleaMarketException(response.message ?? '发送购买请求失败');
     }
+
+    // 发送请求后失效我的购买请求缓存
+    await _cache.invalidateMyFleaMarketCache();
 
     return response.data!;
   }
@@ -216,20 +223,42 @@ class FleaMarketRepository {
     int page = 1,
     int pageSize = 20,
   }) async {
-    final response = await _apiService.get<Map<String, dynamic>>(
-      ApiEndpoints.fleaMarketMyPurchases,
-      queryParameters: {
-        'page': page,
-        'page_size': pageSize,
-      },
+    final cacheKey = CacheManager.buildKey(
+      '${CacheManager.prefixMyFleaMarket}purchases_',
+      {'p': page, 'ps': pageSize},
     );
 
-    if (!response.isSuccess || response.data == null) {
-      throw FleaMarketException(response.message ?? '获取购买历史失败');
+    final cached = _cache.get<Map<String, dynamic>>(cacheKey);
+    if (cached != null) {
+      final items = cached['items'] as List<dynamic>? ?? [];
+      return items.map((e) => e as Map<String, dynamic>).toList();
     }
 
-    final items = response.data!['items'] as List<dynamic>? ?? [];
-    return items.map((e) => e as Map<String, dynamic>).toList();
+    try {
+      final response = await _apiService.get<Map<String, dynamic>>(
+        ApiEndpoints.fleaMarketMyPurchases,
+        queryParameters: {
+          'page': page,
+          'page_size': pageSize,
+        },
+      );
+
+      if (!response.isSuccess || response.data == null) {
+        throw FleaMarketException(response.message ?? '获取购买历史失败');
+      }
+
+      await _cache.set(cacheKey, response.data!, ttl: CacheManager.personalTTL);
+
+      final items = response.data!['items'] as List<dynamic>? ?? [];
+      return items.map((e) => e as Map<String, dynamic>).toList();
+    } catch (e) {
+      final stale = _cache.getStale<Map<String, dynamic>>(cacheKey);
+      if (stale != null) {
+        final items = stale['items'] as List<dynamic>? ?? [];
+        return items.map((e) => e as Map<String, dynamic>).toList();
+      }
+      rethrow;
+    }
   }
 
   /// 获取收藏商品列表
@@ -252,12 +281,23 @@ class FleaMarketRepository {
     return FleaMarketListResponse.fromJson(response.data!);
   }
 
-  /// 获取我的商品
+  /// 获取我的在售商品（对齐iOS loadSellingItems）
+  /// 使用 GET /api/flea-market/items?seller_id={userId}&status=active
   Future<FleaMarketListResponse> getMyItems({
     int page = 1,
     int pageSize = 20,
   }) async {
-    final params = {'page': page, 'page_size': pageSize};
+    final userId = StorageService.instance.getUserId();
+    if (userId == null) {
+      throw FleaMarketException('用户未登录');
+    }
+
+    final params = {
+      'page': page,
+      'page_size': pageSize,
+      'seller_id': userId,
+      'status': 'active',
+    };
     final cacheKey =
         CacheManager.buildKey('${CacheManager.prefixMyFleaMarket}items_', params);
 
@@ -267,7 +307,7 @@ class FleaMarketRepository {
     }
 
     final response = await _apiService.get<Map<String, dynamic>>(
-      ApiEndpoints.fleaMarketMyItems,
+      ApiEndpoints.fleaMarketItems,
       queryParameters: params,
     );
 
@@ -285,41 +325,88 @@ class FleaMarketRepository {
     int page = 1,
     int pageSize = 20,
   }) async {
-    final response = await _apiService.get<Map<String, dynamic>>(
-      ApiEndpoints.fleaMarketMyPurchaseRequests,
-      queryParameters: {
-        'page': page,
-        'page_size': pageSize,
-      },
+    final cacheKey = CacheManager.buildKey(
+      '${CacheManager.prefixMyFleaMarket}requests_',
+      {'p': page, 'ps': pageSize},
     );
 
-    if (!response.isSuccess || response.data == null) {
-      throw FleaMarketException(response.message ?? '获取购买请求失败');
+    final cached = _cache.get<Map<String, dynamic>>(cacheKey);
+    if (cached != null) {
+      final items = cached['items'] as List<dynamic>? ?? [];
+      return items.map((e) => e as Map<String, dynamic>).toList();
     }
 
-    final items = response.data!['items'] as List<dynamic>? ?? [];
-    return items.map((e) => e as Map<String, dynamic>).toList();
+    try {
+      final response = await _apiService.get<Map<String, dynamic>>(
+        ApiEndpoints.fleaMarketMyPurchaseRequests,
+        queryParameters: {
+          'page': page,
+          'page_size': pageSize,
+        },
+      );
+
+      if (!response.isSuccess || response.data == null) {
+        throw FleaMarketException(response.message ?? '获取购买请求失败');
+      }
+
+      await _cache.set(cacheKey, response.data!, ttl: CacheManager.personalTTL);
+
+      final items = response.data!['items'] as List<dynamic>? ?? [];
+      return items.map((e) => e as Map<String, dynamic>).toList();
+    } catch (e) {
+      final stale = _cache.getStale<Map<String, dynamic>>(cacheKey);
+      if (stale != null) {
+        final items = stale['items'] as List<dynamic>? ?? [];
+        return items.map((e) => e as Map<String, dynamic>).toList();
+      }
+      rethrow;
+    }
   }
 
-  /// 获取我的销售记录
-  Future<List<Map<String, dynamic>>> getMySales({
+  /// 获取我的已售商品（对齐iOS loadSoldItems）
+  /// 使用 GET /api/flea-market/items?seller_id={userId}&status=sold
+  Future<FleaMarketListResponse> getMySales({
     int page = 1,
     int pageSize = 20,
   }) async {
-    final response = await _apiService.get<Map<String, dynamic>>(
-      ApiEndpoints.fleaMarketMySales,
-      queryParameters: {
-        'page': page,
-        'page_size': pageSize,
-      },
-    );
-
-    if (!response.isSuccess || response.data == null) {
-      throw FleaMarketException(response.message ?? '获取销售记录失败');
+    final userId = StorageService.instance.getUserId();
+    if (userId == null) {
+      throw FleaMarketException('用户未登录');
     }
 
-    final items = response.data!['items'] as List<dynamic>? ?? [];
-    return items.map((e) => e as Map<String, dynamic>).toList();
+    final params = {
+      'page': page,
+      'page_size': pageSize,
+      'seller_id': userId,
+      'status': 'sold',
+    };
+    final cacheKey = CacheManager.buildKey(
+      '${CacheManager.prefixMyFleaMarket}sales_',
+      params,
+    );
+
+    final cached = _cache.get<Map<String, dynamic>>(cacheKey);
+    if (cached != null) {
+      return FleaMarketListResponse.fromJson(cached);
+    }
+
+    try {
+      final response = await _apiService.get<Map<String, dynamic>>(
+        ApiEndpoints.fleaMarketItems,
+        queryParameters: params,
+      );
+
+      if (!response.isSuccess || response.data == null) {
+        throw FleaMarketException(response.message ?? '获取销售记录失败');
+      }
+
+      await _cache.set(cacheKey, response.data!, ttl: CacheManager.personalTTL);
+      return FleaMarketListResponse.fromJson(response.data!);
+    } catch (e) {
+      final stale = _cache.getStale<Map<String, dynamic>>(cacheKey);
+      if (stale != null) return FleaMarketListResponse.fromJson(stale);
+      rethrow;
+    }
   }
 
   /// 批准购买请求（卖家操作）
@@ -425,6 +512,7 @@ class FleaMarketRepository {
     }
 
     await _cache.invalidateFleaMarketCache();
+    await _cache.invalidateMyFleaMarketCache();
   }
 
   /// 拒绝购买请求
@@ -438,6 +526,7 @@ class FleaMarketRepository {
     }
 
     await _cache.invalidateFleaMarketCache();
+    await _cache.invalidateMyFleaMarketCache();
   }
 
   /// 发起还价

@@ -575,7 +575,7 @@ class _CustomerServiceContentState extends State<_CustomerServiceContent> {
           Flexible(
             child: Container(
               constraints: BoxConstraints(
-                maxWidth: MediaQuery.of(context).size.width * 0.7,
+                maxWidth: MediaQuery.sizeOf(context).width * 0.7,
               ),
               padding: AppSpacing.allSm,
               decoration: BoxDecoration(

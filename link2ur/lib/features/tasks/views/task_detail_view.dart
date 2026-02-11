@@ -20,6 +20,7 @@ import '../../../core/widgets/animated_list_item.dart';
 import '../../../core/router/app_router.dart';
 import '../../../core/utils/responsive.dart';
 import '../../../core/utils/l10n_extension.dart';
+import '../../../core/utils/date_formatter.dart';
 import '../../../core/utils/task_type_helper.dart';
 import '../../../data/models/task.dart';
 import '../../../data/models/user.dart';
@@ -187,24 +188,9 @@ class _TaskDetailContent extends StatelessWidget {
         ),
       ),
       actions: [
-        if (state.task != null) ...[
+        if (state.task != null)
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 4),
-            child: GlassButton(
-              onTap: () {
-                AppHaptics.selection();
-                CustomSharePanel.show(
-                  context,
-                  title: state.task!.displayTitle,
-                  description: state.task!.displayDescription ?? '',
-                  url: 'https://link2ur.com/tasks/${state.task!.id}',
-                );
-              },
-              child: const Icon(Icons.share_outlined, size: 20, color: Colors.white),
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.only(left: 4, right: 12),
+            padding: const EdgeInsets.only(right: 12),
             child: GlassButton(
               onTap: () {
                 AppHaptics.selection();
@@ -213,29 +199,7 @@ class _TaskDetailContent extends StatelessWidget {
               child: const Icon(Icons.more_horiz, size: 20, color: Colors.white),
             ),
           ),
-        ],
       ],
-    );
-  }
-
-  Widget _buildAppBarButton({
-    required IconData icon,
-    required VoidCallback onPressed,
-  }) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 4),
-      child: GestureDetector(
-        onTap: onPressed,
-        child: Container(
-          width: 36,
-          height: 36,
-          decoration: BoxDecoration(
-            color: Colors.black.withValues(alpha: 0.3),
-            shape: BoxShape.circle,
-          ),
-          child: Icon(icon, size: 18, color: Colors.white),
-        ),
-      ),
     );
   }
 
@@ -371,7 +335,7 @@ class _TaskDetailContent extends StatelessWidget {
                 // 标题和状态卡片
                 AnimatedListItem(
                   index: 0,
-                  child: _TaskHeaderCard(task: task, isDark: isDark),
+                  child: _TaskHeaderCard(task: task, isDark: isDark, currentUserId: currentUserId),
                 ),
                 const SizedBox(height: AppSpacing.md),
 
@@ -846,9 +810,10 @@ class _TaskImageCarouselState extends State<_TaskImageCarousel> {
 // ============================================================
 
 class _TaskHeaderCard extends StatelessWidget {
-  const _TaskHeaderCard({required this.task, required this.isDark});
+  const _TaskHeaderCard({required this.task, required this.isDark, this.currentUserId});
   final Task task;
   final bool isDark;
+  final String? currentUserId;
 
   @override
   Widget build(BuildContext context) {
@@ -923,7 +888,7 @@ class _TaskHeaderCard extends StatelessWidget {
                 isPrimary: true,
               ),
               _buildTag(
-                text: task.location ?? 'Online',
+                text: task.displayLocation(currentUserId) ?? 'Online',
                 icon: task.isOnline
                     ? Icons.language
                     : Icons.location_on,
@@ -1199,7 +1164,7 @@ class _TaskInfoCard extends StatelessWidget {
                     _buildGridItem(
                       icon: Icons.calendar_today,
                       title: context.l10n.taskDetailPublishTime,
-                      value: _formatDate(task.createdAt!),
+                      value: DateFormatter.formatRelative(task.createdAt!, l10n: context.l10n),
                       iconColor: AppColors.primary,
                       width: (constraints.maxWidth - AppSpacing.md) / 2,
                     ),

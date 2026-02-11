@@ -58,6 +58,15 @@ class MessageHideTaskChat extends MessageEvent {
   List<Object?> get props => [taskId];
 }
 
+/// 本地标记任务聊天已读（将 unreadCount 置 0，无需网络请求）
+class MessageMarkTaskChatRead extends MessageEvent {
+  const MessageMarkTaskChatRead(this.taskId);
+  final int taskId;
+
+  @override
+  List<Object?> get props => [taskId];
+}
+
 // ==================== State ====================
 
 enum MessageStatus { initial, loading, loaded, error }
@@ -175,6 +184,7 @@ class MessageBloc extends Bloc<MessageEvent, MessageState> {
     on<MessagePinTaskChat>(_onPinTaskChat);
     on<MessageUnpinTaskChat>(_onUnpinTaskChat);
     on<MessageHideTaskChat>(_onHideTaskChat);
+    on<MessageMarkTaskChatRead>(_onMarkTaskChatRead);
   }
 
   final MessageRepository _messageRepository;
@@ -329,5 +339,23 @@ class MessageBloc extends Bloc<MessageEvent, MessageState> {
     final updated = Map<int, DateTime>.from(state.hiddenTaskChats);
     updated[event.taskId] = DateTime.now();
     emit(state.copyWith(hiddenTaskChats: updated));
+  }
+
+  /// 本地将指定任务聊天的未读计数清零
+  void _onMarkTaskChatRead(
+    MessageMarkTaskChatRead event,
+    Emitter<MessageState> emit,
+  ) {
+    final updatedChats = state.taskChats.map((chat) {
+      if (chat.taskId == event.taskId && chat.unreadCount > 0) {
+        return chat.copyWith(unreadCount: 0);
+      }
+      return chat;
+    }).toList();
+
+    // 只在确实有变化时 emit
+    if (updatedChats != state.taskChats) {
+      emit(state.copyWith(taskChats: updatedChats));
+    }
   }
 }

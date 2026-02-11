@@ -21,14 +21,18 @@ class TaskExpertRepository {
     int page = 1,
     int pageSize = 50,
     String? keyword,
+    String? category,
+    String? location,
     bool forceRefresh = false,
     CancelToken? cancelToken,
   }) async {
-    // 后端使用 limit/offset 分页，不支持 keyword（task_expert_routes.py）
+    // 后端使用 limit/offset 分页（task_expert_routes.py）
     final offset = (page - 1) * pageSize;
     final params = {
       'limit': pageSize,
       'offset': offset,
+      if (category != null) 'category': category,
+      if (location != null) 'location': location,
     };
 
     final cacheKey =

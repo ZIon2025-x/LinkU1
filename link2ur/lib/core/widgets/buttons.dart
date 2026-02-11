@@ -153,55 +153,65 @@ class PrimaryButton extends StatelessWidget {
 
     final isActive = !isDisabled && !isLoading;
 
-    return ScaleTapWrapper(
-      enabled: isActive,
-      onTap: () {
-        AppHaptics.buttonTap();
-        onPressed?.call();
-      },
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 350),
-        curve: Curves.easeInOutCubic,
-        width: isLoading ? height : width, // 收缩为圆形
-        height: height,
-        decoration: BoxDecoration(
-          gradient: isActive || isLoading ? effectiveGradient : null,
-          color: isActive || isLoading ? null : AppColors.textTertiaryLight,
-          borderRadius: isLoading
-              ? BorderRadius.circular(height / 2) // 圆形
-              : AppRadius.button,
-          boxShadow: isActive || isLoading
-              ? AppShadows.primary(opacity: 0.2)
-              : null,
-        ),
-        child: Center(
-          child: AnimatedSwitcher(
-            duration: const Duration(milliseconds: 250),
-            switchInCurve: Curves.easeOut,
-            switchOutCurve: Curves.easeIn,
-            transitionBuilder: (child, animation) => FadeTransition(
-              opacity: animation,
-              child: ScaleTransition(scale: animation, child: child),
+    // 当 width 为 null 时，使用 LayoutBuilder 获取父级实际宽度，
+    // 确保 AnimatedContainer 始终在 finite 约束之间插值，
+    // 避免 BoxConstraints.lerp() 在 Infinity ↔ finite 之间的断言错误。
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        // 解析实际可用宽度：优先使用显式 width，否则取父级 maxWidth
+        final resolvedWidth = width ?? (constraints.maxWidth.isFinite ? constraints.maxWidth : null);
+
+        return ScaleTapWrapper(
+          enabled: isActive,
+          onTap: () {
+            AppHaptics.buttonTap();
+            onPressed?.call();
+          },
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 350),
+            curve: Curves.easeInOutCubic,
+            width: isLoading ? height : resolvedWidth,
+            height: height,
+            decoration: BoxDecoration(
+              gradient: isActive || isLoading ? effectiveGradient : null,
+              color: isActive || isLoading ? null : AppColors.textTertiaryLight,
+              borderRadius: isLoading
+                  ? BorderRadius.circular(height / 2) // 圆形
+                  : AppRadius.button,
+              boxShadow: isActive || isLoading
+                  ? AppShadows.primary(opacity: 0.2)
+                  : null,
             ),
-            child: isLoading
-                ? const ButtonLoadingIndicator(key: ValueKey('loading'))
-                : Row(
-                    key: const ValueKey('content'),
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      if (icon != null) ...[
-                        Icon(icon, color: Colors.white, size: 20),
-                        AppSpacing.hSm,
-                      ],
-                      Text(
-                        text,
-                        style: AppTypography.button.copyWith(color: Colors.white),
+            child: Center(
+              child: AnimatedSwitcher(
+                duration: const Duration(milliseconds: 250),
+                switchInCurve: Curves.easeOut,
+                switchOutCurve: Curves.easeIn,
+                transitionBuilder: (child, animation) => FadeTransition(
+                  opacity: animation,
+                  child: ScaleTransition(scale: animation, child: child),
+                ),
+                child: isLoading
+                    ? const ButtonLoadingIndicator(key: ValueKey('loading'))
+                    : Row(
+                        key: const ValueKey('content'),
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          if (icon != null) ...[
+                            Icon(icon, color: Colors.white, size: 20),
+                            AppSpacing.hSm,
+                          ],
+                          Text(
+                            text,
+                            style: AppTypography.button.copyWith(color: Colors.white),
+                          ),
+                        ],
                       ),
-                    ],
-                  ),
+              ),
+            ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 }

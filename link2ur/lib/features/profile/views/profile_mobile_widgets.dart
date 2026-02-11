@@ -33,7 +33,9 @@ Widget _buildMobileProfile(
       ),
       SingleChildScrollView(
         physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.only(bottom: 20),
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.of(context).padding.bottom + 80,
+        ),
         child: Column(
           children: [
             _buildUserInfoSection(context, user, isDark),

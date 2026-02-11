@@ -18,6 +18,47 @@ import '../../../data/repositories/task_expert_repository.dart';
 import '../../../data/models/task_expert.dart';
 import '../bloc/task_expert_bloc.dart';
 
+/// 达人类型列表（与后端 models.py FeaturedTaskExpert.category 对齐）
+const List<Map<String, String>> _expertCategories = [
+  {'key': 'all'},
+  {'key': 'programming'},
+  {'key': 'translation'},
+  {'key': 'tutoring'},
+  {'key': 'food'},
+  {'key': 'beverage'},
+  {'key': 'cake'},
+  {'key': 'errand_transport'},
+  {'key': 'social_entertainment'},
+  {'key': 'beauty_skincare'},
+  {'key': 'handicraft'},
+];
+
+/// 城市列表（与后端 city_filter_utils.py UK_MAIN_CITIES 对齐）
+const List<String> _ukCities = [
+  'London', 'Edinburgh', 'Manchester', 'Birmingham', 'Glasgow',
+  'Bristol', 'Sheffield', 'Leeds', 'Nottingham', 'Newcastle',
+  'Southampton', 'Liverpool', 'Cardiff', 'Coventry', 'Exeter',
+  'Leicester', 'York', 'Aberdeen', 'Bath', 'Dundee',
+  'Reading', 'St Andrews', 'Belfast', 'Brighton', 'Durham',
+  'Norwich', 'Swansea', 'Loughborough', 'Lancaster', 'Warwick',
+  'Cambridge', 'Oxford',
+];
+
+/// 中英文城市名映射
+const Map<String, String> _cityNameZh = {
+  'London': '伦敦', 'Edinburgh': '爱丁堡', 'Manchester': '曼彻斯特',
+  'Birmingham': '伯明翰', 'Glasgow': '格拉斯哥', 'Bristol': '布里斯托',
+  'Sheffield': '谢菲尔德', 'Leeds': '利兹', 'Nottingham': '诺丁汉',
+  'Newcastle': '纽卡斯尔', 'Southampton': '南安普顿', 'Liverpool': '利物浦',
+  'Cardiff': '卡迪夫', 'Coventry': '考文垂', 'Exeter': '埃克塞特',
+  'Leicester': '莱斯特', 'York': '约克', 'Aberdeen': '阿伯丁',
+  'Bath': '巴斯', 'Dundee': '邓迪', 'Reading': '雷丁',
+  'St Andrews': '圣安德鲁斯', 'Belfast': '贝尔法斯特', 'Brighton': '布莱顿',
+  'Durham': '达勒姆', 'Norwich': '诺里奇', 'Swansea': '斯旺西',
+  'Loughborough': '拉夫堡', 'Lancaster': '兰开斯特', 'Warwick': '华威',
+  'Cambridge': '剑桥', 'Oxford': '牛津',
+};
+
 /// 任务达人列表页
 /// 参考iOS TaskExpertListView.swift
 class TaskExpertListView extends StatelessWidget {
@@ -97,9 +138,41 @@ class _TaskExpertListViewContentState extends State<_TaskExpertListViewContent> 
             icon: Icon(_isSearching ? Icons.close : Icons.search),
             onPressed: _toggleSearch,
           ),
+          // 筛选按钮（有激活筛选时显示小圆点）
+          BlocBuilder<TaskExpertBloc, TaskExpertState>(
+            buildWhen: (prev, curr) =>
+                prev.hasActiveFilters != curr.hasActiveFilters,
+            builder: (context, state) {
+              return Stack(
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.tune, size: 22),
+                    onPressed: () => _showFilterPanel(context),
+                  ),
+                  if (state.hasActiveFilters)
+                    Positioned(
+                      right: 8,
+                      top: 8,
+                      child: Container(
+                        width: 8,
+                        height: 8,
+                        decoration: const BoxDecoration(
+                          color: AppColors.primary,
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                    ),
+                ],
+              );
+            },
+          ),
         ],
       ),
       body: BlocBuilder<TaskExpertBloc, TaskExpertState>(
+        buildWhen: (previous, current) =>
+            previous.status != current.status ||
+            previous.experts != current.experts ||
+            previous.hasMore != current.hasMore,
         builder: (context, state) {
             // Loading state
             if (state.status == TaskExpertStatus.loading &&
@@ -163,6 +236,269 @@ class _TaskExpertListViewContentState extends State<_TaskExpertListViewContent> 
             );
           },
         ),
+    );
+  }
+
+  /// 达人类型的本地化名称
+  String _categoryLabel(BuildContext context, String key) {
+    final l10n = context.l10n;
+    switch (key) {
+      case 'all':
+        return l10n.expertCategoryAll;
+      case 'programming':
+        return l10n.expertCategoryProgramming;
+      case 'translation':
+        return l10n.expertCategoryTranslation;
+      case 'tutoring':
+        return l10n.expertCategoryTutoring;
+      case 'food':
+        return l10n.expertCategoryFood;
+      case 'beverage':
+        return l10n.expertCategoryBeverage;
+      case 'cake':
+        return l10n.expertCategoryCake;
+      case 'errand_transport':
+        return l10n.expertCategoryErrandTransport;
+      case 'social_entertainment':
+        return l10n.expertCategorySocialEntertainment;
+      case 'beauty_skincare':
+        return l10n.expertCategoryBeautySkincare;
+      case 'handicraft':
+        return l10n.expertCategoryHandicraft;
+      default:
+        return key;
+    }
+  }
+
+  void _showFilterPanel(BuildContext context) {
+    final bloc = context.read<TaskExpertBloc>();
+    final currentState = bloc.state;
+    String tempCategory = currentState.selectedCategory;
+    String tempCity = currentState.selectedCity;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (ctx, setModalState) {
+            final isDark = Theme.of(ctx).brightness == Brightness.dark;
+            final l10n = ctx.l10n;
+
+            return SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // 顶部拖拽条
+                    Center(
+                      child: Container(
+                        width: 36,
+                        height: 4,
+                        decoration: BoxDecoration(
+                          color: isDark
+                              ? AppColors.dividerDark
+                              : AppColors.dividerLight,
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+
+                    // 标题行：筛选 + 重置
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          l10n.commonFilter,
+                          style: AppTypography.title2.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        TextButton(
+                          onPressed: () {
+                            setModalState(() {
+                              tempCategory = 'all';
+                              tempCity = 'all';
+                            });
+                          },
+                          child: Text(
+                            l10n.commonReset,
+                            style: TextStyle(
+                              color: AppColors.primary,
+                              fontSize: 14,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 20),
+
+                    // ── 达人类型 ──
+                    Text(
+                      l10n.taskExpertCategory,
+                      style: AppTypography.bodyBold,
+                    ),
+                    const SizedBox(height: 12),
+                    Wrap(
+                      spacing: 10,
+                      runSpacing: 10,
+                      children: _expertCategories.map((cat) {
+                        final key = cat['key']!;
+                        return _FilterChip(
+                          label: _categoryLabel(ctx, key),
+                          isSelected: tempCategory == key,
+                          isDark: isDark,
+                          onTap: () => setModalState(() => tempCategory = key),
+                        );
+                      }).toList(),
+                    ),
+                    const SizedBox(height: 24),
+
+                    // ── 城市筛选 ──
+                    Text(
+                      l10n.taskFilterCity,
+                      style: AppTypography.bodyBold,
+                    ),
+                    const SizedBox(height: 12),
+                    ConstrainedBox(
+                      constraints: const BoxConstraints(maxHeight: 220),
+                      child: SingleChildScrollView(
+                        child: Wrap(
+                          spacing: 10,
+                          runSpacing: 10,
+                          children: [
+                            _FilterChip(
+                              label: l10n.commonAll,
+                              isSelected: tempCity == 'all',
+                              isDark: isDark,
+                              onTap: () => setModalState(() => tempCity = 'all'),
+                            ),
+                            ..._ukCities.map((city) {
+                              final zhName = _cityNameZh[city];
+                              final locale = Localizations.localeOf(ctx);
+                              final displayName = locale.languageCode == 'zh'
+                                  ? (zhName ?? city)
+                                  : city;
+                              return _FilterChip(
+                                label: displayName,
+                                isSelected: tempCity == city,
+                                isDark: isDark,
+                                onTap: () =>
+                                    setModalState(() => tempCity = city),
+                              );
+                            }),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+
+                    // ── 确认按钮 ──
+                    SizedBox(
+                      width: double.infinity,
+                      height: 48,
+                      child: ElevatedButton(
+                        onPressed: () {
+                          // 只在有变化时发送事件
+                          if (tempCategory != currentState.selectedCategory ||
+                              tempCity != currentState.selectedCity) {
+                            bloc.add(TaskExpertFilterChanged(
+                              category: tempCategory,
+                              city: tempCity,
+                            ));
+                          }
+                          Navigator.pop(ctx);
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.primary,
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          elevation: 0,
+                        ),
+                        child: Text(
+                          l10n.commonConfirm,
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+}
+
+/// 筛选 Chip 组件
+class _FilterChip extends StatelessWidget {
+  const _FilterChip({
+    required this.label,
+    required this.isSelected,
+    required this.isDark,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool isSelected;
+  final bool isDark;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () {
+        AppHaptics.selection();
+        onTap();
+      },
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        decoration: BoxDecoration(
+          gradient: isSelected
+              ? const LinearGradient(colors: AppColors.gradientPrimary)
+              : null,
+          color: isSelected
+              ? null
+              : (isDark
+                  ? AppColors.surface2(Brightness.dark)
+                  : AppColors.surface1(Brightness.light)),
+          borderRadius: BorderRadius.circular(20),
+          border: isSelected
+              ? null
+              : Border.all(
+                  color: (isDark
+                          ? AppColors.separatorDark
+                          : AppColors.separatorLight)
+                      .withValues(alpha: 0.3),
+                ),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            color: isSelected
+                ? Colors.white
+                : (isDark
+                    ? AppColors.textPrimaryDark
+                    : AppColors.textPrimaryLight),
+            fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+            fontSize: 13,
+          ),
+        ),
+      ),
     );
   }
 }

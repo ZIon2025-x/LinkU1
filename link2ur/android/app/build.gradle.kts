@@ -85,6 +85,14 @@ android {
     }
 }
 
+// Force consistent Stripe SDK versions to resolve duplicate class conflict
+// between payments-core (from flutter_stripe) and payments-model (from stripe-connect)
+configurations.all {
+    resolutionStrategy {
+        force("com.stripe:payments-core:22.8.0")
+    }
+}
+
 dependencies {
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
     // Firebase BOM + FCM
@@ -97,6 +105,8 @@ dependencies {
     implementation("com.google.android.material:material:1.12.0")
     // AppCompat (LocationPickerActivity extends AppCompatActivity)
     implementation("androidx.appcompat:appcompat:1.7.0")
+    // Stripe Connect
+    implementation("com.stripe:connect:22.8.0")
 }
 
 flutter {

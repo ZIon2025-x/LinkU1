@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../core/design/app_colors.dart';
+import '../../../core/design/app_typography.dart';
 import '../../../core/utils/haptic_feedback.dart';
 import '../../../core/router/app_router.dart';
 import '../../../core/utils/l10n_extension.dart';
@@ -84,11 +85,16 @@ class _ForumPostDetailViewState extends State<ForumPostDetailView> {
             ),
           ],
         ),
-        body: Center(
+        body: Align(
+          alignment: Alignment.topCenter,
           child: ConstrainedBox(
             constraints: BoxConstraints(maxWidth: ResponsiveUtils.detailMaxWidth(context)),
             child: BlocBuilder<ForumBloc, ForumState>(
-          builder: (context, state) {
+              buildWhen: (previous, current) =>
+                  previous.status != current.status ||
+                  previous.selectedPost != current.selectedPost ||
+                  previous.replies != current.replies,
+              builder: (context, state) {
             if (state.status == ForumStatus.loading &&
                 state.selectedPost == null) {
               return const SkeletonPostDetail();
@@ -155,7 +161,7 @@ class _ForumPostDetailViewState extends State<ForumPostDetailView> {
                     onReplyTo: _setReplyTo,
                   ),
 
-                  const SizedBox(height: 120),
+                  const SizedBox(height: 88),
                 ],
               ),
             );
@@ -171,6 +177,9 @@ class _ForumPostDetailViewState extends State<ForumPostDetailView> {
 
   Widget _buildBottomReplyBar(BuildContext context) {
     return BlocBuilder<ForumBloc, ForumState>(
+      buildWhen: (previous, current) =>
+          previous.selectedPost != current.selectedPost ||
+          previous.isReplying != current.isReplying,
       builder: (context, state) {
         final isDark = Theme.of(context).brightness == Brightness.dark;
         final post = state.selectedPost;
@@ -227,7 +236,7 @@ class _ForumPostDetailViewState extends State<ForumPostDetailView> {
                       Row(
                         children: [
                           // 点赞按钮 — 带粒子爆炸动画
-                          if (post != null)
+                          if (post != null) ...[
                             AnimatedLikeButton(
                               isLiked: post.isLiked,
                               size: 22,
@@ -238,6 +247,8 @@ class _ForumPostDetailViewState extends State<ForumPostDetailView> {
                                     .add(ForumLikePost(widget.postId));
                               },
                             ),
+                            const SizedBox(width: 12),
+                          ],
 
                           // 回复输入框
                           Expanded(
@@ -266,53 +277,57 @@ class _ForumPostDetailViewState extends State<ForumPostDetailView> {
                                             const EdgeInsets.symmetric(
                                                 horizontal: 16),
                                       ),
-                                      onChanged: (_) => setState(() {}),
                                     ),
                                   ),
                                   // 发送按钮
-                                  if (_replyController.text.trim().isNotEmpty)
-                                    Padding(
-                                      padding: const EdgeInsets.only(right: 4),
-                                      child: GestureDetector(
-                                        onTap: state.isReplying
-                                            ? null
-                                            : () {
-                                                AppHaptics.selection();
-                                                context.read<ForumBloc>().add(
-                                                      ForumReplyPost(
-                                                        postId: widget.postId,
-                                                        content: _replyController
-                                                            .text
-                                                            .trim(),
-                                                        parentReplyId: _replyToId,
-                                                      ),
-                                                    );
-                                                _replyController.clear();
-                                                _clearReplyTo();
-                                              },
-                                        child: Container(
-                                          width: 36,
-                                          height: 36,
-                                          decoration: BoxDecoration(
-                                            color: AppColors.primary
-                                                .withValues(alpha: 0.1),
-                                            shape: BoxShape.circle,
+                                  ValueListenableBuilder<TextEditingValue>(
+                                    valueListenable: _replyController,
+                                    builder: (context, value, child) {
+                                      if (value.text.trim().isEmpty) return const SizedBox.shrink();
+                                      return Padding(
+                                        padding: const EdgeInsets.only(right: 4),
+                                        child: GestureDetector(
+                                          onTap: state.isReplying
+                                              ? null
+                                              : () {
+                                                  AppHaptics.selection();
+                                                  context.read<ForumBloc>().add(
+                                                        ForumReplyPost(
+                                                          postId: widget.postId,
+                                                          content: _replyController
+                                                              .text
+                                                              .trim(),
+                                                          parentReplyId: _replyToId,
+                                                        ),
+                                                      );
+                                                  _replyController.clear();
+                                                  _clearReplyTo();
+                                                },
+                                          child: Container(
+                                            width: 36,
+                                            height: 36,
+                                            decoration: BoxDecoration(
+                                              color: AppColors.primary
+                                                  .withValues(alpha: 0.1),
+                                              shape: BoxShape.circle,
+                                            ),
+                                            child: state.isReplying
+                                                ? const Padding(
+                                                    padding: EdgeInsets.all(8),
+                                                    child:
+                                                        CircularProgressIndicator(
+                                                            strokeWidth: 2),
+                                                  )
+                                                : const Icon(
+                                                    Icons.send,
+                                                    size: 18,
+                                                    color: AppColors.primary,
+                                                  ),
                                           ),
-                                          child: state.isReplying
-                                              ? const Padding(
-                                                  padding: EdgeInsets.all(8),
-                                                  child:
-                                                      CircularProgressIndicator(
-                                                          strokeWidth: 2),
-                                                )
-                                              : const Icon(
-                                                  Icons.send,
-                                                  size: 18,
-                                                  color: AppColors.primary,
-                                                ),
                                         ),
-                                      ),
-                                    ),
+                                      );
+                                    },
+                                  ),
                                 ],
                               ),
                             ),
@@ -383,13 +398,10 @@ class _PostHeader extends StatelessWidget {
           // 标题 - 对标iOS 22pt bold
           Text(
             post.title,
-            style: TextStyle(
-              fontSize: 22,
-              fontWeight: FontWeight.bold,
+            style: AppTypography.title2.copyWith(
               color: isDark
                   ? AppColors.textPrimaryDark
                   : AppColors.textPrimaryLight,
-              height: 1.4,
             ),
           ),
           const SizedBox(height: 12),
@@ -429,9 +441,7 @@ class _PostHeader extends StatelessWidget {
                           onTap: () => context.goToUserProfile(post.authorId.toString()),
                           child: Text(
                             post.author?.name ?? context.l10n.forumUserFallback(post.authorId.toString()),
-                            style: TextStyle(
-                              fontSize: 15,
-                              fontWeight: FontWeight.w600,
+                            style: AppTypography.subheadlineBold.copyWith(
                               color: isDark
                                   ? AppColors.textPrimaryDark
                                   : AppColors.textPrimaryLight,
@@ -526,8 +536,7 @@ class _PostContent extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
       child: Text(
         post.content!,
-        style: TextStyle(
-          fontSize: 17,
+        style: AppTypography.body.copyWith(
           color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
           height: 1.8,
         ),
@@ -606,7 +615,9 @@ class _StatLabel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final c = color ?? AppColors.textTertiaryLight;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final defaultColor = isDark ? AppColors.textTertiaryDark : AppColors.textTertiaryLight;
+    final c = color ?? defaultColor;
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -630,7 +641,7 @@ class _StatLabel extends StatelessWidget {
         const SizedBox(height: 2),
         Text(
           label,
-          style: const TextStyle(fontSize: 10, color: AppColors.textTertiaryLight),
+          style: TextStyle(fontSize: 10, color: defaultColor),
         ),
       ],
     );
@@ -664,9 +675,8 @@ class _ReplySection extends StatelessWidget {
             children: [
               Text(
                 context.l10n.forumAllReplies,
-                style: TextStyle(
+                style: AppTypography.title3.copyWith(
                   fontSize: 18,
-                  fontWeight: FontWeight.bold,
                   color: isDark
                       ? AppColors.textPrimaryDark
                       : AppColors.textPrimaryLight,
@@ -699,17 +709,21 @@ class _ReplySection extends StatelessWidget {
               child: Center(
                 child: Column(
                   children: [
-                    const Icon(
+                    Icon(
                       Icons.chat_bubble_outline,
                       size: 40,
-                      color: AppColors.textTertiaryLight,
+                      color: isDark
+                          ? AppColors.textTertiaryDark
+                          : AppColors.textTertiaryLight,
                     ),
                     const SizedBox(height: 8),
                     Text(
                       context.l10n.forumNoReplies,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 14,
-                        color: AppColors.textSecondaryLight,
+                        color: isDark
+                            ? AppColors.textSecondaryDark
+                            : AppColors.textSecondaryLight,
                       ),
                     ),
                   ],
@@ -828,7 +842,7 @@ class _ReplyCard extends StatelessWidget {
                           horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
                         color: reply.isLiked
-                            ? AppColors.error.withValues(alpha: 0.1)
+                            ? AppColors.accentPink.withValues(alpha: 0.1)
                             : Colors.transparent,
                         borderRadius: BorderRadius.circular(8),
                       ),
@@ -841,8 +855,8 @@ class _ReplyCard extends StatelessWidget {
                                 : Icons.thumb_up_outlined,
                             size: 12,
                             color: reply.isLiked
-                                ? AppColors.error
-                                : AppColors.textTertiaryLight,
+                                ? AppColors.accentPink
+                                : (isDark ? AppColors.textTertiaryDark : AppColors.textTertiaryLight),
                           ),
                           if (reply.likeCount > 0) ...[
                             const SizedBox(width: 3),
@@ -851,8 +865,8 @@ class _ReplyCard extends StatelessWidget {
                               style: TextStyle(
                                 fontSize: 12,
                                 color: reply.isLiked
-                                    ? AppColors.error
-                                    : AppColors.textTertiaryLight,
+                                    ? AppColors.accentPink
+                                    : (isDark ? AppColors.textTertiaryDark : AppColors.textTertiaryLight),
                               ),
                             ),
                           ],
@@ -894,8 +908,8 @@ class _ReplyCard extends StatelessWidget {
                   padding: const EdgeInsets.only(right: 42),
                   child: Text(
                     reply.content,
-                    style: TextStyle(
-                      fontSize: isSubReply ? 14 : 15,
+                    style: (isSubReply ? AppTypography.footnote : AppTypography.subheadline).copyWith(
+                      fontSize: isSubReply ? 14 : null,
                       color: isDark
                           ? AppColors.textPrimaryDark
                           : AppColors.textPrimaryLight,
@@ -906,6 +920,7 @@ class _ReplyCard extends StatelessWidget {
                 const SizedBox(height: 6),
                 // 回复按钮
                 GestureDetector(
+                  behavior: HitTestBehavior.opaque,
                   onTap: () {
                     AppHaptics.selection();
                     onReplyTo(
@@ -913,19 +928,22 @@ class _ReplyCard extends StatelessWidget {
                       reply.author?.name ?? reply.authorId.toString(),
                     );
                   },
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 12, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: AppColors.primary.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Text(
-                      context.l10n.forumReply,
-                      style: const TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w500,
-                        color: AppColors.primary,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 4),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: AppColors.primary.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        context.l10n.forumReply,
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                          color: AppColors.primary,
+                        ),
                       ),
                     ),
                   ),

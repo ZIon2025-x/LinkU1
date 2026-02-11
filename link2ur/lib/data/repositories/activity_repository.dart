@@ -18,11 +18,13 @@ class ActivityRepository {
 
   /// 获取活动列表
   /// 后端使用 limit/offset 分页，返回 JSON 数组 (List<ActivityOut>)
+  /// [hasTimeSlots]: false=单人活动，true=多人活动（对齐iOS活动大厅筛选）
   Future<ActivityListResponse> getActivities({
     int page = 1,
     int pageSize = 20,
     String? status,
     String? keyword,
+    bool? hasTimeSlots,
     CancelToken? cancelToken,
   }) async {
     final offset = (page - 1) * pageSize;
@@ -31,6 +33,7 @@ class ActivityRepository {
       'offset': offset,
       if (status != null) 'status': status,
       if (keyword != null) 'keyword': keyword,
+      if (hasTimeSlots != null) 'has_time_slots': hasTimeSlots,
     };
 
     final cacheKey = keyword == null
@@ -134,6 +137,7 @@ class ActivityRepository {
     // 申请后失效缓存
     await _cache.remove('${CacheManager.prefixActivityDetail}$activityId');
     await _cache.invalidateActivitiesCache();
+    await _cache.removeByPrefix('${CacheManager.prefixActivities}my_');
 
     return response.data!;
   }
@@ -162,29 +166,55 @@ class ActivityRepository {
     return response.data!['is_favorite'] as bool? ?? false;
   }
 
-  /// 获取我参与的活动
+  /// 获取我参与的活动（对齐iOS MyActivitiesViewModel）
+  /// [type]: "all" | "applied" | "favorited"
   /// 后端返回 {"success": true, "data": {"activities": [...], "total": ..., ...}}
   Future<ActivityListResponse> getMyActivities({
+    String type = 'all',
     int page = 1,
-    int pageSize = 20,
+    int pageSize = 50,
   }) async {
     final offset = (page - 1) * pageSize;
-    final response = await _apiService.get<Map<String, dynamic>>(
-      ApiEndpoints.myActivities,
-      queryParameters: {
-        'limit': pageSize,
-        'offset': offset,
-      },
+    final params = {
+      'type': type,
+      'limit': pageSize,
+      'offset': offset,
+    };
+    final cacheKey = CacheManager.buildKey(
+      '${CacheManager.prefixActivities}my_',
+      params,
     );
 
-    if (!response.isSuccess || response.data == null) {
-      throw ActivityException(response.message ?? '获取我的活动失败');
+    final cached = _cache.get<Map<String, dynamic>>(cacheKey);
+    if (cached != null) {
+      final innerData = cached['data'] as Map<String, dynamic>? ?? cached;
+      return ActivityListResponse.fromJson(innerData, page: page, pageSize: pageSize);
     }
 
-    final data = response.data!;
-    // 后端嵌套在 data 字段中
-    final innerData = data['data'] as Map<String, dynamic>? ?? data;
-    return ActivityListResponse.fromJson(innerData, page: page, pageSize: pageSize);
+    try {
+      final response = await _apiService.get<Map<String, dynamic>>(
+        ApiEndpoints.myActivities,
+        queryParameters: params,
+      );
+
+      if (!response.isSuccess || response.data == null) {
+        throw ActivityException(response.message ?? '获取我的活动失败');
+      }
+
+      await _cache.set(cacheKey, response.data!, ttl: CacheManager.personalTTL);
+
+      final data = response.data!;
+      // 后端嵌套在 data 字段中
+      final innerData = data['data'] as Map<String, dynamic>? ?? data;
+      return ActivityListResponse.fromJson(innerData, page: page, pageSize: pageSize);
+    } catch (e) {
+      final stale = _cache.getStale<Map<String, dynamic>>(cacheKey);
+      if (stale != null) {
+        final innerData = stale['data'] as Map<String, dynamic>? ?? stale;
+        return ActivityListResponse.fromJson(innerData, page: page, pageSize: pageSize);
+      }
+      rethrow;
+    }
   }
 }
 

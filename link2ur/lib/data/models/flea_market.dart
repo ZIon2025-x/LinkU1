@@ -93,21 +93,21 @@ class FleaMarketItem extends Equatable {
       id: json['id']?.toString() ?? '',
       title: json['title'] as String? ?? '',
       description: json['description'] as String?,
-      price: (json['price'] as num?)?.toDouble() ?? 0,
+      price: _toDouble(json['price']),
       currency: json['currency'] as String? ?? 'GBP',
       images: (json['images'] as List<dynamic>?)
               ?.map((e) => e as String)
               .toList() ??
           [],
       location: json['location'] as String?,
-      latitude: (json['latitude'] as num?)?.toDouble(),
-      longitude: (json['longitude'] as num?)?.toDouble(),
+      latitude: _toDoubleNullable(json['latitude']),
+      longitude: _toDoubleNullable(json['longitude']),
       category: json['category'] as String?,
       status: json['status'] as String? ?? AppConstants.fleaMarketStatusActive,
       sellerId: json['seller_id']?.toString() ?? '',
       sellerUserLevel: json['seller_user_level'] as String?,
-      viewCount: json['view_count'] as int? ?? 0,
-      favoriteCount: json['favorite_count'] as int? ?? 0,
+      viewCount: _toInt(json['view_count']),
+      favoriteCount: _toInt(json['favorite_count']),
       refreshedAt: json['refreshed_at'] != null
           ? DateTime.parse(json['refreshed_at'])
           : null,
@@ -117,11 +117,11 @@ class FleaMarketItem extends Equatable {
       updatedAt: json['updated_at'] != null
           ? DateTime.parse(json['updated_at'])
           : null,
-      daysUntilAutoDelist: json['days_until_auto_delist'] as int?,
-      pendingPaymentTaskId: json['pending_payment_task_id'] as int?,
+      daysUntilAutoDelist: _toIntNullable(json['days_until_auto_delist']),
+      pendingPaymentTaskId: _toIntNullable(json['pending_payment_task_id']),
       pendingPaymentClientSecret:
           json['pending_payment_client_secret'] as String?,
-      pendingPaymentAmount: json['pending_payment_amount'] as int?,
+      pendingPaymentAmount: _toIntNullable(json['pending_payment_amount']),
       pendingPaymentAmountDisplay:
           json['pending_payment_amount_display'] as String?,
       pendingPaymentCurrency: json['pending_payment_currency'] as String?,
@@ -135,7 +135,7 @@ class FleaMarketItem extends Equatable {
       userPurchaseRequestStatus:
           json['user_purchase_request_status'] as String?,
       userPurchaseRequestProposedPrice:
-          (json['user_purchase_request_proposed_price'] as num?)?.toDouble(),
+          _toDoubleNullable(json['user_purchase_request_proposed_price']),
     );
   }
 
@@ -254,10 +254,14 @@ class FleaMarketListResponse {
                   (e) => FleaMarketItem.fromJson(e as Map<String, dynamic>))
               .toList() ??
           [],
-      total: json['total'] as int? ?? 0,
-      page: json['page'] as int? ?? 1,
+      total: _toInt(json['total']),
+      page: json['page'] != null ? _toInt(json['page']) : 1,
       // 后端 Pydantic 可能返回 pageSize 或 page_size
-      pageSize: json['page_size'] as int? ?? json['pageSize'] as int? ?? 20,
+      pageSize: json['page_size'] != null
+          ? _toInt(json['page_size'])
+          : json['pageSize'] != null
+              ? _toInt(json['pageSize'])
+              : 20,
     );
   }
 }
@@ -295,10 +299,10 @@ class PurchaseRequest extends Equatable {
           json['buyer']?['name'] as String?,
       buyerAvatar: json['buyer_avatar'] as String? ??
           json['buyer']?['avatar'] as String?,
-      proposedPrice: (json['proposed_price'] as num?)?.toDouble(),
+      proposedPrice: _toDoubleNullable(json['proposed_price']),
       message: json['message'] as String?,
       status: json['status'] as String? ?? 'pending',
-      sellerCounterPrice: (json['seller_counter_price'] as num?)?.toDouble(),
+      sellerCounterPrice: _toDoubleNullable(json['seller_counter_price']),
       createdAt: json['created_at'] != null
           ? DateTime.parse(json['created_at'])
           : null,
@@ -346,4 +350,40 @@ class CreateFleaMarketRequest {
       if (category != null) 'category': category,
     };
   }
+}
+
+/// 安全地将 JSON 值转为 int（兼容 String/num/null）
+int _toInt(dynamic value) {
+  if (value == null) return 0;
+  if (value is int) return value;
+  if (value is num) return value.toInt();
+  if (value is String) return int.tryParse(value) ?? 0;
+  return 0;
+}
+
+/// 安全地将 JSON 值转为 int?（兼容 String/num/null）
+int? _toIntNullable(dynamic value) {
+  if (value == null) return null;
+  if (value is int) return value;
+  if (value is num) return value.toInt();
+  if (value is String) return int.tryParse(value);
+  return null;
+}
+
+/// 安全地将 JSON 值转为 double（兼容 String/num/null）
+double _toDouble(dynamic value) {
+  if (value == null) return 0;
+  if (value is double) return value;
+  if (value is num) return value.toDouble();
+  if (value is String) return double.tryParse(value) ?? 0;
+  return 0;
+}
+
+/// 安全地将 JSON 值转为 double?（兼容 String/num/null）
+double? _toDoubleNullable(dynamic value) {
+  if (value == null) return null;
+  if (value is double) return value;
+  if (value is num) return value.toDouble();
+  if (value is String) return double.tryParse(value);
+  return null;
 }

@@ -27,6 +27,9 @@ class NotificationCenterView extends StatelessWidget {
           title: Text(context.l10n.notificationsNotifications),
           actions: [
             BlocBuilder<NotificationBloc, NotificationState>(
+              buildWhen: (previous, current) =>
+                  previous.notifications.isEmpty !=
+                  current.notifications.isEmpty,
               builder: (context, state) {
                 return TextButton(
                   onPressed: state.notifications.isEmpty
@@ -84,6 +87,11 @@ class _SystemNotificationListState extends State<_SystemNotificationList> {
   @override
   Widget build(BuildContext context) {
     return BlocBuilder<NotificationBloc, NotificationState>(
+      buildWhen: (previous, current) =>
+          previous.status != current.status ||
+          previous.notifications != current.notifications ||
+          previous.selectedType != current.selectedType ||
+          previous.hasMore != current.hasMore,
       builder: (context, state) {
         // Show only when selectedType matches
         if (state.selectedType != 'system' &&
@@ -173,6 +181,11 @@ class _InteractionNotificationListState
   @override
   Widget build(BuildContext context) {
     return BlocBuilder<NotificationBloc, NotificationState>(
+      buildWhen: (previous, current) =>
+          previous.status != current.status ||
+          previous.notifications != current.notifications ||
+          previous.selectedType != current.selectedType ||
+          previous.hasMore != current.hasMore,
       builder: (context, state) {
         // Show only when selectedType matches
         if (state.selectedType != 'interaction' &&

@@ -292,14 +292,16 @@ async def get_flea_market_items(
     pageSize: int = Query(20, ge=1, le=100, alias="page_size"),  # 支持 page_size 参数名
     category: Optional[str] = Query(None),
     keyword: Optional[str] = Query(None),
-    status_filter: Optional[str] = Query("active", alias="status", pattern="^(active)$"),
+    status_filter: Optional[str] = Query("active", alias="status", pattern="^(active|sold)$"),
     seller_id: Optional[str] = Query(None, description="卖家ID，用于筛选特定卖家的商品"),
     db: AsyncSession = Depends(get_async_db_dependency),
 ):
     """获取商品列表（分页、搜索、筛选）- 带Redis缓存"""
     try:
         # 安全：公共接口只允许查看 active 状态的商品
-        status_filter = "active"
+        # 但当 seller_id 存在时，允许卖家查看自己的 sold 商品（对齐iOS MyPostsViewModel）
+        if not seller_id:
+            status_filter = "active"
         
         # 尝试从缓存获取（如果有seller_id筛选，不使用缓存）
         if not seller_id:
@@ -313,8 +315,9 @@ async def get_flea_market_items(
         # 构建查询
         query = select(models.FleaMarketItem)
         
-        # 状态筛选（公共接口只允许 active）
+        # 状态筛选
         if seller_id:
+            # 卖家筛选时，允许按 active/sold 状态查看自己的商品
             query = query.where(models.FleaMarketItem.status == status_filter)
         else:
             # ⚠️ 优化：只显示 active 状态且未被预留的商品（sold_task_id 为空）

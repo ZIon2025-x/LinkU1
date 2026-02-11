@@ -172,6 +172,7 @@ async def get_my_application(
 async def get_experts_list(
     request: Request,
     category: Optional[str] = Query(None, description="分类筛选"),
+    location: Optional[str] = Query(None, description="城市位置筛选"),
     status_filter: Optional[str] = Query("active", alias="status"),
     limit: int = Query(50, ge=1, le=100),
     offset: int = Query(0, ge=0),
@@ -181,8 +182,10 @@ async def get_experts_list(
     
     优先从 FeaturedTaskExpert 表获取精选任务达人，如果没有则从 TaskExpert 表获取。
     根据 Accept-Language 请求头自动返回对应语言的双语字段。
+    支持 category 和 location 筛选。location 支持中英文城市名（如 London / 伦敦）。
     """
     import json
+    from app.utils.city_filter_utils import CITY_NAME_MAPPING, CITY_NAME_REVERSE_MAPPING
     
     # 获取用户语言偏好（从 Accept-Language 请求头）
     user_lang = _get_language_from_request(request)
@@ -195,6 +198,17 @@ async def get_experts_list(
     if category:
         featured_query = featured_query.where(
             models.FeaturedTaskExpert.category == category
+        )
+    
+    if location:
+        # 支持中英文城市名匹配
+        location_variants = {location}
+        if location in CITY_NAME_MAPPING:
+            location_variants.add(CITY_NAME_MAPPING[location])
+        elif location in CITY_NAME_REVERSE_MAPPING:
+            location_variants.add(CITY_NAME_REVERSE_MAPPING[location])
+        featured_query = featured_query.where(
+            models.FeaturedTaskExpert.location.in_(location_variants)
         )
     
     featured_query = featured_query.order_by(

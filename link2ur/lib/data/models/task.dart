@@ -43,6 +43,7 @@ class Task extends Equatable {
     this.hasReviewed = false,
     this.createdAt,
     this.updatedAt,
+    this.distance,
   });
 
   final int id;
@@ -83,6 +84,30 @@ class Task extends Equatable {
   final DateTime? createdAt;
   final DateTime? updatedAt;
 
+  /// 与用户的距离（米），由前端计算
+  final double? distance;
+
+  /// 模糊距离（500m 为一个区间）
+  /// 返回区间上限值（用于排序），如 500, 1000, 1500, ...
+  int? get blurredDistanceBucket {
+    if (distance == null) return null;
+    // 向上取整到最近的 500m
+    return ((distance! / 500).ceil() * 500).toInt();
+  }
+
+  /// 模糊距离显示文本
+  /// <500m → "<500m", 500-1000m → "<1km", 1-1.5km → "<1.5km", ...
+  String? get blurredDistanceText {
+    final bucket = blurredDistanceBucket;
+    if (bucket == null) return null;
+    if (bucket <= 500) return '<500m';
+    if (bucket < 1000) return '<${bucket}m';
+    final km = bucket / 1000;
+    // 整数公里不显示小数点
+    if (km == km.roundToDouble()) return '<${km.toInt()}km';
+    return '<${km.toStringAsFixed(1)}km';
+  }
+
   /// 显示标题（根据语言）
   String get displayTitle => titleZh ?? titleEn ?? title;
 
@@ -91,6 +116,52 @@ class Task extends Equatable {
 
   /// 是否是线上任务
   bool get isOnline => location == null || location == 'online';
+
+  /// 模糊地址（隐藏详细街道信息，只保留区域级别）
+  /// 例如 "London, Westminster, 10 Downing St" → "London, Westminster"
+  /// 例如 "北京市朝阳区建国路88号" → "北京市朝阳区"
+  String? get blurredLocation {
+    if (location == null || isOnline) return location;
+    final loc = location!.trim();
+
+    // 尝试按逗号分割（英文地址格式: "City, Area, Street..."）
+    final commaParts = loc.split(',').map((s) => s.trim()).where((s) => s.isNotEmpty).toList();
+    if (commaParts.length >= 2) {
+      // 只保留前两段（通常是城市+区域）
+      return commaParts.take(2).join(', ');
+    }
+
+    // 中文地址格式：尝试截取到"区/县/市"
+    final zhMatch = RegExp(r'^(.+?[市省州])?(.+?[区县镇])').firstMatch(loc);
+    if (zhMatch != null) {
+      return zhMatch.group(0);
+    }
+
+    // 兜底：如果地址较长，只显示前半部分 + "附近"
+    if (loc.length > 6) {
+      return '${loc.substring(0, (loc.length * 0.5).ceil())}***';
+    }
+
+    return loc;
+  }
+
+  /// 判断指定用户是否可以查看完整地址
+  /// 任务发布者和已接单者可以看到完整地址
+  bool canViewFullAddress(String? userId) {
+    if (userId == null) return false;
+    if (userId == posterId) return true; // 发布者
+    if (takerId != null && userId == takerId) return true; // 接单者
+    // 已申请且被接受的用户
+    if (userApplicationStatus == 'accepted') return true;
+    return false;
+  }
+
+  /// 根据用户身份返回应该显示的地址
+  String? displayLocation(String? currentUserId) {
+    if (isOnline) return location;
+    if (canViewFullAddress(currentUserId)) return location;
+    return blurredLocation;
+  }
 
   /// 是否已截止
   bool get isExpired => deadline != null && deadline!.isBefore(DateTime.now());
@@ -290,6 +361,7 @@ class Task extends Equatable {
       updatedAt: json['updated_at'] != null
           ? DateTime.parse(json['updated_at'])
           : null,
+      distance: (json['distance'] as num?)?.toDouble(),
     );
   }
 
@@ -371,6 +443,7 @@ class Task extends Equatable {
     bool? hasReviewed,
     DateTime? createdAt,
     DateTime? updatedAt,
+    double? distance,
   }) {
     return Task(
       id: id ?? this.id,
@@ -410,6 +483,7 @@ class Task extends Equatable {
       hasReviewed: hasReviewed ?? this.hasReviewed,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
+      distance: distance ?? this.distance,
     );
   }
 

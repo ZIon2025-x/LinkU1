@@ -102,6 +102,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get commonFilter => '筛选';
 
   @override
+  String get commonReset => '重置';
+
+  @override
   String get commonNotProvided => '未提供';
 
   @override
@@ -7798,6 +7801,9 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get commonFilter => '篩選';
 
   @override
+  String get commonReset => '重置';
+
+  @override
   String get commonNotProvided => '未提供';
 
   @override
@@ -13365,6 +13371,95 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get paymentNoPayoutsMessage => '您還沒有任何提現記錄';
+
+  @override
+  String get paymentExpired => '支付已過期';
+
+  @override
+  String get paymentExpiredMessage => '支付時間已到，請重新發起支付。';
+
+  @override
+  String get paymentApplePayIOSOnly => 'Apple Pay 僅在 iOS 裝置上可用';
+
+  @override
+  String get paymentApplePayNotSupported => '您的裝置不支援 Apple Pay，請使用其他支付方式';
+
+  @override
+  String get paymentNetworkConnectionFailed => '網路連線失敗，請檢查網路後重試。';
+
+  @override
+  String get paymentRequestTimeout => '請求逾時，請稍後重試。';
+
+  @override
+  String paymentRemainingTime(String param1) {
+    return '支付剩餘時間：$param1';
+  }
+
+  @override
+  String get paymentOrderInfo => '訂單資訊';
+
+  @override
+  String get paymentTaskNumber => '任務編號';
+
+  @override
+  String get paymentOriginalPrice => '原價';
+
+  @override
+  String paymentDiscount(String param1) {
+    return '優惠 ($param1)';
+  }
+
+  @override
+  String get paymentFinalAmount => '實付金額';
+
+  @override
+  String get paymentMethod => '支付方式';
+
+  @override
+  String get paymentCreditDebitCard => '信用卡/扣帳卡';
+
+  @override
+  String get paymentFastSecure => '快速安全支付';
+
+  @override
+  String get paymentWeChatPay => '微信支付';
+
+  @override
+  String get paymentAlipay => '支付寶';
+
+  @override
+  String get paymentCouponSelected => '已選擇優惠券';
+
+  @override
+  String get paymentSelectCoupon => '選擇優惠券';
+
+  @override
+  String get paymentConfirmFree => '確認（免費）';
+
+  @override
+  String paymentPayNow(String param1) {
+    return '立即支付 $param1';
+  }
+
+  @override
+  String get paymentCancelPayment => '取消支付';
+
+  @override
+  String get paymentCancelPaymentConfirm => '確定要取消支付嗎？';
+
+  @override
+  String get paymentContinuePayment => '繼續支付';
+
+  @override
+  String get paymentLoadFailed => '載入失敗';
+
+  @override
+  String get paymentCoupon => '優惠券';
+
+  @override
+  String paymentApplePayLabel(int param1) {
+    return '任務 #$param1';
+  }
 
   @override
   String get profileTaskCount => '任務數';

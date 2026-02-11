@@ -110,6 +110,12 @@ class CacheManager {
   /// 支付
   static const String prefixPayment = 'payment_';
 
+  /// 聊天/消息
+  static const String prefixMessages = 'msg_';
+  static const String prefixTaskMessages = 'task_msg_';
+  static const String prefixContacts = 'contacts_';
+  static const String prefixTaskChats = 'task_chats_';
+
   // ==================== 初始化 ====================
 
   /// 初始化磁盘缓存
@@ -422,6 +428,29 @@ class CacheManager {
     AppLogger.debug('Translation cache invalidated');
   }
 
+  /// 清除所有聊天/消息缓存
+  Future<void> invalidateMessagesCache() async {
+    await removeByPrefix(prefixMessages);
+    await removeByPrefix(prefixTaskMessages);
+    await removeByPrefix(prefixContacts);
+    await removeByPrefix(prefixTaskChats);
+    AppLogger.debug('Messages cache invalidated');
+  }
+
+  /// 清除指定用户的私信缓存
+  Future<void> invalidateChatCache(String userId) async {
+    await removeByPrefix('${prefixMessages}uid=$userId');
+    await removeByPrefix(prefixContacts);
+    AppLogger.debug('Chat cache invalidated for user: $userId');
+  }
+
+  /// 清除指定任务的聊天缓存
+  Future<void> invalidateTaskChatCache(int taskId) async {
+    await removeByPrefix('${prefixTaskMessages}tid=$taskId');
+    await removeByPrefix(prefixTaskChats);
+    AppLogger.debug('Task chat cache invalidated for task: $taskId');
+  }
+
   /// 清除所有个人数据缓存（登出时使用）
   Future<void> invalidatePersonalDataCache() async {
     await invalidateMyTasksCache();
@@ -430,6 +459,7 @@ class CacheManager {
     await invalidateMyLeaderboardsCache();
     await invalidatePaymentCache();
     await invalidateNotificationsCache();
+    await invalidateMessagesCache();
     AppLogger.debug('Personal data cache invalidated');
   }
 

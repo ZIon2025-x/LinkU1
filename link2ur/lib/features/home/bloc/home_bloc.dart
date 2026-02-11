@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../data/models/task.dart';
@@ -52,33 +54,40 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
     }
 
     try {
-      // 优先尝试推荐任务（需要认证），失败或为空则降级为公开任务列表
+      // 已登录用户尝试推荐任务，未登录直接请求公开任务列表（避免无意义的 401）
       TaskListResponse result;
-      try {
-        result = await _taskRepository.getRecommendedTasks(
-          page: 1,
-          pageSize: 20,
-        );
-      } catch (_) {
-        // 未登录或认证失败时，降级到公开任务列表
-        AppLogger.info('Recommendations unavailable, falling back to public tasks');
-        result = await _taskRepository.getTasks(
-          page: 1,
-          pageSize: 20,
-        );
-      }
-
-      // 推荐为空时，降级到公开任务列表（新用户可能没有推荐数据）
-      if (result.tasks.isEmpty) {
-        AppLogger.info('Recommendations empty, falling back to public tasks');
+      if (currentUser != null) {
         try {
-          result = await _taskRepository.getTasks(
+          result = await _taskRepository.getRecommendedTasks(
             page: 1,
             pageSize: 20,
           );
         } catch (_) {
-          // 公开任务也失败，保持空列表
+          AppLogger.info('Recommendations unavailable, falling back to public tasks');
+          result = await _taskRepository.getTasks(
+            page: 1,
+            pageSize: 20,
+          );
         }
+
+        // 推荐为空时，降级到公开任务列表（新用户可能没有推荐数据）
+        if (result.tasks.isEmpty) {
+          AppLogger.info('Recommendations empty, falling back to public tasks');
+          try {
+            result = await _taskRepository.getTasks(
+              page: 1,
+              pageSize: 20,
+            );
+          } catch (_) {
+            // 公开任务也失败，保持空列表
+          }
+        }
+      } else {
+        // 未登录：直接请求公开任务列表
+        result = await _taskRepository.getTasks(
+          page: 1,
+          pageSize: 20,
+        );
       }
 
       emit(state.copyWith(
@@ -109,23 +118,27 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
 
     try {
       TaskListResponse result;
-      try {
-        result = await _taskRepository.getRecommendedTasks(
-          page: 1,
-          pageSize: 20,
-        );
-      } catch (_) {
-        result = await _taskRepository.getTasks(
-          page: 1,
-          pageSize: 20,
-        );
-      }
-
-      // 推荐为空时降级到公开任务
-      if (result.tasks.isEmpty) {
+      if (currentUser != null) {
         try {
-          result = await _taskRepository.getTasks(page: 1, pageSize: 20);
-        } catch (_) {}
+          result = await _taskRepository.getRecommendedTasks(
+            page: 1,
+            pageSize: 20,
+          );
+        } catch (_) {
+          result = await _taskRepository.getTasks(
+            page: 1,
+            pageSize: 20,
+          );
+        }
+
+        // 推荐为空时降级到公开任务
+        if (result.tasks.isEmpty) {
+          try {
+            result = await _taskRepository.getTasks(page: 1, pageSize: 20);
+          } catch (_) {}
+        }
+      } else {
+        result = await _taskRepository.getTasks(page: 1, pageSize: 20);
       }
 
       emit(state.copyWith(
@@ -211,15 +224,36 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
         longitude: event.longitude,
         page: page,
         pageSize: 20,
+        city: event.city,
       );
 
-      final tasks = event.loadMore
-          ? [...state.nearbyTasks, ...nearby.tasks]
-          : nearby.tasks;
+      // 为每个任务计算与用户的距离
+      final tasksWithDistance = nearby.tasks.map((task) {
+        if (task.latitude != null && task.longitude != null) {
+          final dist = _haversineDistance(
+            event.latitude, event.longitude,
+            task.latitude!, task.longitude!,
+          );
+          return task.copyWith(distance: dist);
+        }
+        return task;
+      }).toList();
+
+      final allTasks = event.loadMore
+          ? [...state.nearbyTasks, ...tasksWithDistance]
+          : tasksWithDistance;
+
+      // 按模糊距离区间排序（500m 为一个区间）
+      // 同一区间内保持原始顺序（后端已按精确距离排序）
+      allTasks.sort((a, b) {
+        final aBucket = a.blurredDistanceBucket ?? 999999;
+        final bBucket = b.blurredDistanceBucket ?? 999999;
+        return aBucket.compareTo(bBucket);
+      });
 
       emit(state.copyWith(
         status: HomeStatus.loaded,
-        nearbyTasks: tasks,
+        nearbyTasks: allTasks,
         hasMoreNearby: nearby.hasMore,
         nearbyPage: page,
       ));
@@ -378,4 +412,20 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
       return [];
     }
   }
+
+  /// Haversine 公式计算两点间距离（米）
+  static double _haversineDistance(
+    double lat1, double lon1, double lat2, double lon2,
+  ) {
+    const earthRadius = 6371000.0; // 地球半径（米）
+    final dLat = _toRadians(lat2 - lat1);
+    final dLon = _toRadians(lon2 - lon1);
+    final a = math.sin(dLat / 2) * math.sin(dLat / 2) +
+        math.cos(_toRadians(lat1)) * math.cos(_toRadians(lat2)) *
+        math.sin(dLon / 2) * math.sin(dLon / 2);
+    final c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a));
+    return earthRadius * c;
+  }
+
+  static double _toRadians(double degrees) => degrees * math.pi / 180;
 }

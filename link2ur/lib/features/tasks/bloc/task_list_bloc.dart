@@ -16,9 +16,13 @@ class TaskListBloc extends Bloc<TaskListEvent, TaskListState> {
     on<TaskListSearchChanged>(_onSearchChanged);
     on<TaskListCategoryChanged>(_onCategoryChanged);
     on<TaskListSortChanged>(_onSortChanged);
+    on<TaskListCityChanged>(_onCityChanged);
   }
 
   final TaskRepository _taskRepository;
+
+  /// 获取当前城市筛选参数，'all' 时返回 null
+  String? _cityParam(String city) => city == 'all' ? null : city;
 
   Future<void> _onLoadRequested(
     TaskListLoadRequested event,
@@ -32,6 +36,7 @@ class TaskListBloc extends Bloc<TaskListEvent, TaskListState> {
         taskType: state.selectedCategory == 'all' ? null : state.selectedCategory,
         keyword: state.searchQuery.isEmpty ? null : state.searchQuery,
         sortBy: state.sortBy,
+        location: _cityParam(state.selectedCity),
       );
 
       emit(state.copyWith(
@@ -62,6 +67,7 @@ class TaskListBloc extends Bloc<TaskListEvent, TaskListState> {
         taskType: state.selectedCategory == 'all' ? null : state.selectedCategory,
         keyword: state.searchQuery.isEmpty ? null : state.searchQuery,
         sortBy: state.sortBy,
+        location: _cityParam(state.selectedCity),
       );
 
       emit(state.copyWith(
@@ -91,6 +97,7 @@ class TaskListBloc extends Bloc<TaskListEvent, TaskListState> {
         taskType: state.selectedCategory == 'all' ? null : state.selectedCategory,
         keyword: state.searchQuery.isEmpty ? null : state.searchQuery,
         sortBy: state.sortBy,
+        location: _cityParam(state.selectedCity),
       );
 
       emit(state.copyWith(
@@ -119,6 +126,7 @@ class TaskListBloc extends Bloc<TaskListEvent, TaskListState> {
         taskType: state.selectedCategory == 'all' ? null : state.selectedCategory,
         keyword: event.query.isEmpty ? null : event.query,
         sortBy: state.sortBy,
+        location: _cityParam(state.selectedCity),
       );
 
       emit(state.copyWith(
@@ -152,6 +160,7 @@ class TaskListBloc extends Bloc<TaskListEvent, TaskListState> {
         taskType: event.category == 'all' ? null : event.category,
         keyword: state.searchQuery.isEmpty ? null : state.searchQuery,
         sortBy: state.sortBy,
+        location: _cityParam(state.selectedCity),
       );
 
       emit(state.copyWith(
@@ -185,6 +194,7 @@ class TaskListBloc extends Bloc<TaskListEvent, TaskListState> {
         taskType: state.selectedCategory == 'all' ? null : state.selectedCategory,
         keyword: state.searchQuery.isEmpty ? null : state.searchQuery,
         sortBy: event.sortBy,
+        location: _cityParam(state.selectedCity),
       );
 
       emit(state.copyWith(
@@ -196,6 +206,40 @@ class TaskListBloc extends Bloc<TaskListEvent, TaskListState> {
       ));
     } catch (e) {
       AppLogger.error('Failed to sort tasks', e);
+      emit(state.copyWith(
+        status: TaskListStatus.error,
+        errorMessage: e.toString(),
+      ));
+    }
+  }
+
+  Future<void> _onCityChanged(
+    TaskListCityChanged event,
+    Emitter<TaskListState> emit,
+  ) async {
+    emit(state.copyWith(
+      selectedCity: event.city,
+      status: TaskListStatus.loading,
+    ));
+
+    try {
+      final response = await _taskRepository.getTasks(
+        page: 1,
+        taskType: state.selectedCategory == 'all' ? null : state.selectedCategory,
+        keyword: state.searchQuery.isEmpty ? null : state.searchQuery,
+        sortBy: state.sortBy,
+        location: _cityParam(event.city),
+      );
+
+      emit(state.copyWith(
+        status: TaskListStatus.loaded,
+        tasks: response.tasks,
+        total: response.total,
+        page: 1,
+        hasMore: response.hasMore,
+      ));
+    } catch (e) {
+      AppLogger.error('Failed to filter tasks by city', e);
       emit(state.copyWith(
         status: TaskListStatus.error,
         errorMessage: e.toString(),

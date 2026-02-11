@@ -15,6 +15,10 @@ import SwiftUI
   /// MethodChannel 用于原生地图选点
   private var locationPickerChannel: FlutterMethodChannel?
 
+  /// MethodChannel 用于 Stripe Connect Onboarding
+  private var stripeConnectChannel: FlutterMethodChannel?
+  private var stripeConnectHandler = StripeConnectOnboardingHandler()
+
   /// 缓存的 APNs device token（hex 格式）
   private var cachedDeviceToken: String?
 
@@ -80,6 +84,32 @@ import SwiftUI
           self?.openLocationPicker(arguments: call.arguments as? [String: Any], result: channelResult)
         default:
           channelResult(FlutterMethodNotImplemented)
+        }
+      }
+
+      // Stripe Connect channel
+      stripeConnectChannel = FlutterMethodChannel(
+        name: "com.link2ur/stripe_connect",
+        binaryMessenger: controller.binaryMessenger
+      )
+      stripeConnectChannel?.setMethodCallHandler { [weak self] call, result in
+        switch call.method {
+        case "openOnboarding":
+          guard let args = call.arguments as? [String: Any],
+                let publishableKey = args["publishableKey"] as? String,
+                let clientSecret = args["clientSecret"] as? String else {
+            result(FlutterError(code: "INVALID_ARGS", message: "Missing publishableKey or clientSecret", details: nil))
+            return
+          }
+          
+          self?.stripeConnectHandler.openOnboarding(
+            publishableKey: publishableKey,
+            clientSecret: clientSecret,
+            from: controller,
+            result: result
+          )
+        default:
+          result(FlutterMethodNotImplemented)
         }
       }
     }

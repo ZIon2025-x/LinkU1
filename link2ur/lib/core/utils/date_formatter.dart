@@ -74,6 +74,31 @@ class DateFormatter {
     }
   }
 
+  /// 相对时间（纯模糊时间：刚刚、X分钟前、X小时前、X天前、X周前、X个月前、X年前）
+  static String formatRelative(DateTime date, {AppLocalizations? l10n}) {
+    final now = DateTime.now();
+    final diff = now.difference(date);
+
+    if (diff.isNegative || diff.inMinutes < 1) {
+      return l10n?.timeJustNow ?? 'Just now';
+    } else if (diff.inMinutes < 60) {
+      return l10n?.timeMinutesAgo(diff.inMinutes) ?? '${diff.inMinutes} min ago';
+    } else if (diff.inHours < 24) {
+      return l10n?.timeHoursAgo(diff.inHours) ?? '${diff.inHours} hr ago';
+    } else if (diff.inDays < 7) {
+      return l10n?.timeDaysAgo(diff.inDays) ?? '${diff.inDays}d ago';
+    } else if (diff.inDays < 30) {
+      final weeks = (diff.inDays / 7).floor();
+      return l10n?.timeWeeksAgo(weeks) ?? '${weeks}w ago';
+    } else if (diff.inDays < 365) {
+      final months = (diff.inDays / 30).floor();
+      return l10n?.timeMonthsAgo(months) ?? '${months}mo ago';
+    } else {
+      final years = (diff.inDays / 365).floor();
+      return l10n?.timeYearsAgo(years) ?? '${years}y ago';
+    }
+  }
+
   /// 消息时间格式化
   static String formatMessageTime(DateTime date, {AppLocalizations? l10n}) {
     final now = DateTime.now();

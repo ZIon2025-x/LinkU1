@@ -203,9 +203,13 @@ class _DeferredBlocLoaderState extends State<_DeferredBlocLoader> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       context.read<SettingsBloc>().add(const SettingsLoadRequested());
-      context.read<NotificationBloc>().add(
-        const NotificationLoadUnreadNotificationCount(),
-      );
+      // 仅已登录用户才请求通知计数（避免未登录时产生 401 错误）
+      final authState = context.read<AuthBloc>().state;
+      if (authState.isAuthenticated) {
+        context.read<NotificationBloc>().add(
+          const NotificationLoadUnreadNotificationCount(),
+        );
+      }
     });
   }
 

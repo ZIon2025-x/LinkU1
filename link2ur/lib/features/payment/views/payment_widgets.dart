@@ -41,7 +41,7 @@ class _CouponSelectorSheetState extends State<_CouponSelectorSheet> {
   Widget build(BuildContext context) {
     return Container(
       constraints: BoxConstraints(
-        maxHeight: MediaQuery.of(context).size.height * 0.6,
+        maxHeight: MediaQuery.sizeOf(context).height * 0.6,
       ),
       padding: const EdgeInsets.all(20),
       child: Column(

@@ -52,3 +52,13 @@ class TaskListSortChanged extends TaskListEvent {
   @override
   List<Object?> get props => [sortBy];
 }
+
+/// 城市筛选改变
+class TaskListCityChanged extends TaskListEvent {
+  const TaskListCityChanged(this.city);
+
+  final String city;
+
+  @override
+  List<Object?> get props => [city];
+}

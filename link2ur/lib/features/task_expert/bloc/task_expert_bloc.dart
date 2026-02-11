@@ -103,6 +103,20 @@ class TaskExpertLoadServiceTimeSlots extends TaskExpertEvent {
   List<Object?> get props => [serviceId];
 }
 
+/// 达人筛选条件改变（类型 + 城市）
+class TaskExpertFilterChanged extends TaskExpertEvent {
+  const TaskExpertFilterChanged({this.category, this.city});
+
+  /// 达人类型，'all' 或 null 表示全部
+  final String? category;
+
+  /// 城市，'all' 或 null 表示全部
+  final String? city;
+
+  @override
+  List<Object?> get props => [category, city];
+}
+
 /// 增强版申请服务事件（支持议价/时间段/期限/灵活时间）
 class TaskExpertApplyServiceEnhanced extends TaskExpertEvent {
   const TaskExpertApplyServiceEnhanced(
@@ -150,6 +164,9 @@ class TaskExpertState extends Equatable {
     this.isLoadingReviews = false,
     this.timeSlots = const [],
     this.isLoadingTimeSlots = false,
+    this.selectedCategory = 'all',
+    this.selectedCity = 'all',
+    this.searchKeyword,
   });
 
   final TaskExpertStatus status;
@@ -171,7 +188,19 @@ class TaskExpertState extends Equatable {
   final List<ServiceTimeSlot> timeSlots;
   final bool isLoadingTimeSlots;
 
+  /// 选中的达人类型筛选，'all' 表示全部
+  final String selectedCategory;
+
+  /// 选中的城市筛选，'all' 表示全部
+  final String selectedCity;
+
+  /// 当前搜索关键词
+  final String? searchKeyword;
+
   bool get isLoading => status == TaskExpertStatus.loading;
+
+  /// 当前是否有激活的筛选条件（类型非全部 或 城市非全部）
+  bool get hasActiveFilters => selectedCategory != 'all' || selectedCity != 'all';
 
   TaskExpertState copyWith({
     TaskExpertStatus? status,
@@ -192,6 +221,9 @@ class TaskExpertState extends Equatable {
     bool? isLoadingReviews,
     List<ServiceTimeSlot>? timeSlots,
     bool? isLoadingTimeSlots,
+    String? selectedCategory,
+    String? selectedCity,
+    String? searchKeyword,
   }) {
     return TaskExpertState(
       status: status ?? this.status,
@@ -212,6 +244,9 @@ class TaskExpertState extends Equatable {
       isLoadingReviews: isLoadingReviews ?? this.isLoadingReviews,
       timeSlots: timeSlots ?? this.timeSlots,
       isLoadingTimeSlots: isLoadingTimeSlots ?? this.isLoadingTimeSlots,
+      selectedCategory: selectedCategory ?? this.selectedCategory,
+      selectedCity: selectedCity ?? this.selectedCity,
+      searchKeyword: searchKeyword ?? this.searchKeyword,
     );
   }
 
@@ -235,6 +270,9 @@ class TaskExpertState extends Equatable {
         isLoadingReviews,
         timeSlots,
         isLoadingTimeSlots,
+        selectedCategory,
+        selectedCity,
+        searchKeyword,
       ];
 }
 
@@ -256,20 +294,34 @@ class TaskExpertBloc extends Bloc<TaskExpertEvent, TaskExpertState> {
     on<TaskExpertLoadExpertReviews>(_onLoadExpertReviews);
     on<TaskExpertLoadServiceTimeSlots>(_onLoadServiceTimeSlots);
     on<TaskExpertApplyServiceEnhanced>(_onApplyServiceEnhanced);
+    on<TaskExpertFilterChanged>(_onFilterChanged);
   }
 
   final TaskExpertRepository _taskExpertRepository;
+
+  /// 获取城市筛选参数，'all' 时返回 null
+  String? _cityParam(String city) => city == 'all' ? null : city;
+
+  /// 获取类型筛选参数，'all' 时返回 null
+  String? _categoryParam(String cat) => cat == 'all' ? null : cat;
 
   Future<void> _onLoadRequested(
     TaskExpertLoadRequested event,
     Emitter<TaskExpertState> emit,
   ) async {
-    emit(state.copyWith(status: TaskExpertStatus.loading));
+    // 如果传了 skill，更新 searchKeyword
+    final keyword = event.skill;
+    emit(state.copyWith(
+      status: TaskExpertStatus.loading,
+      searchKeyword: keyword ?? '',
+    ));
 
     try {
       final response = await _taskExpertRepository.getExperts(
         page: 1,
-        keyword: event.skill,
+        keyword: keyword,
+        category: _categoryParam(state.selectedCategory),
+        location: _cityParam(state.selectedCity),
       );
 
       emit(state.copyWith(
@@ -298,6 +350,9 @@ class TaskExpertBloc extends Bloc<TaskExpertEvent, TaskExpertState> {
       final nextPage = state.page + 1;
       final response = await _taskExpertRepository.getExperts(
         page: nextPage,
+        keyword: (state.searchKeyword?.isNotEmpty ?? false) ? state.searchKeyword : null,
+        category: _categoryParam(state.selectedCategory),
+        location: _cityParam(state.selectedCity),
       );
 
       emit(state.copyWith(
@@ -317,6 +372,9 @@ class TaskExpertBloc extends Bloc<TaskExpertEvent, TaskExpertState> {
     try {
       final response = await _taskExpertRepository.getExperts(
         page: 1,
+        keyword: (state.searchKeyword?.isNotEmpty ?? false) ? state.searchKeyword : null,
+        category: _categoryParam(state.selectedCategory),
+        location: _cityParam(state.selectedCity),
         forceRefresh: true,
       );
 
@@ -329,6 +387,43 @@ class TaskExpertBloc extends Bloc<TaskExpertEvent, TaskExpertState> {
       ));
     } catch (e) {
       AppLogger.error('Failed to refresh experts', e);
+    }
+  }
+
+  Future<void> _onFilterChanged(
+    TaskExpertFilterChanged event,
+    Emitter<TaskExpertState> emit,
+  ) async {
+    final newCategory = event.category ?? state.selectedCategory;
+    final newCity = event.city ?? state.selectedCity;
+
+    emit(state.copyWith(
+      selectedCategory: newCategory,
+      selectedCity: newCity,
+      status: TaskExpertStatus.loading,
+    ));
+
+    try {
+      final response = await _taskExpertRepository.getExperts(
+        page: 1,
+        keyword: (state.searchKeyword?.isNotEmpty ?? false) ? state.searchKeyword : null,
+        category: _categoryParam(newCategory),
+        location: _cityParam(newCity),
+      );
+
+      emit(state.copyWith(
+        status: TaskExpertStatus.loaded,
+        experts: response.experts,
+        total: response.total,
+        page: 1,
+        hasMore: response.hasMore,
+      ));
+    } catch (e) {
+      AppLogger.error('Failed to filter experts', e);
+      emit(state.copyWith(
+        status: TaskExpertStatus.error,
+        errorMessage: e.toString(),
+      ));
     }
   }
 

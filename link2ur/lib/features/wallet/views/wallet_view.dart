@@ -61,6 +61,12 @@ class _WalletContent extends StatelessWidget {
         }
       },
       child: BlocBuilder<WalletBloc, WalletState>(
+        buildWhen: (previous, current) =>
+            previous.isLoading != current.isLoading ||
+            previous.pointsAccount != current.pointsAccount ||
+            previous.errorMessage != current.errorMessage ||
+            previous.isCheckingIn != current.isCheckingIn ||
+            previous.transactions != current.transactions,
         builder: (context, state) {
           return Scaffold(
             appBar: AppBar(

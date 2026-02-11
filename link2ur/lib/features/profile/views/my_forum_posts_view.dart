@@ -165,9 +165,11 @@ class _MyForumPostsViewState extends State<MyForumPostsView>
         separatorBuilder: (_, __) => const SizedBox(height: AppSpacing.md),
         itemBuilder: (context, index) {
           final post = posts[index];
-          return _MyPostCard(
-            post: post,
-            onTap: () => context.safePush('/forum/posts/${post.id}'),
+          return RepaintBoundary(
+            child: _MyPostCard(
+              post: post,
+              onTap: () => context.safePush('/forum/posts/${post.id}'),
+            ),
           );
         },
       ),

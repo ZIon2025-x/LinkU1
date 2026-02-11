@@ -915,7 +915,7 @@ class SkeletonLeaderboardItemDetail extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final imageHeight =
-        (MediaQuery.of(context).size.width * 17 / 20).clamp(200, 400).toDouble();
+        (MediaQuery.sizeOf(context).width * 17 / 20).clamp(200, 400).toDouble();
 
     return _ShimmerWrap(
       child: SingleChildScrollView(

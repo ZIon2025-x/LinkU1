@@ -79,13 +79,14 @@ class _TaskChatContentState extends State<_TaskChatContent> {
     super.dispose();
   }
 
-  /// 滚动到顶部时加载更多 + 滚动到底部时自动标记已读
+  /// reverse 模式下，往上滚动（远离 0）= 查看历史消息
+  /// maxScrollExtent 方向是旧消息，接近 0 是最新消息
   void _onScroll() {
     if (!_scrollController.hasClients) return;
 
-    // 滚动到顶部 → 加载更多历史消息
-    if (_scrollController.position.pixels <=
-        _scrollController.position.minScrollExtent + 50) {
+    // 滚动到历史消息方向 → 加载更多
+    if (_scrollController.position.pixels >=
+        _scrollController.position.maxScrollExtent - 50) {
       context.read<ChatBloc>().add(const ChatLoadMore());
     }
   }
@@ -99,7 +100,7 @@ class _TaskChatContentState extends State<_TaskChatContent> {
         const TextPosition(offset: _maxCharacters),
       );
     }
-    setState(() {}); // 刷新字符计数器
+    // setState(() {}); // 刷新字符计数器
   }
 
   void _sendMessage() {
@@ -111,26 +112,9 @@ class _TaskChatContentState extends State<_TaskChatContent> {
         );
     _messageController.clear();
     setState(() => _showActionMenu = false);
-
-    // 发送后滚动到底部
-    _scrollToBottomDelayed();
+    // reverse: true 模式下，新消息自动出现在底部（position 0），无需手动滚动
   }
 
-  void _scrollToBottom() {
-    if (_scrollController.hasClients) {
-      _scrollController.animateTo(
-        _scrollController.position.maxScrollExtent,
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeOut,
-      );
-    }
-  }
-
-  void _scrollToBottomDelayed() {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _scrollToBottom();
-    });
-  }
 
   Future<void> _pickImage() async {
     final image = await _imagePicker.pickImage(
@@ -143,7 +127,7 @@ class _TaskChatContentState extends State<_TaskChatContent> {
             ChatSendImage(filePath: image.path),
           );
       setState(() => _showActionMenu = false);
-      _scrollToBottomDelayed();
+      // reverse: true 模式下，新消息自动出现在 position 0
     }
   }
 
@@ -159,14 +143,7 @@ class _TaskChatContentState extends State<_TaskChatContent> {
   Widget build(BuildContext context) {
     return BlocConsumer<ChatBloc, ChatState>(
       listener: (context, state) {
-        // 首次加载完成 → 滚动到底部
-        if (state.status == ChatStatus.loaded && state.page == 1) {
-          _scrollToBottomDelayed();
-        }
-        // 有新消息且靠近底部 → 自动滚动
-        if (state.messages.isNotEmpty && _isNearBottom()) {
-          _scrollToBottomDelayed();
-        }
+        // reverse: true 模式下，最新消息始终在底部（position 0），无需手动滚动
       },
       builder: (context, state) {
         return Scaffold(
@@ -236,12 +213,6 @@ class _TaskChatContentState extends State<_TaskChatContent> {
     );
   }
 
-  bool _isNearBottom() {
-    if (!_scrollController.hasClients) return true;
-    final maxScroll = _scrollController.position.maxScrollExtent;
-    final currentScroll = _scrollController.position.pixels;
-    return maxScroll - currentScroll < 150;
-  }
 
   Widget _buildTaskInfoCard(ChatState state) {
     return Container(
@@ -398,23 +369,24 @@ class _TaskChatContentState extends State<_TaskChatContent> {
       );
     }
 
-    // 使用消息分组
+    // 使用消息分组，然后反转顺序（reverse ListView 从底部渲染）
     final groups = groupMessages(state.messages, _currentUserId);
+    final reversedGroups = groups.reversed.toList();
 
     return ListView.builder(
       controller: _scrollController,
+      reverse: true,
       padding: const EdgeInsets.symmetric(vertical: 12),
-      itemCount: groups.length + (state.isLoadingMore ? 1 : 0),
+      itemCount: reversedGroups.length + (state.isLoadingMore ? 1 : 0),
       itemBuilder: (context, index) {
-        // 加载更多指示器（顶部）
-        if (state.isLoadingMore && index == 0) {
+        // 加载更多指示器（reverse 模式下 index 最大 = 视觉顶部）
+        if (state.isLoadingMore && index == reversedGroups.length) {
           return const Padding(
             padding: EdgeInsets.all(8),
             child: Center(child: LoadingIndicator(size: 20)),
           );
         }
-        final groupIndex = state.isLoadingMore ? index - 1 : index;
-        final group = groups[groupIndex];
+        final group = reversedGroups[index];
         return MessageGroupBubbleView(
           group: group,
           onAvatarTap: () {
@@ -435,8 +407,6 @@ class _TaskChatContentState extends State<_TaskChatContent> {
   }
 
   Widget _buildInputArea(ChatState state) {
-    final charCount = _messageController.text.length;
-    final showCounter = charCount >= _showCounterThreshold;
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return ClipRect(
@@ -514,29 +484,42 @@ class _TaskChatContentState extends State<_TaskChatContent> {
                     child: LoadingIndicator(size: 24),
                   )
                 else
-                  IconButton(
-                    icon: const Icon(Icons.send),
-                    onPressed: _messageController.text.trim().isEmpty
-                        ? null
-                        : _sendMessage,
-                    color: AppColors.primary,
+                  ValueListenableBuilder<TextEditingValue>(
+                    valueListenable: _messageController,
+                    builder: (context, value, child) {
+                      return IconButton(
+                        icon: const Icon(Icons.send),
+                        onPressed: value.text.trim().isEmpty
+                            ? null
+                            : _sendMessage,
+                        color: AppColors.primary,
+                      );
+                    },
                   ),
               ],
             ),
             // 字符计数器 - 对齐iOS (400+显示)
-            if (showCounter)
-              Padding(
-                padding: const EdgeInsets.only(top: 4, right: 8),
-                child: Text(
-                  '$charCount/$_maxCharacters',
-                  style: TextStyle(
-                    fontSize: 11,
-                    color: charCount >= _maxCharacters
-                        ? AppColors.error
-                        : AppColors.textTertiaryLight,
+            ValueListenableBuilder<TextEditingValue>(
+              valueListenable: _messageController,
+              builder: (context, value, child) {
+                final charCount = value.text.length;
+                final showCounter = charCount >= _showCounterThreshold;
+                if (!showCounter) return const SizedBox.shrink();
+
+                return Padding(
+                  padding: const EdgeInsets.only(top: 4, right: 8),
+                  child: Text(
+                    '$charCount/$_maxCharacters',
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: charCount >= _maxCharacters
+                          ? AppColors.error
+                          : AppColors.textTertiaryLight,
+                    ),
                   ),
-                ),
-              ),
+                );
+              },
+            ),
           ],
         ),
       ),

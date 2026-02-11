@@ -44,6 +44,8 @@ class TaskExpertDetailView extends StatelessWidget {
           foregroundColor: Colors.white,
           actions: [
             BlocBuilder<TaskExpertBloc, TaskExpertState>(
+              buildWhen: (previous, current) =>
+                  previous.selectedExpert != current.selectedExpert,
               builder: (context, state) {
                 return IconButton(
                   icon: const Icon(Icons.share_outlined),
@@ -70,6 +72,12 @@ class TaskExpertDetailView extends StatelessWidget {
             constraints: BoxConstraints(
                 maxWidth: ResponsiveUtils.detailMaxWidth(context)),
             child: BlocBuilder<TaskExpertBloc, TaskExpertState>(
+              buildWhen: (previous, current) =>
+                  previous.status != current.status ||
+                  previous.selectedExpert != current.selectedExpert ||
+                  previous.reviews != current.reviews ||
+                  previous.isLoadingReviews != current.isLoadingReviews ||
+                  previous.services != current.services,
               builder: (context, state) {
                 if (state.status == TaskExpertStatus.loading &&
                     state.selectedExpert == null) {
@@ -172,7 +180,7 @@ class _DetailBody extends StatelessWidget {
                 // 5. 服务菜单
                 _ServicesSection(services: services),
 
-                const SizedBox(height: 100),
+                SizedBox(height: MediaQuery.paddingOf(context).bottom + 24),
               ],
             ),
           ),
@@ -193,7 +201,7 @@ class _TopHeaderBackground extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      height: 180 + MediaQuery.of(context).padding.top,
+      height: 180 + MediaQuery.paddingOf(context).top,
       width: double.infinity,
       child: Stack(
         children: [

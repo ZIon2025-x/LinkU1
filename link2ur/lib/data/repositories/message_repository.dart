@@ -2,6 +2,7 @@ import '../models/message.dart';
 import '../services/api_service.dart';
 import '../services/websocket_service.dart';
 import '../../core/constants/api_endpoints.dart';
+import '../../core/utils/cache_manager.dart';
 import '../../core/utils/logger.dart';
 import '../../core/utils/app_exception.dart';
 
@@ -13,6 +14,7 @@ class MessageRepository {
   }) : _apiService = apiService;
 
   final ApiService _apiService;
+  final CacheManager _cache = CacheManager.shared;
 
   /// 从 API 响应中提取列表数据
   /// 后端可能返回 List 或 Map（带包装键如 contacts, task_chats, items 等）
@@ -39,22 +41,48 @@ class MessageRepository {
     int page = 1,
     int pageSize = 20,
   }) async {
-    final response = await _apiService.get<dynamic>(
-      ApiEndpoints.messageContacts,
-      queryParameters: {
-        'page': page,
-        'page_size': pageSize,
-      },
+    final cacheKey = CacheManager.buildKey(
+      CacheManager.prefixContacts,
+      {'p': page, 'ps': pageSize},
     );
 
-    if (!response.isSuccess || response.data == null) {
-      throw MessageException(response.message ?? '获取联系人列表失败');
+    // 1. 检查缓存
+    final cached = _cache.getWithOfflineFallback<List<dynamic>>(cacheKey);
+    if (cached != null) {
+      return cached
+          .map((e) => ChatContact.fromJson(e as Map<String, dynamic>))
+          .toList();
     }
 
-    final items = _extractList(response.data, ['contacts', 'items', 'data']);
-    return items
-        .map((e) => ChatContact.fromJson(e as Map<String, dynamic>))
-        .toList();
+    // 2. 网络请求
+    try {
+      final response = await _apiService.get<dynamic>(
+        ApiEndpoints.messageContacts,
+        queryParameters: {
+          'page': page,
+          'page_size': pageSize,
+        },
+      );
+
+      if (!response.isSuccess || response.data == null) {
+        throw MessageException(response.message ?? '获取联系人列表失败');
+      }
+
+      final items = _extractList(response.data, ['contacts', 'items', 'data']);
+      await _cache.set(cacheKey, items, ttl: CacheManager.shortTTL);
+      return items
+          .map((e) => ChatContact.fromJson(e as Map<String, dynamic>))
+          .toList();
+    } catch (e) {
+      // 3. 离线回退
+      final stale = _cache.getStale<List<dynamic>>(cacheKey);
+      if (stale != null) {
+        return stale
+            .map((e) => ChatContact.fromJson(e as Map<String, dynamic>))
+            .toList();
+      }
+      rethrow;
+    }
   }
 
   /// 获取与某用户的消息历史
@@ -63,23 +91,49 @@ class MessageRepository {
     int page = 1,
     int pageSize = 50,
   }) async {
-    final response = await _apiService.get(
-      ApiEndpoints.messageHistory(userId),
-      queryParameters: {
-        'page': page,
-        'page_size': pageSize,
-      },
+    final cacheKey = CacheManager.buildKey(
+      CacheManager.prefixMessages,
+      {'uid': userId, 'p': page},
     );
 
-    if (!response.isSuccess || response.data == null) {
-      throw MessageException(response.message ?? '获取消息失败');
+    // 1. 检查缓存
+    final cached = _cache.getWithOfflineFallback<List<dynamic>>(cacheKey);
+    if (cached != null) {
+      return cached
+          .map((e) => Message.fromJson(e as Map<String, dynamic>))
+          .toList();
     }
 
-    final items = _extractList(
-        response.data, ['items', 'messages', 'data']);
-    return items
-        .map((e) => Message.fromJson(e as Map<String, dynamic>))
-        .toList();
+    // 2. 网络请求
+    try {
+      final response = await _apiService.get(
+        ApiEndpoints.messageHistory(userId),
+        queryParameters: {
+          'page': page,
+          'page_size': pageSize,
+        },
+      );
+
+      if (!response.isSuccess || response.data == null) {
+        throw MessageException(response.message ?? '获取消息失败');
+      }
+
+      final items = _extractList(
+          response.data, ['items', 'messages', 'data']);
+      await _cache.set(cacheKey, items, ttl: CacheManager.defaultTTL);
+      return items
+          .map((e) => Message.fromJson(e as Map<String, dynamic>))
+          .toList();
+    } catch (e) {
+      // 3. 离线回退
+      final stale = _cache.getStale<List<dynamic>>(cacheKey);
+      if (stale != null) {
+        return stale
+            .map((e) => Message.fromJson(e as Map<String, dynamic>))
+            .toList();
+      }
+      rethrow;
+    }
   }
 
   /// 获取与某用户的消息列表（兼容旧调用）
@@ -105,6 +159,9 @@ class MessageRepository {
     if (!response.isSuccess || response.data == null) {
       throw MessageException(response.message ?? '发送消息失败');
     }
+
+    // 发送后失效对应聊天缓存
+    await _cache.invalidateChatCache(request.receiverId);
 
     return Message.fromJson(response.data!);
   }
@@ -177,23 +234,49 @@ class MessageRepository {
     int page = 1,
     int pageSize = 20,
   }) async {
-    final response = await _apiService.get<dynamic>(
-      ApiEndpoints.taskChatList,
-      queryParameters: {
-        'page': page,
-        'page_size': pageSize,
-      },
+    final cacheKey = CacheManager.buildKey(
+      CacheManager.prefixTaskChats,
+      {'p': page, 'ps': pageSize},
     );
 
-    if (!response.isSuccess || response.data == null) {
-      throw MessageException(response.message ?? '获取任务聊天列表失败');
+    // 1. 检查缓存
+    final cached = _cache.getWithOfflineFallback<List<dynamic>>(cacheKey);
+    if (cached != null) {
+      return cached
+          .map((e) => TaskChat.fromJson(e as Map<String, dynamic>))
+          .toList();
     }
 
-    final items = _extractList(
-        response.data, ['task_chats', 'tasks', 'items', 'data']);
-    return items
-        .map((e) => TaskChat.fromJson(e as Map<String, dynamic>))
-        .toList();
+    // 2. 网络请求
+    try {
+      final response = await _apiService.get<dynamic>(
+        ApiEndpoints.taskChatList,
+        queryParameters: {
+          'page': page,
+          'page_size': pageSize,
+        },
+      );
+
+      if (!response.isSuccess || response.data == null) {
+        throw MessageException(response.message ?? '获取任务聊天列表失败');
+      }
+
+      final items = _extractList(
+          response.data, ['task_chats', 'tasks', 'items', 'data']);
+      await _cache.set(cacheKey, items, ttl: CacheManager.shortTTL);
+      return items
+          .map((e) => TaskChat.fromJson(e as Map<String, dynamic>))
+          .toList();
+    } catch (e) {
+      // 3. 离线回退
+      final stale = _cache.getStale<List<dynamic>>(cacheKey);
+      if (stale != null) {
+        return stale
+            .map((e) => TaskChat.fromJson(e as Map<String, dynamic>))
+            .toList();
+      }
+      rethrow;
+    }
   }
 
   /// 获取任务聊天未读数量
@@ -218,23 +301,49 @@ class MessageRepository {
     int page = 1,
     int pageSize = 50,
   }) async {
-    final response = await _apiService.get(
-      ApiEndpoints.taskChatMessages(taskId),
-      queryParameters: {
-        'page': page,
-        'page_size': pageSize,
-      },
+    final cacheKey = CacheManager.buildKey(
+      CacheManager.prefixTaskMessages,
+      {'tid': taskId, 'p': page},
     );
 
-    if (!response.isSuccess || response.data == null) {
-      throw MessageException(response.message ?? '获取任务聊天消息失败');
+    // 1. 检查缓存
+    final cached = _cache.getWithOfflineFallback<List<dynamic>>(cacheKey);
+    if (cached != null) {
+      return cached
+          .map((e) => Message.fromJson(e as Map<String, dynamic>))
+          .toList();
     }
 
-    final items = _extractList(
-        response.data, ['items', 'messages', 'data']);
-    return items
-        .map((e) => Message.fromJson(e as Map<String, dynamic>))
-        .toList();
+    // 2. 网络请求
+    try {
+      final response = await _apiService.get(
+        ApiEndpoints.taskChatMessages(taskId),
+        queryParameters: {
+          'page': page,
+          'page_size': pageSize,
+        },
+      );
+
+      if (!response.isSuccess || response.data == null) {
+        throw MessageException(response.message ?? '获取任务聊天消息失败');
+      }
+
+      final items = _extractList(
+          response.data, ['items', 'messages', 'data']);
+      await _cache.set(cacheKey, items, ttl: CacheManager.defaultTTL);
+      return items
+          .map((e) => Message.fromJson(e as Map<String, dynamic>))
+          .toList();
+    } catch (e) {
+      // 3. 离线回退
+      final stale = _cache.getStale<List<dynamic>>(cacheKey);
+      if (stale != null) {
+        return stale
+            .map((e) => Message.fromJson(e as Map<String, dynamic>))
+            .toList();
+      }
+      rethrow;
+    }
   }
 
   /// 发送任务聊天消息
@@ -254,6 +363,9 @@ class MessageRepository {
     if (!response.isSuccess || response.data == null) {
       throw MessageException(response.message ?? '发送任务聊天消息失败');
     }
+
+    // 发送后失效对应任务聊天缓存
+    await _cache.invalidateTaskChatCache(taskId);
 
     return Message.fromJson(response.data!);
   }

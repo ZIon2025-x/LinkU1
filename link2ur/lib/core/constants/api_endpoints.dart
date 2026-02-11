@@ -136,10 +136,9 @@ class ApiEndpoints {
       '/api/flea-market/items/$id/respond-counter-offer';
   static const String fleaMarketAgreeNotice = '/api/flea-market/agree-notice';
   // --- 我的商品/购买/销售 ---
-  static const String fleaMarketMyItems = '/api/flea-market/my/items';
+  // 我的在售商品 & 已售商品: 复用 fleaMarketItems + seller_id + status 参数（对齐iOS）
   static const String fleaMarketMyPurchaseRequests =
       '/api/flea-market/my/purchase-requests';
-  static const String fleaMarketMySales = '/api/flea-market/my/sales';
   static String fleaMarketApprovePurchaseRequest(String requestId) =>
       '/api/flea-market/purchase-requests/$requestId/approve';
 

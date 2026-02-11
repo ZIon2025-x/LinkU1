@@ -185,7 +185,9 @@ class _RecommendedTab extends StatelessWidget {
           childAspectRatio: 0.82,
         ),
         delegate: SliverChildBuilderDelegate(
-          (context, index) => _DesktopTaskCard(key: ValueKey(tasks[index].id), task: tasks[index]),
+          (context, index) => RepaintBoundary(
+            child: _DesktopTaskCard(key: ValueKey(tasks[index].id), task: tasks[index]),
+          ),
           childCount: tasks.length,
         ),
       ),
@@ -400,7 +402,8 @@ class _DesktopTaskCardState extends State<_DesktopTaskCard> {
         onTap: () => context.safePush('/tasks/${task.id}'),
         // 简化：去掉 AnimatedContainer + BoxShadow 动画 + Matrix4 transform
         // 改为静态容器 + Opacity 控制 hover 效果（成本远低于 shadow 动画）
-        child: Opacity(
+        child: AnimatedOpacity(
+          duration: const Duration(milliseconds: 150),
           opacity: _isHovered ? 0.85 : 1.0,
           child: Container(
           clipBehavior: Clip.antiAlias,
@@ -470,7 +473,7 @@ class _DesktopTaskCardState extends State<_DesktopTaskCard> {
                               ConstrainedBox(
                                 constraints: const BoxConstraints(maxWidth: 80),
                                 child: Text(
-                                  task.location!,
+                                  task.blurredLocation ?? task.location!,
                                   style: TextStyle(
                                     fontSize: 11, fontWeight: FontWeight.w500,
                                     color: isDark ? Colors.white : AppColors.desktopTextLight,

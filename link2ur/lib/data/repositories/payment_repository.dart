@@ -154,21 +154,43 @@ class PaymentRepository {
     int page = 1,
     int pageSize = 20,
   }) async {
-    final response = await _apiService.get<Map<String, dynamic>>(
-      ApiEndpoints.stripeConnectTransactions,
-      queryParameters: {
-        'page': page,
-        'page_size': pageSize,
-        'type': 'payout',
-      },
+    final cacheKey = CacheManager.buildKey(
+      '${CacheManager.prefixPayment}payouts_',
+      {'p': page, 'ps': pageSize},
     );
 
-    if (!response.isSuccess || response.data == null) {
-      return [];
+    final cached = _cache.get<Map<String, dynamic>>(cacheKey);
+    if (cached != null) {
+      final items = cached['items'] as List<dynamic>? ?? [];
+      return items.map((e) => e as Map<String, dynamic>).toList();
     }
 
-    final items = response.data!['items'] as List<dynamic>? ?? [];
-    return items.map((e) => e as Map<String, dynamic>).toList();
+    try {
+      final response = await _apiService.get<Map<String, dynamic>>(
+        ApiEndpoints.stripeConnectTransactions,
+        queryParameters: {
+          'page': page,
+          'page_size': pageSize,
+          'type': 'payout',
+        },
+      );
+
+      if (!response.isSuccess || response.data == null) {
+        return [];
+      }
+
+      await _cache.set(cacheKey, response.data!, ttl: CacheManager.personalTTL);
+
+      final items = response.data!['items'] as List<dynamic>? ?? [];
+      return items.map((e) => e as Map<String, dynamic>).toList();
+    } catch (e) {
+      final stale = _cache.getStale<Map<String, dynamic>>(cacheKey);
+      if (stale != null) {
+        final items = stale['items'] as List<dynamic>? ?? [];
+        return items.map((e) => e as Map<String, dynamic>).toList();
+      }
+      rethrow;
+    }
   }
 
   // ==================== Stripe Connect ====================
@@ -177,6 +199,20 @@ class PaymentRepository {
   Future<Map<String, dynamic>> createStripeConnectAccount() async {
     final response = await _apiService.post<Map<String, dynamic>>(
       ApiEndpoints.stripeConnectAccountCreate,
+    );
+
+    if (!response.isSuccess || response.data == null) {
+      throw PaymentException(response.message ?? '创建Connect账户失败');
+    }
+
+    return response.data!;
+  }
+
+  /// 创建Stripe Connect嵌入式账户（对标iOS create-embedded）
+  /// 返回 account_id, client_secret 等
+  Future<Map<String, dynamic>> createStripeConnectAccountEmbedded() async {
+    final response = await _apiService.post<Map<String, dynamic>>(
+      ApiEndpoints.stripeConnectAccountCreateEmbedded,
     );
 
     if (!response.isSuccess || response.data == null) {
@@ -212,7 +248,20 @@ class PaymentRepository {
     return StripeConnectStatus.fromJson(response.data!);
   }
 
-  /// 获取Stripe Connect账户详情
+  /// 获取Stripe Connect账户详情（强类型）
+  Future<StripeConnectAccountDetails> getStripeConnectAccountDetails() async {
+    final response = await _apiService.get<Map<String, dynamic>>(
+      ApiEndpoints.stripeConnectAccountDetails,
+    );
+
+    if (!response.isSuccess || response.data == null) {
+      throw PaymentException(response.message ?? '获取Connect详情失败');
+    }
+
+    return StripeConnectAccountDetails.fromJson(response.data!);
+  }
+
+  /// 获取Stripe Connect账户详情（原始Map，向后兼容）
   Future<Map<String, dynamic>> getStripeConnectDetails() async {
     final response = await _apiService.get<Map<String, dynamic>>(
       ApiEndpoints.stripeConnectAccountDetails,
@@ -225,7 +274,27 @@ class PaymentRepository {
     return response.data!;
   }
 
-  /// 获取Stripe Connect余额
+  /// 获取Stripe Connect余额（强类型）
+  Future<StripeConnectBalance> getStripeConnectBalanceTyped() async {
+    const cacheKey = '${CacheManager.prefixPayment}balance';
+
+    final cached = _cache.get<Map<String, dynamic>>(cacheKey);
+    if (cached != null) return StripeConnectBalance.fromJson(cached);
+
+    final response = await _apiService.get<Map<String, dynamic>>(
+      ApiEndpoints.stripeConnectAccountBalance,
+    );
+
+    if (!response.isSuccess || response.data == null) {
+      throw PaymentException(response.message ?? '获取余额失败');
+    }
+
+    await _cache.set(cacheKey, response.data!, ttl: CacheManager.personalTTL);
+
+    return StripeConnectBalance.fromJson(response.data!);
+  }
+
+  /// 获取Stripe Connect余额（原始Map，向后兼容）
   Future<Map<String, dynamic>> getStripeConnectBalance() async {
     const cacheKey = '${CacheManager.prefixPayment}balance';
 
@@ -243,6 +312,87 @@ class PaymentRepository {
     await _cache.set(cacheKey, response.data!, ttl: CacheManager.personalTTL);
 
     return response.data!;
+  }
+
+  /// 获取外部账户列表（银行账户/银行卡）
+  Future<List<ExternalAccount>> getExternalAccounts() async {
+    final response = await _apiService.get<Map<String, dynamic>>(
+      ApiEndpoints.stripeConnectExternalAccounts,
+    );
+
+    if (!response.isSuccess || response.data == null) {
+      return [];
+    }
+
+    final items = response.data!['items'] as List<dynamic>? ?? [];
+    return items
+        .map((e) => ExternalAccount.fromJson(e as Map<String, dynamic>))
+        .toList();
+  }
+
+  /// 获取 Stripe Connect 交易记录（强类型）
+  Future<List<StripeConnectTransaction>> getStripeConnectTransactions({
+    int limit = 100,
+  }) async {
+    final response = await _apiService.get<Map<String, dynamic>>(
+      ApiEndpoints.stripeConnectTransactions,
+      queryParameters: {'limit': limit},
+    );
+
+    if (!response.isSuccess || response.data == null) {
+      return [];
+    }
+
+    final items = response.data!['items'] as List<dynamic>? ?? [];
+    return items
+        .map((e) => StripeConnectTransaction.fromJson(e as Map<String, dynamic>))
+        .toList();
+  }
+
+  /// 获取任务支付记录（强类型）
+  Future<List<TaskPaymentRecord>> getTaskPaymentRecords({
+    int limit = 100,
+    int skip = 0,
+  }) async {
+    final cacheKey = CacheManager.buildKey(
+      '${CacheManager.prefixPayment}task_records_',
+      {'l': limit, 's': skip},
+    );
+
+    final cached = _cache.get<Map<String, dynamic>>(cacheKey);
+    if (cached != null) {
+      final items = cached['payments'] as List<dynamic>? ?? [];
+      return items
+          .map((e) => TaskPaymentRecord.fromJson(e as Map<String, dynamic>))
+          .toList();
+    }
+
+    try {
+      final response = await _apiService.get<Map<String, dynamic>>(
+        ApiEndpoints.paymentHistory,
+        queryParameters: {'limit': limit, 'skip': skip},
+      );
+
+      if (!response.isSuccess || response.data == null) {
+        return [];
+      }
+
+      await _cache.set(cacheKey, response.data!, ttl: CacheManager.personalTTL);
+
+      final items = response.data!['payments'] as List<dynamic>? ?? [];
+      return items
+          .map((e) => TaskPaymentRecord.fromJson(e as Map<String, dynamic>))
+          .toList();
+    } catch (e) {
+      final stale = _cache.getStale<Map<String, dynamic>>(cacheKey);
+      if (stale != null) {
+        final items = stale['payments'] as List<dynamic>? ?? [];
+        return items
+            .map((e) => TaskPaymentRecord.fromJson(e as Map<String, dynamic>))
+            .toList();
+      }
+      rethrow;
+    }
   }
 
   /// 获取Stripe Connect交易记录
@@ -280,20 +430,42 @@ class PaymentRepository {
     int page = 1,
     int pageSize = 20,
   }) async {
-    final response = await _apiService.get<Map<String, dynamic>>(
-      ApiEndpoints.vipHistory,
-      queryParameters: {
-        'page': page,
-        'page_size': pageSize,
-      },
+    final cacheKey = CacheManager.buildKey(
+      '${CacheManager.prefixPayment}vip_history_',
+      {'p': page, 'ps': pageSize},
     );
 
-    if (!response.isSuccess || response.data == null) {
-      throw PaymentException(response.message ?? '获取VIP历史失败');
+    final cached = _cache.get<Map<String, dynamic>>(cacheKey);
+    if (cached != null) {
+      final items = cached['items'] as List<dynamic>? ?? [];
+      return items.map((e) => e as Map<String, dynamic>).toList();
     }
 
-    final items = response.data!['items'] as List<dynamic>? ?? [];
-    return items.map((e) => e as Map<String, dynamic>).toList();
+    try {
+      final response = await _apiService.get<Map<String, dynamic>>(
+        ApiEndpoints.vipHistory,
+        queryParameters: {
+          'page': page,
+          'page_size': pageSize,
+        },
+      );
+
+      if (!response.isSuccess || response.data == null) {
+        throw PaymentException(response.message ?? '获取VIP历史失败');
+      }
+
+      await _cache.set(cacheKey, response.data!, ttl: CacheManager.personalTTL);
+
+      final items = response.data!['items'] as List<dynamic>? ?? [];
+      return items.map((e) => e as Map<String, dynamic>).toList();
+    } catch (e) {
+      final stale = _cache.getStale<Map<String, dynamic>>(cacheKey);
+      if (stale != null) {
+        final items = stale['items'] as List<dynamic>? ?? [];
+        return items.map((e) => e as Map<String, dynamic>).toList();
+      }
+      rethrow;
+    }
   }
 
   /// 发起提现

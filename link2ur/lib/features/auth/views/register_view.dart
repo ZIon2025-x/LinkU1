@@ -471,7 +471,6 @@ class _RegisterViewState extends State<RegisterView>
                   obscureText: _obscurePassword,
                   isDark: isDark,
                   validator: (v) => Validators.validatePassword(v, l10n: context.l10n),
-                  onChanged: (_) => setState(() {}),
                   suffixIcon: IconButton(
                     icon: Icon(
                       _obscurePassword
@@ -487,11 +486,16 @@ class _RegisterViewState extends State<RegisterView>
                   ),
                 ),
                 // 密码强度条
-                if (_passwordController.text.isNotEmpty)
-                  _PasswordStrengthBar(
-                    password: _passwordController.text,
-                    isDark: isDark,
-                  ),
+                ValueListenableBuilder<TextEditingValue>(
+                  valueListenable: _passwordController,
+                  builder: (context, value, child) {
+                    if (value.text.isEmpty) return const SizedBox.shrink();
+                    return _PasswordStrengthBar(
+                      password: value.text,
+                      isDark: isDark,
+                    );
+                  },
+                ),
                 const SizedBox(height: AppSpacing.md),
 
                 // 确认密码

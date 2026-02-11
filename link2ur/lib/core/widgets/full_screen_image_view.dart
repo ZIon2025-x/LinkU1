@@ -139,7 +139,7 @@ class _FullScreenImageViewState extends State<FullScreenImageView> {
 
           // 顶部关闭按钮（始终可见）
           Positioned(
-            top: MediaQuery.of(context).padding.top + AppSpacing.md,
+            top: MediaQuery.paddingOf(context).top + AppSpacing.md,
             right: AppSpacing.md,
             child: GestureDetector(
               onTap: () => Navigator.of(context).pop(),
@@ -162,7 +162,7 @@ class _FullScreenImageViewState extends State<FullScreenImageView> {
           // 底部图片指示器（多张图片时显示）
           if (widget.images.length > 1 && _showControls)
             Positioned(
-              bottom: MediaQuery.of(context).padding.bottom + AppSpacing.lg,
+              bottom: MediaQuery.paddingOf(context).bottom + AppSpacing.lg,
               left: 0,
               right: 0,
               child: AnimatedOpacity(

@@ -105,10 +105,10 @@ class _FleaMarketViewContentState extends State<_FleaMarketViewContent> {
               final isDark = Theme.of(context).brightness == Brightness.dark;
               final categories = _getCategories(context);
               return SizedBox(
-                height: 48,
+                height: 56,
                 child: ListView.separated(
                   scrollDirection: Axis.horizontal,
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
                   itemCount: categories.length,
                   separatorBuilder: (_, __) => const SizedBox(width: 8),
                   itemBuilder: (context, index) {
@@ -124,7 +124,7 @@ class _FleaMarketViewContentState extends State<_FleaMarketViewContent> {
                       child: AnimatedContainer(
                         duration: const Duration(milliseconds: 250),
                         curve: Curves.easeOutCubic,
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 7),
                         decoration: BoxDecoration(
                           gradient: isSelected
                               ? const LinearGradient(
@@ -158,6 +158,7 @@ class _FleaMarketViewContentState extends State<_FleaMarketViewContent> {
                             fontWeight:
                                 isSelected ? FontWeight.w600 : FontWeight.normal,
                             fontSize: 14,
+                            height: 1.2,
                           ),
                         ),
                       ),

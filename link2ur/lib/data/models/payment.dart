@@ -113,6 +113,9 @@ class StripeConnectStatus extends Equatable {
     this.accountId,
     this.chargesEnabled = false,
     this.payoutsEnabled = false,
+    this.detailsSubmitted = false,
+    this.needsOnboarding = true,
+    this.clientSecret,
     this.onboardingUrl,
   });
 
@@ -120,23 +123,30 @@ class StripeConnectStatus extends Equatable {
   final String? accountId;
   final bool chargesEnabled;
   final bool payoutsEnabled;
+  final bool detailsSubmitted;
+  final bool needsOnboarding;
+  final String? clientSecret;
   final String? onboardingUrl;
 
   /// 账户是否已完全激活
   bool get isFullyActive => isConnected && chargesEnabled && payoutsEnabled;
 
   factory StripeConnectStatus.fromJson(Map<String, dynamic> json) {
+    final accountId = json['account_id'] as String?;
     return StripeConnectStatus(
-      isConnected: json['is_connected'] as bool? ?? false,
-      accountId: json['account_id'] as String?,
+      isConnected: accountId != null,
+      accountId: accountId,
       chargesEnabled: json['charges_enabled'] as bool? ?? false,
       payoutsEnabled: json['payouts_enabled'] as bool? ?? false,
+      detailsSubmitted: json['details_submitted'] as bool? ?? false,
+      needsOnboarding: json['needs_onboarding'] as bool? ?? true,
+      clientSecret: json['client_secret'] as String?,
       onboardingUrl: json['onboarding_url'] as String?,
     );
   }
 
   @override
-  List<Object?> get props => [isConnected, accountId, chargesEnabled];
+  List<Object?> get props => [isConnected, accountId, chargesEnabled, payoutsEnabled, detailsSubmitted, needsOnboarding, clientSecret];
 }
 
 /// 钱包信息模型
@@ -237,4 +247,251 @@ class Transaction extends Equatable {
 
   @override
   List<Object?> get props => [id, type, amount, status];
+}
+
+/// Stripe Connect 余额模型（对标 iOS StripeConnectBalance）
+class StripeConnectBalance extends Equatable {
+  const StripeConnectBalance({
+    this.available = 0,
+    this.pending = 0,
+    this.currency = 'gbp',
+  });
+
+  final double available;
+  final double pending;
+  final String currency;
+
+  double get total => available + pending;
+
+  String formatAmount(double amount) {
+    final code = currency.toUpperCase();
+    switch (code) {
+      case 'GBP':
+        return '£${amount.toStringAsFixed(2)}';
+      case 'USD':
+        return '\$${amount.toStringAsFixed(2)}';
+      case 'EUR':
+        return '€${amount.toStringAsFixed(2)}';
+      case 'CNY':
+        return '¥${amount.toStringAsFixed(2)}';
+      default:
+        return '$code ${amount.toStringAsFixed(2)}';
+    }
+  }
+
+  factory StripeConnectBalance.fromJson(Map<String, dynamic> json) {
+    // 后端返回的金额可能是 pence/cents，需要转换
+    final available = json['available'];
+    final pending = json['pending'];
+
+    double parseAmount(dynamic val) {
+      if (val is num) return val.toDouble();
+      if (val is List && val.isNotEmpty) {
+        final first = val.first;
+        if (first is Map<String, dynamic>) {
+          return (first['amount'] as num?)?.toDouble() ?? 0;
+        }
+      }
+      return 0;
+    }
+
+    return StripeConnectBalance(
+      available: parseAmount(available),
+      pending: parseAmount(pending),
+      currency: json['currency'] as String? ?? 'gbp',
+    );
+  }
+
+  @override
+  List<Object?> get props => [available, pending, currency];
+}
+
+/// Stripe Connect 账户详情（对标 iOS StripeConnectAccountDetails）
+class StripeConnectAccountDetails extends Equatable {
+  const StripeConnectAccountDetails({
+    required this.accountId,
+    this.displayName,
+    this.email,
+    this.country = '',
+    this.type = '',
+    this.detailsSubmitted = false,
+    this.chargesEnabled = false,
+    this.payoutsEnabled = false,
+    this.dashboardUrl,
+  });
+
+  final String accountId;
+  final String? displayName;
+  final String? email;
+  final String country;
+  final String type;
+  final bool detailsSubmitted;
+  final bool chargesEnabled;
+  final bool payoutsEnabled;
+  final String? dashboardUrl;
+
+  factory StripeConnectAccountDetails.fromJson(Map<String, dynamic> json) {
+    return StripeConnectAccountDetails(
+      accountId: json['account_id'] as String? ?? '',
+      displayName: json['display_name'] as String?,
+      email: json['email'] as String?,
+      country: json['country'] as String? ?? '',
+      type: json['type'] as String? ?? '',
+      detailsSubmitted: json['details_submitted'] as bool? ?? false,
+      chargesEnabled: json['charges_enabled'] as bool? ?? false,
+      payoutsEnabled: json['payouts_enabled'] as bool? ?? false,
+      dashboardUrl: json['dashboard_url'] as String?,
+    );
+  }
+
+  @override
+  List<Object?> get props => [accountId, chargesEnabled, payoutsEnabled];
+}
+
+/// 外部账户（银行账户/银行卡）（对标 iOS ExternalAccount）
+class ExternalAccount extends Equatable {
+  const ExternalAccount({
+    required this.id,
+    required this.object, // bank_account 或 card
+    this.bankName,
+    this.last4,
+    this.routingNumber,
+    this.accountHolderName,
+    this.accountHolderType,
+    this.currency,
+    this.country,
+    this.status,
+    this.brand,
+    this.expMonth,
+    this.expYear,
+    this.funding,
+    this.isDefault = false,
+  });
+
+  final String id;
+  final String object;
+  final String? bankName;
+  final String? last4;
+  final String? routingNumber;
+  final String? accountHolderName;
+  final String? accountHolderType;
+  final String? currency;
+  final String? country;
+  final String? status;
+  final String? brand;
+  final int? expMonth;
+  final int? expYear;
+  final String? funding;
+  final bool isDefault;
+
+  bool get isBankAccount => object == 'bank_account';
+  bool get isCard => object == 'card';
+
+  factory ExternalAccount.fromJson(Map<String, dynamic> json) {
+    return ExternalAccount(
+      id: json['id'] as String? ?? '',
+      object: json['object'] as String? ?? 'bank_account',
+      bankName: json['bank_name'] as String?,
+      last4: json['last4'] as String?,
+      routingNumber: json['routing_number'] as String?,
+      accountHolderName: json['account_holder_name'] as String?,
+      accountHolderType: json['account_holder_type'] as String?,
+      currency: json['currency'] as String?,
+      country: json['country'] as String?,
+      status: json['status'] as String?,
+      brand: json['brand'] as String?,
+      expMonth: json['exp_month'] as int?,
+      expYear: json['exp_year'] as int?,
+      funding: json['funding'] as String?,
+      isDefault: json['default_for_currency'] as bool? ?? false,
+    );
+  }
+
+  @override
+  List<Object?> get props => [id, object, last4];
+}
+
+/// Stripe Connect 交易记录（对标 iOS StripeConnectTransaction）
+class StripeConnectTransaction extends Equatable {
+  const StripeConnectTransaction({
+    required this.id,
+    required this.amount,
+    this.currency = 'gbp',
+    this.description = '',
+    this.status = '',
+    this.type = '',
+    this.source = '',
+    this.createdAt = '',
+  });
+
+  final String id;
+  final double amount;
+  final String currency;
+  final String description;
+  final String status;
+  final String type; // income / expense
+  final String source; // payout / transfer / charge / payment_intent
+  final String createdAt;
+
+  bool get isIncome => type != 'expense';
+
+  String get amountDisplay {
+    final prefix = isIncome ? '+' : '-';
+    return '$prefix£${amount.abs().toStringAsFixed(2)}';
+  }
+
+  factory StripeConnectTransaction.fromJson(Map<String, dynamic> json) {
+    return StripeConnectTransaction(
+      id: json['id'] as String? ?? '',
+      amount: (json['amount'] as num?)?.toDouble() ?? 0,
+      currency: json['currency'] as String? ?? 'gbp',
+      description: json['description'] as String? ?? '',
+      status: json['status'] as String? ?? '',
+      type: json['type'] as String? ?? '',
+      source: json['source'] as String? ?? '',
+      createdAt: json['created_at'] as String? ?? '',
+    );
+  }
+
+  @override
+  List<Object?> get props => [id, amount, status];
+}
+
+/// 任务支付记录（对标 iOS TaskPaymentRecord）
+class TaskPaymentRecord extends Equatable {
+  const TaskPaymentRecord({
+    required this.id,
+    this.taskId,
+    this.taskTitle,
+    this.amount = 0,
+    this.currency = 'gbp',
+    this.status = '',
+    this.paymentMethod,
+    this.createdAt,
+  });
+
+  final int id;
+  final int? taskId;
+  final String? taskTitle;
+  final double amount;
+  final String currency;
+  final String status;
+  final String? paymentMethod;
+  final String? createdAt;
+
+  factory TaskPaymentRecord.fromJson(Map<String, dynamic> json) {
+    return TaskPaymentRecord(
+      id: json['id'] as int? ?? 0,
+      taskId: json['task_id'] as int?,
+      taskTitle: json['task_title'] as String?,
+      amount: (json['amount'] as num?)?.toDouble() ?? 0,
+      currency: json['currency'] as String? ?? 'gbp',
+      status: json['status'] as String? ?? '',
+      paymentMethod: json['payment_method'] as String?,
+      createdAt: json['created_at'] as String?,
+    );
+  }
+
+  @override
+  List<Object?> get props => [id, taskId, amount, status];
 }

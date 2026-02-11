@@ -754,13 +754,12 @@ class AppRouter {
         },
       ),
 
-      // Stripe Connect 入驻
+      // Stripe Connect 入驻（对标iOS：自动检查状态→创建账户→入驻）
       GoRoute(
         path: AppRoutes.stripeConnectOnboarding,
         name: 'stripeConnectOnboarding',
         builder: (context, state) {
-          final url = state.extra as String;
-          return StripeConnectOnboardingView(onboardingUrl: url);
+          return const StripeConnectOnboardingView();
         },
       ),
 

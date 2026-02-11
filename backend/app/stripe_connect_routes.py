@@ -20,6 +20,7 @@ import requests
 from typing import Optional, Dict, Any, List
 from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException, Request, Query
+from fastapi.responses import HTMLResponse
 from sqlalchemy.orm import Session
 import stripe
 
@@ -487,6 +488,135 @@ def verify_account_ownership(account_id: str, current_user: models.User) -> bool
     except Exception as e:
         logger.error(f"Unexpected error verifying account ownership: {e}", exc_info=True)
         return False
+
+
+@router.get("/onboarding-page", response_class=HTMLResponse)
+def onboarding_page(client_secret: str = Query(..., description="Stripe AccountSession client_secret")):
+    """
+    返回 Stripe Connect 嵌入式 Onboarding HTML 页面
+    
+    Flutter WebView 加载此页面，使用 Stripe Connect.js 展示原生入驻表单。
+    对标 iOS 原生项目的 AccountOnboardingController（Web 等价方案）。
+    
+    参考: https://docs.stripe.com/connect/get-started-connect-embedded-components
+    """
+    publishable_key = os.getenv("STRIPE_PUBLISHABLE_KEY", "")
+    if not publishable_key:
+        raise HTTPException(status_code=500, detail="STRIPE_PUBLISHABLE_KEY not configured")
+    
+    html = f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Payment Account Setup</title>
+<style>
+  * {{ margin: 0; padding: 0; box-sizing: border-box; }}
+  body {{
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: #f6f8fa;
+    min-height: 100vh;
+  }}
+  #loading {{
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    color: #666;
+  }}
+  .spinner {{
+    width: 36px; height: 36px;
+    border: 3px solid #e0e0e0;
+    border-top-color: #635bff;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    margin-bottom: 16px;
+  }}
+  @keyframes spin {{ to {{ transform: rotate(360deg); }} }}
+  #error {{
+    display: none;
+    text-align: center;
+    padding: 40px 20px;
+    color: #e53e3e;
+  }}
+  #error button {{
+    margin-top: 16px;
+    padding: 10px 24px;
+    background: #635bff;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 15px;
+    cursor: pointer;
+  }}
+  #onboarding-container {{
+    width: 100%;
+    min-height: 100vh;
+  }}
+</style>
+</head>
+<body>
+<div id="loading">
+  <div class="spinner"></div>
+  <p>Loading...</p>
+</div>
+<div id="error">
+  <p id="error-message">Failed to load. Please try again.</p>
+  <button onclick="location.reload()">Retry</button>
+</div>
+<div id="onboarding-container"></div>
+
+<script src="https://connect-js.stripe.com/v1.0/connect.js" async></script>
+<script>
+// 使用 Stripe Connect.js 官方无 npm 初始化方式
+// 参考: https://docs.stripe.com/connect/get-started-connect-embedded-components#without-npm
+// 兼容 V1 和 V2 账户
+window.StripeConnect = window.StripeConnect || {{}};
+StripeConnect.onLoad = function() {{
+  try {{
+    var instance = StripeConnect.init({{
+      publishableKey: {repr(publishable_key)},
+      fetchClientSecret: function() {{
+        return {repr(client_secret)};
+      }},
+      appearance: {{
+        variables: {{
+          colorPrimary: '#635bff',
+        }},
+      }},
+    }});
+
+    var onboarding = instance.create('account-onboarding');
+
+    onboarding.setOnLoaderStart(function() {{
+      document.getElementById('loading').style.display = 'none';
+    }});
+
+    onboarding.setOnLoadError(function(loadError) {{
+      document.getElementById('loading').style.display = 'none';
+      document.getElementById('error').style.display = 'block';
+      var msg = loadError.error ? loadError.error.message : 'Failed to load';
+      document.getElementById('error-message').textContent = msg || 'Failed to load';
+    }});
+
+    onboarding.setOnExit(function() {{
+      window.location.href = 'stripe-connect/return';
+    }});
+
+    document.getElementById('onboarding-container').appendChild(onboarding);
+
+  }} catch (e) {{
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('error').style.display = 'block';
+    document.getElementById('error-message').textContent = e.message || 'Failed to load';
+  }}
+}};
+</script>
+</body>
+</html>"""
+    
+    return HTMLResponse(content=html)
 
 
 @router.post("/account/create", response_model=schemas.StripeConnectAccountEmbeddedResponse)

@@ -155,12 +155,10 @@ class _MyPostsViewState extends State<MyPostsView>
   Future<void> _loadSoldItems(FleaMarketRepository repo) async {
     setState(() => _isLoadingSold = true);
     try {
-      final rawItems = await repo.getMySales(page: 1, pageSize: 20);
+      final response = await repo.getMySales(page: 1, pageSize: 20);
       if (mounted) {
         setState(() {
-          _soldItems = rawItems
-              .map((e) => FleaMarketItem.fromJson(e))
-              .toList();
+          _soldItems = response.items;
           _isLoadingSold = false;
           _categoryErrors[_MyItemsCategory.sold] = null;
         });
@@ -218,8 +216,6 @@ class _MyPostsViewState extends State<MyPostsView>
         ],
         bottom: TabBar(
           controller: _tabController,
-          isScrollable: true,
-          tabAlignment: TabAlignment.start,
           labelColor: AppColors.primary,
           unselectedLabelColor: isDark
               ? AppColors.textSecondaryDark

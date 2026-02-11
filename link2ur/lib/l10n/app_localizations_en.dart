@@ -102,6 +102,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get commonFilter => 'Filter';
 
   @override
+  String get commonReset => 'Reset';
+
+  @override
   String get commonNotProvided => 'Not provided';
 
   @override

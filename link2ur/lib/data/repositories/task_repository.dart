@@ -33,6 +33,7 @@ class TaskRepository {
     String? status,
     String? keyword,
     String? sortBy,
+    String? location,
     CancelToken? cancelToken,
   }) async {
     final params = {
@@ -42,6 +43,7 @@ class TaskRepository {
       if (status != null) 'status': status,
       if (keyword != null) 'keyword': keyword,
       if (sortBy != null) 'sort_by': sortBy,
+      if (location != null) 'location': location,
     };
     final cacheKey = keyword == null
         ? CacheManager.buildKey(CacheManager.prefixTasks, params)
@@ -143,15 +145,17 @@ class TaskRepository {
     int page = 1,
     int pageSize = 20,
     double? radius,
+    String? city,
   }) async {
     final response = await _apiService.get<Map<String, dynamic>>(
       ApiEndpoints.tasks,
       queryParameters: {
-        'latitude': latitude,
-        'longitude': longitude,
+        'user_latitude': latitude,
+        'user_longitude': longitude,
         'page': page,
         'page_size': pageSize,
         if (radius != null) 'radius': radius,
+        if (city != null && city.isNotEmpty) 'location': city,
         'sort_by': 'distance',
       },
     );
@@ -234,24 +238,52 @@ class TaskRepository {
     // 失效相关缓存
     await _cache.invalidateTaskDetailCache(taskId);
     await _cache.invalidateMyTasksCache();
+    await _cache.remove('${CacheManager.prefixMyTasks}apps');
   }
 
   /// 获取我的所有申请（pending applications）
   Future<List<TaskApplication>> getMyApplications() async {
-    final response = await _apiService.get<Map<String, dynamic>>(
-      ApiEndpoints.myApplications,
-    );
+    const cacheKey = '${CacheManager.prefixMyTasks}apps';
 
-    if (!response.isSuccess || response.data == null) {
-      throw TaskException(response.message ?? 'Failed to load applications');
+    final cached = _cache.get<Map<String, dynamic>>(cacheKey);
+    if (cached != null) {
+      final items = cached['items'] as List<dynamic>? ??
+          cached['applications'] as List<dynamic>? ??
+          [];
+      return items
+          .map((e) => TaskApplication.fromJson(e as Map<String, dynamic>))
+          .toList();
     }
 
-    final items = response.data!['items'] as List<dynamic>? ??
-        response.data!['applications'] as List<dynamic>? ??
-        [];
-    return items
-        .map((e) => TaskApplication.fromJson(e as Map<String, dynamic>))
-        .toList();
+    try {
+      final response = await _apiService.get<Map<String, dynamic>>(
+        ApiEndpoints.myApplications,
+      );
+
+      if (!response.isSuccess || response.data == null) {
+        throw TaskException(response.message ?? 'Failed to load applications');
+      }
+
+      await _cache.set(cacheKey, response.data!, ttl: CacheManager.personalTTL);
+
+      final items = response.data!['items'] as List<dynamic>? ??
+          response.data!['applications'] as List<dynamic>? ??
+          [];
+      return items
+          .map((e) => TaskApplication.fromJson(e as Map<String, dynamic>))
+          .toList();
+    } catch (e) {
+      final stale = _cache.getStale<Map<String, dynamic>>(cacheKey);
+      if (stale != null) {
+        final items = stale['items'] as List<dynamic>? ??
+            stale['applications'] as List<dynamic>? ??
+            [];
+        return items
+            .map((e) => TaskApplication.fromJson(e as Map<String, dynamic>))
+            .toList();
+      }
+      rethrow;
+    }
   }
 
   /// 获取任务申请列表
@@ -299,6 +331,8 @@ class TaskRepository {
     if (!response.isSuccess) {
       throw TaskException(response.message ?? '撤回申请失败');
     }
+
+    await _cache.remove('${CacheManager.prefixMyTasks}apps');
   }
 
   /// 申请议价
@@ -477,16 +511,35 @@ class TaskRepository {
 
   /// 获取任务历史记录
   Future<List<Map<String, dynamic>>> getTaskHistory(int taskId) async {
-    final response = await _apiService.get<Map<String, dynamic>>(
-      ApiEndpoints.taskHistory(taskId),
-    );
+    final cacheKey = '${CacheManager.prefixTaskDetail}${taskId}_history';
 
-    if (!response.isSuccess || response.data == null) {
-      throw TaskException(response.message ?? '获取任务历史失败');
+    final cached = _cache.get<Map<String, dynamic>>(cacheKey);
+    if (cached != null) {
+      final items = cached['items'] as List<dynamic>? ?? [];
+      return items.map((e) => e as Map<String, dynamic>).toList();
     }
 
-    final items = response.data!['items'] as List<dynamic>? ?? [];
-    return items.map((e) => e as Map<String, dynamic>).toList();
+    try {
+      final response = await _apiService.get<Map<String, dynamic>>(
+        ApiEndpoints.taskHistory(taskId),
+      );
+
+      if (!response.isSuccess || response.data == null) {
+        throw TaskException(response.message ?? '获取任务历史失败');
+      }
+
+      await _cache.set(cacheKey, response.data!, ttl: CacheManager.personalTTL);
+
+      final items = response.data!['items'] as List<dynamic>? ?? [];
+      return items.map((e) => e as Map<String, dynamic>).toList();
+    } catch (e) {
+      final stale = _cache.getStale<Map<String, dynamic>>(cacheKey);
+      if (stale != null) {
+        final items = stale['items'] as List<dynamic>? ?? [];
+        return items.map((e) => e as Map<String, dynamic>).toList();
+      }
+      rethrow;
+    }
   }
 
   /// 发起争议
@@ -730,35 +783,53 @@ class TaskRepository {
     int pageSize = 20,
     String? status,
   }) async {
-    final response = await _apiService.get(
-      ApiEndpoints.myTasks,
-      queryParameters: {
-        'page': page,
-        'page_size': pageSize,
-        'role': 'poster',
-        if (status != null) 'status': status,
-      },
+    final params = {
+      'page': page,
+      'page_size': pageSize,
+      'role': 'poster',
+      if (status != null) 'status': status,
+    };
+    final cacheKey = CacheManager.buildKey(
+      '${CacheManager.prefixMyTasks}posted_',
+      params,
     );
 
-    if (!response.isSuccess || response.data == null) {
-      throw TaskException(response.message ?? '获取已发布任务失败');
+    final cached = _cache.get<Map<String, dynamic>>(cacheKey);
+    if (cached != null) {
+      return TaskListResponse.fromJson(cached);
     }
 
-    // 兼容后端返回裸数组或分页对象
-    final Map<String, dynamic> normalized;
-    if (response.data is List) {
-      final list = response.data as List;
-      normalized = {
-        'tasks': list,
-        'total': list.length,
-        'page': page,
-        'page_size': pageSize,
-      };
-    } else {
-      normalized = response.data as Map<String, dynamic>;
-    }
+    try {
+      final response = await _apiService.get(
+        ApiEndpoints.myTasks,
+        queryParameters: params,
+      );
 
-    return TaskListResponse.fromJson(normalized);
+      if (!response.isSuccess || response.data == null) {
+        throw TaskException(response.message ?? '获取已发布任务失败');
+      }
+
+      // 兼容后端返回裸数组或分页对象
+      final Map<String, dynamic> normalized;
+      if (response.data is List) {
+        final list = response.data as List;
+        normalized = {
+          'tasks': list,
+          'total': list.length,
+          'page': page,
+          'page_size': pageSize,
+        };
+      } else {
+        normalized = response.data as Map<String, dynamic>;
+      }
+
+      await _cache.set(cacheKey, normalized, ttl: CacheManager.personalTTL);
+      return TaskListResponse.fromJson(normalized);
+    } catch (e) {
+      final stale = _cache.getStale<Map<String, dynamic>>(cacheKey);
+      if (stale != null) return TaskListResponse.fromJson(stale);
+      rethrow;
+    }
   }
 
   /// 发送申请消息

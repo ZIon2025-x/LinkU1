@@ -13,6 +13,7 @@ class TaskListState extends Equatable {
     this.page = 1,
     this.hasMore = true,
     this.selectedCategory = 'all',
+    this.selectedCity = 'all',
     this.searchQuery = '',
     this.sortBy = 'latest',
     this.errorMessage,
@@ -25,6 +26,9 @@ class TaskListState extends Equatable {
   final int page;
   final bool hasMore;
   final String selectedCategory;
+
+  /// 选中的城市筛选，'all' 表示全部城市
+  final String selectedCity;
   final String searchQuery;
   final String sortBy;
   final String? errorMessage;
@@ -35,6 +39,9 @@ class TaskListState extends Equatable {
   bool get hasError => status == TaskListStatus.error;
   bool get isEmpty => tasks.isEmpty && isLoaded;
 
+  /// 当前是否有激活的筛选条件（排序非默认 或 城市非全部）
+  bool get hasActiveFilters => sortBy != 'latest' || selectedCity != 'all';
+
   TaskListState copyWith({
     TaskListStatus? status,
     List<Task>? tasks,
@@ -42,6 +49,7 @@ class TaskListState extends Equatable {
     int? page,
     bool? hasMore,
     String? selectedCategory,
+    String? selectedCity,
     String? searchQuery,
     String? sortBy,
     String? errorMessage,
@@ -54,6 +62,7 @@ class TaskListState extends Equatable {
       page: page ?? this.page,
       hasMore: hasMore ?? this.hasMore,
       selectedCategory: selectedCategory ?? this.selectedCategory,
+      selectedCity: selectedCity ?? this.selectedCity,
       searchQuery: searchQuery ?? this.searchQuery,
       sortBy: sortBy ?? this.sortBy,
       errorMessage: errorMessage ?? this.errorMessage,
@@ -69,6 +78,7 @@ class TaskListState extends Equatable {
         page,
         hasMore,
         selectedCategory,
+        selectedCity,
         searchQuery,
         sortBy,
         errorMessage,

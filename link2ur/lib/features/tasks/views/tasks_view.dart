@@ -104,19 +104,11 @@ class _TasksViewContentState extends State<_TasksViewContent> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(context.l10n.tasksTasks),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.filter_list),
-            onPressed: () {
-              _showSortOptions(context);
-            },
-          ),
-        ],
+        titleSpacing: 0,
+        title: _buildSearchBar(),
       ),
       body: Column(
         children: [
-          _buildSearchBar(),
           _buildCategoryTabs(),
           const SizedBox(height: 8),
           Expanded(child: _buildTaskGrid()),
@@ -136,8 +128,9 @@ class _TasksViewContentState extends State<_TasksViewContent> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Padding(
-      padding: AppSpacing.allMd,
+      padding: const EdgeInsets.only(left: 4, right: 8),
       child: Container(
+        height: 40,
         decoration: BoxDecoration(
           color: isDark
               ? AppColors.secondaryBackgroundDark
@@ -149,7 +142,7 @@ class _TasksViewContentState extends State<_TasksViewContent> {
         ),
         child: Row(
           children: [
-            const SizedBox(width: 16),
+            const SizedBox(width: 12),
             Icon(
               Icons.search,
               size: 20,
@@ -164,7 +157,8 @@ class _TasksViewContentState extends State<_TasksViewContent> {
                 decoration: InputDecoration(
                   hintText: context.l10n.commonSearch,
                   border: InputBorder.none,
-                  contentPadding: const EdgeInsets.symmetric(vertical: 12),
+                  isDense: true,
+                  contentPadding: const EdgeInsets.symmetric(vertical: 10),
                 ),
                 onChanged: (value) {
                   _debouncer.call(() {
@@ -179,6 +173,8 @@ class _TasksViewContentState extends State<_TasksViewContent> {
             if (_searchController.text.isNotEmpty)
               IconButton(
                 icon: const Icon(Icons.clear, size: 18),
+                constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+                padding: EdgeInsets.zero,
                 onPressed: () {
                   _searchController.clear();
                   _debouncer.cancel();
@@ -188,10 +184,36 @@ class _TasksViewContentState extends State<_TasksViewContent> {
                 },
               )
             else
-              // 搜索/筛选按钮
-              IconButton(
-                icon: const Icon(Icons.tune, size: 20),
-                onPressed: () => _showSortOptions(context),
+              // 筛选按钮（有激活筛选时显示小圆点）
+              BlocBuilder<TaskListBloc, TaskListState>(
+                buildWhen: (prev, curr) =>
+                    prev.hasActiveFilters != curr.hasActiveFilters,
+                builder: (context, state) {
+                  return Stack(
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.tune, size: 20),
+                        constraints:
+                            const BoxConstraints(minWidth: 36, minHeight: 36),
+                        padding: EdgeInsets.zero,
+                        onPressed: () => _showFilterPanel(context),
+                      ),
+                      if (state.hasActiveFilters)
+                        Positioned(
+                          right: 6,
+                          top: 6,
+                          child: Container(
+                            width: 8,
+                            height: 8,
+                            decoration: const BoxDecoration(
+                              color: AppColors.primary,
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                        ),
+                    ],
+                  );
+                },
               ),
           ],
         ),
@@ -406,59 +428,262 @@ class _TasksViewContentState extends State<_TasksViewContent> {
         );
   }
 
-  void _showSortOptions(BuildContext context) {
+  /// 城市列表（与后端 city_filter_utils.py 中 UK_MAIN_CITIES 保持一致）
+  static const List<String> _ukCities = [
+    'London', 'Edinburgh', 'Manchester', 'Birmingham', 'Glasgow',
+    'Bristol', 'Sheffield', 'Leeds', 'Nottingham', 'Newcastle',
+    'Southampton', 'Liverpool', 'Cardiff', 'Coventry', 'Exeter',
+    'Leicester', 'York', 'Aberdeen', 'Bath', 'Dundee',
+    'Reading', 'St Andrews', 'Belfast', 'Brighton', 'Durham',
+    'Norwich', 'Swansea', 'Loughborough', 'Lancaster', 'Warwick',
+    'Cambridge', 'Oxford',
+  ];
+
+  /// 中英文城市名映射（用于显示）
+  static const Map<String, String> _cityNameZh = {
+    'London': '伦敦', 'Edinburgh': '爱丁堡', 'Manchester': '曼彻斯特',
+    'Birmingham': '伯明翰', 'Glasgow': '格拉斯哥', 'Bristol': '布里斯托',
+    'Sheffield': '谢菲尔德', 'Leeds': '利兹', 'Nottingham': '诺丁汉',
+    'Newcastle': '纽卡斯尔', 'Southampton': '南安普顿', 'Liverpool': '利物浦',
+    'Cardiff': '卡迪夫', 'Coventry': '考文垂', 'Exeter': '埃克塞特',
+    'Leicester': '莱斯特', 'York': '约克', 'Aberdeen': '阿伯丁',
+    'Bath': '巴斯', 'Dundee': '邓迪', 'Reading': '雷丁',
+    'St Andrews': '圣安德鲁斯', 'Belfast': '贝尔法斯特', 'Brighton': '布莱顿',
+    'Durham': '达勒姆', 'Norwich': '诺里奇', 'Swansea': '斯旺西',
+    'Loughborough': '拉夫堡', 'Lancaster': '兰开斯特', 'Warwick': '华威',
+    'Cambridge': '剑桥', 'Oxford': '牛津',
+  };
+
+  void _showFilterPanel(BuildContext context) {
+    final bloc = context.read<TaskListBloc>();
+    final currentState = bloc.state;
+    // 临时变量，用于面板内选择（确认后才应用）
+    String tempSortBy = currentState.sortBy;
+    String tempCity = currentState.selectedCity;
+
     showModalBottomSheet(
       context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
       builder: (ctx) {
-        return SafeArea(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Padding(
-                padding: const EdgeInsets.all(16),
-                child: Text(
-                  ctx.l10n.taskSortBy,
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                  ),
+        return StatefulBuilder(
+          builder: (ctx, setModalState) {
+            final isDark = Theme.of(ctx).brightness == Brightness.dark;
+            final l10n = ctx.l10n;
+
+            return SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // 顶部拖拽条
+                    Center(
+                      child: Container(
+                        width: 36,
+                        height: 4,
+                        decoration: BoxDecoration(
+                          color: isDark
+                              ? AppColors.dividerDark
+                              : AppColors.dividerLight,
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+
+                    // 标题行：筛选 + 重置按钮
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          l10n.commonFilter,
+                          style: AppTypography.title2.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        TextButton(
+                          onPressed: () {
+                            setModalState(() {
+                              tempSortBy = 'latest';
+                              tempCity = 'all';
+                            });
+                          },
+                          child: Text(
+                            l10n.commonReset,
+                            style: TextStyle(
+                              color: AppColors.primary,
+                              fontSize: 14,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 20),
+
+                    // ── 排序方式 ──
+                    Text(
+                      l10n.taskSortBy,
+                      style: AppTypography.bodyBold,
+                    ),
+                    const SizedBox(height: 12),
+                    Wrap(
+                      spacing: 10,
+                      runSpacing: 10,
+                      children: [
+                        _buildFilterChip(
+                          label: l10n.taskSortLatest,
+                          isSelected: tempSortBy == 'latest',
+                          isDark: isDark,
+                          onTap: () => setModalState(() => tempSortBy = 'latest'),
+                        ),
+                        _buildFilterChip(
+                          label: l10n.taskSortHighestPay,
+                          isSelected: tempSortBy == 'reward',
+                          isDark: isDark,
+                          onTap: () => setModalState(() => tempSortBy = 'reward'),
+                        ),
+                        _buildFilterChip(
+                          label: l10n.taskSortNearDeadline,
+                          isSelected: tempSortBy == 'deadline',
+                          isDark: isDark,
+                          onTap: () => setModalState(() => tempSortBy = 'deadline'),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 24),
+
+                    // ── 城市筛选 ──
+                    Text(
+                      l10n.taskFilterCity,
+                      style: AppTypography.bodyBold,
+                    ),
+                    const SizedBox(height: 12),
+                    ConstrainedBox(
+                      constraints: const BoxConstraints(maxHeight: 220),
+                      child: SingleChildScrollView(
+                        child: Wrap(
+                          spacing: 10,
+                          runSpacing: 10,
+                          children: [
+                            _buildFilterChip(
+                              label: l10n.commonAll,
+                              isSelected: tempCity == 'all',
+                              isDark: isDark,
+                              onTap: () => setModalState(() => tempCity = 'all'),
+                            ),
+                            ..._ukCities.map((city) {
+                              final zhName = _cityNameZh[city];
+                              // 根据当前语言显示城市名
+                              final locale = Localizations.localeOf(ctx);
+                              final displayName = locale.languageCode == 'zh'
+                                  ? (zhName != null ? '$zhName' : city)
+                                  : city;
+                              return _buildFilterChip(
+                                label: displayName,
+                                isSelected: tempCity == city,
+                                isDark: isDark,
+                                onTap: () => setModalState(() => tempCity = city),
+                              );
+                            }),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+
+                    // ── 确认按钮 ──
+                    SizedBox(
+                      width: double.infinity,
+                      height: 48,
+                      child: ElevatedButton(
+                        onPressed: () {
+                          // 应用筛选
+                          if (tempSortBy != currentState.sortBy) {
+                            bloc.add(TaskListSortChanged(tempSortBy));
+                          }
+                          if (tempCity != currentState.selectedCity) {
+                            bloc.add(TaskListCityChanged(tempCity));
+                          }
+                          Navigator.pop(ctx);
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.primary,
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          elevation: 0,
+                        ),
+                        child: Text(
+                          l10n.commonConfirm,
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
-              ListTile(
-                leading: const Icon(Icons.access_time),
-                title: Text(ctx.l10n.taskSortLatest),
-                onTap: () {
-                  context
-                      .read<TaskListBloc>()
-                      .add(const TaskListSortChanged('latest'));
-                  Navigator.pop(ctx);
-                },
-              ),
-              ListTile(
-                leading: const Icon(Icons.attach_money),
-                title: Text(ctx.l10n.taskSortHighestPay),
-                onTap: () {
-                  context
-                      .read<TaskListBloc>()
-                      .add(const TaskListSortChanged('reward'));
-                  Navigator.pop(ctx);
-                },
-              ),
-              ListTile(
-                leading: const Icon(Icons.timer),
-                title: Text(ctx.l10n.taskSortNearDeadline),
-                onTap: () {
-                  context
-                      .read<TaskListBloc>()
-                      .add(const TaskListSortChanged('deadline'));
-                  Navigator.pop(ctx);
-                },
-              ),
-              const SizedBox(height: 8),
-            ],
-          ),
+            );
+          },
         );
       },
+    );
+  }
+
+  /// 构建筛选 Chip
+  Widget _buildFilterChip({
+    required String label,
+    required bool isSelected,
+    required bool isDark,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: () {
+        AppHaptics.selection();
+        onTap();
+      },
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        decoration: BoxDecoration(
+          gradient: isSelected
+              ? const LinearGradient(colors: AppColors.gradientPrimary)
+              : null,
+          color: isSelected
+              ? null
+              : (isDark
+                  ? AppColors.surface2(Brightness.dark)
+                  : AppColors.surface1(Brightness.light)),
+          borderRadius: BorderRadius.circular(20),
+          border: isSelected
+              ? null
+              : Border.all(
+                  color: (isDark
+                          ? AppColors.separatorDark
+                          : AppColors.separatorLight)
+                      .withValues(alpha: 0.3),
+                ),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            color: isSelected
+                ? Colors.white
+                : (isDark
+                    ? AppColors.textPrimaryDark
+                    : AppColors.textPrimaryLight),
+            fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+            fontSize: 13,
+          ),
+        ),
+      ),
     );
   }
 }
@@ -591,7 +816,7 @@ class _TaskGridCard extends StatelessWidget {
                 ConstrainedBox(
                   constraints: const BoxConstraints(maxWidth: 80),
                   child: Text(
-                    task.location ?? 'Online',
+                    task.blurredLocation ?? 'Online',
                     style: AppTypography.caption.copyWith(
                       color: Colors.white,
                       fontWeight: FontWeight.w600,

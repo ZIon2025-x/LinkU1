@@ -16,6 +16,7 @@ import '../../../core/widgets/error_state_view.dart';
 import '../../../core/widgets/async_image_view.dart';
 import '../../../core/widgets/full_screen_image_view.dart';
 import '../../../core/widgets/custom_share_panel.dart';
+import '../../../core/widgets/scroll_safe_tap.dart';
 import '../../../core/router/app_router.dart';
 import '../../../data/models/activity.dart';
 import '../../../data/models/task_expert.dart';
@@ -142,20 +143,7 @@ class _ActivityDetailViewContent extends StatelessWidget {
                 onTap: () {
                   context.safePush('/task-experts/${state.activityDetail!.expertId}');
                 },
-                child: Container(
-                  width: 32,
-                  height: 32,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: AppColors.primary.withValues(alpha: 0.15),
-                    border: Border.all(
-                      color: AppColors.primary.withValues(alpha: 0.3),
-                      width: 1.5,
-                    ),
-                  ),
-                  child: const Icon(Icons.person,
-                      size: 14, color: AppColors.primary),
-                ),
+                child: _buildExpertAvatarSmall(state.expert),
               ),
             ),
         ],
@@ -181,6 +169,42 @@ class _ActivityDetailViewContent extends StatelessWidget {
           child: Icon(icon, size: 18, color: Colors.white),
         ),
       ),
+    );
+  }
+
+  /// 右上角小头像 - 对标iOS expert avatar (32px)
+  Widget _buildExpertAvatarSmall(TaskExpert? expert) {
+    final avatarUrl = expert?.avatar;
+    if (avatarUrl != null && avatarUrl.isNotEmpty) {
+      return Container(
+        width: 32,
+        height: 32,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          border: Border.all(color: Colors.white.withValues(alpha: 0.6), width: 1.5),
+        ),
+        child: ClipOval(
+          child: AsyncImageView(
+            imageUrl: avatarUrl,
+            width: 32,
+            height: 32,
+            fit: BoxFit.cover,
+          ),
+        ),
+      );
+    }
+    return Container(
+      width: 32,
+      height: 32,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: AppColors.primary.withValues(alpha: 0.15),
+        border: Border.all(
+          color: AppColors.primary.withValues(alpha: 0.3),
+          width: 1.5,
+        ),
+      ),
+      child: const Icon(Icons.person, size: 14, color: AppColors.primary),
     );
   }
 
@@ -238,7 +262,16 @@ class _ActivityDetailViewContent extends StatelessWidget {
                 const SizedBox(height: AppSpacing.md),
 
                 // 发布者信息行 - 对标iOS PosterInfoRow
-                _PosterInfoRow(activity: activity, isDark: isDark),
+                BlocBuilder<ActivityBloc, ActivityState>(
+                  buildWhen: (prev, curr) => prev.expert != curr.expert,
+                  builder: (context, expertState) {
+                    return _PosterInfoRow(
+                      activity: activity,
+                      isDark: isDark,
+                      expert: expertState.expert,
+                    );
+                  },
+                ),
 
                 const SizedBox(height: 120),
               ],
@@ -483,7 +516,7 @@ class _ActivityImageCarouselState extends State<_ActivityImageCarousel> {
             onPageChanged: (index) =>
                 setState(() => _currentPage = index),
             itemBuilder: (context, index) {
-              return GestureDetector(
+              return ScrollSafeTap(
                 onTap: () {
                   Navigator.of(context).push(MaterialPageRoute(
                     builder: (_) => FullScreenImageView(
@@ -1142,7 +1175,7 @@ class _ActivityInfoGrid extends StatelessWidget {
 
   String _formatDateTime(DateTime? dateTime) {
     if (dateTime == null) return '';
-    return '${dateTime.year}-${dateTime.month.toString().padLeft(2, '0')}-${dateTime.day.toString().padLeft(2, '0')} ${dateTime.hour.toString().padLeft(2, '0')}:${dateTime.minute.toString().padLeft(2, '0')}';
+    return '${dateTime.year}-${dateTime.month.toString().padLeft(2, '0')}-${dateTime.day.toString().padLeft(2, '0')}';
   }
 }
 
@@ -1176,21 +1209,23 @@ class _InfoRow extends StatelessWidget {
             ),
           ),
           const SizedBox(width: AppSpacing.md),
+          // label 不压缩，固定宽度
           Text(
             label,
             style: AppTypography.body.copyWith(
               color: AppColors.textSecondaryLight,
             ),
           ),
-          const Spacer(),
-          Flexible(
+          const SizedBox(width: AppSpacing.md),
+          // value 占据剩余空间，右对齐，允许完整显示
+          Expanded(
             child: Text(
               value,
               style: AppTypography.body.copyWith(
                 fontWeight: FontWeight.w500,
                 color: valueColor ?? AppColors.textPrimaryLight,
               ),
-              maxLines: 1,
+              maxLines: 2,
               overflow: TextOverflow.ellipsis,
               textAlign: TextAlign.end,
             ),
@@ -1236,16 +1271,21 @@ class _PosterInfoRow extends StatelessWidget {
   const _PosterInfoRow({
     required this.activity,
     required this.isDark,
+    this.expert,
   });
 
   final Activity activity;
   final bool isDark;
+  final TaskExpert? expert;
 
   @override
   Widget build(BuildContext context) {
+    final avatarUrl = expert?.avatar;
+    final expertName = expert?.displayName;
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
-      child: GestureDetector(
+      child: ScrollSafeTap(
         onTap: () {
           AppHaptics.selection();
           if (activity.expertId.isNotEmpty) {
@@ -1269,48 +1309,31 @@ class _PosterInfoRow extends StatelessWidget {
           ),
           child: Row(
             children: [
-              // 头像
-              Container(
-                width: 52,
-                height: 52,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: const LinearGradient(
-                    colors: AppColors.gradientDeepBlue,
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: AppColors.primary.withValues(alpha: 0.2),
-                      blurRadius: 4,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
-                ),
-                child: const Icon(Icons.person, size: 22, color: Colors.white),
-              ),
+              // 达人头像 - 对标iOS AvatarView
+              _buildAvatar(avatarUrl),
               const SizedBox(width: AppSpacing.md),
-              // 文字
+              // 达人名字 + 查看资料 - 对标iOS expert.name
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      context.l10n.activityPublisher,
-                      style: AppTypography.caption.copyWith(
-                        color: isDark
-                            ? AppColors.textSecondaryDark
-                            : AppColors.textSecondaryLight,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      context.l10n.activityViewExpertProfileShort,
+                      expertName ?? context.l10n.activityPublisher,
                       style: AppTypography.bodyBold.copyWith(
                         color: isDark
                             ? AppColors.textPrimaryDark
                             : AppColors.textPrimaryLight,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      context.l10n.activityViewExpertProfileShort,
+                      style: AppTypography.caption.copyWith(
+                        color: isDark
+                            ? AppColors.textSecondaryDark
+                            : AppColors.textSecondaryLight,
                       ),
                     ),
                   ],
@@ -1337,6 +1360,56 @@ class _PosterInfoRow extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+
+  /// 达人头像：有真实头像显示真实头像，否则显示默认 icon
+  Widget _buildAvatar(String? avatarUrl) {
+    if (avatarUrl != null && avatarUrl.isNotEmpty) {
+      return Container(
+        width: 52,
+        height: 52,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          boxShadow: [
+            BoxShadow(
+              color: AppColors.primary.withValues(alpha: 0.15),
+              blurRadius: 4,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: ClipOval(
+          child: AsyncImageView(
+            imageUrl: avatarUrl,
+            width: 52,
+            height: 52,
+            fit: BoxFit.cover,
+          ),
+        ),
+      );
+    }
+
+    // 无头像时的默认样式
+    return Container(
+      width: 52,
+      height: 52,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        gradient: const LinearGradient(
+          colors: AppColors.gradientDeepBlue,
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.primary.withValues(alpha: 0.2),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: const Icon(Icons.person, size: 22, color: Colors.white),
     );
   }
 }
@@ -1882,116 +1955,117 @@ class _ActivityTimeSlotCard extends StatelessWidget {
     final canSelect = slot.canSelect;
     final opacity = canSelect ? 1.0 : 0.5;
 
-    return GestureDetector(
-      onTap: canSelect ? onSelect : null,
-      child: AnimatedOpacity(
-        opacity: opacity,
-        duration: const Duration(milliseconds: 200),
-        child: Container(
-          width: (MediaQuery.of(context).size.width - 48 - AppSpacing.sm) / 2,
-          padding: const EdgeInsets.all(10),
-          decoration: BoxDecoration(
+    final card = AnimatedOpacity(
+      opacity: opacity,
+      duration: const Duration(milliseconds: 200),
+      child: Container(
+        width: (MediaQuery.of(context).size.width - 48 - AppSpacing.sm) / 2,
+        padding: const EdgeInsets.all(10),
+        decoration: BoxDecoration(
+          color: isSelected
+              ? AppColors.primary.withValues(alpha: 0.1)
+              : slot.userHasApplied
+                  ? (isDark
+                      ? AppColors.textTertiaryDark.withValues(alpha: 0.1)
+                      : AppColors.textTertiaryLight.withValues(alpha: 0.08))
+                  : (isDark
+                      ? AppColors.cardBackgroundDark
+                      : AppColors.cardBackgroundLight),
+          borderRadius: AppRadius.allMedium,
+          border: Border.all(
             color: isSelected
-                ? AppColors.primary.withValues(alpha: 0.1)
+                ? AppColors.primary
                 : slot.userHasApplied
                     ? (isDark
-                        ? AppColors.textTertiaryDark.withValues(alpha: 0.1)
-                        : AppColors.textTertiaryLight.withValues(alpha: 0.08))
+                            ? AppColors.textTertiaryDark
+                            : AppColors.textTertiaryLight)
+                        .withValues(alpha: 0.3)
                     : (isDark
-                        ? AppColors.cardBackgroundDark
-                        : AppColors.cardBackgroundLight),
-            borderRadius: AppRadius.allMedium,
-            border: Border.all(
-              color: isSelected
-                  ? AppColors.primary
-                  : slot.userHasApplied
-                      ? (isDark
-                          ? AppColors.textTertiaryDark
-                          : AppColors.textTertiaryLight).withValues(alpha: 0.3)
-                      : (isDark
-                              ? AppColors.separatorDark
-                              : AppColors.separatorLight)
-                          .withValues(alpha: 0.3),
-              width: isSelected ? 2 : 1,
-            ),
+                            ? AppColors.separatorDark
+                            : AppColors.separatorLight)
+                        .withValues(alpha: 0.3),
+            width: isSelected ? 2 : 1,
           ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // 已申请标签
-              if (slot.userHasApplied) ...[
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: isDark
-                        ? AppColors.textTertiaryDark.withValues(alpha: 0.2)
-                        : AppColors.textTertiaryLight.withValues(alpha: 0.15),
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                  child: Text(
-                    context.l10n.serviceApplied,
-                    style: TextStyle(
-                      fontSize: 9,
-                      fontWeight: FontWeight.bold,
-                      color: isDark
-                          ? AppColors.textTertiaryDark
-                          : AppColors.textTertiaryLight,
-                    ),
-                  ),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // 已申请标签
+            if (slot.userHasApplied) ...[
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  color: isDark
+                      ? AppColors.textTertiaryDark.withValues(alpha: 0.2)
+                      : AppColors.textTertiaryLight.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(4),
                 ),
-                const SizedBox(height: 4),
-              ],
-              // 时间范围 - 对标iOS formatTimeRange
-              Text(
-                _formatTimeRange(slot.slotStartDatetime, slot.slotEndDatetime),
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.bold,
-                  color: isSelected
-                      ? AppColors.primary
-                      : slot.userHasApplied
-                          ? (isDark
-                              ? AppColors.textTertiaryDark
-                              : AppColors.textTertiaryLight)
-                          : (isDark
-                              ? AppColors.textPrimaryDark
-                              : AppColors.textPrimaryLight),
+                child: Text(
+                  context.l10n.serviceApplied,
+                  style: TextStyle(
+                    fontSize: 9,
+                    fontWeight: FontWeight.bold,
+                    color: isDark
+                        ? AppColors.textTertiaryDark
+                        : AppColors.textTertiaryLight,
+                  ),
                 ),
               ),
               const SizedBox(height: 4),
-              // 人数 - 对标iOS currentParticipants/maxParticipants
+            ],
+            // 时间范围 - 对标iOS formatTimeRange
+            Text(
+              _formatTimeRange(slot.slotStartDatetime, slot.slotEndDatetime),
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.bold,
+                color: isSelected
+                    ? AppColors.primary
+                    : slot.userHasApplied
+                        ? (isDark
+                            ? AppColors.textTertiaryDark
+                            : AppColors.textTertiaryLight)
+                        : (isDark
+                            ? AppColors.textPrimaryDark
+                            : AppColors.textPrimaryLight),
+              ),
+            ),
+            const SizedBox(height: 4),
+            // 人数 - 对标iOS currentParticipants/maxParticipants
+            Text(
+              context.l10n.activityPersonCount(
+                  slot.currentParticipants, slot.maxParticipants),
+              style: TextStyle(
+                fontSize: 11,
+                color: isSelected
+                    ? AppColors.primary
+                    : (isDark
+                        ? AppColors.textSecondaryDark
+                        : AppColors.textSecondaryLight),
+              ),
+            ),
+            // 价格
+            if (slot.displayPrice != null) ...[
+              const SizedBox(height: 4),
               Text(
-                context.l10n.activityPersonCount(
-                    slot.currentParticipants, slot.maxParticipants),
+                '£${slot.displayPrice!.toStringAsFixed(0)}',
                 style: TextStyle(
-                  fontSize: 11,
-                  color: isSelected
-                      ? AppColors.primary
-                      : (isDark
-                          ? AppColors.textSecondaryDark
-                          : AppColors.textSecondaryLight),
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                  color: slot.userHasApplied
+                      ? AppColors.textTertiaryLight
+                      : AppColors.primary,
                 ),
               ),
-              // 价格
-              if (slot.displayPrice != null) ...[
-                const SizedBox(height: 4),
-                Text(
-                  '£${slot.displayPrice!.toStringAsFixed(0)}',
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                    color: slot.userHasApplied
-                        ? AppColors.textTertiaryLight
-                        : AppColors.primary,
-                  ),
-                ),
-              ],
             ],
-          ),
+          ],
         ),
       ),
     );
+
+    if (canSelect) return ScrollSafeTap(onTap: onSelect, child: card);
+    return card;
   }
 
   /// 格式化时间范围 HH:mm-HH:mm - 对标iOS formatTimeRange

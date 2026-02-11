@@ -13,11 +13,14 @@ class MainActivity : FlutterActivity() {
 
     companion object {
         private const val LOCATION_PICKER_REQUEST = 2001
+        private const val STRIPE_CONNECT_REQUEST = 2002
     }
 
     private var pushChannel: MethodChannel? = null
     private var locationPickerChannel: MethodChannel? = null
+    private var stripeConnectChannel: MethodChannel? = null
     private var locationPickerResult: MethodChannel.Result? = null
+    private var stripeConnectResult: MethodChannel.Result? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -87,6 +90,34 @@ class MainActivity : FlutterActivity() {
             }
         }
 
+        // Stripe Connect MethodChannel
+        stripeConnectChannel = MethodChannel(
+            flutterEngine.dartExecutor.binaryMessenger,
+            "com.link2ur/stripe_connect"
+        )
+        stripeConnectChannel?.setMethodCallHandler { call, result ->
+            when (call.method) {
+                "openOnboarding" -> {
+                    stripeConnectResult = result
+                    val args = call.arguments as? Map<*, *>
+                    val publishableKey = args?.get("publishableKey") as? String
+                    val clientSecret = args?.get("clientSecret") as? String
+                    
+                    if (publishableKey != null && clientSecret != null) {
+                        val intent = Intent(this, StripeConnectOnboardingActivity::class.java).apply {
+                            putExtra("publishableKey", publishableKey)
+                            putExtra("clientSecret", clientSecret)
+                        }
+                        @Suppress("DEPRECATION")
+                        startActivityForResult(intent, STRIPE_CONNECT_REQUEST)
+                    } else {
+                        result.error("INVALID_ARGS", "Missing publishableKey or clientSecret", null)
+                    }
+                }
+                else -> result.notImplemented()
+            }
+        }
+
         // 设置 FCM Service 回调 → 转发到 Flutter
         LinkUFirebaseMessagingService.onTokenRefresh = { token ->
             runOnUiThread {
@@ -135,12 +166,26 @@ class MainActivity : FlutterActivity() {
             } else {
                 pendingResult?.success(null)
             }
+        } else if (requestCode == STRIPE_CONNECT_REQUEST) {
+            val pendingResult = stripeConnectResult
+            stripeConnectResult = null
+            if (resultCode == Activity.RESULT_OK) {
+                pendingResult?.success(mapOf("status" to "completed"))
+            } else {
+                val error = data?.getStringExtra("error")
+                if (error != null) {
+                    pendingResult?.error("ONBOARDING_FAILED", error, null)
+                } else {
+                    pendingResult?.success(mapOf("status" to "cancelled"))
+                }
+            }
         }
     }
 
     override fun onDestroy() {
         // 清除回调引用，避免内存泄漏
         locationPickerResult = null
+        stripeConnectResult = null
         LinkUFirebaseMessagingService.onTokenRefresh = null
         LinkUFirebaseMessagingService.onRemoteMessage = null
         super.onDestroy()

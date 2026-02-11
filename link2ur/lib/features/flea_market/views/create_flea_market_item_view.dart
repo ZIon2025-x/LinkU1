@@ -9,6 +9,7 @@ import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_radius.dart';
 import '../../../core/utils/l10n_extension.dart';
 import '../../../core/widgets/buttons.dart';
+import '../../../core/widgets/location_picker.dart';
 import '../../../data/repositories/flea_market_repository.dart';
 import '../../../data/models/flea_market.dart';
 import '../bloc/flea_market_bloc.dart';
@@ -42,8 +43,10 @@ class _CreateFleaMarketItemContentState
   final _titleController = TextEditingController();
   final _descriptionController = TextEditingController();
   final _priceController = TextEditingController();
-  final _locationController = TextEditingController();
 
+  String? _location;
+  double? _latitude;
+  double? _longitude;
   String? _selectedCategory;
   final List<File> _selectedImages = [];
   final _imagePicker = ImagePicker();
@@ -62,7 +65,6 @@ class _CreateFleaMarketItemContentState
     _titleController.dispose();
     _descriptionController.dispose();
     _priceController.dispose();
-    _locationController.dispose();
     super.dispose();
   }
 
@@ -122,9 +124,9 @@ class _CreateFleaMarketItemContentState
           : _descriptionController.text.trim(),
       price: price,
       category: _selectedCategory,
-      location: _locationController.text.trim().isEmpty
-          ? null
-          : _locationController.text.trim(),
+      location: _location,
+      latitude: _latitude,
+      longitude: _longitude,
       // 图片URL需要先上传，这里传空列表，实际项目中应先上传图片获取URL
       images: [],
     );
@@ -278,16 +280,23 @@ class _CreateFleaMarketItemContentState
                 AppSpacing.vMd,
 
                 // 位置
-                TextFormField(
-                  controller: _locationController,
-                  decoration: InputDecoration(
-                    labelText: context.l10n.fleaMarketLocationOptional,
-                    hintText: context.l10n.fleaMarketLocationHint,
-                    prefixIcon: const Icon(Icons.location_on_outlined),
-                    border: OutlineInputBorder(
-                      borderRadius: AppRadius.allMedium,
-                    ),
-                  ),
+                Text(
+                  context.l10n.fleaMarketLocationOptional,
+                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                ),
+                AppSpacing.vSm,
+                LocationInputField(
+                  hintText: context.l10n.fleaMarketLocationHint,
+                  onChanged: (address) {
+                    _location = address.isNotEmpty ? address : null;
+                    _latitude = null;
+                    _longitude = null;
+                  },
+                  onLocationPicked: (address, lat, lng) {
+                    _location = address.isNotEmpty ? address : null;
+                    _latitude = lat;
+                    _longitude = lng;
+                  },
                 ),
                 AppSpacing.vXl,
 

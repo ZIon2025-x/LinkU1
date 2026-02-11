@@ -34,14 +34,18 @@ class HomeLoadNearby extends HomeEvent {
     required this.latitude,
     required this.longitude,
     this.loadMore = false,
+    this.city,
   });
 
   final double latitude;
   final double longitude;
   final bool loadMore;
 
+  /// 反向地理编码得到的城市名（如 "Birmingham"），用于后端同城过滤
+  final String? city;
+
   @override
-  List<Object?> get props => [latitude, longitude, loadMore];
+  List<Object?> get props => [latitude, longitude, loadMore, city];
 }
 
 /// 切换Tab

@@ -144,11 +144,13 @@ class _ForumPostListViewContentState
                         const SizedBox(height: AppSpacing.md),
                     itemBuilder: (context, index) {
                       final post = posts[index];
-                      return _PostCard(
-                        key: ValueKey(post.id),
-                        post: post,
-                        onTap: () =>
-                            context.safePush('/forum/posts/${post.id}'),
+                      return RepaintBoundary(
+                        child: _PostCard(
+                          key: ValueKey(post.id),
+                          post: post,
+                          onTap: () =>
+                              context.safePush('/forum/posts/${post.id}'),
+                        ),
                       );
                     },
                   ),

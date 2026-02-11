@@ -82,6 +82,9 @@ class _MessageContent extends StatelessWidget {
     final horizontalPadding = isDesktop ? 40.0 : AppSpacing.md;
 
     return BlocBuilder<MessageBloc, MessageState>(
+      buildWhen: (previous, current) =>
+          previous.displayTaskChats != current.displayTaskChats ||
+          previous.pinnedTaskIds != current.pinnedTaskIds,
       builder: (context, state) {
         final displayChats = state.displayTaskChats;
         final pinnedIds = state.pinnedTaskIds;
@@ -217,6 +220,8 @@ class _QuickActionBar extends StatelessWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return BlocBuilder<NotificationBloc, NotificationState>(
+      buildWhen: (previous, current) =>
+          previous.unreadCount != current.unreadCount,
       builder: (context, notifState) {
         final systemUnread = notifState.unreadCount.count;
         final interactionUnread = notifState.unreadCount.forumCount;
@@ -295,7 +300,7 @@ class _QuickActionButton extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: SizedBox(
-        width: 72,
+        width: 80,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -304,8 +309,8 @@ class _QuickActionButton extends StatelessWidget {
               clipBehavior: Clip.none,
               children: [
                 Container(
-                  width: 52,
-                  height: 52,
+                  width: 60,
+                  height: 60,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     gradient: LinearGradient(
@@ -324,7 +329,7 @@ class _QuickActionButton extends StatelessWidget {
                       ),
                     ],
                   ),
-                  child: Icon(icon, color: Colors.white, size: 24),
+                  child: Icon(icon, color: Colors.white, size: 28),
                 ),
                 // 未读计数徽章
                 if (unreadCount > 0)
@@ -372,12 +377,12 @@ class _QuickActionButton extends StatelessWidget {
                   ),
               ],
             ),
-            const SizedBox(height: 6),
+            const SizedBox(height: 8),
             // 标签文字
             Text(
               label,
               style: TextStyle(
-                fontSize: 11,
+                fontSize: 12,
                 color: isDark
                     ? AppColors.textSecondaryDark
                     : AppColors.textSecondaryLight,
@@ -519,7 +524,14 @@ class _TaskChatItem extends StatelessWidget {
     return GestureDetector(
       onTap: () {
         AppHaptics.selection();
-        context.push('/task-chat/${taskChat.taskId}');
+        // 先导航，再异步清零未读计数，避免用户看到数字消失的过渡
+        context.push('/task-chat/${taskChat.taskId}').then((_) {
+          if (context.mounted && taskChat.unreadCount > 0) {
+            context
+                .read<MessageBloc>()
+                .add(MessageMarkTaskChatRead(taskChat.taskId));
+          }
+        });
       },
       child: Container(
         margin: const EdgeInsets.only(bottom: AppSpacing.sm),

@@ -1143,7 +1143,7 @@ class _HorizontalTaskCard extends StatelessWidget {
                               constraints:
                                   const BoxConstraints(maxWidth: 80),
                               child: Text(
-                                task.location!,
+                                task.blurredLocation ?? task.location!,
                                 style: const TextStyle(
                                   fontSize: 11,
                                   color: Colors.white,
@@ -1349,24 +1349,29 @@ class _NearbyTab extends StatefulWidget {
 
 class _NearbyTabState extends State<_NearbyTab> {
   bool _locationLoading = false;
+  String? _city; // 反向地理编码得到的城市名
+
+  // 默认坐标（伦敦）
+  static const _defaultLat = 51.5074;
+  static const _defaultLng = -0.1278;
 
   @override
   void initState() {
     super.initState();
+    // 如果已有附近任务数据，跳过重新定位
+    final homeState = context.read<HomeBloc>().state;
+    if (homeState.nearbyTasks.isNotEmpty) return;
     _loadLocation();
   }
 
   Future<void> _loadLocation() async {
-    setState(() {
-      _locationLoading = true;
-    });
+    setState(() => _locationLoading = true);
 
     try {
       // 检查位置服务是否启用
-      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      final serviceEnabled = await Geolocator.isLocationServiceEnabled();
       if (!serviceEnabled) {
-        // 位置服务未开启，使用默认坐标（伦敦）
-        _loadWithCoordinates(51.5074, -0.1278);
+        _loadWithCoordinates(_defaultLat, _defaultLng);
         return;
       }
 
@@ -1375,35 +1380,78 @@ class _NearbyTabState extends State<_NearbyTab> {
       if (permission == LocationPermission.denied) {
         permission = await Geolocator.requestPermission();
         if (permission == LocationPermission.denied) {
-          // 权限被拒绝，使用默认坐标
-          _loadWithCoordinates(51.5074, -0.1278);
+          _loadWithCoordinates(_defaultLat, _defaultLng);
           return;
         }
       }
 
       if (permission == LocationPermission.deniedForever) {
-        // 永久拒绝，使用默认坐标
-        _loadWithCoordinates(51.5074, -0.1278);
+        _loadWithCoordinates(_defaultLat, _defaultLng);
         return;
       }
 
-      // 获取位置
+      // 优先使用上次已知位置（几乎瞬间返回），快速展示数据
+      final lastKnown = await Geolocator.getLastKnownPosition();
+      if (lastKnown != null) {
+        await _resolveCity(lastKnown.latitude, lastKnown.longitude);
+        _loadWithCoordinates(lastKnown.latitude, lastKnown.longitude);
+        // 后台获取精确位置，如果差异较大则刷新
+        _refreshWithCurrentPosition(lastKnown.latitude, lastKnown.longitude);
+        return;
+      }
+
+      // 没有缓存位置，必须等待 getCurrentPosition
       final position = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.medium,
+        desiredAccuracy: LocationAccuracy.low, // low 精度更快
       ).timeout(
-        const Duration(seconds: 10),
-        onTimeout: () async {
-          // 超时使用最后已知位置
-          final last = await Geolocator.getLastKnownPosition();
-          if (last != null) return last;
-          throw Exception('Location timeout');
-        },
+        const Duration(seconds: 5),
+        onTimeout: () => throw Exception('Location timeout'),
       );
 
+      await _resolveCity(position.latitude, position.longitude);
       _loadWithCoordinates(position.latitude, position.longitude);
     } catch (e) {
-      // 获取位置失败，使用默认坐标
-      _loadWithCoordinates(51.5074, -0.1278);
+      _loadWithCoordinates(_defaultLat, _defaultLng);
+    }
+  }
+
+  /// 反向地理编码获取城市名，用于同城过滤
+  Future<void> _resolveCity(double lat, double lng) async {
+    try {
+      final placemarks = await placemarkFromCoordinates(lat, lng);
+      if (placemarks.isNotEmpty) {
+        // locality 通常是城市名（如 "Birmingham"、"London"）
+        _city = placemarks.first.locality;
+      }
+    } catch (_) {
+      // 反向编码失败不影响加载，只是不做同城过滤
+    }
+  }
+
+  /// 后台获取精确位置，如果与快速位置差异 > 500m 则刷新列表
+  Future<void> _refreshWithCurrentPosition(double quickLat, double quickLng) async {
+    try {
+      final position = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.medium,
+      ).timeout(const Duration(seconds: 5), onTimeout: () => throw Exception('timeout'));
+
+      if (!mounted) return;
+
+      // 计算距离差异，超过 500m 才刷新
+      final distance = Geolocator.distanceBetween(
+        quickLat, quickLng, position.latitude, position.longitude,
+      );
+      if (distance > 500) {
+        await _resolveCity(position.latitude, position.longitude);
+        if (!mounted) return;
+        context.read<HomeBloc>().add(HomeLoadNearby(
+              latitude: position.latitude,
+              longitude: position.longitude,
+              city: _city,
+            ));
+      }
+    } catch (_) {
+      // 精确定位失败不影响已加载的数据
     }
   }
 
@@ -1413,6 +1461,7 @@ class _NearbyTabState extends State<_NearbyTab> {
     context.read<HomeBloc>().add(HomeLoadNearby(
           latitude: lat,
           longitude: lng,
+          city: _city,
         ));
   }
 
@@ -1532,83 +1581,146 @@ class _ExpertsTabContentState extends State<_ExpertsTabContent> {
 
     return Column(
       children: [
-        // 内联搜索框：直接输入，下方实时过滤
+        // 搜索框 + 筛选按钮
         Padding(
           padding: const EdgeInsets.symmetric(
             horizontal: AppSpacing.md,
             vertical: AppSpacing.sm,
           ),
-          child: TextField(
-            controller: _searchController,
-            onChanged: _onSearchChanged,
-            style: AppTypography.subheadline.copyWith(
-              color: isDark
-                  ? AppColors.textPrimaryDark
-                  : AppColors.textPrimaryLight,
-            ),
-            decoration: InputDecoration(
-              hintText: context.l10n.homeSearchExperts,
-              hintStyle: AppTypography.subheadline.copyWith(
-                color: isDark
-                    ? AppColors.textTertiaryDark
-                    : AppColors.textTertiaryLight,
-              ),
-              prefixIcon: Icon(
-                Icons.search,
-                color: isDark
-                    ? AppColors.textTertiaryDark
-                    : AppColors.textTertiaryLight,
-                size: 20,
-              ),
-              suffixIcon: ValueListenableBuilder<TextEditingValue>(
-                valueListenable: _searchController,
-                builder: (context, value, _) {
-                  if (value.text.isEmpty) return const SizedBox.shrink();
-                  return GestureDetector(
-                    onTap: () {
-                      _searchController.clear();
-                      _onSearchChanged('');
-                    },
-                    child: Icon(
-                      Icons.close,
-                      size: 18,
+          child: Row(
+            children: [
+              // 搜索框
+              Expanded(
+                child: TextField(
+                  controller: _searchController,
+                  onChanged: _onSearchChanged,
+                  style: AppTypography.subheadline.copyWith(
+                    color: isDark
+                        ? AppColors.textPrimaryDark
+                        : AppColors.textPrimaryLight,
+                  ),
+                  decoration: InputDecoration(
+                    hintText: context.l10n.homeSearchExperts,
+                    hintStyle: AppTypography.subheadline.copyWith(
                       color: isDark
                           ? AppColors.textTertiaryDark
                           : AppColors.textTertiaryLight,
                     ),
+                    prefixIcon: Icon(
+                      Icons.search,
+                      color: isDark
+                          ? AppColors.textTertiaryDark
+                          : AppColors.textTertiaryLight,
+                      size: 20,
+                    ),
+                    suffixIcon: ValueListenableBuilder<TextEditingValue>(
+                      valueListenable: _searchController,
+                      builder: (context, value, _) {
+                        if (value.text.isEmpty) return const SizedBox.shrink();
+                        return GestureDetector(
+                          onTap: () {
+                            _searchController.clear();
+                            _onSearchChanged('');
+                          },
+                          child: Icon(
+                            Icons.close,
+                            size: 18,
+                            color: isDark
+                                ? AppColors.textTertiaryDark
+                                : AppColors.textTertiaryLight,
+                          ),
+                        );
+                      },
+                    ),
+                    filled: true,
+                    fillColor: isDark
+                        ? AppColors.cardBackgroundDark
+                        : AppColors.cardBackgroundLight,
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.md,
+                      vertical: AppSpacing.sm,
+                    ),
+                    border: OutlineInputBorder(
+                      borderRadius: AppRadius.allMedium,
+                      borderSide: BorderSide(
+                        color: (isDark ? AppColors.dividerDark : AppColors.dividerLight)
+                            .withValues(alpha: 0.3),
+                      ),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: AppRadius.allMedium,
+                      borderSide: BorderSide(
+                        color: (isDark ? AppColors.dividerDark : AppColors.dividerLight)
+                            .withValues(alpha: 0.3),
+                      ),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: AppRadius.allMedium,
+                      borderSide: const BorderSide(
+                        color: AppColors.primary,
+                        width: 1,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              // 筛选按钮
+              BlocBuilder<TaskExpertBloc, TaskExpertState>(
+                buildWhen: (prev, curr) =>
+                    prev.hasActiveFilters != curr.hasActiveFilters,
+                builder: (context, state) {
+                  return GestureDetector(
+                    onTap: () => _showFilterPanel(context),
+                    child: Container(
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        color: isDark
+                            ? AppColors.cardBackgroundDark
+                            : AppColors.cardBackgroundLight,
+                        borderRadius: AppRadius.allMedium,
+                        border: Border.all(
+                          color: state.hasActiveFilters
+                              ? AppColors.primary
+                              : (isDark
+                                  ? AppColors.dividerDark
+                                  : AppColors.dividerLight)
+                                  .withValues(alpha: 0.3),
+                        ),
+                      ),
+                      child: Stack(
+                        alignment: Alignment.center,
+                        children: [
+                          Icon(
+                            Icons.tune,
+                            size: 20,
+                            color: state.hasActiveFilters
+                                ? AppColors.primary
+                                : (isDark
+                                    ? AppColors.textSecondaryDark
+                                    : AppColors.textSecondaryLight),
+                          ),
+                          if (state.hasActiveFilters)
+                            Positioned(
+                              right: 6,
+                              top: 6,
+                              child: Container(
+                                width: 7,
+                                height: 7,
+                                decoration: const BoxDecoration(
+                                  color: AppColors.primary,
+                                  shape: BoxShape.circle,
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
                   );
                 },
               ),
-              filled: true,
-              fillColor: isDark
-                  ? AppColors.cardBackgroundDark
-                  : AppColors.cardBackgroundLight,
-              contentPadding: const EdgeInsets.symmetric(
-                horizontal: AppSpacing.md,
-                vertical: AppSpacing.sm,
-              ),
-              border: OutlineInputBorder(
-                borderRadius: AppRadius.allMedium,
-                borderSide: BorderSide(
-                  color: (isDark ? AppColors.dividerDark : AppColors.dividerLight)
-                      .withValues(alpha: 0.3),
-                ),
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: AppRadius.allMedium,
-                borderSide: BorderSide(
-                  color: (isDark ? AppColors.dividerDark : AppColors.dividerLight)
-                      .withValues(alpha: 0.3),
-                ),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: AppRadius.allMedium,
-                borderSide: const BorderSide(
-                  color: AppColors.primary,
-                  width: 1,
-                ),
-              ),
-            ),
+            ],
           ),
         ),
 
@@ -1674,6 +1786,227 @@ class _ExpertsTabContentState extends State<_ExpertsTabContent> {
           ),
         ),
       ],
+    );
+  }
+
+  // ==================== 达人类型 & 城市常量 ====================
+
+  static const List<String> _expertCategoryKeys = [
+    'all', 'programming', 'translation', 'tutoring', 'food',
+    'beverage', 'cake', 'errand_transport', 'social_entertainment',
+    'beauty_skincare', 'handicraft',
+  ];
+
+  static const List<String> _ukCities = [
+    'London', 'Edinburgh', 'Manchester', 'Birmingham', 'Glasgow',
+    'Bristol', 'Sheffield', 'Leeds', 'Nottingham', 'Newcastle',
+    'Southampton', 'Liverpool', 'Cardiff', 'Coventry', 'Exeter',
+    'Leicester', 'York', 'Aberdeen', 'Bath', 'Dundee',
+    'Reading', 'St Andrews', 'Belfast', 'Brighton', 'Durham',
+    'Norwich', 'Swansea', 'Loughborough', 'Lancaster', 'Warwick',
+    'Cambridge', 'Oxford',
+  ];
+
+  static const Map<String, String> _cityNameZh = {
+    'London': '伦敦', 'Edinburgh': '爱丁堡', 'Manchester': '曼彻斯特',
+    'Birmingham': '伯明翰', 'Glasgow': '格拉斯哥', 'Bristol': '布里斯托',
+    'Sheffield': '谢菲尔德', 'Leeds': '利兹', 'Nottingham': '诺丁汉',
+    'Newcastle': '纽卡斯尔', 'Southampton': '南安普顿', 'Liverpool': '利物浦',
+    'Cardiff': '卡迪夫', 'Coventry': '考文垂', 'Exeter': '埃克塞特',
+    'Leicester': '莱斯特', 'York': '约克', 'Aberdeen': '阿伯丁',
+    'Bath': '巴斯', 'Dundee': '邓迪', 'Reading': '雷丁',
+    'St Andrews': '圣安德鲁斯', 'Belfast': '贝尔法斯特', 'Brighton': '布莱顿',
+    'Durham': '达勒姆', 'Norwich': '诺里奇', 'Swansea': '斯旺西',
+    'Loughborough': '拉夫堡', 'Lancaster': '兰开斯特', 'Warwick': '华威',
+    'Cambridge': '剑桥', 'Oxford': '牛津',
+  };
+
+  String _categoryLabel(BuildContext context, String key) {
+    final l10n = context.l10n;
+    switch (key) {
+      case 'all': return l10n.expertCategoryAll;
+      case 'programming': return l10n.expertCategoryProgramming;
+      case 'translation': return l10n.expertCategoryTranslation;
+      case 'tutoring': return l10n.expertCategoryTutoring;
+      case 'food': return l10n.expertCategoryFood;
+      case 'beverage': return l10n.expertCategoryBeverage;
+      case 'cake': return l10n.expertCategoryCake;
+      case 'errand_transport': return l10n.expertCategoryErrandTransport;
+      case 'social_entertainment': return l10n.expertCategorySocialEntertainment;
+      case 'beauty_skincare': return l10n.expertCategoryBeautySkincare;
+      case 'handicraft': return l10n.expertCategoryHandicraft;
+      default: return key;
+    }
+  }
+
+  void _showFilterPanel(BuildContext context) {
+    final bloc = context.read<TaskExpertBloc>();
+    final currentState = bloc.state;
+    String tempCategory = currentState.selectedCategory;
+    String tempCity = currentState.selectedCity;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (ctx, setModalState) {
+            final isDark = Theme.of(ctx).brightness == Brightness.dark;
+            final l10n = ctx.l10n;
+
+            return SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // 拖拽条
+                    Center(
+                      child: Container(
+                        width: 36, height: 4,
+                        decoration: BoxDecoration(
+                          color: isDark ? AppColors.dividerDark : AppColors.dividerLight,
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+
+                    // 标题 + 重置
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(l10n.commonFilter,
+                          style: AppTypography.title2.copyWith(fontWeight: FontWeight.bold)),
+                        TextButton(
+                          onPressed: () => setModalState(() {
+                            tempCategory = 'all';
+                            tempCity = 'all';
+                          }),
+                          child: Text(l10n.commonReset,
+                            style: TextStyle(color: AppColors.primary, fontSize: 14)),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 20),
+
+                    // ── 达人类型 ──
+                    Text(l10n.taskExpertCategory, style: AppTypography.bodyBold),
+                    const SizedBox(height: 12),
+                    Wrap(
+                      spacing: 10, runSpacing: 10,
+                      children: _expertCategoryKeys.map((key) {
+                        return _buildChip(
+                          label: _categoryLabel(ctx, key),
+                          isSelected: tempCategory == key,
+                          isDark: isDark,
+                          onTap: () => setModalState(() => tempCategory = key),
+                        );
+                      }).toList(),
+                    ),
+                    const SizedBox(height: 24),
+
+                    // ── 城市 ──
+                    Text(l10n.taskFilterCity, style: AppTypography.bodyBold),
+                    const SizedBox(height: 12),
+                    ConstrainedBox(
+                      constraints: const BoxConstraints(maxHeight: 220),
+                      child: SingleChildScrollView(
+                        child: Wrap(
+                          spacing: 10, runSpacing: 10,
+                          children: [
+                            _buildChip(
+                              label: l10n.commonAll,
+                              isSelected: tempCity == 'all',
+                              isDark: isDark,
+                              onTap: () => setModalState(() => tempCity = 'all'),
+                            ),
+                            ..._ukCities.map((city) {
+                              final locale = Localizations.localeOf(ctx);
+                              final display = locale.languageCode == 'zh'
+                                  ? (_cityNameZh[city] ?? city)
+                                  : city;
+                              return _buildChip(
+                                label: display,
+                                isSelected: tempCity == city,
+                                isDark: isDark,
+                                onTap: () => setModalState(() => tempCity = city),
+                              );
+                            }),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+
+                    // ── 确认 ──
+                    SizedBox(
+                      width: double.infinity, height: 48,
+                      child: ElevatedButton(
+                        onPressed: () {
+                          if (tempCategory != currentState.selectedCategory ||
+                              tempCity != currentState.selectedCity) {
+                            bloc.add(TaskExpertFilterChanged(
+                              category: tempCategory,
+                              city: tempCity,
+                            ));
+                          }
+                          Navigator.pop(ctx);
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.primary,
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12)),
+                          elevation: 0,
+                        ),
+                        child: Text(l10n.commonConfirm,
+                          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Widget _buildChip({
+    required String label,
+    required bool isSelected,
+    required bool isDark,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: () { AppHaptics.selection(); onTap(); },
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        decoration: BoxDecoration(
+          gradient: isSelected
+              ? const LinearGradient(colors: AppColors.gradientPrimary) : null,
+          color: isSelected ? null
+              : (isDark ? AppColors.surface2(Brightness.dark) : AppColors.surface1(Brightness.light)),
+          borderRadius: BorderRadius.circular(20),
+          border: isSelected ? null : Border.all(
+            color: (isDark ? AppColors.separatorDark : AppColors.separatorLight)
+                .withValues(alpha: 0.3)),
+        ),
+        child: Text(label,
+          style: TextStyle(
+            color: isSelected ? Colors.white
+                : (isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight),
+            fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+            fontSize: 13,
+          )),
+      ),
     );
   }
 }
@@ -1998,7 +2331,7 @@ class _TaskCard extends StatelessWidget {
                               constraints:
                                   const BoxConstraints(maxWidth: 140),
                               child: Text(
-                                task.location!,
+                                task.blurredLocation ?? task.location!,
                                 style: const TextStyle(
                                   fontSize: 11,
                                   color: Colors.white,
@@ -2006,6 +2339,40 @@ class _TaskCard extends StatelessWidget {
                                 ),
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+
+                  // 右上: 模糊距离标签
+                  if (task.blurredDistanceText != null)
+                    Positioned(
+                      top: 8,
+                      right: 8,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: AppColors.primary.withValues(alpha: 0.85),
+                          borderRadius: AppRadius.allPill,
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(
+                              Icons.near_me,
+                              size: 11,
+                              color: Colors.white,
+                            ),
+                            const SizedBox(width: 3),
+                            Text(
+                              task.blurredDistanceText!,
+                              style: const TextStyle(
+                                fontSize: 11,
+                                color: Colors.white,
+                                fontWeight: FontWeight.w700,
                               ),
                             ),
                           ],

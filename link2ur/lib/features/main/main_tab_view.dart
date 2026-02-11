@@ -128,6 +128,10 @@ class _MainTabViewState extends State<MainTabView> {
       _messageBloc = MessageBloc(
         messageRepository: context.read<MessageRepository>(),
       );
+      // 已登录时立即加载聊天列表，以便底部 tab 显示未读计数
+      if (authState.isAuthenticated) {
+        _messageBloc.add(const MessageLoadTaskChats());
+      }
       _blocsInitialized = true;
     }
   }
@@ -253,13 +257,21 @@ class _MainTabViewState extends State<MainTabView> {
         BlocProvider<LeaderboardBloc>.value(value: _leaderboardBloc),
         BlocProvider<MessageBloc>.value(value: _messageBloc),
       ],
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          if (constraints.maxWidth >= Breakpoints.mobile) {
-            return _buildDesktopLayout(context);
-          }
-          return _buildMobileLayout(context);
+      child: BlocListener<AuthBloc, AuthState>(
+        listenWhen: (prev, curr) =>
+            !prev.isAuthenticated && curr.isAuthenticated,
+        listener: (context, state) {
+          // 登录成功后立即加载聊天列表，以便底部 tab 显示未读计数
+          _messageBloc.add(const MessageLoadTaskChats());
         },
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            if (constraints.maxWidth >= Breakpoints.mobile) {
+              return _buildDesktopLayout(context);
+            }
+            return _buildMobileLayout(context);
+          },
+        ),
       ),
     );
   }
@@ -700,7 +712,8 @@ class _TabItem {
   final bool isCenter;
 }
 
-/// 通知 Tab 图标 - 提取为独立组件，隔离 BlocBuilder 重建范围
+/// 消息 Tab 图标 - 汇总所有未读数（通知 + 聊天）
+/// 提取为独立组件，隔离 BlocBuilder 重建范围
 class _NotificationTabIcon extends StatelessWidget {
   const _NotificationTabIcon({
     required this.tab,
@@ -716,16 +729,21 @@ class _NotificationTabIcon extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<NotificationBloc, NotificationState>(
-      builder: (context, notifState) {
-        final unreadCount = notifState.unreadCount.totalCount;
-        return IconWithBadge(
-          icon: isSelected ? tab.activeIcon : tab.icon,
-          count: unreadCount,
-          iconSize: 24,
-          iconColor: isSelected ? selectedColor : unselectedColor,
-        );
-      },
+    // 监听通知未读数
+    final notifUnread = context.select<NotificationBloc, int>(
+      (bloc) => bloc.state.unreadCount.totalCount,
+    );
+    // 监听聊天未读数
+    final chatUnread = context.select<MessageBloc, int>(
+      (bloc) => bloc.state.totalUnread,
+    );
+    final totalUnread = notifUnread + chatUnread;
+
+    return IconWithBadge(
+      icon: isSelected ? tab.activeIcon : tab.icon,
+      count: totalUnread,
+      iconSize: 24,
+      iconColor: isSelected ? selectedColor : unselectedColor,
     );
   }
 }

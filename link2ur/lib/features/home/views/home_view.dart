@@ -20,6 +20,7 @@ import '../../../core/widgets/skeleton_view.dart';
 import '../../../core/widgets/error_state_view.dart';
 import '../../../core/widgets/empty_state_view.dart';
 import '../../../core/widgets/loading_view.dart';
+import 'package:geocoding/geocoding.dart';
 import 'package:geolocator/geolocator.dart';
 
 import '../../../core/widgets/content_constraint.dart';

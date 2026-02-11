@@ -1,5 +1,8 @@
 import 'dart:async';
+import 'dart:collection';
+import 'dart:io';
 import 'package:dio/dio.dart';
+import 'package:dio/io.dart';
 
 import '../../core/config/app_config.dart';
 import '../../core/config/api_config.dart';
@@ -14,6 +17,7 @@ import 'storage_service.dart';
 class ApiService {
   ApiService() {
     _dio = Dio(_baseOptions);
+    _configureHttpClient();
     _setupInterceptors();
   }
 
@@ -38,6 +42,22 @@ class ApiService {
         headers: ApiConfig.defaultHeaders,
       );
 
+  /// 配置 HTTP 客户端（连接池、keep-alive）
+  void _configureHttpClient() {
+    _dio.httpClientAdapter = IOHttpClientAdapter(
+      createHttpClient: () {
+        final client = HttpClient()
+          ..maxConnectionsPerHost = 6 // 每个 host 最多 6 个并发连接
+          ..idleTimeout = const Duration(seconds: 15) // 空闲连接 15s 后关闭
+          ..connectionTimeout = const Duration(seconds: 10); // 连接超时 10s
+        return client;
+      },
+    );
+  }
+
+  /// 内存缓存实例（GET 请求短时缓存）
+  final _cache = _MemoryCache(maxEntries: 100);
+
   /// 配置拦截器
   void _setupInterceptors() {
     _dio.interceptors.add(
@@ -47,6 +67,9 @@ class ApiService {
         onError: _onError,
       ),
     );
+
+    // GET 请求内存缓存拦截器
+    _dio.interceptors.add(_CacheInterceptor(cache: _cache));
 
     // 自动重试拦截器
     _dio.interceptors.add(_RetryInterceptor(
@@ -104,11 +127,7 @@ class ApiService {
     final language = StorageService.instance.getLanguage();
     options.headers['Accept-Language'] = language ?? 'zh-CN';
 
-    AppLogger.network(
-      options.method,
-      options.uri.toString(),
-    );
-
+    // 网络日志由 NetworkMonitorInterceptor 统一记录，此处不再重复打印
     handler.next(options);
   }
 
@@ -117,11 +136,7 @@ class ApiService {
     Response response,
     ResponseInterceptorHandler handler,
   ) {
-    AppLogger.network(
-      response.requestOptions.method,
-      response.requestOptions.uri.toString(),
-      statusCode: response.statusCode,
-    );
+    // 网络日志由 NetworkMonitorInterceptor 统一记录，此处不再重复打印
     handler.next(response);
   }
 
@@ -142,6 +157,13 @@ class ApiService {
       if (error.requestOptions.path.contains('/api/secure-auth/refresh')) {
         AppLogger.warning('Refresh token expired or invalid');
         _notifyAuthFailure(); // Token 清理统一由 AuthForceLogout → clearLocalAuthData 处理
+        return handler.reject(error);
+      }
+
+      // 如果请求本身没有携带 token（未登录用户访问了受保护接口），
+      // 直接拒绝，不触发 refresh/logout 流程
+      final authHeader = error.requestOptions.headers['Authorization'];
+      if (authHeader == null || authHeader.toString().isEmpty) {
         return handler.reject(error);
       }
 
@@ -550,8 +572,15 @@ class ApiService {
     return null;
   }
 
+  /// 清除所有缓存（登出时调用）
+  void clearCache() => _cache.clear();
+
+  /// 使指定路径前缀的缓存失效（如写操作后主动刷新）
+  void invalidateCache(String pathPrefix) => _cache.invalidate(pathPrefix);
+
   /// 释放资源
   void dispose() {
+    _cache.clear();
     _dio.close();
   }
 }
@@ -679,5 +708,167 @@ class _RetryInterceptor extends Interceptor {
       default:
         return false;
     }
+  }
+}
+
+// ==================== 内存缓存 ====================
+
+/// 缓存条目
+class _CacheEntry {
+  _CacheEntry({required this.response, required this.expiry});
+
+  final Response response;
+  final DateTime expiry;
+
+  bool get isExpired => DateTime.now().isAfter(expiry);
+}
+
+/// 简单的 LRU 内存缓存，用于 GET 请求响应
+class _MemoryCache {
+  _MemoryCache({this.maxEntries = 100});
+
+  final int maxEntries;
+  final LinkedHashMap<String, _CacheEntry> _store = LinkedHashMap();
+
+  /// 可缓存的 GET 路径前缀及其 TTL（秒）
+  /// 只缓存读取型、变化频率低的接口
+  static const Map<String, int> _cachePolicies = {
+    '/api/tasks': 30,                   // 任务列表 30s
+    '/api/forum': 30,                   // 论坛帖子 30s
+    '/api/flea-market': 30,             // 跳蚤市场 30s
+    '/api/task-experts': 60,            // 达人列表 60s
+    '/api/users/profile/': 120,         // 用户资料 120s
+    '/api/leaderboard': 300,            // 排行榜 5min
+    '/api/categories': 600,             // 分类 10min
+    '/api/app-config': 600,             // 应用配置 10min
+  };
+
+  /// 根据路径获取 TTL，返回 null 表示不缓存
+  int? _getTtl(String path) {
+    for (final entry in _cachePolicies.entries) {
+      if (path.startsWith(entry.key)) return entry.value;
+    }
+    return null;
+  }
+
+  /// 构建缓存键
+  String _buildKey(RequestOptions options) {
+    final params = options.queryParameters;
+    if (params.isEmpty) return options.path;
+    final sortedKeys = params.keys.toList()..sort();
+    final paramStr = sortedKeys.map((k) => '$k=${params[k]}').join('&');
+    return '${options.path}?$paramStr';
+  }
+
+  /// 尝试获取缓存
+  Response? get(RequestOptions options) {
+    final ttl = _getTtl(options.path);
+    if (ttl == null) return null;
+
+    final key = _buildKey(options);
+    final entry = _store[key];
+    if (entry == null) return null;
+
+    if (entry.isExpired) {
+      _store.remove(key);
+      return null;
+    }
+
+    // LRU: 移到末尾
+    _store.remove(key);
+    _store[key] = entry;
+    return entry.response;
+  }
+
+  /// 存入缓存
+  void put(RequestOptions options, Response response) {
+    final ttl = _getTtl(options.path);
+    if (ttl == null) return;
+
+    // 只缓存成功响应
+    if (response.statusCode != null &&
+        response.statusCode! >= 200 &&
+        response.statusCode! < 300) {
+      final key = _buildKey(options);
+
+      // LRU 淘汰
+      if (_store.length >= maxEntries && !_store.containsKey(key)) {
+        _store.remove(_store.keys.first);
+      }
+
+      _store[key] = _CacheEntry(
+        response: response,
+        expiry: DateTime.now().add(Duration(seconds: ttl)),
+      );
+    }
+  }
+
+  /// 清除所有缓存
+  void clear() => _store.clear();
+
+  /// 清除匹配前缀的缓存（用于写操作后主动失效）
+  void invalidate(String pathPrefix) {
+    _store.removeWhere((key, _) => key.startsWith(pathPrefix));
+  }
+}
+
+/// GET 请求缓存拦截器
+class _CacheInterceptor extends Interceptor {
+  _CacheInterceptor({required this.cache});
+
+  final _MemoryCache cache;
+
+  /// 请求头标记：跳过缓存（用于下拉刷新等场景）
+  static const String skipCacheHeader = 'x-skip-cache';
+
+  @override
+  void onRequest(RequestOptions options, RequestInterceptorHandler handler) {
+    // 只缓存 GET 请求
+    if (options.method.toUpperCase() != 'GET') {
+      return handler.next(options);
+    }
+
+    // 检查是否要求跳过缓存
+    if (options.headers[skipCacheHeader] == 'true') {
+      options.headers.remove(skipCacheHeader);
+      return handler.next(options);
+    }
+
+    final cached = cache.get(options);
+    if (cached != null) {
+      AppLogger.debug('Cache HIT: ${options.path}');
+      return handler.resolve(
+        Response(
+          requestOptions: options,
+          data: cached.data,
+          statusCode: cached.statusCode,
+          headers: cached.headers,
+        ),
+      );
+    }
+
+    handler.next(options);
+  }
+
+  @override
+  void onResponse(Response response, ResponseInterceptorHandler handler) {
+    // 缓存 GET 成功响应
+    if (response.requestOptions.method.toUpperCase() == 'GET') {
+      cache.put(response.requestOptions, response);
+    }
+
+    // 写操作自动失效相关缓存
+    final method = response.requestOptions.method.toUpperCase();
+    if (method == 'POST' || method == 'PUT' || method == 'PATCH' || method == 'DELETE') {
+      // 提取路径前缀进行失效（例如 /api/tasks/123 → /api/tasks）
+      final path = response.requestOptions.path;
+      final segments = path.split('/');
+      if (segments.length >= 3) {
+        final prefix = segments.sublist(0, 3).join('/');
+        cache.invalidate(prefix);
+      }
+    }
+
+    handler.next(response);
   }
 }

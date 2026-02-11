@@ -320,6 +320,31 @@ class TaskChat extends Equatable {
     );
   }
 
+  /// 创建副本，仅覆盖指定字段
+  TaskChat copyWith({
+    int? unreadCount,
+  }) {
+    return TaskChat(
+      taskId: taskId,
+      taskTitle: taskTitle,
+      titleEn: titleEn,
+      titleZh: titleZh,
+      taskStatus: taskStatus,
+      taskType: taskType,
+      taskSource: taskSource,
+      posterId: posterId,
+      takerId: takerId,
+      expertCreatorId: expertCreatorId,
+      images: images,
+      isMultiParticipant: isMultiParticipant,
+      participants: participants,
+      lastMessage: lastMessage,
+      lastMessageObj: lastMessageObj,
+      lastMessageTime: lastMessageTime,
+      unreadCount: unreadCount ?? this.unreadCount,
+    );
+  }
+
   @override
   List<Object?> get props => [taskId, lastMessage, unreadCount];
 }

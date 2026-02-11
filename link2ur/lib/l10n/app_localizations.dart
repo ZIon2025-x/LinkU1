@@ -285,6 +285,12 @@ abstract class AppLocalizations {
   /// **'Filter'**
   String get commonFilter;
 
+  /// No description provided for @commonReset.
+  ///
+  /// In en, this message translates to:
+  /// **'Reset'**
+  String get commonReset;
+
   /// No description provided for @commonNotProvided.
   ///
   /// In en, this message translates to:

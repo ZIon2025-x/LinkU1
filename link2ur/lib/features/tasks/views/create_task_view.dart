@@ -8,6 +8,7 @@ import '../../../core/design/app_radius.dart';
 import '../../../core/utils/l10n_extension.dart';
 import '../../../core/widgets/app_feedback.dart';
 import '../../../core/widgets/buttons.dart';
+import '../../../core/widgets/location_picker.dart';
 import '../../../core/utils/validators.dart';
 import '../../../data/models/task.dart';
 import '../../../data/repositories/task_repository.dart';
@@ -41,8 +42,10 @@ class _CreateTaskContentState extends State<_CreateTaskContent> {
   final _titleController = TextEditingController();
   final _descriptionController = TextEditingController();
   final _rewardController = TextEditingController();
-  final _locationController = TextEditingController();
 
+  String? _location;
+  double? _latitude;
+  double? _longitude;
   String _selectedCategory = 'delivery';
   String _selectedCurrency = 'GBP';
   DateTime? _deadline;
@@ -65,7 +68,6 @@ class _CreateTaskContentState extends State<_CreateTaskContent> {
     _titleController.dispose();
     _descriptionController.dispose();
     _rewardController.dispose();
-    _locationController.dispose();
     super.dispose();
   }
 
@@ -97,9 +99,9 @@ class _CreateTaskContentState extends State<_CreateTaskContent> {
       taskType: _selectedCategory,
       reward: reward,
       currency: _selectedCurrency,
-      location: _locationController.text.trim().isNotEmpty
-          ? _locationController.text.trim()
-          : null,
+      location: _location,
+      latitude: _latitude,
+      longitude: _longitude,
       deadline: _deadline,
     );
 
@@ -183,15 +185,18 @@ class _CreateTaskContentState extends State<_CreateTaskContent> {
                 AppSpacing.vLg,
 
                 _buildSectionTitle(context.l10n.createTaskLocation),
-                TextFormField(
-                  controller: _locationController,
-                  decoration: InputDecoration(
-                    hintText: context.l10n.createTaskLocationHint,
-                    suffixIcon: IconButton(
-                      icon: const Icon(Icons.my_location),
-                      onPressed: () {},
-                    ),
-                  ),
+                LocationInputField(
+                  hintText: context.l10n.createTaskLocationHint,
+                  onChanged: (address) {
+                    _location = address.isNotEmpty ? address : null;
+                    _latitude = null;
+                    _longitude = null;
+                  },
+                  onLocationPicked: (address, lat, lng) {
+                    _location = address.isNotEmpty ? address : null;
+                    _latitude = lat;
+                    _longitude = lng;
+                  },
                 ),
                 AppSpacing.vLg,
 

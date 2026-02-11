@@ -82,6 +82,11 @@ class _SearchContentState extends State<_SearchContent> {
         ],
       ),
       body: BlocBuilder<SearchBloc, SearchState>(
+        buildWhen: (previous, current) =>
+            previous.status != current.status ||
+            previous.taskResults != current.taskResults ||
+            previous.forumResults != current.forumResults ||
+            previous.fleaMarketResults != current.fleaMarketResults,
         builder: (context, state) {
           if (state.status == SearchStatus.initial) {
             return _buildInitialState(isDark);

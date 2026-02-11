@@ -389,7 +389,8 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     try {
       if (state.isTaskChat) {
         // 任务聊天：使用任务聊天标记已读API，传入最新消息ID
-        final latestId = state.messages.isNotEmpty ? state.messages.last.id : null;
+        // 后端返回消息按 created_at DESC 排序，messages[0] 是最新的
+        final latestId = state.messages.isNotEmpty ? state.messages.first.id : null;
         if (latestId != null) {
           await _messageRepository.markTaskChatRead(
             state.taskId!,

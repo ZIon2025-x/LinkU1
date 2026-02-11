@@ -13,6 +13,7 @@ import '../../../core/utils/l10n_extension.dart';
 import '../../../core/utils/validators.dart';
 import '../../../core/widgets/app_feedback.dart';
 import '../../../core/widgets/buttons.dart';
+import '../../../core/widgets/location_picker.dart';
 import '../../../data/models/flea_market.dart';
 import '../../../data/models/forum.dart';
 import '../../../data/models/task.dart';
@@ -75,8 +76,10 @@ class _PublishContentState extends State<_PublishContent>
   final _taskTitleCtrl = TextEditingController();
   final _taskDescCtrl = TextEditingController();
   final _taskRewardCtrl = TextEditingController();
-  final _taskLocationCtrl = TextEditingController();
-  String? _taskCategory;
+  String? _taskLocation;
+  double? _taskLatitude;
+  double? _taskLongitude;
+  final ValueNotifier<String?> _taskCategoryNotifier = ValueNotifier(null);
   String _taskCurrency = 'GBP';
   DateTime? _taskDeadline;
 
@@ -85,7 +88,9 @@ class _PublishContentState extends State<_PublishContent>
   final _fleaTitleCtrl = TextEditingController();
   final _fleaDescCtrl = TextEditingController();
   final _fleaPriceCtrl = TextEditingController();
-  final _fleaLocationCtrl = TextEditingController();
+  String? _fleaLocation;
+  double? _fleaLatitude;
+  double? _fleaLongitude;
   String? _fleaCategory;
   final List<File> _fleaImages = [];
   final _imagePicker = ImagePicker();
@@ -113,14 +118,13 @@ class _PublishContentState extends State<_PublishContent>
     _taskTitleCtrl.dispose();
     _taskDescCtrl.dispose();
     _taskRewardCtrl.dispose();
-    _taskLocationCtrl.dispose();
     _fleaTitleCtrl.dispose();
     _fleaDescCtrl.dispose();
     _fleaPriceCtrl.dispose();
-    _fleaLocationCtrl.dispose();
     _postTitleCtrl.dispose();
     _postContentCtrl.dispose();
     _closeAnimCtrl.dispose();
+    _taskCategoryNotifier.dispose();
     super.dispose();
   }
 
@@ -168,7 +172,7 @@ class _PublishContentState extends State<_PublishContent>
   // ==================== 提交 ====================
   void _submitTask() {
     if (!_taskFormKey.currentState!.validate()) return;
-    if (_taskCategory == null) {
+    if (_taskCategoryNotifier.value == null) {
       AppFeedback.showWarning(context, context.l10n.feedbackSelectCategory);
       return;
     }
@@ -176,10 +180,12 @@ class _PublishContentState extends State<_PublishContent>
     final request = CreateTaskRequest(
       title: _taskTitleCtrl.text.trim(),
       description: _taskDescCtrl.text.trim().isNotEmpty ? _taskDescCtrl.text.trim() : null,
-      taskType: _taskCategory!,
+      taskType: _taskCategoryNotifier.value!,
       reward: reward,
       currency: _taskCurrency,
-      location: _taskLocationCtrl.text.trim().isNotEmpty ? _taskLocationCtrl.text.trim() : null,
+      location: _taskLocation,
+      latitude: _taskLatitude,
+      longitude: _taskLongitude,
       deadline: _taskDeadline,
     );
     context.read<CreateTaskBloc>().add(CreateTaskSubmitted(request));
@@ -197,7 +203,9 @@ class _PublishContentState extends State<_PublishContent>
       description: _fleaDescCtrl.text.trim().isEmpty ? null : _fleaDescCtrl.text.trim(),
       price: price,
       category: _fleaCategory,
-      location: _fleaLocationCtrl.text.trim().isEmpty ? null : _fleaLocationCtrl.text.trim(),
+      location: _fleaLocation,
+      latitude: _fleaLatitude,
+      longitude: _fleaLongitude,
       images: [],
     );
     context.read<FleaMarketBloc>().add(FleaMarketCreateItem(request));
@@ -305,16 +313,22 @@ class _PublishContentState extends State<_PublishContent>
         ),
         // 闲置发布成功监听
         BlocListener<FleaMarketBloc, FleaMarketState>(
-          listenWhen: (prev, curr) => prev.actionMessage != curr.actionMessage,
+          listenWhen: (prev, curr) =>
+              prev.actionMessage != curr.actionMessage ||
+              prev.errorMessage != curr.errorMessage,
           listener: (context, state) {
-            if (state.actionMessage != null) {
-              final isSuccess = state.actionMessage!.contains('成功');
-              if (isSuccess) {
-                AppFeedback.showSuccess(context, state.actionMessage!);
-                context.pop();
-              } else {
-                AppFeedback.showError(context, state.actionMessage!);
+            if (state.actionMessage == 'item_published') {
+              AppFeedback.showSuccess(context, context.l10n.actionItemPublished);
+              context.pop();
+            } else if (state.actionMessage == 'publish_failed') {
+              // 显示后端返回的具体错误信息（如收款账户验证失败等）
+              // 清理异常类名前缀（如 "FleaMarketException: "）
+              var message = state.errorMessage ?? context.l10n.feedbackPublishFailed;
+              final colonIndex = message.indexOf(': ');
+              if (colonIndex > 0 && colonIndex < 30) {
+                message = message.substring(colonIndex + 2);
               }
+              AppFeedback.showError(context, message);
             }
           },
         ),
@@ -475,11 +489,11 @@ class _PublishContentState extends State<_PublishContent>
     final taskCategories = _getTaskCategories(context);
 
     // 如果当前选中的类型被禁用，重置
-    if (_taskCategory != null) {
-      final match = taskCategories.where((c) => c.$1 == _taskCategory);
+    if (_taskCategoryNotifier.value != null) {
+      final match = taskCategories.where((c) => c.$1 == _taskCategoryNotifier.value);
       if (match.isEmpty || !match.first.$3) {
         WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (mounted) setState(() => _taskCategory = null);
+          if (mounted) _taskCategoryNotifier.value = null;
         });
       }
     }
@@ -572,13 +586,18 @@ class _PublishContentState extends State<_PublishContent>
           AppSpacing.vLg,
 
           _sectionTitle(context.l10n.createTaskLocation),
-          TextFormField(
-            controller: _taskLocationCtrl,
-            decoration: _inputDecoration(
-              hint: context.l10n.createTaskLocationHint,
-              icon: Icons.location_on_outlined,
-              isDark: isDark,
-            ),
+          LocationInputField(
+            hintText: context.l10n.createTaskLocationHint,
+            onChanged: (address) {
+              _taskLocation = address.isNotEmpty ? address : null;
+              _taskLatitude = null;
+              _taskLongitude = null;
+            },
+            onLocationPicked: (address, lat, lng) {
+              _taskLocation = address.isNotEmpty ? address : null;
+              _taskLatitude = lat;
+              _taskLongitude = lng;
+            },
           ),
           AppSpacing.vLg,
 
@@ -701,13 +720,18 @@ class _PublishContentState extends State<_PublishContent>
           AppSpacing.vMd,
 
           _sectionTitle(context.l10n.fleaMarketLocationOptional),
-          TextFormField(
-            controller: _fleaLocationCtrl,
-            decoration: _inputDecoration(
-              hint: context.l10n.fleaMarketLocationHint,
-              icon: Icons.location_on_outlined,
-              isDark: isDark,
-            ),
+          LocationInputField(
+            hintText: context.l10n.fleaMarketLocationHint,
+            onChanged: (address) {
+              _fleaLocation = address.isNotEmpty ? address : null;
+              _fleaLatitude = null;
+              _fleaLongitude = null;
+            },
+            onLocationPicked: (address, lat, lng) {
+              _fleaLocation = address.isNotEmpty ? address : null;
+              _fleaLatitude = lat;
+              _fleaLongitude = lng;
+            },
           ),
           const SizedBox(height: 120),
         ],
@@ -796,88 +820,103 @@ class _PublishContentState extends State<_PublishContent>
       alignment: Alignment.centerLeft,
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 220),
-        child: DropdownButtonFormField<String>(
-          value: _taskCategory,
-          isExpanded: true,
-          decoration: InputDecoration(
-            hintText: context.l10n.createTaskType,
-            prefixIcon: const Icon(Icons.category_outlined, size: 20),
-            filled: true,
-            fillColor: isDark
-                ? Colors.white.withValues(alpha: 0.06)
-                : AppColors.backgroundLight,
-            border: OutlineInputBorder(
-              borderRadius: AppRadius.allMedium,
-              borderSide: BorderSide(
-                color: isDark
-                    ? Colors.white.withValues(alpha: 0.1)
-                    : AppColors.separatorLight.withValues(alpha: 0.5),
-              ),
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: AppRadius.allMedium,
-              borderSide: BorderSide(
-                color: isDark
-                    ? Colors.white.withValues(alpha: 0.1)
-                    : AppColors.separatorLight.withValues(alpha: 0.5),
-              ),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: AppRadius.allMedium,
-              borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
-            ),
-            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-            isDense: true,
-          ),
-          style: TextStyle(
-            fontSize: 14,
-            color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
-          ),
-          // 所有选项都可选择（enabled 项和 disabled 项都用同一个 value）
-          items: categories.map((c) {
-            final enabled = c.$3;
-            return DropdownMenuItem<String>(
-              value: c.$1,
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      c.$2,
-                      style: TextStyle(
-                        color: enabled
-                            ? (isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight)
-                            : (isDark ? AppColors.textTertiaryDark : AppColors.textTertiaryLight),
-                      ),
-                    ),
+        child: ValueListenableBuilder<String?>(
+          valueListenable: _taskCategoryNotifier,
+          builder: (context, value, child) {
+            return DropdownButtonFormField<String>(
+              value: value,
+              isExpanded: true,
+              decoration: InputDecoration(
+                hintText: context.l10n.createTaskType,
+                prefixIcon: const Icon(Icons.category_outlined, size: 20),
+                filled: true,
+                fillColor: isDark
+                    ? Colors.white.withValues(alpha: 0.06)
+                    : AppColors.backgroundLight,
+                border: OutlineInputBorder(
+                  borderRadius: AppRadius.allMedium,
+                  borderSide: BorderSide(
+                    color: isDark
+                        ? Colors.white.withValues(alpha: 0.1)
+                        : AppColors.separatorLight.withValues(alpha: 0.5),
                   ),
-                  if (!enabled)
-                    Icon(
-                      Icons.lock_outline,
-                      size: 14,
-                      color: isDark ? AppColors.textTertiaryDark : AppColors.textTertiaryLight,
-                    ),
-                ],
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: AppRadius.allMedium,
+                  borderSide: BorderSide(
+                    color: isDark
+                        ? Colors.white.withValues(alpha: 0.1)
+                        : AppColors.separatorLight.withValues(alpha: 0.5),
+                  ),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: AppRadius.allMedium,
+                  borderSide:
+                      const BorderSide(color: AppColors.primary, width: 1.5),
+                ),
+                contentPadding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                isDense: true,
               ),
+              style: TextStyle(
+                fontSize: 14,
+                color: isDark
+                    ? AppColors.textPrimaryDark
+                    : AppColors.textPrimaryLight,
+              ),
+              // 所有选项都可选择（enabled 项和 disabled 项都用同一个 value）
+              items: categories.map((c) {
+                final enabled = c.$3;
+                return DropdownMenuItem<String>(
+                  value: c.$1,
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          c.$2,
+                          style: TextStyle(
+                            color: enabled
+                                ? (isDark
+                                    ? AppColors.textPrimaryDark
+                                    : AppColors.textPrimaryLight)
+                                : (isDark
+                                    ? AppColors.textTertiaryDark
+                                    : AppColors.textTertiaryLight),
+                          ),
+                        ),
+                      ),
+                      if (!enabled)
+                        Icon(
+                          Icons.lock_outline,
+                          size: 14,
+                          color: isDark
+                              ? AppColors.textTertiaryDark
+                              : AppColors.textTertiaryLight,
+                        ),
+                    ],
+                  ),
+                );
+              }).toList(),
+              onChanged: (v) {
+                if (v == null) return;
+                // 查找该选项是否 enabled
+                final match = categories.firstWhere((c) => c.$1 == v);
+                if (!match.$3) {
+                  // 禁用项 → 弹出提示，不更新选择
+                  AppHaptics.light();
+                  AppFeedback.showWarning(
+                    context,
+                    context.l10n.taskTypeCampusLifeNeedVerify,
+                  );
+                  // 重置回之前的值（用 addPostFrameCallback 避免 build 中 setState）
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    if (mounted) setState(() {}); // 触发重绘恢复旧值
+                  });
+                  return;
+                }
+                _taskCategoryNotifier.value = v;
+              },
             );
-          }).toList(),
-          onChanged: (v) {
-            if (v == null) return;
-            // 查找该选项是否 enabled
-            final match = categories.firstWhere((c) => c.$1 == v);
-            if (!match.$3) {
-              // 禁用项 → 弹出提示，不更新选择
-              AppHaptics.light();
-              AppFeedback.showWarning(
-                context,
-                context.l10n.taskTypeCampusLifeNeedVerify,
-              );
-              // 重置回之前的值（用 addPostFrameCallback 避免 build 中 setState）
-              WidgetsBinding.instance.addPostFrameCallback((_) {
-                if (mounted) setState(() {}); // 触发重绘恢复旧值
-              });
-              return;
-            }
-            setState(() => _taskCategory = v);
           },
         ),
       ),

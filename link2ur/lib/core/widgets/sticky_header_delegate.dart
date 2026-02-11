@@ -46,24 +46,28 @@ class StickyHeaderDelegate extends SliverPersistentHeaderDelegate {
       BuildContext context, double shrinkOffset, bool overlapsContent) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    // 吸顶进度（0=完全展开，1=完全收起）
-    final progress =
-        (shrinkOffset / (maxExtent - minExtent)).clamp(0.0, 1.0);
+    // 计算透明度
+    // 如果是收缩型 Header (max > min)，根据收缩进度计算
+    // 如果是固定高度 Header (max == min)，根据是否遮挡内容计算
+    double opacity = 0.0;
+    if (maxExtent > minExtent) {
+      opacity = (shrinkOffset / (maxExtent - minExtent)).clamp(0.0, 1.0);
+    } else {
+      opacity = overlapsContent ? 1.0 : 0.0;
+    }
 
-    if (!enableBlur || progress < 0.1) {
+    if (!enableBlur || opacity < 0.1) {
       return SizedBox.expand(child: child);
     }
 
     return ClipRect(
       child: BackdropFilter(
-        filter: ImageFilter.blur(
-          sigmaX: 10 * progress,
-          sigmaY: 10 * progress,
-        ),
+        // 使用固定模糊半径，避免滚动时频繁重绘导致性能问题
+        filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
         child: Container(
           color: isDark
-              ? AppColors.backgroundDark.withValues(alpha: 0.8 * progress)
-              : AppColors.backgroundLight.withValues(alpha: 0.85 * progress),
+              ? AppColors.backgroundDark.withValues(alpha: 0.8 * opacity)
+              : AppColors.backgroundLight.withValues(alpha: 0.85 * opacity),
           child: child,
         ),
       ),
