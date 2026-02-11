@@ -1021,45 +1021,53 @@ class _ServiceCard extends StatelessWidget {
                             : AppColors.textPrimaryLight,
                       ),
                     ),
-                  const SizedBox(height: 4),
-                  _DiscoveryUserRow(
-                    userId: item.userId,
-                    userName: item.userName,
-                    userAvatar: item.userAvatar,
-                    isDark: isDark,
-                  ),
-                  const SizedBox(height: 4),
-                  // 价格 + 评分
+                  const SizedBox(height: 8),
+                  // 底部一行：左下角达人头像+名字，右下角金额+评分
                   Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
-                      if (item.price != null)
-                        Text(
-                          '${item.currency ?? "£"}${item.price!.toStringAsFixed(0)}起',
-                          style: const TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.w700,
-                            color: Color(0xFFFF6B9D),
-                          ),
+                      Expanded(
+                        child: _DiscoveryUserRow(
+                          userId: item.userId,
+                          userName: item.userName,
+                          userAvatar: item.userAvatar,
+                          isDark: isDark,
                         ),
-                      const Spacer(),
-                      if (item.rating != null)
-                        Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(Icons.star,
-                                size: 12, color: Color(0xFFFFB300)),
-                            const SizedBox(width: 2),
+                      ),
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          if (item.price != null)
                             Text(
-                              item.rating!.toStringAsFixed(1),
-                              style: TextStyle(
-                                fontSize: 11,
-                                color: isDark
-                                    ? AppColors.textSecondaryDark
-                                    : AppColors.textSecondaryLight,
+                              '${item.currency ?? "£"}${item.price!.toStringAsFixed(0)}起',
+                              style: const TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w700,
+                                color: Color(0xFFFF6B9D),
                               ),
                             ),
-                          ],
-                        ),
+                          if (item.price != null && item.rating != null)
+                            const SizedBox(width: 6),
+                          if (item.rating != null)
+                            Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(Icons.star,
+                                    size: 12, color: Color(0xFFFFB300)),
+                                const SizedBox(width: 2),
+                                Text(
+                                  item.rating!.toStringAsFixed(1),
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    color: isDark
+                                        ? AppColors.textSecondaryDark
+                                        : AppColors.textSecondaryLight,
+                                  ),
+                                ),
+                              ],
+                            ),
+                        ],
+                      ),
                     ],
                   ),
                 ],

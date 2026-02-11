@@ -62,6 +62,19 @@ class ForumPermissionHelper {
         .toList();
   }
 
+  /// 过滤出当前用户可发帖的板块列表（可见且非仅管理员发帖）
+  ///
+  /// [categories] 后端返回的板块列表
+  /// [user] 当前登录用户，null 表示未登录
+  static List<ForumCategory> filterPostableCategories(
+    List<ForumCategory> categories,
+    User? user,
+  ) {
+    return filterVisibleCategories(categories, user)
+        .where((c) => !c.isAdminOnly)
+        .toList();
+  }
+
   /// 获取用户可见的板块 ID 集合（用于最新动态过滤）
   ///
   /// [categories] 后端返回的板块列表

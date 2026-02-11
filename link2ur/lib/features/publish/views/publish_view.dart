@@ -18,6 +18,7 @@ import '../../../core/widgets/location_picker.dart';
 import '../../../data/models/flea_market.dart';
 import '../../../data/models/forum.dart';
 import '../../../data/models/task.dart';
+import '../../../data/repositories/discovery_repository.dart';
 import '../../../data/repositories/flea_market_repository.dart';
 import '../../../data/repositories/forum_repository.dart';
 import '../../../data/repositories/task_repository.dart';
@@ -101,6 +102,11 @@ class _PublishContentState extends State<_PublishContent>
   final _postTitleCtrl = TextEditingController();
   final _postContentCtrl = TextEditingController();
   int? _postCategoryId;
+  final List<File> _postImages = [];
+  String? _postLinkedType;
+  String? _postLinkedId;
+  String? _postLinkedName;
+  bool _postUploadingImages = false;
 
   // ── 关闭动画 ──
   late final AnimationController _closeAnimCtrl;
@@ -212,21 +218,55 @@ class _PublishContentState extends State<_PublishContent>
     context.read<FleaMarketBloc>().add(FleaMarketCreateItem(request));
   }
 
-  void _submitPost() {
-    if (_postTitleCtrl.text.trim().isEmpty || _postContentCtrl.text.trim().isEmpty) {
+  Future<void> _submitPost() async {
+    final title = _postTitleCtrl.text.trim();
+    final content = _postContentCtrl.text.trim();
+    if (title.isEmpty || content.isEmpty) {
       AppFeedback.showWarning(context, context.l10n.feedbackFillTitleAndContent);
+      return;
+    }
+    if (content.length < 10) {
+      AppFeedback.showWarning(
+        context,
+        context.l10n.validatorFieldMinLength(
+          context.l10n.forumCreatePostPostContent,
+          10,
+        ),
+      );
       return;
     }
     if (_postCategoryId == null) {
       AppFeedback.showWarning(context, context.l10n.feedbackSelectCategory);
       return;
     }
+    List<String> imageUrls = [];
+    if (_postImages.isNotEmpty) {
+      setState(() => _postUploadingImages = true);
+      try {
+        final repo = context.read<ForumRepository>();
+        for (final file in _postImages) {
+          final url = await repo.uploadPostImage(file.path);
+          imageUrls.add(url);
+        }
+      } catch (e) {
+        if (mounted) {
+          setState(() => _postUploadingImages = false);
+          AppFeedback.showError(context, e.toString());
+        }
+        return;
+      }
+      if (mounted) setState(() => _postUploadingImages = false);
+    }
+    if (!mounted) return;
     context.read<ForumBloc>().add(
           ForumCreatePost(
             CreatePostRequest(
-              title: _postTitleCtrl.text.trim(),
-              content: _postContentCtrl.text.trim(),
+              title: title,
+              content: content,
               categoryId: _postCategoryId!,
+              images: imageUrls,
+              linkedItemType: _postLinkedType,
+              linkedItemId: _postLinkedId,
             ),
           ),
         );
@@ -243,6 +283,7 @@ class _PublishContentState extends State<_PublishContent>
         _submitFleaMarket();
       case _PublishType.post:
         _submitPost();
+        break;
     }
   }
 
@@ -277,6 +318,35 @@ class _PublishContentState extends State<_PublishContent>
 
   void _removeImage(int index) => setState(() => _fleaImages.removeAt(index));
 
+  static const int _kPostMaxImages = 5;
+
+  Future<void> _pickPostImages() async {
+    try {
+      final files = await _imagePicker.pickMultiImage(
+        maxWidth: 1024,
+        maxHeight: 1024,
+        imageQuality: 85,
+      );
+      if (files.isNotEmpty && mounted) {
+        setState(() {
+          for (final f in files) {
+            if (_postImages.length < _kPostMaxImages) _postImages.add(File(f.path));
+          }
+        });
+      }
+    } catch (e) {
+      if (mounted) AppFeedback.showError(context, e.toString());
+    }
+  }
+
+  void _removePostImage(int index) => setState(() => _postImages.removeAt(index));
+
+  void _clearPostLinked() => setState(() {
+    _postLinkedType = null;
+    _postLinkedId = null;
+    _postLinkedName = null;
+  });
+
   String get _submitButtonText {
     final type = _selectedType;
     if (type == null) return context.l10n.createTaskPublishTask;
@@ -294,7 +364,7 @@ class _PublishContentState extends State<_PublishContent>
     final isTaskSubmitting = context.watch<CreateTaskBloc>().state.isSubmitting;
     final isFleaSubmitting = context.watch<FleaMarketBloc>().state.isSubmitting;
     final isPostSubmitting = context.watch<ForumBloc>().state.isCreatingPost;
-    return isTaskSubmitting || isFleaSubmitting || isPostSubmitting;
+    return isTaskSubmitting || isFleaSubmitting || isPostSubmitting || _postUploadingImages;
   }
 
   // ==================== Build ====================
@@ -920,8 +990,8 @@ class _PublishContentState extends State<_PublishContent>
     final forumState = context.watch<ForumBloc>().state;
     final currentUser = context.watch<AuthBloc>().state.user;
 
-    // 只展示当前用户有权发布的板块
-    final postableCategories = ForumPermissionHelper.filterVisibleCategories(
+    // 只展示当前用户有权发布的板块（可见且非仅管理员发帖）
+    final postableCategories = ForumPermissionHelper.filterPostableCategories(
       forumState.categories,
       currentUser,
     );
@@ -980,6 +1050,16 @@ class _PublishContentState extends State<_PublishContent>
             maxLines: 8,
             minLines: 5,
           ),
+          AppSpacing.vMd,
+          _sectionTitle('图片（选填，最多 $_kPostMaxImages 张）'),
+          _buildPostImagePicker(isDark),
+          AppSpacing.vMd,
+          _sectionTitle('关联内容（选填，可关联服务/活动/商品/排行榜等）'),
+          _buildPostLinkedChip(isDark),
+          if (_postUploadingImages) ...[
+            AppSpacing.vMd,
+            const Center(child: CircularProgressIndicator()),
+          ],
           const SizedBox(height: 120),
         ],
       ),
@@ -1221,6 +1301,203 @@ class _PublishContentState extends State<_PublishContent>
           ),
       ],
     );
+  }
+
+  // ==================== 帖子图片选择器（最多 5 张） ====================
+  Widget _buildPostImagePicker(bool isDark) {
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: [
+        ..._postImages.asMap().entries.map((entry) {
+          return Stack(
+            children: [
+              ClipRRect(
+                borderRadius: AppRadius.allSmall,
+                child: Image.file(entry.value, width: 80, height: 80, fit: BoxFit.cover),
+              ),
+              Positioned(
+                top: -4,
+                right: -4,
+                child: GestureDetector(
+                  onTap: () => _removePostImage(entry.key),
+                  child: Container(
+                    width: 22,
+                    height: 22,
+                    decoration: const BoxDecoration(color: AppColors.error, shape: BoxShape.circle),
+                    child: const Icon(Icons.close, size: 14, color: Colors.white),
+                  ),
+                ),
+              ),
+            ],
+          );
+        }),
+        if (_postImages.length < _kPostMaxImages)
+          GestureDetector(
+            onTap: _pickPostImages,
+            child: Container(
+              width: 80,
+              height: 80,
+              decoration: BoxDecoration(
+                color: isDark ? Colors.white.withValues(alpha: 0.06) : AppColors.backgroundLight,
+                borderRadius: AppRadius.allSmall,
+                border: Border.all(
+                  color: isDark
+                      ? Colors.white.withValues(alpha: 0.12)
+                      : AppColors.textTertiaryLight.withValues(alpha: 0.4),
+                ),
+              ),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.add_photo_alternate_outlined,
+                    size: 28,
+                    color: isDark ? AppColors.textTertiaryDark : AppColors.textTertiaryLight,
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    '${_postImages.length}/$_kPostMaxImages',
+                    style: TextStyle(
+                      fontSize: 10,
+                      color: isDark ? AppColors.textTertiaryDark : AppColors.textTertiaryLight,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+
+  // ==================== 帖子关联内容（单选） ====================
+  Widget _buildPostLinkedChip(bool isDark) {
+    if (_postLinkedName != null && _postLinkedName!.isNotEmpty) {
+      return Row(
+        children: [
+          Expanded(
+            child: Chip(
+              avatar: Icon(Icons.link, size: 18, color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight),
+              label: Text(_postLinkedName!, maxLines: 1, overflow: TextOverflow.ellipsis),
+              onDeleted: _clearPostLinked,
+            ),
+          ),
+        ],
+      );
+    }
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: OutlinedButton.icon(
+        onPressed: () => _showPostLinkSearchDialog(isDark),
+        icon: const Icon(Icons.add_link, size: 20),
+        label: const Text('搜索并关联'),
+      ),
+    );
+  }
+
+  Future<void> _showPostLinkSearchDialog(bool isDark) async {
+    final queryCtrl = TextEditingController();
+    final discoveryRepo = context.read<DiscoveryRepository>();
+    List<Map<String, dynamic>> results = [];
+    bool loading = false;
+
+    if (!mounted) return;
+    await showDialog<void>(
+      context: context,
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            Future<void> runSearch(String q) async {
+              if (q.trim().isEmpty) return;
+              setDialogState(() => loading = true);
+              try {
+                final list = await discoveryRepo.searchLinkableContent(query: q.trim(), type: 'all');
+                if (ctx.mounted) setDialogState(() {
+                  results = list;
+                  loading = false;
+                });
+              } catch (e) {
+                if (ctx.mounted) {
+                  setDialogState(() => loading = false);
+                  AppFeedback.showError(ctx, e.toString());
+                }
+              }
+            }
+            return AlertDialog(
+              title: const Text('关联内容'),
+              content: SizedBox(
+                width: double.maxFinite,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            controller: queryCtrl,
+                            decoration: const InputDecoration(
+                              hintText: '输入关键词搜索服务、活动、商品、排行榜…',
+                              border: OutlineInputBorder(),
+                            ),
+                            onSubmitted: runSearch,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        IconButton(
+                          icon: const Icon(Icons.search),
+                          onPressed: () => runSearch(queryCtrl.text),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    if (loading) const Center(child: CircularProgressIndicator()),
+                    if (!loading && results.isNotEmpty)
+                      Flexible(
+                        child: ListView.builder(
+                          shrinkWrap: true,
+                          itemCount: results.length,
+                          itemBuilder: (context, i) {
+                            final r = results[i];
+                            final type = r['item_type'] as String? ?? '';
+                            final name = r['name'] as String? ?? r['title'] as String? ?? '未命名';
+                            final id = r['item_id']?.toString() ?? '';
+                            return ListTile(
+                              title: Text(name),
+                              subtitle: Text(type),
+                              onTap: () {
+                                setState(() {
+                                  _postLinkedType = type;
+                                  _postLinkedId = id;
+                                  _postLinkedName = name;
+                                });
+                                Navigator.of(ctx).pop();
+                              },
+                            );
+                          },
+                        ),
+                      ),
+                    if (!loading && results.isEmpty && queryCtrl.text.trim().isNotEmpty)
+                      const Padding(
+                        padding: EdgeInsets.all(12),
+                        child: Text('无结果，换关键词试试'),
+                      ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(ctx).pop(),
+                  child: Text(MaterialLocalizations.of(context).cancelButtonLabel),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+    queryCtrl.dispose();
   }
 
   // ==================== 工具方法 ====================

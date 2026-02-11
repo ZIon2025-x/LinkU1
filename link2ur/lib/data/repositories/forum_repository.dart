@@ -195,6 +195,26 @@ class ForumRepository {
     }
   }
 
+  /// 上传帖子图片（临时目录，发帖时由后端 move_from_temp）
+  /// 最多 5 张，需在发帖前依次上传，将返回的 url 列表传入 createPost。
+  Future<String> uploadPostImage(String filePath) async {
+    final response = await _apiService.uploadFile<Map<String, dynamic>>(
+      '${ApiEndpoints.uploadImage}?category=forum_post',
+      filePath: filePath,
+      fieldName: 'image',
+    );
+
+    if (!response.isSuccess || response.data == null) {
+      throw ForumException(response.message ?? '上传图片失败');
+    }
+
+    final url = response.data!['url'] as String?;
+    if (url == null || url.isEmpty) {
+      throw ForumException('上传成功但未返回图片地址');
+    }
+    return url;
+  }
+
   /// 创建帖子
   Future<ForumPost> createPost(CreatePostRequest request) async {
     final response = await _apiService.post<Map<String, dynamic>>(

@@ -551,9 +551,11 @@ async def _fetch_expert_services(db: AsyncSession, limit: int) -> list:
             models.TaskExpertService.currency,
             models.TaskExpertService.created_at,
             models.TaskExpert.id.label("expert_user_id"),
+            models.TaskExpert.expert_name.label("expert_display_name"),
+            models.TaskExpert.avatar.label("expert_avatar_url"),
             models.TaskExpert.rating.label("expert_rating"),
-            models.User.name.label("expert_name"),
-            models.User.avatar.label("expert_avatar"),
+            models.User.name.label("user_name"),
+            models.User.avatar.label("user_avatar_url"),
         )
         .join(models.TaskExpert, models.TaskExpertService.expert_id == models.TaskExpert.id)
         .join(models.User, models.TaskExpert.id == models.User.id)
@@ -565,7 +567,10 @@ async def _fetch_expert_services(db: AsyncSession, limit: int) -> list:
     items = []
     for row in result:
         service_thumb = _first_image(row.service_images)
-        
+        # 达人展示名和头像：优先用 TaskExpert 的，否则用 User 的
+        expert_name = row.expert_display_name or row.user_name
+        expert_avatar = row.expert_avatar_url or row.user_avatar_url
+
         items.append({
             "feed_type": "service",
             "id": f"service_{row.id}",
@@ -573,8 +578,8 @@ async def _fetch_expert_services(db: AsyncSession, limit: int) -> list:
             "description": (row.description or "")[:80],
             "images": [service_thumb] if service_thumb else None,
             "user_id": str(row.expert_user_id) if row.expert_user_id else None,
-            "user_name": row.expert_name,
-            "user_avatar": row.expert_avatar,
+            "user_name": expert_name,
+            "user_avatar": expert_avatar,
             "price": float(row.base_price) if row.base_price else None,
             "original_price": None,
             "discount_percentage": None,

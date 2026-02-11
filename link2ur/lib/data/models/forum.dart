@@ -20,6 +20,7 @@ class ForumCategory extends Equatable {
     this.isFavorited = false,
     this.lastPostAt,
     this.latestPost,
+    this.isAdminOnly = false,
   });
 
   // ==================== 板块类型常量 ====================
@@ -62,6 +63,8 @@ class ForumCategory extends Equatable {
   final bool isFavorited;
   final DateTime? lastPostAt;
   final LatestPostInfo? latestPost;
+  /// 是否仅管理员可发帖（普通用户不可在此板块发帖）
+  final bool isAdminOnly;
 
   // ==================== 权限辅助 ====================
 
@@ -108,6 +111,7 @@ class ForumCategory extends Equatable {
           ? LatestPostInfo.fromJson(
               json['latest_post'] as Map<String, dynamic>)
           : null,
+      isAdminOnly: json['is_admin_only'] as bool? ?? false,
     );
   }
 
@@ -451,8 +455,14 @@ class CreatePostRequest {
       'content': content,
       'category_id': categoryId,
       if (images.isNotEmpty) 'images': images,
-      if (linkedItemType != null) 'linked_item_type': linkedItemType,
-      if (linkedItemId != null) 'linked_item_id': linkedItemId,
+      if (linkedItemType != null &&
+          linkedItemType!.isNotEmpty &&
+          linkedItemId != null &&
+          linkedItemId!.isNotEmpty)
+        ...{
+          'linked_item_type': linkedItemType!,
+          'linked_item_id': linkedItemId!,
+        },
     };
   }
 }
