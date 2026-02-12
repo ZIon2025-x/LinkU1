@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:equatable/equatable.dart';
 
@@ -38,7 +39,17 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     emit(state.copyWith(status: AuthStatus.checking));
 
     try {
-      final user = await _authRepository.getCurrentUser();
+      // Web 端：8 秒超时，避免 CORS 等导致请求挂起时无限等待
+      final future = _authRepository.getCurrentUser();
+      final user = kIsWeb
+          ? await future.timeout(
+              const Duration(seconds: 8),
+              onTimeout: () {
+                AppLogger.warning('Auth check timeout on web (possible CORS)');
+                return null;
+              },
+            )
+          : await future;
       if (user != null) {
         emit(state.copyWith(
           status: AuthStatus.authenticated,

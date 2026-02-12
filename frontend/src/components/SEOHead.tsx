@@ -173,9 +173,9 @@ const SEOHead: React.FC<SEOHeadProps> = ({
       let fullOgImage = ogImage.startsWith('http') ? ogImage : `${window.location.origin}${ogImage}`;
       
       // 对于其他页面，如果图片尺寸太小，才 fallback 到默认大图
-      if (!isValidOgImage(fullOgImage)) {
+      if (!isValidOgImage(fullOgImage)) {        
         fullOgImage = 'https://www.link2ur.com/static/favicon.png'; // 默认分享图
-      }
+    }
       
       // 添加版本号避免缓存问题
       fullOgImage = fullOgImage.includes('?') ? fullOgImage : `${fullOgImage}?v=2`;

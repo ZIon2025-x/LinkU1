@@ -131,10 +131,11 @@ class AppConfig {
 ''';
 
       if (_environment == AppEnvironment.production) {
-        // 生产环境必须配置，否则抛出错误
+        // 生产环境：缺少 Stripe 密钥仅发出警告，不阻塞启动
+        // Stripe 功能在用户实际进入支付页面时才需要密钥，
+        // 此处崩溃会导致整个应用无法启动（包括 Web 端白屏）
         AppLogger.error('Stripe configuration missing in production',
           Exception(errorMessage));
-        throw StateError('Stripe publishable key is required in production environment.\n$errorMessage');
       } else {
         // 开发/测试环境仅警告（AppLogger 内部已处理输出，无需额外 debugPrint）
         AppLogger.warning(errorMessage);

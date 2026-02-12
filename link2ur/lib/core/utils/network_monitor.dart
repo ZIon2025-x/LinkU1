@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 
 import 'logger.dart';
 
@@ -20,9 +21,16 @@ class NetworkMonitor {
   NetworkStatus get currentStatus => _currentStatus;
 
   /// 是否已连接
-  bool get isConnected =>
-      _currentStatus == NetworkStatus.wifi ||
-      _currentStatus == NetworkStatus.cellular;
+  /// Web 端 connectivity_plus 不总是可靠（初始状态 unknown，某些浏览器不支持
+  /// Network Information API），对 unknown 状态乐观假设已连接，避免误拒请求
+  bool get isConnected {
+    if (kIsWeb) {
+      // Web 端：只有明确检测到 offline 才认为无连接
+      return _currentStatus != NetworkStatus.offline;
+    }
+    return _currentStatus == NetworkStatus.wifi ||
+        _currentStatus == NetworkStatus.cellular;
+  }
 
   /// 是否使用WiFi
   bool get isWifi => _currentStatus == NetworkStatus.wifi;

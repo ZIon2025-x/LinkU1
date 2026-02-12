@@ -11,6 +11,6 @@ flutter doctor -v
 # 安装依赖并构建
 echo "Building Flutter Web..."
 flutter pub get
-flutter build web --release
+flutter build web --release --base-href /
 
 echo "Build complete. Output in build/web"

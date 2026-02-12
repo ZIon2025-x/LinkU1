@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -141,6 +142,7 @@ class _Link2UrAppState extends State<Link2UrApp> {
           ),
         ],
         child: _DeferredBlocLoader(
+          child: _WebSplashTimeout(
           child: BlocListener<AuthBloc, AuthState>(
           listenWhen: (prev, curr) {
             // 当认证检查完成时触发（从 initial/checking 变为其他状态）
@@ -190,9 +192,34 @@ class _Link2UrAppState extends State<Link2UrApp> {
           ),
         ),
         ),
+          ),
       ),
     );
   }
+}
+
+/// Web 端：2 秒后强制移除 splash，避免 CORS/API 挂起时无限转圈
+class _WebSplashTimeout extends StatefulWidget {
+  const _WebSplashTimeout({required this.child});
+  final Widget child;
+
+  @override
+  State<_WebSplashTimeout> createState() => _WebSplashTimeoutState();
+}
+
+class _WebSplashTimeoutState extends State<_WebSplashTimeout> {
+  @override
+  void initState() {
+    super.initState();
+    if (kIsWeb) {
+      Future.delayed(const Duration(seconds: 2), () {
+        if (mounted) FlutterNativeSplash.remove();
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => widget.child;
 }
 
 /// 延迟加载非关键 BLoC 数据，避免阻塞首帧渲染
