@@ -1,10 +1,11 @@
 import 'dart:convert';
-import 'dart:io';
 import 'dart:typed_data';
 
-import 'package:path_provider/path_provider.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 
 import 'logger.dart';
+import 'backup_manager_stub.dart'
+    if (dart.library.io) 'backup_manager_io.dart' as backup_impl;
 
 /// 备份管理器
 /// 对齐 iOS BackupManager.swift
@@ -15,17 +16,10 @@ class BackupManager {
 
   String? _backupDirPath;
 
-  /// 获取备份目录
-  Future<Directory> get _backupDir async {
-    if (_backupDirPath == null) {
-      final docDir = await getApplicationDocumentsDirectory();
-      _backupDirPath = '${docDir.path}/Backups';
-    }
-    final dir = Directory(_backupDirPath!);
-    if (!await dir.exists()) {
-      await dir.create(recursive: true);
-    }
-    return dir;
+  /// 获取备份目录路径
+  Future<String> get _backupDirPathAsync async {
+    _backupDirPath ??= await backup_impl.getBackupDirPath();
+    return _backupDirPath!;
   }
 
   /// 创建备份
@@ -38,18 +32,17 @@ class BackupManager {
     required String name,
     Map<String, dynamic>? metadata,
   }) async {
+    if (kIsWeb) throw BackupException('Backup not available on Web');
     try {
-      final dir = await _backupDir;
+      final dirPath = await _backupDirPathAsync;
       final timestamp = DateTime.now().millisecondsSinceEpoch;
       final fileName = '${name}_$timestamp.backup';
-      final file = File('${dir.path}/$fileName');
 
-      await file.writeAsBytes(data);
+      final filePath = await backup_impl.writeBackup(dirPath, fileName, data);
 
       // 保存元数据
       if (metadata != null) {
-        final metaFile = File('${dir.path}/$fileName.meta');
-        await metaFile.writeAsString(jsonEncode({
+        await backup_impl.writeMetadata(filePath, jsonEncode({
           ...metadata,
           'name': name,
           'createdAt': DateTime.now().toIso8601String(),
@@ -58,7 +51,7 @@ class BackupManager {
       }
 
       AppLogger.info('BackupManager: Created backup - $fileName');
-      return file.path;
+      return filePath;
     } catch (e) {
       AppLogger.error('BackupManager: Create backup failed', e);
       rethrow;
@@ -87,13 +80,9 @@ class BackupManager {
   /// [filePath] 备份文件路径
   /// 返回备份数据
   Future<Uint8List> restoreBackup({required String filePath}) async {
+    if (kIsWeb) throw BackupException('Backup not available on Web');
     try {
-      final file = File(filePath);
-      if (!await file.exists()) {
-        throw BackupException('备份文件不存在: $filePath');
-      }
-
-      final data = await file.readAsBytes();
+      final data = await backup_impl.readBackup(filePath);
       AppLogger.info('BackupManager: Restored backup - $filePath');
       return data;
     } catch (e) {
@@ -113,44 +102,18 @@ class BackupManager {
   /// 列出所有备份
   /// 返回按创建时间倒序排列的备份信息列表
   Future<List<BackupInfo>> listBackups() async {
+    if (kIsWeb) return [];
     try {
-      final dir = await _backupDir;
-      final files = dir
-          .listSync()
-          .whereType<File>()
-          .where((f) => f.path.endsWith('.backup'))
-          .toList();
+      final dirPath = await _backupDirPathAsync;
+      final rawList = await backup_impl.listBackupFiles(dirPath);
 
-      // 按修改时间倒序排列
-      files.sort((a, b) {
-        final aStat = a.statSync();
-        final bStat = b.statSync();
-        return bStat.modified.compareTo(aStat.modified);
-      });
-
-      final backups = <BackupInfo>[];
-      for (final file in files) {
-        final stat = file.statSync();
-        final metaFile = File('${file.path}.meta');
-        Map<String, dynamic>? metadata;
-
-        if (await metaFile.exists()) {
-          try {
-            metadata = jsonDecode(await metaFile.readAsString())
-                as Map<String, dynamic>;
-          } catch (_) {}
-        }
-
-        backups.add(BackupInfo(
-          filePath: file.path,
-          fileName: file.uri.pathSegments.last,
-          sizeBytes: stat.size,
-          createdAt: stat.modified,
-          metadata: metadata,
-        ));
-      }
-
-      return backups;
+      return rawList.map((raw) => BackupInfo(
+        filePath: raw['filePath'] as String,
+        fileName: raw['fileName'] as String,
+        sizeBytes: raw['sizeBytes'] as int,
+        createdAt: DateTime.parse(raw['createdAt'] as String),
+        metadata: raw['metadata'] as Map<String, dynamic>?,
+      )).toList();
     } catch (e) {
       AppLogger.error('BackupManager: List backups failed', e);
       return [];
@@ -159,16 +122,9 @@ class BackupManager {
 
   /// 删除备份
   Future<void> deleteBackup({required String filePath}) async {
+    if (kIsWeb) return;
     try {
-      final file = File(filePath);
-      if (await file.exists()) {
-        await file.delete();
-      }
-      // 同时删除元数据
-      final metaFile = File('$filePath.meta');
-      if (await metaFile.exists()) {
-        await metaFile.delete();
-      }
+      await backup_impl.deleteBackupFile(filePath);
       AppLogger.info('BackupManager: Deleted backup - $filePath');
     } catch (e) {
       AppLogger.error('BackupManager: Delete backup failed', e);

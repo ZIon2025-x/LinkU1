@@ -55,6 +55,30 @@ class AppConfig {
   /// Apple Pay商户标识
   String get applePayMerchantId => 'merchant.com.link2ur.app';
 
+  /// Web 前端 URL（React 宣传站）
+  String get webFrontendUrl {
+    switch (_environment) {
+      case AppEnvironment.development:
+        return 'http://localhost:3000';
+      case AppEnvironment.staging:
+        return 'https://www.link2ur.com';
+      case AppEnvironment.production:
+        return 'https://www.link2ur.com';
+    }
+  }
+
+  /// Flutter Web App URL（用户端 Web）
+  String get webAppUrl {
+    switch (_environment) {
+      case AppEnvironment.development:
+        return 'http://localhost:8080';
+      case AppEnvironment.staging:
+        return 'https://app.link2ur.com';
+      case AppEnvironment.production:
+        return 'https://app.link2ur.com';
+    }
+  }
+
   /// 请求超时时间
   Duration get requestTimeout => const Duration(seconds: 30);
 

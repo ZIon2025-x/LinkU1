@@ -1,4 +1,4 @@
-import 'dart:io';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/services.dart';
 
 import 'logger.dart';
@@ -16,7 +16,7 @@ class BadgeService {
   /// 更新 App 图标角标数
   /// [count] 未读总数（通知 + 消息）
   Future<void> updateBadge(int count) async {
-    if (!Platform.isIOS) return; // Android 由系统/launcher 处理
+    if (kIsWeb) return; // Web 不支持角标
 
     try {
       await _channel.invokeMethod('updateBadge', count);
@@ -27,7 +27,7 @@ class BadgeService {
 
   /// 清除 App 图标角标
   Future<void> clearBadge() async {
-    if (!Platform.isIOS) return;
+    if (kIsWeb) return;
 
     try {
       await _channel.invokeMethod('clearBadge');
@@ -38,7 +38,7 @@ class BadgeService {
 
   /// 获取当前角标数
   Future<int> getBadgeCount() async {
-    if (!Platform.isIOS) return 0;
+    if (kIsWeb) return 0;
 
     try {
       final count = await _channel.invokeMethod<int>('getBadgeCount');

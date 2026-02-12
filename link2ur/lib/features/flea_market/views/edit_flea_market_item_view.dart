@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:image_picker/image_picker.dart';
-import 'dart:io';
 
 import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_radius.dart';
 import '../../../core/utils/l10n_extension.dart';
 import '../../../core/widgets/async_image_view.dart';
+import '../../../core/widgets/cross_platform_image.dart';
 import '../../../data/models/flea_market.dart';
 import '../../../data/repositories/flea_market_repository.dart';
 import '../bloc/flea_market_bloc.dart';
@@ -304,8 +304,8 @@ class _EditFleaMarketItemViewContentState
                         // 新选图片
                         ..._newImages.asMap().entries.map((entry) =>
                             _buildImageTile(
-                              child: Image.file(
-                                File(entry.value.path),
+                              child: CrossPlatformImage(
+                                xFile: entry.value,
                                 width: 90,
                                 height: 90,
                                 fit: BoxFit.cover,

@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 
@@ -7,6 +6,9 @@ import '../../core/constants/storage_keys.dart';
 import '../../core/utils/cache_manager.dart';
 import '../../core/utils/logger.dart';
 import '../../core/utils/translation_cache_manager.dart';
+import 'secure_storage_stub.dart'
+    if (dart.library.io) 'secure_storage_io.dart'
+    if (dart.library.html) 'secure_storage_web.dart';
 
 /// 存储服务
 /// 参考iOS KeychainHelper.swift 和 UserDefaults
@@ -18,7 +20,7 @@ class StorageService {
   static final StorageService instance = StorageService._();
 
   late SharedPreferences _prefs;
-  late FlutterSecureStorage _secureStorage;
+  late SecureTokenStorage _secureStorage;
   Box? _cacheBox;
 
   // ==================== 内存缓存 ====================
@@ -35,14 +37,7 @@ class StorageService {
   /// 初始化
   /// SharedPreferences、Hive.openBox、CacheManager 互不依赖，并行执行以减少启动时间
   Future<void> init() async {
-    _secureStorage = const FlutterSecureStorage(
-      aOptions: AndroidOptions(
-        encryptedSharedPreferences: true,
-      ),
-      iOptions: IOSOptions(
-        accessibility: KeychainAccessibility.first_unlock_this_device,
-      ),
-    );
+    _secureStorage = createSecureStorage();
 
     // 并行初始化三个独立的异步操作
     late final SharedPreferences prefs;

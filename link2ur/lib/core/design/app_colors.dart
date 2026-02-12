@@ -7,17 +7,17 @@ class AppColors {
   AppColors._();
 
   // ==================== 主色调 ====================
-  /// 主色 - 与iOS DesignSystem对齐 (#2659F2)
-  static const Color primary = Color(0xFF2659F2);
+  /// 主色 - Apple System Blue (#007AFF)
+  static const Color primary = Color(0xFF007AFF);
 
   /// 主色变体
-  static const Color primaryLight = Color(0xFF4088FF);
-  static const Color primaryDark = Color(0xFF1A3FBF);
+  static const Color primaryLight = Color(0xFF409CFF);
+  static const Color primaryDark = Color(0xFF0059B3);
 
-  /// 渐变主色 - 与iOS对齐 [#2659F2, #4088FF]
+  /// 渐变主色 [#007AFF, #409CFF]
   static const List<Color> gradientPrimary = [
-    Color(0xFF2659F2),
-    Color(0xFF4088FF),
+    Color(0xFF007AFF),
+    Color(0xFF409CFF),
   ];
 
   // ==================== 辅助色 ====================
@@ -51,8 +51,8 @@ class AppColors {
   static const Color errorLight = Color(0xFFFFE5E5);
 
   /// 信息
-  static const Color info = Color(0xFF2659F2);
-  static const Color infoLight = Color(0xFFE5EDFF);
+  static const Color info = Color(0xFF007AFF);
+  static const Color infoLight = Color(0xFFE5F0FF);
 
   // ==================== 背景色 ====================
   /// 主背景色（浅色模式）
@@ -189,7 +189,7 @@ class AppColors {
 
   /// 深蓝渐变 - 按钮变体
   static const List<Color> gradientDeepBlue = [
-    Color(0xFF2659F2),
+    Color(0xFF007AFF),
     Color(0xFF0059B3),
   ];
 

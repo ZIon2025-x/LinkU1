@@ -1,4 +1,3 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:image_picker/image_picker.dart';
@@ -8,6 +7,7 @@ import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_radius.dart';
 import '../../../core/utils/haptic_feedback.dart';
 import '../../../core/utils/l10n_extension.dart';
+import '../../../core/widgets/cross_platform_image.dart';
 import '../../../core/widgets/app_feedback.dart';
 import '../../../core/widgets/buttons.dart';
 import '../../../data/repositories/leaderboard_repository.dart';
@@ -27,7 +27,7 @@ class _ApplyLeaderboardViewState extends State<ApplyLeaderboardView> {
   final _descriptionController = TextEditingController();
   final _rulesController = TextEditingController();
   final _imagePicker = ImagePicker();
-  File? _coverImage;
+  XFile? _coverImage;
 
   @override
   void dispose() {
@@ -47,7 +47,7 @@ class _ApplyLeaderboardViewState extends State<ApplyLeaderboardView> {
         imageQuality: 85,
       );
       if (picked != null) {
-        setState(() => _coverImage = File(picked.path));
+        setState(() => _coverImage = picked);
       }
     } catch (e) {
       if (mounted) {
@@ -194,8 +194,8 @@ class _ApplyLeaderboardViewState extends State<ApplyLeaderboardView> {
             children: [
               ClipRRect(
                 borderRadius: BorderRadius.circular(AppRadius.medium),
-                child: Image.file(
-                  _coverImage!,
+                child: CrossPlatformImage(
+                  xFile: _coverImage!,
                   width: double.infinity,
                   height: 180,
                   fit: BoxFit.cover,

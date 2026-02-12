@@ -1,8 +1,7 @@
 import 'dart:async';
 import 'dart:collection';
-import 'dart:io';
 import 'package:dio/dio.dart';
-import 'package:dio/io.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 
 import '../../core/config/app_config.dart';
 import '../../core/config/api_config.dart';
@@ -11,6 +10,9 @@ import '../../core/utils/network_interceptor.dart';
 import '../../core/utils/network_monitor.dart';
 import '../../core/utils/app_exception.dart';
 import 'storage_service.dart';
+import 'http_client_config_stub.dart'
+    if (dart.library.io) 'http_client_config_io.dart'
+    if (dart.library.html) 'http_client_config_web.dart' as http_config;
 
 /// API服务
 /// 参考iOS APIService.swift
@@ -43,16 +45,9 @@ class ApiService {
       );
 
   /// 配置 HTTP 客户端（连接池、keep-alive）
+  /// 使用条件导入：移动端用 IOHttpClientAdapter，Web 端用 BrowserHttpClientAdapter
   void _configureHttpClient() {
-    _dio.httpClientAdapter = IOHttpClientAdapter(
-      createHttpClient: () {
-        final client = HttpClient()
-          ..maxConnectionsPerHost = 6 // 每个 host 最多 6 个并发连接
-          ..idleTimeout = const Duration(seconds: 15) // 空闲连接 15s 后关闭
-          ..connectionTimeout = const Duration(seconds: 10); // 连接超时 10s
-        return client;
-      },
-    );
+    http_config.configureHttpClient(_dio);
   }
 
   /// 内存缓存实例（GET 请求短时缓存）
@@ -507,7 +502,7 @@ class ApiService {
     }
   }
 
-  /// 上传文件
+  /// 上传文件（通过文件路径，仅限移动端/桌面端）
   Future<ApiResponse<T>> uploadFile<T>(
     String path, {
     required String filePath,
@@ -520,6 +515,39 @@ class ApiService {
     try {
       final formData = FormData.fromMap({
         fieldName: await MultipartFile.fromFile(filePath),
+        if (extraData != null) ...extraData,
+      });
+
+      final response = await _dio.post(
+        path,
+        data: formData,
+        onSendProgress: onProgress,
+        cancelToken: cancelToken,
+      );
+
+      return ApiResponse.success(
+        data: fromJson != null ? fromJson(response.data) : response.data,
+        statusCode: response.statusCode,
+      );
+    } on DioException catch (e) {
+      return _handleError(e);
+    }
+  }
+
+  /// 上传文件（通过字节数据，Web 和移动端通用）
+  Future<ApiResponse<T>> uploadFileBytes<T>(
+    String path, {
+    required List<int> bytes,
+    required String filename,
+    String fieldName = 'file',
+    Map<String, dynamic>? extraData,
+    T Function(dynamic)? fromJson,
+    void Function(int, int)? onProgress,
+    CancelToken? cancelToken,
+  }) async {
+    try {
+      final formData = FormData.fromMap({
+        fieldName: MultipartFile.fromBytes(bytes, filename: filename),
         if (extraData != null) ...extraData,
       });
 

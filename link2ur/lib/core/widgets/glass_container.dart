@@ -127,7 +127,7 @@ class _GlassCardState extends State<GlassCard>
         decoration: BoxDecoration(
           borderRadius: radius,
           gradient: LinearGradient(
-            colors: widget.gradientColors ?? const [Color(0xFF2659F2), Color(0xFF4088FF)],
+            colors: widget.gradientColors ?? const [Color(0xFF007AFF), Color(0xFF409CFF)],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),

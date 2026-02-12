@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_native_splash/flutter_native_splash.dart';
+import 'package:flutter_web_plugins/url_strategy.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 
 import 'app.dart';
@@ -20,10 +21,13 @@ void main() {
   // runZonedGuarded 额外捕获 Zone 内未处理的异步异常（三层防护互补）
   runZonedGuarded(
     () async {
+      // Web 上使用路径 URL 策略（去掉 # 号）
+      usePathUrlStrategy();
+
       WidgetsBinding widgetsBinding =
           WidgetsFlutterBinding.ensureInitialized();
 
-      // 保持原生启动画面直到 Flutter 初始化完毕
+      // 保持原生启动画面直到 Flutter 初始化完毕（Web 上为 no-op）
       FlutterNativeSplash.preserve(widgetsBinding: widgetsBinding);
 
       // 初始化日志
@@ -33,7 +37,7 @@ void main() {
       // 统一错误捕获：FlutterError + PlatformDispatcher
       await CrashReporter.instance.initialize();
 
-      // 设置系统UI样式
+      // 设置系统UI样式（Web 上这些调用会被忽略，但不会报错）
       SystemChrome.setSystemUIOverlayStyle(
         const SystemUiOverlayStyle(
           statusBarColor: Colors.transparent,
@@ -43,12 +47,12 @@ void main() {
       );
 
       // 并行化无依赖的初始化操作，减少冷启动时间
-      // 屏幕方向 和 Hive 初始化互不依赖，可并行执行
       await Future.wait([
-        SystemChrome.setPreferredOrientations([
-          DeviceOrientation.portraitUp,
-          DeviceOrientation.portraitDown,
-        ]),
+        if (!kIsWeb) // 屏幕方向锁定仅在移动端生效
+          SystemChrome.setPreferredOrientations([
+            DeviceOrientation.portraitUp,
+            DeviceOrientation.portraitDown,
+          ]),
         Hive.initFlutter(),
       ]);
 

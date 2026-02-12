@@ -1,5 +1,5 @@
 import 'dart:async';
-import 'dart:io';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -273,7 +273,7 @@ class _PaymentContentState extends State<_PaymentContent> {
   /// 对齐 iOS PaymentViewModel.startApplePay()
   /// 使用 STPApplePayContext / confirmPlatformPayPaymentIntent
   Future<void> _presentApplePay() async {
-    if (!Platform.isIOS) {
+    if (kIsWeb) {
       context.read<PaymentBloc>().add(
             PaymentMarkFailed(context.l10n.paymentApplePayIOSOnly),
           );
@@ -711,7 +711,7 @@ class _PaymentContentState extends State<_PaymentContent> {
           onTap: () => _onPaymentMethodChanged(PaymentMethod.card),
         ),
         AppSpacing.vSm,
-        if (Platform.isIOS) ...[
+        if (!kIsWeb) ...[
           _PaymentMethodTile(
             icon: Icons.apple,
             title: 'Apple Pay',

@@ -5,8 +5,8 @@ import CoreLocation
 // MARK: - Color & Style Constants (替代原生项目的 AppColors)
 
 private enum PickerColors {
-    static let primary = Color(red: 0.33, green: 0.49, blue: 1.0)       // #547DFF
-    static let primaryLight = Color(red: 0.33, green: 0.49, blue: 1.0).opacity(0.1)
+    static let primary = Color(red: 0.0, green: 0.478, blue: 1.0)       // #007AFF
+    static let primaryLight = Color(red: 0.0, green: 0.478, blue: 1.0).opacity(0.1)
     static let textPrimary = Color(UIColor.label)
     static let textSecondary = Color(UIColor.secondaryLabel)
     static let background = Color(UIColor.systemBackground)

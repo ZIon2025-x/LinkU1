@@ -1,5 +1,6 @@
 import 'dart:typed_data';
 
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:fluwx/fluwx.dart' as fluwx;
 
 import 'logger.dart';
@@ -21,6 +22,10 @@ class WeChatShareManager {
     required String appId,
     String? universalLink,
   }) async {
+    if (kIsWeb) {
+      AppLogger.info('WeChat SDK: Not available on Web');
+      return;
+    }
     try {
       await _fluwx.registerApi(
         appId: appId,

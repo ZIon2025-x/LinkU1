@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:tencent_kit/tencent_kit.dart';
 
 import 'logger.dart';
@@ -18,6 +19,10 @@ class QQShareManager {
     required String appId,
     String? universalLink,
   }) async {
+    if (kIsWeb) {
+      AppLogger.info('QQ SDK: Not available on Web');
+      return;
+    }
     try {
       await TencentKitPlatform.instance.setIsPermissionGranted(
         granted: true,

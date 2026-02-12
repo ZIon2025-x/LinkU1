@@ -1,4 +1,4 @@
-import 'dart:io';
+import 'package:flutter/foundation.dart' show Uint8List, kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -6,6 +6,7 @@ import 'package:image_picker/image_picker.dart';
 
 import '../../../core/constants/app_assets.dart';
 import '../../../core/design/app_colors.dart';
+import '../../../core/widgets/cross_platform_image.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_radius.dart';
 import '../../../core/utils/l10n_extension.dart';
@@ -49,7 +50,7 @@ class _EditProfileContentState extends State<_EditProfileContent> {
   final _bioController = TextEditingController();
   final _residenceCityController = TextEditingController();
 
-  File? _selectedImageFile;
+  XFile? _selectedImageFile;
   bool _initialized = false;
 
   @override
@@ -82,7 +83,7 @@ class _EditProfileContentState extends State<_EditProfileContent> {
 
       if (pickedFile != null) {
         setState(() {
-          _selectedImageFile = File(pickedFile.path);
+          _selectedImageFile = pickedFile;
         });
         if (mounted) {
           context.read<ProfileBloc>().add(
@@ -287,10 +288,15 @@ class _EditProfileContentState extends State<_EditProfileContent> {
 
     // 1. 用户刚选了本地图片文件
     if (_selectedImageFile != null) {
-      return CircleAvatar(
-        radius: radius,
-        backgroundColor: AppColors.primary.withValues(alpha: 0.1),
-        backgroundImage: FileImage(_selectedImageFile!),
+      return FutureBuilder<Uint8List>(
+        future: _selectedImageFile!.readAsBytes(),
+        builder: (context, snapshot) {
+          return CircleAvatar(
+            radius: radius,
+            backgroundColor: AppColors.primary.withValues(alpha: 0.1),
+            backgroundImage: snapshot.hasData ? MemoryImage(snapshot.data!) : null,
+          );
+        },
       );
     }
 

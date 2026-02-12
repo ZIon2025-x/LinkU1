@@ -1,4 +1,3 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -8,6 +7,7 @@ import '../../../core/constants/app_constants.dart';
 import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_radius.dart';
+import '../../../core/widgets/cross_platform_image.dart';
 import '../../../core/utils/haptic_feedback.dart';
 import '../../../core/utils/l10n_extension.dart';
 import '../../../core/utils/validators.dart';
@@ -93,7 +93,7 @@ class _PublishContentState extends State<_PublishContent>
   double? _fleaLatitude;
   double? _fleaLongitude;
   String? _fleaCategory;
-  final List<File> _fleaImages = [];
+  final List<XFile> _fleaImages = [];
   final _imagePicker = ImagePicker();
 
   // ── 帖子表单 ──
@@ -101,7 +101,7 @@ class _PublishContentState extends State<_PublishContent>
   final _postTitleCtrl = TextEditingController();
   final _postContentCtrl = TextEditingController();
   int? _postCategoryId;
-  final List<File> _postImages = [];
+  final List<XFile> _postImages = [];
   String? _postLinkedType;
   String? _postLinkedId;
   String? _postLinkedName;
@@ -306,7 +306,7 @@ class _PublishContentState extends State<_PublishContent>
       if (files.isNotEmpty) {
         setState(() {
           for (final f in files) {
-            if (_fleaImages.length < 9) _fleaImages.add(File(f.path));
+            if (_fleaImages.length < 9) _fleaImages.add(f);
           }
         });
       }
@@ -329,7 +329,7 @@ class _PublishContentState extends State<_PublishContent>
       if (files.isNotEmpty && mounted) {
         setState(() {
           for (final f in files) {
-            if (_postImages.length < _kPostMaxImages) _postImages.add(File(f.path));
+            if (_postImages.length < _kPostMaxImages) _postImages.add(f);
           }
         });
       }
@@ -462,7 +462,7 @@ class _PublishContentState extends State<_PublishContent>
                               type: _PublishType.task,
                               label: context.l10n.publishTaskCardLabel,
                               icon: Icons.task_alt_rounded,
-                              gradient: const [Color(0xFF2659F2), Color(0xFF4088FF)],
+                              gradient: const [Color(0xFF007AFF), Color(0xFF409CFF)],
                               onTap: () {
                                 AppHaptics.selection();
                                 setState(() => _selectedType = _PublishType.task);
@@ -1245,7 +1245,7 @@ class _PublishContentState extends State<_PublishContent>
             children: [
               ClipRRect(
                 borderRadius: AppRadius.allSmall,
-                child: Image.file(entry.value, width: 80, height: 80, fit: BoxFit.cover),
+                child: CrossPlatformImage(xFile: entry.value, width: 80, height: 80, fit: BoxFit.cover),
               ),
               Positioned(
                 top: -4,
@@ -1313,7 +1313,7 @@ class _PublishContentState extends State<_PublishContent>
             children: [
               ClipRRect(
                 borderRadius: AppRadius.allSmall,
-                child: Image.file(entry.value, width: 80, height: 80, fit: BoxFit.cover),
+                child: CrossPlatformImage(xFile: entry.value, width: 80, height: 80, fit: BoxFit.cover),
               ),
               Positioned(
                 top: -4,

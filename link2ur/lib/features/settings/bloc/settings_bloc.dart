@@ -1,14 +1,16 @@
-import 'dart:io';
 import 'package:equatable/equatable.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:path_provider/path_provider.dart';
 
 import '../../../data/services/storage_service.dart';
 import '../../../data/services/api_service.dart';
 import '../../../core/utils/cache_manager.dart';
 import '../../../core/utils/translation_cache_manager.dart';
 import '../../../core/utils/logger.dart';
+import '../../../core/utils/cache_directory_helper_stub.dart'
+    if (dart.library.io) '../../../core/utils/cache_directory_helper_io.dart'
+    as cache_dir_helper;
 
 // ==================== Events ====================
 
@@ -239,9 +241,8 @@ class SettingsBloc extends Bloc<SettingsEvent, SettingsState> {
     Emitter<SettingsState> emit,
   ) async {
     try {
-      // 计算临时目录大小（图片缓存等）
-      final cacheDir = await getTemporaryDirectory();
-      final tempSize = await _calculateDirectorySize(cacheDir);
+      // 计算临时目录大小（图片缓存等）— Web 上返回 0
+      final tempSize = await cache_dir_helper.calculateCacheDirectorySize();
 
       // 加上 CacheManager 的缓存大小
       final apiCacheSize = CacheManager.shared.diskCacheSizeBytes;
@@ -269,21 +270,8 @@ class SettingsBloc extends Bloc<SettingsEvent, SettingsState> {
       // 3. 清理 StorageService 的 Hive 缓存
       await StorageService.instance.clearCache();
 
-      // 4. 清理临时目录（图片缓存等）
-      final cacheDir = await getTemporaryDirectory();
-      if (cacheDir.existsSync()) {
-        await for (final entity in cacheDir.list()) {
-          try {
-            if (entity is File) {
-              await entity.delete();
-            } else if (entity is Directory) {
-              await entity.delete(recursive: true);
-            }
-          } catch (_) {
-            // 跳过无法删除的文件
-          }
-        }
-      }
+      // 4. 清理临时目录（图片缓存等）— Web 上为 no-op
+      await cache_dir_helper.clearCacheDirectory();
 
       // 记录缓存统计
       final stats = CacheManager.shared.getStatistics();
@@ -321,22 +309,6 @@ class SettingsBloc extends Bloc<SettingsEvent, SettingsState> {
         deleteAccountError: e.toString(),
       ));
     }
-  }
-
-  /// 计算目录大小
-  Future<int> _calculateDirectorySize(Directory dir) async {
-    int totalSize = 0;
-    try {
-      if (dir.existsSync()) {
-        await for (final entity
-            in dir.list(recursive: true, followLinks: false)) {
-          if (entity is File) {
-            totalSize += await entity.length();
-          }
-        }
-      }
-    } catch (_) {}
-    return totalSize;
   }
 
   /// 格式化文件大小

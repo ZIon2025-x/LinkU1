@@ -1,4 +1,3 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -8,6 +7,7 @@ import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_radius.dart';
 import '../../../core/utils/l10n_extension.dart';
+import '../../../core/widgets/cross_platform_image.dart';
 import '../../../core/widgets/buttons.dart';
 import '../../../core/widgets/location_picker.dart';
 import '../../../data/repositories/flea_market_repository.dart';
@@ -48,7 +48,7 @@ class _CreateFleaMarketItemContentState
   double? _latitude;
   double? _longitude;
   String? _selectedCategory;
-  final List<File> _selectedImages = [];
+  final List<XFile> _selectedImages = [];
   final _imagePicker = ImagePicker();
 
   List<(String, String)> _getCategories(BuildContext context) => [
@@ -80,7 +80,7 @@ class _CreateFleaMarketItemContentState
         setState(() {
           for (final file in pickedFiles) {
             if (_selectedImages.length < 9) {
-              _selectedImages.add(File(file.path));
+              _selectedImages.add(file);
             }
           }
         });
@@ -333,8 +333,8 @@ class _CreateFleaMarketItemContentState
             children: [
               ClipRRect(
                 borderRadius: AppRadius.allSmall,
-                child: Image.file(
-                  entry.value,
+                child: CrossPlatformImage(
+                  xFile: entry.value,
                   width: 80,
                   height: 80,
                   fit: BoxFit.cover,

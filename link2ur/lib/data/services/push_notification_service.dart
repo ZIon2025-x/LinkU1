@@ -1,4 +1,4 @@
-import 'dart:io';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/services.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:go_router/go_router.dart';
@@ -6,6 +6,7 @@ import 'package:device_info_plus/device_info_plus.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
 import '../../core/constants/api_endpoints.dart';
+import '../../core/config/api_config.dart';
 import '../../core/utils/logger.dart';
 import 'storage_service.dart';
 import 'api_service.dart';
@@ -41,6 +42,12 @@ class PushNotificationService {
 
   /// 初始化推送通知服务
   Future<void> init() async {
+    // Web 上不支持推送通知
+    if (kIsWeb) {
+      AppLogger.info('PushNotificationService: Skipped on Web');
+      return;
+    }
+
     // 初始化本地通知
     await _initLocalNotifications();
 
@@ -93,24 +100,26 @@ class PushNotificationService {
 
       // 获取设备信息（与原生项目一致）
       String deviceId = '';
-      final deviceInfo = DeviceInfoPlugin();
-      if (Platform.isIOS) {
-        final iosInfo = await deviceInfo.iosInfo;
-        deviceId = iosInfo.identifierForVendor ?? '';
-      } else if (Platform.isAndroid) {
-        final androidInfo = await deviceInfo.androidInfo;
-        deviceId = androidInfo.id;
+      final platformId = ApiConfig.platformId;
+      if (!kIsWeb) {
+        final deviceInfo = DeviceInfoPlugin();
+        if (platformId == 'ios') {
+          final iosInfo = await deviceInfo.iosInfo;
+          deviceId = iosInfo.identifierForVendor ?? '';
+        } else if (platformId == 'android') {
+          final androidInfo = await deviceInfo.androidInfo;
+          deviceId = androidInfo.id;
+        }
       }
 
       final packageInfo = await PackageInfo.fromPlatform();
-      final locale = Platform.localeName;
-      final deviceLanguage = locale.startsWith('zh') ? 'zh' : 'en';
+      final deviceLanguage = _getDeviceLanguage();
 
       await _apiService!.post(
         ApiEndpoints.deviceToken,
         data: {
           'device_token': token,
-          'platform': Platform.isIOS ? 'ios' : 'android',
+          'platform': platformId,
           'device_id': deviceId,
           'app_version': packageInfo.version,
           'device_language': deviceLanguage,
@@ -157,7 +166,7 @@ class PushNotificationService {
     );
 
     // 创建 Android 通知渠道
-    if (Platform.isAndroid) {
+    if (!kIsWeb && ApiConfig.platformId == 'android') {
       const channel = AndroidNotificationChannel(
         'link2ur_default',
         'Link²Ur 通知',
@@ -225,8 +234,13 @@ class PushNotificationService {
   /// 获取设备语言（简化为 "en" 或 "zh"）
   /// 与原生项目 PushNotificationLocalizer.deviceLanguage 逻辑一致
   String _getDeviceLanguage() {
-    final locale = Platform.localeName;
-    return locale.startsWith('zh') ? 'zh' : 'en';
+    // 优先从 StorageService 获取用户设置的语言
+    final savedLang = StorageService.instance.getLanguage();
+    if (savedLang != null) {
+      return savedLang.startsWith('zh') ? 'zh' : 'en';
+    }
+    // Web 上使用 window.navigator.language 的结果已由 Flutter 自动处理
+    return 'en';
   }
 
   /// 处理通知点击（从原生端传来）

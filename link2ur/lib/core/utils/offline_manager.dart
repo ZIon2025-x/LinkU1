@@ -1,12 +1,13 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:io';
 
-import 'package:path_provider/path_provider.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:uuid/uuid.dart';
 
 import 'logger.dart';
 import 'network_monitor.dart';
+import 'offline_storage_stub.dart'
+    if (dart.library.io) 'offline_storage_io.dart' as offline_storage;
 
 /// 离线操作类型
 enum OfflineOperationType { create, update, delete, custom }
@@ -156,6 +157,13 @@ class OfflineManager {
       return;
     }
 
+    // Web 上不支持离线操作持久化
+    if (kIsWeb) {
+      _initialized = true;
+      AppLogger.info('OfflineManager: Web mode - persistence disabled');
+      return;
+    }
+
     // 加载持久化的操作
     await _loadOperations();
 
@@ -255,23 +263,15 @@ class OfflineManager {
       op.status = OfflineOperationStatus.syncing;
 
       try {
-        // 这里需要实际的网络请求
-        // 由于不直接依赖 ApiService，使用 HttpClient
-        final uri = Uri.parse(op.endpoint);
-        final request = await HttpClient().openUrl(op.method, uri);
+        // 使用条件导入的 HTTP 请求实现
+        final result = await offline_storage.performHttpRequest(
+          method: op.method,
+          endpoint: op.endpoint,
+          headers: op.headers,
+          body: op.body,
+        );
 
-        // 添加 headers
-        op.headers?.forEach((key, value) {
-          request.headers.set(key, value);
-        });
-
-        if (op.body != null) {
-          request.headers.contentType = ContentType.json;
-          request.write(jsonEncode(op.body));
-        }
-
-        final response = await request.close();
-        final statusCode = response.statusCode;
+        final statusCode = result['statusCode'] as int;
 
         if (statusCode >= 200 && statusCode < 300) {
           op.status = OfflineOperationStatus.completed;
@@ -279,9 +279,10 @@ class OfflineManager {
           successCount++;
         } else if (statusCode == 409) {
           // 冲突
-          final body = await response.transform(utf8.decoder).join();
-          final serverData =
-              jsonDecode(body) as Map<String, dynamic>?;
+          final bodyStr = result['body'] as String?;
+          final serverData = bodyStr != null
+              ? jsonDecode(bodyStr) as Map<String, dynamic>?
+              : null;
           onConflict?.call(SyncConflict(
             operation: op,
             serverData: serverData,
@@ -340,22 +341,25 @@ class OfflineManager {
   // ==================== 持久化 ====================
 
   Future<void> _saveOperations() async {
+    if (kIsWeb) return;
     try {
-      final dir = await getApplicationDocumentsDirectory();
-      final file = File('${dir.path}/$_operationsFileName');
       final json = _operations.map((op) => op.toJson()).toList();
-      await file.writeAsString(jsonEncode(json));
+      await offline_storage.saveOperationsToFile(
+        _operationsFileName,
+        jsonEncode(json),
+      );
     } catch (e) {
       AppLogger.error('OfflineManager: Save operations failed', e);
     }
   }
 
   Future<void> _loadOperations() async {
+    if (kIsWeb) return;
     try {
-      final dir = await getApplicationDocumentsDirectory();
-      final file = File('${dir.path}/$_operationsFileName');
-      if (await file.exists()) {
-        final content = await file.readAsString();
+      final content = await offline_storage.loadOperationsFromFile(
+        _operationsFileName,
+      );
+      if (content != null) {
         final list = jsonDecode(content) as List<dynamic>;
         _operations.clear();
         _operations.addAll(
@@ -384,19 +388,17 @@ class OfflineDataStore {
 
   Future<String> get _dataPath async {
     if (_basePath == null) {
-      final dir = await getApplicationDocumentsDirectory();
-      _basePath = '${dir.path}/OfflineData';
-      await Directory(_basePath!).create(recursive: true);
+      _basePath = await offline_storage.getOfflineDataPath();
     }
     return _basePath!;
   }
 
   /// 保存数据
   Future<void> save<T>(T data, {required String key}) async {
+    if (kIsWeb) return;
     try {
       final path = await _dataPath;
-      final file = File('$path/$key.json');
-      await file.writeAsString(jsonEncode(data));
+      await offline_storage.saveDataToFile(path, key, jsonEncode(data));
     } catch (e) {
       AppLogger.error('OfflineDataStore: Save failed for $key', e);
     }
@@ -404,11 +406,11 @@ class OfflineDataStore {
 
   /// 加载数据
   Future<T?> load<T>(String key, {T Function(dynamic)? fromJson}) async {
+    if (kIsWeb) return null;
     try {
       final path = await _dataPath;
-      final file = File('$path/$key.json');
-      if (await file.exists()) {
-        final content = await file.readAsString();
+      final content = await offline_storage.loadDataFromFile(path, key);
+      if (content != null) {
         final data = jsonDecode(content);
         return fromJson != null ? fromJson(data) : data as T;
       }
@@ -420,12 +422,10 @@ class OfflineDataStore {
 
   /// 删除数据
   Future<void> remove({required String key}) async {
+    if (kIsWeb) return;
     try {
       final path = await _dataPath;
-      final file = File('$path/$key.json');
-      if (await file.exists()) {
-        await file.delete();
-      }
+      await offline_storage.deleteDataFile(path, key);
     } catch (e) {
       AppLogger.error('OfflineDataStore: Remove failed for $key', e);
     }
@@ -433,19 +433,17 @@ class OfflineDataStore {
 
   /// 检查数据是否存在
   Future<bool> exists({required String key}) async {
+    if (kIsWeb) return false;
     final path = await _dataPath;
-    return File('$path/$key.json').exists();
+    return offline_storage.dataFileExists(path, key);
   }
 
   /// 清除所有离线数据
   Future<void> clearAll() async {
+    if (kIsWeb) return;
     try {
       final path = await _dataPath;
-      final dir = Directory(path);
-      if (await dir.exists()) {
-        await dir.delete(recursive: true);
-        await dir.create(recursive: true);
-      }
+      await offline_storage.clearOfflineData(path);
     } catch (e) {
       AppLogger.error('OfflineDataStore: Clear all failed', e);
     }

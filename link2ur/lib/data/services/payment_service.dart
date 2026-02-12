@@ -1,5 +1,4 @@
-import 'dart:io';
-
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_stripe/flutter_stripe.dart';
 
@@ -29,7 +28,7 @@ class PaymentService {
 
   /// 检查 Apple Pay 是否可用（使用 Platform Pay API）
   Future<bool> isApplePaySupported() async {
-    if (!Platform.isIOS) return false;
+    if (kIsWeb) return false;
     try {
       return await Stripe.instance.isPlatformPaySupported(
         googlePay: const IsGooglePaySupportedParams(),
@@ -52,8 +51,8 @@ class PaymentService {
     String label = 'Link²Ur',
     String countryCode = 'GB',
   }) async {
-    if (!Platform.isIOS) {
-      throw const PaymentServiceException('Apple Pay is only available on iOS');
+    if (kIsWeb) {
+      throw const PaymentServiceException('Apple Pay is not available on Web');
     }
 
     try {

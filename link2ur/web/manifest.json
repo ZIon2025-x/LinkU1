@@ -1,11 +1,11 @@
 {
-    "name": "link2ur",
-    "short_name": "link2ur",
+    "name": "Link²Ur",
+    "short_name": "Link²Ur",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#ffffff",
-    "theme_color": "#4CAF50",
-    "description": "A new Flutter project.",
+    "theme_color": "#007AFF",
+    "description": "Link²Ur - Skill Exchange Platform | 技能互助平台",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

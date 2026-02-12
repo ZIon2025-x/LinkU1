@@ -1,4 +1,6 @@
-import 'dart:io' show Platform;
+import 'package:flutter/foundation.dart' show kIsWeb;
+import 'platform_helper_stub.dart'
+    if (dart.library.io) 'platform_helper_io.dart' as platform_helper;
 
 /// API配置
 class ApiConfig {
@@ -7,12 +9,11 @@ class ApiConfig {
   /// API版本
   static const String apiVersion = 'v1';
 
-  /// 运行时平台标识（ios / android / other）
+  /// 运行时平台标识（ios / android / web / other）
   /// 后端通过 X-Platform 判断移动端应用并给予长期会话
   static String get platformId {
-    if (Platform.isIOS) return 'ios';
-    if (Platform.isAndroid) return 'android';
-    return 'other';
+    if (kIsWeb) return 'web';
+    return platform_helper.getPlatformId();
   }
 
   /// 请求头

@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/services.dart';
 import 'package:local_auth/local_auth.dart';
 
@@ -15,6 +16,7 @@ class BiometricAuthManager {
 
   /// 检查设备是否支持生物认证
   Future<bool> get isAvailable async {
+    if (kIsWeb) return false; // Web 不支持生物认证
     try {
       final canCheck = await _auth.canCheckBiometrics;
       final isDeviceSupported = await _auth.isDeviceSupported();

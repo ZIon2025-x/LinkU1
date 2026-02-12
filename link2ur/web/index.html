@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
   <!--
     If you are serving your web app in a path other than the root, change the
@@ -18,21 +18,83 @@
 
   <meta charset="UTF-8">
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
-  <meta name="description" content="A new Flutter project.">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
+  <!-- SEO & App Meta -->
+  <meta name="description" content="Link²Ur - 技能互助平台 | Skill Exchange Platform. Find help, share skills, connect with others.">
+  <meta name="keywords" content="Link2Ur, skill exchange, task help, freelance, student help, 技能互助, 任务帮助">
+  <meta name="author" content="Link²Ur">
+  <meta name="theme-color" content="#007AFF">
+
+  <!-- Open Graph -->
+  <meta property="og:title" content="Link²Ur - Skill Exchange Platform">
+  <meta property="og:description" content="Find help, share skills, and connect with others on Link²Ur.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://app.link2ur.com">
+  <meta property="og:site_name" content="Link²Ur">
+
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" content="Link²Ur - Skill Exchange Platform">
+  <meta name="twitter:description" content="Find help, share skills, and connect with others on Link²Ur.">
 
   <!-- iOS meta tags & icons -->
   <meta name="mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black">
-  <meta name="apple-mobile-web-app-title" content="link2ur">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Link²Ur">
   <link rel="apple-touch-icon" href="icons/Icon-192.png">
 
   <!-- Favicon -->
   <link rel="icon" type="image/png" href="favicon.png"/>
 
-  <title>link2ur</title>
+  <title>Link²Ur</title>
   <link rel="manifest" href="manifest.json">
+
+  <style>
+    /* Loading indicator while Flutter initializes */
+    .loading {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      background-color: #ffffff;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    }
+    .loading-spinner {
+      width: 40px;
+      height: 40px;
+      border: 3px solid #f3f3f3;
+      border-top: 3px solid #007AFF;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    @media (prefers-color-scheme: dark) {
+      .loading {
+        background-color: #000000;
+      }
+      .loading-spinner {
+        border-color: #333;
+        border-top-color: #007AFF;
+      }
+    }
+  </style>
 </head>
 <body>
+  <div class="loading" id="loading">
+    <div class="loading-spinner"></div>
+  </div>
+  <script>
+    // Remove loading indicator when Flutter is ready
+    window.addEventListener('flutter-first-frame', function() {
+      var loading = document.getElementById('loading');
+      if (loading) loading.remove();
+    });
+  </script>
   <script src="flutter_bootstrap.js" async></script>
 </body>
 </html>

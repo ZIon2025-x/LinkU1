@@ -1,10 +1,11 @@
 import 'dart:async';
-import 'dart:io';
 
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:in_app_purchase/in_app_purchase.dart';
 
 import '../../core/constants/api_endpoints.dart';
 import '../../core/utils/logger.dart';
+import '../../core/config/api_config.dart';
 import 'api_service.dart';
 
 /// IAP 内购服务
@@ -54,6 +55,13 @@ class IAPService {
   Future<void> initialize({required ApiService apiService}) async {
     _initialized = true;
     _apiService = apiService;
+
+    // Web 上不支持应用内购买
+    if (kIsWeb) {
+      AppLogger.info('IAP: Not available on Web');
+      errorMessage = 'Web 端不支持应用内购买';
+      return;
+    }
 
     final available = await _iap.isAvailable();
     if (!available) {
@@ -183,7 +191,7 @@ class IAPService {
               purchase.purchaseID ?? '',
           'receipt_data':
               purchase.verificationData.serverVerificationData,
-          'platform': Platform.isIOS ? 'ios' : 'android',
+          'platform': ApiConfig.platformId,
         },
       );
 

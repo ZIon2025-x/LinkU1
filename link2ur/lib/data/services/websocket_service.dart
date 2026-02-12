@@ -2,12 +2,14 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/widgets.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
-import 'package:web_socket_channel/io.dart';
 
 import '../../core/config/app_config.dart';
 import '../../core/utils/logger.dart';
 import '../../core/utils/network_monitor.dart';
 import 'storage_service.dart';
+import 'websocket_channel_stub.dart'
+    if (dart.library.io) 'websocket_channel_io.dart'
+    if (dart.library.html) 'websocket_channel_web.dart' as ws_config;
 
 /// WebSocket服务
 /// 参考iOS WebSocketService.swift
@@ -76,9 +78,9 @@ class WebSocketService extends WidgetsBindingObserver {
       final wsUrl = '${AppConfig.instance.wsUrl}/ws?token=${Uri.encodeComponent(token)}';
       AppLogger.info('Connecting to WebSocket: ${AppConfig.instance.wsUrl}/ws');
 
-      _channel = IOWebSocketChannel.connect(
+      _channel = ws_config.createWebSocketChannel(
         Uri.parse(wsUrl),
-        headers: {
+        {
           'X-Session-ID': token,
           'Authorization': 'Bearer $token',
         },

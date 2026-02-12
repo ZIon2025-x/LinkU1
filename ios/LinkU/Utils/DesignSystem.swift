@@ -2,10 +2,10 @@ import SwiftUI
 
 // MARK: - 核心调色板 (Modern Brand Palette)
 struct AppColors {
-    // 主品牌色 - 更加深邃且有活力的蓝色
-    static let primary = Color(red: 0.15, green: 0.35, blue: 0.95) // #2659F2
+    // 主品牌色 - Apple System Blue (#007AFF)
+    static let primary = Color(red: 0.0, green: 0.478, blue: 1.0) // #007AFF
     static let primaryGradient = LinearGradient(
-        colors: [primary, Color(red: 0.25, green: 0.55, blue: 1.0)],
+        colors: [primary, Color(red: 0.251, green: 0.612, blue: 1.0)], // #409CFF
         startPoint: .topLeading,
         endPoint: .bottomTrailing
     )
