@@ -43,10 +43,11 @@ class DesktopDrawer extends StatelessWidget {
             // 顶部 Header：Logo + 关闭按钮（对齐 frontend .menu-header）
             _buildHeader(context, isDark),
 
-            // 可滚动内容区
+            // 可滚动内容区（RepaintBoundary 隔离菜单项 hover 重绘，减轻背后阴影晃动）
             Expanded(
-              child: ListView(
-                padding: EdgeInsets.zero,
+              child: RepaintBoundary(
+                child: ListView(
+                  padding: EdgeInsets.zero,
                 children: [
                   const SizedBox(height: 20),
 
@@ -159,6 +160,7 @@ class DesktopDrawer extends StatelessWidget {
                     ),
                   ],
                 ],
+              ),
               ),
             ),
 

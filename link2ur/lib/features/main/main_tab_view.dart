@@ -278,9 +278,12 @@ class _MainTabViewState extends State<MainTabView> {
 
     return Scaffold(
       key: _desktopScaffoldKey,
-      endDrawer: DesktopDrawer(
-        currentRoute: _currentRoute,
-        onNavigate: _onDesktopNavigate,
+      endDrawer: Drawer(
+        elevation: 6,
+        child: DesktopDrawer(
+          currentRoute: _currentRoute,
+          onNavigate: _onDesktopNavigate,
+        ),
       ),
       body: Column(
         children: [
