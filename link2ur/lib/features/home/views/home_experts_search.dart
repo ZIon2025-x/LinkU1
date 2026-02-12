@@ -198,6 +198,11 @@ class _ExpertsTabContentState extends State<_ExpertsTabContent> {
         // 对标iOS: 达人卡片列表
         Expanded(
           child: BlocBuilder<TaskExpertBloc, TaskExpertState>(
+            buildWhen: (prev, curr) =>
+                prev.status != curr.status ||
+                prev.experts != curr.experts ||
+                prev.errorMessage != curr.errorMessage ||
+                prev.hasMore != curr.hasMore,
             builder: (context, state) {
               if (state.status == TaskExpertStatus.loading &&
                   state.experts.isEmpty) {

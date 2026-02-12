@@ -2,6 +2,8 @@ part of 'home_view.dart';
 
 /// 对标iOS: headerSection — 两行问候 + 右侧通知按钮
 class _GreetingSection extends StatelessWidget {
+  const _GreetingSection();
+
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;

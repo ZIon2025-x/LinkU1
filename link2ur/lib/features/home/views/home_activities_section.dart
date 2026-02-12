@@ -9,6 +9,8 @@ String _currencySymbol(String? currency) {
 
 /// 对标iOS: PopularActivitiesSection - 热门活动区域
 class _PopularActivitiesSection extends StatelessWidget {
+  const _PopularActivitiesSection();
+
   @override
   Widget build(BuildContext context) {
     return SizedBox(

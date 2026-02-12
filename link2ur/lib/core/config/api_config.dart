@@ -1,3 +1,5 @@
+import 'dart:io' show Platform;
+
 /// API配置
 class ApiConfig {
   ApiConfig._();
@@ -5,12 +7,22 @@ class ApiConfig {
   /// API版本
   static const String apiVersion = 'v1';
 
+  /// 运行时平台标识（ios / android / other）
+  /// 后端通过 X-Platform 判断移动端应用并给予长期会话
+  static String get platformId {
+    if (Platform.isIOS) return 'ios';
+    if (Platform.isAndroid) return 'android';
+    return 'other';
+  }
+
   /// 请求头
-  static const Map<String, String> defaultHeaders = {
+  /// 注意：X-Platform 依赖运行时平台检测，因此使用 getter 而非 const
+  static Map<String, String> get defaultHeaders => {
     'Content-Type': 'application/json',
     'Accept': 'application/json',
     'Accept-Encoding': 'gzip, deflate',
     'X-App-Platform': 'flutter',
+    'X-Platform': platformId,
     'X-App-Version': '1.0.0',
   };
 

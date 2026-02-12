@@ -197,6 +197,17 @@ class _ProfileContent extends StatelessWidget {
           );
         },
         child: BlocBuilder<ProfileBloc, ProfileState>(
+        buildWhen: (prev, curr) =>
+            prev.status != curr.status ||
+            prev.user != curr.user ||
+            prev.myTasks != curr.myTasks ||
+            prev.postedTasks != curr.postedTasks ||
+            prev.myForumPosts != curr.myForumPosts ||
+            prev.favoritedPosts != curr.favoritedPosts ||
+            prev.likedPosts != curr.likedPosts ||
+            prev.preferences != curr.preferences ||
+            prev.errorMessage != curr.errorMessage ||
+            prev.isUpdating != curr.isUpdating,
         builder: (context, profileState) {
           final user = authState.user!;
 

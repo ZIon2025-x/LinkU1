@@ -241,12 +241,8 @@ class _LoginViewState extends State<LoginView>
                         horizontal: AppSpacing.md,
                         vertical: AppSpacing.lg,
                       ),
-                      child: AnimatedBuilder(
-                        animation: _animController,
-                        builder: (context, child) => Opacity(
-                          opacity: _fadeIn.value,
-                          child: child,
-                        ),
+                      child: FadeTransition(
+                        opacity: _fadeIn,
                         child: Column(
                           children: [
                             // Logo + 品牌名

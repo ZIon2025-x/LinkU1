@@ -2,7 +2,7 @@
 
 > 分析日期：2026-02-12
 > 环境：Flutter Debug 模式 + Android 模拟器/虚拟机
-> 状态：**全部已实施** (Phase 1 + Phase 2 + Phase 3)
+> 状态：**全部已实施** (Phase 1 + Phase 2 + Phase 3 + Round 2)
 
 ---
 
@@ -516,3 +516,23 @@ flutter run --release
 **Phase 1 的 4 项修改（约 20 分钟工作量）即可解决 80% 的卡顿问题。**
 
 Release/Profile 模式下 `kDebugMode` 为 false，日志相关代码不执行，因此实际用户不会遇到这些问题。但优化 Debug 模式对开发效率至关重要。
+
+---
+
+## Round 2 — Widget 层深度优化 (2026-02-12)
+
+### 已实施
+
+| # | 优化项 | 文件 | 说明 |
+|---|--------|------|------|
+| 11 | const 构造函数 | `home_widgets.dart`, `home_activities_section.dart`, `home_recommended_section.dart` | `_GreetingSection`、`_PopularActivitiesSection` 添加 const 构造 + 调用点加 const，避免每帧重建 |
+| 12 | buildWhen 过滤 | `home_experts_search.dart`, `notification_list_view.dart`, `activity_detail_view.dart`, `profile_view.dart` | 4 个大型 BlocBuilder 添加 buildWhen，只在相关字段变化时重建 |
+| 13a | Opacity → 背景色透明度 | `coupon_points_view.dart` | 移除 `Opacity(0.5)` 包裹整张卡片（触发 saveLayer），改用容器背景色 alpha |
+| 13b | AnimatedBuilder+Opacity → FadeTransition | `login_view.dart`, `register_view.dart` | 替换为 Flutter 专用 `FadeTransition`，减少手动 builder 重建 |
+
+### buildWhen 详细说明
+
+- **TaskExpertBloc** (home_experts_search): 状态含 20+ 字段，列表仅依赖 `status`/`experts`/`errorMessage`/`hasMore`，过滤 `selectedExpert`/`services`/`reviews`/`timeSlots` 等无关变更
+- **NotificationBloc** (notification_list_view): `unreadCount` 频繁更新（WebSocket 推送），不应触发列表重建
+- **ActivityBloc** (activity_detail_view): 详情页不需要响应 `activities` 列表/分页字段变化
+- **ProfileBloc** (profile_view): 过滤 `publicUser`（他人资料）和 `actionMessage`（已由 BlocListener 处理）

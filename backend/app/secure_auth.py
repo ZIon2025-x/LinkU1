@@ -25,10 +25,11 @@ settings = get_settings()
 
 ACCESS_TOKEN_EXPIRE_MINUTES = settings.ACCESS_TOKEN_EXPIRE_MINUTES
 REFRESH_TOKEN_EXPIRE_HOURS = settings.REFRESH_TOKEN_EXPIRE_HOURS
-# 会话过期时间：移动端（非iOS原生应用）使用较长时间，Web端使用较短时间
-# iOS 原生应用会话使用 IOS_SESSION_EXPIRE_DAYS 天（默认90天，可通过环境变量调整）
+# 会话过期时间：Web端使用较短时间，移动端应用（iOS原生/Flutter）使用较长时间
+# 移动端应用会话使用 MOBILE_APP_SESSION_EXPIRE_DAYS 天（默认90天，可通过环境变量调整）
+# 向后兼容：环境变量名仍支持 IOS_SESSION_EXPIRE_DAYS
 SESSION_EXPIRE_HOURS = int(os.getenv("SESSION_EXPIRE_HOURS", "24"))  # 默认24小时（优化：从1小时改为24小时，提升用户体验）
-IOS_SESSION_EXPIRE_HOURS = int(os.getenv("IOS_SESSION_EXPIRE_DAYS", "90")) * 24  # 默认90天（从365天降低，平衡安全与体验）
+IOS_SESSION_EXPIRE_HOURS = int(os.getenv("MOBILE_APP_SESSION_EXPIRE_DAYS", os.getenv("IOS_SESSION_EXPIRE_DAYS", "90"))) * 24  # 默认90天，移动端应用共享
 USER_SESSION_EXPIRE_HOURS = int(os.getenv("USER_SESSION_EXPIRE_HOURS", "168"))  # 默认7天（优化：从1小时改为168小时，减少频繁登出）
 MAX_ACTIVE_SESSIONS = int(os.getenv("MAX_ACTIVE_SESSIONS", "5"))
 
@@ -598,47 +599,72 @@ def is_mobile_request(request: Request) -> bool:
     logger.debug(f"移动端请求验证失败: {platform}")
     return False
 
-def is_ios_app_request(request: Request) -> bool:
+def is_mobile_app_request(request: Request) -> bool:
     """
-    检测是否为 iOS 原生应用请求（排除Safari浏览器）
+    检测是否为移动端原生应用请求（iOS 原生 / Flutter iOS / Flutter Android）
     
-    检查条件（必须同时满足）：
-    1. X-Platform 头为 "ios"
-    2. User-Agent 包含 "Link2Ur-iOS" 或 "link2ur-ios"（应用特定标识）
-    3. User-Agent 不包含 "Safari" 或 "Version/"（排除浏览器）
+    匹配以下任一条件即视为移动端应用：
     
-    注意：iPhone/iPad 上的 Safari 浏览器不应该被识别为 iOS 应用
+    A) iOS 原生应用（Swift/SwiftUI）：
+       - X-Platform 头为 "ios"
+       - User-Agent 包含 "Link2Ur-iOS" 或 "link2ur-ios"
+       - User-Agent 不包含 "Safari"+"Version/"（排除浏览器）
     
-    iOS 应用会话将获得 1 年的有效期，普通会话使用 SESSION_EXPIRE_HOURS（默认24小时）
+    B) Flutter 应用（iOS 或 Android）：
+       - X-App-Platform 头为 "flutter"
+       - User-Agent 包含 "dart"（Flutter/Dart 的默认 UA 格式为 "Dart/x.y (dart:io)"）
+       - 排除浏览器（不包含 "Mozilla"）
+    
+    移动端应用会话将获得长期有效期（默认90天），普通 Web 会话使用 SESSION_EXPIRE_HOURS
     """
-    # 1. 必须要有 X-Platform 头
-    platform = request.headers.get("X-Platform", "").lower()
     user_agent = request.headers.get("user-agent", "").lower()
     
-    # 调试日志：记录请求的关键 headers
-    logger.debug(f"[iOS检测] X-Platform={platform}, User-Agent={user_agent[:100]}")
+    # ========== 路径 A: iOS 原生应用 ==========
+    x_platform = request.headers.get("X-Platform", "").lower()
     
-    if platform != "ios":
-        logger.debug(f"[iOS检测] X-Platform 不是 'ios'，不是 iOS 应用")
+    if x_platform == "ios":
+        # 排除 Safari 浏览器
+        if "safari" in user_agent and "version/" in user_agent:
+            logger.debug(f"[移动端检测] Safari 浏览器，非应用: UA={user_agent[:80]}")
+            return False
+        
+        # iOS 原生应用特定标识
+        if "link2ur-ios" in user_agent or "link2ur/ios" in user_agent:
+            logger.info(f"[移动端检测] ✅ iOS 原生应用，长期会话（{IOS_SESSION_EXPIRE_HOURS // 24}天）: UA={user_agent[:80]}")
+            return True
+    
+    # ========== 路径 B: Flutter 应用（iOS / Android） ==========
+    x_app_platform = request.headers.get("X-App-Platform", "").lower()
+    
+    if x_app_platform == "flutter":
+        # Flutter/Dart 的 User-Agent 格式为 "Dart/x.y (dart:io)"
+        # 排除浏览器伪造（浏览器 UA 通常包含 "mozilla"）
+        if "dart" in user_agent and "mozilla" not in user_agent:
+            platform_detail = x_platform or "unknown"
+            logger.info(f"[移动端检测] ✅ Flutter 应用（平台={platform_detail}），长期会话（{IOS_SESSION_EXPIRE_HOURS // 24}天）: UA={user_agent[:80]}")
+            return True
+        
+        # X-App-Platform=flutter 但 UA 不匹配，可能是伪造
+        logger.warning(f"[移动端检测] X-App-Platform=flutter 但 UA 不含 dart 或含 mozilla，拒绝: UA={user_agent[:80]}")
         return False
     
-    # 排除 Safari 浏览器（Safari 的 User-Agent 通常包含 "Safari" 和 "Version/"）
-    if "safari" in user_agent and "version/" in user_agent:
-        # 这是 Safari 浏览器，不是 iOS 应用
-        logger.debug(f"[iOS检测] 检测到 Safari 浏览器，不是 iOS 应用: UA={user_agent[:80]}")
-        return False
-    
-    # 3. 检查是否包含 iOS 应用特定标识
-    # iOS 应用的 User-Agent 应该包含 "Link2Ur-iOS" 或 "link2ur-ios"
-    # 不应该仅仅因为包含 "link2ur" 就认为是应用（可能是网页）
-    if "link2ur-ios" in user_agent or "link2ur/ios" in user_agent:
-        logger.info(f"[iOS检测] ✅ 检测到 iOS 原生应用请求，将创建长期会话（{IOS_SESSION_EXPIRE_HOURS // 24}天）: platform={platform}, UA={user_agent[:80]}")
-        return True
-    
-    # 如果只有 X-Platform 头但没有应用标识，也不认为是应用
-    # 这可能是网页请求但设置了错误的头
-    logger.warning(f"[iOS检测] X-Platform=ios 但缺少应用标识（link2ur-ios），不是 iOS 应用: UA={user_agent[:80]}")
+    # ========== 未匹配任何移动端特征 ==========
+    if x_platform or x_app_platform:
+        logger.debug(f"[移动端检测] 未匹配移动端应用: X-Platform={x_platform}, X-App-Platform={x_app_platform}, UA={user_agent[:80]}")
     return False
+
+
+# 向后兼容别名：所有已有代码中 from app.secure_auth import is_ios_app_request 仍可正常工作
+is_ios_app_request = is_mobile_app_request
+
+
+def _is_ios_platform_request(request: Request) -> bool:
+    """
+    判断请求是否来自 iOS 平台（iOS 原生应用 或 Flutter iOS 版）。
+    仅用于需要区分 iOS vs Android 的场景（如 Stripe 微信支付 client 参数）。
+    """
+    x_platform = request.headers.get("X-Platform", "").lower()
+    return x_platform == "ios"
 
 
 def get_wechat_pay_payment_method_options(request: Optional[Request]) -> dict:
@@ -646,12 +672,15 @@ def get_wechat_pay_payment_method_options(request: Optional[Request]) -> dict:
     返回 WeChat Pay 的 payment_method_options，用于创建 PaymentIntent。
     iOS PaymentSheet 必须为 wechat_pay 指定 client: "ios"，否则会报
     "None of the payment methods can be used in PaymentSheet"；
-    Web 端不传或传 client: "web" 即可。
+    Android 端指定 client: "android"；Web 端不传或传 client: "web" 即可。
     """
     if request is None:
         return {}
-    if is_ios_app_request(request):
+    x_platform = request.headers.get("X-Platform", "").lower()
+    if x_platform == "ios":
         return {"wechat_pay": {"client": "ios"}}
+    if x_platform == "android":
+        return {"wechat_pay": {"client": "android"}}
     return {}
 
 

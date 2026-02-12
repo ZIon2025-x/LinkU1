@@ -76,6 +76,14 @@ class _ActivityDetailViewContent extends StatelessWidget {
         }
       },
       child: BlocBuilder<ActivityBloc, ActivityState>(
+        buildWhen: (prev, curr) =>
+            prev.detailStatus != curr.detailStatus ||
+            prev.activityDetail != curr.activityDetail ||
+            prev.expert != curr.expert ||
+            prev.isSubmitting != curr.isSubmitting ||
+            prev.timeSlots != curr.timeSlots ||
+            prev.isLoadingTimeSlots != curr.isLoadingTimeSlots ||
+            prev.errorMessage != curr.errorMessage,
         builder: (context, state) {
           final hasImages = state.activityDetail?.images?.isNotEmpty == true ||
               state.activityDetail?.serviceImages?.isNotEmpty == true;

@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash($env:PATH = \"F:\\\\flutter\\\\bin;\" + $env:PATH)",
+      "Bash($env:PUB_CACHE = \"F:\\\\DevCache\\\\.pub-cache\")",
+      "Bash(flutter analyze:*)"
+    ]
+  }
+}

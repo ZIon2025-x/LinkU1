@@ -614,15 +614,15 @@ def verify_email(
         client_ip = get_client_ip(request)
         user_agent = request.headers.get("user-agent", "")
         
-        # 检测是否为 iOS 应用
-        from app.secure_auth import is_ios_app_request
-        is_ios_app = is_ios_app_request(request)
+        # 检测是否为移动端应用（iOS 原生 / Flutter iOS / Flutter Android）
+        from app.secure_auth import is_mobile_app_request
+        is_ios_app = is_mobile_app_request(request)
         
-        # 生成刷新令牌（iOS应用使用更长的过期时间）
+        # 生成刷新令牌（移动端应用使用更长的过期时间）
         from app.secure_auth import create_user_refresh_token
         refresh_token = create_user_refresh_token(user.id, client_ip, device_fingerprint, is_ios_app=is_ios_app)
         
-        # 创建会话（iOS 应用会话将长期有效）
+        # 创建会话（移动端应用会话将长期有效）
         session = SecureAuthManager.create_session(
             user_id=user.id,
             device_fingerprint=device_fingerprint,

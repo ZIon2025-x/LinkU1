@@ -155,17 +155,17 @@ def secure_login(
         client_ip = get_client_ip(request)
         user_agent = request.headers.get("user-agent", "")
         
-        # 检测是否为 iOS 应用
-        from app.secure_auth import is_ios_app_request
-        is_ios_app = is_ios_app_request(request)
+        # 检测是否为移动端应用（iOS 原生 / Flutter iOS / Flutter Android）
+        from app.secure_auth import is_mobile_app_request
+        is_ios_app = is_mobile_app_request(request)
         if is_ios_app:
-            logger.info(f"[SECURE_AUTH] 检测到 iOS 应用登录: user_id={user.id}")
+            logger.info(f"[SECURE_AUTH] 检测到移动端应用登录: user_id={user.id}")
         
-        # 生成并存储刷新令牌到Redis（iOS应用使用更长的过期时间）
+        # 生成并存储刷新令牌到Redis（移动端应用使用更长的过期时间）
         from app.secure_auth import create_user_refresh_token
         refresh_token = create_user_refresh_token(user.id, client_ip, device_fingerprint, is_ios_app=is_ios_app)
         
-        # 创建新会话（iOS 应用会话将长期有效）
+        # 创建新会话（移动端应用会话将长期有效）
         session = SecureAuthManager.create_session(
             user_id=user.id,
             device_fingerprint=device_fingerprint,
@@ -213,7 +213,7 @@ def secure_login(
         # 记录登录成功事件
         logger.info(
             f"登录成功: user_id={user.id}, email={user.email}, "
-            f"IP={client_ip}, mobile={is_mobile}, ios_app={is_ios_app}"
+            f"IP={client_ip}, mobile={is_mobile}, mobile_app={is_ios_app}"
         )
 
         response_data = {
@@ -1586,17 +1586,17 @@ def login_with_phone_verification_code(
         client_ip = get_client_ip(request)
         user_agent = request.headers.get("user-agent", "")
         
-        # 检测是否为 iOS 应用
-        from app.secure_auth import is_ios_app_request
-        is_ios_app = is_ios_app_request(request)
+        # 检测是否为移动端应用（iOS 原生 / Flutter iOS / Flutter Android）
+        from app.secure_auth import is_mobile_app_request
+        is_ios_app = is_mobile_app_request(request)
         if is_ios_app:
-            logger.info(f"[SECURE_AUTH] 检测到 iOS 应用登录（手机验证码）: user_id={user.id}")
+            logger.info(f"[SECURE_AUTH] 检测到移动端应用登录（手机验证码）: user_id={user.id}")
         
-        # 生成并存储刷新令牌到Redis（iOS应用使用更长的过期时间）
+        # 生成并存储刷新令牌到Redis（移动端应用使用更长的过期时间）
         from app.secure_auth import create_user_refresh_token
         refresh_token = create_user_refresh_token(user.id, client_ip, device_fingerprint, is_ios_app=is_ios_app)
         
-        # 创建新会话（iOS 应用会话将长期有效）
+        # 创建新会话（移动端应用会话将长期有效）
         session = SecureAuthManager.create_session(
             user_id=user.id,
             device_fingerprint=device_fingerprint,
@@ -1833,17 +1833,17 @@ def login_with_verification_code(
         client_ip = get_client_ip(request)
         user_agent = request.headers.get("user-agent", "")
         
-        # 检测是否为 iOS 应用
-        from app.secure_auth import is_ios_app_request
-        is_ios_app = is_ios_app_request(request)
+        # 检测是否为移动端应用（iOS 原生 / Flutter iOS / Flutter Android）
+        from app.secure_auth import is_mobile_app_request
+        is_ios_app = is_mobile_app_request(request)
         if is_ios_app:
-            logger.info(f"[SECURE_AUTH] 检测到 iOS 应用登录（手机验证码）: user_id={user.id}")
+            logger.info(f"[SECURE_AUTH] 检测到移动端应用登录（手机验证码）: user_id={user.id}")
         
-        # 生成并存储刷新令牌到Redis（iOS应用使用更长的过期时间）
+        # 生成并存储刷新令牌到Redis（移动端应用使用更长的过期时间）
         from app.secure_auth import create_user_refresh_token
         refresh_token = create_user_refresh_token(user.id, client_ip, device_fingerprint, is_ios_app=is_ios_app)
         
-        # 创建新会话（iOS 应用会话将长期有效）
+        # 创建新会话（移动端应用会话将长期有效）
         session = SecureAuthManager.create_session(
             user_id=user.id,
             device_fingerprint=device_fingerprint,
@@ -1926,7 +1926,7 @@ def login_with_verification_code(
 @secure_auth_router.get("/session-diagnose", response_model=Dict[str, Any])
 def diagnose_session(request: Request):
     """诊断当前会话状态 - 用于排查登录问题"""
-    from app.secure_auth import SecureAuthManager, is_ios_app_request
+    from app.secure_auth import SecureAuthManager, is_mobile_app_request
     from app.redis_cache import get_redis_client
     
     redis_client = get_redis_client()
@@ -1946,15 +1946,18 @@ def diagnose_session(request: Request):
         refresh_source = "header" if refresh_token else None
     
     # 检测请求信息
-    is_ios = is_ios_app_request(request)
+    is_mobile = is_mobile_app_request(request)
     platform = request.headers.get("X-Platform", "unknown")
+    app_platform = request.headers.get("X-App-Platform", "unknown")
     user_agent = request.headers.get("user-agent", "")[:100]
     client_ip = get_client_ip(request)
     
     result = {
         "request_info": {
-            "is_ios_app": is_ios,
+            "is_mobile_app": is_mobile,
+            "is_ios_app": is_mobile,  # 向后兼容（字段名保留，含义扩展为移动端应用）
             "platform": platform,
+            "app_platform": app_platform,
             "user_agent": user_agent,
             "client_ip": client_ip[:20] + "..." if len(client_ip) > 20 else client_ip,
         },

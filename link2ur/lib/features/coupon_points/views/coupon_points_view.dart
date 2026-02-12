@@ -614,15 +614,14 @@ class _MyCouponCard extends StatelessWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final isUsable = coupon.isUsable;
 
-    return Opacity(
-      opacity: isUsable ? 1.0 : 0.5,
-      child: Container(
+    return Container(
         margin: const EdgeInsets.only(bottom: AppSpacing.sm),
         padding: AppSpacing.allMd,
         decoration: BoxDecoration(
-          color: isDark
+          color: (isDark
               ? AppColors.cardBackgroundDark
-              : AppColors.cardBackgroundLight,
+              : AppColors.cardBackgroundLight)
+              .withValues(alpha: isUsable ? 1.0 : 0.6),
           borderRadius: AppRadius.allMedium,
         ),
         child: Row(
@@ -673,7 +672,6 @@ class _MyCouponCard extends StatelessWidget {
             ),
           ],
         ),
-      ),
     );
   }
 

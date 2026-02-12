@@ -361,10 +361,10 @@ class UserRedisCleanup:
             
             last_activity = parse_iso_utc(last_activity_str)
             
-            # ⚠️ iOS 应用会话使用 1 年有效期，其他会话使用 24 小时
+            # ⚠️ 移动端应用会话（iOS 原生 / Flutter）使用 1 年有效期，其他会话使用 24 小时
             is_ios_app = data.get('is_ios_app', False)
             if is_ios_app:
-                # iOS 应用：1年有效期
+                # 移动端应用：1年有效期
                 expire_hours = 365 * 24
             else:
                 # 普通会话：24小时

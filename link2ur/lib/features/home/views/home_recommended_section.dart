@@ -30,7 +30,7 @@ class _RecommendedTab extends StatelessWidget {
             slivers: [
               // 欢迎区域
               SliverToBoxAdapter(
-                child: _GreetingSection(),
+                child: const _GreetingSection(),
               ),
 
               // Banner 区域 — 紧跟问候语，无分隔线（对标iOS VStack spacing）
@@ -135,7 +135,7 @@ class _RecommendedTab extends StatelessWidget {
                 SliverToBoxAdapter(
                   child: isDesktop
                       ? const _DesktopActivitiesRow()
-                      : _PopularActivitiesSection(),
+                      : const _PopularActivitiesSection(),
                 ),
 
                 // 发现更多标题（与 discovery_feed_prototype 一致：左侧标题 + 右侧筛选）

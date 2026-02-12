@@ -52,6 +52,10 @@ class _NotificationListViewContent extends StatelessWidget {
     final l10n = context.l10n;
 
     return BlocBuilder<NotificationBloc, NotificationState>(
+      buildWhen: (prev, curr) =>
+          prev.status != curr.status ||
+          prev.notifications != curr.notifications ||
+          prev.errorMessage != curr.errorMessage,
       builder: (context, state) {
         final notifications = state.notifications;
 
