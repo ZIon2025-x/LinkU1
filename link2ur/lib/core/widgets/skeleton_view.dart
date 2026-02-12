@@ -324,15 +324,15 @@ class SkeletonGrid extends StatelessWidget {
               // 内容区域
               Expanded(
                 flex: contentFlex,
-                child: Padding(
-                  padding: const EdgeInsets.all(10),
+                child: const Padding(
+                  padding: EdgeInsets.all(10),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const _Line(width: double.infinity, height: 14),
+                      _Line(width: double.infinity, height: 14),
                       AppSpacing.vXs,
-                      const _Line(width: 80, height: 12),
+                      _Line(width: 80, height: 12),
                     ],
                   ),
                 ),

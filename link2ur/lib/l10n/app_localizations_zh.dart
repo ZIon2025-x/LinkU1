@@ -2733,6 +2733,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get couponCheckInReward => '签到奖励';
 
   @override
+  String get couponCheckInComingSoon => '签到活动即将开放，敬请期待';
+
+  @override
   String get couponCheckInSuccess => '签到成功';
 
   @override
@@ -6221,7 +6224,10 @@ class AppLocalizationsZh extends AppLocalizations {
   String get walletPointsBalance => '积分余额';
 
   @override
-  String get walletTotalEarned => '累计获得';
+  String get walletUnwithdrawnIncome => '未提现收入';
+
+  @override
+  String get walletTotalEarned => '累计收入';
 
   @override
   String get walletTotalSpent => '累计消费';
@@ -10452,6 +10458,9 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get couponCheckInReward => '籤到獎勵';
 
   @override
+  String get couponCheckInComingSoon => '簽到活動即將開放，敬請期待';
+
+  @override
   String get couponCheckInSuccess => '籤到成功';
 
   @override
@@ -13940,7 +13949,10 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get walletPointsBalance => '積分餘額';
 
   @override
-  String get walletTotalEarned => '累計獲得';
+  String get walletUnwithdrawnIncome => '未提現收入';
+
+  @override
+  String get walletTotalEarned => '累計收入';
 
   @override
   String get walletTotalSpent => '累計消費';

@@ -146,7 +146,7 @@ class _RecommendedTab extends StatelessWidget {
                       children: [
                         Row(
                           children: [
-                            Icon(
+                            const Icon(
                               Icons.auto_awesome,
                               size: 22,
                               color: AppColors.primary,

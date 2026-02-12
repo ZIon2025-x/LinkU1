@@ -2848,6 +2848,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get couponCheckInReward => 'Check-in Rewards';
 
   @override
+  String get couponCheckInComingSoon =>
+      'Check-in rewards coming soon, stay tuned';
+
+  @override
   String get couponCheckInSuccess => 'Check-in Successful';
 
   @override
@@ -6484,6 +6488,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get walletPointsBalance => 'Points Balance';
+
+  @override
+  String get walletUnwithdrawnIncome => 'Unwithdrawn Income';
 
   @override
   String get walletTotalEarned => 'Total Earned';

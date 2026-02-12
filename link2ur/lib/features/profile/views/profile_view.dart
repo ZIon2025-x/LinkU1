@@ -13,6 +13,7 @@ import '../../../core/utils/responsive.dart';
 import '../../../core/widgets/user_identity_badges.dart';
 import '../../../core/widgets/async_image_view.dart';
 import '../../../core/widgets/content_constraint.dart';
+import '../../../core/widgets/page_background.dart';
 import '../../../core/widgets/credit_score_gauge.dart';
 import '../../../core/widgets/animated_counter.dart';
 import '../../../data/models/user.dart';
@@ -164,9 +165,8 @@ class _ProfileContent extends StatelessWidget {
     final isDesktop = ResponsiveUtils.isDesktop(context);
 
     return Scaffold(
-      backgroundColor: isDesktop
-          ? (isDark ? AppColors.backgroundDark : Colors.white)
-          : null,
+      backgroundColor: AppColors.backgroundFor(
+          Theme.of(context).brightness),
       appBar: isDesktop
           ? null
           : AppBar(

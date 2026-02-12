@@ -300,7 +300,7 @@ class _FeedTypeBadge extends StatelessWidget {
   (String, Color, Color) _style(String type, bool isDark) {
     if (isDark) {
       final bg = Colors.white.withValues(alpha: 0.15);
-      final fg = Colors.white;
+      const fg = Colors.white;
       return (_label(type), bg, fg);
     }
     switch (type) {
@@ -383,7 +383,7 @@ class _PostCard extends StatelessWidget {
                 children: [
                   Row(
                     children: [
-                      _FeedTypeBadge(feedType: 'forum_post'),
+                      const _FeedTypeBadge(feedType: 'forum_post'),
                       if (item.extraData?['category_name'] != null) ...[
                         const SizedBox(width: 6),
                         Flexible(
@@ -520,7 +520,7 @@ class _ProductCard extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _FeedTypeBadge(feedType: 'product'),
+                  const _FeedTypeBadge(feedType: 'product'),
                   const SizedBox(height: 6),
                   if (item.title != null)
                     Text(
@@ -629,7 +629,7 @@ class _CompetitorReviewCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _FeedTypeBadge(feedType: 'competitor_review'),
+            const _FeedTypeBadge(feedType: 'competitor_review'),
             const SizedBox(height: 8),
             // 引用框（与原型 review-quote 一致）
             if (item.description != null)
@@ -648,7 +648,7 @@ class _CompetitorReviewCard extends StatelessWidget {
                     topRight: Radius.circular(8),
                     bottomRight: Radius.circular(8),
                   ),
-                  border: Border(
+                  border: const Border(
                     left: BorderSide(
                       color: AppColors.primary,
                       width: 3,
@@ -683,12 +683,12 @@ class _CompetitorReviewCard extends StatelessWidget {
             // 赞/踩（与原型一致：up 绿色，down 红色）
             Row(
               children: [
-                Icon(Icons.thumb_up_outlined, size: 12, color: const Color(0xFF10B981)),
+                const Icon(Icons.thumb_up_outlined, size: 12, color: Color(0xFF10B981)),
                 const SizedBox(width: 3),
                 Text('${item.upvoteCount ?? 0}',
                     style: const TextStyle(fontSize: 12, color: Color(0xFF10B981))),
                 const SizedBox(width: 12),
-                Icon(Icons.thumb_down_outlined, size: 12, color: const Color(0xFFEF4444)),
+                const Icon(Icons.thumb_down_outlined, size: 12, color: Color(0xFFEF4444)),
                 const SizedBox(width: 3),
                 Text('${item.downvoteCount ?? 0}',
                     style: const TextStyle(fontSize: 12, color: Color(0xFFEF4444))),
@@ -774,7 +774,7 @@ class _ServiceReviewCard extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _FeedTypeBadge(feedType: 'service_review'),
+                  const _FeedTypeBadge(feedType: 'service_review'),
                   const SizedBox(height: 8),
                   // 引用框（与竞品评价一致）
                   if (item.description != null)
@@ -793,7 +793,7 @@ class _ServiceReviewCard extends StatelessWidget {
                           topRight: Radius.circular(8),
                           bottomRight: Radius.circular(8),
                         ),
-                        border: Border(
+                        border: const Border(
                           left: BorderSide(
                             color: AppColors.primary,
                             width: 3,
@@ -891,7 +891,7 @@ class _RankingCard extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _FeedTypeBadge(feedType: 'ranking'),
+                  const _FeedTypeBadge(feedType: 'ranking'),
                   const SizedBox(height: 6),
                   Row(
                     children: [
@@ -1016,7 +1016,7 @@ class _ServiceCard extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _FeedTypeBadge(feedType: 'service'),
+                  const _FeedTypeBadge(feedType: 'service'),
                   const SizedBox(height: 6),
                   if (item.title != null)
                     Text(
@@ -1342,7 +1342,7 @@ class _ActivityPriceRow extends StatelessWidget {
         // 原价（划线）
         Text(
           '${_currencySymbol(activityInfo.currency)}${activityInfo.originalPrice?.toStringAsFixed(2) ?? ""}',
-          style: TextStyle(
+          style: const TextStyle(
             fontSize: 12,
             color: Colors.grey,
             decoration: TextDecoration.lineThrough,

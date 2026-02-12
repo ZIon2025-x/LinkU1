@@ -156,6 +156,7 @@ class _TaskChatContentState extends State<_TaskChatContent> {
           prev.taskStatus != curr.taskStatus,
       builder: (context, state) {
         return Scaffold(
+          backgroundColor: AppColors.backgroundFor(Theme.of(context).brightness),
           appBar: AppBar(
             title: Text(context.l10n.chatTaskTitle(widget.taskId)),
             actions: [

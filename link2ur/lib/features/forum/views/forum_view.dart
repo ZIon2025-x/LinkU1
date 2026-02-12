@@ -74,7 +74,7 @@ class _ForumViewState extends State<ForumView> {
 
   Widget _buildDesktopLayout(bool isDark) {
     return Scaffold(
-      backgroundColor: isDark ? AppColors.backgroundDark : Colors.white,
+      backgroundColor: AppColors.backgroundFor(isDark ? Brightness.dark : Brightness.light),
       body: Column(
         children: [
           // Notion 风格 tab + 发帖按钮
@@ -151,6 +151,7 @@ class _ForumViewState extends State<ForumView> {
 
   Widget _buildMobileLayout(bool isDark) {
     return Scaffold(
+      backgroundColor: AppColors.backgroundFor(isDark ? Brightness.dark : Brightness.light),
       body: SafeArea(
         child: Column(
           children: [

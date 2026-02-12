@@ -132,7 +132,7 @@ Widget _buildSystemSection(BuildContext context, bool isDark) {
                 icon: Icons.credit_card,           // creditcard.fill
                 title: context.l10n.profilePaymentAccount,
                 color: AppColors.primary,
-                onTap: () => context.push('/payment/stripe-connect/payments'),
+                onTap: () => context.push('/payment/stripe-connect/onboarding'),
               ),
               _profileDivider(isDark),
               _ProfileRow(
@@ -252,7 +252,6 @@ class _ProfileRow extends StatelessWidget {
     required this.color,
     required this.onTap,
     this.subtitle,
-    this.trailing,
   });
 
   final IconData icon;
@@ -260,7 +259,6 @@ class _ProfileRow extends StatelessWidget {
   final Color color;
   final VoidCallback onTap;
   final String? subtitle;
-  final Widget? trailing;
 
   @override
   Widget build(BuildContext context) {
@@ -331,10 +329,6 @@ class _ProfileRow extends StatelessWidget {
                 ],
               ),
             ),
-            if (trailing != null) ...[
-              trailing!,
-              const SizedBox(width: 8),
-            ],
             Icon(
               Icons.chevron_right,
               size: 16,

@@ -210,7 +210,7 @@ class ForumRepository {
 
     final url = response.data!['url'] as String?;
     if (url == null || url.isEmpty) {
-      throw ForumException('上传成功但未返回图片地址');
+      throw const ForumException('上传成功但未返回图片地址');
     }
     return url;
   }

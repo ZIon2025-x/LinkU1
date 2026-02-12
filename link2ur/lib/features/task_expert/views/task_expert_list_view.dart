@@ -329,7 +329,7 @@ class _TaskExpertListViewContentState extends State<_TaskExpertListViewContent> 
                           },
                           child: Text(
                             l10n.commonReset,
-                            style: TextStyle(
+                            style: const TextStyle(
                               color: AppColors.primary,
                               fontSize: 14,
                             ),

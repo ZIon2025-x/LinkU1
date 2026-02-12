@@ -57,8 +57,8 @@ class _GreetingSection extends StatelessWidget {
             child: Container(
               width: 44,
               height: 44,
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
                   colors: AppColors.gradientPrimary,
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,

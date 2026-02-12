@@ -62,6 +62,7 @@ class _ForumPostListViewContentState
     final l10n = context.l10n;
 
     return Scaffold(
+      backgroundColor: AppColors.backgroundFor(Theme.of(context).brightness),
       appBar: AppBar(
         title: Text(
             widget.category?.displayName ?? l10n.forumAllPosts),

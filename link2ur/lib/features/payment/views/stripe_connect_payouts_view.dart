@@ -431,7 +431,7 @@ class _ActionButtons extends StatelessWidget {
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(AppRadius.medium),
               ),
-              side: BorderSide(color: AppColors.primary),
+              side: const BorderSide(color: AppColors.primary),
             ),
           ),
         ),
@@ -563,14 +563,6 @@ class _PayoutSheetState extends State<_PayoutSheet> {
   final _noteController = TextEditingController();
   bool _isProcessing = false;
 
-  bool get _canCreatePayout {
-    final amount = double.tryParse(_amountController.text);
-    return amount != null &&
-        amount > 0 &&
-        amount <= widget.balance.available &&
-        !_isProcessing;
-  }
-
   @override
   void dispose() {
     _amountController.dispose();
@@ -631,7 +623,7 @@ class _PayoutSheetState extends State<_PayoutSheet> {
                 const SizedBox(height: 4),
                 Text(
                   widget.balance.formatAmount(widget.balance.available),
-                  style: TextStyle(
+                  style: const TextStyle(
                     fontSize: 24,
                     fontWeight: FontWeight.w700,
                     color: AppColors.primary,
@@ -691,12 +683,13 @@ class _PayoutSheetState extends State<_PayoutSheet> {
                     ? () async {
                         final amount =
                             double.tryParse(_amountController.text) ?? 0;
+                        final navigator = Navigator.of(context);
                         setState(() => _isProcessing = true);
                         await widget.onCreatePayout(
                             amount, widget.balance.currency);
                         if (mounted) {
                           setState(() => _isProcessing = false);
-                          Navigator.pop(context);
+                          navigator.pop();
                         }
                       }
                     : null,

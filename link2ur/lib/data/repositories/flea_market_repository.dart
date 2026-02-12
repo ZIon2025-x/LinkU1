@@ -296,7 +296,7 @@ class FleaMarketRepository {
   }) async {
     final userId = StorageService.instance.getUserId();
     if (userId == null) {
-      throw FleaMarketException('用户未登录');
+      throw const FleaMarketException('用户未登录');
     }
 
     final params = {
@@ -378,7 +378,7 @@ class FleaMarketRepository {
   }) async {
     final userId = StorageService.instance.getUserId();
     if (userId == null) {
-      throw FleaMarketException('用户未登录');
+      throw const FleaMarketException('用户未登录');
     }
 
     final params = {

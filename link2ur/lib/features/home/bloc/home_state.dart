@@ -1,110 +1,10 @@
 import 'package:equatable/equatable.dart';
 
 import '../../../data/models/task.dart';
-import '../../../data/models/forum.dart';
-import '../../../data/models/flea_market.dart';
-import '../../../data/models/leaderboard.dart';
 import '../../../data/models/discovery_feed.dart';
 
 /// 首页状态
 enum HomeStatus { initial, loading, loaded, error }
-
-/// 最新动态项（对标 iOS RecentActivity）
-///
-/// 聚合三种数据源：论坛帖子、跳蚤市场商品、排行榜
-class RecentActivityItem extends Equatable {
-  const RecentActivityItem({
-    required this.id,
-    required this.type,
-    required this.title,
-    this.description,
-    required this.userName,
-    this.userAvatar,
-    this.categoryName,
-    this.categoryId,
-    this.replyCount = 0,
-    this.viewCount = 0,
-    this.createdAt,
-    this.itemId, // 原始数据ID（用于跳转导航）
-  });
-
-  /// 唯一标识（带类型前缀，如 "forum_123", "flea_456"）
-  final String id;
-
-  /// 动态类型：forum_post, flea_market_item, leaderboard_created
-  final String type;
-  final String title;
-  final String? description;
-  final String userName;
-  final String? userAvatar;
-  final String? categoryName;
-  final int? categoryId;
-  final int replyCount;
-  final int viewCount;
-  final DateTime? createdAt;
-
-  /// 原始数据 ID（int 或 String，用于导航跳转）
-  final String? itemId;
-
-  // ==================== 类型常量（对标 iOS ActivityType） ====================
-
-  static const String typeForumPost = 'forum_post';
-  static const String typeFleaMarketItem = 'flea_market_item';
-  static const String typeLeaderboardCreated = 'leaderboard_created';
-
-  // ==================== 工厂构造 ====================
-
-  /// 从论坛帖子创建（对标 iOS RecentActivity.init(forumPost:)）
-  factory RecentActivityItem.fromForumPost(ForumPost post) {
-    return RecentActivityItem(
-      id: 'forum_${post.id}',
-      type: typeForumPost,
-      title: post.title,
-      description: post.displayContent,
-      userName: post.author?.name ?? '',
-      userAvatar: post.author?.avatar,
-      categoryName: post.category?.displayName,
-      categoryId: post.categoryId,
-      replyCount: post.replyCount,
-      viewCount: post.viewCount,
-      createdAt: post.createdAt,
-      itemId: post.id.toString(),
-    );
-  }
-
-  /// 从跳蚤市场商品创建（对标 iOS RecentActivity.init(fleaMarketItem:)）
-  factory RecentActivityItem.fromFleaMarketItem(FleaMarketItem item) {
-    return RecentActivityItem(
-      id: 'flea_${item.id}',
-      type: typeFleaMarketItem,
-      title: item.title,
-      description: item.description,
-      userName: '', // FleaMarketItem 只有 sellerId，无 seller 名称
-      categoryName: item.category,
-      viewCount: item.viewCount,
-      createdAt: item.createdAt,
-      itemId: item.id,
-    );
-  }
-
-  /// 从排行榜创建（对标 iOS RecentActivity.init(leaderboard:)）
-  factory RecentActivityItem.fromLeaderboard(Leaderboard leaderboard) {
-    return RecentActivityItem(
-      id: 'leaderboard_${leaderboard.id}',
-      type: typeLeaderboardCreated,
-      title: leaderboard.displayName,
-      description: leaderboard.displayDescription,
-      userName: leaderboard.applicant?.name ?? '',
-      userAvatar: leaderboard.applicant?.avatar,
-      viewCount: leaderboard.viewCount,
-      createdAt: leaderboard.createdAt,
-      itemId: leaderboard.id.toString(),
-    );
-  }
-
-  @override
-  List<Object?> get props => [id, type, title, createdAt];
-}
 
 class HomeState extends Equatable {
   const HomeState({
@@ -119,8 +19,6 @@ class HomeState extends Equatable {
     this.errorMessage,
     this.isRefreshing = false,
     this.refreshError,
-    this.recentActivities = const [],
-    this.isLoadingActivities = false,
     this.discoveryItems = const [],
     this.isLoadingDiscovery = false,
     this.hasMoreDiscovery = true,
@@ -139,10 +37,6 @@ class HomeState extends Equatable {
   final bool isRefreshing;
   /// 刷新失败错误信息，用于 UI 层通过 BlocListener 显示 Toast
   final String? refreshError;
-  @Deprecated('Use discoveryItems instead')
-  final List<RecentActivityItem> recentActivities;
-  @Deprecated('Use isLoadingDiscovery instead')
-  final bool isLoadingActivities;
 
   // Discovery Feed
   final List<DiscoveryFeedItem> discoveryItems;
@@ -167,8 +61,6 @@ class HomeState extends Equatable {
     bool? isRefreshing,
     String? refreshError,
     bool clearRefreshError = false,
-    List<RecentActivityItem>? recentActivities,
-    bool? isLoadingActivities,
     List<DiscoveryFeedItem>? discoveryItems,
     bool? isLoadingDiscovery,
     bool? hasMoreDiscovery,
@@ -186,8 +78,6 @@ class HomeState extends Equatable {
       errorMessage: errorMessage ?? this.errorMessage,
       isRefreshing: isRefreshing ?? this.isRefreshing,
       refreshError: clearRefreshError ? null : (refreshError ?? this.refreshError),
-      recentActivities: recentActivities ?? this.recentActivities,
-      isLoadingActivities: isLoadingActivities ?? this.isLoadingActivities,
       discoveryItems: discoveryItems ?? this.discoveryItems,
       isLoadingDiscovery: isLoadingDiscovery ?? this.isLoadingDiscovery,
       hasMoreDiscovery: hasMoreDiscovery ?? this.hasMoreDiscovery,
@@ -208,8 +98,6 @@ class HomeState extends Equatable {
         errorMessage,
         isRefreshing,
         refreshError,
-        recentActivities,
-        isLoadingActivities,
         discoveryItems,
         isLoadingDiscovery,
         hasMoreDiscovery,

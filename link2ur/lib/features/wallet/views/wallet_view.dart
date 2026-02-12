@@ -40,32 +40,11 @@ class _WalletContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BlocListener<WalletBloc, WalletState>(
-      listenWhen: (prev, curr) => prev.actionMessage != curr.actionMessage,
-      listener: (context, state) {
-        if (state.actionMessage != null) {
-          final isError = state.actionMessage!.contains('failed');
-          final message = switch (state.actionMessage) {
-            'check_in_success' => context.l10n.actionCheckInSuccess,
-            'check_in_failed' => state.errorMessage != null
-                ? '${context.l10n.actionCheckInFailed}: ${state.errorMessage}'
-                : context.l10n.actionCheckInFailed,
-            _ => state.actionMessage ?? '',
-          };
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(message),
-              backgroundColor: isError ? AppColors.error : AppColors.success,
-            ),
-          );
-        }
-      },
-      child: BlocBuilder<WalletBloc, WalletState>(
+    return BlocBuilder<WalletBloc, WalletState>(
         buildWhen: (previous, current) =>
             previous.isLoading != current.isLoading ||
             previous.pointsAccount != current.pointsAccount ||
             previous.errorMessage != current.errorMessage ||
-            previous.isCheckingIn != current.isCheckingIn ||
             previous.transactions != current.transactions,
         builder: (context, state) {
           return Scaffold(
@@ -94,17 +73,13 @@ class _WalletContent extends StatelessWidget {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               if (state.pointsAccount != null)
-                                _PointsCard(account: state.pointsAccount!),
+                                _PointsCard(
+                                  account: state.pointsAccount!,
+                                  connectBalance: state.connectBalance,
+                                ),
                               AppSpacing.vLg,
                               // 快捷操作卡片 - 与iOS对齐
                               const _QuickActionCards(),
-                              AppSpacing.vLg,
-                              _CheckInButton(
-                                isCheckingIn: state.isCheckingIn,
-                                onPressed: () => context
-                                    .read<WalletBloc>()
-                                    .add(const WalletCheckIn()),
-                              ),
                               AppSpacing.vLg,
                               if (state.stripeConnectStatus != null)
                                 _StripeConnectSection(
@@ -125,16 +100,16 @@ class _WalletContent extends StatelessWidget {
                       ),
           );
         },
-      ),
-    );
+      );
   }
 }
 
 // ==================== 子组件 ====================
 
 class _PointsCard extends StatefulWidget {
-  const _PointsCard({required this.account});
+  const _PointsCard({required this.account, this.connectBalance});
   final PointsAccount account;
+  final StripeConnectBalance? connectBalance;
 
   @override
   State<_PointsCard> createState() => _PointsCardState();
@@ -189,42 +164,32 @@ class _PointsCardState extends State<_PointsCard> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              context.l10n.walletPointsBalance,
+              context.l10n.walletUnwithdrawnIncome,
               style: TextStyle(
                 fontSize: 14,
                 color: Colors.white.withValues(alpha: 0.8),
               ),
             ),
             AppSpacing.vSm,
-            // 余额 — 滚动数字动画
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                _RollingNumber(
-                  value: widget.account.balance,
-                  display: widget.account.balanceDisplay,
-                ),
-                AppSpacing.hSm,
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 10),
-                  child: Text(
-                    widget.account.currency,
-                    style: TextStyle(
-                      fontSize: 16,
-                      color: Colors.white.withValues(alpha: 0.7),
-                    ),
-                  ),
-                ),
-              ],
+            // 未提现收入 — Connect available 余额（£）
+            Text(
+              '£${(widget.connectBalance?.available ?? 0).toStringAsFixed(2)}',
+              style: const TextStyle(
+                fontSize: 48,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+                height: 1.1,
+                fontFeatures: [FontFeature.tabularFigures()],
+              ),
             ),
             AppSpacing.vLg,
-            // 统计项 - 白色文字
+            // 累计收入 / 累计消费 — 便士转英镑（/100）
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
                 _BalanceStatItem(
                   label: context.l10n.walletTotalEarned,
-                  value: widget.account.totalEarned.toString(),
+                  value: '£${(widget.account.totalEarned / 100).toStringAsFixed(2)}',
                 ),
                 Container(
                   width: 1,
@@ -233,7 +198,7 @@ class _PointsCardState extends State<_PointsCard> {
                 ),
                 _BalanceStatItem(
                   label: context.l10n.walletTotalSpent,
-                  value: widget.account.totalSpent.toString(),
+                  value: '£${(widget.account.totalSpent / 100).toStringAsFixed(2)}',
                 ),
               ],
             ),
@@ -244,35 +209,7 @@ class _PointsCardState extends State<_PointsCard> {
   }
 }
 
-/// 余额滚动数字 — TweenAnimationBuilder + Curves.easeOutExpo
-class _RollingNumber extends StatelessWidget {
-  const _RollingNumber({required this.value, required this.display});
-  final int value;
-  final String display;
-
-  @override
-  Widget build(BuildContext context) {
-    return TweenAnimationBuilder<double>(
-      tween: Tween(begin: 0, end: value.toDouble()),
-      duration: const Duration(milliseconds: 900),
-      curve: Curves.easeOutExpo,
-      builder: (context, v, _) {
-        return Text(
-          v.toInt().toString(),
-          style: const TextStyle(
-            fontSize: 48,
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
-            height: 1.1,
-            fontFeatures: [FontFeature.tabularFigures()],
-          ),
-        );
-      },
-    );
-  }
-}
-
-/// 快捷操作卡片 - 与iOS QuickActionCard对齐
+/// 快捷操作卡片 - 与iOS对齐：积分与优惠券 + 提现管理
 class _QuickActionCards extends StatelessWidget {
   const _QuickActionCards();
 
@@ -282,28 +219,19 @@ class _QuickActionCards extends StatelessWidget {
       children: [
         Expanded(
           child: _QuickActionCard(
-            icon: Icons.account_balance_wallet_outlined,
-            title: context.l10n.walletTopUp,
+            icon: Icons.card_giftcard_rounded,
+            title: context.l10n.profilePointsCoupons,
             gradientColors: AppColors.gradientPrimary,
-            onTap: () => context.push('/wallet/top-up'),
+            onTap: () => context.push('/coupon-points'),
           ),
         ),
         AppSpacing.hMd,
         Expanded(
           child: _QuickActionCard(
-            icon: Icons.send_rounded,
-            title: context.l10n.walletTransfer,
+            icon: Icons.trending_up_rounded,
+            title: context.l10n.walletPayoutManagement,
             gradientColors: AppColors.gradientEmerald,
-            onTap: () => context.push('/wallet/transfer'),
-          ),
-        ),
-        AppSpacing.hMd,
-        Expanded(
-          child: _QuickActionCard(
-            icon: Icons.history_rounded,
-            title: context.l10n.walletTransactionHistory,
-            gradientColors: AppColors.gradientOrange,
-            onTap: () => context.push('/wallet/transactions'),
+            onTap: () => context.push('/payment/stripe-connect/payouts'),
           ),
         ),
       ],
@@ -410,21 +338,7 @@ class _BalanceStatItem extends StatelessWidget {
 
 // _StatItem 已被 _BalanceStatItem 替代
 
-class _CheckInButton extends StatelessWidget {
-  const _CheckInButton({required this.isCheckingIn, required this.onPressed});
-  final bool isCheckingIn;
-  final VoidCallback onPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    return PrimaryButton(
-      text: isCheckingIn ? context.l10n.walletCheckingIn : context.l10n.walletDailyCheckIn,
-      icon: Icons.check_circle_outline,
-      onPressed: isCheckingIn ? null : onPressed,
-      isLoading: isCheckingIn,
-    );
-  }
-}
+// _CheckInButton 已移除 —— 签到功能统一由优惠券页入口提供
 
 class _StripeConnectSection extends StatelessWidget {
   const _StripeConnectSection({required this.status});
@@ -530,7 +444,7 @@ class _TransactionsSection extends StatelessWidget {
                   style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
               if (transactions.isNotEmpty)
                 GestureDetector(
-                  onTap: () => context.push('/wallet/transactions'),
+                  onTap: () => context.push('/coupon-points'),
                   child: Text(
                     context.l10n.walletViewAll,
                     style: const TextStyle(
@@ -575,14 +489,7 @@ class _TransactionsSection extends StatelessWidget {
                 .map((t) => _TransactionItem(transaction: t))
                 .toList(),
           ),
-        if (hasMore && transactions.length > 10)
-          Padding(
-            padding: AppSpacing.allMd,
-            child: TextButton(
-              onPressed: onLoadMore,
-              child: Text(context.l10n.walletViewMore),
-            ),
-          ),
+        // 「查看全部」已跳转至优惠券积分页，不再加载更多
       ],
     );
   }

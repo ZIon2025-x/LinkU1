@@ -359,7 +359,7 @@ class _ExpertsTabContentState extends State<_ExpertsTabContent> {
                             tempCity = 'all';
                           }),
                           child: Text(l10n.commonReset,
-                            style: TextStyle(color: AppColors.primary, fontSize: 14)),
+                            style: const TextStyle(color: AppColors.primary, fontSize: 14)),
                         ),
                       ],
                     ),

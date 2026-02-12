@@ -58,12 +58,6 @@ class HomeTabChanged extends HomeEvent {
   List<Object?> get props => [index];
 }
 
-/// 加载最新动态（论坛帖子，按权限过滤）
-@Deprecated('Use HomeLoadDiscoveryFeed instead')
-class HomeLoadRecentActivities extends HomeEvent {
-  const HomeLoadRecentActivities();
-}
-
 /// 加载发现 Feed
 class HomeLoadDiscoveryFeed extends HomeEvent {
   const HomeLoadDiscoveryFeed();

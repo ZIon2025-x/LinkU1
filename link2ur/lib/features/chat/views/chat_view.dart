@@ -124,6 +124,7 @@ class _ChatContentState extends State<_ChatContent> {
           prev.isLoadingMore != curr.isLoadingMore,
       builder: (context, state) {
         return Scaffold(
+          backgroundColor: AppColors.backgroundFor(Theme.of(context).brightness),
           appBar: AppBar(
             title: Text(context.l10n.chatUserTitle(widget.userId)),
             actions: [

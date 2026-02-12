@@ -71,7 +71,7 @@ void main() {
       expect(walletBloc.state.transactions, isEmpty);
       expect(walletBloc.state.coupons, isEmpty);
       expect(walletBloc.state.stripeConnectStatus, isNull);
-      expect(walletBloc.state.isCheckingIn, isFalse);
+      expect(walletBloc.state.connectBalance, isNull);
     });
 
     // ==================== WalletLoadRequested ====================
@@ -90,6 +90,8 @@ void main() {
               .thenAnswer((_) async => testCoupons);
           when(() => mockPaymentRepo.getStripeConnectStatus())
               .thenAnswer((_) async => testStripeStatus);
+          when(() => mockPaymentRepo.getStripeConnectBalanceTyped())
+              .thenThrow(Exception('No connect account'));
           return walletBloc;
         },
         act: (bloc) => bloc.add(const WalletLoadRequested()),
@@ -139,6 +141,8 @@ void main() {
               .thenAnswer((_) async => testCoupons);
           when(() => mockPaymentRepo.getStripeConnectStatus())
               .thenAnswer((_) async => testStripeStatus);
+          when(() => mockPaymentRepo.getStripeConnectBalanceTyped())
+              .thenThrow(Exception('No connect account'));
           return walletBloc;
         },
         act: (bloc) => bloc.add(const WalletLoadRequested()),
@@ -168,94 +172,6 @@ void main() {
           isA<WalletState>()
               .having((s) => s.status, 'status', WalletStatus.error)
               .having((s) => s.errorMessage, 'errorMessage', isNotNull),
-        ],
-      );
-    });
-
-    // ==================== WalletCheckIn ====================
-
-    group('WalletCheckIn', () {
-      final checkInTransaction = PointsTransaction(
-        id: 99,
-        type: 'earn',
-        amount: 10,
-        description: 'Daily check-in',
-        createdAt: DateTime(2026, 2, 7),
-      );
-
-      const updatedAccount = PointsAccount(
-        balance: 510,
-        balanceDisplay: '510',
-        totalEarned: 1010,
-        totalSpent: 500,
-      );
-
-      blocTest<WalletBloc, WalletState>(
-        'emits [isCheckingIn=true, updated data with actionMessage] on success',
-        build: () {
-          when(() => mockCouponPointsRepo.checkIn())
-              .thenAnswer((_) async => checkInTransaction);
-          when(() => mockCouponPointsRepo.getPointsAccount())
-              .thenAnswer((_) async => updatedAccount);
-          return walletBloc;
-        },
-        seed: () => WalletState(
-          status: WalletStatus.loaded,
-          pointsAccount: testAccount,
-          transactions: testTransactions,
-        ),
-        act: (bloc) => bloc.add(const WalletCheckIn()),
-        expect: () => [
-          // 1. 开始签到
-          WalletState(
-            status: WalletStatus.loaded,
-            pointsAccount: testAccount,
-            transactions: testTransactions,
-            isCheckingIn: true,
-          ),
-          // 2. 签到成功
-          WalletState(
-            status: WalletStatus.loaded,
-            pointsAccount: updatedAccount,
-            transactions: [checkInTransaction, ...testTransactions],
-            isCheckingIn: false,
-            actionMessage: '签到成功！',
-          ),
-        ],
-      );
-
-      blocTest<WalletBloc, WalletState>(
-        'does not check in when already checking in',
-        build: () => walletBloc,
-        seed: () => const WalletState(
-          status: WalletStatus.loaded,
-          isCheckingIn: true,
-        ),
-        act: (bloc) => bloc.add(const WalletCheckIn()),
-        expect: () => [], // 不应该有新状态
-      );
-
-      blocTest<WalletBloc, WalletState>(
-        'handles check-in failure gracefully',
-        build: () {
-          when(() => mockCouponPointsRepo.checkIn())
-              .thenThrow(Exception('Already checked in today'));
-          return walletBloc;
-        },
-        seed: () => const WalletState(
-          status: WalletStatus.loaded,
-          pointsAccount: testAccount,
-        ),
-        act: (bloc) => bloc.add(const WalletCheckIn()),
-        expect: () => [
-          const WalletState(
-            status: WalletStatus.loaded,
-            pointsAccount: testAccount,
-            isCheckingIn: true,
-          ),
-          isA<WalletState>()
-              .having((s) => s.isCheckingIn, 'isCheckingIn', isFalse)
-              .having((s) => s.actionMessage, 'actionMessage', contains('签到失败')),
         ],
       );
     });
@@ -352,14 +268,6 @@ void main() {
           clearError: true,
         );
         expect(cleared.errorMessage, isNull);
-      });
-
-      test('copyWith clearAction resets actionMessage', () {
-        const state = WalletState(
-          actionMessage: 'some action',
-        );
-        final cleared = state.copyWith(clearAction: true);
-        expect(cleared.actionMessage, isNull);
       });
     });
   });

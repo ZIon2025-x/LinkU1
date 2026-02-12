@@ -816,15 +816,7 @@ class _CheckInTab extends StatelessWidget {
   }
 
   Widget _buildRewardSection(BuildContext context, bool isDark, CouponPointsState state) {
-    // 使用后端返回的奖励配置，如果没有则显示默认
-    final rewards = state.checkInRewards.isNotEmpty
-        ? state.checkInRewards
-        : [
-            {'days': 3, 'reward': context.l10n.couponRewardPoints50, 'icon': 'fire'},
-            {'days': 7, 'reward': context.l10n.couponRewardPoints100Coupon, 'icon': 'star'},
-            {'days': 30, 'reward': context.l10n.couponRewardPoints500Vip, 'icon': 'premium'},
-          ];
-
+    // 签到活动尚未开放，显示占位文案
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -837,100 +829,38 @@ class _CheckInTab extends StatelessWidget {
           ),
         ),
         AppSpacing.vMd,
-        ...rewards.map((reward) {
-          final daysValue = reward['days'] ?? 0;
-          final days = daysValue is int ? daysValue : int.tryParse(daysValue.toString()) ?? 0;
-          final rewardText = reward['reward'] ?? '';
-          final iconName = reward['icon'] ?? 'star';
-
-          IconData icon;
-          Color iconColor;
-          switch (iconName) {
-            case 'fire':
-              icon = Icons.local_fire_department;
-              iconColor = AppColors.warning;
-              break;
-            case 'premium':
-              icon = Icons.workspace_premium;
-              iconColor = AppColors.purple;
-              break;
-            default:
-              icon = Icons.star;
-              iconColor = AppColors.accent;
-          }
-
-          final isAchieved = state.consecutiveDays >= days;
-
-          return _RewardRow(
-            title: context.l10n.couponConsecutiveCheckIn(days),
-            reward: rewardText.toString(),
-            icon: icon,
-            iconColor: iconColor,
-            isAchieved: isAchieved,
-          );
-        }),
+        Container(
+          width: double.infinity,
+          padding: AppSpacing.allLg,
+          decoration: BoxDecoration(
+            color: isDark
+                ? AppColors.cardBackgroundDark
+                : AppColors.cardBackgroundLight,
+            borderRadius: AppRadius.allMedium,
+          ),
+          child: Column(
+            children: [
+              Icon(
+                Icons.event_available_rounded,
+                size: 48,
+                color: AppColors.textSecondaryLight.withValues(alpha: 0.5),
+              ),
+              AppSpacing.vMd,
+              Text(
+                context.l10n.couponCheckInComingSoon,
+                textAlign: TextAlign.center,
+                style: AppTypography.body.copyWith(
+                  color: isDark
+                      ? AppColors.textSecondaryDark
+                      : AppColors.textSecondaryLight,
+                ),
+              ),
+            ],
+          ),
+        ),
       ],
     );
   }
 }
 
-class _RewardRow extends StatelessWidget {
-  const _RewardRow({
-    required this.title,
-    required this.reward,
-    required this.icon,
-    required this.iconColor,
-    this.isAchieved = false,
-  });
-
-  final String title;
-  final String reward;
-  final IconData icon;
-  final Color iconColor;
-  final bool isAchieved;
-
-  @override
-  Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    return Container(
-      margin: const EdgeInsets.only(bottom: AppSpacing.sm),
-      padding: AppSpacing.allMd,
-      decoration: BoxDecoration(
-        color: isDark
-            ? AppColors.cardBackgroundDark
-            : AppColors.cardBackgroundLight,
-        borderRadius: AppRadius.allMedium,
-      ),
-      child: Row(
-        children: [
-          Icon(icon, size: 24, color: iconColor),
-          AppSpacing.hMd,
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: AppTypography.bodyBold.copyWith(
-                    color: isDark
-                        ? AppColors.textPrimaryDark
-                        : AppColors.textPrimaryLight,
-                  ),
-                ),
-                Text(
-                  reward,
-                  style: AppTypography.caption.copyWith(
-                    color: iconColor,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          if (isAchieved)
-            const Icon(Icons.check_circle, color: AppColors.success, size: 20),
-        ],
-      ),
-    );
-  }
-}
+// _RewardRow 已移除 —— 签到奖励区域改为占位文案

@@ -1,37 +1,12 @@
 part of 'profile_view.dart';
 
 /// Mobile profile layout — gradient background + scrollable content
+/// 对齐 iOS ProfileView: AppColors.background + 顶部 primary 渐变
 Widget _buildMobileProfile(
     BuildContext context, ProfileState profileState, User user, bool isDark) {
-  return Stack(
-    children: [
-      Positioned(
-        top: 0, left: 0, right: 0,
-        child: Container(
-          height: 300,
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: isDark
-                  ? [
-                      AppColors.primary.withValues(alpha: 0.20),
-                      AppColors.purple.withValues(alpha: 0.15),
-                      AppColors.teal.withValues(alpha: 0.12),
-                      AppColors.primary.withValues(alpha: 0.10),
-                    ]
-                  : [
-                      AppColors.primary.withValues(alpha: 0.15),
-                      AppColors.purple.withValues(alpha: 0.12),
-                      AppColors.teal.withValues(alpha: 0.10),
-                      AppColors.primary.withValues(alpha: 0.08),
-                    ],
-              stops: const [0.0, 0.3, 0.6, 1.0],
-            ),
-          ),
-        ),
-      ),
-      SingleChildScrollView(
+  return PageBackground(
+    hasTopGradient: true,
+    child: SingleChildScrollView(
         physics: const AlwaysScrollableScrollPhysics(),
         padding: EdgeInsets.only(
           bottom: MediaQuery.of(context).padding.bottom + 80,
@@ -50,7 +25,6 @@ Widget _buildMobileProfile(
           ],
         ),
       ),
-    ],
   );
 }
 
@@ -84,9 +58,9 @@ Widget _buildUserInfoSection(
               Container(
                 width: 110,
                 height: 110,
-                decoration: BoxDecoration(
+                decoration: const BoxDecoration(
                   shape: BoxShape.circle,
-                  gradient: const LinearGradient(
+                  gradient: LinearGradient(
                     colors: AppColors.gradientPrimary,
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,

@@ -1,6 +1,5 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
@@ -1080,7 +1079,7 @@ class _PublishContentState extends State<_PublishContent>
           valueListenable: _taskCategoryNotifier,
           builder: (context, value, child) {
             return DropdownButtonFormField<String>(
-              value: value,
+              initialValue: value,
               isExpanded: true,
               decoration: InputDecoration(
                 hintText: context.l10n.createTaskType,
@@ -1192,7 +1191,7 @@ class _PublishContentState extends State<_PublishContent>
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 220),
         child: DropdownButtonFormField<T>(
-          value: value,
+          initialValue: value,
           isExpanded: true,
           decoration: InputDecoration(
             hintText: hint,
@@ -1413,10 +1412,12 @@ class _PublishContentState extends State<_PublishContent>
               setDialogState(() => loading = true);
               try {
                 final list = await discoveryRepo.searchLinkableContent(query: q.trim(), type: 'all');
-                if (ctx.mounted) setDialogState(() {
-                  results = list;
-                  loading = false;
-                });
+                if (ctx.mounted) {
+                  setDialogState(() {
+                    results = list;
+                    loading = false;
+                  });
+                }
               } catch (e) {
                 if (ctx.mounted) {
                   setDialogState(() => loading = false);

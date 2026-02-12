@@ -125,7 +125,7 @@ class PushNotificationService {
   /// 注销推送 Token（登出时调用）
   Future<void> unregisterToken() async {
     try {
-      final token = await StorageService.instance.getPushToken();
+      final token = StorageService.instance.getPushToken();
       if (token == null || _apiService == null) return;
 
       await _apiService!.delete(

@@ -112,9 +112,9 @@ Widget _buildDesktopUserCard(
               Container(
                 width: 86,
                 height: 86,
-                decoration: BoxDecoration(
+                decoration: const BoxDecoration(
                   shape: BoxShape.circle,
-                  gradient: const LinearGradient(
+                  gradient: LinearGradient(
                     colors: AppColors.gradientPrimary,
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,

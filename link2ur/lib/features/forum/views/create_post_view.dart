@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/utils/l10n_extension.dart';
 import '../../../core/widgets/app_feedback.dart';
@@ -73,6 +74,7 @@ class _CreatePostViewState extends State<CreatePostView> {
         },
         builder: (context, state) {
           return Scaffold(
+            backgroundColor: AppColors.backgroundFor(Theme.of(context).brightness),
             appBar: AppBar(
               title: Text(context.l10n.forumCreatePostTitle),
               actions: [

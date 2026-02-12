@@ -840,7 +840,7 @@ class _RelatedActivitiesSection extends StatelessWidget {
             ),
           ],
         ),
-        child: Center(
+        child: const Center(
           child: SizedBox(
             width: 28,
             height: 28,

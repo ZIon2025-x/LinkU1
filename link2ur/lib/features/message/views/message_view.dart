@@ -33,7 +33,7 @@ class MessageView extends StatelessWidget {
 
     if (isDesktop) {
       return Scaffold(
-        backgroundColor: isDark ? AppColors.backgroundDark : Colors.white,
+        backgroundColor: AppColors.backgroundFor(Theme.of(context).brightness),
         body: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -62,6 +62,7 @@ class MessageView extends StatelessWidget {
     }
 
     return Scaffold(
+      backgroundColor: AppColors.backgroundFor(Theme.of(context).brightness),
       appBar: AppBar(
         title: Text(context.l10n.messagesMessages),
       ),

@@ -252,7 +252,7 @@ class _StripeConnectOnboardingViewState
         children: [
           // 成功图标
           AppSpacing.vLg,
-          Icon(
+          const Icon(
             Icons.check_circle,
             size: 50,
             color: AppColors.success,
@@ -315,7 +315,7 @@ class _StripeConnectOnboardingViewState
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(AppRadius.medium),
               ),
-              side: BorderSide(color: AppColors.primary),
+              side: const BorderSide(color: AppColors.primary),
             ),
           ),
           AppSpacing.vMd,

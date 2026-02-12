@@ -794,9 +794,13 @@ class _ReviewDialogState extends State<_ReviewDialog> {
                 Switch.adaptive(
                   value: _isAnonymous,
                   onChanged: (v) => setState(() => _isAnonymous = v),
-                  activeColor: isDark
+                  activeThumbColor: isDark
                       ? AppColors.primaryDark
                       : AppColors.primaryLight,
+                  activeTrackColor: (isDark
+                      ? AppColors.primaryDark
+                      : AppColors.primaryLight)
+                      .withValues(alpha: 0.5),
                 ),
               ],
             ),

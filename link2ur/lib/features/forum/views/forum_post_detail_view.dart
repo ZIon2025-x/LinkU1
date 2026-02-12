@@ -68,6 +68,7 @@ class _ForumPostDetailViewState extends State<ForumPostDetailView> {
         ..add(ForumLoadPostDetail(widget.postId))
         ..add(ForumLoadReplies(widget.postId)),
       child: Scaffold(
+        backgroundColor: AppColors.backgroundFor(Theme.of(context).brightness),
         appBar: AppBar(
           title: Text(context.l10n.forumPostDetail),
           actions: [

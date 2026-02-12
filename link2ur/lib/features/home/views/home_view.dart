@@ -27,7 +27,6 @@ import 'package:geocoding/geocoding.dart';
 import 'package:geolocator/geolocator.dart';
 
 import '../../../core/widgets/content_constraint.dart';
-import '../../../core/widgets/gradient_text.dart';
 import '../../../core/router/app_router.dart';
 import '../../../data/models/task.dart';
 import '../../../data/models/task_expert.dart';
@@ -110,7 +109,7 @@ class _HomeViewContentState extends State<_HomeViewContent> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
-      backgroundColor: isDark ? AppColors.backgroundDark : Colors.white,
+      backgroundColor: AppColors.backgroundFor(Theme.of(context).brightness),
       body: Column(
         children: [
           // Notion 风格内嵌 Tab 切换
@@ -185,7 +184,7 @@ class _HomeViewContentState extends State<_HomeViewContent> {
       body: Stack(
         children: [
           Container(
-            color: isDark ? AppColors.backgroundDark : AppColors.backgroundLight,
+            color: AppColors.backgroundFor(Theme.of(context).brightness),
           ),
           // 装饰性背景 - 与iOS HomeView对齐：模糊彩色圆形
           const RepaintBoundary(child: _DecorativeBackground()),

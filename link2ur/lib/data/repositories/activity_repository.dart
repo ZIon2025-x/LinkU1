@@ -71,7 +71,7 @@ class ActivityRepository {
         // 兼容：如果后端后续改为分页格式
         return ActivityListResponse.fromJson(data, page: page, pageSize: pageSize);
       } else {
-        throw ActivityException('活动列表返回格式异常');
+        throw const ActivityException('活动列表返回格式异常');
       }
 
       if (cacheKey != null) {

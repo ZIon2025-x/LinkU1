@@ -542,12 +542,12 @@ class _ExpertActivitiesSection extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _SectionHeader(
-            title: '${context.l10n.taskSourceExpertActivity}'),
+            title: context.l10n.taskSourceExpertActivity),
         const SizedBox(height: AppSpacing.md),
         if (isLoading && activities.isEmpty)
-          Center(
+          const Center(
             child: Padding(
-              padding: const EdgeInsets.symmetric(vertical: 24),
+              padding: EdgeInsets.symmetric(vertical: 24),
               child: SizedBox(
                 width: 32,
                 height: 32,
@@ -1071,7 +1071,7 @@ class _ServiceCard extends StatelessWidget {
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(
+                            const Icon(
                               Icons.event_available,
                               size: 14,
                               color: AppColors.warning,
@@ -1081,7 +1081,7 @@ class _ServiceCard extends StatelessWidget {
                               context.l10n
                                   .taskExpertRelatedActivitiesAvailable(
                                       relatedActivityCount),
-                              style: TextStyle(
+                              style: const TextStyle(
                                 fontSize: 12,
                                 fontWeight: FontWeight.w500,
                                 color: AppColors.warning,

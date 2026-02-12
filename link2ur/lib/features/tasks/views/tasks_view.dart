@@ -515,7 +515,7 @@ class _TasksViewContentState extends State<_TasksViewContent> {
                           },
                           child: Text(
                             l10n.commonReset,
-                            style: TextStyle(
+                            style: const TextStyle(
                               color: AppColors.primary,
                               fontSize: 14,
                             ),
@@ -581,7 +581,7 @@ class _TasksViewContentState extends State<_TasksViewContent> {
                               // 根据当前语言显示城市名
                               final locale = Localizations.localeOf(ctx);
                               final displayName = locale.languageCode == 'zh'
-                                  ? (zhName != null ? '$zhName' : city)
+                                  ? (zhName ?? city)
                                   : city;
                               return _buildFilterChip(
                                 label: displayName,

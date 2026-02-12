@@ -197,7 +197,7 @@ class PosterInfoCard extends StatelessWidget {
       ),
       child: Row(
         children: [
-          Icon(Icons.info_outline, size: 24, color: AppColors.primary),
+          const Icon(Icons.info_outline, size: 24, color: AppColors.primary),
           const SizedBox(width: AppSpacing.md),
           Expanded(
             child: Column(
@@ -262,7 +262,7 @@ class ConfirmationReminderCard extends StatelessWidget {
         children: [
           Row(
             children: [
-              Icon(Icons.schedule, size: 20, color: AppColors.warning),
+              const Icon(Icons.schedule, size: 20, color: AppColors.warning),
               const SizedBox(width: 8),
               Text(
                 context.l10n.taskDetailPleaseConfirmComplete,
@@ -317,7 +317,7 @@ class WaitingConfirmationCard extends StatelessWidget {
       ),
       child: Row(
         children: [
-          Icon(Icons.hourglass_top, size: 24, color: AppColors.primary),
+          const Icon(Icons.hourglass_top, size: 24, color: AppColors.primary),
           const SizedBox(width: AppSpacing.md),
           Expanded(
             child: Column(
@@ -386,7 +386,7 @@ class CompletionEvidenceCard extends StatelessWidget {
         children: [
           Row(
             children: [
-              Icon(Icons.verified, size: 18, color: AppColors.success),
+              const Icon(Icons.verified, size: 18, color: AppColors.success),
               const SizedBox(width: 8),
               Text(
                 context.l10n.taskDetailTaskCompletionEvidence,
@@ -585,7 +585,7 @@ class ApplicationsListView extends StatelessWidget {
         children: [
           Row(
             children: [
-              Icon(Icons.people, size: 18, color: AppColors.primary),
+              const Icon(Icons.people, size: 18, color: AppColors.primary),
               const SizedBox(width: 8),
               Text(
                 context.l10n
@@ -870,7 +870,7 @@ class TaskReviewsSection extends StatelessWidget {
         children: [
           Row(
             children: [
-              Icon(Icons.rate_review, size: 18, color: AppColors.warning),
+              const Icon(Icons.rate_review, size: 18, color: AppColors.warning),
               const SizedBox(width: 8),
               Text(
                 context.l10n.taskDetailMyReviews,
@@ -1375,7 +1375,7 @@ class TaskActionButtonsView extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.cancel_outlined, size: 18, color: AppColors.error),
+          const Icon(Icons.cancel_outlined, size: 18, color: AppColors.error),
           const SizedBox(width: 6),
           Text(
             context.l10n.actionsCancelTask,
@@ -1529,9 +1529,13 @@ class _ReviewBottomSheetState extends State<_ReviewBottomSheet> {
                 Switch.adaptive(
                   value: _isAnonymous,
                   onChanged: (v) => setState(() => _isAnonymous = v),
-                  activeColor: isDark
+                  activeThumbColor: isDark
                       ? AppColors.primaryDark
                       : AppColors.primaryLight,
+                  activeTrackColor: (isDark
+                      ? AppColors.primaryDark
+                      : AppColors.primaryLight)
+                      .withValues(alpha: 0.5),
                 ),
               ],
             ),

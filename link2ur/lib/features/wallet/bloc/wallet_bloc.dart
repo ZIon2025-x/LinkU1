@@ -16,14 +16,9 @@ abstract class WalletEvent extends Equatable {
   List<Object?> get props => [];
 }
 
-/// 加载钱包全部数据（积分账户 + 交易记录 + 优惠券 + Stripe Connect 状态）
+/// 加载钱包全部数据（积分账户 + 交易记录 + 优惠券 + Stripe Connect 状态 + Connect 余额）
 class WalletLoadRequested extends WalletEvent {
   const WalletLoadRequested();
-}
-
-/// 每日签到
-class WalletCheckIn extends WalletEvent {
-  const WalletCheckIn();
 }
 
 /// 加载更多交易记录
@@ -39,54 +34,49 @@ class WalletState extends Equatable {
   const WalletState({
     this.status = WalletStatus.initial,
     this.pointsAccount,
+    this.connectBalance,
     this.transactions = const [],
     this.coupons = const [],
     this.stripeConnectStatus,
     this.transactionPage = 1,
     this.hasMoreTransactions = true,
-    this.isCheckingIn = false,
     this.errorMessage,
-    this.actionMessage,
   });
 
   final WalletStatus status;
   final PointsAccount? pointsAccount;
+  final StripeConnectBalance? connectBalance;
   final List<PointsTransaction> transactions;
   final List<UserCoupon> coupons;
   final StripeConnectStatus? stripeConnectStatus;
   final int transactionPage;
   final bool hasMoreTransactions;
-  final bool isCheckingIn;
   final String? errorMessage;
-  final String? actionMessage;
 
   bool get isLoading => status == WalletStatus.loading;
 
   WalletState copyWith({
     WalletStatus? status,
     PointsAccount? pointsAccount,
+    StripeConnectBalance? connectBalance,
     List<PointsTransaction>? transactions,
     List<UserCoupon>? coupons,
     StripeConnectStatus? stripeConnectStatus,
     int? transactionPage,
     bool? hasMoreTransactions,
-    bool? isCheckingIn,
     String? errorMessage,
-    String? actionMessage,
     bool clearError = false,
-    bool clearAction = false,
   }) {
     return WalletState(
       status: status ?? this.status,
       pointsAccount: pointsAccount ?? this.pointsAccount,
+      connectBalance: connectBalance ?? this.connectBalance,
       transactions: transactions ?? this.transactions,
       coupons: coupons ?? this.coupons,
       stripeConnectStatus: stripeConnectStatus ?? this.stripeConnectStatus,
       transactionPage: transactionPage ?? this.transactionPage,
       hasMoreTransactions: hasMoreTransactions ?? this.hasMoreTransactions,
-      isCheckingIn: isCheckingIn ?? this.isCheckingIn,
       errorMessage: clearError ? null : (errorMessage ?? this.errorMessage),
-      actionMessage: clearAction ? null : (actionMessage ?? this.actionMessage),
     );
   }
 
@@ -94,14 +84,13 @@ class WalletState extends Equatable {
   List<Object?> get props => [
         status,
         pointsAccount,
+        connectBalance,
         transactions,
         coupons,
         stripeConnectStatus,
         transactionPage,
         hasMoreTransactions,
-        isCheckingIn,
         errorMessage,
-        actionMessage,
       ];
 }
 
@@ -115,7 +104,6 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
         _paymentRepo = paymentRepository,
         super(const WalletState()) {
     on<WalletLoadRequested>(_onLoadRequested);
-    on<WalletCheckIn>(_onCheckIn);
     on<WalletLoadMoreTransactions>(_onLoadMore);
   }
 
@@ -136,12 +124,21 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
         _paymentRepo.getStripeConnectStatus(),
       ]);
 
+      // 尝试加载 Connect 余额（可能无账户 → 404，视为零余额）
+      StripeConnectBalance? balance;
+      try {
+        balance = await _paymentRepo.getStripeConnectBalanceTyped();
+      } catch (_) {
+        // 无 Connect 账户或 API 错误，balance 保持 null → UI 显示 £0.00
+      }
+
       emit(state.copyWith(
         status: WalletStatus.loaded,
         pointsAccount: results[0] as PointsAccount,
         transactions: results[1] as List<PointsTransaction>,
         coupons: results[2] as List<UserCoupon>,
         stripeConnectStatus: results[3] as StripeConnectStatus,
+        connectBalance: balance,
         transactionPage: 1,
         hasMoreTransactions:
             (results[1] as List<PointsTransaction>).length >= 20,
@@ -150,33 +147,6 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
       AppLogger.error('Failed to load wallet', e);
       emit(state.copyWith(
         status: WalletStatus.error,
-        errorMessage: e.toString(),
-      ));
-    }
-  }
-
-  Future<void> _onCheckIn(
-    WalletCheckIn event,
-    Emitter<WalletState> emit,
-  ) async {
-    if (state.isCheckingIn) return;
-    emit(state.copyWith(isCheckingIn: true, clearAction: true));
-
-    try {
-      final transaction = await _couponPointsRepo.checkIn();
-      final account = await _couponPointsRepo.getPointsAccount();
-
-      emit(state.copyWith(
-        pointsAccount: account,
-        transactions: [transaction, ...state.transactions],
-        isCheckingIn: false,
-        actionMessage: 'check_in_success',
-      ));
-    } catch (e) {
-      AppLogger.error('Failed to check in', e);
-      emit(state.copyWith(
-        isCheckingIn: false,
-        actionMessage: 'check_in_failed',
         errorMessage: e.toString(),
       ));
     }

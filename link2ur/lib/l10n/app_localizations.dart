@@ -5277,6 +5277,12 @@ abstract class AppLocalizations {
   /// **'Check-in Rewards'**
   String get couponCheckInReward;
 
+  /// No description provided for @couponCheckInComingSoon.
+  ///
+  /// In en, this message translates to:
+  /// **'Check-in rewards coming soon, stay tuned'**
+  String get couponCheckInComingSoon;
+
   /// No description provided for @couponCheckInSuccess.
   ///
   /// In en, this message translates to:
@@ -11881,6 +11887,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Points Balance'**
   String get walletPointsBalance;
+
+  /// No description provided for @walletUnwithdrawnIncome.
+  ///
+  /// In en, this message translates to:
+  /// **'Unwithdrawn Income'**
+  String get walletUnwithdrawnIncome;
 
   /// No description provided for @walletTotalEarned.
   ///

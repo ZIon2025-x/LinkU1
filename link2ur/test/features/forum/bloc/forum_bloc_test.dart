@@ -266,7 +266,7 @@ void main() {
               page: 2,
               categoryId: any(named: 'categoryId'),
               keyword: any(named: 'keyword'),
-            )).thenAnswer((_) async => ForumPostListResponse(
+            )).thenAnswer((_) async => const ForumPostListResponse(
               posts: [morePost],
               total: 2,
               page: 2,
