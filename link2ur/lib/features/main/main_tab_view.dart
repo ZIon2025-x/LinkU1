@@ -1,5 +1,3 @@
-import 'dart:ui';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -311,14 +309,11 @@ class _MainTabViewState extends State<MainTabView> {
     return Scaffold(
       extendBody: true,
       body: widget.navigationShell,
-      bottomNavigationBar: ClipRect(
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-          child: Container(
-            decoration: BoxDecoration(
+      bottomNavigationBar: Container(
+        decoration: BoxDecoration(
               color: isDark
-                  ? AppColors.cardBackgroundDark.withValues(alpha: 0.85)
-                  : AppColors.cardBackgroundLight.withValues(alpha: 0.88),
+                  ? AppColors.cardBackgroundDark
+                  : AppColors.cardBackgroundLight,
               border: Border(
                 top: BorderSide(
                   color: isDark
@@ -350,9 +345,7 @@ class _MainTabViewState extends State<MainTabView> {
                 ),
               ),
             ),
-          ),
-        ),
-      ),
+    ),
     );
   }
 
@@ -597,6 +590,9 @@ class _DesktopTopBar extends StatelessWidget {
 
           // 通知铃铛
           BlocBuilder<NotificationBloc, NotificationState>(
+            // 仅在未读总数变化时重建铃铛按钮
+            buildWhen: (prev, curr) =>
+                prev.unreadCount.totalCount != curr.unreadCount.totalCount,
             builder: (context, state) {
               final count = state.unreadCount.totalCount;
               return _TopBarIconButton(

@@ -146,14 +146,21 @@ class _ActivityListContentState extends State<_ActivityListContent> {
                   content = RefreshIndicator(
                     key: const ValueKey('loaded'),
                     onRefresh: () async {
-                      context.read<ActivityBloc>().add(
-                            const ActivityRefreshRequested(),
+                      final bloc = context.read<ActivityBloc>();
+                      bloc.add(const ActivityRefreshRequested());
+                      await bloc.stream
+                          .firstWhere(
+                            (s) => s.status != ActivityStatus.loading,
+                            orElse: () => state,
+                          )
+                          .timeout(
+                            const Duration(seconds: 15),
+                            onTimeout: () => state,
                           );
-                      await Future.delayed(
-                          const Duration(milliseconds: 500));
                     },
                     child: ListView.separated(
                       clipBehavior: Clip.none,
+                      addAutomaticKeepAlives: false,
                       padding: const EdgeInsets.symmetric(
                         horizontal: AppSpacing.md,
                         vertical: AppSpacing.sm,
@@ -318,7 +325,7 @@ class ActivityCardView extends StatelessWidget {
     return ScrollSafeTap(
       onTap: onTap,
       child: Container(
-        clipBehavior: Clip.antiAlias,
+        clipBehavior: Clip.hardEdge,
         decoration: BoxDecoration(
           color: isDark
               ? AppColors.cardBackgroundDark

@@ -150,6 +150,7 @@ class ForumState extends Equatable {
     this.errorMessage,
     this.isRefreshing = false,
     this.loadMoreError = false,
+    this.isLoadingMore = false,
     this.selectedPost,
     this.replies = const [],
     this.isCreatingPost = false,
@@ -172,6 +173,8 @@ class ForumState extends Equatable {
   final bool isRefreshing;
   /// 分页加载更多失败标志，用于 UI 显示重试按钮
   final bool loadMoreError;
+  /// 是否正在加载更多，防止快速滚动触发重复请求
+  final bool isLoadingMore;
   final ForumPost? selectedPost;
   final List<ForumReply> replies;
   final bool isCreatingPost;
@@ -196,6 +199,7 @@ class ForumState extends Equatable {
     String? errorMessage,
     bool? isRefreshing,
     bool? loadMoreError,
+    bool? isLoadingMore,
     ForumPost? selectedPost,
     List<ForumReply>? replies,
     bool? isCreatingPost,
@@ -218,6 +222,7 @@ class ForumState extends Equatable {
       errorMessage: errorMessage,
       isRefreshing: isRefreshing ?? this.isRefreshing,
       loadMoreError: loadMoreError ?? false,
+      isLoadingMore: isLoadingMore ?? this.isLoadingMore,
       selectedPost: selectedPost ?? this.selectedPost,
       replies: replies ?? this.replies,
       isCreatingPost: isCreatingPost ?? this.isCreatingPost,
@@ -243,6 +248,7 @@ class ForumState extends Equatable {
         errorMessage,
         isRefreshing,
         loadMoreError,
+        isLoadingMore,
         selectedPost,
         replies,
         isCreatingPost,
@@ -332,6 +338,7 @@ class ForumBloc extends Bloc<ForumEvent, ForumState> {
         total: response.total,
         page: 1,
         hasMore: response.hasMore,
+        isLoadingMore: false,
       ));
     } catch (e) {
       AppLogger.error('Failed to load forum posts', e);
@@ -346,8 +353,9 @@ class ForumBloc extends Bloc<ForumEvent, ForumState> {
     ForumLoadMorePosts event,
     Emitter<ForumState> emit,
   ) async {
-    if (!state.hasMore) return;
+    if (!state.hasMore || state.isLoadingMore) return;
 
+    emit(state.copyWith(isLoadingMore: true));
     try {
       final nextPage = state.page + 1;
       final response = await _forumRepository.getPosts(
@@ -362,11 +370,12 @@ class ForumBloc extends Bloc<ForumEvent, ForumState> {
         page: nextPage,
         hasMore: response.hasMore,
         loadMoreError: false,
+        isLoadingMore: false,
       ));
     } catch (e) {
       AppLogger.error('Failed to load more posts', e);
       // 标记加载更多失败，UI 可显示重试按钮（不设 hasMore: false，允许用户重试）
-      emit(state.copyWith(loadMoreError: true));
+      emit(state.copyWith(loadMoreError: true, isLoadingMore: false));
     }
   }
 
@@ -432,6 +441,7 @@ class ForumBloc extends Bloc<ForumEvent, ForumState> {
         total: response.total,
         page: 1,
         hasMore: response.hasMore,
+        isLoadingMore: false,
       ));
     } catch (e) {
       emit(state.copyWith(
@@ -463,6 +473,7 @@ class ForumBloc extends Bloc<ForumEvent, ForumState> {
         total: response.total,
         page: 1,
         hasMore: response.hasMore,
+        isLoadingMore: false,
       ));
     } catch (e) {
       emit(state.copyWith(

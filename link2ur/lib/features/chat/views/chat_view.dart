@@ -1,5 +1,3 @@
-import 'dart:ui';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -188,6 +186,7 @@ class _ChatContentState extends State<_ChatContent> {
     return ListView.builder(
       controller: _scrollController,
       padding: const EdgeInsets.symmetric(vertical: 12),
+      addAutomaticKeepAlives: false,
       itemCount: groups.length,
       itemBuilder: (context, index) {
         final group = groups[index];
@@ -258,10 +257,8 @@ class _ChatContentState extends State<_ChatContent> {
 
   Widget _buildInputArea(ChatState state) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    return ClipRect(
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
-        child: Container(
+    // 使用半透明容器替代 BackdropFilter，减少滚动时的重绘开销
+    return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: isDark
@@ -356,8 +353,6 @@ class _ChatContentState extends State<_ChatContent> {
           ],
         ),
       ),
-    ),
-      ),
     );
   }
 }
@@ -407,6 +402,10 @@ class _AttachOption extends StatelessWidget {
 
 /// 消息气泡入场动画
 /// 自己的消息从右侧滑入，对方的从左侧滑入，带弹簧效果
+///
+/// 性能优化：
+/// - 仅前 6 条消息播放动画，其余直接显示（避免大量 AnimationController）
+/// - 使用 FadeTransition 替代 Opacity（避免 saveLayer 离屏缓冲）
 class _MessageBubbleAnimation extends StatefulWidget {
   const _MessageBubbleAnimation({
     required this.index,
@@ -425,14 +424,20 @@ class _MessageBubbleAnimation extends StatefulWidget {
 
 class _MessageBubbleAnimationState extends State<_MessageBubbleAnimation>
     with SingleTickerProviderStateMixin {
-  late final AnimationController _controller;
-  late final Animation<double> _fadeAnimation;
-  late final Animation<Offset> _slideAnimation;
-  late final Animation<double> _scaleAnimation;
+  AnimationController? _controller;
+  Animation<double>? _fadeAnimation;
+  Animation<Offset>? _slideAnimation;
+  Animation<double>? _scaleAnimation;
+
+  /// 仅前 6 条播放动画，减少 AnimationController 数量
+  bool get _shouldAnimate => widget.index <= 5;
 
   @override
   void initState() {
     super.initState();
+
+    if (!_shouldAnimate) return;
+
     _controller = AnimationController(
       duration: const Duration(milliseconds: 400),
       vsync: this,
@@ -440,7 +445,7 @@ class _MessageBubbleAnimationState extends State<_MessageBubbleAnimation>
 
     _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(
-        parent: _controller,
+        parent: _controller!,
         curve: const Interval(0.0, 0.5, curve: Curves.easeOut),
       ),
     );
@@ -450,46 +455,55 @@ class _MessageBubbleAnimationState extends State<_MessageBubbleAnimation>
       begin: Offset(slideX, 10),
       end: Offset.zero,
     ).animate(CurvedAnimation(
-      parent: _controller,
+      parent: _controller!,
       curve: Curves.easeOutBack,
     ));
 
     _scaleAnimation = Tween<double>(begin: 0.9, end: 1.0).animate(
       CurvedAnimation(
-        parent: _controller,
+        parent: _controller!,
         curve: const Interval(0.2, 1.0, curve: Curves.easeOutCubic),
       ),
     );
 
-    // 限制动画只对最近的消息播放
-    final clampedIndex = widget.index.clamp(0, 10);
-    final delay = Duration(milliseconds: clampedIndex * 30);
-    Future.delayed(delay, () {
-      if (mounted) _controller.forward();
+    final delay = Duration(milliseconds: widget.index * 30);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      if (delay == Duration.zero) {
+        _controller?.forward();
+      } else {
+        Future.delayed(delay, () {
+          if (mounted) _controller?.forward();
+        });
+      }
     });
   }
 
   @override
   void dispose() {
-    _controller.dispose();
+    _controller?.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
+    if (!_shouldAnimate) {
+      return widget.child;
+    }
+
     return AnimatedBuilder(
-      animation: _controller,
+      animation: _controller!,
       builder: (context, child) => Transform.translate(
-        offset: _slideAnimation.value,
+        offset: _slideAnimation!.value,
         child: Transform.scale(
-          scale: _scaleAnimation.value,
-          child: Opacity(
-            opacity: _fadeAnimation.value,
-            child: child,
-          ),
+          scale: _scaleAnimation!.value,
+          child: child,
         ),
       ),
-      child: widget.child,
+      child: FadeTransition(
+        opacity: _fadeAnimation!,
+        child: widget.child,
+      ),
     );
   }
 }

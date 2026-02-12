@@ -7015,8 +7015,6 @@ async def search_linkable_content(
     
     混合方案：所有公开内容都可搜索，但标注用户是否参与过
     """
-    from app.auth import get_current_user_secure_async_csrf
-    
     # 获取当前用户（用于判断 is_experienced）
     current_user = None
     try:

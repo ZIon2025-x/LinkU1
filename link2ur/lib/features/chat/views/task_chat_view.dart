@@ -1,5 +1,3 @@
-import 'dart:ui';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -387,6 +385,7 @@ class _TaskChatContentState extends State<_TaskChatContent> {
       controller: _scrollController,
       reverse: true,
       padding: const EdgeInsets.symmetric(vertical: 12),
+      addAutomaticKeepAlives: false,
       itemCount: reversedGroups.length + (state.isLoadingMore ? 1 : 0),
       itemBuilder: (context, index) {
         // 加载更多指示器（reverse 模式下 index 最大 = 视觉顶部）
@@ -419,10 +418,8 @@ class _TaskChatContentState extends State<_TaskChatContent> {
   Widget _buildInputArea(ChatState state) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    return ClipRect(
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
-        child: Container(
+    // 使用半透明容器替代 BackdropFilter，减少滚动时的重绘开销
+    return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: isDark
@@ -532,8 +529,6 @@ class _TaskChatContentState extends State<_TaskChatContent> {
             ),
           ],
         ),
-      ),
-    ),
       ),
     );
   }

@@ -1457,7 +1457,6 @@ class _PublishContentState extends State<_PublishContent>
                     if (!loading && results.isNotEmpty)
                       Flexible(
                         child: ListView.builder(
-                          shrinkWrap: true,
                           itemCount: results.length,
                           itemBuilder: (context, i) {
                             final r = results[i];

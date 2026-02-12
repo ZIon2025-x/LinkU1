@@ -112,9 +112,8 @@ class AppConfig {
           Exception(errorMessage));
         throw StateError('Stripe publishable key is required in production environment.\n$errorMessage');
       } else {
-        // 开发/测试环境仅警告
+        // 开发/测试环境仅警告（AppLogger 内部已处理输出，无需额外 debugPrint）
         AppLogger.warning(errorMessage);
-        debugPrint(errorMessage);
       }
     } else {
       // 验证密钥格式

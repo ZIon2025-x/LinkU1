@@ -7,6 +7,7 @@ import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_radius.dart';
 import '../../../core/utils/debouncer.dart';
 import '../../../core/utils/l10n_extension.dart';
+import '../../../core/widgets/loading_view.dart';
 import '../../../core/widgets/skeleton_view.dart';
 import '../../../core/widgets/empty_state_view.dart';
 import '../../../core/widgets/error_state_view.dart';
@@ -105,10 +106,13 @@ class _ForumPostListViewContentState
           // 内容
           Expanded(
             child: BlocBuilder<ForumBloc, ForumState>(
-              buildWhen: (prev, curr) =>
+                  buildWhen: (prev, curr) =>
                   prev.posts != curr.posts ||
                   prev.status != curr.status ||
-                  prev.errorMessage != curr.errorMessage,
+                  prev.errorMessage != curr.errorMessage ||
+                  prev.hasMore != curr.hasMore ||
+                  prev.loadMoreError != curr.loadMoreError ||
+                  prev.isLoadingMore != curr.isLoadingMore,
               builder: (context, state) {
                 final posts = state.posts;
                 final isLoading = state.status == ForumStatus.loading;
@@ -138,12 +142,29 @@ class _ForumPostListViewContentState
                   },
                   child: ListView.separated(
                     clipBehavior: Clip.none,
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: AppSpacing.md),
-                    itemCount: posts.length,
+                    cacheExtent: 500,
+                    padding: EdgeInsets.only(
+                      left: AppSpacing.md,
+                      right: AppSpacing.md,
+                      top: AppSpacing.sm,
+                      bottom: MediaQuery.of(context).padding.bottom + AppSpacing.md,
+                    ),
+                    itemCount: posts.length + (state.hasMore ? 1 : 0),
                     separatorBuilder: (_, __) =>
                         const SizedBox(height: AppSpacing.md),
                     itemBuilder: (context, index) {
+                      if (index == posts.length) {
+                        if (!state.isLoadingMore) {
+                          context.read<ForumBloc>().add(
+                              const ForumLoadMorePosts());
+                        }
+                        return const Center(
+                          child: Padding(
+                            padding: EdgeInsets.all(16.0),
+                            child: LoadingIndicator(),
+                          ),
+                        );
+                      }
                       final post = posts[index];
                       return RepaintBoundary(
                         child: _PostCard(

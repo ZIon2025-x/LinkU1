@@ -94,6 +94,14 @@ class ApiService {
     RequestOptions options,
     RequestInterceptorHandler handler,
   ) async {
+    // Token 刷新请求跳过 auth 拦截器，防止覆盖已设置的 header
+    if (options.extra['skipAuth'] == true) {
+      // 仅添加语言 header
+      final language = StorageService.instance.getLanguage();
+      options.headers['Accept-Language'] = language ?? 'zh-CN';
+      return handler.next(options);
+    }
+
     // 网络状态预检 — 无网络时立即失败，避免等待超时
     if (!NetworkMonitor.instance.isConnected) {
       AppLogger.warning('Request rejected: No network connection - ${options.uri}');
@@ -232,6 +240,9 @@ class ApiService {
   }
 
   /// 刷新Token
+  ///
+  /// 复用主 _dio 实例以利用连接池，通过 extra 标记跳过 auth 拦截器防止循环。
+  /// _onError 中已对 refresh 路径做了独立的 401 短路处理。
   Future<bool> _refreshToken() async {
     try {
       final refreshToken = await StorageService.instance.getRefreshToken();
@@ -242,13 +253,9 @@ class ApiService {
 
       AppLogger.info('Attempting to refresh access token...');
 
-      // 创建独立的Dio实例，不使用auth拦截器避免循环
-      // 但保留基础配置（超时、baseUrl等）
-      final refreshDio = Dio(_baseOptions);
-
       // 后端接受 refresh_token 通过 X-Refresh-Token header
       final currentToken = await StorageService.instance.getAccessToken();
-      final response = await refreshDio.post(
+      final response = await _dio.post(
         '/api/secure-auth/refresh',
         options: Options(
           // 设置较短的超时，refresh不应该很慢
@@ -258,6 +265,8 @@ class ApiService {
             if (currentToken != null) 'X-Session-ID': currentToken,
             'X-Refresh-Token': refreshToken,
           },
+          // 跳过 _onRequest 中的 auth 拦截器，防止覆盖 header
+          extra: {'skipAuth': true},
         ),
       );
 

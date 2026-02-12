@@ -588,7 +588,7 @@ class _ExpertActivityCard extends StatelessWidget {
         context.push('/activities/${activity.id}');
       },
       child: Container(
-        clipBehavior: Clip.antiAlias,
+        clipBehavior: Clip.hardEdge,
         decoration: BoxDecoration(
           color: isDark
               ? AppColors.cardBackgroundDark

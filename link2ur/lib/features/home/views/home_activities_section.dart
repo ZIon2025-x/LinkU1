@@ -81,16 +81,12 @@ class _ActivityCard extends StatelessWidget {
             end: Alignment.bottomRight,
           ),
           borderRadius: AppRadius.allLarge,
+          // 单层阴影：减少 GPU 合成开销
           boxShadow: [
             BoxShadow(
-              color: gradient.first.withValues(alpha: 0.35),
-              blurRadius: 12,
-              offset: const Offset(0, 6),
-            ),
-            BoxShadow(
-              color: gradient.last.withValues(alpha: 0.15),
-              blurRadius: 4,
-              offset: const Offset(0, 2),
+              color: gradient.first.withValues(alpha: 0.25),
+              blurRadius: 6,
+              offset: const Offset(0, 3),
             ),
           ],
         ),
@@ -168,8 +164,14 @@ class _ActivityCard extends StatelessWidget {
 // Discovery Feed 瀑布流 — 替代旧的 _RecentActivitiesSection
 // =============================================================================
 
-/// 发现更多 — 小红书风格瀑布流（6 种卡片类型混排）
-class _RecentActivitiesSection extends StatelessWidget {
+/// 发现更多 — Sliver 版本瀑布流（避免 shrinkWrap: true 破坏视口优化）
+/// 旧方案：MasonryGridView + shrinkWrap: true + NeverScrollableScrollPhysics
+///   → 所有条目立即全部 layout，无视口裁剪，items 越多越卡
+/// 新方案：SliverMasonryGrid 天然支持视口优化，只构建可见区域
+class _SliverDiscoveryFeed extends StatelessWidget {
+  const _SliverDiscoveryFeed({required this.horizontalPadding});
+  final double horizontalPadding;
+
   @override
   Widget build(BuildContext context) {
     return BlocBuilder<HomeBloc, HomeState>(
@@ -178,61 +180,69 @@ class _RecentActivitiesSection extends StatelessWidget {
           prev.isLoadingDiscovery != curr.isLoadingDiscovery,
       builder: (context, state) {
         if (state.isLoadingDiscovery && state.discoveryItems.isEmpty) {
-          return const Padding(
-            padding: AppSpacing.allMd,
-            child: Center(child: CircularProgressIndicator()),
+          return const SliverToBoxAdapter(
+            child: Padding(
+              padding: AppSpacing.allMd,
+              child: Center(child: CircularProgressIndicator()),
+            ),
           );
         }
 
         if (state.discoveryItems.isEmpty) {
-          return Padding(
-            padding: const EdgeInsets.symmetric(vertical: 32),
-            child: Center(
-              child: Text(
-                '暂无内容',
-                style: TextStyle(
-                  color: Theme.of(context).brightness == Brightness.dark
-                      ? AppColors.textSecondaryDark
-                      : AppColors.textSecondaryLight,
+          return SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 32),
+              child: Center(
+                child: Text(
+                  '暂无内容',
+                  style: TextStyle(
+                    color: Theme.of(context).brightness == Brightness.dark
+                        ? AppColors.textSecondaryDark
+                        : AppColors.textSecondaryLight,
+                  ),
                 ),
               ),
             ),
           );
         }
 
-        return Column(
-          children: [
-            MasonryGridView.count(
-              crossAxisCount: 2,
-              mainAxisSpacing: 10,
-              crossAxisSpacing: 10,
-              padding: const EdgeInsets.symmetric(horizontal: 10),
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: state.discoveryItems.length,
-              itemBuilder: (context, index) {
-                final item = state.discoveryItems[index];
-                return Padding(
-                  padding: const EdgeInsets.only(bottom: 10),
-                  child: _DiscoveryFeedCard(item: item),
-                );
-              },
+        // 计算总 item 数 = feed items + (加载更多按钮占 1 个 Sliver)
+        return SliverMainAxisGroup(
+          slivers: [
+            SliverPadding(
+              padding: EdgeInsets.symmetric(horizontal: horizontalPadding == 0 ? 10 : horizontalPadding),
+              sliver: SliverMasonryGrid.count(
+                crossAxisCount: 2,
+                mainAxisSpacing: 10,
+                crossAxisSpacing: 10,
+                childCount: state.discoveryItems.length,
+                itemBuilder: (context, index) {
+                  final item = state.discoveryItems[index];
+                  return RepaintBoundary(
+                    child: _DiscoveryFeedCard(item: item),
+                  );
+                },
+              ),
             ),
             if (state.hasMoreDiscovery)
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                child: state.isLoadingDiscovery
-                    ? const SizedBox(
-                        width: 24,
-                        height: 24,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : TextButton(
-                        onPressed: () => context
-                            .read<HomeBloc>()
-                            .add(const HomeLoadMoreDiscovery()),
-                        child: const Text('加载更多'),
-                      ),
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  child: Center(
+                    child: state.isLoadingDiscovery
+                        ? const SizedBox(
+                            width: 24,
+                            height: 24,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : TextButton(
+                            onPressed: () => context
+                                .read<HomeBloc>()
+                                .add(const HomeLoadMoreDiscovery()),
+                            child: const Text('加载更多'),
+                          ),
+                  ),
+                ),
               ),
           ],
         );
@@ -362,7 +372,7 @@ class _PostCard extends StatelessWidget {
             ),
           ],
         ),
-        clipBehavior: Clip.antiAlias,
+        clipBehavior: Clip.hardEdge,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -503,7 +513,7 @@ class _ProductCard extends StatelessWidget {
             ),
           ],
         ),
-        clipBehavior: Clip.antiAlias,
+        clipBehavior: Clip.hardEdge,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -732,7 +742,7 @@ class _ServiceReviewCard extends StatelessWidget {
             ),
           ],
         ),
-        clipBehavior: Clip.antiAlias,
+        clipBehavior: Clip.hardEdge,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -874,7 +884,7 @@ class _RankingCard extends StatelessWidget {
             ),
           ],
         ),
-        clipBehavior: Clip.antiAlias,
+        clipBehavior: Clip.hardEdge,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -999,7 +1009,7 @@ class _ServiceCard extends StatelessWidget {
             ),
           ],
         ),
-        clipBehavior: Clip.antiAlias,
+        clipBehavior: Clip.hardEdge,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [

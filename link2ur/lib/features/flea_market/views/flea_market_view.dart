@@ -322,8 +322,12 @@ class _FleaMarketViewContentState extends State<_FleaMarketViewContent> {
     return RefreshIndicator(
       key: const ValueKey('content'),
       onRefresh: () async {
-        context.read<FleaMarketBloc>().add(const FleaMarketRefreshRequested());
-        await Future.delayed(const Duration(milliseconds: 500));
+        final bloc = context.read<FleaMarketBloc>();
+        bloc.add(const FleaMarketRefreshRequested());
+        await bloc.stream.firstWhere(
+          (s) => !s.isRefreshing,
+          orElse: () => state,
+        );
       },
       child: MasonryGridView.count(
         crossAxisCount: columnCount,
@@ -373,7 +377,7 @@ class _FleaMarketItemCard extends StatelessWidget {
         }
       },
       child: Container(
-        clipBehavior: Clip.antiAlias,
+        clipBehavior: Clip.hardEdge,
         decoration: BoxDecoration(
           color: isDark
               ? AppColors.cardBackgroundDark

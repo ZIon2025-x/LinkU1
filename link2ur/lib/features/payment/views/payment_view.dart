@@ -104,6 +104,17 @@ class _PaymentContentState extends State<_PaymentContent> {
   void initState() {
     super.initState();
     _startCountdownIfNeeded();
+    // 自动检查支付状态 —— 对齐 iOS viewDidAppear 中的 checkPaymentStatus()
+    // 处理用户返回支付页时已通过其他渠道完成支付的场景
+    _checkPaymentStatusOnInit();
+  }
+
+  /// 初始化时检查支付状态（延迟执行，等待 PaymentIntent 创建完成后再检查）
+  Future<void> _checkPaymentStatusOnInit() async {
+    // 等待 BLoC 创建 PaymentIntent 完成
+    await Future.delayed(const Duration(milliseconds: 800));
+    if (!mounted) return;
+    context.read<PaymentBloc>().add(PaymentCheckStatus(widget.taskId));
   }
 
   @override

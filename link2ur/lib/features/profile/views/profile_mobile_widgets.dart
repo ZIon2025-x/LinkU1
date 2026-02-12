@@ -9,7 +9,8 @@ Widget _buildMobileProfile(
     child: SingleChildScrollView(
         physics: const AlwaysScrollableScrollPhysics(),
         padding: EdgeInsets.only(
-          bottom: MediaQuery.of(context).padding.bottom + 80,
+          // MediaQuery.padding.bottom 已包含底部导航栏+系统安全区高度（extendBody: true）
+          bottom: MediaQuery.of(context).padding.bottom + AppSpacing.md,
         ),
         child: Column(
           children: [

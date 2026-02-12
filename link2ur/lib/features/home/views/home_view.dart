@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
@@ -65,6 +64,9 @@ class _HomeViewContentState extends State<_HomeViewContent> {
   int _selectedTab = 1; // 0: 达人, 1: 推荐, 2: 附近
   PageController? _pageController;
 
+  /// 已访问过的 Tab 集合（懒加载：未访问过的 Tab 不构建内容，避免首帧多余 build 开销）
+  final Set<int> _visitedTabs = {1}; // 推荐 Tab 默认已访问
+
   @override
   void initState() {
     super.initState();
@@ -83,6 +85,7 @@ class _HomeViewContentState extends State<_HomeViewContent> {
       AppHaptics.selection();
       setState(() {
         _selectedTab = index;
+        _visitedTabs.add(index); // 标记 Tab 已访问，触发内容构建
       });
       // 仅移动端使用 PageView 动画
       _pageController?.animateToPage(
@@ -115,15 +118,15 @@ class _HomeViewContentState extends State<_HomeViewContent> {
           // Notion 风格内嵌 Tab 切换
           _buildDesktopTabBar(isDark),
 
-          // 直接渲染当前 Tab 内容（不用 PageView）
+          // 懒加载 Tab 内容：未访问过的 Tab 用 SizedBox 占位，减少首帧 build 开销
           Expanded(
             child: ContentConstraint(
               child: IndexedStack(
                 index: _selectedTab,
-                children: const [
-                  _ExpertsTab(),
-                  _RecommendedTab(),
-                  _NearbyTab(),
+                children: [
+                  _visitedTabs.contains(0) ? const _ExpertsTab() : const SizedBox.shrink(),
+                  const _RecommendedTab(), // 默认 Tab，始终构建
+                  _visitedTabs.contains(2) ? const _NearbyTab() : const SizedBox.shrink(),
                 ],
               ),
             ),
@@ -196,13 +199,17 @@ class _HomeViewContentState extends State<_HomeViewContent> {
                   child: PageView(
                     controller: _pageController,
                     onPageChanged: (index) {
-                      setState(() => _selectedTab = index);
+                      setState(() {
+                        _selectedTab = index;
+                        _visitedTabs.add(index);
+                      });
                       context.read<HomeBloc>().add(HomeTabChanged(index));
                     },
-                    children: const [
-                      _ExpertsTab(),
-                      _RecommendedTab(),
-                      _NearbyTab(),
+                    children: [
+                      // 懒加载：PageView 会预构建相邻页，用占位符减少首帧开销
+                      _visitedTabs.contains(0) ? const _ExpertsTab() : const SizedBox.shrink(),
+                      const _RecommendedTab(), // 默认 Tab，始终构建
+                      _visitedTabs.contains(2) ? const _NearbyTab() : const SizedBox.shrink(),
                     ],
                   ),
                 ),
@@ -415,65 +422,78 @@ class _TabButton extends StatelessWidget {
 }
 
 /// 装饰性背景 - 与iOS HomeView对齐
-/// 使用模糊彩色圆形营造柔和氛围感
+/// 使用 RadialGradient 代替 ImageFiltered (blur) 实现柔和氛围感
+/// ImageFiltered 在每帧都触发 GPU 模糊运算，RadialGradient 零 GPU 开销
 class _DecorativeBackground extends StatelessWidget {
   const _DecorativeBackground();
 
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final bgColor = isDark ? AppColors.backgroundDark : AppColors.backgroundLight;
     // 深色模式下降低装饰透明度
     final primaryAlpha = isDark ? 0.06 : 0.15;
     final pinkAlpha = isDark ? 0.04 : 0.10;
 
-    return Stack(
-      children: [
-        // 背景底色
-        Positioned.fill(
-          child: ColoredBox(
-            color: isDark ? AppColors.backgroundDark : AppColors.backgroundLight,
-          ),
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: bgColor,
+      ),
+      child: CustomPaint(
+        painter: _DecorativeBgPainter(
+          primaryColor: AppColors.primary.withValues(alpha: primaryAlpha),
+          pinkColor: AppColors.accentPink.withValues(alpha: pinkAlpha),
+          overlayColor: bgColor.withValues(alpha: 0.85),
         ),
-        // 主色模糊圆 (与iOS对齐: 300x300, blur=60, opacity=0.15)
-        Positioned(
-          right: -60,
-          top: -100,
-          child: ImageFiltered(
-            imageFilter: ImageFilter.blur(sigmaX: 60, sigmaY: 60),
-            child: Container(
-              width: 300,
-              height: 300,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: AppColors.primary.withValues(alpha: primaryAlpha),
-              ),
-            ),
-          ),
-        ),
-        // 粉色模糊圆 (与iOS对齐: 250x250, blur=50, opacity=0.1)
-        Positioned(
-          left: -75,
-          top: 200,
-          child: ImageFiltered(
-            imageFilter: ImageFilter.blur(sigmaX: 50, sigmaY: 50),
-            child: Container(
-              width: 250,
-              height: 250,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: AppColors.accentPink.withValues(alpha: pinkAlpha),
-              ),
-            ),
-          ),
-        ),
-        // 半透明覆盖层
-        Positioned.fill(
-          child: ColoredBox(
-            color: (isDark ? AppColors.backgroundDark : AppColors.backgroundLight)
-                .withValues(alpha: 0.85),
-          ),
-        ),
-      ],
+        child: const SizedBox.expand(),
+      ),
     );
   }
+}
+
+/// 使用 CustomPainter 绘制两个径向渐变圆（模拟模糊效果）
+/// shouldRepaint → false：静态装饰，绘制一次后缓存
+class _DecorativeBgPainter extends CustomPainter {
+  _DecorativeBgPainter({
+    required this.primaryColor,
+    required this.pinkColor,
+    required this.overlayColor,
+  });
+
+  final Color primaryColor;
+  final Color pinkColor;
+  final Color overlayColor;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    // 主色径向渐变圆（右上角）— 模拟 blur=60 的模糊圆
+    final primaryCenter = Offset(size.width + 60, -100);
+    final primaryPaint = Paint()
+      ..shader = RadialGradient(
+        colors: [primaryColor, primaryColor.withValues(alpha: 0)],
+        stops: const [0.0, 1.0],
+      ).createShader(Rect.fromCircle(center: primaryCenter, radius: 200));
+    canvas.drawCircle(primaryCenter, 200, primaryPaint);
+
+    // 粉色径向渐变圆（左下方）— 模拟 blur=50 的模糊圆
+    const pinkCenter = Offset(-75, 200);
+    final pinkPaint = Paint()
+      ..shader = RadialGradient(
+        colors: [pinkColor, pinkColor.withValues(alpha: 0)],
+        stops: const [0.0, 1.0],
+      ).createShader(Rect.fromCircle(center: pinkCenter, radius: 175));
+    canvas.drawCircle(pinkCenter, 175, pinkPaint);
+
+    // 半透明覆盖层
+    canvas.drawRect(
+      Offset.zero & size,
+      Paint()..color = overlayColor,
+    );
+  }
+
+  @override
+  bool shouldRepaint(_DecorativeBgPainter oldDelegate) =>
+      primaryColor != oldDelegate.primaryColor ||
+      pinkColor != oldDelegate.pinkColor ||
+      overlayColor != oldDelegate.overlayColor;
 }

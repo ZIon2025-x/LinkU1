@@ -153,6 +153,10 @@ class _ForumViewState extends State<ForumView> {
     return Scaffold(
       backgroundColor: AppColors.backgroundFor(isDark ? Brightness.dark : Brightness.light),
       body: SafeArea(
+        // bottom: false 让列表内容可以自然延伸到底部导航栏后面
+        // 配合半透明底部导航栏，滚动时内容透过可见，体验更好
+        // 各 Tab 内的 ListView 通过 padding.bottom 自行处理底部间距
+        bottom: false,
         child: Column(
           children: [
             _buildMobileAppBar(isDark),
@@ -170,19 +174,6 @@ class _ForumViewState extends State<ForumView> {
             ),
           ],
         ),
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          if (_selectedTab == 0) {
-            // 论坛tab → 申请新版块
-            context.push('/forum/category-request');
-          } else {
-            // 排行榜tab → 申请新排行榜
-            context.push('/leaderboard/apply');
-          }
-        },
-        backgroundColor: AppColors.primary,
-        child: const Icon(Icons.edit, color: Colors.white),
       ),
     );
   }
@@ -213,7 +204,34 @@ class _ForumViewState extends State<ForumView> {
             ],
           ),
           const Spacer(),
-          const SizedBox(width: 44),
+          // 编辑按钮：论坛 → 申请新版块，排行榜 → 申请新排行榜
+          Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: () {
+                if (_selectedTab == 0) {
+                  context.push('/forum/category-request');
+                } else {
+                  context.push('/leaderboard/apply');
+                }
+              },
+              borderRadius: BorderRadius.circular(20),
+              child: Container(
+                width: 40,
+                height: 40,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: AppColors.primary.withValues(alpha: 0.12),
+                ),
+                child: const Icon(
+                  Icons.edit_outlined,
+                  size: 20,
+                  color: AppColors.primary,
+                ),
+              ),
+            ),
+          ),
         ],
       ),
     );
@@ -458,7 +476,14 @@ class _ForumTab extends StatelessWidget {
               },
               child: ListView.separated(
                 clipBehavior: Clip.none,
-                padding: AppSpacing.allMd,
+                // extendBody: true 时，手动指定 padding 会覆盖 ListView 自动的
+                // MediaQuery padding，需要自己加上底部导航栏+安全区高度
+                padding: EdgeInsets.only(
+                  left: AppSpacing.md,
+                  right: AppSpacing.md,
+                  top: AppSpacing.md,
+                  bottom: MediaQuery.of(context).padding.bottom + AppSpacing.md,
+                ),
                 itemCount: sorted.length,
                 separatorBuilder: (context, index) => AppSpacing.vMd,
                 itemBuilder: (context, index) {
@@ -521,7 +546,12 @@ class _LeaderboardTab extends StatelessWidget {
           },
           child: ListView.separated(
             clipBehavior: Clip.none,
-            padding: AppSpacing.allMd,
+            padding: EdgeInsets.only(
+              left: AppSpacing.md,
+              right: AppSpacing.md,
+              top: AppSpacing.md,
+              bottom: MediaQuery.of(context).padding.bottom + AppSpacing.md,
+            ),
             itemCount: state.leaderboards.length +
                 (state.hasMore ? 1 : 0),
             separatorBuilder: (context, index) => AppSpacing.vMd,

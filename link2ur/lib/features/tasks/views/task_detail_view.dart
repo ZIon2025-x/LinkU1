@@ -151,9 +151,10 @@ class _TaskDetailContent extends StatelessWidget {
       bloc.add(TaskDetailLoadApplications(currentUserId: currentUserId));
     }
 
-    // 发布者 + pendingConfirmation 时加载退款状态
+    // 发布者或接单者 + pendingConfirmation 时加载退款状态
     final isPoster = currentUserId == task.posterId;
-    if (isPoster &&
+    final isTaker = currentUserId == task.takerId;
+    if ((isPoster || isTaker) &&
         task.status == AppConstants.taskStatusPendingConfirmation &&
         !state.isLoadingRefundStatus &&
         state.refundRequest == null) {

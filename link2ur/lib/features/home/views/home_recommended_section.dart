@@ -15,10 +15,16 @@ class _RecommendedTab extends StatelessWidget {
           prev.recommendedTasks != curr.recommendedTasks ||
           prev.isRefreshing != curr.isRefreshing,
       builder: (context, state) {
+        final isDark = Theme.of(context).brightness == Brightness.dark;
+
         return RefreshIndicator(
           onRefresh: () async {
-            context.read<HomeBloc>().add(const HomeRefreshRequested());
-            await Future.delayed(const Duration(milliseconds: 500));
+            final bloc = context.read<HomeBloc>();
+            bloc.add(const HomeRefreshRequested());
+            await bloc.stream.firstWhere(
+              (s) => !s.isRefreshing,
+              orElse: () => state,
+            );
           },
           child: CustomScrollView(
             slivers: [
@@ -52,7 +58,7 @@ class _RecommendedTab extends StatelessWidget {
                       Text(
                         context.l10n.homeRecommendedTasks,
                         style: AppTypography.title3.copyWith(
-                          color: Theme.of(context).brightness == Brightness.dark
+                          color: isDark
                               ? AppColors.textPrimaryDark
                               : AppColors.desktopTextLight,
                         ),
@@ -112,7 +118,7 @@ class _RecommendedTab extends StatelessWidget {
                         Text(
                           context.l10n.homeHotEvents,
                           style: AppTypography.title3.copyWith(
-                            color: Theme.of(context).brightness == Brightness.dark
+                            color: isDark
                                 ? AppColors.textPrimaryDark
                                 : AppColors.desktopTextLight,
                           ),
@@ -157,7 +163,7 @@ class _RecommendedTab extends StatelessWidget {
                               style: AppTypography.title3.copyWith(
                                 fontWeight: FontWeight.w700,
                                 fontSize: 18,
-                                color: Theme.of(context).brightness == Brightness.dark
+                                color: isDark
                                     ? AppColors.textPrimaryDark
                                     : AppColors.desktopTextLight,
                               ),
@@ -166,7 +172,7 @@ class _RecommendedTab extends StatelessWidget {
                         ),
                         Container(
                           decoration: BoxDecoration(
-                            color: Theme.of(context).brightness == Brightness.dark
+                            color: isDark
                                 ? AppColors.cardBackgroundDark
                                 : Colors.white,
                             borderRadius: BorderRadius.circular(999),
@@ -194,7 +200,7 @@ class _RecommendedTab extends StatelessWidget {
                                   Icon(
                                     Icons.tune,
                                     size: 16,
-                                    color: Theme.of(context).brightness == Brightness.dark
+                                    color: isDark
                                         ? AppColors.textSecondaryDark
                                         : AppColors.textSecondaryLight,
                                   ),
@@ -203,7 +209,7 @@ class _RecommendedTab extends StatelessWidget {
                                     '筛选',
                                     style: TextStyle(
                                       fontSize: 13,
-                                      color: Theme.of(context).brightness == Brightness.dark
+                                      color: isDark
                                           ? AppColors.textSecondaryDark
                                           : AppColors.textSecondaryLight,
                                     ),
@@ -218,15 +224,8 @@ class _RecommendedTab extends StatelessWidget {
                   ),
                 ),
 
-                // 发现更多瀑布流
-                SliverToBoxAdapter(
-                  child: Padding(
-                    padding: EdgeInsets.symmetric(
-                      horizontal: isDesktop ? 40 : 0,
-                    ),
-                    child: _RecentActivitiesSection(),
-                  ),
-                ),
+                // 发现更多瀑布流 — 使用 Sliver 版本，避免 shrinkWrap 破坏视口优化
+                _SliverDiscoveryFeed(horizontalPadding: isDesktop ? 40.0 : 0),
               ],
 
               const SliverPadding(padding: EdgeInsets.only(bottom: 20)),
@@ -277,10 +276,12 @@ class _RecommendedTab extends StatelessWidget {
           separatorBuilder: (_, __) => const SizedBox(width: 12),
           itemBuilder: (context, index) {
             final task = state.recommendedTasks[index];
-            return AnimatedListItem(
-              key: ValueKey(task.id),
-              index: index,
-              child: _HorizontalTaskCard(task: task),
+            return RepaintBoundary(
+              child: AnimatedListItem(
+                key: ValueKey(task.id),
+                index: index,
+                child: _HorizontalTaskCard(task: task),
+              ),
             );
           },
         ),
@@ -472,7 +473,7 @@ class _DesktopTaskCardState extends State<_DesktopTaskCard> {
           duration: const Duration(milliseconds: 150),
           opacity: _isHovered ? 0.85 : 1.0,
           child: Container(
-          clipBehavior: Clip.antiAlias,
+          clipBehavior: Clip.hardEdge,
           decoration: BoxDecoration(
             color: isDark ? AppColors.cardBackgroundDark : Colors.white,
             borderRadius: BorderRadius.circular(12),
@@ -693,7 +694,7 @@ class _SkeletonHorizontalCards extends StatelessWidget {
       itemBuilder: (context, index) {
         return Container(
           width: 220,
-          clipBehavior: Clip.antiAlias,
+          clipBehavior: Clip.hardEdge,
           decoration: BoxDecoration(
             color: isDark
                 ? AppColors.cardBackgroundDark

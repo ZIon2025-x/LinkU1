@@ -282,9 +282,11 @@ void main() {
       ),
       act: (bloc) => bloc.add(const ForumLoadMorePosts()),
       expect: () => [
+        isA<ForumState>().having((s) => s.isLoadingMore, 'isLoadingMore', true),
         isA<ForumState>()
             .having((s) => s.posts.length, 'posts length', 2)
-            .having((s) => s.page, 'page', 2),
+            .having((s) => s.page, 'page', 2)
+            .having((s) => s.isLoadingMore, 'isLoadingMore', false),
       ],
     );
 

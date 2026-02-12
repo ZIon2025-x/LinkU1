@@ -21,22 +21,19 @@ class CrashReporter {
     try {
       // 捕获 Flutter 框架错误
       FlutterError.onError = (FlutterErrorDetails details) {
+        AppLogger.error(
+          'FlutterError: ${details.exceptionAsString()}',
+          details.exception,
+          details.stack,
+        );
         if (kDebugMode) {
           FlutterError.dumpErrorToConsole(details);
-        } else {
-          AppLogger.error(
-            'Flutter fatal error',
-            details.exception,
-            details.stack,
-          );
         }
       };
 
-      // 捕获异步错误
+      // 捕获异步错误（Future/async 中未捕获的异常）
       PlatformDispatcher.instance.onError = (error, stack) {
-        if (!kDebugMode) {
-          AppLogger.error('Platform error (fatal)', error, stack);
-        }
+        AppLogger.error('Platform error (uncaught)', error, stack);
         return true;
       };
 

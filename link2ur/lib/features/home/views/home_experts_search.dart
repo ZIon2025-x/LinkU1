@@ -692,7 +692,7 @@ class _TaskCard extends StatelessWidget {
         context.safePush('/tasks/${task.id}');
       },
       child: Container(
-        clipBehavior: Clip.antiAlias,
+        clipBehavior: Clip.hardEdge,
         decoration: BoxDecoration(
           color: isDark
               ? AppColors.cardBackgroundDark

@@ -59,7 +59,7 @@ class _CustomerServiceContentState extends State<_CustomerServiceContent> {
   void _scrollToBottom() {
     if (_scrollController.hasClients) {
       Future.delayed(const Duration(milliseconds: 100), () {
-        if (_scrollController.hasClients) {
+        if (mounted && _scrollController.hasClients) {
           _scrollController.animateTo(
             _scrollController.position.maxScrollExtent,
             duration: const Duration(milliseconds: 200),
@@ -139,7 +139,7 @@ class _CustomerServiceContentState extends State<_CustomerServiceContent> {
           ],
         ),
       ),
-    );
+    ).then((_) => commentController.dispose());
   }
 
   void _showChatHistory() {
@@ -203,7 +203,6 @@ class _CustomerServiceContentState extends State<_CustomerServiceContent> {
               else
                 Flexible(
                   child: ListView.builder(
-                    shrinkWrap: true,
                     itemCount: messages.length,
                     itemBuilder: (_, index) {
                       final msg = messages[index];
@@ -288,6 +287,10 @@ class _CustomerServiceContentState extends State<_CustomerServiceContent> {
                 ),
               ),
             BlocBuilder<CustomerServiceBloc, CustomerServiceState>(
+              // 仅在连接/结束状态变化时重建 AppBar actions
+              buildWhen: (prev, curr) =>
+                  prev.isConnected != curr.isConnected ||
+                  prev.isEnded != curr.isEnded,
               builder: (context, state) {
                 return Row(
                   mainAxisSize: MainAxisSize.min,
@@ -340,6 +343,12 @@ class _CustomerServiceContentState extends State<_CustomerServiceContent> {
           ],
         ),
         body: BlocBuilder<CustomerServiceBloc, CustomerServiceState>(
+          buildWhen: (prev, curr) =>
+              prev.status != curr.status ||
+              prev.messages != curr.messages ||
+              prev.queueStatus != curr.queueStatus ||
+              prev.isConnecting != curr.isConnecting ||
+              prev.isSending != curr.isSending,
           builder: (context, state) {
             return Stack(
               children: [
@@ -437,6 +446,7 @@ class _CustomerServiceContentState extends State<_CustomerServiceContent> {
       onTap: () => _focusNode.unfocus(),
       child: ListView.builder(
         controller: _scrollController,
+        addAutomaticKeepAlives: false,
         padding: const EdgeInsets.symmetric(
           horizontal: AppSpacing.md,
           vertical: AppSpacing.sm,

@@ -306,7 +306,7 @@ class SkeletonGrid extends StatelessWidget {
         ),
         itemCount: itemCount,
         itemBuilder: (context, index) => Container(
-          clipBehavior: Clip.antiAlias,
+          clipBehavior: Clip.hardEdge,
           decoration: BoxDecoration(
             color: isDark
                 ? AppColors.cardBackgroundDark
@@ -369,7 +369,7 @@ class SkeletonTopImageCardList extends StatelessWidget {
         itemCount: itemCount,
         separatorBuilder: (_, __) => AppSpacing.vMd,
         itemBuilder: (_, __) => Container(
-          clipBehavior: Clip.antiAlias,
+          clipBehavior: Clip.hardEdge,
           decoration: BoxDecoration(
             color: isDark
                 ? AppColors.cardBackgroundDark

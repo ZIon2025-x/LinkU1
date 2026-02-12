@@ -82,6 +82,11 @@ class AppLogger {
   }
 
   /// 内部日志方法
+  ///
+  /// 仅使用 developer.log（异步缓冲，不阻塞 UI 线程）。
+  /// 已移除 debugPrint：它有 1000 字符/秒的节流限制，
+  /// 队列处理在 UI 线程上，高频日志会导致严重掉帧。
+  /// 日志可在 DevTools → Logging 面板中查看和过滤。
   static void _log(String level, String message, [Object? error, StackTrace? stackTrace]) {
     final timestamp = DateTime.now().toIso8601String();
     final logMessage = '[$timestamp] [$level] $message';
@@ -93,15 +98,6 @@ class AppLogger {
         error: error,
         stackTrace: stackTrace,
       );
-
-      // 同时输出到控制台
-      debugPrint(logMessage);
-      if (error != null) {
-        debugPrint('Error: $error');
-      }
-      if (stackTrace != null) {
-        debugPrint('StackTrace: $stackTrace');
-      }
     }
   }
 

@@ -172,100 +172,111 @@ class _PointsTab extends StatelessWidget {
                 .read<CouponPointsBloc>()
                 .add(const CouponPointsLoadRequested());
           },
-          child: SingleChildScrollView(
+          child: CustomScrollView(
             physics: const AlwaysScrollableScrollPhysics(),
-            padding: AppSpacing.allMd,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // 积分卡片
-                Container(
-                  width: double.infinity,
-                  padding: AppSpacing.allLg,
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: AppColors.gradientGold,
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
+            slivers: [
+              // 积分卡片
+              SliverPadding(
+                padding: AppSpacing.allMd,
+                sliver: SliverToBoxAdapter(
+                  child: Container(
+                    width: double.infinity,
+                    padding: AppSpacing.allLg,
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: AppColors.gradientGold,
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: AppRadius.allLarge,
                     ),
-                    borderRadius: AppRadius.allLarge,
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        context.l10n.pointsBalance,
-                        style: AppTypography.subheadline.copyWith(
-                          color: Colors.white.withValues(alpha: 0.8),
-                        ),
-                      ),
-                      AppSpacing.vSm,
-                      Text(
-                        state.pointsAccount.balanceDisplay,
-                        style: const TextStyle(
-                          fontSize: 36,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                        ),
-                      ),
-                      AppSpacing.vSm,
-                      Text(
-                        '${context.l10n.pointsTotalEarned}: ${state.pointsAccount.totalEarned}  ${context.l10n.pointsTotalSpent}: ${state.pointsAccount.totalSpent}',
-                        style: AppTypography.caption.copyWith(
-                          color: Colors.white.withValues(alpha: 0.7),
-                        ),
-                      ),
-                      AppSpacing.vMd,
-                      Row(
-                        children: [
-                          _PointActionButton(
-                            icon: Icons.card_giftcard,
-                            label: context.l10n.couponRedeemReward,
-                            onTap: () {
-                              context
-                                  .read<CouponPointsBloc>()
-                                  .add(const CouponPointsLoadAvailableCoupons());
-                            },
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          context.l10n.pointsBalance,
+                          style: AppTypography.subheadline.copyWith(
+                            color: Colors.white.withValues(alpha: 0.8),
                           ),
-                          AppSpacing.hMd,
-                          _PointActionButton(
-                            icon: Icons.confirmation_number,
-                            label: context.l10n.couponRedeemCode,
-                            onTap: () => _showRedemptionCodeDialog(context),
+                        ),
+                        AppSpacing.vSm,
+                        Text(
+                          state.pointsAccount.balanceDisplay,
+                          style: const TextStyle(
+                            fontSize: 36,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
                           ),
-                        ],
-                      ),
-                    ],
+                        ),
+                        AppSpacing.vSm,
+                        Text(
+                          '${context.l10n.pointsTotalEarned}: ${state.pointsAccount.totalEarned}  ${context.l10n.pointsTotalSpent}: ${state.pointsAccount.totalSpent}',
+                          style: AppTypography.caption.copyWith(
+                            color: Colors.white.withValues(alpha: 0.7),
+                          ),
+                        ),
+                        AppSpacing.vMd,
+                        Row(
+                          children: [
+                            _PointActionButton(
+                              icon: Icons.card_giftcard,
+                              label: context.l10n.couponRedeemReward,
+                              onTap: () {
+                                context
+                                    .read<CouponPointsBloc>()
+                                    .add(const CouponPointsLoadAvailableCoupons());
+                              },
+                            ),
+                            AppSpacing.hMd,
+                            _PointActionButton(
+                              icon: Icons.confirmation_number,
+                              label: context.l10n.couponRedeemCode,
+                              onTap: () => _showRedemptionCodeDialog(context),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
                   ),
                 ),
+              ),
 
-                AppSpacing.vLg,
-
-                // 积分记录
-                Text(
-                  context.l10n.pointsTransactionHistory,
-                  style: AppTypography.title3.copyWith(
-                    color: isDark
-                        ? AppColors.textPrimaryDark
-                        : AppColors.textPrimaryLight,
+              // 积分记录标题
+              SliverPadding(
+                padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.md, AppSpacing.lg, AppSpacing.md, AppSpacing.md,
+                ),
+                sliver: SliverToBoxAdapter(
+                  child: Text(
+                    context.l10n.pointsTransactionHistory,
+                    style: AppTypography.title3.copyWith(
+                      color: isDark
+                          ? AppColors.textPrimaryDark
+                          : AppColors.textPrimaryLight,
+                    ),
                   ),
                 ),
-                AppSpacing.vMd,
+              ),
 
-                if (state.transactions.isEmpty)
-                  EmptyStateView.noData(context, title: context.l10n.couponNoPointsRecords)
-                else
-                  ListView.builder(
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
+              // 积分记录列表 — 使用 SliverList 实现虚拟化渲染
+              if (state.transactions.isEmpty)
+                SliverToBoxAdapter(
+                  child: EmptyStateView.noData(context, title: context.l10n.couponNoPointsRecords),
+                )
+              else
+                SliverPadding(
+                  padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+                  sliver: SliverList.builder(
                     itemCount: state.transactions.length,
                     itemBuilder: (context, index) {
                       final tx = state.transactions[index];
                       return _TransactionRow(transaction: tx);
                     },
                   ),
-              ],
-            ),
+                ),
+
+              const SliverPadding(padding: EdgeInsets.only(bottom: AppSpacing.md)),
+            ],
           ),
         );
       },

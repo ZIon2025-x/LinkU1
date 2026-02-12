@@ -344,17 +344,35 @@ class PaymentBloc extends Bloc<PaymentEvent, PaymentState> {
     ));
   }
 
+  /// 格式化 Stripe / 网络错误为本地化 key 或用户友好消息
+  ///
+  /// 对齐 iOS PaymentViewModel.formatPaymentError()
   String _formatError(dynamic error) {
     final msg = error.toString();
+    // Stripe 卡支付相关错误
     if (msg.contains('insufficient_funds')) {
       return 'error_insufficient_funds';
     } else if (msg.contains('card_declined')) {
       return 'error_card_declined';
     } else if (msg.contains('expired_card')) {
       return 'error_expired_card';
-    } else if (msg.contains('network')) {
+    } else if (msg.contains('incorrect_cvc')) {
+      return 'error_incorrect_cvc';
+    } else if (msg.contains('incorrect_number')) {
+      return 'error_incorrect_number';
+    } else if (msg.contains('authentication_required')) {
+      return 'error_authentication_required';
+    } else if (msg.contains('processing_error')) {
+      return 'error_processing';
+    } else if (msg.contains('rate_limit')) {
+      return 'error_rate_limit';
+    } else if (msg.contains('invalid_request')) {
+      return 'error_invalid_request';
+    }
+    // 网络/超时
+    if (msg.contains('network') || msg.contains('SocketException')) {
       return 'error_network_connection';
-    } else if (msg.contains('timeout')) {
+    } else if (msg.contains('timeout') || msg.contains('TimeoutException')) {
       return 'error_network_timeout';
     }
     return msg

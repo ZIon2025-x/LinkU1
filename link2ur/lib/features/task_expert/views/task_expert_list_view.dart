@@ -205,11 +205,12 @@ class _TaskExpertListViewContentState extends State<_TaskExpertListViewContent> 
             // List with pull-to-refresh and infinite scroll
             return RefreshIndicator(
               onRefresh: () async {
-                context.read<TaskExpertBloc>().add(
-                      const TaskExpertRefreshRequested(),
-                    );
-                // Wait for refresh to complete
-                await Future.delayed(const Duration(milliseconds: 500));
+                final bloc = context.read<TaskExpertBloc>();
+                bloc.add(const TaskExpertRefreshRequested());
+                await bloc.stream.firstWhere(
+                  (s) => !s.isLoading,
+                  orElse: () => state,
+                );
               },
               child: ListView.separated(
                 padding: AppSpacing.allMd,

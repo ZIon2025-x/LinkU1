@@ -1,5 +1,3 @@
-import 'dart:ui';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -120,51 +118,106 @@ class _ForumPostDetailViewState extends State<ForumPostDetailView> {
             final post = state.selectedPost!;
             final isDark = Theme.of(context).brightness == Brightness.dark;
 
-            return SingleChildScrollView(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // 帖子头部 - 对标iOS postHeader
-                  _PostHeader(post: post, isDark: isDark),
+            // 使用 CustomScrollView + Sliver 替代 SingleChildScrollView + Column
+            // 评论区使用 SliverList 实现懒加载，避免一次性构建所有评论 widget
+            return CustomScrollView(
+              slivers: [
+                // 帖子头部 + 内容 + 图片 + 统计（固定内容，非列表项）
+                SliverToBoxAdapter(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _PostHeader(post: post, isDark: isDark),
+                      const Divider(height: 1),
+                      _PostContent(post: post, isDark: isDark),
+                      if (post.images.isNotEmpty)
+                        _PostImages(images: post.images),
+                      _PostStats(
+                        post: post,
+                        isDark: isDark,
+                        postId: widget.postId,
+                      ),
+                      Divider(
+                        height: 1,
+                        indent: 20,
+                        endIndent: 20,
+                        color: (isDark
+                                ? AppColors.separatorDark
+                                : AppColors.separatorLight)
+                            .withValues(alpha: 0.5),
+                      ),
+                      const SizedBox(height: 8),
+                    ],
+                  ),
+                ),
 
-                  const Divider(height: 1),
-
-                  // 帖子内容 - 对标iOS postContent
-                  _PostContent(post: post, isDark: isDark),
-
-                  // 图片区域
-                  if (post.images.isNotEmpty)
-                    _PostImages(images: post.images),
-
-                  // 互动统计 - 对标iOS postStats
-                  _PostStats(
-                    post: post,
+                // 评论区标题
+                SliverToBoxAdapter(
+                  child: _ReplySectionHeader(
+                    replyCount: state.replies.length,
                     isDark: isDark,
-                    postId: widget.postId,
+                  ),
+                ),
+
+                // 评论列表 — SliverList 懒加载，仅构建可见区域的评论
+                if (state.replies.isEmpty)
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 60),
+                      child: Center(
+                        child: Column(
+                          children: [
+                            Icon(
+                              Icons.chat_bubble_outline,
+                              size: 40,
+                              color: isDark
+                                  ? AppColors.textTertiaryDark
+                                  : AppColors.textTertiaryLight,
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              context.l10n.forumNoReplies,
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: isDark
+                                    ? AppColors.textSecondaryDark
+                                    : AppColors.textSecondaryLight,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  )
+                else
+                  SliverPadding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    sliver: SliverList.separated(
+                      itemCount: state.replies.length,
+                      separatorBuilder: (_, __) => Divider(
+                        height: 1,
+                        indent: 42,
+                        color: (isDark
+                                ? AppColors.separatorDark
+                                : AppColors.separatorLight)
+                            .withValues(alpha: 0.3),
+                      ),
+                      itemBuilder: (context, index) {
+                        return _ReplyCard(
+                          reply: state.replies[index],
+                          isDark: isDark,
+                          postId: widget.postId,
+                          onReplyTo: _setReplyTo,
+                        );
+                      },
+                    ),
                   ),
 
-                  Divider(
-                    height: 1,
-                    indent: 20,
-                    endIndent: 20,
-                    color: (isDark
-                            ? AppColors.separatorDark
-                            : AppColors.separatorLight)
-                        .withValues(alpha: 0.5),
-                  ),
-                  const SizedBox(height: 8),
-
-                  // 评论区 - 对标iOS replySection
-                  _ReplySection(
-                    replies: state.replies,
-                    isDark: isDark,
-                    postId: widget.postId,
-                    onReplyTo: _setReplyTo,
-                  ),
-
-                  const SizedBox(height: 88),
-                ],
-              ),
+                // 底部间距
+                const SliverToBoxAdapter(
+                  child: SizedBox(height: 88),
+                ),
+              ],
             );
           },
             ),
@@ -185,11 +238,9 @@ class _ForumPostDetailViewState extends State<ForumPostDetailView> {
         final isDark = Theme.of(context).brightness == Brightness.dark;
         final post = state.selectedPost;
 
-        return ClipRect(
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
-            child: Container(
-              decoration: BoxDecoration(
+        // 使用半透明容器替代 BackdropFilter，减少输入区域重绘开销
+        return Container(
+          decoration: BoxDecoration(
                 color: (isDark
                         ? AppColors.cardBackgroundDark
                         : AppColors.cardBackgroundLight)
@@ -339,8 +390,6 @@ class _ForumPostDetailViewState extends State<ForumPostDetailView> {
                   ),
                 ),
               ),
-            ),
-          ),
         );
       },
     );
@@ -650,107 +699,49 @@ class _StatLabel extends StatelessWidget {
   }
 }
 
-// ==================== 评论区 ====================
+// ==================== 评论区标题（用于 CustomScrollView sliver 布局） ====================
 
-class _ReplySection extends StatelessWidget {
-  const _ReplySection({
-    required this.replies,
+class _ReplySectionHeader extends StatelessWidget {
+  const _ReplySectionHeader({
+    required this.replyCount,
     required this.isDark,
-    required this.postId,
-    required this.onReplyTo,
   });
 
-  final List<ForumReply> replies;
+  final int replyCount;
   final bool isDark;
-  final int postId;
-  final void Function(int replyId, String authorName) onReplyTo;
 
   @override
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Row(
         children: [
-          // 标题行 - 对标iOS "All replies" + count capsule
-          Row(
-            children: [
-              Text(
-                context.l10n.forumAllReplies,
-                style: AppTypography.title3.copyWith(
-                  fontSize: 18,
-                  color: isDark
-                      ? AppColors.textPrimaryDark
-                      : AppColors.textPrimaryLight,
-                ),
-              ),
-              const SizedBox(width: 8),
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                decoration: BoxDecoration(
-                  color: AppColors.skeletonBase,
-                  borderRadius: BorderRadius.circular(999),
-                ),
-                child: Text(
-                  '${replies.length}',
-                  style: const TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w500,
-                    color: AppColors.textSecondaryLight,
-                  ),
-                ),
-              ),
-            ],
+          Text(
+            context.l10n.forumAllReplies,
+            style: AppTypography.title3.copyWith(
+              fontSize: 18,
+              color: isDark
+                  ? AppColors.textPrimaryDark
+                  : AppColors.textPrimaryLight,
+            ),
           ),
-          const SizedBox(height: 16),
-
-          if (replies.isEmpty)
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 60),
-              child: Center(
-                child: Column(
-                  children: [
-                    Icon(
-                      Icons.chat_bubble_outline,
-                      size: 40,
-                      color: isDark
-                          ? AppColors.textTertiaryDark
-                          : AppColors.textTertiaryLight,
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      context.l10n.forumNoReplies,
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: isDark
-                            ? AppColors.textSecondaryDark
-                            : AppColors.textSecondaryLight,
-                      ),
-                    ),
-                  ],
-                ),
+          const SizedBox(width: 8),
+          Container(
+            padding:
+                const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+            decoration: BoxDecoration(
+              color: AppColors.skeletonBase,
+              borderRadius: BorderRadius.circular(999),
+            ),
+            child: Text(
+              '$replyCount',
+              style: const TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w500,
+                color: AppColors.textSecondaryLight,
               ),
-            )
-          else
-            ...replies.asMap().entries.map((entry) {
-              final index = entry.key;
-              final reply = entry.value;
-              return Column(
-                children: [
-                  _ReplyCard(reply: reply, isDark: isDark, postId: postId, onReplyTo: onReplyTo),
-                  if (index < replies.length - 1)
-                    Divider(
-                      height: 1,
-                      indent: 42,
-                      color: (isDark
-                              ? AppColors.separatorDark
-                              : AppColors.separatorLight)
-                          .withValues(alpha: 0.3),
-                    ),
-                ],
-              );
-            }),
+            ),
+          ),
         ],
       ),
     );

@@ -92,21 +92,15 @@ class _BannerCarouselState extends State<_BannerCarousel> {
 
   final PageController _controller = PageController(viewportFraction: 0.88);
   final ValueNotifier<int> _currentPage = ValueNotifier<int>(0);
-  final ValueNotifier<double> _pageOffset = ValueNotifier<double>(0.0);
-
   Timer? _autoPlayTimer;
 
   @override
   void initState() {
     super.initState();
-    _controller.addListener(_onScroll);
-    _startAutoPlay();
-  }
-
-  void _onScroll() {
-    if (_controller.hasClients) {
-      _pageOffset.value = _controller.page ?? 0.0;
-    }
+    // 延迟启动自动轮播，避免在首帧渲染期间创建周期性 timer
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _startAutoPlay();
+    });
   }
 
   void _startAutoPlay() {
@@ -130,10 +124,8 @@ class _BannerCarouselState extends State<_BannerCarousel> {
   @override
   void dispose() {
     _stopAutoPlay();
-    _controller.removeListener(_onScroll);
     _controller.dispose();
     _currentPage.dispose();
-    _pageOffset.dispose();
     super.dispose();
   }
 
@@ -145,71 +137,75 @@ class _BannerCarouselState extends State<_BannerCarousel> {
           padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
           child: SizedBox(
             height: 162,
-            // ValueListenableBuilder 仅在 _pageOffset 变化时重建 PageView 内容
-            child: ValueListenableBuilder<double>(
-              valueListenable: _pageOffset,
-              builder: (context, pageOffset, _) {
-                return GestureDetector(
-                  // 手指按下时暂停自动轮播，抬起后恢复
-                  onPanDown: (_) => _stopAutoPlay(),
-                  onPanEnd: (_) => _startAutoPlay(),
-                  onPanCancel: () => _startAutoPlay(),
-                  child: PageView.builder(
-                  clipBehavior: Clip.none,
-                  controller: _controller,
-                  itemCount: _bannerCount,
-                  onPageChanged: (index) {
-                    _currentPage.value = index;
-                  },
-                  itemBuilder: (context, index) {
-                    // 视差偏移量：图片移动速度慢于卡片（0.3倍率）
-                    final parallaxOffset = (pageOffset - index) * 30;
-                    // 当前页略大，相邻页略小
-                    final offset = (pageOffset - index).abs();
-                    final scale = (1.0 - (offset * 0.05)).clamp(0.92, 1.0);
+            // 将动画监听移到 itemBuilder 内部：
+            // PageView 本身不随 scroll 重建，仅每个 banner item 内部通过
+            // AnimatedBuilder 监听 _controller 做视差/缩放变换。
+            // 这样 banner 的子 widget tree（文字/图标/图片）作为 child 参数
+            // 不会在每帧 scroll 时重建，只有 Transform 矩阵更新。
+            child: GestureDetector(
+              // 手指按下时暂停自动轮播，抬起后恢复
+              onPanDown: (_) => _stopAutoPlay(),
+              onPanEnd: (_) => _startAutoPlay(),
+              onPanCancel: () => _startAutoPlay(),
+              child: PageView.builder(
+                clipBehavior: Clip.none,
+                controller: _controller,
+                itemCount: _bannerCount,
+                onPageChanged: (index) {
+                  _currentPage.value = index;
+                },
+                itemBuilder: (context, index) {
+                  // 预构建 banner 内容（不参与动画重建）
+                  final bannerContents = [
+                    _BannerItem(
+                      title: context.l10n.homeSecondHandMarket,
+                      subtitle: context.l10n.homeSecondHandSubtitle,
+                      gradient: AppColors.gradientGreen,
+                      icon: Icons.storefront,
+                      imagePath: AppAssets.fleaMarketBanner,
+                      imageAlignment: const Alignment(0.0, 0.4),
+                      onTap: () => context.push('/flea-market'),
+                      parallaxOffset: 0, // 视差由外部 Transform 控制
+                    ),
+                    _BannerItem(
+                      title: context.l10n.homeStudentVerification,
+                      subtitle: context.l10n.homeStudentVerificationSubtitle,
+                      gradient: AppColors.gradientIndigo,
+                      icon: Icons.school,
+                      imagePath: AppAssets.studentVerificationBanner,
+                      onTap: () => context.push('/student-verification'),
+                      parallaxOffset: 0,
+                    ),
+                    _BannerItem(
+                      title: context.l10n.homeBecomeExpert,
+                      subtitle: context.l10n.homeBecomeExpertSubtitle,
+                      gradient: AppColors.gradientOrange,
+                      icon: Icons.star,
+                      onTap: () => context.push('/task-experts/intro'),
+                      parallaxOffset: 0,
+                    ),
+                  ];
 
-                    final banners = [
-                      // 跳蚤市场Banner
-                      _BannerItem(
-                        title: context.l10n.homeSecondHandMarket,
-                        subtitle: context.l10n.homeSecondHandSubtitle,
-                        gradient: AppColors.gradientGreen,
-                        icon: Icons.storefront,
-                        imagePath: AppAssets.fleaMarketBanner,
-                        imageAlignment: const Alignment(0.0, 0.4),
-                        onTap: () => context.push('/flea-market'),
-                        parallaxOffset: parallaxOffset,
-                      ),
-                      // 学生认证Banner
-                      _BannerItem(
-                        title: context.l10n.homeStudentVerification,
-                        subtitle: context.l10n.homeStudentVerificationSubtitle,
-                        gradient: AppColors.gradientIndigo,
-                        icon: Icons.school,
-                        imagePath: AppAssets.studentVerificationBanner,
-                        onTap: () => context.push('/student-verification'),
-                        parallaxOffset: parallaxOffset,
-                      ),
-                      // 任务达人Banner
-                      _BannerItem(
-                        title: context.l10n.homeBecomeExpert,
-                        subtitle: context.l10n.homeBecomeExpertSubtitle,
-                        gradient: AppColors.gradientOrange,
-                        icon: Icons.star,
-                        onTap: () => context.push('/task-experts/intro'),
-                        parallaxOffset: parallaxOffset,
-                      ),
-                    ];
-
-                    return Transform.scale(
-                      scale: scale,
-                      alignment: Alignment.center,
-                      child: banners[index],
-                    );
-                  },
-                ),
-                );
-              },
+                  // AnimatedBuilder 监听 PageController 做视差 + 缩放
+                  // child 参数（banner 内容）不参与每帧重建
+                  return AnimatedBuilder(
+                    animation: _controller,
+                    builder: (context, child) {
+                      final page = _controller.hasClients
+                          ? (_controller.page ?? 0.0)
+                          : 0.0;
+                      final offset = (page - index).abs();
+                      final scale = (1.0 - (offset * 0.05)).clamp(0.92, 1.0);
+                      return Transform.scale(
+                        scale: scale,
+                        alignment: Alignment.center,
+                        child: child,
+                      );
+                    },
+                    child: bannerContents[index],
+                  );
+                },
+              ),
             ),
           ),
         ),
@@ -275,7 +271,7 @@ class _BannerItem extends StatelessWidget {
       onTap: onTap,
       child: Container(
         margin: const EdgeInsets.fromLTRB(4, 4, 4, 10),
-        clipBehavior: Clip.antiAlias,
+        clipBehavior: Clip.hardEdge,
         decoration: BoxDecoration(
           gradient: imagePath == null
               ? LinearGradient(

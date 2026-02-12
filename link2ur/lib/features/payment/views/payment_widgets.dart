@@ -86,7 +86,6 @@ class _CouponSelectorSheetState extends State<_CouponSelectorSheet> {
           else
             Flexible(
               child: ListView.separated(
-                shrinkWrap: true,
                 itemCount: _coupons.length,
                 separatorBuilder: (_, __) => const SizedBox(height: 8),
                 itemBuilder: (context, index) {

@@ -10,6 +10,9 @@ import '../../core/utils/translation_cache_manager.dart';
 
 /// 存储服务
 /// 参考iOS KeychainHelper.swift 和 UserDefaults
+///
+/// 高频读取的值在 init() 时预加载到内存缓存，
+/// 避免每次 BLoC 状态重建时触发 SharedPreferences 磁盘 I/O。
 class StorageService {
   StorageService._();
   static final StorageService instance = StorageService._();
@@ -17,6 +20,17 @@ class StorageService {
   late SharedPreferences _prefs;
   late FlutterSecureStorage _secureStorage;
   Box? _cacheBox;
+
+  // ==================== 内存缓存 ====================
+  String? _cachedUserId;
+  Map<String, dynamic>? _cachedUserInfo;
+  String? _cachedLanguage;
+  String? _cachedThemeMode;
+  bool _cachedNotificationEnabled = true;
+  bool _cachedSoundEnabled = true;
+  List<String>? _cachedSearchHistory;
+  Set<int>? _cachedPinnedTaskChatIds;
+  Map<int, DateTime>? _cachedHiddenTaskChats;
 
   /// 初始化
   /// SharedPreferences、Hive.openBox、CacheManager 互不依赖，并行执行以减少启动时间
@@ -41,7 +55,42 @@ class StorageService {
     _prefs = prefs;
     _cacheBox = cacheBox;
 
+    // 预加载热数据到内存，避免后续 UI 线程同步磁盘读取
+    _loadCachedValues();
+
     AppLogger.info('StorageService initialized');
+  }
+
+  /// 从 SharedPreferences 加载热数据到内存缓存
+  void _loadCachedValues() {
+    _cachedUserId = _prefs.getString(StorageKeys.userId);
+    _cachedLanguage = _prefs.getString(StorageKeys.languageCode);
+    _cachedThemeMode = _prefs.getString(StorageKeys.themeMode);
+    _cachedNotificationEnabled = _prefs.getBool(StorageKeys.notificationEnabled) ?? true;
+    _cachedSoundEnabled = _prefs.getBool('sound_enabled') ?? true;
+
+    // 带 JSON 解析的缓存
+    final userInfoJson = _prefs.getString(StorageKeys.userInfo);
+    if (userInfoJson != null) {
+      _cachedUserInfo = jsonDecode(userInfoJson) as Map<String, dynamic>;
+    }
+
+    final searchJson = _prefs.getString(StorageKeys.searchHistory);
+    if (searchJson != null) {
+      _cachedSearchHistory = List<String>.from(jsonDecode(searchJson));
+    }
+
+    final pinnedJson = _prefs.getString(StorageKeys.pinnedTaskChatIds);
+    if (pinnedJson != null) {
+      _cachedPinnedTaskChatIds = Set<int>.from(jsonDecode(pinnedJson) as List);
+    }
+
+    final hiddenJson = _prefs.getString(StorageKeys.hiddenTaskChats);
+    if (hiddenJson != null) {
+      final raw = jsonDecode(hiddenJson) as Map<String, dynamic>;
+      _cachedHiddenTaskChats = raw.map((key, value) =>
+          MapEntry(int.parse(key), DateTime.parse(value as String)));
+    }
   }
 
   // ==================== 安全存储（Token等敏感信息） ====================
@@ -91,28 +140,26 @@ class StorageService {
 
   /// 保存用户ID
   Future<void> saveUserId(String userId) async {
+    _cachedUserId = userId;
     await _prefs.setString(StorageKeys.userId, userId);
   }
 
   /// 获取用户ID
-  String? getUserId() {
-    return _prefs.getString(StorageKeys.userId);
-  }
+  String? getUserId() => _cachedUserId;
 
   /// 保存用户信息JSON
   Future<void> saveUserInfo(Map<String, dynamic> userInfo) async {
+    _cachedUserInfo = userInfo;
     await _prefs.setString(StorageKeys.userInfo, jsonEncode(userInfo));
   }
 
   /// 获取用户信息
-  Map<String, dynamic>? getUserInfo() {
-    final json = _prefs.getString(StorageKeys.userInfo);
-    if (json == null) return null;
-    return jsonDecode(json) as Map<String, dynamic>;
-  }
+  Map<String, dynamic>? getUserInfo() => _cachedUserInfo;
 
   /// 清除用户信息
   Future<void> clearUserInfo() async {
+    _cachedUserId = null;
+    _cachedUserInfo = null;
     await _prefs.remove(StorageKeys.userId);
     await _prefs.remove(StorageKeys.userInfo);
   }
@@ -139,50 +186,46 @@ class StorageService {
 
   /// 保存语言设置
   Future<void> saveLanguage(String languageCode) async {
+    _cachedLanguage = languageCode;
     await _prefs.setString(StorageKeys.languageCode, languageCode);
   }
 
   /// 获取语言设置
-  String? getLanguage() {
-    return _prefs.getString(StorageKeys.languageCode);
-  }
+  String? getLanguage() => _cachedLanguage;
 
   /// 保存主题模式
   Future<void> saveThemeMode(String themeMode) async {
+    _cachedThemeMode = themeMode;
     await _prefs.setString(StorageKeys.themeMode, themeMode);
   }
 
   /// 获取主题模式
-  String? getThemeMode() {
-    return _prefs.getString(StorageKeys.themeMode);
-  }
+  String? getThemeMode() => _cachedThemeMode;
 
   /// 保存通知设置
   Future<void> saveNotificationEnabled(bool enabled) async {
+    _cachedNotificationEnabled = enabled;
     await _prefs.setBool(StorageKeys.notificationEnabled, enabled);
   }
 
   /// 获取通知设置
-  bool isNotificationEnabled() {
-    return _prefs.getBool(StorageKeys.notificationEnabled) ?? true;
-  }
+  bool isNotificationEnabled() => _cachedNotificationEnabled;
 
   /// 保存音效设置
   Future<void> saveSoundEnabled(bool enabled) async {
+    _cachedSoundEnabled = enabled;
     await _prefs.setBool('sound_enabled', enabled);
   }
 
   /// 获取音效设置
-  bool isSoundEnabled() {
-    return _prefs.getBool('sound_enabled') ?? true;
-  }
+  bool isSoundEnabled() => _cachedSoundEnabled;
 
   /// 保存推送Token
   Future<void> savePushToken(String token) async {
     await _prefs.setString(StorageKeys.pushToken, token);
   }
 
-  /// 获取推送Token
+  /// 获取推送Token（低频访问，不缓存）
   String? getPushToken() {
     return _prefs.getString(StorageKeys.pushToken);
   }
@@ -190,67 +233,53 @@ class StorageService {
   // ==================== 搜索历史 ====================
 
   /// 获取搜索历史
-  List<String> getSearchHistory() {
-    final json = _prefs.getString(StorageKeys.searchHistory);
-    if (json == null) return [];
-    return List<String>.from(jsonDecode(json));
-  }
+  List<String> getSearchHistory() => List.of(_cachedSearchHistory ?? const []);
 
   /// 添加搜索历史
   Future<void> addSearchHistory(String keyword) async {
     final history = getSearchHistory();
-    // 移除重复项
     history.remove(keyword);
-    // 添加到开头
     history.insert(0, keyword);
-    // 最多保存20条
     if (history.length > 20) {
       history.removeLast();
     }
+    _cachedSearchHistory = history;
     await _prefs.setString(StorageKeys.searchHistory, jsonEncode(history));
   }
 
   /// 清除搜索历史
   Future<void> clearSearchHistory() async {
+    _cachedSearchHistory = null;
     await _prefs.remove(StorageKeys.searchHistory);
   }
 
   // ==================== 任务聊天偏好（置顶/隐藏） ====================
 
   /// 获取置顶的任务聊天ID列表
-  Set<int> getPinnedTaskChatIds() {
-    final json = _prefs.getString(StorageKeys.pinnedTaskChatIds);
-    if (json == null) return {};
-    return Set<int>.from(jsonDecode(json) as List);
-  }
+  Set<int> getPinnedTaskChatIds() => Set.of(_cachedPinnedTaskChatIds ?? const {});
 
   /// 置顶任务聊天
   Future<void> pinTaskChat(int taskId) async {
-    final ids = getPinnedTaskChatIds();
-    ids.add(taskId);
+    final ids = getPinnedTaskChatIds()..add(taskId);
+    _cachedPinnedTaskChatIds = ids;
     await _prefs.setString(StorageKeys.pinnedTaskChatIds, jsonEncode(ids.toList()));
   }
 
   /// 取消置顶任务聊天
   Future<void> unpinTaskChat(int taskId) async {
-    final ids = getPinnedTaskChatIds();
-    ids.remove(taskId);
+    final ids = getPinnedTaskChatIds()..remove(taskId);
+    _cachedPinnedTaskChatIds = ids;
     await _prefs.setString(StorageKeys.pinnedTaskChatIds, jsonEncode(ids.toList()));
   }
 
   /// 获取隐藏的任务聊天 (taskId -> 隐藏时间)
-  Map<int, DateTime> getHiddenTaskChats() {
-    final json = _prefs.getString(StorageKeys.hiddenTaskChats);
-    if (json == null) return {};
-    final raw = jsonDecode(json) as Map<String, dynamic>;
-    return raw.map((key, value) =>
-        MapEntry(int.parse(key), DateTime.parse(value as String)));
-  }
+  Map<int, DateTime> getHiddenTaskChats() => Map.of(_cachedHiddenTaskChats ?? const {});
 
   /// 隐藏（软删除）任务聊天
   Future<void> hideTaskChat(int taskId) async {
     final hidden = getHiddenTaskChats();
     hidden[taskId] = DateTime.now();
+    _cachedHiddenTaskChats = hidden;
     final raw = hidden.map((key, value) =>
         MapEntry(key.toString(), value.toIso8601String()));
     await _prefs.setString(StorageKeys.hiddenTaskChats, jsonEncode(raw));
@@ -260,6 +289,7 @@ class StorageService {
   Future<void> unhideTaskChat(int taskId) async {
     final hidden = getHiddenTaskChats();
     hidden.remove(taskId);
+    _cachedHiddenTaskChats = hidden;
     final raw = hidden.map((key, value) =>
         MapEntry(key.toString(), value.toIso8601String()));
     await _prefs.setString(StorageKeys.hiddenTaskChats, jsonEncode(raw));
@@ -268,6 +298,9 @@ class StorageService {
   // ==================== 缓存（Hive） ====================
 
   /// 设置缓存
+  ///
+  /// 使用 Hive 原生 Map 存储，避免 jsonEncode/jsonDecode 的序列化开销。
+  /// Hive 原生支持 Map、List、基本类型的直接存储。
   Future<void> setCache(String key, dynamic value, {Duration? expiry}) async {
     final box = _cacheBox;
     if (box == null) return;
@@ -278,7 +311,7 @@ class StorageService {
           ? DateTime.now().add(expiry).millisecondsSinceEpoch
           : null,
     };
-    await box.put(key, jsonEncode(cacheData));
+    await box.put(key, cacheData);
   }
 
   /// 获取缓存
@@ -286,10 +319,19 @@ class StorageService {
     final box = _cacheBox;
     if (box == null) return null;
 
-    final json = box.get(key);
-    if (json == null) return null;
+    final raw = box.get(key);
+    if (raw == null) return null;
 
-    final cacheData = jsonDecode(json) as Map<String, dynamic>;
+    // 兼容旧格式（JSON 字符串）和新格式（原生 Map）
+    final Map<String, dynamic> cacheData;
+    if (raw is String) {
+      cacheData = jsonDecode(raw) as Map<String, dynamic>;
+    } else if (raw is Map) {
+      cacheData = Map<String, dynamic>.from(raw);
+    } else {
+      return null;
+    }
+
     final expiry = cacheData['expiry'] as int?;
 
     // 检查是否过期
@@ -317,6 +359,10 @@ class StorageService {
   Future<void> clearAllOnLogout() async {
     await clearTokens();
     await clearUserInfo();
+    // 清除个人数据相关的内存缓存
+    _cachedSearchHistory = null;
+    _cachedPinnedTaskChatIds = null;
+    _cachedHiddenTaskChats = null;
     // 清除个人数据缓存（保留公共缓存如分类、FAQ等）
     await CacheManager.shared.invalidatePersonalDataCache();
     // 保留语言和主题设置
@@ -328,6 +374,14 @@ class StorageService {
     await clearTokens();
     await clearUserInfo();
     await clearCache();
+    // 重置所有内存缓存
+    _cachedLanguage = null;
+    _cachedThemeMode = null;
+    _cachedNotificationEnabled = true;
+    _cachedSoundEnabled = true;
+    _cachedSearchHistory = null;
+    _cachedPinnedTaskChatIds = null;
+    _cachedHiddenTaskChats = null;
     // 清除所有 API 缓存
     await CacheManager.shared.clearAll();
     // 清除翻译缓存

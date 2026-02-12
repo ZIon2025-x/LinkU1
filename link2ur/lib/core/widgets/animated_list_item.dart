@@ -76,8 +76,9 @@ class _AnimatedListItemState extends State<AnimatedListItem>
   Animation<double>? _fadeAnimation;
   Animation<Offset>? _slideAnimation;
 
-  /// index > 8 的列表项跳过动画，直接显示（避免大量无用 Future 和 AnimationController）
-  bool get _shouldAnimate => widget.index <= 8;
+  /// index > 5 的列表项跳过动画，直接显示（避免大量无用 Future 和 AnimationController）
+  /// 降低阈值：同时存在 6+ 个 AnimationController 在 debug 模式下会产生明显卡顿
+  bool get _shouldAnimate => widget.index <= 5;
 
   @override
   void initState() {
@@ -116,11 +117,18 @@ class _AnimatedListItemState extends State<AnimatedListItem>
       curve: Interval(0.1, 1.0, curve: effectiveCurve),
     ));
 
-    // 错开延迟启动
+    // 错开延迟启动 — 延迟到首帧渲染后再开始动画
+    // 避免在 build 阶段大量 Future.delayed 占用主线程调度
     final delay = widget.staggerDelay * widget.index;
-
-    Future.delayed(delay, () {
-      if (mounted) _controller?.forward();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      if (delay == Duration.zero) {
+        _controller?.forward();
+      } else {
+        Future.delayed(delay, () {
+          if (mounted) _controller?.forward();
+        });
+      }
     });
   }
 
@@ -138,16 +146,20 @@ class _AnimatedListItemState extends State<AnimatedListItem>
       return RepaintBoundary(child: widget.child);
     }
 
+    // 使用 FadeTransition 替代 Opacity widget：
+    // Opacity widget 在值不为 0/1 时会触发 saveLayer（离屏缓冲区），
+    // 导致每帧额外的 GPU 合成。FadeTransition 直接操作 RenderObject.opacity，
+    // 无需 saveLayer，性能显著更优。
     return AnimatedBuilder(
       animation: _controller!,
       builder: (context, child) => Transform.translate(
         offset: _slideAnimation!.value,
-        child: Opacity(
-          opacity: _fadeAnimation!.value,
-          child: child,
-        ),
+        child: child,
       ),
-      child: RepaintBoundary(child: widget.child),
+      child: FadeTransition(
+        opacity: _fadeAnimation!,
+        child: RepaintBoundary(child: widget.child),
+      ),
     );
   }
 }

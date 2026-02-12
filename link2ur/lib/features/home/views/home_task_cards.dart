@@ -30,7 +30,7 @@ class _HorizontalTaskCard extends StatelessWidget {
       },
       child: Container(
         width: 220,
-        clipBehavior: Clip.antiAlias,
+        clipBehavior: Clip.hardEdge,
         decoration: BoxDecoration(
           color: isDark
               ? AppColors.cardBackgroundDark
@@ -42,17 +42,12 @@ class _HorizontalTaskCard extends StatelessWidget {
                 .withValues(alpha: 0.3),
             width: 0.5,
           ),
-          // 对标iOS: 双层阴影 - primary色柔和扩散 + 黑色紧密底部
+          // 单层阴影：减少 GPU 高斯模糊开销（列表中卡片数量多，累积影响显著）
           boxShadow: [
             BoxShadow(
               color: AppColors.primary.withValues(alpha: 0.08),
-              blurRadius: 12,
-              offset: const Offset(0, 4),
-            ),
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.03),
-              blurRadius: 2,
-              offset: const Offset(0, 1),
+              blurRadius: 6,
+              offset: const Offset(0, 2),
             ),
           ],
         ),
@@ -509,8 +504,12 @@ class _NearbyTabState extends State<_NearbyTab> {
 
         return RefreshIndicator(
           onRefresh: () async {
+            final homeBloc = context.read<HomeBloc>();
             await _loadLocation();
-            await Future.delayed(const Duration(milliseconds: 500));
+            await homeBloc.stream.firstWhere(
+              (s) => !s.isLoading,
+              orElse: () => state,
+            );
           },
           child: ListView.separated(
             padding: AppSpacing.allMd,

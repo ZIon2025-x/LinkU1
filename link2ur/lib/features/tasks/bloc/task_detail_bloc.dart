@@ -104,14 +104,32 @@ class TaskDetailReviewRequested extends TaskDetailEvent {
   List<Object?> get props => [review];
 }
 
-/// 退款申请
+/// 退款申请（对齐 iOS RefundRequestCreate + 后端 RefundRequestCreate schema）
 class TaskDetailRequestRefund extends TaskDetailEvent {
-  const TaskDetailRequestRefund({required this.reason, this.evidence});
-  final String reason;
-  final List<String>? evidence;
+  const TaskDetailRequestRefund({
+    required this.reasonType,
+    required this.reason,
+    required this.refundType,
+    this.evidenceFiles,
+    this.refundAmount,
+    this.refundPercentage,
+  });
+
+  final String reasonType; // completion_time_unsatisfactory / not_completed / quality_issue / other
+  final String reason; // 详细退款原因（10-2000字符）
+  final String refundType; // full / partial
+  final List<String>? evidenceFiles;
+  final double? refundAmount; // 部分退款金额
+  final double? refundPercentage; // 部分退款百分比
 
   @override
-  List<Object?> get props => [reason, evidence];
+  List<Object?> get props =>
+      [reasonType, reason, refundType, evidenceFiles, refundAmount, refundPercentage];
+}
+
+/// 加载退款历史
+class TaskDetailLoadRefundHistory extends TaskDetailEvent {
+  const TaskDetailLoadRefundHistory();
 }
 
 /// 取消退款
@@ -154,6 +172,8 @@ class TaskDetailState extends Equatable {
     this.userApplication,
     this.refundRequest,
     this.isLoadingRefundStatus = false,
+    this.refundHistory = const [],
+    this.isLoadingRefundHistory = false,
     this.reviews = const [],
     this.isLoadingReviews = false,
   });
@@ -172,6 +192,8 @@ class TaskDetailState extends Equatable {
   // 退款
   final RefundRequest? refundRequest;
   final bool isLoadingRefundStatus;
+  final List<RefundRequest> refundHistory;
+  final bool isLoadingRefundHistory;
 
   // 评价
   final List<Review> reviews;
@@ -193,6 +215,8 @@ class TaskDetailState extends Equatable {
     RefundRequest? refundRequest,
     bool clearRefundRequest = false,
     bool? isLoadingRefundStatus,
+    List<RefundRequest>? refundHistory,
+    bool? isLoadingRefundHistory,
     List<Review>? reviews,
     bool? isLoadingReviews,
   }) {
@@ -213,6 +237,9 @@ class TaskDetailState extends Equatable {
           : (refundRequest ?? this.refundRequest),
       isLoadingRefundStatus:
           isLoadingRefundStatus ?? this.isLoadingRefundStatus,
+      refundHistory: refundHistory ?? this.refundHistory,
+      isLoadingRefundHistory:
+          isLoadingRefundHistory ?? this.isLoadingRefundHistory,
       reviews: reviews ?? this.reviews,
       isLoadingReviews: isLoadingReviews ?? this.isLoadingReviews,
     );
@@ -230,6 +257,8 @@ class TaskDetailState extends Equatable {
         userApplication,
         refundRequest,
         isLoadingRefundStatus,
+        refundHistory,
+        isLoadingRefundHistory,
         reviews,
         isLoadingReviews,
       ];
@@ -254,6 +283,7 @@ class TaskDetailBloc extends Bloc<TaskDetailEvent, TaskDetailState> {
     on<TaskDetailCancelRequested>(_onCancelRequested);
     on<TaskDetailReviewRequested>(_onReviewRequested);
     on<TaskDetailRequestRefund>(_onRequestRefund);
+    on<TaskDetailLoadRefundHistory>(_onLoadRefundHistory);
     on<TaskDetailCancelRefund>(_onCancelRefund);
     on<TaskDetailSubmitRebuttal>(_onSubmitRebuttal);
   }
@@ -581,8 +611,12 @@ class TaskDetailBloc extends Bloc<TaskDetailEvent, TaskDetailState> {
     try {
       final raw = await _taskRepository.requestRefund(
         _taskId!,
+        reasonType: event.reasonType,
         reason: event.reason,
-        evidence: event.evidence,
+        refundType: event.refundType,
+        evidenceFiles: event.evidenceFiles,
+        refundAmount: event.refundAmount,
+        refundPercentage: event.refundPercentage,
       );
       final refund = RefundRequest.fromJson(raw);
       // 退款请求已返回 refund 数据，仅刷新任务状态
@@ -598,6 +632,27 @@ class TaskDetailBloc extends Bloc<TaskDetailEvent, TaskDetailState> {
         isSubmitting: false,
         actionMessage: 'refund_failed',
       ));
+    }
+  }
+
+  Future<void> _onLoadRefundHistory(
+    TaskDetailLoadRefundHistory event,
+    Emitter<TaskDetailState> emit,
+  ) async {
+    if (_taskId == null) return;
+    emit(state.copyWith(isLoadingRefundHistory: true));
+
+    try {
+      final rawList = await _taskRepository.getRefundHistory(_taskId!);
+      final history =
+          rawList.map((e) => RefundRequest.fromJson(e)).toList();
+      emit(state.copyWith(
+        refundHistory: history,
+        isLoadingRefundHistory: false,
+      ));
+    } catch (e) {
+      AppLogger.error('Failed to load refund history', e);
+      emit(state.copyWith(isLoadingRefundHistory: false));
     }
   }
 

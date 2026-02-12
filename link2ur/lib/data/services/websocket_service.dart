@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'package:flutter/widgets.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 import 'package:web_socket_channel/io.dart';
 
@@ -10,7 +11,7 @@ import 'storage_service.dart';
 
 /// WebSocket服务
 /// 参考iOS WebSocketService.swift
-class WebSocketService {
+class WebSocketService extends WidgetsBindingObserver {
   WebSocketService._();
   static final WebSocketService instance = WebSocketService._();
 
@@ -25,9 +26,11 @@ class WebSocketService {
   bool _shouldBeConnected = false; // 是否应该保持连接（用户已登录）
   int _reconnectAttempts = 0;
   static const int _maxReconnectAttempts = 15;
-  static const Duration _heartbeatInterval = Duration(seconds: 30);
+  static const Duration _heartbeatIntervalForeground = Duration(seconds: 30);
+  static const Duration _heartbeatIntervalBackground = Duration(seconds: 120);
   static const Duration _initialReconnectDelay = Duration(seconds: 1);
   static const Duration _maxReconnectDelay = Duration(seconds: 60);
+  bool _appInForeground = true;
 
   /// 消息流控制器
   final _messageController = StreamController<WebSocketMessage>.broadcast();
@@ -50,6 +53,9 @@ class WebSocketService {
 
     _shouldBeConnected = true;
     _isConnecting = true;
+
+    // 注册生命周期观察者（自适应心跳）
+    WidgetsBinding.instance.addObserver(this);
 
     // 检查网络状态 — 无网络时不尝试连接，等待网络恢复
     if (!NetworkMonitor.instance.isConnected) {
@@ -120,6 +126,7 @@ class WebSocketService {
     _shouldBeConnected = false;
     _cancelReconnect();
     _stopHeartbeat();
+    WidgetsBinding.instance.removeObserver(this);
     _networkSubscription?.cancel();
     _networkSubscription = null;
     _subscription?.cancel();
@@ -226,10 +233,13 @@ class WebSocketService {
     _scheduleReconnect();
   }
 
-  /// 开始心跳
+  /// 开始心跳（根据前台/后台自适应间隔）
   void _startHeartbeat() {
     _heartbeatTimer?.cancel();
-    _heartbeatTimer = Timer.periodic(_heartbeatInterval, (_) {
+    final interval = _appInForeground
+        ? _heartbeatIntervalForeground
+        : _heartbeatIntervalBackground;
+    _heartbeatTimer = Timer.periodic(interval, (_) {
       send({'type': 'ping'});
     });
   }
@@ -238,6 +248,17 @@ class WebSocketService {
   void _stopHeartbeat() {
     _heartbeatTimer?.cancel();
     _heartbeatTimer = null;
+  }
+
+  /// 应用生命周期变化时切换心跳频率
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    final wasForeground = _appInForeground;
+    _appInForeground = state == AppLifecycleState.resumed;
+    // 仅在前后台切换且已连接时重启心跳
+    if (wasForeground != _appInForeground && _isConnected) {
+      _startHeartbeat();
+    }
   }
 
   /// 监听网络恢复并自动重连

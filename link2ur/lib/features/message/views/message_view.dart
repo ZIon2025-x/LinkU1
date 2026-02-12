@@ -92,17 +92,23 @@ class _MessageContent extends StatelessWidget {
 
         return RefreshIndicator(
           onRefresh: () async {
-            context.read<MessageBloc>()
-              ..add(const MessageLoadContacts())
-              ..add(const MessageLoadTaskChats());
+            final messageBloc = context.read<MessageBloc>();
+            messageBloc.add(const MessageRefreshRequested());
             context.read<NotificationBloc>()
-              .add(const NotificationLoadUnreadNotificationCount());
-            await Future.delayed(const Duration(milliseconds: 500));
+                .add(const NotificationLoadUnreadNotificationCount());
+            await messageBloc.stream.firstWhere(
+              (s) => s.status != MessageStatus.loading,
+              orElse: () => state,
+            );
           },
           child: ListView.builder(
-            padding: EdgeInsets.symmetric(
-              horizontal: horizontalPadding,
-              vertical: AppSpacing.md,
+            padding: EdgeInsets.only(
+              left: horizontalPadding,
+              right: horizontalPadding,
+              top: AppSpacing.md,
+              // extendBody: true 时手动 padding 会覆盖 ListView 自动的 MediaQuery padding
+              // MediaQuery.padding.bottom 已包含底部导航栏+系统安全区高度
+              bottom: MediaQuery.of(context).padding.bottom + AppSpacing.md,
             ),
             itemCount: 2 + (displayChats.isNotEmpty
                 ? displayChats.length
@@ -547,16 +553,12 @@ class _TaskChatItem extends StatelessWidget {
                 .withValues(alpha: 0.3),
             width: 0.5,
           ),
+          // 单层阴影：减少列表滑动时 GPU 模糊开销
           boxShadow: [
             BoxShadow(
               color: gradient.first.withValues(alpha: 0.06),
-              blurRadius: 12,
-              offset: const Offset(0, 3),
-            ),
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.02),
-              blurRadius: 2,
-              offset: const Offset(0, 1),
+              blurRadius: 6,
+              offset: const Offset(0, 2),
             ),
           ],
         ),

@@ -264,6 +264,8 @@ class ActivityBloc extends Bloc<ActivityEvent, ActivityState> {
       ));
     } catch (e) {
       AppLogger.error('Failed to refresh activities', e);
+      // 刷新失败时仍需 emit，以便 RefreshIndicator 的 firstWhere 完成、loading 立即停止
+      emit(state.copyWith(errorMessage: e.toString()));
     }
   }
 

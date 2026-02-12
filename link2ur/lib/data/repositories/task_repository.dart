@@ -565,17 +565,25 @@ class TaskRepository {
 
   // ==================== 退款/争议 ====================
 
-  /// 发起退款请求
+  /// 发起退款请求（对齐后端 RefundRequestCreate schema）
   Future<Map<String, dynamic>> requestRefund(
     int taskId, {
+    required String reasonType,
     required String reason,
-    List<String>? evidence,
+    required String refundType,
+    List<String>? evidenceFiles,
+    double? refundAmount,
+    double? refundPercentage,
   }) async {
     final response = await _apiService.post<Map<String, dynamic>>(
       ApiEndpoints.refundRequest(taskId),
       data: {
+        'reason_type': reasonType,
         'reason': reason,
-        if (evidence != null) 'evidence': evidence,
+        'refund_type': refundType,
+        if (evidenceFiles != null) 'evidence_files': evidenceFiles,
+        if (refundAmount != null) 'refund_amount': refundAmount,
+        if (refundPercentage != null) 'refund_percentage': refundPercentage,
       },
     );
 
@@ -624,7 +632,7 @@ class TaskRepository {
     }
   }
 
-  /// 提交退款反驳
+  /// 提交退款反驳（对齐后端 RefundRequestRebuttal schema）
   Future<void> submitRefundRebuttal(
     int taskId,
     int refundId, {
@@ -634,8 +642,8 @@ class TaskRepository {
     final response = await _apiService.post(
       ApiEndpoints.submitRefundRebuttal(taskId, refundId),
       data: {
-        'content': content,
-        if (evidence != null) 'evidence': evidence,
+        'rebuttal_text': content,
+        if (evidence != null) 'evidence_files': evidence,
       },
     );
 
