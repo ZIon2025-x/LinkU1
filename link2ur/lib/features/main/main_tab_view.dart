@@ -471,22 +471,36 @@ class _DesktopTopBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 56,
-      padding: const EdgeInsets.symmetric(horizontal: 24),
+      height: 60,
       decoration: BoxDecoration(
         color: isDark
             ? AppColors.cardBackgroundDark
             : AppColors.cardBackgroundLight,
-        border: Border(
-          bottom: BorderSide(
-            color: isDark
-                ? Colors.white.withValues(alpha: 0.06)
-                : AppColors.desktopBorderLight,
-            width: 1,
-          ),
-        ),
+        boxShadow: isDark
+            ? null
+            : [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.06),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+        border: isDark
+            ? Border(
+                bottom: BorderSide(
+                  color: Colors.white.withValues(alpha: 0.06),
+                  width: 1,
+                ),
+              )
+            : null,
       ),
-      child: Row(
+      // 内容居中约束在 maxContentWidth 内，对齐 frontend Header
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: Breakpoints.maxContentWidth),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24),
+            child: Row(
         children: [
           // Logo
           GestureDetector(
@@ -606,13 +620,15 @@ class _DesktopTopBar extends StatelessWidget {
 
           const SizedBox(width: 4),
 
-          // 汉堡菜单
-          _TopBarIconButton(
-            icon: Icons.menu_rounded,
+          // 汉堡菜单（对齐 frontend 渐变三线风格）
+          _GradientHamburgerButton(
             isDark: isDark,
             onTap: onMenuTap,
           ),
         ],
+      ),
+          ),
+        ),
       ),
     );
   }
@@ -738,6 +754,113 @@ class _NotificationTabIcon extends StatelessWidget {
       count: totalUnread,
       iconSize: 24,
       iconColor: isSelected ? selectedColor : unselectedColor,
+    );
+  }
+}
+
+/// 渐变汉堡菜单按钮（对齐 frontend .hamburger-btn 风格）
+/// 三条渐变色线 + gradient-shift 动画
+class _GradientHamburgerButton extends StatefulWidget {
+  const _GradientHamburgerButton({
+    required this.isDark,
+    required this.onTap,
+  });
+
+  final bool isDark;
+  final VoidCallback onTap;
+
+  @override
+  State<_GradientHamburgerButton> createState() =>
+      _GradientHamburgerButtonState();
+}
+
+class _GradientHamburgerButtonState extends State<_GradientHamburgerButton>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _animController;
+  bool _isHovered = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _animController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 3),
+    )..repeat();
+  }
+
+  @override
+  void dispose() {
+    _animController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      onEnter: (_) => setState(() => _isHovered = true),
+      onExit: (_) => setState(() => _isHovered = false),
+      cursor: SystemMouseCursors.click,
+      child: GestureDetector(
+        onTap: widget.onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 120),
+          width: 36,
+          height: 36,
+          decoration: BoxDecoration(
+            color: _isHovered
+                ? (widget.isDark
+                    ? Colors.white.withValues(alpha: 0.08)
+                    : AppColors.desktopHoverLight)
+                : Colors.transparent,
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Center(
+            child: SizedBox(
+              width: 22,
+              height: 16,
+              child: AnimatedBuilder(
+                animation: _animController,
+                builder: (context, child) {
+                  return Column(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      _buildLine(0),
+                      _buildLine(1),
+                      _buildLine(2),
+                    ],
+                  );
+                },
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildLine(int index) {
+    // 对齐 frontend: gradient-shift 动画 — 渐变流动
+    // 三条线略有偏移以产生交错效果
+    final offset = _animController.value + (index * 0.15);
+    final normalizedOffset = offset - offset.floor();
+
+    return Container(
+      width: double.infinity,
+      height: 2,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(1),
+        gradient: LinearGradient(
+          colors: const [
+            Color(0xFFFF6B6B),
+            Color(0xFF4ECDC4),
+            Color(0xFF45B7D1),
+            Color(0xFFFF6B6B),
+          ],
+          stops: const [0.0, 0.33, 0.66, 1.0],
+          begin: Alignment(-1 + 2 * normalizedOffset, 0),
+          end: Alignment(1 + 2 * normalizedOffset, 0),
+        ),
+      ),
     );
   }
 }

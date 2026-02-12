@@ -34,14 +34,14 @@ class Breakpoints {
   /// 桌面端最大宽度（用于超宽屏约束）
   static const double desktop = 1440;
 
-  /// 内容区最大宽度（桌面端居中约束）
-  static const double maxContentWidth = 1100;
+  /// 内容区最大宽度（桌面端居中约束，对齐 frontend 1200px）
+  static const double maxContentWidth = 1200;
 
   /// 详情页最大宽度（防止大屏拉伸过宽）
-  static const double maxDetailWidth = 900;
+  static const double maxDetailWidth = 960;
 
-  /// 抽屉宽度
-  static const double drawerWidth = 320;
+  /// 抽屉宽度（对齐 frontend HamburgerMenu 350-400px）
+  static const double drawerWidth = 360;
 }
 
 /// 响应式工具方法

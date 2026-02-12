@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import '../design/app_colors.dart';
 import '../design/app_radius.dart';
@@ -6,7 +7,8 @@ import '../design/app_spacing.dart';
 import '../utils/haptic_feedback.dart';
 
 /// 基础卡片 — 带按压缩放反馈 + 增强阴影
-/// 参考iOS cardStyle modifier + BouncyButtonStyle
+/// 移动端：iOS 风格按压缩放反馈
+/// Web 桌面端：hover 上浮 + 阴影增强（对齐 frontend translateY(-2px) 效果）
 class AppCard extends StatefulWidget {
   const AppCard({
     super.key,
@@ -44,6 +46,9 @@ class _AppCardState extends State<AppCard>
   // 列表中大量纯展示 AppCard 不会产生额外开销
   AnimationController? _scaleController;
   Animation<double>? _scaleAnimation;
+
+  /// Web 桌面端 hover 状态
+  bool _isHovered = false;
 
   bool get _needsAnimation =>
       widget.onTap != null && widget.enableScaleTap;
@@ -85,20 +90,31 @@ class _AppCardState extends State<AppCard>
         (isDark ? AppColors.cardBackgroundDark : AppColors.cardBackgroundLight);
     final effectiveBorderRadius = widget.borderRadius ?? AppRadius.card;
 
+    // Web 桌面端 hover 时使用增强阴影
+    final useHoverShadow = kIsWeb && _isHovered && widget.hasShadow;
+
     final defaultBorder = Border.all(
       color: (isDark ? AppColors.separatorDark : AppColors.separatorLight)
-          .withValues(alpha: 0.3),
+          .withValues(alpha: _isHovered ? 0.15 : 0.3),
       width: 0.5,
     );
 
     final effectiveShadow = widget.hasShadow
-        ? AppShadows.cardDualForBrightness(
-            isDark ? Brightness.dark : Brightness.light)
+        ? (useHoverShadow
+            ? AppShadows.cardHover(isDark)
+            : AppShadows.cardDualForBrightness(
+                isDark ? Brightness.dark : Brightness.light))
         : null;
 
-    Widget card = Container(
+    Widget card = AnimatedContainer(
+      duration: const Duration(milliseconds: 200),
+      curve: Curves.easeOutCubic,
       margin: widget.margin,
       padding: widget.padding ?? AppSpacing.allMd,
+      // Web 桌面端 hover 时上移 2px（对齐 frontend translateY(-2px)）
+      transform: kIsWeb && _isHovered
+          ? Matrix4.translationValues(0, -2, 0)
+          : null,
       decoration: BoxDecoration(
         color: bgColor,
         borderRadius: effectiveBorderRadius,
@@ -113,8 +129,19 @@ class _AppCardState extends State<AppCard>
       child: widget.child,
     );
 
+    // Web 桌面端：添加 MouseRegion hover 效果 + 鼠标指针
+    if (kIsWeb && widget.onTap != null) {
+      card = MouseRegion(
+        cursor: SystemMouseCursors.click,
+        onEnter: (_) => setState(() => _isHovered = true),
+        onExit: (_) => setState(() => _isHovered = false),
+        child: card,
+      );
+    }
+
     if (widget.onTap != null) {
-      if (_needsAnimation) {
+      if (!kIsWeb && _needsAnimation) {
+        // 移动端：按压缩放反馈
         _ensureController();
         card = GestureDetector(
           onTapDown: _onTapDown,
@@ -136,7 +163,7 @@ class _AppCardState extends State<AppCard>
       } else {
         card = GestureDetector(
           onTap: () {
-            AppHaptics.selection();
+            if (!kIsWeb) AppHaptics.selection();
             widget.onTap?.call();
           },
           child: card,

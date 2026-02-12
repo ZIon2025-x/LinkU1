@@ -55,8 +55,8 @@ class AppColors {
   static const Color infoLight = Color(0xFFE5F0FF);
 
   // ==================== 背景色 ====================
-  /// 主背景色（浅色模式）
-  static const Color backgroundLight = Color(0xFFF2F2F7);
+  /// 主背景色（浅色模式）— 对齐 frontend #f5f5f5
+  static const Color backgroundLight = Color(0xFFF5F5F5);
 
   /// 主背景色（深色模式）
   static const Color backgroundDark = Color(0xFF000000);

@@ -15,7 +15,7 @@ class ContentConstraint extends StatelessWidget {
   /// 子组件
   final Widget child;
 
-  /// 最大宽度，默认 1100px
+  /// 最大宽度，默认 1200px（对齐 frontend max-width: 1200px）
   final double maxWidth;
 
   /// 对齐方式，默认顶部居中

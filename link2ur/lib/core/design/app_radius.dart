@@ -1,7 +1,9 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 
 /// 应用圆角系统
 /// 参考iOS DesignSystem.swift - AppCornerRadius
+/// Web 桌面端使用更紧凑的圆角以对齐 frontend React 项目
 class AppRadius {
   AppRadius._();
 
@@ -9,20 +11,20 @@ class AppRadius {
   /// 4pt - 超小圆角
   static const double tiny = 4.0;
 
-  /// 10pt - 小圆角 (与iOS对齐)
-  static const double small = 10.0;
+  /// 小圆角：移动端 10pt（iOS 对齐），Web 桌面端 8pt（frontend 对齐）
+  static const double small = kIsWeb ? 8.0 : 10.0;
 
-  /// 16pt - 中圆角（与iOS对齐）
-  static const double medium = 16.0;
+  /// 中圆角：移动端 16pt（iOS 对齐），Web 桌面端 12pt（frontend 对齐）
+  static const double medium = kIsWeb ? 12.0 : 16.0;
 
-  /// 24pt - 大圆角 (与iOS对齐)
-  static const double large = 24.0;
+  /// 大圆角：移动端 24pt（iOS 对齐），Web 桌面端 16pt（frontend 对齐）
+  static const double large = kIsWeb ? 16.0 : 24.0;
 
-  /// 32pt - 超大圆角 (与iOS对齐)
-  static const double xlarge = 32.0;
+  /// 超大圆角：移动端 32pt（iOS 对齐），Web 桌面端 20pt（frontend 对齐）
+  static const double xlarge = kIsWeb ? 20.0 : 32.0;
 
-  /// 36pt - 特大圆角
-  static const double xxlarge = 36.0;
+  /// 特大圆角
+  static const double xxlarge = kIsWeb ? 24.0 : 36.0;
 
   /// 999pt - 胶囊/圆形
   static const double pill = 999.0;

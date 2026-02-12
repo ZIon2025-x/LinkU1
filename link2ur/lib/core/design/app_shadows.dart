@@ -3,22 +3,16 @@ import 'app_colors.dart';
 
 /// 应用阴影系统
 /// 采用双层阴影 (Double Shadow) 提升层次感
+/// 对齐 frontend 阴影参数：sm/md/lg/xl
 class AppShadows {
   AppShadows._();
 
-  /// 基础卡片阴影 (浅色)
+  /// 基础卡片阴影 (浅色) — 对齐 frontend md: 0 2px 8px rgba(0,0,0,0.1)
   static final List<BoxShadow> cardLight = [
-    // 轮廓阴影
     BoxShadow(
-      color: Colors.black.withValues(alpha: 0.04),
-      blurRadius: 4,
+      color: Colors.black.withValues(alpha: 0.05),
+      blurRadius: 8,
       offset: const Offset(0, 2),
-    ),
-    // 浮动阴影
-    BoxShadow(
-      color: Colors.black.withValues(alpha: 0.06),
-      blurRadius: 12,
-      offset: const Offset(0, 8),
     ),
   ];
 
@@ -101,4 +95,29 @@ class AppShadows {
   /// 根据亮度获取双层卡片阴影
   static List<BoxShadow> cardDualForBrightness(Brightness brightness) =>
       brightness == Brightness.dark ? cardDark : cardLight;
+
+  // ==================== 桌面端 Hover 阴影 ====================
+  // 对齐 frontend hover 效果：translateY(-2px) + 增强阴影
+
+  /// 桌面端卡片 hover 阴影 (浅色) — 对齐 frontend lg
+  static final List<BoxShadow> cardHoverLight = [
+    BoxShadow(
+      color: Colors.black.withValues(alpha: 0.08),
+      blurRadius: 16,
+      offset: const Offset(0, 4),
+    ),
+  ];
+
+  /// 桌面端卡片 hover 阴影 (深色)
+  static final List<BoxShadow> cardHoverDark = [
+    BoxShadow(
+      color: Colors.black.withValues(alpha: 0.35),
+      blurRadius: 16,
+      offset: const Offset(0, 8),
+    ),
+  ];
+
+  /// 获取卡片 hover 阴影
+  static List<BoxShadow> cardHover(bool isDark) =>
+      isDark ? cardHoverDark : cardHoverLight;
 }
