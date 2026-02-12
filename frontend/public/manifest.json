@@ -31,7 +31,7 @@
   "start_url": "/",
   "display": "standalone",
   "display_override": ["window-controls-overlay", "standalone", "minimal-ui"],
-  "theme_color": "#1890ff",
+  "theme_color": "#007AFF",
   "background_color": "#ffffff",
   "orientation": "any",
   "scope": "/",

@@ -9,6 +9,7 @@ import zhTranslations from '../locales/zh.json';
 import enTranslations from '../locales/en.json';
 import api, { fetchCurrentUser, getNotificationsWithRecentRead, getUnreadNotificationCount, markNotificationRead, markAllNotificationsRead, getPublicSystemSettings, logout } from '../api';
 import SEOHead from '../components/SEOHead';
+import ItemListStructuredData from '../components/ItemListStructuredData';
 import LanguageSwitcher from '../components/LanguageSwitcher';
 import NotificationButton from '../components/NotificationButton';
 import NotificationPanel from '../components/NotificationPanel';
@@ -756,6 +757,16 @@ const FleaMarketPage: React.FC = () => {
         canonicalUrl={`https://www.link2ur.com/${language}/flea-market`}
         ogTitle={t('fleaMarket.pageTitle')}
         ogDescription={t('fleaMarket.pageDescription')}
+      />
+      <ItemListStructuredData
+        items={items.slice(0, 20).map((item) => ({
+          id: item.id,
+          url: `/${language}/flea-market/${item.id}`,
+          name: item.title
+        }))}
+        listUrl={`/${language}/flea-market`}
+        listName={t('fleaMarket.pageTitle') || 'Flea Market - Link²Ur'}
+        numberOfItems={items.length}
       />
       
       {/* 顶部导航栏 - 与首页一致 */}

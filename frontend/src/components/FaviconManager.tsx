@@ -111,7 +111,7 @@ const FaviconManager: React.FC = () => {
       const maskIcon = document.createElement('link');
       maskIcon.rel = 'mask-icon';
       maskIcon.href = `${baseUrl}/static/favicon.svg?v=${version}`;
-      maskIcon.setAttribute('color', '#1890ff');
+      maskIcon.setAttribute('color', '#007AFF');
       document.head.insertBefore(maskIcon, defaultPngIcon.nextSibling);
     };
 
@@ -150,12 +150,12 @@ const FaviconManager: React.FC = () => {
         maskIcon = document.createElement('link');
         maskIcon.rel = 'mask-icon';
         maskIcon.href = `${baseUrl}/static/favicon.svg?v=${version}`;
-        maskIcon.setAttribute('color', '#1890ff');
+        maskIcon.setAttribute('color', '#007AFF');
         document.head.insertBefore(maskIcon, svgFavicon.nextSibling);
       } else if (!maskIcon.href.startsWith('http')) {
         maskIcon.href = `${baseUrl}/static/favicon.svg?v=${version}`;
         if (!maskIcon.getAttribute('color')) {
-          maskIcon.setAttribute('color', '#1890ff');
+          maskIcon.setAttribute('color', '#007AFF');
         }
       }
       

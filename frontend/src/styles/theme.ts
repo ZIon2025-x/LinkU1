@@ -7,9 +7,9 @@ export const theme = {
   // 颜色系统
   colors: {
     // 主色调
-    primary: '#1890ff',
-    primaryHover: '#40a9ff',
-    primaryActive: '#096dd9',
+    primary: '#007AFF',
+    primaryHover: '#409CFF',
+    primaryActive: '#0059B3',
     
     // 辅助色
     secondary: '#52c41a',
@@ -20,7 +20,7 @@ export const theme = {
     success: '#52c41a',
     warning: '#faad14',
     error: '#ff4d4f',
-    info: '#1890ff',
+    info: '#007AFF',
     
     // 中性色
     text: {

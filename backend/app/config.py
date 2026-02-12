@@ -135,7 +135,7 @@ class Config:
         # 生产环境：允许主站、管理后台和客服系统
         ALLOWED_ORIGINS = os.getenv(
             "ALLOWED_ORIGINS", 
-            "https://www.link2ur.com,https://link2ur.com,https://admin.link2ur.com,https://service.link2ur.com"
+            "https://www.link2ur.com,https://link2ur.com,https://app.link2ur.com,https://admin.link2ur.com,https://service.link2ur.com"
         ).split(",")
     else:
         # 开发环境：允许本地开发服务器（主站3000，管理后台3001，客服系统3002）

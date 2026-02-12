@@ -6,7 +6,7 @@
             <square150x150logo src="https://www.link2ur.com/static/favicon.png"/>
             <square310x310logo src="https://www.link2ur.com/static/favicon.png"/>
             <wide310x150logo src="https://www.link2ur.com/static/favicon.png"/>
-            <TileColor>#1890ff</TileColor>
+            <TileColor>#007AFF</TileColor>
         </tile>
     </msapplication>
 </browserconfig>

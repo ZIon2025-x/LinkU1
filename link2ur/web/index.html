@@ -94,6 +94,11 @@
       var loading = document.getElementById('loading');
       if (loading) loading.remove();
     });
+    // Fallback: remove loader after 15s to avoid infinite spinner (e.g. API/CORS issues)
+    setTimeout(function() {
+      var loading = document.getElementById('loading');
+      if (loading) loading.remove();
+    }, 15000);
   </script>
   <script src="flutter_bootstrap.js" async></script>
 </body>

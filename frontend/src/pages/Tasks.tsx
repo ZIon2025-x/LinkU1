@@ -18,6 +18,8 @@ import NotificationButton from '../components/NotificationButton';
 import NotificationPanel from '../components/NotificationPanel';
 import SEOHead from '../components/SEOHead';
 import HreflangManager from '../components/HreflangManager';
+import ItemListStructuredData from '../components/ItemListStructuredData';
+import { getTaskDisplayTitle } from '../utils/displayLocale';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useUnreadMessages } from '../contexts/UnreadMessageContext';
 import { useTaskFilters } from '../hooks/useTaskFilters';
@@ -2088,6 +2090,19 @@ const Tasks: React.FC = () => {
         ogDescription={t('tasks.seoDescription')}
         ogImage="/static/favicon.png"
         ogUrl={canonicalUrl}
+      />
+      <ItemListStructuredData
+        items={displayTasks
+          .filter((item: any) => item?.id !== 'flea-market-card' && typeof item?.id === 'number')
+          .slice(0, 20)
+          .map((item: any) => ({
+            id: item.id,
+            url: `/${language}${isActivity(item) ? '/activities' : '/tasks'}/${item.id}`,
+            name: getTaskDisplayTitle(item, language)
+          }))}
+        listUrl={`/${language}/tasks`}
+        listName={t('tasks.pageTitle') || 'Task Hall - Link²Ur'}
+        numberOfItems={displayTasks.filter((i: any) => i?.id !== 'flea-market-card').length}
       />
       <HreflangManager type="page" path="/tasks" />
 

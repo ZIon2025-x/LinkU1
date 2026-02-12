@@ -13,6 +13,7 @@ import { getForumPosts, getForumCategory, deleteForumPost, fetchCurrentUser, get
 import { useUnreadMessages } from '../contexts/UnreadMessageContext';
 import { message, Modal } from 'antd';
 import SEOHead from '../components/SEOHead';
+import ItemListStructuredData from '../components/ItemListStructuredData';
 import LanguageSwitcher from '../components/LanguageSwitcher';
 import NotificationButton from '../components/NotificationButton';
 import HamburgerMenu from '../components/HamburgerMenu';
@@ -229,6 +230,16 @@ const ForumPostList: React.FC = () => {
       <SEOHead 
         title={category ? `${category.name} - ${t('forum.title')}` : t('forum.title')}
         description={category?.description || t('forum.description')}
+      />
+      <ItemListStructuredData
+        items={posts.slice(0, 20).map((post) => ({
+          id: post.id,
+          url: `/${lang}/forum/post/${post.id}`,
+          name: getForumPostDisplayTitle(post, lang)
+        }))}
+        listUrl={categoryId ? `/${lang}/forum/category/${categoryId}` : `/${lang}/forum`}
+        listName={category ? `${category.name} - ${t('forum.title')}` : t('forum.title')}
+        numberOfItems={total}
       />
       <header className={styles.header}>
         <div className={styles.headerContainer}>
