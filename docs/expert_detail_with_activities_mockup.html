@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>达人详情 - 活动展示方案 Mockup | Link2Ur</title>
+  <style>
+    :root {
+      /* Link2Ur 平台主色 - 与 app_colors.dart 对齐 */
+      --primary: #2659F2;
+      --primary-light: #4088FF;
+      --primary-light-bg: rgba(38, 89, 242, 0.12);
+      --card-bg: #ffffff;
+      --text-primary: #1e293b;
+      --text-secondary: #64748b;
+      --text-tertiary: #94a3b8;
+      --gold: #f59e0b;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f1f5f9; color: var(--text-primary); line-height: 1.5; }
+    .container { max-width: 420px; margin: 0 auto; padding-bottom: 40px; }
+    
+    /* 顶部渐变背景 */
+    .header-bg { height: 180px; background: linear-gradient(135deg, var(--primary), var(--primary) 60%, rgba(38, 89, 242, 0.7)); position: relative; overflow: hidden; }
+    .header-bg::before { content: ""; position: absolute; right: -25px; top: -25px; width: 150px; height: 150px; border-radius: 50%; background: rgba(255,255,255,0.1); }
+    .header-bg::after { content: ""; position: absolute; left: -60px; bottom: -40px; width: 200px; height: 200px; border-radius: 50%; background: rgba(255,255,255,0.05); }
+    .app-bar { display: flex; justify-content: space-between; align-items: center; padding: 16px 20px; color: white; }
+    .app-bar .back { font-size: 24px; }
+    .app-bar .share { font-size: 22px; }
+    
+    /* 浮动个人卡片 */
+    .profile-card { margin: -60px 16px 0; padding: 24px; background: var(--card-bg); border-radius: 24px; box-shadow: 0 10px 40px rgba(0,0,0,0.08); }
+    .avatar-wrap { width: 90px; height: 90px; margin: 0 auto 20px; border-radius: 50%; overflow: hidden; border: 4px solid white; box-shadow: 0 5px 20px rgba(0,0,0,0.1); }
+    .avatar-wrap img { width: 100%; height: 100%; object-fit: cover; }
+    .avatar-placeholder { width: 90px; height: 90px; margin: 0 auto 20px; border-radius: 50%; background: var(--primary-light-bg); display: flex; align-items: center; justify-content: center; font-size: 36px; color: var(--primary); }
+    .expert-name { text-align: center; font-size: 22px; font-weight: bold; margin-bottom: 8px; }
+    .expert-name .verified { color: var(--primary); font-size: 18px; margin-left: 4px; }
+    .expert-bio { text-align: center; font-size: 14px; color: var(--text-secondary); margin-bottom: 16px; max-width: 90%; margin-left: auto; margin-right: auto; }
+    .stats { display: flex; justify-content: space-around; border-top: 1px solid rgba(0,0,0,0.06); padding-top: 16px; }
+    .stat-item { text-align: center; }
+    .stat-item .value { font-size: 18px; font-weight: bold; }
+    .stat-item .label { font-size: 12px; color: var(--text-tertiary); margin-top: 4px; }
+    
+    /* 区块 */
+    .section { margin: 24px 16px 0; }
+    .section-header { display: flex; align-items: center; margin-bottom: 12px; }
+    .section-header .bar { width: 4px; height: 18px; background: var(--primary); border-radius: 2px; margin-right: 8px; }
+    .section-header h3 { font-size: 18px; font-weight: bold; }
+    
+    /* 专业领域标签 */
+    .tags { display: flex; flex-wrap: wrap; gap: 8px; }
+    .tag { padding: 8px 14px; background: var(--primary-light-bg); color: var(--primary); border-radius: 18px; font-size: 13px; font-weight: 500; }
+    
+    /* 服务卡片 */
+    .service-card { display: flex; gap: 16px; padding: 16px; background: var(--card-bg); border-radius: 20px; box-shadow: 0 2px 12px rgba(0,0,0,0.05); margin-bottom: 16px; }
+    .service-img { width: 100px; height: 100px; border-radius: 12px; object-fit: cover; flex-shrink: 0; }
+    .service-placeholder { width: 100px; height: 100px; border-radius: 12px; background: var(--primary-light-bg); display: flex; align-items: center; justify-content: center; color: var(--text-tertiary); flex-shrink: 0; }
+    .service-info { flex: 1; min-width: 0; }
+    .service-title { font-size: 16px; font-weight: 600; margin-bottom: 4px; line-height: 1.3; }
+    .service-desc { font-size: 13px; color: var(--text-secondary); margin-bottom: 8px; max-lines: 2; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+    .service-footer { display: flex; justify-content: space-between; align-items: center; }
+    .service-price { font-size: 18px; font-weight: bold; color: var(--primary); }
+    
+    /* 方案B：服务卡片内的活动关联提示 */
+    .service-activity-tag { display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; background: rgba(245, 158, 11, 0.12); color: #b45309; border-radius: 10px; font-size: 12px; margin-top: 8px; }
+    .service-activity-tag::before { content: "🎯"; }
+    
+    /* 达人活动卡片（方案A） */
+    .activity-card { background: var(--card-bg); border-radius: 20px; overflow: hidden; box-shadow: 0 2px 12px rgba(0,0,0,0.05); margin-bottom: 16px; }
+    .activity-img { width: 100%; height: 160px; object-fit: cover; }
+    .activity-placeholder { width: 100%; height: 160px; background: linear-gradient(135deg, var(--primary-light-bg), rgba(38, 89, 242, 0.05)); display: flex; align-items: center; justify-content: center; color: var(--text-tertiary); }
+    .activity-body { padding: 16px; }
+    .activity-title { font-size: 16px; font-weight: 600; margin-bottom: 8px; }
+    .activity-meta { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; font-size: 13px; color: var(--text-secondary); margin-bottom: 12px; }
+    .activity-meta span { display: flex; align-items: center; gap: 4px; }
+    .activity-footer { display: flex; justify-content: space-between; align-items: center; }
+    .activity-price { font-size: 18px; font-weight: bold; color: var(--primary); }
+    .activity-price .original { font-size: 12px; color: var(--text-tertiary); text-decoration: line-through; margin-right: 6px; }
+    .activity-badge { background: #22c55e; color: white; padding: 4px 10px; border-radius: 8px; font-size: 12px; font-weight: 600; }
+    
+    /* 分页导航（mockup 内切换方案） */
+    .mockup-tabs { display: flex; gap: 8px; padding: 16px; background: #e2e8f0; position: sticky; top: 0; z-index: 10; }
+    .mockup-tabs button { padding: 10px 16px; border: none; border-radius: 12px; background: white; font-size: 14px; font-weight: 500; cursor: pointer; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+    .mockup-tabs button.active { background: var(--primary); color: white; }
+    .mockup-page { display: none; }
+    .mockup-page.active { display: block; }
+    
+    /* 服务详情页 - 相关活动区块（方案C） */
+    .related-activities { margin-top: 24px; padding: 20px; background: var(--card-bg); border-radius: 20px; box-shadow: 0 2px 12px rgba(0,0,0,0.05); }
+    .related-activities .section-header { margin-bottom: 16px; }
+    .activity-mini { display: flex; gap: 12px; padding: 12px; background: #f8fafc; border-radius: 12px; margin-bottom: 12px; }
+    .activity-mini:last-child { margin-bottom: 0; }
+    .activity-mini-img { width: 72px; height: 72px; border-radius: 10px; object-fit: cover; flex-shrink: 0; }
+    .activity-mini-placeholder { width: 72px; height: 72px; border-radius: 10px; background: var(--primary-light-bg); flex-shrink: 0; display: flex; align-items: center; justify-content: center; color: var(--text-tertiary); }
+    .activity-mini-info { flex: 1; min-width: 0; }
+    .activity-mini-title { font-size: 14px; font-weight: 600; margin-bottom: 4px; }
+    .activity-mini-meta { font-size: 12px; color: var(--text-secondary); }
+    
+    /* 评价区域示例 */
+    .review-card { padding: 12px 16px; background: #f8fafc; border-radius: 12px; margin-bottom: 12px; }
+    .review-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+    .review-stars { color: var(--gold); }
+    .review-date { font-size: 12px; color: var(--text-tertiary); }
+    .review-text { font-size: 14px; color: var(--text-secondary); }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="mockup-tabs">
+      <button class="active" data-page="detail">方案A：达人详情 + 活动卡片</button>
+      <button data-page="service">方案B：服务内活动提示</button>
+      <button data-page="service-detail">方案C：服务详情 + 相关活动</button>
+    </div>
+
+    <!-- ========== 方案A：达人详情页 + 独立达人活动卡片 ========== -->
+    <div id="page-detail" class="mockup-page active">
+      <div class="header-bg">
+        <div class="app-bar">
+          <span class="back">←</span>
+          <span class="share">↗</span>
+        </div>
+      </div>
+      <div class="profile-card">
+        <div class="avatar-placeholder">👤</div>
+        <div class="expert-name">张老师 <span class="verified">✓</span></div>
+        <div class="expert-bio">资深英语辅导老师，10年教学经验，擅长雅思/托福备考</div>
+        <div class="stats">
+          <div class="stat-item"><span class="value">4.9</span><div class="label">评分</div></div>
+          <div class="stat-item"><span class="value">128</span><div class="label">完成订单</div></div>
+          <div class="stat-item"><span class="value">3</span><div class="label">服务</div></div>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-header"><div class="bar"></div><h3>专业领域</h3></div>
+        <div class="tags">
+          <span class="tag">英语辅导</span>
+          <span class="tag">雅思备考</span>
+          <span class="tag">托福备考</span>
+        </div>
+      </div>
+
+      <!-- 达人活动卡片区域（方案A 核心） -->
+      <div class="section">
+        <div class="section-header"><div class="bar"></div><h3>🎯 达人活动</h3></div>
+        <div class="activity-card">
+          <div class="activity-placeholder">活动封面</div>
+          <div class="activity-body">
+            <div class="activity-title">周末雅思口语实战 workshop</div>
+            <div class="activity-meta">
+              <span>📅 02/15 14:00</span>
+              <span>👥 3/8</span>
+              <span class="activity-badge">开放中</span>
+            </div>
+            <div class="activity-footer">
+              <span class="activity-price"><span class="original">£35</span>£28</span>
+              <span>查看详情 →</span>
+            </div>
+          </div>
+        </div>
+        <div class="activity-card">
+          <div class="activity-placeholder">活动封面</div>
+          <div class="activity-body">
+            <div class="activity-title">托福写作一对一集训营</div>
+            <div class="activity-meta">
+              <span>📅 多个时间段</span>
+              <span>👥 2/6</span>
+              <span class="activity-badge">开放中</span>
+            </div>
+            <div class="activity-footer">
+              <span class="activity-price">£45</span>
+              <span>查看详情 →</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-header"><div class="bar"></div><h3>评价</h3></div>
+        <div class="review-card">
+          <div class="review-row"><span class="review-stars">★★★★★</span><span class="review-date">2025-02-01</span></div>
+          <div class="review-text">老师非常专业，口语提升很快！</div>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-header"><div class="bar"></div><h3>提供的服务</h3></div>
+        <div class="service-card">
+          <div class="service-placeholder">📷</div>
+          <div class="service-info">
+            <div class="service-title">雅思口语一对一辅导</div>
+            <div class="service-desc">针对雅思口语 Part 1-3 进行专项训练</div>
+            <div class="service-footer"><span class="service-price">£50/小时</span><span>→</span></div>
+          </div>
+        </div>
+        <div class="service-card">
+          <div class="service-placeholder">📷</div>
+          <div class="service-info">
+            <div class="service-title">托福写作批改服务</div>
+            <div class="service-desc">专业托福写作批改与反馈</div>
+            <div class="service-footer"><span class="service-price">£35/篇</span><span>→</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========== 方案B：服务卡片内显示活动关联 ========== -->
+    <div id="page-service" class="mockup-page">
+      <div class="header-bg">
+        <div class="app-bar"><span class="back">←</span><span class="share">↗</span></div>
+      </div>
+      <div class="profile-card">
+        <div class="avatar-placeholder">👤</div>
+        <div class="expert-name">张老师 <span class="verified">✓</span></div>
+        <div class="expert-bio">资深英语辅导老师</div>
+        <div class="stats">
+          <div class="stat-item"><span class="value">4.9</span><div class="label">评分</div></div>
+          <div class="stat-item"><span class="value">128</span><div class="label">完成订单</div></div>
+          <div class="stat-item"><span class="value">3</span><div class="label">服务</div></div>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-header"><div class="bar"></div><h3>提供的服务</h3></div>
+        <!-- 有关联活动的服务：显示活动提示 -->
+        <div class="service-card">
+          <div class="service-placeholder">📷</div>
+          <div class="service-info">
+            <div class="service-title">雅思口语一对一辅导</div>
+            <div class="service-desc">针对雅思口语 Part 1-3 进行专项训练</div>
+            <div class="service-activity-tag">2 个相关活动可报名</div>
+            <div class="service-footer"><span class="service-price">£50/小时</span><span>→</span></div>
+          </div>
+        </div>
+        <!-- 无活动的服务 -->
+        <div class="service-card">
+          <div class="service-placeholder">📷</div>
+          <div class="service-info">
+            <div class="service-title">托福写作批改服务</div>
+            <div class="service-desc">专业托福写作批改与反馈</div>
+            <div class="service-footer"><span class="service-price">£35/篇</span><span>→</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========== 方案C：服务详情页 + 相关活动区块 ========== -->
+    <div id="page-service-detail" class="mockup-page">
+      <div style="height: 200px; background: linear-gradient(135deg, var(--primary), rgba(38, 89, 242, 0.7)); display: flex; align-items: center; justify-content: center; color: white; font-size: 18px;">服务图片画廊</div>
+      <div style="margin: -40px 16px 0; padding: 24px; background: var(--card-bg); border-radius: 24px; box-shadow: 0 10px 40px rgba(0,0,0,0.08);">
+        <div style="font-size: 32px; font-weight: bold; color: #dc2626;">£50.00</div>
+        <div style="font-size: 20px; font-weight: bold; margin-top: 12px;">雅思口语一对一辅导</div>
+      </div>
+      <div class="section">
+        <div class="section-header"><div class="bar"></div><h3>服务描述</h3></div>
+        <p style="color: var(--text-secondary); font-size: 15px;">针对雅思口语 Part 1-3 进行专项训练，模拟真实考场环境...</p>
+      </div>
+      <div class="section">
+        <div class="section-header"><div class="bar"></div><h3>评价</h3></div>
+        <div class="review-card"><div class="review-row"><span class="review-stars">★★★★★</span><span class="review-date">2025-02-01</span></div><div class="review-text">老师非常专业！</div></div>
+      </div>
+      <!-- 方案C 核心：服务详情页内的「相关活动」区块 -->
+      <div class="section">
+        <div class="related-activities">
+          <div class="section-header"><div class="bar"></div><h3>🎯 达人的相关活动</h3></div>
+          <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">该服务达人还有以下活动可参与，多人一起更优惠</p>
+          <div class="activity-mini">
+            <div class="activity-mini-placeholder">📷</div>
+            <div class="activity-mini-info">
+              <div class="activity-mini-title">周末雅思口语实战 workshop</div>
+              <div class="activity-mini-meta">02/15 14:00 · 3/8 人 · £28</div>
+            </div>
+            <span style="color: var(--primary); font-weight: 600;">查看</span>
+          </div>
+          <div class="activity-mini">
+            <div class="activity-mini-placeholder">📷</div>
+            <div class="activity-mini-info">
+              <div class="activity-mini-title">托福写作一对一集训营</div>
+              <div class="activity-mini-meta">多个时间段 · 2/6 人 · £45</div>
+            </div>
+            <span style="color: var(--primary); font-weight: 600;">查看</span>
+          </div>
+        </div>
+      </div>
+      <div style="height: 100px;"></div>
+    </div>
+  </div>
+
+  <script>
+    document.querySelectorAll('.mockup-tabs button').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.mockup-tabs button').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.mockup-page').forEach(p => p.classList.remove('active'));
+        btn.classList.add('active');
+        document.getElementById('page-' + btn.dataset.page).classList.add('active');
+      });
+    });
+  </script>
+</body>
+</html>

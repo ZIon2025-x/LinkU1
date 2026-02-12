@@ -684,6 +684,7 @@ async def heartbeat_loop(websocket: WebSocket, user_id: str):
 def cancel_expired_tasks():
     """自动取消已过期的未接受任务"""
     from app.database import SessionLocal
+    from app.task_scheduler import DBUnavailableError, _is_db_connection_error
 
     db = None
     try:
@@ -693,6 +694,8 @@ def cancel_expired_tasks():
             logger.info(f"成功取消 {cancelled_count} 个过期任务")
 
     except Exception as e:
+        if _is_db_connection_error(e):
+            raise DBUnavailableError(f"取消过期任务时数据库不可用: {e}") from e
         logger.error(f"自动取消过期任务时出错: {e}")
     finally:
         if db:
@@ -703,6 +706,7 @@ def update_all_users_statistics():
     """更新所有用户的统计信息（使用分页批处理，避免一次性加载所有用户到内存）"""
     from app.database import SessionLocal
     from app.models import User
+    from app.task_scheduler import DBUnavailableError, _is_db_connection_error
 
     db = None
     try:
@@ -722,6 +726,8 @@ def update_all_users_statistics():
                     crud.update_user_statistics(db, str(user_id))
                     updated_count += 1
                 except Exception as e:
+                    if _is_db_connection_error(e):
+                        raise DBUnavailableError(f"更新用户统计时数据库不可用: {e}") from e
                     logger.error(f"更新用户 {user_id} 统计信息时出错: {e}")
                     continue
             
@@ -730,7 +736,11 @@ def update_all_users_statistics():
         if updated_count > 0:
             logger.info(f"成功更新 {updated_count} 个用户的统计信息")
 
+    except DBUnavailableError:
+        raise
     except Exception as e:
+        if _is_db_connection_error(e):
+            raise DBUnavailableError(f"更新用户统计时数据库不可用: {e}") from e
         logger.error(f"更新用户统计信息时出错: {e}")
     finally:
         if db:

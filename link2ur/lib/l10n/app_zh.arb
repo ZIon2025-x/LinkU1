@@ -1734,6 +1734,13 @@
   "taskExpertMoreOrdersDesc": "获得更多任务申请，增加收入机会",
   "taskExpertNoActivities": "暂无活动",
   "taskExpertNoActivitiesMessage": "目前还没有活动记录",
+  "taskExpertRelatedActivitiesAvailable": "{count} 个相关活动可报名",
+  "@taskExpertRelatedActivitiesAvailable": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "taskExpertRelatedActivitiesSection": "达人的相关活动",
   "taskExpertNoAppliedMessage": "您还没有申请过任何活动",
   "taskExpertExpertiseAreas": "专业领域",
   "taskExpertFeaturedSkills": "特色技能",

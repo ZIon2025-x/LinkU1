@@ -4194,6 +4194,14 @@ class AppLocalizationsZh extends AppLocalizations {
   String get taskExpertNoActivitiesMessage => '目前还没有活动记录';
 
   @override
+  String taskExpertRelatedActivitiesAvailable(int count) {
+    return '$count 个相关活动可报名';
+  }
+
+  @override
+  String get taskExpertRelatedActivitiesSection => '达人的相关活动';
+
+  @override
   String get taskExpertExpertiseAreas => '专业领域';
 
   @override
@@ -11903,6 +11911,14 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get taskExpertNoActivitiesMessage => '目前還沒有活動記錄';
+
+  @override
+  String taskExpertRelatedActivitiesAvailable(int count) {
+    return '$count 個相關活動可報名';
+  }
+
+  @override
+  String get taskExpertRelatedActivitiesSection => '達人的相關活動';
 
   @override
   String get taskExpertExpertiseAreas => '專業領域';

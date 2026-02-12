@@ -10,8 +10,9 @@ import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_radius.dart';
 import '../../../core/utils/l10n_extension.dart';
 import '../../../core/widgets/buttons.dart';
+import 'package:webview_flutter/webview_flutter.dart';
+
 import '../../../core/widgets/loading_view.dart';
-import '../../../core/widgets/external_web_view.dart';
 import '../../../data/repositories/payment_repository.dart';
 import '../../../data/services/payment_service.dart';
 import '../../../data/models/payment.dart';

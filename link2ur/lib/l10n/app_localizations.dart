@@ -8079,6 +8079,18 @@ abstract class AppLocalizations {
   /// **'You have not applied or favorited any activities'**
   String get taskExpertNoActivitiesMessage;
 
+  /// No description provided for @taskExpertRelatedActivitiesAvailable.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} related activities available'**
+  String taskExpertRelatedActivitiesAvailable(int count);
+
+  /// No description provided for @taskExpertRelatedActivitiesSection.
+  ///
+  /// In en, this message translates to:
+  /// **'Expert\'s Related Activities'**
+  String get taskExpertRelatedActivitiesSection;
+
   /// No description provided for @taskExpertExpertiseAreas.
   ///
   /// In en, this message translates to:

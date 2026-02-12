@@ -1975,6 +1975,13 @@
   "taskExpertNoFavoritesMessage": "You have not favorited any activities",
   "taskExpertNoAppliedMessage": "You have not applied for any activities",
   "taskExpertNoActivitiesMessage": "You have not applied or favorited any activities",
+  "taskExpertRelatedActivitiesAvailable": "{count} related activities available",
+  "@taskExpertRelatedActivitiesAvailable": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "taskExpertRelatedActivitiesSection": "Expert's Related Activities",
   "taskExpertExpertiseAreas": "Expertise Areas",
   "taskExpertFeaturedSkills": "Featured Skills",
   "taskExpertAchievements": "Achievements",

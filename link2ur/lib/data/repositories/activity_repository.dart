@@ -19,12 +19,14 @@ class ActivityRepository {
   /// 获取活动列表
   /// 后端使用 limit/offset 分页，返回 JSON 数组 (List<ActivityOut>)
   /// [hasTimeSlots]: false=单人活动，true=多人活动（对齐iOS活动大厅筛选）
+  /// [expertId]: 可选，筛选指定达人的活动（达人详情页「达人活动」用）
   Future<ActivityListResponse> getActivities({
     int page = 1,
     int pageSize = 20,
     String? status,
     String? keyword,
     bool? hasTimeSlots,
+    String? expertId,
     CancelToken? cancelToken,
   }) async {
     final offset = (page - 1) * pageSize;
@@ -34,9 +36,10 @@ class ActivityRepository {
       if (status != null) 'status': status,
       if (keyword != null) 'keyword': keyword,
       if (hasTimeSlots != null) 'has_time_slots': hasTimeSlots,
+      if (expertId != null) 'expert_id': expertId,
     };
 
-    final cacheKey = keyword == null
+    final cacheKey = (keyword == null && expertId == null)
         ? CacheManager.buildKey(CacheManager.prefixActivities, params)
         : null;
 

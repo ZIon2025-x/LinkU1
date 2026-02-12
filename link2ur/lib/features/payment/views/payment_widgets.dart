@@ -163,7 +163,9 @@ class _CouponSelectorSheetState extends State<_CouponSelectorSheet> {
 /// 微信支付 WebView 页面
 ///
 /// 对齐 iOS WeChatPayWebView.swift
-/// 通过 URL 检测 payment-success / payment-cancel 来判断支付结果
+/// 使用 webview_flutter 在应用内加载 Stripe Checkout 页面
+/// 通过 NavigationDelegate.onNavigationRequest 检测 URL 中的
+/// payment-success / payment-cancel 来判断支付结果
 class _WeChatPayWebView extends StatefulWidget {
   const _WeChatPayWebView({
     required this.checkoutUrl,
@@ -180,7 +182,60 @@ class _WeChatPayWebView extends StatefulWidget {
 }
 
 class _WeChatPayWebViewState extends State<_WeChatPayWebView> {
+  late WebViewController _controller;
+  bool _isLoading = true;
   String? _errorMessage;
+
+  @override
+  void initState() {
+    super.initState();
+    _initWebView();
+  }
+
+  void _initWebView() {
+    _controller = WebViewController()
+      ..setJavaScriptMode(JavaScriptMode.unrestricted)
+      ..setNavigationDelegate(
+        NavigationDelegate(
+          onNavigationRequest: (NavigationRequest request) {
+            final urlLower = request.url.toLowerCase();
+
+            // 检测支付成功 URL（对齐 iOS decidePolicyFor）
+            if (urlLower.contains('payment-success') ||
+                urlLower.contains('payment_success') ||
+                urlLower.contains('/success')) {
+              widget.onPaymentSuccess();
+              return NavigationDecision.prevent;
+            }
+
+            // 检测支付取消 URL
+            if (urlLower.contains('payment-cancel') ||
+                urlLower.contains('payment_cancel') ||
+                urlLower.contains('/cancel')) {
+              widget.onPaymentCancel();
+              return NavigationDecision.prevent;
+            }
+
+            return NavigationDecision.navigate;
+          },
+          onPageStarted: (_) {
+            if (mounted) setState(() => _isLoading = true);
+          },
+          onPageFinished: (_) {
+            if (mounted) setState(() => _isLoading = false);
+          },
+          onWebResourceError: (error) {
+            if (mounted) {
+              setState(() {
+                _isLoading = false;
+                _errorMessage = error.description;
+              });
+            }
+          },
+        ),
+      )
+      ..loadRequest(Uri.parse(widget.checkoutUrl));
+  }
 
   void _confirmCancel() {
     showDialog(
@@ -198,7 +253,8 @@ class _WeChatPayWebViewState extends State<_WeChatPayWebView> {
               Navigator.pop(ctx);
               widget.onPaymentCancel();
             },
-            child: Text(context.l10n.paymentCancelPayment, style: const TextStyle(color: AppColors.error)),
+            child: Text(context.l10n.paymentCancelPayment,
+                style: const TextStyle(color: AppColors.error)),
           ),
         ],
       ),
@@ -217,40 +273,65 @@ class _WeChatPayWebViewState extends State<_WeChatPayWebView> {
       ),
       body: Stack(
         children: [
-          ExternalWebView(
-            url: widget.checkoutUrl,
-            title: context.l10n.paymentWeChatPay,
-          ),
+          WebViewWidget(controller: _controller),
+          if (_isLoading)
+            Container(
+              color: Theme.of(context)
+                  .scaffoldBackgroundColor
+                  .withValues(alpha: 0.9),
+              child: Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const CircularProgressIndicator(strokeWidth: 2),
+                    const SizedBox(height: 16),
+                    Text(
+                      context.l10n.webviewLoading,
+                      style: const TextStyle(
+                          color: AppColors.textSecondaryLight),
+                    ),
+                  ],
+                ),
+              ),
+            ),
           if (_errorMessage != null)
-            Center(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Icon(Icons.error_outline, size: 48, color: AppColors.error),
-                  const SizedBox(height: 12),
-                  Text(context.l10n.paymentLoadFailed,
-                      style:
-                          const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
-                  const SizedBox(height: 8),
-                  Text(_errorMessage!,
-                      style: const TextStyle(color: AppColors.textSecondaryLight)),
-                  const SizedBox(height: 24),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      OutlinedButton(
-                        onPressed: widget.onPaymentCancel,
-                        child: Text(context.l10n.commonBack),
-                      ),
-                      const SizedBox(width: 16),
-                      ElevatedButton(
-                        onPressed: () =>
-                            setState(() => _errorMessage = null),
-                        child: Text(context.l10n.paymentRetry),
-                      ),
-                    ],
-                  ),
-                ],
+            Container(
+              color: Theme.of(context).scaffoldBackgroundColor,
+              child: Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.error_outline,
+                        size: 48, color: AppColors.error),
+                    const SizedBox(height: 12),
+                    Text(context.l10n.paymentLoadFailed,
+                        style: const TextStyle(
+                            fontSize: 16, fontWeight: FontWeight.w600)),
+                    const SizedBox(height: 8),
+                    Text(_errorMessage!,
+                        style: const TextStyle(
+                            color: AppColors.textSecondaryLight)),
+                    const SizedBox(height: 24),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        OutlinedButton(
+                          onPressed: widget.onPaymentCancel,
+                          child: Text(context.l10n.commonBack),
+                        ),
+                        const SizedBox(width: 16),
+                        ElevatedButton(
+                          onPressed: () {
+                            setState(() => _errorMessage = null);
+                            _controller
+                                .loadRequest(Uri.parse(widget.checkoutUrl));
+                          },
+                          child: Text(context.l10n.paymentRetry),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
             ),
         ],

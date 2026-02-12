@@ -13,6 +13,10 @@
 - P2 #9: 高频任务优先执行
 - P3 #10: Prometheus import 优化
 - P3 #12: 执行耗时告警阈值
+
+修复日志（2026-02-12）：
+- P0 #13: DB 不可用时定时任务刷屏报错 → with_db 捕获 OperationalError，降级为 warning
+- P0 #14: DB 不可用时日志限流 → 全局 cooldown，同一错误 60 秒内只报一次
 """
 import threading
 import time
@@ -30,6 +34,38 @@ try:
     from app.metrics import record_scheduled_task as _record_scheduled_task
 except ImportError:
     pass
+
+
+class DBUnavailableError(Exception):
+    """
+    P0 #13: 标记数据库不可用的异常。
+    当 with_db 检测到 OperationalError（连接超时/拒绝等）时抛出此异常，
+    让 _run_task 可以区分 DB 不可用和业务逻辑错误，避免刷屏报错。
+    """
+    pass
+
+
+# P0 #14: DB 不可用日志限流 — 同一错误 60 秒内只报一次
+_db_unavailable_last_logged: float = 0.0
+_DB_UNAVAILABLE_LOG_COOLDOWN = 60  # 秒
+
+
+def _is_db_connection_error(exc: Exception) -> bool:
+    """判断异常是否为数据库连接不可用错误"""
+    from sqlalchemy.exc import OperationalError, InvalidatePoolError
+    if isinstance(exc, (OperationalError, InvalidatePoolError)):
+        return True
+    # psycopg2 原始错误
+    error_msg = str(exc).lower()
+    return any(keyword in error_msg for keyword in [
+        "connection refused",
+        "connection timed out",
+        "could not connect",
+        "connection reset",
+        "server closed the connection unexpectedly",
+        "connection is closed",
+        "ssl connection has been closed unexpectedly",
+    ])
 
 
 class TaskScheduler:
@@ -85,6 +121,7 @@ class TaskScheduler:
     
     def _run_task(self, task_name: str):
         """执行单个任务"""
+        global _db_unavailable_last_logged
         task = self.tasks[task_name]
         start_time = time.time()
         try:
@@ -107,6 +144,27 @@ class TaskScheduler:
             if _record_scheduled_task:
                 try:
                     _record_scheduled_task(task_name, "success", duration)
+                except Exception:
+                    pass
+        except DBUnavailableError:
+            # P0 #13: DB 不可用 — 降级为 warning，不打印完整 traceback
+            duration = time.time() - start_time
+            task['last_run'] = get_utc_time()
+            task['error_count'] += 1
+            
+            # P0 #14: 日志限流 — 60 秒内只报一次
+            now = time.time()
+            if now - _db_unavailable_last_logged > _DB_UNAVAILABLE_LOG_COOLDOWN:
+                _db_unavailable_last_logged = now
+                logger.warning(
+                    f"⚠️ 数据库不可用，任务 {task_name} 已跳过 (耗时: {duration:.2f}秒)。"
+                    f"后续 {_DB_UNAVAILABLE_LOG_COOLDOWN} 秒内同类错误将被静默。"
+                )
+            
+            # 记录 Prometheus 指标
+            if _record_scheduled_task:
+                try:
+                    _record_scheduled_task(task_name, "db_unavailable", duration)
                 except Exception:
                     pass
         except Exception as e:
@@ -266,13 +324,21 @@ def init_scheduler():
     scheduler = get_scheduler()
     
     # P1 #5: 创建数据库会话的包装函数 — 加显式 rollback
+    # P0 #13: 捕获 DB 连接错误，转为 DBUnavailableError，避免刷屏
     def with_db(func):
         def wrapper():
-            db = SessionLocal()
+            try:
+                db = SessionLocal()
+            except Exception as e:
+                if _is_db_connection_error(e):
+                    raise DBUnavailableError(f"无法创建数据库连接: {e}") from e
+                raise
             try:
                 func(db)
-            except Exception:
+            except Exception as e:
                 db.rollback()
+                if _is_db_connection_error(e):
+                    raise DBUnavailableError(f"数据库操作失败（连接不可用）: {e}") from e
                 raise
             finally:
                 db.close()
@@ -352,7 +418,12 @@ def init_scheduler():
             if not keys:
                 return
             
-            db = SessionLocal()
+            try:
+                db = SessionLocal()
+            except Exception as e:
+                if _is_db_connection_error(e):
+                    raise DBUnavailableError(f"无法创建数据库连接: {e}") from e
+                raise
             try:
                 synced_count = 0
                 # 第一步：读取所有增量并记录
@@ -394,11 +465,17 @@ def init_scheduler():
                 
                 if synced_count > 0:
                     logger.info(f"同步{entity_name}浏览数完成，同步了 {synced_count} 个")
-            except Exception:
+            except DBUnavailableError:
+                raise
+            except Exception as e:
                 db.rollback()
+                if _is_db_connection_error(e):
+                    raise DBUnavailableError(f"同步{entity_name}浏览数时数据库不可用: {e}") from e
                 raise
             finally:
                 db.close()
+        except DBUnavailableError:
+            raise
         except Exception as e:
             logger.error(f"同步{entity_name}浏览数失败: {e}", exc_info=True)
     
@@ -612,7 +689,12 @@ def init_scheduler():
             from app.redis_cache import redis_cache
             from sqlalchemy import func, desc
             
-            db = SessionLocal()
+            try:
+                db = SessionLocal()
+            except Exception as e:
+                if _is_db_connection_error(e):
+                    raise DBUnavailableError(f"无法创建数据库连接: {e}") from e
+                raise
             try:
                 recent_time = get_utc_time() - timedelta(hours=24)
                 popular_tasks = db.query(
@@ -633,11 +715,17 @@ def init_scheduler():
                 task_ids = [task.id for task in popular_tasks]
                 redis_cache.setex("popular_tasks:24h", 3600, json.dumps(task_ids))
                 logger.info(f"热门任务列表已更新: count={len(task_ids)}")
-            except Exception:
+            except DBUnavailableError:
+                raise
+            except Exception as e:
                 db.rollback()
+                if _is_db_connection_error(e):
+                    raise DBUnavailableError(f"更新热门任务时数据库不可用: {e}") from e
                 raise
             finally:
                 db.close()
+        except DBUnavailableError:
+            raise
         except Exception as e:
             logger.error(f"更新热门任务失败: {e}", exc_info=True)
     
@@ -655,7 +743,12 @@ def init_scheduler():
             from app.models import UserTaskInteraction
             from sqlalchemy import distinct
             
-            db = SessionLocal()
+            try:
+                db = SessionLocal()
+            except Exception as e:
+                if _is_db_connection_error(e):
+                    raise DBUnavailableError(f"无法创建数据库连接: {e}") from e
+                raise
             try:
                 # 通过最近有交互行为的用户来判断活跃用户（最多100个）
                 recent_time = get_utc_time() - timedelta(days=7)
@@ -675,8 +768,16 @@ def init_scheduler():
                         continue
                 
                 logger.info(f"预计算推荐完成: {computed_count}/{len(active_users)} 个用户")
+            except DBUnavailableError:
+                raise
+            except Exception as e:
+                if _is_db_connection_error(e):
+                    raise DBUnavailableError(f"预计算推荐时数据库不可用: {e}") from e
+                raise
             finally:
                 db.close()
+        except DBUnavailableError:
+            raise
         except Exception as e:
             logger.error(f"预计算推荐失败: {e}", exc_info=True)
     
@@ -691,12 +792,21 @@ def init_scheduler():
     
     # 清理长期无活动对话 - 每天凌晨2点
     def _cleanup_chats():
-        db = SessionLocal()
+        try:
+            db = SessionLocal()
+        except Exception as e:
+            if _is_db_connection_error(e):
+                raise DBUnavailableError(f"无法创建数据库连接: {e}") from e
+            raise
         try:
             cleanup_long_inactive_chats(db, inactive_days=30)
             logger.info("清理长期无活动对话完成")
-        except Exception:
+        except DBUnavailableError:
+            raise
+        except Exception as e:
             db.rollback()
+            if _is_db_connection_error(e):
+                raise DBUnavailableError(f"清理对话时数据库不可用: {e}") from e
             raise
         finally:
             db.close()
@@ -710,18 +820,27 @@ def init_scheduler():
     
     # 学生认证过期提醒 - 每天凌晨2点
     def _expiry_reminders():
-        db = SessionLocal()
+        try:
+            db = SessionLocal()
+        except Exception as e:
+            if _is_db_connection_error(e):
+                raise DBUnavailableError(f"无法创建数据库连接: {e}") from e
+            raise
         try:
             for days in [30, 7, 1]:
                 try:
                     send_expiry_reminders(db, days_before=days)
                     logger.info(f"发送过期提醒邮件完成（{days}天前）")
                 except Exception as e:
+                    if _is_db_connection_error(e):
+                        raise DBUnavailableError(f"发送过期提醒时数据库不可用: {e}") from e
                     logger.error(f"发送过期提醒邮件失败（{days}天前）: {e}")
             try:
                 send_expiry_notifications(db)
                 logger.info("发送过期通知邮件完成")
             except Exception as e:
+                if _is_db_connection_error(e):
+                    raise DBUnavailableError(f"发送过期通知时数据库不可用: {e}") from e
                 logger.error(f"发送过期通知邮件失败: {e}")
         finally:
             db.close()
@@ -737,15 +856,26 @@ def init_scheduler():
     def _recommendation_cleanup():
         try:
             from app.recommendation_data_cleanup import cleanup_recommendation_data
-            db = SessionLocal()
+            try:
+                db = SessionLocal()
+            except Exception as e:
+                if _is_db_connection_error(e):
+                    raise DBUnavailableError(f"无法创建数据库连接: {e}") from e
+                raise
             try:
                 stats = cleanup_recommendation_data(db)
                 logger.info(f"推荐数据清理完成: {stats}")
-            except Exception:
+            except DBUnavailableError:
+                raise
+            except Exception as e:
                 db.rollback()
+                if _is_db_connection_error(e):
+                    raise DBUnavailableError(f"推荐数据清理时数据库不可用: {e}") from e
                 raise
             finally:
                 db.close()
+        except DBUnavailableError:
+            raise
         except Exception as e:
             logger.error(f"推荐数据清理失败: {e}", exc_info=True)
     
@@ -772,15 +902,26 @@ def init_scheduler():
     def _recommendation_optimize():
         try:
             from app.recommendation_optimizer import optimize_recommendation_system
-            db = SessionLocal()
+            try:
+                db = SessionLocal()
+            except Exception as e:
+                if _is_db_connection_error(e):
+                    raise DBUnavailableError(f"无法创建数据库连接: {e}") from e
+                raise
             try:
                 result = optimize_recommendation_system(db)
                 logger.info(f"推荐系统优化完成: {result}")
-            except Exception:
+            except DBUnavailableError:
+                raise
+            except Exception as e:
                 db.rollback()
+                if _is_db_connection_error(e):
+                    raise DBUnavailableError(f"推荐系统优化时数据库不可用: {e}") from e
                 raise
             finally:
                 db.close()
+        except DBUnavailableError:
+            raise
         except Exception as e:
             logger.error(f"推荐系统优化失败: {e}", exc_info=True)
     
@@ -797,16 +938,27 @@ def init_scheduler():
     def _anonymize_data():
         try:
             from app.data_anonymization import anonymize_old_interactions, anonymize_old_feedback
-            db = SessionLocal()
+            try:
+                db = SessionLocal()
+            except Exception as e:
+                if _is_db_connection_error(e):
+                    raise DBUnavailableError(f"无法创建数据库连接: {e}") from e
+                raise
             try:
                 interaction_count = anonymize_old_interactions(db, days_old=90)
                 feedback_count = anonymize_old_feedback(db, days_old=90)
                 logger.info(f"数据匿名化完成: 交互记录 {interaction_count} 条, 反馈记录 {feedback_count} 条")
-            except Exception:
+            except DBUnavailableError:
+                raise
+            except Exception as e:
                 db.rollback()
+                if _is_db_connection_error(e):
+                    raise DBUnavailableError(f"数据匿名化时数据库不可用: {e}") from e
                 raise
             finally:
                 db.close()
+        except DBUnavailableError:
+            raise
         except Exception as e:
             logger.error(f"数据匿名化失败: {e}", exc_info=True)
     

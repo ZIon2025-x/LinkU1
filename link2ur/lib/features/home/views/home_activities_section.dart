@@ -1,5 +1,12 @@
 part of 'home_view.dart';
 
+/// 货币符号：GBP 转为 £，否则默认 £
+String _currencySymbol(String? currency) {
+  if (currency == null || currency.isEmpty) return '£';
+  if (currency.toUpperCase() == 'GBP') return '£';
+  return '$currency ';
+}
+
 /// 对标iOS: PopularActivitiesSection - 热门活动区域
 class _PopularActivitiesSection extends StatelessWidget {
   @override
@@ -429,11 +436,12 @@ class _PostCard extends StatelessWidget {
                     _LinkedItemTag(linkedItem: item.linkedItem!),
                   ],
                   const SizedBox(height: 8),
-                  // 底部：用户（头像可点进个人页）
+                  // 底部：用户/达人（有 expertId 时点击进达人详情页）
                   _DiscoveryUserRow(
                     userId: item.userId,
                     userName: item.userName,
                     userAvatar: item.userAvatar,
+                    expertId: item.expertId,
                     isDark: isDark,
                   ),
                   // 操作行（与原型 feed-actions 一致）
@@ -546,7 +554,7 @@ class _ProductCard extends StatelessWidget {
                     children: [
                       if (item.price != null)
                         Text(
-                          '${item.currency ?? "£"}${item.price!.toStringAsFixed(2)}',
+                          '${_currencySymbol(item.currency)}${item.price!.toStringAsFixed(2)}',
                           style: const TextStyle(
                             fontSize: 15,
                             fontWeight: FontWeight.w700,
@@ -642,7 +650,7 @@ class _CompetitorReviewCard extends StatelessWidget {
                   ),
                   border: Border(
                     left: BorderSide(
-                      color: isDark ? AppColors.primary : const Color(0xFF6C5CE7),
+                      color: AppColors.primary,
                       width: 3,
                     ),
                   ),
@@ -665,6 +673,7 @@ class _CompetitorReviewCard extends StatelessWidget {
               userId: item.userId,
               userName: item.userName,
               userAvatar: item.userAvatar,
+              expertId: item.expertId,
               isDark: isDark,
             ),
             const SizedBox(height: 8),
@@ -786,7 +795,7 @@ class _ServiceReviewCard extends StatelessWidget {
                         ),
                         border: Border(
                           left: BorderSide(
-                            color: isDark ? AppColors.primary : const Color(0xFF6C5CE7),
+                            color: AppColors.primary,
                             width: 3,
                           ),
                         ),
@@ -809,6 +818,7 @@ class _ServiceReviewCard extends StatelessWidget {
                     userId: item.userId,
                     userName: item.userName,
                     userAvatar: item.userAvatar,
+                    expertId: item.expertId,
                     isDark: isDark,
                   ),
                   const SizedBox(height: 8),
@@ -1031,6 +1041,7 @@ class _ServiceCard extends StatelessWidget {
                           userId: item.userId,
                           userName: item.userName,
                           userAvatar: item.userAvatar,
+                          expertId: item.expertId,
                           isDark: isDark,
                         ),
                       ),
@@ -1039,7 +1050,7 @@ class _ServiceCard extends StatelessWidget {
                         children: [
                           if (item.price != null)
                             Text(
-                              '${item.currency ?? "£"}${item.price!.toStringAsFixed(0)}起',
+                              '${_currencySymbol(item.currency)}${item.price!.toStringAsFixed(0)}起',
                               style: const TextStyle(
                                 fontSize: 15,
                                 fontWeight: FontWeight.w700,
@@ -1084,18 +1095,22 @@ class _ServiceCard extends StatelessWidget {
 // 共用组件
 // =============================================================================
 
-/// 发现卡片中的用户行：头像 + 昵称，点击头像/昵称跳转个人页
+/// 发现卡片中的用户行：头像 + 昵称，点击跳转个人页或达人详情页
+/// 当 [expertId] 非空时跳达人详情页，否则跳用户个人页
 class _DiscoveryUserRow extends StatelessWidget {
   const _DiscoveryUserRow({
     this.userId,
     this.userName,
     this.userAvatar,
+    this.expertId,
     required this.isDark,
   });
 
   final String? userId;
   final String? userName;
   final String? userAvatar;
+  /// 非空时点击跳达人详情页 (/task-experts/:id)，否则跳用户个人页 (/user/:id)
+  final String? expertId;
   final bool isDark;
 
   @override
@@ -1126,9 +1141,20 @@ class _DiscoveryUserRow extends StatelessWidget {
         ),
       ],
     );
-    if (userId != null && userId!.isNotEmpty) {
+    final canGoExpert = expertId != null &&
+        expertId!.isNotEmpty &&
+        int.tryParse(expertId!) != null;
+    final canGoUser =
+        userId != null && userId!.isNotEmpty;
+    if (canGoExpert || canGoUser) {
       return GestureDetector(
-        onTap: () => context.push('/user/$userId'),
+        onTap: () {
+          if (canGoExpert) {
+            context.push('/task-experts/$expertId');
+          } else {
+            context.push('/user/$userId');
+          }
+        },
         behavior: HitTestBehavior.opaque,
         child: content,
       );
@@ -1305,7 +1331,7 @@ class _ActivityPriceRow extends StatelessWidget {
       children: [
         // 折后价
         Text(
-          '${activityInfo.currency} ${activityInfo.discountedPrice?.toStringAsFixed(2) ?? ""}',
+          '${_currencySymbol(activityInfo.currency)}${activityInfo.discountedPrice?.toStringAsFixed(2) ?? ""}',
           style: const TextStyle(
             fontSize: 15,
             fontWeight: FontWeight.bold,
@@ -1315,7 +1341,7 @@ class _ActivityPriceRow extends StatelessWidget {
         const SizedBox(width: 6),
         // 原价（划线）
         Text(
-          '${activityInfo.currency} ${activityInfo.originalPrice?.toStringAsFixed(2) ?? ""}',
+          '${_currencySymbol(activityInfo.currency)}${activityInfo.originalPrice?.toStringAsFixed(2) ?? ""}',
           style: TextStyle(
             fontSize: 12,
             color: Colors.grey,

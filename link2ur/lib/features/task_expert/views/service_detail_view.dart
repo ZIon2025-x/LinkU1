@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../../core/constants/app_constants.dart';
@@ -8,12 +9,17 @@ import '../../../core/design/app_radius.dart';
 import '../../../core/design/app_typography.dart';
 import '../../../core/router/app_router.dart';
 import '../../../core/utils/l10n_extension.dart';
+import '../../../core/utils/haptic_feedback.dart';
 import '../../../core/utils/responsive.dart';
 import '../../../core/widgets/loading_view.dart';
 import '../../../core/widgets/error_state_view.dart';
 import '../../../core/widgets/async_image_view.dart';
+import '../../../core/widgets/scroll_safe_tap.dart';
+import '../../../data/models/activity.dart';
 import '../../../data/models/task_expert.dart';
+import '../../../data/repositories/activity_repository.dart';
 import '../../../data/repositories/task_expert_repository.dart';
+import 'activity_price_widget.dart';
 import '../bloc/task_expert_bloc.dart';
 
 /// 服务详情页
@@ -28,6 +34,7 @@ class ServiceDetailView extends StatelessWidget {
     return BlocProvider(
       create: (context) => TaskExpertBloc(
         taskExpertRepository: context.read<TaskExpertRepository>(),
+        activityRepository: context.read<ActivityRepository>(),
       )
         ..add(TaskExpertLoadServiceDetail(serviceId))
         ..add(TaskExpertLoadServiceReviews(serviceId))
@@ -130,6 +137,16 @@ class _ServiceDetailContent extends StatelessWidget {
                               timeSlots: state.timeSlots,
                               isLoading: state.isLoadingTimeSlots,
                             ),
+
+                          // 方案C：达人的相关活动（仅开放中，无则隐藏）
+                          if (!(state.expertActivities.isEmpty &&
+                              !state.isLoadingExpertActivities)) ...[
+                            _RelatedActivitiesSection(
+                              activities: state.expertActivities,
+                              isLoading: state.isLoadingExpertActivities,
+                            ),
+                            const SizedBox(height: 24),
+                          ],
 
                           // 底部留白给底部栏
                           const SizedBox(height: 120),
@@ -789,6 +806,210 @@ class _TimeSlotCard extends StatelessWidget {
     } catch (_) {
       return dateStr;
     }
+  }
+}
+
+// =============================================================
+// 方案C：达人的相关活动区块（服务详情页）
+// =============================================================
+
+class _RelatedActivitiesSection extends StatelessWidget {
+  const _RelatedActivitiesSection({
+    required this.activities,
+    required this.isLoading,
+  });
+
+  final List<Activity> activities;
+  final bool isLoading;
+
+  @override
+  Widget build(BuildContext context) {
+    if (isLoading && activities.isEmpty) {
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(20),
+        margin: const EdgeInsets.only(bottom: 24),
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.surface,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.04),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Center(
+          child: SizedBox(
+            width: 28,
+            height: 28,
+            child: CircularProgressIndicator(
+              strokeWidth: 2.5,
+              color: AppColors.primary,
+            ),
+          ),
+        ),
+      );
+    }
+
+    if (activities.isEmpty) return const SizedBox.shrink();
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
+      margin: const EdgeInsets.only(bottom: 24),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 4,
+                height: 16,
+                decoration: BoxDecoration(
+                  color: AppColors.primary,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                context.l10n.taskExpertRelatedActivitiesSection,
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          ...activities.map(
+            (activity) => _RelatedActivityMiniCard(activity: activity),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _RelatedActivityMiniCard extends StatelessWidget {
+  const _RelatedActivityMiniCard({required this.activity});
+
+  final Activity activity;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: ScrollSafeTap(
+        onTap: () {
+          AppHaptics.selection();
+          context.push('/activities/${activity.id}');
+        },
+        child: Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: AppColors.primary.withValues(alpha: 0.05),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Row(
+            children: [
+              if (activity.firstImage != null)
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(10),
+                  child: AsyncImageView(
+                    imageUrl: activity.firstImage!,
+                    width: 72,
+                    height: 72,
+                  ),
+                )
+              else
+                Container(
+                  width: 72,
+                  height: 72,
+                  decoration: BoxDecoration(
+                    color: AppColors.primary.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Icon(
+                    Icons.event,
+                    color: AppColors.primary.withValues(alpha: 0.4),
+                  ),
+                ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      activity.title,
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      activity.hasTimeSlots
+                          ? context.l10n.activityMultipleTimeSlots
+                          : (activity.deadline != null
+                              ? DateFormat('MM/dd HH:mm')
+                                  .format(activity.deadline!.toLocal())
+                              : ''),
+                      style: AppTypography.caption.copyWith(
+                        color: AppColors.textSecondaryLight,
+                        fontSize: 12,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Row(
+                      children: [
+                        Text(
+                          '${activity.currentParticipants ?? 0}/${activity.maxParticipants}',
+                          style: AppTypography.caption.copyWith(
+                            color: AppColors.textTertiaryLight,
+                            fontSize: 11,
+                          ),
+                        ),
+                        Text(
+                          ' · ',
+                          style: AppTypography.caption.copyWith(
+                            color: AppColors.textTertiaryLight,
+                            fontSize: 11,
+                          ),
+                        ),
+                        ActivityPriceWidget(activity: activity, fontSize: 11),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              Text(
+                context.l10n.homeView,
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.primary,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }
 

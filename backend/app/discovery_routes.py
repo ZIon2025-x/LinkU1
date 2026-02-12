@@ -571,15 +571,17 @@ async def _fetch_expert_services(db: AsyncSession, limit: int) -> list:
         expert_name = row.expert_display_name or row.user_name
         expert_avatar = row.expert_avatar_url or row.user_avatar_url
 
+        expert_id_val = str(row.expert_user_id) if row.expert_user_id else None
         items.append({
             "feed_type": "service",
             "id": f"service_{row.id}",
             "title": row.service_name,
             "description": (row.description or "")[:80],
             "images": [service_thumb] if service_thumb else None,
-            "user_id": str(row.expert_user_id) if row.expert_user_id else None,
+            "user_id": expert_id_val,
             "user_name": expert_name,
             "user_avatar": expert_avatar,
+            "expert_id": expert_id_val,
             "price": float(row.base_price) if row.base_price else None,
             "original_price": None,
             "discount_percentage": None,

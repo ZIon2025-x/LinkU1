@@ -149,9 +149,7 @@ class _RecommendedTab extends StatelessWidget {
                             Icon(
                               Icons.auto_awesome,
                               size: 22,
-                              color: Theme.of(context).brightness == Brightness.dark
-                                  ? const Color(0xFFA29BFE)
-                                  : const Color(0xFF6C5CE7),
+                              color: AppColors.primary,
                             ),
                             const SizedBox(width: 8),
                             Text(

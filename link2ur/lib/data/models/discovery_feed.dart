@@ -12,6 +12,7 @@ class DiscoveryFeedItem extends Equatable {
     this.userId,
     this.userName,
     this.userAvatar,
+    this.expertId,
     this.price,
     this.originalPrice,
     this.discountPercentage,
@@ -37,6 +38,8 @@ class DiscoveryFeedItem extends Equatable {
   final String? userId;
   final String? userName;
   final String? userAvatar;
+  /// 当展示的是达人时由后端返回，点击头像/名字跳达人详情页
+  final String? expertId;
   final double? price;
   final double? originalPrice;
   final double? discountPercentage;
@@ -95,6 +98,7 @@ class DiscoveryFeedItem extends Equatable {
       userId: json['user_id'] as String?,
       userName: json['user_name'] as String?,
       userAvatar: json['user_avatar'] as String?,
+      expertId: json['expert_id'] as String?,
       price: (json['price'] as num?)?.toDouble(),
       originalPrice: (json['original_price'] as num?)?.toDouble(),
       discountPercentage: (json['discount_percentage'] as num?)?.toDouble(),

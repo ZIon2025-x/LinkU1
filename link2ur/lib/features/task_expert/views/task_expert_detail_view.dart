@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:share_plus/share_plus.dart';
 
@@ -9,12 +10,17 @@ import '../../../core/design/app_radius.dart';
 import '../../../core/router/app_router.dart';
 import '../../../core/utils/l10n_extension.dart';
 import '../../../core/utils/responsive.dart';
+import '../../../core/utils/haptic_feedback.dart';
 import '../../../core/widgets/loading_view.dart';
 import '../../../core/widgets/error_state_view.dart';
 import '../../../core/widgets/empty_state_view.dart';
 import '../../../core/widgets/async_image_view.dart';
-import '../../../data/repositories/task_expert_repository.dart';
+import '../../../core/widgets/scroll_safe_tap.dart';
+import '../../../data/models/activity.dart';
 import '../../../data/models/task_expert.dart';
+import '../../../data/repositories/activity_repository.dart';
+import '../../../data/repositories/task_expert_repository.dart';
+import 'activity_price_widget.dart';
 import '../bloc/task_expert_bloc.dart';
 
 /// 任务达人详情页
@@ -32,6 +38,7 @@ class TaskExpertDetailView extends StatelessWidget {
     return BlocProvider(
       create: (context) => TaskExpertBloc(
         taskExpertRepository: context.read<TaskExpertRepository>(),
+        activityRepository: context.read<ActivityRepository>(),
       )
         ..add(TaskExpertLoadDetail(expertId))
         ..add(TaskExpertLoadExpertReviews(expertId.toString())),
@@ -77,7 +84,9 @@ class TaskExpertDetailView extends StatelessWidget {
                   previous.selectedExpert != current.selectedExpert ||
                   previous.reviews != current.reviews ||
                   previous.isLoadingReviews != current.isLoadingReviews ||
-                  previous.services != current.services,
+                  previous.services != current.services ||
+                  previous.expertActivities != current.expertActivities ||
+                  previous.isLoadingExpertActivities != current.isLoadingExpertActivities,
               builder: (context, state) {
                 if (state.status == TaskExpertStatus.loading &&
                     state.selectedExpert == null) {
@@ -111,6 +120,8 @@ class TaskExpertDetailView extends StatelessWidget {
                   reviews: state.reviews,
                   isLoadingReviews: state.isLoadingReviews,
                   services: state.services,
+                  expertActivities: state.expertActivities,
+                  isLoadingExpertActivities: state.isLoadingExpertActivities,
                 );
               },
             ),
@@ -131,12 +142,16 @@ class _DetailBody extends StatelessWidget {
     required this.reviews,
     required this.isLoadingReviews,
     required this.services,
+    required this.expertActivities,
+    required this.isLoadingExpertActivities,
   });
 
   final TaskExpert expert;
   final List<Map<String, dynamic>> reviews;
   final bool isLoadingReviews;
   final List<TaskExpertService> services;
+  final List<Activity> expertActivities;
+  final bool isLoadingExpertActivities;
 
   @override
   Widget build(BuildContext context) {
@@ -170,15 +185,27 @@ class _DetailBody extends StatelessWidget {
                   const SizedBox(height: 24),
                 ],
 
-                // 4. 评价
+                // 4. 达人活动（方案 A：仅显示开放中，无则隐藏）
+                if (!(expertActivities.isEmpty && !isLoadingExpertActivities))
+                  _ExpertActivitiesSection(
+                    activities: expertActivities,
+                    isLoading: isLoadingExpertActivities,
+                  ),
+                if (!(expertActivities.isEmpty && !isLoadingExpertActivities))
+                  const SizedBox(height: 24),
+
+                // 5. 评价
                 _ReviewsSection(
                   reviews: reviews,
                   isLoading: isLoadingReviews,
                 ),
                 const SizedBox(height: 24),
 
-                // 5. 服务菜单
-                _ServicesSection(services: services),
+                // 6. 服务菜单（方案B：服务卡片内显示活动关联提示）
+                _ServicesSection(
+                  services: services,
+                  expertActivities: expertActivities,
+                ),
 
                 SizedBox(height: MediaQuery.paddingOf(context).bottom + 24),
               ],
@@ -497,6 +524,194 @@ class _SpecialtiesSection extends StatelessWidget {
 }
 
 // =============================================================
+// 达人活动 — 方案 A：独立活动卡片区域
+// =============================================================
+
+class _ExpertActivitiesSection extends StatelessWidget {
+  const _ExpertActivitiesSection({
+    required this.activities,
+    required this.isLoading,
+  });
+
+  final List<Activity> activities;
+  final bool isLoading;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _SectionHeader(
+            title: '${context.l10n.taskSourceExpertActivity}'),
+        const SizedBox(height: AppSpacing.md),
+        if (isLoading && activities.isEmpty)
+          Center(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 24),
+              child: SizedBox(
+                width: 32,
+                height: 32,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2.5,
+                  color: AppColors.primary,
+                ),
+              ),
+            ),
+          )
+        else if (activities.isEmpty)
+          const SizedBox.shrink()
+        else
+          ...activities.map(
+            (activity) => Padding(
+              padding: const EdgeInsets.only(bottom: 16),
+              child: _ExpertActivityCard(activity: activity),
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+/// 达人活动卡片：封面 + 标题 + 时间/人数/价格，点击进入活动详情
+class _ExpertActivityCard extends StatelessWidget {
+  const _ExpertActivityCard({required this.activity});
+
+  final Activity activity;
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return ScrollSafeTap(
+      onTap: () {
+        AppHaptics.selection();
+        context.push('/activities/${activity.id}');
+      },
+      child: Container(
+        clipBehavior: Clip.antiAlias,
+        decoration: BoxDecoration(
+          color: isDark
+              ? AppColors.cardBackgroundDark
+              : AppColors.cardBackgroundLight,
+          borderRadius: AppRadius.allLarge,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.05),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (activity.firstImage != null)
+              AsyncImageView(
+                imageUrl: activity.firstImage!,
+                width: double.infinity,
+                height: 160,
+              )
+            else
+              Container(
+                width: double.infinity,
+                height: 160,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      AppColors.primary.withValues(alpha: 0.12),
+                      AppColors.primary.withValues(alpha: 0.04),
+                    ],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                ),
+                child: Icon(
+                  Icons.photo_library_outlined,
+                  size: 40,
+                  color: AppColors.primary.withValues(alpha: 0.4),
+                ),
+              ),
+            Padding(
+              padding: const EdgeInsets.all(AppSpacing.md),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    activity.title,
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: isDark
+                          ? AppColors.textPrimaryDark
+                          : AppColors.textPrimaryLight,
+                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      if (activity.hasTimeSlots)
+                        Text(
+                          context.l10n.activityMultipleTimeSlots,
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: isDark
+                                ? AppColors.textSecondaryDark
+                                : AppColors.textSecondaryLight,
+                          ),
+                        )
+                      else if (activity.deadline != null)
+                        Text(
+                          DateFormat('MM/dd HH:mm')
+                              .format(activity.deadline!.toLocal()),
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: isDark
+                                ? AppColors.textSecondaryDark
+                                : AppColors.textSecondaryLight,
+                          ),
+                        ),
+                      const SizedBox(width: 12),
+                      Icon(
+                        Icons.people_outlined,
+                        size: 14,
+                        color: isDark
+                            ? AppColors.textSecondaryDark
+                            : AppColors.textSecondaryLight,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        '${activity.currentParticipants ?? 0}/${activity.maxParticipants}',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: isDark
+                              ? AppColors.textSecondaryDark
+                              : AppColors.textSecondaryLight,
+                        ),
+                      ),
+                      const Spacer(),
+                      ActivityPriceWidget(activity: activity, fontSize: 18),
+                      Icon(
+                        Icons.chevron_right,
+                        size: 20,
+                        color: isDark
+                            ? AppColors.textTertiaryDark
+                            : AppColors.textTertiaryLight,
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// =============================================================
 // Reviews — 卡片列表（对标iOS reviewsCard）
 // =============================================================
 
@@ -672,9 +887,13 @@ class _ReviewRow extends StatelessWidget {
 // =============================================================
 
 class _ServicesSection extends StatelessWidget {
-  const _ServicesSection({required this.services});
+  const _ServicesSection({
+    required this.services,
+    required this.expertActivities,
+  });
 
   final List<TaskExpertService> services;
+  final List<Activity> expertActivities;
 
   @override
   Widget build(BuildContext context) {
@@ -703,10 +922,16 @@ class _ServicesSection extends StatelessWidget {
           _buildEmptyServices(context, isDark)
         else
           ...services.map(
-            (service) => _ServiceCard(
-              service: service,
-              onTap: () => context.goToServiceDetail(service.id),
-            ),
+            (service) {
+              final relatedCount = expertActivities
+                  .where((a) => a.expertServiceId == service.id)
+                  .length;
+              return _ServiceCard(
+                service: service,
+                relatedActivityCount: relatedCount,
+                onTap: () => context.goToServiceDetail(service.id),
+              );
+            },
           ),
       ],
     );
@@ -748,13 +973,16 @@ class _ServicesSection extends StatelessWidget {
 }
 
 /// 服务卡片（对标iOS ServiceCard: 100x100图 + semibold title + caption + price + chevron）
+/// 方案B：若有关联活动，显示「N 个相关活动可报名」提示
 class _ServiceCard extends StatelessWidget {
   const _ServiceCard({
     required this.service,
+    required this.relatedActivityCount,
     required this.onTap,
   });
 
   final TaskExpertService service;
+  final int relatedActivityCount;
   final VoidCallback onTap;
 
   @override
@@ -828,6 +1056,39 @@ class _ServiceCard extends StatelessWidget {
                         ),
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                    // 方案B：关联活动提示
+                    if (relatedActivityCount > 0) ...[
+                      const SizedBox(height: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: AppColors.warning.withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.event_available,
+                              size: 14,
+                              color: AppColors.warning,
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              context.l10n
+                                  .taskExpertRelatedActivitiesAvailable(
+                                      relatedActivityCount),
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w500,
+                                color: AppColors.warning,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ],
                     const Spacer(),

@@ -1,7 +1,9 @@
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../../../data/models/activity.dart';
 import '../../../data/models/task_expert.dart';
+import '../../../data/repositories/activity_repository.dart';
 import '../../../data/repositories/task_expert_repository.dart';
 import '../../../core/utils/logger.dart';
 
@@ -93,6 +95,7 @@ class TaskExpertLoadExpertReviews extends TaskExpertEvent {
   List<Object?> get props => [expertId];
 }
 
+
 /// 加载服务时间段
 class TaskExpertLoadServiceTimeSlots extends TaskExpertEvent {
   const TaskExpertLoadServiceTimeSlots(this.serviceId);
@@ -150,6 +153,8 @@ class TaskExpertState extends Equatable {
     this.experts = const [],
     this.selectedExpert,
     this.services = const [],
+    this.expertActivities = const [],
+    this.isLoadingExpertActivities = false,
     this.total = 0,
     this.page = 1,
     this.hasMore = true,
@@ -173,6 +178,9 @@ class TaskExpertState extends Equatable {
   final List<TaskExpert> experts;
   final TaskExpert? selectedExpert;
   final List<TaskExpertService> services;
+  /// 达人详情页：该达人发布的活动列表（方案 A）
+  final List<Activity> expertActivities;
+  final bool isLoadingExpertActivities;
   final int total;
   final int page;
   final bool hasMore;
@@ -207,6 +215,8 @@ class TaskExpertState extends Equatable {
     List<TaskExpert>? experts,
     TaskExpert? selectedExpert,
     List<TaskExpertService>? services,
+    List<Activity>? expertActivities,
+    bool? isLoadingExpertActivities,
     int? total,
     int? page,
     bool? hasMore,
@@ -230,6 +240,8 @@ class TaskExpertState extends Equatable {
       experts: experts ?? this.experts,
       selectedExpert: selectedExpert ?? this.selectedExpert,
       services: services ?? this.services,
+      expertActivities: expertActivities ?? this.expertActivities,
+      isLoadingExpertActivities: isLoadingExpertActivities ?? this.isLoadingExpertActivities,
       total: total ?? this.total,
       page: page ?? this.page,
       hasMore: hasMore ?? this.hasMore,
@@ -256,6 +268,8 @@ class TaskExpertState extends Equatable {
         experts,
         selectedExpert,
         services,
+        expertActivities,
+        isLoadingExpertActivities,
         total,
         page,
         hasMore,
@@ -279,8 +293,11 @@ class TaskExpertState extends Equatable {
 // ==================== Bloc ====================
 
 class TaskExpertBloc extends Bloc<TaskExpertEvent, TaskExpertState> {
-  TaskExpertBloc({required TaskExpertRepository taskExpertRepository})
-      : _taskExpertRepository = taskExpertRepository,
+  TaskExpertBloc({
+    required TaskExpertRepository taskExpertRepository,
+    ActivityRepository? activityRepository,
+  })  : _taskExpertRepository = taskExpertRepository,
+        _activityRepository = activityRepository,
         super(const TaskExpertState()) {
     on<TaskExpertLoadRequested>(_onLoadRequested);
     on<TaskExpertLoadMore>(_onLoadMore);
@@ -298,6 +315,7 @@ class TaskExpertBloc extends Bloc<TaskExpertEvent, TaskExpertState> {
   }
 
   final TaskExpertRepository _taskExpertRepository;
+  final ActivityRepository? _activityRepository;
 
   /// 获取城市筛选参数，'all' 时返回 null
   String? _cityParam(String city) => city == 'all' ? null : city;
@@ -431,7 +449,11 @@ class TaskExpertBloc extends Bloc<TaskExpertEvent, TaskExpertState> {
     TaskExpertLoadDetail event,
     Emitter<TaskExpertState> emit,
   ) async {
-    emit(state.copyWith(status: TaskExpertStatus.loading));
+    emit(state.copyWith(
+      status: TaskExpertStatus.loading,
+      isLoadingExpertActivities: true,
+      expertActivities: const [],
+    ));
 
     try {
       final expert =
@@ -439,16 +461,34 @@ class TaskExpertBloc extends Bloc<TaskExpertEvent, TaskExpertState> {
       final services =
           await _taskExpertRepository.getExpertServices(event.expertId.toString());
 
+      List<Activity> activities = const [];
+      final activityRepo = _activityRepository;
+      if (activityRepo != null) {
+        try {
+          final res = await activityRepo.getActivities(
+            expertId: event.expertId.toString(),
+            status: 'open',
+            pageSize: 20,
+          );
+          activities = res.activities;
+        } catch (e) {
+          AppLogger.warning('Failed to load expert activities', e);
+        }
+      }
+
       emit(state.copyWith(
         status: TaskExpertStatus.loaded,
         selectedExpert: expert,
         services: services,
+        expertActivities: activities,
+        isLoadingExpertActivities: false,
       ));
     } catch (e) {
       AppLogger.error('Failed to load expert detail', e);
       emit(state.copyWith(
         status: TaskExpertStatus.error,
         errorMessage: e.toString(),
+        isLoadingExpertActivities: false,
       ));
     }
   }
@@ -490,9 +530,27 @@ class TaskExpertBloc extends Bloc<TaskExpertEvent, TaskExpertState> {
         forceRefresh: event.forceRefresh,
       );
 
+      List<Activity> activities = const [];
+      final activityRepo = _activityRepository;
+      if (activityRepo != null &&
+          service.expertId.isNotEmpty) {
+        try {
+          final res = await activityRepo.getActivities(
+            expertId: service.expertId,
+            status: 'open',
+            pageSize: 20,
+          );
+          activities = res.activities;
+        } catch (e) {
+          AppLogger.warning('Failed to load expert activities for service', e);
+        }
+      }
+
       emit(state.copyWith(
         status: TaskExpertStatus.loaded,
         selectedService: service,
+        expertActivities: activities,
+        isLoadingExpertActivities: false,
       ));
     } catch (e) {
       AppLogger.error('Failed to load service detail', e);

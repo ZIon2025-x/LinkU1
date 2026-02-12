@@ -1734,6 +1734,13 @@
   "taskExpertMoreOrdersDesc": "獲得更多任務申請，增加收入機會",
   "taskExpertNoActivities": "暫無活動",
   "taskExpertNoActivitiesMessage": "目前還沒有活動記錄",
+  "taskExpertRelatedActivitiesAvailable": "{count} 個相關活動可報名",
+  "@taskExpertRelatedActivitiesAvailable": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "taskExpertRelatedActivitiesSection": "達人的相關活動",
   "taskExpertNoAppliedMessage": "您還沒有申請過任何活動",
   "taskExpertExpertiseAreas": "專業領域",
   "taskExpertFeaturedSkills": "特色技能",

@@ -4369,6 +4369,15 @@ class AppLocalizationsEn extends AppLocalizations {
       'You have not applied or favorited any activities';
 
   @override
+  String taskExpertRelatedActivitiesAvailable(int count) {
+    return '$count related activities available';
+  }
+
+  @override
+  String get taskExpertRelatedActivitiesSection =>
+      'Expert\'s Related Activities';
+
+  @override
   String get taskExpertExpertiseAreas => 'Expertise Areas';
 
   @override

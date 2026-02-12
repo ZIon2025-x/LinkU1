@@ -998,14 +998,21 @@ class _CommentCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isAnonymous = vote['is_anonymous'] == true;
-    final authorName = isAnonymous
+    final isAnonymous =
+        vote['is_anonymous'] == true || vote['is_anonymous'] == 1;
+    final author = vote['author'] as Map<String, dynamic>?;
+    final authorId = author?['id'] ?? vote['voter_id'];
+    final authorNameRaw =
+        author?['name'] as String? ?? vote['voter_name'] as String?;
+    final authorAvatar =
+        author?['avatar'] as String? ?? vote['voter_avatar'] as String?;
+    final displayName = isAnonymous
         ? context.l10n.leaderboardAnonymousUser
-        : (vote['voter_name'] as String? ?? '');
+        : (authorNameRaw ?? '');
     final voteType = vote['vote_type'] as String? ?? '';
     final comment = vote['comment'] as String? ?? '';
     final likeCount = (vote['like_count'] as int?) ?? 0;
-    final isLiked = vote['is_liked'] == true;
+    final isLiked = vote['is_liked'] == true || vote['user_liked'] == true;
     final voteId = vote['id'] as int?;
     final createdAt = vote['created_at'] as String?;
 
@@ -1021,26 +1028,24 @@ class _CommentCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // 作者行
+          // 作者行：匿名用 any 头像 + 显示「匿名用户」
           Row(
             children: [
-              // 头像
               AvatarView(
-                imageUrl: !isAnonymous ? vote['voter_avatar'] as String? : null,
-                name: !isAnonymous ? vote['voter_name'] as String? : null,
+                imageUrl: isAnonymous ? null : authorAvatar,
+                name: isAnonymous ? null : authorNameRaw,
                 size: 28,
                 isAnonymous: isAnonymous,
               ),
               const SizedBox(width: 8),
-              // 名称
               GestureDetector(
                 onTap: () {
-                  if (!isAnonymous && vote['voter_id'] != null) {
-                    context.goToUserProfile(vote['voter_id'].toString());
+                  if (!isAnonymous && authorId != null) {
+                    context.goToUserProfile(authorId.toString());
                   }
                 },
                 child: Text(
-                  authorName,
+                  displayName,
                   style: AppTypography.bodyBold.copyWith(fontSize: 13),
                 ),
               ),
