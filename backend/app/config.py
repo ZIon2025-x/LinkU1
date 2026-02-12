@@ -122,6 +122,11 @@ class Config:
     
     # 开发环境配置
     DEBUG = os.getenv("DEBUG", "true").lower() == "true"
+    
+    # 只读模式 — 设为 true 时拒绝所有写操作（POST/PUT/PATCH/DELETE），
+    # 仅允许 GET/HEAD/OPTIONS，用于数据库维护期间保证最小可用性。
+    # 可通过环境变量 READ_ONLY_MODE=true 开启，或通过 /admin/read-only 端点动态切换。
+    READ_ONLY_MODE = os.getenv("READ_ONLY_MODE", "false").lower() == "true"
 
     # CORS配置 - 安全配置
     # 复用上面已定义的 IS_PRODUCTION（避免重复定义导致不一致）

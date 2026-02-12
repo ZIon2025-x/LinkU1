@@ -61,6 +61,13 @@ class BusinessError(Exception):
         super().__init__(self.message)
 
 
+class ReadOnlyModeError(Exception):
+    """只读模式错误 — 系统处于维护/只读状态，写操作被拒绝"""
+    def __init__(self, message: str = "系统维护中，暂时无法执行此操作，请稍后再试"):
+        self.message = message
+        super().__init__(self.message)
+
+
 # 标准错误响应格式
 def create_error_response(
     message: str,
@@ -100,6 +107,8 @@ SECURITY_ERROR_MESSAGES = {
     "DUPLICATE_RESOURCE": "资源已存在",
     "OPERATION_FAILED": "操作失败",
     "SERVER_ERROR": "服务器内部错误",
+    "SERVICE_UNAVAILABLE": "服务暂时不可用，请稍后重试",
+    "MAINTENANCE": "系统维护中，暂时无法执行此操作，请稍后再试",
     # 注册相关错误
     "EMAIL_ALREADY_EXISTS": "该邮箱已被注册，请使用其他邮箱或直接登录",
     "USERNAME_ALREADY_EXISTS": "该用户名已被使用，请选择其他用户名",
@@ -367,12 +376,75 @@ async def business_exception_handler(request: Request, exc: BusinessError) -> JS
     return response
 
 
+async def read_only_mode_handler(request: Request, exc: ReadOnlyModeError) -> JSONResponse:
+    """只读模式异常处理器 — 返回 503 + MAINTENANCE"""
+    response = JSONResponse(
+        status_code=503,
+        content=create_error_response(
+            message=exc.message,
+            status_code=503,
+            error_code="MAINTENANCE"
+        ),
+        headers={"Retry-After": "60"}
+    )
+    set_cors_headers(response, request)
+    return response
+
+
+def _is_db_unavailable_error(exc: Exception) -> bool:
+    """判断异常是否为数据库不可用错误（连接超时/拒绝/池耗尽等）"""
+    try:
+        from sqlalchemy.exc import OperationalError, InvalidatePoolError, TimeoutError as SATimeoutError
+        if isinstance(exc, (OperationalError, InvalidatePoolError, SATimeoutError)):
+            return True
+    except ImportError:
+        pass
+    
+    error_msg = str(exc).lower()
+    return any(keyword in error_msg for keyword in [
+        "connection refused",
+        "connection timed out",
+        "could not connect",
+        "connection reset",
+        "server closed the connection unexpectedly",
+        "connection is closed",
+        "ssl connection has been closed unexpectedly",
+        "queuepool limit",
+    ])
+
+
+# DB 不可用日志限流 — 避免请求级别的刷屏
+import time as _time
+_db_error_last_logged: float = 0.0
+_DB_ERROR_LOG_COOLDOWN = 30  # 秒
+
+
 async def general_exception_handler(request: Request, exc: Exception) -> JSONResponse:
-    """通用异常处理器"""
-    # 记录详细错误信息到日志（使用 exc_info 让日志框架处理堆栈格式化）
+    """通用异常处理器 — 区分 DB 不可用（503）和其他服务端错误（500）"""
+    global _db_error_last_logged
+    
+    # 检测数据库不可用 → 返回 503 + Retry-After，而非 500
+    if _is_db_unavailable_error(exc):
+        now = _time.time()
+        if now - _db_error_last_logged > _DB_ERROR_LOG_COOLDOWN:
+            _db_error_last_logged = now
+            logger.error(f"数据库不可用: {type(exc).__name__} - {str(exc)}")
+        
+        response = JSONResponse(
+            status_code=503,
+            content=create_error_response(
+                message="服务暂时不可用，请稍后重试",
+                status_code=503,
+                error_code="SERVICE_UNAVAILABLE"
+            ),
+            headers={"Retry-After": "30"}
+        )
+        set_cors_headers(response, request)
+        return response
+    
+    # 其他未处理异常 → 500
     logger.error(f"未处理的异常: {type(exc).__name__} - {str(exc)}", exc_info=True)
     
-    # 返回通用错误信息
     safe_message = get_safe_error_message("SERVER_ERROR")
     
     response = JSONResponse(

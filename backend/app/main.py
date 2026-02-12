@@ -48,7 +48,9 @@ from app.error_handlers import (
     validation_exception_handler,
     security_exception_handler,
     business_exception_handler,
-    general_exception_handler
+    general_exception_handler,
+    read_only_mode_handler,
+    ReadOnlyModeError
 )
 from app.utils.check_dependencies import check_translation_dependencies
 from app.error_handlers import SecurityError, ValidationError, BusinessError
@@ -184,6 +186,20 @@ app.middleware("http")(admin_security_middleware)
 async def security_monitoring_middleware(request: Request, call_next):
     """安全监控中间件"""
     return await check_security_middleware(request, call_next)
+
+# ==================== 只读模式中间件 ====================
+# 在 READ_ONLY_MODE 开启时，拒绝所有写操作（POST/PUT/PATCH/DELETE），
+# 仅放行 GET/HEAD/OPTIONS 以及健康检查端点，保证最小可读性。
+@app.middleware("http")
+async def read_only_mode_middleware(request: Request, call_next):
+    """只读模式中间件 — DB 维护期间拒绝写操作"""
+    if Config.READ_ONLY_MODE and request.method in ("POST", "PUT", "PATCH", "DELETE"):
+        # 放行健康检查和存活探测
+        safe_paths = ("/health", "/live", "/ping", "/", "/metrics")
+        if request.url.path not in safe_paths:
+            raise ReadOnlyModeError()
+    return await call_next(request)
+
 
 @app.middleware("http")
 async def add_noindex_header(request: Request, call_next):
@@ -355,6 +371,7 @@ app.add_exception_handler(HTTPException, http_exception_handler)
 app.add_exception_handler(RequestValidationError, validation_exception_handler)
 app.add_exception_handler(SecurityError, security_exception_handler)
 app.add_exception_handler(BusinessError, business_exception_handler)
+app.add_exception_handler(ReadOnlyModeError, read_only_mode_handler)
 app.add_exception_handler(Exception, general_exception_handler)
 
 # 添加任务相关的路由（不需要/users前缀）
@@ -1982,6 +1999,16 @@ def read_root():
     return {"status": "ok", "message": "Welcome to Link²Ur!"}
 
 
+@app.get("/live")
+def liveness_check():
+    """轻量级存活探测 — 不依赖 DB/Redis，仅证明进程在运行。
+    
+    用于负载均衡 / Railway 的 Liveness 探测，避免 DB 短暂不可用时
+    平台误判实例不健康并频繁重启。
+    """
+    return {"status": "alive"}
+
+
 @app.get("/health")
 async def health_check():
     """完整的健康检查 - 使用增强的健康检查模块"""
@@ -2018,6 +2045,31 @@ async def health_check():
 def ping():
     """简单的ping端点 - 用于健康检查"""
     return "pong"
+
+
+# ==================== 只读模式管理端点 ====================
+@app.get("/admin/read-only")
+def get_read_only_status():
+    """查询当前只读模式状态"""
+    return {"read_only": Config.READ_ONLY_MODE}
+
+
+@app.post("/admin/read-only")
+def toggle_read_only_mode(request: Request, enable: bool = True):
+    """动态切换只读模式（需管理员权限）
+    
+    用法：POST /admin/read-only?enable=true  开启只读
+         POST /admin/read-only?enable=false 关闭只读
+    """
+    # 简单的管理员密钥验证（避免依赖 DB）
+    admin_key = request.headers.get("X-Admin-Key", "")
+    expected_key = os.getenv("ADMIN_TOGGLE_KEY", "")
+    if not expected_key or admin_key != expected_key:
+        raise HTTPException(status_code=403, detail="Forbidden")
+    
+    Config.READ_ONLY_MODE = enable
+    logger.warning(f"只读模式已{'开启' if enable else '关闭'}（操作者IP: {request.client.host if request.client else 'unknown'}）")
+    return {"read_only": Config.READ_ONLY_MODE, "message": f"只读模式已{'开启' if enable else '关闭'}"}
 
 
 @app.get("/metrics/performance")

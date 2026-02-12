@@ -17,6 +17,8 @@
 修复日志（2026-02-12）：
 - P0 #13: DB 不可用时定时任务刷屏报错 → with_db 捕获 OperationalError，降级为 warning
 - P0 #14: DB 不可用时日志限流 → 全局 cooldown，同一错误 60 秒内只报一次
+- P0 #15: 任务调度状态 Redis 持久化 → 部署重启后从 Redis 恢复 last_run / last_successful_date，
+         避免所有任务立刻全跑一轮；每日/每周任务不会因部署而重复执行
 """
 import threading
 import time
@@ -71,11 +73,100 @@ def _is_db_connection_error(exc: Exception) -> bool:
 class TaskScheduler:
     """细粒度任务调度器"""
     
+    # P0 #15: Redis 持久化 key 前缀和 TTL
+    _REDIS_KEY_PREFIX = "scheduler:task:"
+    _REDIS_STATE_TTL = 7 * 24 * 3600  # 7天
+    
     def __init__(self):
         self.tasks: Dict[str, Dict] = {}
         self._shutdown_flag = False
         self._thread: Optional[threading.Thread] = None
         self._last_heartbeat: Optional[datetime] = None  # P2 #8: 健康检查心跳
+        self._redis_client = None  # P0 #15: Redis 客户端（延迟初始化）
+        self._redis_initialized = False
+    
+    # ========== P0 #15: Redis 状态持久化 ==========
+    
+    def _get_redis(self):
+        """延迟获取 Redis 客户端（避免模块加载时循环依赖）"""
+        if not self._redis_initialized:
+            self._redis_initialized = True
+            try:
+                from app.redis_cache import get_redis_client
+                self._redis_client = get_redis_client()
+                if self._redis_client:
+                    logger.info("调度器 Redis 持久化已启用")
+                else:
+                    logger.warning("调度器 Redis 不可用，任务状态不会跨部署保存")
+            except Exception as e:
+                logger.warning(f"调度器 Redis 初始化失败: {e}")
+                self._redis_client = None
+        return self._redis_client
+    
+    def _save_task_state(self, task_name: str):
+        """将单个任务的运行状态保存到 Redis"""
+        redis_client = self._get_redis()
+        if not redis_client:
+            return
+        
+        task = self.tasks.get(task_name)
+        if not task:
+            return
+        
+        try:
+            import json
+            state = {}
+            if task['last_run']:
+                state['last_run'] = task['last_run'].isoformat()
+            if task.get('last_successful_date'):
+                state['last_successful_date'] = task['last_successful_date'].isoformat()
+            
+            key = f"{self._REDIS_KEY_PREFIX}{task_name}"
+            redis_client.setex(key, self._REDIS_STATE_TTL, json.dumps(state))
+        except Exception as e:
+            # 保存失败不影响任务执行
+            logger.debug(f"保存任务 {task_name} 状态到 Redis 失败: {e}")
+    
+    def _load_all_task_states(self):
+        """从 Redis 恢复所有已注册任务的运行状态（部署后调用）"""
+        redis_client = self._get_redis()
+        if not redis_client:
+            logger.info("Redis 不可用，所有任务将从头开始执行")
+            return
+        
+        import json
+        restored_count = 0
+        for task_name, task in self.tasks.items():
+            try:
+                key = f"{self._REDIS_KEY_PREFIX}{task_name}"
+                raw = redis_client.get(key)
+                if not raw:
+                    continue
+                
+                state = json.loads(raw.decode('utf-8') if isinstance(raw, bytes) else raw)
+                
+                if 'last_run' in state and state['last_run']:
+                    task['last_run'] = datetime.fromisoformat(state['last_run'])
+                    restored_count += 1
+                
+                if 'last_successful_date' in state and state['last_successful_date']:
+                    from datetime import date as date_type
+                    date_str = state['last_successful_date']
+                    # 支持 date 和 datetime 格式
+                    if 'T' in date_str:
+                        task['last_successful_date'] = datetime.fromisoformat(date_str).date()
+                    else:
+                        task['last_successful_date'] = date_type.fromisoformat(date_str)
+            except Exception as e:
+                logger.debug(f"恢复任务 {task_name} 状态失败: {e}")
+                continue
+        
+        if restored_count > 0:
+            logger.info(f"从 Redis 恢复了 {restored_count}/{len(self.tasks)} 个任务的运行状态")
+        else:
+            logger.info("Redis 中没有找到任务运行状态（首次部署或状态已过期）")
+    
+    # ========== 任务注册 ==========
     
     def register_task(
         self,
@@ -140,6 +231,9 @@ class TaskScheduler:
             else:
                 logger.debug(f"任务 {task_name} 执行完成 (耗时: {duration:.2f}秒)")
             
+            # P0 #15: 持久化任务状态到 Redis
+            self._save_task_state(task_name)
+            
             # 记录 Prometheus 指标
             if _record_scheduled_task:
                 try:
@@ -161,6 +255,9 @@ class TaskScheduler:
                     f"后续 {_DB_UNAVAILABLE_LOG_COOLDOWN} 秒内同类错误将被静默。"
                 )
             
+            # P0 #15: DB 不可用时也保存 last_run（防止重启后立即重试）
+            self._save_task_state(task_name)
+            
             # 记录 Prometheus 指标
             if _record_scheduled_task:
                 try:
@@ -174,6 +271,9 @@ class TaskScheduler:
             task['error_count'] += 1
             logger.error(f"任务 {task_name} 执行失败 (耗时: {duration:.2f}秒): {e}", exc_info=True)
             
+            # P0 #15: 失败时也保存 last_run
+            self._save_task_state(task_name)
+            
             # 记录 Prometheus 指标
             if _record_scheduled_task:
                 try:
@@ -184,6 +284,9 @@ class TaskScheduler:
     def run(self):
         """运行调度器主循环"""
         logger.info("定时任务调度器已启动")
+        
+        # P0 #15: 从 Redis 恢复上次的任务运行状态（部署重启后不会立刻全跑一轮）
+        self._load_all_task_states()
         
         # 计算最小间隔（用于主循环）
         min_interval = min(
@@ -345,6 +448,7 @@ def init_scheduler():
         return wrapper
     
     # P1 #4: 每日/每周任务的包装器 — 记录上次成功日期，支持补偿执行
+    # P0 #15: 更新 last_successful_date 后同步持久化到 Redis
     def make_daily_task(task_name: str, target_hour: int, task_func):
         """
         创建每日任务包装函数。
@@ -372,6 +476,9 @@ def init_scheduler():
             if now.hour >= target_hour:
                 task_func()
                 task_meta['last_successful_date'] = today
+                # P0 #15: 持久化 last_successful_date（由 _run_task 统一保存 last_run，
+                # 但 last_successful_date 在这里更新，所以需要额外触发保存）
+                scheduler._save_task_state(task_name)
         
         return wrapper
     
@@ -396,6 +503,8 @@ def init_scheduler():
             if now.weekday() == target_weekday and now.hour >= target_hour:
                 task_func()
                 task_meta['last_successful_date'] = today
+                # P0 #15: 持久化 last_successful_date
+                scheduler._save_task_state(task_name)
         
         return wrapper
     
