@@ -592,6 +592,9 @@
   "stripeDashboard": "Stripe Dashboard",
   "stripeConnectInitFailed": "Unable to initialise payout account setup",
   "stripeConnectLoadFailed": "Payout setup failed to load, please try again",
+  "stripeConnectOnboardingCancelled": "Payment account setup was cancelled",
+  "stripeConnectOnboardingFailed": "Payment account setup failed",
+  "stripeConnectOnboardingErrorHint": "If you see \"Sorry, something went wrong\" in the page, check your network or try again later; ensure the app and backend use the same Stripe environment (test/live).",
   "stripeConnectLoadFailedWithReason": "Load failed: {param1}",
   "@stripeConnectLoadFailedWithReason": {
     "placeholders": {

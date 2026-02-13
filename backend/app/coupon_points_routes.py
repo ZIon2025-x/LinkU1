@@ -1958,6 +1958,32 @@ def check_in_api(
     )
     
     if not check_in_record:
+        # 今天已签到过：返回 200 + already_checked，避免前端当错误处理
+        if error_msg == "今天已经签到过了":
+            today_check_in = get_check_in_today(db, current_user.id)
+            if today_check_in:
+                reward = None
+                if today_check_in.reward_type == "points" and today_check_in.points_reward:
+                    reward = {
+                        "type": "points",
+                        "points_reward": today_check_in.points_reward,
+                        "points_reward_display": f"{today_check_in.points_reward / 100:.2f}",
+                        "description": today_check_in.reward_description or f"连续签到{today_check_in.consecutive_days}天",
+                    }
+                elif today_check_in.reward_type == "coupon" and today_check_in.coupon_id:
+                    reward = {
+                        "type": "coupon",
+                        "coupon_id": today_check_in.coupon_id,
+                        "description": today_check_in.reward_description or f"连续签到{today_check_in.consecutive_days}天",
+                    }
+                return {
+                    "success": True,
+                    "already_checked": True,
+                    "check_in_date": today_check_in.check_in_date,
+                    "consecutive_days": today_check_in.consecutive_days,
+                    "reward": reward,
+                    "message": "今天已经签到过了",
+                }
         raise HTTPException(status_code=400, detail=error_msg or "签到失败")
     
     # 格式化奖励信息
@@ -1978,6 +2004,7 @@ def check_in_api(
     
     return {
         "success": True,
+        "already_checked": False,
         "check_in_date": check_in_record.check_in_date,
         "consecutive_days": check_in_record.consecutive_days,
         "reward": reward,

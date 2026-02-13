@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
@@ -144,12 +145,20 @@ class _StripeConnectOnboardingViewState
         // 完成后重新检查状态
         _loadOnboardingSession();
       } else {
-        // 取消或失败
+        // 取消或失败：显示具体原因，并提示常见问题
         setState(() {
           _viewState = _ViewState.error;
-          _error = result == 'cancelled' ? 'Onboarding cancelled' : 'Onboarding failed';
+          _error = result == 'cancelled'
+              ? context.l10n.stripeConnectOnboardingCancelled
+              : context.l10n.stripeConnectOnboardingFailed;
         });
       }
+    } on PlatformException catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _viewState = _ViewState.error;
+        _error = e.message ?? e.code;
+      });
     } catch (e) {
       if (!mounted) return;
       setState(() {
@@ -208,6 +217,7 @@ class _StripeConnectOnboardingViewState
   }
 
   Widget _buildErrorView(bool isDark) {
+    final l10n = context.l10n;
     return Center(
       child: Padding(
         padding: AppSpacing.allLg,
@@ -221,7 +231,7 @@ class _StripeConnectOnboardingViewState
             ),
             AppSpacing.vLg,
             Text(
-              _error ?? context.l10n.stripeConnectLoadFailed,
+              _error ?? l10n.stripeConnectLoadFailed,
               style: TextStyle(
                 fontSize: 16,
                 color: isDark
@@ -230,9 +240,20 @@ class _StripeConnectOnboardingViewState
               ),
               textAlign: TextAlign.center,
             ),
+            AppSpacing.vMd,
+            Text(
+              l10n.stripeConnectOnboardingErrorHint,
+              style: TextStyle(
+                fontSize: 13,
+                color: isDark
+                    ? AppColors.textSecondaryDark
+                    : AppColors.textSecondaryLight,
+              ),
+              textAlign: TextAlign.center,
+            ),
             AppSpacing.vXl,
             PrimaryButton(
-              text: context.l10n.commonRetry,
+              text: l10n.commonRetry,
               onPressed: _loadOnboardingSession,
               width: 200,
             ),

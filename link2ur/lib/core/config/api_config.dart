@@ -17,15 +17,24 @@ class ApiConfig {
   }
 
   /// 请求头
-  /// 注意：X-Platform 依赖运行时平台检测，因此使用 getter 而非 const
-  static Map<String, String> get defaultHeaders => {
-    'Content-Type': 'application/json',
-    'Accept': 'application/json',
-    'Accept-Encoding': 'gzip, deflate',
-    'X-App-Platform': 'flutter',
-    'X-Platform': platformId,
-    'X-App-Version': '1.0.0',
-  };
+  /// 注意：X-Platform / User-Agent 依赖运行时平台检测，后端用其校验移动端请求
+  static Map<String, String> get defaultHeaders {
+    final platform = platformId;
+    final ua = platform == 'ios'
+        ? 'Link2Ur-iOS'
+        : platform == 'android'
+            ? 'Link2Ur-Android'
+            : 'Link2Ur-Flutter';
+    return {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+      'Accept-Encoding': 'gzip, deflate',
+      'User-Agent': '$ua/1.0.0 ($apiVersion)',
+      'X-App-Platform': 'flutter',
+      'X-Platform': platform,
+      'X-App-Version': '1.0.0',
+    };
+  }
 
   /// 重试次数
   static const int maxRetries = 3;

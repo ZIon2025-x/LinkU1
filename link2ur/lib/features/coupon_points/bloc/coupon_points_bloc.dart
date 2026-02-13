@@ -288,7 +288,7 @@ class CouponPointsBloc extends Bloc<CouponPointsEvent, CouponPointsState> {
     emit(state.copyWith(isSubmitting: true));
 
     try {
-      await _repository.checkIn();
+      final checkInResult = await _repository.checkIn();
 
       // 刷新数据
       final results = await Future.wait([
@@ -298,6 +298,7 @@ class CouponPointsBloc extends Bloc<CouponPointsEvent, CouponPointsState> {
 
       final account = results[0] as PointsAccount;
       final checkInData = results[1] as Map<String, dynamic>;
+      final alreadyChecked = checkInResult['already_checked'] as bool? ?? false;
 
       emit(state.copyWith(
         isSubmitting: false,
@@ -305,7 +306,7 @@ class CouponPointsBloc extends Bloc<CouponPointsEvent, CouponPointsState> {
         checkInStatus: checkInData,
         isCheckedInToday: true,
         consecutiveDays: checkInData['consecutive_days'] as int? ?? 0,
-        actionMessage: 'check_in_success',
+        actionMessage: alreadyChecked ? 'check_in_already' : 'check_in_success',
       ));
     } catch (e) {
       final errMsg = e.toString().replaceAll('CouponPointsException: ', '');

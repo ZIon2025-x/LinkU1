@@ -1507,6 +1507,7 @@ class CouponUseResponse(BaseModel):
 # 签到相关 Schemas
 class CheckInResponse(BaseModel):
     success: bool
+    already_checked: Optional[bool] = False  # 今日已签到过时为 True，前端用于展示「已签到」而非错误
     check_in_date: datetime.date
     consecutive_days: int
     reward: Optional[Dict[str, Any]] = None

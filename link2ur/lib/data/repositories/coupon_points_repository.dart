@@ -71,7 +71,8 @@ class CouponPointsRepository {
   // ==================== 签到相关 ====================
 
   /// 每日签到
-  Future<PointsTransaction> checkIn() async {
+  /// 返回 API 原始响应（含 success, already_checked, check_in_date, consecutive_days, reward, message）
+  Future<Map<String, dynamic>> checkIn() async {
     final response = await _apiService.post<Map<String, dynamic>>(
       ApiEndpoints.checkIn,
     );
@@ -80,7 +81,7 @@ class CouponPointsRepository {
       throw CouponPointsException(response.message ?? '签到失败');
     }
 
-    return PointsTransaction.fromJson(response.data!);
+    return response.data!;
   }
 
   /// 获取签到状态

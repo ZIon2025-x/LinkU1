@@ -2877,6 +2877,24 @@ abstract class AppLocalizations {
   /// **'Payout setup failed to load, please try again'**
   String get stripeConnectLoadFailed;
 
+  /// No description provided for @stripeConnectOnboardingCancelled.
+  ///
+  /// In en, this message translates to:
+  /// **'Payment account setup was cancelled'**
+  String get stripeConnectOnboardingCancelled;
+
+  /// No description provided for @stripeConnectOnboardingFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Payment account setup failed'**
+  String get stripeConnectOnboardingFailed;
+
+  /// No description provided for @stripeConnectOnboardingErrorHint.
+  ///
+  /// In en, this message translates to:
+  /// **'If you see \"Sorry, something went wrong\" in the page, check your network or try again later; ensure the app and backend use the same Stripe environment (test/live).'**
+  String get stripeConnectOnboardingErrorHint;
+
   /// No description provided for @stripeConnectLoadFailedWithReason.
   ///
   /// In en, this message translates to:

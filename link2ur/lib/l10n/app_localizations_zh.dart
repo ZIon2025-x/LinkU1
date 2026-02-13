@@ -1438,6 +1438,16 @@ class AppLocalizationsZh extends AppLocalizations {
   String get stripeConnectLoadFailed => '加载失败';
 
   @override
+  String get stripeConnectOnboardingCancelled => '已取消设置收款账户';
+
+  @override
+  String get stripeConnectOnboardingFailed => '设置收款账户失败';
+
+  @override
+  String get stripeConnectOnboardingErrorHint =>
+      '若页面内出现「Sorry, something went wrong」，请检查网络或稍后重试；并确认 App 与后端使用同一 Stripe 环境（测试/正式）。';
+
+  @override
   String stripeConnectLoadFailedWithReason(String param1) {
     return '加载失败：$param1';
   }
@@ -9161,6 +9171,16 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get stripeConnectLoadFailed => '加載失敗';
+
+  @override
+  String get stripeConnectOnboardingCancelled => '已取消設置收款賬戶';
+
+  @override
+  String get stripeConnectOnboardingFailed => '設置收款賬戶失敗';
+
+  @override
+  String get stripeConnectOnboardingErrorHint =>
+      '若頁面內出現「Sorry, something went wrong」，請檢查網絡或稍後重試；並確認 App 與後端使用同一 Stripe 環境（測試/正式）。';
 
   @override
   String stripeConnectLoadFailedWithReason(String param1) {

@@ -802,8 +802,9 @@ def create_connect_account(
                         }
                     
                     # 如果账户未完成 onboarding，创建 AccountSession 用于嵌入式组件
-                    onboarding_session = create_account_session_safe(existing_account.id)
-                    
+                    onboarding_session = create_account_session_safe(
+                        existing_account.id, enable_account_onboarding=True
+                    )
                     return {
                         "account_id": existing_account.id,
                         "client_secret": onboarding_session.client_secret,
@@ -1143,7 +1144,9 @@ def create_connect_account_embedded(
                             "message": "您已经有一个 Stripe 账户且已完成设置"
                         }
                     # 如果账户未完成 onboarding，创建 onboarding session
-                    onboarding_session = create_account_session_safe(existing_account.id)
+                    onboarding_session = create_account_session_safe(
+                        existing_account.id, enable_account_onboarding=True
+                    )
                     return {
                         "account_id": existing_account.id,
                         "client_secret": onboarding_session.client_secret,

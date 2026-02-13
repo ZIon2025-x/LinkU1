@@ -1513,6 +1513,17 @@ class AppLocalizationsEn extends AppLocalizations {
       'Payout setup failed to load, please try again';
 
   @override
+  String get stripeConnectOnboardingCancelled =>
+      'Payment account setup was cancelled';
+
+  @override
+  String get stripeConnectOnboardingFailed => 'Payment account setup failed';
+
+  @override
+  String get stripeConnectOnboardingErrorHint =>
+      'If you see \"Sorry, something went wrong\" in the page, check your network or try again later; ensure the app and backend use the same Stripe environment (test/live).';
+
+  @override
   String stripeConnectLoadFailedWithReason(String param1) {
     return 'Load failed: $param1';
   }

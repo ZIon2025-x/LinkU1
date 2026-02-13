@@ -206,7 +206,7 @@ class _MyPostsViewState extends State<MyPostsView>
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(l10n.myPostsTitle),
+        title: Text(l10n.profileMyPosts),
         actions: [
           IconButton(
             icon: const Icon(Icons.add_circle, size: 28),

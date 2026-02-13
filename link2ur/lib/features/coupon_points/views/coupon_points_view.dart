@@ -83,6 +83,7 @@ class _CouponPointsContentState extends State<_CouponPointsContent>
           final isError = state.actionMessage!.contains('failed');
           final message = switch (state.actionMessage) {
             'check_in_success' => context.l10n.actionCheckInSuccess,
+            'check_in_already' => context.l10n.pointsCheckedInToday,
             'check_in_failed' => state.errorMessage != null
                 ? '${context.l10n.actionCheckInFailed}: ${state.errorMessage}'
                 : context.l10n.actionCheckInFailed,

@@ -61,6 +61,165 @@ class PublishView extends StatelessWidget {
   }
 }
 
+/// 关联内容弹窗内容：内部持有 TextEditingController，随弹窗 dispose，避免 disposed 后仍被使用。
+class _PostLinkSearchDialogContent extends StatefulWidget {
+  const _PostLinkSearchDialogContent({
+    required this.discoveryRepo,
+    required this.isDark,
+    required this.userRelated,
+  });
+
+  final DiscoveryRepository discoveryRepo;
+  final bool isDark;
+  final List<Map<String, dynamic>> userRelated;
+
+  @override
+  State<_PostLinkSearchDialogContent> createState() => _PostLinkSearchDialogContentState();
+}
+
+class _PostLinkSearchDialogContentState extends State<_PostLinkSearchDialogContent> {
+  late final TextEditingController _queryCtrl;
+  List<Map<String, dynamic>> _results = [];
+  bool _loading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _queryCtrl = TextEditingController();
+  }
+
+  @override
+  void dispose() {
+    _queryCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _runSearch(String q) async {
+    if (q.trim().isEmpty) return;
+    setState(() => _loading = true);
+    try {
+      final list = await widget.discoveryRepo.searchLinkableContent(query: q.trim(), type: 'all');
+      if (mounted) {
+        setState(() {
+          _results = list;
+          _loading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _loading = false);
+        AppFeedback.showError(context, e.toString());
+      }
+    }
+  }
+
+  Widget _buildLinkableList(List<Map<String, dynamic>> list, double height) {
+    return SizedBox(
+      height: height,
+      child: ListView.builder(
+        shrinkWrap: true,
+        itemCount: list.length,
+        itemBuilder: (context, i) {
+          final r = list[i];
+          final type = r['item_type'] as String? ?? '';
+          final name = r['name'] as String? ?? r['title'] as String? ?? '未命名';
+          final id = r['item_id']?.toString() ?? '';
+          final subtitle = r['subtitle'] as String? ?? type;
+          return ListTile(
+            title: Text(name),
+            subtitle: Text(subtitle),
+            onTap: () {
+              Navigator.of(context).pop(<String, String>{'type': type, 'id': id, 'name': name});
+            },
+          );
+        },
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = widget.isDark;
+    return AlertDialog(
+      title: const Text('关联内容'),
+      content: SingleChildScrollView(
+        child: SizedBox(
+          width: double.maxFinite,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: _queryCtrl,
+                      decoration: const InputDecoration(
+                        hintText: '输入关键词搜索服务、活动、商品、排行榜…',
+                        border: OutlineInputBorder(),
+                      ),
+                      onSubmitted: _runSearch,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  IconButton(
+                    icon: const Icon(Icons.search),
+                    onPressed: () => _runSearch(_queryCtrl.text),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              if (widget.userRelated.isNotEmpty) ...[
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    '与我相关',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 4),
+                _buildLinkableList(widget.userRelated, 200),
+                const SizedBox(height: 12),
+              ],
+              if (_loading) const Center(child: CircularProgressIndicator()),
+              if (!_loading && _results.isNotEmpty) ...[
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    '搜索结果',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 4),
+                _buildLinkableList(_results, 220),
+              ],
+              if (!_loading && _results.isEmpty && _queryCtrl.text.trim().isNotEmpty)
+                const Padding(
+                  padding: EdgeInsets.all(12),
+                  child: Text('无结果，换关键词试试'),
+                ),
+            ],
+          ),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: Text(MaterialLocalizations.of(context).cancelButtonLabel),
+        ),
+      ],
+    );
+  }
+}
+
 // ── 发布类型 ──
 enum _PublishType { task, fleaMarket, post }
 
@@ -1546,7 +1705,6 @@ class _PublishContentState extends State<_PublishContent>
   }
 
   Future<void> _showPostLinkSearchDialog(bool isDark) async {
-    final queryCtrl = TextEditingController();
     final discoveryRepo = context.read<DiscoveryRepository>();
     List<Map<String, dynamic>> userRelated = [];
     try {
@@ -1554,140 +1712,21 @@ class _PublishContentState extends State<_PublishContent>
     } catch (_) {}
     if (!mounted) return;
 
-    List<Map<String, dynamic>> results = [];
-    bool loading = false;
-
-    await showDialog<void>(
+    final result = await showDialog<Map<String, String>>(
       context: context,
-      builder: (ctx) {
-        return StatefulBuilder(
-          builder: (context, setDialogState) {
-            Future<void> runSearch(String q) async {
-              if (q.trim().isEmpty) return;
-              setDialogState(() => loading = true);
-              try {
-                final list = await discoveryRepo.searchLinkableContent(query: q.trim(), type: 'all');
-                if (ctx.mounted) {
-                  setDialogState(() {
-                    results = list;
-                    loading = false;
-                  });
-                }
-              } catch (e) {
-                if (ctx.mounted) {
-                  setDialogState(() => loading = false);
-                  AppFeedback.showError(ctx, e.toString());
-                }
-              }
-            }
-            Widget buildLinkableList(List<Map<String, dynamic>> list, double height) {
-              return SizedBox(
-                height: height,
-                child: ListView.builder(
-                  shrinkWrap: true,
-                  itemCount: list.length,
-                  itemBuilder: (context, i) {
-                    final r = list[i];
-                    final type = r['item_type'] as String? ?? '';
-                    final name = r['name'] as String? ?? r['title'] as String? ?? '未命名';
-                    final id = r['item_id']?.toString() ?? '';
-                    final subtitle = r['subtitle'] as String? ?? type;
-                    return ListTile(
-                      title: Text(name),
-                      subtitle: Text(subtitle),
-                      onTap: () {
-                        setState(() {
-                          _postLinkedType = type;
-                          _postLinkedId = id;
-                          _postLinkedName = name;
-                        });
-                        Navigator.of(ctx).pop();
-                      },
-                    );
-                  },
-                ),
-              );
-            }
-            return AlertDialog(
-              title: const Text('关联内容'),
-              content: SizedBox(
-                width: double.maxFinite,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Row(
-                      children: [
-                        Expanded(
-                          child: TextField(
-                            controller: queryCtrl,
-                            decoration: const InputDecoration(
-                              hintText: '输入关键词搜索服务、活动、商品、排行榜…',
-                              border: OutlineInputBorder(),
-                            ),
-                            onSubmitted: runSearch,
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        IconButton(
-                          icon: const Icon(Icons.search),
-                          onPressed: () => runSearch(queryCtrl.text),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    if (userRelated.isNotEmpty) ...[
-                      Align(
-                        alignment: Alignment.centerLeft,
-                        child: Text(
-                          '与我相关',
-                          style: TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w600,
-                            color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      buildLinkableList(userRelated, 200),
-                      const SizedBox(height: 12),
-                    ],
-                    if (loading) const Center(child: CircularProgressIndicator()),
-                    if (!loading && results.isNotEmpty) ...[
-                      Align(
-                        alignment: Alignment.centerLeft,
-                        child: Text(
-                          '搜索结果',
-                          style: TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w600,
-                            color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      buildLinkableList(results, 220),
-                    ],
-                    if (!loading && results.isEmpty && queryCtrl.text.trim().isNotEmpty)
-                      const Padding(
-                        padding: EdgeInsets.all(12),
-                        child: Text('无结果，换关键词试试'),
-                      ),
-                  ],
-                ),
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.of(ctx).pop(),
-                  child: Text(MaterialLocalizations.of(context).cancelButtonLabel),
-                ),
-              ],
-            );
-          },
-        );
-      },
+      builder: (ctx) => _PostLinkSearchDialogContent(
+        discoveryRepo: discoveryRepo,
+        isDark: isDark,
+        userRelated: userRelated,
+      ),
     );
-    queryCtrl.dispose();
+    if (result != null && mounted) {
+      setState(() {
+        _postLinkedType = result['type']!;
+        _postLinkedId = result['id']!;
+        _postLinkedName = result['name']!;
+      });
+    }
   }
 
   // ==================== 工具方法 ====================
