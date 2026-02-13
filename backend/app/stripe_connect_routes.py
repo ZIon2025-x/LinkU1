@@ -2044,7 +2044,13 @@ def create_onboarding_session(
             )
         
         # 创建 AccountSession 用于嵌入式组件
-        onboarding_session = create_account_session_safe(account.id)
+        # disable_stripe_user_authentication=True 跳过 Stripe 认证页面（Custom/V2 账户推荐）
+        # 参考: https://docs.stripe.com/connect/get-started-connect-embedded-components
+        onboarding_session = create_account_session_safe(
+            account.id,
+            enable_account_onboarding=True,
+            disable_stripe_user_authentication=True
+        )
         
         return {
             "client_secret": onboarding_session.client_secret
@@ -2165,8 +2171,11 @@ def create_onboarding_session(
             }
         
         # 创建新的 AccountSession（每次调用都新建，避免前端复用导致 "already been claimed"）
+        # disable_stripe_user_authentication=True 跳过 Stripe 认证页面（Custom 账户推荐）
+        # 参考: https://docs.stripe.com/connect/get-started-connect-embedded-components
         onboarding_session = create_account_session_safe(
-            account.id, enable_account_onboarding=True
+            account.id, enable_account_onboarding=True,
+            disable_stripe_user_authentication=True
         )
         return {
             "account_id": account.id,

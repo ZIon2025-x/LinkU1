@@ -76,9 +76,11 @@
             android:windowSoftInputMode="adjustPan" />
 
         <!-- Stripe Connect Onboarding Activity -->
+        <!-- configChanges 防止 Stripe 认证 WebView 返回时 Activity 被销毁重建 -->
         <activity
             android:name=".StripeConnectOnboardingActivity"
             android:exported="false"
+            android:configChanges="orientation|screenSize|screenLayout|keyboardHidden|keyboard|navigation|uiMode"
             android:theme="@style/Theme.MaterialComponents.Light.NoActionBar" />
 
         <!-- Don't delete the meta-data below.

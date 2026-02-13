@@ -102,11 +102,15 @@ class MainActivity : FlutterActivity() {
                     val args = call.arguments as? Map<*, *>
                     val publishableKey = args?.get("publishableKey") as? String
                     val clientSecret = args?.get("clientSecret") as? String
+                    val apiBaseUrl = args?.get("apiBaseUrl") as? String
+                    val authToken = args?.get("authToken") as? String
                     
                     if (publishableKey != null && clientSecret != null) {
                         val intent = Intent(this, StripeConnectOnboardingActivity::class.java).apply {
                             putExtra("publishableKey", publishableKey)
                             putExtra("clientSecret", clientSecret)
+                            putExtra("apiBaseUrl", apiBaseUrl)
+                            putExtra("authToken", authToken)
                         }
                         @Suppress("DEPRECATION")
                         startActivityForResult(intent, STRIPE_CONNECT_REQUEST)
