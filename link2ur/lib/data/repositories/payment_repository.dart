@@ -235,6 +235,17 @@ class PaymentRepository {
     return response.data!['url'] as String? ?? '';
   }
 
+  /// 为已有账户创建新的 onboarding session（每次打开入驻页前调用，获取新的 client_secret，避免 Stripe "already been claimed"）
+  Future<Map<String, dynamic>> createStripeConnectOnboardingSession() async {
+    final response = await _apiService.post<Map<String, dynamic>>(
+      ApiEndpoints.stripeConnectOnboardingSession,
+    );
+    if (!response.isSuccess || response.data == null) {
+      throw PaymentException(response.message ?? '获取入驻会话失败');
+    }
+    return response.data!;
+  }
+
   /// 获取Stripe Connect状态
   Future<StripeConnectStatus> getStripeConnectStatus() async {
     final response = await _apiService.get<Map<String, dynamic>>(

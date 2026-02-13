@@ -67,16 +67,33 @@ class _StripeConnectOnboardingViewState
           status.chargesEnabled) {
         // 账户已完成设置 → 加载详情
         await _loadAccountDetails();
-      } else if (status.clientSecret != null &&
-          status.clientSecret!.isNotEmpty) {
-        // 后端已返回 client_secret（账户已存在但需要继续 onboarding）
-        await _startNativeOnboarding(status.clientSecret!);
-      } else if (status.accountId == null) {
-        // 账户不存在，需要创建
-        await _createOnboardingSession();
+      } else if (status.accountId != null) {
+        // 账户已存在但需要继续 onboarding：每次打开都请求新的 AccountSession，避免 "already been claimed"
+        await _requestFreshOnboardingSessionAndOpen();
       } else {
-        // 账户存在但没有 client_secret（异常情况），尝试创建 onboarding session
+        // 账户不存在，需要创建（create-embedded 会返回新的 client_secret）
         await _createOnboardingSession();
+      }
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _viewState = _ViewState.error;
+        _error = _extractErrorMessage(e.toString());
+      });
+    }
+  }
+
+  /// 已有账户：请求新的 onboarding session 并打开原生页（避免复用已 claim 的 client_secret）
+  Future<void> _requestFreshOnboardingSessionAndOpen() async {
+    try {
+      final result = await _paymentRepository.createStripeConnectOnboardingSession();
+      if (!mounted) return;
+      final clientSecret = result['client_secret'] as String?;
+      if (clientSecret != null && clientSecret.isNotEmpty) {
+        await _startNativeOnboarding(clientSecret);
+      } else {
+        // 账户可能已完成
+        _loadOnboardingSession();
       }
     } catch (e) {
       if (!mounted) return;

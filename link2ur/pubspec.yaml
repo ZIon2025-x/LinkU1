@@ -89,7 +89,8 @@ dependencies:
   # App Review
   in_app_review: ^2.0.9
 
-  # 加密
+  # 加密 / HMAC（移动端请求签名）
+  crypto: ^3.0.3
   encrypt: ^5.0.3
 
   # 原生启动画面

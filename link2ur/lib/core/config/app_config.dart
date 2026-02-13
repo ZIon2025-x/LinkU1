@@ -35,6 +35,11 @@ class AppConfig {
     }
   }
 
+  /// 移动端请求签名密钥（与后端 MOBILE_APP_SECRET 一致，用于 X-App-Signature）
+  /// 通过 --dart-define=MOBILE_APP_SECRET=xxx 传入，不传则不发签名（后端会 fallback 会话验证但打 WARNING）
+  static String get mobileAppSecret =>
+      const String.fromEnvironment('MOBILE_APP_SECRET', defaultValue: '');
+
   /// Stripe公钥
   String get stripePublishableKey {
     switch (_environment) {

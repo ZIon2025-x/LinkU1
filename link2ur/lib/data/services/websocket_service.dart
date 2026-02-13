@@ -75,8 +75,16 @@ class WebSocketService extends WidgetsBindingObserver {
         return;
       }
 
-      final wsUrl = '${AppConfig.instance.wsUrl}/ws?token=${Uri.encodeComponent(token)}';
-      AppLogger.info('Connecting to WebSocket: ${AppConfig.instance.wsUrl}/ws');
+      final userId = StorageService.instance.getUserId();
+      if (userId == null || userId.isEmpty) {
+        AppLogger.warning('Cannot connect WebSocket: No userId');
+        _isConnecting = false;
+        return;
+      }
+
+      // 后端 WebSocket 路径为 /ws/chat/{user_id}，需与 session 中的 user_id 一致
+      final wsUrl = '${AppConfig.instance.wsUrl}/ws/chat/$userId?token=${Uri.encodeComponent(token)}';
+      AppLogger.info('Connecting to WebSocket: ${AppConfig.instance.wsUrl}/ws/chat/$userId');
 
       _channel = ws_config.createWebSocketChannel(
         Uri.parse(wsUrl),

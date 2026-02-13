@@ -2164,9 +2164,10 @@ def create_onboarding_session(
                 "message": "账户已完成设置"
             }
         
-        # 创建 AccountSession 用于嵌入式 onboarding
-        onboarding_session = create_account_session_safe(account.id)
-        
+        # 创建新的 AccountSession（每次调用都新建，避免前端复用导致 "already been claimed"）
+        onboarding_session = create_account_session_safe(
+            account.id, enable_account_onboarding=True
+        )
         return {
             "account_id": account.id,
             "client_secret": onboarding_session.client_secret,

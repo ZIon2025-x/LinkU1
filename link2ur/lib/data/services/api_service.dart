@@ -1,5 +1,7 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:collection';
+import 'package:crypto/crypto.dart';
 import 'package:dio/dio.dart';
 
 import '../../core/config/app_config.dart';
@@ -114,6 +116,19 @@ class ApiService {
     if (token != null && token.isNotEmpty) {
       options.headers['Authorization'] = 'Bearer $token';
       options.headers['X-Session-ID'] = token;
+
+      // 移动端签名（与后端 MOBILE_APP_SECRET 一致时消除「缺少签名或时间戳」WARNING）
+      final secret = AppConfig.mobileAppSecret;
+      if (secret.isNotEmpty) {
+        final timestamp = (DateTime.now().toUtc().millisecondsSinceEpoch ~/ 1000).toString();
+        final message = utf8.encode('$token$timestamp');
+        final key = utf8.encode(secret);
+        final hmacSha256 = Hmac(sha256, key);
+        final digest = hmacSha256.convert(message);
+        final signature = digest.bytes.map((b) => b.toRadixString(16).padLeft(2, '0')).join();
+        options.headers['X-App-Timestamp'] = timestamp;
+        options.headers['X-App-Signature'] = signature;
+      }
 
       // 检测到有效 token（用户重新登录），自动重置认证失败标志
       if (_authFailureNotified) {
