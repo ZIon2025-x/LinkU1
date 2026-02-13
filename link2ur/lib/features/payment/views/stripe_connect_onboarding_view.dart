@@ -12,7 +12,6 @@ import '../../../core/widgets/buttons.dart';
 import '../../../core/widgets/loading_view.dart';
 import '../../../data/models/payment.dart';
 import '../../../data/repositories/payment_repository.dart';
-import '../../../data/services/storage_service.dart';
 import '../../../data/services/stripe_connect_service.dart';
 
 /// Stripe Connect 入驻页
@@ -147,20 +146,15 @@ class _StripeConnectOnboardingViewState
       // 优先从 AppConfig 获取（通过 --dart-define 传入）
       var publishableKey = AppConfig.instance.stripePublishableKey;
       
-      // 如果未配置，回退到 iOS 项目中的硬编码 Key (仅作为最后的手段)
+      // 如果未配置，根据当前环境选择回退 key
+      // ⚠️ publishable key 必须与后端 STRIPE_SECRET_KEY 的模式匹配（同为 test 或同为 live）
       if (publishableKey.isEmpty) {
         publishableKey = "pk_live_51SePW15vvXfvzqMhSEXu7QnduEi7axoPiUMc9gNiV8KFAa82b6rFrrbOFW3gmTiaOETlI3gA0SsAz18SSokFKGLx00bALMvCAg";
       }
 
-      // 获取 auth token 和 API base URL，供原生 Activity 刷新 client_secret 使用
-      final authToken = await StorageService.instance.getAccessToken();
-      final apiBaseUrl = AppConfig.instance.baseUrl;
-
       final result = await StripeConnectService.instance.openOnboarding(
         publishableKey: publishableKey,
         clientSecret: clientSecret,
-        apiBaseUrl: apiBaseUrl,
-        authToken: authToken,
       );
 
       if (!mounted) return;

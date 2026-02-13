@@ -107,6 +107,9 @@ dependencies {
     implementation("androidx.appcompat:appcompat:1.7.0")
     // Stripe Connect
     implementation("com.stripe:connect:22.8.0")
+    // ViewModel (Stripe 文档推荐 EmbeddedComponentManager 放在 ViewModel 中)
+    implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:2.8.7")
+    implementation("androidx.activity:activity-ktx:1.9.3")
 }
 
 flutter {

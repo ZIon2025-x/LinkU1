@@ -12,9 +12,7 @@ class StripeConnectService {
   /// 打开原生 Onboarding 页面
   /// 
   /// [publishableKey] Stripe Publishable Key
-  /// [clientSecret] AccountSession client_secret
-  /// [apiBaseUrl] 后端 API 基础 URL（供原生 Activity 刷新 client_secret 用）
-  /// [authToken] 用户认证 token（供原生 Activity 调用后端 API 用）
+  /// [clientSecret] AccountSession client_secret（Flutter 层在调用前已获取 fresh secret）
   /// 
   /// 返回结果：
   /// - `completed`: 用户完成入驻
@@ -23,15 +21,11 @@ class StripeConnectService {
   Future<String> openOnboarding({
     required String publishableKey,
     required String clientSecret,
-    String? apiBaseUrl,
-    String? authToken,
   }) async {
     try {
       final result = await _channel.invokeMethod('openOnboarding', {
         'publishableKey': publishableKey,
         'clientSecret': clientSecret,
-        'apiBaseUrl': apiBaseUrl,
-        'authToken': authToken,
       });
       
       if (result is Map) {

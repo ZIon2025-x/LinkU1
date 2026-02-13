@@ -707,7 +707,7 @@ def create_connect_account(
                     data={
                         "contact_email": current_user.email or f"user_{current_user.id}@link2ur.com",
                         "display_name": current_user.name or f"User {current_user.id}",
-                        "dashboard": "express",  # Express Dashboard
+                        "dashboard": "none",  # No Stripe Dashboard（Custom 账户）— 无需 Stripe User Authentication
                         "identity": {
                             "country": "GB",  # 默认使用 GB（与 sample code 一致），用户可以在 onboarding 时更改
                             "entity_type": "individual"  # 默认为个人，用户可以在 onboarding 时更改（sample code 使用 company，但我们使用 individual 更符合任务接受人的场景）
@@ -1065,7 +1065,7 @@ def create_connect_account_embedded(
                     data={
                         "contact_email": current_user.email or f"user_{current_user.id}@link2ur.com",
                         "display_name": current_user.name or f"User {current_user.id}",
-                        "dashboard": "express",  # Express Dashboard
+                        "dashboard": "none",  # No Stripe Dashboard（Custom 账户）— 无需 Stripe User Authentication
                         "identity": {
                             "country": "GB",  # 默认使用 GB（与 sample code 一致），用户可以在 onboarding 时更改
                             "entity_type": "individual"  # 默认为个人，用户可以在 onboarding 时更改（sample code 使用 company，但我们使用 individual 更符合任务接受人的场景）

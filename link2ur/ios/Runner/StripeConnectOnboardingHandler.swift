@@ -32,19 +32,16 @@ class StripeConnectOnboardingHandler: NSObject, AccountOnboardingControllerDeleg
             }
         )
         
-        // Configure collection options (optional, matching iOS native pattern if needed)
-        // var collectionOptions = AccountCollectionOptions()
-        // collectionOptions.fields = .eventuallyDue
-        // collectionOptions.futureRequirements = .include
+        // 与 iOS 原生项目一致的 collectionOptions（收集 eventuallyDue + 包含 futureRequirements）
+        var collectionOptions = AccountCollectionOptions()
+        collectionOptions.fields = .eventuallyDue
+        collectionOptions.futureRequirements = .include
         
-        // Create Controller
-        // Note: In newer Stripe iOS SDKs, createAccountOnboardingController might have different signatures.
-        // We assume standard usage here.
         let controller = embeddedComponentManager!.createAccountOnboardingController(
             fullTermsOfServiceUrl: termsURL,
             recipientTermsOfServiceUrl: termsURL,
-            privacyPolicyUrl: privacyURL
-            // collectionOptions: collectionOptions
+            privacyPolicyUrl: privacyURL,
+            collectionOptions: collectionOptions
         )
         
         controller.delegate = self
