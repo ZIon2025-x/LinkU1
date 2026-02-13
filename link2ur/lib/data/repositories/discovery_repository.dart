@@ -45,4 +45,16 @@ class DiscoveryRepository {
     final results = response.data!['results'] as List<dynamic>? ?? [];
     return results.cast<Map<String, dynamic>>();
   }
+
+  /// 获取与当前用户相关的可关联内容（发帖关联弹窗中搜索框下方展示）
+  Future<List<Map<String, dynamic>>> getLinkableContentForUser() async {
+    final response = await _apiService.get<Map<String, dynamic>>(
+      ApiEndpoints.forumLinkableForUser,
+    );
+    if (!response.isSuccess || response.data == null) {
+      return [];
+    }
+    final results = response.data!['results'] as List<dynamic>? ?? [];
+    return results.cast<Map<String, dynamic>>();
+  }
 }

@@ -307,6 +307,9 @@ class _BannerItem extends StatelessWidget {
                   imagePath!,
                   fit: BoxFit.cover,
                   alignment: imageAlignment,
+                  // 限制解码尺寸，避免全分辨率占用 GPU 纹理内存
+                  // banner 容器高 162px × 最大 3x dpr ≈ 486px
+                  cacheWidth: 800,
                   errorBuilder: (context, error, stackTrace) {
                     return Container(
                       decoration: BoxDecoration(

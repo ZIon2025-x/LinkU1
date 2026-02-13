@@ -20,6 +20,7 @@ import '../../../core/widgets/location_picker.dart';
 import '../../../data/models/flea_market.dart';
 import '../../../data/models/forum.dart';
 import '../../../data/models/task.dart';
+import '../../../data/models/user.dart';
 import '../../../data/repositories/discovery_repository.dart';
 import '../../../data/repositories/flea_market_repository.dart';
 import '../../../data/repositories/forum_repository.dart';
@@ -86,6 +87,8 @@ class _PublishContentState extends State<_PublishContent>
   final ValueNotifier<String?> _taskCategoryNotifier = ValueNotifier(null);
   String _taskCurrency = 'GBP';
   DateTime? _taskDeadline;
+  final List<XFile> _taskImages = [];
+  static const int _kTaskMaxImages = 5;
 
   // ── 闲置表单 ──
   final _fleaFormKey = GlobalKey<FormState>();
@@ -179,12 +182,31 @@ class _PublishContentState extends State<_PublishContent>
       ];
 
   // ==================== 提交 ====================
-  void _submitTask() {
+  Future<void> _submitTask() async {
     if (!_taskFormKey.currentState!.validate()) return;
     if (_taskCategoryNotifier.value == null) {
       AppFeedback.showWarning(context, context.l10n.feedbackSelectCategory);
       return;
     }
+    List<String> imageUrls = [];
+    if (_taskImages.isNotEmpty) {
+      setState(() => _postUploadingImages = true);
+      try {
+        final repo = context.read<TaskRepository>();
+        for (final file in _taskImages) {
+          final url = await repo.uploadTaskImage(file.path);
+          imageUrls.add(url);
+        }
+      } catch (e) {
+        if (mounted) {
+          setState(() => _postUploadingImages = false);
+          AppFeedback.showError(context, context.l10n.createTaskImageUploadFailed);
+        }
+        return;
+      }
+      if (mounted) setState(() => _postUploadingImages = false);
+    }
+    if (!mounted) return;
     final reward = double.tryParse(_taskRewardCtrl.text) ?? 0;
     final request = CreateTaskRequest(
       title: _taskTitleCtrl.text.trim(),
@@ -196,6 +218,7 @@ class _PublishContentState extends State<_PublishContent>
       latitude: _taskLatitude,
       longitude: _taskLongitude,
       deadline: _taskDeadline,
+      images: imageUrls,
     );
     context.read<CreateTaskBloc>().add(CreateTaskSubmitted(request));
   }
@@ -281,8 +304,10 @@ class _PublishContentState extends State<_PublishContent>
     switch (type) {
       case _PublishType.task:
         _submitTask();
+        break;
       case _PublishType.fleaMarket:
         _submitFleaMarket();
+        break;
       case _PublishType.post:
         _submitPost();
         break;
@@ -360,6 +385,27 @@ class _PublishContentState extends State<_PublishContent>
 
   void _removePostImage(int index) => setState(() => _postImages.removeAt(index));
 
+  Future<void> _pickTaskImages() async {
+    try {
+      final files = await _imagePicker.pickMultiImage(
+        maxWidth: 1024,
+        maxHeight: 1024,
+        imageQuality: 85,
+      );
+      if (files.isNotEmpty && mounted) {
+        setState(() {
+          for (final f in files) {
+            if (_taskImages.length < _kTaskMaxImages) _taskImages.add(f);
+          }
+        });
+      }
+    } catch (e) {
+      if (mounted) AppFeedback.showError(context, e.toString());
+    }
+  }
+
+  void _removeTaskImage(int index) => setState(() => _taskImages.removeAt(index));
+
   void _clearPostLinked() => setState(() {
     _postLinkedType = null;
     _postLinkedId = null;
@@ -379,18 +425,18 @@ class _PublishContentState extends State<_PublishContent>
     }
   }
 
-  bool get _isSubmitting {
-    final isTaskSubmitting = context.watch<CreateTaskBloc>().state.isSubmitting;
-    final isFleaSubmitting = context.watch<FleaMarketBloc>().state.isSubmitting;
-    final isPostSubmitting = context.watch<ForumBloc>().state.isCreatingPost;
-    return isTaskSubmitting || isFleaSubmitting || isPostSubmitting || _postUploadingImages;
-  }
-
   // ==================== Build ====================
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final bottomPadding = MediaQuery.of(context).padding.bottom;
+    // 必须在 build 内使用 context.select，不能放在 getter 或子 build 里
+    final isTaskSubmitting = context.select<CreateTaskBloc, bool>((b) => b.state.isSubmitting);
+    final isFleaSubmitting = context.select<FleaMarketBloc, bool>((b) => b.state.isSubmitting);
+    final isPostSubmitting = context.select<ForumBloc, bool>((b) => b.state.isCreatingPost);
+    final isSubmitting = isTaskSubmitting || isFleaSubmitting || isPostSubmitting || _postUploadingImages;
+    final postCategories = context.select<ForumBloc, List<ForumCategory>>((b) => b.state.categories);
+    final postCurrentUser = context.select<AuthBloc, User?>((b) => b.state.user);
 
     return MultiBlocListener(
       listeners: [
@@ -448,7 +494,7 @@ class _PublishContentState extends State<_PublishContent>
           final isDesktop = ResponsiveUtils.isDesktop(context);
           final bodyContent = _selectedType == null
               ? _buildTypePicker(isDark, bottomPadding)
-              : _buildFormView(isDark, bottomPadding);
+              : _buildFormView(isDark, bottomPadding, isSubmitting, postCategories, postCurrentUser);
           return Scaffold(
             backgroundColor: isDark ? AppColors.backgroundDark : AppColors.backgroundLight,
             body: SafeArea(
@@ -578,7 +624,13 @@ class _PublishContentState extends State<_PublishContent>
   }
 
   // ==================== 表单页（含返回 + 表单 + 底部栏）====================
-  Widget _buildFormView(bool isDark, double bottomPadding) {
+  Widget _buildFormView(
+    bool isDark,
+    double bottomPadding,
+    bool isSubmitting,
+    List<ForumCategory> postCategories,
+    User? postCurrentUser,
+  ) {
     final type = _selectedType!;
     return Column(
       children: [
@@ -591,11 +643,11 @@ class _PublishContentState extends State<_PublishContent>
             child: switch (type) {
               _PublishType.task => _buildTaskForm(isDark),
               _PublishType.fleaMarket => _buildFleaMarketForm(isDark),
-              _PublishType.post => _buildPostForm(isDark),
+              _PublishType.post => _buildPostForm(isDark, postCategories, postCurrentUser),
             },
           ),
         ),
-        _buildBottomBar(isDark, bottomPadding),
+        _buildBottomBar(isDark, bottomPadding, isSubmitting),
       ],
     );
   }
@@ -699,9 +751,7 @@ class _PublishContentState extends State<_PublishContent>
   }
 
   // ==================== 底部操作栏 ====================
-  Widget _buildBottomBar(bool isDark, double bottomPadding) {
-    final isSubmitting = _isSubmitting;
-
+  Widget _buildBottomBar(bool isDark, double bottomPadding, bool isSubmitting) {
     return Container(
       padding: EdgeInsets.only(
         left: AppSpacing.lg,
@@ -805,6 +855,10 @@ class _PublishContentState extends State<_PublishContent>
             maxLength: 2000,
             validator: (value) => Validators.validateDescription(value, l10n: context.l10n),
           ),
+          AppSpacing.vMd,
+
+          _sectionTitle(context.l10n.createTaskImages),
+          _buildTaskImagePicker(isDark),
           AppSpacing.vMd,
 
           _sectionTitle(context.l10n.createTaskReward),
@@ -1011,13 +1065,15 @@ class _PublishContentState extends State<_PublishContent>
   }
 
   // ==================== 帖子发布表单 ====================
-  Widget _buildPostForm(bool isDark) {
-    final forumState = context.watch<ForumBloc>().state;
-    final currentUser = context.watch<AuthBloc>().state.user;
-
+  /// [categories] 与 [currentUser] 必须在 build 内通过 context.select 取得后传入，避免在子 build 里用 select 导致崩溃
+  Widget _buildPostForm(
+    bool isDark,
+    List<ForumCategory> categories,
+    User? currentUser,
+  ) {
     // 只展示当前用户有权发布的板块（可见且非仅管理员发帖）
     final postableCategories = ForumPermissionHelper.filterPostableCategories(
-      forumState.categories,
+      categories,
       currentUser,
     );
 
@@ -1328,6 +1384,74 @@ class _PublishContentState extends State<_PublishContent>
     );
   }
 
+  // ==================== 任务图片选择器（最多 5 张） ====================
+  Widget _buildTaskImagePicker(bool isDark) {
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: [
+        ..._taskImages.asMap().entries.map((entry) {
+          return Stack(
+            children: [
+              ClipRRect(
+                borderRadius: AppRadius.allSmall,
+                child: CrossPlatformImage(xFile: entry.value, width: 80, height: 80, fit: BoxFit.cover),
+              ),
+              Positioned(
+                top: -4,
+                right: -4,
+                child: GestureDetector(
+                  onTap: () => _removeTaskImage(entry.key),
+                  child: Container(
+                    width: 22,
+                    height: 22,
+                    decoration: const BoxDecoration(color: AppColors.error, shape: BoxShape.circle),
+                    child: const Icon(Icons.close, size: 14, color: Colors.white),
+                  ),
+                ),
+              ),
+            ],
+          );
+        }),
+        if (_taskImages.length < _kTaskMaxImages)
+          GestureDetector(
+            onTap: _pickTaskImages,
+            child: Container(
+              width: 80,
+              height: 80,
+              decoration: BoxDecoration(
+                color: isDark ? Colors.white.withValues(alpha: 0.06) : AppColors.backgroundLight,
+                borderRadius: AppRadius.allSmall,
+                border: Border.all(
+                  color: isDark
+                      ? Colors.white.withValues(alpha: 0.12)
+                      : AppColors.textTertiaryLight.withValues(alpha: 0.4),
+                ),
+              ),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.add_photo_alternate_outlined,
+                    size: 28,
+                    color: isDark ? AppColors.textTertiaryDark : AppColors.textTertiaryLight,
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    '${_taskImages.length}/$_kTaskMaxImages',
+                    style: TextStyle(
+                      fontSize: 10,
+                      color: isDark ? AppColors.textTertiaryDark : AppColors.textTertiaryLight,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+
   // ==================== 帖子图片选择器（最多 5 张） ====================
   Widget _buildPostImagePicker(bool isDark) {
     return Wrap(
@@ -1424,10 +1548,15 @@ class _PublishContentState extends State<_PublishContent>
   Future<void> _showPostLinkSearchDialog(bool isDark) async {
     final queryCtrl = TextEditingController();
     final discoveryRepo = context.read<DiscoveryRepository>();
+    List<Map<String, dynamic>> userRelated = [];
+    try {
+      userRelated = await discoveryRepo.getLinkableContentForUser();
+    } catch (_) {}
+    if (!mounted) return;
+
     List<Map<String, dynamic>> results = [];
     bool loading = false;
 
-    if (!mounted) return;
     await showDialog<void>(
       context: context,
       builder: (ctx) {
@@ -1450,6 +1579,34 @@ class _PublishContentState extends State<_PublishContent>
                   AppFeedback.showError(ctx, e.toString());
                 }
               }
+            }
+            Widget buildLinkableList(List<Map<String, dynamic>> list, double height) {
+              return SizedBox(
+                height: height,
+                child: ListView.builder(
+                  shrinkWrap: true,
+                  itemCount: list.length,
+                  itemBuilder: (context, i) {
+                    final r = list[i];
+                    final type = r['item_type'] as String? ?? '';
+                    final name = r['name'] as String? ?? r['title'] as String? ?? '未命名';
+                    final id = r['item_id']?.toString() ?? '';
+                    final subtitle = r['subtitle'] as String? ?? type;
+                    return ListTile(
+                      title: Text(name),
+                      subtitle: Text(subtitle),
+                      onTap: () {
+                        setState(() {
+                          _postLinkedType = type;
+                          _postLinkedId = id;
+                          _postLinkedName = name;
+                        });
+                        Navigator.of(ctx).pop();
+                      },
+                    );
+                  },
+                ),
+              );
             }
             return AlertDialog(
               title: const Text('关联内容'),
@@ -1479,31 +1636,38 @@ class _PublishContentState extends State<_PublishContent>
                       ],
                     ),
                     const SizedBox(height: 12),
-                    if (loading) const Center(child: CircularProgressIndicator()),
-                    if (!loading && results.isNotEmpty)
-                      Flexible(
-                        child: ListView.builder(
-                          itemCount: results.length,
-                          itemBuilder: (context, i) {
-                            final r = results[i];
-                            final type = r['item_type'] as String? ?? '';
-                            final name = r['name'] as String? ?? r['title'] as String? ?? '未命名';
-                            final id = r['item_id']?.toString() ?? '';
-                            return ListTile(
-                              title: Text(name),
-                              subtitle: Text(type),
-                              onTap: () {
-                                setState(() {
-                                  _postLinkedType = type;
-                                  _postLinkedId = id;
-                                  _postLinkedName = name;
-                                });
-                                Navigator.of(ctx).pop();
-                              },
-                            );
-                          },
+                    if (userRelated.isNotEmpty) ...[
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          '与我相关',
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                          ),
                         ),
                       ),
+                      const SizedBox(height: 4),
+                      buildLinkableList(userRelated, 200),
+                      const SizedBox(height: 12),
+                    ],
+                    if (loading) const Center(child: CircularProgressIndicator()),
+                    if (!loading && results.isNotEmpty) ...[
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          '搜索结果',
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      buildLinkableList(results, 220),
+                    ],
                     if (!loading && results.isEmpty && queryCtrl.text.trim().isNotEmpty)
                       const Padding(
                         padding: EdgeInsets.all(12),

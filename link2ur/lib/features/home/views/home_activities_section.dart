@@ -7,6 +7,45 @@ String _currencySymbol(String? currency) {
   return '$currency ';
 }
 
+/// 热门活动加载骨架（无活动时隐藏区域，加载中显示此骨架）
+class _HomeActivitiesSkeleton extends StatelessWidget {
+  const _HomeActivitiesSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final bg = isDark
+        ? AppColors.cardBackgroundDark
+        : AppColors.cardBackgroundLight;
+    return SizedBox(
+      height: 164,
+      child: ListView(
+        scrollDirection: Axis.horizontal,
+        clipBehavior: Clip.none,
+        padding: const EdgeInsets.only(
+          left: AppSpacing.md,
+          right: AppSpacing.lg,
+          top: 4,
+          bottom: 10,
+        ),
+        children: List.generate(
+          3,
+          (_) => Padding(
+            padding: const EdgeInsets.only(right: 12),
+            child: Container(
+              width: 180,
+              decoration: BoxDecoration(
+                color: bg,
+                borderRadius: AppRadius.allLarge,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 /// 对标iOS: PopularActivitiesSection - 热门活动区域
 class _PopularActivitiesSection extends StatelessWidget {
   const _PopularActivitiesSection();
@@ -166,6 +205,114 @@ class _ActivityCard extends StatelessWidget {
 // Discovery Feed 瀑布流 — 替代旧的 _RecentActivitiesSection
 // =============================================================================
 
+/// 发现更多加载骨架 — 两列卡片占位（与热门活动骨架风格一致）
+class _DiscoveryFeedSkeleton extends StatelessWidget {
+  const _DiscoveryFeedSkeleton({required this.horizontalPadding});
+  final double horizontalPadding;
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final bg = isDark
+        ? AppColors.cardBackgroundDark
+        : AppColors.cardBackgroundLight;
+    final place = isDark
+        ? Colors.white.withValues(alpha: 0.06)
+        : Colors.black.withValues(alpha: 0.06);
+    const spacing = 10.0;
+    const crossCount = 2;
+    const itemCount = 6;
+
+    return Padding(
+      padding: EdgeInsets.symmetric(
+        horizontal: horizontalPadding == 0 ? 10 : horizontalPadding,
+      ),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final width = (constraints.maxWidth - spacing) / crossCount;
+          final imageHeight = width * (3 / 4);
+          return Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              for (int row = 0; row < (itemCount / crossCount).ceil(); row++) ...[
+                if (row > 0) const SizedBox(height: spacing),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    for (int col = 0; col < crossCount; col++) ...[
+                      if (col > 0) const SizedBox(width: spacing),
+                      SizedBox(
+                        width: width,
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: bg,
+                            borderRadius:
+                                BorderRadius.circular(_kDiscoveryCardRadius),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Container(
+                                height: imageHeight,
+                                width: double.infinity,
+                                decoration: BoxDecoration(
+                                  color: place,
+                                  borderRadius: const BorderRadius.vertical(
+                                    top: Radius.circular(_kDiscoveryCardRadius),
+                                  ),
+                                ),
+                              ),
+                              Padding(
+                                padding: const EdgeInsets.fromLTRB(10, 8, 10, 10),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Container(
+                                      height: 14,
+                                      width: 56,
+                                      decoration: BoxDecoration(
+                                        color: place,
+                                        borderRadius: BorderRadius.circular(4),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 8),
+                                    Container(
+                                      height: 12,
+                                      width: double.infinity,
+                                      decoration: BoxDecoration(
+                                        color: place,
+                                        borderRadius: BorderRadius.circular(4),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 6),
+                                    Container(
+                                      height: 12,
+                                      width: 100,
+                                      decoration: BoxDecoration(
+                                        color: place,
+                                        borderRadius: BorderRadius.circular(4),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ],
+            ],
+          );
+        },
+      ),
+    );
+  }
+}
+
 /// 发现更多 — Sliver 版本瀑布流（避免 shrinkWrap: true 破坏视口优化）
 /// 旧方案：MasonryGridView + shrinkWrap: true + NeverScrollableScrollPhysics
 ///   → 所有条目立即全部 layout，无视口裁剪，items 越多越卡
@@ -182,11 +329,8 @@ class _SliverDiscoveryFeed extends StatelessWidget {
           prev.isLoadingDiscovery != curr.isLoadingDiscovery,
       builder: (context, state) {
         if (state.isLoadingDiscovery && state.discoveryItems.isEmpty) {
-          return const SliverToBoxAdapter(
-            child: Padding(
-              padding: AppSpacing.allMd,
-              child: Center(child: CircularProgressIndicator()),
-            ),
+          return SliverToBoxAdapter(
+            child: _DiscoveryFeedSkeleton(horizontalPadding: horizontalPadding),
           );
         }
 

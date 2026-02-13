@@ -285,7 +285,7 @@ class _PointsTab extends StatelessWidget {
 
   void _showRedemptionCodeDialog(BuildContext context) {
     final controller = TextEditingController();
-    showDialog(
+    showDialog<void>(
       context: context,
       builder: (ctx) => AlertDialog(
         title: Text(context.l10n.couponEnterInviteCodeTitle),
@@ -315,7 +315,7 @@ class _PointsTab extends StatelessWidget {
           ),
         ],
       ),
-    );
+    ).then((_) => controller.dispose());
   }
 }
 

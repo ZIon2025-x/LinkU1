@@ -204,6 +204,23 @@ class TaskRepository {
   Future<Task> getTaskDetail(int id, {CancelToken? cancelToken}) =>
       getTaskById(id, cancelToken: cancelToken);
 
+  /// 上传任务图片（创建任务前调用，返回图片 URL）
+  Future<String> uploadTaskImage(String filePath) async {
+    final response = await _apiService.uploadFile<Map<String, dynamic>>(
+      '${ApiEndpoints.uploadImage}?category=task',
+      filePath: filePath,
+      fieldName: 'image',
+    );
+    if (!response.isSuccess || response.data == null) {
+      throw TaskException(response.message ?? '上传图片失败');
+    }
+    final url = response.data!['url'] as String?;
+    if (url == null || url.isEmpty) {
+      throw const TaskException('上传成功但未返回图片地址');
+    }
+    return url;
+  }
+
   /// 创建任务
   Future<Task> createTask(CreateTaskRequest request) async {
     final response = await _apiService.post<Map<String, dynamic>>(

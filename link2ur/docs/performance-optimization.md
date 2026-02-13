@@ -558,3 +558,19 @@ Release/Profile 模式下 `kDebugMode` 为 false，日志相关代码不执行�
 - **AnimatedContainer + boxShadow** 是 Flutter 最昂贵的动画之一 — GPU 需要在每个动画帧重新计算高斯模糊。AppCard 被全局使用，影响所有卡片列表
 - **ValueKey** 让 Flutter 在列表增删时精确匹配元素，避免整棵子树重建
 - **ValueListenableBuilder** 比 setState 更轻量 — 只重建监听该 ValueNotifier 的子树
+
+---
+
+## Round 4 — 资源泄漏 + 精确订阅 + 图片缓存 (2026-02-13)
+
+### 已实施
+
+| # | 优化项 | 文件 | 说明 |
+|---|--------|------|------|
+| 20 | TextEditingController 泄漏修复 | `coupon_points_view.dart` | showDialog 后 `.then((_) => controller.dispose())` |
+| 21 | initState 延迟 BLoC dispatch | `activity_detail_view.dart` | `ActivityLoadTimeSlots` 包裹 `addPostFrameCallback`，避免首帧前触发状态变更 |
+| 22 | Image.asset cacheWidth | `home_widgets.dart` | Banner 图 `cacheWidth: 800`，限制解码纹理尺寸 |
+| 23 | 视频缩略图 maxWidth/maxHeight | `video_player_view.dart` | `CachedNetworkImageProvider` 添加 `maxWidth: 600, maxHeight: 400` |
+| — | context.watch → context.select | `publish_view.dart` (5处), `task_experts_intro_view.dart` | 精确订阅特定字段，避免无关状态变化触发重建 |
+| — | 清理未使用 import | `api_service.dart`, `edit_profile_view.dart`, `settings_bloc.dart` | 移除 3 个 unused import warnings |
+| — | 补充 const 构造 | `home_recommended_section.dart` (3处), `home_task_cards.dart` (2处), `forum_view.dart` (2处) | const 静态子组件避免重建 |

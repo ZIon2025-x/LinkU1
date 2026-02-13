@@ -464,8 +464,8 @@ class _NearbyTabState extends State<_NearbyTab> {
   Widget build(BuildContext context) {
     final isDesktop = ResponsiveUtils.isDesktop(context);
     if (_locationLoading) {
-      final body = const SkeletonTopImageCardList(itemCount: 3, imageHeight: 140);
-      return isDesktop ? ContentConstraint(child: body) : body;
+      const body = SkeletonTopImageCardList(itemCount: 3, imageHeight: 140);
+      return isDesktop ? const ContentConstraint(child: body) : body;
     }
 
     return BlocBuilder<HomeBloc, HomeState>(
@@ -476,7 +476,7 @@ class _NearbyTabState extends State<_NearbyTab> {
       builder: (context, state) {
         if (state.isLoading && state.nearbyTasks.isEmpty) {
           const body = SkeletonTopImageCardList(itemCount: 3, imageHeight: 140);
-          return isDesktop ? ContentConstraint(child: body) : body;
+          return isDesktop ? const ContentConstraint(child: body) : body;
         }
 
         if (state.nearbyTasks.isEmpty) {

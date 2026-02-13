@@ -7234,3 +7234,157 @@ async def search_linkable_content(
     
     return {"results": results}
 
+
+@router.get("/linkable-for-user")
+async def get_linkable_content_for_user(
+    request: Request = None,
+    db: AsyncSession = Depends(get_async_db_dependency),
+):
+    """获取与当前用户相关的可关联内容（发帖关联时在搜索框下方展示）
+    - 未登录返回空列表
+    - 已登录：我的服务、我的活动、我收藏的商品、我申请的排行榜等
+    """
+    current_user = None
+    try:
+        current_user = await get_current_user_secure_async_csrf(request, db)
+    except Exception:
+        pass
+    if not current_user:
+        return {"results": []}
+
+    results = []
+    limit_per_type = 5
+
+    # 我的达人服务（当前用户是达人且有名下服务）
+    expert_row = await db.execute(
+        select(models.TaskExpert.id).where(models.TaskExpert.user_id == current_user.id)
+    )
+    expert_id = expert_row.scalar_one_or_none()
+    if expert_id:
+        svc_query = (
+            select(
+                models.TaskExpertService.id,
+                models.TaskExpertService.service_name,
+                models.TaskExpertService.images,
+            )
+            .where(
+                models.TaskExpertService.expert_id == expert_id,
+                models.TaskExpertService.status == "active",
+            )
+            .limit(limit_per_type)
+        )
+        for row in (await db.execute(svc_query)).all():
+            thumb = None
+            if row.images:
+                if isinstance(row.images, list):
+                    thumb = row.images[0] if row.images else None
+                elif isinstance(row.images, str):
+                    try:
+                        parsed = json.loads(row.images)
+                        thumb = parsed[0] if isinstance(parsed, list) and parsed else None
+                    except Exception:
+                        pass
+            results.append({
+                "item_type": "service",
+                "item_id": str(row.id),
+                "name": row.service_name,
+                "title": row.service_name,
+                "subtitle": "我的服务",
+                "thumbnail": thumb,
+            })
+
+    # 我的活动（我发布的）
+    act_query = (
+        select(
+            models.Activity.id,
+            models.Activity.title,
+            models.Activity.images.label("activity_images"),
+        )
+        .where(
+            models.Activity.expert_id == current_user.id,
+            models.Activity.status.in_(["published", "registration_open"]),
+        )
+        .order_by(desc(models.Activity.created_at))
+        .limit(limit_per_type)
+    )
+    for row in (await db.execute(act_query)).all():
+        thumb = None
+        if row.activity_images:
+            if isinstance(row.activity_images, list):
+                thumb = row.activity_images[0] if row.activity_images else None
+            elif isinstance(row.activity_images, str):
+                try:
+                    parsed = json.loads(row.activity_images)
+                    thumb = parsed[0] if isinstance(parsed, list) and parsed else None
+                except Exception:
+                    pass
+        results.append({
+            "item_type": "activity",
+            "item_id": str(row.id),
+            "name": row.title,
+            "title": row.title,
+            "subtitle": "我的活动",
+            "thumbnail": thumb,
+        })
+
+    # 我收藏的跳蚤市场商品
+    fav_query = (
+        select(
+            models.FleaMarketItem.id,
+            models.FleaMarketItem.title,
+            models.FleaMarketItem.images,
+            models.FleaMarketItem.price,
+            models.FleaMarketItem.currency,
+        )
+        .join(models.FleaMarketFavorite, models.FleaMarketFavorite.item_id == models.FleaMarketItem.id)
+        .where(
+            models.FleaMarketFavorite.user_id == current_user.id,
+            models.FleaMarketItem.status == "active",
+        )
+        .limit(limit_per_type)
+    )
+    for row in (await db.execute(fav_query)).all():
+        thumb = None
+        if row.images:
+            if isinstance(row.images, list):
+                thumb = row.images[0] if row.images else None
+            elif isinstance(row.images, str):
+                try:
+                    parsed = json.loads(row.images)
+                    thumb = parsed[0] if isinstance(parsed, list) and parsed else None
+                except Exception:
+                    pass
+        results.append({
+            "item_type": "product",
+            "item_id": str(row.id),
+            "name": row.title,
+            "title": row.title,
+            "subtitle": f"{row.currency} {row.price:.2f}" if row.price else "收藏",
+            "thumbnail": thumb,
+        })
+
+    # 我申请的排行榜（已通过）
+    lb_query = (
+        select(
+            models.CustomLeaderboard.id,
+            models.CustomLeaderboard.name,
+            models.CustomLeaderboard.cover_image,
+        )
+        .where(
+            models.CustomLeaderboard.applicant_id == current_user.id,
+            models.CustomLeaderboard.status == "active",
+        )
+        .limit(limit_per_type)
+    )
+    for row in (await db.execute(lb_query)).all():
+        results.append({
+            "item_type": "ranking",
+            "item_id": str(row.id),
+            "name": row.name,
+            "title": row.name,
+            "subtitle": "排行榜",
+            "thumbnail": row.cover_image,
+        })
+
+    return {"results": results}
+

@@ -18,7 +18,7 @@ class TaskExpertsIntroView extends StatelessWidget {
     final l10n = context.l10n;
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final isAuthenticated =
-        context.watch<AuthBloc>().state.isAuthenticated;
+        context.select<AuthBloc, bool>((b) => b.state.isAuthenticated);
 
     return Scaffold(
       appBar: AppBar(

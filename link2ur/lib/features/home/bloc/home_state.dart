@@ -1,6 +1,7 @@
 import 'package:equatable/equatable.dart';
 
 import '../../../data/models/task.dart';
+import '../../../data/models/activity.dart';
 import '../../../data/models/discovery_feed.dart';
 
 /// 首页状态
@@ -23,6 +24,8 @@ class HomeState extends Equatable {
     this.isLoadingDiscovery = false,
     this.hasMoreDiscovery = true,
     this.discoveryPage = 1,
+    this.openActivities = const [],
+    this.isLoadingOpenActivities = false,
   });
 
   final HomeStatus status;
@@ -43,6 +46,10 @@ class HomeState extends Equatable {
   final bool isLoadingDiscovery;
   final bool hasMoreDiscovery;
   final int discoveryPage;
+
+  /// 开放中的活动（首页「热门活动」用；空则隐藏区域）
+  final List<Activity> openActivities;
+  final bool isLoadingOpenActivities;
 
   bool get isLoading => status == HomeStatus.loading;
   bool get isLoaded => status == HomeStatus.loaded;
@@ -65,6 +72,8 @@ class HomeState extends Equatable {
     bool? isLoadingDiscovery,
     bool? hasMoreDiscovery,
     int? discoveryPage,
+    List<Activity>? openActivities,
+    bool? isLoadingOpenActivities,
   }) {
     return HomeState(
       status: status ?? this.status,
@@ -82,6 +91,8 @@ class HomeState extends Equatable {
       isLoadingDiscovery: isLoadingDiscovery ?? this.isLoadingDiscovery,
       hasMoreDiscovery: hasMoreDiscovery ?? this.hasMoreDiscovery,
       discoveryPage: discoveryPage ?? this.discoveryPage,
+      openActivities: openActivities ?? this.openActivities,
+      isLoadingOpenActivities: isLoadingOpenActivities ?? this.isLoadingOpenActivities,
     );
   }
 
@@ -102,5 +113,7 @@ class HomeState extends Equatable {
         isLoadingDiscovery,
         hasMoreDiscovery,
         discoveryPage,
+        openActivities,
+        isLoadingOpenActivities,
       ];
 }

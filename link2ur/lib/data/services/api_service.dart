@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'dart:collection';
 import 'package:dio/dio.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
 
 import '../../core/config/app_config.dart';
 import '../../core/config/api_config.dart';

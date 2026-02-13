@@ -74,7 +74,11 @@ class _VideoPlayerViewState extends State<VideoPlayerView> {
           borderRadius: BorderRadius.circular(widget.borderRadius),
           image: widget.thumbnailUrl != null
               ? DecorationImage(
-                  image: CachedNetworkImageProvider(widget.thumbnailUrl!),
+                  image: CachedNetworkImageProvider(
+                    widget.thumbnailUrl!,
+                    maxWidth: 600,
+                    maxHeight: 400,
+                  ),
                   fit: BoxFit.cover,
                 )
               : null,

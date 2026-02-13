@@ -1476,11 +1476,15 @@ class _ActivityApplySheetState extends State<ActivityApplySheet> {
   void initState() {
     super.initState();
     // 有时间段时自动加载 - 对标iOS onAppear
+    // 延迟到首帧后再 dispatch，避免在 build 前触发状态变更
     if (_hasTimeSlots) {
-      context.read<ActivityBloc>().add(ActivityLoadTimeSlots(
-            serviceId: widget.activity.expertServiceId,
-            activityId: widget.activityId,
-          ));
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        context.read<ActivityBloc>().add(ActivityLoadTimeSlots(
+              serviceId: widget.activity.expertServiceId,
+              activityId: widget.activityId,
+            ));
+      });
     }
   }
 

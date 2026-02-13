@@ -9,6 +9,7 @@ import '../../core/utils/responsive.dart';
 import '../../core/widgets/badge_view.dart';
 import '../../core/widgets/buttons.dart';
 import '../../core/widgets/desktop_sidebar.dart';
+import '../../data/repositories/activity_repository.dart';
 import '../../data/repositories/discovery_repository.dart';
 import '../../data/repositories/forum_repository.dart';
 import '../../data/repositories/leaderboard_repository.dart';
@@ -110,6 +111,7 @@ class _MainTabViewState extends State<MainTabView> {
       // 仅 HomeBloc 立即创建并加载数据（首页默认展示）
       _homeBloc = HomeBloc(
         taskRepository: context.read<TaskRepository>(),
+        activityRepository: context.read<ActivityRepository>(),
         discoveryRepository: context.read<DiscoveryRepository>(),
       )
         ..currentUser = authState.isAuthenticated ? authState.user : null

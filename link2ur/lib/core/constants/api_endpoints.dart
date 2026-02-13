@@ -425,6 +425,7 @@ class ApiEndpoints {
 
   // ==================== 论坛关联搜索 ====================
   static const String forumSearchLinkable = '/api/forum/search-linkable';
+  static const String forumLinkableForUser = '/api/forum/linkable-for-user';
 
   // ==================== 通用/其他 ====================
   static const String uploadImage = '/api/upload/image';

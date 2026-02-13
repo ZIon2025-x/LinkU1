@@ -3,8 +3,10 @@ import 'dart:math' as math;
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../data/models/task.dart';
+import '../../../data/models/activity.dart';
 import '../../../data/models/user.dart';
 import '../../../data/repositories/task_repository.dart';
+import '../../../data/repositories/activity_repository.dart';
 import '../../../data/repositories/discovery_repository.dart';
 import '../../../core/utils/cache_manager.dart';
 import '../../../core/utils/logger.dart';
@@ -15,8 +17,10 @@ import 'home_state.dart';
 class HomeBloc extends Bloc<HomeEvent, HomeState> {
   HomeBloc({
     required TaskRepository taskRepository,
+    required ActivityRepository activityRepository,
     DiscoveryRepository? discoveryRepository,
   })  : _taskRepository = taskRepository,
+        _activityRepository = activityRepository,
         _discoveryRepository = discoveryRepository,
         super(const HomeState()) {
     on<HomeLoadRequested>(_onLoadRequested);
@@ -29,6 +33,7 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
   }
 
   final TaskRepository _taskRepository;
+  final ActivityRepository _activityRepository;
   final DiscoveryRepository? _discoveryRepository;
 
   /// 当前用户（由外部设置，用于权限过滤）
@@ -44,6 +49,9 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
     final hasExistingData = state.recommendedTasks.isNotEmpty;
     if (!hasExistingData) {
       emit(state.copyWith(status: HomeStatus.loading));
+    }
+    if (state.openActivities.isEmpty) {
+      emit(state.copyWith(isLoadingOpenActivities: true));
     }
 
     try {
@@ -83,14 +91,30 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
         );
       }
 
+      // 并行加载开放中的活动（首页「热门活动」；无则隐藏区域）
+      List<Activity> openList = [];
+      try {
+        final actRes = await _activityRepository.getActivities(
+          page: 1,
+          pageSize: 20,
+          status: 'open',
+        );
+        openList = actRes.activities;
+      } catch (_) {
+        AppLogger.info('Open activities load failed, home hot section will be hidden');
+      }
+
       emit(state.copyWith(
         status: HomeStatus.loaded,
         recommendedTasks: result.tasks,
         hasMoreRecommended: result.hasMore,
         recommendedPage: 1,
+        openActivities: openList,
+        isLoadingOpenActivities: false,
       ));
     } catch (e) {
       AppLogger.error('Failed to load home data', e);
+      emit(state.copyWith(isLoadingOpenActivities: false));
       // 对标iOS: 已有数据时不切换到error状态，保持显示旧数据
       if (hasExistingData) {
         AppLogger.info('Keeping existing data despite load failure');
@@ -137,12 +161,25 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
         result = await _taskRepository.getTasks(page: 1, pageSize: 20);
       }
 
+      // 刷新开放中的活动（首页「热门活动」）
+      List<Activity> openList = [];
+      try {
+        final actRes = await _activityRepository.getActivities(
+          page: 1,
+          pageSize: 20,
+          status: 'open',
+        );
+        openList = actRes.activities;
+      } catch (_) {}
+
       emit(state.copyWith(
         status: HomeStatus.loaded,
         recommendedTasks: result.tasks,
         hasMoreRecommended: result.hasMore,
         recommendedPage: 1,
         isRefreshing: false,
+        openActivities: openList,
+        isLoadingOpenActivities: false,
       ));
     } catch (e) {
       AppLogger.error('Failed to refresh home data', e);

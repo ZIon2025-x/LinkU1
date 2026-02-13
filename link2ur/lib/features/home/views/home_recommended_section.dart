@@ -9,11 +9,13 @@ class _RecommendedTab extends StatelessWidget {
     final isDesktop = ResponsiveUtils.isDesktop(context);
 
     return BlocBuilder<HomeBloc, HomeState>(
-      // 仅在推荐任务数据或状态变化时重建，避免其他字段（如 nearbyTasks）变更触发重建
+      // 推荐任务、热门活动（开放中）数据或状态变化时重建
       buildWhen: (prev, curr) =>
           prev.status != curr.status ||
           prev.recommendedTasks != curr.recommendedTasks ||
-          prev.isRefreshing != curr.isRefreshing,
+          prev.isRefreshing != curr.isRefreshing ||
+          prev.openActivities != curr.openActivities ||
+          prev.isLoadingOpenActivities != curr.isLoadingOpenActivities,
       builder: (context, state) {
         final isDark = Theme.of(context).brightness == Brightness.dark;
 
@@ -31,7 +33,7 @@ class _RecommendedTab extends StatelessWidget {
               // 欢迎区域（桌面端全宽滚动，内容 1200 居中）
               SliverToBoxAdapter(
                 child: isDesktop
-                    ? ContentConstraint(child: const _GreetingSection())
+                    ? const ContentConstraint(child: _GreetingSection())
                     : const _GreetingSection(),
               ),
 
@@ -148,11 +150,38 @@ class _RecommendedTab extends StatelessWidget {
                 else
                   _buildMobileTaskScroll(state),
 
-                // 热门活动标题
-                SliverToBoxAdapter(
-                  child: isDesktop
-                      ? ContentConstraint(
-                          child: Padding(
+                // 热门活动区域：无开放中活动时隐藏（与 iOS 一致）
+                if (state.isLoadingOpenActivities && state.openActivities.isEmpty)
+                  SliverToBoxAdapter(
+                    child: isDesktop
+                        ? ContentConstraint(
+                            child: Padding(
+                              padding: EdgeInsets.fromLTRB(
+                                isDesktop ? 24 : AppSpacing.md,
+                                AppSpacing.lg,
+                                isDesktop ? 24 : AppSpacing.md,
+                                AppSpacing.sm,
+                              ),
+                              child: Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text(
+                                    context.l10n.homeHotEvents,
+                                    style: AppTypography.title3.copyWith(
+                                      color: isDark
+                                          ? AppColors.textPrimaryDark
+                                          : AppColors.desktopTextLight,
+                                    ),
+                                  ),
+                                  _ViewAllButton(
+                                    onTap: () => context.push('/activities'),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          )
+                        : Padding(
                             padding: EdgeInsets.fromLTRB(
                               isDesktop ? 24 : AppSpacing.md,
                               AppSpacing.lg,
@@ -160,7 +189,8 @@ class _RecommendedTab extends StatelessWidget {
                               AppSpacing.sm,
                             ),
                             child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              mainAxisAlignment:
+                                  MainAxisAlignment.spaceBetween,
                               children: [
                                 Text(
                                   context.l10n.homeHotEvents,
@@ -176,39 +206,77 @@ class _RecommendedTab extends StatelessWidget {
                               ],
                             ),
                           ),
-                        )
-                      : Padding(
-                          padding: EdgeInsets.fromLTRB(
-                            isDesktop ? 24 : AppSpacing.md,
-                            AppSpacing.lg,
-                            isDesktop ? 24 : AppSpacing.md,
-                            AppSpacing.sm,
-                          ),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text(
-                                context.l10n.homeHotEvents,
-                                style: AppTypography.title3.copyWith(
-                                  color: isDark
-                                      ? AppColors.textPrimaryDark
-                                      : AppColors.desktopTextLight,
+                  ),
+                if (state.isLoadingOpenActivities && state.openActivities.isEmpty)
+                  SliverToBoxAdapter(
+                    child: isDesktop
+                        ? const ContentConstraint(
+                            child: _HomeActivitiesSkeleton(),
+                          )
+                        : const _HomeActivitiesSkeleton(),
+                  ),
+                if (state.openActivities.isNotEmpty) ...[
+                  SliverToBoxAdapter(
+                    child: isDesktop
+                        ? ContentConstraint(
+                            child: Padding(
+                              padding: EdgeInsets.fromLTRB(
+                                isDesktop ? 24 : AppSpacing.md,
+                                AppSpacing.lg,
+                                isDesktop ? 24 : AppSpacing.md,
+                                AppSpacing.sm,
+                              ),
+                              child: Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text(
+                                    context.l10n.homeHotEvents,
+                                    style: AppTypography.title3.copyWith(
+                                      color: isDark
+                                          ? AppColors.textPrimaryDark
+                                          : AppColors.desktopTextLight,
+                                    ),
+                                  ),
+                                  _ViewAllButton(
+                                    onTap: () => context.push('/activities'),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          )
+                        : Padding(
+                            padding: EdgeInsets.fromLTRB(
+                              isDesktop ? 24 : AppSpacing.md,
+                              AppSpacing.lg,
+                              isDesktop ? 24 : AppSpacing.md,
+                              AppSpacing.sm,
+                            ),
+                            child: Row(
+                              mainAxisAlignment:
+                                  MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(
+                                  context.l10n.homeHotEvents,
+                                  style: AppTypography.title3.copyWith(
+                                    color: isDark
+                                        ? AppColors.textPrimaryDark
+                                        : AppColors.desktopTextLight,
+                                  ),
                                 ),
-                              ),
-                              _ViewAllButton(
-                                onTap: () => context.push('/activities'),
-                              ),
-                            ],
+                                _ViewAllButton(
+                                  onTap: () => context.push('/activities'),
+                                ),
+                              ],
+                            ),
                           ),
-                        ),
-                ),
-
-                // 热门活动 — 桌面端 3 列 Row，移动端横向滚动
-                SliverToBoxAdapter(
-                  child: isDesktop
-                      ? const ContentConstraint(child: _DesktopActivitiesRow())
-                      : const _PopularActivitiesSection(),
-                ),
+                  ),
+                  SliverToBoxAdapter(
+                    child: isDesktop
+                        ? const ContentConstraint(child: _DesktopActivitiesRow())
+                        : const _PopularActivitiesSection(),
+                  ),
+                ],
 
                 // 发现更多标题（与 discovery_feed_prototype 一致：左侧标题 + 右侧筛选）
                 SliverToBoxAdapter(
@@ -387,12 +455,12 @@ class _RecommendedTab extends StatelessWidget {
                           .clamp(0.0, double.infinity);
                       return SliverPadding(
                         padding: EdgeInsets.symmetric(horizontal: pad),
-                        sliver: _SliverDiscoveryFeed(horizontalPadding: 24),
+                        sliver: const _SliverDiscoveryFeed(horizontalPadding: 24),
                       );
                     },
                   )
                 else
-                  _SliverDiscoveryFeed(horizontalPadding: 0),
+                  const _SliverDiscoveryFeed(horizontalPadding: 0),
               ],
 
               const SliverPadding(padding: EdgeInsets.only(bottom: 20)),
