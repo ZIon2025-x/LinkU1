@@ -5,7 +5,7 @@ Widget _buildDesktopProfile(
     BuildContext context, ProfileState profileState, User user, bool isDark) {
   return SingleChildScrollView(
     physics: const AlwaysScrollableScrollPhysics(),
-    padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 20),
+    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -60,15 +60,18 @@ Widget _buildDesktopProfile(
 /// Desktop user card — avatar, name, badges, stats in a horizontal row
 Widget _buildDesktopUserCard(
     BuildContext context, ProfileState state, User user, bool isDark) {
-  final inProgressCount = state.myTasks
-      .where((t) =>
-          t.status == 'assigned' ||
-          t.status == AppConstants.taskStatusInProgress ||
-          t.status == 'accepted')
-      .length;
-  final completedCount = state.myTasks
-      .where((t) => t.status == AppConstants.taskStatusCompleted)
-      .length;
+  // 单次遍历计算进行中和已完成的任务数量（避免双重 .where()）
+  var inProgressCount = 0;
+  var completedCount = 0;
+  for (final t in state.myTasks) {
+    if (t.status == 'assigned' ||
+        t.status == AppConstants.taskStatusInProgress ||
+        t.status == 'accepted') {
+      inProgressCount++;
+    } else if (t.status == AppConstants.taskStatusCompleted) {
+      completedCount++;
+    }
+  }
 
   return Container(
     padding: const EdgeInsets.all(24),

@@ -20,6 +20,12 @@ class AppColors {
     Color(0xFF409CFF),
   ];
 
+  /// 任务类型/平台徽章渐变 — 与 frontend .taskTypeBadge 一致 (135deg #3b82f6 → #8b5cf6)
+  static const List<Color> taskTypeBadgeGradient = [
+    Color(0xFF3b82f6),
+    Color(0xFF8b5cf6),
+  ];
+
   // ==================== 辅助色 ====================
   /// 橙色 - 强调色 (与iOS accentOrange对齐)
   static const Color accent = Color(0xFFFF8033);

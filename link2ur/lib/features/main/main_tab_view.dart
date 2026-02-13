@@ -8,7 +8,6 @@ import '../../core/utils/l10n_extension.dart';
 import '../../core/utils/responsive.dart';
 import '../../core/widgets/badge_view.dart';
 import '../../core/widgets/buttons.dart';
-import '../../core/widgets/content_constraint.dart';
 import '../../core/widgets/desktop_sidebar.dart';
 import '../../data/repositories/discovery_repository.dart';
 import '../../data/repositories/forum_repository.dart';
@@ -43,6 +42,8 @@ class MainTabView extends StatefulWidget {
 class _MainTabViewState extends State<MainTabView> {
   final _desktopScaffoldKey = GlobalKey<ScaffoldState>();
   final Set<int> _loadedTabs = {0}; // 首页默认加载
+  /// 桌面端汉堡菜单是否展开（对齐 frontend：遮罩+面板 overlay，不用 Drawer 避免 elevation 阴影随 hover 晃动）
+  bool _showDesktopMenu = false;
 
   // StatefulShellRoute branch index ↔ 移动端 Tab index 映射
   // Branch: [0=home, 1=community, 2=messages, 3=profile]
@@ -273,31 +274,70 @@ class _MainTabViewState extends State<MainTabView> {
   }
 
   // ==================== 桌面/平板布局 ====================
+  /// 对齐 frontend：遮罩 + 固定右侧面板，面板用 CSS box-shadow 静态阴影（-4px 0 32px rgba(0,0,0,0.15)），
+  /// 指针在菜单项间移动时不会触发阴影重绘，避免晃动。
   Widget _buildDesktopLayout(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
       key: _desktopScaffoldKey,
-      endDrawer: Drawer(
-        elevation: 6,
-        child: DesktopDrawer(
-          currentRoute: _currentRoute,
-          onNavigate: _onDesktopNavigate,
-        ),
-      ),
-      body: Column(
+      body: Stack(
         children: [
-          // TopBar
-          _DesktopTopBar(
-            isDark: isDark,
-            onMenuTap: () {
-              _desktopScaffoldKey.currentState?.openEndDrawer();
-            },
+          Column(
+            children: [
+              _DesktopTopBar(
+                isDark: isDark,
+                onMenuTap: () => setState(() => _showDesktopMenu = true),
+              ),
+              Expanded(child: widget.navigationShell),
+            ],
           ),
-          // 全宽内容区（StatefulShellRoute 原生 IndexedStack 保持各分支状态）
-          Expanded(
-            child: ContentConstraint(
-              child: widget.navigationShell,
+          if (_showDesktopMenu) _DesktopMenuOverlay(
+            currentRoute: _currentRoute,
+            onNavigate: _onDesktopNavigate,
+            onClose: () => setState(() => _showDesktopMenu = false),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ==================== 桌面菜单浮层（对齐 frontend 遮罩 + 静态 box-shadow 面板） ====================
+  static Widget _DesktopMenuOverlay({
+    required String currentRoute,
+    required ValueChanged<String> onNavigate,
+    required VoidCallback onClose,
+  }) {
+    return Positioned.fill(
+      child: Stack(
+        alignment: Alignment.centerRight,
+        children: [
+          GestureDetector(
+            onTap: onClose,
+            behavior: HitTestBehavior.opaque,
+            child: Container(
+              color: Colors.black54,
+            ),
+          ),
+          Material(
+            color: Colors.transparent,
+            child: Container(
+              width: Breakpoints.drawerWidth,
+              decoration: BoxDecoration(
+                color: Colors.transparent,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.15),
+                    offset: const Offset(-4, 0),
+                    blurRadius: 32,
+                  ),
+                ],
+              ),
+              child: DesktopDrawer(
+                currentRoute: currentRoute,
+                onNavigate: onNavigate,
+                onClose: onClose,
+              ),
             ),
           ),
         ],

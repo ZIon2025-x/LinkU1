@@ -153,7 +153,7 @@ class _HorizontalTaskCard extends StatelessWidget {
                       ),
                     ),
 
-                  // 右下: 任务类型标签 (半透明容器，避免 BackdropFilter 在列表中的性能开销)
+                  // 右下: 任务类型标签（与 frontend .taskTypeBadge 一致：蓝紫渐变）
                   Positioned(
                     bottom: 8,
                     right: 8,
@@ -161,12 +161,12 @@ class _HorizontalTaskCard extends StatelessWidget {
                       padding: const EdgeInsets.symmetric(
                           horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
-                        color: Colors.black.withValues(alpha: 0.35),
-                        borderRadius: AppRadius.allPill,
-                        border: Border.all(
-                          color: Colors.white.withValues(alpha: 0.2),
-                          width: 0.5,
+                        gradient: const LinearGradient(
+                          colors: AppColors.taskTypeBadgeGradient,
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
                         ),
+                        borderRadius: AppRadius.allPill,
                       ),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
@@ -462,8 +462,10 @@ class _NearbyTabState extends State<_NearbyTab> {
 
   @override
   Widget build(BuildContext context) {
+    final isDesktop = ResponsiveUtils.isDesktop(context);
     if (_locationLoading) {
-      return const SkeletonTopImageCardList(itemCount: 3, imageHeight: 140);
+      final body = const SkeletonTopImageCardList(itemCount: 3, imageHeight: 140);
+      return isDesktop ? ContentConstraint(child: body) : body;
     }
 
     return BlocBuilder<HomeBloc, HomeState>(
@@ -473,11 +475,12 @@ class _NearbyTabState extends State<_NearbyTab> {
           prev.isLoading != curr.isLoading,
       builder: (context, state) {
         if (state.isLoading && state.nearbyTasks.isEmpty) {
-          return const SkeletonTopImageCardList(itemCount: 3, imageHeight: 140);
+          const body = SkeletonTopImageCardList(itemCount: 3, imageHeight: 140);
+          return isDesktop ? ContentConstraint(child: body) : body;
         }
 
         if (state.nearbyTasks.isEmpty) {
-          return Center(
+          final center = Center(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
@@ -500,9 +503,10 @@ class _NearbyTabState extends State<_NearbyTab> {
               ],
             ),
           );
+          return isDesktop ? ContentConstraint(child: center) : center;
         }
 
-        return RefreshIndicator(
+        final refresh = RefreshIndicator(
           onRefresh: () async {
             final homeBloc = context.read<HomeBloc>();
             await _loadLocation();
@@ -523,6 +527,7 @@ class _NearbyTabState extends State<_NearbyTab> {
             },
           ),
         );
+        return isDesktop ? ContentConstraint(child: refresh) : refresh;
       },
     );
   }

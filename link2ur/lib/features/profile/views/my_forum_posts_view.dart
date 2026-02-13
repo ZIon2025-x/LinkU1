@@ -166,6 +166,7 @@ class _MyForumPostsViewState extends State<MyForumPostsView>
         itemBuilder: (context, index) {
           final post = posts[index];
           return RepaintBoundary(
+            key: ValueKey(post.id),
             child: _MyPostCard(
               post: post,
               onTap: () => context.safePush('/forum/posts/${post.id}'),

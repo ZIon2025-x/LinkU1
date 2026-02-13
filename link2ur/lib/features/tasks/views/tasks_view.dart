@@ -18,6 +18,7 @@ import '../../../core/router/app_router.dart';
 import '../../../core/widgets/empty_state_view.dart';
 import '../../../core/widgets/skeleton_view.dart';
 import '../../../core/widgets/error_state_view.dart';
+import '../../../core/widgets/content_constraint.dart';
 import '../../../core/widgets/loading_view.dart';
 import '../../../data/models/task.dart';
 import '../../../data/repositories/task_repository.dart';
@@ -103,16 +104,21 @@ class _TasksViewContentState extends State<_TasksViewContent> {
 
   @override
   Widget build(BuildContext context) {
+    final isDesktop = ResponsiveUtils.isDesktop(context);
     return Scaffold(
       appBar: AppBar(
         titleSpacing: 0,
-        title: _buildSearchBar(),
+        title: isDesktop ? ContentConstraint(child: _buildSearchBar()) : _buildSearchBar(),
       ),
       body: Column(
         children: [
-          _buildCategoryTabs(),
+          isDesktop ? ContentConstraint(child: _buildCategoryTabs()) : _buildCategoryTabs(),
           const SizedBox(height: 8),
-          Expanded(child: _buildTaskGrid()),
+          Expanded(
+            child: isDesktop
+                ? ContentConstraint(child: _buildTaskGrid())
+                : _buildTaskGrid(),
+          ),
         ],
       ),
       floatingActionButton: FloatingActionButton(
@@ -831,7 +837,7 @@ class _TaskGridCard extends StatelessWidget {
           ),
         ),
 
-        // 右下角：任务类型标签 (半透明胶囊，替代 BackdropFilter 以提升滚动性能)
+        // 右下角：任务类型标签（与 frontend .taskTypeBadge 一致：蓝紫渐变）
         Positioned(
           bottom: 8,
           right: 8,
@@ -839,12 +845,12 @@ class _TaskGridCard extends StatelessWidget {
             padding:
                 const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
             decoration: BoxDecoration(
-              color: Colors.black.withValues(alpha: 0.35),
-              borderRadius: AppRadius.allPill,
-              border: Border.all(
-                color: Colors.white.withValues(alpha: 0.15),
-                width: 0.5,
+              gradient: const LinearGradient(
+                colors: AppColors.taskTypeBadgeGradient,
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
               ),
+              borderRadius: AppRadius.allPill,
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,

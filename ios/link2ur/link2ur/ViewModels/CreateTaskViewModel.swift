@@ -13,6 +13,7 @@ class CreateTaskViewModel: ObservableObject {
     @Published var longitude: Double?
     @Published var category = ""
     @Published var taskType = "Other"
+    @Published var deadline: Date?
     @Published var selectedImages: [UIImage] = []
     @Published var uploadedImageUrls: [String] = []
     @Published var isLoading = false
@@ -165,6 +166,13 @@ class CreateTaskViewModel: ObservableObject {
                 body["images"] = self.uploadedImageUrls
             }
             
+            if let deadline = self.deadline {
+                let formatter = ISO8601DateFormatter()
+                formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+                formatter.timeZone = TimeZone(identifier: "UTC")
+                body["deadline"] = formatter.string(from: deadline)
+            }
+            
             let startTime = Date()
             let endpoint = "/api/tasks"
             
@@ -214,6 +222,7 @@ class CreateTaskViewModel: ObservableObject {
         longitude = nil
         category = ""
         taskType = "Other"
+        deadline = nil
         selectedImages = []
         uploadedImageUrls = []
         errorMessage = nil

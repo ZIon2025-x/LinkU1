@@ -117,7 +117,7 @@
 "home.member_seller" = "会员卖家";
 "home.no_recommended_tasks" = "暂无推荐任务";
 "home.no_recommended_tasks_message" = "还没有推荐任务，快去任务大厅看看吧！";
-"home.latest_activity" = "最新动态";
+"home.latest_activity" = "发现更多";
 "home.no_activity" = "暂无动态";
 "home.no_activity_message" = "还没有最新动态";
 "home.no_more_activity" = "以上为最新动态";
@@ -1180,6 +1180,8 @@
 "create_task.fill_all_required" = "请填写所有必填项";
 "create_task.image_upload_failed" = "部分图片上传失败，请重试";
 "create_task.student_verification_required" = "只有已通过学生认证的用户才能发布\"校园生活\"类型的任务，请先完成学生认证";
+"create_task.deadline" = "截止时间";
+"create_task.select_deadline" = "选择截止日期与时间";
 "create_task.campus_life_restriction" = "仅已验证学生可发布\"校园生活\"类型任务";
 "create_task.city" = "城市";
 "create_task.description" = "任务详情";

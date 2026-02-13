@@ -844,7 +844,7 @@ class _TaskImageCarousel extends StatefulWidget {
 }
 
 class _TaskImageCarouselState extends State<_TaskImageCarousel> {
-  int _currentPage = 0;
+  final ValueNotifier<int> _currentPage = ValueNotifier<int>(0);
   late final PageController _pageController;
 
   @override
@@ -856,6 +856,7 @@ class _TaskImageCarouselState extends State<_TaskImageCarousel> {
   @override
   void dispose() {
     _pageController.dispose();
+    _currentPage.dispose();
     super.dispose();
   }
 
@@ -867,6 +868,9 @@ class _TaskImageCarouselState extends State<_TaskImageCarousel> {
       return _buildPlaceholder();
     }
 
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
     return SizedBox(
       height: 300,
       child: Stack(
@@ -875,7 +879,7 @@ class _TaskImageCarouselState extends State<_TaskImageCarousel> {
           // 占位背景（避免闪烁）
           Container(
             height: 300,
-            color: Theme.of(context).brightness == Brightness.dark
+            color: isDark
                 ? AppColors.cardBackgroundDark
                 : AppColors.cardBackgroundLight,
           ),
@@ -885,7 +889,7 @@ class _TaskImageCarouselState extends State<_TaskImageCarousel> {
             controller: _pageController,
             itemCount: images.length,
             onPageChanged: (index) {
-              setState(() => _currentPage = index);
+              _currentPage.value = index;
             },
             itemBuilder: (context, index) {
               final imageWidget = AsyncImageView(
@@ -925,8 +929,7 @@ class _TaskImageCarouselState extends State<_TaskImageCarousel> {
                   end: Alignment.bottomCenter,
                   colors: [
                     Colors.transparent,
-                    Theme.of(context)
-                        .scaffoldBackgroundColor
+                    theme.scaffoldBackgroundColor
                         .withValues(alpha: 0.6),
                   ],
                 ),
@@ -934,36 +937,41 @@ class _TaskImageCarouselState extends State<_TaskImageCarousel> {
             ),
           ),
 
-          // 自定义页面指示器 (半透明背景，替代 BackdropFilter)
+          // 自定义页面指示器 — 仅在 _currentPage 变化时重建（不触发整个轮播重建）
           if (images.length > 1)
             Positioned(
               bottom: 24,
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 10, vertical: 6),
-                decoration: BoxDecoration(
-                  color: Colors.black.withValues(alpha: 0.3),
-                  borderRadius: AppRadius.allPill,
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: List.generate(
-                    images.length,
-                    (index) => AnimatedContainer(
-                      duration: const Duration(milliseconds: 200),
-                      margin:
-                          const EdgeInsets.symmetric(horizontal: 3),
-                      width: _currentPage == index ? 16 : 6,
-                      height: 6,
-                      decoration: BoxDecoration(
-                        color: _currentPage == index
-                            ? Colors.white
-                            : Colors.white.withValues(alpha: 0.4),
-                        borderRadius: AppRadius.allPill,
+              child: ValueListenableBuilder<int>(
+                valueListenable: _currentPage,
+                builder: (context, currentPage, _) {
+                  return Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 10, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withValues(alpha: 0.3),
+                      borderRadius: AppRadius.allPill,
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: List.generate(
+                        images.length,
+                        (index) => AnimatedContainer(
+                          duration: const Duration(milliseconds: 200),
+                          margin:
+                              const EdgeInsets.symmetric(horizontal: 3),
+                          width: currentPage == index ? 16 : 6,
+                          height: 6,
+                          decoration: BoxDecoration(
+                            color: currentPage == index
+                                ? Colors.white
+                                : Colors.white.withValues(alpha: 0.4),
+                            borderRadius: AppRadius.allPill,
+                          ),
+                        ),
                       ),
                     ),
-                  ),
-                ),
+                  );
+                },
               ),
             ),
         ],

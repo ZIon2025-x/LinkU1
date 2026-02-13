@@ -49,8 +49,8 @@ class _ExpertsTabContentState extends State<_ExpertsTabContent> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    return Column(
+    final isDesktop = ResponsiveUtils.isDesktop(context);
+    final column = Column(
       children: [
         // 搜索框 + 筛选按钮
         Padding(
@@ -263,6 +263,7 @@ class _ExpertsTabContentState extends State<_ExpertsTabContent> {
         ),
       ],
     );
+    return isDesktop ? ContentConstraint(child: column) : column;
   }
 
   // ==================== 达人类型 & 城市常量 ====================
@@ -864,12 +865,12 @@ class _TaskCard extends StatelessWidget {
                       padding: const EdgeInsets.symmetric(
                           horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
-                        color: Colors.black.withValues(alpha: 0.35),
-                        borderRadius: AppRadius.allPill,
-                        border: Border.all(
-                          color: Colors.white.withValues(alpha: 0.2),
-                          width: 0.5,
+                        gradient: const LinearGradient(
+                          colors: AppColors.taskTypeBadgeGradient,
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
                         ),
+                        borderRadius: AppRadius.allPill,
                       ),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,

@@ -133,6 +133,8 @@ class _PointsCardState extends State<_PointsCard> {
 
   @override
   Widget build(BuildContext context) {
+    // 分离 Transform 和装饰：AnimatedContainer 只做 transform 动画，
+    // boxShadow 放在静态 Container 里，避免每帧 pan 手势触发阴影插值。
     return GestureDetector(
       onPanUpdate: _onPanUpdate,
       onPanEnd: _onPanEnd,
@@ -144,6 +146,7 @@ class _PointsCardState extends State<_PointsCard> {
           ..setEntry(3, 2, 0.001) // 透视
           ..rotateX(_rotateX)
           ..rotateY(_rotateY),
+        child: Container(
         padding: AppSpacing.allLg,
         decoration: BoxDecoration(
           gradient: const LinearGradient(
@@ -204,6 +207,7 @@ class _PointsCardState extends State<_PointsCard> {
             ),
           ],
         ),
+      ),
       ),
     );
   }

@@ -1826,47 +1826,106 @@ struct RecommendedTasksSection: View {
     }
 }
 
-// 最新动态区域组件
+// 发现更多区域组件（与 Flutter 一致：Discovery Feed API + 两列瀑布流）
 struct RecentActivitiesSection: View {
-    @StateObject private var viewModel = RecentActivityViewModel()
+    @StateObject private var viewModel = DiscoveryFeedViewModel()
+    
+    private let columns = [GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10)]
     
     var body: some View {
         VStack(alignment: .leading, spacing: AppSpacing.md) {
-            Text(LocalizationKey.homeLatestActivity.localized)
-                .font(AppTypography.title3) // 使用 title3
-                .foregroundColor(AppColors.textPrimary)
-                .padding(.horizontal, AppSpacing.md)
+            // 标题行：与 Flutter 一致 — 左侧 sparkles + 发现更多，右侧 筛选 胶囊
+            HStack(spacing: 0) {
+                HStack(spacing: 8) {
+                    Image(systemName: "sparkles")
+                        .font(.system(size: 22))
+                        .foregroundColor(AppColors.primary)
+                    Text(LocalizationKey.homeLatestActivity.localized)
+                        .font(.system(size: 18, weight: .bold))
+                        .foregroundColor(AppColors.textPrimary)
+                }
+                Spacer(minLength: 12)
+                Button(action: {
+                    HapticFeedback.light()
+                    // TODO: 打开筛选（类型/排序）
+                }) {
+                    HStack(spacing: 4) {
+                        Image(systemName: "slider.horizontal.3")
+                            .font(.system(size: 16))
+                        Text(LocalizationKey.commonFilter.localized)
+                            .font(.system(size: 13))
+                    }
+                    .foregroundColor(AppColors.textSecondary)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 6)
+                    .background(AppColors.cardBackground)
+                    .clipShape(Capsule())
+                    .shadow(color: Color.black.opacity(0.06), radius: 3, x: 0, y: 1)
+                }
+                .buttonStyle(PlainButtonStyle())
+            }
+            .padding(.horizontal, AppSpacing.md)
+            .padding(.bottom, 4)
             
-            if viewModel.isLoading && viewModel.activities.isEmpty {
+            if let error = viewModel.errorMessage, !viewModel.items.isEmpty {
+                HStack(spacing: 8) {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .foregroundColor(AppColors.warning)
+                    Text(error)
+                        .font(AppTypography.caption)
+                        .foregroundColor(AppColors.textSecondary)
+                        .lineLimit(2)
+                }
+                .padding(.horizontal, AppSpacing.md)
+                .padding(.vertical, 8)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(AppColors.warning.opacity(0.1))
+                .cornerRadius(AppCornerRadius.medium)
+                .padding(.horizontal, AppSpacing.md)
+            }
+            
+            if viewModel.isLoading && viewModel.items.isEmpty {
                 HStack {
                     Spacer()
                     CompactLoadingView()
                         .padding()
                     Spacer()
                 }
-            } else if viewModel.activities.isEmpty {
+            } else if viewModel.items.isEmpty && viewModel.errorMessage == nil {
                 EmptyStateView(
-                    icon: "bell.fill",
+                    icon: "sparkles",
                     title: LocalizationKey.homeNoActivity.localized,
                     message: LocalizationKey.homeNoActivityMessage.localized
                 )
                 .padding(AppSpacing.md)
-            } else {
-                // 限制最多显示15条
-                ForEach(Array(viewModel.activities.prefix(15).enumerated()), id: \.element.id) { index, activity in
-                    ActivityRow(activity: activity)
-                        .listItemAppear(index: index, totalItems: min(15, viewModel.activities.count)) // 添加错落入场动画
-                        .onAppear {
-                            // 当显示最后3个项目时，加载更多（但不超过15条）
-                            let displayedCount = min(15, viewModel.activities.count)
-                            let threshold = max(0, displayedCount - 3)
-                            if index >= threshold && viewModel.hasMore && !viewModel.isLoadingMore && !viewModel.isLoading && viewModel.activities.count < 15 {
-                                viewModel.loadMoreActivities()
-                            }
-                        }
+            } else if viewModel.items.isEmpty && viewModel.errorMessage != nil {
+                VStack(spacing: 12) {
+                    Text(viewModel.errorMessage ?? "")
+                        .font(AppTypography.caption)
+                        .foregroundColor(AppColors.textSecondary)
+                        .multilineTextAlignment(.center)
+                    Button(LocalizationKey.commonRetry.localized) {
+                        viewModel.refresh()
+                    }
+                    .font(AppTypography.body)
+                    .foregroundColor(AppColors.primary)
                 }
+                .padding(AppSpacing.md)
+                .frame(maxWidth: .infinity)
+            } else {
+                LazyVGrid(columns: columns, spacing: 10) {
+                    ForEach(Array(viewModel.items.enumerated()), id: \.element.id) { index, item in
+                        DiscoveryFeedCardView(item: item)
+                            .listItemAppear(index: index, totalItems: viewModel.items.count)
+                            .onAppear {
+                                if index >= viewModel.items.count - 3 && viewModel.hasMore && !viewModel.isLoadingMore && !viewModel.isLoading {
+                                    viewModel.loadMore()
+                                }
+                            }
+                    }
+                }
+                .padding(.horizontal, AppSpacing.md)
                 
-                // 加载更多指示器
                 if viewModel.isLoadingMore {
                     HStack {
                         Spacer()
@@ -1874,33 +1933,236 @@ struct RecentActivitiesSection: View {
                             .padding()
                         Spacer()
                     }
-                } else if !viewModel.hasMore && !viewModel.activities.isEmpty {
-                    HStack {
-                        Spacer()
-                        Text(LocalizationKey.homeNoMoreActivity.localized)
+                } else if viewModel.hasMore && !viewModel.items.isEmpty {
+                    Button(action: { viewModel.loadMore() }) {
+                        Text(LocalizationKey.commonLoadMore.localized)
                             .font(AppTypography.caption)
-                            .foregroundColor(AppColors.textTertiary)
-                            .padding()
-                        Spacer()
+                            .foregroundColor(AppColors.primary)
                     }
+                    .padding(.vertical, 12)
+                    .frame(maxWidth: .infinity)
                 }
             }
         }
         .task {
-            // 使用 task 替代 onAppear，避免重复加载
-            // 延迟加载，避免启动时阻塞主线程
-            if viewModel.activities.isEmpty && !viewModel.isLoading {
-                // 延迟1秒加载，让关键内容先显示
+            if viewModel.items.isEmpty && !viewModel.isLoading {
                 try? await _Concurrency.Task.sleep(nanoseconds: 1_000_000_000)
-                if viewModel.activities.isEmpty && !viewModel.isLoading {
-                    viewModel.loadRecentActivities()
+                if viewModel.items.isEmpty && !viewModel.isLoading {
+                    viewModel.loadFeed()
                 }
             }
         }
         .onReceive(NotificationCenter.default.publisher(for: .refreshHomeContent)) { _ in
-            // 刷新最新动态（首页下拉刷新时触发）
             viewModel.refresh()
         }
+    }
+}
+
+// 发现 Feed 卡片（与 Flutter _DiscoveryFeedCard 一致：帖子/商品等）
+struct DiscoveryFeedCardView: View {
+    let item: DiscoveryFeedItem
+    
+    private let cardRadius: CGFloat = 12
+    
+    var body: some View {
+        Group {
+            switch item.feedType {
+            case "forum_post":
+                postCard
+            case "product":
+                productCard
+            case "ranking":
+                rankingCard
+            case "service":
+                serviceCard
+            case "competitor_review":
+                competitorReviewCard
+            case "service_review":
+                serviceReviewCard
+            default:
+                genericCard
+            }
+        }
+    }
+    
+    private var postCard: some View {
+        cardContent(
+            imageAspect: 4/3,
+            badgeLabel: "💬 帖子",
+            badgeBg: Color(red: 0.93, green: 0.91, blue: 0.996),
+            badgeFg: Color(red: 0.49, green: 0.24, blue: 0.93)
+        ) {
+            if let name = item.categoryName, !name.isEmpty {
+                Text(name)
+                    .font(.system(size: 10))
+                    .foregroundColor(AppColors.textTertiary)
+                    .lineLimit(1)
+            }
+        } destination: {
+            if let postId = Int(item.id.replacingOccurrences(of: "post_", with: "")) {
+                ForumPostDetailView(postId: postId)
+            }
+        }
+    }
+    
+    private var productCard: some View {
+        cardContent(
+            imageAspect: 1,
+            badgeLabel: "🏷️ 商品",
+            badgeBg: Color(red: 1, green: 0.95, blue: 0.78),
+            badgeFg: Color(red: 0.85, green: 0.47, blue: 0.02)
+        ) {
+            if let price = item.price {
+                Text(priceFormat(price))
+                    .font(.system(size: 14, weight: .bold))
+                    .foregroundColor(AppColors.primary)
+            }
+        } destination: {
+            let itemId = item.id.replacingOccurrences(of: "product_", with: "")
+            FleaMarketDetailView(itemId: itemId)
+        }
+    }
+    
+    private var rankingCard: some View {
+        cardContent(
+            imageAspect: 4/3,
+            badgeLabel: "🏆 排行榜",
+            badgeBg: Color(red: 0.86, green: 0.92, blue: 0.99),
+            badgeFg: Color(red: 0.15, green: 0.39, blue: 0.92)
+        ) { EmptyView() } destination: {
+            if let id = Int(item.id.replacingOccurrences(of: "ranking_", with: "")) {
+                LeaderboardDetailView(leaderboardId: id)
+            }
+        }
+    }
+    
+    private var serviceCard: some View {
+        cardContent(
+            imageAspect: 4/3,
+            badgeLabel: "👨‍🏫 达人服务",
+            badgeBg: Color(red: 1, green: 0.97, blue: 0.93),
+            badgeFg: Color(red: 0.92, green: 0.35, blue: 0.05)
+        ) {
+            if let price = item.price {
+                Text(priceFormat(price))
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundColor(AppColors.primary)
+            }
+        } destination: {
+            if let id = Int(item.id.replacingOccurrences(of: "service_", with: "")) {
+                ServiceDetailView(serviceId: id)
+            }
+        }
+    }
+    
+    private var competitorReviewCard: some View {
+        cardContent(
+            imageAspect: 4/3,
+            badgeLabel: "⭐ 竞品评价",
+            badgeBg: Color(red: 0.86, green: 0.92, blue: 0.99),
+            badgeFg: Color(red: 0.15, green: 0.39, blue: 0.92)
+        ) { EmptyView() } destination: {
+            if let t = item.targetItem, let id = Int(t.itemId) {
+                LeaderboardItemDetailWrapperView(itemId: id)
+            }
+        }
+    }
+    
+    private var serviceReviewCard: some View {
+        cardContent(
+            imageAspect: 4/3,
+            badgeLabel: "⭐ 服务评价",
+            badgeBg: Color(red: 1, green: 0.97, blue: 0.93),
+            badgeFg: Color(red: 0.92, green: 0.35, blue: 0.05)
+        ) { EmptyView() } destination: {
+            if let t = item.targetItem, let id = Int(t.itemId) {
+                ServiceDetailView(serviceId: id)
+            }
+        }
+    }
+    
+    private var genericCard: some View {
+        cardContent(
+            imageAspect: 4/3,
+            badgeLabel: "发现",
+            badgeBg: Color(red: 0.9, green: 0.91, blue: 0.92),
+            badgeFg: Color(red: 0.42, green: 0.45, blue: 0.5)
+        ) { EmptyView() } destination: { EmptyView() }
+    }
+    
+    private func cardContent<Extra: View, D: View>(
+        imageAspect: CGFloat,
+        badgeLabel: String,
+        badgeBg: Color,
+        badgeFg: Color,
+        @ViewBuilder extra: () -> Extra,
+        @ViewBuilder destination: () -> D
+    ) -> some View {
+        let content = VStack(alignment: .leading, spacing: 0) {
+            if item.hasImages, let urlString = item.firstImage, let url = URL(string: urlString) {
+                AsyncImage(url: url) { phase in
+                    if let image = phase.image {
+                        image.resizable().aspectRatio(contentMode: .fill)
+                    } else {
+                        Rectangle().fill(AppColors.background)
+                    }
+                }
+                .aspectRatio(imageAspect, contentMode: .fill)
+                .clipped()
+            }
+            VStack(alignment: .leading, spacing: 6) {
+                HStack(spacing: 6) {
+                    Text(badgeLabel)
+                        .font(.system(size: 10, weight: .semibold))
+                        .foregroundColor(badgeFg)
+                        .padding(.horizontal, 7)
+                        .padding(.vertical, 2)
+                        .background(badgeBg)
+                        .clipShape(Capsule())
+                    extra()
+                }
+                if let title = item.title, !title.isEmpty {
+                    Text(title)
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundColor(AppColors.textPrimary)
+                        .lineLimit(2)
+                }
+                if let desc = item.description, !desc.isEmpty {
+                    Text(desc)
+                        .font(.system(size: 12))
+                        .foregroundColor(AppColors.textSecondary)
+                        .lineLimit(2)
+                }
+            }
+            .padding(10)
+        }
+        .background(AppColors.cardBackground)
+        .clipShape(RoundedRectangle(cornerRadius: cardRadius))
+        .shadow(color: Color.black.opacity(0.06), radius: 3, x: 0, y: 1)
+        
+        let useLink: Bool = {
+            switch item.feedType {
+            case "forum_post": return Int(item.id.replacingOccurrences(of: "post_", with: "")) != nil
+            case "product", "ranking", "service": return true
+            case "competitor_review": return item.targetItem != nil && Int(item.targetItem!.itemId) != nil
+            case "service_review": return item.targetItem != nil && Int(item.targetItem!.itemId) != nil
+            default: return false
+            }
+        }()
+        return Group {
+            if useLink {
+                NavigationLink(destination: destination()) { content }
+                    .buttonStyle(PlainButtonStyle())
+            } else {
+                content
+            }
+        }
+    }
+    
+    private func priceFormat(_ value: Double) -> String {
+        let currency = item.currency ?? "GBP"
+        if currency == "GBP" { return "£\(String(format: "%.2f", value))" }
+        return "\(currency) \(String(format: "%.2f", value))"
     }
 }
 
@@ -1997,51 +2259,49 @@ struct ActivityRow: View {
     }
 }
 
-// 热门活动区域组件（只显示开放中的活动）
+// 热门活动区域组件（只显示开放中的活动；无活动时隐藏整个区域）
 struct PopularActivitiesSection: View {
     @StateObject private var viewModel = ActivityViewModel()
     
     var body: some View {
-        VStack(alignment: .leading, spacing: AppSpacing.md) {
-            HStack {
-                Text(LocalizationKey.homeHotEvents.localized)
-                    .font(AppTypography.title3)
-                    .foregroundColor(AppColors.textPrimary)
-                
-                Spacer()
-                
-                NavigationLink(destination: ActivityListView()) {
-                    HStack(spacing: 4) {
-                        Text(LocalizationKey.commonViewAll.localized)
-                            .font(AppTypography.body)
-                        IconStyle.icon("chevron.right", size: IconStyle.small)
-                    }
-                    .foregroundColor(AppColors.primary)
-                }
-                .buttonStyle(PlainButtonStyle())
-            }
-            .padding(.horizontal, AppSpacing.md)
-            
-            if viewModel.isLoading && viewModel.activities.isEmpty {
-                // 使用水平滚动骨架屏
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: AppSpacing.md) {
-                        ForEach(0..<3, id: \.self) { index in
-                            ActivityCardSkeleton()
-                                .frame(width: 280)
-                                .listItemAppear(index: index, totalItems: 3)
+        Group {
+            // 已加载完成且无活动：隐藏整个区域
+            if !viewModel.isLoading && viewModel.activities.isEmpty {
+                EmptyView()
+            } else {
+                VStack(alignment: .leading, spacing: AppSpacing.md) {
+                    HStack {
+                        Text(LocalizationKey.homeHotEvents.localized)
+                            .font(AppTypography.title3)
+                            .foregroundColor(AppColors.textPrimary)
+                        
+                        Spacer()
+                        
+                        NavigationLink(destination: ActivityListView()) {
+                            HStack(spacing: 4) {
+                                Text(LocalizationKey.commonViewAll.localized)
+                                    .font(AppTypography.body)
+                                IconStyle.icon("chevron.right", size: IconStyle.small)
+                            }
+                            .foregroundColor(AppColors.primary)
                         }
+                        .buttonStyle(PlainButtonStyle())
                     }
                     .padding(.horizontal, AppSpacing.md)
-                }
-            } else if viewModel.activities.isEmpty {
-                EmptyStateView(
-                    icon: "calendar.badge.plus",
-                    title: LocalizationKey.homeNoEvents.localized,
-                    message: LocalizationKey.homeNoEventsMessage.localized
-                )
-                .padding()
-            } else {
+                    
+                    if viewModel.isLoading && viewModel.activities.isEmpty {
+                        // 使用水平滚动骨架屏
+                        ScrollView(.horizontal, showsIndicators: false) {
+                            HStack(spacing: AppSpacing.md) {
+                                ForEach(0..<3, id: \.self) { index in
+                                    ActivityCardSkeleton()
+                                        .frame(width: 280)
+                                        .listItemAppear(index: index, totalItems: 3)
+                                }
+                            }
+                            .padding(.horizontal, AppSpacing.md)
+                        }
+                    } else {
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: AppSpacing.md) {
                         // 性能优化：缓存 prefix 结果，避免重复计算，并确保稳定的 id
@@ -2063,6 +2323,8 @@ struct PopularActivitiesSection: View {
                     .padding(.horizontal, AppSpacing.md)
                 }
                 .animation(.easeInOut(duration: 0.1), value: viewModel.activities.count) // 更快的过渡动画
+                    }
+                }
             }
         }
         .task {

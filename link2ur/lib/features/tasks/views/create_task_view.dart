@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 
 import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_spacing.dart';
@@ -78,10 +79,21 @@ class _CreateTaskContentState extends State<_CreateTaskContent> {
       firstDate: DateTime.now(),
       lastDate: DateTime.now().add(const Duration(days: 365)),
     );
-
-    if (date != null) {
+    if (date == null || !mounted) return;
+    final initialTime = _deadline != null
+        ? TimeOfDay(hour: _deadline!.hour, minute: _deadline!.minute)
+        : const TimeOfDay(hour: 12, minute: 0);
+    final time = await showTimePicker(
+      context: context,
+      initialTime: initialTime,
+    );
+    if (time != null && mounted) {
       setState(() {
-        _deadline = date;
+        _deadline = DateTime(date.year, date.month, date.day, time.hour, time.minute);
+      });
+    } else if (mounted) {
+      setState(() {
+        _deadline = DateTime(date.year, date.month, date.day, 12, 0);
       });
     }
   }
@@ -218,7 +230,7 @@ class _CreateTaskContentState extends State<_CreateTaskContent> {
                         AppSpacing.hMd,
                         Text(
                           _deadline != null
-                              ? '${_deadline!.year}-${_deadline!.month.toString().padLeft(2, '0')}-${_deadline!.day.toString().padLeft(2, '0')}'
+                              ? DateFormat('yyyy-MM-dd HH:mm').format(_deadline!)
                               : context.l10n.createTaskSelectDeadline,
                           style: TextStyle(
                             color: _deadline != null

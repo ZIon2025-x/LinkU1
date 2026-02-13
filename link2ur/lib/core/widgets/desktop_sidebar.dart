@@ -16,6 +16,7 @@ class DesktopDrawer extends StatelessWidget {
     super.key,
     required this.currentRoute,
     required this.onNavigate,
+    required this.onClose,
   });
 
   /// 当前路由路径，用于高亮当前项
@@ -23,6 +24,9 @@ class DesktopDrawer extends StatelessWidget {
 
   /// 导航回调（路由路径）
   final ValueChanged<String> onNavigate;
+
+  /// 关闭菜单回调（对齐 frontend：遮罩/面板独立于 Navigator，由调用方控制关闭）
+  final VoidCallback onClose;
 
   /// 菜单项文字色（对齐 frontend #A67C52 金棕色）
   static const Color _menuItemColor = Color(0xFFA67C52);
@@ -68,7 +72,7 @@ class DesktopDrawer extends StatelessWidget {
                     emoji: '🚀',
                     label: l10n.publishTitle,
                     onTap: () {
-                      Navigator.of(context).pop();
+                      onClose();
                       _showCreateOptions(context);
                     },
                     isDark: isDark,
@@ -152,7 +156,7 @@ class DesktopDrawer extends StatelessWidget {
                       emoji: '🚪',
                       label: l10n.authLogout,
                       onTap: () {
-                        Navigator.of(context).pop();
+                        onClose();
                         context.read<AuthBloc>().add(AuthLogoutRequested());
                       },
                       isDark: isDark,
@@ -211,7 +215,7 @@ class DesktopDrawer extends StatelessWidget {
             icon: Icons.close_rounded,
             size: 24,
             isDark: isDark,
-            onTap: () => Navigator.of(context).pop(),
+            onTap: onClose,
           ),
         ],
       ),
@@ -319,7 +323,7 @@ class DesktopDrawer extends StatelessWidget {
         color: Colors.transparent,
         child: InkWell(
           onTap: () {
-            Navigator.of(context).pop();
+            onClose();
             context.push('/login');
           },
           borderRadius: BorderRadius.circular(12),
@@ -362,7 +366,7 @@ class DesktopDrawer extends StatelessWidget {
   }
 
   void _navigate(BuildContext context, String route) {
-    Navigator.of(context).pop();
+    onClose();
     onNavigate(route);
   }
 

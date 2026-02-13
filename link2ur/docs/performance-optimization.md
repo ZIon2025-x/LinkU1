@@ -2,7 +2,7 @@
 
 > 分析日期：2026-02-12
 > 环境：Flutter Debug 模式 + Android 模拟器/虚拟机
-> 状态：**全部已实施** (Phase 1 + Phase 2 + Phase 3 + Round 2)
+> 状态：**全部已实施** (Phase 1 + Phase 2 + Phase 3 + Round 2 + Round 3)
 
 ---
 
@@ -536,3 +536,25 @@ Release/Profile 模式下 `kDebugMode` 为 false，日志相关代码不执行�
 - **NotificationBloc** (notification_list_view): `unreadCount` 频繁更新（WebSocket 推送），不应触发列表重建
 - **ActivityBloc** (activity_detail_view): 详情页不需要响应 `activities` 列表/分页字段变化
 - **ProfileBloc** (profile_view): 过滤 `publicUser`（他人资料）和 `actionMessage`（已由 BlocListener 处理）
+
+---
+
+## Round 3 — 渲染管线 + 列表效率优化 (2026-02-13)
+
+### 已实施
+
+| # | 优化项 | 文件 | 说明 |
+|---|--------|------|------|
+| 14 | 缓存 _sections() 结果 | `info_views.dart` | `_sections(context)` 原先在 ListView.builder 里被调用 N+1 次，改为构建前缓存一次 |
+| 15 | AnimatedContainer boxShadow → 静态 Container | `cards.dart`, `forum_view.dart` | `AnimatedContainer` 在 hover 时做 boxShadow 插值极其昂贵（GPU 每帧重算模糊），改用静态 Container + AnimatedSlide |
+| 16 | Theme.of(context) 提取局部变量 | `home_view.dart`, `task_detail_view.dart`, `stripe_connect_payouts_view.dart` | 同一 build 方法内多次调用 → 提取一次 |
+| 17 | ListView 项添加 ValueKey | 7 个文件共 8 处 | activity_list, task_expert_list, notification_center, my_tasks (2处), my_forum_posts, my_service_applications — 启用 Flutter 高效 diff |
+| 18 | 单次遍历替换双重 .where() | `profile_mobile_widgets.dart`, `profile_desktop_widgets.dart` | 任务统计从双重 `.where().length` 改为单次 for 循环 |
+| 19a | 图片轮播 setState → ValueNotifier | `task_detail_view.dart` | 页码切换只重建指示器圆点，不再重建整个轮播组件 |
+| 19b | 钱包卡片分离 Transform 和装饰 | `wallet_view.dart` | `AnimatedContainer` 只做 3D tilt transform，boxShadow 放在内层静态 Container |
+
+### 关键优化原理
+
+- **AnimatedContainer + boxShadow** 是 Flutter 最昂贵的动画之一 — GPU 需要在每个动画帧重新计算高斯模糊。AppCard 被全局使用，影响所有卡片列表
+- **ValueKey** 让 Flutter 在列表增删时精确匹配元素，避免整棵子树重建
+- **ValueListenableBuilder** 比 setState 更轻量 — 只重建监听该 ValueNotifier 的子树

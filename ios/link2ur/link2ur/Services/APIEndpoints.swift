@@ -346,6 +346,11 @@ enum APIEndpoints {
         static let myFavorites = "/api/custom-leaderboards/my/favorites"
     }
     
+    // MARK: - Discovery (发现 Feed)
+    enum Discovery {
+        static let feed = "/api/discovery/feed"
+    }
+    
     // MARK: - Common (通用)
     enum Common {
         static let uploadImage = "/api/upload/image"  // 私密图片（任务聊天、客服聊天）
@@ -394,6 +399,7 @@ enum APIEndpoints {
         Forum.posts,
         Forum.categories,
         Activities.list,
+        Discovery.feed,
         Common.banners,
         Common.health,
         "/api/faq",

@@ -143,6 +143,7 @@ class _SystemNotificationListState extends State<_SystemNotificationList> {
                 );
               }
               return AnimatedListItem(
+                key: ValueKey(state.notifications[index].id),
                 index: index,
                 child: _NotificationItem(
                   notification: state.notifications[index],

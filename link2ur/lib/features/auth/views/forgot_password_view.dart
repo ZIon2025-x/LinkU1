@@ -5,6 +5,7 @@ import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_radius.dart';
 import '../../../core/utils/l10n_extension.dart';
+import '../../../core/utils/responsive.dart';
 import '../../../core/utils/validators.dart';
 import '../../../core/widgets/buttons.dart';
 import '../bloc/auth_bloc.dart';
@@ -105,9 +106,16 @@ class _ForgotPasswordViewState extends State<ForgotPasswordView> {
               title: Text(context.l10n.authForgotPassword),
             ),
             body: SafeArea(
-              child: SingleChildScrollView(
-                padding: AppSpacing.allLg,
-                child: Form(
+              child: Center(
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(
+                    maxWidth: ResponsiveUtils.isDesktop(context)
+                        ? 440
+                        : double.infinity,
+                  ),
+                  child: SingleChildScrollView(
+                    padding: AppSpacing.allLg,
+                    child: Form(
                   key: _formKey,
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -323,6 +331,8 @@ class _ForgotPasswordViewState extends State<ForgotPasswordView> {
                   ),
                 ),
               ),
+            ),
+          ),
             ),
           );
         },

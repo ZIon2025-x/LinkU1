@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:intl/intl.dart';
 
 import '../../../core/constants/app_constants.dart';
 import '../../../core/design/app_colors.dart';
@@ -10,8 +11,10 @@ import '../../../core/design/app_radius.dart';
 import '../../../core/widgets/cross_platform_image.dart';
 import '../../../core/utils/haptic_feedback.dart';
 import '../../../core/utils/l10n_extension.dart';
+import '../../../core/utils/responsive.dart';
 import '../../../core/utils/validators.dart';
 import '../../../core/widgets/app_feedback.dart';
+import '../../../core/widgets/content_constraint.dart';
 import '../../../core/widgets/buttons.dart';
 import '../../../core/widgets/location_picker.dart';
 import '../../../data/models/flea_market.dart';
@@ -293,7 +296,24 @@ class _PublishContentState extends State<_PublishContent>
       firstDate: DateTime.now(),
       lastDate: DateTime.now().add(const Duration(days: 365)),
     );
-    if (date != null) setState(() => _taskDeadline = date);
+    if (date == null || !mounted) return;
+    final initialTime = _taskDeadline != null
+        ? TimeOfDay(hour: _taskDeadline!.hour, minute: _taskDeadline!.minute)
+        : const TimeOfDay(hour: 12, minute: 0);
+    final time = await showTimePicker(
+      context: context,
+      initialTime: initialTime,
+    );
+    if (time != null && mounted) {
+      setState(() {
+        _taskDeadline = DateTime(date.year, date.month, date.day, time.hour, time.minute);
+      });
+    } else if (mounted) {
+      // 只选了日期未选时间时，使用 12:00
+      setState(() {
+        _taskDeadline = DateTime(date.year, date.month, date.day, 12, 0);
+      });
+    }
   }
 
   Future<void> _pickImages() async {
@@ -423,14 +443,20 @@ class _PublishContentState extends State<_PublishContent>
           },
         ),
       ],
-      child: Scaffold(
-        backgroundColor: isDark ? AppColors.backgroundDark : AppColors.backgroundLight,
-        body: SafeArea(
-          bottom: false,
-          child: _selectedType == null
+      child: Builder(
+        builder: (context) {
+          final isDesktop = ResponsiveUtils.isDesktop(context);
+          final bodyContent = _selectedType == null
               ? _buildTypePicker(isDark, bottomPadding)
-              : _buildFormView(isDark, bottomPadding),
-        ),
+              : _buildFormView(isDark, bottomPadding);
+          return Scaffold(
+            backgroundColor: isDark ? AppColors.backgroundDark : AppColors.backgroundLight,
+            body: SafeArea(
+              bottom: false,
+              child: isDesktop ? ContentConstraint(child: bodyContent) : bodyContent,
+            ),
+          );
+        },
       ),
     );
   }
@@ -872,7 +898,7 @@ class _PublishContentState extends State<_PublishContent>
                   const SizedBox(width: 12),
                   Text(
                     _taskDeadline != null
-                        ? '${_taskDeadline!.year}-${_taskDeadline!.month.toString().padLeft(2, '0')}-${_taskDeadline!.day.toString().padLeft(2, '0')}'
+                        ? DateFormat('yyyy-MM-dd HH:mm').format(_taskDeadline!)
                         : context.l10n.createTaskSelectDeadline,
                     style: TextStyle(
                       color: _taskDeadline != null

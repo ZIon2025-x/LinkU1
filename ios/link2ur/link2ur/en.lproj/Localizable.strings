@@ -111,7 +111,7 @@
 "home.member_seller" = "Member Seller";
 "home.no_recommended_tasks" = "No recommended tasks";
 "home.no_recommended_tasks_message" = "No recommended tasks yet. Check out the task hall!";
-"home.latest_activity" = "Latest Activity";
+"home.latest_activity" = "Discover more";
 "home.no_activity" = "No activity";
 "home.no_activity_message" = "No latest activity yet";
 "home.no_more_activity" = "Above are the latest activities";
@@ -1120,6 +1120,8 @@
 "create_task.fill_all_required" = "Please fill in all required fields";
 "create_task.image_upload_failed" = "Some images failed to upload, please try again";
 "create_task.student_verification_required" = "Only verified students can post \"Campus Life\" type tasks. Please complete student verification first";
+"create_task.deadline" = "Deadline";
+"create_task.select_deadline" = "Select date & time";
 
 // MARK: - Task Expert
 "task_expert.become_expert" = "Become an Expert";

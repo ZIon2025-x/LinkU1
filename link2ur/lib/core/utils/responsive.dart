@@ -141,11 +141,11 @@ class ResponsiveUtils {
 
   // ===== 自适应间距与约束 =====
 
-  /// 自适应水平内边距
-  /// compact: 16, medium: 20, expanded: 40
+  /// 自适应水平内边距（桌面端 24 对齐 frontend）
+  /// compact: 16, medium: 20, expanded: 24
   static double horizontalPadding(BuildContext context) {
     final w = MediaQuery.sizeOf(context).width;
-    if (w >= Breakpoints.expanded) return 40.0;
+    if (w >= Breakpoints.expanded) return 24.0;
     if (w >= Breakpoints.medium) return 24.0;
     if (w >= Breakpoints.compact) return 20.0;
     return 16.0; // AppSpacing.md

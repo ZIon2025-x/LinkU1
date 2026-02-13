@@ -12,6 +12,7 @@ import '../../../core/design/app_radius.dart';
 import '../../../core/utils/validators.dart';
 import '../../../core/utils/l10n_extension.dart';
 import '../../../core/router/app_router.dart';
+import '../../../core/utils/responsive.dart';
 import '../bloc/auth_bloc.dart';
 
 /// 登录页面
@@ -233,15 +234,21 @@ class _LoginViewState extends State<LoginView>
                 // 背景
                 _buildBackground(isDark),
 
-                // 内容
+                // 内容（桌面端约束最大宽度，避免表单过宽）
                 SafeArea(
                   child: Center(
-                    child: SingleChildScrollView(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: AppSpacing.md,
-                        vertical: AppSpacing.lg,
+                    child: ConstrainedBox(
+                      constraints: BoxConstraints(
+                        maxWidth: ResponsiveUtils.isDesktop(context)
+                            ? 440
+                            : double.infinity,
                       ),
-                      child: FadeTransition(
+                      child: SingleChildScrollView(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: AppSpacing.md,
+                          vertical: AppSpacing.lg,
+                        ),
+                        child: FadeTransition(
                         opacity: _fadeIn,
                         child: Column(
                           children: [
@@ -260,6 +267,7 @@ class _LoginViewState extends State<LoginView>
                       ),
                     ),
                   ),
+                ),
                 ),
               ],
             ),

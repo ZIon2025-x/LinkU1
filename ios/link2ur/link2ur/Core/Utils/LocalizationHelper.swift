@@ -1292,6 +1292,8 @@ case tasksNotInterested = "tasks.not_interested"
     case createTaskFillAllRequired = "create_task.fill_all_required"
     case createTaskImageUploadFailed = "create_task.image_upload_failed"
     case createTaskStudentVerificationRequired = "create_task.student_verification_required"
+    case createTaskDeadline = "create_task.deadline"
+    case createTaskSelectDeadline = "create_task.select_deadline"
     
     // MARK: - Task Expert (Part 1 - Non-duplicate cases)
     case taskExpertBecomeExpertTitle = "task_expert.become_expert_title"

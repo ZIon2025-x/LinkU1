@@ -310,6 +310,7 @@ class _MyTasksViewState extends State<MyTasksView>
             return const SkeletonCard(hasImage: false);
           }
           return AnimatedListItem(
+            key: ValueKey(tasks[index].id),
             index: index,
             child: _TaskCard(task: tasks[index]),
           );
@@ -350,6 +351,7 @@ class _MyTasksViewState extends State<MyTasksView>
         separatorBuilder: (_, __) => const SizedBox(height: AppSpacing.md),
         itemBuilder: (context, index) {
           return AnimatedListItem(
+            key: ValueKey(_pendingApplications[index].id),
             index: index,
             child: _ApplicationCard(application: _pendingApplications[index]),
           );

@@ -53,6 +53,7 @@ class FAQView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final sections = _sections(context);
 
     return Scaffold(
       appBar: AppBar(
@@ -61,9 +62,9 @@ class FAQView extends StatelessWidget {
       ),
       body: ListView.builder(
         padding: AppSpacing.allMd,
-        itemCount: _sections(context).length,
+        itemCount: sections.length,
         itemBuilder: (context, index) {
-          final section = _sections(context)[index];
+          final section = sections[index];
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [

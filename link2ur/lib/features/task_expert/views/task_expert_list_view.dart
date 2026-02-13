@@ -231,7 +231,7 @@ class _TaskExpertListViewContentState extends State<_TaskExpertListViewContent> 
                   }
 
                   final expert = state.experts[index];
-                  return _ExpertCard(expert: expert);
+                  return _ExpertCard(key: ValueKey(expert.id), expert: expert);
                 },
               ),
             );
@@ -505,7 +505,7 @@ class _FilterChip extends StatelessWidget {
 }
 
 class _ExpertCard extends StatelessWidget {
-  const _ExpertCard({required this.expert});
+  const _ExpertCard({super.key, required this.expert});
 
   final TaskExpert expert;
 

@@ -755,7 +755,30 @@ extension APIService {
             retryConfiguration: .default
         )
     }
-    
+}
+
+// MARK: - Discovery Feed API
+
+extension APIService {
+    /// 获取发现 Feed（首页「发现更多」瀑布流）
+    func getDiscoveryFeed(page: Int = 1, limit: Int = 20) -> AnyPublisher<DiscoveryFeedResponse, APIError> {
+        let queryParams: [String: String?] = [
+            "page": "\(page)",
+            "limit": "\(limit)"
+        ]
+        let queryString = APIRequestHelper.buildQueryString(queryParams)
+        let endpoint = "\(APIEndpoints.Discovery.feed)?\(queryString)"
+        return requestWithRetry(
+            DiscoveryFeedResponse.self,
+            endpoint,
+            retryConfiguration: .default
+        )
+    }
+}
+
+// MARK: - Forum Post Detail (continued)
+
+extension APIService {
     /// 获取帖子详情（带缓存，3分钟有效）
     func getForumPostDetail(postId: Int) -> AnyPublisher<ForumPostOut, APIError> {
         let endpoint = APIEndpoints.Forum.postDetail(postId)

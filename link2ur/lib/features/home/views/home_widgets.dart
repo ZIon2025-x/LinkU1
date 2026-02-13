@@ -15,7 +15,7 @@ class _GreetingSection extends StatelessWidget {
         ? (userNameFromState ?? context.l10n.homeDefaultUser)
         : context.l10n.homeClassmate;
 
-    final horizontalPadding = isDesktop ? 40.0 : AppSpacing.md;
+    final horizontalPadding = isDesktop ? 24.0 : AppSpacing.md;
 
     return Padding(
       padding: EdgeInsets.fromLTRB(

@@ -102,6 +102,31 @@ struct CreateTaskView: View {
                                     .background(AppColors.warning.opacity(0.1))
                                     .cornerRadius(AppCornerRadius.medium)
                                 }
+                                
+                                // 截止时间（日期+时间）
+                                VStack(alignment: .leading, spacing: 8) {
+                                    HStack {
+                                        Image(systemName: "calendar.badge.clock")
+                                            .font(.system(size: 14))
+                                            .foregroundColor(AppColors.textSecondary)
+                                        Text(LocalizationKey.createTaskDeadline.localized)
+                                            .font(AppTypography.subheadline)
+                                            .foregroundColor(AppColors.textSecondary)
+                                    }
+                                    DatePicker(
+                                        LocalizationKey.createTaskSelectDeadline.localized,
+                                        selection: Binding(
+                                            get: {
+                                                viewModel.deadline ?? Calendar.current.date(byAdding: .day, value: 7, to: Date()) ?? Date()
+                                            },
+                                            set: { viewModel.deadline = $0 }
+                                        ),
+                                        in: Date()...,
+                                        displayedComponents: [.date, .hourAndMinute]
+                                    )
+                                    .datePickerStyle(.compact)
+                                    .tint(AppColors.primary)
+                                }
                             }
                         }
                         .padding(DeviceInfo.isPad ? AppSpacing.xl : AppSpacing.md)

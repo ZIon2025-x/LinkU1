@@ -225,6 +225,7 @@ class _MyServiceApplicationsViewState extends State<MyServiceApplicationsView>
         itemBuilder: (context, index) {
           final activity = activities[index];
           return AnimatedListItem(
+            key: ValueKey(activity.id),
             index: index,
             child: ActivityCardView(
               activity: activity,

@@ -16,6 +16,7 @@ import '../../../core/widgets/error_state_view.dart';
 import '../../../core/widgets/empty_state_view.dart';
 import '../../../core/widgets/loading_view.dart';
 import '../../../core/widgets/async_image_view.dart';
+import '../../../core/widgets/content_constraint.dart';
 import '../../../data/repositories/flea_market_repository.dart';
 import '../../../data/models/flea_market.dart';
 import '../bloc/flea_market_bloc.dart';
@@ -170,6 +171,7 @@ class _FleaMarketViewContentState extends State<_FleaMarketViewContent> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final isDesktop = ResponsiveUtils.isDesktop(context);
 
     return Scaffold(
       appBar: AppBar(
@@ -267,12 +269,13 @@ class _FleaMarketViewContentState extends State<_FleaMarketViewContent> {
             prev.hasMore != curr.hasMore ||
             prev.isEmpty != curr.isEmpty,
         builder: (context, state) {
-          return AnimatedSwitcher(
+          final content = AnimatedSwitcher(
             duration: const Duration(milliseconds: 300),
             switchInCurve: Curves.easeOut,
             switchOutCurve: Curves.easeIn,
             child: _buildFleaMarketContent(context, state),
           );
+          return isDesktop ? ContentConstraint(child: content) : content;
         },
       ),
       floatingActionButton: FloatingActionButton(

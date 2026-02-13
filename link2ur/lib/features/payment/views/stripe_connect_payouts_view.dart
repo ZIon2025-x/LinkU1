@@ -115,6 +115,8 @@ class _StripeConnectPayoutsViewState extends State<StripeConnectPayoutsView> {
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
 
     return Scaffold(
       appBar: AppBar(
@@ -168,7 +170,7 @@ class _StripeConnectPayoutsViewState extends State<StripeConnectPayoutsView> {
                                         vertical: 16),
                                     alignment: Alignment.center,
                                     decoration: BoxDecoration(
-                                      color: Theme.of(context).cardColor,
+                                      color: theme.cardColor,
                                       borderRadius: BorderRadius.circular(
                                           AppRadius.medium),
                                     ),
@@ -176,8 +178,7 @@ class _StripeConnectPayoutsViewState extends State<StripeConnectPayoutsView> {
                                       l10n.paymentNoAvailableBalance,
                                       style: TextStyle(
                                         fontSize: 14,
-                                        color: Theme.of(context).brightness ==
-                                                Brightness.dark
+                                        color: isDark
                                             ? AppColors.textSecondaryDark
                                             : AppColors.textSecondaryLight,
                                       ),

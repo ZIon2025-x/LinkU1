@@ -39,7 +39,7 @@ class MessageView extends StatelessWidget {
           children: [
             // 桌面端标题栏
             Padding(
-              padding: const EdgeInsets.fromLTRB(40, 20, 40, 12),
+              padding: const EdgeInsets.fromLTRB(24, 20, 24, 12),
               child: Text(
                 context.l10n.messagesMessages,
                 style: TextStyle(
@@ -52,9 +52,7 @@ class MessageView extends StatelessWidget {
               ),
             ),
             const Expanded(
-              child: ContentConstraint(
-                child: _MessageContent(),
-              ),
+              child: _MessageContent(),
             ),
           ],
         ),
@@ -80,7 +78,6 @@ class _MessageContent extends StatelessWidget {
       (bloc) => bloc.state.user?.id,
     );
     final isDesktop = ResponsiveUtils.isDesktop(context);
-    final horizontalPadding = isDesktop ? 40.0 : AppSpacing.md;
 
     return BlocBuilder<MessageBloc, MessageState>(
       buildWhen: (previous, current) =>
@@ -90,21 +87,10 @@ class _MessageContent extends StatelessWidget {
         final displayChats = state.displayTaskChats;
         final pinnedIds = state.pinnedTaskIds;
 
-        return RefreshIndicator(
-          onRefresh: () async {
-            final messageBloc = context.read<MessageBloc>();
-            messageBloc.add(const MessageRefreshRequested());
-            context.read<NotificationBloc>()
-                .add(const NotificationLoadUnreadNotificationCount());
-            await messageBloc.stream.firstWhere(
-              (s) => s.status != MessageStatus.loading,
-              orElse: () => state,
-            );
-          },
-          child: ListView.builder(
+        final listView = ListView.builder(
             padding: EdgeInsets.only(
-              left: horizontalPadding,
-              right: horizontalPadding,
+              left: isDesktop ? 24.0 : AppSpacing.md,
+              right: isDesktop ? 24.0 : AppSpacing.md,
               top: AppSpacing.md,
               // extendBody: true 时手动 padding 会覆盖 ListView 自动的 MediaQuery padding
               // MediaQuery.padding.bottom 已包含底部导航栏+系统安全区高度
@@ -211,7 +197,19 @@ class _MessageContent extends StatelessWidget {
                 ],
               );
             },
-          ),
+        );
+        return RefreshIndicator(
+          onRefresh: () async {
+            final messageBloc = context.read<MessageBloc>();
+            messageBloc.add(const MessageRefreshRequested());
+            context.read<NotificationBloc>()
+                .add(const NotificationLoadUnreadNotificationCount());
+            await messageBloc.stream.firstWhere(
+              (s) => s.status != MessageStatus.loading,
+              orElse: () => state,
+            );
+          },
+          child: isDesktop ? ContentConstraint(child: listView) : listView,
         );
       },
     );

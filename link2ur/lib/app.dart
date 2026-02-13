@@ -5,6 +5,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_native_splash/flutter_native_splash.dart';
 
 import 'core/design/app_theme.dart';
+import 'core/design/scroll_behavior.dart';
 import 'core/router/app_router.dart';
 import 'core/utils/deep_link_handler.dart';
 import 'data/services/websocket_service.dart';
@@ -170,6 +171,7 @@ class _Link2UrAppState extends State<Link2UrApp> {
                 child: MaterialApp.router(
                 title: 'Link²Ur',
                 debugShowCheckedModeBanner: false,
+                scrollBehavior: const AppScrollBehavior(),
                 theme: AppTheme.lightTheme,
                 darkTheme: AppTheme.darkTheme,
                 themeMode: settingsState.themeMode,

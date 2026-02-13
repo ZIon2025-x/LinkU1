@@ -118,17 +118,15 @@ class _HomeViewContentState extends State<_HomeViewContent> {
           // Notion 风格内嵌 Tab 切换
           _buildDesktopTabBar(isDark),
 
-          // 懒加载 Tab 内容：未访问过的 Tab 用 SizedBox 占位，减少首帧 build 开销
+          // 懒加载 Tab 内容；桌面端全宽，各 Tab 内部用 ContentConstraint 约束 1200（对齐 frontend）
           Expanded(
-            child: ContentConstraint(
-              child: IndexedStack(
-                index: _selectedTab,
-                children: [
-                  _visitedTabs.contains(0) ? const _ExpertsTab() : const SizedBox.shrink(),
-                  const _RecommendedTab(), // 默认 Tab，始终构建
-                  _visitedTabs.contains(2) ? const _NearbyTab() : const SizedBox.shrink(),
-                ],
-              ),
+            child: IndexedStack(
+              index: _selectedTab,
+              children: [
+                _visitedTabs.contains(0) ? const _ExpertsTab() : const SizedBox.shrink(),
+                const _RecommendedTab(), // 默认 Tab，始终构建
+                _visitedTabs.contains(2) ? const _NearbyTab() : const SizedBox.shrink(),
+              ],
             ),
           ),
         ],
@@ -137,12 +135,13 @@ class _HomeViewContentState extends State<_HomeViewContent> {
   }
 
   Widget _buildDesktopTabBar(bool isDark) {
-    return Container(
-      padding: const EdgeInsets.fromLTRB(40, 20, 40, 12),
-      child: Row(
-        children: [
-          // 分段控件
-          Container(
+    return ContentConstraint(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(24, 20, 24, 12),
+        child: Row(
+          children: [
+            // 分段控件
+            Container(
             padding: const EdgeInsets.all(3),
             decoration: BoxDecoration(
               color: isDark
@@ -174,20 +173,22 @@ class _HomeViewContentState extends State<_HomeViewContent> {
               ],
             ),
           ),
-        ],
+          ],
+        ),
       ),
     );
   }
 
   // ==================== 移动端首页（保持原样） ====================
   Widget _buildMobileHome(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final brightness = Theme.of(context).brightness;
+    final isDark = brightness == Brightness.dark;
 
     return Scaffold(
       body: Stack(
         children: [
           Container(
-            color: AppColors.backgroundFor(Theme.of(context).brightness),
+            color: AppColors.backgroundFor(brightness),
           ),
           // 装饰性背景 - 与iOS HomeView对齐：模糊彩色圆形
           const RepaintBoundary(child: _DecorativeBackground()),

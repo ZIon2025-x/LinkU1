@@ -182,6 +182,7 @@ class _ActivityListContentState extends State<_ActivityListContent> {
                           );
                         }
                         return AnimatedListItem(
+                          key: ValueKey(filtered[index].id),
                           index: index,
                           child: ActivityCardView(
                             activity: filtered[index],

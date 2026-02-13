@@ -80,16 +80,14 @@ class _ForumViewState extends State<ForumView> {
           // Notion 风格 tab + 发帖按钮
           _buildDesktopHeader(isDark),
 
-          // 直接渲染 tab 内容
+          // 直接渲染 tab 内容（桌面端全宽，各 tab 内部 ContentConstraint 约束 1200）
           Expanded(
-            child: ContentConstraint(
-              child: IndexedStack(
-                index: _selectedTab,
-                children: const [
-                  _ForumTab(),
-                  _LeaderboardTab(),
-                ],
-              ),
+            child: IndexedStack(
+              index: _selectedTab,
+              children: const [
+                _ForumTab(),
+                _LeaderboardTab(),
+              ],
             ),
           ),
         ],
@@ -98,9 +96,10 @@ class _ForumViewState extends State<ForumView> {
   }
 
   Widget _buildDesktopHeader(bool isDark) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(40, 20, 40, 12),
-      child: Row(
+    return ContentConstraint(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(24, 20, 24, 12),
+        child: Row(
         children: [
           // 分段控件
           Container(
@@ -145,6 +144,7 @@ class _ForumViewState extends State<ForumView> {
             },
           ),
         ],
+        ),
       ),
     );
   }
@@ -267,8 +267,7 @@ class _DesktopSegmentState extends State<_DesktopSegment> {
       cursor: SystemMouseCursors.click,
       child: GestureDetector(
         onTap: widget.onTap,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 180),
+        child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
           decoration: BoxDecoration(
             color: widget.isSelected
@@ -281,7 +280,7 @@ class _DesktopSegmentState extends State<_DesktopSegment> {
             borderRadius: BorderRadius.circular(7),
             boxShadow: widget.isSelected
                 ? [BoxShadow(color: Colors.black.withValues(alpha: 0.06), blurRadius: 3, offset: const Offset(0, 1))]
-                : [],
+                : const [],
           ),
           child: Text(
             widget.label,
@@ -326,15 +325,14 @@ class _DesktopCreateButtonState extends State<_DesktopCreateButton> {
       cursor: SystemMouseCursors.click,
       child: GestureDetector(
         onTap: widget.onTap,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 150),
+        child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           decoration: BoxDecoration(
             color: _isHovered ? AppColors.primary : AppColors.primary.withValues(alpha: 0.9),
             borderRadius: BorderRadius.circular(8),
             boxShadow: _isHovered
                 ? [BoxShadow(color: AppColors.primary.withValues(alpha: 0.3), blurRadius: 8, offset: const Offset(0, 2))]
-                : [],
+                : const [],
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
@@ -416,6 +414,7 @@ class _ForumTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDesktop = ResponsiveUtils.isDesktop(context);
     return BlocBuilder<AuthBloc, AuthState>(
       buildWhen: (prev, curr) =>
           prev.isAuthenticated != curr.isAuthenticated ||
@@ -428,12 +427,13 @@ class _ForumTab extends StatelessWidget {
           builder: (context, state) {
             if (state.status == ForumStatus.loading &&
                 state.categories.isEmpty) {
-              return const SkeletonList(imageSize: 64);
+              const body = SkeletonList(imageSize: 64);
+              return isDesktop ? const ContentConstraint(child: body) : body;
             }
 
             if (state.status == ForumStatus.error &&
                 state.categories.isEmpty) {
-              return ErrorStateView.loadFailed(
+              final body = ErrorStateView.loadFailed(
                 message:
                     state.errorMessage ?? context.l10n.tasksLoadFailed,
                 onRetry: () {
@@ -442,6 +442,7 @@ class _ForumTab extends StatelessWidget {
                       .add(const ForumLoadCategories());
                 },
               );
+              return isDesktop ? ContentConstraint(child: body) : body;
             }
 
             // 客户端兜底过滤：根据用户身份过滤板块可见性
@@ -453,11 +454,12 @@ class _ForumTab extends StatelessWidget {
             );
 
             if (visible.isEmpty) {
-              return EmptyStateView.noData(
+              final body = EmptyStateView.noData(
                 context,
                 title: context.l10n.forumNoPosts,
                 description: context.l10n.forumNoPostsHint,
               );
+              return isDesktop ? ContentConstraint(child: body) : body;
             }
 
             // 收藏板块优先，对标iOS
@@ -468,7 +470,7 @@ class _ForumTab extends StatelessWidget {
               return a.sortOrder.compareTo(b.sortOrder);
             });
 
-            return RefreshIndicator(
+            final refresh = RefreshIndicator(
               onRefresh: () async {
                 context
                     .read<ForumBloc>()
@@ -494,6 +496,7 @@ class _ForumTab extends StatelessWidget {
                 },
               ),
             );
+            return isDesktop ? ContentConstraint(child: refresh) : refresh;
           },
         );
       },
@@ -507,6 +510,7 @@ class _LeaderboardTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDesktop = ResponsiveUtils.isDesktop(context);
     return BlocBuilder<LeaderboardBloc, LeaderboardState>(
       buildWhen: (prev, curr) =>
           prev.leaderboards != curr.leaderboards ||
@@ -515,12 +519,13 @@ class _LeaderboardTab extends StatelessWidget {
       builder: (context, state) {
         if (state.status == LeaderboardStatus.loading &&
             state.leaderboards.isEmpty) {
-          return const SkeletonList(imageSize: 90);
+          const body = SkeletonList(imageSize: 90);
+          return isDesktop ? const ContentConstraint(child: body) : body;
         }
 
         if (state.status == LeaderboardStatus.error &&
             state.leaderboards.isEmpty) {
-          return ErrorStateView.loadFailed(
+          final body = ErrorStateView.loadFailed(
             message: state.errorMessage ?? context.l10n.tasksLoadFailed,
             onRetry: () {
               context.read<LeaderboardBloc>().add(
@@ -528,17 +533,19 @@ class _LeaderboardTab extends StatelessWidget {
                   );
             },
           );
+          return isDesktop ? ContentConstraint(child: body) : body;
         }
 
         if (state.leaderboards.isEmpty) {
-          return EmptyStateView.noData(
+          final body = EmptyStateView.noData(
             context,
             title: context.l10n.forumNoLeaderboard,
             description: context.l10n.forumNoLeaderboardMessage,
           );
+          return isDesktop ? ContentConstraint(child: body) : body;
         }
 
-        return RefreshIndicator(
+        final refresh = RefreshIndicator(
           onRefresh: () async {
             context.read<LeaderboardBloc>().add(
                   const LeaderboardRefreshRequested(),
@@ -576,6 +583,7 @@ class _LeaderboardTab extends StatelessWidget {
               },
             ),
           );
+        return isDesktop ? ContentConstraint(child: refresh) : refresh;
         },
       );
   }

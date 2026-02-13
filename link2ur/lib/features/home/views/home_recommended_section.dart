@@ -28,28 +28,66 @@ class _RecommendedTab extends StatelessWidget {
           },
           child: CustomScrollView(
             slivers: [
-              // 欢迎区域
+              // 欢迎区域（桌面端全宽滚动，内容 1200 居中）
               SliverToBoxAdapter(
-                child: const _GreetingSection(),
+                child: isDesktop
+                    ? ContentConstraint(child: const _GreetingSection())
+                    : const _GreetingSection(),
               ),
 
               // Banner 区域 — 紧跟问候语，无分隔线（对标iOS VStack spacing）
               SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.only(top: AppSpacing.sm),
-                  child: isDesktop
-                      ? const _DesktopBannerRow()
-                      : const _BannerCarousel(),
-                ),
+                child: isDesktop
+                    ? ContentConstraint(
+                        child: Padding(
+                          padding: const EdgeInsets.only(top: AppSpacing.sm),
+                          child: isDesktop
+                              ? const _DesktopBannerRow()
+                              : const _BannerCarousel(),
+                        ),
+                      )
+                    : Padding(
+                        padding: const EdgeInsets.only(top: AppSpacing.sm),
+                        child: isDesktop
+                            ? const _DesktopBannerRow()
+                            : const _BannerCarousel(),
+                      ),
               ),
 
               // 推荐任务标题 — 与 Banner 紧凑衔接
               SliverToBoxAdapter(
-                child: Padding(
+                child: isDesktop
+                    ? ContentConstraint(
+                        child: Padding(
+                          padding: EdgeInsets.fromLTRB(
+                            isDesktop ? 24 : AppSpacing.md,
+                            AppSpacing.md,
+                            isDesktop ? 24 : AppSpacing.md,
+                            AppSpacing.sm,
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                context.l10n.homeRecommendedTasks,
+                                style: AppTypography.title3.copyWith(
+                                  color: isDark
+                                      ? AppColors.textPrimaryDark
+                                      : AppColors.desktopTextLight,
+                                ),
+                              ),
+                              _ViewAllButton(
+                                onTap: () => context.push('/tasks'),
+                              ),
+                            ],
+                          ),
+                        ),
+                      )
+                    : Padding(
                   padding: EdgeInsets.fromLTRB(
-                    isDesktop ? 40 : AppSpacing.md,
+                    isDesktop ? 24 : AppSpacing.md,
                     AppSpacing.md,
-                    isDesktop ? 40 : AppSpacing.md,
+                    isDesktop ? 24 : AppSpacing.md,
                     AppSpacing.sm,
                   ),
                   child: Row(
@@ -74,10 +112,17 @@ class _RecommendedTab extends StatelessWidget {
               // 推荐任务内容
               if (state.isLoading && state.recommendedTasks.isEmpty)
                 SliverToBoxAdapter(
-                  child: SizedBox(
-                    height: 256,
-                    child: _SkeletonHorizontalCards(isDesktop: isDesktop),
-                  ),
+                  child: isDesktop
+                      ? ContentConstraint(
+                          child: SizedBox(
+                            height: 256,
+                            child: _SkeletonHorizontalCards(isDesktop: isDesktop),
+                          ),
+                        )
+                      : SizedBox(
+                          height: 256,
+                          child: _SkeletonHorizontalCards(isDesktop: isDesktop),
+                        ),
                 )
               else if (state.hasError && state.recommendedTasks.isEmpty)
                 SliverFillRemaining(
@@ -105,48 +150,77 @@ class _RecommendedTab extends StatelessWidget {
 
                 // 热门活动标题
                 SliverToBoxAdapter(
-                  child: Padding(
-                    padding: EdgeInsets.fromLTRB(
-                      isDesktop ? 40 : AppSpacing.md,
-                      AppSpacing.lg,
-                      isDesktop ? 40 : AppSpacing.md,
-                      AppSpacing.sm,
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          context.l10n.homeHotEvents,
-                          style: AppTypography.title3.copyWith(
-                            color: isDark
-                                ? AppColors.textPrimaryDark
-                                : AppColors.desktopTextLight,
+                  child: isDesktop
+                      ? ContentConstraint(
+                          child: Padding(
+                            padding: EdgeInsets.fromLTRB(
+                              isDesktop ? 24 : AppSpacing.md,
+                              AppSpacing.lg,
+                              isDesktop ? 24 : AppSpacing.md,
+                              AppSpacing.sm,
+                            ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(
+                                  context.l10n.homeHotEvents,
+                                  style: AppTypography.title3.copyWith(
+                                    color: isDark
+                                        ? AppColors.textPrimaryDark
+                                        : AppColors.desktopTextLight,
+                                  ),
+                                ),
+                                _ViewAllButton(
+                                  onTap: () => context.push('/activities'),
+                                ),
+                              ],
+                            ),
+                          ),
+                        )
+                      : Padding(
+                          padding: EdgeInsets.fromLTRB(
+                            isDesktop ? 24 : AppSpacing.md,
+                            AppSpacing.lg,
+                            isDesktop ? 24 : AppSpacing.md,
+                            AppSpacing.sm,
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                context.l10n.homeHotEvents,
+                                style: AppTypography.title3.copyWith(
+                                  color: isDark
+                                      ? AppColors.textPrimaryDark
+                                      : AppColors.desktopTextLight,
+                                ),
+                              ),
+                              _ViewAllButton(
+                                onTap: () => context.push('/activities'),
+                              ),
+                            ],
                           ),
                         ),
-                        _ViewAllButton(
-                          onTap: () => context.push('/activities'),
-                        ),
-                      ],
-                    ),
-                  ),
                 ),
 
                 // 热门活动 — 桌面端 3 列 Row，移动端横向滚动
                 SliverToBoxAdapter(
                   child: isDesktop
-                      ? const _DesktopActivitiesRow()
+                      ? const ContentConstraint(child: _DesktopActivitiesRow())
                       : const _PopularActivitiesSection(),
                 ),
 
                 // 发现更多标题（与 discovery_feed_prototype 一致：左侧标题 + 右侧筛选）
                 SliverToBoxAdapter(
-                  child: Padding(
-                    padding: EdgeInsets.fromLTRB(
-                      isDesktop ? 40 : 20,
-                      AppSpacing.lg,
-                      isDesktop ? 40 : 20,
-                      12,
-                    ),
+                  child: isDesktop
+                      ? ContentConstraint(
+                          child: Padding(
+                            padding: EdgeInsets.fromLTRB(
+                              isDesktop ? 24 : 20,
+                              AppSpacing.lg,
+                              isDesktop ? 24 : 20,
+                              12,
+                            ),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
@@ -222,10 +296,103 @@ class _RecommendedTab extends StatelessWidget {
                       ],
                     ),
                   ),
+                )
+                      : Padding(
+                          padding: EdgeInsets.fromLTRB(
+                            isDesktop ? 24 : 20,
+                            AppSpacing.lg,
+                            isDesktop ? 24 : 20,
+                            12,
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Row(
+                                children: [
+                                  const Icon(
+                                    Icons.auto_awesome,
+                                    size: 22,
+                                    color: AppColors.primary,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    '发现更多',
+                                    style: AppTypography.title3.copyWith(
+                                      fontWeight: FontWeight.w700,
+                                      fontSize: 18,
+                                      color: isDark
+                                          ? AppColors.textPrimaryDark
+                                          : AppColors.desktopTextLight,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              Container(
+                                decoration: BoxDecoration(
+                                  color: isDark
+                                      ? AppColors.cardBackgroundDark
+                                      : Colors.white,
+                                  borderRadius: BorderRadius.circular(999),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withValues(alpha: 0.06),
+                                      blurRadius: 3,
+                                      offset: const Offset(0, 1),
+                                    ),
+                                  ],
+                                ),
+                                child: InkWell(
+                                  onTap: () {},
+                                  borderRadius: BorderRadius.circular(999),
+                                  child: Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 12,
+                                      vertical: 6,
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Icon(
+                                          Icons.tune,
+                                          size: 16,
+                                          color: isDark
+                                              ? AppColors.textSecondaryDark
+                                              : AppColors.textSecondaryLight,
+                                        ),
+                                        const SizedBox(width: 4),
+                                        Text(
+                                          '筛选',
+                                          style: TextStyle(
+                                            fontSize: 13,
+                                            color: isDark
+                                                ? AppColors.textSecondaryDark
+                                                : AppColors.textSecondaryLight,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
                 ),
 
-                // 发现更多瀑布流 — 使用 Sliver 版本，避免 shrinkWrap 破坏视口优化
-                _SliverDiscoveryFeed(horizontalPadding: isDesktop ? 40.0 : 0),
+                // 发现更多瀑布流 — 桌面端约束 1200 居中（SliverLayoutBuilder 取宽后算 padding）
+                if (isDesktop)
+                  SliverLayoutBuilder(
+                    builder: (context, constraints) {
+                      final pad = ((constraints.crossAxisExtent - Breakpoints.maxContentWidth) / 2)
+                          .clamp(0.0, double.infinity);
+                      return SliverPadding(
+                        padding: EdgeInsets.symmetric(horizontal: pad),
+                        sliver: _SliverDiscoveryFeed(horizontalPadding: 24),
+                      );
+                    },
+                  )
+                else
+                  _SliverDiscoveryFeed(horizontalPadding: 0),
               ],
 
               const SliverPadding(padding: EdgeInsets.only(bottom: 20)),
@@ -236,24 +403,43 @@ class _RecommendedTab extends StatelessWidget {
     );
   }
 
-  /// 桌面端 3 列 Grid 任务卡片
+  /// 桌面端 3 列 Grid 任务卡片（ContentConstraint 内，全宽滚动时内容 1200 居中）
   Widget _buildDesktopTaskGrid(BuildContext context, HomeState state) {
     final tasks = state.recommendedTasks.take(9).toList();
+    final crossAxisCount = ResponsiveUtils.gridColumnCount(context, type: GridItemType.task);
+    const spacing = 14.0;
+    const aspectRatio = 0.82;
 
-    return SliverPadding(
-      padding: const EdgeInsets.symmetric(horizontal: 40),
-      sliver: SliverGrid(
-        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: ResponsiveUtils.gridColumnCount(context, type: GridItemType.task),
-          mainAxisSpacing: 14,
-          crossAxisSpacing: 14,
-          childAspectRatio: 0.82,
-        ),
-        delegate: SliverChildBuilderDelegate(
-          (context, index) => RepaintBoundary(
-            child: _DesktopTaskCard(key: ValueKey(tasks[index].id), task: tasks[index]),
-          ),
-          childCount: tasks.length,
+    return SliverToBoxAdapter(
+      child: ContentConstraint(
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final width = constraints.maxWidth;
+            final cellWidth = (width - spacing * (crossAxisCount - 1)) / crossAxisCount;
+            final cellHeight = cellWidth / aspectRatio;
+            final rowCount = (tasks.length / crossAxisCount).ceil();
+            final gridHeight = rowCount * cellHeight + spacing * (rowCount - 1);
+            return SizedBox(
+              height: gridHeight,
+              child: GridView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: crossAxisCount,
+                  mainAxisSpacing: spacing,
+                  crossAxisSpacing: spacing,
+                  childAspectRatio: aspectRatio,
+                ),
+                itemCount: tasks.length,
+                itemBuilder: (context, index) => RepaintBoundary(
+                  child: _DesktopTaskCard(
+                    key: ValueKey(tasks[index].id),
+                    task: tasks[index],
+                  ),
+                ),
+              ),
+            );
+          },
         ),
       ),
     );
@@ -341,7 +527,7 @@ class _DesktopBannerRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 40),
+      padding: const EdgeInsets.symmetric(horizontal: 24),
       child: SizedBox(
         height: 180,
         child: Row(
@@ -391,7 +577,7 @@ class _DesktopActivitiesRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 40),
+      padding: const EdgeInsets.symmetric(horizontal: 24),
       child: SizedBox(
         height: 160,
         child: Row(
@@ -618,6 +804,36 @@ class _DesktopTaskCardState extends State<_DesktopTaskCard> {
                       const Spacer(),
                       Row(
                         children: [
+                          // 任务类型徽章（与 frontend 一致：蓝紫渐变）
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              gradient: const LinearGradient(
+                                colors: AppColors.taskTypeBadgeGradient,
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                              ),
+                              borderRadius: BorderRadius.circular(999),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(_taskTypeIcon(task.taskType), size: 10, color: Colors.white),
+                                const SizedBox(width: 2),
+                                Text(
+                                  task.taskTypeText,
+                                  style: const TextStyle(
+                                    fontSize: 10,
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 8),
                           if (task.deadline != null) ...[
                             Icon(Icons.schedule, size: 12,
                                 color: isDark ? AppColors.textSecondaryDark : AppColors.desktopPlaceholderLight),

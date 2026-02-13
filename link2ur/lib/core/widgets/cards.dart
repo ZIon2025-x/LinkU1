@@ -106,15 +106,11 @@ class _AppCardState extends State<AppCard>
                 isDark ? Brightness.dark : Brightness.light))
         : null;
 
-    Widget card = AnimatedContainer(
-      duration: const Duration(milliseconds: 200),
-      curve: Curves.easeOutCubic,
+    // 使用静态 Container 避免 AnimatedContainer 在 hover 时做 boxShadow 插值
+    // （GPU 每帧重算模糊非常昂贵）。hover 上浮效果用 AnimatedSlide 代替。
+    Widget card = Container(
       margin: widget.margin,
       padding: widget.padding ?? AppSpacing.allMd,
-      // Web 桌面端 hover 时上移 2px（对齐 frontend translateY(-2px)）
-      transform: kIsWeb && _isHovered
-          ? Matrix4.translationValues(0, -2, 0)
-          : null,
       decoration: BoxDecoration(
         color: bgColor,
         borderRadius: effectiveBorderRadius,
@@ -128,6 +124,16 @@ class _AppCardState extends State<AppCard>
       ),
       child: widget.child,
     );
+
+    // Web 桌面端 hover 上移 2px（对齐 frontend translateY(-2px)）
+    if (kIsWeb) {
+      card = AnimatedSlide(
+        duration: const Duration(milliseconds: 200),
+        curve: Curves.easeOutCubic,
+        offset: _isHovered ? const Offset(0, -0.01) : Offset.zero,
+        child: card,
+      );
+    }
 
     // Web 桌面端：添加 MouseRegion hover 效果 + 鼠标指针
     if (kIsWeb && widget.onTap != null) {

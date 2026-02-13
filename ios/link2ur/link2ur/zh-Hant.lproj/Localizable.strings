@@ -101,7 +101,7 @@
 "home.member_seller" = "會員賣家";
 "home.no_recommended_tasks" = "暫無推薦任務";
 "home.no_recommended_tasks_message" = "還沒有推薦任務，快去任務大廳看看吧！";
-"home.latest_activity" = "最新動態";
+"home.latest_activity" = "發現更多";
 "home.no_activity" = "暫無動態";
 "home.no_activity_message" = "還沒有最新動態";
 "home.no_more_activity" = "以上為最新動態";
@@ -1363,6 +1363,8 @@
 "create_task.online" = "线上";
 "create_task.reward" = "任务奖励";
 "create_task.student_verification_required" = "只有已通过学生认证的用户才能发布\"校园生活\"类型的任务，请先完成学生认证";
+"create_task.deadline" = "截止時間";
+"create_task.select_deadline" = "選擇截止日期與時間";
 "create_task.title" = "任务标题";
 "create_task.title_placeholder" = "简要描述您的需求（例如：代取包裹）";
 "error.operation_failed" = "操作失败";
