@@ -761,22 +761,29 @@ class _TaskGridCard extends StatelessWidget {
     );
   }
 
-  /// 图片区域 - 对齐iOS TaskCard ZStack
+  /// 图片区域 - 对齐iOS TaskCard ZStack；等比例裁剪不拉伸变形
   Widget _buildImageArea(bool isDark) {
-    return Stack(
-      fit: StackFit.expand,
-      children: [
-        // 任务图片或占位背景
-        if (task.firstImage != null)
-          Hero(
-            tag: 'task_image_${task.id}',
-            child: AsyncImageView(
-              imageUrl: task.firstImage!,
-              fit: BoxFit.cover,
-            ),
-          )
-        else
-          _buildPlaceholderBackground(),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final w = constraints.maxWidth;
+        final h = constraints.maxHeight;
+        return ClipRect(
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              // 任务图片或占位背景（显式宽高 + cover 保证等比例裁剪、不变形）
+              if (task.firstImage != null)
+                Hero(
+                  tag: 'task_image_${task.id}',
+                  child: AsyncImageView(
+                    imageUrl: task.firstImage!,
+                    width: w,
+                    height: h,
+                    fit: BoxFit.cover,
+                  ),
+                )
+              else
+                _buildPlaceholderBackground(),
 
         // 渐变遮罩层 (对齐iOS LinearGradient overlay)
         DecoratedBox(
@@ -872,7 +879,10 @@ class _TaskGridCard extends StatelessWidget {
             ),
           ),
         ),
-      ],
+            ],
+          ),
+        );
+      },
     );
   }
 

@@ -58,20 +58,21 @@ class _HorizontalTaskCard extends StatelessWidget {
             SizedBox(
               height: 170,
               width: double.infinity,
-              child: Stack(
-                fit: StackFit.expand,
-                children: [
-                  // 图片或占位背景（对标iOS placeholderBackground）
-                  if (task.firstImage != null)
-                    Hero(
-                      tag: 'task_image_${task.id}',
-                      child: AsyncImageView(
-                        imageUrl: task.firstImage!,
-                        width: 220,
-                        height: 170,
-                        fit: BoxFit.cover,
-                      ),
-                    )
+              child: ClipRect(
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    // 图片或占位背景（等比例裁剪不拉伸变形）
+                    if (task.firstImage != null)
+                      Hero(
+                        tag: 'task_image_${task.id}',
+                        child: AsyncImageView(
+                          imageUrl: task.firstImage!,
+                          width: 220,
+                          height: 170,
+                          fit: BoxFit.cover,
+                        ),
+                      )
                   else
                     Container(
                       decoration: BoxDecoration(
@@ -91,8 +92,8 @@ class _HorizontalTaskCard extends StatelessWidget {
                       ),
                     ),
 
-                  // 对标iOS: 3段渐变遮罩（0.2→0.0→0.4）
-                  DecoratedBox(
+                    // 对标iOS: 3段渐变遮罩（0.2→0.0→0.4）
+                    DecoratedBox(
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
                         begin: Alignment.topCenter,
@@ -234,6 +235,7 @@ class _HorizontalTaskCard extends StatelessWidget {
                   ),
                 ],
               ),
+            ),
             ),
 
             // ===== 内容区域 (对标iOS - title + deadline + price badge) =====

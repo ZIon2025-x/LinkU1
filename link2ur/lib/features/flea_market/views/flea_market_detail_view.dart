@@ -398,12 +398,15 @@ class _FleaMarketDetailContent extends StatelessWidget {
           ),
         ),
         const SizedBox(width: 12),
-        // 编辑按钮 - 对标iOS primary gradient
+        // 编辑按钮 - 对标iOS primary gradient（路径须为 /flea-market/:id/edit，传 extra 供编辑页使用）
         Expanded(
           child: GestureDetector(
             onTap: () {
               AppHaptics.selection();
-              context.push('/flea-market/edit/$itemId');
+              final item = state.selectedItem;
+              if (item != null) {
+                context.push('/flea-market/${item.id}/edit', extra: item);
+              }
             },
             child: Container(
               height: 50,

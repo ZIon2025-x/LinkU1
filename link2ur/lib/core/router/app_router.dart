@@ -42,6 +42,7 @@ import '../../features/customer_service/views/customer_service_view.dart';
 import '../../features/coupon_points/views/coupon_points_view.dart';
 import '../../features/info/views/info_views.dart';
 import '../../features/info/views/vip_purchase_view.dart';
+import '../../data/models/flea_market.dart';
 import '../../features/flea_market/views/edit_flea_market_item_view.dart';
 import '../../features/forum/views/forum_post_list_view.dart';
 import '../../features/forum/views/forum_category_request_view.dart';
@@ -399,11 +400,14 @@ class AppRouter {
         redirect: (context, state) {
           final id = (state.pathParameters['id'] ?? '').trim();
           if (id.isEmpty) return AppRoutes.fleaMarket;
+          // 无 extra（如直接链入编辑页）时先跳到详情，由详情再进编辑并带上 item
+          final item = state.extra;
+          if (item == null) return '/flea-market/$id';
           return null;
         },
         pageBuilder: (context, state) {
           final id = state.pathParameters['id'] ?? '';
-          final item = state.extra as dynamic;
+          final item = state.extra as FleaMarketItem;
           return SlideUpTransitionPage(
             key: state.pageKey,
             child: EditFleaMarketItemView(itemId: id, item: item),

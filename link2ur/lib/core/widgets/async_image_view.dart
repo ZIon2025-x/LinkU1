@@ -7,6 +7,7 @@ import '../utils/helpers.dart';
 
 /// 异步图片视图
 /// 参考iOS AsyncImageView.swift
+/// 默认 [BoxFit.cover]：等比例缩放并裁剪填满，不拉伸变形；小图标等可用 [BoxFit.contain]。
 class AsyncImageView extends StatelessWidget {
   const AsyncImageView({
     super.key,

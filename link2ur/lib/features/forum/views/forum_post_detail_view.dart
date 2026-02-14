@@ -978,65 +978,92 @@ class _PostImages extends StatelessWidget {
 
   Widget _buildImageLayout(BuildContext context) {
     if (images.length == 1) {
-      // 单张全宽
-      return GestureDetector(
-        onTap: () => _openFullScreen(context, 0),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(12),
-          child: AsyncImageView(
-            imageUrl: images[0],
-            width: double.infinity,
-            height: 220,
-            fit: BoxFit.cover,
-          ),
-        ),
-      );
-    }
-
-    if (images.length == 2) {
-      // 2张并排
-      return Row(
-        children: [
-          Expanded(
-            child: GestureDetector(
-              onTap: () => _openFullScreen(context, 0),
-              child: ClipRRect(
-                borderRadius: const BorderRadius.only(
-                  topLeft: Radius.circular(12),
-                  bottomLeft: Radius.circular(12),
-                ),
+      // 单张全宽，等比例裁剪不拉伸变形
+      return LayoutBuilder(
+        builder: (context, constraints) {
+          final w = constraints.maxWidth;
+          return GestureDetector(
+            onTap: () => _openFullScreen(context, 0),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: SizedBox(
+                width: w,
+                height: 220,
                 child: AsyncImageView(
                   imageUrl: images[0],
-                  width: double.infinity,
-                  height: 180,
+                  width: w,
+                  height: 220,
                   fit: BoxFit.cover,
                 ),
               ),
             ),
+          );
+        },
+      );
+    }
+
+    if (images.length == 2) {
+      // 2张并排，等比例裁剪不拉伸变形
+      return Row(
+        children: [
+          Expanded(
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final w = constraints.maxWidth;
+                return GestureDetector(
+                  onTap: () => _openFullScreen(context, 0),
+                  child: ClipRRect(
+                    borderRadius: const BorderRadius.only(
+                      topLeft: Radius.circular(12),
+                      bottomLeft: Radius.circular(12),
+                    ),
+                    child: SizedBox(
+                      width: w,
+                      height: 180,
+                      child: AsyncImageView(
+                        imageUrl: images[0],
+                        width: w,
+                        height: 180,
+                        fit: BoxFit.cover,
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
           ),
           const SizedBox(width: 4),
           Expanded(
-            child: GestureDetector(
-              onTap: () => _openFullScreen(context, 1),
-              child: ClipRRect(
-                borderRadius: const BorderRadius.only(
-                  topRight: Radius.circular(12),
-                  bottomRight: Radius.circular(12),
-                ),
-                child: AsyncImageView(
-                  imageUrl: images[1],
-                  width: double.infinity,
-                  height: 180,
-                  fit: BoxFit.cover,
-                ),
-              ),
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final w = constraints.maxWidth;
+                return GestureDetector(
+                  onTap: () => _openFullScreen(context, 1),
+                  child: ClipRRect(
+                    borderRadius: const BorderRadius.only(
+                      topRight: Radius.circular(12),
+                      bottomRight: Radius.circular(12),
+                    ),
+                    child: SizedBox(
+                      width: w,
+                      height: 180,
+                      child: AsyncImageView(
+                        imageUrl: images[1],
+                        width: w,
+                        height: 180,
+                        fit: BoxFit.cover,
+                      ),
+                    ),
+                  ),
+                );
+              },
             ),
           ),
         ],
       );
     }
 
-    // 3+ 张网格
+    // 3+ 张网格，等比例裁剪不拉伸变形
     return GridView.builder(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
@@ -1052,11 +1079,20 @@ class _PostImages extends StatelessWidget {
           onTap: () => _openFullScreen(context, index),
           child: ClipRRect(
             borderRadius: BorderRadius.circular(8),
-            child: AsyncImageView(
-              imageUrl: images[index],
-              width: double.infinity,
-              height: double.infinity,
-              fit: BoxFit.cover,
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final size = constraints.maxWidth;
+                return SizedBox(
+                  width: size,
+                  height: size,
+                  child: AsyncImageView(
+                    imageUrl: images[index],
+                    width: size,
+                    height: size,
+                    fit: BoxFit.cover,
+                  ),
+                );
+              },
             ),
           ),
         );
