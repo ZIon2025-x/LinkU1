@@ -501,7 +501,11 @@ class FleaMarketBloc extends Bloc<FleaMarketEvent, FleaMarketState> {
     FleaMarketUpdateItem event,
     Emitter<FleaMarketState> emit,
   ) async {
-    emit(state.copyWith(isSubmitting: true));
+    emit(state.copyWith(
+      isSubmitting: true,
+      actionMessage: null,
+      errorMessage: null,
+    ));
 
     try {
       final updatedItem = await _fleaMarketRepository.updateItem(

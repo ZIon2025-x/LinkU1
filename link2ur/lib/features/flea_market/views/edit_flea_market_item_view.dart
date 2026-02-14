@@ -174,10 +174,15 @@ class _EditFleaMarketItemViewContentState
     final totalImages = _existingImageUrls.length + _newImages.length;
 
     return BlocListener<FleaMarketBloc, FleaMarketState>(
+      listenWhen: (previous, current) =>
+          current.actionMessage != previous.actionMessage ||
+          current.errorMessage != previous.errorMessage,
       listener: (context, state) {
         if (state.actionMessage == 'item_updated') {
           Navigator.of(context).pop(true);
-        } else if (state.actionMessage != null) {
+          return;
+        }
+        if (state.actionMessage != null) {
           final l10n = context.l10n;
           final message = switch (state.actionMessage) {
             'item_published' => l10n.actionItemPublished,

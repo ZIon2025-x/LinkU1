@@ -489,11 +489,13 @@ class FleaMarketRepository {
       throw FleaMarketException(response.message ?? '更新商品失败');
     }
 
-    // 失效缓存
-    await _cache.remove('${CacheManager.prefixFleaMarketDetail}$id');
-    await _cache.invalidateFleaMarketCache();
-
-    return FleaMarketItem.fromJson(response.data!);
+    final item = FleaMarketItem.fromJson(response.data!);
+    // 先返回结果让 UI 立即关闭 loading，再在后台失效缓存
+    Future.microtask(() async {
+      await _cache.remove('${CacheManager.prefixFleaMarketDetail}$id');
+      await _cache.invalidateFleaMarketCache();
+    });
+    return item;
   }
 
   /// 删除商品

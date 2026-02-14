@@ -934,6 +934,7 @@ async def update_flea_market_item(
                 
                 # 处理临时图片：移动临时图片到正式目录并更新URL（使用图片上传服务）
                 updated_images = []
+                temp_marker = f"/temp_{current_user.id}/"
                 
                 if item_data.images:
                     try:
@@ -949,11 +950,32 @@ async def update_flea_market_item(
                             image_urls=list(item_data.images)
                         )
                         
+                        # 禁止把临时 URL 写入数据库：若仍有 temp 路径说明移动未成功
+                        still_temp = [u for u in updated_images if temp_marker in u]
+                        if still_temp:
+                            logger.error(
+                                f"商品 {db_id} 更新图片时部分仍为临时路径，不写入数据库: {still_temp}"
+                            )
+                            raise HTTPException(
+                                status_code=status.HTTP_400_BAD_REQUEST,
+                                detail="图片移动失败，请重新选择图片后保存"
+                            )
+                        
                         # 尝试删除临时目录
                         service.delete_temp(category=ImageCategory.FLEA_MARKET, user_id=current_user.id)
+                    except HTTPException:
+                        raise
                     except Exception as e:
                         logger.warning(f"移动商品图片失败: {e}，使用原图片列表")
                         updated_images = list(item_data.images)
+                        # 若回退后仍是临时 URL，不写入数据库并报错
+                        still_temp = [u for u in updated_images if temp_marker in u]
+                        if still_temp:
+                            logger.error(f"移动失败且回退列表含临时 URL，拒绝写入: {still_temp}")
+                            raise HTTPException(
+                                status_code=status.HTTP_400_BAD_REQUEST,
+                                detail="图片处理失败，请重新选择图片后保存"
+                            )
                 
                 # 更新图片列表（使用更新后的URL）
                 update_data["images"] = json.dumps(updated_images) if updated_images else None
