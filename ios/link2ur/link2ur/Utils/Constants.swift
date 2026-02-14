@@ -59,8 +59,8 @@ public struct Constants {
             if let key = ProcessInfo.processInfo.environment["STRIPE_PUBLISHABLE_KEY"], !key.isEmpty {
                 return key
             }
-            // 默认使用生产环境 publishable key（公开密钥，安全嵌入客户端）
-            return "pk_live_51SePW15vvXfvzqMhSEXu7QnduEi7axoPiUMc9gNiV8KFAa82b6rFrrbOFW3gmTiaOETlI3gA0SsAz18SSokFKGLx00bALMvCAg"
+            // 默认使用测试环境 publishable key（公开密钥，安全嵌入客户端）
+            return "pk_test_51SePW98JTHo8ClgaUWRjX9HHabiw09tJQLJlQdJXYCNMVDFr9B9ZeWNwkH9D8NRxreIew4AfQ7hByO6l37KdEkAa00yqY1lz0P"
         }()
         
         // Apple Pay Merchant ID

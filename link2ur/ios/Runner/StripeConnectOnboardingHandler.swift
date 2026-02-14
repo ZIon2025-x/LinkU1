@@ -1,19 +1,18 @@
 import Foundation
 import Flutter
 import UIKit
-import StripeConnect
+@_spi(PrivateBetaConnect) import StripeConnect
 
-class StripeConnectOnboardingHandler: NSObject, AccountOnboardingControllerDelegate {
-    
+@available(iOS 15, *)
+class StripeConnectOnboardingHandler: NSObject, StripeConnect.AccountOnboardingControllerDelegate {
+
     private var result: FlutterResult?
-    private var embeddedComponentManager: EmbeddedComponentManager?
-    private var onboardingController: AccountOnboardingController?
-    
-    // Hardcoded URLs matching the iOS native project (or can be passed from Flutter)
-    // In a real app, these should probably come from Flutter/AppConfig
-    private let termsURL = URL(string: "https://link2ur.com/terms")!
-    private let privacyURL = URL(string: "https://link2ur.com/privacy")!
-    
+    private var embeddedComponentManager: StripeConnect.EmbeddedComponentManager?
+    private var onboardingController: StripeConnect.AccountOnboardingController?
+
+    private let termsURL = URL(string: "https://www.link2ur.com/terms")!
+    private let privacyURL = URL(string: "https://www.link2ur.com/privacy")!
+
     func openOnboarding(
         publishableKey: String,
         clientSecret: String,
@@ -21,62 +20,43 @@ class StripeConnectOnboardingHandler: NSObject, AccountOnboardingControllerDeleg
         result: @escaping FlutterResult
     ) {
         self.result = result
-        
-        // Initialize Stripe Client
+
         STPAPIClient.shared.publishableKey = publishableKey
-        
-        // Initialize EmbeddedComponentManager
-        embeddedComponentManager = EmbeddedComponentManager(
-            fetchClientSecret: {
-                return clientSecret
-            }
+
+        let secret = clientSecret
+        embeddedComponentManager = StripeConnect.EmbeddedComponentManager(
+            fetchClientSecret: { () async -> String? in secret }
         )
-        
-        // 与 iOS 原生项目一致的 collectionOptions（收集 eventuallyDue + 包含 futureRequirements）
-        var collectionOptions = AccountCollectionOptions()
+
+        var collectionOptions = StripeConnect.AccountCollectionOptions()
         collectionOptions.fields = .eventuallyDue
         collectionOptions.futureRequirements = .include
-        
+
         let controller = embeddedComponentManager!.createAccountOnboardingController(
             fullTermsOfServiceUrl: termsURL,
             recipientTermsOfServiceUrl: termsURL,
             privacyPolicyUrl: privacyURL,
             collectionOptions: collectionOptions
         )
-        
+
         controller.delegate = self
         self.onboardingController = controller
-        
-        // Present
+
         controller.present(from: viewController)
     }
-    
-    // MARK: - AccountOnboardingControllerDelegate
-    
-    func accountOnboardingController(_ controller: AccountOnboardingController, didCompleteWith account: Account) {
-        // Onboarding completed
+
+    // MARK: - AccountOnboardingControllerDelegate（当前 SDK 仅提供这两个回调）
+
+    func accountOnboardingDidExit(_ accountOnboarding: StripeConnect.AccountOnboardingController) {
         result?(["status": "completed"])
         cleanup()
     }
-    
-    func accountOnboardingController(_ controller: AccountOnboardingController, didCancelWith account: Account) {
-        // User cancelled
-        result?(["status": "cancelled"])
-        cleanup()
-    }
-    
-    func accountOnboardingController(_ controller: AccountOnboardingController, didFailWith error: Error) {
-        // Error occurred
-        result?(FlutterError(code: "ONBOARDING_FAILED", message: error.localizedDescription, details: nil))
-        cleanup()
-    }
-    
-    func accountOnboardingController(_ controller: AccountOnboardingController, didFailLoadWithError error: Error) {
-        // Load error
+
+    func accountOnboarding(_ accountOnboarding: StripeConnect.AccountOnboardingController, didFailLoadWithError error: Error) {
         result?(FlutterError(code: "LOAD_FAILED", message: error.localizedDescription, details: nil))
         cleanup()
     }
-    
+
     private func cleanup() {
         onboardingController = nil
         embeddedComponentManager = nil

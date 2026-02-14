@@ -22,12 +22,47 @@
 		<string>????</string>
 		<key>CFBundleVersion</key>
 		<string>$(FLUTTER_BUILD_NUMBER)</string>
+		<key>CFBundleKeywords</key>
+		<array>
+			<string>link2ur</string>
+			<string>link to you</string>
+			<string>link 2 u r</string>
+			<string>link²ur</string>
+			<string>任务</string>
+			<string>跳蚤市场</string>
+			<string>论坛</string>
+			<string>task</string>
+			<string>flea market</string>
+			<string>forum</string>
+		</array>
 		<key>LSRequiresIPhoneOS</key>
 		<true/>
 		<key>UILaunchStoryboardName</key>
 		<string>LaunchScreen</string>
 		<key>UIMainStoryboardFile</key>
 		<string>Main</string>
+		<!-- UIScene 生命周期（消除 "does not adopt UIScene lifecycle" 警告） -->
+		<key>UIApplicationSceneManifest</key>
+		<dict>
+			<key>UIApplicationSupportsMultipleScenes</key>
+			<false/>
+			<key>UISceneConfigurations</key>
+			<dict>
+				<key>UIWindowSceneSessionRoleApplication</key>
+				<array>
+					<dict>
+						<key>UISceneClassName</key>
+						<string>UIWindowScene</string>
+						<key>UISceneConfigurationName</key>
+						<string>flutter</string>
+						<key>UISceneDelegateClassName</key>
+						<string>FlutterSceneDelegate</string>
+						<key>UISceneStoryboardFile</key>
+						<string>Main</string>
+					</dict>
+				</array>
+			</dict>
+		</dict>
 		<key>UISupportedInterfaceOrientations</key>
 		<array>
 			<string>UIInterfaceOrientationPortrait</string>
@@ -64,6 +99,16 @@
 				<string>Editor</string>
 				<key>CFBundleURLName</key>
 				<string>com.link2ur</string>
+				<key>CFBundleURLSchemes</key>
+				<array>
+					<string>link2ur</string>
+				</array>
+			</dict>
+			<dict>
+				<key>CFBundleTypeRole</key>
+				<string>Editor</string>
+				<key>CFBundleURLName</key>
+				<string>com.link2ur.app</string>
 				<key>CFBundleURLSchemes</key>
 				<array>
 					<string>link2ur</string>

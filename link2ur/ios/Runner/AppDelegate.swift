@@ -4,7 +4,7 @@ import UserNotifications
 import SwiftUI
 
 @main
-@objc class AppDelegate: FlutterAppDelegate {
+@objc class AppDelegate: FlutterAppDelegate, FlutterImplicitEngineDelegate {
 
   /// MethodChannel 用于与 Dart 层通信推送事件
   private var pushChannel: FlutterMethodChannel?
@@ -22,111 +22,116 @@ import SwiftUI
   /// 缓存的 APNs device token（hex 格式）
   private var cachedDeviceToken: String?
 
+  // MARK: - FlutterImplicitEngineDelegate（UIScene 生命周期下在此创建 channel，避免在 didFinishLaunching 访问 window 导致崩溃）
+
+  func didInitializeImplicitFlutterEngine(_ engineBridge: FlutterImplicitEngineBridge) {
+    GeneratedPluginRegistrant.register(with: engineBridge.pluginRegistry)
+    let messenger = engineBridge.applicationRegistrar.messenger()
+
+    // 推送通知 channel
+    pushChannel = FlutterMethodChannel(name: "com.link2ur/push", binaryMessenger: messenger)
+    pushChannel?.setMethodCallHandler { [weak self] call, result in
+      switch call.method {
+      case "getDeviceToken":
+        result(self?.cachedDeviceToken)
+      default:
+        result(FlutterMethodNotImplemented)
+      }
+    }
+
+    // 角标管理 channel
+    badgeChannel = FlutterMethodChannel(name: "com.link2ur/badge", binaryMessenger: messenger)
+    badgeChannel?.setMethodCallHandler { call, result in
+      switch call.method {
+      case "updateBadge":
+        let count = call.arguments as? Int ?? 0
+        UNUserNotificationCenter.current().getNotificationSettings { settings in
+          DispatchQueue.main.async {
+            if settings.authorizationStatus == .authorized {
+              UIApplication.shared.applicationIconBadgeNumber = count
+            }
+            result(nil)
+          }
+        }
+      case "clearBadge":
+        DispatchQueue.main.async {
+          UIApplication.shared.applicationIconBadgeNumber = 0
+          result(nil)
+        }
+      case "getBadgeCount":
+        result(UIApplication.shared.applicationIconBadgeNumber)
+      default:
+        result(FlutterMethodNotImplemented)
+      }
+    }
+
+    // 地图选点 channel
+    locationPickerChannel = FlutterMethodChannel(name: "com.link2ur/location_picker", binaryMessenger: messenger)
+    locationPickerChannel?.setMethodCallHandler { [weak self] call, channelResult in
+      switch call.method {
+      case "openLocationPicker":
+        self?.openLocationPicker(arguments: call.arguments as? [String: Any], result: channelResult)
+      default:
+        channelResult(FlutterMethodNotImplemented)
+      }
+    }
+
+    // Stripe Connect channel（present 时通过 currentFlutterViewController() 获取 VC）
+    stripeConnectChannel = FlutterMethodChannel(name: "com.link2ur/stripe_connect", binaryMessenger: messenger)
+    stripeConnectChannel?.setMethodCallHandler { [weak self] call, result in
+      switch call.method {
+      case "openOnboarding":
+        guard let self = self,
+              let args = call.arguments as? [String: Any],
+              let publishableKey = args["publishableKey"] as? String,
+              let clientSecret = args["clientSecret"] as? String else {
+          result(FlutterError(code: "INVALID_ARGS", message: "Missing publishableKey or clientSecret", details: nil))
+          return
+        }
+        guard let controller = self.currentFlutterViewController() else {
+          result(FlutterError(code: "NO_VC", message: "No Flutter view controller", details: nil))
+          return
+        }
+        self.stripeConnectHandler.openOnboarding(
+          publishableKey: publishableKey,
+          clientSecret: clientSecret,
+          from: controller,
+          result: result
+        )
+      default:
+        result(FlutterMethodNotImplemented)
+      }
+    }
+  }
+
   override func application(
     _ application: UIApplication,
     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
   ) -> Bool {
-    GeneratedPluginRegistrant.register(with: self)
-
-    // 设置 MethodChannels
-    if let controller = window?.rootViewController as? FlutterViewController {
-      // 推送通知 channel
-      pushChannel = FlutterMethodChannel(
-        name: "com.link2ur/push",
-        binaryMessenger: controller.binaryMessenger
-      )
-      pushChannel?.setMethodCallHandler { [weak self] call, result in
-        switch call.method {
-        case "getDeviceToken":
-          result(self?.cachedDeviceToken)
-        default:
-          result(FlutterMethodNotImplemented)
-        }
-      }
-
-      // 角标管理 channel
-      badgeChannel = FlutterMethodChannel(
-        name: "com.link2ur/badge",
-        binaryMessenger: controller.binaryMessenger
-      )
-      badgeChannel?.setMethodCallHandler { call, result in
-        switch call.method {
-        case "updateBadge":
-          let count = call.arguments as? Int ?? 0
-          UNUserNotificationCenter.current().getNotificationSettings { settings in
-            DispatchQueue.main.async {
-              if settings.authorizationStatus == .authorized {
-                UIApplication.shared.applicationIconBadgeNumber = count
-              }
-              result(nil)
-            }
-          }
-        case "clearBadge":
-          DispatchQueue.main.async {
-            UIApplication.shared.applicationIconBadgeNumber = 0
-            result(nil)
-          }
-        case "getBadgeCount":
-          result(UIApplication.shared.applicationIconBadgeNumber)
-        default:
-          result(FlutterMethodNotImplemented)
-        }
-      }
-
-      // 地图选点 channel
-      locationPickerChannel = FlutterMethodChannel(
-        name: "com.link2ur/location_picker",
-        binaryMessenger: controller.binaryMessenger
-      )
-      locationPickerChannel?.setMethodCallHandler { [weak self] call, channelResult in
-        switch call.method {
-        case "openLocationPicker":
-          self?.openLocationPicker(arguments: call.arguments as? [String: Any], result: channelResult)
-        default:
-          channelResult(FlutterMethodNotImplemented)
-        }
-      }
-
-      // Stripe Connect channel
-      stripeConnectChannel = FlutterMethodChannel(
-        name: "com.link2ur/stripe_connect",
-        binaryMessenger: controller.binaryMessenger
-      )
-      stripeConnectChannel?.setMethodCallHandler { [weak self] call, result in
-        switch call.method {
-        case "openOnboarding":
-          guard let args = call.arguments as? [String: Any],
-                let publishableKey = args["publishableKey"] as? String,
-                let clientSecret = args["clientSecret"] as? String else {
-            result(FlutterError(code: "INVALID_ARGS", message: "Missing publishableKey or clientSecret", details: nil))
-            return
-          }
-          
-          self?.stripeConnectHandler.openOnboarding(
-            publishableKey: publishableKey,
-            clientSecret: clientSecret,
-            from: controller,
-            result: result
-          )
-        default:
-          result(FlutterMethodNotImplemented)
-        }
-      }
-    }
-
-    // 注册远程推送
+    // 插件注册已移至 didInitializeImplicitFlutterEngine；此处仅保留进程级与推送配置
     UNUserNotificationCenter.current().delegate = self
     application.registerForRemoteNotifications()
 
-    // 检查 app 是否从通知冷启动
     if let notification = launchOptions?[.remoteNotification] as? [String: Any] {
-      // 延迟处理，等待 Flutter engine 就绪
       DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self] in
         self?.pushChannel?.invokeMethod("onNotificationTapped", arguments: notification)
       }
     }
 
     return super.application(application, didFinishLaunchingWithOptions: launchOptions)
+  }
+
+  /// 当前用于 present 的 Flutter VC（兼容 UIScene：优先 delegate.window，否则取 keyWindow）
+  private func currentFlutterViewController() -> FlutterViewController? {
+    if let vc = window?.rootViewController as? FlutterViewController { return vc }
+    if #available(iOS 15.0, *) {
+      return UIApplication.shared.connectedScenes
+        .compactMap { $0 as? UIWindowScene }
+        .flatMap { $0.windows }
+        .first { $0.isKeyWindow }?
+        .rootViewController as? FlutterViewController
+    }
+    return UIApplication.shared.windows.first { $0.isKeyWindow }?.rootViewController as? FlutterViewController
   }
 
   // MARK: - APNs Token
@@ -209,7 +214,7 @@ import SwiftUI
 
   /// 打开原生 MapKit 地图选点页面
   private func openLocationPicker(arguments: [String: Any]?, result: @escaping FlutterResult) {
-    guard let controller = window?.rootViewController else {
+    guard let controller = currentFlutterViewController() else {
       result(nil)
       return
     }

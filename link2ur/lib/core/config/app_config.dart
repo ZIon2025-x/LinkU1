@@ -58,7 +58,7 @@ class AppConfig {
   }
 
   /// Apple Pay商户标识
-  String get applePayMerchantId => 'merchant.com.link2ur.app';
+  String get applePayMerchantId => 'merchant.com.link2ur';
 
   /// Web 前端 URL（React 宣传站）
   String get webFrontendUrl {

@@ -43,5 +43,46 @@ end
 post_install do |installer|
   installer.pods_project.targets.each do |target|
     flutter_additional_ios_build_settings(target)
+
+    # 统一最低 iOS 部署目标为 12.0，满足 Xcode 支持的 12.0–26.2.99 范围
+    target.build_configurations.each do |config|
+      config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '12.0'
+    end
+
+    # 仅处理有编译源的原生 target（跳过 Pods-Runner 等 aggregate target）
+    next unless target.respond_to?(:source_build_phase) && target.source_build_phase
+
+    # 1. 将误加入 Compile Sources 的 PrivacyInfo.xcprivacy 移出（避免 no rule to process）
+    target.source_build_phase.files.each do |build_file|
+      next unless build_file.file_ref
+      path = build_file.file_ref.path.to_s
+      next unless path.end_with?('PrivacyInfo.xcprivacy')
+      file_ref = build_file.file_ref
+      build_file.remove_from_project
+      resources_phase = target.build_phases.find { |p| p.respond_to?(:name) && p.name == 'Resources' }
+      if resources_phase && resources_phase.respond_to?(:add_file_reference)
+        in_resources = resources_phase.files.any? { |f| f.file_ref && f.file_ref.path == file_ref.path }
+        resources_phase.add_file_reference(file_ref) unless in_resources
+      end
+    end
+
+    # 2. fluwx 需要能找到 WechatOpenSDK 的 WXApi.h
+    if target.name == 'fluwx'
+      wechat_headers = [
+        '"${PODS_ROOT}/WechatOpenSDK-XCFramework/WechatOpenSDK.xcframework/ios-arm64/WechatOpenSDK.framework/Headers"',
+        '"${PODS_ROOT}/WechatOpenSDK-XCFramework/WechatOpenSDK.xcframework/ios-arm64_x86_64-simulator/WechatOpenSDK.framework/Headers"'
+      ].join(' ')
+      target.build_configurations.each do |config|
+        existing = config.build_settings['HEADER_SEARCH_PATHS'] || '$(inherited)'
+        config.build_settings['HEADER_SEARCH_PATHS'] = "#{existing} #{wechat_headers}"
+      end
+    end
   end
+
+  # 将 Pods 工程本身的部署目标也设为 12.0
+  installer.pods_project.build_configurations.each do |config|
+    config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '12.0'
+  end
+
+  installer.pods_project.save
 end

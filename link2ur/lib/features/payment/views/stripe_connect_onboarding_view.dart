@@ -149,7 +149,7 @@ class _StripeConnectOnboardingViewState
       // 如果未配置，根据当前环境选择回退 key
       // ⚠️ publishable key 必须与后端 STRIPE_SECRET_KEY 的模式匹配（同为 test 或同为 live）
       if (publishableKey.isEmpty) {
-        publishableKey = "pk_live_51SePW15vvXfvzqMhSEXu7QnduEi7axoPiUMc9gNiV8KFAa82b6rFrrbOFW3gmTiaOETlI3gA0SsAz18SSokFKGLx00bALMvCAg";
+        publishableKey = "pk_test_51SePW98JTHo8ClgaUWRjX9HHabiw09tJQLJlQdJXYCNMVDFr9B9ZeWNwkH9D8NRxreIew4AfQ7hByO6l37KdEkAa00yqY1lz0P";
       }
 
       final result = await StripeConnectService.instance.openOnboarding(
