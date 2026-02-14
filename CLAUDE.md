@@ -34,6 +34,10 @@ flutter run
 flutter build apk
 flutter build ios
 
+# Build iOS/Android with mobile request signing (eliminates backend "缺少签名或时间戳" WARNING)
+# flutter build ios --dart-define=MOBILE_APP_SECRET=<same as backend MOBILE_APP_SECRET>
+# See link2ur/docs/mobile-app-secret.md for details.
+
 # Analyze code
 flutter analyze
 
