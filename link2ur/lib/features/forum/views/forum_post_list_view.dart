@@ -71,7 +71,12 @@ class _ForumPostListViewContentState
         actions: [
           IconButton(
             icon: const Icon(Icons.add_circle, color: AppColors.primary),
-            onPressed: () => context.push('/forum/posts/create'),
+            onPressed: () async {
+              await context.push('/forum/posts/create');
+              if (context.mounted) {
+                context.read<ForumBloc>().add(ForumLoadPosts(categoryId: widget.category?.id));
+              }
+            },
           ),
         ],
       ),

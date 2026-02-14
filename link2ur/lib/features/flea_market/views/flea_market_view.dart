@@ -279,8 +279,11 @@ class _FleaMarketViewContentState extends State<_FleaMarketViewContent> {
         },
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          context.push('/flea-market/create');
+        onPressed: () async {
+          await context.push('/flea-market/create');
+          if (context.mounted) {
+            context.read<FleaMarketBloc>().add(const FleaMarketRefreshRequested());
+          }
         },
         backgroundColor: AppColors.primary,
         child: const Icon(Icons.add, color: Colors.white),

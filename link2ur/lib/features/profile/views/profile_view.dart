@@ -174,7 +174,12 @@ class _ProfileContent extends StatelessWidget {
               actions: [
                 IconButton(
                   icon: const Icon(Icons.edit),
-                  onPressed: () => context.push('/profile/edit'),
+                  onPressed: () async {
+                    await context.push('/profile/edit');
+                    if (context.mounted) {
+                      context.read<ProfileBloc>().add(const ProfileLoadRequested());
+                    }
+                  },
                 ),
               ],
             ),

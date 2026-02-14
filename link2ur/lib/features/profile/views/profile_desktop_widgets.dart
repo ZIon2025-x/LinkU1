@@ -24,7 +24,12 @@ Widget _buildDesktopProfile(
             ),
             const Spacer(),
             _DesktopEditButton(
-              onTap: () => context.push('/profile/edit'),
+              onTap: () async {
+                await context.push('/profile/edit');
+                if (context.mounted) {
+                  context.read<ProfileBloc>().add(const ProfileLoadRequested());
+                }
+              },
               isDark: isDark,
             ),
           ],

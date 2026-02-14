@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:geocoding/geocoding.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -57,6 +58,34 @@ class _LocationInputFieldState extends State<LocationInputField> {
     super.dispose();
   }
 
+  /// 将 Placemark 格式化为可读地址（街道/区域、城市、省/州、国家）
+  static String _formatPlacemarkAddress(Placemark p) {
+    final parts = <String>[];
+    if (p.street != null && p.street!.isNotEmpty) {
+      parts.add(p.street!);
+    } else if (p.thoroughfare != null && p.thoroughfare!.isNotEmpty) {
+      parts.add(p.thoroughfare!);
+    }
+    if (p.locality != null && p.locality!.isNotEmpty) {
+      parts.add(p.locality!);
+    }
+    if (p.administrativeArea != null && p.administrativeArea!.isNotEmpty) {
+      parts.add(p.administrativeArea!);
+    }
+    if (p.country != null && p.country!.isNotEmpty) {
+      parts.add(p.country!);
+    }
+    if (parts.isEmpty && p.name != null && p.name!.isNotEmpty) {
+      parts.add(p.name!);
+    }
+    return parts.isNotEmpty ? parts.join(', ') : '';
+  }
+
+  /// 逆地理失败时的后备文案（仍显示坐标，但标注为“已获取坐标”）
+  static String _fallbackCoordinateText(double lat, double lng) {
+    return '已获取坐标 (${lat.toStringAsFixed(4)}, ${lng.toStringAsFixed(4)})';
+  }
+
   Future<void> _getCurrentLocation() async {
     setState(() => _isLoadingLocation = true);
 
@@ -90,9 +119,37 @@ class _LocationInputFieldState extends State<LocationInputField> {
         desiredAccuracy: LocationAccuracy.medium,
       );
 
+      if (!mounted) return;
+
+      // 逆地理编码：坐标 → 可读地址
+      String locationText;
+      try {
+        final placemarks = await placemarkFromCoordinates(
+          position.latitude,
+          position.longitude,
+        );
+        if (placemarks.isNotEmpty) {
+          final formatted = _formatPlacemarkAddress(placemarks.first);
+          locationText = formatted.isNotEmpty
+              ? formatted
+              : _fallbackCoordinateText(
+                  position.latitude,
+                  position.longitude,
+                );
+        } else {
+          locationText = _fallbackCoordinateText(
+            position.latitude,
+            position.longitude,
+          );
+        }
+      } catch (_) {
+        locationText = _fallbackCoordinateText(
+          position.latitude,
+          position.longitude,
+        );
+      }
+
       if (mounted) {
-        final locationText =
-            '${position.latitude.toStringAsFixed(4)}, ${position.longitude.toStringAsFixed(4)}';
         _controller.text = locationText;
         _latitude = position.latitude;
         _longitude = position.longitude;

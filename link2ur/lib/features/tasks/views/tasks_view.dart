@@ -122,8 +122,11 @@ class _TasksViewContentState extends State<_TasksViewContent> {
         ],
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          context.push('/tasks/create');
+        onPressed: () async {
+          await context.push('/tasks/create');
+          if (context.mounted) {
+            context.read<TaskListBloc>().add(const TaskListRefreshRequested());
+          }
         },
         backgroundColor: AppColors.primary,
         child: const Icon(Icons.add, color: Colors.white),
@@ -384,8 +387,11 @@ class _TasksViewContentState extends State<_TasksViewContent> {
             child: EmptyStateView.noTasks(
               context,
               actionText: context.l10n.homePublishTask,
-              onAction: () {
-                context.push('/tasks/create');
+              onAction: () async {
+                await context.push('/tasks/create');
+                if (context.mounted) {
+                  context.read<TaskListBloc>().add(const TaskListRefreshRequested());
+                }
               },
             ),
           );

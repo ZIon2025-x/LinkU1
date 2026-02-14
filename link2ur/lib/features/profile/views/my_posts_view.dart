@@ -211,7 +211,10 @@ class _MyPostsViewState extends State<MyPostsView>
           IconButton(
             icon: const Icon(Icons.add_circle, size: 28),
             color: AppColors.primary,
-            onPressed: () => context.push('/flea-market/create'),
+            onPressed: () async {
+              await context.push('/flea-market/create');
+              if (mounted) _loadAllCategories(forceRefresh: true);
+            },
           ),
         ],
         bottom: TabBar(

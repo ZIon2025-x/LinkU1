@@ -401,11 +401,14 @@ class _FleaMarketDetailContent extends StatelessWidget {
         // 编辑按钮 - 对标iOS primary gradient（路径须为 /flea-market/:id/edit，传 extra 供编辑页使用）
         Expanded(
           child: GestureDetector(
-            onTap: () {
+            onTap: () async {
               AppHaptics.selection();
               final item = state.selectedItem;
               if (item != null) {
-                context.push('/flea-market/${item.id}/edit', extra: item);
+                await context.push('/flea-market/${item.id}/edit', extra: item);
+                if (context.mounted) {
+                  context.read<FleaMarketBloc>().add(FleaMarketLoadDetailRequested(itemId));
+                }
               }
             },
             child: Container(
