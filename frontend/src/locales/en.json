@@ -3211,6 +3211,7 @@
     "addImages": "+ Add Images",
     "rateLimitExceeded": "Too many requests, please try again later",
     "duplicatePost": "You have recently posted a post with the same title, please do not duplicate",
+    "postMaybeCreated": "If the post was published, please check the category.",
     "myContent": "My Content",
     "noLikes": "No likes yet",
     "noFavorites": "No favorites yet",

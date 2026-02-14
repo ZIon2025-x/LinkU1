@@ -146,13 +146,16 @@ const ForumCreatePost: React.FC = () => {
       }
       navigate(`/${lang}/forum/category/${values.category_id}`);
     } catch (error: any) {
+      const isTimeout = error?.code === 'ECONNABORTED' || error?.message?.includes('timeout');
       message.error(getErrorMessage(error));
-      
+      // 发帖超时：后端可能已完成（如正在移动图片），提示用户到板块确认
+      if (!isEdit && isTimeout) {
+        message.warning(t('forum.postMaybeCreated') || '若帖子已发布，请到对应板块查看。');
+      }
       // 处理频率限制错误
       if (error.response?.status === 429) {
         message.warning(t('forum.rateLimitExceeded'));
       }
-      
       // 处理重复内容错误
       if (error.response?.headers?.['x-error-code'] === 'DUPLICATE_POST') {
         message.warning(t('forum.duplicatePost'));

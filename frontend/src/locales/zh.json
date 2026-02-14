@@ -3101,6 +3101,7 @@
     "addImages": "+ 添加图片",
     "rateLimitExceeded": "操作过于频繁，请稍后再试",
     "duplicatePost": "您最近已发布过相同标题的帖子，请勿重复发布",
+    "postMaybeCreated": "若帖子已发布，请到对应板块查看。",
     "myContent": "我的内容",
     "noLikes": "暂无点赞",
     "noFavorites": "暂无收藏",

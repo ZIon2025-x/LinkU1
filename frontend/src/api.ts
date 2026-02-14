@@ -2135,8 +2135,10 @@ export const createForumPost = async (data: {
   images?: string[];
 }) => {
   const token = await getCSRFToken();
+  // 带图片时后端需移动 S3 文件，可能超过默认 10s，延长超时
   const res = await api.post('/api/forum/posts', data, {
-    headers: { 'X-CSRF-Token': token }
+    headers: { 'X-CSRF-Token': token },
+    timeout: 60000,
   });
   return res.data;
 };
@@ -2148,8 +2150,10 @@ export const updateForumPost = async (postId: number, data: {
   images?: string[];
 }) => {
   const token = await getCSRFToken();
+  // 带图片时后端需移动 S3 文件，可能超过默认 10s，延长超时
   const res = await api.put(`/api/forum/posts/${postId}`, data, {
-    headers: { 'X-CSRF-Token': token }
+    headers: { 'X-CSRF-Token': token },
+    timeout: 60000,
   });
   return res.data;
 };
