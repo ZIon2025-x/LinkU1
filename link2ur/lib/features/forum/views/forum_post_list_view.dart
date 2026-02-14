@@ -6,6 +6,7 @@ import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_radius.dart';
 import '../../../core/utils/debouncer.dart';
+import '../../../core/utils/helpers.dart';
 import '../../../core/utils/l10n_extension.dart';
 import '../../../core/widgets/loading_view.dart';
 import '../../../core/widgets/skeleton_view.dart';
@@ -246,11 +247,11 @@ class _PostCard extends StatelessWidget {
               overflow: TextOverflow.ellipsis,
             ),
 
-            // 内容预览（后端列表接口返回 content_preview，非 content）
+            // 内容预览（后端列表接口返回 content_preview，支持 \n 换行）
             if (post.displayContent != null && post.displayContent!.isNotEmpty) ...[
               const SizedBox(height: 6),
               Text(
-                post.displayContent!,
+                Helpers.normalizeContentNewlines(post.displayContent!),
                 style: const TextStyle(
                     fontSize: 14, color: AppColors.textSecondary),
                 maxLines: 2,

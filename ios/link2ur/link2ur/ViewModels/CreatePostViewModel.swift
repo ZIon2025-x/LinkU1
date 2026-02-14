@@ -1,5 +1,6 @@
 import Foundation
 import Combine
+import UIKit
 
 class CreatePostViewModel: ObservableObject {
     private let performanceMonitor = PerformanceMonitor.shared
@@ -7,7 +8,10 @@ class CreatePostViewModel: ObservableObject {
     @Published var content = ""
     @Published var selectedCategoryId: Int?
     @Published var categories: [ForumCategory] = []
+    @Published var selectedImages: [UIImage] = []
+    @Published var uploadedImageUrls: [String] = []
     @Published var isLoading = false
+    @Published var isUploading = false
     @Published var errorMessage: String?
     
     // 使用依赖注入获取服务
@@ -61,18 +65,24 @@ class CreatePostViewModel: ObservableObject {
         isLoading = true
         errorMessage = nil
         
-        // 对内容进行编码：将换行和空格转换为标记格式
-        let encodedContent = ContentFormatter.encodeContent(content)
-        
-        let body: [String: Any] = [
-            "title": title,
-            "content": encodedContent,
-            "category_id": categoryId
-        ]
-        
-        Logger.debug("发送发布请求", category: .api)
-        
-        apiService.request(ForumPost.self, endpoint, method: "POST", body: body)
+        // 先上传图片（帖子图片使用 forum_post 类别，上传到临时目录，发帖时后端会 move_from_temp）
+        uploadImages { [weak self] uploadSuccess in
+            guard let self = self else { return }
+            
+            let encodedContent = ContentFormatter.encodeContent(self.content)
+            
+            var body: [String: Any] = [
+                "title": self.title,
+                "content": encodedContent,
+                "category_id": categoryId
+            ]
+            if !self.uploadedImageUrls.isEmpty {
+                body["images"] = self.uploadedImageUrls
+            }
+            
+            Logger.debug("发送发布请求", category: .api)
+            
+            self.apiService.request(ForumPost.self, endpoint, method: "POST", body: body)
             .sink(receiveCompletion: { [weak self] result in
                 let duration = Date().timeIntervalSince(startTime)
                 self?.isLoading = false
@@ -104,12 +114,63 @@ class CreatePostViewModel: ObservableObject {
                 completion(true)
             })
             .store(in: &cancellables)
+        }
+    }
+    
+    func uploadImages(completion: @escaping (Bool) -> Void) {
+        guard !selectedImages.isEmpty else {
+            completion(true)
+            return
+        }
+        
+        isUploading = true
+        uploadedImageUrls = []
+        
+        let uploadGroup = DispatchGroup()
+        var uploadErrors: [Error] = []
+        
+        for image in selectedImages {
+            uploadGroup.enter()
+            guard let imageData = image.jpegData(compressionQuality: 0.8) else {
+                uploadGroup.leave()
+                continue
+            }
+            
+            // 论坛帖子图片使用 forum_post 类别，上传到临时目录
+            apiService.uploadPublicImage(imageData, filename: "post_\(UUID().uuidString).jpg", category: "forum_post")
+                .sink(receiveCompletion: { result in
+                    if case .failure(let error) = result {
+                        ErrorHandler.shared.handle(error, context: "上传帖子图片")
+                        uploadErrors.append(error)
+                    }
+                    uploadGroup.leave()
+                }, receiveValue: { [weak self] url in
+                    self?.uploadedImageUrls.append(url)
+                })
+                .store(in: &cancellables)
+        }
+        
+        uploadGroup.notify(queue: .main) { [weak self] in
+            self?.isUploading = false
+            if uploadErrors.isEmpty {
+                completion(true)
+            } else {
+                self?.isLoading = false
+                if let firstError = uploadErrors.first {
+                    ErrorHandler.shared.handle(firstError, context: "上传帖子图片")
+                }
+                self?.errorMessage = "部分图片上传失败，请重试"
+                completion(false)
+            }
+        }
     }
     
     func reset() {
         title = ""
         content = ""
         selectedCategoryId = nil
+        selectedImages = []
+        uploadedImageUrls = []
         errorMessage = nil
     }
 }

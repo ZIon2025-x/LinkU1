@@ -1571,6 +1571,8 @@ case tasksNotInterested = "tasks.not_interested"
     case forumCreatePostContentPlaceholder = "forum.create_post_content_placeholder"
     case forumCreatePostPublishing = "forum.create_post_publishing"
     case forumCreatePostPublishNow = "forum.create_post_publish_now"
+    case forumCreatePostImages = "forum.create_post_images"
+    case forumCreatePostAddImage = "forum.create_post_add_image"
     
     // MARK: - Flea Market Create
     case fleaMarketCreatePublishing = "flea_market.create_publishing"

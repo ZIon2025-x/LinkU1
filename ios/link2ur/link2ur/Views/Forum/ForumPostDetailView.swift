@@ -12,6 +12,8 @@ struct ForumPostDetailView: View {
     @State private var showShareSheet = false
     @State private var isTogglingLike = false
     @State private var isTogglingFavorite = false
+    @State private var showFullScreenImage = false
+    @State private var selectedImageIndex = 0
     
     var body: some View {
         ZStack(alignment: .bottom) {
@@ -252,9 +254,43 @@ struct ForumPostDetailView: View {
                     .multilineTextAlignment(.leading)  // 左对齐多行文本
                     .fixedSize(horizontal: false, vertical: true)
             }
+            
+            // 帖子图片
+            if let images = post.images, !images.isEmpty {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 12) {
+                        ForEach(Array(images.enumerated()), id: \.offset) { index, imageUrl in
+                            Button(action: {
+                                selectedImageIndex = index
+                                showFullScreenImage = true
+                                HapticFeedback.light()
+                            }) {
+                                AsyncImageView(
+                                    urlString: imageUrl,
+                                    placeholder: Image(systemName: "photo"),
+                                    width: 120,
+                                    height: 120,
+                                    contentMode: .fill,
+                                    cornerRadius: AppCornerRadius.medium
+                                )
+                            }
+                            .buttonStyle(PlainButtonStyle())
+                        }
+                    }
+                }
+            }
         }
         .padding(.horizontal, 20)
         .padding(.vertical, 16)
+        .fullScreenCover(isPresented: $showFullScreenImage) {
+            if let images = post.images, !images.isEmpty {
+                FullScreenImageView(
+                    images: images,
+                    selectedIndex: $selectedImageIndex,
+                    isPresented: $showFullScreenImage
+                )
+            }
+        }
     }
     
     @ViewBuilder

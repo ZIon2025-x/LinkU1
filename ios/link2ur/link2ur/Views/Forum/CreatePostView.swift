@@ -1,10 +1,12 @@
 import SwiftUI
+import PhotosUI
 
 struct CreatePostView: View {
     @StateObject private var viewModel = CreatePostViewModel()
     @Environment(\.dismiss) var dismiss
     @EnvironmentObject var appState: AppState
     @State private var showLogin = false
+    @State private var selectedItems: [PhotosPickerItem] = []
     
     var body: some View {
         NavigationView {
@@ -59,6 +61,78 @@ struct CreatePostView: View {
                     .cornerRadius(AppCornerRadius.large)
                     .shadow(color: Color.black.opacity(0.03), radius: 10, x: 0, y: 4)
                     
+                    // 3. 帖子图片（最多5张）
+                    VStack(alignment: .leading, spacing: AppSpacing.md) {
+                        HStack {
+                            SectionHeader(title: LocalizationKey.forumCreatePostImages.localized, icon: "photo.on.rectangle.angled")
+                            Spacer()
+                            Text("\(viewModel.selectedImages.count)/5")
+                                .font(AppTypography.caption)
+                                .fontWeight(.bold)
+                                .foregroundColor(AppColors.primary)
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 4)
+                                .background(AppColors.primaryLight)
+                                .clipShape(Capsule())
+                        }
+                        
+                        ScrollView(.horizontal, showsIndicators: false) {
+                            HStack(spacing: AppSpacing.md) {
+                                if viewModel.selectedImages.count < 5 {
+                                    PhotosPicker(selection: $selectedItems, maxSelectionCount: 5 - viewModel.selectedImages.count, matching: .images) {
+                                        VStack(spacing: 8) {
+                                            Image(systemName: "plus.viewfinder")
+                                                .font(.system(size: 28))
+                                                .foregroundColor(AppColors.primary)
+                                            Text(LocalizationKey.forumCreatePostAddImage.localized)
+                                                .font(.system(size: 11, weight: .medium))
+                                                .foregroundColor(AppColors.textSecondary)
+                                        }
+                                        .frame(width: 90, height: 90)
+                                        .background(AppColors.background)
+                                        .cornerRadius(AppCornerRadius.medium)
+                                        .overlay(
+                                            RoundedRectangle(cornerRadius: AppCornerRadius.medium)
+                                                .stroke(AppColors.primary.opacity(0.2), style: StrokeStyle(lineWidth: 1, dash: [5, 3]))
+                                        )
+                                    }
+                                    .onChange(of: selectedItems) { _ in
+                                        handleImageSelection()
+                                    }
+                                }
+                                
+                                ForEach(Array(viewModel.selectedImages.enumerated()), id: \.offset) { index, image in
+                                    ZStack(alignment: .topTrailing) {
+                                        Image(uiImage: image)
+                                            .resizable()
+                                            .aspectRatio(contentMode: .fill)
+                                            .frame(width: 90, height: 90)
+                                            .clipShape(RoundedRectangle(cornerRadius: AppCornerRadius.medium))
+                                        
+                                        Button(action: {
+                                            withAnimation {
+                                                viewModel.selectedImages.remove(at: index)
+                                                selectedItems = []
+                                                HapticFeedback.light()
+                                            }
+                                        }) {
+                                            Image(systemName: "xmark.circle.fill")
+                                                .font(.system(size: 20))
+                                                .foregroundColor(.white)
+                                                .background(Circle().fill(Color.black.opacity(0.5)))
+                                        }
+                                        .padding(4)
+                                    }
+                                }
+                            }
+                            .padding(.vertical, 4)
+                        }
+                    }
+                    .padding(AppSpacing.md)
+                    .background(AppColors.cardBackground)
+                    .cornerRadius(AppCornerRadius.large)
+                    .shadow(color: Color.black.opacity(0.03), radius: 10, x: 0, y: 4)
+                    
                     // 错误提示
                     if let errorMessage = viewModel.errorMessage {
                         HStack(spacing: 8) {
@@ -89,17 +163,17 @@ struct CreatePostView: View {
                         }
                     }) {
                         HStack(spacing: 8) {
-                            if viewModel.isLoading {
+                            if viewModel.isLoading || viewModel.isUploading {
                                 ProgressView().tint(.white)
                             } else {
                                 IconStyle.icon("paperplane.fill", size: 18)
                             }
-                            Text(viewModel.isLoading ? LocalizationKey.forumCreatePostPublishing.localized : LocalizationKey.forumCreatePostPublishNow.localized)
+                            Text(viewModel.isLoading || viewModel.isUploading ? LocalizationKey.forumCreatePostPublishing.localized : LocalizationKey.forumCreatePostPublishNow.localized)
                                 .font(AppTypography.bodyBold)
                         }
                     }
                     .buttonStyle(PrimaryButtonStyle())
-                    .disabled(viewModel.isLoading || viewModel.title.isEmpty || viewModel.content.isEmpty || viewModel.selectedCategoryId == nil)
+                    .disabled(viewModel.isLoading || viewModel.isUploading || viewModel.title.isEmpty || viewModel.content.isEmpty || viewModel.selectedCategoryId == nil)
                     .padding(.top, AppSpacing.lg)
                     .padding(.bottom, AppSpacing.xxl)
                 }
@@ -162,6 +236,24 @@ struct CreatePostView: View {
             from: nil,
             for: nil
         )
+    }
+    
+    private func handleImageSelection() {
+        Task {
+            for item in selectedItems {
+                if let data = try? await item.loadTransferable(type: Data.self),
+                   let image = UIImage(data: data) {
+                    await MainActor.run {
+                        if viewModel.selectedImages.count < 5 {
+                            viewModel.selectedImages.append(image)
+                        }
+                    }
+                }
+            }
+            await MainActor.run {
+                selectedItems = []
+            }
+        }
     }
 }
 

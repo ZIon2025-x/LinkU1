@@ -1830,8 +1830,6 @@ struct RecommendedTasksSection: View {
 struct RecentActivitiesSection: View {
     @StateObject private var viewModel = DiscoveryFeedViewModel()
     
-    private let columns = [GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10)]
-    
     var body: some View {
         VStack(alignment: .leading, spacing: AppSpacing.md) {
             // 标题行：与 Flutter 一致 — 左侧 sparkles + 发现更多，右侧 筛选 胶囊
@@ -1913,15 +1911,29 @@ struct RecentActivitiesSection: View {
                 .padding(AppSpacing.md)
                 .frame(maxWidth: .infinity)
             } else {
-                LazyVGrid(columns: columns, spacing: 10) {
-                    ForEach(Array(viewModel.items.enumerated()), id: \.element.id) { index, item in
-                        DiscoveryFeedCardView(item: item)
-                            .listItemAppear(index: index, totalItems: viewModel.items.count)
-                            .onAppear {
-                                if index >= viewModel.items.count - 3 && viewModel.hasMore && !viewModel.isLoadingMore && !viewModel.isLoading {
-                                    viewModel.loadMore()
+                // 两列瀑布流（与 Flutter SliverMasonryGrid 一致，每列独立高度）
+                HStack(alignment: .top, spacing: 10) {
+                    LazyVStack(spacing: 10) {
+                        ForEach(Array(viewModel.items.enumerated().filter { $0.offset % 2 == 0 }), id: \.element.id) { index, item in
+                            DiscoveryFeedCardView(item: item)
+                                .listItemAppear(index: index, totalItems: viewModel.items.count)
+                                .onAppear {
+                                    if index >= viewModel.items.count - 4 && viewModel.hasMore && !viewModel.isLoadingMore && !viewModel.isLoading {
+                                        viewModel.loadMore()
+                                    }
                                 }
-                            }
+                        }
+                    }
+                    LazyVStack(spacing: 10) {
+                        ForEach(Array(viewModel.items.enumerated().filter { $0.offset % 2 == 1 }), id: \.element.id) { index, item in
+                            DiscoveryFeedCardView(item: item)
+                                .listItemAppear(index: index, totalItems: viewModel.items.count)
+                                .onAppear {
+                                    if index >= viewModel.items.count - 4 && viewModel.hasMore && !viewModel.isLoadingMore && !viewModel.isLoading {
+                                        viewModel.loadMore()
+                                    }
+                                }
+                        }
                     }
                 }
                 .padding(.horizontal, AppSpacing.md)
@@ -1986,97 +1998,359 @@ struct DiscoveryFeedCardView: View {
     }
     
     private var postCard: some View {
-        cardContent(
-            imageAspect: 4/3,
-            badgeLabel: "💬 帖子",
-            badgeBg: Color(red: 0.93, green: 0.91, blue: 0.996),
-            badgeFg: Color(red: 0.49, green: 0.24, blue: 0.93)
-        ) {
-            if let name = item.categoryName, !name.isEmpty {
-                Text(name)
-                    .font(.system(size: 10))
-                    .foregroundColor(AppColors.textTertiary)
-                    .lineLimit(1)
+        // 与 Flutter 一致：图片、徽章、分类、标题、描述、用户行、赞/评数
+        let content = VStack(alignment: .leading, spacing: 0) {
+            if item.hasImages, let urlString = item.firstImage, let url = URL(string: urlString) {
+                AsyncImage(url: url) { phase in
+                    if let image = phase.image {
+                        image.resizable().aspectRatio(contentMode: .fill)
+                    } else {
+                        Rectangle().fill(AppColors.background)
+                    }
+                }
+                .aspectRatio(4/3, contentMode: .fill)
+                .clipped()
             }
-        } destination: {
+            VStack(alignment: .leading, spacing: 6) {
+                HStack(spacing: 6) {
+                    discoveryBadge(label: "💬 帖子", bg: Color(red: 0.93, green: 0.91, blue: 0.996), fg: Color(red: 0.49, green: 0.24, blue: 0.93))
+                    if let name = item.categoryName, !name.isEmpty {
+                        Text(name)
+                            .font(.system(size: 10))
+                            .foregroundColor(AppColors.textTertiary)
+                            .lineLimit(1)
+                    }
+                }
+                if let title = item.title, !title.isEmpty {
+                    Text(title)
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundColor(AppColors.textPrimary)
+                        .lineLimit(2)
+                }
+                if let desc = item.description, !desc.isEmpty {
+                    Text(desc)
+                        .font(.system(size: 12))
+                        .foregroundColor(AppColors.textSecondary)
+                        .lineLimit(2)
+                }
+                discoveryUserRow
+                HStack(spacing: 12) {
+                    HStack(spacing: 3) {
+                        Image(systemName: "heart")
+                            .font(.system(size: 14))
+                            .foregroundColor(AppColors.textTertiary)
+                        Text("\(item.likeCount ?? 0)")
+                            .font(.system(size: 11))
+                            .foregroundColor(AppColors.textTertiary)
+                    }
+                    HStack(spacing: 3) {
+                        Image(systemName: "bubble.left")
+                            .font(.system(size: 14))
+                            .foregroundColor(AppColors.textTertiary)
+                        Text("\(item.commentCount ?? 0)")
+                            .font(.system(size: 11))
+                            .foregroundColor(AppColors.textTertiary)
+                    }
+                }
+            }
+            .padding(10)
+        }
+        .background(AppColors.cardBackground)
+        .clipShape(RoundedRectangle(cornerRadius: cardRadius))
+        .shadow(color: Color.black.opacity(0.06), radius: 3, x: 0, y: 1)
+        
+        return Group {
             if let postId = Int(item.id.replacingOccurrences(of: "post_", with: "")) {
-                ForumPostDetailView(postId: postId)
+                NavigationLink(destination: ForumPostDetailView(postId: postId)) { content }
+                    .buttonStyle(PlainButtonStyle())
+            } else {
+                content
             }
         }
     }
     
     private var productCard: some View {
-        cardContent(
-            imageAspect: 1,
-            badgeLabel: "🏷️ 商品",
-            badgeBg: Color(red: 1, green: 0.95, blue: 0.78),
-            badgeFg: Color(red: 0.85, green: 0.47, blue: 0.02)
-        ) {
-            if let price = item.price {
-                Text(priceFormat(price))
-                    .font(.system(size: 14, weight: .bold))
-                    .foregroundColor(AppColors.primary)
+        // 与 Flutter 一致：1:1 图、徽章、价格、标题、描述、喜欢数
+        let content = VStack(alignment: .leading, spacing: 0) {
+            if item.hasImages, let urlString = item.firstImage, let url = URL(string: urlString) {
+                AsyncImage(url: url) { phase in
+                    if let image = phase.image {
+                        image.resizable().aspectRatio(contentMode: .fill)
+                    } else {
+                        Rectangle().fill(AppColors.background)
+                    }
+                }
+                .aspectRatio(1, contentMode: .fill)
+                .clipped()
             }
-        } destination: {
-            let itemId = item.id.replacingOccurrences(of: "product_", with: "")
-            FleaMarketDetailView(itemId: itemId)
+            VStack(alignment: .leading, spacing: 6) {
+                HStack(spacing: 6) {
+                    discoveryBadge(label: "🏷️ 商品", bg: Color(red: 1, green: 0.95, blue: 0.78), fg: Color(red: 0.85, green: 0.47, blue: 0.02))
+                    Spacer()
+                    if let price = item.price {
+                        Text(priceFormat(price))
+                            .font(.system(size: 14, weight: .bold))
+                            .foregroundColor(AppColors.primary)
+                    }
+                }
+                if let title = item.title, !title.isEmpty {
+                    Text(title)
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundColor(AppColors.textPrimary)
+                        .lineLimit(2)
+                }
+                if let desc = item.description, !desc.isEmpty {
+                    Text(desc)
+                        .font(.system(size: 12))
+                        .foregroundColor(AppColors.textSecondary)
+                        .lineLimit(2)
+                }
+                if item.likeCount != nil {
+                    HStack(spacing: 3) {
+                        Image(systemName: "heart")
+                            .font(.system(size: 12))
+                            .foregroundColor(AppColors.textTertiary)
+                        Text("\(item.likeCount ?? 0)")
+                            .font(.system(size: 11))
+                            .foregroundColor(AppColors.textTertiary)
+                    }
+                }
+            }
+            .padding(10)
         }
+        .background(AppColors.cardBackground)
+        .clipShape(RoundedRectangle(cornerRadius: cardRadius))
+        .shadow(color: Color.black.opacity(0.06), radius: 3, x: 0, y: 1)
+        
+        let itemId = item.id.replacingOccurrences(of: "product_", with: "")
+        return NavigationLink(destination: FleaMarketDetailView(itemId: itemId)) { content }
+            .buttonStyle(PlainButtonStyle())
     }
     
     private var rankingCard: some View {
-        cardContent(
-            imageAspect: 4/3,
-            badgeLabel: "🏆 排行榜",
-            badgeBg: Color(red: 0.86, green: 0.92, blue: 0.99),
-            badgeFg: Color(red: 0.15, green: 0.39, blue: 0.92)
-        ) { EmptyView() } destination: {
+        // 与 Flutter 一致：渐变背景、16:9 图、TOP3 列表
+        let content = VStack(alignment: .leading, spacing: 0) {
+            if item.hasImages, let urlString = item.firstImage, let url = URL(string: urlString) {
+                AsyncImage(url: url) { phase in
+                    if let image = phase.image {
+                        image.resizable().aspectRatio(contentMode: .fill)
+                    } else {
+                        Rectangle().fill(AppColors.background)
+                    }
+                }
+                .aspectRatio(16/9, contentMode: .fill)
+                .clipped()
+            }
+            VStack(alignment: .leading, spacing: 6) {
+                discoveryBadge(label: "🏆 排行榜", bg: Color(red: 0.86, green: 0.92, blue: 0.99), fg: Color(red: 0.15, green: 0.39, blue: 0.92))
+                HStack(spacing: 4) {
+                    Image(systemName: "trophy.fill")
+                        .font(.system(size: 16))
+                        .foregroundColor(Color(red: 1, green: 0.7, blue: 0))
+                    Text(item.title ?? "")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundColor(AppColors.textPrimary)
+                        .lineLimit(1)
+                }
+                if let top3 = item.top3, !top3.isEmpty {
+                    VStack(spacing: 0) {
+                        let medals = ["🥇", "🥈", "🥉"]
+                        ForEach(Array(top3.prefix(3).enumerated()), id: \.offset) { i, entry in
+                            if i > 0 {
+                                Divider()
+                                    .background(Color(red: 0.9, green: 0.91, blue: 0.92))
+                            }
+                            HStack(spacing: 8) {
+                                Text(medals[i])
+                                    .font(.system(size: 16))
+                                Text(entry.name ?? "")
+                                    .font(.system(size: 12, weight: .semibold))
+                                    .foregroundColor(AppColors.textPrimary)
+                                    .lineLimit(1)
+                                Spacer()
+                                Text("⭐ \(String(format: "%.1f", entry.rating))")
+                                    .font(.system(size: 10))
+                                    .foregroundColor(AppColors.textTertiary)
+                            }
+                            .padding(.vertical, 6)
+                        }
+                    }
+                }
+            }
+            .padding(10)
+        }
+        .background(
+            LinearGradient(
+                colors: [Color(red: 0.97, green: 0.92, blue: 1), Color(red: 0.99, green: 0.99, blue: 0.91)],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+        )
+        .clipShape(RoundedRectangle(cornerRadius: cardRadius))
+        .shadow(color: Color.black.opacity(0.06), radius: 3, x: 0, y: 1)
+        
+        return Group {
             if let id = Int(item.id.replacingOccurrences(of: "ranking_", with: "")) {
-                LeaderboardDetailView(leaderboardId: id)
+                NavigationLink(destination: LeaderboardDetailView(leaderboardId: id)) { content }
+                    .buttonStyle(PlainButtonStyle())
+            } else {
+                content
             }
         }
     }
     
     private var serviceCard: some View {
-        cardContent(
-            imageAspect: 4/3,
-            badgeLabel: "👨‍🏫 达人服务",
-            badgeBg: Color(red: 1, green: 0.97, blue: 0.93),
-            badgeFg: Color(red: 0.92, green: 0.35, blue: 0.05)
-        ) {
-            if let price = item.price {
-                Text(priceFormat(price))
-                    .font(.system(size: 12, weight: .semibold))
-                    .foregroundColor(AppColors.primary)
+        // 与 Flutter 一致：图片、徽章、标题、用户行、价格、评分
+        let content = VStack(alignment: .leading, spacing: 0) {
+            if item.hasImages, let urlString = item.firstImage, let url = URL(string: urlString) {
+                AsyncImage(url: url) { phase in
+                    if let image = phase.image {
+                        image.resizable().aspectRatio(contentMode: .fill)
+                    } else {
+                        Rectangle().fill(AppColors.background)
+                    }
+                }
+                .aspectRatio(4/3, contentMode: .fill)
+                .clipped()
             }
-        } destination: {
+            VStack(alignment: .leading, spacing: 6) {
+                discoveryBadge(label: "👨‍🏫 达人服务", bg: Color(red: 1, green: 0.97, blue: 0.93), fg: Color(red: 0.92, green: 0.35, blue: 0.05))
+                if let title = item.title, !title.isEmpty {
+                    Text(title)
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundColor(AppColors.textPrimary)
+                        .lineLimit(2)
+                }
+                HStack {
+                    discoveryUserRow
+                    Spacer()
+                    if let price = item.price {
+                        Text("\(priceFormat(price))起")
+                            .font(.system(size: 15, weight: .bold))
+                            .foregroundColor(Color(red: 1, green: 0.42, blue: 0.62))
+                    }
+                    if let rating = item.rating {
+                        HStack(spacing: 2) {
+                            Image(systemName: "star.fill")
+                                .font(.system(size: 12))
+                                .foregroundColor(Color(red: 1, green: 0.7, blue: 0))
+                            Text(String(format: "%.1f", rating))
+                                .font(.system(size: 11))
+                                .foregroundColor(AppColors.textSecondary)
+                        }
+                    }
+                }
+            }
+            .padding(10)
+        }
+        .background(AppColors.cardBackground)
+        .clipShape(RoundedRectangle(cornerRadius: cardRadius))
+        .shadow(color: Color.black.opacity(0.06), radius: 3, x: 0, y: 1)
+        
+        return Group {
             if let id = Int(item.id.replacingOccurrences(of: "service_", with: "")) {
-                ServiceDetailView(serviceId: id)
+                NavigationLink(destination: ServiceDetailView(serviceId: id)) { content }
+                    .buttonStyle(PlainButtonStyle())
+            } else {
+                content
             }
         }
     }
     
     private var competitorReviewCard: some View {
-        cardContent(
-            imageAspect: 4/3,
-            badgeLabel: "⭐ 竞品评价",
-            badgeBg: Color(red: 0.86, green: 0.92, blue: 0.99),
-            badgeFg: Color(red: 0.15, green: 0.39, blue: 0.92)
-        ) { EmptyView() } destination: {
+        // 与 Flutter 一致：无图、引用框、用户行、目标标签、赞踩
+        let content = VStack(alignment: .leading, spacing: 8) {
+            discoveryBadge(label: "⭐ 竞品评价", bg: Color(red: 0.99, green: 0.91, blue: 0.95), fg: Color(red: 0.86, green: 0.15, blue: 0.47))
+            if let desc = item.description, !desc.isEmpty {
+                quoteBox(text: desc)
+            }
+            discoveryUserRow
+            if let t = item.targetItem {
+                targetItemTag(t)
+            }
+            HStack(spacing: 12) {
+                HStack(spacing: 3) {
+                    Image(systemName: "hand.thumbsup")
+                        .font(.system(size: 12))
+                        .foregroundColor(Color(red: 0.06, green: 0.73, blue: 0.51))
+                    Text("\(item.upvoteCount ?? 0)")
+                        .font(.system(size: 12))
+                        .foregroundColor(Color(red: 0.06, green: 0.73, blue: 0.51))
+                }
+                HStack(spacing: 3) {
+                    Image(systemName: "hand.thumbsdown")
+                        .font(.system(size: 12))
+                        .foregroundColor(Color(red: 0.94, green: 0.27, blue: 0.27))
+                    Text("\(item.downvoteCount ?? 0)")
+                        .font(.system(size: 12))
+                        .foregroundColor(Color(red: 0.94, green: 0.27, blue: 0.27))
+                }
+            }
+        }
+        .padding(12)
+        .background(AppColors.cardBackground)
+        .clipShape(RoundedRectangle(cornerRadius: cardRadius))
+        .shadow(color: Color.black.opacity(0.06), radius: 3, x: 0, y: 1)
+        
+        return Group {
             if let t = item.targetItem, let id = Int(t.itemId) {
-                LeaderboardItemDetailWrapperView(itemId: id)
+                NavigationLink(destination: LeaderboardItemDetailWrapperView(itemId: id)) { content }
+                    .buttonStyle(PlainButtonStyle())
+            } else {
+                content
             }
         }
     }
     
     private var serviceReviewCard: some View {
-        cardContent(
-            imageAspect: 4/3,
-            badgeLabel: "⭐ 服务评价",
-            badgeBg: Color(red: 1, green: 0.97, blue: 0.93),
-            badgeFg: Color(red: 0.92, green: 0.35, blue: 0.05)
-        ) { EmptyView() } destination: {
+        // 与 Flutter 一致：可选活动标签、引用框、用户行、目标标签
+        let content = VStack(alignment: .leading, spacing: 0) {
+            if let act = item.activityInfo {
+                HStack(spacing: 4) {
+                    Image(systemName: "flame.fill")
+                        .font(.system(size: 14))
+                        .foregroundColor(Color(red: 1, green: 0.42, blue: 0.42))
+                    Text("来自 \(act.activityTitle ?? "活动")")
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundColor(Color(red: 1, green: 0.42, blue: 0.42))
+                        .lineLimit(1)
+                }
+                .padding(.horizontal, 10)
+                .padding(.vertical, 6)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(
+                    LinearGradient(
+                        colors: [
+                            Color(red: 1, green: 0.42, blue: 0.42).opacity(0.1),
+                            Color(red: 1, green: 0.56, blue: 0.33).opacity(0.05)
+                        ],
+                        startPoint: .leading,
+                        endPoint: .trailing
+                    )
+                )
+            }
+            VStack(alignment: .leading, spacing: 8) {
+                discoveryBadge(label: "⭐ 服务评价", bg: Color(red: 0.99, green: 0.91, blue: 0.95), fg: Color(red: 0.86, green: 0.15, blue: 0.47))
+                if let desc = item.description, !desc.isEmpty {
+                    quoteBox(text: desc)
+                }
+                discoveryUserRow
+                if let t = item.targetItem {
+                    targetItemTag(t)
+                }
+            }
+            .padding(12)
+        }
+        .background(AppColors.cardBackground)
+        .clipShape(RoundedRectangle(cornerRadius: cardRadius))
+        .shadow(color: Color.black.opacity(0.06), radius: 3, x: 0, y: 1)
+        
+        return Group {
             if let t = item.targetItem, let id = Int(t.itemId) {
-                ServiceDetailView(serviceId: id)
+                NavigationLink(destination: ServiceDetailView(serviceId: id)) { content }
+                    .buttonStyle(PlainButtonStyle())
+            } else {
+                content
             }
         }
     }
@@ -2163,6 +2437,92 @@ struct DiscoveryFeedCardView: View {
         let currency = item.currency ?? "GBP"
         if currency == "GBP" { return "£\(String(format: "%.2f", value))" }
         return "\(currency) \(String(format: "%.2f", value))"
+    }
+    
+    private func discoveryBadge(label: String, bg: Color, fg: Color) -> some View {
+        Text(label)
+            .font(.system(size: 10, weight: .semibold))
+            .foregroundColor(fg)
+            .padding(.horizontal, 7)
+            .padding(.vertical, 2)
+            .background(bg)
+            .clipShape(Capsule())
+    }
+    
+    private var discoveryUserRow: some View {
+        HStack(spacing: 6) {
+            AvatarView(urlString: (item.userId == nil || item.userName == "匿名用户") ? nil : item.userAvatar, size: 20)
+                .clipShape(Circle())
+            Text(item.userName ?? "匿名用户")
+                .font(.system(size: 11, weight: .medium))
+                .foregroundColor(AppColors.textSecondary)
+                .lineLimit(1)
+        }
+    }
+    
+    private func quoteBox(text: String) -> some View {
+        Text(text)
+            .font(.system(size: 13))
+            .foregroundColor(AppColors.textPrimary)
+            .lineLimit(4)
+            .multilineTextAlignment(.leading)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 10)
+            .background(
+                LinearGradient(
+                    colors: [
+                        Color(red: 0.97, green: 0.97, blue: 1),
+                        Color(red: 1, green: 0.94, blue: 0.96)
+                    ],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+            )
+            .clipShape(UnevenRoundedRectangle(
+                topLeadingRadius: 0,
+                bottomLeadingRadius: 0,
+                bottomTrailingRadius: 8,
+                topTrailingRadius: 8
+            ))
+            .overlay(
+                Rectangle()
+                    .fill(AppColors.primary)
+                    .frame(width: 3),
+                alignment: .leading
+            )
+    }
+    
+    private func targetItemTag(_ t: TargetItemBrief) -> some View {
+        HStack(spacing: 6) {
+            if let thumb = t.thumbnail, let url = URL(string: thumb) {
+                AsyncImage(url: url) { phase in
+                    if let img = phase.image {
+                        img.resizable().aspectRatio(contentMode: .fill)
+                    } else {
+                        RoundedRectangle(cornerRadius: 6)
+                            .fill(Color(red: 0.9, green: 0.9, blue: 0.92))
+                    }
+                }
+                .frame(width: 28, height: 28)
+                .clipped()
+                .clipShape(RoundedRectangle(cornerRadius: 6))
+            } else {
+                RoundedRectangle(cornerRadius: 6)
+                    .fill(Color(red: 0.9, green: 0.9, blue: 0.92))
+                    .frame(width: 28, height: 28)
+                    .overlay(Image(systemName: "square.stack.3d.up").font(.system(size: 14)))
+            }
+            Text(t.name ?? "")
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundColor(AppColors.textPrimary)
+                .lineLimit(1)
+            Spacer()
+        }
+        .padding(.horizontal, 8)
+        .padding(.vertical, 6)
+        .background(Color(red: 0.42, green: 0.36, blue: 0.91).opacity(0.04))
+        .clipShape(RoundedRectangle(cornerRadius: 8))
     }
 }
 

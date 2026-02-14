@@ -192,6 +192,8 @@
 "forum.create_post_content_placeholder" = "分享您的见解、经验或提出问题。友好互助，共同成长...";
 "forum.create_post_publishing" = "发布中...";
 "forum.create_post_publish_now" = "立即发布";
+"forum.create_post_images" = "帖子图片";
+"forum.create_post_add_image" = "添加图片";
 
 // MARK: - Flea Market
 "flea_market.flea_market" = "跳蚤市场";

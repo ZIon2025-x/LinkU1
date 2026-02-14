@@ -4,6 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_radius.dart';
+import '../../../core/utils/helpers.dart';
 import '../../../core/utils/l10n_extension.dart';
 import '../../../core/router/app_router.dart';
 import '../../../core/widgets/skeleton_view.dart';
@@ -214,7 +215,7 @@ class _MyPostCard extends StatelessWidget {
             if (post.content != null && post.content!.isNotEmpty) ...[
               const SizedBox(height: 6),
               Text(
-                post.content!,
+                Helpers.normalizeContentNewlines(post.content!),
                 style: const TextStyle(
                     fontSize: 14, color: AppColors.textSecondary),
                 maxLines: 2,

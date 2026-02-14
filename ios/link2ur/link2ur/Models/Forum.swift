@@ -172,9 +172,10 @@ struct ForumPost: Codable, Identifiable {
     let isFavorited: Bool?
     let createdAt: String
     let lastReplyAt: String?
+    let images: [String]?
     
     enum CodingKeys: String, CodingKey {
-        case id, title, content, category, author
+        case id, title, content, category, author, images
         case titleEn = "title_en"
         case titleZh = "title_zh"
         case contentEn = "content_en"
@@ -250,6 +251,7 @@ struct ForumPost: Codable, Identifiable {
         isFavorited = try container.decodeIfPresent(Bool.self, forKey: .isFavorited)
         createdAt = try container.decode(String.self, forKey: .createdAt)
         lastReplyAt = try container.decodeIfPresent(String.self, forKey: .lastReplyAt)
+        images = try container.decodeIfPresent([String].self, forKey: .images)
     }
     
     // 根据当前语言获取显示标题

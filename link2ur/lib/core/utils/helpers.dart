@@ -97,6 +97,17 @@ class Helpers {
     return '${text.substring(0, maxLength)}$suffix';
   }
 
+  /// 将帖子/回复内容中的标记转为真实换行和空格（与 iOS ContentFormatter 一致）。
+  /// 标记规则：\n → 换行，\c → 空格，\r\n / \r → 换行。
+  static String normalizeContentNewlines(String text) {
+    if (text.isEmpty) return text;
+    return text
+        .replaceAll(r'\r\n', '\n')
+        .replaceAll(r'\n', '\n')
+        .replaceAll(r'\r', '\n')
+        .replaceAll(r'\c', ' ');
+  }
+
   // ==================== 颜色处理 ====================
   /// 从十六进制字符串创建颜色
   static Color hexToColor(String hex) {

@@ -9882,7 +9882,7 @@ async def upload_image(
 async def upload_public_image(
     request: Request,
     image: UploadFile = File(...),
-    category: str = Query("public", description="图片类型：expert_avatar（任务达人头像）、service_image（服务图片）、public（任务相关图片）、leaderboard_item（竞品图片）、leaderboard_cover（榜单封面）、flea_market（跳蚤市场商品图片）"),
+    category: str = Query("public", description="图片类型：expert_avatar、service_image、public、leaderboard_item、leaderboard_cover、flea_market、forum_post（论坛帖子图片）"),
     resource_id: str = Query(None, description="资源ID：expert_avatar时传expert_id，service_image时传expert_id，public时传task_id（任务ID，发布新任务时可省略）"),
     db: Session = Depends(get_db),
 ):
@@ -9946,6 +9946,7 @@ async def upload_public_image(
             "leaderboard_item": ImageCategory.LEADERBOARD_ITEM,
             "leaderboard_cover": ImageCategory.LEADERBOARD_COVER,
             "flea_market": ImageCategory.FLEA_MARKET,
+            "forum_post": ImageCategory.FORUM_POST,
         }
         
         if category not in category_map:

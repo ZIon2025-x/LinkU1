@@ -1422,6 +1422,8 @@
 "forum.create_post_publish_now" = "立即发布";
 "forum.create_post_publishing" = "发布中...";
 "forum.create_post_title" = "发布帖子";
+"forum.create_post_images" = "帖子圖片";
+"forum.create_post_add_image" = "添加圖片";
 "forum.favorite" = "收藏";
 "forum.like" = "点赞";
 "forum.post_load_failed" = "加载帖子失败";

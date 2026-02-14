@@ -1476,6 +1476,8 @@
 "forum.create_post_content_placeholder" = "Share your insights, experiences, or ask questions. Be friendly and help each other grow...";
 "forum.create_post_publishing" = "Publishing...";
 "forum.create_post_publish_now" = "Publish Now";
+"forum.create_post_images" = "Post Images";
+"forum.create_post_add_image" = "Add Image";
 
 // MARK: - Flea Market Create
 "flea_market.create_publishing" = "Publishing...";

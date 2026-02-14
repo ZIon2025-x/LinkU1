@@ -150,9 +150,10 @@ struct ForumPostCreateRequest: Encodable {
     let title: String
     let content: String
     let categoryId: Int
+    let images: [String]?
     
     enum CodingKeys: String, CodingKey {
-        case title, content
+        case title, content, images
         case categoryId = "category_id"
     }
 }

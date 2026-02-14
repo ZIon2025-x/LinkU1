@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_typography.dart';
+import '../../../core/utils/helpers.dart';
 import '../../../core/utils/haptic_feedback.dart';
 import '../../../core/router/app_router.dart';
 import '../../../core/utils/l10n_extension.dart';
@@ -586,7 +587,7 @@ class _PostContent extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
       child: Text(
-        post.content!,
+        Helpers.normalizeContentNewlines(post.content!),
         style: AppTypography.body.copyWith(
           color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
           height: 1.8,
@@ -897,11 +898,11 @@ class _ReplyCard extends StatelessWidget {
                   ),
 
                 const SizedBox(height: 6),
-                // 内容
+                // 内容（支持后端返回的字面量 \n 换行）
                 Padding(
                   padding: const EdgeInsets.only(right: 42),
                   child: Text(
-                    reply.content,
+                    Helpers.normalizeContentNewlines(reply.content),
                     style: (isSubReply ? AppTypography.footnote : AppTypography.subheadline).copyWith(
                       fontSize: isSubReply ? 14 : null,
                       color: isDark
