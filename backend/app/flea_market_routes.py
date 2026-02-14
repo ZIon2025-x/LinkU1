@@ -1466,7 +1466,7 @@ async def direct_purchase_item(
         import concurrent.futures
         
         # 定义 Stripe API 调用函数（同步函数，将在线程池中执行）
-        def create_payment_intent_sync():
+        def create_payment_intent_sync(customer_id=None):
             from app.secure_auth import get_wechat_pay_payment_method_options
             payment_method_options = get_wechat_pay_payment_method_options(request)
             create_pi_kw = {
@@ -1490,6 +1490,8 @@ async def direct_purchase_item(
                     "flea_market_item_id": str(item.id)
                 },
             }
+            if customer_id:
+                create_pi_kw["customer"] = customer_id
             if payment_method_options:
                 create_pi_kw["payment_method_options"] = payment_method_options
             return stripe.PaymentIntent.create(**create_pi_kw)
@@ -1525,12 +1527,11 @@ async def direct_purchase_item(
                     .values(stripe_customer_id=customer_id)
                 )
             
-            # Customer 已确定，将其加入 PI 创建参数
-            if customer_id:
-                create_pi_kw["customer"] = customer_id
-            
-            # 并行执行：创建 PI 和 Ephemeral Key
-            pi_future = loop.run_in_executor(executor, create_payment_intent_sync)
+            # 并行执行：创建 PI 和 Ephemeral Key（将 customer_id 传入 PI 创建函数）
+            pi_future = loop.run_in_executor(
+                executor,
+                lambda: create_payment_intent_sync(customer_id),
+            )
             ek_future = loop.run_in_executor(executor, create_ephemeral_key_sync, customer_id) if customer_id else None
             
             if ek_future:
