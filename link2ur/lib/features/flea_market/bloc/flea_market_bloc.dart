@@ -133,13 +133,16 @@ class FleaMarketUploadImage extends FleaMarketEvent {
   const FleaMarketUploadImage({
     required this.imageBytes,
     required this.filename,
+    this.itemId,
   });
 
   final Uint8List imageBytes;
   final String filename;
+  /// 编辑时传入，上传到商品目录；新建时不传
+  final String? itemId;
 
   @override
-  List<Object?> get props => [imageBytes.length, filename];
+  List<Object?> get props => [imageBytes.length, filename, itemId];
 }
 
 // ==================== State ====================
@@ -646,6 +649,7 @@ class FleaMarketBloc extends Bloc<FleaMarketEvent, FleaMarketState> {
       final url = await _fleaMarketRepository.uploadImage(
         event.imageBytes,
         event.filename,
+        itemId: event.itemId,
       );
       emit(state.copyWith(
         isUploadingImage: false,

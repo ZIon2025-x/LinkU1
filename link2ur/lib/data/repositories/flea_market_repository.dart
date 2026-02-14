@@ -440,14 +440,21 @@ class FleaMarketRepository {
   }
 
   /// 上传图片（后端接口要求 multipart 字段名为 image）
-  Future<String> uploadImage(Uint8List bytes, String filename) async {
+  /// [itemId] 编辑时传入，图片直接存到商品目录；新建时不传，存临时目录后由创建接口 move_from_temp
+  Future<String> uploadImage(
+    Uint8List bytes,
+    String filename, {
+    String? itemId,
+  }) async {
+    final name = filename.trim().isNotEmpty ? filename : 'image.jpg';
     final formData = FormData.fromMap({
-      'image': MultipartFile.fromBytes(bytes, filename: filename),
+      'image': MultipartFile.fromBytes(bytes, filename: name),
     });
 
     final response = await _apiService.post<Map<String, dynamic>>(
       ApiEndpoints.fleaMarketUploadImage,
       data: formData,
+      queryParameters: itemId != null ? {'item_id': itemId} : null,
     );
 
     if (!response.isSuccess || response.data == null) {

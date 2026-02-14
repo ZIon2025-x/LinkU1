@@ -135,22 +135,22 @@ class _EditFleaMarketItemViewContentState
 
     final bloc = context.read<FleaMarketBloc>();
 
-    // Upload new images first
+    // Upload new images first（编辑时传 itemId 使图片直接存商品目录）
     _uploadedUrls.clear();
     for (final image in _newImages) {
       final bytes = await image.readAsBytes();
+      final name = image.name.trim().isNotEmpty ? image.name : 'image.jpg';
       bloc.add(FleaMarketUploadImage(
         imageBytes: bytes,
-        filename: image.name,
+        filename: name,
+        itemId: widget.itemId,
       ));
-      // Wait for upload to complete
-      await bloc.stream.firstWhere(
-        (state) => !state.isUploadingImage,
+      final state = await bloc.stream.firstWhere(
+        (s) => !s.isUploadingImage,
       );
-      if (bloc.state.uploadedImageUrl != null) {
-        _uploadedUrls.add(bloc.state.uploadedImageUrl!);
-      } else if (bloc.state.errorMessage != null) {
-        // Upload failed, stop
+      if (state.uploadedImageUrl != null) {
+        _uploadedUrls.add(state.uploadedImageUrl!);
+      } else if (state.errorMessage != null) {
         return;
       }
     }
