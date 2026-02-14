@@ -7,6 +7,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 **Link2Ur** — 技能互助平台 (skill exchange / task assistance platform). This is a monorepo containing:
 
 - `link2ur/` — Flutter mobile app (primary codebase)
+- `ios/` — **iOS native app (reference implementation)** — 业务逻辑、接口与交互以 iOS 为准；不确定时请查看 `ios/link2ur/link2ur/` 下的 Views / ViewModels / Services
 - `backend/` — Python backend API (deployed on Railway)
 - `frontend/` — React admin/web frontend
 - `admin/` — Admin panel
@@ -108,6 +109,8 @@ lib/
 - **Dev/Staging**: `https://linktest.up.railway.app` / `wss://linktest.up.railway.app`
 - **Production**: `https://api.link2ur.com` / `wss://api.link2ur.com`
 - Environment auto-detected via `kDebugMode`
+
+**密钥不会从文件导入**：Stripe 公钥、`MOBILE_APP_SECRET` 等均通过 **`--dart-define`** 在运行/构建时传入，不读 `.env`。未传时 Stripe 公钥为空，支付会失败。详见 `link2ur/docs/stripe-keys-setup.md`。
 
 ### Android Build Notes
 

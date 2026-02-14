@@ -2901,6 +2901,18 @@ abstract class AppLocalizations {
   /// **'Load failed: {param1}'**
   String stripeConnectLoadFailedWithReason(String param1);
 
+  /// No description provided for @stripeConnectOpenDashboard.
+  ///
+  /// In en, this message translates to:
+  /// **'Open Stripe Dashboard'**
+  String get stripeConnectOpenDashboard;
+
+  /// No description provided for @stripeConnectDashboardUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Unable to open Stripe dashboard'**
+  String get stripeConnectDashboardUnavailable;
+
   /// No description provided for @stripeOnboardingCreateFailed.
   ///
   /// In en, this message translates to:
@@ -7058,6 +7070,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'No Available Coupons'**
   String get paymentNoAvailableCoupons;
+
+  /// No description provided for @paymentDoNotUseCoupon.
+  ///
+  /// In en, this message translates to:
+  /// **'Don\'t use coupon'**
+  String get paymentDoNotUseCoupon;
+
+  /// No description provided for @paymentTimeoutOrRefreshHint.
+  ///
+  /// In en, this message translates to:
+  /// **'If you have already paid, close this page and refresh; otherwise please try again'**
+  String get paymentTimeoutOrRefreshHint;
 
   /// No description provided for @paymentTotalAmount.
   ///

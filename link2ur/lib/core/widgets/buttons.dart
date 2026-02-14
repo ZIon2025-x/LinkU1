@@ -195,15 +195,21 @@ class PrimaryButton extends StatelessWidget {
                     ? const ButtonLoadingIndicator(key: ValueKey('loading'))
                     : Row(
                         key: const ValueKey('content'),
-                        mainAxisSize: MainAxisSize.min,
+                        mainAxisSize: MainAxisSize.max,
+                        mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           if (icon != null) ...[
                             Icon(icon, color: Colors.white, size: 20),
                             AppSpacing.hSm,
                           ],
-                          Text(
-                            text,
-                            style: AppTypography.button.copyWith(color: Colors.white),
+                          Flexible(
+                            child: Text(
+                              text,
+                              style: AppTypography.button.copyWith(color: Colors.white),
+                              overflow: TextOverflow.ellipsis,
+                              maxLines: 1,
+                              textAlign: TextAlign.center,
+                            ),
                           ),
                         ],
                       ),
@@ -277,15 +283,21 @@ class SecondaryButton extends StatelessWidget {
                   )
                 : Row(
                     key: const ValueKey('content'),
-                    mainAxisSize: MainAxisSize.min,
+                    mainAxisSize: MainAxisSize.max,
+                    mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       if (icon != null) ...[
                         Icon(icon, color: effectiveColor, size: 20),
                         AppSpacing.hSm,
                       ],
-                      Text(
-                        text,
-                        style: AppTypography.button.copyWith(color: effectiveColor),
+                      Flexible(
+                        child: Text(
+                          text,
+                          style: AppTypography.button.copyWith(color: effectiveColor),
+                          overflow: TextOverflow.ellipsis,
+                          maxLines: 1,
+                          textAlign: TextAlign.center,
+                        ),
                       ),
                     ],
                   ),

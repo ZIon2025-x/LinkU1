@@ -1,8 +1,11 @@
+import 'dart:async';
+
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../data/models/notification.dart';
 import '../../../data/repositories/notification_repository.dart';
+import '../../../data/services/websocket_service.dart';
 import '../../../core/utils/logger.dart';
 
 // ==================== Events ====================
@@ -119,9 +122,23 @@ class NotificationBloc extends Bloc<NotificationEvent, NotificationState> {
     on<NotificationMarkAsRead>(_onMarkAsRead);
     on<NotificationMarkAllAsRead>(_onMarkAllAsRead);
     on<NotificationLoadUnreadNotificationCount>(_onLoadUnreadNotificationCount);
+
+    // 监听 WebSocket：新通知时刷新未读数，红点实时更新
+    _wsSubscription = WebSocketService.instance.messageStream.listen((wsMessage) {
+      if (wsMessage.isNotification) {
+        add(const NotificationLoadUnreadNotificationCount());
+      }
+    });
   }
 
   final NotificationRepository _notificationRepository;
+  StreamSubscription<WebSocketMessage>? _wsSubscription;
+
+  @override
+  Future<void> close() {
+    _wsSubscription?.cancel();
+    return super.close();
+  }
 
   /// 互动消息类型前缀（论坛 + 排行榜）
   static const _interactionTypePrefixes = ['forum_', 'leaderboard_'];

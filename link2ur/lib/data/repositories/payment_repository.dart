@@ -15,22 +15,18 @@ class PaymentRepository {
   final CacheManager _cache = CacheManager.shared;
 
   /// 创建任务支付（对应后端 /api/coupon-points/tasks/{taskId}/payment）
-  ///
-  /// [preferredPaymentMethod] 对齐 iOS PaymentViewModel：
-  /// - `'card'` → 后端设置 `payment_method_types: ["card"]`
-  /// - `'alipay'` → 后端设置 `payment_method_types: ["alipay"]`
-  /// - `'wechat_pay'` → 微信走单独的 Checkout Session，不用此方法
-  /// - `null` → 后端使用默认支付方式
+  /// [userCouponId] 用户优惠券 ID（后端字段 user_coupon_id），选券后传入以抵扣
+  /// [preferredPaymentMethod] 对齐 iOS：card / alipay / null
   Future<TaskPaymentResponse> createTaskPayment({
     required int taskId,
-    int? couponId,
+    int? userCouponId,
     String? preferredPaymentMethod,
   }) async {
     final response = await _apiService.post<Map<String, dynamic>>(
       ApiEndpoints.createTaskPayment(taskId),
       data: {
         'payment_method': 'stripe',
-        if (couponId != null) 'coupon_id': couponId,
+        if (userCouponId != null) 'user_coupon_id': userCouponId,
         if (preferredPaymentMethod != null)
           'preferred_payment_method': preferredPaymentMethod,
       },
@@ -113,12 +109,12 @@ class PaymentRepository {
   /// 创建支付意向（便捷方法，调用 createTaskPayment）
   Future<TaskPaymentResponse> createPaymentIntent({
     required int taskId,
-    int? couponId,
+    int? userCouponId,
     String? preferredPaymentMethod,
   }) async {
     return createTaskPayment(
       taskId: taskId,
-      couponId: couponId,
+      userCouponId: userCouponId,
       preferredPaymentMethod: preferredPaymentMethod,
     );
   }

@@ -1,0 +1,34 @@
+---
+description: 以 iOS 原生项目为业务逻辑与交互的参考实现
+alwaysApply: true
+---
+
+# iOS 原生项目作为参考
+
+本仓库中 **iOS 原生应用是业务逻辑与交互的参考实现**，Flutter 实现应对齐 iOS 的行为与接口。
+
+## 位置与结构
+
+- **路径**：仓库根目录下的 `ios/`（不是 `link2ur/ios/`；后者是 Flutter 的 iOS Runner）。
+- **主代码**：`ios/link2ur/link2ur/`
+  - `Views/` — 界面与流程（如 `Payment/StripePaymentView.swift`、`Tasks/TaskDetailView.swift`、`FleaMarket/FleaMarketDetailView.swift`）
+  - `ViewModels/` — 业务逻辑（如 `PaymentViewModel.swift`、`TaskDetailViewModel.swift`、`FleaMarketViewModel.swift`）
+  - `Models/` — 数据模型
+  - `Services/` — API、端点等（如 `APIService.swift`、`APIEndpoints.swift`）
+
+## 何时参考
+
+在以下情况应优先查看 iOS 原生项目：
+
+- **不确定业务逻辑**：例如支付流程、任务批准、申请服务、跳蚤市场购买/议价、优惠券使用等。
+- **接口或字段不明确**：请求/响应字段名、枚举取值、错误处理，以 iOS 调用的 API 与模型为准。
+- **交互与文案**：页面结构、按钮文案、倒计时、支付方式展示顺序等，应对齐 iOS 的 UI 与文案。
+- **与后端约定**：iOS 已和后端对齐的字段（如 `user_coupon_id`、`application_message`、`negotiated_price` 等），Flutter 应一致。
+
+## 使用方式
+
+1. 根据功能在 `ios/link2ur/link2ur/` 下找对应 **View** 或 **ViewModel**。
+2. 阅读其中的请求参数、状态流转、错误处理和界面展示逻辑。
+3. 在 Flutter 的对应 feature（bloc + views + repository）中实现或修正，保持与 iOS 一致。
+
+这样可减少与后端或产品行为的不一致，并便于后续维护。

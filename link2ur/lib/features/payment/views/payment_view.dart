@@ -10,13 +10,13 @@ import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_radius.dart';
 import '../../../core/utils/l10n_extension.dart';
 import '../../../core/widgets/buttons.dart';
-import 'package:webview_flutter/webview_flutter.dart';
 
 import '../../../core/widgets/loading_view.dart';
 import '../../../data/repositories/payment_repository.dart';
 import '../../../data/services/payment_service.dart';
 import '../../../data/models/payment.dart';
 import '../bloc/payment_bloc.dart';
+import 'wechat_pay_webview.dart';
 
 part 'payment_widgets.dart';
 
@@ -250,8 +250,8 @@ class _PaymentContentState extends State<_PaymentContent> {
     try {
       final success = await PaymentService.instance.presentPaymentSheet(
         clientSecret: response.clientSecret!,
-        customerId: response.customerId ?? '',
-        ephemeralKeySecret: response.ephemeralKeySecret ?? '',
+        customerId: response.customerId,
+        ephemeralKeySecret: response.ephemeralKeySecret,
       );
 
       if (!mounted) return;
@@ -346,7 +346,7 @@ class _PaymentContentState extends State<_PaymentContent> {
   Future<void> _openWeChatWebView(String checkoutUrl) async {
     final result = await Navigator.of(context).push<bool>(
       MaterialPageRoute(
-        builder: (_) => _WeChatPayWebView(
+        builder: (_) => WeChatPayWebView(
           checkoutUrl: checkoutUrl,
           onPaymentSuccess: () => Navigator.of(context).pop(true),
           onPaymentCancel: () => Navigator.of(context).pop(false),

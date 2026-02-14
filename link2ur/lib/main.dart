@@ -13,6 +13,7 @@ import 'core/config/app_config.dart';
 import 'core/utils/crash_reporter.dart';
 import 'core/utils/logger.dart';
 import 'core/utils/network_monitor.dart';
+import 'data/services/payment_service.dart';
 import 'data/services/storage_service.dart';
 
 void main() {
@@ -63,6 +64,9 @@ void main() {
       // AppConfig 依赖 StorageService，必须在其之后（同步初始化，无需 await）
       AppConfig.instance.init();
 
+      // Stripe 支付（信用卡/Apple Pay/支付宝）需在首次支付前完成初始化，避免点击「确认支付」时抛出 StripeConfigException
+      await _initStripeIfConfigured();
+
       // 网络监测：非阻塞初始化，不影响启动速度
       NetworkMonitor.instance.initialize();
 
@@ -90,6 +94,16 @@ void main() {
       AppLogger.error('Uncaught zone error', error, stackTrace);
     },
   );
+}
+
+/// 在配置了 Stripe 公钥时初始化 Stripe，避免支付页点击确认时出现 StripeConfigException
+Future<void> _initStripeIfConfigured() async {
+  if (AppConfig.instance.stripePublishableKey.isEmpty) return;
+  try {
+    await PaymentService.instance.init();
+  } catch (e, st) {
+    AppLogger.warning('Stripe init failed (payments may fail): $e', st);
+  }
 }
 
 /// Bloc观察者，用于调试和错误追踪

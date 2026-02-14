@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/design/app_colors.dart';
+import '../../../core/design/app_radius.dart';
 import '../../../core/utils/haptic_feedback.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_typography.dart';
@@ -17,6 +18,8 @@ import '../../../data/repositories/flea_market_repository.dart';
 import '../../../data/models/flea_market.dart';
 import '../../../features/auth/bloc/auth_bloc.dart';
 import '../bloc/flea_market_bloc.dart';
+import '../../tasks/views/approval_payment_page.dart';
+import '../../tasks/bloc/task_detail_bloc.dart' show AcceptPaymentData;
 
 /// 跳蚤市场商品详情页 - 对标iOS FleaMarketDetailView.swift
 class FleaMarketDetailView extends StatelessWidget {
@@ -59,6 +62,34 @@ class _FleaMarketDetailContent extends StatelessWidget {
           (curr.actionMessage != null &&
               prev.actionMessage != curr.actionMessage),
       listener: (context, state) {
+        // 直接购买后需支付：打开支付页（对标 iOS handlePurchaseComplete）
+        if (state.actionMessage == 'open_payment' &&
+            state.acceptPaymentData != null) {
+          final paymentData = state.acceptPaymentData!;
+          context.read<FleaMarketBloc>().add(const FleaMarketClearAcceptPaymentData());
+          Navigator.of(context)
+              .push<bool>(
+                MaterialPageRoute<bool>(
+                  builder: (_) => ApprovalPaymentPage(
+                    paymentData: paymentData,
+                  ),
+                ),
+              )
+              .then((paid) {
+            if (!context.mounted) return;
+            if (paid == true) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(context.l10n.actionPurchaseSuccess),
+                  backgroundColor: AppColors.success,
+                ),
+              );
+              context.read<FleaMarketBloc>().add(FleaMarketLoadDetailRequested(itemId));
+            }
+          });
+          return;
+        }
+
         // 操作提示
         if (state.actionMessage != null) {
           final l10n = context.l10n;
@@ -67,6 +98,8 @@ class _FleaMarketDetailContent extends StatelessWidget {
             'publish_failed' => l10n.actionPublishFailed,
             'purchase_success' => l10n.actionPurchaseSuccess,
             'purchase_failed' => l10n.actionPurchaseFailed,
+            'negotiate_request_sent' => l10n.fleaMarketNegotiateRequestSent,
+            'negotiate_request_failed' => l10n.fleaMarketNegotiateRequestFailed,
             'item_updated' => l10n.actionItemUpdated,
             'update_failed' => l10n.actionUpdateFailed,
             'refresh_success' => l10n.actionRefreshSuccess,
@@ -78,6 +111,7 @@ class _FleaMarketDetailContent extends StatelessWidget {
               : message;
           final isSuccess = state.actionMessage == 'item_published' ||
               state.actionMessage == 'purchase_success' ||
+              state.actionMessage == 'negotiate_request_sent' ||
               state.actionMessage == 'item_updated' ||
               state.actionMessage == 'refresh_success';
           ScaffoldMessenger.of(context).showSnackBar(
@@ -514,16 +548,43 @@ class _FleaMarketDetailContent extends StatelessWidget {
           : () {
               AppHaptics.selection();
               if (hasPendingPayment) {
-                // TODO: 跳转支付页面 (Stripe)
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                      content: Text(context.l10n.fleaMarketProcessingPurchase)),
+                // 对标 iOS：用商品详情返回的待支付信息打开支付页
+                final taskId = item.pendingPaymentTaskId!;
+                final clientSecret = item.pendingPaymentClientSecret!;
+                final paymentData = AcceptPaymentData(
+                  taskId: taskId,
+                  clientSecret: clientSecret,
+                  customerId: item.pendingPaymentCustomerId ?? '',
+                  ephemeralKeySecret:
+                      item.pendingPaymentEphemeralKeySecret ?? '',
+                  amountDisplay: item.pendingPaymentAmountDisplay,
+                  applicationId: null,
+                  paymentExpiresAt: item.pendingPaymentExpiresAt,
                 );
+                Navigator.of(context)
+                    .push<bool>(
+                      MaterialPageRoute<bool>(
+                        builder: (_) =>
+                            ApprovalPaymentPage(paymentData: paymentData),
+                      ),
+                    )
+                    .then((paid) {
+                  if (!context.mounted) return;
+                  if (paid == true) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(context.l10n.actionPurchaseSuccess),
+                        backgroundColor: AppColors.success,
+                      ),
+                    );
+                    context
+                        .read<FleaMarketBloc>()
+                        .add(FleaMarketLoadDetailRequested(itemId));
+                  }
+                });
               } else {
-                // 购买流程
-                context
-                    .read<FleaMarketBloc>()
-                    .add(FleaMarketPurchaseItem(itemId));
+                // 弹出购买/议价申请框（留言 + 是否议价 + 金额）
+                _FleaMarketPurchaseSheet.show(context, item, itemId);
               }
             },
       child: Container(
@@ -563,6 +624,351 @@ class _FleaMarketDetailContent extends StatelessWidget {
                 ),
         ),
       ),
+    );
+  }
+}
+
+// ==================== 购买/议价申请弹窗（对标 iOS 购买弹窗：留言 + 是否议价 + 金额） ====================
+
+class _FleaMarketPurchaseSheet extends StatefulWidget {
+  const _FleaMarketPurchaseSheet({
+    required this.item,
+    required this.itemId,
+  });
+
+  final FleaMarketItem item;
+  final String itemId;
+
+  static void show(BuildContext context, FleaMarketItem item, String itemId) {
+    final bloc = context.read<FleaMarketBloc>();
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => BlocProvider.value(
+        value: bloc,
+        child: BlocListener<FleaMarketBloc, FleaMarketState>(
+          listenWhen: (p, c) =>
+              c.actionMessage == 'purchase_success' ||
+              c.actionMessage == 'negotiate_request_sent' ||
+              c.actionMessage == 'open_payment',
+          listener: (c, _) => Navigator.of(c).pop(),
+          child: _FleaMarketPurchaseSheet(item: item, itemId: itemId),
+        ),
+      ),
+    );
+  }
+
+  @override
+  State<_FleaMarketPurchaseSheet> createState() =>
+      _FleaMarketPurchaseSheetState();
+}
+
+class _FleaMarketPurchaseSheetState extends State<_FleaMarketPurchaseSheet> {
+  final _messageController = TextEditingController();
+  final _amountController = TextEditingController();
+  bool _showNegotiate = false;
+  bool _isSubmitting = false;
+  String? _errorMessage;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.item.price > 0) {
+      _amountController.text = widget.item.price ==
+              widget.item.price.truncateToDouble()
+          ? widget.item.price.toInt().toString()
+          : widget.item.price.toStringAsFixed(2);
+    }
+  }
+
+  @override
+  void dispose() {
+    _messageController.dispose();
+    _amountController.dispose();
+    super.dispose();
+  }
+
+  String? _validate() {
+    if (_showNegotiate) {
+      final amount = double.tryParse(_amountController.text.trim());
+      if (amount == null || amount <= 0) {
+        return context.l10n.fleaMarketNegotiatePriceTooLow;
+      }
+      if (amount > widget.item.price) {
+        return context.l10n.fleaMarketNegotiatePriceTooHigh;
+      }
+    }
+    return null;
+  }
+
+  void _submit() {
+    // 对标 iOS：有待处理议价时只能直接购买，不允许再议价
+    final forceDirectPurchase = _hasPendingRequest;
+    if (!forceDirectPurchase) {
+      final err = _validate();
+      if (err != null) {
+        setState(() {
+          _errorMessage = err;
+          _isSubmitting = false;
+        });
+        return;
+      }
+    }
+    setState(() {
+      _isSubmitting = true;
+      _errorMessage = null;
+    });
+    final message = _messageController.text.trim();
+    final proposedPrice = forceDirectPurchase
+        ? null
+        : (_showNegotiate
+            ? double.tryParse(_amountController.text.trim())
+            : null);
+    context.read<FleaMarketBloc>().add(
+          FleaMarketSubmitPurchaseOrRequest(
+            widget.itemId,
+            message: message.isEmpty ? null : message,
+            proposedPrice: proposedPrice,
+          ),
+        );
+  }
+
+  /// 对标 iOS：用户已有待处理议价时只显示等待卖家确认，不允许再议价，只能直接购买
+  bool get _hasPendingRequest {
+    final s = widget.item.userPurchaseRequestStatus;
+    return s == 'pending' || s == 'seller_negotiating';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return DraggableScrollableSheet(
+      initialChildSize: 0.55,
+      minChildSize: 0.4,
+      maxChildSize: 0.85,
+      expand: false,
+      builder: (context, scrollController) {
+        return Container(
+          decoration: BoxDecoration(
+            color: Theme.of(context).scaffoldBackgroundColor,
+            borderRadius:
+                const BorderRadius.vertical(top: Radius.circular(20)),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const SizedBox(height: 12),
+              Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: AppColors.textTertiary.withValues(alpha: 0.3),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.lg, vertical: 12),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      l10n.fleaMarketConfirmPurchase,
+                      style: const TextStyle(
+                          fontSize: 18, fontWeight: FontWeight.w600),
+                    ),
+                    IconButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                      icon: const Icon(Icons.close),
+                    ),
+                  ],
+                ),
+              ),
+              const Divider(height: 1),
+              Flexible(
+                child: SingleChildScrollView(
+                  controller: scrollController,
+                  padding: const EdgeInsets.all(AppSpacing.lg),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Text(
+                        l10n.taskApplicationApplyInfo,
+                        style: const TextStyle(
+                            fontSize: 16, fontWeight: FontWeight.w600),
+                      ),
+                      const SizedBox(height: 8),
+                      TextField(
+                        controller: _messageController,
+                        maxLines: 3,
+                        maxLength: 500,
+                        decoration: InputDecoration(
+                          hintText: l10n.taskApplicationAdvantagePlaceholder,
+                          border: OutlineInputBorder(
+                            borderRadius:
+                                BorderRadius.circular(AppRadius.medium),
+                          ),
+                          filled: true,
+                          fillColor: isDark
+                              ? AppColors.skeletonBase
+                              : AppColors.skeletonHighlight,
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+                      Text(
+                        l10n.taskDetailPriceNegotiation,
+                        style: const TextStyle(
+                            fontSize: 16, fontWeight: FontWeight.w600),
+                      ),
+                      const SizedBox(height: 8),
+                      // 对标 iOS：有待处理议价时只显示等待卖家确认+议价金额，不显示议价开关
+                      if (_hasPendingRequest) ...[
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: AppColors.primary.withValues(alpha: 0.1),
+                            borderRadius:
+                                BorderRadius.circular(AppRadius.medium),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(Icons.schedule,
+                                  size: 20, color: AppColors.primary),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment:
+                                      CrossAxisAlignment.start,
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Text(
+                                      l10n.fleaMarketWaitingSellerConfirm,
+                                      style: const TextStyle(
+                                          fontSize: 15,
+                                          fontWeight: FontWeight.w500),
+                                    ),
+                                    if (widget.item
+                                            .userPurchaseRequestProposedPrice !=
+                                        null)
+                                      Text(
+                                        l10n.fleaMarketNegotiateAmountFormat(
+                                            widget.item
+                                                .userPurchaseRequestProposedPrice!),
+                                        style: TextStyle(
+                                            fontSize: 13,
+                                            color: AppColors.textSecondary),
+                                      ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                      ] else ...[
+                        SwitchListTile(
+                          value: _showNegotiate,
+                          onChanged: (value) {
+                            setState(() {
+                              _showNegotiate = value;
+                              if (value &&
+                                  _amountController.text.trim().isEmpty &&
+                                  widget.item.price > 0) {
+                                _amountController.text = widget.item.price ==
+                                        widget.item.price.truncateToDouble()
+                                    ? widget.item.price.toInt().toString()
+                                    : widget.item.price.toStringAsFixed(2);
+                              }
+                            });
+                          },
+                          title: Text(
+                            l10n.taskApplicationIWantToNegotiatePrice,
+                            style: const TextStyle(fontSize: 15),
+                          ),
+                          activeColor: AppColors.primary,
+                        ),
+                        if (_showNegotiate) ...[
+                          const SizedBox(height: 8),
+                          TextField(
+                            controller: _amountController,
+                            keyboardType: const TextInputType
+                                .numberWithOptions(decimal: true),
+                            decoration: InputDecoration(
+                              labelText: l10n.taskApplicationExpectedAmount,
+                              prefixText: '£ ',
+                              border: OutlineInputBorder(
+                                borderRadius:
+                                    BorderRadius.circular(AppRadius.medium),
+                              ),
+                              filled: true,
+                              fillColor: isDark
+                                  ? AppColors.skeletonBase
+                                  : AppColors.skeletonHighlight,
+                            ),
+                            onChanged: (_) =>
+                                setState(() => _errorMessage = null),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            l10n.taskApplicationNegotiatePriceHint,
+                            style: TextStyle(
+                                fontSize: 12,
+                                color: AppColors.textTertiary),
+                          ),
+                          const SizedBox(height: 16),
+                        ],
+                      ],
+                      if (_errorMessage != null) ...[
+                        const SizedBox(height: 8),
+                        Text(
+                          _errorMessage!,
+                          style: const TextStyle(
+                              color: AppColors.error, fontSize: 13),
+                        ),
+                        const SizedBox(height: 8),
+                      ],
+                      const SizedBox(height: 24),
+                      SizedBox(
+                        height: 50,
+                        child: ElevatedButton.icon(
+                          onPressed: _isSubmitting
+                              ? null
+                              : () => _submit(),
+                          icon: _isSubmitting
+                              ? const SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(
+                                      strokeWidth: 2),
+                                )
+                              : const Icon(Icons.shopping_cart, size: 20),
+                          label: Text(
+                            _showNegotiate
+                                ? l10n.fleaMarketNegotiate
+                                : l10n.fleaMarketConfirmPurchase,
+                            style: const TextStyle(
+                                fontSize: 16, fontWeight: FontWeight.w600),
+                          ),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.primary,
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(25),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 }

@@ -603,6 +603,8 @@
       }
     }
   },
+  "stripeConnectOpenDashboard": "Open Stripe Dashboard",
+  "stripeConnectDashboardUnavailable": "Unable to open Stripe dashboard",
   "stripeOnboardingCreateFailed": "Unable to create payout setup session, please try again",
   "uploadNetworkErrorWithReason": "Network error: {param1}",
   "@uploadNetworkErrorWithReason": {
@@ -1798,6 +1800,8 @@
   "paymentCoupons": "Coupons",
   "paymentCouponDiscount": "Coupon Discount",
   "paymentNoAvailableCoupons": "No available coupons",
+  "paymentDoNotUseCoupon": "Don't use coupon",
+  "paymentTimeoutOrRefreshHint": "If you have already paid, close this page and refresh; otherwise please try again",
   "paymentTotalAmount": "Total Amount",
   "paymentFinalPayment": "Final Payment",
   "paymentMixed": "Mixed",

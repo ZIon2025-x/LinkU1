@@ -1453,6 +1453,12 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
+  String get stripeConnectOpenDashboard => '进入 Stripe 子账户';
+
+  @override
+  String get stripeConnectDashboardUnavailable => '暂无法打开 Stripe 子账户页面';
+
+  @override
   String get stripeOnboardingCreateFailed => '无法创建收款设置会话，请重试';
 
   @override
@@ -3677,6 +3683,12 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get paymentNoAvailableCoupons => '暂无可用优惠券';
+
+  @override
+  String get paymentDoNotUseCoupon => '不使用优惠券';
+
+  @override
+  String get paymentTimeoutOrRefreshHint => '若已完成支付请关闭本页并刷新；若未完成请重试';
 
   @override
   String get paymentTotalAmount => '总金额';
@@ -9188,6 +9200,12 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   }
 
   @override
+  String get stripeConnectOpenDashboard => '進入 Stripe 子賬戶';
+
+  @override
+  String get stripeConnectDashboardUnavailable => '暫無法打開 Stripe 子賬戶頁面';
+
+  @override
   String get stripeOnboardingCreateFailed => '無法創建收款設置會話，請重試';
 
   @override
@@ -11412,6 +11430,12 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get paymentNoAvailableCoupons => '暫無可用優惠券';
+
+  @override
+  String get paymentDoNotUseCoupon => '不使用優惠券';
+
+  @override
+  String get paymentTimeoutOrRefreshHint => '若已完成支付請關閉本頁並重新整理；若未完成請重試';
 
   @override
   String get paymentTotalAmount => '總金額';

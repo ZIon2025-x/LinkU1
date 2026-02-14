@@ -239,13 +239,21 @@ class TaskRepository {
     return Task.fromJson(response.data!);
   }
 
-  /// 申请任务
-  Future<void> applyTask(int taskId, {String? message}) async {
+  /// 申请任务（支持留言、议价金额与货币）
+  Future<void> applyTask(
+    int taskId, {
+    String? message,
+    double? negotiatedPrice,
+    String? currency,
+  }) async {
+    final Map<String, dynamic> data = {};
+    if (message != null && message.isNotEmpty) data['message'] = message;
+    if (negotiatedPrice != null) data['negotiated_price'] = negotiatedPrice;
+    if (currency != null && currency.isNotEmpty) data['currency'] = currency;
+
     final response = await _apiService.post(
       ApiEndpoints.applyTask(taskId),
-      data: {
-        if (message != null) 'message': message,
-      },
+      data: data.isEmpty ? null : data,
     );
 
     if (!response.isSuccess) {
@@ -304,8 +312,9 @@ class TaskRepository {
   }
 
   /// 获取任务申请列表
+  /// 后端 GET /api/tasks/{id}/applications 直接返回数组，不是 { items: [] }
   Future<List<Map<String, dynamic>>> getTaskApplications(int taskId) async {
-    final response = await _apiService.get<Map<String, dynamic>>(
+    final response = await _apiService.get<dynamic>(
       ApiEndpoints.taskApplications(taskId),
     );
 
@@ -313,19 +322,25 @@ class TaskRepository {
       throw TaskException(response.message ?? '获取申请列表失败');
     }
 
-    final items = response.data!['items'] as List<dynamic>? ?? [];
-    return items.map((e) => e as Map<String, dynamic>).toList();
+    final data = response.data!;
+    final List<dynamic> rawList = data is List<dynamic>
+        ? data
+        : (data is Map ? (data['items'] as List<dynamic>? ?? []) : <dynamic>[]);
+    return rawList.map((e) => e as Map<String, dynamic>).toList();
   }
 
-  /// 接受申请
-  Future<void> acceptApplication(int taskId, int applicationId) async {
-    final response = await _apiService.post(
+  /// 接受申请。返回后端响应（含 client_secret 等），需支付时由调用方打开支付页。
+  /// 对齐 iOS approveApplication → 返回 clientSecret 后显示支付界面。
+  Future<Map<String, dynamic>?> acceptApplication(
+      int taskId, int applicationId) async {
+    final response = await _apiService.post<Map<String, dynamic>>(
       ApiEndpoints.acceptApplication(taskId, applicationId),
     );
 
     if (!response.isSuccess) {
       throw TaskException(response.message ?? '接受申请失败');
     }
+    return response.data;
   }
 
   /// 拒绝申请
@@ -798,7 +813,7 @@ class TaskRepository {
 
   /// 接受申请人（便捷方法，applicantId 即 applicationId）
   Future<void> acceptApplicant(int taskId, int applicantId) async {
-    return acceptApplication(taskId, applicantId);
+    await acceptApplication(taskId, applicantId);
   }
 
   /// 获取我发布的任务（通过tasks接口加filter）

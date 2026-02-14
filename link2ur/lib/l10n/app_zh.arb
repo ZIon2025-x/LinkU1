@@ -1550,6 +1550,8 @@
       }
     }
   },
+  "stripeConnectOpenDashboard": "进入 Stripe 子账户",
+  "stripeConnectDashboardUnavailable": "暂无法打开 Stripe 子账户页面",
   "stripeOnboardingCreateFailed": "无法创建收款设置会话，请重试",
   "uploadNetworkErrorWithReason": "网络错误：{param1}",
   "@uploadNetworkErrorWithReason": {
@@ -2094,6 +2096,8 @@
   "paymentCoupons": "优惠券",
   "paymentCouponDiscount": "优惠券折扣",
   "paymentNoAvailableCoupons": "暂无可用优惠券",
+  "paymentDoNotUseCoupon": "不使用优惠券",
+  "paymentTimeoutOrRefreshHint": "若已完成支付请关闭本页并刷新；若未完成请重试",
   "paymentTotalAmount": "总金额",
   "paymentFinalPayment": "最终支付",
   "paymentMixed": "混合",

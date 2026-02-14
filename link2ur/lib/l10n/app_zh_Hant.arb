@@ -1550,6 +1550,8 @@
       }
     }
   },
+  "stripeConnectOpenDashboard": "進入 Stripe 子賬戶",
+  "stripeConnectDashboardUnavailable": "暫無法打開 Stripe 子賬戶頁面",
   "stripeOnboardingCreateFailed": "無法創建收款設置會話，請重試",
   "uploadNetworkErrorWithReason": "網絡錯誤：{param1}",
   "@uploadNetworkErrorWithReason": {
@@ -2094,6 +2096,8 @@
   "paymentCoupons": "優惠券",
   "paymentCouponDiscount": "優惠券折扣",
   "paymentNoAvailableCoupons": "暫無可用優惠券",
+  "paymentDoNotUseCoupon": "不使用優惠券",
+  "paymentTimeoutOrRefreshHint": "若已完成支付請關閉本頁並重新整理；若未完成請重試",
   "paymentTotalAmount": "總金額",
   "paymentFinalPayment": "最終支付",
   "paymentMixed": "混合",

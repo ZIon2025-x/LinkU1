@@ -11,6 +11,7 @@ import '../../../core/widgets/error_state_view.dart';
 import '../../../core/widgets/empty_state_view.dart';
 import '../../../core/widgets/cards.dart';
 import '../../../core/widgets/buttons.dart';
+import '../../../core/widgets/external_web_view.dart';
 import '../../../core/widgets/sparkline_chart.dart';
 import '../../../data/models/coupon_points.dart';
 import '../../../data/models/payment.dart';
@@ -408,6 +409,36 @@ class _StripeConnectSection extends StatelessWidget {
             title: Text(context.l10n.walletWithdrawalRecords),
             trailing: const Icon(Icons.chevron_right, size: 20),
             onTap: () => context.push('/payment/stripe-connect/payouts'),
+          ),
+          ListTile(
+            contentPadding: AppSpacing.horizontalMd,
+            leading: const Icon(Icons.open_in_browser_outlined, size: 20),
+            title: Text(context.l10n.stripeConnectOpenDashboard),
+            trailing: const Icon(Icons.chevron_right, size: 20),
+            onTap: () async {
+              final repo = context.read<PaymentRepository>();
+              try {
+                final details = await repo.getStripeConnectAccountDetails();
+                final url = details.dashboardUrl;
+                if (!context.mounted) return;
+                if (url != null && url.isNotEmpty) {
+                  await ExternalWebView.openInApp(
+                    context,
+                    url: url,
+                    title: context.l10n.stripeConnectOpenDashboard,
+                  );
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text(context.l10n.stripeConnectDashboardUnavailable)),
+                  );
+                }
+              } catch (_) {
+                if (!context.mounted) return;
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text(context.l10n.stripeConnectDashboardUnavailable)),
+                );
+              }
+            },
           ),
         ],
         if (!status.isFullyActive)

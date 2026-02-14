@@ -1529,6 +1529,13 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get stripeConnectOpenDashboard => 'Open Stripe Dashboard';
+
+  @override
+  String get stripeConnectDashboardUnavailable =>
+      'Unable to open Stripe dashboard';
+
+  @override
   String get stripeOnboardingCreateFailed =>
       'Unable to create payout setup session, please try again';
 
@@ -3828,6 +3835,13 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get paymentNoAvailableCoupons => 'No Available Coupons';
+
+  @override
+  String get paymentDoNotUseCoupon => 'Don\'t use coupon';
+
+  @override
+  String get paymentTimeoutOrRefreshHint =>
+      'If you have already paid, close this page and refresh; otherwise please try again';
 
   @override
   String get paymentTotalAmount => 'Total Amount';

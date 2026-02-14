@@ -8,6 +8,7 @@ import '../../../core/utils/cache_manager.dart';
 import '../../../data/models/flea_market.dart';
 import '../../../data/repositories/flea_market_repository.dart';
 import '../../../core/utils/logger.dart';
+import '../../tasks/bloc/task_detail_bloc.dart' show AcceptPaymentData;
 
 // ==================== Events ====================
 
@@ -64,6 +65,22 @@ class FleaMarketPurchaseItem extends FleaMarketEvent {
 
   @override
   List<Object?> get props => [itemId];
+}
+
+/// 提交购买/议价申请（留言 + 可选议价金额）- 对标 iOS 购买弹窗
+class FleaMarketSubmitPurchaseOrRequest extends FleaMarketEvent {
+  const FleaMarketSubmitPurchaseOrRequest(
+    this.itemId, {
+    this.message,
+    this.proposedPrice,
+  });
+
+  final String itemId;
+  final String? message;
+  final double? proposedPrice;
+
+  @override
+  List<Object?> get props => [itemId, message, proposedPrice];
 }
 
 class FleaMarketUpdateItem extends FleaMarketEvent {
@@ -129,6 +146,11 @@ class FleaMarketToggleFavorite extends FleaMarketEvent {
   List<Object?> get props => [itemId];
 }
 
+/// 清除直接购买后的支付数据（关闭支付页或支付完成后调用）
+class FleaMarketClearAcceptPaymentData extends FleaMarketEvent {
+  const FleaMarketClearAcceptPaymentData();
+}
+
 class FleaMarketUploadImage extends FleaMarketEvent {
   const FleaMarketUploadImage({
     required this.imageBytes,
@@ -171,6 +193,8 @@ class FleaMarketState extends Equatable {
     this.isFavorited = false,
     this.isTogglingFavorite = false,
     this.isLoadingMore = false,
+    this.acceptPaymentData,
+    this.clearAcceptPaymentData = false,
   });
 
   final FleaMarketStatus status;
@@ -193,6 +217,9 @@ class FleaMarketState extends Equatable {
   final bool isFavorited;
   final bool isTogglingFavorite;
   final bool isLoadingMore;
+  /// 直接购买后需支付时由后端返回，用于打开支付页（对标 iOS handlePurchaseComplete）
+  final AcceptPaymentData? acceptPaymentData;
+  final bool clearAcceptPaymentData;
 
   bool get isLoading => status == FleaMarketStatus.loading;
   bool get isEmpty => items.isEmpty && status == FleaMarketStatus.loaded;
@@ -220,6 +247,8 @@ class FleaMarketState extends Equatable {
     bool? isFavorited,
     bool? isTogglingFavorite,
     bool? isLoadingMore,
+    AcceptPaymentData? acceptPaymentData,
+    bool clearAcceptPaymentData = false,
   }) {
     return FleaMarketState(
       status: status ?? this.status,
@@ -242,6 +271,10 @@ class FleaMarketState extends Equatable {
       isFavorited: isFavorited ?? this.isFavorited,
       isTogglingFavorite: isTogglingFavorite ?? this.isTogglingFavorite,
       isLoadingMore: isLoadingMore ?? this.isLoadingMore,
+      acceptPaymentData: clearAcceptPaymentData
+          ? null
+          : (acceptPaymentData ?? this.acceptPaymentData),
+      clearAcceptPaymentData: clearAcceptPaymentData,
     );
   }
 
@@ -265,6 +298,7 @@ class FleaMarketState extends Equatable {
         isFavorited,
         isTogglingFavorite,
         isLoadingMore,
+        acceptPaymentData,
       ];
 }
 
@@ -281,12 +315,14 @@ class FleaMarketBloc extends Bloc<FleaMarketEvent, FleaMarketState> {
     on<FleaMarketSearchChanged>(_onSearchChanged);
     on<FleaMarketCreateItem>(_onCreateItem);
     on<FleaMarketPurchaseItem>(_onPurchaseItem);
+    on<FleaMarketSubmitPurchaseOrRequest>(_onSubmitPurchaseOrRequest);
     on<FleaMarketUpdateItem>(_onUpdateItem);
     on<FleaMarketLoadDetailRequested>(_onLoadDetailRequested);
     on<FleaMarketRefreshItem>(_onRefreshItem);
     on<FleaMarketLoadPurchaseRequests>(_onLoadPurchaseRequests);
     on<FleaMarketUploadImage>(_onUploadImage);
     on<FleaMarketToggleFavorite>(_onToggleFavorite);
+    on<FleaMarketClearAcceptPaymentData>(_onClearAcceptPaymentData);
   }
 
   final FleaMarketRepository _fleaMarketRepository;
@@ -460,11 +496,31 @@ class FleaMarketBloc extends Bloc<FleaMarketEvent, FleaMarketState> {
     }
   }
 
+  /// 从直接购买接口返回的 body 中解析支付数据（后端返回 { success, data: { task_id, client_secret, ... } }）
+  AcceptPaymentData? _parseDirectPurchasePaymentData(Map<String, dynamic> raw) {
+    final payload = raw['data'] as Map<String, dynamic>? ?? raw;
+    final clientSecret = payload['client_secret'] as String?;
+    if (clientSecret == null || clientSecret.isEmpty) return null;
+    final taskIdRaw = payload['task_id'];
+    final taskId = taskIdRaw != null
+        ? (int.tryParse(taskIdRaw.toString()) ?? 0)
+        : 0;
+    if (taskId == 0) return null;
+    return AcceptPaymentData(
+      taskId: taskId,
+      clientSecret: clientSecret,
+      customerId: (payload['customer_id'] as String?) ?? '',
+      ephemeralKeySecret: (payload['ephemeral_key_secret'] as String?) ?? '',
+      amountDisplay: payload['amount_display'] as String?,
+      applicationId: null,
+      paymentExpiresAt: payload['payment_expires_at'] as String?,
+    );
+  }
+
   Future<void> _onPurchaseItem(
     FleaMarketPurchaseItem event,
     Emitter<FleaMarketState> emit,
   ) async {
-    // 清除旧的错误/操作消息，避免残留
     emit(state.copyWith(
       isSubmitting: true,
       actionMessage: null,
@@ -472,16 +528,24 @@ class FleaMarketBloc extends Bloc<FleaMarketEvent, FleaMarketState> {
     ));
 
     try {
-      await _fleaMarketRepository.directPurchase(event.itemId);
+      final result = await _fleaMarketRepository.directPurchase(event.itemId);
+      final paymentData = _parseDirectPurchasePaymentData(result);
 
-      // 更新本地状态
+      if (paymentData != null) {
+        emit(state.copyWith(
+          isSubmitting: false,
+          actionMessage: 'open_payment',
+          acceptPaymentData: paymentData,
+        ));
+        return;
+      }
+
       final updatedItems = state.items.map((item) {
         if (item.id == event.itemId) {
           return item.copyWith(status: AppConstants.fleaMarketStatusSold);
         }
         return item;
       }).toList();
-
       emit(state.copyWith(
         items: updatedItems,
         isSubmitting: false,
@@ -495,6 +559,82 @@ class FleaMarketBloc extends Bloc<FleaMarketEvent, FleaMarketState> {
         errorMessage: e.toString(),
       ));
     }
+  }
+
+  Future<void> _onSubmitPurchaseOrRequest(
+    FleaMarketSubmitPurchaseOrRequest event,
+    Emitter<FleaMarketState> emit,
+  ) async {
+    emit(state.copyWith(
+      isSubmitting: true,
+      actionMessage: null,
+      errorMessage: null,
+    ));
+
+    try {
+      FleaMarketItem? refreshedDetail;
+      if (event.proposedPrice != null) {
+        await _fleaMarketRepository.sendPurchaseRequest(
+          event.itemId,
+          proposedPrice: event.proposedPrice,
+          message: event.message,
+        );
+        if (state.selectedItem?.id == event.itemId) {
+          refreshedDetail =
+              await _fleaMarketRepository.getItemById(event.itemId);
+        }
+        emit(state.copyWith(
+          isSubmitting: false,
+          actionMessage: 'negotiate_request_sent',
+          selectedItem: refreshedDetail ?? state.selectedItem,
+        ));
+      } else {
+        final result = await _fleaMarketRepository.directPurchase(event.itemId);
+        final paymentData = _parseDirectPurchasePaymentData(result);
+
+        if (paymentData != null) {
+          emit(state.copyWith(
+            isSubmitting: false,
+            actionMessage: 'open_payment',
+            acceptPaymentData: paymentData,
+          ));
+          return;
+        }
+
+        final updatedItems = state.items.map((item) {
+          if (item.id == event.itemId) {
+            return item.copyWith(status: AppConstants.fleaMarketStatusSold);
+          }
+          return item;
+        }).toList();
+        if (state.selectedItem?.id == event.itemId) {
+          refreshedDetail =
+              await _fleaMarketRepository.getItemById(event.itemId);
+        }
+        emit(state.copyWith(
+          items: updatedItems,
+          isSubmitting: false,
+          actionMessage: 'purchase_success',
+          selectedItem: refreshedDetail ?? state.selectedItem,
+        ));
+      }
+    } catch (e) {
+      AppLogger.error('Failed to submit purchase/request', e);
+      emit(state.copyWith(
+        isSubmitting: false,
+        actionMessage: event.proposedPrice != null
+            ? 'negotiate_request_failed'
+            : 'purchase_failed',
+        errorMessage: e.toString(),
+      ));
+    }
+  }
+
+  void _onClearAcceptPaymentData(
+    FleaMarketClearAcceptPaymentData event,
+    Emitter<FleaMarketState> emit,
+  ) {
+    emit(state.copyWith(clearAcceptPaymentData: true));
   }
 
   Future<void> _onUpdateItem(

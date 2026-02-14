@@ -7,6 +7,7 @@ import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_radius.dart';
 import '../../../core/utils/l10n_extension.dart';
 import '../../../core/widgets/buttons.dart';
+import '../../../core/widgets/external_web_view.dart';
 import '../../../core/widgets/loading_view.dart';
 import '../../../core/widgets/empty_state_view.dart';
 import '../../../data/models/payment.dart';
@@ -121,6 +122,35 @@ class _StripeConnectPayoutsViewState extends State<StripeConnectPayoutsView> {
     return Scaffold(
       appBar: AppBar(
         title: Text(l10n.paymentPayoutManagement),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.open_in_browser_outlined),
+            tooltip: l10n.stripeConnectOpenDashboard,
+            onPressed: () async {
+              try {
+                final details = await _repo.getStripeConnectAccountDetails();
+                final url = details.dashboardUrl;
+                if (!mounted) return;
+                if (url != null && url.isNotEmpty) {
+                  await ExternalWebView.openInApp(
+                    context,
+                    url: url,
+                    title: l10n.stripeConnectOpenDashboard,
+                  );
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text(l10n.stripeConnectDashboardUnavailable)),
+                  );
+                }
+              } catch (_) {
+                if (!mounted) return;
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text(l10n.stripeConnectDashboardUnavailable)),
+                );
+              }
+            },
+          ),
+        ],
       ),
       body: _isLoading
           ? const LoadingView()
@@ -861,6 +891,21 @@ class _AccountInfoSection extends StatelessWidget {
             valueColor:
                 details.payoutsEnabled ? AppColors.success : AppColors.error,
           ),
+          if (details.dashboardUrl != null && details.dashboardUrl!.isNotEmpty) ...[
+            AppSpacing.vMd,
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: () => ExternalWebView.openInApp(
+                  context,
+                  url: details.dashboardUrl!,
+                  title: l10n.stripeConnectOpenDashboard,
+                ),
+                icon: const Icon(Icons.open_in_browser_outlined, size: 18),
+                label: Text(l10n.stripeConnectOpenDashboard),
+              ),
+            ),
+          ],
         ],
       ),
     );

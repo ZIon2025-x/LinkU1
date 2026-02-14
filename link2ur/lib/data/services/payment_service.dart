@@ -26,15 +26,14 @@ class PaymentService {
 
   // ==================== Apple Pay ====================
 
-  /// 检查 Apple Pay 是否可用（使用 Platform Pay API）
+  /// 检查 Apple Pay（iOS）/ Google Pay（Android）是否可用（使用 Platform Pay API）
+  /// 不传 googlePay 时，iOS 端会检测 Apple Pay，Android 端会检测 Google Pay
   Future<bool> isApplePaySupported() async {
     if (kIsWeb) return false;
     try {
-      return await Stripe.instance.isPlatformPaySupported(
-        googlePay: const IsGooglePaySupportedParams(),
-      );
+      return await Stripe.instance.isPlatformPaySupported();
     } catch (e) {
-      AppLogger.warning('Apple Pay support check failed: $e');
+      AppLogger.warning('Platform Pay support check failed: $e');
       return false;
     }
   }
@@ -90,22 +89,24 @@ class PaymentService {
   // ==================== PaymentSheet (Card / Alipay) ====================
 
   /// 使用 PaymentSheet 完成支付
-  /// [preferredPaymentMethod] 可选：card / alipay
+  /// [customerId] / [ephemeralKeySecret] 可选：后端有时不返回（如复用未完成 PI 或创建 Customer 失败），
+  /// 仅当两者均非空时传入，否则走「仅 client_secret」的一次性支付，避免「加载失败」
   Future<bool> presentPaymentSheet({
     required String clientSecret,
-    required String customerId,
-    required String ephemeralKeySecret,
+    String? customerId,
+    String? ephemeralKeySecret,
     String? merchantDisplayName,
     String? preferredPaymentMethod,
     String? returnUrl,
   }) async {
     try {
-      // 初始化 PaymentSheet
+      final hasCustomer = (customerId != null && customerId.isNotEmpty) &&
+          (ephemeralKeySecret != null && ephemeralKeySecret.isNotEmpty);
       await Stripe.instance.initPaymentSheet(
         paymentSheetParameters: SetupPaymentSheetParameters(
           paymentIntentClientSecret: clientSecret,
-          customerEphemeralKeySecret: ephemeralKeySecret,
-          customerId: customerId,
+          customerId: hasCustomer ? customerId : null,
+          customerEphemeralKeySecret: hasCustomer ? ephemeralKeySecret : null,
           merchantDisplayName: merchantDisplayName ?? 'Link²Ur',
           style: ThemeMode.system,
           allowsDelayedPaymentMethods: true,
@@ -144,8 +145,8 @@ class PaymentService {
 
     return presentPaymentSheet(
       clientSecret: paymentResponse.clientSecret!,
-      customerId: paymentResponse.customerId ?? '',
-      ephemeralKeySecret: paymentResponse.ephemeralKeySecret ?? '',
+      customerId: paymentResponse.customerId,
+      ephemeralKeySecret: paymentResponse.ephemeralKeySecret,
     );
   }
 }

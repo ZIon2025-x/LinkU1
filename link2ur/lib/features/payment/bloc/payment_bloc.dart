@@ -225,7 +225,7 @@ class PaymentBloc extends Bloc<PaymentEvent, PaymentState> {
     try {
       final response = await _repository.createPaymentIntent(
         taskId: event.taskId,
-        couponId: event.couponId ?? state.selectedCouponId,
+        userCouponId: event.couponId ?? state.selectedCouponId,
         preferredPaymentMethod: event.preferredPaymentMethod,
       );
 

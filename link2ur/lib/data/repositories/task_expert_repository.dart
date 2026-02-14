@@ -229,7 +229,8 @@ class TaskExpertRepository {
   }
 
   /// 申请达人服务
-  /// 对标iOS ServiceDetailView.applyService
+  /// 对标 iOS ServiceDetailView.applyService + 后端 ServiceApplicationCreate
+  /// 字段：application_message, negotiated_price, deadline, is_flexible(0/1), time_slot_id
   Future<Map<String, dynamic>> applyService(
     int serviceId, {
     String? message,
@@ -241,11 +242,12 @@ class TaskExpertRepository {
     final response = await _apiService.post<Map<String, dynamic>>(
       ApiEndpoints.applyForService(serviceId),
       data: {
-        if (message != null && message.isNotEmpty) 'message': message,
-        if (counterPrice != null) 'counter_price': counterPrice,
+        if (message != null && message.isNotEmpty)
+          'application_message': message,
+        if (counterPrice != null) 'negotiated_price': counterPrice,
         if (timeSlotId != null) 'time_slot_id': timeSlotId,
-        if (preferredDeadline != null) 'preferred_deadline': preferredDeadline,
-        'is_flexible_time': isFlexibleTime,
+        if (preferredDeadline != null) 'deadline': preferredDeadline,
+        'is_flexible': isFlexibleTime ? 1 : 0,
       },
     );
 

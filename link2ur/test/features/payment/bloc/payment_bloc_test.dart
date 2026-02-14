@@ -44,7 +44,7 @@ void main() {
         build: () {
           when(() => mockPaymentRepository.createPaymentIntent(
                 taskId: any(named: 'taskId'),
-                couponId: any(named: 'couponId'),
+                userCouponId: any(named: 'userCouponId'),
                 preferredPaymentMethod: any(named: 'preferredPaymentMethod'),
               )).thenAnswer((_) async => testPaymentResponse);
           return paymentBloc;
@@ -64,7 +64,7 @@ void main() {
         verify: (_) {
           verify(() => mockPaymentRepository.createPaymentIntent(
                 taskId: 1,
-                couponId: null,
+                userCouponId: null,
                 preferredPaymentMethod: 'card',
               )).called(1);
         },
@@ -75,7 +75,7 @@ void main() {
         build: () {
           when(() => mockPaymentRepository.createPaymentIntent(
                 taskId: any(named: 'taskId'),
-                couponId: any(named: 'couponId'),
+                userCouponId: any(named: 'userCouponId'),
                 preferredPaymentMethod: any(named: 'preferredPaymentMethod'),
               )).thenThrow(Exception('Payment intent creation failed'));
           return paymentBloc;
@@ -98,7 +98,7 @@ void main() {
         build: () {
           when(() => mockPaymentRepository.createPaymentIntent(
                 taskId: any(named: 'taskId'),
-                couponId: any(named: 'couponId'),
+                userCouponId: any(named: 'userCouponId'),
                 preferredPaymentMethod: any(named: 'preferredPaymentMethod'),
               )).thenAnswer((_) async => testPaymentResponse);
           return paymentBloc;

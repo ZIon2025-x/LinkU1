@@ -1,9 +1,12 @@
+import 'dart:async';
+
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../data/models/message.dart';
 import '../../../data/repositories/message_repository.dart';
 import '../../../data/services/storage_service.dart';
+import '../../../data/services/websocket_service.dart';
 import '../../../core/utils/logger.dart';
 
 // ==================== Events ====================
@@ -80,6 +83,7 @@ class MessageState extends Equatable {
     this.taskChatsPage = 1,
     this.hasMoreTaskChats = true,
     this.isLoadingMore = false,
+    this.isRefreshing = false,
     this.pinnedTaskIds = const {},
     this.hiddenTaskChats = const {},
   });
@@ -91,6 +95,9 @@ class MessageState extends Equatable {
   final int taskChatsPage;
   final bool hasMoreTaskChats;
   final bool isLoadingMore;
+
+  /// 下拉刷新中（用于 RefreshIndicator 正确结束）
+  final bool isRefreshing;
 
   /// 置顶的任务ID集合
   final Set<int> pinnedTaskIds;
@@ -141,6 +148,7 @@ class MessageState extends Equatable {
     int? taskChatsPage,
     bool? hasMoreTaskChats,
     bool? isLoadingMore,
+    bool? isRefreshing,
     Set<int>? pinnedTaskIds,
     Map<int, DateTime>? hiddenTaskChats,
   }) {
@@ -152,6 +160,7 @@ class MessageState extends Equatable {
       taskChatsPage: taskChatsPage ?? this.taskChatsPage,
       hasMoreTaskChats: hasMoreTaskChats ?? this.hasMoreTaskChats,
       isLoadingMore: isLoadingMore ?? this.isLoadingMore,
+      isRefreshing: isRefreshing ?? this.isRefreshing,
       pinnedTaskIds: pinnedTaskIds ?? this.pinnedTaskIds,
       hiddenTaskChats: hiddenTaskChats ?? this.hiddenTaskChats,
     );
@@ -166,6 +175,7 @@ class MessageState extends Equatable {
         taskChatsPage,
         hasMoreTaskChats,
         isLoadingMore,
+        isRefreshing,
         pinnedTaskIds,
         hiddenTaskChats,
       ];
@@ -185,9 +195,23 @@ class MessageBloc extends Bloc<MessageEvent, MessageState> {
     on<MessageUnpinTaskChat>(_onUnpinTaskChat);
     on<MessageHideTaskChat>(_onHideTaskChat);
     on<MessageMarkTaskChatRead>(_onMarkTaskChatRead);
+
+    // 监听 WebSocket：新消息或通知时刷新列表，红点实时更新
+    _wsSubscription = WebSocketService.instance.messageStream.listen((wsMessage) {
+      if (wsMessage.isChatMessage || wsMessage.isNotification) {
+        add(const MessageRefreshRequested());
+      }
+    });
   }
 
   final MessageRepository _messageRepository;
+  StreamSubscription<WebSocketMessage>? _wsSubscription;
+
+  @override
+  Future<void> close() {
+    _wsSubscription?.cancel();
+    return super.close();
+  }
   static const _pageSize = 20;
   final StorageService _storage = StorageService.instance;
 
@@ -286,6 +310,7 @@ class MessageBloc extends Bloc<MessageEvent, MessageState> {
     MessageRefreshRequested event,
     Emitter<MessageState> emit,
   ) async {
+    emit(state.copyWith(isRefreshing: true));
     try {
       // 刷新时重新加载本地偏好
       _loadPreferences(emit);
@@ -301,12 +326,14 @@ class MessageBloc extends Bloc<MessageEvent, MessageState> {
         taskChats: taskChats,
         taskChatsPage: 1,
         hasMoreTaskChats: taskChats.length >= _pageSize,
+        isRefreshing: false,
       ));
     } catch (e) {
       AppLogger.error('Failed to refresh messages', e);
       emit(state.copyWith(
         status: MessageStatus.error,
         errorMessage: e.toString(),
+        isRefreshing: false,
       ));
     }
   }

@@ -204,10 +204,15 @@ class _MessageContent extends StatelessWidget {
             messageBloc.add(const MessageRefreshRequested());
             context.read<NotificationBloc>()
                 .add(const NotificationLoadUnreadNotificationCount());
-            await messageBloc.stream.firstWhere(
-              (s) => s.status != MessageStatus.loading,
-              orElse: () => state,
-            );
+            await messageBloc.stream
+                .firstWhere(
+                  (s) => !s.isRefreshing,
+                  orElse: () => state,
+                )
+                .timeout(
+                  const Duration(seconds: 15),
+                  onTimeout: () => state,
+                );
           },
           child: isDesktop ? ContentConstraint(child: listView) : listView,
         );

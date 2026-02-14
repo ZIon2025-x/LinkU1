@@ -1150,7 +1150,7 @@ class TaskActionButtonsView extends StatelessWidget {
       );
     }
 
-    // 未申请 + 任务 open + 无接单者
+    // 未申请 + 任务 open + 无接单者 → 弹出申请框（留言 + 议价 + 金额）
     if (task.status == AppConstants.taskStatusOpen &&
         task.takerId == null) {
       return Padding(
@@ -1162,9 +1162,21 @@ class TaskActionButtonsView extends StatelessWidget {
           onPressed: state.isSubmitting
               ? null
               : () {
-                  context
-                      .read<TaskDetailBloc>()
-                      .add(const TaskDetailApplyRequested());
+                  final bloc = context.read<TaskDetailBloc>();
+                  showModalBottomSheet<void>(
+                    context: context,
+                    isScrollControlled: true,
+                    backgroundColor: Colors.transparent,
+                    builder: (ctx) => BlocProvider.value(
+                      value: bloc,
+                      child: BlocListener<TaskDetailBloc, TaskDetailState>(
+                        listenWhen: (prev, cur) =>
+                            cur.actionMessage == 'application_submitted',
+                        listener: (c, _) => Navigator.of(c).pop(),
+                        child: ApplyTaskSheet(task: task),
+                      ),
+                    ),
+                  );
                 },
         ),
       );
@@ -1676,6 +1688,268 @@ class _ReviewBottomSheetState extends State<_ReviewBottomSheet> {
           ],
         ),
       ),
+    );
+  }
+}
+
+// ============================================================
+// 申请任务弹窗（对齐 iOS ApplyTaskSheet：留言 + 是否议价 + 议价金额）
+// ============================================================
+
+class ApplyTaskSheet extends StatefulWidget {
+  const ApplyTaskSheet({
+    super.key,
+    required this.task,
+  });
+
+  final Task task;
+
+  @override
+  State<ApplyTaskSheet> createState() => _ApplyTaskSheetState();
+}
+
+class _ApplyTaskSheetState extends State<ApplyTaskSheet> {
+  final _messageController = TextEditingController();
+  final _amountController = TextEditingController();
+  bool _showNegotiatePrice = false;
+  bool _isSubmitting = false;
+  String? _errorMessage;
+
+  @override
+  void initState() {
+    super.initState();
+    final base = widget.task.baseReward ?? widget.task.reward;
+    if (base > 0) _amountController.text = base == base.truncateToDouble() ? base.toInt().toString() : base.toStringAsFixed(2);
+  }
+
+  @override
+  void dispose() {
+    _messageController.dispose();
+    _amountController.dispose();
+    super.dispose();
+  }
+
+  String? _validate() {
+    if (_showNegotiatePrice) {
+      final amount = double.tryParse(_amountController.text.trim());
+      if (amount == null || amount <= 0) {
+        return context.l10n.fleaMarketNegotiatePriceTooLow;
+      }
+    }
+    return null;
+  }
+
+  Future<void> _submit() async {
+    final error = _validate();
+    if (error != null) {
+      setState(() {
+        _errorMessage = error;
+        _isSubmitting = false;
+      });
+      return;
+    }
+
+    setState(() {
+      _isSubmitting = true;
+      _errorMessage = null;
+    });
+
+    final message = _messageController.text.trim();
+    final negotiatedPrice = _showNegotiatePrice
+        ? double.tryParse(_amountController.text.trim())
+        : null;
+    final currency = _showNegotiatePrice ? widget.task.currency : null;
+
+    if (!mounted) return;
+    context.read<TaskDetailBloc>().add(TaskDetailApplyRequested(
+          message: message.isEmpty ? null : message,
+          negotiatedPrice: negotiatedPrice,
+          currency: currency,
+        ));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final showPriceSection = widget.task.isMultiParticipant != true;
+
+    return BlocListener<TaskDetailBloc, TaskDetailState>(
+      listenWhen: (prev, cur) =>
+          cur.actionMessage == 'application_failed' && cur.isSubmitting == false,
+      listener: (_, __) {
+        if (mounted) setState(() => _isSubmitting = false);
+      },
+      child: DraggableScrollableSheet(
+      initialChildSize: 0.6,
+      minChildSize: 0.4,
+      maxChildSize: 0.9,
+      expand: false,
+      builder: (context, scrollController) {
+        return Container(
+          decoration: BoxDecoration(
+            color: Theme.of(context).scaffoldBackgroundColor,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const SizedBox(height: 12),
+              Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: AppColors.textTertiary.withValues(alpha: 0.3),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.lg, vertical: 12),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      l10n.taskApplicationApplyTask,
+                      style: const TextStyle(
+                          fontSize: 18, fontWeight: FontWeight.w600),
+                    ),
+                    IconButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                      icon: const Icon(Icons.close),
+                    ),
+                  ],
+                ),
+              ),
+              const Divider(height: 1),
+              Flexible(
+                child: SingleChildScrollView(
+                  controller: scrollController,
+                  padding: const EdgeInsets.all(AppSpacing.lg),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      // 申请信息 / 留言
+                      Text(
+                        l10n.taskApplicationApplyInfo,
+                        style: const TextStyle(
+                            fontSize: 16, fontWeight: FontWeight.w600),
+                      ),
+                      const SizedBox(height: 8),
+                      TextField(
+                        controller: _messageController,
+                        maxLines: 4,
+                        maxLength: 500,
+                        decoration: InputDecoration(
+                          hintText: l10n.taskApplicationAdvantagePlaceholder,
+                          border: OutlineInputBorder(
+                            borderRadius:
+                                BorderRadius.circular(AppRadius.medium),
+                          ),
+                          filled: true,
+                          fillColor: isDark
+                              ? AppColors.skeletonBase
+                              : AppColors.skeletonHighlight,
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+
+                      // 价格协商（非多参与者任务时显示）
+                      if (showPriceSection) ...[
+                        Text(
+                          l10n.taskDetailPriceNegotiation,
+                          style: const TextStyle(
+                              fontSize: 16, fontWeight: FontWeight.w600),
+                        ),
+                        const SizedBox(height: 8),
+                        SwitchListTile(
+                          value: _showNegotiatePrice,
+                          onChanged: (value) {
+                            setState(() {
+                              _showNegotiatePrice = value;
+                              if (value &&
+                                  _amountController.text.trim().isEmpty) {
+                                final base = widget.task.baseReward ??
+                                    widget.task.reward;
+                                if (base > 0) {
+                                  _amountController.text = base ==
+                                          base.truncateToDouble()
+                                      ? base.toInt().toString()
+                                      : base.toStringAsFixed(2);
+                                }
+                              }
+                            });
+                          },
+                          title: Text(
+                            l10n.taskApplicationIWantToNegotiatePrice,
+                            style: const TextStyle(fontSize: 15),
+                          ),
+                          activeColor: AppColors.primary,
+                        ),
+                        if (_showNegotiatePrice) ...[
+                          const SizedBox(height: 8),
+                          TextField(
+                            controller: _amountController,
+                            keyboardType: const TextInputType.numberWithOptions(
+                                decimal: true),
+                            decoration: InputDecoration(
+                              labelText: l10n.taskApplicationExpectedAmount,
+                              prefixText:
+                                  '${widget.task.currency == 'GBP' ? '£' : widget.task.currency} ',
+                              border: OutlineInputBorder(
+                                borderRadius:
+                                    BorderRadius.circular(AppRadius.medium),
+                              ),
+                              filled: true,
+                              fillColor: isDark
+                                  ? AppColors.skeletonBase
+                                  : AppColors.skeletonHighlight,
+                            ),
+                            onChanged: (_) =>
+                                setState(() => _errorMessage = null),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            l10n.taskApplicationNegotiatePriceHint,
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: AppColors.textTertiary,
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                        ],
+                      ],
+
+                      if (_errorMessage != null) ...[
+                        const SizedBox(height: 8),
+                        Text(
+                          _errorMessage!,
+                          style: const TextStyle(
+                              color: AppColors.error, fontSize: 13),
+                        ),
+                        const SizedBox(height: 8),
+                      ],
+
+                      const SizedBox(height: 24),
+                      PrimaryButton(
+                        text: l10n.taskApplicationSubmitApplication,
+                        icon: Icons.pan_tool,
+                        isLoading: _isSubmitting,
+                        onPressed: _isSubmitting
+                            ? null
+                            : () async {
+                                await _submit();
+                              },
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    ),
     );
   }
 }

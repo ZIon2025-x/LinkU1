@@ -43,16 +43,27 @@ class TaskDetailLoadReviews extends TaskDetailEvent {
 }
 
 class TaskDetailApplyRequested extends TaskDetailEvent {
-  const TaskDetailApplyRequested({this.message});
+  const TaskDetailApplyRequested({
+    this.message,
+    this.negotiatedPrice,
+    this.currency,
+  });
 
   final String? message;
+  final double? negotiatedPrice;
+  final String? currency;
 
   @override
-  List<Object?> get props => [message];
+  List<Object?> get props => [message, negotiatedPrice, currency];
 }
 
 class TaskDetailCancelApplicationRequested extends TaskDetailEvent {
   const TaskDetailCancelApplicationRequested();
+}
+
+/// 批准申请后需支付时清除支付数据，避免重复弹支付页
+class TaskDetailClearAcceptPaymentData extends TaskDetailEvent {
+  const TaskDetailClearAcceptPaymentData();
 }
 
 class TaskDetailAcceptApplicant extends TaskDetailEvent {
@@ -71,6 +82,38 @@ class TaskDetailRejectApplicant extends TaskDetailEvent {
 
   @override
   List<Object?> get props => [applicationId];
+}
+
+/// 批准申请后后端返回的支付信息（需打开支付页完成支付，对齐 iOS）
+class AcceptPaymentData extends Equatable {
+  const AcceptPaymentData({
+    required this.taskId,
+    required this.clientSecret,
+    required this.customerId,
+    required this.ephemeralKeySecret,
+    this.amountDisplay,
+    this.applicationId,
+    this.paymentExpiresAt,
+    this.taskTitle,
+    this.applicantName,
+  });
+
+  final int taskId;
+  final String clientSecret;
+  final String customerId;
+  final String ephemeralKeySecret;
+  final String? amountDisplay;
+  final int? applicationId;
+  /// 支付过期时间（ISO 8601），用于显示倒计时 Banner（对齐 iOS）
+  final String? paymentExpiresAt;
+  /// 任务标题（批准后支付页显示「任务信息」卡片，对齐 iOS）
+  final String? taskTitle;
+  /// 被批准申请者姓名（批准后支付页显示，对齐 iOS）
+  final String? applicantName;
+
+  @override
+  List<Object?> get props =>
+      [taskId, clientSecret, customerId, ephemeralKeySecret];
 }
 
 class TaskDetailCompleteRequested extends TaskDetailEvent {
@@ -167,6 +210,7 @@ class TaskDetailState extends Equatable {
     this.errorMessage,
     this.isSubmitting = false,
     this.actionMessage,
+    this.acceptPaymentData,
     this.applications = const [],
     this.isLoadingApplications = false,
     this.userApplication,
@@ -183,6 +227,8 @@ class TaskDetailState extends Equatable {
   final String? errorMessage;
   final bool isSubmitting;
   final String? actionMessage;
+  /// 批准申请后需支付时由后端返回，用于打开支付页（对齐 iOS）
+  final AcceptPaymentData? acceptPaymentData;
 
   // 申请列表
   final List<TaskApplication> applications;
@@ -208,6 +254,8 @@ class TaskDetailState extends Equatable {
     String? errorMessage,
     bool? isSubmitting,
     String? actionMessage,
+    AcceptPaymentData? acceptPaymentData,
+    bool clearAcceptPaymentData = false,
     List<TaskApplication>? applications,
     bool? isLoadingApplications,
     TaskApplication? userApplication,
@@ -226,6 +274,9 @@ class TaskDetailState extends Equatable {
       errorMessage: errorMessage,
       isSubmitting: isSubmitting ?? this.isSubmitting,
       actionMessage: actionMessage,
+      acceptPaymentData: clearAcceptPaymentData
+          ? null
+          : (acceptPaymentData ?? this.acceptPaymentData),
       applications: applications ?? this.applications,
       isLoadingApplications:
           isLoadingApplications ?? this.isLoadingApplications,
@@ -252,6 +303,7 @@ class TaskDetailState extends Equatable {
         errorMessage,
         isSubmitting,
         actionMessage,
+        acceptPaymentData,
         applications,
         isLoadingApplications,
         userApplication,
@@ -277,6 +329,7 @@ class TaskDetailBloc extends Bloc<TaskDetailEvent, TaskDetailState> {
     on<TaskDetailApplyRequested>(_onApplyRequested);
     on<TaskDetailCancelApplicationRequested>(_onCancelApplication);
     on<TaskDetailAcceptApplicant>(_onAcceptApplicant);
+    on<TaskDetailClearAcceptPaymentData>(_onClearAcceptPaymentData);
     on<TaskDetailRejectApplicant>(_onRejectApplicant);
     on<TaskDetailCompleteRequested>(_onCompleteRequested);
     on<TaskDetailConfirmCompletionRequested>(_onConfirmCompletion);
@@ -398,7 +451,12 @@ class TaskDetailBloc extends Bloc<TaskDetailEvent, TaskDetailState> {
     emit(state.copyWith(isSubmitting: true));
 
     try {
-      await _taskRepository.applyTask(_taskId!, message: event.message);
+      await _taskRepository.applyTask(
+        _taskId!,
+        message: event.message,
+        negotiatedPrice: event.negotiatedPrice,
+        currency: event.currency,
+      );
       final task = await _refreshTask();
       emit(state.copyWith(
         task: task,
@@ -449,19 +507,62 @@ class TaskDetailBloc extends Bloc<TaskDetailEvent, TaskDetailState> {
     emit(state.copyWith(isSubmitting: true));
 
     try {
-      await _taskRepository.acceptApplication(_taskId!, event.applicationId);
-      final task = await _refreshTask();
-      emit(state.copyWith(
-        task: task,
-        isSubmitting: false,
-        actionMessage: 'application_accepted',
-      ));
+      final data = await _taskRepository.acceptApplication(
+          _taskId!, event.applicationId);
+      final clientSecret = data != null
+          ? data['client_secret'] as String?
+          : null;
+      final needPayment = clientSecret != null && clientSecret.isNotEmpty;
+
+      if (needPayment) {
+        final customerId =
+            (data!['customer_id'] as String?) ?? '';
+        final ephemeralKey =
+            (data['ephemeral_key_secret'] as String?) ?? '';
+        final amountDisplay =
+            data['amount_display'] as String?;
+        TaskApplication? approvedApp;
+        try {
+          approvedApp = state.applications
+              .firstWhere((a) => a.id == event.applicationId);
+        } catch (_) {
+          approvedApp = null;
+        }
+        emit(state.copyWith(
+          isSubmitting: false,
+          actionMessage: 'open_payment',
+          acceptPaymentData: AcceptPaymentData(
+            taskId: _taskId!,
+            clientSecret: clientSecret,
+            customerId: customerId,
+            ephemeralKeySecret: ephemeralKey,
+            amountDisplay: amountDisplay,
+            applicationId: event.applicationId,
+            taskTitle: state.task?.title,
+            applicantName: approvedApp?.applicantName,
+          ),
+        ));
+      } else {
+        final task = await _refreshTask();
+        emit(state.copyWith(
+          task: task,
+          isSubmitting: false,
+          actionMessage: 'application_accepted',
+        ));
+      }
     } catch (e) {
       emit(state.copyWith(
         isSubmitting: false,
         actionMessage: 'operation_failed',
       ));
     }
+  }
+
+  void _onClearAcceptPaymentData(
+    TaskDetailClearAcceptPaymentData event,
+    Emitter<TaskDetailState> emit,
+  ) {
+    emit(state.copyWith(clearAcceptPaymentData: true));
   }
 
   Future<void> _onRejectApplicant(

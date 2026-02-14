@@ -31,6 +31,7 @@ import '../bloc/task_detail_bloc.dart';
 import '../../../core/widgets/glass_button.dart';
 import '../../../core/widgets/bouncing_widget.dart';
 import '../../../core/design/app_shadows.dart';
+import 'approval_payment_page.dart';
 import 'task_detail_components.dart';
 
 /// 任务详情页
@@ -69,6 +70,31 @@ class _TaskDetailContent extends StatelessWidget {
           // 首次加载完成时触发关联数据加载
           (!prev.isLoaded && curr.isLoaded && curr.task != null),
       listener: (context, state) {
+        // 批准申请后需支付：用全屏路由打开支付页，否则在 Modal 内调 Stripe PaymentSheet 时原生银行卡/支付宝表单无法弹出
+        if (state.actionMessage == 'open_payment' &&
+            state.acceptPaymentData != null) {
+          final data = state.acceptPaymentData!;
+          final taskId = state.task?.id;
+          final bloc = context.read<TaskDetailBloc>();
+          bloc.add(const TaskDetailClearAcceptPaymentData());
+          Navigator.of(context)
+              .push<bool>(
+                MaterialPageRoute(
+                  builder: (_) => ApprovalPaymentPage(paymentData: data),
+                  fullscreenDialog: true,
+                ),
+              )
+              .then((result) {
+            if (!context.mounted) return;
+            if (result == true && taskId != null) {
+              context.read<TaskDetailBloc>().add(TaskDetailLoadRequested(taskId));
+              context.read<TaskDetailBloc>().add(TaskDetailLoadApplications(
+                  currentUserId: currentUserId));
+            }
+          });
+          return;
+        }
+
         if (state.actionMessage != null) {
           final l10n = context.l10n;
           final message = switch (state.actionMessage) {
@@ -558,14 +584,26 @@ class _TaskDetailContent extends StatelessWidget {
       );
     }
 
-    // 非发布者 + 可申请
+    // 非发布者 + 可申请 → 弹出申请框（留言 + 议价 + 金额）
     if (!isPoster && task.canApply) {
       return PrimaryButton(
         text: context.l10n.actionsApplyForTask,
         onPressed: () {
-          context
-              .read<TaskDetailBloc>()
-              .add(const TaskDetailApplyRequested());
+          final bloc = context.read<TaskDetailBloc>();
+          showModalBottomSheet<void>(
+            context: context,
+            isScrollControlled: true,
+            backgroundColor: Colors.transparent,
+            builder: (ctx) => BlocProvider.value(
+              value: bloc,
+              child: BlocListener<TaskDetailBloc, TaskDetailState>(
+                listenWhen: (prev, cur) =>
+                    cur.actionMessage == 'application_submitted',
+                listener: (c, _) => Navigator.of(c).pop(),
+                child: ApplyTaskSheet(task: task),
+              ),
+            ),
+          );
         },
       );
     }
