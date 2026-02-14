@@ -31,27 +31,27 @@ def _check_account_status_v2(account_id: str) -> Tuple[bool, bool]:
             include=["requirements", "configuration.recipient"]
         )
         
-        # 从 V2 API 响应中提取状态
-        requirements = account.get("requirements", {})
-        summary = requirements.get("summary", {})
-        minimum_deadline = summary.get("minimum_deadline", {})
+        # 从 V2 API 响应中提取状态（防御 None：Stripe 可能返回 null）
+        requirements = account.get("requirements") or {}
+        summary = requirements.get("summary") or {}
+        minimum_deadline = summary.get("minimum_deadline") or {}
         
         # 如果没有 minimum_deadline（即没有待完成的必填项），认为 details_submitted
-        details_submitted = minimum_deadline is None or len(minimum_deadline) == 0
+        details_submitted = len(minimum_deadline) == 0
         
         # 检查 charges_enabled (recipient 配置中的 stripe_transfers)
-        configuration = account.get("configuration", {})
+        configuration = account.get("configuration") or {}
         recipient_config = configuration.get("recipient") or {}
-        recipient_capabilities = recipient_config.get("capabilities", {})
-        stripe_balance = recipient_capabilities.get("stripe_balance", {})
-        stripe_transfers = stripe_balance.get("stripe_transfers", {})
+        recipient_capabilities = recipient_config.get("capabilities") or {}
+        stripe_balance = recipient_capabilities.get("stripe_balance") or {}
+        stripe_transfers = stripe_balance.get("stripe_transfers") or {}
         charges_enabled = stripe_transfers.get("status") == "active"
         
         # 如果 recipient 没有，检查 merchant (card_payments)
         if not charges_enabled:
             merchant_config = configuration.get("merchant") or {}
-            merchant_capabilities = merchant_config.get("capabilities", {})
-            card_payments = merchant_capabilities.get("card_payments", {})
+            merchant_capabilities = merchant_config.get("capabilities") or {}
+            card_payments = merchant_capabilities.get("card_payments") or {}
             charges_enabled = card_payments.get("status") == "active"
         
         logger.debug(f"V2 API 账户状态: {account_id}, details_submitted={details_submitted}, charges_enabled={charges_enabled}")

@@ -349,14 +349,16 @@ class PushNotificationService {
       case 'payment_failed':
         _router!.push('/wallet');
         break;
-      case 'flea_market':
-        final itemId = data['item_id'] ?? data['related_id'];
-        if (itemId != null) {
+      case 'flea_market': {
+        final raw = data['item_id'] ?? data['related_id'];
+        final itemId = raw is int ? raw : int.tryParse(raw?.toString() ?? '');
+        if (itemId != null && itemId > 0) {
           _router!.push('/flea-market/$itemId');
         } else {
           _router!.push('/notifications');
         }
         break;
+      }
       case 'activity':
         final activityId = data['activity_id'] ?? data['related_id'];
         if (activityId != null) {

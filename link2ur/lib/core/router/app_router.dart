@@ -396,8 +396,13 @@ class AppRouter {
       GoRoute(
         path: AppRoutes.editFleaMarketItem,
         name: 'editFleaMarketItem',
+        redirect: (context, state) {
+          final id = int.tryParse(state.pathParameters['id'] ?? '');
+          if (id == null || id <= 0) return AppRoutes.fleaMarket;
+          return null;
+        },
         pageBuilder: (context, state) {
-          final id = int.tryParse(state.pathParameters['id'] ?? '') ?? 0;
+          final id = int.tryParse(state.pathParameters['id'] ?? '')!;
           final item = state.extra as dynamic;
           return SlideUpTransitionPage(
             key: state.pageKey,
@@ -408,8 +413,14 @@ class AppRouter {
       GoRoute(
         path: AppRoutes.fleaMarketDetail,
         name: 'fleaMarketDetail',
+        redirect: (context, state) {
+          final idParam = state.pathParameters['id'] ?? '';
+          final id = int.tryParse(idParam);
+          if (id == null || id <= 0) return AppRoutes.fleaMarket;
+          return null;
+        },
         pageBuilder: (context, state) {
-          final id = int.tryParse(state.pathParameters['id'] ?? '') ?? 0;
+          final id = int.tryParse(state.pathParameters['id'] ?? '')!;
           return SpringSlideTransitionPage(
             key: state.pageKey,
             child: FleaMarketDetailView(itemId: id),
