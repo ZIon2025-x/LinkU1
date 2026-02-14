@@ -178,12 +178,12 @@ class LeaderboardRepository {
     return items.map((e) => e as Map<String, dynamic>).toList();
   }
 
-  /// 上传图片（返回 URL）
+  /// 上传排行榜封面图（公开图片，使用 V2 接口；创建时由后端迁移到正式目录）
   Future<String> uploadImage(String filePath) async {
     final response = await _apiService.uploadFile<Map<String, dynamic>>(
-      ApiEndpoints.uploadImage,
+      '${ApiEndpoints.uploadImageV2}?category=leaderboard_cover',
       filePath: filePath,
-      fieldName: 'file',
+      fieldName: 'image',
     );
 
     if (!response.isSuccess || response.data == null) {

@@ -183,12 +183,12 @@ class UserRepository {
     }
   }
 
-  /// 上传图片（私密）
+  /// 上传图片（私密，任务聊天等；后端 /api/upload/image 要求字段名为 image）
   Future<String> uploadImage(String filePath) async {
     final response = await _apiService.uploadFile<Map<String, dynamic>>(
       ApiEndpoints.uploadImage,
       filePath: filePath,
-      fieldName: 'file',
+      fieldName: 'image',
     );
 
     if (!response.isSuccess || response.data == null) {

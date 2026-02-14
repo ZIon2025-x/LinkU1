@@ -398,12 +398,12 @@ class MessageRepository {
     }
   }
 
-  /// 上传聊天图片（私密图片）
+  /// 上传任务聊天图片（私密图片，走 /api/upload/image，后端要求字段名为 image）
   Future<String> uploadImage(String filePath) async {
     final response = await _apiService.uploadFile<Map<String, dynamic>>(
       ApiEndpoints.uploadImage,
       filePath: filePath,
-      fieldName: 'file',
+      fieldName: 'image',
     );
 
     if (!response.isSuccess || response.data == null) {

@@ -398,6 +398,10 @@ class ImageUploadService:
                 
                 logger.debug(f"move_from_temp: URL={url}, public_url={public_url}, extracted_path={relative_path}")
                 
+                # 规范化路径：存储层使用 category/... 不含 uploads/ 前缀，URL 可能含 uploads/
+                if relative_path.startswith("uploads/"):
+                    relative_path = relative_path[len("uploads/"):].lstrip("/")
+                
                 # 验证路径格式
                 if not relative_path.startswith(category.value):
                     logger.warning(f"图片路径格式不正确: {relative_path}, 期望以 {category.value} 开头, URL={url}, public_url={public_url}")

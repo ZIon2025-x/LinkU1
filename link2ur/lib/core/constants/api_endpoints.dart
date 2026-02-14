@@ -429,6 +429,8 @@ class ApiEndpoints {
 
   // ==================== 通用/其他 ====================
   static const String uploadImage = '/api/upload/image';
+  /// 优化版公开图片上传（任务/论坛/跳蚤等），返回公开 URL，支持临时目录迁移
+  static const String uploadImageV2 = '/api/v2/upload/image';
   static const String uploadPublicImage = '/api/upload/public-image';
   static const String uploadFile = '/api/upload/file';
   static const String refreshImageUrl = '/api/refresh-image-url';

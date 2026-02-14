@@ -195,11 +195,11 @@ class ForumRepository {
     }
   }
 
-  /// 上传帖子图片（临时目录，发帖时由后端 move_from_temp）
+  /// 上传帖子图片（临时目录，发帖时由后端 move_from_temp 到 post_id 目录；使用 V2 公开接口）
   /// 最多 5 张，需在发帖前依次上传，将返回的 url 列表传入 createPost。
   Future<String> uploadPostImage(String filePath) async {
     final response = await _apiService.uploadFile<Map<String, dynamic>>(
-      '${ApiEndpoints.uploadImage}?category=forum_post',
+      '${ApiEndpoints.uploadImageV2}?category=forum_post',
       filePath: filePath,
       fieldName: 'image',
     );

@@ -204,10 +204,10 @@ class TaskRepository {
   Future<Task> getTaskDetail(int id, {CancelToken? cancelToken}) =>
       getTaskById(id, cancelToken: cancelToken);
 
-  /// 上传任务图片（创建任务前调用，返回图片 URL）
+  /// 上传任务图片（创建任务前调用，返回公开 URL；使用 V2 接口以便后端迁移到 task_id 目录并更新 DB）
   Future<String> uploadTaskImage(String filePath) async {
     final response = await _apiService.uploadFile<Map<String, dynamic>>(
-      '${ApiEndpoints.uploadImage}?category=task',
+      '${ApiEndpoints.uploadImageV2}?category=task',
       filePath: filePath,
       fieldName: 'image',
     );
