@@ -3,7 +3,7 @@ import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { Card, Form, Input, Button, Select, message, Spin } from 'antd';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useCurrentUser } from '../contexts/AuthContext';
-import { getVisibleForums, createForumPost, updateForumPost, getForumPost, fetchCurrentUser, getPublicSystemSettings, logout, getForumUnreadNotificationCount } from '../api';
+import { getVisibleForums, createForumPost, updateForumPost, getForumPost, uploadForumPostImage, fetchCurrentUser, getPublicSystemSettings, logout, getForumUnreadNotificationCount } from '../api';
 import { useUnreadMessages } from '../contexts/UnreadMessageContext';
 import SEOHead from '../components/SEOHead';
 import LanguageSwitcher from '../components/LanguageSwitcher';
@@ -12,6 +12,8 @@ import HamburgerMenu from '../components/HamburgerMenu';
 import LoginModal from '../components/LoginModal';
 import { getErrorMessage } from '../utils/errorHandler';
 import { validateName } from '../utils/inputValidators';
+import { compressImage } from '../utils/imageCompression';
+import { formatImageUrl } from '../utils/imageUtils';
 import styles from './ForumCreatePost.module.css';
 
 const { TextArea } = Input;
@@ -43,6 +45,8 @@ const ForumCreatePost: React.FC = () => {
   const [user, setUser] = useState<any>(null);
   const [systemSettings, setSystemSettings] = useState<any>({ vip_button_visible: false });
   const [unreadCount, setUnreadCount] = useState(0);
+  const [imageList, setImageList] = useState<string[]>([]);
+  const [uploadingImages, setUploadingImages] = useState<boolean[]>([]);
 
   useEffect(() => {
     if (!currentUser) {
@@ -114,6 +118,7 @@ const ForumCreatePost: React.FC = () => {
         content: decodeContent(response.content || ''),
         category_id: response.category.id
       });
+      setImageList(Array.isArray(response.images) ? response.images : []);
     } catch (error: any) {
       message.error(getErrorMessage(error));
     } finally {
@@ -128,7 +133,8 @@ const ForumCreatePost: React.FC = () => {
       const { encodeContent } = await import('../utils/formatContent');
       const encodedValues = {
         ...values,
-        content: encodeContent(values.content || '')
+        content: encodeContent(values.content || ''),
+        ...(imageList.length > 0 ? { images: imageList } : {})
       };
       
       if (isEdit && postId) {
@@ -154,6 +160,53 @@ const ForumCreatePost: React.FC = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+    const remainingSlots = 5 - imageList.length;
+    if (remainingSlots <= 0) {
+      message.warning(t('forum.maxImages') || '最多只能上传5张图片');
+      return;
+    }
+    const filesToUpload = Array.from(files).slice(0, remainingSlots);
+    for (let i = 0; i < filesToUpload.length; i++) {
+      const file = filesToUpload[i];
+      if (!file || !file.type.startsWith('image/')) {
+        message.error(t('forum.invalidImage') || '请选择图片文件');
+        continue;
+      }
+      if (file.size > 5 * 1024 * 1024) {
+        message.error(t('forum.imageTooLarge') || '单张图片不能超过5MB');
+        continue;
+      }
+      const fileIndex = imageList.length + i;
+      setUploadingImages(prev => {
+        const next = [...prev];
+        next[fileIndex] = true;
+        return next;
+      });
+      try {
+        const compressed = await compressImage(file, { maxSizeMB: 1, maxWidthOrHeight: 1920 });
+        const { url } = await uploadForumPostImage(compressed);
+        setImageList(prev => [...prev, url]);
+      } catch (err: any) {
+        message.error(getErrorMessage(err));
+      } finally {
+        setUploadingImages(prev => {
+          const next = [...prev];
+          next[fileIndex] = false;
+          return next;
+        });
+      }
+    }
+    e.target.value = '';
+  };
+
+  const handleRemoveImage = (index: number) => {
+    setImageList(prev => prev.filter((_, i) => i !== index));
+    setUploadingImages(prev => prev.filter((_, i) => i !== index));
   };
 
   if (!currentUser) {
@@ -297,6 +350,45 @@ const ForumCreatePost: React.FC = () => {
                   maxLength={50000}
                   showCount
                 />
+              </Form.Item>
+
+              <Form.Item label={t('forum.postImages') || '帖子图片'} extra={t('forum.postImagesExtra') || '最多 5 张，每张不超过 5MB'}>
+                <div className={styles.imageUploadArea}>
+                  {imageList.length < 5 && (
+                    <label className={styles.uploadTrigger}>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        multiple
+                        onChange={handleImageUpload}
+                        disabled={uploadingImages.some(Boolean)}
+                        className={styles.uploadInput}
+                      />
+                      <span className={styles.uploadText}>
+                        {uploadingImages.some(Boolean) ? t('forum.uploading') || '上传中…' : (t('forum.addImages') || '+ 添加图片')}
+                      </span>
+                    </label>
+                  )}
+                  <div className={styles.imagePreviewList}>
+                    {imageList.map((url, index) => (
+                      <div key={url + index} className={styles.imagePreviewItem}>
+                        <img src={formatImageUrl(url)} alt="" className={styles.previewImg} />
+                        {uploadingImages[index] && (
+                          <div className={styles.previewLoading}><Spin size="small" /></div>
+                        )}
+                        <button
+                          type="button"
+                          className={styles.previewRemove}
+                          onClick={() => handleRemoveImage(index)}
+                          disabled={uploadingImages[index]}
+                          aria-label={t('common.delete')}
+                        >
+                          ×
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
               </Form.Item>
 
               <Form.Item>

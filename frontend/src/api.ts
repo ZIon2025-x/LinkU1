@@ -2113,10 +2113,26 @@ export const getForumPost = async (postId: number) => {
   return res.data;
 };
 
+/** 上传论坛帖子图片（临时），发布/更新帖子时传入返回的 url 列表，后端会移动到正式目录。最多 5 张。 */
+export const uploadForumPostImage = async (file: File): Promise<{ url: string }> => {
+  const token = await getCSRFToken();
+  const formData = new FormData();
+  formData.append('image', file);
+  const res = await api.post('/api/v2/upload/image?category=forum_post', formData, {
+    headers: {
+      'X-CSRF-Token': token,
+      'Content-Type': 'multipart/form-data',
+    },
+  });
+  if (!res.data?.url) throw new Error('上传失败');
+  return { url: res.data.url };
+};
+
 export const createForumPost = async (data: {
   title: string;
   content: string;
   category_id: number;
+  images?: string[];
 }) => {
   const token = await getCSRFToken();
   const res = await api.post('/api/forum/posts', data, {
@@ -2129,6 +2145,7 @@ export const updateForumPost = async (postId: number, data: {
   title?: string;
   content?: string;
   category_id?: number;
+  images?: string[];
 }) => {
   const token = await getCSRFToken();
   const res = await api.put(`/api/forum/posts/${postId}`, data, {

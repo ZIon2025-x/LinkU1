@@ -26,6 +26,8 @@ import HamburgerMenu from '../components/HamburgerMenu';
 import LoginModal from '../components/LoginModal';
 import { formatRelativeTime } from '../utils/timeUtils';
 import SafeContent from '../components/SafeContent';
+import LazyImage from '../components/LazyImage';
+import { formatImageUrl } from '../utils/imageUtils';
 import { getErrorMessage } from '../utils/errorHandler';
 import { getForumPostDisplayTitle, getForumPostDisplayContent } from '../utils/displayLocale';
 import SkeletonLoader from '../components/SkeletonLoader';
@@ -62,6 +64,7 @@ interface ForumPost {
   content: string;
   content_zh?: string | null;
   content_en?: string | null;
+  images?: string[] | null;
   category: {
     id: number;
     name: string;
@@ -1150,6 +1153,26 @@ const ForumPostDetail: React.FC = () => {
 
           <div className={styles.postContent} style={{ position: 'relative' }}>
             <SafeContent content={getForumPostDisplayContent(post, language) ?? post.content} />
+            {post.images && post.images.length > 0 && (
+              <div className={styles.postImages}>
+                {post.images.map((url, index) => (
+                  <a
+                    key={`${url}-${index}`}
+                    href={formatImageUrl(url)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={styles.postImageLink}
+                  >
+                    <LazyImage
+                      src={url}
+                      alt=""
+                      className={styles.postImage}
+                      style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                    />
+                  </a>
+                ))}
+              </div>
+            )}
             <div style={{ 
               position: 'absolute', 
               bottom: 0, 
