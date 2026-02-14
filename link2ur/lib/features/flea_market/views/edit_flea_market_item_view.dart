@@ -61,9 +61,14 @@ class _EditFleaMarketItemViewContentState
   final List<XFile> _newImages = [];
   final List<String> _uploadedUrls = [];
 
-  final _categories = [
-    'Electronics', 'Clothing', 'Furniture', 'Books',
-    'Sports', 'Beauty', 'Other',
+  /// 与创建页一致：使用本地化 (key, label)，保证与接口存的值（如「其他」）一致
+  List<(String, String)> _getCategories(BuildContext context) => [
+    (context.l10n.fleaMarketCategoryKeyElectronics, context.l10n.fleaMarketCategoryElectronics),
+    (context.l10n.fleaMarketCategoryKeyBooks, context.l10n.fleaMarketCategoryBooks),
+    (context.l10n.fleaMarketCategoryKeyDaily, context.l10n.fleaMarketCategoryDailyUse),
+    (context.l10n.fleaMarketCategoryKeyClothing, context.l10n.fleaMarketCategoryClothing),
+    (context.l10n.fleaMarketCategoryKeySports, context.l10n.fleaMarketCategorySports),
+    (context.l10n.fleaMarketCategoryKeyOther, context.l10n.fleaMarketCategoryOther),
   ];
 
   @override
@@ -234,11 +239,7 @@ class _EditFleaMarketItemViewContentState
                     isRequired: true,
                   ),
                   const SizedBox(height: AppSpacing.md),
-                  _buildDropdown(
-                    label: l10n.fleaMarketCategory,
-                    value: _selectedCategory.isEmpty ? null : _selectedCategory,
-                    items: _categories,
-                  ),
+                  _buildCategoryDropdown(context),
                   const SizedBox(height: AppSpacing.md),
                   _buildTextField(
                     controller: _descriptionController,
@@ -494,20 +495,27 @@ class _EditFleaMarketItemViewContentState
     );
   }
 
-  Widget _buildDropdown({
-    required String label,
-    String? value,
-    required List<String> items,
-  }) {
+  /// 分类下拉：与创建页一致用本地化 (key, label)；若当前值不在列表中则补一项，避免 assertion
+  Widget _buildCategoryDropdown(BuildContext context) {
+    final l10n = context.l10n;
+    final categories = _getCategories(context);
+    final keys = categories.map((e) => e.$1).toList();
+    final value = _selectedCategory.isEmpty ? null : _selectedCategory;
+    List<DropdownMenuItem<String>> menuItems = categories
+        .map((e) => DropdownMenuItem(value: e.$1, child: Text(e.$2)))
+        .toList();
+    if (value != null && !keys.contains(value)) {
+      menuItems.add(DropdownMenuItem(value: value, child: Text(value)));
+    }
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label,
+        Text(l10n.fleaMarketCategory,
             style:
                 const TextStyle(fontSize: 14, color: AppColors.textSecondary)),
         const SizedBox(height: 6),
         DropdownButtonFormField<String>(
-          initialValue: value,
+          value: value,
           decoration: InputDecoration(
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(AppRadius.medium),
@@ -515,10 +523,7 @@ class _EditFleaMarketItemViewContentState
             contentPadding:
                 const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
           ),
-          items: items
-              .map((item) =>
-                  DropdownMenuItem(value: item, child: Text(item)))
-              .toList(),
+          items: menuItems,
           onChanged: (val) {
             if (val != null) setState(() => _selectedCategory = val);
           },
