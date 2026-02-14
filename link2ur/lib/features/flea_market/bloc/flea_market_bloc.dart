@@ -538,6 +538,14 @@ class FleaMarketBloc extends Bloc<FleaMarketEvent, FleaMarketState> {
     FleaMarketLoadDetailRequested event,
     Emitter<FleaMarketState> emit,
   ) async {
+    if (event.itemId <= 0) {
+      emit(state.copyWith(
+        detailStatus: FleaMarketStatus.error,
+        errorMessage: '无效的商品 ID',
+      ));
+      return;
+    }
+
     emit(state.copyWith(detailStatus: FleaMarketStatus.loading));
 
     try {

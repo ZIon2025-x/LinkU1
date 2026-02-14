@@ -644,8 +644,11 @@ class _ProductCard extends StatelessWidget {
 
     return GestureDetector(
       onTap: () {
-        final id = item.id.replaceFirst('product_', '');
-        context.push('/flea-market/$id');
+        final raw = item.id.replaceFirst('product_', '');
+        final id = int.tryParse(raw);
+        if (id != null && id > 0) {
+          context.push('/flea-market/$id');
+        }
       },
       child: Container(
         decoration: BoxDecoration(

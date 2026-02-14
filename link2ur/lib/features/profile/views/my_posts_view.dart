@@ -309,7 +309,10 @@ class _MyPostsViewState extends State<MyPostsView>
             child: _FleaMarketItemCard(
               item: item,
               category: category,
-              onTap: () => context.safePush('/flea-market/${item.id}'),
+              onTap: () {
+                final id = int.tryParse(item.id);
+                if (id != null && id > 0) context.safePush('/flea-market/$id');
+              },
             ),
           );
         },

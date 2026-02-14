@@ -107,6 +107,11 @@ class FleaMarketRepository {
 
   /// 获取商品详情
   Future<FleaMarketItem> getItemById(String id, {CancelToken? cancelToken}) async {
+    final idTrim = id.trim();
+    if (idTrim.isEmpty || idTrim == '0') {
+      throw FleaMarketException('无效的商品 ID');
+    }
+
     final cacheKey = '${CacheManager.prefixFleaMarketDetail}$id';
 
     final cached = _cache.get<Map<String, dynamic>>(cacheKey);
