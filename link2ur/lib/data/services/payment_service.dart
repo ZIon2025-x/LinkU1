@@ -18,10 +18,17 @@ class PaymentService {
 
   /// 初始化 Stripe
   Future<void> init() async {
-    Stripe.publishableKey = AppConfig.instance.stripePublishableKey;
+    final key = AppConfig.instance.stripePublishableKey;
+    if (key.isEmpty) {
+      AppLogger.warning('Stripe publishable key is empty — Stripe will NOT be initialized. '
+          'Payments will fail. Please provide --dart-define=STRIPE_PUBLISHABLE_KEY_TEST=pk_test_xxx');
+      return;
+    }
+    Stripe.publishableKey = key;
     Stripe.merchantIdentifier = _merchantId;
     await Stripe.instance.applySettings();
-    AppLogger.info('Stripe initialized');
+    AppLogger.info('Stripe initialized: key=${key.substring(0, key.length.clamp(0, 15))}..., '
+        'merchant=$_merchantId');
   }
 
   // ==================== Apple Pay ====================
@@ -101,45 +108,43 @@ class PaymentService {
     String? preferredPaymentMethod,
     String? returnUrl,
   }) async {
+    // ✅ 对标 iOS 原生 PaymentViewModel.setupPaymentElement：
+    // 当 Customer + EphemeralKey 均有效时才配置，否则走一次性支付（guest flow）
+    // 注意：flutter_stripe 11.5.0 对应 stripe-ios 24.7.x，
+    // 后端 EphemeralKey 的 stripe_version 必须与 SDK 兼容，否则 initPaymentSheet 会卡住。
+    // 为安全起见，仅当两者均非空时才传入。
     final hasCustomer = (customerId != null && customerId.isNotEmpty) &&
         (ephemeralKeySecret != null && ephemeralKeySecret.isNotEmpty);
-    if (hasCustomer) {
-      AppLogger.info('PaymentSheet: using Customer + EphemeralKey');
-    } else {
-      AppLogger.info('PaymentSheet: guest flow (no customer)');
-    }
-    try {
-      await Stripe.instance.initPaymentSheet(
-        paymentSheetParameters: SetupPaymentSheetParameters(
-          paymentIntentClientSecret: clientSecret,
-          customerId: hasCustomer ? customerId : null,
-          customerEphemeralKeySecret: hasCustomer ? ephemeralKeySecret : null,
-          merchantDisplayName: merchantDisplayName ?? 'Link²Ur',
-          style: ThemeMode.system,
-          allowsDelayedPaymentMethods: true,
-          returnURL: returnUrl ?? 'link2ur://stripe-redirect',
-          billingDetailsCollectionConfiguration:
-              const BillingDetailsCollectionConfiguration(
-            address: AddressCollectionMode.never,
-          ),
-        ),
-      ).timeout(
-        const Duration(seconds: 15),
-        onTimeout: () {
-          throw PaymentServiceException(
-            'Payment sheet initialisation timed out. Please check your network and try again.',
-          );
-        },
-      );
+    AppLogger.info(
+      'PaymentSheet: ${hasCustomer ? "Customer + EphemeralKey" : "guest flow (no customer)"}, '
+      'clientSecret=${clientSecret.substring(0, clientSecret.length.clamp(0, 25))}..., '
+      'publishableKey=${Stripe.publishableKey.substring(0, Stripe.publishableKey.length.clamp(0, 15))}...',
+    );
 
-      // 展示 PaymentSheet（含超时，避免一直转圈）
-      await Stripe.instance.presentPaymentSheet().timeout(
-        _paymentSheetTimeout,
-        onTimeout: () {
-          throw PaymentServiceException(
-            'Payment sheet did not open in time. Please try again.',
-          );
-        },
+    // 验证 publishable key 已设置
+    if (Stripe.publishableKey.isEmpty) {
+      throw const PaymentServiceException(
+        'Stripe publishable key is not configured. Please check your build configuration.',
+      );
+    }
+
+    // 验证 clientSecret 格式
+    if (!clientSecret.contains('_secret_')) {
+      AppLogger.error('PaymentSheet: clientSecret format invalid: ${clientSecret.substring(0, clientSecret.length.clamp(0, 30))}...');
+      throw const PaymentServiceException(
+        'Invalid payment configuration. Please try again.',
+      );
+    }
+
+    try {
+      // ✅ 对标 iOS PaymentViewModel.setupPaymentElement 配置
+      await _initAndPresentSheet(
+        clientSecret: clientSecret,
+        useCustomer: hasCustomer,
+        customerId: customerId,
+        ephemeralKeySecret: ephemeralKeySecret,
+        merchantDisplayName: merchantDisplayName,
+        returnUrl: returnUrl,
       );
 
       AppLogger.info('Payment completed successfully');
@@ -149,14 +154,135 @@ class PaymentService {
         AppLogger.info('Payment cancelled by user');
         return false;
       }
-      AppLogger.error('Stripe payment error', e);
+
+      // ✅ 如果使用 Customer+EphemeralKey 失败，自动 fallback 到 guest flow 重试
+      // 这可以解决 EphemeralKey stripe_version 不兼容的问题
+      if (hasCustomer) {
+        AppLogger.warning(
+          'PaymentSheet failed with Customer+EphemeralKey (${e.error.code}: ${e.error.message}), '
+          'retrying with guest flow...',
+        );
+        try {
+          await _initAndPresentSheet(
+            clientSecret: clientSecret,
+            useCustomer: false,
+            merchantDisplayName: merchantDisplayName,
+            returnUrl: returnUrl,
+          );
+          AppLogger.info('Payment completed successfully (guest flow fallback)');
+          return true;
+        } on StripeException catch (retryE) {
+          if (retryE.error.code == FailureCode.Canceled) {
+            AppLogger.info('Payment cancelled by user (guest flow fallback)');
+            return false;
+          }
+          AppLogger.error(
+            'Stripe payment error (guest flow fallback): code=${retryE.error.code}, '
+            'message=${retryE.error.message}',
+            retryE,
+          );
+          rethrow;
+        }
+      }
+
+      AppLogger.error(
+        'Stripe payment error: code=${e.error.code}, '
+        'message=${e.error.message}, '
+        'localizedMessage=${e.error.localizedMessage}',
+        e,
+      );
       rethrow;
     } on PaymentServiceException {
+      // ✅ 超时等错误也尝试 fallback（如 initPaymentSheet 超时可能是 EphemeralKey 问题）
+      if (hasCustomer) {
+        AppLogger.warning('PaymentSheet timed out with Customer, retrying guest flow...');
+        try {
+          await _initAndPresentSheet(
+            clientSecret: clientSecret,
+            useCustomer: false,
+            merchantDisplayName: merchantDisplayName,
+            returnUrl: returnUrl,
+          );
+          AppLogger.info('Payment completed successfully (guest flow fallback after timeout)');
+          return true;
+        } on StripeException catch (retryE) {
+          if (retryE.error.code == FailureCode.Canceled) return false;
+          rethrow;
+        } catch (_) {
+          // fallback 也失败了，抛出原始错误
+        }
+      }
       rethrow;
-    } catch (e) {
-      AppLogger.error('Payment error', e);
+    } catch (e, st) {
+      AppLogger.error('Payment error: $e', e, st);
       rethrow;
     }
+  }
+
+  /// 内部方法：初始化并展示 PaymentSheet
+  Future<void> _initAndPresentSheet({
+    required String clientSecret,
+    required bool useCustomer,
+    String? customerId,
+    String? ephemeralKeySecret,
+    String? merchantDisplayName,
+    String? returnUrl,
+  }) async {
+    AppLogger.info('PaymentSheet: initPaymentSheet (useCustomer=$useCustomer)...');
+    final stopwatch = Stopwatch()..start();
+
+    await Stripe.instance.initPaymentSheet(
+      paymentSheetParameters: SetupPaymentSheetParameters(
+        paymentIntentClientSecret: clientSecret,
+        customerId: useCustomer ? customerId : null,
+        customerEphemeralKeySecret: useCustomer ? ephemeralKeySecret : null,
+        merchantDisplayName: merchantDisplayName ?? 'Link²Ur',
+        style: ThemeMode.system,
+        // 对标 iOS: allowsDelayedPaymentMethods = true（支持支付宝等延迟支付方式）
+        allowsDelayedPaymentMethods: true,
+        // 对标 iOS: returnURL = "link2ur://stripe-redirect"
+        returnURL: returnUrl ?? 'link2ur://stripe-redirect',
+        // 对标 iOS: defaultBillingDetails.address.country = "GB"
+        billingDetails: const BillingDetails(
+          address: Address(
+            country: 'GB',
+            city: '',
+            line1: '',
+            line2: '',
+            postalCode: '',
+            state: '',
+          ),
+        ),
+        billingDetailsCollectionConfiguration:
+            const BillingDetailsCollectionConfiguration(
+          address: AddressCollectionMode.never,
+        ),
+      ),
+    ).timeout(
+      const Duration(seconds: 15),
+      onTimeout: () {
+        throw PaymentServiceException(
+          'Payment sheet initialisation timed out (${stopwatch.elapsedMilliseconds}ms). '
+          'Please check your network and try again.',
+        );
+      },
+    );
+
+    stopwatch.stop();
+    AppLogger.info('PaymentSheet: initPaymentSheet completed in ${stopwatch.elapsedMilliseconds}ms, presenting...');
+
+    // 展示 PaymentSheet
+    final presentStopwatch = Stopwatch()..start();
+    await Stripe.instance.presentPaymentSheet().timeout(
+      _paymentSheetTimeout,
+      onTimeout: () {
+        throw PaymentServiceException(
+          'Payment sheet did not respond in ${presentStopwatch.elapsedMilliseconds}ms. Please try again.',
+        );
+      },
+    );
+    presentStopwatch.stop();
+    AppLogger.info('PaymentSheet: presentPaymentSheet completed in ${presentStopwatch.elapsedMilliseconds}ms');
   }
 
   /// 从 TaskPaymentResponse 发起支付

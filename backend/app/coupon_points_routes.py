@@ -1078,7 +1078,7 @@ def create_task_payment(
                         # 创建 Ephemeral Key
                         ephemeral_key = stripe.EphemeralKey.create(
                             customer=customer_id,
-                            stripe_version="2025-04-30.preview"
+                            stripe_version="2025-01-27.acacia"
                         )
                         ephemeral_key_secret = ephemeral_key.secret
                     except Exception as e:
@@ -1188,7 +1188,7 @@ def create_task_payment(
             # 创建 Ephemeral Key（用于客户端访问 Customer 的支付方式）
             ephemeral_key = stripe.EphemeralKey.create(
                 customer=customer_id,
-                stripe_version="2025-04-30.preview"
+                stripe_version="2025-01-27.acacia"
             )
             ephemeral_key_secret = ephemeral_key.secret
             

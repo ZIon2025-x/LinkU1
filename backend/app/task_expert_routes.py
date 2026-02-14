@@ -3234,7 +3234,7 @@ async def approve_service_application(
 
         ephemeral_key = stripe.EphemeralKey.create(
             customer=customer_id,
-            stripe_version="2025-04-30.preview",
+            stripe_version="2025-01-27.acacia",
         )
         ephemeral_key_secret = ephemeral_key.secret
     except Exception as e:

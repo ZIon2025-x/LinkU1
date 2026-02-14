@@ -1358,7 +1358,7 @@ async def accept_application(
 
                 ephemeral_key = stripe_module.EphemeralKey.create(
                     customer=customer_id,
-                    stripe_version="2025-04-30.preview",
+                    stripe_version="2025-01-27.acacia",
                 )
                 ephemeral_key_secret = ephemeral_key.secret
             except Exception as e:
@@ -2594,7 +2594,7 @@ async def respond_negotiation(
 
                     ephemeral_key = stripe.EphemeralKey.create(
                         customer=customer_id,
-                        stripe_version="2025-04-30.preview",
+                        stripe_version="2025-01-27.acacia",
                     )
                     ephemeral_key_secret = ephemeral_key.secret
             except Exception as e:
