@@ -25,7 +25,7 @@ class FleaMarketDetailView extends StatelessWidget {
     required this.itemId,
   });
 
-  final int itemId;
+  final String itemId;
 
   @override
   Widget build(BuildContext context) {
@@ -41,7 +41,7 @@ class FleaMarketDetailView extends StatelessWidget {
 class _FleaMarketDetailContent extends StatelessWidget {
   const _FleaMarketDetailContent({required this.itemId});
 
-  final int itemId;
+  final String itemId;
 
   @override
   Widget build(BuildContext context) {
@@ -225,7 +225,7 @@ class _FleaMarketDetailContent extends StatelessWidget {
     return RefreshIndicator(
       onRefresh: () async {
         final bloc = context.read<FleaMarketBloc>();
-        bloc.add(FleaMarketLoadDetailRequested(int.parse(item.id)));
+        bloc.add(FleaMarketLoadDetailRequested(item.id));
         await bloc.stream.firstWhere((s) =>
             s.isDetailLoaded || s.detailStatus == FleaMarketStatus.error);
       },

@@ -397,12 +397,12 @@ class AppRouter {
         path: AppRoutes.editFleaMarketItem,
         name: 'editFleaMarketItem',
         redirect: (context, state) {
-          final id = int.tryParse(state.pathParameters['id'] ?? '');
-          if (id == null || id <= 0) return AppRoutes.fleaMarket;
+          final id = (state.pathParameters['id'] ?? '').trim();
+          if (id.isEmpty) return AppRoutes.fleaMarket;
           return null;
         },
         pageBuilder: (context, state) {
-          final id = int.tryParse(state.pathParameters['id'] ?? '')!;
+          final id = state.pathParameters['id'] ?? '';
           final item = state.extra as dynamic;
           return SlideUpTransitionPage(
             key: state.pageKey,
@@ -414,13 +414,12 @@ class AppRouter {
         path: AppRoutes.fleaMarketDetail,
         name: 'fleaMarketDetail',
         redirect: (context, state) {
-          final idParam = state.pathParameters['id'] ?? '';
-          final id = int.tryParse(idParam);
-          if (id == null || id <= 0) return AppRoutes.fleaMarket;
+          final idParam = (state.pathParameters['id'] ?? '').trim();
+          if (idParam.isEmpty) return AppRoutes.fleaMarket;
           return null;
         },
         pageBuilder: (context, state) {
-          final id = int.tryParse(state.pathParameters['id'] ?? '')!;
+          final id = state.pathParameters['id'] ?? '';
           return SpringSlideTransitionPage(
             key: state.pageKey,
             child: FleaMarketDetailView(itemId: id),
@@ -833,9 +832,10 @@ extension GoRouterExtension on BuildContext {
     push('/tasks/$taskId');
   }
 
-  /// 跳转到跳蚤市场详情
-  void goToFleaMarketDetail(int itemId) {
+  /// 跳转到跳蚤市场详情（id 为后端返回的字符串格式，如 S0001）
+  void goToFleaMarketDetail(String itemId) {
     if (!_NavigationThrottle.acquire()) return;
+    if (itemId.isEmpty) return;
     push('/flea-market/$itemId');
   }
 

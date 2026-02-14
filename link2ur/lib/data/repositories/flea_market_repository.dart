@@ -33,10 +33,14 @@ class FleaMarketRepository {
     String? sortBy,
     CancelToken? cancelToken,
   }) async {
+    // 「全部」或空字符串时不传 category，后端不按分类筛选
+    final effectiveCategory = (category != null && category.isNotEmpty && category != 'all')
+        ? category
+        : null;
     final params = {
       'page': page,
       'page_size': pageSize,
-      if (category != null) 'category': category,
+      if (effectiveCategory != null) 'category': effectiveCategory,
       if (keyword != null) 'keyword': keyword,
       if (sortBy != null) 'sort_by': sortBy,
     };

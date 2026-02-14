@@ -333,8 +333,8 @@ async def get_flea_market_items(
         if seller_id:
             query = query.where(models.FleaMarketItem.seller_id == seller_id)
         
-        # 分类筛选
-        if category:
+        # 分类筛选（"all" 或空表示不过滤）
+        if category and category.strip().lower() != "all":
             query = query.where(models.FleaMarketItem.category == category)
         
         # 关键词搜索（标题和描述）
@@ -3071,8 +3071,8 @@ async def get_flea_market_items_admin(
         if seller_id:
             query = query.where(models.FleaMarketItem.seller_id == seller_id)
         
-        # 分类筛选
-        if category:
+        # 分类筛选（"all" 或空表示不过滤）
+        if category and category.strip().lower() != "all":
             query = query.where(models.FleaMarketItem.category == category)
         
         # 关键词搜索（标题和描述）

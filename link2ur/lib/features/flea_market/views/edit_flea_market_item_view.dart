@@ -21,7 +21,7 @@ class EditFleaMarketItemView extends StatelessWidget {
     required this.item,
   });
 
-  final int itemId;
+  final String itemId;
   final FleaMarketItem item;
 
   @override
@@ -41,7 +41,7 @@ class _EditFleaMarketItemViewContent extends StatefulWidget {
     required this.item,
   });
 
-  final int itemId;
+  final String itemId;
   final FleaMarketItem item;
 
   @override

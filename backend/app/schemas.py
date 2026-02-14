@@ -2450,7 +2450,7 @@ class PaginatedResponse(BaseModel):
 class FleaMarketItemBase(BaseModel):
     """跳蚤市场商品基础模型"""
     title: str = Field(..., min_length=1, max_length=200)
-    description: str = Field(..., min_length=1)
+    description: str = Field(default="", max_length=5000)  # 可选，空表示无描述
     price: Decimal = Field(..., gt=0)
     images: List[str] = Field(default_factory=list, max_items=5)
     location: Optional[str] = Field(None, max_length=100)  # 位置文本（用于显示）

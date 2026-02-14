@@ -50,6 +50,7 @@ class _CreateFleaMarketItemContentState
   String? _selectedCategory;
   final List<XFile> _selectedImages = [];
   final _imagePicker = ImagePicker();
+  bool _isUploadingImages = false;
 
   List<(String, String)> _getCategories(BuildContext context) => [
     (context.l10n.fleaMarketCategoryKeyElectronics, context.l10n.fleaMarketCategoryElectronics),
@@ -79,7 +80,7 @@ class _CreateFleaMarketItemContentState
       if (pickedFiles.isNotEmpty) {
         setState(() {
           for (final file in pickedFiles) {
-            if (_selectedImages.length < 9) {
+            if (_selectedImages.length < 5) {
               _selectedImages.add(file);
             }
           }
@@ -103,7 +104,7 @@ class _CreateFleaMarketItemContentState
     });
   }
 
-  void _submitForm() {
+  Future<void> _submitForm() async {
     if (!_formKey.currentState!.validate()) return;
 
     final price = double.tryParse(_priceController.text.trim());
@@ -117,6 +118,37 @@ class _CreateFleaMarketItemContentState
       return;
     }
 
+    final repo = context.read<FleaMarketRepository>();
+    final List<String> imageUrls = [];
+
+    if (_selectedImages.isNotEmpty) {
+      setState(() => _isUploadingImages = true);
+      try {
+        for (int i = 0; i < _selectedImages.length; i++) {
+          final file = _selectedImages[i];
+          final bytes = await file.readAsBytes();
+          final name = file.name.isNotEmpty
+              ? file.name
+              : 'image_${i + 1}.jpg';
+          final url = await repo.uploadImage(bytes, name);
+          if (url.isNotEmpty) imageUrls.add(url);
+        }
+      } catch (e) {
+        if (mounted) {
+          setState(() => _isUploadingImages = false);
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('上传图片失败: $e'),
+              backgroundColor: AppColors.error,
+            ),
+          );
+        }
+        return;
+      } finally {
+        if (mounted) setState(() => _isUploadingImages = false);
+      }
+    }
+
     final request = CreateFleaMarketRequest(
       title: _titleController.text.trim(),
       description: _descriptionController.text.trim().isEmpty
@@ -127,10 +159,10 @@ class _CreateFleaMarketItemContentState
       location: _location,
       latitude: _latitude,
       longitude: _longitude,
-      // 图片URL需要先上传，这里传空列表，实际项目中应先上传图片获取URL
-      images: [],
+      images: imageUrls,
     );
 
+    if (!mounted) return;
     context.read<FleaMarketBloc>().add(FleaMarketCreateItem(request));
   }
 
@@ -303,12 +335,13 @@ class _CreateFleaMarketItemContentState
                 // 提交按钮
                 BlocBuilder<FleaMarketBloc, FleaMarketState>(
                   builder: (context, state) {
+                    final busy = _isUploadingImages || state.isSubmitting;
                     return SizedBox(
                       width: double.infinity,
                       child: PrimaryButton(
                         text: context.l10n.fleaMarketPublishItem,
-                        onPressed: state.isSubmitting ? null : _submitForm,
-                        isLoading: state.isSubmitting,
+                        onPressed: busy ? null : _submitForm,
+                        isLoading: busy,
                       ),
                     );
                   },
@@ -364,8 +397,8 @@ class _CreateFleaMarketItemContentState
           );
         }),
 
-        // 添加按钮
-        if (_selectedImages.length < 9)
+        // 添加按钮（后端最多 5 张）
+        if (_selectedImages.length < 5)
           GestureDetector(
             onTap: _pickImages,
             child: Container(
@@ -391,7 +424,7 @@ class _CreateFleaMarketItemContentState
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    '${_selectedImages.length}/9',
+                    '${_selectedImages.length}/5',
                     style: const TextStyle(
                       fontSize: 10,
                       color: AppColors.textTertiaryLight,

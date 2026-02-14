@@ -310,8 +310,7 @@ class _MyPostsViewState extends State<MyPostsView>
               item: item,
               category: category,
               onTap: () {
-                final id = int.tryParse(item.id);
-                if (id != null && id > 0) context.safePush('/flea-market/$id');
+                if (item.id.isNotEmpty) context.safePush('/flea-market/${item.id}');
               },
             ),
           );

@@ -374,9 +374,8 @@ class _FleaMarketItemCard extends StatelessWidget {
 
     return GestureDetector(
       onTap: () {
-        final itemId = int.tryParse(item.id);
-        if (itemId != null) {
-          context.safePush('/flea-market/$itemId');
+        if (item.id.isNotEmpty) {
+          context.safePush('/flea-market/${item.id}');
         }
       },
       child: Container(

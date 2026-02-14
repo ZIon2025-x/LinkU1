@@ -88,17 +88,29 @@ class FleaMarketItem extends Equatable {
   /// 是否有待支付
   bool get hasPendingPayment => pendingPaymentClientSecret != null;
 
+  static List<String> _parseImages(dynamic value) {
+    if (value == null) return [];
+    if (value is List) {
+      return value.map((e) => e?.toString()).whereType<String>().where((s) => s.isNotEmpty).toList();
+    }
+    if (value is String && value.isNotEmpty) return [value];
+    return [];
+  }
+
   factory FleaMarketItem.fromJson(Map<String, dynamic> json) {
+    final imagesRaw = json['images'] ?? json['image_urls'];
+    final images = imagesRaw != null
+        ? FleaMarketItem._parseImages(imagesRaw)
+        : (json['image_url'] != null && json['image_url'] is String
+            ? [json['image_url'] as String]
+            : <String>[]);
     return FleaMarketItem(
       id: json['id']?.toString() ?? '',
       title: json['title'] as String? ?? '',
       description: json['description'] as String?,
       price: _toDouble(json['price']),
       currency: json['currency'] as String? ?? 'GBP',
-      images: (json['images'] as List<dynamic>?)
-              ?.map((e) => e as String)
-              .toList() ??
-          [],
+      images: images,
       location: json['location'] as String?,
       latitude: _toDoubleNullable(json['latitude']),
       longitude: _toDoubleNullable(json['longitude']),
@@ -340,7 +352,7 @@ class CreateFleaMarketRequest {
   Map<String, dynamic> toJson() {
     return {
       'title': title,
-      if (description != null) 'description': description,
+      'description': description ?? '',
       'price': price,
       'currency': currency,
       'images': images,

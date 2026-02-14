@@ -60,7 +60,7 @@ class FleaMarketCreateItem extends FleaMarketEvent {
 class FleaMarketPurchaseItem extends FleaMarketEvent {
   const FleaMarketPurchaseItem(this.itemId);
 
-  final int itemId;
+  final String itemId;
 
   @override
   List<Object?> get props => [itemId];
@@ -77,7 +77,7 @@ class FleaMarketUpdateItem extends FleaMarketEvent {
     this.images,
   });
 
-  final int itemId;
+  final String itemId;
   final String title;
   final String description;
   final double price;
@@ -93,7 +93,7 @@ class FleaMarketUpdateItem extends FleaMarketEvent {
 class FleaMarketLoadDetailRequested extends FleaMarketEvent {
   const FleaMarketLoadDetailRequested(this.itemId);
 
-  final int itemId;
+  final String itemId;
 
   @override
   List<Object?> get props => [itemId];
@@ -103,7 +103,7 @@ class FleaMarketLoadDetailRequested extends FleaMarketEvent {
 class FleaMarketRefreshItem extends FleaMarketEvent {
   const FleaMarketRefreshItem(this.itemId);
 
-  final int itemId;
+  final String itemId;
 
   @override
   List<Object?> get props => [itemId];
@@ -113,7 +113,7 @@ class FleaMarketRefreshItem extends FleaMarketEvent {
 class FleaMarketLoadPurchaseRequests extends FleaMarketEvent {
   const FleaMarketLoadPurchaseRequests(this.itemId);
 
-  final int itemId;
+  final String itemId;
 
   @override
   List<Object?> get props => [itemId];
@@ -469,12 +469,11 @@ class FleaMarketBloc extends Bloc<FleaMarketEvent, FleaMarketState> {
     ));
 
     try {
-      await _fleaMarketRepository.directPurchase(event.itemId.toString());
+      await _fleaMarketRepository.directPurchase(event.itemId);
 
       // 更新本地状态
       final updatedItems = state.items.map((item) {
-        final itemIdInt = int.tryParse(item.id);
-        if (itemIdInt == event.itemId) {
+        if (item.id == event.itemId) {
           return item.copyWith(status: AppConstants.fleaMarketStatusSold);
         }
         return item;
@@ -503,7 +502,7 @@ class FleaMarketBloc extends Bloc<FleaMarketEvent, FleaMarketState> {
 
     try {
       final updatedItem = await _fleaMarketRepository.updateItem(
-        event.itemId.toString(),
+        event.itemId,
         title: event.title,
         description: event.description,
         price: event.price,
@@ -513,8 +512,7 @@ class FleaMarketBloc extends Bloc<FleaMarketEvent, FleaMarketState> {
 
       // 更新列表中的对应项
       final updatedItems = state.items.map((item) {
-        final itemIdInt = int.tryParse(item.id);
-        return itemIdInt == event.itemId ? updatedItem : item;
+        return item.id == event.itemId ? updatedItem : item;
       }).toList();
 
       emit(state.copyWith(
@@ -538,7 +536,7 @@ class FleaMarketBloc extends Bloc<FleaMarketEvent, FleaMarketState> {
     FleaMarketLoadDetailRequested event,
     Emitter<FleaMarketState> emit,
   ) async {
-    if (event.itemId <= 0) {
+    if (event.itemId.trim().isEmpty) {
       emit(state.copyWith(
         detailStatus: FleaMarketStatus.error,
         errorMessage: '无效的商品 ID',
@@ -549,7 +547,7 @@ class FleaMarketBloc extends Bloc<FleaMarketEvent, FleaMarketState> {
     emit(state.copyWith(detailStatus: FleaMarketStatus.loading));
 
     try {
-      final item = await _fleaMarketRepository.getItemById(event.itemId.toString());
+      final item = await _fleaMarketRepository.getItemById(event.itemId);
       emit(state.copyWith(
         detailStatus: FleaMarketStatus.loaded,
         selectedItem: item,
@@ -590,7 +588,7 @@ class FleaMarketBloc extends Bloc<FleaMarketEvent, FleaMarketState> {
     emit(state.copyWith(isSubmitting: true));
 
     try {
-      await _fleaMarketRepository.refreshItem(event.itemId.toString());
+      await _fleaMarketRepository.refreshItem(event.itemId);
       emit(state.copyWith(
         isSubmitting: false,
         actionMessage: 'refresh_success',
@@ -616,7 +614,7 @@ class FleaMarketBloc extends Bloc<FleaMarketEvent, FleaMarketState> {
 
     try {
       final rawRequests = await _fleaMarketRepository
-          .getItemPurchaseRequests(event.itemId.toString());
+          .getItemPurchaseRequests(event.itemId);
 
       final requests = rawRequests
           .map((e) => PurchaseRequest.fromJson(e))

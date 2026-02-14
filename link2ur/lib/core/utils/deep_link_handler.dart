@@ -74,8 +74,8 @@ class DeepLinkHandler {
           if (id != null) context.safePush('/forum/posts/$id');
           break;
         case _DeepLinkRoute.fleaMarketItem:
-          final id = _extractId(path);
-          if (id != null) context.safePush('/flea-market/$id');
+          final id = _extractLastSegment(path);
+          if (id != null && id.isNotEmpty) context.safePush('/flea-market/$id');
           break;
         case _DeepLinkRoute.userProfile:
           final id = _extractId(path);
@@ -131,6 +131,15 @@ class DeepLinkHandler {
     final segments = path.split('/').where((s) => s.isNotEmpty).toList();
     if (segments.length >= 2) {
       return int.tryParse(segments.last);
+    }
+    return null;
+  }
+
+  /// 提取路径最后一段为字符串（用于跳蚤市场等 id 为 S0001 格式）
+  String? _extractLastSegment(String path) {
+    final segments = path.split('/').where((s) => s.isNotEmpty).toList();
+    if (segments.length >= 2) {
+      return segments.last;
     }
     return null;
   }

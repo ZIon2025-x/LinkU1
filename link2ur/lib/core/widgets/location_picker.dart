@@ -61,13 +61,26 @@ class _LocationInputFieldState extends State<LocationInputField> {
     setState(() => _isLoadingLocation = true);
 
     try {
-      final result = await PermissionManager.instance.requestLocation();
-      if (!result.granted) {
+      // 使用 Geolocator 检查/请求位置权限，与 getCurrentPosition 一致，在 iOS 上比 permission_handler 更准确
+      final serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('请先开启设备的定位服务')),
+        );
+        return;
+      }
+
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+      }
+      if (permission == LocationPermission.denied ||
+          permission == LocationPermission.deniedForever) {
         if (mounted) {
           PermissionManager.showPermissionDeniedDialog(
             context,
             permissionName: '位置',
-            isPermanentlyDenied: result.isPermanentlyDenied,
+            isPermanentlyDenied: permission == LocationPermission.deniedForever,
           );
         }
         return;
