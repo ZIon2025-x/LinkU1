@@ -3421,6 +3421,7 @@
   "myPostsEmptyDesc": "You haven't posted anything yet",
   "fleaMarketSold": "Sold",
   "fleaMarketDelisted": "Delisted",
+  "fleaMarketItemReserved": "Item Reserved",
   "fleaMarketCategoryAll": "All",
   "fleaMarketCategoryElectronics": "Electronics",
   "fleaMarketCategoryBooks": "Books & Textbooks",

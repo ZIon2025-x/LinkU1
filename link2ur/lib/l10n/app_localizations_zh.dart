@@ -6989,6 +6989,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get fleaMarketDelisted => '已下架';
 
   @override
+  String get fleaMarketItemReserved => '商品已被预留';
+
+  @override
   String get fleaMarketCategoryAll => '全部';
 
   @override
@@ -14734,6 +14737,9 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get fleaMarketDelisted => '已下架';
+
+  @override
+  String get fleaMarketItemReserved => '商品已被預留';
 
   @override
   String get fleaMarketCategoryAll => '全部';

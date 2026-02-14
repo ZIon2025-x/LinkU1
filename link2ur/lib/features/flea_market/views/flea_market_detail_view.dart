@@ -62,30 +62,37 @@ class _FleaMarketDetailContent extends StatelessWidget {
           (curr.actionMessage != null &&
               prev.actionMessage != curr.actionMessage),
       listener: (context, state) {
-        // 直接购买后需支付：打开支付页（对标 iOS handlePurchaseComplete）
+        // 直接购买后需支付：打开支付页（对标 iOS handlePurchaseComplete + showPaymentView = true）
+        // 使用 addPostFrameCallback 确保在下一帧打开，避免与 isSubmitting 状态更新竞争，支付页能稳定弹出
         if (state.actionMessage == 'open_payment' &&
             state.acceptPaymentData != null) {
           final paymentData = state.acceptPaymentData!;
           context.read<FleaMarketBloc>().add(const FleaMarketClearAcceptPaymentData());
-          Navigator.of(context)
-              .push<bool>(
-                MaterialPageRoute<bool>(
-                  builder: (_) => ApprovalPaymentPage(
-                    paymentData: paymentData,
-                  ),
-                ),
-              )
-              .then((paid) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
             if (!context.mounted) return;
-            if (paid == true) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(context.l10n.actionPurchaseSuccess),
-                  backgroundColor: AppColors.success,
-                ),
-              );
+            Navigator.of(context)
+                .push<bool>(
+                  MaterialPageRoute<bool>(
+                    builder: (_) => ApprovalPaymentPage(
+                      paymentData: paymentData,
+                    ),
+                  ),
+                )
+                .then((paid) {
+              if (!context.mounted) return;
+              // ✅ 对标 iOS: 无论支付成功、失败还是取消，都刷新商品详情
+              // 支付成功 → 商品状态变为 sold，详情页显示"已售出"
+              // 支付取消/失败 → 商品仍为 active + hasPendingPayment，详情页显示"继续支付"按钮
               context.read<FleaMarketBloc>().add(FleaMarketLoadDetailRequested(itemId));
-            }
+              if (paid == true) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(context.l10n.actionPurchaseSuccess),
+                    backgroundColor: AppColors.success,
+                  ),
+                );
+              }
+            });
           });
           return;
         }
@@ -345,8 +352,17 @@ class _FleaMarketDetailContent extends StatelessWidget {
     final item = state.selectedItem!;
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    // 只有 active 状态才显示底部栏 - 对标iOS
-    if (!item.isActive) return const SizedBox.shrink();
+    // 对标 iOS bottomBar 逻辑：
+    // 1. 商品 active 且无人预留 → 显示购买/编辑按钮
+    // 2. 商品 active 但有待支付（hasPendingPayment）→ 买家显示"继续支付"按钮
+    // 3. 商品 sold/delisted → 不显示底部栏
+    if (item.isSold) return const SizedBox.shrink();
+
+    // 买家有待支付的订单时，即使商品不可购买（is_available=false），也显示"继续支付"
+    final showBuyerBar = !isSeller && (item.isActive || item.hasPendingPayment);
+    final showSellerBar = isSeller && item.isActive;
+
+    if (!showBuyerBar && !showSellerBar) return const SizedBox.shrink();
 
     return Container(
       decoration: BoxDecoration(
@@ -366,7 +382,7 @@ class _FleaMarketDetailContent extends StatelessWidget {
         child: Padding(
           padding: const EdgeInsets.symmetric(
               horizontal: AppSpacing.md, vertical: 12),
-          child: isSeller
+          child: showSellerBar
               ? _buildSellerBottomBar(context, state, item)
               : _buildBuyerBottomBar(context, state, item),
         ),
@@ -482,9 +498,12 @@ class _FleaMarketDetailContent extends StatelessWidget {
     );
   }
 
-  /// 买家底部栏 - 对标iOS: 聊天 + 继续支付/立即购买
+  /// 买家底部栏 - 对标iOS: 聊天 + 继续支付/立即购买/已被预留提示
   Widget _buildBuyerBottomBar(
       BuildContext context, FleaMarketState state, FleaMarketItem item) {
+    // 商品不可购买（被其他人预留）且自己没有待支付订单 → 显示"已被预留"提示
+    final isUnavailable = item.isAvailable == false && !item.hasPendingPayment;
+
     return Row(
       children: [
         // 聊天按钮 - 对标iOS 小按钮
@@ -524,11 +543,38 @@ class _FleaMarketDetailContent extends StatelessWidget {
           ),
         ),
         const SizedBox(width: 12),
-        // 主操作按钮：继续支付 或 立即购买 - 对标iOS
+        // 主操作按钮：继续支付 / 立即购买 / 已被预留
         Expanded(
-          child: _buildBuyerCTAButton(context, state, item),
+          child: isUnavailable
+              ? _buildUnavailableButton(context)
+              : _buildBuyerCTAButton(context, state, item),
         ),
       ],
+    );
+  }
+
+  /// 商品已被其他人预留的提示按钮（不可点击）
+  Widget _buildUnavailableButton(BuildContext context) {
+    return Container(
+      height: 50,
+      decoration: BoxDecoration(
+        color: AppColors.textTertiary.withValues(alpha: 0.3),
+        borderRadius: BorderRadius.circular(25),
+      ),
+      child: Center(
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.lock_outline, size: 16, color: AppColors.textSecondary),
+            const SizedBox(width: 8),
+            Text(
+              context.l10n.fleaMarketItemReserved,
+              style: AppTypography.bodyBold
+                  .copyWith(color: AppColors.textSecondary),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -570,6 +616,10 @@ class _FleaMarketDetailContent extends StatelessWidget {
                     )
                     .then((paid) {
                   if (!context.mounted) return;
+                  // ✅ 对标 iOS: 无论支付结果如何都刷新详情
+                  context
+                      .read<FleaMarketBloc>()
+                      .add(FleaMarketLoadDetailRequested(itemId));
                   if (paid == true) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
@@ -577,9 +627,6 @@ class _FleaMarketDetailContent extends StatelessWidget {
                         backgroundColor: AppColors.success,
                       ),
                     );
-                    context
-                        .read<FleaMarketBloc>()
-                        .add(FleaMarketLoadDetailRequested(itemId));
                   }
                 });
               } else {

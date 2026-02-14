@@ -6,7 +6,6 @@ import 'package:go_router/go_router.dart';
 import '../../../core/design/app_colors.dart';
 import '../../../core/utils/debouncer.dart';
 import '../../../core/utils/haptic_feedback.dart';
-import '../../../core/router/app_router.dart';
 import '../../../core/design/app_radius.dart';
 import '../../../core/utils/l10n_extension.dart';
 import '../../../core/utils/responsive.dart';
@@ -376,9 +375,14 @@ class _FleaMarketItemCard extends StatelessWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return GestureDetector(
-      onTap: () {
+      onTap: () async {
         if (item.id.isNotEmpty) {
-          context.safePush('/flea-market/${item.id}');
+          // 等待详情页返回后刷新列表（对标 iOS: CacheManager.shared.invalidateFleaMarketCache()）
+          // 用户可能在详情页中购买/支付，返回后列表需要反映最新状态
+          await context.push('/flea-market/${item.id}');
+          if (context.mounted) {
+            context.read<FleaMarketBloc>().add(const FleaMarketRefreshRequested());
+          }
         }
       },
       child: Container(

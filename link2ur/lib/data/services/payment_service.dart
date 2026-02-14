@@ -91,6 +91,8 @@ class PaymentService {
   /// 使用 PaymentSheet 完成支付
   /// [customerId] / [ephemeralKeySecret] 可选：后端有时不返回（如复用未完成 PI 或创建 Customer 失败），
   /// 仅当两者均非空时传入，否则走「仅 client_secret」的一次性支付，避免「加载失败」
+  static const Duration _paymentSheetTimeout = Duration(seconds: 90);
+
   Future<bool> presentPaymentSheet({
     required String clientSecret,
     String? customerId,
@@ -99,9 +101,14 @@ class PaymentService {
     String? preferredPaymentMethod,
     String? returnUrl,
   }) async {
+    final hasCustomer = (customerId != null && customerId.isNotEmpty) &&
+        (ephemeralKeySecret != null && ephemeralKeySecret.isNotEmpty);
+    if (hasCustomer) {
+      AppLogger.info('PaymentSheet: using Customer + EphemeralKey');
+    } else {
+      AppLogger.info('PaymentSheet: guest flow (no customer)');
+    }
     try {
-      final hasCustomer = (customerId != null && customerId.isNotEmpty) &&
-          (ephemeralKeySecret != null && ephemeralKeySecret.isNotEmpty);
       await Stripe.instance.initPaymentSheet(
         paymentSheetParameters: SetupPaymentSheetParameters(
           paymentIntentClientSecret: clientSecret,
@@ -116,10 +123,24 @@ class PaymentService {
             address: AddressCollectionMode.never,
           ),
         ),
+      ).timeout(
+        const Duration(seconds: 15),
+        onTimeout: () {
+          throw PaymentServiceException(
+            'Payment sheet initialisation timed out. Please check your network and try again.',
+          );
+        },
       );
 
-      // 展示 PaymentSheet
-      await Stripe.instance.presentPaymentSheet();
+      // 展示 PaymentSheet（含超时，避免一直转圈）
+      await Stripe.instance.presentPaymentSheet().timeout(
+        _paymentSheetTimeout,
+        onTimeout: () {
+          throw PaymentServiceException(
+            'Payment sheet did not open in time. Please try again.',
+          );
+        },
+      );
 
       AppLogger.info('Payment completed successfully');
       return true;
@@ -129,6 +150,8 @@ class PaymentService {
         return false;
       }
       AppLogger.error('Stripe payment error', e);
+      rethrow;
+    } on PaymentServiceException {
       rethrow;
     } catch (e) {
       AppLogger.error('Payment error', e);

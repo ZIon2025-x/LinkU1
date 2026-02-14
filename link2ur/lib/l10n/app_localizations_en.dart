@@ -7267,6 +7267,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get fleaMarketDelisted => 'Delisted';
 
   @override
+  String get fleaMarketItemReserved => 'Item Reserved';
+
+  @override
   String get fleaMarketCategoryAll => 'All';
 
   @override

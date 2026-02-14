@@ -3,7 +3,6 @@ import 'dart:typed_data';
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
-import '../../../core/constants/app_constants.dart';
 import '../../../core/utils/cache_manager.dart';
 import '../../../data/models/flea_market.dart';
 import '../../../data/repositories/flea_market_repository.dart';
@@ -497,10 +496,13 @@ class FleaMarketBloc extends Bloc<FleaMarketEvent, FleaMarketState> {
   }
 
   /// 从直接购买接口返回的 body 中解析支付数据（后端返回 { success, data: { task_id, client_secret, ... } }）
+  /// 对标 iOS DirectPurchaseResponse.DirectPurchaseData，仅当需支付（pending_payment + client_secret）时返回非 null
   AcceptPaymentData? _parseDirectPurchasePaymentData(Map<String, dynamic> raw) {
     final payload = raw['data'] as Map<String, dynamic>? ?? raw;
     final clientSecret = payload['client_secret'] as String?;
     if (clientSecret == null || clientSecret.isEmpty) return null;
+    final taskStatus = payload['task_status'] as String?;
+    if (taskStatus != null && taskStatus != 'pending_payment') return null;
     final taskIdRaw = payload['task_id'];
     final taskId = taskIdRaw != null
         ? (int.tryParse(taskIdRaw.toString()) ?? 0)
@@ -532,6 +534,8 @@ class FleaMarketBloc extends Bloc<FleaMarketEvent, FleaMarketState> {
       final paymentData = _parseDirectPurchasePaymentData(result);
 
       if (paymentData != null) {
+        // ✅ 正常流程：需要支付，打开支付页
+        // 此时商品状态在后端仍为 active（但 sold_task_id 已设置），不在本地改状态
         emit(state.copyWith(
           isSubmitting: false,
           actionMessage: 'open_payment',
@@ -540,16 +544,16 @@ class FleaMarketBloc extends Bloc<FleaMarketEvent, FleaMarketState> {
         return;
       }
 
-      final updatedItems = state.items.map((item) {
-        if (item.id == event.itemId) {
-          return item.copyWith(status: AppConstants.fleaMarketStatusSold);
-        }
-        return item;
-      }).toList();
+      // ⚠️ 无需支付的情况（极少见，如0元商品）：刷新详情确认最新状态
+      FleaMarketItem? refreshedDetail;
+      if (state.selectedItem?.id == event.itemId) {
+        refreshedDetail =
+            await _fleaMarketRepository.getItemById(event.itemId);
+      }
       emit(state.copyWith(
-        items: updatedItems,
         isSubmitting: false,
         actionMessage: 'purchase_success',
+        selectedItem: refreshedDetail ?? state.selectedItem,
       ));
     } catch (e) {
       AppLogger.error('Failed to purchase item', e);
@@ -593,6 +597,8 @@ class FleaMarketBloc extends Bloc<FleaMarketEvent, FleaMarketState> {
         final paymentData = _parseDirectPurchasePaymentData(result);
 
         if (paymentData != null) {
+          // ✅ 正常流程：需要支付，打开支付页
+          // 对标 iOS handlePurchaseComplete：不改变本地商品状态，等支付完成后刷新
           emit(state.copyWith(
             isSubmitting: false,
             actionMessage: 'open_payment',
@@ -601,18 +607,12 @@ class FleaMarketBloc extends Bloc<FleaMarketEvent, FleaMarketState> {
           return;
         }
 
-        final updatedItems = state.items.map((item) {
-          if (item.id == event.itemId) {
-            return item.copyWith(status: AppConstants.fleaMarketStatusSold);
-          }
-          return item;
-        }).toList();
+        // ⚠️ 无需支付的情况：刷新详情确认最新状态
         if (state.selectedItem?.id == event.itemId) {
           refreshedDetail =
               await _fleaMarketRepository.getItemById(event.itemId);
         }
         emit(state.copyWith(
-          items: updatedItems,
           isSubmitting: false,
           actionMessage: 'purchase_success',
           selectedItem: refreshedDetail ?? state.selectedItem,

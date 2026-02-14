@@ -178,16 +178,20 @@ async def send_direct_purchase_notification(
     buyer: models.User,
     task_id: int
 ):
-    """发送直接购买通知给卖家"""
+    """发送直接购买（待付款）通知给卖家
+    
+    ⚠️ 此时买家尚未完成支付，商品状态为 reserved（预留），不是 sold。
+    "商品已售出"通知应在支付成功后（webhook）发送，此处仅通知卖家有买家下单。
+    """
     try:
         buyer_name = buyer.name or f"用户{buyer.id}"
-        content = f"{buyer_name} 直接购买了您的商品「{item.title}」\n任务已创建，可以开始交易了"
+        content = f"{buyer_name} 下单了您的商品「{item.title}」，等待买家完成付款"
         
         await async_crud.async_notification_crud.create_notification(
             db=db,
             user_id=item.seller_id,
             notification_type="flea_market_direct_purchase",
-            title="商品已售出",
+            title="商品已被下单",
             content=content,
             related_id=str(task_id),
         )
@@ -203,7 +207,7 @@ async def send_direct_purchase_notification(
                 body=None,  # 从模板生成（会根据用户语言偏好）
                 notification_type="flea_market_direct_purchase",
                 data={
-                    "item_id": format_flea_market_id(item.id),  # 使用格式化的ID（S0020格式）以便iOS客户端正确跳转
+                    "item_id": format_flea_market_id(item.id),
                     "task_id": task_id
                 },
                 template_vars={
@@ -213,9 +217,8 @@ async def send_direct_purchase_notification(
             )
         except Exception as e:
             logger.warning(f"发送直接购买推送通知失败: {e}")
-            # 推送通知失败不影响主流程
         
-        logger.info(f"直接购买通知已发送给卖家 {item.seller_id}")
+        logger.info(f"直接购买待付款通知已发送给卖家 {item.seller_id}")
     except Exception as e:
         logger.error(f"发送直接购买通知失败: {e}")
 

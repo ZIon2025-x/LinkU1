@@ -250,15 +250,27 @@ PUSH_NOTIFICATION_TEMPLATES = {
         }
     },
     
-    # 跳蚤市场直接购买
+    # 跳蚤市场直接购买（待付款阶段，买家下单但尚未支付）
     "flea_market_direct_purchase": {
         "en": {
-            "title": "💰 Item Sold",
-            "body_template": "{buyer_name} directly purchased「{item_title}」"
+            "title": "🛒 New Order Received",
+            "body_template": "{buyer_name} placed an order for「{item_title}」, awaiting payment"
+        },
+        "zh": {
+            "title": "🛒 商品已被下单",
+            "body_template": "{buyer_name} 下单了「{item_title}」，等待买家完成付款"
+        }
+    },
+    
+    # 跳蚤市场商品售出（支付成功后）
+    "flea_market_sold": {
+        "en": {
+            "title": "💰 Item Sold!",
+            "body_template": "「{item_title}」has been sold! The buyer has completed payment."
         },
         "zh": {
             "title": "💰 商品已售出",
-            "body_template": "{buyer_name} 直接购买了「{item_title}」"
+            "body_template": "「{item_title}」已售出！买家已完成付款，可以开始交易了"
         }
     },
     
@@ -301,12 +313,12 @@ PUSH_NOTIFICATION_TEMPLATES = {
     # 跳蚤市场（通用，用于其他情况）
     "flea_market_generic": {
         "en": {
-            "title": "🛒 Flea Market",
+            "title": "🛒 Flea Market Update",
             "body_template": "You have a new update about「{item_title}」"
         },
         "zh": {
-            "title": "💰 商品已售出",
-            "body_template": "{buyer_name} 直接购买了「{item_title}」"
+            "title": "🛒 跳蚤市场动态",
+            "body_template": "您的商品「{item_title}」有新的动态"
         }
     },
     

@@ -5,11 +5,13 @@ import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import com.google.firebase.messaging.FirebaseMessaging
-import io.flutter.embedding.android.FlutterActivity
+import io.flutter.embedding.android.FlutterFragmentActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
 
-class MainActivity : FlutterActivity() {
+/// 必须继承 FlutterFragmentActivity，否则 flutter_stripe 的 Payment Sheet 无法初始化
+/// 见 https://github.com/flutter-stripe/flutter_stripe#android
+class MainActivity : FlutterFragmentActivity() {
 
     companion object {
         private const val LOCATION_PICKER_REQUEST = 2001

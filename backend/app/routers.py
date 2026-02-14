@@ -6191,6 +6191,59 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
                                 from app.flea_market_extensions import invalidate_item_cache
                                 invalidate_item_cache(flea_item.id)
                                 logger.info(f"✅ [WEBHOOK] 已清除跳蚤市场商品缓存（包括列表和详情）")
+                                
+                                # ✅ 支付成功后，发送"商品已售出"通知给卖家
+                                # 注意：下单时仅发送"商品已被下单"通知，此处才是真正的"已售出"
+                                try:
+                                    buyer_name = metadata.get("poster_name", "买家")
+                                    item_title = flea_item.title or metadata.get("task_title", "商品")
+                                    
+                                    crud.create_notification(
+                                        db=db,
+                                        user_id=flea_item.seller_id,
+                                        type="flea_market_sold",
+                                        title="商品已售出",
+                                        content=f"「{item_title}」已售出！买家已完成付款，可以开始交易了",
+                                        related_id=str(task_id),
+                                        auto_commit=False,
+                                    )
+                                    
+                                    # 发送推送通知给卖家
+                                    try:
+                                        from app.id_generator import format_flea_market_id
+                                        send_push_notification(
+                                            db=db,
+                                            user_id=flea_item.seller_id,
+                                            title=None,  # 从模板生成（根据用户语言偏好）
+                                            body=None,   # 从模板生成
+                                            notification_type="flea_market_sold",
+                                            data={
+                                                "item_id": format_flea_market_id(flea_item.id),
+                                                "task_id": task_id
+                                            },
+                                            template_vars={
+                                                "item_title": item_title
+                                            }
+                                        )
+                                    except Exception as push_err:
+                                        logger.warning(f"⚠️ [WEBHOOK] 发送商品售出推送通知失败: {push_err}")
+                                    
+                                    # 同时通知买家：支付成功
+                                    buyer_id = metadata.get("poster_id")
+                                    if buyer_id:
+                                        crud.create_notification(
+                                            db=db,
+                                            user_id=buyer_id,
+                                            type="flea_market_payment_success",
+                                            title="支付成功",
+                                            content=f"您已成功购买「{item_title}」，可以联系卖家进行交易",
+                                            related_id=str(task_id),
+                                            auto_commit=False,
+                                        )
+                                    
+                                    logger.info(f"✅ [WEBHOOK] 跳蚤市场商品售出通知已创建 (seller_id: {flea_item.seller_id}, task_id: {task_id})")
+                                except Exception as notify_err:
+                                    logger.warning(f"⚠️ [WEBHOOK] 创建商品售出通知失败: {notify_err}")
                             else:
                                 logger.warning(f"⚠️ [WEBHOOK] 跳蚤市场商品 {flea_market_item_id} 未找到或状态不匹配 (db_id: {db_item_id}, task_id: {task_id})")
                         except Exception as e:

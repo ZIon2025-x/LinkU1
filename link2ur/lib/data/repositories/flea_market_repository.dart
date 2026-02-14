@@ -168,7 +168,11 @@ class FleaMarketRepository {
       throw FleaMarketException(response.message ?? '购买失败');
     }
 
-    // 购买后失效我的购买/销售缓存
+    // 购买后失效缓存：
+    // 1. 主列表缓存（商品已被预留，不应再出现在公开列表中）
+    // 2. 我的购买/销售缓存
+    // 对标 iOS CacheManager.shared.invalidateFleaMarketCache()
+    await _cache.invalidateFleaMarketCache();
     await _cache.invalidateMyFleaMarketCache();
 
     return response.data!;

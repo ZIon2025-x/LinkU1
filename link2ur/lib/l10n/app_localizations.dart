@@ -13376,6 +13376,12 @@ abstract class AppLocalizations {
   /// **'Delisted'**
   String get fleaMarketDelisted;
 
+  /// No description provided for @fleaMarketItemReserved.
+  ///
+  /// In en, this message translates to:
+  /// **'Item Reserved'**
+  String get fleaMarketItemReserved;
+
   /// No description provided for @fleaMarketCategoryAll.
   ///
   /// In en, this message translates to:
