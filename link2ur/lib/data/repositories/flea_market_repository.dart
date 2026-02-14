@@ -439,10 +439,10 @@ class FleaMarketRepository {
     return response.data!;
   }
 
-  /// 上传图片
+  /// 上传图片（后端接口要求 multipart 字段名为 image）
   Future<String> uploadImage(Uint8List bytes, String filename) async {
     final formData = FormData.fromMap({
-      'file': MultipartFile.fromBytes(bytes, filename: filename),
+      'image': MultipartFile.fromBytes(bytes, filename: filename),
     });
 
     final response = await _apiService.post<Map<String, dynamic>>(
