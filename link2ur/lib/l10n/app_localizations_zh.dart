@@ -7779,6 +7779,48 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get actionInviteCodeUsed => '邀请码使用成功';
+
+  @override
+  String get profileRecentPosts => '近期帖子';
+
+  @override
+  String get profileNoRecentPosts => '暂无帖子';
+
+  @override
+  String get profileSoldItems => '已售物品';
+
+  @override
+  String get profileNoSoldItems => '暂无已售物品';
+
+  @override
+  String get profileDirectRequest => '发布任务请求';
+
+  @override
+  String get profileDirectRequestTitle => '发送任务请求';
+
+  @override
+  String get profileDirectRequestSuccess => '任务请求已发送';
+
+  @override
+  String get profileDirectRequestHintTitle => '任务标题';
+
+  @override
+  String get profileDirectRequestHintDescription => '任务描述（选填）';
+
+  @override
+  String get profileDirectRequestHintPrice => '价格';
+
+  @override
+  String get profileDirectRequestHintTaskType => '任务类型';
+
+  @override
+  String get profileDirectRequestSubmit => '发送请求';
+
+  @override
+  String get profileMySoldItems => '已售闲置';
+
+  @override
+  String get profileMySoldItemsSubtitle => '查看已售出的闲置物品';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -15556,4 +15598,46 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get actionInviteCodeUsed => '邀請碼使用成功';
+
+  @override
+  String get profileRecentPosts => '近期帖子';
+
+  @override
+  String get profileNoRecentPosts => '暫無帖子';
+
+  @override
+  String get profileSoldItems => '已售物品';
+
+  @override
+  String get profileNoSoldItems => '暫無已售物品';
+
+  @override
+  String get profileDirectRequest => '發佈任務請求';
+
+  @override
+  String get profileDirectRequestTitle => '發送任務請求';
+
+  @override
+  String get profileDirectRequestSuccess => '任務請求已發送';
+
+  @override
+  String get profileDirectRequestHintTitle => '任務標題';
+
+  @override
+  String get profileDirectRequestHintDescription => '任務描述（選填）';
+
+  @override
+  String get profileDirectRequestHintPrice => '價格';
+
+  @override
+  String get profileDirectRequestHintTaskType => '任務類型';
+
+  @override
+  String get profileDirectRequestSubmit => '發送請求';
+
+  @override
+  String get profileMySoldItems => '已售閒置';
+
+  @override
+  String get profileMySoldItemsSubtitle => '查看已售出的閒置物品';
 }

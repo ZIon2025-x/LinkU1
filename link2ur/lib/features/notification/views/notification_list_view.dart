@@ -307,6 +307,7 @@ class _NotificationCard extends StatelessWidget {
       return Icons.leaderboard;
     }
     // 任务类型
+    if (type == 'task_direct_request') return Icons.person_add;
     if (type.startsWith('task_')) return Icons.assignment;
     // 其他系统类型
     switch (type) {

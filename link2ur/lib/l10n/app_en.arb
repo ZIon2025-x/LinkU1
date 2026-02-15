@@ -3811,5 +3811,20 @@
 
   "actionCouponClaimed": "Coupon claimed",
   "actionCouponRedeemed": "Redeemed successfully",
-  "actionInviteCodeUsed": "Invite code applied"
+  "actionInviteCodeUsed": "Invite code applied",
+
+  "profileRecentPosts": "Recent Posts",
+  "profileNoRecentPosts": "No posts yet",
+  "profileSoldItems": "Sold Items",
+  "profileNoSoldItems": "No sold items yet",
+  "profileDirectRequest": "Request Service",
+  "profileDirectRequestTitle": "Send Task Request",
+  "profileDirectRequestSuccess": "Task request sent successfully",
+  "profileDirectRequestHintTitle": "Task title",
+  "profileDirectRequestHintDescription": "Task description (optional)",
+  "profileDirectRequestHintPrice": "Price",
+  "profileDirectRequestHintTaskType": "Task type",
+  "profileDirectRequestSubmit": "Send Request",
+  "profileMySoldItems": "My Sold Items",
+  "profileMySoldItemsSubtitle": "View your sold flea market items"
 }

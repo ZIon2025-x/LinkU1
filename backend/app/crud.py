@@ -642,9 +642,47 @@ def create_task(db: Session, user_id: str, task: schemas.TaskCreate):
         is_public=getattr(task, "is_public", 1),  # 默认为公开
         images=images_json,  # 存储为JSON字符串
     )
+    # 处理指定接单人
+    designated_taker_id = getattr(task, "designated_taker_id", None)
+    task_source = getattr(task, "task_source", "normal") or "normal"
+    if designated_taker_id:
+        db_task.taker_id = designated_taker_id
+        db_task.status = "pending_acceptance"
+        db_task.task_source = task_source if hasattr(db_task, 'task_source') else task_source
+
     db.add(db_task)
     db.commit()
     db.refresh(db_task)
+
+    # 如果是指定任务，创建自动申请记录并通知指定用户
+    if designated_taker_id:
+        try:
+            from app.models import TaskApplication
+            auto_application = TaskApplication(
+                task_id=db_task.id,
+                applicant_id=designated_taker_id,
+                status="pending",
+                message=f"来自用户资料页的任务请求",
+                negotiated_price=task.reward,
+                currency=getattr(task, "currency", "GBP") or "GBP",
+            )
+            db.add(auto_application)
+            db.commit()
+
+            # 通知指定用户
+            create_notification(
+                db,
+                user_id=designated_taker_id,
+                type="task_direct_request",
+                title="有用户向你发送了任务请求",
+                title_en="You received a task request",
+                content=f"「{task.title}」- £{task.reward}",
+                content_en=f'"{task.title}" - £{task.reward}',
+                related_id=str(db_task.id),
+                related_type="task_id",
+            )
+        except Exception as e:
+            logger.warning(f"创建指定任务申请/通知失败: {e}")
 
     # 自动更新发布者的任务统计
     update_user_statistics(db, user_id)
@@ -1002,12 +1040,16 @@ def accept_task(db: Session, task_id: int, taker_id: str):
             return None
 
         # 检查任务状态（在锁内检查，确保状态一致）
-        if task.status != "open":
+        # pending_acceptance: 指定任务请求，允许指定用户接受
+        if task.status == "pending_acceptance":
+            if task.taker_id != taker_id:
+                logger.warning(f"任务 {task_id} 指定给 {task.taker_id}，但 {taker_id} 尝试接受")
+                return None
+        elif task.status != "open":
             logger.warning(f"任务 {task_id} 状态为 {task.status}，不是 open")
             return None
-        
-        # 检查任务是否已被接受（双重检查）
-        if task.taker_id is not None:
+        elif task.taker_id is not None:
+            # 检查任务是否已被接受（双重检查，仅 open 状态）
             logger.warning(f"任务 {task_id} 已被用户 {task.taker_id} 接受")
             return None
         
@@ -1099,10 +1141,13 @@ def cancel_task(db: Session, task_id: int, user_id: str, is_admin_review: bool =
 
     # 检查权限
     if not is_admin_review:
-        # 普通用户只能取消自己发布的任务，且只能是open状态
-        if task.poster_id != user_id:
-            return None
-        if task.status != "open":
+        # 指定任务请求：被指定用户可以拒绝（取消）
+        if task.status == "pending_acceptance" and task.taker_id == user_id:
+            pass  # 允许指定用户拒绝
+        elif task.poster_id == user_id and task.status in ("open", "pending_acceptance"):
+            pass  # 发布者可以取消 open 或 pending_acceptance 状态的任务
+        else:
+            # 普通用户只能取消自己发布的open状态任务
             return None
     else:
         # 管理员审核通过后，可以取消任何状态的任务

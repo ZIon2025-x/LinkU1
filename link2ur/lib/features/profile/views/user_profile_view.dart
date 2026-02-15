@@ -13,7 +13,9 @@ import '../../../core/widgets/animated_circular_progress.dart';
 import '../../../core/widgets/animated_star_rating.dart';
 import '../../../core/utils/date_formatter.dart';
 import '../../../core/widgets/skill_radar_chart.dart';
-import '../../../data/models/user.dart' show User, UserProfileDetail, UserProfileReview;
+import '../../../core/constants/app_constants.dart';
+import '../../../data/models/user.dart' show User, UserProfileDetail, UserProfileReview, UserProfileForumPost, UserProfileFleaItem;
+import '../../../data/models/task.dart' show CreateTaskRequest;
 import '../../../data/repositories/user_repository.dart';
 import '../../../data/repositories/task_repository.dart';
 import '../../../data/repositories/forum_repository.dart';
@@ -74,6 +76,8 @@ class _UserProfileViewState extends State<UserProfileView> {
                                 children: [
                                   // 用户信息卡片
                                   _buildUserInfoCard(context, state.publicUser!),
+                                  // 指定任务请求按钮
+                                  _buildDirectRequestButton(context, state.publicUser!),
                                   // 统计数据
                                   _buildStatsRow(context, state.publicUser!),
                                   const SizedBox(height: AppSpacing.md),
@@ -81,6 +85,12 @@ class _UserProfileViewState extends State<UserProfileView> {
                                   _buildSkillRadar(context, state.publicUser!),
                                   // 近期任务
                                   _buildRecentTasksSection(context, state.publicProfileDetail),
+                                  // 近期论坛帖子
+                                  if (state.publicProfileDetail?.recentForumPosts.isNotEmpty == true)
+                                    _buildRecentForumPostsSection(context, state.publicProfileDetail!.recentForumPosts),
+                                  // 已售闲置物品
+                                  if (state.publicProfileDetail?.soldFleaItems.isNotEmpty == true)
+                                    _buildSoldFleaItemsSection(context, state.publicProfileDetail!.soldFleaItems),
                                   // 收到的评价
                                   if (state.publicProfileDetail?.reviews.isNotEmpty == true)
                                     _buildReviewsSection(context, state.publicProfileDetail!.reviews),
@@ -372,6 +382,369 @@ class _UserProfileViewState extends State<UserProfileView> {
                     onTap: () => context.goToTaskDetail(t.id),
                   ),
                 )),
+        ],
+      ),
+    );
+  }
+
+  /// 指定任务请求按钮
+  Widget _buildDirectRequestButton(BuildContext context, User user) {
+    final l10n = context.l10n;
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+      child: SizedBox(
+        width: double.infinity,
+        child: ElevatedButton.icon(
+          onPressed: () => _showDirectRequestSheet(context, user),
+          icon: const Icon(Icons.send, size: 18),
+          label: Text(l10n.profileDirectRequest),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: AppColors.primary,
+            foregroundColor: Colors.white,
+            padding: const EdgeInsets.symmetric(vertical: 12),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(AppRadius.medium),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showDirectRequestSheet(BuildContext context, User user) {
+    final l10n = context.l10n;
+    final titleController = TextEditingController();
+    final descriptionController = TextEditingController();
+    final priceController = TextEditingController();
+    String selectedTaskType = AppConstants.taskTypes.first;
+    bool isSubmitting = false;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (sheetContext) {
+        return StatefulBuilder(
+          builder: (ctx, setSheetState) {
+            return Padding(
+              padding: EdgeInsets.only(
+                left: AppSpacing.lg,
+                right: AppSpacing.lg,
+                top: AppSpacing.lg,
+                bottom: MediaQuery.of(ctx).viewInsets.bottom + AppSpacing.lg,
+              ),
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Title
+                    Center(
+                      child: Text(
+                        l10n.profileDirectRequestTitle,
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.lg),
+
+                    // Task title
+                    TextField(
+                      controller: titleController,
+                      decoration: InputDecoration(
+                        labelText: l10n.profileDirectRequestHintTitle,
+                        border: const OutlineInputBorder(),
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.md),
+
+                    // Description
+                    TextField(
+                      controller: descriptionController,
+                      maxLines: 3,
+                      decoration: InputDecoration(
+                        labelText: l10n.profileDirectRequestHintDescription,
+                        border: const OutlineInputBorder(),
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.md),
+
+                    // Price
+                    TextField(
+                      controller: priceController,
+                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                      decoration: InputDecoration(
+                        labelText: l10n.profileDirectRequestHintPrice,
+                        prefixText: '£ ',
+                        border: const OutlineInputBorder(),
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.md),
+
+                    // Task type dropdown
+                    DropdownButtonFormField<String>(
+                      initialValue: selectedTaskType,
+                      decoration: InputDecoration(
+                        labelText: l10n.profileDirectRequestHintTaskType,
+                        border: const OutlineInputBorder(),
+                      ),
+                      items: AppConstants.taskTypes
+                          .map((type) => DropdownMenuItem(
+                                value: type,
+                                child: Text(type),
+                              ))
+                          .toList(),
+                      onChanged: (value) {
+                        if (value != null) {
+                          setSheetState(() => selectedTaskType = value);
+                        }
+                      },
+                    ),
+                    const SizedBox(height: AppSpacing.lg),
+
+                    // Submit button
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: isSubmitting
+                            ? null
+                            : () async {
+                                final title = titleController.text.trim();
+                                final price = double.tryParse(priceController.text.trim());
+                                if (title.isEmpty || price == null || price < 1) return;
+
+                                setSheetState(() => isSubmitting = true);
+                                try {
+                                  final taskRepo = context.read<TaskRepository>();
+                                  await taskRepo.createTask(
+                                    CreateTaskRequest(
+                                      title: title,
+                                      description: descriptionController.text.trim().isNotEmpty
+                                          ? descriptionController.text.trim()
+                                          : null,
+                                      taskType: selectedTaskType,
+                                      location: user.residenceCity ?? 'Online',
+                                      reward: price,
+                                      currency: 'GBP',
+                                      isPublic: 0,
+                                      taskSource: 'user_profile',
+                                      designatedTakerId: user.id,
+                                    ),
+                                  );
+                                  if (ctx.mounted) {
+                                    Navigator.pop(ctx);
+                                  }
+                                  if (context.mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(content: Text(l10n.profileDirectRequestSuccess)),
+                                    );
+                                  }
+                                } catch (e) {
+                                  setSheetState(() => isSubmitting = false);
+                                  if (ctx.mounted) {
+                                    ScaffoldMessenger.of(ctx).showSnackBar(
+                                      SnackBar(content: Text(e.toString())),
+                                    );
+                                  }
+                                }
+                              },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.primary,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(AppRadius.medium),
+                          ),
+                        ),
+                        child: isSubmitting
+                            ? const SizedBox(
+                                height: 20,
+                                width: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Colors.white,
+                                ),
+                              )
+                            : Text(l10n.profileDirectRequestSubmit),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  /// 近期论坛帖子
+  Widget _buildRecentForumPostsSection(
+    BuildContext context,
+    List<UserProfileForumPost> posts,
+  ) {
+    final l10n = context.l10n;
+
+    return Padding(
+      padding: const EdgeInsets.all(AppSpacing.md),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.forum, color: AppColors.primary, size: 18),
+              const SizedBox(width: 8),
+              Text(l10n.profileRecentPosts,
+                  style: const TextStyle(
+                      fontSize: 16, fontWeight: FontWeight.w600)),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.md),
+          ...posts.take(5).map((p) => Padding(
+                padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+                child: ListTile(
+                  title: Text(p.title,
+                      maxLines: 1, overflow: TextOverflow.ellipsis),
+                  subtitle: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      if (p.contentPreview != null && p.contentPreview!.isNotEmpty)
+                        Text(
+                          p.contentPreview!,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: AppColors.textSecondary,
+                          ),
+                        ),
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          const Icon(Icons.thumb_up_outlined, size: 12, color: AppColors.textTertiary),
+                          const SizedBox(width: 4),
+                          Text('${p.likeCount}', style: const TextStyle(fontSize: 11, color: AppColors.textTertiary)),
+                          const SizedBox(width: 12),
+                          const Icon(Icons.comment_outlined, size: 12, color: AppColors.textTertiary),
+                          const SizedBox(width: 4),
+                          Text('${p.replyCount}', style: const TextStyle(fontSize: 11, color: AppColors.textTertiary)),
+                        ],
+                      ),
+                    ],
+                  ),
+                  trailing: const Icon(Icons.chevron_right),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(AppRadius.medium),
+                  ),
+                  onTap: () => context.goToForumPostDetail(p.id),
+                ),
+              )),
+        ],
+      ),
+    );
+  }
+
+  /// 已售闲置物品
+  Widget _buildSoldFleaItemsSection(
+    BuildContext context,
+    List<UserProfileFleaItem> items,
+  ) {
+    final l10n = context.l10n;
+
+    return Padding(
+      padding: const EdgeInsets.all(AppSpacing.md),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.storefront, color: AppColors.primary, size: 18),
+              const SizedBox(width: 8),
+              Text(l10n.profileSoldItems,
+                  style: const TextStyle(
+                      fontSize: 16, fontWeight: FontWeight.w600)),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.md),
+          SizedBox(
+            height: 140,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              itemCount: items.length,
+              separatorBuilder: (_, __) => const SizedBox(width: AppSpacing.sm),
+              itemBuilder: (context, index) {
+                final item = items[index];
+                return GestureDetector(
+                  onTap: () => context.goToFleaMarketDetail('${item.id}'),
+                  child: Container(
+                    width: 120,
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).cardColor,
+                      borderRadius: BorderRadius.circular(AppRadius.medium),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.05),
+                          blurRadius: 6,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Thumbnail
+                        ClipRRect(
+                          borderRadius: const BorderRadius.vertical(
+                            top: Radius.circular(AppRadius.medium),
+                          ),
+                          child: item.images.isNotEmpty
+                              ? AsyncImageView(
+                                  imageUrl: item.images.first,
+                                  width: 120,
+                                  height: 80,
+                                  fit: BoxFit.cover,
+                                )
+                              : Container(
+                                  width: 120,
+                                  height: 80,
+                                  color: Colors.grey.shade200,
+                                  child: const Icon(Icons.image, color: AppColors.textTertiary),
+                                ),
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.all(6),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                item.title,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                '£${item.price.toStringAsFixed(2)}',
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppColors.primary,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
         ],
       ),
     );

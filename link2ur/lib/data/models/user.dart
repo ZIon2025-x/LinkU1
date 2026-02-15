@@ -251,12 +251,16 @@ class UserProfileDetail {
     required this.stats,
     this.recentTasks = const [],
     this.reviews = const [],
+    this.recentForumPosts = const [],
+    this.soldFleaItems = const [],
   });
 
   final User user;
   final UserProfileStats stats;
   final List<UserProfileTask> recentTasks;
   final List<UserProfileReview> reviews;
+  final List<UserProfileForumPost> recentForumPosts;
+  final List<UserProfileFleaItem> soldFleaItems;
 
   factory UserProfileDetail.fromJson(Map<String, dynamic> json) {
     final userJson = json['user'] as Map<String, dynamic>?;
@@ -269,6 +273,10 @@ class UserProfileDetail {
     final recentTasksRaw =
         json['recent_tasks'] as List<dynamic>? ?? [];
     final reviewsRaw = json['reviews'] as List<dynamic>? ?? [];
+    final forumPostsRaw =
+        json['recent_forum_posts'] as List<dynamic>? ?? [];
+    final fleaItemsRaw =
+        json['sold_flea_items'] as List<dynamic>? ?? [];
 
     return UserProfileDetail(
       user: User.fromJson(userJson),
@@ -282,6 +290,16 @@ class UserProfileDetail {
           .toList(),
       reviews: reviewsRaw
           .map((e) => UserProfileReview.fromJson(
+                Map<String, dynamic>.from(e as Map),
+              ))
+          .toList(),
+      recentForumPosts: forumPostsRaw
+          .map((e) => UserProfileForumPost.fromJson(
+                Map<String, dynamic>.from(e as Map),
+              ))
+          .toList(),
+      soldFleaItems: fleaItemsRaw
+          .map((e) => UserProfileFleaItem.fromJson(
                 Map<String, dynamic>.from(e as Map),
               ))
           .toList(),
@@ -379,6 +397,81 @@ class UserProfileReview {
       isAnonymous: json['is_anonymous'] as bool? ?? false,
       reviewerName: json['reviewer_name'] as String?,
       reviewerAvatar: json['reviewer_avatar'] as String?,
+    );
+  }
+}
+
+/// 用户近期论坛帖子（用于个人主页展示）
+class UserProfileForumPost {
+  const UserProfileForumPost({
+    required this.id,
+    required this.title,
+    this.contentPreview,
+    this.images = const [],
+    this.likeCount = 0,
+    this.replyCount = 0,
+    this.viewCount = 0,
+    this.createdAt,
+  });
+
+  final int id;
+  final String title;
+  final String? contentPreview;
+  final List<String> images;
+  final int likeCount;
+  final int replyCount;
+  final int viewCount;
+  final String? createdAt;
+
+  factory UserProfileForumPost.fromJson(Map<String, dynamic> json) {
+    return UserProfileForumPost(
+      id: json['id'] as int,
+      title: json['title'] as String? ?? '',
+      contentPreview: json['content_preview'] as String?,
+      images: (json['images'] as List<dynamic>?)
+              ?.map((e) => e.toString())
+              .toList() ??
+          [],
+      likeCount: json['like_count'] as int? ?? 0,
+      replyCount: json['reply_count'] as int? ?? 0,
+      viewCount: json['view_count'] as int? ?? 0,
+      createdAt: json['created_at']?.toString(),
+    );
+  }
+}
+
+/// 用户已售闲置物品（用于个人主页展示）
+class UserProfileFleaItem {
+  const UserProfileFleaItem({
+    required this.id,
+    required this.title,
+    required this.price,
+    this.images = const [],
+    this.status = 'sold',
+    this.viewCount = 0,
+    this.createdAt,
+  });
+
+  final int id;
+  final String title;
+  final double price;
+  final List<String> images;
+  final String status;
+  final int viewCount;
+  final String? createdAt;
+
+  factory UserProfileFleaItem.fromJson(Map<String, dynamic> json) {
+    return UserProfileFleaItem(
+      id: json['id'] as int? ?? 0,
+      title: json['title'] as String? ?? '',
+      price: (json['price'] as num?)?.toDouble() ?? 0,
+      images: (json['images'] as List<dynamic>?)
+              ?.map((e) => e.toString())
+              .toList() ??
+          [],
+      status: json['status'] as String? ?? 'sold',
+      viewCount: json['view_count'] as int? ?? 0,
+      createdAt: json['created_at']?.toString(),
     );
   }
 }

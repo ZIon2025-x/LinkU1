@@ -14875,6 +14875,90 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Invite code applied'**
   String get actionInviteCodeUsed;
+
+  /// No description provided for @profileRecentPosts.
+  ///
+  /// In en, this message translates to:
+  /// **'Recent Posts'**
+  String get profileRecentPosts;
+
+  /// No description provided for @profileNoRecentPosts.
+  ///
+  /// In en, this message translates to:
+  /// **'No posts yet'**
+  String get profileNoRecentPosts;
+
+  /// No description provided for @profileSoldItems.
+  ///
+  /// In en, this message translates to:
+  /// **'Sold Items'**
+  String get profileSoldItems;
+
+  /// No description provided for @profileNoSoldItems.
+  ///
+  /// In en, this message translates to:
+  /// **'No sold items yet'**
+  String get profileNoSoldItems;
+
+  /// No description provided for @profileDirectRequest.
+  ///
+  /// In en, this message translates to:
+  /// **'Request Service'**
+  String get profileDirectRequest;
+
+  /// No description provided for @profileDirectRequestTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Send Task Request'**
+  String get profileDirectRequestTitle;
+
+  /// No description provided for @profileDirectRequestSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Task request sent successfully'**
+  String get profileDirectRequestSuccess;
+
+  /// No description provided for @profileDirectRequestHintTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Task title'**
+  String get profileDirectRequestHintTitle;
+
+  /// No description provided for @profileDirectRequestHintDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Task description (optional)'**
+  String get profileDirectRequestHintDescription;
+
+  /// No description provided for @profileDirectRequestHintPrice.
+  ///
+  /// In en, this message translates to:
+  /// **'Price'**
+  String get profileDirectRequestHintPrice;
+
+  /// No description provided for @profileDirectRequestHintTaskType.
+  ///
+  /// In en, this message translates to:
+  /// **'Task type'**
+  String get profileDirectRequestHintTaskType;
+
+  /// No description provided for @profileDirectRequestSubmit.
+  ///
+  /// In en, this message translates to:
+  /// **'Send Request'**
+  String get profileDirectRequestSubmit;
+
+  /// No description provided for @profileMySoldItems.
+  ///
+  /// In en, this message translates to:
+  /// **'My Sold Items'**
+  String get profileMySoldItems;
+
+  /// No description provided for @profileMySoldItemsSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'View your sold flea market items'**
+  String get profileMySoldItemsSubtitle;
 }
 
 class _AppLocalizationsDelegate

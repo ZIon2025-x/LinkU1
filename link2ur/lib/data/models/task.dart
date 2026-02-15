@@ -542,6 +542,9 @@ class CreateTaskRequest {
     this.deadline,
     this.isMultiParticipant = false,
     this.maxParticipants = 1,
+    this.isPublic = 1,
+    this.taskSource = 'normal',
+    this.designatedTakerId,
   });
 
   final String title;
@@ -556,6 +559,9 @@ class CreateTaskRequest {
   final DateTime? deadline;
   final bool isMultiParticipant;
   final int maxParticipants;
+  final int isPublic;
+  final String taskSource;
+  final String? designatedTakerId;
 
   Map<String, dynamic> toJson() {
     return {
@@ -571,6 +577,9 @@ class CreateTaskRequest {
       if (deadline != null) 'deadline': deadline!.toIso8601String(),
       'is_multi_participant': isMultiParticipant,
       'max_participants': maxParticipants,
+      'is_public': isPublic,
+      'task_source': taskSource,
+      if (designatedTakerId != null) 'designated_taker_id': designatedTakerId,
     };
   }
 }

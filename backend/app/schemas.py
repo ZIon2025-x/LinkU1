@@ -354,6 +354,8 @@ class TaskBase(BaseModel):
 class TaskCreate(TaskBase):
     is_public: Optional[int] = 1  # 1=public, 0=private (仅自己可见)
     images: Optional[List[str]] = None  # 图片URL列表
+    task_source: Optional[str] = "normal"  # normal / user_profile
+    designated_taker_id: Optional[str] = None  # 指定接单人ID（来自用户资料页请求）
     
     @validator('reward')
     def validate_reward_minimum(cls, v):

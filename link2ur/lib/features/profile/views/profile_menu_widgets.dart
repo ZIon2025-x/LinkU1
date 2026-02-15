@@ -62,6 +62,14 @@ Widget _buildMyContentSection(BuildContext context, bool isDark) {
               ),
               _profileDivider(isDark),
               _ProfileRow(
+                icon: Icons.storefront,            // sold items
+                title: context.l10n.profileMySoldItems,
+                subtitle: context.l10n.profileMySoldItemsSubtitle,
+                color: Colors.teal,
+                onTap: () => context.push('/flea-market'),
+              ),
+              _profileDivider(isDark),
+              _ProfileRow(
                 icon: Icons.credit_card,           // creditcard.fill
                 title: context.l10n.profileMyWallet,
                 subtitle: context.l10n.profileMyWalletSubtitle,

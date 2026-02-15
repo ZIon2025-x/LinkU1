@@ -8091,4 +8091,47 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get actionInviteCodeUsed => 'Invite code applied';
+
+  @override
+  String get profileRecentPosts => 'Recent Posts';
+
+  @override
+  String get profileNoRecentPosts => 'No posts yet';
+
+  @override
+  String get profileSoldItems => 'Sold Items';
+
+  @override
+  String get profileNoSoldItems => 'No sold items yet';
+
+  @override
+  String get profileDirectRequest => 'Request Service';
+
+  @override
+  String get profileDirectRequestTitle => 'Send Task Request';
+
+  @override
+  String get profileDirectRequestSuccess => 'Task request sent successfully';
+
+  @override
+  String get profileDirectRequestHintTitle => 'Task title';
+
+  @override
+  String get profileDirectRequestHintDescription =>
+      'Task description (optional)';
+
+  @override
+  String get profileDirectRequestHintPrice => 'Price';
+
+  @override
+  String get profileDirectRequestHintTaskType => 'Task type';
+
+  @override
+  String get profileDirectRequestSubmit => 'Send Request';
+
+  @override
+  String get profileMySoldItems => 'My Sold Items';
+
+  @override
+  String get profileMySoldItemsSubtitle => 'View your sold flea market items';
 }

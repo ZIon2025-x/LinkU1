@@ -5,7 +5,10 @@
       "Bash($env:PUB_CACHE = \"F:\\\\DevCache\\\\.pub-cache\")",
       "Bash(flutter analyze:*)",
       "Bash(grep:*)",
-      "Bash(powershell:*)"
+      "Bash(powershell:*)",
+      "Bash(flutter gen-l10n:*)",
+      "Bash(export PATH=\"F:/flutter/bin:$PATH\")",
+      "Bash(export:*)"
     ]
   }
 }

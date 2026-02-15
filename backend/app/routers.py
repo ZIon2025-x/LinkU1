@@ -4812,6 +4812,33 @@ def user_profile(
         "is_student_verified": is_student_verified,
     }
     
+    # 获取用户近期论坛帖子（已发布的，最多5条）
+    from app.models import ForumPost
+    recent_forum_posts = (
+        db.query(ForumPost)
+        .filter(
+            ForumPost.author_id == user_id,
+            ForumPost.is_deleted == False,
+            ForumPost.is_visible == True,
+        )
+        .order_by(ForumPost.created_at.desc())
+        .limit(5)
+        .all()
+    )
+
+    # 获取用户已售闲置物品（最多5条）
+    from app.models import FleaMarketItem
+    sold_flea_items = (
+        db.query(FleaMarketItem)
+        .filter(
+            FleaMarketItem.seller_id == user_id,
+            FleaMarketItem.status == "sold",
+        )
+        .order_by(FleaMarketItem.updated_at.desc())
+        .limit(5)
+        .all()
+    )
+
     return {
         "user": user_data,
         "stats": {
@@ -4849,6 +4876,33 @@ def user_profile(
                 "reviewer_avatar": "" if r.is_anonymous else (user.avatar or ""),
             }
             for r, user in reviews
+        ],
+        "recent_forum_posts": [
+            {
+                "id": p.id,
+                "title": p.title,
+                "title_en": p.title_en,
+                "title_zh": p.title_zh,
+                "content_preview": (p.content[:100] + "...") if p.content and len(p.content) > 100 else p.content,
+                "images": p.images if isinstance(p.images, list) else [],
+                "like_count": p.like_count or 0,
+                "reply_count": p.reply_count or 0,
+                "view_count": p.view_count or 0,
+                "created_at": p.created_at,
+            }
+            for p in recent_forum_posts
+        ],
+        "sold_flea_items": [
+            {
+                "id": item.id,
+                "title": item.title,
+                "price": float(item.price) if item.price is not None else 0.0,
+                "images": json.loads(item.images) if item.images and isinstance(item.images, str) else (item.images if isinstance(item.images, list) else []),
+                "status": item.status,
+                "view_count": item.view_count or 0,
+                "created_at": item.created_at,
+            }
+            for item in sold_flea_items
         ],
     }
 

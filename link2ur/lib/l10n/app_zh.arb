@@ -3739,5 +3739,20 @@
 
   "actionCouponClaimed": "领取成功",
   "actionCouponRedeemed": "兑换成功",
-  "actionInviteCodeUsed": "邀请码使用成功"
+  "actionInviteCodeUsed": "邀请码使用成功",
+
+  "profileRecentPosts": "近期帖子",
+  "profileNoRecentPosts": "暂无帖子",
+  "profileSoldItems": "已售物品",
+  "profileNoSoldItems": "暂无已售物品",
+  "profileDirectRequest": "发布任务请求",
+  "profileDirectRequestTitle": "发送任务请求",
+  "profileDirectRequestSuccess": "任务请求已发送",
+  "profileDirectRequestHintTitle": "任务标题",
+  "profileDirectRequestHintDescription": "任务描述（选填）",
+  "profileDirectRequestHintPrice": "价格",
+  "profileDirectRequestHintTaskType": "任务类型",
+  "profileDirectRequestSubmit": "发送请求",
+  "profileMySoldItems": "已售闲置",
+  "profileMySoldItemsSubtitle": "查看已售出的闲置物品"
 }

@@ -3678,5 +3678,20 @@
 
   "actionCouponClaimed": "領取成功",
   "actionCouponRedeemed": "兌換成功",
-  "actionInviteCodeUsed": "邀請碼使用成功"
+  "actionInviteCodeUsed": "邀請碼使用成功",
+
+  "profileRecentPosts": "近期帖子",
+  "profileNoRecentPosts": "暫無帖子",
+  "profileSoldItems": "已售物品",
+  "profileNoSoldItems": "暫無已售物品",
+  "profileDirectRequest": "發佈任務請求",
+  "profileDirectRequestTitle": "發送任務請求",
+  "profileDirectRequestSuccess": "任務請求已發送",
+  "profileDirectRequestHintTitle": "任務標題",
+  "profileDirectRequestHintDescription": "任務描述（選填）",
+  "profileDirectRequestHintPrice": "價格",
+  "profileDirectRequestHintTaskType": "任務類型",
+  "profileDirectRequestSubmit": "發送請求",
+  "profileMySoldItems": "已售閒置",
+  "profileMySoldItemsSubtitle": "查看已售出的閒置物品"
 }
