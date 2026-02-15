@@ -1,4 +1,4 @@
-import 'dart:async';
+import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -62,7 +62,6 @@ class _EditFleaMarketItemViewContentState
   String _selectedCategory = '';
   List<String> _existingImageUrls = [];
   final List<XFile> _newImages = [];
-  final List<String> _uploadedUrls = [];
 
   /// 与创建页一致：使用本地化 (key, label)，保证与接口存的值（如「其他」）一致
   List<(String, String)> _getCategories(BuildContext context) => [
@@ -165,54 +164,23 @@ class _EditFleaMarketItemViewContentState
     }
 
     final bloc = context.read<FleaMarketBloc>();
-
-    // Upload new images first（编辑时传 itemId 使图片直接存商品目录）
-    // 必须在 add 之前订阅 stream，否则快速完成时可能错过状态导致 firstWhere 抛 No element
-    _uploadedUrls.clear();
+    final newImagesToUpload = <(Uint8List, String)>[];
     for (final image in _newImages) {
       final bytes = await image.readAsBytes();
       final name = image.name.trim().isNotEmpty ? image.name : 'image.jpg';
-      final stateFuture = bloc.stream
-          .where((s) => !s.isUploadingImage)
-          .first
-          .timeout(const Duration(seconds: 60));
-      bloc.add(FleaMarketUploadImage(
-        imageBytes: bytes,
-        filename: name,
-        itemId: widget.itemId,
-      ));
-      FleaMarketState state;
-      try {
-        state = await stateFuture;
-      } on TimeoutException {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(context.l10n.fleaMarketUploadTimeout),
-              backgroundColor: AppColors.error,
-            ),
-          );
-        }
-        return;
-      }
-      if (!mounted) return;
-      if (state.uploadedImageUrl != null) {
-        _uploadedUrls.add(state.uploadedImageUrl!);
-      } else if (state.errorMessage != null) {
-        return;
-      }
+      newImagesToUpload.add((bytes, name));
     }
+    if (!mounted) return;
 
-    final allImages = [..._existingImageUrls, ..._uploadedUrls];
-
-    // Update item
-    bloc.add(FleaMarketUpdateItem(
+    // 使用 bloc 内串行「上传 + 更新」，避免 stream 竞态导致 PUT 未发送
+    bloc.add(FleaMarketUploadImagesAndUpdateItem(
       itemId: widget.itemId,
       title: _titleController.text,
       description: _descriptionController.text,
       price: double.tryParse(_priceController.text) ?? 0,
       category: _selectedCategory,
-      images: allImages,
+      existingImageUrls: _existingImageUrls,
+      newImagesToUpload: newImagesToUpload,
     ));
   }
 

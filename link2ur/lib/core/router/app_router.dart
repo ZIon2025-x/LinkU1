@@ -206,9 +206,14 @@ const _authRequiredRoutes = <String>{
 
 /// 应用路由配置
 class AppRouter {
-  AppRouter({required AuthBloc authBloc}) : _authBloc = authBloc;
+  AppRouter({
+    required AuthBloc authBloc,
+    GlobalKey<NavigatorState>? navigatorKey,
+  })  : _authBloc = authBloc,
+        _navigatorKey = navigatorKey;
 
   final AuthBloc _authBloc;
+  final GlobalKey<NavigatorState>? _navigatorKey;
 
   /// 检查路径是否需要认证（支持参数化路径匹配）
   static bool _requiresAuth(String location) {
@@ -224,6 +229,7 @@ class AppRouter {
   }
 
   late final GoRouter router = GoRouter(
+    navigatorKey: _navigatorKey,
     initialLocation: AppRoutes.main,
     debugLogDiagnostics: false,
     // 监听 AuthBloc 状态变化，自动触发路由重定向（如 Token 失效时跳转登录页）

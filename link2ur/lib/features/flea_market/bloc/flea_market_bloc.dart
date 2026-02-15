@@ -166,6 +166,33 @@ class FleaMarketUploadImage extends FleaMarketEvent {
   List<Object?> get props => [imageBytes.length, filename, itemId];
 }
 
+/// 编辑页专用：先上传新图片，再调用 PUT 更新商品（含 images 字段）
+/// 在 bloc 内串行执行，避免 stream 竞态导致 PUT 未发送或漏写 DB
+class FleaMarketUploadImagesAndUpdateItem extends FleaMarketEvent {
+  const FleaMarketUploadImagesAndUpdateItem({
+    required this.itemId,
+    required this.title,
+    required this.description,
+    required this.price,
+    required this.category,
+    required this.existingImageUrls,
+    required this.newImagesToUpload,
+  });
+
+  final String itemId;
+  final String title;
+  final String description;
+  final double price;
+  final String category;
+  final List<String> existingImageUrls;
+  /// (bytes, filename) 列表
+  final List<(Uint8List, String)> newImagesToUpload;
+
+  @override
+  List<Object?> get props =>
+      [itemId, title, description, price, category, existingImageUrls];
+}
+
 // ==================== State ====================
 
 enum FleaMarketStatus { initial, loading, loaded, error }
@@ -316,6 +343,7 @@ class FleaMarketBloc extends Bloc<FleaMarketEvent, FleaMarketState> {
     on<FleaMarketPurchaseItem>(_onPurchaseItem);
     on<FleaMarketSubmitPurchaseOrRequest>(_onSubmitPurchaseOrRequest);
     on<FleaMarketUpdateItem>(_onUpdateItem);
+    on<FleaMarketUploadImagesAndUpdateItem>(_onUploadImagesAndUpdateItem);
     on<FleaMarketLoadDetailRequested>(_onLoadDetailRequested);
     on<FleaMarketRefreshItem>(_onRefreshItem);
     on<FleaMarketLoadPurchaseRequests>(_onLoadPurchaseRequests);
@@ -673,6 +701,63 @@ class FleaMarketBloc extends Bloc<FleaMarketEvent, FleaMarketState> {
       AppLogger.error('Failed to update flea market item', e);
       emit(state.copyWith(
         isSubmitting: false,
+        actionMessage: 'update_failed',
+        errorMessage: e.toString(),
+      ));
+    }
+  }
+
+  /// 编辑页专用：串行上传 + 更新，确保 PUT 一定发送且 images 写入 DB
+  Future<void> _onUploadImagesAndUpdateItem(
+    FleaMarketUploadImagesAndUpdateItem event,
+    Emitter<FleaMarketState> emit,
+  ) async {
+    emit(state.copyWith(
+      isSubmitting: true,
+      isUploadingImage: event.newImagesToUpload.isNotEmpty,
+      actionMessage: null,
+      errorMessage: null,
+    ));
+
+    try {
+      final uploadedUrls = <String>[];
+      for (final (bytes, filename) in event.newImagesToUpload) {
+        final url = await _fleaMarketRepository.uploadImage(
+          bytes,
+          filename,
+          itemId: event.itemId,
+        );
+        uploadedUrls.add(url);
+      }
+
+      final allImages = [...event.existingImageUrls, ...uploadedUrls];
+
+      final updatedItem = await _fleaMarketRepository.updateItem(
+        event.itemId,
+        title: event.title,
+        description: event.description,
+        price: event.price,
+        category: event.category,
+        images: allImages,
+      );
+
+      final updatedItems = state.items.map((item) {
+        return item.id == event.itemId ? updatedItem : item;
+      }).toList();
+
+      emit(state.copyWith(
+        isSubmitting: false,
+        isUploadingImage: false,
+        items: updatedItems,
+        selectedItem:
+            state.selectedItem?.id == updatedItem.id ? updatedItem : null,
+        actionMessage: 'item_updated',
+      ));
+    } catch (e) {
+      AppLogger.error('Failed to upload images and update flea market item', e);
+      emit(state.copyWith(
+        isSubmitting: false,
+        isUploadingImage: false,
         actionMessage: 'update_failed',
         errorMessage: e.toString(),
       ));

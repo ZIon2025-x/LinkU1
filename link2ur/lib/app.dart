@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -28,6 +30,7 @@ import 'data/repositories/student_verification_repository.dart';
 import 'data/repositories/common_repository.dart';
 import 'data/repositories/discovery_repository.dart';
 import 'data/services/api_service.dart';
+import 'data/services/push_notification_service.dart';
 import 'l10n/app_localizations.dart';
 
 class Link2UrApp extends StatefulWidget {
@@ -56,6 +59,7 @@ class _Link2UrAppState extends State<Link2UrApp> {
   late final DiscoveryRepository _discoveryRepository;
   late final AuthBloc _authBloc;
   late final AppRouter _appRouter;
+  final GlobalKey<NavigatorState> _rootNavigatorKey = GlobalKey<NavigatorState>();
 
   @override
   void initState() {
@@ -86,7 +90,19 @@ class _Link2UrAppState extends State<Link2UrApp> {
     };
 
     // 创建路由，传入 AuthBloc 的 refreshListenable 以监听认证状态变化
-    _appRouter = AppRouter(authBloc: _authBloc);
+    _appRouter = AppRouter(
+      authBloc: _authBloc,
+      navigatorKey: _rootNavigatorKey,
+    );
+    // 初始化深度链接处理（含 Stripe 支付回调 link2ur://stripe-redirect）
+    unawaited(
+      DeepLinkHandler.instance.initialize(navigatorKey: _rootNavigatorKey),
+    );
+
+    // 推送通知：设置 Router/ApiService 并初始化（Token 上传、点击通知导航）
+    PushNotificationService.instance.setRouter(_appRouter.router);
+    PushNotificationService.instance.setApiService(_apiService);
+    unawaited(PushNotificationService.instance.init());
   }
 
   @override
