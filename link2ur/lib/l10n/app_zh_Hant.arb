@@ -2103,6 +2103,7 @@
   "paymentMixed": "混合",
   "paymentSelectMethod": "選擇支付方式",
   "paymentPayWithApplePay": "使用 Apple Pay 支付",
+  "paymentPayWithGooglePay": "使用 Google Pay 支付",
   "paymentPayWithWechatPay": "使用微信支付",
   "paymentPayWithAlipay": "使用支付寶支付",
   "paymentNoPayoutRecords": "無提現記錄",

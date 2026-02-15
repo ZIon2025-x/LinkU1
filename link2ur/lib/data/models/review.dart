@@ -17,7 +17,7 @@ class Review extends Equatable {
   final int taskId;
   final int reviewerId;
   final UserBrief? reviewer;
-  final int rating;
+  final double rating;
   final String? comment;
   final DateTime? createdAt;
 
@@ -29,7 +29,7 @@ class Review extends Equatable {
       reviewer: json['reviewer'] != null
           ? UserBrief.fromJson(json['reviewer'] as Map<String, dynamic>)
           : null,
-      rating: json['rating'] as int? ?? 0,
+      rating: (json['rating'] as num?)?.toDouble() ?? 0.0,
       comment: json['comment'] as String?,
       createdAt: json['created_at'] != null
           ? DateTime.parse(json['created_at'])
@@ -49,7 +49,8 @@ class CreateReviewRequest {
     this.isAnonymous = false,
   });
 
-  final int rating;
+  /// 评分 0.5–5.0，支持 0.5 间隔，与后端 ReviewCreate 一致
+  final double rating;
   final String? comment;
   final bool isAnonymous;
 

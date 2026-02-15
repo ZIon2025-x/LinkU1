@@ -225,6 +225,7 @@ class _WebSplashTimeoutState extends State<_WebSplashTimeout> {
 }
 
 /// 延迟加载非关键 BLoC 数据，避免阻塞首帧渲染
+/// 对齐 iOS：60 秒轮询未读数 + 应用恢复前台时刷新（不依赖后端 WebSocket 推送）
 class _DeferredBlocLoader extends StatefulWidget {
   const _DeferredBlocLoader({required this.child});
   final Widget child;
@@ -233,26 +234,61 @@ class _DeferredBlocLoader extends StatefulWidget {
   State<_DeferredBlocLoader> createState() => _DeferredBlocLoaderState();
 }
 
-class _DeferredBlocLoaderState extends State<_DeferredBlocLoader> {
+class _DeferredBlocLoaderState extends State<_DeferredBlocLoader>
+    with WidgetsBindingObserver {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     // 延迟到首帧渲染完成后再触发非关键数据加载
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       context.read<SettingsBloc>().add(const SettingsLoadRequested());
-      // 仅已登录用户才请求通知计数（避免未登录时产生 401 错误）
       final authState = context.read<AuthBloc>().state;
       if (authState.isAuthenticated) {
         context.read<NotificationBloc>().add(
           const NotificationLoadUnreadNotificationCount(),
         );
+        context.read<NotificationBloc>().add(const NotificationStartPolling());
       }
     });
   }
 
   @override
-  Widget build(BuildContext context) => widget.child;
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed && mounted) {
+      final authState = context.read<AuthBloc>().state;
+      if (authState.isAuthenticated) {
+        context.read<NotificationBloc>().add(
+          const NotificationLoadUnreadNotificationCount(),
+        );
+        context.read<NotificationBloc>().add(
+          const NotificationRefreshListIfLoaded(),
+        );
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocListener<AuthBloc, AuthState>(
+      listenWhen: (prev, curr) => prev.isAuthenticated != curr.isAuthenticated,
+      listener: (context, state) {
+        if (state.isAuthenticated) {
+          context.read<NotificationBloc>().add(const NotificationStartPolling());
+        } else {
+          context.read<NotificationBloc>().add(const NotificationStopPolling());
+        }
+      },
+      child: widget.child,
+    );
+  }
 }
 
 Locale _localeFromString(String s) {

@@ -43,6 +43,12 @@ class _MyPostsViewState extends State<MyPostsView>
   List<FleaMarketItem> _favoriteItems = [];
   List<FleaMarketItem> _soldItems = [];
 
+  // 收的闲置分页
+  int _purchasedPage = 1;
+  bool _purchasedHasMore = false;
+  bool _isLoadingPurchasedMore = false;
+  final ScrollController _purchasedScrollController = ScrollController();
+
   // 各分类加载状态
   bool _isLoadingSelling = true;
   bool _isLoadingPurchased = true;
@@ -62,15 +68,26 @@ class _MyPostsViewState extends State<MyPostsView>
         AppHaptics.tabSwitch();
       }
     });
+    _purchasedScrollController.addListener(_onPurchasedScroll);
     // 延迟加载，确保context可用
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _loadAllCategories();
     });
   }
 
+  void _onPurchasedScroll() {
+    if (_isLoadingPurchasedMore || !_purchasedHasMore) return;
+    final pos = _purchasedScrollController.position;
+    if (pos.pixels >= pos.maxScrollExtent - 200) {
+      _loadPurchasedMore();
+    }
+  }
+
   @override
   void dispose() {
     _tabController.dispose();
+    _purchasedScrollController.removeListener(_onPurchasedScroll);
+    _purchasedScrollController.dispose();
     super.dispose();
   }
 
@@ -78,10 +95,10 @@ class _MyPostsViewState extends State<MyPostsView>
     if (!mounted) return;
     final repo = context.read<FleaMarketRepository>();
 
-    // 并行加载所有分类
+    // 并行加载所有分类（forceRefresh 时收的闲置会刷新缓存）
     await Future.wait([
       _loadSellingItems(repo),
-      _loadPurchasedItems(repo),
+      _loadPurchasedItems(repo, page: 1, forceRefresh: forceRefresh),
       _loadFavoriteItems(repo),
       _loadSoldItems(repo),
     ]);
@@ -108,16 +125,37 @@ class _MyPostsViewState extends State<MyPostsView>
     }
   }
 
-  Future<void> _loadPurchasedItems(FleaMarketRepository repo) async {
-    setState(() => _isLoadingPurchased = true);
+  Future<void> _loadPurchasedItems(
+    FleaMarketRepository repo, {
+    int page = 1,
+    bool forceRefresh = false,
+  }) async {
+    if (page == 1) {
+      setState(() => _isLoadingPurchased = true);
+    } else {
+      setState(() => _isLoadingPurchasedMore = true);
+    }
     try {
-      final rawItems = await repo.getMyPurchases(page: 1, pageSize: 20);
+      final response = await repo.getMyPurchases(
+        page: page,
+        pageSize: 100,
+        forceRefresh: forceRefresh,
+      );
       if (mounted) {
         setState(() {
-          _purchasedItems = rawItems
+          final items = response.items
               .map((e) => FleaMarketItem.fromJson(e))
               .toList();
+          if (page == 1) {
+            _purchasedItems = items;
+            _purchasedPage = 1;
+          } else {
+            _purchasedItems = [..._purchasedItems, ...items];
+            _purchasedPage = page;
+          }
+          _purchasedHasMore = response.hasMore;
           _isLoadingPurchased = false;
+          _isLoadingPurchasedMore = false;
           _categoryErrors[_MyItemsCategory.purchased] = null;
         });
       }
@@ -125,10 +163,17 @@ class _MyPostsViewState extends State<MyPostsView>
       if (mounted) {
         setState(() {
           _isLoadingPurchased = false;
+          _isLoadingPurchasedMore = false;
           _categoryErrors[_MyItemsCategory.purchased] = e.toString();
         });
       }
     }
+  }
+
+  Future<void> _loadPurchasedMore() async {
+    if (_isLoadingPurchasedMore || !_purchasedHasMore || !mounted) return;
+    final repo = context.read<FleaMarketRepository>();
+    await _loadPurchasedItems(repo, page: _purchasedPage + 1);
   }
 
   Future<void> _loadFavoriteItems(FleaMarketRepository repo) async {
@@ -298,14 +343,25 @@ class _MyPostsViewState extends State<MyPostsView>
       );
     }
 
+    final isPurchased = category == _MyItemsCategory.purchased;
+    final itemCount = items.length +
+        (isPurchased && _isLoadingPurchasedMore ? 1 : 0);
+
     return RefreshIndicator(
       onRefresh: () => _loadAllCategories(forceRefresh: true),
       child: ListView.separated(
+        controller: isPurchased ? _purchasedScrollController : null,
         clipBehavior: Clip.none,
         padding: const EdgeInsets.all(AppSpacing.md),
-        itemCount: items.length,
+        itemCount: itemCount,
         separatorBuilder: (_, __) => const SizedBox(height: AppSpacing.md),
         itemBuilder: (context, index) {
+          if (isPurchased && index == items.length) {
+            return const Padding(
+              padding: EdgeInsets.all(AppSpacing.lg),
+              child: Center(child: CircularProgressIndicator()),
+            );
+          }
           final item = items[index];
           return AnimatedListItem(
             index: index,
@@ -499,8 +555,11 @@ class _FleaMarketItemCard extends StatelessWidget {
         text = l10n.myItemsStatusSelling;
         color = AppColors.success;
       case _MyItemsCategory.purchased:
-        text = l10n.myItemsStatusPurchased;
-        color = AppColors.primary;
+        // 待支付商品显示「待支付」，方便用户识别并完成支付
+        text = item.hasPendingPayment
+            ? l10n.taskStatusPendingPayment
+            : l10n.myItemsStatusPurchased;
+        color = item.hasPendingPayment ? AppColors.warning : AppColors.primary;
       case _MyItemsCategory.favorites:
         return const SizedBox.shrink();
       case _MyItemsCategory.sold:

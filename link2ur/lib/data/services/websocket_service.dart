@@ -362,8 +362,11 @@ class WebSocketMessage {
     );
   }
 
-  /// 是否是聊天消息
-  bool get isChatMessage => type == 'chat_message' || type == 'new_message';
+  /// 是否是聊天消息（含任务消息，后端发送 type: task_message）
+  bool get isChatMessage =>
+      type == 'chat_message' ||
+      type == 'new_message' ||
+      type == 'task_message';
 
   /// 是否是已读回执
   bool get isReadReceipt => type == 'read_receipt';
@@ -371,8 +374,9 @@ class WebSocketMessage {
   /// 是否是正在输入
   bool get isTyping => type == 'typing';
 
-  /// 是否是系统通知
-  bool get isNotification => type == 'notification';
+  /// 是否是系统通知（含 notification_created，customer_service_tasks 发送）
+  bool get isNotification =>
+      type == 'notification' || type == 'notification_created';
 
   /// 是否是任务更新
   bool get isTaskUpdate => type == 'task_update';

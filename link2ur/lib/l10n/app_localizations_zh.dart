@@ -3706,6 +3706,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get paymentPayWithApplePay => '使用 Apple Pay 支付';
 
   @override
+  String get paymentPayWithGooglePay => '使用 Google Pay 支付';
+
+  @override
   String get paymentPayWithWechatPay => '使用微信支付';
 
   @override
@@ -11454,6 +11457,9 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get paymentPayWithApplePay => '使用 Apple Pay 支付';
+
+  @override
+  String get paymentPayWithGooglePay => '使用 Google Pay 支付';
 
   @override
   String get paymentPayWithWechatPay => '使用微信支付';

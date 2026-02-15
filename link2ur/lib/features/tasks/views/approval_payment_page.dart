@@ -1,13 +1,16 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart' show kDebugMode, kIsWeb, defaultTargetPlatform, TargetPlatform;
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart' show kIsWeb, defaultTargetPlatform, TargetPlatform;
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_stripe/flutter_stripe.dart' show Stripe, StripeException;
 
 import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_spacing.dart';
+import '../../../core/utils/haptic_feedback.dart';
 import '../../../core/design/app_typography.dart';
 import '../../../core/utils/l10n_extension.dart';
+import '../../../core/utils/logger.dart';
 import '../../../core/widgets/buttons.dart';
 import '../../../data/models/coupon_points.dart';
 import '../../../data/repositories/coupon_points_repository.dart';
@@ -60,6 +63,8 @@ class _ApprovalPaymentPageState extends State<ApprovalPaymentPage> {
   Timer? _paymentPollTimer;
   /// 已由轮询检测到支付成功并 pop，避免 presentPaymentSheet 晚回调时重复 pop
   bool _paymentSuccessFromPolling = false;
+  /// 支付成功：显示成功 overlay，延迟后 pop（对齐 iOS paymentSuccessView）
+  bool _showPaymentSuccess = false;
 
   @override
   void initState() {
@@ -73,13 +78,25 @@ class _ApprovalPaymentPageState extends State<ApprovalPaymentPage> {
     PaymentService.instance.isApplePaySupported().then((v) {
       if (mounted) setState(() => _applePaySupported = v);
     });
+    // 提前检查 Stripe 初始化状态，如果 publishableKey 为空则立即显示错误
+    if (Stripe.publishableKey.isEmpty) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        AppLogger.error('Payment page opened but Stripe publishableKey is empty. '
+            'Did you pass --dart-define=STRIPE_PUBLISHABLE_KEY_TEST=pk_test_xxx?');
+        setState(() {
+          _errorMessage = kDebugMode
+              ? 'Stripe key not configured. Pass --dart-define=STRIPE_PUBLISHABLE_KEY_TEST=pk_test_xxx'
+              : context.l10n.paymentLoadFailed;
+        });
+      });
+    }
   }
 
   /// 选择支付宝时懒加载 Alipay PaymentIntent
   Future<void> _ensureAlipayPaymentData() async {
     if (_alipayClientSecret != null || _alipayLoading) return;
     final taskId = widget.paymentData.taskId;
-    if (taskId == null) return;
     setState(() => _alipayLoading = true);
     try {
       final response = await context.read<PaymentRepository>().createTaskPayment(
@@ -105,26 +122,44 @@ class _ApprovalPaymentPageState extends State<ApprovalPaymentPage> {
     }
   }
 
+  /// 支付成功：显示成功界面，1.5 秒后 pop（对齐 iOS paymentSuccessView，避免用户困惑或重复付款）
+  void _handlePaymentSuccess() {
+    if (!mounted || _showPaymentSuccess) return;
+    _paymentPollTimer?.cancel();
+    _paymentPollTimer = null;
+    _paymentSuccessFromPolling = true;
+    setState(() {
+      _isProcessing = false;
+      _showPaymentSuccess = true;
+    });
+    AppHaptics.paymentSuccess();
+    Future.delayed(const Duration(milliseconds: 1500), () {
+      if (!mounted) return;
+      Navigator.of(context).pop(true);
+    });
+  }
+
   void _loadCouponsIfTaskPayment() {
-    final taskId = widget.paymentData.taskId;
-    if (taskId == null) return;
     setState(() => _loadingCoupons = true);
     context.read<CouponPointsRepository>().getMyCoupons(status: 'active').then((list) {
-      if (mounted) setState(() {
-        _availableCoupons = list;
-        _loadingCoupons = false;
-      });
+      if (mounted) {
+        setState(() {
+          _availableCoupons = list;
+          _loadingCoupons = false;
+        });
+      }
     }).catchError((_) {
-      if (mounted) setState(() {
-        _availableCoupons = [];
-        _loadingCoupons = false;
-      });
+      if (mounted) {
+        setState(() {
+          _availableCoupons = [];
+          _loadingCoupons = false;
+        });
+      }
     });
   }
 
   Future<void> _applyCoupon(UserCoupon? coupon) async {
     final taskId = widget.paymentData.taskId;
-    if (taskId == null) return;
     final previous = _selectedUserCoupon;
     setState(() {
       _selectedUserCoupon = coupon;
@@ -192,10 +227,16 @@ class _ApprovalPaymentPageState extends State<ApprovalPaymentPage> {
     return _applePaySupported;
   }
 
+  /// Platform Pay 显示文案：iOS → Apple Pay，Android → Google Pay
+  String _platformPayLabel(dynamic l10n) =>
+      defaultTargetPlatform == TargetPlatform.iOS
+          ? l10n.paymentPayWithApplePay
+          : l10n.paymentPayWithGooglePay;
+
   String _payButtonText(dynamic l10n) {
     switch (_selectedMethod) {
       case _PaymentMethod.applePay:
-        return l10n.paymentPayWithApplePay;
+        return _platformPayLabel(l10n);
       case _PaymentMethod.alipay:
         return l10n.paymentPayWithAlipay;
       case _PaymentMethod.wechatPay:
@@ -208,7 +249,9 @@ class _ApprovalPaymentPageState extends State<ApprovalPaymentPage> {
   IconData _payButtonIcon() {
     switch (_selectedMethod) {
       case _PaymentMethod.applePay:
-        return Icons.apple;
+        return defaultTargetPlatform == TargetPlatform.iOS
+            ? Icons.apple
+            : Icons.account_balance_wallet;
       case _PaymentMethod.alipay:
         return Icons.payment;
       case _PaymentMethod.wechatPay:
@@ -219,11 +262,21 @@ class _ApprovalPaymentPageState extends State<ApprovalPaymentPage> {
   }
 
   String _formatPaymentError(dynamic e) {
-    final msg = e.toString();
-    if (msg.contains('StripeConfigException')) {
-      return context.l10n.paymentLoadFailed;
+    // StripeException：提取 SDK 的 localizedMessage，Debug 模式附加错误码
+    if (e is StripeException) {
+      final stripeError = e.error;
+      final userMessage = stripeError.localizedMessage
+          ?? stripeError.message
+          ?? context.l10n.paymentLoadFailed;
+      if (kDebugMode) {
+        return '$userMessage (code: ${stripeError.code}, declineCode: ${stripeError.declineCode})';
+      }
+      return userMessage;
     }
-    if (msg.contains('StripeException') && msg.contains('Canceled') == false) {
+    final msg = e.toString();
+    // PlatformException 包裹的 Stripe 错误（如 flutter_stripe initialization failed）
+    if (msg.contains('flutter_stripe')) {
+      if (kDebugMode) return msg;
       return context.l10n.paymentLoadFailed;
     }
     return msg
@@ -237,14 +290,8 @@ class _ApprovalPaymentPageState extends State<ApprovalPaymentPage> {
     if (_isProcessing) return;
     final taskId = widget.paymentData.taskId;
 
-    // 微信支付：Checkout Session + WebView（仅任务支付支持）
+    // 微信支付：Checkout Session + WebView
     if (_selectedMethod == _PaymentMethod.wechatPay) {
-      if (taskId == null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(context.l10n.paymentLoadFailed)),
-        );
-        return;
-      }
       setState(() {
         _isProcessing = true;
         _errorMessage = null;
@@ -266,7 +313,17 @@ class _ApprovalPaymentPageState extends State<ApprovalPaymentPage> {
           ),
         );
         if (!mounted) return;
-        if (result == true) Navigator.of(context).pop(true);
+        if (result == true) {
+          setState(() {
+            _isProcessing = false;
+            _showPaymentSuccess = true;
+          });
+          AppHaptics.paymentSuccess();
+          Future.delayed(const Duration(milliseconds: 1500), () {
+            if (!mounted) return;
+            Navigator.of(context).pop(true);
+          });
+        }
       } catch (e) {
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
@@ -311,25 +368,19 @@ class _ApprovalPaymentPageState extends State<ApprovalPaymentPage> {
     });
 
     // 任务支付且为银行卡/支付宝时：轮询支付状态（对齐 iOS checkPaymentStatus），避免原生未回调导致一直转圈
-    final taskIdForPolling = taskId;
     final isCardOrAlipay = _selectedMethod == _PaymentMethod.card || _selectedMethod == _PaymentMethod.alipay;
-    if (taskIdForPolling != null && isCardOrAlipay) {
+    if (isCardOrAlipay) {
       _paymentPollTimer?.cancel();
       final repo = context.read<PaymentRepository>();
       void doPoll() async {
         if (!mounted || !_isProcessing) return;
         try {
-          final statusData = await repo.getTaskPaymentStatus(taskIdForPolling);
+          final statusData = await repo.getTaskPaymentStatus(taskId);
           final isPaid = statusData['is_paid'] == true;
           final details = statusData['payment_details'] as Map<String, dynamic>?;
           final piStatus = details?['status'] as String?;
           if (isPaid || piStatus == 'succeeded') {
-            _paymentPollTimer?.cancel();
-            _paymentPollTimer = null;
-            if (!mounted || !_isProcessing) return;
-            _paymentSuccessFromPolling = true;
-            setState(() => _isProcessing = false);
-            Navigator.of(context).pop(true);
+            _handlePaymentSuccess();
           }
         } catch (_) { /* 忽略单次轮询失败 */ }
       }
@@ -361,7 +412,7 @@ class _ApprovalPaymentPageState extends State<ApprovalPaymentPage> {
       if (!mounted) return;
       if (_paymentSuccessFromPolling) return; // 已由轮询 pop，避免重复
       if (success) {
-        Navigator.of(context).pop(true);
+        _handlePaymentSuccess();
       } else {
         setState(() => _isProcessing = false);
       }
@@ -377,11 +428,13 @@ class _ApprovalPaymentPageState extends State<ApprovalPaymentPage> {
           backgroundColor: AppColors.primary,
         ),
       );
-    } catch (e) {
+    } catch (e, st) {
       if (!mounted) return;
       _paymentPollTimer?.cancel();
       _paymentPollTimer = null;
       if (_paymentSuccessFromPolling) return;
+      // 输出完整错误到终端，方便调试（UI 上只显示格式化后的友好文案）
+      AppLogger.error('Payment failed in ApprovalPaymentPage', e, st);
       setState(() {
         _isProcessing = false;
         _errorMessage = _formatPaymentError(e);
@@ -405,12 +458,14 @@ class _ApprovalPaymentPageState extends State<ApprovalPaymentPage> {
     final amountText = amountDisplay != null && amountDisplay.isNotEmpty
         ? '£$amountDisplay'
         : '';
-    final showCouponSection = widget.paymentData.taskId != null;
+    const showCouponSection = true; // taskId is always non-null (int)
     final showCountdown = widget.paymentData.paymentExpiresAt != null &&
         widget.paymentData.paymentExpiresAt!.isNotEmpty;
     final isExpired = showCountdown && _secondsRemaining <= 0;
 
-    return Scaffold(
+    return Stack(
+      children: [
+        Scaffold(
       appBar: AppBar(
         title: Text(l10n.paymentPayment),
         leading: IconButton(
@@ -534,12 +589,14 @@ class _ApprovalPaymentPageState extends State<ApprovalPaymentPage> {
                           isSelected: _selectedMethod == _PaymentMethod.card,
                           onTap: () => setState(() => _selectedMethod = _PaymentMethod.card),
                         ),
-                        // Apple Pay：iOS 上始终显示（对齐原生）；Android 依赖 isPlatformPaySupported（Google Pay）
+                        // Platform Pay：iOS → Apple Pay，Android → Google Pay（isPlatformPaySupported）
                         if (_showApplePayOption()) ...[
                           const SizedBox(height: 12),
                           _PaymentMethodOption(
-                            icon: Icons.apple,
-                            label: l10n.paymentPayWithApplePay,
+                            icon: defaultTargetPlatform == TargetPlatform.iOS
+                                ? Icons.apple
+                                : Icons.account_balance_wallet,
+                            label: _platformPayLabel(l10n),
                             isSelected: _selectedMethod == _PaymentMethod.applePay,
                             onTap: () => setState(() => _selectedMethod = _PaymentMethod.applePay),
                           ),
@@ -554,15 +611,13 @@ class _ApprovalPaymentPageState extends State<ApprovalPaymentPage> {
                             _ensureAlipayPaymentData();
                           },
                         ),
-                        if (widget.paymentData.taskId != null) ...[
-                          const SizedBox(height: 12),
-                          _PaymentMethodOption(
-                            imageAsset: AppAssets.wechatPay,
-                            label: l10n.wechatPayTitle,
-                            isSelected: _selectedMethod == _PaymentMethod.wechatPay,
-                            onTap: () => setState(() => _selectedMethod = _PaymentMethod.wechatPay),
-                          ),
-                        ],
+                        const SizedBox(height: 12),
+                        _PaymentMethodOption(
+                          imageAsset: AppAssets.wechatPay,
+                          label: l10n.wechatPayTitle,
+                          isSelected: _selectedMethod == _PaymentMethod.wechatPay,
+                          onTap: () => setState(() => _selectedMethod = _PaymentMethod.wechatPay),
+                        ),
                       ],
                     ),
                   ),
@@ -608,6 +663,44 @@ class _ApprovalPaymentPageState extends State<ApprovalPaymentPage> {
           ),
         ],
       ),
+    ),
+        if (_showPaymentSuccess)
+          Positioned.fill(
+            child: Container(
+            color: Theme.of(context).scaffoldBackgroundColor,
+            alignment: Alignment.center,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  Icons.check_circle,
+                  size: 64,
+                  color: AppColors.success,
+                ),
+                const SizedBox(height: AppSpacing.lg),
+                Text(
+                  l10n.paymentSuccess,
+                  style: AppTypography.title2.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.textPrimary,
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.sm),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
+                  child: Text(
+                    l10n.paymentSuccessMessage,
+                    textAlign: TextAlign.center,
+                    style: AppTypography.body.copyWith(
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          ),
+      ],
     );
   }
 }

@@ -267,21 +267,21 @@ class TaskRepository {
   }
 
   /// 获取我的所有申请（pending applications）
+  /// 后端 GET /api/my-applications 返回裸数组 List[dict]，需兼容处理。
   Future<List<TaskApplication>> getMyApplications() async {
     const cacheKey = '${CacheManager.prefixMyTasks}apps';
 
     final cached = _cache.get<Map<String, dynamic>>(cacheKey);
     if (cached != null) {
-      final items = cached['items'] as List<dynamic>? ??
-          cached['applications'] as List<dynamic>? ??
-          [];
+      final items = cached['items'] as List<dynamic>? ?? [];
       return items
           .map((e) => TaskApplication.fromJson(e as Map<String, dynamic>))
           .toList();
     }
 
     try {
-      final response = await _apiService.get<Map<String, dynamic>>(
+      // 后端返回裸数组，使用 dynamic 接收
+      final response = await _apiService.get<dynamic>(
         ApiEndpoints.myApplications,
       );
 
@@ -289,20 +289,30 @@ class TaskRepository {
         throw TaskException(response.message ?? 'Failed to load applications');
       }
 
-      await _cache.set(cacheKey, response.data!, ttl: CacheManager.personalTTL);
+      // 兼容后端两种返回格式：裸数组 或 { items/applications: [...] }
+      final List<dynamic> rawList;
+      final data = response.data!;
+      if (data is List) {
+        rawList = data;
+      } else if (data is Map) {
+        rawList = (data['items'] as List<dynamic>?) ??
+            (data['applications'] as List<dynamic>?) ??
+            [];
+      } else {
+        rawList = [];
+      }
 
-      final items = response.data!['items'] as List<dynamic>? ??
-          response.data!['applications'] as List<dynamic>? ??
-          [];
-      return items
+      // 缓存时统一包装为 Map 格式
+      final normalized = <String, dynamic>{'items': rawList};
+      await _cache.set(cacheKey, normalized, ttl: CacheManager.personalTTL);
+
+      return rawList
           .map((e) => TaskApplication.fromJson(e as Map<String, dynamic>))
           .toList();
     } catch (e) {
       final stale = _cache.getStale<Map<String, dynamic>>(cacheKey);
       if (stale != null) {
-        final items = stale['items'] as List<dynamic>? ??
-            stale['applications'] as List<dynamic>? ??
-            [];
+        final items = stale['items'] as List<dynamic>? ?? [];
         return items
             .map((e) => TaskApplication.fromJson(e as Map<String, dynamic>))
             .toList();

@@ -7113,6 +7113,12 @@ abstract class AppLocalizations {
   /// **'Pay with Apple Pay'**
   String get paymentPayWithApplePay;
 
+  /// No description provided for @paymentPayWithGooglePay.
+  ///
+  /// In en, this message translates to:
+  /// **'Pay with Google Pay'**
+  String get paymentPayWithGooglePay;
+
   /// No description provided for @paymentPayWithWechatPay.
   ///
   /// In en, this message translates to:

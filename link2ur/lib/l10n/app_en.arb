@@ -1807,6 +1807,7 @@
   "paymentMixed": "Mixed",
   "paymentSelectMethod": "Select Payment Method",
   "paymentPayWithApplePay": "Pay with Apple Pay",
+  "paymentPayWithGooglePay": "Pay with Google Pay",
   "paymentPayWithWechatPay": "Pay with WeChat Pay",
   "paymentPayWithAlipay": "Pay with Alipay",
   "shareWechat": "WeChat",

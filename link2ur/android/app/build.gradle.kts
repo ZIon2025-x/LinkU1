@@ -85,11 +85,13 @@ android {
     }
 }
 
-// Force consistent Stripe SDK versions to resolve duplicate class conflict
-// between payments-core (from flutter_stripe) and payments-model (from stripe-connect)
+// Stripe：flutter_stripe stripe_android 使用 22.2.+，stripe-connect 使用 22.8.0，
+// 版本混用导致 NoClassDefFoundError: SectionFieldErrorController（uicore 与 lpm-foundations 不一致）
+// 强制统一为 22.8.0
 configurations.all {
     resolutionStrategy {
-        force("com.stripe:payments-core:22.8.0")
+        force("com.stripe:stripe-android:22.8.0")
+        force("com.stripe:financial-connections:22.8.0")
     }
 }
 
@@ -105,8 +107,10 @@ dependencies {
     implementation("com.google.android.material:material:1.12.0")
     // AppCompat (LocationPickerActivity extends AppCompatActivity)
     implementation("androidx.appcompat:appcompat:1.7.0")
-    // Stripe Connect
+    // Stripe Connect（与 flutter_stripe 12.x 共用 stripe-android 22.8）
     implementation("com.stripe:connect:22.8.0")
+    // Google Pay（Stripe Platform Pay 在 Android 上需要）
+    implementation("com.google.android.gms:play-services-wallet:19.3.0")
     // ViewModel (Stripe 文档推荐 EmbeddedComponentManager 放在 ViewModel 中)
     implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:2.8.7")
     implementation("androidx.activity:activity-ktx:1.9.3")

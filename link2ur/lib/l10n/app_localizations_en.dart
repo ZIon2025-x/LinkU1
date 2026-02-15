@@ -3859,6 +3859,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get paymentPayWithApplePay => 'Pay with Apple Pay';
 
   @override
+  String get paymentPayWithGooglePay => 'Pay with Google Pay';
+
+  @override
   String get paymentPayWithWechatPay => 'Pay with WeChat Pay';
 
   @override

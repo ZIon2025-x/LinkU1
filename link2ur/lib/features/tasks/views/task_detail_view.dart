@@ -26,10 +26,12 @@ import '../../../data/models/task.dart';
 import '../../../data/models/review.dart';
 import '../../../data/models/user.dart';
 import '../../../data/repositories/task_repository.dart';
+import '../../../data/repositories/payment_repository.dart';
 import '../../../features/auth/bloc/auth_bloc.dart';
 import '../bloc/task_detail_bloc.dart';
 import '../../../core/widgets/glass_button.dart';
 import '../../../core/widgets/bouncing_widget.dart';
+import '../../../core/widgets/animated_star_rating.dart';
 import '../../../core/design/app_shadows.dart';
 import 'approval_payment_page.dart';
 import 'task_detail_components.dart';
@@ -86,10 +88,18 @@ class _TaskDetailContent extends StatelessWidget {
               )
               .then((result) {
             if (!context.mounted) return;
-            if (result == true && taskId != null) {
-              context.read<TaskDetailBloc>().add(TaskDetailLoadRequested(taskId));
-              context.read<TaskDetailBloc>().add(TaskDetailLoadApplications(
-                  currentUserId: currentUserId));
+            if (result == true) {
+              if (taskId != null) {
+                context.read<TaskDetailBloc>().add(TaskDetailLoadRequested(taskId));
+                context.read<TaskDetailBloc>().add(TaskDetailLoadApplications(
+                    currentUserId: currentUserId));
+              }
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(context.l10n.paymentSuccessMessage),
+                  backgroundColor: AppColors.success,
+                ),
+              );
             }
           });
           return;
@@ -580,7 +590,9 @@ class _TaskDetailContent extends StatelessWidget {
       return PrimaryButton(
         text: context.l10n.taskDetailPlatformServiceFee,
         icon: Icons.credit_card,
-        onPressed: task.isPaymentExpired ? null : () {},
+        onPressed: task.isPaymentExpired
+            ? null
+            : () => _openPaymentPageForPendingTask(context, task.id),
       );
     }
 
@@ -666,6 +678,65 @@ class _TaskDetailContent extends StatelessWidget {
     );
   }
 
+  /// 待支付任务：拉取支付数据并打开支付页
+  Future<void> _openPaymentPageForPendingTask(
+      BuildContext context, int taskId) async {
+    final currentUserId =
+        context.read<AuthBloc>().state.user?.id;
+    try {
+      final resp = await context.read<PaymentRepository>().createTaskPayment(
+        taskId: taskId,
+      );
+      if (!context.mounted) return;
+      if (resp.clientSecret == null || resp.clientSecret!.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(context.l10n.paymentLoadFailed),
+            backgroundColor: AppColors.error,
+          ),
+        );
+        return;
+      }
+      final data = AcceptPaymentData(
+        taskId: taskId,
+        clientSecret: resp.clientSecret!,
+        customerId: resp.customerId ?? '',
+        ephemeralKeySecret: resp.ephemeralKeySecret ?? '',
+        amountDisplay: resp.finalAmountDisplay,
+        applicationId: null,
+        paymentExpiresAt: null,
+      );
+      final result = await Navigator.of(context).push<bool>(
+        MaterialPageRoute(
+          builder: (_) => ApprovalPaymentPage(paymentData: data),
+          fullscreenDialog: true,
+        ),
+      );
+      if (!context.mounted) return;
+      if (result == true) {
+        context.read<TaskDetailBloc>().add(TaskDetailLoadRequested(taskId));
+        context
+            .read<TaskDetailBloc>()
+            .add(TaskDetailLoadApplications(currentUserId: currentUserId));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(context.l10n.paymentSuccessMessage),
+            backgroundColor: AppColors.success,
+          ),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(e.toString()),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+    }
+  }
+
   /// 显示评价弹窗
   void _showReviewDialog(BuildContext context) {
     showModalBottomSheet(
@@ -695,14 +766,14 @@ class _TaskDetailContent extends StatelessWidget {
 
 class _ReviewDialog extends StatefulWidget {
   const _ReviewDialog({required this.onSubmit});
-  final void Function(int rating, String? comment, bool isAnonymous) onSubmit;
+  final void Function(double rating, String? comment, bool isAnonymous) onSubmit;
 
   @override
   State<_ReviewDialog> createState() => _ReviewDialogState();
 }
 
 class _ReviewDialogState extends State<_ReviewDialog> {
-  int _rating = 0;
+  double _rating = 5.0;
   bool _isAnonymous = false;
   final _commentController = TextEditingController();
 
@@ -753,23 +824,15 @@ class _ReviewDialogState extends State<_ReviewDialog> {
               ),
             ),
             const SizedBox(height: 20),
-            // 星级评分
+            // 星级评分（支持半星，对齐 iOS）
             Center(
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: List.generate(5, (i) {
-                  return GestureDetector(
-                    onTap: () => setState(() => _rating = i + 1),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 6),
-                      child: Icon(
-                        i < _rating ? Icons.star : Icons.star_border,
-                        color: const Color(0xFFFFB300),
-                        size: 36,
-                      ),
-                    ),
-                  );
-                }),
+              child: AnimatedStarRating(
+                rating: _rating,
+                size: 36,
+                spacing: 6,
+                activeColor: const Color(0xFFFFB300),
+                allowHalfRating: true,
+                onRatingChanged: (v) => setState(() => _rating = v),
               ),
             ),
             const SizedBox(height: 16),
@@ -849,7 +912,7 @@ class _ReviewDialogState extends State<_ReviewDialog> {
               width: double.infinity,
               child: PrimaryButton(
                 text: '提交评价',
-                onPressed: _rating > 0
+                onPressed: _rating >= 0.5
                     ? () {
                         final comment = _commentController.text.trim();
                         widget.onSubmit(

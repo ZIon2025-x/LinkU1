@@ -12,6 +12,7 @@ import '../../../core/widgets/buttons.dart';
 import '../../../core/widgets/loading_view.dart';
 import '../../../core/widgets/async_image_view.dart';
 import '../../../core/widgets/bouncing_widget.dart';
+import '../../../core/widgets/animated_star_rating.dart';
 import '../../../core/utils/l10n_extension.dart';
 import '../../../data/models/task.dart';
 import '../../../data/models/task_application.dart';
@@ -917,16 +918,19 @@ class _ReviewItem extends StatelessWidget {
                 ),
               ),
               const Spacer(),
-              // 星星评分
+              // 星星评分（支持半星）
               Row(
-                children: List.generate(
-                  5,
-                  (i) => Icon(
-                    i < review.rating ? Icons.star : Icons.star_border,
-                    size: 16,
-                    color: AppColors.warning,
-                  ),
-                ),
+                children: List.generate(5, (i) {
+                  IconData icon;
+                  if (review.rating >= i + 1) {
+                    icon = Icons.star;
+                  } else if (review.rating > i && review.rating < i + 1) {
+                    icon = Icons.star_half;
+                  } else {
+                    icon = Icons.star_border;
+                  }
+                  return Icon(icon, size: 16, color: AppColors.warning);
+                }),
               ),
             ],
           ),
@@ -1524,14 +1528,14 @@ class TaskActionButtonsView extends StatelessWidget {
 
 class _ReviewBottomSheet extends StatefulWidget {
   const _ReviewBottomSheet({required this.onSubmit});
-  final void Function(int rating, String? comment, bool isAnonymous) onSubmit;
+  final void Function(double rating, String? comment, bool isAnonymous) onSubmit;
 
   @override
   State<_ReviewBottomSheet> createState() => _ReviewBottomSheetState();
 }
 
 class _ReviewBottomSheetState extends State<_ReviewBottomSheet> {
-  int _rating = 0;
+  double _rating = 5.0;
   bool _isAnonymous = false;
   final _commentController = TextEditingController();
 
@@ -1581,21 +1585,13 @@ class _ReviewBottomSheetState extends State<_ReviewBottomSheet> {
             ),
             const SizedBox(height: 20),
             Center(
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: List.generate(5, (i) {
-                  return GestureDetector(
-                    onTap: () => setState(() => _rating = i + 1),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 6),
-                      child: Icon(
-                        i < _rating ? Icons.star : Icons.star_border,
-                        color: const Color(0xFFFFB300),
-                        size: 36,
-                      ),
-                    ),
-                  );
-                }),
+              child: AnimatedStarRating(
+                rating: _rating,
+                size: 36,
+                spacing: 6,
+                activeColor: const Color(0xFFFFB300),
+                allowHalfRating: true,
+                onRatingChanged: (v) => setState(() => _rating = v),
               ),
             ),
             const SizedBox(height: 16),
@@ -1672,7 +1668,7 @@ class _ReviewBottomSheetState extends State<_ReviewBottomSheet> {
               width: double.infinity,
               child: PrimaryButton(
                 text: '提交评价',
-                onPressed: _rating > 0
+                onPressed: _rating >= 0.5
                     ? () {
                         final comment = _commentController.text.trim();
                         widget.onSubmit(

@@ -47,6 +47,10 @@ class _MyTasksViewState extends State<MyTasksView>
   // 每个Tab独立管理数据
   final Map<_TaskTab, List<Task>> _tabData = {};
   final Map<_TaskTab, bool> _tabLoading = {};
+  /// 防重入标志：true 表示正在发起网络请求，避免并发加载。
+  /// 与 _tabLoading（控制 UI skeleton 显示）分离，
+  /// 因为 _tabLoading 初始为 true（显示 skeleton），但此时并未真正在请求。
+  final Map<_TaskTab, bool> _tabFetching = {};
   final Map<_TaskTab, bool> _tabHasMore = {};
   final Map<_TaskTab, int> _tabPage = {};
   final Map<_TaskTab, String?> _tabError = {};
@@ -76,7 +80,8 @@ class _MyTasksViewState extends State<MyTasksView>
     // 初始化每个Tab的状态
     for (final tab in _tabs) {
       _tabData[tab] = [];
-      _tabLoading[tab] = true;
+      _tabLoading[tab] = true;   // UI 显示 skeleton
+      _tabFetching[tab] = false; // 防重入标志（尚未发起请求）
       _tabHasMore[tab] = false;
       _tabPage[tab] = 1;
       _tabError[tab] = null;
@@ -126,7 +131,7 @@ class _MyTasksViewState extends State<MyTasksView>
   void _onScroll(_TaskTab tab) {
     final sc = _scrollControllers[tab]!;
     if (sc.position.pixels >= sc.position.maxScrollExtent - 200) {
-      if (_tabHasMore[tab] == true && _tabLoading[tab] != true) {
+      if (_tabHasMore[tab] == true && _tabFetching[tab] != true) {
         _loadTab(tab, page: (_tabPage[tab] ?? 1) + 1);
       }
     }
@@ -161,9 +166,11 @@ class _MyTasksViewState extends State<MyTasksView>
       return _loadPendingApplications();
     }
 
-    // 防止并发加载：如果已经在加载中，跳过
-    if (_tabLoading[tab] == true) return;
+    // 防止并发加载：使用 _tabFetching（而非 _tabLoading）做防重入
+    // page == 1 时允许重新加载（下拉刷新场景）
+    if (_tabFetching[tab] == true && page > 1) return;
 
+    _tabFetching[tab] = true;
     setState(() => _tabLoading[tab] = true);
 
     try {
@@ -195,6 +202,7 @@ class _MyTasksViewState extends State<MyTasksView>
           _tabPage[tab] = response.page;
           _tabHasMore[tab] = response.hasMore;
           _tabLoading[tab] = false;
+          _tabFetching[tab] = false;
           _tabError[tab] = null;
         });
       }
@@ -202,6 +210,7 @@ class _MyTasksViewState extends State<MyTasksView>
       if (mounted) {
         setState(() {
           _tabLoading[tab] = false;
+          _tabFetching[tab] = false;
           _tabError[tab] = e.toString();
         });
       }

@@ -106,46 +106,41 @@ class FleaMarketItem extends Equatable {
             : <String>[]);
     return FleaMarketItem(
       id: json['id']?.toString() ?? '',
-      title: json['title'] as String? ?? '',
-      description: json['description'] as String?,
+      title: _toStringNullable(json['title']) ?? '',
+      description: _toStringNullable(json['description']),
       price: _toDouble(json['price']),
-      currency: json['currency'] as String? ?? 'GBP',
+      currency: _toStringNullable(json['currency']) ?? 'GBP',
       images: images,
-      location: json['location'] as String?,
+      location: _toStringNullable(json['location']),
       latitude: _toDoubleNullable(json['latitude']),
       longitude: _toDoubleNullable(json['longitude']),
-      category: json['category'] as String?,
-      status: json['status'] as String? ?? AppConstants.fleaMarketStatusActive,
+      category: _toStringNullable(json['category']),
+      status: _toStringNullable(json['status']) ??
+          AppConstants.fleaMarketStatusActive,
       sellerId: json['seller_id']?.toString() ?? '',
-      sellerUserLevel: json['seller_user_level'] as String?,
+      sellerUserLevel: _toStringNullable(json['seller_user_level']),
       viewCount: _toInt(json['view_count']),
       favoriteCount: _toInt(json['favorite_count']),
-      refreshedAt: json['refreshed_at'] != null
-          ? DateTime.parse(json['refreshed_at'])
-          : null,
-      createdAt: json['created_at'] != null
-          ? DateTime.parse(json['created_at'])
-          : null,
-      updatedAt: json['updated_at'] != null
-          ? DateTime.parse(json['updated_at'])
-          : null,
+      refreshedAt: _toDateTimeNullable(json['refreshed_at']),
+      createdAt: _toDateTimeNullable(json['created_at']),
+      updatedAt: _toDateTimeNullable(json['updated_at']),
       daysUntilAutoDelist: _toIntNullable(json['days_until_auto_delist']),
       pendingPaymentTaskId: _toIntNullable(json['pending_payment_task_id']),
       pendingPaymentClientSecret:
-          json['pending_payment_client_secret'] as String?,
+          _toStringNullable(json['pending_payment_client_secret']),
       pendingPaymentAmount: _toIntNullable(json['pending_payment_amount']),
       pendingPaymentAmountDisplay:
-          json['pending_payment_amount_display'] as String?,
-      pendingPaymentCurrency: json['pending_payment_currency'] as String?,
+          _toStringNullable(json['pending_payment_amount_display']),
+      pendingPaymentCurrency: _toStringNullable(json['pending_payment_currency']),
       pendingPaymentCustomerId:
-          json['pending_payment_customer_id'] as String?,
+          _toStringNullable(json['pending_payment_customer_id']),
       pendingPaymentEphemeralKeySecret:
-          json['pending_payment_ephemeral_key_secret'] as String?,
+          _toStringNullable(json['pending_payment_ephemeral_key_secret']),
       pendingPaymentExpiresAt:
-          json['pending_payment_expires_at'] as String?,
-      isAvailable: json['is_available'] as bool?,
+          _toStringNullable(json['pending_payment_expires_at']),
+      isAvailable: _toBoolNullable(json['is_available']),
       userPurchaseRequestStatus:
-          json['user_purchase_request_status'] as String?,
+          _toStringNullable(json['user_purchase_request_status']),
       userPurchaseRequestProposedPrice:
           _toDoubleNullable(json['user_purchase_request_proposed_price']),
     );
@@ -243,6 +238,19 @@ class FleaMarketItem extends Equatable {
   List<Object?> get props => [id, title, status, price, updatedAt];
 }
 
+/// 我的购买列表响应（含待支付 + 已购）
+class MyPurchasesResponse {
+  const MyPurchasesResponse({
+    required this.items,
+    required this.total,
+    required this.hasMore,
+  });
+
+  final List<Map<String, dynamic>> items;
+  final int total;
+  final bool hasMore;
+}
+
 /// 跳蚤市场列表响应
 class FleaMarketListResponse {
   const FleaMarketListResponse({
@@ -260,12 +268,19 @@ class FleaMarketListResponse {
   bool get hasMore => items.length >= pageSize;
 
   factory FleaMarketListResponse.fromJson(Map<String, dynamic> json) {
+    final rawItems = json['items'] as List<dynamic>? ?? [];
+    final parsedItems = <FleaMarketItem>[];
+    for (final raw in rawItems) {
+      if (raw is! Map) continue;
+      try {
+        parsedItems.add(FleaMarketItem.fromJson(Map<String, dynamic>.from(raw)));
+      } catch (_) {
+        // 单条脏数据不应导致整个列表失败
+      }
+    }
+
     return FleaMarketListResponse(
-      items: (json['items'] as List<dynamic>?)
-              ?.map(
-                  (e) => FleaMarketItem.fromJson(e as Map<String, dynamic>))
-              .toList() ??
-          [],
+      items: parsedItems,
       total: _toInt(json['total']),
       page: json['page'] != null ? _toInt(json['page']) : 1,
       // 后端 Pydantic 可能返回 pageSize 或 page_size
@@ -387,7 +402,10 @@ double _toDouble(dynamic value) {
   if (value == null) return 0;
   if (value is double) return value;
   if (value is num) return value.toDouble();
-  if (value is String) return double.tryParse(value) ?? 0;
+  if (value is String) {
+    final normalized = value.trim().replaceAll(',', '');
+    return double.tryParse(normalized) ?? 0;
+  }
   return 0;
 }
 
@@ -396,6 +414,39 @@ double? _toDoubleNullable(dynamic value) {
   if (value == null) return null;
   if (value is double) return value;
   if (value is num) return value.toDouble();
-  if (value is String) return double.tryParse(value);
+  if (value is String) {
+    final normalized = value.trim().replaceAll(',', '');
+    return double.tryParse(normalized);
+  }
+  return null;
+}
+
+/// 安全地将 JSON 值转为 String?（兼容 num/bool/String/null）
+String? _toStringNullable(dynamic value) {
+  if (value == null) return null;
+  final s = value.toString();
+  return s.isEmpty ? null : s;
+}
+
+/// 安全地将 JSON 值转为 bool?（兼容 bool/num/String/null）
+bool? _toBoolNullable(dynamic value) {
+  if (value == null) return null;
+  if (value is bool) return value;
+  if (value is num) return value != 0;
+  if (value is String) {
+    final normalized = value.trim().toLowerCase();
+    if (normalized == 'true' || normalized == '1') return true;
+    if (normalized == 'false' || normalized == '0') return false;
+  }
+  return null;
+}
+
+/// 安全地将 JSON 值转为 DateTime?（兼容 String/DateTime/null）
+DateTime? _toDateTimeNullable(dynamic value) {
+  if (value == null) return null;
+  if (value is DateTime) return value;
+  if (value is String && value.trim().isNotEmpty) {
+    return DateTime.tryParse(value.trim());
+  }
   return null;
 }

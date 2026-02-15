@@ -47,6 +47,21 @@ class NotificationLoadUnreadNotificationCount extends NotificationEvent {
   const NotificationLoadUnreadNotificationCount();
 }
 
+/// 开始轮询未读数（对齐 iOS 60 秒定时刷新，不依赖后端 WebSocket 推送）
+class NotificationStartPolling extends NotificationEvent {
+  const NotificationStartPolling();
+}
+
+/// 停止轮询（登出时调用）
+class NotificationStopPolling extends NotificationEvent {
+  const NotificationStopPolling();
+}
+
+/// 若列表已加载则刷新（系统通知 + 互动通知实时更新）
+class NotificationRefreshListIfLoaded extends NotificationEvent {
+  const NotificationRefreshListIfLoaded();
+}
+
 // ==================== State ====================
 
 enum NotificationStatus { initial, loading, loaded, error }
@@ -122,22 +137,61 @@ class NotificationBloc extends Bloc<NotificationEvent, NotificationState> {
     on<NotificationMarkAsRead>(_onMarkAsRead);
     on<NotificationMarkAllAsRead>(_onMarkAllAsRead);
     on<NotificationLoadUnreadNotificationCount>(_onLoadUnreadNotificationCount);
+    on<NotificationStartPolling>(_onStartPolling);
+    on<NotificationStopPolling>(_onStopPolling);
+    on<NotificationRefreshListIfLoaded>(_onRefreshListIfLoaded);
 
-    // 监听 WebSocket：新通知时刷新未读数，红点实时更新
+    // 监听 WebSocket：新通知时刷新未读数 + 若列表已打开则刷新列表（系统/互动通知实时更新）
     _wsSubscription = WebSocketService.instance.messageStream.listen((wsMessage) {
       if (wsMessage.isNotification) {
         add(const NotificationLoadUnreadNotificationCount());
+        add(const NotificationRefreshListIfLoaded());
       }
     });
   }
 
   final NotificationRepository _notificationRepository;
   StreamSubscription<WebSocketMessage>? _wsSubscription;
+  Timer? _pollingTimer;
+  static const Duration _pollingInterval = Duration(seconds: 60);
 
   @override
   Future<void> close() {
     _wsSubscription?.cancel();
+    _pollingTimer?.cancel();
+    _pollingTimer = null;
     return super.close();
+  }
+
+  void _onStartPolling(
+    NotificationStartPolling event,
+    Emitter<NotificationState> emit,
+  ) {
+    _pollingTimer?.cancel();
+    _pollingTimer = Timer.periodic(_pollingInterval, (_) {
+      add(const NotificationLoadUnreadNotificationCount());
+      add(const NotificationRefreshListIfLoaded());
+    });
+  }
+
+  void _onRefreshListIfLoaded(
+    NotificationRefreshListIfLoaded event,
+    Emitter<NotificationState> emit,
+  ) {
+    if (state.status == NotificationStatus.loaded && state.selectedType != null) {
+      add(NotificationLoadRequested(type: state.selectedType));
+    } else if (state.status == NotificationStatus.loaded) {
+      // 无 selectedType 时刷新系统消息（默认 Tab）
+      add(const NotificationLoadRequested(type: 'system'));
+    }
+  }
+
+  void _onStopPolling(
+    NotificationStopPolling event,
+    Emitter<NotificationState> emit,
+  ) {
+    _pollingTimer?.cancel();
+    _pollingTimer = null;
   }
 
   /// 互动消息类型前缀（论坛 + 排行榜）

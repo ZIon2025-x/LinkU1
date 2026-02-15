@@ -1200,16 +1200,17 @@ async def get_my_purchases(
     current_user: models.User = Depends(get_current_user_secure_async_csrf),
     db: AsyncSession = Depends(get_async_db_dependency),
 ):
-    """获取我的购买商品（已售出且已创建任务）"""
+    """获取我的购买商品（含待支付和已完成的购买）"""
     try:
         # 查询条件：通过tasks表关联查询
-        # tasks.poster_id = 当前用户id AND tasks.task_type = 'Second-hand & Rental' AND flea_market_items.status = 'sold'
+        # 包含待支付(pending_payment)和已完成(sold)的商品，方便用户在「收的闲置」中完成支付
         query = (
             select(
                 models.FleaMarketItem,
                 models.Task.id.label("task_id"),
                 models.Task.agreed_reward,
                 models.Task.reward,
+                models.Task.status.label("task_status"),
             )
             .join(
                 models.Task,
@@ -1217,7 +1218,12 @@ async def get_my_purchases(
             )
             .where(models.Task.poster_id == current_user.id)
             .where(models.Task.task_type == "Second-hand & Rental")
-            .where(models.FleaMarketItem.status == "sold")
+            .where(
+                or_(
+                    models.FleaMarketItem.status == "sold",
+                    models.Task.status == "pending_payment",
+                )
+            )
         )
         
         # 计算总数
@@ -1236,13 +1242,14 @@ async def get_my_purchases(
         result = await db.execute(query)
         rows = result.all()
         
-        # 格式化响应
+        # 格式化响应（含待支付信息，便于用户在「收的闲置」中继续支付）
         formatted_items = []
         for row in rows:
             item = row[0]
             task_id = row[1]
             agreed_reward = row[2]
             reward = row[3]
+            task_status = row[4]
             
             # 最终成交价：优先从agreed_reward获取，否则从reward获取
             final_price = agreed_reward if agreed_reward is not None else Decimal(str(reward))
@@ -1252,8 +1259,44 @@ async def get_my_purchases(
             if item.images:
                 try:
                     images = json.loads(item.images)
-                except:
+                except Exception:
                     images = []
+            
+            # 待支付商品：从关联任务获取 PaymentIntent 信息
+            pending_payment_task_id = None
+            pending_payment_client_secret = None
+            pending_payment_amount = None
+            pending_payment_amount_display = None
+            pending_payment_currency = None
+            pending_payment_customer_id = None
+            pending_payment_ephemeral_key_secret = None
+            pending_payment_expires_at = None
+            if task_status == "pending_payment":
+                task_result = await db.execute(
+                    select(models.Task).where(models.Task.id == task_id)
+                )
+                task = task_result.scalar_one_or_none()
+                if task and task.payment_intent_id:
+                    try:
+                        import stripe
+                        payment_intent = stripe.PaymentIntent.retrieve(task.payment_intent_id)
+                        if payment_intent.status in [
+                            "requires_payment_method",
+                            "requires_confirmation",
+                            "requires_action",
+                        ]:
+                            pending_payment_task_id = task.id
+                            pending_payment_client_secret = payment_intent.client_secret
+                            pending_payment_amount = payment_intent.amount
+                            pending_payment_amount_display = f"{payment_intent.amount / 100:.2f}"
+                            pending_payment_currency = (payment_intent.currency or "gbp").upper()
+                            pending_payment_expires_at = (
+                                task.payment_expires_at.isoformat()
+                                if task.payment_expires_at
+                                else None
+                            )
+                    except Exception as e:
+                        logger.warning(f"获取待支付商品 {item.id} 的支付信息失败: {e}")
             
             formatted_items.append(schemas.MyPurchasesItemResponse(
                 id=format_flea_market_id(item.id),
@@ -1272,6 +1315,14 @@ async def get_my_purchases(
                 updated_at=format_iso_utc(item.updated_at),
                 task_id=format_flea_market_id(task_id),
                 final_price=final_price,
+                pending_payment_task_id=pending_payment_task_id,
+                pending_payment_client_secret=pending_payment_client_secret,
+                pending_payment_amount=pending_payment_amount,
+                pending_payment_amount_display=pending_payment_amount_display,
+                pending_payment_currency=pending_payment_currency,
+                pending_payment_customer_id=pending_payment_customer_id,
+                pending_payment_ephemeral_key_secret=pending_payment_ephemeral_key_secret,
+                pending_payment_expires_at=pending_payment_expires_at,
             ))
         
         # 计算hasMore

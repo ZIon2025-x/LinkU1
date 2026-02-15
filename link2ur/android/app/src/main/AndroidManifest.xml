@@ -68,6 +68,11 @@
             android:name="com.google.android.geo.API_KEY"
             android:value="${MAPS_API_KEY}" />
 
+        <!-- Google Pay API（Stripe Platform Pay 需要） -->
+        <meta-data
+            android:name="com.google.android.gms.wallet.api.enabled"
+            android:value="true" />
+
         <!-- Location Picker Activity -->
         <activity
             android:name=".LocationPickerActivity"

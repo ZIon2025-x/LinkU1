@@ -238,20 +238,29 @@ class FleaMarketRepository {
     }
   }
 
-  /// 获取购买历史
-  Future<List<Map<String, dynamic>>> getMyPurchases({
+  /// 获取购买历史（含待支付 + 已购，对齐 iOS pageSize 100 + 分页）
+  Future<MyPurchasesResponse> getMyPurchases({
     int page = 1,
-    int pageSize = 20,
+    int pageSize = 100,
+    bool forceRefresh = false,
   }) async {
+    if (forceRefresh) {
+      await _cache.invalidateMyFleaMarketCache();
+    }
+
     final cacheKey = CacheManager.buildKey(
       '${CacheManager.prefixMyFleaMarket}purchases_',
       {'p': page, 'ps': pageSize},
     );
 
-    final cached = _cache.get<Map<String, dynamic>>(cacheKey);
+    final cached = forceRefresh ? null : _cache.get<Map<String, dynamic>>(cacheKey);
     if (cached != null) {
       final items = cached['items'] as List<dynamic>? ?? [];
-      return items.map((e) => e as Map<String, dynamic>).toList();
+      return MyPurchasesResponse(
+        items: items.map((e) => e as Map<String, dynamic>).toList(),
+        total: cached['total'] as int? ?? 0,
+        hasMore: cached['hasMore'] as bool? ?? false,
+      );
     }
 
     try {
@@ -267,15 +276,24 @@ class FleaMarketRepository {
         throw FleaMarketException(response.message ?? '获取购买历史失败');
       }
 
-      await _cache.set(cacheKey, response.data!, ttl: CacheManager.personalTTL);
+      final data = response.data!;
+      await _cache.set(cacheKey, data, ttl: CacheManager.personalTTL);
 
-      final items = response.data!['items'] as List<dynamic>? ?? [];
-      return items.map((e) => e as Map<String, dynamic>).toList();
+      final items = data['items'] as List<dynamic>? ?? [];
+      return MyPurchasesResponse(
+        items: items.map((e) => e as Map<String, dynamic>).toList(),
+        total: data['total'] as int? ?? 0,
+        hasMore: data['hasMore'] as bool? ?? data['has_more'] as bool? ?? false,
+      );
     } catch (e) {
       final stale = _cache.getStale<Map<String, dynamic>>(cacheKey);
       if (stale != null) {
         final items = stale['items'] as List<dynamic>? ?? [];
-        return items.map((e) => e as Map<String, dynamic>).toList();
+        return MyPurchasesResponse(
+          items: items.map((e) => e as Map<String, dynamic>).toList(),
+          total: stale['total'] as int? ?? 0,
+          hasMore: stale['hasMore'] as bool? ?? false,
+        );
       }
       rethrow;
     }

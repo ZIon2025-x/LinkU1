@@ -695,14 +695,16 @@ class FleaMarketBloc extends Bloc<FleaMarketEvent, FleaMarketState> {
 
     try {
       final item = await _fleaMarketRepository.getItemById(event.itemId);
+      if (emit.isDone) return;
       emit(state.copyWith(
         detailStatus: FleaMarketStatus.loaded,
         selectedItem: item,
       ));
       // 对标iOS checkFavoriteStatus：从收藏列表判断是否已收藏
-      _checkFavoriteStatus(item.id, emit);
+      await _checkFavoriteStatus(item.id, emit);
     } catch (e) {
       AppLogger.error('Failed to load flea market item detail', e);
+      if (emit.isDone) return;
       emit(state.copyWith(
         detailStatus: FleaMarketStatus.error,
         errorMessage: e.toString(),
@@ -721,6 +723,7 @@ class FleaMarketBloc extends Bloc<FleaMarketEvent, FleaMarketState> {
         pageSize: 100,
       );
       final favoriteIds = favResponse.items.map((e) => e.id).toSet();
+      if (emit.isDone) return;
       emit(state.copyWith(isFavorited: favoriteIds.contains(itemId)));
     } catch (e) {
       AppLogger.error('Failed to check favorite status', e);

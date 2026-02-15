@@ -120,7 +120,7 @@ class _AnimatedStarRatingState extends State<AnimatedStarRating>
     super.dispose();
   }
 
-  void _handleTap(int index) {
+  void _handleTap(int index, double localX) {
     if (widget.onRatingChanged == null) return;
 
     AppHaptics.selection();
@@ -128,7 +128,13 @@ class _AnimatedStarRatingState extends State<AnimatedStarRating>
     // 弹簧缩放反馈
     _controllers[index].forward(from: 0);
 
-    final newRating = (index + 1).toDouble();
+    final double newRating;
+    if (widget.allowHalfRating) {
+      final isLeftHalf = localX < widget.size / 2;
+      newRating = isLeftHalf ? index + 0.5 : (index + 1).toDouble();
+    } else {
+      newRating = (index + 1).toDouble();
+    }
     widget.onRatingChanged!(newRating);
   }
 
@@ -152,8 +158,8 @@ class _AnimatedStarRatingState extends State<AnimatedStarRating>
             right: index < widget.maxRating - 1 ? widget.spacing : 0,
           ),
           child: GestureDetector(
-            onTap: widget.onRatingChanged != null
-                ? () => _handleTap(index)
+            onTapUp: widget.onRatingChanged != null
+                ? (TapUpDetails d) => _handleTap(index, d.localPosition.dx)
                 : null,
             child: AnimatedBuilder(
               animation: _controllers[index],

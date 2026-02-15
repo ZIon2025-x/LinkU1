@@ -1,11 +1,15 @@
-import 'package:flutter/foundation.dart' show kIsWeb;
-import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kDebugMode, kIsWeb, defaultTargetPlatform, TargetPlatform;
+import 'package:flutter/material.dart' show ThemeMode;
+import 'package:flutter/services.dart' show PlatformException;
 import 'package:flutter_stripe/flutter_stripe.dart';
 
 import '../../core/config/app_config.dart';
 import '../../core/utils/logger.dart';
 import '../../core/utils/app_exception.dart';
 import '../models/payment.dart';
+
+String get _platformTag =>
+    kIsWeb ? 'web' : (defaultTargetPlatform == TargetPlatform.iOS ? 'iOS' : 'Android');
 
 /// Stripe 支付服务
 /// 封装 Stripe SDK 的支付流程：信用卡、Apple Pay、支付宝
@@ -62,33 +66,46 @@ class PaymentService {
     }
 
     try {
+      final confirmParams = defaultTargetPlatform == TargetPlatform.iOS
+          ? PlatformPayConfirmParams.applePay(
+              applePay: ApplePayParams(
+                cartItems: [
+                  ApplePayCartSummaryItem.immediate(
+                    label: label,
+                    amount: (amount / 100).toStringAsFixed(2),
+                  ),
+                ],
+                currencyCode: currency,
+                merchantCountryCode: countryCode,
+              ),
+            )
+          : PlatformPayConfirmParams.googlePay(
+              googlePay: GooglePayParams(
+                merchantCountryCode: countryCode,
+                currencyCode: currency,
+                merchantName: label,
+                testEnv: kDebugMode,
+              ),
+            );
       await Stripe.instance.confirmPlatformPayPaymentIntent(
         clientSecret: clientSecret,
-        confirmParams: PlatformPayConfirmParams.applePay(
-          applePay: ApplePayParams(
-            cartItems: [
-              ApplePayCartSummaryItem.immediate(
-                label: label,
-                amount: (amount / 100).toStringAsFixed(2),
-              ),
-            ],
-            currencyCode: currency,
-            merchantCountryCode: countryCode,
-          ),
-        ),
+        confirmParams: confirmParams,
       );
 
       AppLogger.info('Apple Pay payment completed successfully');
       return true;
     } on StripeException catch (e) {
       if (e.error.code == FailureCode.Canceled) {
-        AppLogger.info('Apple Pay cancelled by user');
+        AppLogger.info('Apple Pay [$_platformTag] cancelled by user');
         return false;
       }
-      AppLogger.error('Apple Pay error', e);
+      AppLogger.error('Apple Pay [$_platformTag] error: code=${e.error.code}, message=${e.error.message}', e);
       rethrow;
-    } catch (e) {
-      AppLogger.error('Apple Pay error', e);
+    } catch (e, st) {
+      AppLogger.error('Apple Pay [$_platformTag] error: $e', e, st);
+      if (e is PlatformException) {
+        AppLogger.error('PlatformException: code=${e.code}, message=${e.message}, details=${e.details}', e);
+      }
       rethrow;
     }
   }
@@ -214,7 +231,13 @@ class PaymentService {
       }
       rethrow;
     } catch (e, st) {
-      AppLogger.error('Payment error: $e', e, st);
+      AppLogger.error('Payment error [$_platformTag]: $e', e, st);
+      if (e is PlatformException) {
+        AppLogger.error(
+          'PlatformException: code=${e.code}, message=${e.message}, details=${e.details}',
+          e,
+        );
+      }
       rethrow;
     }
   }
@@ -228,9 +251,10 @@ class PaymentService {
     String? merchantDisplayName,
     String? returnUrl,
   }) async {
-    AppLogger.info('PaymentSheet: initPaymentSheet (useCustomer=$useCustomer)...');
+    AppLogger.info('PaymentSheet [$_platformTag]: initPaymentSheet (useCustomer=$useCustomer)...');
     final stopwatch = Stopwatch()..start();
 
+    try {
     await Stripe.instance.initPaymentSheet(
       paymentSheetParameters: SetupPaymentSheetParameters(
         paymentIntentClientSecret: clientSecret,
@@ -267,22 +291,45 @@ class PaymentService {
         );
       },
     );
+    } catch (e, st) {
+      AppLogger.error(
+        'PaymentSheet initPaymentSheet FAILED [$_platformTag]: $e',
+        e,
+        st,
+      );
+      rethrow;
+    }
 
     stopwatch.stop();
-    AppLogger.info('PaymentSheet: initPaymentSheet completed in ${stopwatch.elapsedMilliseconds}ms, presenting...');
+    AppLogger.info('PaymentSheet [$_platformTag]: initPaymentSheet completed in ${stopwatch.elapsedMilliseconds}ms, presenting...');
 
     // 展示 PaymentSheet
     final presentStopwatch = Stopwatch()..start();
-    await Stripe.instance.presentPaymentSheet().timeout(
-      _paymentSheetTimeout,
-      onTimeout: () {
-        throw PaymentServiceException(
-          'Payment sheet did not respond in ${presentStopwatch.elapsedMilliseconds}ms. Please try again.',
+    try {
+      await Stripe.instance.presentPaymentSheet().timeout(
+        _paymentSheetTimeout,
+        onTimeout: () {
+          throw PaymentServiceException(
+            'Payment sheet did not respond in ${presentStopwatch.elapsedMilliseconds}ms. Please try again.',
+          );
+        },
+      );
+    } catch (e, st) {
+      AppLogger.error(
+        'PaymentSheet presentPaymentSheet FAILED [$_platformTag]: $e',
+        e,
+        st,
+      );
+      if (e is PlatformException) {
+        AppLogger.error(
+          'PlatformException details: code=${e.code}, message=${e.message}, details=${e.details}',
+          e,
         );
-      },
-    );
+      }
+      rethrow;
+    }
     presentStopwatch.stop();
-    AppLogger.info('PaymentSheet: presentPaymentSheet completed in ${presentStopwatch.elapsedMilliseconds}ms');
+    AppLogger.info('PaymentSheet [$_platformTag]: presentPaymentSheet completed in ${presentStopwatch.elapsedMilliseconds}ms');
   }
 
   /// 从 TaskPaymentResponse 发起支付

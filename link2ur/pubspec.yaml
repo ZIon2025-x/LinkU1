@@ -48,8 +48,8 @@ dependencies:
   # WebView
   webview_flutter: ^4.10.0
   
-  # 支付
-  flutter_stripe: ^11.0.0
+  # 支付（^12.0.0 与 stripe-connect:22.8 版本一致，避免 FinancialConnectionsSession 重复类）
+  flutter_stripe: ^12.0.0
   
   # 位置服务
   geolocator: ^12.0.0

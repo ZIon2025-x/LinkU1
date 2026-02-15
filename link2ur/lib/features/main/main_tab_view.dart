@@ -194,23 +194,29 @@ class _MainTabViewState extends State<MainTabView> {
   /// BLoC 实例由 BlocProvider(lazy: true) 在首次 context.read 时创建
   /// 此方法仅负责触发数据加载事件
   void _ensureTabLoaded(int index) {
-    if (_loadedTabs.contains(index)) return;
+    final wasAlreadyLoaded = _loadedTabs.contains(index);
     _loadedTabs.add(index);
 
     // 根据 tab index 触发对应 BLoC 数据加载
     switch (index) {
       case 0: // Home
-        _homeBloc.add(const HomeLoadRequested());
-        _homeBloc.add(const HomeLoadDiscoveryFeed());
+        if (!wasAlreadyLoaded) {
+          _homeBloc.add(const HomeLoadRequested());
+          _homeBloc.add(const HomeLoadDiscoveryFeed());
+        }
         break;
       case 1: // Community (Forum) — 首次切到社区 Tab 时触发加载
-        _forumBloc.add(const ForumLoadCategories());
-        _leaderboardBloc.add(const LeaderboardLoadRequested());
+        if (!wasAlreadyLoaded) {
+          _forumBloc.add(const ForumLoadCategories());
+          _leaderboardBloc.add(const LeaderboardLoadRequested());
+        }
         break;
-      case 3: // Messages — 首次切到消息 Tab 时触发加载
+      case 3: // Messages — 每次切到消息 Tab 都刷新未读，便于实时更新红点
         _messageBloc
           ..add(const MessageLoadContacts())
           ..add(const MessageLoadTaskChats());
+        context.read<NotificationBloc>()
+            .add(const NotificationLoadUnreadNotificationCount());
         break;
       case 4: // Profile — no BLoC here at this level
         break;
