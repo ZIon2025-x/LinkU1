@@ -1431,8 +1431,8 @@ def _build_wechat_checkout_metadata(
 async def create_wechat_checkout_session(
     task_id: int,
     request: Request,
-    user_coupon_id: Optional[int] = None,
-    coupon_code: Optional[str] = None,
+    user_coupon_id: Optional[int] = Body(None),
+    coupon_code: Optional[str] = Body(None),
     task_source: Optional[str] = Body(None),
     flea_market_item_id: Optional[str] = Body(None),
     current_user: models.User = Depends(get_current_user_secure_sync_csrf),
