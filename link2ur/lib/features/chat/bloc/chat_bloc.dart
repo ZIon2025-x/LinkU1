@@ -1,4 +1,4 @@
-﻿import 'dart:async';
+import 'dart:async';
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -97,7 +97,7 @@ class ChatState extends Equatable {
   final String? taskStatus;
   final int page;
   final bool hasMore;
-  /// 浠诲姟鑱婂ぉ娓告爣鍒嗛〉锛氬姞杞芥洿澶氭椂浼犵粰鍚庣鐨?cursor
+  /// 任务聊天游标分页：加载更多时传给后端的 cursor
   final String? nextCursor;
   final bool isSending;
   final bool isLoadingMore;
@@ -105,7 +105,7 @@ class ChatState extends Equatable {
 
   bool get isTaskChat => taskId != null;
 
-  /// Whether the task chat should be closed for input.
+  /// 任务是否已关闭（对齐iOS: 已完成/已取消/已过期等禁用输入）
   bool get isTaskClosed {
     if (taskStatus == null) return false;
     return taskStatus == AppConstants.taskStatusCompleted ||
@@ -171,7 +171,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     on<ChatMessageReceived>(_onMessageReceived);
     on<ChatMarkAsRead>(_onMarkAsRead);
 
-    // Listen to WebSocket chat events.
+    // 监听WebSocket消息（task_message 格式为 { type, message: {...} }，对齐 iOS）
     _wsSubscription = WebSocketService.instance.messageStream.listen(
       (wsMessage) {
         if (!wsMessage.isChatMessage || wsMessage.data == null) return;
@@ -205,7 +205,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
 
     try {
       if (event.taskId != null) {
-        // 浠诲姟鑱婂ぉ锛氬悗绔父鏍囧垎椤?limit + cursor
+        // 任务聊天：后端游标分页 limit + cursor
         final result = await _messageRepository.getTaskChatMessages(
           event.taskId!,
           limit: 50,
@@ -218,7 +218,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
           nextCursor: result.nextCursor,
         ));
       } else {
-        // 绉佽亰
+        // 私聊
         final messages = await _messageRepository.getMessagesWith(
           event.userId,
           page: 1,
@@ -231,7 +231,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
         ));
       }
 
-      // 鏍囪宸茶
+      // 标记已读
       add(const ChatMarkAsRead());
     } catch (e) {
       AppLogger.error('Failed to load messages', e);
@@ -252,7 +252,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
 
     try {
       if (state.taskId != null) {
-        // Task chat uses cursor pagination for older messages.
+        // 任务聊天：用 cursor 加载更早的消息
         if (state.nextCursor == null || state.nextCursor!.isEmpty) {
           emit(state.copyWith(hasMore: false, isLoadingMore: false));
           return;
@@ -262,7 +262,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
           limit: 50,
           cursor: state.nextCursor,
         );
-        // 鏇存棭鐨勬秷鎭拷鍔犲埌鍒楄〃鏈熬锛堝悗绔繑鍥炰粛涓?鏂扳啋鏃э紝鎵€浠?result.messages 鏄瘮褰撳墠 state.messages 鏇存棫鐨勪竴鎵癸級
+        // 更早的消息追加到列表末尾（后端返回仍为 新→旧，所以 result.messages 是比当前 state.messages 更旧的一批）
         emit(state.copyWith(
           messages: [...state.messages, ...result.messages],
           hasMore: result.hasMore,
@@ -301,14 +301,14 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
       Message message;
 
       if (state.isTaskChat) {
-        // 浠诲姟鑱婂ぉ锛氫娇鐢ㄤ换鍔¤亰澶╀笓鐢ˋPI
+        // 任务聊天：使用任务聊天专用API
         message = await _messageRepository.sendTaskChatMessage(
           state.taskId!,
           content: event.content,
           messageType: event.messageType,
         );
       } else {
-        // 绉佽亰锛氫娇鐢ㄧ鑱夾PI
+        // 私聊：使用私聊API
         message = await _messageRepository.sendMessage(
           SendMessageRequest(
             receiverId: state.userId,
@@ -319,7 +319,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
           ),
         );
 
-        // Send through websocket for direct chat too.
+        // 私聊同时通过WebSocket发送
         _messageRepository.sendMessageViaWebSocket(
           SendMessageRequest(
             receiverId: state.userId,
@@ -330,7 +330,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
         );
       }
 
-      // 浠诲姟鑱婂ぉ state 涓烘渶鏂板湪鍓嶏紝鏂版秷鎭彃鍒板ご閮ㄦ墠浼氭樉绀哄湪鍒楄〃搴曢儴锛涚鑱婁繚鎸佽拷鍔犲埌鏈熬
+      // 任务聊天 state 为最新在前，新消息插到头部才会显示在列表底部；私聊保持追加到末尾
       final newMessages = state.isTaskChat
           ? [message, ...state.messages]
           : [...state.messages, message];
@@ -351,16 +351,16 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     emit(state.copyWith(isSending: true));
 
     try {
-      // 鍏堜笂浼犲浘鐗囪幏鍙朥RL
+      // 先上传图片获取URL
       final imageUrl = await _messageRepository.uploadImage(event.filePath);
 
       Message message;
       if (state.isTaskChat) {
-        // Upload first, then send image message with attachment metadata.
+        // 任务聊天：先上传再发送带附件的消息（对齐 iOS sendMessageWithAttachment）
         final filename = Uri.tryParse(imageUrl)?.pathSegments.last ?? 'image.jpg';
         message = await _messageRepository.sendTaskChatMessage(
           state.taskId!,
-          content: '[Image]',
+          content: '[图片]',
           messageType: 'image',
           attachments: [
             {
@@ -374,7 +374,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
         message = await _messageRepository.sendMessage(
           SendMessageRequest(
             receiverId: state.userId,
-            content: '[Image]',
+            content: '[图片]',
             messageType: 'image',
             taskId: state.taskId,
             imageUrl: imageUrl,
@@ -382,7 +382,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
         );
       }
 
-      // Task chat keeps newest-first; direct chat appends at the end.
+      // 任务聊天 state 为最新在前，新消息插到头部；私聊保持追加到末尾
       final newMessages = state.isTaskChat
           ? [message, ...state.messages]
           : [...state.messages, message];
@@ -402,22 +402,22 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
   ) {
     final message = event.message;
 
-    // 鍘婚噸妫€鏌?- 瀵归綈iOS deduplication
+    // 去重检查 - 对齐iOS deduplication
     if (state.messages.any((m) => m.id == message.id)) {
       return;
     }
 
     if (state.isTaskChat) {
-      // 浠诲姟鑱婂ぉ锛氭寜taskId杩囨护锛屾柊娑堟伅鎻掑埌澶撮儴锛堟樉绀哄湪鍒楄〃搴曢儴锛? 瀵归綈iOS
+      // 任务聊天：按taskId过滤，新消息插到头部（显示在列表底部）- 对齐iOS
       if (message.taskId == state.taskId) {
         emit(state.copyWith(
           messages: [message, ...state.messages],
         ));
-        // 鑷姩鏍囪宸茶
+        // 自动标记已读
         add(const ChatMarkAsRead());
       }
     } else {
-      // 绉佽亰锛氭寜userId杩囨护锛岃拷鍔犲埌鏈熬
+      // 私聊：按userId过滤，追加到末尾
       if (message.senderId == state.userId ||
           message.receiverId == state.userId) {
         emit(state.copyWith(
@@ -433,8 +433,8 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
   ) async {
     try {
       if (state.isTaskChat) {
-        // 浠诲姟鑱婂ぉ锛氫娇鐢ㄤ换鍔¤亰澶╂爣璁板凡璇籄PI锛屼紶鍏ユ渶鏂版秷鎭疘D
-        // 鍚庣杩斿洖娑堟伅鎸?created_at DESC 鎺掑簭锛宮essages[0] 鏄渶鏂扮殑
+        // 任务聊天：使用任务聊天标记已读API，传入最新消息ID
+        // 后端返回消息按 created_at DESC 排序，messages[0] 是最新的
         final latestId = state.messages.isNotEmpty ? state.messages.first.id : null;
         if (latestId != null) {
           await _messageRepository.markTaskChatRead(
@@ -443,7 +443,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
           );
         }
       } else {
-        // 绉佽亰
+        // 私聊
         await _messageRepository.markMessagesRead(state.userId);
       }
     } catch (e) {
@@ -457,4 +457,3 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     return super.close();
   }
 }
-

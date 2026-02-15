@@ -1,4 +1,4 @@
-﻿import 'package:equatable/equatable.dart';
+import 'package:equatable/equatable.dart';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -81,7 +81,7 @@ class SettingsState extends Equatable {
     this.locale = 'zh',
     this.notificationsEnabled = true,
     this.soundEnabled = true,
-    this.cacheSize = 'common_loading',
+    this.cacheSize = '计算中...',
     this.appVersion = '',
     this.isClearingCache = false,
     this.isDeletingAccount = false,
@@ -173,7 +173,7 @@ class SettingsBloc extends Bloc<SettingsEvent, SettingsState> {
         soundEnabled: soundEnabled,
       ));
 
-      // 寮傛璁＄畻缂撳瓨澶у皬
+      // 异步计算缓存大小
       add(const SettingsCalculateCacheSize());
     } catch (e) {
       AppLogger.error('Failed to load settings', e);
@@ -241,10 +241,10 @@ class SettingsBloc extends Bloc<SettingsEvent, SettingsState> {
     Emitter<SettingsState> emit,
   ) async {
     try {
-      // 璁＄畻涓存椂鐩綍澶у皬锛堝浘鐗囩紦瀛樼瓑锛夆€?Web 涓婅繑鍥?0
+      // 计算临时目录大小（图片缓存等）— Web 上返回 0
       final tempSize = await cache_dir_helper.calculateCacheDirectorySize();
 
-      // 鍔犱笂 CacheManager 鐨勭紦瀛樺ぇ灏?
+      // 加上 CacheManager 的缓存大小
       final apiCacheSize = CacheManager.shared.diskCacheSizeBytes;
 
       final totalSize = tempSize + apiCacheSize;
@@ -261,19 +261,19 @@ class SettingsBloc extends Bloc<SettingsEvent, SettingsState> {
     try {
       emit(state.copyWith(isClearingCache: true));
 
-      // 1. 娓呯悊 CacheManager锛圓PI 鍝嶅簲缂撳瓨锛?
+      // 1. 清理 CacheManager（API 响应缓存）
       await CacheManager.shared.clearAll();
 
-      // 2. 娓呯悊缈昏瘧缂撳瓨
+      // 2. 清理翻译缓存
       await TranslationCacheManager.shared.clearAllCache();
 
-      // 3. 娓呯悊 StorageService 鐨?Hive 缂撳瓨
+      // 3. 清理 StorageService 的 Hive 缓存
       await StorageService.instance.clearCache();
 
-      // 4. 娓呯悊涓存椂鐩綍锛堝浘鐗囩紦瀛樼瓑锛夆€?Web 涓婁负 no-op
+      // 4. 清理临时目录（图片缓存等）— Web 上为 no-op
       await cache_dir_helper.clearCacheDirectory();
 
-      // 璁板綍缂撳瓨缁熻
+      // 记录缓存统计
       final stats = CacheManager.shared.getStatistics();
       AppLogger.info('Cache cleared. Stats before clear: $stats');
 
@@ -298,7 +298,7 @@ class SettingsBloc extends Bloc<SettingsEvent, SettingsState> {
         await apiService!.delete('/api/users/me');
       }
 
-      // 娓呯悊鏈湴鏁版嵁
+      // 清理本地数据
       await StorageService.instance.clearAll();
 
       emit(state.copyWith(isDeletingAccount: false));
@@ -311,7 +311,7 @@ class SettingsBloc extends Bloc<SettingsEvent, SettingsState> {
     }
   }
 
-  /// 鏍煎紡鍖栨枃浠跺ぇ灏?
+  /// 格式化文件大小
   String _formatFileSize(int bytes) {
     if (bytes < 1024) return '$bytes B';
     if (bytes < 1024 * 1024) return '${(bytes / 1024).toStringAsFixed(1)} KB';
@@ -321,4 +321,3 @@ class SettingsBloc extends Bloc<SettingsEvent, SettingsState> {
     return '${(bytes / (1024 * 1024 * 1024)).toStringAsFixed(1)} GB';
   }
 }
-

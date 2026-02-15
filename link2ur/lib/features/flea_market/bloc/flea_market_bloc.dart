@@ -1,4 +1,4 @@
-﻿import 'dart:typed_data';
+import 'dart:typed_data';
 
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -67,7 +67,7 @@ class FleaMarketPurchaseItem extends FleaMarketEvent {
   List<Object?> get props => [itemId];
 }
 
-/// 鎻愪氦璐拱/璁环鐢宠锛堢暀瑷€ + 鍙€夎浠烽噾棰濓級- 瀵规爣 iOS 璐拱寮圭獥
+/// 提交购买/议价申请（留言 + 可选议价金额）- 对标 iOS 购买弹窗
 class FleaMarketSubmitPurchaseOrRequest extends FleaMarketEvent {
   const FleaMarketSubmitPurchaseOrRequest(
     this.itemId, {
@@ -116,7 +116,7 @@ class FleaMarketLoadDetailRequested extends FleaMarketEvent {
   List<Object?> get props => [itemId];
 }
 
-/// 鏀粯鎴愬姛鍚庝箰瑙傛爣璁板晢鍝佷负宸插敭鍑猴紙閬垮厤 webhook 鏈彁浜ゆ椂璇︽儏浠嶆樉绀洪鐣欙級
+/// 支付成功后乐观标记商品为已售出（避免 webhook 未提交时详情仍显示预留）
 class FleaMarketMarkItemSold extends FleaMarketEvent {
   const FleaMarketMarkItemSold(this.itemId);
 
@@ -126,7 +126,7 @@ class FleaMarketMarkItemSold extends FleaMarketEvent {
   List<Object?> get props => [itemId];
 }
 
-/// 鍒锋柊鍟嗗搧锛堥噸鏂颁笂鏋讹級- 瀵规爣iOS refreshItem
+/// 刷新商品（重新上架）- 对标iOS refreshItem
 class FleaMarketRefreshItem extends FleaMarketEvent {
   const FleaMarketRefreshItem(this.itemId);
 
@@ -136,7 +136,7 @@ class FleaMarketRefreshItem extends FleaMarketEvent {
   List<Object?> get props => [itemId];
 }
 
-/// 鍔犺浇璐拱鐢宠鍒楄〃 - 瀵规爣iOS loadPurchaseRequests
+/// 加载购买申请列表 - 对标iOS loadPurchaseRequests
 class FleaMarketLoadPurchaseRequests extends FleaMarketEvent {
   const FleaMarketLoadPurchaseRequests(this.itemId);
 
@@ -146,7 +146,7 @@ class FleaMarketLoadPurchaseRequests extends FleaMarketEvent {
   List<Object?> get props => [itemId];
 }
 
-/// 鏀惰棌/鍙栨秷鏀惰棌 - 瀵规爣iOS toggleFavorite
+/// 收藏/取消收藏 - 对标iOS toggleFavorite
 class FleaMarketToggleFavorite extends FleaMarketEvent {
   const FleaMarketToggleFavorite(this.itemId);
 
@@ -156,7 +156,7 @@ class FleaMarketToggleFavorite extends FleaMarketEvent {
   List<Object?> get props => [itemId];
 }
 
-/// Clear direct-purchase payment data after leaving payment flow.
+/// 清除直接购买后的支付数据（关闭支付页或支付完成后调用）
 class FleaMarketClearAcceptPaymentData extends FleaMarketEvent {
   const FleaMarketClearAcceptPaymentData();
 }
@@ -170,15 +170,15 @@ class FleaMarketUploadImage extends FleaMarketEvent {
 
   final Uint8List imageBytes;
   final String filename;
-  /// Optional item id, used when editing and uploading into item directory.
+  /// 编辑时传入，上传到商品目录；新建时不传
   final String? itemId;
 
   @override
   List<Object?> get props => [imageBytes.length, filename, itemId];
 }
 
-/// Edit flow helper: upload new images first, then call PUT with final images.
-/// Keep execution serialized in bloc to avoid race conditions.
+/// 编辑页专用：先上传新图片，再调用 PUT 更新商品（含 images 字段）
+/// 在 bloc 内串行执行，避免 stream 竞态导致 PUT 未发送或漏写 DB
 class FleaMarketUploadImagesAndUpdateItem extends FleaMarketEvent {
   const FleaMarketUploadImagesAndUpdateItem({
     required this.itemId,
@@ -196,7 +196,7 @@ class FleaMarketUploadImagesAndUpdateItem extends FleaMarketEvent {
   final double price;
   final String category;
   final List<String> existingImageUrls;
-  /// (bytes, filename) 鍒楄〃
+  /// (bytes, filename) 列表
   final List<(Uint8List, String)> newImagesToUpload;
 
   @override
@@ -254,7 +254,7 @@ class FleaMarketState extends Equatable {
   final bool isFavorited;
   final bool isTogglingFavorite;
   final bool isLoadingMore;
-  /// Data returned by backend when direct purchase requires additional payment.
+  /// 直接购买后需支付时由后端返回，用于打开支付页（对标 iOS handlePurchaseComplete）
   final AcceptPaymentData? acceptPaymentData;
   final bool clearAcceptPaymentData;
 
@@ -401,7 +401,7 @@ class FleaMarketBloc extends Bloc<FleaMarketEvent, FleaMarketState> {
   ) async {
     emit(state.copyWith(isRefreshing: true));
 
-    // Invalidate cache before refresh to ensure latest data.
+    // 下拉刷新前失效缓存，确保获取最新数据
     await CacheManager.shared.invalidateFleaMarketCache();
 
     try {
@@ -427,7 +427,7 @@ class FleaMarketBloc extends Bloc<FleaMarketEvent, FleaMarketState> {
     FleaMarketLoadMore event,
     Emitter<FleaMarketState> emit,
   ) async {
-    // 闃查噸澶嶏細姝ｅ湪鍔犺浇涓垨鏃犳洿澶氭暟鎹椂璺宠繃
+    // 防重复：正在加载中或无更多数据时跳过
     if (!state.hasMore || state.isLoadingMore) return;
     emit(state.copyWith(isLoadingMore: true));
 
@@ -524,7 +524,7 @@ class FleaMarketBloc extends Bloc<FleaMarketEvent, FleaMarketState> {
         isSubmitting: false,
         actionMessage: 'item_published',
       ));
-      // 鍒锋柊鍒楄〃
+      // 刷新列表
       add(const FleaMarketRefreshRequested());
     } catch (e) {
       emit(state.copyWith(
@@ -535,8 +535,9 @@ class FleaMarketBloc extends Bloc<FleaMarketEvent, FleaMarketState> {
     }
   }
 
-  /// 浠庣洿鎺ヨ喘涔版帴鍙ｈ繑鍥炵殑 body 涓В鏋愭敮浠樻暟鎹紙鍚庣杩斿洖 { success, data: { task_id, client_secret, ... } }锛?  /// 瀵规爣 iOS DirectPurchaseResponse.DirectPurchaseData锛屼粎褰撻渶鏀粯锛坧ending_payment + client_secret锛夋椂杩斿洖闈?null
-  /// [itemId] 璺宠殼甯傚満鍟嗗搧 ID锛屼紶鍏ユ椂琛ュ厖 taskSource 鍜?fleaMarketItemId 渚涙敮浠樺垱寤?PI 浣跨敤
+  /// 从直接购买接口返回的 body 中解析支付数据（后端返回 { success, data: { task_id, client_secret, ... } }）
+  /// 对标 iOS DirectPurchaseResponse.DirectPurchaseData，仅当需支付（pending_payment + client_secret）时返回非 null
+  /// [itemId] 跳蚤市场商品 ID，传入时补充 taskSource 和 fleaMarketItemId 供支付创建 PI 使用
   AcceptPaymentData? _parseDirectPurchasePaymentData(
     Map<String, dynamic> raw, {
     String? itemId,
@@ -580,7 +581,8 @@ class FleaMarketBloc extends Bloc<FleaMarketEvent, FleaMarketState> {
           _parseDirectPurchasePaymentData(result, itemId: event.itemId);
 
       if (paymentData != null) {
-        // Normal flow: needs payment, open payment page.
+        // ✅ 正常流程：需要支付，打开支付页
+        // 此时商品状态在后端仍为 active（但 sold_task_id 已设置），不在本地改状态
         emit(state.copyWith(
           isSubmitting: false,
           actionMessage: 'open_payment',
@@ -589,7 +591,7 @@ class FleaMarketBloc extends Bloc<FleaMarketEvent, FleaMarketState> {
         return;
       }
 
-      // Rare case without extra payment: refresh detail status.
+      // ⚠️ 无需支付的情况（极少见，如0元商品）：刷新详情确认最新状态
       FleaMarketItem? refreshedDetail;
       if (state.selectedItem?.id == event.itemId) {
         refreshedDetail =
@@ -643,7 +645,8 @@ class FleaMarketBloc extends Bloc<FleaMarketEvent, FleaMarketState> {
             _parseDirectPurchasePaymentData(result, itemId: event.itemId);
 
         if (paymentData != null) {
-          // 鉁?姝ｅ父娴佺▼锛氶渶瑕佹敮浠橈紝鎵撳紑鏀粯椤?          // 瀵规爣 iOS handlePurchaseComplete锛氫笉鏀瑰彉鏈湴鍟嗗搧鐘舵€侊紝绛夋敮浠樺畬鎴愬悗鍒锋柊
+          // ✅ 正常流程：需要支付，打开支付页
+          // 对标 iOS handlePurchaseComplete：不改变本地商品状态，等支付完成后刷新
           emit(state.copyWith(
             isSubmitting: false,
             actionMessage: 'open_payment',
@@ -652,7 +655,7 @@ class FleaMarketBloc extends Bloc<FleaMarketEvent, FleaMarketState> {
           return;
         }
 
-        // Rare case without extra payment: refresh detail status.
+        // ⚠️ 无需支付的情况：刷新详情确认最新状态
         if (state.selectedItem?.id == event.itemId) {
           refreshedDetail =
               await _fleaMarketRepository.getItemById(event.itemId);
@@ -702,7 +705,7 @@ class FleaMarketBloc extends Bloc<FleaMarketEvent, FleaMarketState> {
         images: event.images,
       );
 
-      // Update corresponding item in list.
+      // 更新列表中的对应项
       final updatedItems = state.items.map((item) {
         return item.id == event.itemId ? updatedItem : item;
       }).toList();
@@ -724,7 +727,7 @@ class FleaMarketBloc extends Bloc<FleaMarketEvent, FleaMarketState> {
     }
   }
 
-  /// 缂栬緫椤典笓鐢細涓茶涓婁紶 + 鏇存柊锛岀‘淇?PUT 涓€瀹氬彂閫佷笖 images 鍐欏叆 DB
+  /// 编辑页专用：串行上传 + 更新，确保 PUT 一定发送且 images 写入 DB
   Future<void> _onUploadImagesAndUpdateItem(
     FleaMarketUploadImagesAndUpdateItem event,
     Emitter<FleaMarketState> emit,
@@ -788,7 +791,7 @@ class FleaMarketBloc extends Bloc<FleaMarketEvent, FleaMarketState> {
     if (event.itemId.trim().isEmpty) {
       emit(state.copyWith(
         detailStatus: FleaMarketStatus.error,
-        errorMessage: 'flea_market_error_invalid_item_id',
+        errorMessage: '无效的商品 ID',
       ));
       return;
     }
@@ -802,7 +805,7 @@ class FleaMarketBloc extends Bloc<FleaMarketEvent, FleaMarketState> {
         detailStatus: FleaMarketStatus.loaded,
         selectedItem: item,
       ));
-      // Check current favorite state from favorites list.
+      // 对标iOS checkFavoriteStatus：从收藏列表判断是否已收藏
       await _checkFavoriteStatus(item.id, emit);
     } catch (e) {
       AppLogger.error('Failed to load flea market item detail', e);
@@ -828,7 +831,7 @@ class FleaMarketBloc extends Bloc<FleaMarketEvent, FleaMarketState> {
     ));
   }
 
-  /// 妫€鏌ュ晢鍝佹槸鍚﹀凡鏀惰棌 - 瀵规爣iOS checkFavoriteStatus
+  /// 检查商品是否已收藏 - 对标iOS checkFavoriteStatus
   Future<void> _checkFavoriteStatus(
     String itemId,
     Emitter<FleaMarketState> emit,
@@ -846,7 +849,7 @@ class FleaMarketBloc extends Bloc<FleaMarketEvent, FleaMarketState> {
     }
   }
 
-  /// 鍒锋柊鍟嗗搧锛堥噸鏂颁笂鏋讹級- 瀵规爣iOS refreshItem
+  /// 刷新商品（重新上架）- 对标iOS refreshItem
   Future<void> _onRefreshItem(
     FleaMarketRefreshItem event,
     Emitter<FleaMarketState> emit,
@@ -859,7 +862,7 @@ class FleaMarketBloc extends Bloc<FleaMarketEvent, FleaMarketState> {
         isSubmitting: false,
         actionMessage: 'refresh_success',
       ));
-      // Reload detail to fetch latest data.
+      // 重新加载详情以获取最新数据
       add(FleaMarketLoadDetailRequested(event.itemId));
     } catch (e) {
       AppLogger.error('Failed to refresh flea market item', e);
@@ -871,7 +874,7 @@ class FleaMarketBloc extends Bloc<FleaMarketEvent, FleaMarketState> {
     }
   }
 
-  /// 鍔犺浇璐拱鐢宠鍒楄〃 - 瀵规爣iOS loadPurchaseRequests
+  /// 加载购买申请列表 - 对标iOS loadPurchaseRequests
   Future<void> _onLoadPurchaseRequests(
     FleaMarketLoadPurchaseRequests event,
     Emitter<FleaMarketState> emit,
@@ -927,7 +930,7 @@ class FleaMarketBloc extends Bloc<FleaMarketEvent, FleaMarketState> {
     }
   }
 
-  /// 鏀惰棌/鍙栨秷鏀惰棌 - 瀵规爣iOS toggleFavorite
+  /// 收藏/取消收藏 - 对标iOS toggleFavorite
   Future<void> _onToggleFavorite(
     FleaMarketToggleFavorite event,
     Emitter<FleaMarketState> emit,
@@ -947,4 +950,3 @@ class FleaMarketBloc extends Bloc<FleaMarketEvent, FleaMarketState> {
     }
   }
 }
-
