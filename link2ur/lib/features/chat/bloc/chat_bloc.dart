@@ -84,6 +84,7 @@ class ChatState extends Equatable {
     this.taskStatus,
     this.page = 1,
     this.hasMore = true,
+    this.nextCursor,
     this.isSending = false,
     this.isLoadingMore = false,
     this.errorMessage,
@@ -96,6 +97,8 @@ class ChatState extends Equatable {
   final String? taskStatus;
   final int page;
   final bool hasMore;
+  /// 任务聊天游标分页：加载更多时传给后端的 cursor
+  final String? nextCursor;
   final bool isSending;
   final bool isLoadingMore;
   final String? errorMessage;
@@ -119,6 +122,7 @@ class ChatState extends Equatable {
     String? taskStatus,
     int? page,
     bool? hasMore,
+    String? nextCursor,
     bool? isSending,
     bool? isLoadingMore,
     String? errorMessage,
@@ -131,6 +135,7 @@ class ChatState extends Equatable {
       taskStatus: taskStatus ?? this.taskStatus,
       page: page ?? this.page,
       hasMore: hasMore ?? this.hasMore,
+      nextCursor: nextCursor ?? this.nextCursor,
       isSending: isSending ?? this.isSending,
       isLoadingMore: isLoadingMore ?? this.isLoadingMore,
       errorMessage: errorMessage,
@@ -146,6 +151,7 @@ class ChatState extends Equatable {
         taskStatus,
         page,
         hasMore,
+        nextCursor,
         isSending,
         isLoadingMore,
         errorMessage,
@@ -165,12 +171,20 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     on<ChatMessageReceived>(_onMessageReceived);
     on<ChatMarkAsRead>(_onMarkAsRead);
 
-    // 监听WebSocket消息
+    // 监听WebSocket消息（task_message 格式为 { type, message: {...} }，对齐 iOS）
     _wsSubscription = WebSocketService.instance.messageStream.listen(
       (wsMessage) {
-        if (wsMessage.isChatMessage && wsMessage.data != null) {
-          final message = Message.fromJson(wsMessage.data!);
+        if (!wsMessage.isChatMessage || wsMessage.data == null) return;
+        final data = wsMessage.data!;
+        final Map<String, dynamic> messageMap =
+            (wsMessage.type == 'task_message' && data['message'] is Map<String, dynamic>)
+                ? (data['message'] as Map<String, dynamic>)
+                : data;
+        try {
+          final message = Message.fromJson(messageMap);
           add(ChatMessageReceived(message));
+        } catch (e) {
+          AppLogger.warning('WebSocket chat message parse failed', e);
         }
       },
     );
@@ -190,27 +204,32 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     ));
 
     try {
-      List<Message> messages;
       if (event.taskId != null) {
-        // 任务聊天：使用任务聊天API
-        messages = await _messageRepository.getTaskChatMessages(
+        // 任务聊天：后端游标分页 limit + cursor
+        final result = await _messageRepository.getTaskChatMessages(
           event.taskId!,
-          page: 1,
+          limit: 50,
         );
+        emit(state.copyWith(
+          status: ChatStatus.loaded,
+          messages: result.messages,
+          page: 1,
+          hasMore: result.hasMore,
+          nextCursor: result.nextCursor,
+        ));
       } else {
         // 私聊
-        messages = await _messageRepository.getMessagesWith(
+        final messages = await _messageRepository.getMessagesWith(
           event.userId,
           page: 1,
         );
+        emit(state.copyWith(
+          status: ChatStatus.loaded,
+          messages: messages,
+          page: 1,
+          hasMore: messages.length >= 50,
+        ));
       }
-
-      emit(state.copyWith(
-        status: ChatStatus.loaded,
-        messages: messages,
-        page: 1,
-        hasMore: messages.length >= 50,
-      ));
 
       // 标记已读
       add(const ChatMarkAsRead());
@@ -232,27 +251,37 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     emit(state.copyWith(isLoadingMore: true));
 
     try {
-      final nextPage = state.page + 1;
-      List<Message> messages;
-
       if (state.taskId != null) {
-        messages = await _messageRepository.getTaskChatMessages(
+        // 任务聊天：用 cursor 加载更早的消息
+        if (state.nextCursor == null || state.nextCursor!.isEmpty) {
+          emit(state.copyWith(hasMore: false, isLoadingMore: false));
+          return;
+        }
+        final result = await _messageRepository.getTaskChatMessages(
           state.taskId!,
-          page: nextPage,
+          limit: 50,
+          cursor: state.nextCursor,
         );
+        // 更早的消息追加到列表末尾（后端返回仍为 新→旧，所以 result.messages 是比当前 state.messages 更旧的一批）
+        emit(state.copyWith(
+          messages: [...state.messages, ...result.messages],
+          hasMore: result.hasMore,
+          nextCursor: result.nextCursor,
+          isLoadingMore: false,
+        ));
       } else {
-        messages = await _messageRepository.getMessagesWith(
+        final nextPage = state.page + 1;
+        final messages = await _messageRepository.getMessagesWith(
           state.userId,
           page: nextPage,
         );
+        emit(state.copyWith(
+          messages: [...state.messages, ...messages],
+          page: nextPage,
+          hasMore: messages.length >= 50,
+          isLoadingMore: false,
+        ));
       }
-
-      emit(state.copyWith(
-        messages: [...state.messages, ...messages],
-        page: nextPage,
-        hasMore: messages.length >= 50,
-        isLoadingMore: false,
-      ));
     } catch (e) {
       AppLogger.error('Failed to load more messages', e);
       emit(state.copyWith(
@@ -301,9 +330,12 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
         );
       }
 
-      // 插入到消息列表末尾（最新的在最后）
+      // 任务聊天 state 为最新在前，新消息插到头部才会显示在列表底部；私聊保持追加到末尾
+      final newMessages = state.isTaskChat
+          ? [message, ...state.messages]
+          : [...state.messages, message];
       emit(state.copyWith(
-        messages: [...state.messages, message],
+        messages: newMessages,
         isSending: false,
       ));
     } catch (e) {
@@ -324,11 +356,19 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
 
       Message message;
       if (state.isTaskChat) {
-        // 任务聊天：先上传再发送文本消息（附带image_url）
+        // 任务聊天：先上传再发送带附件的消息（对齐 iOS sendMessageWithAttachment）
+        final filename = Uri.tryParse(imageUrl)?.pathSegments.last ?? 'image.jpg';
         message = await _messageRepository.sendTaskChatMessage(
           state.taskId!,
           content: '[图片]',
           messageType: 'image',
+          attachments: [
+            {
+              'attachment_type': 'image',
+              'url': imageUrl,
+              'meta': {'original_filename': filename},
+            },
+          ],
         );
       } else {
         message = await _messageRepository.sendMessage(
@@ -342,8 +382,12 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
         );
       }
 
+      // 任务聊天 state 为最新在前，新消息插到头部；私聊保持追加到末尾
+      final newMessages = state.isTaskChat
+          ? [message, ...state.messages]
+          : [...state.messages, message];
       emit(state.copyWith(
-        messages: [...state.messages, message],
+        messages: newMessages,
         isSending: false,
       ));
     } catch (e) {
@@ -364,16 +408,16 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     }
 
     if (state.isTaskChat) {
-      // 任务聊天：按taskId过滤 - 对齐iOS
+      // 任务聊天：按taskId过滤，新消息插到头部（显示在列表底部）- 对齐iOS
       if (message.taskId == state.taskId) {
         emit(state.copyWith(
-          messages: [...state.messages, message],
+          messages: [message, ...state.messages],
         ));
         // 自动标记已读
         add(const ChatMarkAsRead());
       }
     } else {
-      // 私聊：按userId过滤
+      // 私聊：按userId过滤，追加到末尾
       if (message.senderId == state.userId ||
           message.receiverId == state.userId) {
         emit(state.copyWith(

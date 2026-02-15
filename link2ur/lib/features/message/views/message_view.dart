@@ -534,14 +534,11 @@ class _TaskChatItem extends StatelessWidget {
     return GestureDetector(
       onTap: () {
         AppHaptics.selection();
-        // 先导航，再异步清零未读计数，避免用户看到数字消失的过渡
-        context.push('/task-chat/${taskChat.taskId}').then((_) {
-          if (context.mounted && taskChat.unreadCount > 0) {
-            context
-                .read<MessageBloc>()
-                .add(MessageMarkTaskChatRead(taskChat.taskId));
-          }
-        });
+        // 进入前先本地标记已读，列表立即去红点；进入后 ChatBloc 会请求后端标记已读
+        if (taskChat.unreadCount > 0) {
+          context.read<MessageBloc>().add(MessageMarkTaskChatRead(taskChat.taskId));
+        }
+        context.push('/task-chat/${taskChat.taskId}');
       },
       child: Container(
         margin: const EdgeInsets.only(bottom: AppSpacing.sm),

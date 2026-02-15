@@ -63,6 +63,10 @@ List<MessageGroup> groupMessages(
     }
   }
 
+  // 规范化当前用户 ID（与后端 sender_id 一致为字符串，避免 iOS 等平台类型差异导致对方消息被误判为自己）
+  final normalizedCurrentUserId = currentUserId?.trim();
+  final currentUserIdNotEmpty = normalizedCurrentUserId != null && normalizedCurrentUserId.isNotEmpty;
+
   for (final message in messages) {
     // 系统消息：作为独立组渲染（对齐iOS TaskChatSystemMessageBubble）
     if (message.isSystem) {
@@ -75,14 +79,15 @@ List<MessageGroup> groupMessages(
       continue;
     }
 
-    final isMe = currentUserId != null && message.senderId == currentUserId;
+    final senderIdTrimmed = message.senderId.trim();
+    final isMe = currentUserIdNotEmpty && senderIdTrimmed == normalizedCurrentUserId;
     final direction =
         isMe ? BubbleDirection.outgoing : BubbleDirection.incoming;
 
     bool shouldStartNewGroup;
     if (currentGroup.isEmpty) {
       shouldStartNewGroup = true;
-    } else if (message.senderId != currentSenderId) {
+    } else if (senderIdTrimmed != (currentSenderId?.trim() ?? '')) {
       shouldStartNewGroup = true;
     } else if (direction != currentDirection) {
       shouldStartNewGroup = true;
@@ -100,7 +105,7 @@ List<MessageGroup> groupMessages(
     if (shouldStartNewGroup) {
       flushGroup();
       currentGroup = [message];
-      currentSenderId = message.senderId;
+      currentSenderId = senderIdTrimmed.isEmpty ? message.senderId : senderIdTrimmed;
       currentDirection = direction;
       currentSenderName = message.senderName;
       currentSenderAvatar = message.senderAvatar;
@@ -494,8 +499,9 @@ class _GroupBubbleItemState extends State<_GroupBubbleItem>
     final borderRadius = _getBorderRadius(widget.position, widget.direction);
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    // 图片消息
-    if (widget.message.isImage) {
+    // 图片消息：含 message_type==image 或 带图片附件的消息（任务聊天后端返回 normal + attachments）
+    final showAsImage = widget.message.isImage || widget.message.hasImageAttachments;
+    if (showAsImage) {
       final imageUrls = widget.message.allImageUrls;
       final displayUrl =
           imageUrls.isNotEmpty ? imageUrls.first : widget.message.imageUrl;
@@ -547,6 +553,8 @@ class _GroupBubbleItemState extends State<_GroupBubbleItem>
                 : (isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight),
             fontSize: 15,
           ),
+          softWrap: true,
+          overflow: TextOverflow.visible,
         ),
       ),
     );

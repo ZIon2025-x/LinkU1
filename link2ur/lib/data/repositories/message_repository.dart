@@ -279,7 +279,7 @@ class MessageRepository {
     }
   }
 
-  /// 获取任务聊天未读数量
+  /// 获取任务聊天未读数量（后端返回 unread_count，对标 iOS loadUnreadMessageCount）
   Future<int> getTaskChatUnreadCount() async {
     final response = await _apiService.get(
       ApiEndpoints.taskChatUnreadCount,
@@ -290,74 +290,103 @@ class MessageRepository {
     }
 
     if (response.data is Map<String, dynamic>) {
-      return (response.data as Map<String, dynamic>)['count'] as int? ?? 0;
+      final map = response.data as Map<String, dynamic>;
+      return map['unread_count'] as int? ?? map['count'] as int? ?? 0;
     }
     return 0;
   }
 
-  /// 获取任务聊天消息
-  Future<List<Message>> getTaskChatMessages(
+  /// 任务聊天消息列表结果（后端游标分页：limit + cursor）
+  static List<Message> parseTaskChatMessagesResponse(Map<String, dynamic> data) {
+    final items = (data['messages'] as List<dynamic>?) ?? const [];
+    return items
+        .map((e) => Message.fromJson(e as Map<String, dynamic>))
+        .toList();
+  }
+
+  /// 获取任务聊天消息（后端使用 limit + cursor 分页，非 page）
+  Future<({List<Message> messages, String? nextCursor, bool hasMore})>
+      getTaskChatMessages(
     int taskId, {
-    int page = 1,
-    int pageSize = 50,
+    int limit = 50,
+    String? cursor,
   }) async {
     final cacheKey = CacheManager.buildKey(
       CacheManager.prefixTaskMessages,
-      {'tid': taskId, 'p': page},
+      {'tid': taskId, 'cursor': cursor ?? 'first'},
     );
 
-    // 1. 检查缓存
-    final cached = _cache.getWithOfflineFallback<List<dynamic>>(cacheKey);
-    if (cached != null) {
-      return cached
-          .map((e) => Message.fromJson(e as Map<String, dynamic>))
-          .toList();
-    }
-
-    // 2. 网络请求
+    // 首屏（进入聊天）不读缓存，始终拉网络，保证看到最新消息；列表预览来自 getTaskChats 会更新
+    // 仅加载更多（有 cursor）或网络失败时用缓存/离线数据
     try {
+      final params = <String, dynamic>{'limit': limit.clamp(1, 100)};
+      if (cursor != null && cursor.isNotEmpty) {
+        params['cursor'] = cursor;
+      }
       final response = await _apiService.get(
         ApiEndpoints.taskChatMessages(taskId),
-        queryParameters: {
-          'page': page,
-          'page_size': pageSize,
-        },
+        queryParameters: params,
       );
 
       if (!response.isSuccess || response.data == null) {
         throw MessageException(response.message ?? '获取任务聊天消息失败');
       }
 
-      final items = _extractList(
-          response.data, ['items', 'messages', 'data']);
-      await _cache.set(cacheKey, items, ttl: CacheManager.defaultTTL);
-      return items
-          .map((e) => Message.fromJson(e as Map<String, dynamic>))
-          .toList();
+      final data = response.data as Map<String, dynamic>;
+      final messages = parseTaskChatMessagesResponse(data);
+      final nextCursor = data['next_cursor'] as String?;
+      final hasMore = data['has_more'] as bool? ?? false;
+
+      if (cursor == null || cursor.isEmpty) {
+        final rawMessages = data['messages'] as List<dynamic>? ?? [];
+        await _cache.set(
+          cacheKey,
+          {
+            'messages': rawMessages,
+            'next_cursor': nextCursor,
+            'has_more': hasMore,
+          },
+          ttl: CacheManager.defaultTTL,
+        );
+      }
+
+      return (messages: messages, nextCursor: nextCursor, hasMore: hasMore);
     } catch (e) {
-      // 3. 离线回退
-      final stale = _cache.getStale<List<dynamic>>(cacheKey);
-      if (stale != null) {
-        return stale
-            .map((e) => Message.fromJson(e as Map<String, dynamic>))
-            .toList();
+      if (cursor == null || cursor.isEmpty) {
+        final stale = _cache.getStale<Map<String, dynamic>>(cacheKey);
+        if (stale != null) {
+          final list = stale['messages'] as List<dynamic>? ?? const [];
+          return (
+            messages: list
+                .map((e) => Message.fromJson(e as Map<String, dynamic>))
+                .toList(),
+            nextCursor: stale['next_cursor'] as String?,
+            hasMore: stale['has_more'] as bool? ?? false,
+          );
+        }
       }
       rethrow;
     }
   }
 
   /// 发送任务聊天消息
+  /// [attachments] 附件数组，与 iOS sendMessageWithAttachment 对齐：每项含 attachment_type、url、可选 meta
   Future<Message> sendTaskChatMessage(
     int taskId, {
     required String content,
     String messageType = 'text',
+    List<Map<String, dynamic>>? attachments,
   }) async {
+    final data = <String, dynamic>{
+      'content': content,
+      'message_type': messageType,
+    };
+    if (attachments != null && attachments.isNotEmpty) {
+      data['attachments'] = attachments;
+    }
     final response = await _apiService.post<Map<String, dynamic>>(
       ApiEndpoints.taskChatSend(taskId),
-      data: {
-        'content': content,
-        'message_type': messageType,
-      },
+      data: data,
     );
 
     if (!response.isSuccess || response.data == null) {
@@ -396,6 +425,9 @@ class MessageRepository {
     if (!response.isSuccess) {
       throw MessageException(response.message ?? '标记任务聊天已读失败');
     }
+
+    // 失效任务聊天列表缓存，刷新时能拿到最新未读数
+    await _cache.invalidateTaskChatCache(taskId);
   }
 
   /// 上传任务聊天图片（私密图片，走 /api/upload/image，后端要求字段名为 image）

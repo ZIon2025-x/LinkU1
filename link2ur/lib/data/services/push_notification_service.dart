@@ -181,16 +181,40 @@ class PushNotificationService {
     }
   }
 
+  /// 最近已展示的推送去重：key -> 展示时间（毫秒）
+  static final Map<String, int> _lastShownPayloadKeys = {};
+  static const _dedupeWindowMs = 35000;
+
   /// 处理远程推送消息（前台收到时显示本地通知）
+  /// - iOS：原生 willPresent 已用 completionHandler 展示系统 banner，此处不再重复展示本地通知，避免一条消息推两次/无限重复
+  /// - Android：前台需本地展示，对同一条消息做短时去重
   /// 支持双语 payload：后端可在 custom.localized 中发送多语言内容
-  /// 格式: {"localized": {"en": {"title": "...", "body": "..."}, "zh": {"title": "...", "body": "..."}}}
   void _handleRemoteMessage(Map<String, dynamic> data) {
     AppLogger.info('Remote message received');
+
+    // iOS 前台：系统已展示，不再发本地通知
+    if (!kIsWeb && ApiConfig.platformId == 'ios') {
+      return;
+    }
+
+    // 去重：同一条消息短时间不重复展示（避免后端重发或重复回调导致无限推送）
+    final dedupeKey = _payloadDedupeKey(data);
+    if (dedupeKey != null && dedupeKey.isNotEmpty) {
+      final now = DateTime.now().millisecondsSinceEpoch;
+      final last = _lastShownPayloadKeys[dedupeKey] ?? 0;
+      if (now - last < _dedupeWindowMs) {
+        return;
+      }
+      _lastShownPayloadKeys[dedupeKey] = now;
+      if (_lastShownPayloadKeys.length > 100) {
+        final cutoff = now - _dedupeWindowMs;
+        _lastShownPayloadKeys.removeWhere((_, t) => t < cutoff);
+      }
+    }
 
     String title;
     String body;
 
-    // 尝试从 localized 字段提取当前语言内容
     final localized = _extractLocalized(data);
     if (localized != null) {
       final lang = _getDeviceLanguage();
@@ -200,7 +224,6 @@ class PushNotificationService {
       title = content['title'] as String? ?? '';
       body = content['body'] as String? ?? '';
     } else {
-      // 后端已按 device_language 发送单语言，直接使用
       title = data['title'] as String? ?? '';
       body = data['body'] as String? ?? '';
     }
@@ -212,6 +235,21 @@ class PushNotificationService {
         payload: data.toString(),
       );
     }
+  }
+
+  /// 生成推送去重 key：同一 type+task_id+message_id 或 type+sender_id+时间 视为同一条
+  String? _payloadDedupeKey(Map<String, dynamic> data) {
+    final type = data['type'] as String? ?? '';
+    final taskId = data['task_id'] ?? data['taskId'];
+    final messageId = data['message_id'] ?? data['messageId'];
+    final senderId = data['sender_id'] ?? data['senderId'];
+    if (messageId != null) {
+      return '${type}_${taskId ?? ""}_$messageId';
+    }
+    if (senderId != null && (data['created_at'] != null || data['createdAt'] != null)) {
+      return '${type}_${senderId}_${data['created_at'] ?? data['createdAt']}';
+    }
+    return '${type}_${taskId ?? ""}_${data['title']}_${data['body']}';
   }
 
   /// 从 payload 中提取 localized 内容

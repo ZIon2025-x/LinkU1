@@ -70,6 +70,21 @@ class MessageMarkTaskChatRead extends MessageEvent {
   List<Object?> get props => [taskId];
 }
 
+/// 开始轮询任务聊天列表（与 NotificationBloc 60 秒轮询对齐，保证消息 Tab 未读红点实时）
+class MessageStartPolling extends MessageEvent {
+  const MessageStartPolling();
+}
+
+/// 停止轮询
+class MessageStopPolling extends MessageEvent {
+  const MessageStopPolling();
+}
+
+/// 拉取任务聊天未读数（对标 iOS loadUnreadMessageCount：WebSocket/前台/定时调 API 实现角标实时）
+class MessageFetchUnreadCount extends MessageEvent {
+  const MessageFetchUnreadCount();
+}
+
 // ==================== State ====================
 
 enum MessageStatus { initial, loading, loaded, error }
@@ -79,6 +94,7 @@ class MessageState extends Equatable {
     this.status = MessageStatus.initial,
     this.contacts = const [],
     this.taskChats = const [],
+    this.taskChatUnreadFromApi,
     this.errorMessage,
     this.taskChatsPage = 1,
     this.hasMoreTaskChats = true,
@@ -91,6 +107,8 @@ class MessageState extends Equatable {
   final MessageStatus status;
   final List<ChatContact> contacts;
   final List<TaskChat> taskChats;
+  /// 未读数量 API 结果（WebSocket/前台/定时拉取，角标实时；列表刷新后置 null 用列表汇总）
+  final int? taskChatUnreadFromApi;
   final String? errorMessage;
   final int taskChatsPage;
   final bool hasMoreTaskChats;
@@ -135,15 +153,25 @@ class MessageState extends Equatable {
     return visible;
   }
 
-  /// 总未读数
+  /// 总未读数（联系人 + 任务聊天）
   int get totalUnread =>
       contacts.fold(0, (sum, c) => sum + c.unreadCount) +
       taskChats.fold(0, (sum, c) => sum + c.unreadCount);
+
+  /// 仅任务聊天未读（列表汇总）
+  int get _taskChatUnreadFromList =>
+      taskChats.fold(0, (sum, c) => sum + c.unreadCount);
+
+  /// 消息 Tab 角标用：优先 API 未读数（实时），否则用列表汇总（对标 iOS）
+  int get taskChatUnreadForBadge =>
+      taskChatUnreadFromApi ?? _taskChatUnreadFromList;
 
   MessageState copyWith({
     MessageStatus? status,
     List<ChatContact>? contacts,
     List<TaskChat>? taskChats,
+    int? taskChatUnreadFromApi,
+    bool clearTaskChatUnreadFromApi = false,
     String? errorMessage,
     int? taskChatsPage,
     bool? hasMoreTaskChats,
@@ -156,6 +184,7 @@ class MessageState extends Equatable {
       status: status ?? this.status,
       contacts: contacts ?? this.contacts,
       taskChats: taskChats ?? this.taskChats,
+      taskChatUnreadFromApi: clearTaskChatUnreadFromApi ? null : (taskChatUnreadFromApi ?? this.taskChatUnreadFromApi),
       errorMessage: errorMessage,
       taskChatsPage: taskChatsPage ?? this.taskChatsPage,
       hasMoreTaskChats: hasMoreTaskChats ?? this.hasMoreTaskChats,
@@ -171,6 +200,7 @@ class MessageState extends Equatable {
         status,
         contacts,
         taskChats,
+        taskChatUnreadFromApi,
         errorMessage,
         taskChatsPage,
         hasMoreTaskChats,
@@ -195,10 +225,14 @@ class MessageBloc extends Bloc<MessageEvent, MessageState> {
     on<MessageUnpinTaskChat>(_onUnpinTaskChat);
     on<MessageHideTaskChat>(_onHideTaskChat);
     on<MessageMarkTaskChatRead>(_onMarkTaskChatRead);
+    on<MessageStartPolling>(_onStartPolling);
+    on<MessageStopPolling>(_onStopPolling);
+    on<MessageFetchUnreadCount>(_onFetchUnreadCount);
 
-    // 监听 WebSocket：新消息或通知时刷新列表，红点实时更新
+    // 对标 iOS：WebSocket 收到消息/通知时先拉未读 API 再刷新列表，角标实时更新
     _wsSubscription = WebSocketService.instance.messageStream.listen((wsMessage) {
       if (wsMessage.isChatMessage || wsMessage.isNotification) {
+        add(const MessageFetchUnreadCount());
         add(const MessageRefreshRequested());
       }
     });
@@ -206,12 +240,45 @@ class MessageBloc extends Bloc<MessageEvent, MessageState> {
 
   final MessageRepository _messageRepository;
   StreamSubscription<WebSocketMessage>? _wsSubscription;
+  Timer? _pollingTimer;
+  static const Duration _pollingInterval = Duration(seconds: 60);
 
   @override
   Future<void> close() {
     _wsSubscription?.cancel();
+    _pollingTimer?.cancel();
+    _pollingTimer = null;
     return super.close();
   }
+
+  void _onStartPolling(MessageStartPolling event, Emitter<MessageState> emit) {
+    _pollingTimer?.cancel();
+    _pollingTimer = Timer.periodic(_pollingInterval, (_) {
+      // 对标 iOS 定时器：每 60 秒拉未读数量 API，角标实时
+      add(const MessageFetchUnreadCount());
+      add(const MessageLoadTaskChats());
+    });
+  }
+
+  void _onStopPolling(MessageStopPolling event, Emitter<MessageState> emit) {
+    _pollingTimer?.cancel();
+    _pollingTimer = null;
+  }
+
+  /// 拉取任务聊天未读数（对标 iOS loadUnreadMessageCount：轻量 API，角标实时）
+  Future<void> _onFetchUnreadCount(
+    MessageFetchUnreadCount event,
+    Emitter<MessageState> emit,
+  ) async {
+    try {
+      final count = await _messageRepository.getTaskChatUnreadCount();
+      if (emit.isDone) return;
+      emit(state.copyWith(taskChatUnreadFromApi: count));
+    } catch (e) {
+      AppLogger.error('Failed to fetch task chat unread count', e);
+    }
+  }
+
   static const _pageSize = 20;
   final StorageService _storage = StorageService.instance;
 
@@ -267,6 +334,7 @@ class MessageBloc extends Bloc<MessageEvent, MessageState> {
         taskChats: taskChats,
         taskChatsPage: 1,
         hasMoreTaskChats: taskChats.length >= _pageSize,
+        clearTaskChatUnreadFromApi: true,
       ));
     } catch (e) {
       AppLogger.error('Failed to load task chats', e);
@@ -327,6 +395,7 @@ class MessageBloc extends Bloc<MessageEvent, MessageState> {
         taskChatsPage: 1,
         hasMoreTaskChats: taskChats.length >= _pageSize,
         isRefreshing: false,
+        clearTaskChatUnreadFromApi: true,
       ));
     } catch (e) {
       AppLogger.error('Failed to refresh messages', e);

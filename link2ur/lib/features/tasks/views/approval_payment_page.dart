@@ -65,8 +65,6 @@ class _ApprovalPaymentPageState extends State<ApprovalPaymentPage> {
   int _paymentPollCount = 0;
   /// 已由轮询检测到支付成功并 pop，避免 presentPaymentSheet 晚回调时重复 pop
   bool _paymentSuccessFromPolling = false;
-  /// 支付宝/卡支付：Sheet 关闭但未返回成功时，继续轮询到此时间（用户可能已完成支付，Stripe 延迟确认）
-  DateTime? _paymentGraceEndTime;
   /// 支付成功：显示成功 overlay，延迟后 pop（对齐 iOS paymentSuccessView）
   bool _showPaymentSuccess = false;
   /// 进入页面时检测到任务已支付，禁止再次支付并直接展示成功
@@ -161,7 +159,6 @@ class _ApprovalPaymentPageState extends State<ApprovalPaymentPage> {
     _paymentSuccessFromPolling = true;
     setState(() {
       _isProcessing = false;
-      _paymentGraceEndTime = null;
       _showPaymentSuccess = true;
     });
     AppHaptics.paymentSuccess();
@@ -319,7 +316,7 @@ class _ApprovalPaymentPageState extends State<ApprovalPaymentPage> {
   }
 
   Future<void> _pay() async {
-    if (_isProcessing || _paymentGraceEndTime != null || _alreadyPaid) return;
+    if (_isProcessing || _alreadyPaid) return;
     final taskId = widget.paymentData.taskId;
 
     // 微信支付：Checkout Session + WebView
@@ -408,24 +405,7 @@ class _ApprovalPaymentPageState extends State<ApprovalPaymentPage> {
       final repo = context.read<PaymentRepository>();
       void doPoll() async {
         if (!mounted) return;
-        if (!_isProcessing && _paymentGraceEndTime == null) return;
-        if (_paymentGraceEndTime != null && DateTime.now().isAfter(_paymentGraceEndTime!)) {
-          _paymentPollTimer?.cancel();
-          _paymentPollTimer = null;
-          if (mounted) {
-            setState(() {
-              _isProcessing = false;
-              _paymentGraceEndTime = null;
-            });
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(context.l10n.paymentTimeoutOrRefreshHint),
-                backgroundColor: AppColors.primary,
-              ),
-            );
-          }
-          return;
-        }
+        if (!_isProcessing) return;
         try {
           final statusData = await repo.getTaskPaymentStatus(taskId);
           final isPaid = statusData['is_paid'] == true;
@@ -473,13 +453,13 @@ class _ApprovalPaymentPageState extends State<ApprovalPaymentPage> {
       if (success) {
         _handlePaymentSuccess();
       } else if (isCardOrAlipay) {
-        // 支付宝/卡：Sheet 关闭但未成功（如从支付宝返回后 SDK 未及时回调），继续轮询最多 5 分钟以发现延迟成功
-        setState(() => _paymentGraceEndTime = DateTime.now().add(const Duration(minutes: 5)));
+        // 支付宝/卡：Sheet 关闭但未成功，不锁定按钮（有 deeplink 可处理支付完成回跳）
+        setState(() => _isProcessing = false);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(context.l10n.paymentWaitingConfirmHint),
             backgroundColor: AppColors.primary,
-            duration: const Duration(seconds: 5),
+            duration: const Duration(seconds: 3),
           ),
         );
       } else {
@@ -515,10 +495,8 @@ class _ApprovalPaymentPageState extends State<ApprovalPaymentPage> {
         ),
       );
     } finally {
-      if (_paymentGraceEndTime == null) {
-        _paymentPollTimer?.cancel();
-        _paymentPollTimer = null;
-      }
+      _paymentPollTimer?.cancel();
+      _paymentPollTimer = null;
     }
   }
 
@@ -725,15 +703,13 @@ class _ApprovalPaymentPageState extends State<ApprovalPaymentPage> {
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      if ((_isProcessing || _paymentGraceEndTime != null) &&
+                      if (_isProcessing &&
                           (_selectedMethod == _PaymentMethod.card ||
                               _selectedMethod == _PaymentMethod.alipay))
                         Padding(
                           padding: const EdgeInsets.only(bottom: AppSpacing.sm),
                           child: Text(
-                            _paymentGraceEndTime != null
-                                ? l10n.paymentWaitingConfirmHint
-                                : l10n.paymentConfirmingDoNotRepeat,
+                            l10n.paymentConfirmingDoNotRepeat,
                             style: AppTypography.caption.copyWith(
                               color: Theme.of(context).colorScheme.primary,
                             ),
@@ -743,10 +719,8 @@ class _ApprovalPaymentPageState extends State<ApprovalPaymentPage> {
                       PrimaryButton(
                         text: _payButtonText(l10n),
                         icon: _payButtonIcon(),
-                        isLoading: _isProcessing || _paymentGraceEndTime != null,
-                        onPressed: (_isProcessing || _paymentGraceEndTime != null || _alreadyPaid)
-                            ? null
-                            : _pay,
+                        isLoading: _isProcessing,
+                        onPressed: (_isProcessing || _alreadyPaid) ? null : _pay,
                       ),
                     ],
                   ),

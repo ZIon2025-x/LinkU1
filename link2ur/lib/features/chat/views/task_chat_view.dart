@@ -377,25 +377,26 @@ class _TaskChatContentState extends State<_TaskChatContent> {
       );
     }
 
-    // 使用消息分组，然后反转顺序（reverse ListView 从底部渲染）
-    final groups = groupMessages(state.messages, _currentUserId);
-    final reversedGroups = groups.reversed.toList();
+    // 消息分组：state.messages 已是后端「最新在前」，groups[0]=最新
+    // reverse: true 时 index 0 在底部，故直接用 groups 即可：最新在底部，往上滑是更早的消息
+    final currentUserId = _currentUserId ?? StorageService.instance.getUserId();
+    final groups = groupMessages(state.messages, currentUserId);
 
     return ListView.builder(
       controller: _scrollController,
       reverse: true,
       padding: const EdgeInsets.symmetric(vertical: 12),
       addAutomaticKeepAlives: false,
-      itemCount: reversedGroups.length + (state.isLoadingMore ? 1 : 0),
+      itemCount: groups.length + (state.isLoadingMore ? 1 : 0),
       itemBuilder: (context, index) {
         // 加载更多指示器（reverse 模式下 index 最大 = 视觉顶部）
-        if (state.isLoadingMore && index == reversedGroups.length) {
+        if (state.isLoadingMore && index == groups.length) {
           return const Padding(
             padding: EdgeInsets.all(8),
             child: Center(child: LoadingIndicator(size: 20)),
           );
         }
-        final group = reversedGroups[index];
+        final group = groups[index];
         return MessageGroupBubbleView(
           group: group,
           onAvatarTap: () {

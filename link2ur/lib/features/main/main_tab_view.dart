@@ -40,7 +40,8 @@ class MainTabView extends StatefulWidget {
   State<MainTabView> createState() => _MainTabViewState();
 }
 
-class _MainTabViewState extends State<MainTabView> {
+class _MainTabViewState extends State<MainTabView>
+    with WidgetsBindingObserver {
   final _desktopScaffoldKey = GlobalKey<ScaffoldState>();
   final Set<int> _loadedTabs = {0}; // 首页默认加载
   /// 桌面端汉堡菜单是否展开（对齐 frontend：遮罩+面板 overlay，不用 Drawer 避免 elevation 阴影随 hover 晃动）
@@ -127,16 +128,34 @@ class _MainTabViewState extends State<MainTabView> {
       _messageBloc = MessageBloc(
         messageRepository: context.read<MessageRepository>(),
       );
-      // 已登录时立即加载聊天列表，以便底部 tab 显示未读计数
+      // 已登录时拉未读数 + 聊天列表并启动 60s 轮询（对标 iOS startPeriodicRefresh + 列表）
       if (authState.isAuthenticated) {
+        _messageBloc.add(const MessageFetchUnreadCount());
         _messageBloc.add(const MessageLoadTaskChats());
+        _messageBloc.add(const MessageStartPolling());
       }
       _blocsInitialized = true;
+      WidgetsBinding.instance.addObserver(this);
+    }
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed && _blocsInitialized && mounted) {
+      final authState = context.read<AuthBloc>().state;
+      if (authState.isAuthenticated) {
+        // 对标 iOS：进入前台先拉未读 API 再拉列表，角标实时更新
+        _messageBloc.add(const MessageFetchUnreadCount());
+        _messageBloc.add(const MessageLoadTaskChats());
+      }
     }
   }
 
   @override
   void dispose() {
+    if (_blocsInitialized) {
+      WidgetsBinding.instance.removeObserver(this);
+    }
     if (_blocsInitialized) {
       _homeBloc.close();
       _forumBloc.close();
@@ -264,10 +283,14 @@ class _MainTabViewState extends State<MainTabView> {
       ],
       child: BlocListener<AuthBloc, AuthState>(
         listenWhen: (prev, curr) =>
-            !prev.isAuthenticated && curr.isAuthenticated,
+            prev.isAuthenticated != curr.isAuthenticated,
         listener: (context, state) {
-          // 登录成功后立即加载聊天列表，以便底部 tab 显示未读计数
-          _messageBloc.add(const MessageLoadTaskChats());
+          if (state.isAuthenticated) {
+            _messageBloc.add(const MessageLoadTaskChats());
+            _messageBloc.add(const MessageStartPolling());
+          } else {
+            _messageBloc.add(const MessageStopPolling());
+          }
         },
         child: LayoutBuilder(
           builder: (context, constraints) {
@@ -794,9 +817,9 @@ class _NotificationTabIcon extends StatelessWidget {
     final notifUnread = context.select<NotificationBloc, int>(
       (bloc) => bloc.state.unreadCount.totalCount,
     );
-    // 监听聊天未读数
+    // 监听任务聊天未读（对标 iOS：角标用 API 未读数或列表汇总，实现实时红点）
     final chatUnread = context.select<MessageBloc, int>(
-      (bloc) => bloc.state.totalUnread,
+      (bloc) => bloc.state.taskChatUnreadForBadge,
     );
     final totalUnread = notifUnread + chatUnread;
 

@@ -80,11 +80,9 @@ class _FleaMarketDetailContent extends StatelessWidget {
                 )
                 .then((paid) {
               if (!context.mounted) return;
-              // ✅ 对标 iOS: 无论支付成功、失败还是取消，都刷新商品详情
-              // 支付成功 → 商品状态变为 sold，详情页显示"已售出"
-              // 支付取消/失败 → 商品仍为 active + hasPendingPayment，详情页显示"继续支付"按钮
-              context.read<FleaMarketBloc>().add(FleaMarketLoadDetailRequested(itemId));
+              // ✅ 支付成功时先乐观更新为已售出，避免 webhook 未提交时详情仍显示预留
               if (paid == true) {
+                context.read<FleaMarketBloc>().add(FleaMarketMarkItemSold(itemId));
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
                     content: Text(context.l10n.actionPurchaseSuccess),
@@ -92,6 +90,8 @@ class _FleaMarketDetailContent extends StatelessWidget {
                   ),
                 );
               }
+              // 无论支付成功、失败还是取消，都刷新商品详情以拉取最新状态
+              context.read<FleaMarketBloc>().add(FleaMarketLoadDetailRequested(itemId));
             });
           });
           return;
@@ -543,18 +543,22 @@ class _FleaMarketDetailContent extends StatelessWidget {
           ),
         ),
         const SizedBox(width: 12),
-        // 主操作按钮：继续支付 / 立即购买 / 已被预留
+        // 主操作按钮：继续支付 / 立即购买 / 已被预留 或 已售出
         Expanded(
           child: isUnavailable
-              ? _buildUnavailableButton(context)
+              ? _buildUnavailableButton(context, item)
               : _buildBuyerCTAButton(context, state, item),
         ),
       ],
     );
   }
 
-  /// 商品已被其他人预留的提示按钮（不可点击）
-  Widget _buildUnavailableButton(BuildContext context) {
+  /// 商品不可购买时的提示按钮（已被预留 或 已售出，不可点击）
+  Widget _buildUnavailableButton(BuildContext context, FleaMarketItem item) {
+    final isSold = item.isSold;
+    final label = isSold
+        ? context.l10n.fleaMarketSold
+        : context.l10n.fleaMarketItemReserved;
     return Container(
       height: 50,
       decoration: BoxDecoration(
@@ -565,10 +569,14 @@ class _FleaMarketDetailContent extends StatelessWidget {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.lock_outline, size: 16, color: AppColors.textSecondary),
+            Icon(
+              isSold ? Icons.check_circle_outline : Icons.lock_outline,
+              size: 16,
+              color: AppColors.textSecondary,
+            ),
             const SizedBox(width: 8),
             Text(
-              context.l10n.fleaMarketItemReserved,
+              label,
               style: AppTypography.bodyBold
                   .copyWith(color: AppColors.textSecondary),
             ),

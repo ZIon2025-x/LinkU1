@@ -3,6 +3,7 @@ import 'dart:typed_data';
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../../../core/constants/app_constants.dart';
 import '../../../core/utils/cache_manager.dart';
 import '../../../data/models/flea_market.dart';
 import '../../../data/repositories/flea_market_repository.dart';
@@ -108,6 +109,16 @@ class FleaMarketUpdateItem extends FleaMarketEvent {
 
 class FleaMarketLoadDetailRequested extends FleaMarketEvent {
   const FleaMarketLoadDetailRequested(this.itemId);
+
+  final String itemId;
+
+  @override
+  List<Object?> get props => [itemId];
+}
+
+/// 支付成功后乐观标记商品为已售出（避免 webhook 未提交时详情仍显示预留）
+class FleaMarketMarkItemSold extends FleaMarketEvent {
+  const FleaMarketMarkItemSold(this.itemId);
 
   final String itemId;
 
@@ -345,6 +356,7 @@ class FleaMarketBloc extends Bloc<FleaMarketEvent, FleaMarketState> {
     on<FleaMarketUpdateItem>(_onUpdateItem);
     on<FleaMarketUploadImagesAndUpdateItem>(_onUploadImagesAndUpdateItem);
     on<FleaMarketLoadDetailRequested>(_onLoadDetailRequested);
+    on<FleaMarketMarkItemSold>(_onMarkItemSold);
     on<FleaMarketRefreshItem>(_onRefreshItem);
     on<FleaMarketLoadPurchaseRequests>(_onLoadPurchaseRequests);
     on<FleaMarketUploadImage>(_onUploadImage);
@@ -795,6 +807,20 @@ class FleaMarketBloc extends Bloc<FleaMarketEvent, FleaMarketState> {
         errorMessage: e.toString(),
       ));
     }
+  }
+
+  void _onMarkItemSold(
+    FleaMarketMarkItemSold event,
+    Emitter<FleaMarketState> emit,
+  ) {
+    final current = state.selectedItem;
+    if (current == null || current.id != event.itemId) return;
+    emit(state.copyWith(
+      selectedItem: current.copyWith(
+        status: AppConstants.fleaMarketStatusSold,
+        isAvailable: false,
+      ),
+    ));
   }
 
   /// 检查商品是否已收藏 - 对标iOS checkFavoriteStatus
