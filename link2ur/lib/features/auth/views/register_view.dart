@@ -12,6 +12,7 @@ import '../../../core/design/app_radius.dart';
 import '../../../core/utils/validators.dart';
 import '../../../core/router/app_router.dart';
 import '../../../core/utils/l10n_extension.dart';
+import '../../../core/utils/error_localizer.dart';
 import '../../../core/utils/responsive.dart';
 import '../bloc/auth_bloc.dart';
 
@@ -154,9 +155,11 @@ class _RegisterViewState extends State<RegisterView>
           if (state.status == AuthStatus.authenticated) {
             context.go(AppRoutes.main);
           } else if (state.hasError) {
+            final localizedError =
+                ErrorLocalizer.localize(context, state.errorMessage);
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content: Text(state.errorMessage!),
+                content: Text(localizedError),
                 backgroundColor: AppColors.error,
               ),
             );
@@ -928,7 +931,12 @@ class _PasswordStrengthBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final strength = _strength;
-    final labels = ['弱', '中', '强', '很强'];
+    final labels = [
+      context.l10n.ratingPoor,
+      context.l10n.ratingAverage,
+      context.l10n.ratingGood,
+      context.l10n.ratingExcellent,
+    ];
     final gradients = [
       AppColors.gradientRed,
       AppColors.gradientOrange,

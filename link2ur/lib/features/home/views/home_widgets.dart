@@ -53,9 +53,9 @@ class _GreetingSection extends StatelessWidget {
               ],
             ),
           ),
-          // 右侧：AI 助手按钮（后续接入 AI 对话功能）
+          // 右侧：客服按钮
           GestureDetector(
-            onTap: () => context.push('/ai-chat'),
+            onTap: () => context.push('/customer-service'),
             child: Container(
               width: 44,
               height: 44,
@@ -68,7 +68,7 @@ class _GreetingSection extends StatelessWidget {
                 shape: BoxShape.circle,
               ),
               child: const Icon(
-                Icons.auto_awesome,
+                Icons.headset_mic,
                 color: Colors.white,
                 size: 20,
               ),

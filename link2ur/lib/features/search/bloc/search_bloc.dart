@@ -1,4 +1,4 @@
-import 'package:equatable/equatable.dart';
+﻿import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../data/repositories/task_repository.dart';
@@ -15,7 +15,7 @@ abstract class SearchEvent extends Equatable {
   List<Object?> get props => [];
 }
 
-/// 执行搜索
+/// 鎵ц鎼滅储
 class SearchSubmitted extends SearchEvent {
   const SearchSubmitted(this.query);
 
@@ -25,7 +25,7 @@ class SearchSubmitted extends SearchEvent {
   List<Object?> get props => [query];
 }
 
-/// 清除搜索
+/// 娓呴櫎鎼滅储
 class SearchCleared extends SearchEvent {
   const SearchCleared();
 }
@@ -120,7 +120,7 @@ class SearchBloc extends Bloc<SearchEvent, SearchState> {
     ));
 
     try {
-      // 并行搜索三个模块
+      // 骞惰鎼滅储涓変釜妯″潡
       final results = await Future.wait([
         _searchTasks(query),
         _searchForum(query),
@@ -137,7 +137,7 @@ class SearchBloc extends Bloc<SearchEvent, SearchState> {
       AppLogger.error('Search failed', e);
       emit(state.copyWith(
         status: SearchStatus.error,
-        errorMessage: '搜索失败，请重试',
+        errorMessage: 'search_error_failed',
       ));
     }
   }
@@ -211,3 +211,4 @@ class SearchBloc extends Bloc<SearchEvent, SearchState> {
     }
   }
 }
+

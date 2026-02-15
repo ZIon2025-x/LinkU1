@@ -64,27 +64,43 @@ class StorageService {
     _cachedNotificationEnabled = _prefs.getBool(StorageKeys.notificationEnabled) ?? true;
     _cachedSoundEnabled = _prefs.getBool('sound_enabled') ?? true;
 
-    // 带 JSON 解析的缓存
-    final userInfoJson = _prefs.getString(StorageKeys.userInfo);
-    if (userInfoJson != null) {
-      _cachedUserInfo = jsonDecode(userInfoJson) as Map<String, dynamic>;
+    // 带 JSON 解析的缓存 — 防止存储损坏导致启动崩溃
+    try {
+      final userInfoJson = _prefs.getString(StorageKeys.userInfo);
+      if (userInfoJson != null) {
+        _cachedUserInfo = jsonDecode(userInfoJson) as Map<String, dynamic>;
+      }
+    } catch (_) {
+      _prefs.remove(StorageKeys.userInfo);
     }
 
-    final searchJson = _prefs.getString(StorageKeys.searchHistory);
-    if (searchJson != null) {
-      _cachedSearchHistory = List<String>.from(jsonDecode(searchJson));
+    try {
+      final searchJson = _prefs.getString(StorageKeys.searchHistory);
+      if (searchJson != null) {
+        _cachedSearchHistory = List<String>.from(jsonDecode(searchJson));
+      }
+    } catch (_) {
+      _prefs.remove(StorageKeys.searchHistory);
     }
 
-    final pinnedJson = _prefs.getString(StorageKeys.pinnedTaskChatIds);
-    if (pinnedJson != null) {
-      _cachedPinnedTaskChatIds = Set<int>.from(jsonDecode(pinnedJson) as List);
+    try {
+      final pinnedJson = _prefs.getString(StorageKeys.pinnedTaskChatIds);
+      if (pinnedJson != null) {
+        _cachedPinnedTaskChatIds = Set<int>.from(jsonDecode(pinnedJson) as List);
+      }
+    } catch (_) {
+      _prefs.remove(StorageKeys.pinnedTaskChatIds);
     }
 
-    final hiddenJson = _prefs.getString(StorageKeys.hiddenTaskChats);
-    if (hiddenJson != null) {
-      final raw = jsonDecode(hiddenJson) as Map<String, dynamic>;
-      _cachedHiddenTaskChats = raw.map((key, value) =>
-          MapEntry(int.parse(key), DateTime.parse(value as String)));
+    try {
+      final hiddenJson = _prefs.getString(StorageKeys.hiddenTaskChats);
+      if (hiddenJson != null) {
+        final raw = jsonDecode(hiddenJson) as Map<String, dynamic>;
+        _cachedHiddenTaskChats = raw.map((key, value) =>
+            MapEntry(int.parse(key), DateTime.parse(value as String)));
+      }
+    } catch (_) {
+      _prefs.remove(StorageKeys.hiddenTaskChats);
     }
   }
 
@@ -358,6 +374,8 @@ class StorageService {
     _cachedSearchHistory = null;
     _cachedPinnedTaskChatIds = null;
     _cachedHiddenTaskChats = null;
+    _cachedNotificationEnabled = true;
+    _cachedSoundEnabled = true;
     // 清除个人数据缓存（保留公共缓存如分类、FAQ等）
     await CacheManager.shared.invalidatePersonalDataCache();
     // 保留语言和主题设置

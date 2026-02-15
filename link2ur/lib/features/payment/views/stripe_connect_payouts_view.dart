@@ -113,6 +113,34 @@ class _StripeConnectPayoutsViewState extends State<StripeConnectPayoutsView> {
     }
   }
 
+  void _showDashboardUnavailableSnackBar() {
+    if (!mounted) return;
+    final l10n = context.l10n;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(l10n.stripeConnectDashboardUnavailable)),
+    );
+  }
+
+  Future<void> _openStripeDashboard() async {
+    final l10n = context.l10n;
+    try {
+      final details = await _repo.getStripeConnectAccountDetails();
+      if (!mounted) return;
+      final url = details.dashboardUrl;
+      if (url != null && url.isNotEmpty) {
+        await ExternalWebView.openInApp(
+          context,
+          url: url,
+          title: l10n.stripeConnectOpenDashboard,
+        );
+        return;
+      }
+      _showDashboardUnavailableSnackBar();
+    } catch (_) {
+      _showDashboardUnavailableSnackBar();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
@@ -126,29 +154,7 @@ class _StripeConnectPayoutsViewState extends State<StripeConnectPayoutsView> {
           IconButton(
             icon: const Icon(Icons.open_in_browser_outlined),
             tooltip: l10n.stripeConnectOpenDashboard,
-            onPressed: () async {
-              try {
-                final details = await _repo.getStripeConnectAccountDetails();
-                final url = details.dashboardUrl;
-                if (!mounted) return;
-                if (url != null && url.isNotEmpty) {
-                  await ExternalWebView.openInApp(
-                    context,
-                    url: url,
-                    title: l10n.stripeConnectOpenDashboard,
-                  );
-                } else {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text(l10n.stripeConnectDashboardUnavailable)),
-                  );
-                }
-              } catch (_) {
-                if (!mounted) return;
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text(l10n.stripeConnectDashboardUnavailable)),
-                );
-              }
-            },
+            onPressed: _openStripeDashboard,
           ),
         ],
       ),
@@ -1163,7 +1169,7 @@ class _TransactionDetailSheet extends StatelessWidget {
                     _DetailRow(
                         icon: Icons.check_circle,
                         label: l10n.paymentStatus,
-                        value: _getStatusText(transaction.status)),
+                        value: _getStatusText(context, transaction.status)),
                     _DetailRow(
                         icon: Icons.credit_card,
                         label: l10n.paymentType,
@@ -1173,7 +1179,7 @@ class _TransactionDetailSheet extends StatelessWidget {
                     _DetailRow(
                         icon: Icons.arrow_forward,
                         label: l10n.paymentSource,
-                        value: _getSourceText(transaction.source)),
+                        value: _getSourceText(context, transaction.source)),
                   ],
                 ),
               ),
@@ -1184,34 +1190,35 @@ class _TransactionDetailSheet extends StatelessWidget {
     );
   }
 
-  String _getStatusText(String status) {
+  String _getStatusText(BuildContext context, String status) {
+    final l10n = context.l10n;
     switch (status.toLowerCase()) {
       case 'paid':
       case 'succeeded':
-        return '已到账';
+        return l10n.paymentStatusSuccess;
       case 'pending':
-        return '处理中';
       case 'in_transit':
-        return '转账中';
+        return l10n.paymentStatusProcessing;
       case 'canceled':
-        return '已取消';
+        return l10n.paymentStatusCanceled;
       case 'failed':
-        return '失败';
+        return l10n.paymentStatusFailed;
       default:
         return status;
     }
   }
 
-  String _getSourceText(String source) {
+  String _getSourceText(BuildContext context, String source) {
+    final l10n = context.l10n;
     switch (source) {
       case 'payout':
-        return '提现';
+        return l10n.paymentPayout;
       case 'transfer':
-        return '转账';
+        return 'Transfer';
       case 'charge':
-        return '收款';
+        return l10n.paymentIncome;
       case 'payment_intent':
-        return '支付';
+        return l10n.paymentStatusTaskPayment;
       default:
         return source;
     }

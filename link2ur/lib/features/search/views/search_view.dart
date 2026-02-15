@@ -5,6 +5,7 @@ import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_typography.dart';
 import '../../../core/design/app_radius.dart';
+import '../../../core/utils/error_localizer.dart';
 import '../../../core/utils/l10n_extension.dart';
 import '../../../core/widgets/loading_view.dart';
 import '../../../core/widgets/empty_state_view.dart';
@@ -99,7 +100,10 @@ class _SearchContentState extends State<_SearchContent> {
           if (state.status == SearchStatus.error) {
             return Center(
               child: Text(
-                state.errorMessage ?? context.l10n.searchNoResults,
+                ErrorLocalizer.localize(
+                  context,
+                  state.errorMessage,
+                ),
                 style: TextStyle(
                   color: isDark
                       ? AppColors.textSecondaryDark

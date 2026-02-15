@@ -24,6 +24,22 @@ class ErrorLocalizer {
         return context.l10n.errorNetworkConnection;
       case 'error_unknown':
         return context.l10n.errorUnknownGeneric;
+      case 'auth_error_login_failed':
+        return context.l10n.errorLoginFailed;
+      case 'auth_error_register_failed':
+        return context.l10n.errorRegisterFailed;
+      case 'auth_error_send_code_failed':
+        return context.l10n.errorCodeSendCodeFailed;
+      case 'auth_reset_password_success':
+        return context.l10n.successOperationSuccess;
+      case 'auth_reset_password_failed':
+        return context.l10n.feedbackOperationFailed;
+      case 'search_error_failed':
+        return context.l10n.errorRequestFailedGeneric;
+      case 'flea_market_error_invalid_item_id':
+        return context.l10n.errorInvalidInput;
+      case 'customer_service_no_available_agent':
+        return context.l10n.errorSomethingWentWrong;
       default:
         // 服务端返回的已翻译消息，直接使用
         return errorMessage;

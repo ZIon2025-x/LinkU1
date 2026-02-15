@@ -648,7 +648,7 @@ def create_task(db: Session, user_id: str, task: schemas.TaskCreate):
     if designated_taker_id:
         db_task.taker_id = designated_taker_id
         db_task.status = "pending_acceptance"
-        db_task.task_source = task_source if hasattr(db_task, 'task_source') else task_source
+        db_task.task_source = task_source
 
     db.add(db_task)
     db.commit()

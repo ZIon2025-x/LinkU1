@@ -1,4 +1,5 @@
 /// Stub implementation — Web does not support offline file operations.
+library;
 
 Future<void> saveOperationsToFile(String fileName, String jsonContent) async {}
 

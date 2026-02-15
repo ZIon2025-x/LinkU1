@@ -388,7 +388,9 @@ class _SettingsViewState extends State<SettingsView> {
                           icon: Icons.delete_outline,
                           title: context.l10n.settingsClearCache,
                           trailing: Text(
-                            settingsState.cacheSize,
+                            settingsState.cacheSize == 'common_loading'
+                                ? context.l10n.commonLoading
+                                : settingsState.cacheSize,
                             style: TextStyle(
                               color: isDark
                                   ? AppColors.textSecondaryDark

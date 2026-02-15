@@ -113,7 +113,7 @@ class FleaMarketRepository {
   Future<FleaMarketItem> getItemById(String id, {CancelToken? cancelToken}) async {
     final idTrim = id.trim();
     if (idTrim.isEmpty || idTrim == '0') {
-      throw FleaMarketException('无效的商品 ID');
+      throw const FleaMarketException('无效的商品 ID');
     }
 
     final cacheKey = '${CacheManager.prefixFleaMarketDetail}$id';
@@ -241,7 +241,7 @@ class FleaMarketRepository {
   /// 与我相关的跳蚤市场商品（一次拉取，前端按 出售中/收的闲置/已售出 筛选）
   /// 基于任务来源=跳蚤市场+用户关联，通过任务 id 关联到商品
   Future<List<FleaMarketItem>> getMyRelatedFleaItems({bool forceRefresh = false}) async {
-    final cacheKey = '${CacheManager.prefixMyFleaMarket}related';
+    const cacheKey = '${CacheManager.prefixMyFleaMarket}related';
     if (forceRefresh) await _cache.invalidateMyFleaMarketCache();
     final cached = forceRefresh ? null : _cache.get<List<dynamic>>(cacheKey);
     if (cached != null) {

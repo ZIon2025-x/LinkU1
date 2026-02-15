@@ -1,4 +1,4 @@
-{
+﻿{
   "@@locale": "en",
   "commonOk": "OK",
   "commonCancel": "Cancel",
@@ -35,9 +35,9 @@
   "commonNotProvided": "Not provided",
   "commonPleaseSelect": "Please select",
   "commonUser": "User",
-  "appName": "Link²Ur",
+  "appName": "Link虏Ur",
   "appTagline": "Connect you and me, create value",
-  "appUser": "Link²Ur User",
+  "appUser": "Link虏Ur User",
   "appTermsOfService": "Terms of Service",
   "appPrivacyPolicy": "Privacy Policy",
   "appAbout": "About",
@@ -93,7 +93,7 @@
   "authTermsOfService": "Terms of Service",
   "authPrivacyPolicy": "Privacy Policy",
   "homeExperts": "Experts",
-  "homeRecommended": "Link²Ur",
+  "homeRecommended": "Link虏Ur",
   "homeNearby": "Nearby",
   "homeGreeting": "Hello, {param1}",
   "@homeGreeting": {
@@ -717,7 +717,7 @@
   "successDeleted": "Deleted",
   "successRefreshSuccess": "Refresh successful",
   "successRefreshSuccessMessage": "Item refreshed, auto-removal timer reset",
-  "currencyPound": "£",
+  "currencyPound": "拢",
   "currencyPoints": "Points",
   "pointsBalance": "Points Balance",
   "pointsUnit": "Points",
@@ -746,7 +746,7 @@
   "pointsCheckIn": "Check In",
   "pointsCheckedInToday": "Checked In Today",
   "pointsCheckInReward": "Check In for Points",
-  "pointsCheckInDescription": "• Daily check-in rewards points\\n• More consecutive days, more rewards\\n• Consecutive days reset after interruption",
+  "pointsCheckInDescription": "鈥?Daily check-in rewards points\\n鈥?More consecutive days, more rewards\\n鈥?Consecutive days reset after interruption",
   "pointsTransactionHistory": "Your point transaction history will be displayed here",
   "pointsNoTransactionHistory": "No transaction history",
   "pointsPointsAndCoupons": "Points & Coupons",
@@ -898,7 +898,7 @@
       }
     }
   },
-  "timeWan": "万",
+  "timeWan": "涓?,
   "timeWanPlus": "+",
   "tabsHome": "Home",
   "tabsCommunity": "Community",
@@ -951,7 +951,7 @@
   "profileActivity": "Activity",
   "profileActivitySubtitle": "View and participate in activities",
   "profileSettingsSubtitle": "App settings and preferences",
-  "profileWelcome": "Welcome to Link²Ur",
+  "profileWelcome": "Welcome to Link虏Ur",
   "profileLoginPrompt": "Login to access all features",
   "profileConfirmLogout": "Confirm Logout",
   "profileLogoutMessage": "Are you sure you want to logout?",
@@ -1188,7 +1188,7 @@
   "notificationSystemMessages": "System Messages",
   "notificationViewAllNotifications": "View All Notifications",
   "customerServiceConversationEndedMessage": "Conversation ended. Please start a new conversation if you need help.",
-  "customerServiceConnected": "👋 Connected to customer service {param1}",
+  "customerServiceConnected": "馃憢 Connected to customer service {param1}",
   "@customerServiceConnected": {
     "placeholders": {
       "param1": {
@@ -1621,7 +1621,7 @@
   "infoAboutUs": "About Us",
   "infoOurMission": "Our Mission",
   "infoOurVision": "Our Vision",
-  "infoAboutUsContent": "Link²Ur is an innovative task posting and taking platform dedicated to connecting people who need help with those willing to provide help. We believe everyone has their own skills and time, and through the platform, these resources can be better utilized.",
+  "infoAboutUsContent": "Link虏Ur is an innovative task posting and taking platform dedicated to connecting people who need help with those willing to provide help. We believe everyone has their own skills and time, and through the platform, these resources can be better utilized.",
   "infoOurMissionContent": "Make task posting and taking simple, efficient, and safe. We are committed to building a trusted community platform where everyone can find suitable tasks and help others.",
   "infoOurVisionContent": "Become the most popular task platform in the UK, connecting thousands of users, creating more value, and making the community closer.",
   "vipMember": "VIP Member",
@@ -1652,9 +1652,9 @@
   "vipBuyNow": "Purchase Now",
   "vipRestorePurchase": "Restore Purchase",
   "vipPurchaseInstructions": "Purchase Instructions",
-  "vipSubscriptionAutoRenew": "• Subscription will auto-renew unless cancelled at least 24 hours before expiry",
-  "vipManageSubscription": "• Manage subscription in App Store account settings",
-  "vipPurchaseEffective": "• Benefits take effect immediately after purchase",
+  "vipSubscriptionAutoRenew": "鈥?Subscription will auto-renew unless cancelled at least 24 hours before expiry",
+  "vipManageSubscription": "鈥?Manage subscription in App Store account settings",
+  "vipPurchaseEffective": "鈥?Benefits take effect immediately after purchase",
   "vipPurchaseTitle": "Purchase VIP Membership",
   "vipPurchaseSuccess": "Purchase Successful",
   "vipCongratulations": "Congratulations on becoming a VIP member! Enjoy all VIP benefits.",
@@ -2060,7 +2060,7 @@
   "notificationTitleAnnouncement": "Announcement",
   "notificationTitleCustomerService": "Customer Service",
   "notificationTitleUnknown": "Notification",
-  "notificationContentTaskApplication": "{applicant_name} applied for task「{task_title}」\\nApplication message: {application_message}\\nNegotiated price: {price_info}",
+  "notificationContentTaskApplication": "{applicant_name} applied for task銆寋task_title}銆峔\nApplication message: {application_message}\\nNegotiated price: {price_info}",
   "@notificationContentTaskApplication": {
     "placeholders": {
       "applicant_name": {
@@ -2077,7 +2077,7 @@
       }
     }
   },
-  "notificationContentApplicationAccepted": "The applicant has accepted your negotiation offer for task「{task_title}」. Please complete the payment.{payment_expires_info}",
+  "notificationContentApplicationAccepted": "The applicant has accepted your negotiation offer for task銆寋task_title}銆? Please complete the payment.{payment_expires_info}",
   "@notificationContentApplicationAccepted": {
     "placeholders": {
       "task_title": {
@@ -2096,7 +2096,7 @@
       }
     }
   },
-  "notificationContentApplicationWithdrawn": "An applicant has withdrawn their application for task「{task_title}」",
+  "notificationContentApplicationWithdrawn": "An applicant has withdrawn their application for task銆寋task_title}銆?,
   "@notificationContentApplicationWithdrawn": {
     "placeholders": {
       "task_title": {
@@ -2104,7 +2104,7 @@
       }
     }
   },
-  "notificationContentTaskCompleted": "{taker_name} has marked task「{task_title}」as completed",
+  "notificationContentTaskCompleted": "{taker_name} has marked task銆寋task_title}銆峚s completed",
   "@notificationContentTaskCompleted": {
     "placeholders": {
       "taker_name": {
@@ -2115,7 +2115,7 @@
       }
     }
   },
-  "notificationContentTaskConfirmed": "Task completed and confirmed! Reward for「{task_title}」has been issued",
+  "notificationContentTaskConfirmed": "Task completed and confirmed! Reward for銆寋task_title}銆峢as been issued",
   "@notificationContentTaskConfirmed": {
     "placeholders": {
       "task_title": {
@@ -2123,7 +2123,7 @@
       }
     }
   },
-  "notificationContentTaskCancelled": "Your task「{task_title}」has been cancelled",
+  "notificationContentTaskCancelled": "Your task銆寋task_title}銆峢as been cancelled",
   "@notificationContentTaskCancelled": {
     "placeholders": {
       "task_title": {
@@ -2131,7 +2131,7 @@
       }
     }
   },
-  "notificationContentTaskAutoCancelled": "Your task「{task_title}」has been automatically cancelled due to exceeding the deadline",
+  "notificationContentTaskAutoCancelled": "Your task銆寋task_title}銆峢as been automatically cancelled due to exceeding the deadline",
   "@notificationContentTaskAutoCancelled": {
     "placeholders": {
       "task_title": {
@@ -2139,7 +2139,7 @@
       }
     }
   },
-  "notificationContentApplicationMessage": "The publisher of task「{task_title}」sent you a message: {message}",
+  "notificationContentApplicationMessage": "The publisher of task銆寋task_title}銆峴ent you a message: {message}",
   "@notificationContentApplicationMessage": {
     "placeholders": {
       "task_title": {
@@ -2150,7 +2150,7 @@
       }
     }
   },
-  "notificationContentNegotiationOffer": "The publisher of task「{task_title}」proposed a negotiation\nMessage: {message}\nNegotiated price: £{negotiated_price} {currency}",
+  "notificationContentNegotiationOffer": "The publisher of task銆寋task_title}銆峱roposed a negotiation\nMessage: {message}\nNegotiated price: 拢{negotiated_price} {currency}",
   "@notificationContentNegotiationOffer": {
     "placeholders": {
       "task_title": {
@@ -2167,7 +2167,7 @@
       }
     }
   },
-  "notificationContentNegotiationRejected": "The applicant has rejected your negotiation offer for task「{task_title}」",
+  "notificationContentNegotiationRejected": "The applicant has rejected your negotiation offer for task銆寋task_title}銆?,
   "@notificationContentNegotiationRejected": {
     "placeholders": {
       "task_title": {
@@ -2175,7 +2175,7 @@
       }
     }
   },
-  "notificationContentTaskApproved": "Your application for task「{task_title}」has been approved",
+  "notificationContentTaskApproved": "Your application for task銆寋task_title}銆峢as been approved",
   "@notificationContentTaskApproved": {
     "placeholders": {
       "task_title": {
@@ -2183,7 +2183,7 @@
       }
     }
   },
-  "notificationContentTaskRewardPaid": "Reward for task「{task_title}」has been paid",
+  "notificationContentTaskRewardPaid": "Reward for task銆寋task_title}銆峢as been paid",
   "@notificationContentTaskRewardPaid": {
     "placeholders": {
       "task_title": {
@@ -2252,7 +2252,7 @@
   "commonLongPressToCopy": "Long press to copy",
   "errorOperationFailed": "Operation Failed",
   "onboardingSkip": "Skip",
-  "onboardingWelcomeTitle": "Welcome to Link²Ur",
+  "onboardingWelcomeTitle": "Welcome to Link虏Ur",
   "onboardingWelcomeSubtitle": "Connect Your World",
   "onboardingWelcomeDescription": "Publish tasks, accept tasks, buy and sell second-hand goods, everything is in your hands",
   "onboardingPublishTaskTitle": "Publish Tasks",
@@ -2369,7 +2369,7 @@
   },
   "fleaMarketNoPurchaseRequests": "No Purchase Requests",
   "fleaMarketWaitingSellerConfirm": "Waiting for seller confirmation",
-  "fleaMarketNegotiateAmountFormat": "Negotiated price: £{param1}",
+  "fleaMarketNegotiateAmountFormat": "Negotiated price: 拢{param1}",
   "@fleaMarketNegotiateAmountFormat": {
     "placeholders": {
       "param1": {
@@ -2394,7 +2394,7 @@
   "applePayTitle": "Apple Pay",
   "applePayNotConfigured": "Apple Pay is not configured",
   "applePayPaymentInfoNotReady": "Payment info not ready",
-  "applePayTaskPaymentFallback": "Link²Ur Task Payment",
+  "applePayTaskPaymentFallback": "Link虏Ur Task Payment",
   "applePayUnableToCreateForm": "Unable to create Apple Pay form",
   "applePayUnableToGetPaymentInfo": "Unable to get payment info",
   "chatEvidenceFile": "Evidence file",
@@ -2431,8 +2431,8 @@
   "forumCategoryDescription": "Category Description",
   "forumCategoryDescriptionPlaceholder": "Please briefly describe the purpose and discussion topics of this category",
   "forumCategoryIcon": "Category Icon (Optional)",
-  "forumCategoryIconHint": "You can enter an emoji as the category icon, for example: 💬, 📚, 🎮, etc.",
-  "forumCategoryIconExample": "For example: 💬",
+  "forumCategoryIconHint": "You can enter an emoji as the category icon, for example: 馃挰, 馃摎, 馃幃, etc.",
+  "forumCategoryIconExample": "For example: 馃挰",
   "forumCategoryIconEntered": "1 emoji entered",
   "forumSubmitRequest": "Submit Request",
   "forumMyRequests": "My Requests",
@@ -2662,7 +2662,7 @@
   "refundReasonTypeRequired": "Refund reason type *",
   "refundReasonTypePlaceholder": "Select refund reason type",
   "refundPartialAmountTooHigh": "Partial refund amount cannot be greater than or equal to task amount. Please choose full refund.",
-  "refundAmountExceedsTask": "Refund amount cannot exceed task amount (£{param1})",
+  "refundAmountExceedsTask": "Refund amount cannot exceed task amount (拢{param1})",
   "@refundAmountExceedsTask": {
     "placeholders": {
       "param1": {
@@ -2676,9 +2676,9 @@
   "refundReasonMinLength": "Refund reason must be at least 10 characters",
   "refundTypeRequired": "Refund type *",
   "refundAmountOrRatioRequired": "Refund amount or ratio *",
-  "refundAmountPound": "Refund amount (£)",
+  "refundAmountPound": "Refund amount (拢)",
   "refundRatioPercent": "Refund ratio (%)",
-  "refundTaskAmountFormat": "Task amount: £{param1}",
+  "refundTaskAmountFormat": "Task amount: 拢{param1}",
   "@refundTaskAmountFormat": {
     "placeholders": {
       "param1": {
@@ -2686,7 +2686,7 @@
       }
     }
   },
-  "refundRefundAmountFormat": "Refund amount: £{param1}",
+  "refundRefundAmountFormat": "Refund amount: 拢{param1}",
   "@refundRefundAmountFormat": {
     "placeholders": {
       "param1": {
@@ -2741,7 +2741,7 @@
   "refundStatusCancelledFull": "Refund cancelled",
   "refundDescPending": "Your refund has been submitted. Admin will review within 3-5 business days.",
   "refundDescProcessing": "Refund is being processed. Please wait.",
-  "refundDescApprovedAmount": "Refund amount: £{param2}{param1}. Will be returned in 5-10 business days.",
+  "refundDescApprovedAmount": "Refund amount: 拢{param2}{param1}. Will be returned in 5-10 business days.",
   "@refundDescApprovedAmount": {
     "placeholders": {
       "param1": {
@@ -2762,7 +2762,7 @@
     }
   },
   "refundDescRejectedGeneric": "Refund has been rejected.",
-  "refundDescCompletedAmount": "Refund amount: £{param2}{param1}. Returned to your original payment method.",
+  "refundDescCompletedAmount": "Refund amount: 拢{param2}{param1}. Returned to your original payment method.",
   "@refundDescCompletedAmount": {
     "placeholders": {
       "param1": {
@@ -2955,7 +2955,7 @@
   "networkOnline": "Network restored",
 
   "notificationPermissionTitle": "Enable Push Notifications",
-  "notificationPermissionDescription": "Stay updated with:\n\n• Task status updates\n• New message alerts\n• Task matching recommendations\n• Promotional notifications",
+  "notificationPermissionDescription": "Stay updated with:\n\n鈥?Task status updates\n鈥?New message alerts\n鈥?Task matching recommendations\n鈥?Promotional notifications",
   "notificationPermissionEnable": "Enable Notifications",
   "notificationPermissionSkip": "Skip for now",
 
@@ -3177,7 +3177,7 @@
   "notificationInteractionTab": "Interactions",
   "notificationTaskChatTitle": "Task Chat",
   "notificationNoTaskChats": "No Task Chats",
-  "onboardingWelcome": "Welcome to Link²Ur",
+  "onboardingWelcome": "Welcome to Link虏Ur",
   "onboardingWelcomeSubtitle": "Campus Mutual Aid Platform",
   "onboardingPublishTask": "Post Tasks",
   "onboardingPublishTaskSubtitle": "Easily find help",
@@ -3280,7 +3280,7 @@
   "authConfirmNewPassword": "Confirm New Password",
   "authForgotPasswordQuestion": "Forgot password?",
   "authRegisterNewAccount": "Create account",
-  "authRegisterSubtitle": "Join Link²Ur, start exchanging skills",
+  "authRegisterSubtitle": "Join Link虏Ur, start exchanging skills",
   "homeLoadFailed": "Failed to load",
   "homePublishTask": "Post Task",
   "homeDeadlineExpired": "Expired",
@@ -3551,7 +3551,7 @@
   "vipRegularUser": "Regular User",
   "infoVersionFormat": "Version {version} ({buildNumber})",
   "@infoVersionFormat": { "placeholders": { "version": { "type": "String" }, "buildNumber": { "type": "String" } } },
-  "infoCopyright": "© 2024 Link²Ur. All rights reserved.",
+  "infoCopyright": "漏 2024 Link虏Ur. All rights reserved.",
 
   "chatImagePlaceholder": "[Image]",
 
@@ -3584,11 +3584,11 @@
   "couponRewardPoints500Vip": "+500 Points + VIP Trial",
 
   "settingsLanguageEnglish": "English",
-  "settingsLanguageChinese": "中文",
+  "settingsLanguageChinese": "涓枃",
 
-  "infoTermsContent": "Link²Ur Terms of Service\n\nLast updated: January 1, 2024\n\n1. Service Overview\nLink²Ur is a campus mutual-aid platform designed to help users publish and accept various life service tasks.\n\n2. User Responsibilities\n- Users must provide truthful and accurate personal information\n- Users must comply with platform rules and applicable laws\n- Users are responsible for the content they publish\n\n3. Platform Responsibilities\n- The platform provides information intermediary services\n- The platform implements escrow protection for transaction funds\n- The platform reserves the right to take action against violations\n\n4. Payment & Settlement\n- All payments are processed through third-party payment platforms\n- Tasks are automatically settled upon completion\n- The platform charges reasonable service fees\n\n5. Privacy Protection\nPlease refer to our Privacy Policy for detailed information.\n\n6. Disclaimer\nAs an information intermediary, the platform does not bear direct responsibility for transactions between users.\n\nIf you have any questions, please contact our customer service team.",
-  "infoPrivacyContent": "Link²Ur Privacy Policy\n\nLast updated: January 1, 2024\n\n1. Information Collection\nWe collect the following types of information:\n- Registration information (name, email, etc.)\n- Location information (for nearby task recommendations)\n- Device information (for push notifications)\n\n2. Information Usage\nWe use your information to:\n- Provide and improve services\n- Personalized recommendations\n- Ensure transaction security\n\n3. Information Storage & Protection\n- Data is stored on secure servers\n- Encryption technology is used to protect data transmission\n- Regular security audits are conducted\n\n4. Information Sharing\nWe do not sell your personal information. We only share in the following cases:\n- With your consent\n- Legal requirements\n- Necessary for service provision\n\n5. Cookie Policy\nWe use cookies to improve user experience.\n\n6. Your Rights\n- Access and modify personal information\n- Delete account\n- Unsubscribe from notifications\n\nFor privacy-related questions, please contact privacy@link2ur.com",
-  "infoCookieContent": "Link²Ur Cookie Policy\n\nWe use cookies and similar technologies to improve your experience.\n\n1. What are Cookies\nCookies are small text files stored on your device.\n\n2. How We Use Cookies\n- Essential Cookies: Maintain login status\n- Functional Cookies: Remember preferences\n- Analytics Cookies: Improve service quality\n\n3. Managing Cookies\nYou can manage cookie preferences in your device settings.",
+  "infoTermsContent": "Link虏Ur Terms of Service\n\nLast updated: January 1, 2024\n\n1. Service Overview\nLink虏Ur is a campus mutual-aid platform designed to help users publish and accept various life service tasks.\n\n2. User Responsibilities\n- Users must provide truthful and accurate personal information\n- Users must comply with platform rules and applicable laws\n- Users are responsible for the content they publish\n\n3. Platform Responsibilities\n- The platform provides information intermediary services\n- The platform implements escrow protection for transaction funds\n- The platform reserves the right to take action against violations\n\n4. Payment & Settlement\n- All payments are processed through third-party payment platforms\n- Tasks are automatically settled upon completion\n- The platform charges reasonable service fees\n\n5. Privacy Protection\nPlease refer to our Privacy Policy for detailed information.\n\n6. Disclaimer\nAs an information intermediary, the platform does not bear direct responsibility for transactions between users.\n\nIf you have any questions, please contact our customer service team.",
+  "infoPrivacyContent": "Link虏Ur Privacy Policy\n\nLast updated: January 1, 2024\n\n1. Information Collection\nWe collect the following types of information:\n- Registration information (name, email, etc.)\n- Location information (for nearby task recommendations)\n- Device information (for push notifications)\n\n2. Information Usage\nWe use your information to:\n- Provide and improve services\n- Personalized recommendations\n- Ensure transaction security\n\n3. Information Storage & Protection\n- Data is stored on secure servers\n- Encryption technology is used to protect data transmission\n- Regular security audits are conducted\n\n4. Information Sharing\nWe do not sell your personal information. We only share in the following cases:\n- With your consent\n- Legal requirements\n- Necessary for service provision\n\n5. Cookie Policy\nWe use cookies to improve user experience.\n\n6. Your Rights\n- Access and modify personal information\n- Delete account\n- Unsubscribe from notifications\n\nFor privacy-related questions, please contact privacy@link2ur.com",
+  "infoCookieContent": "Link虏Ur Cookie Policy\n\nWe use cookies and similar technologies to improve your experience.\n\n1. What are Cookies\nCookies are small text files stored on your device.\n\n2. How We Use Cookies\n- Essential Cookies: Maintain login status\n- Functional Cookies: Remember preferences\n- Analytics Cookies: Improve service quality\n\n3. Managing Cookies\nYou can manage cookie preferences in your device settings.",
 
   "settingsUnknown": "Unknown",
 
@@ -3735,7 +3735,7 @@
   "badgeSuper": "Super",
 
   "notificationPermTitle": "Enable Push Notifications",
-  "notificationPermDesc": "Stay updated with:\n\n• Task status updates\n• New message alerts\n• Task match recommendations\n• Deals & promotions",
+  "notificationPermDesc": "Stay updated with:\n\n鈥?Task status updates\n鈥?New message alerts\n鈥?Task match recommendations\n鈥?Deals & promotions",
   "notificationPermEnable": "Enable Notifications",
   "notificationPermSkip": "Skip for Now",
   "notificationPermSettingsTitle": "Notification Permission Required",
@@ -3827,4 +3827,8 @@
   "profileDirectRequestSubmit": "Send Request",
   "profileMySoldItems": "My Sold Items",
   "profileMySoldItemsSubtitle": "View your sold flea market items"
+,
+  "searchErrorSearchFailed": "Search failed, please try again",
+  "fleaMarketErrorInvalidItemId": "Invalid item ID",
+  "customerServiceNoAvailableAgent": "No customer service agent available"
 }

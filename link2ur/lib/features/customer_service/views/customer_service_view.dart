@@ -6,6 +6,7 @@ import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_typography.dart';
 import '../../../core/design/app_radius.dart';
+import '../../../core/utils/error_localizer.dart';
 import '../../../core/utils/l10n_extension.dart';
 import '../../../core/widgets/loading_view.dart';
 import '../../../data/models/customer_service.dart';
@@ -506,7 +507,7 @@ class _CustomerServiceContentState extends State<_CustomerServiceContent> {
                   return Padding(
                     padding: AppSpacing.allMd,
                     child: Text(
-                      state.errorMessage!,
+                      ErrorLocalizer.localize(context, state.errorMessage),
                       style: AppTypography.subheadline.copyWith(
                         color: AppColors.error,
                       ),

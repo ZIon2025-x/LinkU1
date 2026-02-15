@@ -387,9 +387,7 @@ class OfflineDataStore {
   String? _basePath;
 
   Future<String> get _dataPath async {
-    if (_basePath == null) {
-      _basePath = await offline_storage.getOfflineDataPath();
-    }
+    _basePath ??= await offline_storage.getOfflineDataPath();
     return _basePath!;
   }
 

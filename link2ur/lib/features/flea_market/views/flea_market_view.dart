@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/design/app_colors.dart';
 import '../../../core/utils/debouncer.dart';
+import '../../../core/utils/error_localizer.dart';
 import '../../../core/utils/haptic_feedback.dart';
 import '../../../core/design/app_radius.dart';
 import '../../../core/utils/l10n_extension.dart';
@@ -306,7 +307,9 @@ class _FleaMarketViewContentState extends State<_FleaMarketViewContent> {
     // Error state
     if (state.status == FleaMarketStatus.error && state.items.isEmpty) {
       return ErrorStateView.loadFailed(
-        message: state.errorMessage ?? context.l10n.fleaMarketLoadFailed,
+        message: state.errorMessage != null
+            ? ErrorLocalizer.localize(context, state.errorMessage)
+            : context.l10n.fleaMarketLoadFailed,
         onRetry: () {
           context.read<FleaMarketBloc>().add(const FleaMarketLoadRequested());
         },

@@ -148,7 +148,9 @@ class WebSocketService extends WidgetsBindingObserver {
     }
 
     _isConnected = false;
-    _connectionController.add(false);
+    if (!_connectionController.isClosed) {
+      _connectionController.add(false);
+    }
     AppLogger.info('WebSocket disconnected');
   }
 
@@ -238,7 +240,11 @@ class WebSocketService extends WidgetsBindingObserver {
   /// 处理断开连接
   void _handleDisconnect() {
     _isConnected = false;
-    _connectionController.add(false);
+    _subscription?.cancel();
+    _subscription = null;
+    if (!_connectionController.isClosed) {
+      _connectionController.add(false);
+    }
     _stopHeartbeat();
     _scheduleReconnect();
   }
@@ -337,9 +343,18 @@ class WebSocketService extends WidgetsBindingObserver {
 
   /// 释放资源
   void dispose() {
-    disconnect();
+    _shouldBeConnected = false;
+    _cancelReconnect();
+    _stopHeartbeat();
+    WidgetsBinding.instance.removeObserver(this);
     _networkSubscription?.cancel();
     _networkSubscription = null;
+    _subscription?.cancel();
+    _subscription = null;
+    _isConnected = false;
+    // 关闭 channel（fire-and-forget，不阻塞 dispose）
+    _channel?.sink.close().catchError((_) {});
+    _channel = null;
     _messageController.close();
     _connectionController.close();
   }

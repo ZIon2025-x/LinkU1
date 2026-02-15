@@ -116,7 +116,11 @@ class PaymentRepository {
       throw PaymentException(response.message ?? '创建微信支付会话失败');
     }
 
-    return response.data!['checkout_url'] as String? ?? '';
+    final url = response.data!['checkout_url'] as String?;
+    if (url == null || url.isEmpty) {
+      throw const PaymentException('WeChat checkout URL missing in response');
+    }
+    return url;
   }
 
   /// 创建支付意向（便捷方法，调用 createTaskPayment）
@@ -245,7 +249,11 @@ class PaymentRepository {
       throw PaymentException(response.message ?? '获取入驻链接失败');
     }
 
-    return response.data!['url'] as String? ?? '';
+    final url = response.data!['url'] as String?;
+    if (url == null || url.isEmpty) {
+      throw const PaymentException('Stripe onboarding URL missing in response');
+    }
+    return url;
   }
 
   /// 为已有账户创建新的 onboarding session（每次打开入驻页前调用，获取新的 client_secret，避免 Stripe "already been claimed"）

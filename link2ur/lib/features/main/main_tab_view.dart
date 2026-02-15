@@ -323,7 +323,7 @@ class _MainTabViewState extends State<MainTabView>
               Expanded(child: widget.navigationShell),
             ],
           ),
-          if (_showDesktopMenu) _DesktopMenuOverlay(
+          if (_showDesktopMenu) _desktopMenuOverlay(
             currentRoute: _currentRoute,
             onNavigate: _onDesktopNavigate,
             onClose: () => setState(() => _showDesktopMenu = false),
@@ -334,7 +334,7 @@ class _MainTabViewState extends State<MainTabView>
   }
 
   // ==================== 桌面菜单浮层（对齐 frontend 遮罩 + 静态 box-shadow 面板） ====================
-  static Widget _DesktopMenuOverlay({
+  static Widget _desktopMenuOverlay({
     required String currentRoute,
     required ValueChanged<String> onNavigate,
     required VoidCallback onClose,

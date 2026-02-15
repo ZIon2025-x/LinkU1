@@ -155,7 +155,9 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
         if (result.tasks.isEmpty) {
           try {
             result = await _taskRepository.getTasks(page: 1, pageSize: 20);
-          } catch (_) {}
+          } catch (e) {
+            AppLogger.warning('Fallback to public tasks failed', e);
+          }
         }
       } else {
         result = await _taskRepository.getTasks(page: 1, pageSize: 20);
@@ -170,7 +172,9 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
           status: 'open',
         );
         openList = actRes.activities;
-      } catch (_) {}
+      } catch (e) {
+        AppLogger.warning('Failed to load activities for home', e);
+      }
 
       emit(state.copyWith(
         status: HomeStatus.loaded,

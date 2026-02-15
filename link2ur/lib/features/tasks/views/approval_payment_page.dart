@@ -526,7 +526,7 @@ class _ApprovalPaymentPageState extends State<ApprovalPaymentPage> {
         leading: IconButton(
           icon: Text(
             l10n.paymentCancel,
-            style: TextStyle(
+            style: const TextStyle(
               color: AppColors.primary,
               fontSize: 17,
               fontWeight: FontWeight.w400,
@@ -625,7 +625,7 @@ class _ApprovalPaymentPageState extends State<ApprovalPaymentPage> {
                       children: [
                         Row(
                           children: [
-                            Icon(
+                            const Icon(
                               Icons.credit_card,
                               size: 18,
                               color: AppColors.primary,
@@ -745,7 +745,7 @@ class _ApprovalPaymentPageState extends State<ApprovalPaymentPage> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(
+                const Icon(
                   Icons.check_circle,
                   size: 64,
                   color: AppColors.success,
@@ -809,7 +809,7 @@ class _TaskInfoCard extends StatelessWidget {
         children: [
           Row(
             children: [
-              Icon(Icons.info_outline, size: 18, color: AppColors.primary),
+              const Icon(Icons.info_outline, size: 18, color: AppColors.primary),
               const SizedBox(width: 8),
               Text(
                 l10n.paymentTaskInfo,
@@ -822,7 +822,7 @@ class _TaskInfoCard extends StatelessWidget {
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Icon(Icons.list_alt, size: 14, color: AppColors.textSecondary),
+                const Icon(Icons.list_alt, size: 14, color: AppColors.textSecondary),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Column(
@@ -852,7 +852,7 @@ class _TaskInfoCard extends StatelessWidget {
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Icon(Icons.person_outline, size: 14, color: AppColors.textSecondary),
+                const Icon(Icons.person_outline, size: 14, color: AppColors.textSecondary),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Column(
@@ -1006,7 +1006,7 @@ class _PaymentMethodOption extends StatelessWidget {
               ),
             ),
             if (isSelected)
-              Icon(
+              const Icon(
                 Icons.check_circle,
                 size: 20,
                 color: AppColors.primary,
@@ -1056,7 +1056,7 @@ class _CouponSelectionCard extends StatelessWidget {
         children: [
           Row(
             children: [
-              Icon(Icons.local_offer_outlined, size: 18, color: AppColors.primary),
+              const Icon(Icons.local_offer_outlined, size: 18, color: AppColors.primary),
               const SizedBox(width: 8),
               Text(
                 l10n.paymentCoupons,
@@ -1148,7 +1148,7 @@ class _CouponRow extends StatelessWidget {
               ),
             ),
             if (isSelected)
-              Icon(Icons.check_circle, size: 20, color: AppColors.primary),
+              const Icon(Icons.check_circle, size: 20, color: AppColors.primary),
           ],
         ),
       ),

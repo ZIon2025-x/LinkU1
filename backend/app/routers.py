@@ -4673,6 +4673,21 @@ def get_my_tasks(
     }
 
 
+def _safe_parse_images(images_value):
+    """安全解析图片字段（Text/JSON列存储兼容）"""
+    if not images_value:
+        return []
+    if isinstance(images_value, list):
+        return images_value
+    if isinstance(images_value, str):
+        try:
+            parsed = json.loads(images_value)
+            return parsed if isinstance(parsed, list) else []
+        except (json.JSONDecodeError, ValueError):
+            return []
+    return []
+
+
 @router.get("/profile/{user_id}")
 @measure_api_performance("get_user_profile")
 @cache_response(ttl=300, key_prefix="user_profile")  # 缓存5分钟
@@ -4897,7 +4912,7 @@ def user_profile(
                 "id": item.id,
                 "title": item.title,
                 "price": float(item.price) if item.price is not None else 0.0,
-                "images": json.loads(item.images) if item.images and isinstance(item.images, str) else (item.images if isinstance(item.images, list) else []),
+                "images": _safe_parse_images(item.images),
                 "status": item.status,
                 "view_count": item.view_count or 0,
                 "created_at": item.created_at,

@@ -96,9 +96,16 @@ class DeepLinkHandler {
           final id = _extractId(path);
           if (id != null) context.push('/user/$id');
           break;
+        case _DeepLinkRoute.profileSubRoute:
+          context.safePush(_buildAppPath(uri));
+          break;
         case _DeepLinkRoute.leaderboard:
           final id = _extractId(path);
           if (id != null) context.push('/leaderboard/$id');
+          break;
+        case _DeepLinkRoute.leaderboardItem:
+          final id = _extractId(path);
+          if (id != null) context.push('/leaderboard/item/$id');
           break;
         case _DeepLinkRoute.activity:
           final id = _extractId(path);
@@ -133,8 +140,12 @@ class DeepLinkHandler {
     } else if (path.startsWith('/flea-market/') ||
         path.startsWith('/market/')) {
       return _DeepLinkRoute.fleaMarketItem;
-    } else if (path.startsWith('/user/') || path.startsWith('/profile/')) {
+    } else if (path.startsWith('/user/')) {
       return _DeepLinkRoute.userProfile;
+    } else if (path.startsWith('/profile/')) {
+      return _DeepLinkRoute.profileSubRoute;
+    } else if (path.startsWith('/leaderboard/item/')) {
+      return _DeepLinkRoute.leaderboardItem;
     } else if (path.startsWith('/leaderboard/')) {
       return _DeepLinkRoute.leaderboard;
     } else if (path.startsWith('/activity/') ||
@@ -163,6 +174,11 @@ class DeepLinkHandler {
       return segments.last;
     }
     return null;
+  }
+
+  String _buildAppPath(Uri uri) {
+    if (uri.hasQuery) return '${uri.path}?${uri.query}';
+    return uri.path;
   }
 
   /// 生成深度链接URL
@@ -205,7 +221,9 @@ enum _DeepLinkRoute {
   forumPost,
   fleaMarketItem,
   userProfile,
+  profileSubRoute,
   leaderboard,
+  leaderboardItem,
   activity,
   taskExpert,
   unknown,

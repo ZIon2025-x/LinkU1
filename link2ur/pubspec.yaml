@@ -11,6 +11,8 @@ dependencies:
     sdk: flutter
   flutter_localizations:
     sdk: flutter
+  flutter_web_plugins:
+    sdk: flutter
 
   # 状态管理
   flutter_bloc: ^8.1.6
@@ -72,6 +74,7 @@ dependencies:
   package_info_plus: ^8.0.2
   uuid: ^4.4.2
   collection: ^1.18.0
+  web: ^1.1.1
 
   # IAP 内购
   in_app_purchase: ^3.2.0

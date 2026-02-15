@@ -2,6 +2,13 @@ import '../models/discovery_feed.dart';
 import '../services/api_service.dart';
 import '../../core/constants/api_endpoints.dart';
 
+class DiscoveryException implements Exception {
+  DiscoveryException(this.message);
+  final String message;
+  @override
+  String toString() => message;
+}
+
 /// Discovery Feed 仓库
 class DiscoveryRepository {
   DiscoveryRepository({required ApiService apiService})
@@ -22,7 +29,7 @@ class DiscoveryRepository {
       },
     );
     if (!response.isSuccess || response.data == null) {
-      throw Exception(response.message ?? '获取发现 Feed 失败');
+      throw DiscoveryException(response.message ?? '获取发现 Feed 失败');
     }
     return DiscoveryFeedResponse.fromJson(response.data!);
   }
@@ -40,7 +47,7 @@ class DiscoveryRepository {
       },
     );
     if (!response.isSuccess || response.data == null) {
-      throw Exception(response.message ?? '搜索可关联内容失败');
+      throw DiscoveryException(response.message ?? '搜索可关联内容失败');
     }
     final results = response.data!['results'] as List<dynamic>? ?? [];
     return results.cast<Map<String, dynamic>>();

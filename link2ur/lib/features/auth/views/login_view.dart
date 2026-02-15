@@ -11,6 +11,7 @@ import '../../../core/design/app_typography.dart';
 import '../../../core/design/app_radius.dart';
 import '../../../core/utils/validators.dart';
 import '../../../core/utils/l10n_extension.dart';
+import '../../../core/utils/error_localizer.dart';
 import '../../../core/router/app_router.dart';
 import '../../../core/utils/responsive.dart';
 import '../bloc/auth_bloc.dart';
@@ -211,9 +212,11 @@ class _LoginViewState extends State<LoginView>
               setState(() => _showSessionExpiredBanner = false);
             }
           } else if (state.hasError) {
+            final localizedError =
+                ErrorLocalizer.localize(context, state.errorMessage);
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content: Text(state.errorMessage!),
+                content: Text(localizedError),
                 backgroundColor: AppColors.error,
               ),
             );

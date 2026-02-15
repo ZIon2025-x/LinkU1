@@ -7,6 +7,7 @@ import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_radius.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_typography.dart';
+import '../../../core/constants/uk_cities.dart';
 import '../../../core/utils/haptic_feedback.dart';
 import '../../../core/utils/l10n_extension.dart';
 import '../../../core/widgets/loading_view.dart';
@@ -32,32 +33,6 @@ const List<Map<String, String>> _expertCategories = [
   {'key': 'beauty_skincare'},
   {'key': 'handicraft'},
 ];
-
-/// 城市列表（与后端 city_filter_utils.py UK_MAIN_CITIES 对齐）
-const List<String> _ukCities = [
-  'London', 'Edinburgh', 'Manchester', 'Birmingham', 'Glasgow',
-  'Bristol', 'Sheffield', 'Leeds', 'Nottingham', 'Newcastle',
-  'Southampton', 'Liverpool', 'Cardiff', 'Coventry', 'Exeter',
-  'Leicester', 'York', 'Aberdeen', 'Bath', 'Dundee',
-  'Reading', 'St Andrews', 'Belfast', 'Brighton', 'Durham',
-  'Norwich', 'Swansea', 'Loughborough', 'Lancaster', 'Warwick',
-  'Cambridge', 'Oxford',
-];
-
-/// 中英文城市名映射
-const Map<String, String> _cityNameZh = {
-  'London': '伦敦', 'Edinburgh': '爱丁堡', 'Manchester': '曼彻斯特',
-  'Birmingham': '伯明翰', 'Glasgow': '格拉斯哥', 'Bristol': '布里斯托',
-  'Sheffield': '谢菲尔德', 'Leeds': '利兹', 'Nottingham': '诺丁汉',
-  'Newcastle': '纽卡斯尔', 'Southampton': '南安普顿', 'Liverpool': '利物浦',
-  'Cardiff': '卡迪夫', 'Coventry': '考文垂', 'Exeter': '埃克塞特',
-  'Leicester': '莱斯特', 'York': '约克', 'Aberdeen': '阿伯丁',
-  'Bath': '巴斯', 'Dundee': '邓迪', 'Reading': '雷丁',
-  'St Andrews': '圣安德鲁斯', 'Belfast': '贝尔法斯特', 'Brighton': '布莱顿',
-  'Durham': '达勒姆', 'Norwich': '诺里奇', 'Swansea': '斯旺西',
-  'Loughborough': '拉夫堡', 'Lancaster': '兰开斯特', 'Warwick': '华威',
-  'Cambridge': '剑桥', 'Oxford': '牛津',
-};
 
 /// 任务达人列表页
 /// 参考iOS TaskExpertListView.swift
@@ -380,8 +355,8 @@ class _TaskExpertListViewContentState extends State<_TaskExpertListViewContent> 
                               isDark: isDark,
                               onTap: () => setModalState(() => tempCity = 'all'),
                             ),
-                            ..._ukCities.map((city) {
-                              final zhName = _cityNameZh[city];
+                            ...UKCities.all.map((city) {
+                              final zhName = UKCities.zhName[city];
                               final locale = Localizations.localeOf(ctx);
                               final displayName = locale.languageCode == 'zh'
                                   ? (zhName ?? city)

@@ -95,7 +95,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       AppLogger.error('Login failed', e);
       emit(state.copyWith(
         status: AuthStatus.error,
-        errorMessage: '登录失败，请重试',
+        errorMessage: 'auth_error_login_failed',
       ));
     }
   }
@@ -129,7 +129,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       AppLogger.error('Login with code failed', e);
       emit(state.copyWith(
         status: AuthStatus.error,
-        errorMessage: '登录失败，请重试',
+        errorMessage: 'auth_error_login_failed',
       ));
     }
   }
@@ -163,7 +163,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       AppLogger.error('Login with phone failed', e);
       emit(state.copyWith(
         status: AuthStatus.error,
-        errorMessage: '登录失败，请重试',
+        errorMessage: 'auth_error_login_failed',
       ));
     }
   }
@@ -199,7 +199,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       AppLogger.error('Register failed', e);
       emit(state.copyWith(
         status: AuthStatus.error,
-        errorMessage: '注册失败，请重试',
+        errorMessage: 'auth_error_register_failed',
       ));
     }
   }
@@ -239,7 +239,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     } catch (e) {
       emit(state.copyWith(
         codeSendStatus: CodeSendStatus.error,
-        errorMessage: '发送验证码失败',
+        errorMessage: 'auth_error_send_code_failed',
       ));
     }
   }
@@ -265,7 +265,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     } catch (e) {
       emit(state.copyWith(
         codeSendStatus: CodeSendStatus.error,
-        errorMessage: '发送验证码失败',
+        errorMessage: 'auth_error_send_code_failed',
       ));
     }
   }
@@ -315,7 +315,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       );
       emit(state.copyWith(
         resetPasswordStatus: ResetPasswordStatus.success,
-        resetPasswordMessage: '密码重置成功，请使用新密码登录',
+        resetPasswordMessage: 'auth_reset_password_success',
       ));
     } on AuthException catch (e) {
       emit(state.copyWith(
@@ -326,7 +326,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       AppLogger.error('Reset password failed', e);
       emit(state.copyWith(
         resetPasswordStatus: ResetPasswordStatus.error,
-        resetPasswordMessage: '密码重置失败，请重试',
+        resetPasswordMessage: 'auth_reset_password_failed',
       ));
     }
   }

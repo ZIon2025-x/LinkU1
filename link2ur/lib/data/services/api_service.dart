@@ -323,6 +323,7 @@ class ApiService {
       data: requestOptions.data,
       queryParameters: requestOptions.queryParameters,
       options: options,
+      cancelToken: requestOptions.cancelToken,
     );
   }
 

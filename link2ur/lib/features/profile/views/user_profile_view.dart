@@ -364,6 +364,7 @@ class _UserProfileViewState extends State<UserProfileView> {
             )
           else
             ...tasks.take(5).map((t) => Padding(
+                  key: ValueKey('task_${t.id}'),
                   padding: const EdgeInsets.only(bottom: AppSpacing.sm),
                   child: ListTile(
                     title: Text(t.title,
@@ -515,11 +516,17 @@ class _UserProfileViewState extends State<UserProfileView> {
                             : () async {
                                 final title = titleController.text.trim();
                                 final price = double.tryParse(priceController.text.trim());
-                                if (title.isEmpty || price == null || price < 1) return;
+                                if (title.isEmpty || price == null || price < 1) {
+                                  ScaffoldMessenger.of(ctx).showSnackBar(
+                                    SnackBar(content: Text(l10n.profileDirectRequestHintTitle)),
+                                  );
+                                  return;
+                                }
 
+                                // 在 await 之前捕获 repository
+                                final taskRepo = context.read<TaskRepository>();
                                 setSheetState(() => isSubmitting = true);
                                 try {
-                                  final taskRepo = context.read<TaskRepository>();
                                   await taskRepo.createTask(
                                     CreateTaskRequest(
                                       title: title,
@@ -537,9 +544,7 @@ class _UserProfileViewState extends State<UserProfileView> {
                                   );
                                   if (ctx.mounted) {
                                     Navigator.pop(ctx);
-                                  }
-                                  if (context.mounted) {
-                                    ScaffoldMessenger.of(context).showSnackBar(
+                                    ScaffoldMessenger.of(ctx).showSnackBar(
                                       SnackBar(content: Text(l10n.profileDirectRequestSuccess)),
                                     );
                                   }
@@ -579,7 +584,11 @@ class _UserProfileViewState extends State<UserProfileView> {
           },
         );
       },
-    );
+    ).then((_) {
+      titleController.dispose();
+      descriptionController.dispose();
+      priceController.dispose();
+    });
   }
 
   /// 近期论坛帖子
@@ -605,6 +614,7 @@ class _UserProfileViewState extends State<UserProfileView> {
           ),
           const SizedBox(height: AppSpacing.md),
           ...posts.take(5).map((p) => Padding(
+                key: ValueKey('post_${p.id}'),
                 padding: const EdgeInsets.only(bottom: AppSpacing.sm),
                 child: ListTile(
                   title: Text(p.title,

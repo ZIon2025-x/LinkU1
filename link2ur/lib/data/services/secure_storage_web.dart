@@ -1,6 +1,5 @@
 import 'dart:convert';
-// ignore: avoid_web_libraries_in_flutter
-import 'dart:html' as html;
+import 'package:web/web.dart' as web;
 import 'secure_storage_stub.dart';
 export 'secure_storage_stub.dart' show SecureTokenStorage;
 
@@ -15,12 +14,12 @@ class _WebSecureStorage implements SecureTokenStorage {
   Future<void> write({required String key, required String value}) async {
     // Base64 encode to provide basic obfuscation (not true encryption)
     final encoded = base64Encode(utf8.encode(value));
-    html.window.sessionStorage['$_prefix$key'] = encoded;
+    web.window.sessionStorage.setItem('$_prefix$key', encoded);
   }
 
   @override
   Future<String?> read({required String key}) async {
-    final encoded = html.window.sessionStorage['$_prefix$key'];
+    final encoded = web.window.sessionStorage.getItem('$_prefix$key');
     if (encoded == null) return null;
     try {
       return utf8.decode(base64Decode(encoded));
@@ -31,7 +30,7 @@ class _WebSecureStorage implements SecureTokenStorage {
 
   @override
   Future<void> delete({required String key}) async {
-    html.window.sessionStorage.remove('$_prefix$key');
+    web.window.sessionStorage.removeItem('$_prefix$key');
   }
 }
 

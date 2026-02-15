@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_radius.dart';
+import '../../../core/utils/error_localizer.dart';
 import '../../../core/utils/haptic_feedback.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_typography.dart';
@@ -250,7 +251,9 @@ class _FleaMarketDetailContent extends StatelessWidget {
 
     if (state.detailStatus == FleaMarketStatus.error) {
       return ErrorStateView.loadFailed(
-        message: state.errorMessage ?? context.l10n.fleaMarketLoadFailed,
+        message: state.errorMessage != null
+            ? ErrorLocalizer.localize(context, state.errorMessage)
+            : context.l10n.fleaMarketLoadFailed,
         onRetry: () {
           context
               .read<FleaMarketBloc>()
@@ -893,7 +896,7 @@ class _FleaMarketPurchaseSheetState extends State<_FleaMarketPurchaseSheet> {
                           ),
                           child: Row(
                             children: [
-                              Icon(Icons.schedule,
+                              const Icon(Icons.schedule,
                                   size: 20, color: AppColors.primary),
                               const SizedBox(width: 8),
                               Expanded(
@@ -915,7 +918,7 @@ class _FleaMarketPurchaseSheetState extends State<_FleaMarketPurchaseSheet> {
                                         l10n.fleaMarketNegotiateAmountFormat(
                                             widget.item
                                                 .userPurchaseRequestProposedPrice!),
-                                        style: TextStyle(
+                                        style: const TextStyle(
                                             fontSize: 13,
                                             color: AppColors.textSecondary),
                                       ),
@@ -946,7 +949,7 @@ class _FleaMarketPurchaseSheetState extends State<_FleaMarketPurchaseSheet> {
                             l10n.taskApplicationIWantToNegotiatePrice,
                             style: const TextStyle(fontSize: 15),
                           ),
-                          activeColor: AppColors.primary,
+                          activeThumbColor: AppColors.primary,
                         ),
                         if (_showNegotiate) ...[
                           const SizedBox(height: 8),
@@ -972,7 +975,7 @@ class _FleaMarketPurchaseSheetState extends State<_FleaMarketPurchaseSheet> {
                           const SizedBox(height: 4),
                           Text(
                             l10n.taskApplicationNegotiatePriceHint,
-                            style: TextStyle(
+                            style: const TextStyle(
                                 fontSize: 12,
                                 color: AppColors.textTertiary),
                           ),

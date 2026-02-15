@@ -251,9 +251,9 @@ class _SystemMessageBubble extends StatelessWidget {
   bool get _isRefundMessage {
     final content = message.content.toLowerCase();
     return content.contains('refund') ||
-        content.contains('退款') ||
+        content.contains('refund_request') ||
         content.contains('dispute') ||
-        content.contains('争议');
+        content.contains('chargeback');
   }
 
   @override
@@ -291,10 +291,11 @@ class _SystemMessageBubble extends StatelessWidget {
 
   /// 退款/争议相关消息 - 特殊卡片样式（对齐iOS）
   Widget _buildRefundCard(BuildContext context) {
-    final isCompleted = message.content.contains('completed') ||
-        message.content.contains('已完成') ||
-        message.content.contains('resolved') ||
-        message.content.contains('已解决');
+    final normalizedContent = message.content.toLowerCase();
+    final isCompleted = normalizedContent.contains('completed') ||
+        normalizedContent.contains('resolved') ||
+        normalizedContent.contains('succeeded') ||
+        normalizedContent.contains('success');
     final color = isCompleted ? AppColors.success : AppColors.warning;
 
     return Container(

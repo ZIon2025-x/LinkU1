@@ -5,6 +5,7 @@ import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_radius.dart';
 import '../../../core/utils/l10n_extension.dart';
+import '../../../core/utils/error_localizer.dart';
 import '../../../core/utils/responsive.dart';
 import '../../../core/utils/validators.dart';
 import '../../../core/widgets/buttons.dart';
@@ -96,8 +97,10 @@ class _ForgotPasswordViewState extends State<ForgotPasswordView> {
               state.codeSendStatus == CodeSendStatus.sending;
           final isResetting =
               state.resetPasswordStatus == ResetPasswordStatus.loading;
-          final errorMessage =
-              state.errorMessage ?? state.resetPasswordMessage;
+          final errorMessage = ErrorLocalizer.localize(
+            context,
+            state.errorMessage ?? state.resetPasswordMessage,
+          );
           final isSuccess =
               state.resetPasswordStatus == ResetPasswordStatus.success;
 
@@ -155,7 +158,10 @@ class _ForgotPasswordViewState extends State<ForgotPasswordView> {
                               AppSpacing.hSm,
                               Expanded(
                                 child: Text(
-                                  state.resetPasswordMessage!,
+                                  ErrorLocalizer.localize(
+                                    context,
+                                    state.resetPasswordMessage,
+                                  ),
                                   style: const TextStyle(
                                       color: AppColors.success),
                                 ),
@@ -167,7 +173,9 @@ class _ForgotPasswordViewState extends State<ForgotPasswordView> {
                       ],
 
                       // 错误提示
-                      if (errorMessage != null && !isSuccess) ...[
+                      if ((state.errorMessage != null ||
+                              state.resetPasswordMessage != null) &&
+                          !isSuccess) ...[
                         Container(
                           padding: AppSpacing.allMd,
                           decoration: BoxDecoration(
