@@ -94,14 +94,20 @@ class PaymentRepository {
   }
 
   /// 创建微信支付 Checkout Session
+  /// [taskSource] 任务来源（如 flea_market），用于跳蚤市场支付时补充 Session metadata
+  /// [fleaMarketItemId] 跳蚤市场商品 ID，用于 webhook 更新商品状态
   Future<String> createWeChatCheckoutSession({
     required int taskId,
     int? couponId,
+    String? taskSource,
+    String? fleaMarketItemId,
   }) async {
     final response = await _apiService.post<Map<String, dynamic>>(
       ApiEndpoints.createWeChatCheckout(taskId),
       data: {
         if (couponId != null) 'coupon_id': couponId,
+        if (taskSource != null) 'task_source': taskSource,
+        if (fleaMarketItemId != null) 'flea_market_item_id': fleaMarketItemId,
       },
     );
 

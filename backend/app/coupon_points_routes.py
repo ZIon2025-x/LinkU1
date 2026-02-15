@@ -5,7 +5,7 @@ import logging
 from typing import Optional
 from datetime import datetime, date, timezone
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
+from fastapi import APIRouter, Body, Depends, HTTPException, Query, Request, status
 from sqlalchemy.orm import Session
 from datetime import timedelta
 
@@ -1381,6 +1381,51 @@ def create_task_payment(
 
 # ==================== 微信支付二维码（iOS 专用）====================
 
+
+def _build_wechat_checkout_metadata(
+    task_id,
+    task,
+    current_user,
+    effective_taker_id,
+    effective_taker_stripe_account_id,
+    task_amount_pence,
+    coupon_usage_log,
+    coupon_discount,
+    application_fee_pence,
+    task_source,
+    flea_market_item_id,
+    db,
+):
+    """构建微信 Checkout Session 的 metadata，包含跳蚤市场支持"""
+    metadata = {
+        "task_id": str(task_id),
+        "user_id": str(current_user.id),
+        "taker_id": str(effective_taker_id),
+        "taker_stripe_account_id": effective_taker_stripe_account_id,
+        "task_amount": str(task_amount_pence),
+        "coupon_usage_log_id": str(coupon_usage_log.id) if coupon_usage_log else "",
+        "coupon_discount": str(coupon_discount) if coupon_discount > 0 else "",
+        "application_fee": str(application_fee_pence),
+        "payment_type": "wechat_checkout",
+    }
+    # 跳蚤市场：补充 flea_market_item_id 供 webhook 更新商品状态
+    if not flea_market_item_id and (
+        task_source == "flea_market"
+        or getattr(task, "task_source", None) == "flea_market"
+        or task.task_type == "Second-hand & Rental"
+    ):
+        flea_item = db.query(models.FleaMarketItem).filter(
+            models.FleaMarketItem.sold_task_id == task_id
+        ).first()
+        if flea_item:
+            from app.id_generator import format_flea_market_id
+            flea_market_item_id = format_flea_market_id(flea_item.id)
+    if flea_market_item_id:
+        metadata["flea_market_item_id"] = flea_market_item_id
+        logger.info(f"微信支付跳蚤市场：已添加 metadata flea_market_item_id={flea_market_item_id}")
+    return metadata
+
+
 @router.post("/tasks/{task_id}/wechat-checkout")
 @rate_limit("create_payment")
 async def create_wechat_checkout_session(
@@ -1388,6 +1433,8 @@ async def create_wechat_checkout_session(
     request: Request,
     user_coupon_id: Optional[int] = None,
     coupon_code: Optional[str] = None,
+    task_source: Optional[str] = Body(None),
+    flea_market_item_id: Optional[str] = Body(None),
     current_user: models.User = Depends(get_current_user_secure_sync_csrf),
     db: Session = Depends(get_db)
 ):
@@ -1668,17 +1715,12 @@ async def create_wechat_checkout_session(
             "mode": "payment",
             "success_url": success_url,
             "cancel_url": cancel_url,
-            "metadata": {
-                'task_id': str(task_id),
-                'user_id': str(current_user.id),
-                'taker_id': str(effective_taker_id),
-                'taker_stripe_account_id': effective_taker_stripe_account_id,
-                'task_amount': str(task_amount_pence),
-                'coupon_usage_log_id': str(coupon_usage_log.id) if coupon_usage_log else '',
-                'coupon_discount': str(coupon_discount) if coupon_discount > 0 else '',
-                'application_fee': str(application_fee_pence),
-                'payment_type': 'wechat_checkout',
-            },
+            "metadata": _build_wechat_checkout_metadata(
+                task_id, task, current_user, effective_taker_id,
+                effective_taker_stripe_account_id, task_amount_pence,
+                coupon_usage_log, coupon_discount, application_fee_pence,
+                task_source, flea_market_item_id, db,
+            ),
             "expires_at": int((datetime.now(timezone.utc) + timedelta(minutes=30)).timestamp()),
         }
         # 传 Customer 可预填姓名/邮箱；否则传 customer_email

@@ -7061,6 +7061,58 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
                 except Exception as e:
                     logger.warning(f"[WEBHOOK] 更新支付历史记录失败: {e}")
                 
+                # 跳蚤市场：Checkout Session 完成时更新商品状态为 sold（微信支付等）
+                flea_market_item_id = metadata.get("flea_market_item_id")
+                if flea_market_item_id:
+                    try:
+                        from app.models import FleaMarketItem
+                        from app.id_generator import parse_flea_market_id
+                        db_item_id = parse_flea_market_id(flea_market_item_id)
+                        flea_item = db.query(FleaMarketItem).filter(
+                            and_(
+                                FleaMarketItem.id == db_item_id,
+                                FleaMarketItem.sold_task_id == task_id,
+                                FleaMarketItem.status.in_(["active", "reserved"])
+                            )
+                        ).first()
+                        if flea_item:
+                            flea_item.status = "sold"
+                            if flea_item.sold_task_id != task_id:
+                                flea_item.sold_task_id = task_id
+                            db.flush()
+                            logger.info(f"✅ [WEBHOOK] 微信支付跳蚤市场商品 {flea_market_item_id} 状态已更新为 sold (task_id: {task_id})")
+                            from app.flea_market_extensions import invalidate_item_cache
+                            invalidate_item_cache(flea_item.id)
+                            # 发送商品已售出通知
+                            try:
+                                item_title = flea_item.title or metadata.get("task_title", "商品")
+                                crud.create_notification(
+                                    db=db,
+                                    user_id=flea_item.seller_id,
+                                    type="flea_market_sold",
+                                    title="商品已售出",
+                                    content=f"「{item_title}」已售出！买家已完成付款，可以开始交易了",
+                                    related_id=str(task_id),
+                                    auto_commit=False,
+                                )
+                                buyer_id = metadata.get("user_id")
+                                if buyer_id:
+                                    crud.create_notification(
+                                        db=db,
+                                        user_id=int(buyer_id),
+                                        type="flea_market_payment_success",
+                                        title="支付成功",
+                                        content=f"您已成功购买「{item_title}」，可以联系卖家进行交易",
+                                        related_id=str(task_id),
+                                        auto_commit=False,
+                                    )
+                            except Exception as notify_err:
+                                logger.warning(f"⚠️ [WEBHOOK] 创建跳蚤市场售出通知失败: {notify_err}")
+                        else:
+                            logger.warning(f"⚠️ [WEBHOOK] 微信支付跳蚤市场商品 {flea_market_item_id} 未找到 (task_id: {task_id})")
+                    except Exception as e:
+                        logger.error(f"❌ [WEBHOOK] 微信支付更新跳蚤市场商品状态失败: {e}", exc_info=True)
+                
                 db.commit()
                 
                 # 记录微信支付完成（用于调试）

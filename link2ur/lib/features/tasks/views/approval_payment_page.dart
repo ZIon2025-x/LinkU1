@@ -333,6 +333,8 @@ class _ApprovalPaymentPageState extends State<ApprovalPaymentPage> {
         final url = await context.read<PaymentRepository>().createWeChatCheckoutSession(
           taskId: taskId,
           couponId: _selectedUserCoupon?.id,
+          taskSource: widget.paymentData.taskSource,
+          fleaMarketItemId: widget.paymentData.fleaMarketItemId,
         );
         if (!mounted) return;
         if (url.isEmpty) throw Exception('No checkout URL');
