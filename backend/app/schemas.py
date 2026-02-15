@@ -1844,6 +1844,8 @@ class TaskPaymentRequest(BaseModel):
     user_coupon_id: Optional[int] = None  # 用户优惠券ID（如果使用优惠券）
     application_id: Optional[int] = None  # 申请ID（用于验证 PaymentIntent 是否属于此申请者）
     preferred_payment_method: Optional[str] = None  # 首选支付方式：card / alipay / wechat_pay；传则创建仅含该方式的 PI，PaymentSheet 不再弹选择窗
+    task_source: Optional[str] = None  # 任务来源：flea_market、normal 等，用于跳蚤市场支付时补充 PI metadata
+    flea_market_item_id: Optional[str] = None  # 跳蚤市场商品 ID（如 S0123），用于 webhook 更新商品状态
     
     @validator('payment_method')
     def validate_payment_method(cls, v):

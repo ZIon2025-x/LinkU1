@@ -132,6 +132,8 @@ class _ApprovalPaymentPageState extends State<ApprovalPaymentPage> {
         taskId: taskId,
         userCouponId: _selectedUserCoupon?.id,
         preferredPaymentMethod: 'alipay',
+        taskSource: widget.paymentData.taskSource,
+        fleaMarketItemId: widget.paymentData.fleaMarketItemId,
       );
       if (!mounted) return;
       setState(() {
@@ -198,6 +200,8 @@ class _ApprovalPaymentPageState extends State<ApprovalPaymentPage> {
       final response = await context.read<PaymentRepository>().createTaskPayment(
         taskId: taskId,
         userCouponId: coupon?.id,
+        taskSource: widget.paymentData.taskSource,
+        fleaMarketItemId: widget.paymentData.fleaMarketItemId,
       );
       if (!mounted) return;
       setState(() {

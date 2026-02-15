@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import '../../../core/constants/app_constants.dart';
 import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_radius.dart';
 import '../../../core/utils/haptic_feedback.dart';
@@ -614,6 +615,8 @@ class _FleaMarketDetailContent extends StatelessWidget {
                   amountDisplay: item.pendingPaymentAmountDisplay,
                   applicationId: null,
                   paymentExpiresAt: item.pendingPaymentExpiresAt,
+                  taskSource: AppConstants.taskSourceFleaMarket,
+                  fleaMarketItemId: itemId,
                 );
                 Navigator.of(context)
                     .push<bool>(

@@ -96,6 +96,8 @@ class AcceptPaymentData extends Equatable {
     this.paymentExpiresAt,
     this.taskTitle,
     this.applicantName,
+    this.taskSource,
+    this.fleaMarketItemId,
   });
 
   final int taskId;
@@ -110,10 +112,14 @@ class AcceptPaymentData extends Equatable {
   final String? taskTitle;
   /// 被批准申请者姓名（批准后支付页显示，对齐 iOS）
   final String? applicantName;
+  /// 任务来源（如 flea_market），用于跳蚤市场支付时补充 PI metadata
+  final String? taskSource;
+  /// 跳蚤市场商品 ID（如 S0123），用于 webhook 更新商品状态
+  final String? fleaMarketItemId;
 
   @override
   List<Object?> get props =>
-      [taskId, clientSecret, customerId, ephemeralKeySecret];
+      [taskId, clientSecret, customerId, ephemeralKeySecret, taskSource, fleaMarketItemId];
 }
 
 class TaskDetailCompleteRequested extends TaskDetailEvent {

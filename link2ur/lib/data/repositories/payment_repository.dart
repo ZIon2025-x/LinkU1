@@ -17,10 +17,14 @@ class PaymentRepository {
   /// 创建任务支付（对应后端 /api/coupon-points/tasks/{taskId}/payment）
   /// [userCouponId] 用户优惠券 ID（后端字段 user_coupon_id），选券后传入以抵扣
   /// [preferredPaymentMethod] 对齐 iOS：card / alipay / null
+  /// [taskSource] 任务来源（如 flea_market），用于跳蚤市场支付时补充 PI metadata
+  /// [fleaMarketItemId] 跳蚤市场商品 ID，用于 webhook 更新商品状态
   Future<TaskPaymentResponse> createTaskPayment({
     required int taskId,
     int? userCouponId,
     String? preferredPaymentMethod,
+    String? taskSource,
+    String? fleaMarketItemId,
   }) async {
     final response = await _apiService.post<Map<String, dynamic>>(
       ApiEndpoints.createTaskPayment(taskId),
@@ -29,6 +33,8 @@ class PaymentRepository {
         if (userCouponId != null) 'user_coupon_id': userCouponId,
         if (preferredPaymentMethod != null)
           'preferred_payment_method': preferredPaymentMethod,
+        if (taskSource != null) 'task_source': taskSource,
+        if (fleaMarketItemId != null) 'flea_market_item_id': fleaMarketItemId,
       },
     );
 
@@ -111,11 +117,15 @@ class PaymentRepository {
     required int taskId,
     int? userCouponId,
     String? preferredPaymentMethod,
+    String? taskSource,
+    String? fleaMarketItemId,
   }) async {
     return createTaskPayment(
       taskId: taskId,
       userCouponId: userCouponId,
       preferredPaymentMethod: preferredPaymentMethod,
+      taskSource: taskSource,
+      fleaMarketItemId: fleaMarketItemId,
     );
   }
 

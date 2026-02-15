@@ -537,7 +537,11 @@ class FleaMarketBloc extends Bloc<FleaMarketEvent, FleaMarketState> {
 
   /// 从直接购买接口返回的 body 中解析支付数据（后端返回 { success, data: { task_id, client_secret, ... } }）
   /// 对标 iOS DirectPurchaseResponse.DirectPurchaseData，仅当需支付（pending_payment + client_secret）时返回非 null
-  AcceptPaymentData? _parseDirectPurchasePaymentData(Map<String, dynamic> raw) {
+  /// [itemId] 跳蚤市场商品 ID，传入时补充 taskSource 和 fleaMarketItemId 供支付创建 PI 使用
+  AcceptPaymentData? _parseDirectPurchasePaymentData(
+    Map<String, dynamic> raw, {
+    String? itemId,
+  }) {
     final payload = raw['data'] as Map<String, dynamic>? ?? raw;
     final clientSecret = payload['client_secret'] as String?;
     if (clientSecret == null || clientSecret.isEmpty) return null;
@@ -556,6 +560,8 @@ class FleaMarketBloc extends Bloc<FleaMarketEvent, FleaMarketState> {
       amountDisplay: payload['amount_display'] as String?,
       applicationId: null,
       paymentExpiresAt: payload['payment_expires_at'] as String?,
+      taskSource: itemId != null ? AppConstants.taskSourceFleaMarket : null,
+      fleaMarketItemId: itemId,
     );
   }
 
@@ -571,7 +577,8 @@ class FleaMarketBloc extends Bloc<FleaMarketEvent, FleaMarketState> {
 
     try {
       final result = await _fleaMarketRepository.directPurchase(event.itemId);
-      final paymentData = _parseDirectPurchasePaymentData(result);
+      final paymentData =
+          _parseDirectPurchasePaymentData(result, itemId: event.itemId);
 
       if (paymentData != null) {
         // ✅ 正常流程：需要支付，打开支付页
@@ -634,7 +641,8 @@ class FleaMarketBloc extends Bloc<FleaMarketEvent, FleaMarketState> {
         ));
       } else {
         final result = await _fleaMarketRepository.directPurchase(event.itemId);
-        final paymentData = _parseDirectPurchasePaymentData(result);
+        final paymentData =
+            _parseDirectPurchasePaymentData(result, itemId: event.itemId);
 
         if (paymentData != null) {
           // ✅ 正常流程：需要支付，打开支付页

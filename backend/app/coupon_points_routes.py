@@ -1248,20 +1248,39 @@ def create_task_payment(
         from app.secure_auth import get_wechat_pay_payment_method_options
         payment_method_options = get_wechat_pay_payment_method_options(request) if "wechat_pay" in pm_types else {}
 
+        metadata = {
+            "task_id": str(task_id),
+            "user_id": str(current_user.id),
+            "taker_id": str(task.taker_id),
+            "taker_stripe_account_id": taker.stripe_account_id,
+            "task_amount": str(task_amount_pence),
+            "coupon_usage_log_id": str(coupon_usage_log.id) if coupon_usage_log else "",
+            "coupon_discount": str(coupon_discount) if coupon_discount > 0 else "",
+            "application_fee": str(application_fee_pence),
+        }
+        # 跳蚤市场：补充 webhook 需要的 payment_type 和 flea_market_item_id
+        flea_market_item_id = payment_request.flea_market_item_id
+        if not flea_market_item_id and (
+            payment_request.task_source == "flea_market"
+            or getattr(task, "task_source", None) == "flea_market"
+            or task.task_type == "Second-hand & Rental"
+        ):
+            flea_item = db.query(models.FleaMarketItem).filter(
+                models.FleaMarketItem.sold_task_id == task_id
+            ).first()
+            if flea_item:
+                from app.id_generator import format_flea_market_id
+                flea_market_item_id = format_flea_market_id(flea_item.id)
+        if flea_market_item_id:
+            metadata["payment_type"] = "flea_market_direct_purchase"
+            metadata["flea_market_item_id"] = flea_market_item_id
+            logger.info(f"跳蚤市场支付：已添加 metadata payment_type, flea_market_item_id={flea_market_item_id}")
+
         create_kw = {
             "amount": final_amount,
             "currency": "gbp",
             "payment_method_types": pm_types,
-            "metadata": {
-                "task_id": str(task_id),
-                "user_id": str(current_user.id),
-                "taker_id": str(task.taker_id),
-                "taker_stripe_account_id": taker.stripe_account_id,
-                "task_amount": str(task_amount_pence),
-                "coupon_usage_log_id": str(coupon_usage_log.id) if coupon_usage_log else "",
-                "coupon_discount": str(coupon_discount) if coupon_discount > 0 else "",
-                "application_fee": str(application_fee_pence),
-            },
+            "metadata": metadata,
             "description": f"任务 #{task_id} 任务金额支付 - {task.title}",
         }
         # 关联 Customer，PaymentSheet 需要 PI 上的 customer 才能正确保存/复用支付方式
