@@ -81,7 +81,7 @@ class SettingsState extends Equatable {
     this.locale = 'zh',
     this.notificationsEnabled = true,
     this.soundEnabled = true,
-    this.cacheSize = '计算中...',
+    this.cacheSize = 'common_loading',
     this.appVersion = '',
     this.isClearingCache = false,
     this.isDeletingAccount = false,

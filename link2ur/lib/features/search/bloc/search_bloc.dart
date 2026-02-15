@@ -137,7 +137,7 @@ class SearchBloc extends Bloc<SearchEvent, SearchState> {
       AppLogger.error('Search failed', e);
       emit(state.copyWith(
         status: SearchStatus.error,
-        errorMessage: '搜索失败，请重试',
+        errorMessage: 'search_error_failed',
       ));
     }
   }

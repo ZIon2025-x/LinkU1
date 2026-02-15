@@ -215,7 +215,8 @@ class CustomerServiceBloc
       } else {
         emit(state.copyWith(
           status: CustomerServiceStatus.error,
-          errorMessage: assignResponse.message ?? '暂无可用客服',
+          errorMessage:
+              assignResponse.message ?? 'customer_service_no_available_agent',
         ));
       }
     } catch (e) {
