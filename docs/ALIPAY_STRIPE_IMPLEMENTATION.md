@@ -128,6 +128,18 @@ A:
 2. 检查 Info.plist 中是否配置了 URL Scheme
 3. 查看 Xcode 控制台日志排查错误
 
+**Q: 为什么 iOS 测试模式一下就能成功，Flutter 支付后还停在支付页？**
+A: 
+- **原因**：iOS 在收到支付宝/3DS 重定向（`link2ur://stripe-redirect`）时会调用 **StripeAPI.handleURLCallback(with: url)**，把 URL 交给 Stripe SDK，Sheet 才能完成流程并立刻回调 `.completed`，所以测试模式下「一下就能成功」。Flutter 若**没有**把该深度链接交给 Stripe，SDK 收不到重定向，`presentPaymentSheet()` 会一直不返回成功，页面就一直停在支付页。
+- **Flutter 修复**：在 `DeepLinkHandler` 里对 `link2ur://stripe-redirect` 先调用 **Stripe.instance.handleURLCallback(uri)**，与 iOS 行为一致；并在 Stripe 初始化时设置 **Stripe.urlScheme = 'link2ur'**。这样从支付宝/3DS 返回后，SDK 能处理重定向，`presentPaymentSheet()` 会尽快返回成功，页面即可关闭。
+
+**Q: 为什么 Stripe 仪表盘里支付宝付款要过几分钟才显示「成功」？iOS 怎么应对这 5 分钟？**
+A: 
+- **原因**：支付宝是「延迟支付」方式。用户点击支付后，PaymentIntent 先变为 `requires_action`（需在支付宝内完成）；只有支付宝把结果回传给 Stripe 后，Stripe 才会把该 PaymentIntent 更新为 `succeeded`。这几分钟是**支付宝 ↔ Stripe** 的异步确认时间，不是 App 或后端 bug。
+- **iOS 现状**：原生在收到重定向后会调用 `StripeAPI.handleURLCallback`，测试模式下 Stripe 常会很快确认，Sheet 很快回调成功。生产环境若支付宝回调慢，仍可能有一段等待。
+- **Flutter 已做**：深度链接交给 `Stripe.handleURLCallback`（见上条）后，SDK 能完成流程；同时保留轮询 `payment-status`，在 Stripe 已确认但 SDK 未及时回调时也能尽快展示成功。
+- **建议**：若希望 iOS 与 Flutter 一致、在 Stripe 确认后尽快展示成功，可在 iOS 支付宝/银行卡支付发起后同样轮询 `getTaskPaymentStatus`，在检测到 `payment_details.status == "succeeded"` 时主动置 `paymentSuccess = true` 并关闭等待状态。
+
 ---
 
 ## 参考文档

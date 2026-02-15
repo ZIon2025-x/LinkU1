@@ -751,19 +751,19 @@ class TaskRepository {
 
   // ==================== 我的任务 ====================
 
-  /// 获取我的任务
-  /// 兼容后端两种返回格式：
-  ///   - 裸数组: [{task1}, {task2}, ...]
-  ///   - 分页对象: {"tasks": [...], "total": 10, "page": 1}
+  /// 获取我的任务（支持 role/status 筛选，后端分页）
+  /// role: poster=我发布的, taker=我接取的, null=全部
   Future<TaskListResponse> getMyTasks({
     int page = 1,
     int pageSize = 20,
     String? status,
+    String? role,
   }) async {
     final params = {
       'page': page,
       'page_size': pageSize,
       if (status != null) 'status': status,
+      if (role != null) 'role': role,
     };
     final cacheKey = CacheManager.buildKey(CacheManager.prefixMyTasks, params);
 

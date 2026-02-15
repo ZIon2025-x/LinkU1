@@ -107,7 +107,7 @@ class _MyPostsViewState extends State<MyPostsView>
   Future<void> _loadSellingItems(FleaMarketRepository repo) async {
     setState(() => _isLoadingSelling = true);
     try {
-      final response = await repo.getMyItems(page: 1, pageSize: 20);
+      final response = await repo.getMyItems(page: 1, pageSize: 100);
       if (mounted) {
         setState(() {
           _sellingItems = response.items;
@@ -179,7 +179,7 @@ class _MyPostsViewState extends State<MyPostsView>
   Future<void> _loadFavoriteItems(FleaMarketRepository repo) async {
     setState(() => _isLoadingFavorites = true);
     try {
-      final response = await repo.getFavoriteItems(page: 1, pageSize: 20);
+      final response = await repo.getFavoriteItems(page: 1, pageSize: 100);
       if (mounted) {
         setState(() {
           _favoriteItems = response.items;
@@ -200,7 +200,7 @@ class _MyPostsViewState extends State<MyPostsView>
   Future<void> _loadSoldItems(FleaMarketRepository repo) async {
     setState(() => _isLoadingSold = true);
     try {
-      final response = await repo.getMySales(page: 1, pageSize: 20);
+      final response = await repo.getMySales(page: 1, pageSize: 100);
       if (mounted) {
         setState(() {
           _soldItems = response.items;

@@ -401,38 +401,45 @@ def create_user(db: Session, user: schemas.UserCreate):
     return db_user
 
 
-def get_user_tasks(db: Session, user_id: str, limit: int = 50, offset: int = 0):
+def get_user_tasks(
+    db: Session,
+    user_id: str,
+    limit: int = 50,
+    offset: int = 0,
+    role: str | None = None,
+    status: str | None = None,
+):
+    """
+    获取当前用户的任务（发布的、接受的、或参与的），支持按 role/status 筛选与分页。
+    role: 'poster' 仅发布的任务, 'taker' 仅接取/参与的任务, None 全部。
+    status: 任务状态筛选，如 'in_progress', 'completed', 'cancelled' 等，None 表示不按状态筛。
+    返回 (tasks_slice, total_count)。
+    """
     from app.models import Task, TaskTimeSlotRelation, TaskParticipant
     from sqlalchemy.orm import selectinload
     from sqlalchemy import or_, and_
     from datetime import datetime, timedelta, timezone
-    
+
     # 直接从数据库查询，不使用缓存（避免缓存不一致问题）
-    # 用户任务数据更新频繁，缓存TTL短且容易导致数据不一致
-    # 使用预加载避免N+1查询
-    
-    # 计算3天前的时间（用于过滤已完成超过3天的任务）
     now_utc = get_utc_time()
     three_days_ago = now_utc - timedelta(days=3)
-    
+
     # 1. 查询作为发布者、接受者或申请者的任务
-    # 注意：申请活动创建的任务，对于单人任务 poster_id 是申请者，对于多人任务 originating_user_id 是申请者
     tasks_query = (
         db.query(Task)
         .options(
-            selectinload(Task.poster),  # 预加载发布者
-            selectinload(Task.taker),   # 预加载接受者
-            selectinload(Task.reviews),   # 预加载评论
-            selectinload(Task.time_slot_relations).selectinload(TaskTimeSlotRelation.time_slot),  # 预加载时间段关联
-            selectinload(Task.participants)  # 预加载参与者，用于动态计算current_participants
+            selectinload(Task.poster),
+            selectinload(Task.taker),
+            selectinload(Task.reviews),
+            selectinload(Task.time_slot_relations).selectinload(TaskTimeSlotRelation.time_slot),
+            selectinload(Task.participants)
         )
         .filter(
             or_(
-                Task.poster_id == user_id,  # 作为发布者的任务
-                Task.taker_id == user_id,   # 作为接受者的任务
-                Task.originating_user_id == user_id  # 申请活动创建的任务（包括多人任务中 poster_id 为 None 的情况）
+                Task.poster_id == user_id,
+                Task.taker_id == user_id,
+                Task.originating_user_id == user_id
             ),
-            # 过滤掉已完成超过3天的任务
             or_(
                 Task.status != "completed",
                 and_(
@@ -443,23 +450,22 @@ def get_user_tasks(db: Session, user_id: str, limit: int = 50, offset: int = 0):
             )
         )
     )
-    
+
     # 2. 查询作为多人任务参与者的任务
     participant_tasks_query = (
         db.query(Task)
         .join(TaskParticipant, Task.id == TaskParticipant.task_id)
         .options(
-            selectinload(Task.poster),  # 预加载发布者
-            selectinload(Task.taker),   # 预加载接受者
-            selectinload(Task.reviews),   # 预加载评论
-            selectinload(Task.time_slot_relations).selectinload(TaskTimeSlotRelation.time_slot),  # 预加载时间段关联
-            selectinload(Task.participants)  # 预加载参与者，用于动态计算current_participants
+            selectinload(Task.poster),
+            selectinload(Task.taker),
+            selectinload(Task.reviews),
+            selectinload(Task.time_slot_relations).selectinload(TaskTimeSlotRelation.time_slot),
+            selectinload(Task.participants)
         )
         .filter(
             and_(
                 TaskParticipant.user_id == user_id,
                 Task.is_multi_participant == True,
-                # 过滤掉已完成超过3天的任务
                 or_(
                     Task.status != "completed",
                     and_(
@@ -471,24 +477,31 @@ def get_user_tasks(db: Session, user_id: str, limit: int = 50, offset: int = 0):
             )
         )
     )
-    
-    # 合并两个查询结果，去重
+
     tasks_from_poster_taker = tasks_query.all()
     tasks_from_participant = participant_tasks_query.all()
-    
-    # 使用字典去重（按任务ID）
+
     tasks_dict = {}
     for task in tasks_from_poster_taker + tasks_from_participant:
         tasks_dict[task.id] = task
-    
-    # 转换为列表并排序
+
     tasks = list(tasks_dict.values())
+
+    # 按 role 筛选：poster 仅我发布的，taker 仅我接取/参与的（排除我发布的）
+    if role == "poster":
+        tasks = [t for t in tasks if t.poster_id == user_id]
+    elif role == "taker":
+        tasks = [t for t in tasks if t.poster_id != user_id]
+
+    # 按 status 筛选
+    if status:
+        tasks = [t for t in tasks if t.status == status]
+
     tasks.sort(key=lambda t: t.created_at, reverse=True)
-    
-    # 应用分页
-    tasks = tasks[offset:offset + limit]
-    
-    return tasks
+    total = len(tasks)
+    tasks = tasks[offset : offset + limit]
+
+    return tasks, total
 
 
 def get_user_reviews(db: Session, user_id: str, limit: int = 5):

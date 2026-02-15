@@ -3691,6 +3691,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get paymentTimeoutOrRefreshHint => '若已完成支付请关闭本页并刷新；若未完成请重试';
 
   @override
+  String get paymentConfirmingDoNotRepeat => '支付确认中，请稍候，请勿重复支付。';
+
+  @override
+  String get paymentWaitingConfirmHint => '若您已完成支付，我们将自动确认，请稍候（约 5 分钟内）。';
+
+  @override
   String get paymentTotalAmount => '总金额';
 
   @override
@@ -11442,6 +11448,12 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get paymentTimeoutOrRefreshHint => '若已完成支付請關閉本頁並重新整理；若未完成請重試';
+
+  @override
+  String get paymentConfirmingDoNotRepeat => '支付確認中，請稍候，請勿重複支付。';
+
+  @override
+  String get paymentWaitingConfirmHint => '若您已完成支付，我們將自動確認，請稍候（約 5 分鐘內）。';
 
   @override
   String get paymentTotalAmount => '總金額';

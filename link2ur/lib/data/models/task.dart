@@ -505,7 +505,9 @@ class TaskListResponse {
   final int page;
   final int pageSize;
 
-  bool get hasMore => tasks.length >= pageSize;
+  /// 后端返回 total 时用分页计算，否则用本页条数推断
+  bool get hasMore =>
+      total > 0 ? (page * pageSize < total) : (tasks.length >= pageSize);
 
   factory TaskListResponse.fromJson(Map<String, dynamic> json) {
     // 后端不同接口返回不同的键名：

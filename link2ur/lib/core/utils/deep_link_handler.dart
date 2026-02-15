@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:app_links/app_links.dart';
+import 'package:flutter_stripe/flutter_stripe.dart';
 import '../router/app_router.dart';
 
 import 'logger.dart';
@@ -51,6 +52,20 @@ class DeepLinkHandler {
 
   /// 处理深度链接
   void _handleDeepLink(Uri uri) {
+    // 优先交给 Stripe 处理支付重定向（支付宝/3DS 等），与 iOS StripeAPI.handleURLCallback 一致
+    if (_isStripeRedirect(uri)) {
+      Stripe.instance.handleURLCallback(uri.toString()).then((bool handled) {
+        if (handled) {
+          AppLogger.info('Deep link - Stripe handled redirect: $uri');
+        } else {
+          AppLogger.warning('Deep link - Stripe did not handle: $uri');
+        }
+      }).catchError((Object e) {
+        AppLogger.error('Deep link - Stripe handleURLCallback failed', e);
+      });
+      return;
+    }
+
     final context = _navigatorKey?.currentContext;
     if (context == null) {
       AppLogger.warning('Deep link - No navigator context available');
@@ -100,6 +115,12 @@ class DeepLinkHandler {
     } catch (e) {
       AppLogger.error('Deep link - Navigation failed', e);
     }
+  }
+
+  /// 是否为 Stripe 支付重定向（支付宝/3DS 等返回），需交给 Stripe.handleURLCallback
+  bool _isStripeRedirect(Uri uri) {
+    return uri.scheme == 'link2ur' &&
+        (uri.host == 'stripe-redirect' || uri.path.contains('stripe-redirect'));
   }
 
   /// 根据路径匹配路由类型

@@ -4602,17 +4602,24 @@ def get_my_profile(
         raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
 
 
-@router.get("/my-tasks", response_model=list[schemas.TaskOut])
+@router.get("/my-tasks")
 @measure_api_performance("get_my_tasks")
 def get_my_tasks(
-    current_user=Depends(check_user_status), 
+    current_user=Depends(check_user_status),
     db: Session = Depends(get_db),
-    limit: int = Query(50, ge=1, le=100),
-    offset: int = Query(0, ge=0, le=100000)
+    page: int = Query(1, ge=1, description="页码，从 1 开始"),
+    page_size: int = Query(20, ge=1, le=100, description="每页条数"),
+    role: str | None = Query(None, description="角色筛选: poster=我发布的, taker=我接取的"),
+    status: str | None = Query(None, description="状态筛选: open, in_progress, completed, cancelled 等"),
 ):
-    """获取当前用户的任务（发布的和接受的）"""
-    tasks = crud.get_user_tasks(db, current_user.id, limit=limit, offset=offset)
-    
+    """获取当前用户的任务（支持按 role/status 筛选与分页）。返回 { tasks, total, page, page_size }。"""
+    offset = (page - 1) * page_size
+    tasks, total = crud.get_user_tasks(
+        db, current_user.id,
+        limit=page_size, offset=offset,
+        role=role, status=status,
+    )
+
     # 获取所有任务的翻译（标题和描述）
     task_ids = [task.id for task in tasks]
     if task_ids:
@@ -4657,8 +4664,13 @@ def get_my_tasks(
                 target_languages=["en", "zh-CN"],
                 label="后台翻译任务",
             )
-    
-    return tasks
+
+    return {
+        "tasks": [schemas.TaskOut.model_validate(t) for t in tasks],
+        "total": total,
+        "page": page,
+        "page_size": page_size,
+    }
 
 
 @router.get("/profile/{user_id}")
@@ -4708,7 +4720,7 @@ def user_profile(
         completion_rate = (completed_tasks_count / taken_tasks_count) * 100
     
     # 获取已完成且公开的任务用于显示（限制数量以提高性能）
-    tasks = crud.get_user_tasks(db, user_id, limit=100)  # 限制为最近100个任务
+    tasks, _ = crud.get_user_tasks(db, user_id, limit=100)  # 限制为最近100个任务
     # 所有用户看到的任务列表都是一样的，只显示已完成且公开的任务，避免信息泄露
     posted_tasks = [
         t

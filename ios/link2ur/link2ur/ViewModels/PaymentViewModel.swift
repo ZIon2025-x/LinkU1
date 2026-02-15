@@ -94,6 +94,9 @@ class PaymentViewModel: NSObject, ObservableObject, ApplePayContextDelegate, STP
     private var isCreatingPaymentIntent = false // 防止重复创建支付意图
     private var isLoadingPaymentInfo = false // 防止重复加载支付信息
     private var applePayContext: STPApplePayContext?
+    /// 支付中轮询支付状态（与 Flutter 一致：支付宝/Stripe 延迟确认时尽早发现成功）
+    private var paymentStatusPollTimer: Timer?
+    private var paymentStatusPollCount = 0
 
     /// 当前应使用的 PaymentIntent client_secret
     /// - Note: 批准申请支付会直接传入 client_secret，此时 paymentResponse 可能为空
@@ -961,12 +964,76 @@ class PaymentViewModel: NSObject, ObservableObject, ApplePayContextDelegate, STP
             topViewController = presented
         }
         Logger.debug("准备弹出 PaymentSheet", category: .api)
+        startPollingPaymentStatus()
         sheet.present(from: topViewController) { [weak self] result in
             Logger.debug("PaymentSheet 结果: \(result)", category: .api)
+            self?.stopPollingPaymentStatus()
             self?.handlePaymentResult(result)
         }
     }
-    
+
+    /// 开始轮询任务支付状态（银行卡/支付宝等延迟方式：Stripe 确认后 1～2 秒内即可发现成功，与 Flutter 一致）
+    private func startPollingPaymentStatus() {
+        stopPollingPaymentStatus()
+        paymentStatusPollCount = 0
+        paymentStatusPollTimer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: false) { [weak self] _ in
+            Task { @MainActor in
+                self?.firePaymentStatusPoll()
+            }
+        }
+        RunLoop.main.add(paymentStatusPollTimer!, forMode: .common)
+    }
+
+    private func firePaymentStatusPoll() {
+        guard paymentStatusPollTimer != nil else { return }
+        paymentStatusPollCount += 1
+        if paymentStatusPollCount > 90 {
+            stopPollingPaymentStatus()
+            return
+        }
+        checkPaymentStatus { [weak self] alreadyPaid in
+            Task { @MainActor in
+                guard let self = self else { return }
+                if alreadyPaid {
+                    Logger.info("✅ 轮询检测到支付已完成", category: .api)
+                    self.stopPollingPaymentStatus()
+                    self.paymentSuccess = true
+                    self.errorMessage = nil
+                    CacheManager.shared.invalidatePaymentCache()
+                    self.dismissTopPresentedIfNeeded()
+                    return
+                }
+                let interval: TimeInterval = self.paymentStatusPollCount <= 30 ? 1.0 : 2.0
+                self.paymentStatusPollTimer?.invalidate()
+                self.paymentStatusPollTimer = Timer.scheduledTimer(withTimeInterval: interval, repeats: false) { [weak self] _ in
+                    Task { @MainActor in
+                        self?.firePaymentStatusPoll()
+                    }
+                }
+                RunLoop.main.add(self.paymentStatusPollTimer!, forMode: .common)
+            }
+        }
+    }
+
+    private func stopPollingPaymentStatus() {
+        paymentStatusPollTimer?.invalidate()
+        paymentStatusPollTimer = nil
+        paymentStatusPollCount = 0
+    }
+
+    /// 轮询发现支付成功时，关闭可能仍盖在前面的 PaymentSheet，以便用户看到成功页
+    private func dismissTopPresentedIfNeeded() {
+        guard let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+              let root = windowScene.windows.first?.rootViewController else { return }
+        var top = root
+        while let presented = top.presentedViewController {
+            top = presented
+        }
+        if top !== root {
+            top.dismiss(animated: true)
+        }
+    }
+
     /// 处理直接支付结果（支付宝/微信）
     private func handleDirectPaymentResult(status: STPPaymentHandlerActionStatus, error: Error?, paymentMethod: String) {
         Logger.debug("\(paymentMethod)支付结果处理 - 状态: \(status.rawValue)", category: .api)

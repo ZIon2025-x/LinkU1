@@ -19,6 +19,7 @@ import '../../../core/widgets/async_image_view.dart';
 import '../../../data/models/task.dart';
 import '../../../data/models/task_application.dart';
 import '../../../data/repositories/task_repository.dart';
+import '../../auth/bloc/auth_bloc.dart';
 
 /// 任务Tab定义 - 对齐iOS MyTasksView.swift（7个Tab含Pending）
 enum _TaskTab {
@@ -44,16 +45,11 @@ class _MyTasksViewState extends State<MyTasksView>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
 
-  // 每个Tab独立管理数据
-  final Map<_TaskTab, List<Task>> _tabData = {};
-  final Map<_TaskTab, bool> _tabLoading = {};
-  /// 防重入标志：true 表示正在发起网络请求，避免并发加载。
-  /// 与 _tabLoading（控制 UI skeleton 显示）分离，
-  /// 因为 _tabLoading 初始为 true（显示 skeleton），但此时并未真正在请求。
-  final Map<_TaskTab, bool> _tabFetching = {};
-  final Map<_TaskTab, bool> _tabHasMore = {};
-  final Map<_TaskTab, int> _tabPage = {};
-  final Map<_TaskTab, String?> _tabError = {};
+  /// 只拉一次「全部我的任务」，各 Tab 在本地按状态/角色筛选展示
+  List<Task> _allMyTasks = [];
+  bool _allMyTasksLoading = true;
+  String? _allMyTasksError;
+
   final Map<_TaskTab, ScrollController> _scrollControllers = {};
 
   // Pending tab 使用独立的申请数据
@@ -61,8 +57,6 @@ class _MyTasksViewState extends State<MyTasksView>
   bool _pendingLoading = true;
   String? _pendingError;
 
-  // 存储 scroll listener 引用，dispose 时移除
-  final Map<_TaskTab, VoidCallback> _scrollListeners = {};
   Timer? _delayedLoadTimer;
 
   static const _tabs = _TaskTab.values;
@@ -77,36 +71,14 @@ class _MyTasksViewState extends State<MyTasksView>
       }
     });
 
-    // 初始化每个Tab的状态
     for (final tab in _tabs) {
-      _tabData[tab] = [];
-      _tabLoading[tab] = true;   // UI 显示 skeleton
-      _tabFetching[tab] = false; // 防重入标志（尚未发起请求）
-      _tabHasMore[tab] = false;
-      _tabPage[tab] = 1;
-      _tabError[tab] = null;
       _scrollControllers[tab] = ScrollController();
     }
 
-    // 给每个ScrollController添加滚动监听（保存引用以便dispose时移除）
-    for (final tab in _tabs) {
-      void listener() => _onScroll(tab);
-      _scrollListeners[tab] = listener;
-      _scrollControllers[tab]!.addListener(listener);
-    }
-
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      // 初始加载全部Tab
-      _loadTab(_TaskTab.all);
-      // 延迟加载其他Tab（使用Timer以便dispose时可取消）
+      _loadAllMyTasks();
       _delayedLoadTimer = Timer(const Duration(milliseconds: 200), () {
-        if (mounted) {
-          for (final tab in _tabs) {
-            if (tab != _TaskTab.all) {
-              _loadTab(tab);
-            }
-          }
-        }
+        if (mounted) _loadPendingApplications();
       });
     });
   }
@@ -115,103 +87,67 @@ class _MyTasksViewState extends State<MyTasksView>
   void dispose() {
     _delayedLoadTimer?.cancel();
     _tabController.dispose();
-    // 先移除 listener 再 dispose controller
-    for (final tab in _tabs) {
-      final listener = _scrollListeners[tab];
-      if (listener != null) {
-        _scrollControllers[tab]?.removeListener(listener);
-      }
-    }
     for (final sc in _scrollControllers.values) {
       sc.dispose();
     }
     super.dispose();
   }
 
-  void _onScroll(_TaskTab tab) {
-    final sc = _scrollControllers[tab]!;
-    if (sc.position.pixels >= sc.position.maxScrollExtent - 200) {
-      if (_tabHasMore[tab] == true && _tabFetching[tab] != true) {
-        _loadTab(tab, page: (_tabPage[tab] ?? 1) + 1);
-      }
-    }
-  }
-
-  /// 获取Tab对应的API状态筛选值
-  String? _getStatusFilter(_TaskTab tab) {
+  /// 根据当前 Tab 从「全部我的任务」中筛选：我发布的 / 我接取的 / 进行中 / 已完成 / 已取消 / 全部
+  List<Task> _getFilteredTasks(_TaskTab tab) {
+    final userId = context.read<AuthBloc>().state.user?.id;
     switch (tab) {
       case _TaskTab.all:
-        return null;
+        return _allMyTasks;
       case _TaskTab.posted:
-        return null; // posted uses role=poster
+        if (userId == null) return [];
+        return _allMyTasks.where((t) => t.posterId == userId).toList();
       case _TaskTab.taken:
-        return null; // taken uses default (taker role)
+        if (userId == null) return [];
+        return _allMyTasks.where((t) => t.posterId != userId).toList();
       case _TaskTab.inProgress:
-        return AppConstants.taskStatusInProgress;
+        return _allMyTasks
+            .where((t) => t.status == AppConstants.taskStatusInProgress)
+            .toList();
       case _TaskTab.pending:
-        return null; // uses separate API
+        return []; // 使用 _pendingApplications，不会走到这里
       case _TaskTab.completed:
-        return AppConstants.taskStatusCompleted;
+        return _allMyTasks
+            .where((t) => t.status == AppConstants.taskStatusCompleted)
+            .toList();
       case _TaskTab.cancelled:
-        return AppConstants.taskStatusCancelled;
+        return _allMyTasks
+            .where((t) => t.status == AppConstants.taskStatusCancelled)
+            .toList();
     }
   }
 
-  /// 判断是否是 "已发布" Tab
-  bool _isPostedTab(_TaskTab tab) => tab == _TaskTab.posted;
-
-  Future<void> _loadTab(_TaskTab tab, {int page = 1}) async {
-    // Pending tab 使用独立加载逻辑
-    if (tab == _TaskTab.pending) {
-      return _loadPendingApplications();
-    }
-
-    // 防止并发加载：使用 _tabFetching（而非 _tabLoading）做防重入
-    // page == 1 时允许重新加载（下拉刷新场景）
-    if (_tabFetching[tab] == true && page > 1) return;
-
-    _tabFetching[tab] = true;
-    setState(() => _tabLoading[tab] = true);
-
+  /// 只请求一次「全部我的任务」，各 Tab 本地筛选
+  Future<void> _loadAllMyTasks() async {
+    setState(() {
+      _allMyTasksLoading = true;
+      _allMyTasksError = null;
+    });
     try {
       final repo = context.read<TaskRepository>();
-      final status = _getStatusFilter(tab);
-
-      TaskListResponse response;
-      if (_isPostedTab(tab)) {
-        response = await repo.getMyPostedTasks(
-          page: page,
-          pageSize: 20,
-          status: status,
-        );
-      } else {
-        response = await repo.getMyTasks(
-          page: page,
-          pageSize: 20,
-          status: status,
-        );
-      }
-
+      final response = await repo.getMyTasks(
+        page: 1,
+        pageSize: 100,
+        status: null,
+        role: null,
+      );
       if (mounted) {
         setState(() {
-          if (page == 1) {
-            _tabData[tab] = response.tasks;
-          } else {
-            _tabData[tab] = [..._tabData[tab]!, ...response.tasks];
-          }
-          _tabPage[tab] = response.page;
-          _tabHasMore[tab] = response.hasMore;
-          _tabLoading[tab] = false;
-          _tabFetching[tab] = false;
-          _tabError[tab] = null;
+          _allMyTasks = response.tasks;
+          _allMyTasksLoading = false;
+          _allMyTasksError = null;
         });
       }
     } catch (e) {
       if (mounted) {
         setState(() {
-          _tabLoading[tab] = false;
-          _tabFetching[tab] = false;
-          _tabError[tab] = e.toString();
+          _allMyTasksLoading = false;
+          _allMyTasksError = e.toString();
         });
       }
     }
@@ -276,25 +212,23 @@ class _MyTasksViewState extends State<MyTasksView>
   }
 
   Widget _buildTabContent(_TaskTab tab) {
-    // Pending tab 使用独立的 UI
     if (tab == _TaskTab.pending) {
       return _buildPendingContent();
     }
 
-    final tasks = _tabData[tab] ?? [];
-    final loading = _tabLoading[tab] ?? true;
-    final hasMore = _tabHasMore[tab] ?? false;
-    final error = _tabError[tab];
+    final tasks = _getFilteredTasks(tab);
+    final loading = _allMyTasksLoading;
+    final error = _allMyTasksError;
     final l10n = context.l10n;
 
-    if (loading && tasks.isEmpty) {
+    if (loading && _allMyTasks.isEmpty) {
       return const SkeletonList(itemCount: 5, hasImage: false);
     }
 
-    if (error != null && tasks.isEmpty) {
+    if (error != null && _allMyTasks.isEmpty) {
       return ErrorStateView(
         message: error,
-        onRetry: () => _loadTab(tab),
+        onRetry: _loadAllMyTasks,
       );
     }
 
@@ -307,17 +241,14 @@ class _MyTasksViewState extends State<MyTasksView>
     }
 
     return RefreshIndicator(
-      onRefresh: () => _loadTab(tab, page: 1),
+      onRefresh: _loadAllMyTasks,
       child: ListView.separated(
         controller: _scrollControllers[tab],
         clipBehavior: Clip.none,
         padding: const EdgeInsets.all(AppSpacing.md),
-        itemCount: tasks.length + (hasMore ? 1 : 0),
+        itemCount: tasks.length,
         separatorBuilder: (_, __) => const SizedBox(height: AppSpacing.md),
         itemBuilder: (context, index) {
-          if (index >= tasks.length) {
-            return const SkeletonCard(hasImage: false);
-          }
           return AnimatedListItem(
             key: ValueKey(tasks[index].id),
             index: index,

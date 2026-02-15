@@ -30,6 +30,8 @@ class PaymentService {
     }
     Stripe.publishableKey = key;
     Stripe.merchantIdentifier = _merchantId;
+    // 与 returnURL link2ur://stripe-redirect 一致，支付宝/3DS 等重定向返回时 SDK 可识别
+    Stripe.urlScheme = 'link2ur';
     await Stripe.instance.applySettings();
     AppLogger.info('Stripe initialized: key=${key.substring(0, key.length.clamp(0, 15))}..., '
         'merchant=$_merchantId');

@@ -3844,6 +3844,14 @@ class AppLocalizationsEn extends AppLocalizations {
       'If you have already paid, close this page and refresh; otherwise please try again';
 
   @override
+  String get paymentConfirmingDoNotRepeat =>
+      'Confirming payment. Please wait and do not pay again.';
+
+  @override
+  String get paymentWaitingConfirmHint =>
+      'If you have already paid, we will confirm automatically. Please wait (within about 5 minutes).';
+
+  @override
   String get paymentTotalAmount => 'Total Amount';
 
   @override

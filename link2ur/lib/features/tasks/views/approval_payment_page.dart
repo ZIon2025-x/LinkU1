@@ -61,10 +61,16 @@ class _ApprovalPaymentPageState extends State<ApprovalPaymentPage> {
 
   /// 任务支付时轮询支付状态（对齐 iOS checkPaymentStatus），避免原生未回调导致一直转圈
   Timer? _paymentPollTimer;
+  /// 轮询次数，用于前 30 次 1s 后改为 2s（支付宝等延迟方式需更早发现成功）
+  int _paymentPollCount = 0;
   /// 已由轮询检测到支付成功并 pop，避免 presentPaymentSheet 晚回调时重复 pop
   bool _paymentSuccessFromPolling = false;
+  /// 支付宝/卡支付：Sheet 关闭但未返回成功时，继续轮询到此时间（用户可能已完成支付，Stripe 延迟确认）
+  DateTime? _paymentGraceEndTime;
   /// 支付成功：显示成功 overlay，延迟后 pop（对齐 iOS paymentSuccessView）
   bool _showPaymentSuccess = false;
+  /// 进入页面时检测到任务已支付，禁止再次支付并直接展示成功
+  bool _alreadyPaid = false;
 
   @override
   void initState() {
@@ -75,6 +81,7 @@ class _ApprovalPaymentPageState extends State<ApprovalPaymentPage> {
     _effectiveAmountDisplay = widget.paymentData.amountDisplay;
     _initCountdown();
     _loadCouponsIfTaskPayment();
+    _checkAlreadyPaid();
     PaymentService.instance.isApplePaySupported().then((v) {
       if (mounted) setState(() => _applePaySupported = v);
     });
@@ -91,6 +98,30 @@ class _ApprovalPaymentPageState extends State<ApprovalPaymentPage> {
         });
       });
     }
+  }
+
+  /// 进入页面时检查任务是否已支付，若已支付则禁止再次支付并直接展示成功（防重复支付）
+  Future<void> _checkAlreadyPaid() async {
+    final taskId = widget.paymentData.taskId;
+    final repo = context.read<PaymentRepository>();
+    try {
+      final statusData = await repo.getTaskPaymentStatus(taskId);
+      if (!mounted) return;
+      final isPaid = statusData['is_paid'] == true;
+      final details = statusData['payment_details'] as Map<String, dynamic>?;
+      final piStatus = details?['status'] as String?;
+      if (isPaid || piStatus == 'succeeded') {
+        setState(() {
+          _alreadyPaid = true;
+          _showPaymentSuccess = true;
+        });
+        AppHaptics.paymentSuccess();
+        Future.delayed(const Duration(milliseconds: 1500), () {
+          if (!mounted) return;
+          Navigator.of(context).pop(true);
+        });
+      }
+    } catch (_) { /* 忽略，按未支付处理 */ }
   }
 
   /// 选择支付宝时懒加载 Alipay PaymentIntent
@@ -130,6 +161,7 @@ class _ApprovalPaymentPageState extends State<ApprovalPaymentPage> {
     _paymentSuccessFromPolling = true;
     setState(() {
       _isProcessing = false;
+      _paymentGraceEndTime = null;
       _showPaymentSuccess = true;
     });
     AppHaptics.paymentSuccess();
@@ -287,7 +319,7 @@ class _ApprovalPaymentPageState extends State<ApprovalPaymentPage> {
   }
 
   Future<void> _pay() async {
-    if (_isProcessing) return;
+    if (_isProcessing || _paymentGraceEndTime != null || _alreadyPaid) return;
     final taskId = widget.paymentData.taskId;
 
     // 微信支付：Checkout Session + WebView
@@ -368,12 +400,32 @@ class _ApprovalPaymentPageState extends State<ApprovalPaymentPage> {
     });
 
     // 任务支付且为银行卡/支付宝时：轮询支付状态（对齐 iOS checkPaymentStatus），避免原生未回调导致一直转圈
+    // 支付宝等为延迟支付方式，Stripe 需等支付宝回调后才更新为 succeeded，故前 30s 每 1s 轮询以更快反馈
     final isCardOrAlipay = _selectedMethod == _PaymentMethod.card || _selectedMethod == _PaymentMethod.alipay;
     if (isCardOrAlipay) {
       _paymentPollTimer?.cancel();
+      _paymentPollCount = 0;
       final repo = context.read<PaymentRepository>();
       void doPoll() async {
-        if (!mounted || !_isProcessing) return;
+        if (!mounted) return;
+        if (!_isProcessing && _paymentGraceEndTime == null) return;
+        if (_paymentGraceEndTime != null && DateTime.now().isAfter(_paymentGraceEndTime!)) {
+          _paymentPollTimer?.cancel();
+          _paymentPollTimer = null;
+          if (mounted) {
+            setState(() {
+              _isProcessing = false;
+              _paymentGraceEndTime = null;
+            });
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(context.l10n.paymentTimeoutOrRefreshHint),
+                backgroundColor: AppColors.primary,
+              ),
+            );
+          }
+          return;
+        }
         try {
           final statusData = await repo.getTaskPaymentStatus(taskId);
           final isPaid = statusData['is_paid'] == true;
@@ -384,9 +436,16 @@ class _ApprovalPaymentPageState extends State<ApprovalPaymentPage> {
           }
         } catch (_) { /* 忽略单次轮询失败 */ }
       }
-      // 首次 1 秒后轮询，之后每 2 秒轮询（webhook 通常 1～2 秒内更新）
-      Timer(const Duration(seconds: 1), doPoll);
-      _paymentPollTimer = Timer.periodic(const Duration(seconds: 2), (_) => doPoll());
+      // 首次 0.5 秒后轮询，之后前 30 秒每 1 秒、再后每 2 秒（尽快发现支付宝/卡支付成功，减少用户误以为未成功而重复支付）
+      Timer(const Duration(milliseconds: 500), doPoll);
+      _paymentPollTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+        doPoll();
+        _paymentPollCount++;
+        if (_paymentPollCount == 30 && mounted) {
+          _paymentPollTimer?.cancel();
+          _paymentPollTimer = Timer.periodic(const Duration(seconds: 2), (_) => doPoll());
+        }
+      });
     }
 
     try {
@@ -413,6 +472,16 @@ class _ApprovalPaymentPageState extends State<ApprovalPaymentPage> {
       if (_paymentSuccessFromPolling) return; // 已由轮询 pop，避免重复
       if (success) {
         _handlePaymentSuccess();
+      } else if (isCardOrAlipay) {
+        // 支付宝/卡：Sheet 关闭但未成功（如从支付宝返回后 SDK 未及时回调），继续轮询最多 5 分钟以发现延迟成功
+        setState(() => _paymentGraceEndTime = DateTime.now().add(const Duration(minutes: 5)));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(context.l10n.paymentWaitingConfirmHint),
+            backgroundColor: AppColors.primary,
+            duration: const Duration(seconds: 5),
+          ),
+        );
       } else {
         setState(() => _isProcessing = false);
       }
@@ -446,8 +515,10 @@ class _ApprovalPaymentPageState extends State<ApprovalPaymentPage> {
         ),
       );
     } finally {
-      _paymentPollTimer?.cancel();
-      _paymentPollTimer = null;
+      if (_paymentGraceEndTime == null) {
+        _paymentPollTimer?.cancel();
+        _paymentPollTimer = null;
+      }
     }
   }
 
@@ -651,11 +722,33 @@ class _ApprovalPaymentPageState extends State<ApprovalPaymentPage> {
                     AppSpacing.lg,
                     AppSpacing.md,
                   ),
-                  child: PrimaryButton(
-                    text: _payButtonText(l10n),
-                    icon: _payButtonIcon(),
-                    isLoading: _isProcessing,
-                    onPressed: _isProcessing ? null : _pay,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if ((_isProcessing || _paymentGraceEndTime != null) &&
+                          (_selectedMethod == _PaymentMethod.card ||
+                              _selectedMethod == _PaymentMethod.alipay))
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+                          child: Text(
+                            _paymentGraceEndTime != null
+                                ? l10n.paymentWaitingConfirmHint
+                                : l10n.paymentConfirmingDoNotRepeat,
+                            style: AppTypography.caption.copyWith(
+                              color: Theme.of(context).colorScheme.primary,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                        ),
+                      PrimaryButton(
+                        text: _payButtonText(l10n),
+                        icon: _payButtonIcon(),
+                        isLoading: _isProcessing || _paymentGraceEndTime != null,
+                        onPressed: (_isProcessing || _paymentGraceEndTime != null || _alreadyPaid)
+                            ? null
+                            : _pay,
+                      ),
+                    ],
                   ),
                 ),
               ],

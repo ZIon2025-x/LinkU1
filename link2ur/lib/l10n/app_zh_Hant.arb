@@ -2098,6 +2098,8 @@
   "paymentNoAvailableCoupons": "暫無可用優惠券",
   "paymentDoNotUseCoupon": "不使用優惠券",
   "paymentTimeoutOrRefreshHint": "若已完成支付請關閉本頁並重新整理；若未完成請重試",
+  "paymentConfirmingDoNotRepeat": "支付確認中，請稍候，請勿重複支付。",
+  "paymentWaitingConfirmHint": "若您已完成支付，我們將自動確認，請稍候（約 5 分鐘內）。",
   "paymentTotalAmount": "總金額",
   "paymentFinalPayment": "最終支付",
   "paymentMixed": "混合",

@@ -2098,6 +2098,8 @@
   "paymentNoAvailableCoupons": "暂无可用优惠券",
   "paymentDoNotUseCoupon": "不使用优惠券",
   "paymentTimeoutOrRefreshHint": "若已完成支付请关闭本页并刷新；若未完成请重试",
+  "paymentConfirmingDoNotRepeat": "支付确认中，请稍候，请勿重复支付。",
+  "paymentWaitingConfirmHint": "若您已完成支付，我们将自动确认，请稍候（约 5 分钟内）。",
   "paymentTotalAmount": "总金额",
   "paymentFinalPayment": "最终支付",
   "paymentMixed": "混合",

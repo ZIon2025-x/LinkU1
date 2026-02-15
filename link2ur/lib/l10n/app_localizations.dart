@@ -7083,6 +7083,18 @@ abstract class AppLocalizations {
   /// **'If you have already paid, close this page and refresh; otherwise please try again'**
   String get paymentTimeoutOrRefreshHint;
 
+  /// No description provided for @paymentConfirmingDoNotRepeat.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirming payment. Please wait and do not pay again.'**
+  String get paymentConfirmingDoNotRepeat;
+
+  /// No description provided for @paymentWaitingConfirmHint.
+  ///
+  /// In en, this message translates to:
+  /// **'If you have already paid, we will confirm automatically. Please wait (within about 5 minutes).'**
+  String get paymentWaitingConfirmHint;
+
   /// No description provided for @paymentTotalAmount.
   ///
   /// In en, this message translates to:
