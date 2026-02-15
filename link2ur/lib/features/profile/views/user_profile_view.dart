@@ -11,11 +11,13 @@ import '../../../core/widgets/stat_item.dart';
 import '../../../core/widgets/async_image_view.dart';
 import '../../../core/widgets/animated_circular_progress.dart';
 import '../../../core/widgets/animated_star_rating.dart';
+import '../../../core/utils/date_formatter.dart';
 import '../../../core/widgets/skill_radar_chart.dart';
-import '../../../data/models/user.dart';
+import '../../../data/models/user.dart' show User, UserProfileDetail, UserProfileReview;
 import '../../../data/repositories/user_repository.dart';
 import '../../../data/repositories/task_repository.dart';
 import '../../../data/repositories/forum_repository.dart';
+import '../../../core/router/app_router.dart';
 import '../bloc/profile_bloc.dart';
 
 /// 公开用户资料页
@@ -78,7 +80,10 @@ class _UserProfileViewState extends State<UserProfileView> {
                                   // 技能雷达图
                                   _buildSkillRadar(context, state.publicUser!),
                                   // 近期任务
-                                  _buildRecentTasksSection(context),
+                                  _buildRecentTasksSection(context, state.publicProfileDetail),
+                                  // 收到的评价
+                                  if (state.publicProfileDetail?.reviews.isNotEmpty == true)
+                                    _buildReviewsSection(context, state.publicProfileDetail!.reviews),
                                   const SizedBox(height: AppSpacing.xl),
                                 ],
                               ),
@@ -311,8 +316,12 @@ class _UserProfileViewState extends State<UserProfileView> {
     );
   }
 
-  Widget _buildRecentTasksSection(BuildContext context) {
+  Widget _buildRecentTasksSection(
+    BuildContext context,
+    UserProfileDetail? profileDetail,
+  ) {
     final l10n = context.l10n;
+    final tasks = profileDetail?.recentTasks ?? [];
 
     return Padding(
       padding: const EdgeInsets.all(AppSpacing.md),
@@ -329,22 +338,136 @@ class _UserProfileViewState extends State<UserProfileView> {
             ],
           ),
           const SizedBox(height: AppSpacing.md),
-          // 近期任务列表占位 - 实际应从API加载
-          Container(
-            padding: const EdgeInsets.all(AppSpacing.lg),
-            decoration: BoxDecoration(
-              color: Theme.of(context).cardColor,
-              borderRadius: BorderRadius.circular(AppRadius.medium),
-            ),
-            child: Center(
-              child: Text(
-                l10n.profileNoRecentTasks,
-                style: const TextStyle(color: AppColors.textSecondary),
+          if (tasks.isEmpty)
+            Container(
+              padding: const EdgeInsets.all(AppSpacing.lg),
+              decoration: BoxDecoration(
+                color: Theme.of(context).cardColor,
+                borderRadius: BorderRadius.circular(AppRadius.medium),
               ),
-            ),
-          ),
+              child: Center(
+                child: Text(
+                  l10n.profileNoRecentTasks,
+                  style: const TextStyle(color: AppColors.textSecondary),
+                ),
+              ),
+            )
+          else
+            ...tasks.take(5).map((t) => Padding(
+                  padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+                  child: ListTile(
+                    title: Text(t.title,
+                        maxLines: 2, overflow: TextOverflow.ellipsis),
+                    subtitle: Text(
+                      '${t.status} · £${t.reward.toStringAsFixed(2)}',
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                    trailing: const Icon(Icons.chevron_right),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(AppRadius.medium),
+                    ),
+                    onTap: () => context.goToTaskDetail(t.id),
+                  ),
+                )),
         ],
       ),
     );
+  }
+
+  Widget _buildReviewsSection(
+    BuildContext context,
+    List<UserProfileReview> reviews,
+  ) {
+    final l10n = context.l10n;
+
+    return Padding(
+      padding: const EdgeInsets.all(AppSpacing.md),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.star, color: AppColors.primary, size: 18),
+              const SizedBox(width: 8),
+              Text(l10n.profileUserReviews,
+                  style: const TextStyle(
+                      fontSize: 16, fontWeight: FontWeight.w600)),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.md),
+          ...reviews.take(5).map((r) => _ReviewItem(review: r)),
+        ],
+      ),
+    );
+  }
+}
+
+class _ReviewItem extends StatelessWidget {
+  const _ReviewItem({required this.review});
+  final UserProfileReview review;
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: AppSpacing.sm),
+      padding: const EdgeInsets.all(AppSpacing.md),
+      decoration: BoxDecoration(
+        color: Theme.of(context).cardColor,
+        borderRadius: BorderRadius.circular(AppRadius.medium),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              AnimatedStarRating(
+                rating: review.rating,
+                size: 14,
+                spacing: 2,
+              ),
+              if (review.createdAt.isNotEmpty) ...[
+                const SizedBox(width: 8),
+                Text(
+                  _formatReviewTime(context, review.createdAt),
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: isDark
+                        ? AppColors.textTertiaryDark
+                        : AppColors.textTertiaryLight,
+                  ),
+                ),
+              ],
+            ],
+          ),
+          if (review.comment != null && review.comment!.isNotEmpty) ...[
+            const SizedBox(height: 6),
+            Text(
+              review.comment!,
+              style: const TextStyle(fontSize: 14),
+              maxLines: 3,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  String _formatReviewTime(BuildContext context, String createdAt) {
+    final dt = DateTime.tryParse(createdAt);
+    if (dt == null) return createdAt;
+    return DateFormatter.formatRelative(dt, l10n: context.l10n);
   }
 }

@@ -244,6 +244,145 @@ class LoginResponse {
   }
 }
 
+/// 用户资料详情（含统计、近期任务、收到的评价）
+class UserProfileDetail {
+  const UserProfileDetail({
+    required this.user,
+    required this.stats,
+    this.recentTasks = const [],
+    this.reviews = const [],
+  });
+
+  final User user;
+  final UserProfileStats stats;
+  final List<UserProfileTask> recentTasks;
+  final List<UserProfileReview> reviews;
+
+  factory UserProfileDetail.fromJson(Map<String, dynamic> json) {
+    final userJson = json['user'] as Map<String, dynamic>?;
+    if (userJson == null) {
+      throw FormatException(
+        'Profile response missing user. Keys: ${json.keys.toList()}',
+      );
+    }
+    final statsJson = json['stats'] as Map<String, dynamic>? ?? {};
+    final recentTasksRaw =
+        json['recent_tasks'] as List<dynamic>? ?? [];
+    final reviewsRaw = json['reviews'] as List<dynamic>? ?? [];
+
+    return UserProfileDetail(
+      user: User.fromJson(userJson),
+      stats: UserProfileStats.fromJson(
+        Map<String, dynamic>.from(statsJson),
+      ),
+      recentTasks: recentTasksRaw
+          .map((e) => UserProfileTask.fromJson(
+                Map<String, dynamic>.from(e as Map),
+              ))
+          .toList(),
+      reviews: reviewsRaw
+          .map((e) => UserProfileReview.fromJson(
+                Map<String, dynamic>.from(e as Map),
+              ))
+          .toList(),
+    );
+  }
+}
+
+class UserProfileStats {
+  const UserProfileStats({
+    this.totalTasks = 0,
+    this.postedTasks = 0,
+    this.takenTasks = 0,
+    this.completedTasks = 0,
+    this.totalReviews = 0,
+    this.completionRate,
+  });
+
+  final int totalTasks;
+  final int postedTasks;
+  final int takenTasks;
+  final int completedTasks;
+  final int totalReviews;
+  final double? completionRate;
+
+  factory UserProfileStats.fromJson(Map<String, dynamic> json) {
+    return UserProfileStats(
+      totalTasks: json['total_tasks'] as int? ?? 0,
+      postedTasks: json['posted_tasks'] as int? ?? 0,
+      takenTasks: json['taken_tasks'] as int? ?? 0,
+      completedTasks: json['completed_tasks'] as int? ?? 0,
+      totalReviews: json['total_reviews'] as int? ?? 0,
+      completionRate: (json['completion_rate'] as num?)?.toDouble(),
+    );
+  }
+}
+
+class UserProfileTask {
+  const UserProfileTask({
+    required this.id,
+    required this.title,
+    required this.status,
+    required this.reward,
+    this.createdAt,
+    this.taskType,
+  });
+
+  final int id;
+  final String title;
+  final String status;
+  final double reward;
+  final String? createdAt;
+  final String? taskType;
+
+  factory UserProfileTask.fromJson(Map<String, dynamic> json) {
+    return UserProfileTask(
+      id: json['id'] as int,
+      title: json['title'] as String? ?? '',
+      status: json['status'] as String? ?? '',
+      reward: (json['reward'] as num?)?.toDouble() ?? 0,
+      createdAt: json['created_at']?.toString(),
+      taskType: json['task_type'] as String?,
+    );
+  }
+}
+
+/// 用户收到的评价（用于个人主页展示）
+class UserProfileReview {
+  const UserProfileReview({
+    required this.id,
+    required this.rating,
+    this.comment,
+    required this.createdAt,
+    required this.taskId,
+    this.isAnonymous = false,
+    this.reviewerName,
+    this.reviewerAvatar,
+  });
+
+  final int id;
+  final double rating;
+  final String? comment;
+  final String createdAt;
+  final int taskId;
+  final bool isAnonymous;
+  final String? reviewerName;
+  final String? reviewerAvatar;
+
+  factory UserProfileReview.fromJson(Map<String, dynamic> json) {
+    return UserProfileReview(
+      id: json['id'] as int,
+      rating: (json['rating'] as num?)?.toDouble() ?? 0,
+      comment: json['comment'] as String?,
+      createdAt: json['created_at']?.toString() ?? '',
+      taskId: json['task_id'] as int? ?? 0,
+      isAnonymous: json['is_anonymous'] as bool? ?? false,
+      reviewerName: json['reviewer_name'] as String?,
+      reviewerAvatar: json['reviewer_avatar'] as String?,
+    );
+  }
+}
+
 /// 用户简要信息（用于列表显示）
 class UserBrief {
   const UserBrief({

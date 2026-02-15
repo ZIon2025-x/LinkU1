@@ -13,7 +13,9 @@ import '../../../core/widgets/loading_view.dart';
 import '../../../core/widgets/async_image_view.dart';
 import '../../../core/widgets/bouncing_widget.dart';
 import '../../../core/widgets/animated_star_rating.dart';
+import '../../../core/widgets/review_bottom_sheet.dart';
 import '../../../core/utils/l10n_extension.dart';
+import '../../../core/utils/date_formatter.dart';
 import '../../../data/models/task.dart';
 import '../../../data/models/task_application.dart';
 import '../../../data/models/review.dart';
@@ -848,6 +850,10 @@ class TaskReviewsSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    return _buildReviewsSection(context);
+  }
+
+  Widget _buildReviewsSection(BuildContext context) {
     if (reviews.isEmpty) return const SizedBox.shrink();
 
     return Container(
@@ -902,40 +908,36 @@ class _ReviewItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+      padding: const EdgeInsets.only(bottom: AppSpacing.md),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Text(
-                review.reviewer?.name ??
-                    context.l10n.taskDetailAnonymousUser,
-                style: AppTypography.bodyBold.copyWith(
-                  color: isDark
-                      ? AppColors.textPrimaryDark
-                      : AppColors.textPrimaryLight,
+              AnimatedStarRating(
+                rating: review.rating,
+                size: 14,
+                spacing: 2,
+                allowHalfRating: true,
+              ),
+              if (review.createdAt != null) ...[
+                const SizedBox(width: AppSpacing.sm),
+                Text(
+                  DateFormatter.formatRelative(
+                    review.createdAt!,
+                    l10n: context.l10n,
+                  ),
+                  style: AppTypography.caption.copyWith(
+                    color: isDark
+                        ? AppColors.textTertiaryDark
+                        : AppColors.textTertiaryLight,
+                  ),
                 ),
-              ),
-              const Spacer(),
-              // 星星评分（支持半星）
-              Row(
-                children: List.generate(5, (i) {
-                  IconData icon;
-                  if (review.rating >= i + 1) {
-                    icon = Icons.star;
-                  } else if (review.rating > i && review.rating < i + 1) {
-                    icon = Icons.star_half;
-                  } else {
-                    icon = Icons.star_border;
-                  }
-                  return Icon(icon, size: 16, color: AppColors.warning);
-                }),
-              ),
+              ],
             ],
           ),
           if (review.comment != null && review.comment!.isNotEmpty) ...[
-            const SizedBox(height: 4),
+            const SizedBox(height: 6),
             Text(
               review.comment!,
               style: AppTypography.body.copyWith(
@@ -1467,9 +1469,10 @@ class TaskActionButtonsView extends StatelessWidget {
             context: context,
             isScrollControlled: true,
             backgroundColor: Colors.transparent,
-            builder: (sheetContext) => _ReviewBottomSheet(
-              onSubmit: (rating, comment, isAnonymous) {
-                context.read<TaskDetailBloc>().add(
+            builder: (sheetContext) => ReviewBottomSheet(
+              onSubmit: (rating, comment, isAnonymous) async {
+                final bloc = context.read<TaskDetailBloc>();
+                bloc.add(
                   TaskDetailReviewRequested(
                     CreateReviewRequest(
                       rating: rating,
@@ -1478,6 +1481,16 @@ class TaskActionButtonsView extends StatelessWidget {
                     ),
                   ),
                 );
+                await for (final s in bloc.stream) {
+                  if (s.actionMessage == 'review_submitted' ||
+                      s.actionMessage == 'review_failed') {
+                    return (
+                      success: s.actionMessage == 'review_submitted',
+                      error: s.errorMessage,
+                    );
+                  }
+                }
+                return (success: false, error: null);
               },
             ),
           );
@@ -1517,172 +1530,6 @@ class TaskActionButtonsView extends StatelessWidget {
             ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-// ============================================================
-// 评价弹窗（用于 task_detail_components 中的评价按钮）
-// ============================================================
-
-class _ReviewBottomSheet extends StatefulWidget {
-  const _ReviewBottomSheet({required this.onSubmit});
-  final void Function(double rating, String? comment, bool isAnonymous) onSubmit;
-
-  @override
-  State<_ReviewBottomSheet> createState() => _ReviewBottomSheetState();
-}
-
-class _ReviewBottomSheetState extends State<_ReviewBottomSheet> {
-  double _rating = 5.0;
-  bool _isAnonymous = false;
-  final _commentController = TextEditingController();
-
-  @override
-  void dispose() {
-    _commentController.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final bottomInset = MediaQuery.of(context).viewInsets.bottom;
-
-    return Container(
-      padding: EdgeInsets.only(bottom: bottomInset),
-      child: Container(
-        decoration: BoxDecoration(
-          color: isDark ? AppColors.cardBackgroundDark : Colors.white,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-        ),
-        padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Center(
-              child: Container(
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: isDark
-                      ? AppColors.textTertiaryDark
-                      : AppColors.textTertiaryLight,
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              '评价任务',
-              style: AppTypography.title3.copyWith(
-                color: isDark
-                    ? AppColors.textPrimaryDark
-                    : AppColors.textPrimaryLight,
-              ),
-            ),
-            const SizedBox(height: 20),
-            Center(
-              child: AnimatedStarRating(
-                rating: _rating,
-                size: 36,
-                spacing: 6,
-                activeColor: const Color(0xFFFFB300),
-                allowHalfRating: true,
-                onRatingChanged: (v) => setState(() => _rating = v),
-              ),
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: _commentController,
-              maxLines: 3,
-              maxLength: 500,
-              decoration: InputDecoration(
-                hintText: '分享你的体验（可选）',
-                hintStyle: TextStyle(
-                  color: isDark
-                      ? AppColors.textPlaceholderDark
-                      : AppColors.textPlaceholderLight,
-                ),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(
-                    color: isDark
-                        ? AppColors.separatorDark
-                        : AppColors.separatorLight,
-                  ),
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(
-                    color: isDark
-                        ? AppColors.separatorDark
-                        : AppColors.separatorLight,
-                  ),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(
-                    color: isDark
-                        ? AppColors.primaryDark
-                        : AppColors.primaryLight,
-                    width: 2,
-                  ),
-                ),
-                filled: true,
-                fillColor: isDark
-                    ? AppColors.secondaryBackgroundDark
-                    : AppColors.backgroundLight,
-              ),
-            ),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                Text(
-                  '匿名评价',
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: isDark
-                        ? AppColors.textSecondaryDark
-                        : AppColors.textSecondaryLight,
-                  ),
-                ),
-                const Spacer(),
-                Switch.adaptive(
-                  value: _isAnonymous,
-                  onChanged: (v) => setState(() => _isAnonymous = v),
-                  activeThumbColor: isDark
-                      ? AppColors.primaryDark
-                      : AppColors.primaryLight,
-                  activeTrackColor: (isDark
-                      ? AppColors.primaryDark
-                      : AppColors.primaryLight)
-                      .withValues(alpha: 0.5),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            SizedBox(
-              width: double.infinity,
-              child: PrimaryButton(
-                text: '提交评价',
-                onPressed: _rating >= 0.5
-                    ? () {
-                        final comment = _commentController.text.trim();
-                        widget.onSubmit(
-                          _rating,
-                          comment.isEmpty ? null : comment,
-                          _isAnonymous,
-                        );
-                        Navigator.of(context).pop();
-                      }
-                    : null,
-              ),
-            ),
-          ],
-        ),
       ),
     );
   }
@@ -1880,7 +1727,7 @@ class _ApplyTaskSheetState extends State<ApplyTaskSheet> {
                             l10n.taskApplicationIWantToNegotiatePrice,
                             style: const TextStyle(fontSize: 15),
                           ),
-                          activeColor: AppColors.primary,
+                          activeTrackColor: AppColors.primary,
                         ),
                         if (_showNegotiatePrice) ...[
                           const SizedBox(height: 8),
@@ -1907,7 +1754,7 @@ class _ApplyTaskSheetState extends State<ApplyTaskSheet> {
                           const SizedBox(height: 4),
                           Text(
                             l10n.taskApplicationNegotiatePriceHint,
-                            style: TextStyle(
+                            style: const TextStyle(
                               fontSize: 12,
                               color: AppColors.textTertiary,
                             ),

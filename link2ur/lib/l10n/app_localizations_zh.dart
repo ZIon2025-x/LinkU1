@@ -2052,6 +2052,18 @@ class AppLocalizationsZh extends AppLocalizations {
   String get taskDetailTaskAlreadyReviewed => '任务已评价';
 
   @override
+  String get taskDetailReviewTitle => '评价任务';
+
+  @override
+  String get taskDetailReviewCommentHint => '分享你的体验（可选）';
+
+  @override
+  String get taskDetailReviewAnonymous => '匿名评价';
+
+  @override
+  String get taskDetailReviewSubmit => '提交评价';
+
+  @override
   String get taskDetailCompleteTaskSuccess => '已提交完成';
 
   @override
@@ -9815,6 +9827,18 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get taskDetailTaskAlreadyReviewed => '任務已評價';
+
+  @override
+  String get taskDetailReviewTitle => '評價任務';
+
+  @override
+  String get taskDetailReviewCommentHint => '分享你的體驗（可選）';
+
+  @override
+  String get taskDetailReviewAnonymous => '匿名評價';
+
+  @override
+  String get taskDetailReviewSubmit => '提交評價';
 
   @override
   String get taskDetailCompleteTaskSuccess => '已提交完成';

@@ -68,8 +68,17 @@ class UserRepository {
     return getUserPublicProfile(userId, cancelToken: cancelToken);
   }
 
-  /// 获取其他用户公开资料
+  /// 获取其他用户公开资料（简化版，仅基本信息）
   Future<User> getUserPublicProfile(String userId, {CancelToken? cancelToken}) async {
+    final detail = await getPublicProfileDetail(userId, cancelToken: cancelToken);
+    return detail.user;
+  }
+
+  /// 获取其他用户完整资料（含统计、近期任务、收到的评价）
+  Future<UserProfileDetail> getPublicProfileDetail(
+    String userId, {
+    CancelToken? cancelToken,
+  }) async {
     final response = await _apiService.get<Map<String, dynamic>>(
       ApiEndpoints.userById(userId),
       cancelToken: cancelToken,
@@ -79,7 +88,7 @@ class UserRepository {
       throw UserException(response.message ?? '获取用户资料失败');
     }
 
-    return User.fromJson(response.data!);
+    return UserProfileDetail.fromJson(response.data!);
   }
 
   /// 更新头像（预设头像路径）

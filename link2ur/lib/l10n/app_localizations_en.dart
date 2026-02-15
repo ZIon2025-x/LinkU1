@@ -2146,6 +2146,18 @@ class AppLocalizationsEn extends AppLocalizations {
   String get taskDetailTaskAlreadyReviewed => 'Task already reviewed';
 
   @override
+  String get taskDetailReviewTitle => 'Rate Task';
+
+  @override
+  String get taskDetailReviewCommentHint => 'Share your experience (optional)';
+
+  @override
+  String get taskDetailReviewAnonymous => 'Anonymous review';
+
+  @override
+  String get taskDetailReviewSubmit => 'Submit review';
+
+  @override
   String get taskDetailCompleteTaskSuccess => 'Completion submitted';
 
   @override

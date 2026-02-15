@@ -116,6 +116,7 @@ class ProfileState extends Equatable {
     this.status = ProfileStatus.initial,
     this.user,
     this.publicUser,
+    this.publicProfileDetail,
     this.myTasks = const [],
     this.postedTasks = const [],
     this.myForumPosts = const [],
@@ -143,6 +144,7 @@ class ProfileState extends Equatable {
   final ProfileStatus status;
   final User? user;
   final User? publicUser;
+  final UserProfileDetail? publicProfileDetail;
   final List<Task> myTasks;
   final List<Task> postedTasks;
   final List<ForumPost> myForumPosts;
@@ -172,6 +174,7 @@ class ProfileState extends Equatable {
     ProfileStatus? status,
     User? user,
     User? publicUser,
+    UserProfileDetail? publicProfileDetail,
     List<Task>? myTasks,
     List<Task>? postedTasks,
     List<ForumPost>? myForumPosts,
@@ -196,6 +199,7 @@ class ProfileState extends Equatable {
       status: status ?? this.status,
       user: user ?? this.user,
       publicUser: publicUser ?? this.publicUser,
+      publicProfileDetail: publicProfileDetail ?? this.publicProfileDetail,
       myTasks: myTasks ?? this.myTasks,
       postedTasks: postedTasks ?? this.postedTasks,
       myForumPosts: myForumPosts ?? this.myForumPosts,
@@ -223,6 +227,7 @@ class ProfileState extends Equatable {
         status,
         user,
         publicUser,
+        publicProfileDetail,
         myTasks,
         postedTasks,
         myForumPosts,
@@ -392,11 +397,12 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
     emit(state.copyWith(status: ProfileStatus.loading));
 
     try {
-      final user =
-          await _userRepository.getUserPublicProfile(event.userId);
+      final detail =
+          await _userRepository.getPublicProfileDetail(event.userId);
       emit(state.copyWith(
         status: ProfileStatus.loaded,
-        publicUser: user,
+        publicUser: detail.user,
+        publicProfileDetail: detail,
       ));
     } catch (e) {
       AppLogger.error('Failed to load public profile', e);

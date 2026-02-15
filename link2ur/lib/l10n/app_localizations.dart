@@ -3969,6 +3969,30 @@ abstract class AppLocalizations {
   /// **'Task already reviewed'**
   String get taskDetailTaskAlreadyReviewed;
 
+  /// No description provided for @taskDetailReviewTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Rate Task'**
+  String get taskDetailReviewTitle;
+
+  /// No description provided for @taskDetailReviewCommentHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Share your experience (optional)'**
+  String get taskDetailReviewCommentHint;
+
+  /// No description provided for @taskDetailReviewAnonymous.
+  ///
+  /// In en, this message translates to:
+  /// **'Anonymous review'**
+  String get taskDetailReviewAnonymous;
+
+  /// No description provided for @taskDetailReviewSubmit.
+  ///
+  /// In en, this message translates to:
+  /// **'Submit review'**
+  String get taskDetailReviewSubmit;
+
   /// No description provided for @taskDetailCompleteTaskSuccess.
   ///
   /// In en, this message translates to:

@@ -704,6 +704,7 @@ class TaskDetailBloc extends Bloc<TaskDetailEvent, TaskDetailState> {
       emit(state.copyWith(
         isSubmitting: false,
         actionMessage: 'review_failed',
+        errorMessage: e.toString(),
       ));
     }
   }
