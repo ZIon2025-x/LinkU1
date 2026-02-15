@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../core/design/app_colors.dart';
 import '../../../core/utils/haptic_feedback.dart';
@@ -8,6 +9,7 @@ import '../../../core/utils/date_formatter.dart';
 import '../../../core/utils/l10n_extension.dart';
 import '../../../core/widgets/async_image_view.dart';
 import '../../../data/models/message.dart';
+import '../../../data/repositories/common_repository.dart';
 
 /// 消息气泡方向
 enum BubbleDirection { incoming, outgoing }
@@ -411,6 +413,9 @@ class _GroupBubbleItem extends StatefulWidget {
 class _GroupBubbleItemState extends State<_GroupBubbleItem>
     with SingleTickerProviderStateMixin {
   bool _isSelected = false;
+  String? _translatedText;
+  bool _isTranslating = false;
+  bool _showTranslation = false;
 
   late final AnimationController _scaleController;
   late final Animation<double> _scaleAnimation;
@@ -491,7 +496,48 @@ class _GroupBubbleItemState extends State<_GroupBubbleItem>
   void _handleTranslate() {
     AppHaptics.light();
     _dismiss();
-    // TODO: 接入翻译API并缓存结果
+<<<<<<< Current (Your changes)
+
+    // If already translated, toggle display
+    if (_translatedText != null) {
+      setState(() => _showTranslation = !_showTranslation);
+      return;
+    }
+
+    setState(() => _isTranslating = true);
+
+    final locale = Localizations.localeOf(context);
+    final targetLang = locale.languageCode == 'zh' ? 'zh' : 'en';
+
+    context
+        .read<CommonRepository>()
+        .translate(
+          text: widget.message.content,
+          targetLang: targetLang,
+        )
+        .then((result) {
+      if (!mounted) return;
+      final translated = result['translated_text'] as String? ?? '';
+      setState(() {
+        _isTranslating = false;
+        if (translated.isNotEmpty) {
+          _translatedText = translated;
+          _showTranslation = true;
+        }
+      });
+    }).catchError((e) {
+      if (!mounted) return;
+      setState(() => _isTranslating = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(context.l10n.translationFailed),
+          backgroundColor: AppColors.error,
+        ),
+      );
+    });
+=======
+    // TODO(聊天): 接入翻译 API（如 TranslationService），缓存结果后更新气泡文案
+>>>>>>> Incoming (Background Agent changes)
   }
 
   @override
@@ -640,6 +686,65 @@ class _GroupBubbleItemState extends State<_GroupBubbleItem>
                   )
                 : const SizedBox.shrink(),
           ),
+
+          // ── 翻译结果（翻译中/已翻译时显示） ──
+          if (_isTranslating)
+            Padding(
+              padding: const EdgeInsets.only(top: 4),
+              child: Text(
+                context.l10n.translationTranslating,
+                style: TextStyle(
+                  fontSize: 12,
+                  color: isDark
+                      ? AppColors.textTertiaryDark
+                      : AppColors.textTertiaryLight,
+                  fontStyle: FontStyle.italic,
+                ),
+              ),
+            )
+          else if (_translatedText != null && _showTranslation)
+            Padding(
+              padding: const EdgeInsets.only(top: 4),
+              child: GestureDetector(
+                onTap: () => setState(() => _showTranslation = false),
+                child: Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: isDark
+                        ? Colors.white.withValues(alpha: 0.06)
+                        : AppColors.primary.withValues(alpha: 0.05),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: isOutgoing
+                        ? CrossAxisAlignment.end
+                        : CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        _translatedText!,
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: isDark
+                              ? AppColors.textPrimaryDark
+                              : AppColors.textPrimaryLight,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        context.l10n.chatTranslate,
+                        style: TextStyle(
+                          fontSize: 10,
+                          color: isDark
+                              ? AppColors.textTertiaryDark
+                              : AppColors.textTertiaryLight,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
         ],
       ),
     );

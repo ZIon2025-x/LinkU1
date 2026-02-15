@@ -1107,7 +1107,7 @@ class TaskActionButtonsView extends StatelessWidget {
         onPressed: task.isPaymentExpired
             ? null
             : () {
-                // TODO: 跳转支付页面
+                // TODO(支付): 跳转任务支付页，可复用 approval_payment 流程或 payment 路由
               },
       ),
     );
@@ -1512,7 +1512,7 @@ class TaskActionButtonsView extends StatelessWidget {
 
     return TextButton(
       onPressed: () {
-        // TODO: 显示取消确认弹窗
+        // TODO(任务): 取消前先弹出确认弹窗（文案、确认/取消），确认后再 dispatch TaskDetailCancelRequested
         context
             .read<TaskDetailBloc>()
             .add(const TaskDetailCancelRequested());

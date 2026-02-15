@@ -22,7 +22,10 @@ import '../../../core/router/app_router.dart';
 import '../../../data/models/activity.dart';
 import '../../../data/models/task_expert.dart';
 import '../../../data/repositories/activity_repository.dart';
+import '../../../data/repositories/payment_repository.dart';
 import '../../../data/repositories/task_expert_repository.dart';
+import '../../tasks/bloc/task_detail_bloc.dart';
+import '../../tasks/views/approval_payment_page.dart';
 import '../bloc/activity_bloc.dart';
 
 /// 活动详情视图 - 对标iOS ActivityDetailView.swift
@@ -375,9 +378,60 @@ class _ActivityDetailViewContent extends StatelessWidget {
           context,
           text: context.l10n.activityContinuePayment,
           isLoading: state.isSubmitting,
-          onTap: () {
+          onTap: () async {
             AppHaptics.selection();
-            // TODO: 跳转支付页面
+<<<<<<< Current (Your changes)
+            final taskId = activity.userTaskId!;
+            try {
+              final resp = await context
+                  .read<PaymentRepository>()
+                  .createTaskPayment(taskId: taskId);
+              if (!context.mounted) return;
+              if (resp.clientSecret == null ||
+                  resp.clientSecret!.isEmpty) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(context.l10n.activityLoadFailed),
+                    backgroundColor: AppColors.error,
+                  ),
+                );
+                return;
+              }
+              final data = AcceptPaymentData(
+                taskId: taskId,
+                clientSecret: resp.clientSecret!,
+                customerId: resp.customerId ?? '',
+                ephemeralKeySecret: resp.ephemeralKeySecret ?? '',
+                amountDisplay: resp.finalAmountDisplay,
+                applicationId: null,
+                paymentExpiresAt: null,
+              );
+              final result = await Navigator.of(context).push<bool>(
+                MaterialPageRoute(
+                  builder: (_) =>
+                      ApprovalPaymentPage(paymentData: data),
+                  fullscreenDialog: true,
+                ),
+              );
+              if (!context.mounted) return;
+              if (result == true) {
+                context
+                    .read<ActivityBloc>()
+                    .add(ActivityLoadDetail(activityId));
+              }
+            } catch (e) {
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(e.toString()),
+                    backgroundColor: AppColors.error,
+                  ),
+                );
+              }
+            }
+=======
+            // TODO(活动): 跳转活动支付页，与任务支付流程对齐（clientSecret、ApprovalPaymentPage 等）
+>>>>>>> Incoming (Background Agent changes)
           },
         );
       }

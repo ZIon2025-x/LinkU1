@@ -2,25 +2,7 @@
 
 ## 一、关键缺失（影响核心功能）
 
-### 1. PushNotificationService — 推送通知完全不可用
-
-| 方法 | 状态 | 影响 |
-|------|------|------|
-| `PushNotificationService.instance.init()` | ❌ 未调用 | Token  never 上传到后端、本地通知未初始化、MethodChannel 未注册 |
-| `PushNotificationService.instance.setRouter(router)` | ❌ 未调用 | 点击通知无法导航到指定页面 |
-| `PushNotificationService.instance.setApiService(api)` | ❌ 未调用 | Token 上传时 `_apiService == null`，会跳过 |
-
-**建议修复位置**：`app.dart` 或 `main.dart`
-- 在 `Link2UrApp` 的 `initState` 中，创建完 `_appRouter` 后：
-  - `PushNotificationService.instance.setRouter(_appRouter.router)`
-  - `PushNotificationService.instance.setApiService(_apiService)`
-- 在 `main()` 中（或 `initState` 的 `addPostFrameCallback` 内）：
-  - `unawaited(PushNotificationService.instance.init())`
-- 注意：`init()` 依赖 `StorageService`，需在 `StorageService.instance.init()` 之后调用。
-
----
-
-### 2. WeChatShareManager / QQShareManager — 微信/QQ 分享失败
+### 1. WeChatShareManager / QQShareManager — 微信/QQ 分享失败
 
 | 方法 | 状态 | 影响 |
 |------|------|------|
@@ -91,7 +73,8 @@
 - `StorageService` — main()
 - `AppConfig` — main()
 - `PaymentService` (Stripe) — main() 中的 `_initStripeIfConfigured`
-- `DeepLinkHandler` — app.dart initState（已修复）
+- `DeepLinkHandler` — app.dart initState
+- `PushNotificationService` — app.dart 中 `Link2UrApp.initState`：`setRouter(_appRouter.router)`、`setApiService(_apiService)`、`unawaited(PushNotificationService.instance.init())`（init 依赖 StorageService，需在 main 中 StorageService.init 之后；当前在 app 首帧前执行，StorageService 已在 main 完成初始化）
 - `Hive` — main()
 - `IAPService` — 懒加载（`ensureInitialized` 在 VIP 购买页首次使用时触发）
 
@@ -99,7 +82,6 @@
 
 ## 五、建议修复优先级
 
-1. **P0**：`PushNotificationService` — 推送是核心功能，原生层已就绪，仅 Dart 未初始化
-2. **P1**：`WeChatShareManager` / `QQShareManager` — 分享功能已有 UI，缺少 SDK 初始化
-3. **P2**：`OfflineManager` — 仅在业务接入 `addOperation` 后再初始化
-4. **P3**：`PerformanceMonitor.initialize` — 仅影响 Debug 体验，可选
+1. **P1**：`WeChatShareManager` / `QQShareManager` — 分享功能已有 UI，缺少 SDK 初始化
+2. **P2**：`OfflineManager` — 仅在业务接入 `addOperation` 后再初始化
+3. **P3**：`PerformanceMonitor.initialize` — 仅影响 Debug 体验，可选

@@ -67,3 +67,22 @@ class HomeLoadDiscoveryFeed extends HomeEvent {
 class HomeLoadMoreDiscovery extends HomeEvent {
   const HomeLoadMoreDiscovery();
 }
+
+/// 更新推荐任务筛选/排序
+class HomeRecommendedFilterChanged extends HomeEvent {
+  const HomeRecommendedFilterChanged({
+    this.category,
+    this.sortBy,
+    this.clearCategory = false,
+  });
+
+  /// 筛选类别（null + clearCategory=false 表示不变，clearCategory=true 表示清除）
+  final String? category;
+  /// 排序方式
+  final String? sortBy;
+  /// 是否清除类别筛选
+  final bool clearCategory;
+
+  @override
+  List<Object?> get props => [category, sortBy, clearCategory];
+}

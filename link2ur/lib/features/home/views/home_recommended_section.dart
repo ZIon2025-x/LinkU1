@@ -15,7 +15,9 @@ class _RecommendedTab extends StatelessWidget {
           prev.recommendedTasks != curr.recommendedTasks ||
           prev.isRefreshing != curr.isRefreshing ||
           prev.openActivities != curr.openActivities ||
-          prev.isLoadingOpenActivities != curr.isLoadingOpenActivities,
+          prev.isLoadingOpenActivities != curr.isLoadingOpenActivities ||
+          prev.recommendedFilterCategory != curr.recommendedFilterCategory ||
+          prev.recommendedSortBy != curr.recommendedSortBy,
       builder: (context, state) {
         final isDark = Theme.of(context).brightness == Brightness.dark;
 
@@ -327,9 +329,13 @@ class _RecommendedTab extends StatelessWidget {
                             ],
                           ),
                           child: InkWell(
+<<<<<<< Current (Your changes)
+                            onTap: () => _showFilterSheet(context, state),
+=======
                             onTap: () {
-                              // TODO: 打开筛选（类型/排序）
+                              // TODO(首页): 打开推荐区筛选：任务类型、排序方式（可弹 BottomSheet 或跳转筛选页）
                             },
+>>>>>>> Incoming (Background Agent changes)
                             borderRadius: BorderRadius.circular(999),
                             child: Padding(
                               padding: const EdgeInsets.symmetric(
@@ -410,7 +416,7 @@ class _RecommendedTab extends StatelessWidget {
                                   ],
                                 ),
                                 child: InkWell(
-                                  onTap: () {},
+                                  onTap: () => _showFilterSheet(context, state),
                                   borderRadius: BorderRadius.circular(999),
                                   child: Padding(
                                     padding: const EdgeInsets.symmetric(
@@ -471,9 +477,177 @@ class _RecommendedTab extends StatelessWidget {
     );
   }
 
+  /// 获取经过筛选和排序的推荐任务列表
+  List<Task> _getFilteredTasks(HomeState state) {
+    var tasks = List<Task>.from(state.recommendedTasks);
+
+    // 类别筛选
+    final category = state.recommendedFilterCategory;
+    if (category != null && category.isNotEmpty) {
+      tasks = tasks.where((t) => t.taskType == category).toList();
+    }
+
+    // 排序
+    switch (state.recommendedSortBy) {
+      case 'highest_pay':
+        tasks.sort((a, b) => b.reward.compareTo(a.reward));
+        break;
+      case 'near_deadline':
+        tasks.sort((a, b) {
+          if (a.deadline == null && b.deadline == null) return 0;
+          if (a.deadline == null) return 1;
+          if (b.deadline == null) return -1;
+          return a.deadline!.compareTo(b.deadline!);
+        });
+        break;
+      case 'latest':
+      default:
+        // Keep original order (API returns latest first)
+        break;
+    }
+
+    return tasks;
+  }
+
+  /// 打开筛选/排序底部弹窗
+  void _showFilterSheet(BuildContext context, HomeState state) {
+    final bloc = context.read<HomeBloc>();
+    final l10n = context.l10n;
+
+    // 收集所有不重复的任务类别
+    final categories = state.recommendedTasks
+        .map((t) => t.taskType)
+        .toSet()
+        .toList()
+      ..sort();
+
+    var selectedCategory = state.recommendedFilterCategory;
+    var selectedSort = state.recommendedSortBy;
+
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (sheetContext) {
+        return StatefulBuilder(
+          builder: (context, setSheetState) {
+            final isDark = Theme.of(context).brightness == Brightness.dark;
+            return Padding(
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // 拖动手柄
+                  Center(
+                    child: Container(
+                      width: 36,
+                      height: 5,
+                      decoration: BoxDecoration(
+                        color: AppColors.textTertiaryLight.withValues(alpha: 0.3),
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // 排序
+                  Text(l10n.taskSortBy, style: AppTypography.title3),
+                  const SizedBox(height: 10),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      _FilterChip(
+                        label: l10n.taskSortLatest,
+                        isSelected: selectedSort == 'latest',
+                        isDark: isDark,
+                        onTap: () => setSheetState(() => selectedSort = 'latest'),
+                      ),
+                      _FilterChip(
+                        label: l10n.taskSortHighestPay,
+                        isSelected: selectedSort == 'highest_pay',
+                        isDark: isDark,
+                        onTap: () => setSheetState(() => selectedSort = 'highest_pay'),
+                      ),
+                      _FilterChip(
+                        label: l10n.taskSortNearDeadline,
+                        isSelected: selectedSort == 'near_deadline',
+                        isDark: isDark,
+                        onTap: () => setSheetState(() => selectedSort = 'near_deadline'),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+
+                  // 类别
+                  if (categories.isNotEmpty) ...[
+                    Text(l10n.taskFilterCategory, style: AppTypography.title3),
+                    const SizedBox(height: 10),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        _FilterChip(
+                          label: l10n.commonAll,
+                          isSelected: selectedCategory == null,
+                          isDark: isDark,
+                          onTap: () => setSheetState(() => selectedCategory = null),
+                        ),
+                        ...categories.map((cat) => _FilterChip(
+                              label: cat,
+                              isSelected: selectedCategory == cat,
+                              isDark: isDark,
+                              onTap: () => setSheetState(() => selectedCategory = cat),
+                            )),
+                      ],
+                    ),
+                    const SizedBox(height: 20),
+                  ],
+
+                  // 操作按钮
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: () {
+                            setSheetState(() {
+                              selectedCategory = null;
+                              selectedSort = 'latest';
+                            });
+                          },
+                          child: Text(l10n.commonReset),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: FilledButton(
+                          onPressed: () {
+                            bloc.add(HomeRecommendedFilterChanged(
+                              category: selectedCategory,
+                              sortBy: selectedSort,
+                              clearCategory: selectedCategory == null,
+                            ));
+                            Navigator.of(context).pop();
+                          },
+                          child: Text(l10n.commonConfirm),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
   /// 桌面端 3 列 Grid 任务卡片（ContentConstraint 内，全宽滚动时内容 1200 居中）
   Widget _buildDesktopTaskGrid(BuildContext context, HomeState state) {
-    final tasks = state.recommendedTasks.take(9).toList();
+    final tasks = _getFilteredTasks(state).take(9).toList();
     final crossAxisCount = ResponsiveUtils.gridColumnCount(context, type: GridItemType.task);
     const spacing = 14.0;
     const aspectRatio = 0.82;
@@ -515,6 +689,7 @@ class _RecommendedTab extends StatelessWidget {
 
   /// 移动端横向滚动任务卡片（保持原样）
   Widget _buildMobileTaskScroll(HomeState state) {
+    final filteredTasks = _getFilteredTasks(state);
     return SliverToBoxAdapter(
       child: SizedBox(
         height: 256,
@@ -524,12 +699,12 @@ class _RecommendedTab extends StatelessWidget {
           padding: const EdgeInsets.only(
             left: AppSpacing.md, right: AppSpacing.lg, top: 4, bottom: 10,
           ),
-          itemCount: state.recommendedTasks.length > 10
+          itemCount: filteredTasks.length > 10
               ? 10
-              : state.recommendedTasks.length,
+              : filteredTasks.length,
           separatorBuilder: (_, __) => const SizedBox(width: 12),
           itemBuilder: (context, index) {
-            final task = state.recommendedTasks[index];
+            final task = filteredTasks[index];
             return RepaintBoundary(
               child: AnimatedListItem(
                 key: ValueKey(task.id),
@@ -1037,6 +1212,50 @@ class _SkeletonHorizontalCards extends StatelessWidget {
           ),
         );
       },
+    );
+  }
+}
+
+/// 筛选弹窗中的选择标签
+class _FilterChip extends StatelessWidget {
+  const _FilterChip({
+    required this.label,
+    required this.isSelected,
+    required this.isDark,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool isSelected;
+  final bool isDark;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        decoration: BoxDecoration(
+          color: isSelected
+              ? AppColors.primary.withValues(alpha: 0.1)
+              : (isDark ? Colors.white.withValues(alpha: 0.06) : AppColors.skeletonBase),
+          borderRadius: BorderRadius.circular(20),
+          border: isSelected
+              ? Border.all(color: AppColors.primary, width: 1.5)
+              : null,
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+            color: isSelected
+                ? AppColors.primary
+                : (isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight),
+          ),
+        ),
+      ),
     );
   }
 }

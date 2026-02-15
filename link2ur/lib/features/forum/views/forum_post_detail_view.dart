@@ -33,12 +33,14 @@ class ForumPostDetailView extends StatefulWidget {
 
 class _ForumPostDetailViewState extends State<ForumPostDetailView> {
   final _replyController = TextEditingController();
+  final _replyFocusNode = FocusNode();
   int? _replyToId;
   String? _replyToName;
 
   @override
   void dispose() {
     _replyController.dispose();
+    _replyFocusNode.dispose();
     super.dispose();
   }
 
@@ -48,7 +50,11 @@ class _ForumPostDetailViewState extends State<ForumPostDetailView> {
       _replyToName = authorName;
     });
     _replyController.clear();
-    // TODO: Focus the text field
+<<<<<<< Current (Your changes)
+    _replyFocusNode.requestFocus();
+=======
+    // TODO(论坛): 回复时自动 focus 评论输入框（如 FocusScope.of(context).requestFocus(_commentFocusNode)）
+>>>>>>> Incoming (Background Agent changes)
   }
 
   void _clearReplyTo() {
@@ -318,6 +324,7 @@ class _ForumPostDetailViewState extends State<ForumPostDetailView> {
                                   Expanded(
                                     child: TextField(
                                       controller: _replyController,
+                                      focusNode: _replyFocusNode,
                                       enabled: !state.isReplying,
                                       style: const TextStyle(fontSize: 15),
                                       decoration: InputDecoration(

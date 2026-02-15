@@ -9,23 +9,21 @@ from typing import Optional, Tuple
 
 logger = logging.getLogger(__name__)
 
-# 编码标记占位符（使用 Unicode 私有使用区字符，确保不会被翻译服务处理）
-# U+E000 到 U+F8FF 是 Unicode 私有使用区，不会被翻译服务处理
-_ENCODE_PLACEHOLDER_NEWLINE = "\uE000"  # 私有使用区字符，不会被翻译
-_ENCODE_PLACEHOLDER_SPACE = "\uE001"     # 私有使用区字符，不会被翻译
+# 编码标记占位符（使用 HTML 标签，多数翻译服务会保留标签不翻译）
+_ENCODE_PLACEHOLDER_NEWLINE = "<br/>"   # 换行，翻译后替换回 \n
+_ENCODE_PLACEHOLDER_SPACE = "<sp/>"     # 空格，翻译后替换回 \c
 
 
 def _protect_encoding_markers(text: str) -> Tuple[str, bool]:
     """
-    保护编码标记，在翻译前替换为占位符
-    使用 Unicode 私有使用区字符，确保不会被翻译服务处理
+    保护编码标记，在翻译前替换为 HTML 标签占位符
+    多数翻译 API 会保留 HTML 标签，从而保留换行与空格
     
     返回: (处理后的文本, 是否包含编码标记)
     """
     has_encoding = False
     result = text
     
-    # 检测并保护编码标记（使用 Unicode 私有使用区字符）
     if '\\n' in text:
         has_encoding = True
         result = result.replace('\\n', _ENCODE_PLACEHOLDER_NEWLINE)
@@ -142,10 +140,8 @@ async def _translate_segmented(
 
 def _restore_encoding_markers(text: str) -> str:
     """
-    恢复编码标记，将占位符替换回编码标记
+    恢复编码标记，将 HTML 标签占位符替换回 \\n 和 \\c
     同时清理 HTML 实体编码（如 &#39; -> '）
-    
-    如果占位符丢失（被翻译服务处理了），尝试从原文恢复换行位置
     """
     if not text:
         return text
@@ -153,20 +149,10 @@ def _restore_encoding_markers(text: str) -> str:
     # 先清理 HTML 实体编码
     result = html.unescape(text)
     
-    # 恢复编码标记（从 Unicode 私有使用区字符恢复）
-    # 检查占位符是否还存在
-    has_newline_placeholder = _ENCODE_PLACEHOLDER_NEWLINE in result
-    has_space_placeholder = _ENCODE_PLACEHOLDER_SPACE in result
-    
-    if has_newline_placeholder:
-        result = result.replace(_ENCODE_PLACEHOLDER_NEWLINE, '\\n')
-    if has_space_placeholder:
-        result = result.replace(_ENCODE_PLACEHOLDER_SPACE, '\\c')
-    
-    # 如果占位符丢失（被翻译服务处理了），尝试从常见的句子分隔符恢复
-    # 注意：这是一个备用方案，可能不够精确，但至少能保留一些格式
-    # 如果占位符完全丢失，说明翻译服务处理了它们，我们无法完美恢复
-    # 这种情况下，至少 HTML 实体编码已经被清理了
+    # 恢复换行：<br/>、<br>、<br /> 等变体均替换为 \n
+    result = re.sub(r'<br\s*/?>', '\\n', result, flags=re.IGNORECASE)
+    # 恢复空格：<sp/> 替换为 \c
+    result = result.replace(_ENCODE_PLACEHOLDER_SPACE, '\\c')
     
     return result
 

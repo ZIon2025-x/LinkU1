@@ -26,6 +26,8 @@ class HomeState extends Equatable {
     this.discoveryPage = 1,
     this.openActivities = const [],
     this.isLoadingOpenActivities = false,
+    this.recommendedFilterCategory,
+    this.recommendedSortBy = 'latest',
   });
 
   final HomeStatus status;
@@ -51,6 +53,11 @@ class HomeState extends Equatable {
   final List<Activity> openActivities;
   final bool isLoadingOpenActivities;
 
+  /// 推荐任务客户端筛选：类别（null = 全部）
+  final String? recommendedFilterCategory;
+  /// 推荐任务客户端排序：latest / highest_pay / near_deadline
+  final String recommendedSortBy;
+
   bool get isLoading => status == HomeStatus.loading;
   bool get isLoaded => status == HomeStatus.loaded;
   bool get hasError => status == HomeStatus.error;
@@ -74,6 +81,9 @@ class HomeState extends Equatable {
     int? discoveryPage,
     List<Activity>? openActivities,
     bool? isLoadingOpenActivities,
+    String? recommendedFilterCategory,
+    bool clearRecommendedFilterCategory = false,
+    String? recommendedSortBy,
   }) {
     return HomeState(
       status: status ?? this.status,
@@ -93,6 +103,10 @@ class HomeState extends Equatable {
       discoveryPage: discoveryPage ?? this.discoveryPage,
       openActivities: openActivities ?? this.openActivities,
       isLoadingOpenActivities: isLoadingOpenActivities ?? this.isLoadingOpenActivities,
+      recommendedFilterCategory: clearRecommendedFilterCategory
+          ? null
+          : (recommendedFilterCategory ?? this.recommendedFilterCategory),
+      recommendedSortBy: recommendedSortBy ?? this.recommendedSortBy,
     );
   }
 
@@ -115,5 +129,7 @@ class HomeState extends Equatable {
         discoveryPage,
         openActivities,
         isLoadingOpenActivities,
+        recommendedFilterCategory,
+        recommendedSortBy,
       ];
 }

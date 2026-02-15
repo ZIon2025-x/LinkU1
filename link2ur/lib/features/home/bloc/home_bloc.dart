@@ -30,6 +30,7 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
     on<HomeTabChanged>(_onTabChanged);
     on<HomeLoadDiscoveryFeed>(_onLoadDiscoveryFeed);
     on<HomeLoadMoreDiscovery>(_onLoadMoreDiscovery);
+    on<HomeRecommendedFilterChanged>(_onRecommendedFilterChanged);
   }
 
   final TaskRepository _taskRepository;
@@ -378,5 +379,16 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
       AppLogger.error('Failed to load more discovery feed', e);
       emit(state.copyWith(isLoadingDiscovery: false));
     }
+  }
+
+  void _onRecommendedFilterChanged(
+    HomeRecommendedFilterChanged event,
+    Emitter<HomeState> emit,
+  ) {
+    emit(state.copyWith(
+      recommendedFilterCategory: event.category,
+      clearRecommendedFilterCategory: event.clearCategory,
+      recommendedSortBy: event.sortBy,
+    ));
   }
 }

@@ -713,7 +713,7 @@ class _RetryInterceptor extends Interceptor {
   static const String _retryCountKey = 'retry_count';
 
   @override
-  void onError(DioException err, ErrorInterceptorHandler handler) async {
+  Future<void> onError(DioException err, ErrorInterceptorHandler handler) async {
     if (!_shouldRetry(err)) {
       return handler.next(err);
     }

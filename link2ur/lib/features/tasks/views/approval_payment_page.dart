@@ -409,7 +409,7 @@ class _ApprovalPaymentPageState extends State<ApprovalPaymentPage> {
       _paymentPollTimer?.cancel();
       _paymentPollCount = 0;
       final repo = context.read<PaymentRepository>();
-      void doPoll() async {
+      Future<void> doPoll() async {
         if (!mounted) return;
         if (!_isProcessing) return;
         try {
