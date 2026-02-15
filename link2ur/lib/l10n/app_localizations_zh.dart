@@ -4869,6 +4869,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get fleaMarketPartialUploadFailed => '部分图片上传失败，请重试';
 
   @override
+  String get fleaMarketUploadTimeout => '图片上传超时，请重试';
+
+  @override
+  String get fleaMarketPickImageBusy => '图片选择器正忙，请稍后再试';
+
+  @override
   String get fleaMarketFillRequiredFields => '请填写所有必填项';
 
   @override
@@ -12626,6 +12632,12 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get fleaMarketPartialUploadFailed => '部分圖片上傳失敗，請重試';
+
+  @override
+  String get fleaMarketUploadTimeout => '圖片上傳逾時，請重試';
+
+  @override
+  String get fleaMarketPickImageBusy => '圖片選擇器正忙，請稍後再試';
 
   @override
   String get fleaMarketFillRequiredFields => '請填寫所有必填項';

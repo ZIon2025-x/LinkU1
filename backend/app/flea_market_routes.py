@@ -979,6 +979,10 @@ async def update_flea_market_item(
                 
                 # 更新图片列表（使用更新后的URL）
                 update_data["images"] = json.dumps(updated_images) if updated_images else None
+                logger.info(
+                    f"商品 {db_id} 更新图片: 收到 {len(item_data.images)} 张, "
+                    f"处理后 {len(updated_images)} 张, 写入DB"
+                )
                 
                 # 删除不再使用的旧图片
                 if old_images:
@@ -1028,6 +1032,9 @@ async def update_flea_market_item(
             )
         
         await db.commit()
+        
+        # 清除商品缓存，确保列表和详情返回最新数据（含更新后的 images）
+        invalidate_item_cache(db_id)
         
         # 重新查询更新后的商品
         result = await db.execute(

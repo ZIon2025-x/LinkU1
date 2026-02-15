@@ -2352,6 +2352,8 @@
   "fleaMarketCategoryBeauty": "美妝護膚",
   "fleaMarketCategoryOther": "其他",
   "fleaMarketPartialUploadFailed": "部分圖片上傳失敗，請重試",
+  "fleaMarketUploadTimeout": "圖片上傳逾時，請重試",
+  "fleaMarketPickImageBusy": "圖片選擇器正忙，請稍後再試",
   "fleaMarketFillRequiredFields": "請填寫所有必填項",
   "fleaMarketPurchaseRequestsCount": "購買申請 ({param1})",
   "@fleaMarketPurchaseRequestsCount": {

@@ -2352,6 +2352,8 @@
   "fleaMarketCategoryBeauty": "Beauty & Skincare",
   "fleaMarketCategoryOther": "Other",
   "fleaMarketPartialUploadFailed": "Some images failed to upload, please try again",
+  "fleaMarketUploadTimeout": "Image upload timed out, please try again",
+  "fleaMarketPickImageBusy": "Image picker is busy, please try again later",
   "fleaMarketFillRequiredFields": "Please fill in all required fields",
   "fleaMarketPurchaseRequestsCount": "Purchase Requests ({param1})",
   "@fleaMarketPurchaseRequestsCount": {

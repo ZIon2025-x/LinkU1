@@ -5083,6 +5083,14 @@ class AppLocalizationsEn extends AppLocalizations {
       'Some images failed to upload, please try again';
 
   @override
+  String get fleaMarketUploadTimeout =>
+      'Image upload timed out, please try again';
+
+  @override
+  String get fleaMarketPickImageBusy =>
+      'Image picker is busy, please try again later';
+
+  @override
   String get fleaMarketFillRequiredFields =>
       'Please fill in all required fields';
 

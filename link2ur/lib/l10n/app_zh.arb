@@ -2352,6 +2352,8 @@
   "fleaMarketCategoryBeauty": "美妆护肤",
   "fleaMarketCategoryOther": "其他",
   "fleaMarketPartialUploadFailed": "部分图片上传失败，请重试",
+  "fleaMarketUploadTimeout": "图片上传超时，请重试",
+  "fleaMarketPickImageBusy": "图片选择器正忙，请稍后再试",
   "fleaMarketFillRequiredFields": "请填写所有必填项",
   "fleaMarketPurchaseRequestsCount": "购买申请 ({param1})",
   "@fleaMarketPurchaseRequestsCount": {

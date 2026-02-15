@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
@@ -77,6 +78,7 @@ class _CreateFleaMarketItemContentState
         imageQuality: 85,
       );
 
+      if (!mounted) return;
       if (pickedFiles.isNotEmpty) {
         setState(() {
           for (final file in pickedFiles) {
@@ -86,15 +88,31 @@ class _CreateFleaMarketItemContentState
           }
         });
       }
-    } catch (e) {
-      if (mounted) {
+    } on PlatformException catch (e) {
+      if (!mounted) return;
+      if (e.code == 'already_active') {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('${context.l10n.fleaMarketImageSelectFailed}: ${e.toString()}'),
+            content: Text(context.l10n.fleaMarketPickImageBusy),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('${context.l10n.fleaMarketImageSelectFailed}: ${e.message ?? e.code}'),
             backgroundColor: AppColors.error,
           ),
         );
       }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('${context.l10n.fleaMarketImageSelectFailed}: ${e.toString()}'),
+          backgroundColor: AppColors.error,
+        ),
+      );
     }
   }
 

@@ -1,4 +1,7 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:image_picker/image_picker.dart';
 
@@ -99,14 +102,42 @@ class _EditFleaMarketItemViewContentState
     final maxNew = 5 - _existingImageUrls.length - _newImages.length;
     if (maxNew <= 0) return;
 
-    final picked = await picker.pickMultiImage(
-      maxWidth: 1200,
-      imageQuality: 80,
-    );
-    if (picked.isNotEmpty) {
-      setState(() {
-        _newImages.addAll(picked.take(maxNew));
-      });
+    try {
+      final picked = await picker.pickMultiImage(
+        maxWidth: 1200,
+        imageQuality: 80,
+      );
+      if (!mounted) return;
+      if (picked.isNotEmpty) {
+        setState(() {
+          _newImages.addAll(picked.take(maxNew));
+        });
+      }
+    } on PlatformException catch (e) {
+      if (!mounted) return;
+      if (e.code == 'already_active') {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(context.l10n.fleaMarketPickImageBusy),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('${context.l10n.fleaMarketImageSelectFailed}: ${e.message ?? e.code}'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('${context.l10n.fleaMarketImageSelectFailed}: $e'),
+          backgroundColor: AppColors.error,
+        ),
+      );
     }
   }
 
@@ -136,18 +167,35 @@ class _EditFleaMarketItemViewContentState
     final bloc = context.read<FleaMarketBloc>();
 
     // Upload new images first（编辑时传 itemId 使图片直接存商品目录）
+    // 必须在 add 之前订阅 stream，否则快速完成时可能错过状态导致 firstWhere 抛 No element
     _uploadedUrls.clear();
     for (final image in _newImages) {
       final bytes = await image.readAsBytes();
       final name = image.name.trim().isNotEmpty ? image.name : 'image.jpg';
+      final stateFuture = bloc.stream
+          .where((s) => !s.isUploadingImage)
+          .first
+          .timeout(const Duration(seconds: 60));
       bloc.add(FleaMarketUploadImage(
         imageBytes: bytes,
         filename: name,
         itemId: widget.itemId,
       ));
-      final state = await bloc.stream.firstWhere(
-        (s) => !s.isUploadingImage,
-      );
+      FleaMarketState state;
+      try {
+        state = await stateFuture;
+      } on TimeoutException {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(context.l10n.fleaMarketUploadTimeout),
+              backgroundColor: AppColors.error,
+            ),
+          );
+        }
+        return;
+      }
+      if (!mounted) return;
       if (state.uploadedImageUrl != null) {
         _uploadedUrls.add(state.uploadedImageUrl!);
       } else if (state.errorMessage != null) {

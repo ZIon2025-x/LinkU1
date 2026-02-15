@@ -9338,6 +9338,18 @@ abstract class AppLocalizations {
   /// **'Some images failed to upload, please try again'**
   String get fleaMarketPartialUploadFailed;
 
+  /// No description provided for @fleaMarketUploadTimeout.
+  ///
+  /// In en, this message translates to:
+  /// **'Image upload timed out, please try again'**
+  String get fleaMarketUploadTimeout;
+
+  /// No description provided for @fleaMarketPickImageBusy.
+  ///
+  /// In en, this message translates to:
+  /// **'Image picker is busy, please try again later'**
+  String get fleaMarketPickImageBusy;
+
   /// No description provided for @fleaMarketFillRequiredFields.
   ///
   /// In en, this message translates to:
