@@ -238,6 +238,36 @@ class FleaMarketRepository {
     }
   }
 
+  /// 与我相关的跳蚤市场商品（一次拉取，前端按 出售中/收的闲置/已售出 筛选）
+  /// 基于任务来源=跳蚤市场+用户关联，通过任务 id 关联到商品
+  Future<List<FleaMarketItem>> getMyRelatedFleaItems({bool forceRefresh = false}) async {
+    final cacheKey = '${CacheManager.prefixMyFleaMarket}related';
+    if (forceRefresh) await _cache.invalidateMyFleaMarketCache();
+    final cached = forceRefresh ? null : _cache.get<List<dynamic>>(cacheKey);
+    if (cached != null) {
+      return cached
+          .map((e) => FleaMarketItem.fromJson(e as Map<String, dynamic>))
+          .toList();
+    }
+    final response = await _apiService.get<Map<String, dynamic>>(
+      ApiEndpoints.fleaMarketMyRelatedItems,
+    );
+    if (!response.isSuccess || response.data == null) {
+      throw FleaMarketException(response.message ?? '获取与我相关的闲置失败');
+    }
+    final data = response.data!;
+    final rawItems = data['items'] as List<dynamic>? ?? [];
+    final items = rawItems
+        .map((e) => FleaMarketItem.fromJson(e as Map<String, dynamic>))
+        .toList();
+    await _cache.set(
+      cacheKey,
+      rawItems.map((e) => e as Map<String, dynamic>).toList(),
+      ttl: CacheManager.personalTTL,
+    );
+    return items;
+  }
+
   /// 获取购买历史（含待支付 + 已购，对齐 iOS pageSize 100 + 分页）
   Future<MyPurchasesResponse> getMyPurchases({
     int page = 1,

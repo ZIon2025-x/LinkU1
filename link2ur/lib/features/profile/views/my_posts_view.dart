@@ -13,6 +13,7 @@ import '../../../core/widgets/error_state_view.dart';
 import '../../../core/widgets/empty_state_view.dart';
 import '../../../core/widgets/animated_list_item.dart';
 import '../../../core/widgets/async_image_view.dart';
+import '../../../core/constants/app_constants.dart';
 import '../../../data/models/flea_market.dart';
 import '../../../data/repositories/flea_market_repository.dart';
 
@@ -37,25 +38,14 @@ class _MyPostsViewState extends State<MyPostsView>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
 
-  // 各分类数据
-  List<FleaMarketItem> _sellingItems = [];
-  List<FleaMarketItem> _purchasedItems = [];
+  /// 一次拉取「与我相关且任务来源为跳蚤市场」的商品，本地按 tab 筛选
+  List<FleaMarketItem> _allRelatedItems = [];
+  bool _allRelatedLoading = true;
+
   List<FleaMarketItem> _favoriteItems = [];
-  List<FleaMarketItem> _soldItems = [];
+  bool _favoriteLoading = true;
 
-  // 收的闲置分页
-  int _purchasedPage = 1;
-  bool _purchasedHasMore = false;
-  bool _isLoadingPurchasedMore = false;
   final ScrollController _purchasedScrollController = ScrollController();
-
-  // 各分类加载状态
-  bool _isLoadingSelling = true;
-  bool _isLoadingPurchased = true;
-  bool _isLoadingFavorites = true;
-  bool _isLoadingSold = true;
-
-  // 各分类错误状态
   final Map<_MyItemsCategory, String?> _categoryErrors = {};
 
 
@@ -68,179 +58,99 @@ class _MyPostsViewState extends State<MyPostsView>
         AppHaptics.tabSwitch();
       }
     });
-    _purchasedScrollController.addListener(_onPurchasedScroll);
-    // 延迟加载，确保context可用
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _loadAllCategories();
+      _loadAllRelated();
+      _loadFavorites();
     });
-  }
-
-  void _onPurchasedScroll() {
-    if (_isLoadingPurchasedMore || !_purchasedHasMore) return;
-    final pos = _purchasedScrollController.position;
-    if (pos.pixels >= pos.maxScrollExtent - 200) {
-      _loadPurchasedMore();
-    }
   }
 
   @override
   void dispose() {
     _tabController.dispose();
-    _purchasedScrollController.removeListener(_onPurchasedScroll);
     _purchasedScrollController.dispose();
     super.dispose();
   }
 
-  Future<void> _loadAllCategories({bool forceRefresh = false}) async {
-    if (!mounted) return;
-    final repo = context.read<FleaMarketRepository>();
-
-    // 并行加载所有分类（forceRefresh 时收的闲置会刷新缓存）
-    await Future.wait([
-      _loadSellingItems(repo),
-      _loadPurchasedItems(repo, page: 1, forceRefresh: forceRefresh),
-      _loadFavoriteItems(repo),
-      _loadSoldItems(repo),
-    ]);
-  }
-
-  Future<void> _loadSellingItems(FleaMarketRepository repo) async {
-    setState(() => _isLoadingSelling = true);
-    try {
-      final response = await repo.getMyItems(page: 1, pageSize: 100);
-      if (mounted) {
-        setState(() {
-          _sellingItems = response.items;
-          _isLoadingSelling = false;
-          _categoryErrors[_MyItemsCategory.selling] = null;
-        });
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(() {
-          _isLoadingSelling = false;
-          _categoryErrors[_MyItemsCategory.selling] = e.toString();
-        });
-      }
-    }
-  }
-
-  Future<void> _loadPurchasedItems(
-    FleaMarketRepository repo, {
-    int page = 1,
-    bool forceRefresh = false,
-  }) async {
-    if (page == 1) {
-      setState(() => _isLoadingPurchased = true);
-    } else {
-      setState(() => _isLoadingPurchasedMore = true);
-    }
-    try {
-      final response = await repo.getMyPurchases(
-        page: page,
-        pageSize: 100,
-        forceRefresh: forceRefresh,
-      );
-      if (mounted) {
-        setState(() {
-          final items = response.items
-              .map((e) => FleaMarketItem.fromJson(e))
-              .toList();
-          if (page == 1) {
-            _purchasedItems = items;
-            _purchasedPage = 1;
-          } else {
-            _purchasedItems = [..._purchasedItems, ...items];
-            _purchasedPage = page;
-          }
-          _purchasedHasMore = response.hasMore;
-          _isLoadingPurchased = false;
-          _isLoadingPurchasedMore = false;
-          _categoryErrors[_MyItemsCategory.purchased] = null;
-        });
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(() {
-          _isLoadingPurchased = false;
-          _isLoadingPurchasedMore = false;
-          _categoryErrors[_MyItemsCategory.purchased] = e.toString();
-        });
-      }
-    }
-  }
-
-  Future<void> _loadPurchasedMore() async {
-    if (_isLoadingPurchasedMore || !_purchasedHasMore || !mounted) return;
-    final repo = context.read<FleaMarketRepository>();
-    await _loadPurchasedItems(repo, page: _purchasedPage + 1);
-  }
-
-  Future<void> _loadFavoriteItems(FleaMarketRepository repo) async {
-    setState(() => _isLoadingFavorites = true);
-    try {
-      final response = await repo.getFavoriteItems(page: 1, pageSize: 100);
-      if (mounted) {
-        setState(() {
-          _favoriteItems = response.items;
-          _isLoadingFavorites = false;
-          _categoryErrors[_MyItemsCategory.favorites] = null;
-        });
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(() {
-          _isLoadingFavorites = false;
-          _categoryErrors[_MyItemsCategory.favorites] = e.toString();
-        });
-      }
-    }
-  }
-
-  Future<void> _loadSoldItems(FleaMarketRepository repo) async {
-    setState(() => _isLoadingSold = true);
-    try {
-      final response = await repo.getMySales(page: 1, pageSize: 100);
-      if (mounted) {
-        setState(() {
-          _soldItems = response.items;
-          _isLoadingSold = false;
-          _categoryErrors[_MyItemsCategory.sold] = null;
-        });
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(() {
-          _isLoadingSold = false;
-          _categoryErrors[_MyItemsCategory.sold] = e.toString();
-        });
-      }
-    }
-  }
-
-  List<FleaMarketItem> _getItems(_MyItemsCategory category) {
+  /// 根据 tab 从「与我相关」列表中筛选：出售中 / 收的闲置 / 已售出
+  List<FleaMarketItem> _getFilteredItems(_MyItemsCategory category) {
     switch (category) {
       case _MyItemsCategory.selling:
-        return _sellingItems;
+        return _allRelatedItems
+            .where((e) =>
+                e.myRole == 'seller' &&
+                e.status == AppConstants.fleaMarketStatusActive)
+            .toList();
       case _MyItemsCategory.purchased:
-        return _purchasedItems;
+        return _allRelatedItems.where((e) => e.myRole == 'buyer').toList();
       case _MyItemsCategory.favorites:
         return _favoriteItems;
       case _MyItemsCategory.sold:
-        return _soldItems;
+        return _allRelatedItems
+            .where((e) =>
+                e.myRole == 'seller' &&
+                e.status == AppConstants.fleaMarketStatusSold)
+            .toList();
     }
   }
 
   bool _isLoading(_MyItemsCategory category) {
     switch (category) {
       case _MyItemsCategory.selling:
-        return _isLoadingSelling;
       case _MyItemsCategory.purchased:
-        return _isLoadingPurchased;
-      case _MyItemsCategory.favorites:
-        return _isLoadingFavorites;
       case _MyItemsCategory.sold:
-        return _isLoadingSold;
+        return _allRelatedLoading;
+      case _MyItemsCategory.favorites:
+        return _favoriteLoading;
+    }
+  }
+
+  Future<void> _loadAllRelated({bool forceRefresh = false}) async {
+    if (!mounted) return;
+    setState(() => _allRelatedLoading = true);
+    try {
+      final repo = context.read<FleaMarketRepository>();
+      final items = await repo.getMyRelatedFleaItems(forceRefresh: forceRefresh);
+      if (mounted) {
+        setState(() {
+          _allRelatedItems = items;
+          _allRelatedLoading = false;
+          _categoryErrors[_MyItemsCategory.selling] = null;
+          _categoryErrors[_MyItemsCategory.purchased] = null;
+          _categoryErrors[_MyItemsCategory.sold] = null;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _allRelatedLoading = false;
+          _categoryErrors[_MyItemsCategory.selling] = e.toString();
+          _categoryErrors[_MyItemsCategory.purchased] = e.toString();
+          _categoryErrors[_MyItemsCategory.sold] = e.toString();
+        });
+      }
+    }
+  }
+
+  Future<void> _loadFavorites() async {
+    if (!mounted) return;
+    setState(() => _favoriteLoading = true);
+    try {
+      final repo = context.read<FleaMarketRepository>();
+      final response = await repo.getFavoriteItems(page: 1, pageSize: 100);
+      if (mounted) {
+        setState(() {
+          _favoriteItems = response.items;
+          _favoriteLoading = false;
+          _categoryErrors[_MyItemsCategory.favorites] = null;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _favoriteLoading = false;
+          _categoryErrors[_MyItemsCategory.favorites] = e.toString();
+        });
+      }
     }
   }
 
@@ -258,7 +168,7 @@ class _MyPostsViewState extends State<MyPostsView>
             color: AppColors.primary,
             onPressed: () async {
               await context.push('/flea-market/create');
-              if (mounted) _loadAllCategories(forceRefresh: true);
+              if (mounted) { _loadAllRelated(forceRefresh: true); _loadFavorites(); }
             },
           ),
         ],
@@ -303,7 +213,7 @@ class _MyPostsViewState extends State<MyPostsView>
   }
 
   Widget _buildCategoryContent(_MyItemsCategory category) {
-    final items = _getItems(category);
+    final items = _getFilteredItems(category);
     final loading = _isLoading(category);
     final error = _categoryErrors[category];
     final l10n = context.l10n;
@@ -315,7 +225,7 @@ class _MyPostsViewState extends State<MyPostsView>
     if (error != null && items.isEmpty) {
       return ErrorStateView(
         message: error,
-        onRetry: () => _loadAllCategories(forceRefresh: true),
+        onRetry: () { _loadAllRelated(); if (category == _MyItemsCategory.favorites) _loadFavorites(); },
       );
     }
 
@@ -344,24 +254,19 @@ class _MyPostsViewState extends State<MyPostsView>
     }
 
     final isPurchased = category == _MyItemsCategory.purchased;
-    final itemCount = items.length +
-        (isPurchased && _isLoadingPurchasedMore ? 1 : 0);
 
     return RefreshIndicator(
-      onRefresh: () => _loadAllCategories(forceRefresh: true),
+      onRefresh: () async {
+        await _loadAllRelated(forceRefresh: true);
+        if (category == _MyItemsCategory.favorites) await _loadFavorites();
+      },
       child: ListView.separated(
         controller: isPurchased ? _purchasedScrollController : null,
         clipBehavior: Clip.none,
         padding: const EdgeInsets.all(AppSpacing.md),
-        itemCount: itemCount,
+        itemCount: items.length,
         separatorBuilder: (_, __) => const SizedBox(height: AppSpacing.md),
         itemBuilder: (context, index) {
-          if (isPurchased && index == items.length) {
-            return const Padding(
-              padding: EdgeInsets.all(AppSpacing.lg),
-              child: Center(child: CircularProgressIndicator()),
-            );
-          }
           final item = items[index];
           return AnimatedListItem(
             index: index,

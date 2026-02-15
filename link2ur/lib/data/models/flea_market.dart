@@ -35,7 +35,17 @@ class FleaMarketItem extends Equatable {
     this.isAvailable,
     this.userPurchaseRequestStatus,
     this.userPurchaseRequestProposedPrice,
+    this.myRole,
+    this.relatedTaskId,
+    this.finalPrice,
   });
+
+  /// 与我相关接口返回：seller=我发布的/已售出, buyer=收的闲置
+  final String? myRole;
+  /// 作为买家时关联的任务ID（收的闲置）
+  final String? relatedTaskId;
+  /// 作为买家时的成交价
+  final double? finalPrice;
 
   final String id;
   final String title;
@@ -143,6 +153,9 @@ class FleaMarketItem extends Equatable {
           _toStringNullable(json['user_purchase_request_status']),
       userPurchaseRequestProposedPrice:
           _toDoubleNullable(json['user_purchase_request_proposed_price']),
+      myRole: _toStringNullable(json['my_role']),
+      relatedTaskId: _toStringNullable(json['task_id']),
+      finalPrice: _toDoubleNullable(json['final_price']),
     );
   }
 
@@ -199,6 +212,9 @@ class FleaMarketItem extends Equatable {
     bool? isAvailable,
     String? userPurchaseRequestStatus,
     double? userPurchaseRequestProposedPrice,
+    String? myRole,
+    String? relatedTaskId,
+    double? finalPrice,
   }) {
     return FleaMarketItem(
       id: id ?? this.id,
@@ -231,6 +247,9 @@ class FleaMarketItem extends Equatable {
       isAvailable: isAvailable ?? this.isAvailable,
       userPurchaseRequestStatus: userPurchaseRequestStatus ?? this.userPurchaseRequestStatus,
       userPurchaseRequestProposedPrice: userPurchaseRequestProposedPrice ?? this.userPurchaseRequestProposedPrice,
+      myRole: myRole ?? this.myRole,
+      relatedTaskId: relatedTaskId ?? this.relatedTaskId,
+      finalPrice: finalPrice ?? this.finalPrice,
     );
   }
 

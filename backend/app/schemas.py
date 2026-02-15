@@ -2585,6 +2585,18 @@ class MyPurchasesListResponse(BaseModel):
     hasMore: bool
 
 
+class MyRelatedFleaItemResponse(FleaMarketItemResponse):
+    """与我相关的跳蚤市场商品（一次拉取，前端按 tab 筛选）"""
+    my_role: str  # "seller"=我发布的/已售出, "buyer"=收的闲置
+    task_id: Optional[str] = None  # 作为买家时关联的任务ID（用于待支付等）
+    final_price: Optional[Decimal] = None  # 作为买家时的成交价
+
+
+class MyRelatedFleaListResponse(BaseModel):
+    """与我相关的跳蚤市场商品列表（基于任务来源=跳蚤市场+用户关联）"""
+    items: List[MyRelatedFleaItemResponse]
+
+
 # ==================== 商品收藏相关Schemas ====================
 
 class FleaMarketFavoriteResponse(BaseModel):

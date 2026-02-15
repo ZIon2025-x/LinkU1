@@ -1191,6 +1191,179 @@ async def agree_flea_market_notice(
         )
 
 
+# ==================== 与我相关的跳蚤市场商品（一次拉取，前端按 tab 筛选） ====================
+
+@flea_market_router.get("/my-related-items", response_model=schemas.MyRelatedFleaListResponse)
+async def get_my_related_flea_items(
+    current_user: models.User = Depends(get_current_user_secure_async_csrf),
+    db: AsyncSession = Depends(get_async_db_dependency),
+):
+    """获取所有与当前用户相关且任务来源为跳蚤市场的商品：我发布的 + 我购买的（通过任务 id 关联）。前端按 正在出售/收的闲置/已售出 本地筛选。"""
+    try:
+        user_id = str(current_user.id)
+        # 1) 与我相关且来源为跳蚤市场的任务 id
+        task_ids_result = await db.execute(
+            select(models.Task.id).where(
+                and_(
+                    or_(
+                        models.Task.poster_id == user_id,
+                        models.Task.taker_id == user_id,
+                    ),
+                    models.Task.task_source == "flea_market",
+                )
+            )
+        )
+        related_task_ids = [row[0] for row in task_ids_result.all()]
+
+        # 2) 商品：我作为卖家的 或 商品 sold_task_id 在上述任务中（我作为买家）
+        if related_task_ids:
+            query = select(models.FleaMarketItem).where(
+                or_(
+                    models.FleaMarketItem.seller_id == user_id,
+                    models.FleaMarketItem.sold_task_id.in_(related_task_ids),
+                )
+            )
+        else:
+            query = select(models.FleaMarketItem).where(models.FleaMarketItem.seller_id == user_id)
+        query = query.order_by(models.FleaMarketItem.refreshed_at.desc(), models.FleaMarketItem.id.desc())
+        result = await db.execute(query)
+        items = result.scalars().all()
+
+        if not items:
+            return schemas.MyRelatedFleaListResponse(items=[])
+
+        item_ids = [item.id for item in items]
+        seller_ids = list({item.seller_id for item in items})
+        seller_levels = {}
+        if seller_ids:
+            seller_result = await db.execute(
+                select(models.User.id, models.User.user_level).where(models.User.id.in_(seller_ids))
+            )
+            for row in seller_result.all():
+                if row[0] is not None:
+                    seller_levels[row[0]] = (row[1] if len(row) > 1 else None) or "normal"
+
+        favorite_counts_map = {}
+        fav_result = await db.execute(
+            select(
+                models.FleaMarketFavorite.item_id,
+                func.count(models.FleaMarketFavorite.id),
+            ).where(models.FleaMarketFavorite.item_id.in_(item_ids)).group_by(models.FleaMarketFavorite.item_id)
+        )
+        for row in fav_result.all():
+            favorite_counts_map[row[0]] = row[1]
+
+        # 买家侧任务信息：sold_task_id -> (task_id, agreed_reward, reward, status)
+        task_info_map = {}
+        sold_task_ids = [i.sold_task_id for i in items if i.sold_task_id is not None]
+        if sold_task_ids:
+            task_result = await db.execute(
+                select(
+                    models.Task.id,
+                    models.Task.agreed_reward,
+                    models.Task.reward,
+                    models.Task.status,
+                    models.Task.payment_intent_id,
+                    models.Task.payment_expires_at,
+                ).where(models.Task.id.in_(sold_task_ids))
+            )
+            for row in task_result.all():
+                task_info_map[row[0]] = {
+                    "agreed_reward": row[1],
+                    "reward": row[2],
+                    "status": row[3],
+                    "payment_intent_id": row[4],
+                    "payment_expires_at": row[5],
+                }
+
+        formatted = []
+        for item in items:
+            images = []
+            if item.images:
+                try:
+                    images = json.loads(item.images) if isinstance(item.images, str) else item.images
+                except Exception:
+                    images = []
+
+            days_until_auto_delist = None
+            if item.refreshed_at:
+                expiry_date = item.refreshed_at + timedelta(days=AUTO_DELETE_DAYS)
+                now = get_utc_time()
+                days_until_auto_delist = max(0, (expiry_date - now).days)
+
+            is_seller = item.seller_id == user_id
+            my_role = "seller" if is_seller else "buyer"
+            task_id_str = None
+            final_price = None
+            pending_payment_task_id = None
+            pending_payment_client_secret = None
+            pending_payment_amount = None
+            pending_payment_amount_display = None
+            pending_payment_currency = None
+            pending_payment_customer_id = None
+            pending_payment_ephemeral_key_secret = None
+            pending_payment_expires_at = None
+
+            if not is_seller and item.sold_task_id and item.sold_task_id in task_info_map:
+                info = task_info_map[item.sold_task_id]
+                task_id_str = str(item.sold_task_id)
+                final_price = info["agreed_reward"] if info["agreed_reward"] is not None else info["reward"]
+                if info["status"] == "pending_payment" and info.get("payment_intent_id"):
+                    try:
+                        import stripe
+                        pi = stripe.PaymentIntent.retrieve(info["payment_intent_id"])
+                        if pi.status in ("requires_payment_method", "requires_confirmation", "requires_action"):
+                            pending_payment_task_id = item.sold_task_id
+                            pending_payment_client_secret = pi.client_secret
+                            pending_payment_amount = pi.amount
+                            pending_payment_amount_display = f"{pi.amount / 100:.2f}"
+                            pending_payment_currency = (pi.currency or "gbp").upper()
+                            pending_payment_expires_at = (
+                                info["payment_expires_at"].isoformat() if info.get("payment_expires_at") else None
+                            )
+                    except Exception as e:
+                        logger.warning(f"获取待支付任务 {item.sold_task_id} 的支付信息失败: {e}")
+
+            formatted.append(schemas.MyRelatedFleaItemResponse(
+                id=format_flea_market_id(item.id),
+                title=item.title,
+                description=item.description,
+                price=item.price,
+                currency=item.currency or "GBP",
+                images=images,
+                location=item.location,
+                category=item.category,
+                status=item.status,
+                seller_id=item.seller_id,
+                seller_user_level=seller_levels.get(item.seller_id),
+                view_count=item.view_count or 0,
+                favorite_count=favorite_counts_map.get(item.id, 0),
+                refreshed_at=format_iso_utc(item.refreshed_at),
+                created_at=format_iso_utc(item.created_at),
+                updated_at=format_iso_utc(item.updated_at),
+                days_until_auto_delist=days_until_auto_delist,
+                pending_payment_task_id=pending_payment_task_id,
+                pending_payment_client_secret=pending_payment_client_secret,
+                pending_payment_amount=pending_payment_amount,
+                pending_payment_amount_display=pending_payment_amount_display,
+                pending_payment_currency=pending_payment_currency,
+                pending_payment_customer_id=pending_payment_customer_id,
+                pending_payment_ephemeral_key_secret=pending_payment_ephemeral_key_secret,
+                pending_payment_expires_at=pending_payment_expires_at,
+                my_role=my_role,
+                task_id=task_id_str,
+                final_price=final_price,
+            ))
+
+        return schemas.MyRelatedFleaListResponse(items=formatted)
+    except Exception as e:
+        logger.error(f"获取与我相关的跳蚤市场商品失败: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="获取与我相关的跳蚤市场商品失败",
+        )
+
+
 # ==================== 我的购买商品API ====================
 
 @flea_market_router.get("/my-purchases", response_model=schemas.MyPurchasesListResponse)

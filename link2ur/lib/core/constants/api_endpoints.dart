@@ -121,6 +121,7 @@ class ApiEndpoints {
   static String fleaMarketItemReport(String id) =>
       '/api/flea-market/items/$id/report';
   static const String fleaMarketMyPurchases = '/api/flea-market/my-purchases';
+  static const String fleaMarketMyRelatedItems = '/api/flea-market/my-related-items';
   static const String fleaMarketFavorites = '/api/flea-market/favorites/items';
   static const String fleaMarketUploadImage = '/api/flea-market/upload-image';
   // [RESERVED] 以下跳蚤市场端点已在后端定义但Flutter客户端尚未集成
