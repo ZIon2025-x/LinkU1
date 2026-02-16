@@ -6045,6 +6045,198 @@ abstract class AppLocalizations {
   /// **'Handicraft'**
   String get expertCategoryHandicraft;
 
+  /// No description provided for @cityLondon.
+  ///
+  /// In en, this message translates to:
+  /// **'London'**
+  String get cityLondon;
+
+  /// No description provided for @cityEdinburgh.
+  ///
+  /// In en, this message translates to:
+  /// **'Edinburgh'**
+  String get cityEdinburgh;
+
+  /// No description provided for @cityManchester.
+  ///
+  /// In en, this message translates to:
+  /// **'Manchester'**
+  String get cityManchester;
+
+  /// No description provided for @cityBirmingham.
+  ///
+  /// In en, this message translates to:
+  /// **'Birmingham'**
+  String get cityBirmingham;
+
+  /// No description provided for @cityGlasgow.
+  ///
+  /// In en, this message translates to:
+  /// **'Glasgow'**
+  String get cityGlasgow;
+
+  /// No description provided for @cityBristol.
+  ///
+  /// In en, this message translates to:
+  /// **'Bristol'**
+  String get cityBristol;
+
+  /// No description provided for @citySheffield.
+  ///
+  /// In en, this message translates to:
+  /// **'Sheffield'**
+  String get citySheffield;
+
+  /// No description provided for @cityLeeds.
+  ///
+  /// In en, this message translates to:
+  /// **'Leeds'**
+  String get cityLeeds;
+
+  /// No description provided for @cityNottingham.
+  ///
+  /// In en, this message translates to:
+  /// **'Nottingham'**
+  String get cityNottingham;
+
+  /// No description provided for @cityNewcastle.
+  ///
+  /// In en, this message translates to:
+  /// **'Newcastle'**
+  String get cityNewcastle;
+
+  /// No description provided for @citySouthampton.
+  ///
+  /// In en, this message translates to:
+  /// **'Southampton'**
+  String get citySouthampton;
+
+  /// No description provided for @cityLiverpool.
+  ///
+  /// In en, this message translates to:
+  /// **'Liverpool'**
+  String get cityLiverpool;
+
+  /// No description provided for @cityCardiff.
+  ///
+  /// In en, this message translates to:
+  /// **'Cardiff'**
+  String get cityCardiff;
+
+  /// No description provided for @cityCoventry.
+  ///
+  /// In en, this message translates to:
+  /// **'Coventry'**
+  String get cityCoventry;
+
+  /// No description provided for @cityExeter.
+  ///
+  /// In en, this message translates to:
+  /// **'Exeter'**
+  String get cityExeter;
+
+  /// No description provided for @cityLeicester.
+  ///
+  /// In en, this message translates to:
+  /// **'Leicester'**
+  String get cityLeicester;
+
+  /// No description provided for @cityYork.
+  ///
+  /// In en, this message translates to:
+  /// **'York'**
+  String get cityYork;
+
+  /// No description provided for @cityAberdeen.
+  ///
+  /// In en, this message translates to:
+  /// **'Aberdeen'**
+  String get cityAberdeen;
+
+  /// No description provided for @cityBath.
+  ///
+  /// In en, this message translates to:
+  /// **'Bath'**
+  String get cityBath;
+
+  /// No description provided for @cityDundee.
+  ///
+  /// In en, this message translates to:
+  /// **'Dundee'**
+  String get cityDundee;
+
+  /// No description provided for @cityReading.
+  ///
+  /// In en, this message translates to:
+  /// **'Reading'**
+  String get cityReading;
+
+  /// No description provided for @cityStAndrews.
+  ///
+  /// In en, this message translates to:
+  /// **'St Andrews'**
+  String get cityStAndrews;
+
+  /// No description provided for @cityBelfast.
+  ///
+  /// In en, this message translates to:
+  /// **'Belfast'**
+  String get cityBelfast;
+
+  /// No description provided for @cityBrighton.
+  ///
+  /// In en, this message translates to:
+  /// **'Brighton'**
+  String get cityBrighton;
+
+  /// No description provided for @cityDurham.
+  ///
+  /// In en, this message translates to:
+  /// **'Durham'**
+  String get cityDurham;
+
+  /// No description provided for @cityNorwich.
+  ///
+  /// In en, this message translates to:
+  /// **'Norwich'**
+  String get cityNorwich;
+
+  /// No description provided for @citySwansea.
+  ///
+  /// In en, this message translates to:
+  /// **'Swansea'**
+  String get citySwansea;
+
+  /// No description provided for @cityLoughborough.
+  ///
+  /// In en, this message translates to:
+  /// **'Loughborough'**
+  String get cityLoughborough;
+
+  /// No description provided for @cityLancaster.
+  ///
+  /// In en, this message translates to:
+  /// **'Lancaster'**
+  String get cityLancaster;
+
+  /// No description provided for @cityWarwick.
+  ///
+  /// In en, this message translates to:
+  /// **'Warwick'**
+  String get cityWarwick;
+
+  /// No description provided for @cityCambridge.
+  ///
+  /// In en, this message translates to:
+  /// **'Cambridge'**
+  String get cityCambridge;
+
+  /// No description provided for @cityOxford.
+  ///
+  /// In en, this message translates to:
+  /// **'Oxford'**
+  String get cityOxford;
+
   /// No description provided for @taskFilterCategory.
   ///
   /// In en, this message translates to:

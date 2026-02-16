@@ -3259,6 +3259,102 @@ class AppLocalizationsEn extends AppLocalizations {
   String get expertCategoryHandicraft => 'Handicraft';
 
   @override
+  String get cityLondon => 'London';
+
+  @override
+  String get cityEdinburgh => 'Edinburgh';
+
+  @override
+  String get cityManchester => 'Manchester';
+
+  @override
+  String get cityBirmingham => 'Birmingham';
+
+  @override
+  String get cityGlasgow => 'Glasgow';
+
+  @override
+  String get cityBristol => 'Bristol';
+
+  @override
+  String get citySheffield => 'Sheffield';
+
+  @override
+  String get cityLeeds => 'Leeds';
+
+  @override
+  String get cityNottingham => 'Nottingham';
+
+  @override
+  String get cityNewcastle => 'Newcastle';
+
+  @override
+  String get citySouthampton => 'Southampton';
+
+  @override
+  String get cityLiverpool => 'Liverpool';
+
+  @override
+  String get cityCardiff => 'Cardiff';
+
+  @override
+  String get cityCoventry => 'Coventry';
+
+  @override
+  String get cityExeter => 'Exeter';
+
+  @override
+  String get cityLeicester => 'Leicester';
+
+  @override
+  String get cityYork => 'York';
+
+  @override
+  String get cityAberdeen => 'Aberdeen';
+
+  @override
+  String get cityBath => 'Bath';
+
+  @override
+  String get cityDundee => 'Dundee';
+
+  @override
+  String get cityReading => 'Reading';
+
+  @override
+  String get cityStAndrews => 'St Andrews';
+
+  @override
+  String get cityBelfast => 'Belfast';
+
+  @override
+  String get cityBrighton => 'Brighton';
+
+  @override
+  String get cityDurham => 'Durham';
+
+  @override
+  String get cityNorwich => 'Norwich';
+
+  @override
+  String get citySwansea => 'Swansea';
+
+  @override
+  String get cityLoughborough => 'Loughborough';
+
+  @override
+  String get cityLancaster => 'Lancaster';
+
+  @override
+  String get cityWarwick => 'Warwick';
+
+  @override
+  String get cityCambridge => 'Cambridge';
+
+  @override
+  String get cityOxford => 'Oxford';
+
+  @override
   String get taskFilterCategory => 'Category';
 
   @override

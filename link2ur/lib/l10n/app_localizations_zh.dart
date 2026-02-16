@@ -3137,6 +3137,102 @@ class AppLocalizationsZh extends AppLocalizations {
   String get expertCategoryHandicraft => '手工艺';
 
   @override
+  String get cityLondon => '伦敦';
+
+  @override
+  String get cityEdinburgh => '爱丁堡';
+
+  @override
+  String get cityManchester => '曼彻斯特';
+
+  @override
+  String get cityBirmingham => '伯明翰';
+
+  @override
+  String get cityGlasgow => '格拉斯哥';
+
+  @override
+  String get cityBristol => '布里斯托';
+
+  @override
+  String get citySheffield => '谢菲尔德';
+
+  @override
+  String get cityLeeds => '利兹';
+
+  @override
+  String get cityNottingham => '诺丁汉';
+
+  @override
+  String get cityNewcastle => '纽卡斯尔';
+
+  @override
+  String get citySouthampton => '南安普顿';
+
+  @override
+  String get cityLiverpool => '利物浦';
+
+  @override
+  String get cityCardiff => '卡迪夫';
+
+  @override
+  String get cityCoventry => '考文垂';
+
+  @override
+  String get cityExeter => '埃克塞特';
+
+  @override
+  String get cityLeicester => '莱斯特';
+
+  @override
+  String get cityYork => '约克';
+
+  @override
+  String get cityAberdeen => '阿伯丁';
+
+  @override
+  String get cityBath => '巴斯';
+
+  @override
+  String get cityDundee => '邓迪';
+
+  @override
+  String get cityReading => '雷丁';
+
+  @override
+  String get cityStAndrews => '圣安德鲁斯';
+
+  @override
+  String get cityBelfast => '贝尔法斯特';
+
+  @override
+  String get cityBrighton => '布莱顿';
+
+  @override
+  String get cityDurham => '达勒姆';
+
+  @override
+  String get cityNorwich => '诺里奇';
+
+  @override
+  String get citySwansea => '斯旺西';
+
+  @override
+  String get cityLoughborough => '拉夫堡';
+
+  @override
+  String get cityLancaster => '兰开斯特';
+
+  @override
+  String get cityWarwick => '华威';
+
+  @override
+  String get cityCambridge => '剑桥';
+
+  @override
+  String get cityOxford => '牛津';
+
+  @override
   String get taskFilterCategory => '分类';
 
   @override
@@ -11064,6 +11160,102 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get expertCategoryHandicraft => '手工藝';
+
+  @override
+  String get cityLondon => '倫敦';
+
+  @override
+  String get cityEdinburgh => '愛丁堡';
+
+  @override
+  String get cityManchester => '曼徹斯特';
+
+  @override
+  String get cityBirmingham => '伯明翰';
+
+  @override
+  String get cityGlasgow => '格拉斯哥';
+
+  @override
+  String get cityBristol => '布里斯托';
+
+  @override
+  String get citySheffield => '謝菲爾德';
+
+  @override
+  String get cityLeeds => '利茲';
+
+  @override
+  String get cityNottingham => '諾丁漢';
+
+  @override
+  String get cityNewcastle => '紐卡斯爾';
+
+  @override
+  String get citySouthampton => '南安普頓';
+
+  @override
+  String get cityLiverpool => '利物浦';
+
+  @override
+  String get cityCardiff => '卡迪夫';
+
+  @override
+  String get cityCoventry => '考文垂';
+
+  @override
+  String get cityExeter => '埃克塞特';
+
+  @override
+  String get cityLeicester => '萊斯特';
+
+  @override
+  String get cityYork => '約克';
+
+  @override
+  String get cityAberdeen => '阿伯丁';
+
+  @override
+  String get cityBath => '巴斯';
+
+  @override
+  String get cityDundee => '鄧迪';
+
+  @override
+  String get cityReading => '雷丁';
+
+  @override
+  String get cityStAndrews => '聖安德魯斯';
+
+  @override
+  String get cityBelfast => '貝爾法斯特';
+
+  @override
+  String get cityBrighton => '布萊頓';
+
+  @override
+  String get cityDurham => '達勒姆';
+
+  @override
+  String get cityNorwich => '諾里奇';
+
+  @override
+  String get citySwansea => '斯旺西';
+
+  @override
+  String get cityLoughborough => '拉夫堡';
+
+  @override
+  String get cityLancaster => '蘭開斯特';
+
+  @override
+  String get cityWarwick => '華威';
+
+  @override
+  String get cityCambridge => '劍橋';
+
+  @override
+  String get cityOxford => '牛津';
 
   @override
   String get taskFilterCategory => '分類';

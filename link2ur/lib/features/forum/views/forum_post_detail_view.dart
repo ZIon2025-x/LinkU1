@@ -409,6 +409,7 @@ class _PostHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final locale = Localizations.localeOf(context);
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
       child: Column(
@@ -428,7 +429,7 @@ class _PostHeader extends StatelessWidget {
                       color: AppColors.error,
                       icon: Icons.push_pin,
                     ),
-                  if (post.category != null)
+                    if (post.category != null)
                     Container(
                       padding: const EdgeInsets.symmetric(
                           horizontal: 8, vertical: 4),
@@ -437,7 +438,7 @@ class _PostHeader extends StatelessWidget {
                         borderRadius: BorderRadius.circular(4),
                       ),
                       child: Text(
-                        post.category!.name,
+                        post.category!.displayName(locale),
                         style: const TextStyle(
                           fontSize: 11,
                           fontWeight: FontWeight.bold,
@@ -449,9 +450,9 @@ class _PostHeader extends StatelessWidget {
               ),
             ),
 
-          // 标题 - 对标iOS 22pt bold
+          // 标题 - 对标iOS 22pt bold（双语）
           Text(
-            post.title,
+            post.displayTitle(locale),
             style: AppTypography.title2.copyWith(
               color: isDark
                   ? AppColors.textPrimaryDark
@@ -583,14 +584,15 @@ class _PostContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (post.content == null || post.content!.isEmpty) {
+    final content = post.displayContent(Localizations.localeOf(context));
+    if (content == null || content.isEmpty) {
       return const SizedBox.shrink();
     }
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
       child: Text(
-        Helpers.normalizeContentNewlines(post.content!),
+        Helpers.normalizeContentNewlines(content),
         style: AppTypography.body.copyWith(
           color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
           height: 1.8,

@@ -284,20 +284,6 @@ class _ExpertsTabContentState extends State<_ExpertsTabContent> {
     'Cambridge', 'Oxford',
   ];
 
-  static const Map<String, String> _cityNameZh = {
-    'London': '伦敦', 'Edinburgh': '爱丁堡', 'Manchester': '曼彻斯特',
-    'Birmingham': '伯明翰', 'Glasgow': '格拉斯哥', 'Bristol': '布里斯托',
-    'Sheffield': '谢菲尔德', 'Leeds': '利兹', 'Nottingham': '诺丁汉',
-    'Newcastle': '纽卡斯尔', 'Southampton': '南安普顿', 'Liverpool': '利物浦',
-    'Cardiff': '卡迪夫', 'Coventry': '考文垂', 'Exeter': '埃克塞特',
-    'Leicester': '莱斯特', 'York': '约克', 'Aberdeen': '阿伯丁',
-    'Bath': '巴斯', 'Dundee': '邓迪', 'Reading': '雷丁',
-    'St Andrews': '圣安德鲁斯', 'Belfast': '贝尔法斯特', 'Brighton': '布莱顿',
-    'Durham': '达勒姆', 'Norwich': '诺里奇', 'Swansea': '斯旺西',
-    'Loughborough': '拉夫堡', 'Lancaster': '兰开斯特', 'Warwick': '华威',
-    'Cambridge': '剑桥', 'Oxford': '牛津',
-  };
-
   String _categoryLabel(BuildContext context, String key) {
     final l10n = context.l10n;
     switch (key) {
@@ -403,10 +389,7 @@ class _ExpertsTabContentState extends State<_ExpertsTabContent> {
                               onTap: () => setModalState(() => tempCity = 'all'),
                             ),
                             ..._ukCities.map((city) {
-                              final locale = Localizations.localeOf(ctx);
-                              final display = locale.languageCode == 'zh'
-                                  ? (_cityNameZh[city] ?? city)
-                                  : city;
+                              final display = CityDisplayHelper.getDisplayName(city, l10n);
                               return _buildChip(
                                 label: display,
                                 isSelected: tempCity == city,
