@@ -1290,6 +1290,7 @@ def get_activities(
     expert_id: Optional[str] = None,
     status: Optional[str] = None,
     has_time_slots: Optional[bool] = Query(None, description="是否时间段活动：false=单人活动，true=多人活动"),
+    keyword: Optional[str] = Query(None, description="搜索关键词，匹配 title/description/location"),
     limit: int = Query(20, ge=1, le=100),
     offset: int = Query(0, ge=0),
     db: Session = Depends(get_db),
@@ -1299,9 +1300,10 @@ def get_activities(
     
     注意：已过期的活动会自动过滤，不在任务大厅显示。
     has_time_slots：可选，用于活动大厅单人/多人筛选（false=单人/非时间段，true=多人/时间段）。
+    keyword：可选，用于全局搜索，匹配活动标题、描述、地点。
     """
     from app.models import Task, TaskParticipant
-    from sqlalchemy import func
+    from sqlalchemy import func, or_
     
     # 加载关联的服务信息（用于获取服务图片）
     from sqlalchemy.orm import joinedload
@@ -1315,6 +1317,16 @@ def get_activities(
     
     if has_time_slots is not None:
         query = query.filter(Activity.has_time_slots == has_time_slots)
+    
+    if keyword and keyword.strip():
+        kw = f"%{keyword.strip()}%"
+        query = query.filter(
+            or_(
+                Activity.title.ilike(kw),
+                Activity.description.ilike(kw),
+                Activity.location.ilike(kw),
+            )
+        )
     
     activities = query.order_by(Activity.created_at.desc()).offset(offset).limit(limit).all()
     

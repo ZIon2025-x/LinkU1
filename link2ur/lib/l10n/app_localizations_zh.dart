@@ -6593,6 +6593,15 @@ class AppLocalizationsZh extends AppLocalizations {
   String get searchFleaMarketTitle => '跳蚤市场';
 
   @override
+  String get searchExpertsTitle => '达人';
+
+  @override
+  String get searchActivitiesTitle => '活动';
+
+  @override
+  String get searchLeaderboardsTitle => '排行榜';
+
+  @override
   String get leaderboardRankLabel => '排名';
 
   @override
@@ -14616,6 +14625,15 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get searchFleaMarketTitle => '跳蚤市場';
+
+  @override
+  String get searchExpertsTitle => '達人';
+
+  @override
+  String get searchActivitiesTitle => '活動';
+
+  @override
+  String get searchLeaderboardsTitle => '排行榜';
 
   @override
   String get leaderboardRankLabel => '排名';

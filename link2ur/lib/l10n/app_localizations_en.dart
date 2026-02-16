@@ -6868,6 +6868,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get searchFleaMarketTitle => 'Flea Market';
 
   @override
+  String get searchExpertsTitle => 'Experts';
+
+  @override
+  String get searchActivitiesTitle => 'Activities';
+
+  @override
+  String get searchLeaderboardsTitle => 'Leaderboards';
+
+  @override
   String get leaderboardRankLabel => 'Rank';
 
   @override

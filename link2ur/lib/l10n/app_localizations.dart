@@ -12608,6 +12608,24 @@ abstract class AppLocalizations {
   /// **'Flea Market'**
   String get searchFleaMarketTitle;
 
+  /// No description provided for @searchExpertsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Experts'**
+  String get searchExpertsTitle;
+
+  /// No description provided for @searchActivitiesTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Activities'**
+  String get searchActivitiesTitle;
+
+  /// No description provided for @searchLeaderboardsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Leaderboards'**
+  String get searchLeaderboardsTitle;
+
   /// No description provided for @leaderboardRankLabel.
   ///
   /// In en, this message translates to:

@@ -13,6 +13,9 @@ import '../../../core/router/app_router.dart';
 import '../../../data/repositories/task_repository.dart';
 import '../../../data/repositories/forum_repository.dart';
 import '../../../data/repositories/flea_market_repository.dart';
+import '../../../data/repositories/task_expert_repository.dart';
+import '../../../data/repositories/activity_repository.dart';
+import '../../../data/repositories/leaderboard_repository.dart';
 import '../bloc/search_bloc.dart';
 
 /// 全局搜索视图
@@ -27,6 +30,9 @@ class SearchView extends StatelessWidget {
         taskRepository: context.read<TaskRepository>(),
         forumRepository: context.read<ForumRepository>(),
         fleaMarketRepository: context.read<FleaMarketRepository>(),
+        taskExpertRepository: context.read<TaskExpertRepository>(),
+        activityRepository: context.read<ActivityRepository>(),
+        leaderboardRepository: context.read<LeaderboardRepository>(),
       ),
       child: const _SearchContent(),
     );
@@ -87,7 +93,10 @@ class _SearchContentState extends State<_SearchContent> {
             previous.status != current.status ||
             previous.taskResults != current.taskResults ||
             previous.forumResults != current.forumResults ||
-            previous.fleaMarketResults != current.fleaMarketResults,
+            previous.fleaMarketResults != current.fleaMarketResults ||
+            previous.expertResults != current.expertResults ||
+            previous.activityResults != current.activityResults ||
+            previous.leaderboardResults != current.leaderboardResults,
         builder: (context, state) {
           if (state.status == SearchStatus.initial) {
             return _buildInitialState(isDark);
@@ -211,6 +220,25 @@ class _SearchContentState extends State<_SearchContent> {
           ),
           AppSpacing.vMd,
 
+          // 达人结果
+          if (state.expertResults.isNotEmpty) ...[
+            _SectionHeader(
+              title: context.l10n.searchExpertsTitle,
+              count: state.expertResults.length,
+              icon: Icons.person_search,
+              color: AppColors.accent,
+            ),
+            AppSpacing.vSm,
+            ...state.expertResults.map((result) => _SearchResultCard(
+                  result: result,
+                  onTap: () {
+                    final id = result['id'];
+                    if (id != null) context.safePush('/task-experts/$id');
+                  },
+                )),
+            AppSpacing.vLg,
+          ],
+
           // 任务结果
           if (state.taskResults.isNotEmpty) ...[
             _SectionHeader(
@@ -244,6 +272,44 @@ class _SearchContentState extends State<_SearchContent> {
                   onTap: () {
                     final id = result['id'];
                     if (id != null) context.safePush('/forum/posts/$id');
+                  },
+                )),
+            AppSpacing.vLg,
+          ],
+
+          // 活动结果
+          if (state.activityResults.isNotEmpty) ...[
+            _SectionHeader(
+              title: context.l10n.searchActivitiesTitle,
+              count: state.activityResults.length,
+              icon: Icons.event,
+              color: AppColors.info,
+            ),
+            AppSpacing.vSm,
+            ...state.activityResults.map((result) => _SearchResultCard(
+                  result: result,
+                  onTap: () {
+                    final id = result['id'];
+                    if (id != null) context.safePush('/activities/$id');
+                  },
+                )),
+            AppSpacing.vLg,
+          ],
+
+          // 排行榜结果
+          if (state.leaderboardResults.isNotEmpty) ...[
+            _SectionHeader(
+              title: context.l10n.searchLeaderboardsTitle,
+              count: state.leaderboardResults.length,
+              icon: Icons.leaderboard,
+              color: AppColors.success,
+            ),
+            AppSpacing.vSm,
+            ...state.leaderboardResults.map((result) => _SearchResultCard(
+                  result: result,
+                  onTap: () {
+                    final id = result['id'];
+                    if (id != null) context.safePush('/leaderboard/$id');
                   },
                 )),
             AppSpacing.vLg,
