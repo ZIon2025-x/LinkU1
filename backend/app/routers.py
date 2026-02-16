@@ -8032,6 +8032,19 @@ def get_customer_service_queue_status(
     return queue_status
 
 
+@router.get("/user/customer-service/availability")
+def check_customer_service_availability(
+    current_user=Depends(get_current_user_secure_sync_csrf), db: Session = Depends(get_db)
+):
+    """检查人工客服是否有在线的"""
+    from app.models import CustomerService
+    from sqlalchemy import cast, Integer
+    online_count = db.query(func.count(CustomerService.id)).filter(
+        cast(CustomerService.is_online, Integer) == 1
+    ).scalar() or 0
+    return {"available": online_count > 0, "online_count": online_count}
+
+
 # 客服在线状态管理
 @router.post("/customer-service/online")
 def set_customer_service_online(

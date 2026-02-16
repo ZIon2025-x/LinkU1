@@ -400,6 +400,8 @@ class ApiEndpoints {
       '/api/users/user/customer-service/chats/$chatId/rate';
   static const String customerServiceQueueStatus =
       '/api/users/user/customer-service/queue-status';
+  static const String customerServiceAvailability =
+      '/api/users/user/customer-service/availability';
 
   // ==================== VIP ====================
   // 后端: routers.py → /users/vip/*

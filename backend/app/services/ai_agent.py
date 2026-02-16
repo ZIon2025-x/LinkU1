@@ -108,6 +108,7 @@ class IntentType:
     COMPLEX = "complex"      # 复杂/多步 → 大模型 + 工具
     OFF_TOPIC = "off_topic"  # 离题 → 直接拒绝，不调LLM
     UNKNOWN = "unknown"      # 需要 LLM 判别
+    TRANSFER_TO_CS = "transfer_to_cs"  # 用户请求转人工客服
 
 
 # 离题关键词（高置信度直接拒绝）
@@ -126,12 +127,16 @@ _OFF_TOPIC_RE = re.compile("|".join(_OFF_TOPIC_PATTERNS), re.IGNORECASE)
 
 # FAQ 关键词 → 直接命中本地FAQ（零 LLM 消耗）
 _FAQ_KEYWORDS = {
-    "faq_publish": ["怎么发布", "如何发布", "how to post", "how to create task", "发任务", "创建任务"],
-    "faq_accept": ["怎么接单", "如何接任务", "how to accept", "how to take", "接任务"],
-    "faq_payment": ["支付", "付款", "怎么付", "how to pay", "payment", "转账", "收款"],
-    "faq_fee": ["费用", "手续费", "服务费", "收费", "fee", "charge", "多少钱", "cost"],
-    "faq_dispute": ["争议", "投诉", "退款", "dispute", "refund", "complain"],
-    "faq_account": ["改密码", "修改密码", "change password", "修改头像", "个人资料", "profile settings"],
+    "faq_publish": ["怎么发布", "如何发布", "how to post", "how to create task", "发任务", "创建任务", "发布流程"],
+    "faq_accept": ["怎么接单", "如何接任务", "how to accept", "how to take", "接任务", "接单流程", "接受任务"],
+    "faq_payment": ["支付", "付款", "怎么付", "how to pay", "payment", "转账", "收款", "怎么收款", "何时到账"],
+    "faq_fee": ["费用", "手续费", "服务费", "收费", "fee", "charge", "多少钱", "cost", "费率"],
+    "faq_dispute": ["争议", "投诉", "退款", "dispute", "refund", "complain", "纠纷", "申诉"],
+    "faq_account": ["改密码", "修改密码", "change password", "修改头像", "个人资料", "profile settings", "账户设置", "绑定账户"],
+    "faq_wallet": ["钱包", "提现", "withdraw", "到账", "收款账户", "payout", "怎么提现", "绑定收款"],
+    "faq_coupon": ["优惠券", "coupon", "积分", "points", "抵扣", "折扣", "如何使用优惠券"],
+    "faq_activity": ["活动", "activity", "活动专区", "有什么活动", "如何参与"],
+    "faq_flea": ["跳蚤", "二手", "flea", "闲置", "求购", "卖东西", "买二手"],
 }
 
 # 任务相关关键词
@@ -142,6 +147,14 @@ _TASK_KEYWORDS = ["任务", "task", "我的任务", "my task", "进行中", "已
 # 个人资料关键词
 _PROFILE_KEYWORDS = ["个人资料", "我的资料", "my profile", "评分", "rating", "等级", "level",
                      "统计", "stats", "我的信息"]
+
+# 转人工客服关键词
+_TRANSFER_CS_KEYWORDS = [
+    "转人工", "人工客服", "真人客服", "找客服", "联系客服",
+    "connect human", "talk to agent", "human agent", "real person",
+    "speak to someone", "customer service", "live agent", "live chat",
+    "transfer to human", "real agent",
+]
 
 
 def classify_intent(message: str) -> str:
@@ -163,20 +176,24 @@ def classify_intent(message: str) -> str:
     if len(msg_lower) < 3:
         return IntentType.OFF_TOPIC
 
-    # 2. FAQ 精确匹配
+    # 2. 转人工客服检测（优先于 FAQ）
+    if any(kw in msg_lower for kw in _TRANSFER_CS_KEYWORDS):
+        return IntentType.TRANSFER_TO_CS
+
+    # 3. FAQ 精确匹配
     for faq_key, keywords in _FAQ_KEYWORDS.items():
         if any(kw in msg_lower for kw in keywords):
             return IntentType.FAQ
 
-    # 3. 任务相关
+    # 4. 任务相关
     if any(kw in msg_lower for kw in _TASK_KEYWORDS):
         return IntentType.TASK_QUERY
 
-    # 4. 个人资料
+    # 5. 个人资料
     if any(kw in msg_lower for kw in _PROFILE_KEYWORDS):
         return IntentType.PROFILE
 
-    # 5. 包含平台相关词（宽泛匹配）
+    # 6. 包含平台相关词（宽泛匹配）
     platform_words = ["link2ur", "平台", "platform", "帮助", "help", "使用", "怎么用",
                       "how to", "功能", "feature", "钱包", "wallet", "积分", "points",
                       "优惠券", "coupon", "活动", "activity", "达人", "expert",
@@ -200,6 +217,10 @@ def _get_faq_answer(message: str, lang: str) -> str | None:
         "faq_fee": "fee",
         "faq_dispute": "dispute",
         "faq_account": "account",
+        "faq_wallet": "wallet",
+        "faq_coupon": "coupon",
+        "faq_activity": "activity",
+        "faq_flea": "flea",
     }
 
     for faq_key, keywords in _FAQ_KEYWORDS.items():
@@ -234,7 +255,8 @@ _SYSTEM_PROMPT_TEMPLATE = """你是 Link2Ur 技能互助平台的官方 AI 客�
 - 充当通用 AI 助手或聊天机器人
 
 如果用户提出与平台无关的问题，直接回复："抱歉，我只能回答 Link2Ur 平台相关的问题。如需帮助请描述您在平台上遇到的具体问题。"
-如果用户的请求超出你的能力范围，引导用户联系人工客服。
+如果用户的请求超出你的能力范围（如需要修改数据、退款处理、争议仲裁等），主动建议用户输入"转人工"来连接人工客服。
+你可以使用 check_cs_availability 工具来检查是否有人工客服在线。
 
 【回复规范】
 - 语言：{lang_instruction}
@@ -427,7 +449,34 @@ class AIAgent:
             yield self._make_done_sse()
             return
 
-        # ---- 3b. FAQ → 本地回答 + 缓存 ----
+        # ---- 3b. 转人工客服 → 检查在线状态 + 发射 SSE 事件 ----
+        if intent == IntentType.TRANSFER_TO_CS:
+            # 调用工具检查客服在线状态
+            cs_result = await self.executor.execute("check_cs_availability", {})
+            available = cs_result.get("available", False)
+            online_count = cs_result.get("online_count", 0)
+
+            # 发射 cs_available SSE 事件
+            yield ServerSentEvent(
+                data=json.dumps({
+                    "available": available,
+                    "online_count": online_count,
+                    "contact_email": "support@link2ur.com",
+                }, ensure_ascii=False),
+                event="cs_available",
+            )
+
+            if available:
+                reply = "有人工客服在线，点击下方按钮连接人工客服。" if lang == "zh" else "Human agents are online. Tap the button below to connect."
+            else:
+                reply = "暂无在线客服，请发送邮件至 support@link2ur.com 联系我们。" if lang == "zh" else "No agents are currently online. Please email support@link2ur.com for assistance."
+
+            await self._save_assistant_message(conversation_id, reply, "local_cs_check", 0, 0)
+            yield self._make_text_sse(reply)
+            yield self._make_done_sse()
+            return
+
+        # ---- 3c. FAQ → 本地回答 + 缓存 ----
         if intent == IntentType.FAQ:
             cache_key = f"faq:{lang}:{user_message[:100]}"
             cached = _get_faq_cache(cache_key)
@@ -516,6 +565,17 @@ class AIAgent:
                     data=json.dumps({"tool": block.name, "result": result}, ensure_ascii=False),
                     event="tool_result",
                 )
+
+                # 如果 LLM 主动调用了 check_cs_availability，也发射 cs_available 事件
+                if block.name == "check_cs_availability":
+                    yield ServerSentEvent(
+                        data=json.dumps({
+                            "available": result.get("available", False),
+                            "online_count": result.get("online_count", 0),
+                            "contact_email": "support@link2ur.com",
+                        }, ensure_ascii=False),
+                        event="cs_available",
+                    )
 
                 tool_result_blocks.append({
                     "type": "tool_result",

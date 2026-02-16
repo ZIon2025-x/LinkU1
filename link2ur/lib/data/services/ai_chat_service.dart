@@ -184,6 +184,12 @@ class AIChatService {
             inputTokens: json['input_tokens'] as int?,
             outputTokens: json['output_tokens'] as int?,
           );
+        case 'cs_available':
+          return AIChatEvent(
+            type: AIChatEventType.csAvailable,
+            csAvailable: json['available'] as bool? ?? false,
+            contactEmail: json['contact_email'] as String?,
+          );
         default:
           return null;
       }

@@ -191,6 +191,36 @@ class CommonRepository {
     }
   }
 
+  /// 发送客服消息
+  Future<Map<String, dynamic>> sendCustomerServiceMessage(
+    String chatId,
+    String content,
+  ) async {
+    final response = await _apiService.post<Map<String, dynamic>>(
+      ApiEndpoints.customerServiceMessages(chatId),
+      data: {'content': content},
+    );
+
+    if (!response.isSuccess || response.data == null) {
+      throw CommonException(response.message ?? '发送消息失败');
+    }
+
+    return response.data!;
+  }
+
+  /// 检查人工客服可用性
+  Future<Map<String, dynamic>> checkCustomerServiceAvailability() async {
+    final response = await _apiService.get<Map<String, dynamic>>(
+      ApiEndpoints.customerServiceAvailability,
+    );
+
+    if (!response.isSuccess || response.data == null) {
+      throw CommonException(response.message ?? '检查客服可用性失败');
+    }
+
+    return response.data!;
+  }
+
   /// 获取客服排队状态
   Future<Map<String, dynamic>> getCustomerServiceQueueStatus() async {
     final response = await _apiService.get<Map<String, dynamic>>(

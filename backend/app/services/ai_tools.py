@@ -82,4 +82,12 @@ TOOLS = [
             },
         },
     },
+    {
+        "name": "check_cs_availability",
+        "description": "检查是否有人工客服在线。Check if any human customer service agents are currently online.",
+        "input_schema": {
+            "type": "object",
+            "properties": {},
+        },
+    },
 ]

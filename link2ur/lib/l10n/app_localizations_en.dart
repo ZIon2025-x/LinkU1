@@ -8351,4 +8351,32 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get transactionTypeFee => 'Service Fee';
+
+  @override
+  String get supportChatTitle => 'AI Support';
+
+  @override
+  String get supportChatConnecting => 'Connecting...';
+
+  @override
+  String get supportChatHumanOnline => 'Human agent is online';
+
+  @override
+  String get supportChatConnectButton => 'Connect';
+
+  @override
+  String get supportChatHumanOffline =>
+      'No agents online. Email support@link2ur.com';
+
+  @override
+  String get supportChatConnected => 'Human Support';
+
+  @override
+  String get supportChatEnded => 'Conversation ended';
+
+  @override
+  String get supportChatReturnToAI => 'Back to AI';
+
+  @override
+  String get supportChatDivider => 'Connected to human support';
 }

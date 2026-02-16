@@ -3922,5 +3922,15 @@
   "transactionTypePayment": "Payment",
   "transactionTypePayout": "Payout",
   "transactionTypeRefund": "Refund",
-  "transactionTypeFee": "Service Fee"
+  "transactionTypeFee": "Service Fee",
+
+  "supportChatTitle": "AI Support",
+  "supportChatConnecting": "Connecting...",
+  "supportChatHumanOnline": "Human agent is online",
+  "supportChatConnectButton": "Connect",
+  "supportChatHumanOffline": "No agents online. Email support@link2ur.com",
+  "supportChatConnected": "Human Support",
+  "supportChatEnded": "Conversation ended",
+  "supportChatReturnToAI": "Back to AI",
+  "supportChatDivider": "Connected to human support"
 }

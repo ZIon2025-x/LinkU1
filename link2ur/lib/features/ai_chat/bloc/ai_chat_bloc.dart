@@ -98,6 +98,17 @@ class _AIChatError extends AIChatEvent {
   List<Object?> get props => [error];
 }
 
+/// 客服可用性信号（内部事件）
+class _AIChatCSAvailable extends AIChatEvent {
+  const _AIChatCSAvailable(this.available, this.contactEmail);
+
+  final bool available;
+  final String? contactEmail;
+
+  @override
+  List<Object?> get props => [available, contactEmail];
+}
+
 /// 归档对话
 class AIChatArchiveConversation extends AIChatEvent {
   const AIChatArchiveConversation(this.conversationId);
@@ -122,6 +133,8 @@ class AIChatState extends Equatable {
     this.streamingContent = '',
     this.activeToolCall,
     this.errorMessage,
+    this.csAvailableSignal,
+    this.csContactEmail,
   });
 
   final AIChatStatus status;
@@ -132,6 +145,8 @@ class AIChatState extends Equatable {
   final String streamingContent; // 流式回复的累积内容
   final String? activeToolCall; // 正在执行的工具名称
   final String? errorMessage;
+  final bool? csAvailableSignal; // 瞬态信号：客服在线状态（不加入 props）
+  final String? csContactEmail; // 客服联系邮箱
 
   AIChatState copyWith({
     AIChatStatus? status,
@@ -142,6 +157,8 @@ class AIChatState extends Equatable {
     String? streamingContent,
     String? activeToolCall,
     String? errorMessage,
+    bool? csAvailableSignal,
+    String? csContactEmail,
   }) {
     return AIChatState(
       status: status ?? this.status,
@@ -153,6 +170,8 @@ class AIChatState extends Equatable {
       streamingContent: streamingContent ?? this.streamingContent,
       activeToolCall: activeToolCall,
       errorMessage: errorMessage,
+      csAvailableSignal: csAvailableSignal,
+      csContactEmail: csContactEmail,
     );
   }
 
@@ -184,6 +203,7 @@ class AIChatBloc extends Bloc<AIChatEvent, AIChatState> {
     on<_AIChatToolResult>(_onToolResult);
     on<_AIChatMessageCompleted>(_onMessageCompleted);
     on<_AIChatError>(_onError);
+    on<_AIChatCSAvailable>(_onCSAvailable);
     on<AIChatArchiveConversation>(_onArchiveConversation);
   }
 
@@ -299,6 +319,9 @@ class AIChatBloc extends Bloc<AIChatEvent, AIChatState> {
           return _AIChatMessageCompleted(sseEvent.messageId);
         case AIChatEventType.error:
           return _AIChatError(sseEvent.error ?? '未知错误');
+        case AIChatEventType.csAvailable:
+          return _AIChatCSAvailable(
+              sseEvent.csAvailable ?? false, sseEvent.contactEmail);
       }
     }).listen(
       (event) => add(event),
@@ -350,6 +373,16 @@ class AIChatBloc extends Bloc<AIChatEvent, AIChatState> {
     } else {
       emit(state.copyWith(isReplying: false));
     }
+  }
+
+  void _onCSAvailable(
+    _AIChatCSAvailable event,
+    Emitter<AIChatState> emit,
+  ) {
+    emit(state.copyWith(
+      csAvailableSignal: event.available,
+      csContactEmail: event.contactEmail,
+    ));
   }
 
   void _onError(

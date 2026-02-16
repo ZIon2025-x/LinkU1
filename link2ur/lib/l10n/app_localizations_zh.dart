@@ -8036,6 +8036,33 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get transactionTypeFee => '服务费';
+
+  @override
+  String get supportChatTitle => 'AI 客服';
+
+  @override
+  String get supportChatConnecting => '连接中...';
+
+  @override
+  String get supportChatHumanOnline => '人工客服在线';
+
+  @override
+  String get supportChatConnectButton => '连接人工';
+
+  @override
+  String get supportChatHumanOffline => '暂无在线客服，请发邮件至 support@link2ur.com';
+
+  @override
+  String get supportChatConnected => '人工客服';
+
+  @override
+  String get supportChatEnded => '对话已结束';
+
+  @override
+  String get supportChatReturnToAI => '返回 AI';
+
+  @override
+  String get supportChatDivider => '已连接人工客服';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -16070,4 +16097,31 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get transactionTypeFee => '服務費';
+
+  @override
+  String get supportChatTitle => 'AI 客服';
+
+  @override
+  String get supportChatConnecting => '連接中...';
+
+  @override
+  String get supportChatHumanOnline => '人工客服在線';
+
+  @override
+  String get supportChatConnectButton => '連接人工';
+
+  @override
+  String get supportChatHumanOffline => '暫無在線客服，請發郵件至 support@link2ur.com';
+
+  @override
+  String get supportChatConnected => '人工客服';
+
+  @override
+  String get supportChatEnded => '對話已結束';
+
+  @override
+  String get supportChatReturnToAI => '返回 AI';
+
+  @override
+  String get supportChatDivider => '已連接人工客服';
 }

@@ -3789,5 +3789,15 @@
   "transactionTypePayment": "支付",
   "transactionTypePayout": "收款",
   "transactionTypeRefund": "退款",
-  "transactionTypeFee": "服務費"
+  "transactionTypeFee": "服務費",
+
+  "supportChatTitle": "AI 客服",
+  "supportChatConnecting": "連接中...",
+  "supportChatHumanOnline": "人工客服在線",
+  "supportChatConnectButton": "連接人工",
+  "supportChatHumanOffline": "暫無在線客服，請發郵件至 support@link2ur.com",
+  "supportChatConnected": "人工客服",
+  "supportChatEnded": "對話已結束",
+  "supportChatReturnToAI": "返回 AI",
+  "supportChatDivider": "已連接人工客服"
 }

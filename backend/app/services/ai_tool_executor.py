@@ -18,28 +18,44 @@ logger = logging.getLogger(__name__)
 # 平台 FAQ 数据（静态，后续可迁移到数据库/Redis）
 PLATFORM_FAQ = {
     "publish": {
-        "zh": "发布任务流程：1. 点击首页'发布任务'按钮 2. 填写任务标题、描述、报酬、截止日期 3. 选择任务类型和位置 4. 提交后预付款项到平台托管 5. 等待接单者接单",
-        "en": "How to post a task: 1. Click 'Post Task' on the home page 2. Fill in title, description, reward, deadline 3. Select task type and location 4. Submit and prepay to platform escrow 5. Wait for someone to accept",
+        "zh": "发布任务流程：1. 点击首页「发布任务」 2. 填写标题、描述、报酬、截止日期 3. 选择任务类型和位置 4. 提交后预付款到平台托管 5. 等待接单者接单。",
+        "en": "How to post a task: 1. Click 'Post Task' on the home page 2. Fill in title, description, reward, deadline 3. Select task type and location 4. Submit and prepay to platform escrow 5. Wait for someone to accept.",
     },
     "accept": {
-        "zh": "接受任务流程：1. 浏览任务列表或搜索感兴趣的任务 2. 查看任务详情 3. 点击'接受任务'按钮 4. 完成任务后标记完成 5. 等待发布者确认后获得报酬",
-        "en": "How to accept a task: 1. Browse task list or search 2. View task details 3. Click 'Accept Task' 4. Mark as completed after finishing 5. Wait for poster to confirm, then receive payment",
+        "zh": "接单流程：1. 浏览或搜索任务 2. 查看任务详情 3. 点击「接受任务」 4. 完成后标记完成 5. 发布者确认后报酬自动到账。",
+        "en": "How to accept a task: 1. Browse or search tasks 2. View task details 3. Click 'Accept Task' 4. Mark as completed when done 5. After poster confirms, payment is transferred automatically.",
     },
     "payment": {
-        "zh": "支付流程：平台使用 Stripe 安全支付。发布任务时预付报酬到平台托管，任务确认完成后自动转账给接单者。平台收取服务费。退款需通过客服处理。",
-        "en": "Payment: The platform uses Stripe for secure payments. Reward is pre-paid to platform escrow when posting. After task confirmation, funds are automatically transferred to the task taker. A service fee applies. Refunds are handled by customer support.",
+        "zh": "支付与收款：平台使用 Stripe。发布时预付到托管，任务确认后自动转给接单者。接单者需在个人中心绑定 Stripe 收款账户才能提现。退款联系客服。",
+        "en": "Payment: The platform uses Stripe. Reward is pre-paid to escrow when posting; after confirmation it is transferred to the taker. Link a Stripe payout account in your profile to receive funds. Refunds via customer support.",
     },
     "fee": {
-        "zh": "费用说明：平台对每笔交易收取服务费（具体比例见发布页面显示）。服务费从任务报酬中扣除。接单者收到的金额 = 报酬 - 服务费。",
-        "en": "Fees: The platform charges a service fee per transaction (see the posting page for rates). The fee is deducted from the task reward. Taker receives = reward - service fee.",
+        "zh": "费用说明：平台对每笔交易收取服务费（比例见发布页）。接单者实收 = 报酬 - 服务费。",
+        "en": "Fees: A service fee is charged per transaction (see posting page for rates). Taker receives reward minus the service fee.",
     },
     "dispute": {
-        "zh": "争议处理：如对任务结果有异议，可在任务详情页提交争议申请。平台客服将在48小时内介入处理。争议期间资金保持托管状态。",
-        "en": "Disputes: If you have an issue with task results, submit a dispute on the task detail page. Customer support will intervene within 48 hours. Funds remain in escrow during disputes.",
+        "zh": "争议处理：在任务详情页提交争议，客服会在约 48 小时内介入。争议期间款项保持托管。",
+        "en": "Disputes: Submit a dispute on the task detail page. Support will step in within about 48 hours. Funds stay in escrow during the dispute.",
     },
     "account": {
-        "zh": "账户管理：可在个人中心修改头像、昵称、个人简介。邮箱和手机号可用于登录。支持修改密码和绑定 Stripe 收款账户。",
-        "en": "Account: You can update your avatar, name, and bio in your profile. Email and phone can be used for login. You can change your password and link a Stripe payout account.",
+        "zh": "账户管理：个人中心可修改头像、昵称、简介、密码，以及绑定 Stripe 收款账户。邮箱/手机可用于登录。",
+        "en": "Account: In your profile you can update avatar, name, bio, password, and link a Stripe payout account. Email or phone can be used to log in.",
+    },
+    "wallet": {
+        "zh": "钱包与提现：任务确认完成后，款项会自动转入接单方。需在个人中心绑定 Stripe 收款账户才能提现到银行卡。平台不直接打款到支付宝/微信。",
+        "en": "Wallet & withdrawal: After task confirmation, funds are transferred to the taker. You must link a Stripe payout account in your profile to withdraw to your bank. The platform does not pay out to Alipay/WeChat.",
+    },
+    "coupon": {
+        "zh": "优惠券与积分：可通过活动或奖励获得优惠券和积分，支付时可选可用优惠券抵扣。具体规则见活动说明或「我的优惠券」页面。",
+        "en": "Coupons & points: You can earn coupons and points through activities or rewards. Apply eligible coupons at checkout. See activity details or 'My Coupons' for rules.",
+    },
+    "activity": {
+        "zh": "活动：平台不定期推出活动，可在首页或活动专区查看。参与活动可获得奖励、优惠券或积分。",
+        "en": "Activities: The platform runs activities from time to time. Check the home page or activity section. Joining can earn rewards, coupons, or points.",
+    },
+    "flea": {
+        "zh": "跳蚤市场：可发布二手闲置或求购信息，流程类似任务（填写信息、支付托管、交易完成后结算）。在「跳蚤市场」入口发布或浏览。",
+        "en": "Flea market: You can list second-hand items or wanted posts. Flow is similar to tasks (list details, pay to escrow, settle after completion). Use the Flea Market section to post or browse.",
     },
 }
 
@@ -67,6 +83,7 @@ class ToolExecutor:
             "search_tasks": self._search_tasks,
             "get_my_profile": self._get_my_profile,
             "get_platform_faq": self._get_platform_faq,
+            "check_cs_availability": self._check_cs_availability,
         }
 
     async def execute(self, tool_name: str, tool_input: dict) -> dict:
@@ -227,15 +244,19 @@ class ToolExecutor:
         lang = self.user.language_preference or "zh"
         lang_key = "en" if lang.startswith("en") else "zh"
 
-        # 关键词匹配
+        # 关键词匹配（与 ai_agent._FAQ_KEYWORDS 对应）
         matches = []
         keyword_map = {
-            "publish": ["发布", "post", "create", "创建"],
-            "accept": ["接单", "接受", "accept", "take"],
-            "payment": ["支付", "付款", "pay", "payment", "转账", "transfer"],
-            "fee": ["费用", "fee", "charge", "服务费", "cost", "price"],
-            "dispute": ["争议", "dispute", "投诉", "complain", "refund", "退款"],
-            "account": ["账户", "account", "profile", "个人", "密码", "password"],
+            "publish": ["发布", "post", "create", "创建", "发任务"],
+            "accept": ["接单", "接受", "accept", "take", "接任务"],
+            "payment": ["支付", "付款", "pay", "payment", "转账", "transfer", "收款", "到账"],
+            "fee": ["费用", "fee", "charge", "服务费", "cost", "price", "费率"],
+            "dispute": ["争议", "dispute", "投诉", "complain", "refund", "退款", "纠纷", "申诉"],
+            "account": ["账户", "account", "profile", "个人", "密码", "password", "绑定账户"],
+            "wallet": ["钱包", "提现", "withdraw", "payout", "收款账户", "绑定收款"],
+            "coupon": ["优惠券", "coupon", "积分", "points", "抵扣", "折扣"],
+            "activity": ["活动", "activity", "活动专区", "参与活动"],
+            "flea": ["跳蚤", "二手", "flea", "闲置", "求购", "卖东西"],
         }
 
         for topic, keywords in keyword_map.items():
@@ -253,3 +274,12 @@ class ToolExecutor:
             ]
 
         return {"faq": matches}
+
+    async def _check_cs_availability(self, input: dict) -> dict:
+        """检查是否有人工客服在线"""
+        from sqlalchemy import cast, Integer
+        count_q = select(func.count(models.CustomerService.id)).where(
+            cast(models.CustomerService.is_online, Integer) == 1
+        )
+        online_count = (await self.db.execute(count_q)).scalar() or 0
+        return {"available": online_count > 0, "online_count": online_count}

@@ -39,6 +39,7 @@ import '../../features/activity/views/activity_detail_view.dart';
 import '../../features/student_verification/views/student_verification_view.dart';
 import '../../features/onboarding/views/onboarding_view.dart';
 import '../../features/ai_chat/views/ai_chat_view.dart';
+import '../../features/ai_chat/views/unified_chat_view.dart';
 import '../../features/ai_chat/views/ai_chat_list_view.dart';
 import '../../features/customer_service/views/customer_service_view.dart';
 import '../../features/coupon_points/views/coupon_points_view.dart';
@@ -173,6 +174,7 @@ class AppRoutes {
   // AI 助手
   static const String aiChatList = '/ai-chat-list';
   static const String aiChat = '/ai-chat';
+  static const String supportChat = '/support-chat';
 
   // 信息
   static const String faq = '/faq';
@@ -687,6 +689,13 @@ class AppRouter {
         builder: (context, state) => const CustomerServiceView(),
       ),
 
+      // 统一 AI + 客服聊天
+      GoRoute(
+        path: AppRoutes.supportChat,
+        name: 'supportChat',
+        builder: (context, state) => const UnifiedChatView(),
+      ),
+
       // 积分与优惠券
       GoRoute(
         path: AppRoutes.couponPoints,
@@ -957,6 +966,12 @@ extension GoRouterExtension on BuildContext {
   void goToAIChatList() {
     if (!_NavigationThrottle.acquire()) return;
     push(AppRoutes.aiChatList);
+  }
+
+  /// 跳转到统一 AI + 客服聊天
+  void goToSupportChat() {
+    if (!_NavigationThrottle.acquire()) return;
+    push(AppRoutes.supportChat);
   }
 }
 

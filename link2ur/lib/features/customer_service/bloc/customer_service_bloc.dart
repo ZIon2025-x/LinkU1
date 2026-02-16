@@ -267,10 +267,13 @@ class CustomerServiceBloc
     ));
 
     try {
-      // 调用后端发送消息
-      // 后端 customer service 消息通过 chat messages API 发送
+      // POST 消息到后端
+      await _repository.sendCustomerServiceMessage(
+        state.chat!.chatId,
+        event.content.trim(),
+      );
+
       // 重新加载消息列表获取服务端确认
-      await Future.delayed(const Duration(milliseconds: 500));
       final rawMessages =
           await _repository.getCustomerServiceMessages(state.chat!.chatId);
       final messages = rawMessages

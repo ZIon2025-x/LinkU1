@@ -251,21 +251,16 @@ class _QuickActionBar extends StatelessWidget {
                 context.push('/notifications/system');
               },
             ),
-            // 客服中心
+            // AI 客服（统一入口）
             _QuickActionButton(
-              icon: Icons.headset_mic,
-              label: context.l10n.messagesCustomerService,
-              color: AppColors.success,
+              icon: Icons.auto_awesome,
+              label: context.l10n.supportChatTitle,
+              color: const Color(0xFF7C3AED),
               unreadCount: 0,
               isDark: isDark,
               onTap: () {
                 AppHaptics.selection();
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => const CustomerServiceView(),
-                  ),
-                );
+                context.push('/support-chat');
               },
             ),
             // 互动信息
@@ -280,16 +275,21 @@ class _QuickActionBar extends StatelessWidget {
                 context.push('/notifications/interaction');
               },
             ),
-            // AI 助手
+            // 客服中心（独立入口保留）
             _QuickActionButton(
-              icon: Icons.auto_awesome,
-              label: 'AI',
-              color: const Color(0xFF7C3AED),
+              icon: Icons.headset_mic,
+              label: context.l10n.messagesCustomerService,
+              color: AppColors.success,
               unreadCount: 0,
               isDark: isDark,
               onTap: () {
                 AppHaptics.selection();
-                context.push('/ai-chat');
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const CustomerServiceView(),
+                  ),
+                );
               },
             ),
           ],

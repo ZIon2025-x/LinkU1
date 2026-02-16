@@ -152,7 +152,7 @@ class AIToolResult extends Equatable {
 }
 
 /// SSE 事件类型
-enum AIChatEventType { token, toolCall, toolResult, done, error }
+enum AIChatEventType { token, toolCall, toolResult, done, error, csAvailable }
 
 /// SSE 事件
 class AIChatEvent {
@@ -166,6 +166,8 @@ class AIChatEvent {
     this.inputTokens,
     this.outputTokens,
     this.error,
+    this.csAvailable,
+    this.contactEmail,
   });
 
   final AIChatEventType type;
@@ -177,4 +179,6 @@ class AIChatEvent {
   final int? inputTokens;
   final int? outputTokens;
   final String? error;
+  final bool? csAvailable;
+  final String? contactEmail;
 }

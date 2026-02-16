@@ -15373,6 +15373,60 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Service Fee'**
   String get transactionTypeFee;
+
+  /// No description provided for @supportChatTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'AI Support'**
+  String get supportChatTitle;
+
+  /// No description provided for @supportChatConnecting.
+  ///
+  /// In en, this message translates to:
+  /// **'Connecting...'**
+  String get supportChatConnecting;
+
+  /// No description provided for @supportChatHumanOnline.
+  ///
+  /// In en, this message translates to:
+  /// **'Human agent is online'**
+  String get supportChatHumanOnline;
+
+  /// No description provided for @supportChatConnectButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Connect'**
+  String get supportChatConnectButton;
+
+  /// No description provided for @supportChatHumanOffline.
+  ///
+  /// In en, this message translates to:
+  /// **'No agents online. Email support@link2ur.com'**
+  String get supportChatHumanOffline;
+
+  /// No description provided for @supportChatConnected.
+  ///
+  /// In en, this message translates to:
+  /// **'Human Support'**
+  String get supportChatConnected;
+
+  /// No description provided for @supportChatEnded.
+  ///
+  /// In en, this message translates to:
+  /// **'Conversation ended'**
+  String get supportChatEnded;
+
+  /// No description provided for @supportChatReturnToAI.
+  ///
+  /// In en, this message translates to:
+  /// **'Back to AI'**
+  String get supportChatReturnToAI;
+
+  /// No description provided for @supportChatDivider.
+  ///
+  /// In en, this message translates to:
+  /// **'Connected to human support'**
+  String get supportChatDivider;
 }
 
 class _AppLocalizationsDelegate
