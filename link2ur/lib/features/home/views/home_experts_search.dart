@@ -1,7 +1,7 @@
-﻿part of 'home_view.dart';
+part of 'home_view.dart';
 
-/// 瀵规爣iOS: TaskExpertListContentView (杈句汉Tab)
-/// 鍐呭祵杈句汉鍒楄〃锛岀偣鍑绘悳绱㈡璺宠浆鍒板畬鏁存悳绱㈤〉
+/// 对标iOS: TaskExpertListContentView (达人Tab)
+/// 内嵌达人列表，点击搜索框跳转到完整搜索页
 class _ExpertsTab extends StatelessWidget {
   const _ExpertsTab();
 
@@ -52,7 +52,7 @@ class _ExpertsTabContentState extends State<_ExpertsTabContent> {
     final isDesktop = ResponsiveUtils.isDesktop(context);
     final column = Column(
       children: [
-        // 鎼滅储妗?+ 绛涢€夋寜閽?
+        // 搜索框 + 筛选按钮
         Padding(
           padding: const EdgeInsets.symmetric(
             horizontal: AppSpacing.md,
@@ -60,7 +60,7 @@ class _ExpertsTabContentState extends State<_ExpertsTabContent> {
           ),
           child: Row(
             children: [
-              // 鎼滅储妗?
+              // 搜索框
               Expanded(
                 child: TextField(
                   controller: _searchController,
@@ -136,7 +136,7 @@ class _ExpertsTabContentState extends State<_ExpertsTabContent> {
                 ),
               ),
               const SizedBox(width: 8),
-              // 绛涢€夋寜閽?
+              // 筛选按钮
               BlocBuilder<TaskExpertBloc, TaskExpertState>(
                 buildWhen: (prev, curr) =>
                     prev.hasActiveFilters != curr.hasActiveFilters,
@@ -195,7 +195,7 @@ class _ExpertsTabContentState extends State<_ExpertsTabContent> {
           ),
         ),
 
-        // 瀵规爣iOS: 杈句汉鍗＄墖鍒楄〃
+        // 对标iOS: 达人卡片列表
         Expanded(
           child: BlocBuilder<TaskExpertBloc, TaskExpertState>(
             buildWhen: (prev, curr) =>
@@ -266,13 +266,39 @@ class _ExpertsTabContentState extends State<_ExpertsTabContent> {
     return isDesktop ? ContentConstraint(child: column) : column;
   }
 
-  // ==================== 杈句汉绫诲瀷 & 鍩庡競甯搁噺 ====================
+  // ==================== 达人类型 & 城市常量 ====================
 
   static const List<String> _expertCategoryKeys = [
     'all', 'programming', 'translation', 'tutoring', 'food',
     'beverage', 'cake', 'errand_transport', 'social_entertainment',
     'beauty_skincare', 'handicraft',
-  ];  String _categoryLabel(BuildContext context, String key) {
+  ];
+
+  static const List<String> _ukCities = [
+    'London', 'Edinburgh', 'Manchester', 'Birmingham', 'Glasgow',
+    'Bristol', 'Sheffield', 'Leeds', 'Nottingham', 'Newcastle',
+    'Southampton', 'Liverpool', 'Cardiff', 'Coventry', 'Exeter',
+    'Leicester', 'York', 'Aberdeen', 'Bath', 'Dundee',
+    'Reading', 'St Andrews', 'Belfast', 'Brighton', 'Durham',
+    'Norwich', 'Swansea', 'Loughborough', 'Lancaster', 'Warwick',
+    'Cambridge', 'Oxford',
+  ];
+
+  static const Map<String, String> _cityNameZh = {
+    'London': '伦敦', 'Edinburgh': '爱丁堡', 'Manchester': '曼彻斯特',
+    'Birmingham': '伯明翰', 'Glasgow': '格拉斯哥', 'Bristol': '布里斯托',
+    'Sheffield': '谢菲尔德', 'Leeds': '利兹', 'Nottingham': '诺丁汉',
+    'Newcastle': '纽卡斯尔', 'Southampton': '南安普顿', 'Liverpool': '利物浦',
+    'Cardiff': '卡迪夫', 'Coventry': '考文垂', 'Exeter': '埃克塞特',
+    'Leicester': '莱斯特', 'York': '约克', 'Aberdeen': '阿伯丁',
+    'Bath': '巴斯', 'Dundee': '邓迪', 'Reading': '雷丁',
+    'St Andrews': '圣安德鲁斯', 'Belfast': '贝尔法斯特', 'Brighton': '布莱顿',
+    'Durham': '达勒姆', 'Norwich': '诺里奇', 'Swansea': '斯旺西',
+    'Loughborough': '拉夫堡', 'Lancaster': '兰开斯特', 'Warwick': '华威',
+    'Cambridge': '剑桥', 'Oxford': '牛津',
+  };
+
+  String _categoryLabel(BuildContext context, String key) {
     final l10n = context.l10n;
     switch (key) {
       case 'all': return l10n.expertCategoryAll;
@@ -315,7 +341,7 @@ class _ExpertsTabContentState extends State<_ExpertsTabContent> {
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // 鎷栨嫿鏉?
+                    // 拖拽条
                     Center(
                       child: Container(
                         width: 36, height: 4,
@@ -327,7 +353,7 @@ class _ExpertsTabContentState extends State<_ExpertsTabContent> {
                     ),
                     const SizedBox(height: 16),
 
-                    // 鏍囬 + 閲嶇疆
+                    // 标题 + 重置
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
@@ -345,7 +371,7 @@ class _ExpertsTabContentState extends State<_ExpertsTabContent> {
                     ),
                     const SizedBox(height: 20),
 
-                    // 鈹€鈹€ 杈句汉绫诲瀷 鈹€鈹€
+                    // ── 达人类型 ──
                     Text(l10n.taskExpertCategory, style: AppTypography.bodyBold),
                     const SizedBox(height: 12),
                     Wrap(
@@ -361,7 +387,7 @@ class _ExpertsTabContentState extends State<_ExpertsTabContent> {
                     ),
                     const SizedBox(height: 24),
 
-                    // 鈹€鈹€ 鍩庡競 鈹€鈹€
+                    // ── 城市 ──
                     Text(l10n.taskFilterCity, style: AppTypography.bodyBold),
                     const SizedBox(height: 12),
                     ConstrainedBox(
@@ -376,10 +402,10 @@ class _ExpertsTabContentState extends State<_ExpertsTabContent> {
                               isDark: isDark,
                               onTap: () => setModalState(() => tempCity = 'all'),
                             ),
-                            ...UKCities.all.map((city) {
+                            ..._ukCities.map((city) {
                               final locale = Localizations.localeOf(ctx);
                               final display = locale.languageCode == 'zh'
-                                  ? (UKCities.zhName[city] ?? city)
+                                  ? (_cityNameZh[city] ?? city)
                                   : city;
                               return _buildChip(
                                 label: display,
@@ -394,7 +420,7 @@ class _ExpertsTabContentState extends State<_ExpertsTabContent> {
                     ),
                     const SizedBox(height: 24),
 
-                    // 鈹€鈹€ 纭 鈹€鈹€
+                    // ── 确认 ──
                     SizedBox(
                       width: double.infinity, height: 48,
                       child: ElevatedButton(
@@ -462,8 +488,8 @@ class _ExpertsTabContentState extends State<_ExpertsTabContent> {
   }
 }
 
-/// 杈句汉鍗＄墖 - 瀵规爣iOS ExpertCard
-/// 澶村儚鍏夋檿(74鑳屾櫙+68澶村儚) + 璁よ瘉寰界珷 + 鍚嶇О/绠€浠?缁熻 + chevron
+/// 达人卡片 - 对标iOS ExpertCard
+/// 头像光晕(74背景+68头像) + 认证徽章 + 名称/简介/统计 + chevron
 class _ExpertCard extends StatelessWidget {
   const _ExpertCard({required this.expert});
 
@@ -496,7 +522,7 @@ class _ExpertCard extends StatelessWidget {
         ),
         child: Row(
           children: [
-            // 澶村儚 + 鍏夋檿 (瀵规爣iOS: 74鑳屾櫙鍦?+ 68澶村儚 + shadow)
+            // 头像 + 光晕 (对标iOS: 74背景圆 + 68头像 + shadow)
             Container(
               width: 74,
               height: 74,
@@ -520,12 +546,12 @@ class _ExpertCard extends StatelessWidget {
               ),
             ),
             AppSpacing.hMd,
-            // 淇℃伅
+            // 信息
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // 鍚嶇О + 璁よ瘉寰界珷 (瀵规爣iOS checkmark.seal.fill)
+                  // 名称 + 认证徽章 (对标iOS checkmark.seal.fill)
                   Row(
                     children: [
                       Flexible(
@@ -548,7 +574,7 @@ class _ExpertCard extends StatelessWidget {
                       ),
                     ],
                   ),
-                  // 绠€浠嬶紙鍙岃锛夆€?涓虹┖鏃舵樉绀哄崰浣嶆枃鏈?(瀵规爣iOS)
+                  // 简介（双语）— 为空时显示占位文本 (对标iOS)
                   const SizedBox(height: 4),
                   Text(
                     (expert.displayBio != null && expert.displayBio!.isNotEmpty)
@@ -567,10 +593,10 @@ class _ExpertCard extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                   ),
                   const SizedBox(height: 8),
-                  // 缁熻琛?(瀵规爣iOS: 鑳跺泭璇勫垎 + 瀹屾垚鏁奥峰畬鎴愮巼)
+                  // 统计行 (对标iOS: 胶囊评分 + 完成数·完成率)
                   Row(
                     children: [
-                      // 璇勫垎鑳跺泭
+                      // 评分胶囊
                       Container(
                         padding: const EdgeInsets.symmetric(
                             horizontal: 8, vertical: 3),
@@ -595,7 +621,7 @@ class _ExpertCard extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(width: 10),
-                      // 瀹屾垚鍗曟暟 路 瀹屾垚鐜?
+                      // 完成单数 · 完成率
                       Text(
                         context.l10n
                             .leaderboardCompletedCount(expert.completedTasks),
@@ -607,7 +633,7 @@ class _ExpertCard extends StatelessWidget {
                       ),
                       if (expert.totalServices > 0) ...[
                         Text(
-                          ' 路 ',
+                          ' · ',
                           style: AppTypography.caption2.copyWith(
                             color: isDark
                                 ? AppColors.textTertiaryDark
@@ -644,13 +670,13 @@ class _ExpertCard extends StatelessWidget {
   }
 }
 
-/// 浠诲姟鍗＄墖 - 鍨傜洿鍒楄〃锛堝鏍噄OS TaskCard椋庢牸锛氬浘鐗囧湪涓?+ 鍐呭鍦ㄤ笅锛?
+/// 任务卡片 - 垂直列表（对标iOS TaskCard风格：图片在上 + 内容在下）
 class _TaskCard extends StatelessWidget {
   const _TaskCard({required this.task});
 
   final Task task;
 
-  // 浠诲姟绫诲瀷鍥炬爣 鈥?浣跨敤缁熶竴鏄犲皠
+  // 任务类型图标 — 使用统一映射
   IconData _taskTypeIcon(String taskType) => TaskTypeHelper.getIcon(taskType);
 
   String _formatDeadline(BuildContext context, DateTime deadline) {
@@ -678,13 +704,13 @@ class _TaskCard extends StatelessWidget {
               ? AppColors.cardBackgroundDark
               : AppColors.cardBackgroundLight,
           borderRadius: AppRadius.allLarge,
-          // 瀵规爣iOS: 0.5pt separator杈规
+          // 对标iOS: 0.5pt separator边框
           border: Border.all(
             color: (isDark ? AppColors.separatorDark : AppColors.separatorLight)
                 .withValues(alpha: 0.3),
             width: 0.5,
           ),
-          // 瀵规爣iOS: 鍙屽眰闃村奖
+          // 对标iOS: 双层阴影
           boxShadow: [
             BoxShadow(
               color: AppColors.primary.withValues(alpha: 0.08),
@@ -701,14 +727,14 @@ class _TaskCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // ===== 鍥剧墖鍖哄煙 (瀵规爣iOS 140px + 娓愬彉 + 姣涚幓鐠冩爣绛? =====
+            // ===== 图片区域 (对标iOS 140px + 渐变 + 毛玻璃标签) =====
             SizedBox(
               height: 140,
               width: double.infinity,
               child: Stack(
                 fit: StackFit.expand,
                 children: [
-                  // 鍥剧墖鎴栧崰浣嶈儗鏅?
+                  // 图片或占位背景
                   if (task.firstImage != null)
                     AsyncImageView(
                       imageUrl: task.firstImage!,
@@ -735,7 +761,7 @@ class _TaskCard extends StatelessWidget {
                       ),
                     ),
 
-                  // 3娈垫笎鍙橀伄缃?
+                  // 3段渐变遮罩
                   DecoratedBox(
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
@@ -751,7 +777,7 @@ class _TaskCard extends StatelessWidget {
                     ),
                   ),
 
-                  // 宸︿笂: 浣嶇疆鏍囩 (姣涚幓鐠?
+                  // 左上: 位置标签 (毛玻璃)
                   if (task.location != null)
                     Positioned(
                       top: 8,
@@ -797,7 +823,7 @@ class _TaskCard extends StatelessWidget {
                       ),
                     ),
 
-                  // 鍙充笂: 妯＄硦璺濈鏍囩
+                  // 右上: 模糊距离标签
                   if (task.blurredDistanceText != null)
                     Positioned(
                       top: 8,
@@ -831,7 +857,7 @@ class _TaskCard extends StatelessWidget {
                       ),
                     ),
 
-                  // 鍙充笅: 浠诲姟绫诲瀷鏍囩 (鍗婇€忔槑瀹瑰櫒)
+                  // 右下: 任务类型标签 (半透明容器)
                   Positioned(
                     bottom: 8,
                     right: 8,
@@ -871,13 +897,13 @@ class _TaskCard extends StatelessWidget {
               ),
             ),
 
-            // ===== 鍐呭鍖哄煙 =====
+            // ===== 内容区域 =====
             Padding(
               padding: const EdgeInsets.all(14),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // 鏍囬
+                  // 标题
                   Text(
                     task.displayTitle,
                     style: AppTypography.bodyBold.copyWith(
@@ -902,10 +928,10 @@ class _TaskCard extends StatelessWidget {
                     ),
                   ],
                   const SizedBox(height: 10),
-                  // 搴曢儴淇℃伅鏍忥紙瀵规爣iOS: 鎴鏃堕棿 + 鐘舵€?+ 浠锋牸锛?
+                  // 底部信息栏（对标iOS: 截止时间 + 状态 + 价格）
                   Row(
                     children: [
-                      // 鎴鏃堕棿
+                      // 截止时间
                       if (task.deadline != null) ...[
                         Icon(
                           Icons.schedule,
@@ -934,7 +960,7 @@ class _TaskCard extends StatelessWidget {
                         ),
                       ] else
                         const Spacer(),
-                      // 鐘舵€佹爣绛撅紙瀵规爣iOS StatusBadge: 鍦嗙偣+鏂囧瓧锛?
+                      // 状态标签（对标iOS StatusBadge: 圆点+文字）
                       Container(
                         padding: const EdgeInsets.symmetric(
                             horizontal: 8, vertical: 3),
@@ -967,7 +993,7 @@ class _TaskCard extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(width: 8),
-                      // 浠锋牸鏍囩锛堝鏍噄OS缁胯壊Capsule锛?
+                      // 价格标签（对标iOS绿色Capsule）
                       if (task.reward > 0)
                         Container(
                           padding: const EdgeInsets.symmetric(
@@ -980,7 +1006,7 @@ class _TaskCard extends StatelessWidget {
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               Text(
-                                task.currency == 'GBP' ? '拢' : '\$',
+                                task.currency == 'GBP' ? '£' : '\$',
                                 style: const TextStyle(
                                   fontSize: 10,
                                   fontWeight: FontWeight.bold,
@@ -1010,7 +1036,7 @@ class _TaskCard extends StatelessWidget {
   }
 }
 
-/// 瀵规爣iOS: MenuView - 鑿滃崟瑙嗗浘
+/// 对标iOS: MenuView - 菜单视图
 class _MenuView extends StatelessWidget {
   const _MenuView();
 
@@ -1027,7 +1053,7 @@ class _MenuView extends StatelessWidget {
       ),
       child: Column(
         children: [
-          // 鎷栨嫿鎸囩ず鍣?
+          // 拖拽指示器
           Container(
             margin: const EdgeInsets.only(top: 12),
             width: 36,
@@ -1037,7 +1063,7 @@ class _MenuView extends StatelessWidget {
               borderRadius: BorderRadius.circular(2),
             ),
           ),
-          // 鏍囬鏍?
+          // 标题栏
           Padding(
             padding: const EdgeInsets.symmetric(
               horizontal: AppSpacing.md,
@@ -1061,7 +1087,7 @@ class _MenuView extends StatelessWidget {
               ],
             ),
           ),
-          // 瀵规爣iOS: 鑿滃崟椤瑰垪琛?
+          // 对标iOS: 菜单项列表
           Expanded(
             child: ListView(
               padding: AppSpacing.horizontalMd,
@@ -1071,7 +1097,7 @@ class _MenuView extends StatelessWidget {
                   title: context.l10n.menuMy,
                   onTap: () {
                     Navigator.pop(context);
-                    context.go('/profile-tab');
+                    context.push('/profile');
                   },
                 ),
                 _MenuListItem(
@@ -1200,7 +1226,7 @@ class _MenuListItem extends StatelessWidget {
   }
 }
 
-/// 瀵规爣iOS: SearchView - 鎼滅储瑙嗗浘
+/// 对标iOS: SearchView - 搜索视图
 class _SearchView extends StatefulWidget {
   const _SearchView();
 
@@ -1213,7 +1239,7 @@ class _SearchViewState extends State<_SearchView> {
   final FocusNode _focusNode = FocusNode();
   String _searchQuery = '';
 
-  // 鐑棬鎼滅储鍏抽敭璇?
+  // 热门搜索关键词
   List<String> _getHotKeywords(BuildContext context) => [
     context.l10n.taskCategoryPickup,
     context.l10n.taskCategoryTutoring,
@@ -1251,7 +1277,7 @@ class _SearchViewState extends State<_SearchView> {
       ),
       child: Column(
         children: [
-          // 鎷栨嫿鎸囩ず鍣?
+          // 拖拽指示器
           Container(
             margin: const EdgeInsets.only(top: 12),
             width: 36,
@@ -1263,7 +1289,7 @@ class _SearchViewState extends State<_SearchView> {
           ),
           AppSpacing.vSm,
 
-          // 鎼滅储鏍?
+          // 搜索栏
           Padding(
             padding: const EdgeInsets.symmetric(
               horizontal: AppSpacing.md,
@@ -1310,7 +1336,7 @@ class _SearchViewState extends State<_SearchView> {
             ),
           ),
 
-          // 鎼滅储鍐呭
+          // 搜索内容
           Expanded(
             child: _searchQuery.isEmpty
                 ? _buildSearchHome(isDark)
@@ -1370,7 +1396,7 @@ class _SearchViewState extends State<_SearchView> {
           ),
           AppSpacing.vXl,
 
-          // 鎼滅储鍒嗙被
+          // 搜索分类
           Text(
             context.l10n.homeSearchCategory,
             style: AppTypography.title3.copyWith(
@@ -1512,4 +1538,3 @@ class _SearchCategoryItem extends StatelessWidget {
     );
   }
 }
-

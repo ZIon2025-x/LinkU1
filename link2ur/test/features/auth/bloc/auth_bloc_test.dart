@@ -1,4 +1,4 @@
-﻿import 'package:bloc_test/bloc_test.dart';
+import 'package:bloc_test/bloc_test.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 
@@ -37,7 +37,7 @@ void main() {
       expect(authBloc.state.resetPasswordStatus, equals(ResetPasswordStatus.initial));
     });
 
-    // ==================== 閭瀵嗙爜鐧诲綍 ====================
+    // ==================== 邮箱密码登录 ====================
 
     group('AuthLoginRequested', () {
       blocTest<AuthBloc, AuthState>(
@@ -74,7 +74,7 @@ void main() {
           when(() => mockAuthRepository.login(
                 email: any(named: 'email'),
                 password: any(named: 'password'),
-              )).thenThrow(const AuthException('invalid_credentials'));
+              )).thenThrow(const AuthException('邮箱或密码错误'));
           return authBloc;
         },
         act: (bloc) => bloc.add(const AuthLoginRequested(
@@ -85,7 +85,7 @@ void main() {
           const AuthState(status: AuthStatus.loading),
           const AuthState(
             status: AuthStatus.error,
-            errorMessage: 'invalid_credentials',
+            errorMessage: '邮箱或密码错误',
           ),
         ],
       );
@@ -107,13 +107,13 @@ void main() {
           const AuthState(status: AuthStatus.loading),
           const AuthState(
             status: AuthStatus.error,
-            errorMessage: 'auth_error_login_failed',
+            errorMessage: '登录失败，请重试',
           ),
         ],
       );
     });
 
-    // ==================== 閭楠岃瘉鐮佺櫥褰?====================
+    // ==================== 邮箱验证码登录 ====================
 
     group('AuthLoginWithCodeRequested', () {
       blocTest<AuthBloc, AuthState>(
@@ -144,7 +144,7 @@ void main() {
           when(() => mockAuthRepository.loginWithCode(
                 email: any(named: 'email'),
                 code: any(named: 'code'),
-              )).thenThrow(const AuthException('invalid_code'));
+              )).thenThrow(const AuthException('验证码无效'));
           return authBloc;
         },
         act: (bloc) => bloc.add(const AuthLoginWithCodeRequested(
@@ -155,13 +155,13 @@ void main() {
           const AuthState(status: AuthStatus.loading),
           const AuthState(
             status: AuthStatus.error,
-            errorMessage: 'invalid_code',
+            errorMessage: '验证码无效',
           ),
         ],
       );
     });
 
-    // ==================== 鎵嬫満楠岃瘉鐮佺櫥褰?====================
+    // ==================== 手机验证码登录 ====================
 
     group('AuthLoginWithPhoneRequested', () {
       blocTest<AuthBloc, AuthState>(
@@ -187,7 +187,7 @@ void main() {
       );
     });
 
-    // ==================== 娉ㄥ唽 ====================
+    // ==================== 注册 ====================
 
     group('AuthRegisterRequested', () {
       blocTest<AuthBloc, AuthState>(
@@ -224,7 +224,7 @@ void main() {
                 password: any(named: 'password'),
                 name: any(named: 'name'),
                 code: any(named: 'code'),
-              )).thenThrow(const AuthException('閭宸茶娉ㄥ唽'));
+              )).thenThrow(const AuthException('邮箱已被注册'));
           return authBloc;
         },
         act: (bloc) => bloc.add(const AuthRegisterRequested(
@@ -236,13 +236,13 @@ void main() {
           const AuthState(status: AuthStatus.loading),
           const AuthState(
             status: AuthStatus.error,
-            errorMessage: '閭宸茶娉ㄥ唽',
+            errorMessage: '邮箱已被注册',
           ),
         ],
       );
     });
 
-    // ==================== 鐧诲嚭 ====================
+    // ==================== 登出 ====================
 
     group('AuthLogoutRequested', () {
       blocTest<AuthBloc, AuthState>(
@@ -276,14 +276,14 @@ void main() {
           user: testUser,
         ),
         act: (bloc) => bloc.add(AuthLogoutRequested()),
-        // 鍗充娇 logout API 澶辫触锛屼篃搴旇娓呴櫎鏈湴鐘舵€?
+        // 即使 logout API 失败，也应该清除本地状态
         expect: () => [
           const AuthState(status: AuthStatus.unauthenticated),
         ],
       );
     });
 
-    // ==================== 妫€鏌ョ櫥褰曠姸鎬?====================
+    // ==================== 检查登录状态 ====================
 
     group('AuthCheckRequested', () {
       blocTest<AuthBloc, AuthState>(
@@ -332,7 +332,7 @@ void main() {
       );
     });
 
-    // ==================== 鍙戦€侀偖绠遍獙璇佺爜 ====================
+    // ==================== 发送邮箱验证码 ====================
 
     group('AuthSendEmailCodeRequested', () {
       blocTest<AuthBloc, AuthState>(
@@ -355,7 +355,7 @@ void main() {
         'updates codeSendStatus to error with AuthException message',
         build: () {
           when(() => mockAuthRepository.sendEmailCode(any()))
-              .thenThrow(const AuthException('too_many_requests'));
+              .thenThrow(const AuthException('发送频率过快'));
           return authBloc;
         },
         act: (bloc) => bloc.add(const AuthSendEmailCodeRequested(
@@ -365,7 +365,7 @@ void main() {
           const AuthState(codeSendStatus: CodeSendStatus.sending),
           const AuthState(
             codeSendStatus: CodeSendStatus.error,
-            errorMessage: 'too_many_requests',
+            errorMessage: '发送频率过快',
           ),
         ],
       );
@@ -384,13 +384,13 @@ void main() {
           const AuthState(codeSendStatus: CodeSendStatus.sending),
           const AuthState(
             codeSendStatus: CodeSendStatus.error,
-            errorMessage: 'auth_error_send_code_failed',
+            errorMessage: '发送验证码失败',
           ),
         ],
       );
     });
 
-    // ==================== 鐢ㄦ埛淇℃伅鏇存柊 ====================
+    // ==================== 用户信息更新 ====================
 
     group('AuthUserUpdated', () {
       blocTest<AuthBloc, AuthState>(
@@ -415,7 +415,7 @@ void main() {
       );
     });
 
-    // ==================== 閲嶇疆瀵嗙爜 ====================
+    // ==================== 重置密码 ====================
 
     group('AuthResetPasswordRequested', () {
       blocTest<AuthBloc, AuthState>(
@@ -437,7 +437,7 @@ void main() {
           const AuthState(resetPasswordStatus: ResetPasswordStatus.loading),
           const AuthState(
             resetPasswordStatus: ResetPasswordStatus.success,
-            resetPasswordMessage: 'auth_reset_password_success',
+            resetPasswordMessage: '密码重置成功，请使用新密码登录',
           ),
         ],
       );
@@ -449,7 +449,7 @@ void main() {
                 email: any(named: 'email'),
                 code: any(named: 'code'),
                 newPassword: any(named: 'newPassword'),
-              )).thenThrow(const AuthException('invalid_code'));
+              )).thenThrow(const AuthException('验证码错误'));
           return authBloc;
         },
         act: (bloc) => bloc.add(const AuthResetPasswordRequested(
@@ -461,13 +461,13 @@ void main() {
           const AuthState(resetPasswordStatus: ResetPasswordStatus.loading),
           const AuthState(
             resetPasswordStatus: ResetPasswordStatus.error,
-            resetPasswordMessage: 'invalid_code',
+            resetPasswordMessage: '验证码错误',
           ),
         ],
       );
     });
 
-    // ==================== 鐘舵€佽緟鍔╂柟娉?====================
+    // ==================== 状态辅助方法 ====================
 
     group('AuthState helpers', () {
       test('isAuthenticated returns true when authenticated with user', () {
@@ -508,4 +508,3 @@ void main() {
     });
   });
 }
-
