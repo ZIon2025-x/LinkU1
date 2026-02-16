@@ -254,15 +254,17 @@ class LLMClient:
         small_base_url = Config.AI_MODEL_SMALL_BASE_URL
         if not small_key:
             logger.warning("No API key for small model — AI features disabled")
-        self._small = _create_provider(small_provider, small_key, small_base_url, timeout=30.0)
-        logger.info(f"AI small model: {Config.AI_MODEL_SMALL} via {small_provider}")
+        small_timeout = Config.AI_LLM_SMALL_TIMEOUT
+        self._small = _create_provider(small_provider, small_key, small_base_url, timeout=small_timeout)
+        logger.info(f"AI small model: {Config.AI_MODEL_SMALL} via {small_provider} (timeout={small_timeout}s)")
 
         # 大模型
         large_key = Config.AI_MODEL_LARGE_API_KEY or default_key
         large_provider = Config.AI_MODEL_LARGE_PROVIDER
         large_base_url = Config.AI_MODEL_LARGE_BASE_URL
-        self._large = _create_provider(large_provider, large_key, large_base_url, timeout=60.0)
-        logger.info(f"AI large model: {Config.AI_MODEL_LARGE} via {large_provider}")
+        large_timeout = Config.AI_LLM_LARGE_TIMEOUT
+        self._large = _create_provider(large_provider, large_key, large_base_url, timeout=large_timeout)
+        logger.info(f"AI large model: {Config.AI_MODEL_LARGE} via {large_provider} (timeout={large_timeout}s)")
 
     async def chat(
         self,

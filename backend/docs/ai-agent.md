@@ -61,6 +61,8 @@ Link2Ur 平台 AI 客服助手 — 用户通过自然语言查询任务、了解
 | `AI_DAILY_REQUEST_LIMIT` | `100` | 每用户每天请求数 |
 | `AI_DAILY_TOKEN_BUDGET` | `50000` | 每用户每天 token 上限 |
 | `AI_FAQ_CACHE_TTL` | `3600` | FAQ 缓存秒数 |
+| `AI_LLM_SMALL_TIMEOUT` | `60` | 小模型 HTTP 请求超时（秒）。GLM/智谱等首 token 可能较慢，建议 ≥60 以免 ReadTimeout |
+| `AI_LLM_LARGE_TIMEOUT` | `90` | 大模型 HTTP 请求超时（秒） |
 
 ## 换模型示例
 
@@ -182,6 +184,8 @@ ANTHROPIC_API_KEY=sk-ant-api03-xxxxx
 
 ### SSE 事件格式
 
+客户端（Flutter）按标准 [Server-Sent Events](https://html.spec.whatwg.org/multipage/server-sent-events.html) 解析：每块事件由 `event:` 行 + `data:` 行组成，双换行结束。
+
 ```
 event: token
 data: {"content": "你好，你的任务状态如下："}
@@ -195,6 +199,31 @@ data: {"tool": "query_my_tasks", "result": {"tasks": [...], "total": 3}}
 event: done
 data: {"input_tokens": 200, "output_tokens": 150}
 ```
+
+### SSE 实现说明：为何必须用 ServerSentEvent
+
+**问题（已修复）**：早期实现中，后端直接 yield 手写字符串，例如：
+
+```python
+yield f"event: token\ndata: {json.dumps({'content': text})}\n\n"
+```
+
+`sse_starlette` 对**普通字符串**会把每一行再冠以 `data: ` 再发出，导致实际下行格式变成：
+
+```
+data: event: token
+data: data: {"content": "..."}
+```
+
+客户端按标准解析时：没有以 `event: ` 开头的行（只有 `data: event: token`），且 `data` 行内容是 ` data: {...}` 不是合法 JSON，解析失败。结果是 Flutter 端收不到任何 token/done 事件，界面一直显示「AI 正在回复」但看不到回复内容。
+
+**修复**：在 `app/services/ai_agent.py` 中改为使用 `sse_starlette.sse.ServerSentEvent` 发出事件，由库生成标准 `event:` / `data:` 行，不再手拼字符串：
+
+- `_make_text_sse(text)` → `ServerSentEvent(data=json.dumps({"content": text}), event="token")`
+- `_make_done_sse(...)` → `ServerSentEvent(data=json.dumps({...}), event="done")`
+- `tool_call` / `tool_result` 同理，均 yield `ServerSentEvent(..., event="tool_call")` 等
+
+这样发出的 SSE 与上面「SSE 事件格式」一致，Flutter 端无需改动即可正确解析并显示流式内容。
 
 ## 部署步骤
 

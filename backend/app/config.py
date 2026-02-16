@@ -300,6 +300,9 @@ class Config:
     AI_MODEL_LARGE_BASE_URL = os.getenv("AI_MODEL_LARGE_BASE_URL", "")  # OpenAI 兼容 API base URL
     # ---- 通用 ----
     ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY", "")  # 默认 API Key（Anthropic）
+    # LLM 请求超时（秒）。GLM/智谱等首 token 可能较慢，建议小模型≥60
+    AI_LLM_SMALL_TIMEOUT = float(os.getenv("AI_LLM_SMALL_TIMEOUT", "60"))
+    AI_LLM_LARGE_TIMEOUT = float(os.getenv("AI_LLM_LARGE_TIMEOUT", "90"))
     # Token 限制
     AI_MAX_OUTPUT_TOKENS = int(os.getenv("AI_MAX_OUTPUT_TOKENS", "1024"))  # 单次回复上限
     AI_MAX_HISTORY_TURNS = int(os.getenv("AI_MAX_HISTORY_TURNS", "10"))   # 保留最近 N 轮
