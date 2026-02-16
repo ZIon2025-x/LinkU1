@@ -380,7 +380,6 @@ class _ActivityDetailViewContent extends StatelessWidget {
           isLoading: state.isSubmitting,
           onTap: () async {
             AppHaptics.selection();
-<<<<<<< Current (Your changes)
             final taskId = activity.userTaskId!;
             try {
               final resp = await context
@@ -429,9 +428,6 @@ class _ActivityDetailViewContent extends StatelessWidget {
                 );
               }
             }
-=======
-            // TODO(活动): 跳转活动支付页，与任务支付流程对齐（clientSecret、ApprovalPaymentPage 等）
->>>>>>> Incoming (Background Agent changes)
           },
         );
       }

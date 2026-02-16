@@ -107,7 +107,7 @@ void main() {
           const AuthState(status: AuthStatus.loading),
           const AuthState(
             status: AuthStatus.error,
-            errorMessage: '登录失败，请重试',
+            errorMessage: 'auth_error_login_failed',
           ),
         ],
       );
@@ -384,7 +384,7 @@ void main() {
           const AuthState(codeSendStatus: CodeSendStatus.sending),
           const AuthState(
             codeSendStatus: CodeSendStatus.error,
-            errorMessage: '发送验证码失败',
+            errorMessage: 'auth_error_send_code_failed',
           ),
         ],
       );
@@ -437,7 +437,7 @@ void main() {
           const AuthState(resetPasswordStatus: ResetPasswordStatus.loading),
           const AuthState(
             resetPasswordStatus: ResetPasswordStatus.success,
-            resetPasswordMessage: '密码重置成功，请使用新密码登录',
+            resetPasswordMessage: 'auth_reset_password_success',
           ),
         ],
       );

@@ -496,7 +496,6 @@ class _GroupBubbleItemState extends State<_GroupBubbleItem>
   void _handleTranslate() {
     AppHaptics.light();
     _dismiss();
-<<<<<<< Current (Your changes)
 
     // If already translated, toggle display
     if (_translatedText != null) {
@@ -535,9 +534,6 @@ class _GroupBubbleItemState extends State<_GroupBubbleItem>
         ),
       );
     });
-=======
-    // TODO(聊天): 接入翻译 API（如 TranslationService），缓存结果后更新气泡文案
->>>>>>> Incoming (Background Agent changes)
   }
 
   @override

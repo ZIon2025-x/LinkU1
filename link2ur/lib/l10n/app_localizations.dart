@@ -3384,7 +3384,7 @@ abstract class AppLocalizations {
   /// No description provided for @timeWan.
   ///
   /// In en, this message translates to:
-  /// **'万'**
+  /// **'k'**
   String get timeWan;
 
   /// No description provided for @timeWanPlus.

@@ -329,13 +329,7 @@ class _RecommendedTab extends StatelessWidget {
                             ],
                           ),
                           child: InkWell(
-<<<<<<< Current (Your changes)
                             onTap: () => _showFilterSheet(context, state),
-=======
-                            onTap: () {
-                              // TODO(首页): 打开推荐区筛选：任务类型、排序方式（可弹 BottomSheet 或跳转筛选页）
-                            },
->>>>>>> Incoming (Background Agent changes)
                             borderRadius: BorderRadius.circular(999),
                             child: Padding(
                               padding: const EdgeInsets.symmetric(

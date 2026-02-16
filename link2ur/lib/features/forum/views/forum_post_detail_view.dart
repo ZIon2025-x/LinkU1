@@ -50,11 +50,7 @@ class _ForumPostDetailViewState extends State<ForumPostDetailView> {
       _replyToName = authorName;
     });
     _replyController.clear();
-<<<<<<< Current (Your changes)
     _replyFocusNode.requestFocus();
-=======
-    // TODO(论坛): 回复时自动 focus 评论输入框（如 FocusScope.of(context).requestFocus(_commentFocusNode)）
->>>>>>> Incoming (Background Agent changes)
   }
 
   void _clearReplyTo() {

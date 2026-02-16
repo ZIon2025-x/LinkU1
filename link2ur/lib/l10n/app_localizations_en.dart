@@ -1837,7 +1837,7 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get timeWan => '万';
+  String get timeWan => 'k';
 
   @override
   String get timeWanPlus => '+';

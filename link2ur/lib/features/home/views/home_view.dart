@@ -9,7 +9,6 @@ import 'package:go_router/go_router.dart';
 import '../../../data/models/discovery_feed.dart';
 
 import '../../../core/constants/app_assets.dart';
-import '../../../core/constants/uk_cities.dart';
 import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_typography.dart';
