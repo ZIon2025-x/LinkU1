@@ -31,7 +31,7 @@ class TaskExpertDetailView extends StatelessWidget {
     required this.expertId,
   });
 
-  final int expertId;
+  final String expertId;
 
   @override
   Widget build(BuildContext context) {
@@ -41,7 +41,7 @@ class TaskExpertDetailView extends StatelessWidget {
         activityRepository: context.read<ActivityRepository>(),
       )
         ..add(TaskExpertLoadDetail(expertId))
-        ..add(TaskExpertLoadExpertReviews(expertId.toString())),
+        ..add(TaskExpertLoadExpertReviews(expertId)),
       child: Scaffold(
         extendBodyBehindAppBar: true,
         appBar: AppBar(

@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:uuid/uuid.dart';
 
 import '../models/activity.dart';
 import '../services/api_service.dart';
@@ -123,9 +124,11 @@ class ActivityRepository {
     String? preferredDeadline,
     bool isFlexibleTime = false,
   }) async {
+    final idempotencyKey = const Uuid().v4();
     final response = await _apiService.post<Map<String, dynamic>>(
       ApiEndpoints.applyActivity(activityId),
       data: {
+        'idempotency_key': idempotencyKey,
         if (timeSlotId != null) 'time_slot_id': timeSlotId,
         if (preferredDeadline != null)
           'preferred_deadline': preferredDeadline,

@@ -1299,9 +1299,7 @@ class _DiscoveryUserRow extends StatelessWidget {
         ),
       ],
     );
-    final canGoExpert = expertId != null &&
-        expertId!.isNotEmpty &&
-        int.tryParse(expertId!) != null;
+    final canGoExpert = expertId != null && expertId!.isNotEmpty;
     final canGoUser =
         userId != null && userId!.isNotEmpty;
     if (canGoExpert || canGoUser) {

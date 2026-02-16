@@ -469,33 +469,22 @@ def use_coupon(
         if existing_log:
             return existing_log, None
     
-    # 获取用户优惠券
+    # 获取用户优惠券（SELECT FOR UPDATE 锁定行，防止并发使用同一张优惠券）
     user_coupon = db.query(models.UserCoupon).filter(
         models.UserCoupon.id == user_coupon_id,
         models.UserCoupon.user_id == user_id
-    ).first()
-    
+    ).with_for_update().first()
+
     if not user_coupon:
         return None, "用户优惠券不存在"
-    
+
     if user_coupon.status != "unused":
         return None, "优惠券已使用或已过期"
-    
+
     # 验证优惠券
     is_valid, error_msg, discount_amount = validate_coupon_usage(
         db, user_id, user_coupon.coupon_id, order_amount, task_location, task_type, task_date
     )
-    
-    if not is_valid:
-        return None, error_msg
-    
-    # 使用 SELECT FOR UPDATE 锁定行
-    user_coupon = db.query(models.UserCoupon).filter(
-        models.UserCoupon.id == user_coupon_id
-    ).with_for_update().first()
-    
-    if user_coupon.status != "unused":
-        return None, "优惠券已被使用"
     
     # 更新用户优惠券状态
     user_coupon.status = "used"

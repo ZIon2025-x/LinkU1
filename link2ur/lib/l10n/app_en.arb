@@ -759,6 +759,13 @@
   "couponStatusUnused": "Unused",
   "couponStatusUsed": "Used",
   "couponStatusExpired": "Expired",
+  "couponTypeFixedAmount": "Fixed Discount",
+  "couponTypePercentage": "Percentage Off",
+  "pointsTypeEarn": "Points Earned",
+  "pointsTypeSpend": "Points Spent",
+  "pointsTypeRefund": "Points Refunded",
+  "pointsTypeExpire": "Points Expired",
+  "pointsTypeCouponRedeem": "Coupon Redeemed",
   "timeJustNow": "Just now",
   "timeMinutesAgo": "{param1} minutes ago",
   "@timeMinutesAgo": {

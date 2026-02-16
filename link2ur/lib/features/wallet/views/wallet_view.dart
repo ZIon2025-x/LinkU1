@@ -553,7 +553,7 @@ class _TransactionItem extends StatelessWidget {
           size: 20,
         ),
       ),
-      title: Text(transaction.typeText),
+      title: Text(_localizePointsType(context, transaction.type)),
       subtitle: Text(
         transaction.description ?? transaction.source ?? '',
         maxLines: 1,
@@ -643,7 +643,7 @@ class _CouponItem extends StatelessWidget {
         child: const Icon(Icons.card_giftcard, color: AppColors.primary),
       ),
       title: Text(coupon.name),
-      subtitle: Text('${coupon.typeText} · ${coupon.discountValueDisplay}'),
+      subtitle: Text('${_localizeCouponType(context, coupon.type)} · ${coupon.discountValueDisplay}'),
       trailing: Container(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
         decoration: BoxDecoration(
@@ -652,7 +652,7 @@ class _CouponItem extends StatelessWidget {
           borderRadius: AppRadius.allTiny,
         ),
         child: Text(
-          userCoupon.statusText,
+          _localizeCouponStatus(context, userCoupon.status),
           style: TextStyle(
             fontSize: 12,
             color: userCoupon.isUsable ? AppColors.success : AppColors.error,
@@ -660,5 +660,49 @@ class _CouponItem extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+String _localizePointsType(BuildContext context, String type) {
+  final l10n = context.l10n;
+  switch (type) {
+    case 'earn':
+      return l10n.pointsTypeEarn;
+    case 'spend':
+      return l10n.pointsTypeSpend;
+    case 'refund':
+      return l10n.pointsTypeRefund;
+    case 'expire':
+      return l10n.pointsTypeExpire;
+    case 'coupon_redeem':
+      return l10n.pointsTypeCouponRedeem;
+    default:
+      return type;
+  }
+}
+
+String _localizeCouponType(BuildContext context, String type) {
+  final l10n = context.l10n;
+  switch (type) {
+    case 'fixed_amount':
+      return l10n.couponTypeFixedAmount;
+    case 'percentage':
+      return l10n.couponTypePercentage;
+    default:
+      return type;
+  }
+}
+
+String _localizeCouponStatus(BuildContext context, String status) {
+  final l10n = context.l10n;
+  switch (status) {
+    case 'unused':
+      return l10n.couponStatusUnused;
+    case 'used':
+      return l10n.couponStatusUsed;
+    case 'expired':
+      return l10n.couponStatusExpired;
+    default:
+      return status;
   }
 }

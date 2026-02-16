@@ -502,9 +502,8 @@ class _ExpertCard extends StatelessWidget {
     return GestureDetector(
       onTap: () {
         AppHaptics.selection();
-        final expertId = int.tryParse(expert.id) ?? 0;
-        if (expertId > 0) {
-          context.safePush('/task-experts/$expertId');
+        if (expert.id.isNotEmpty) {
+          context.safePush('/task-experts/${expert.id}');
         }
       },
       child: Container(

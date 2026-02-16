@@ -3255,6 +3255,48 @@ abstract class AppLocalizations {
   /// **'Expired'**
   String get couponStatusExpired;
 
+  /// No description provided for @couponTypeFixedAmount.
+  ///
+  /// In en, this message translates to:
+  /// **'Fixed Discount'**
+  String get couponTypeFixedAmount;
+
+  /// No description provided for @couponTypePercentage.
+  ///
+  /// In en, this message translates to:
+  /// **'Percentage Off'**
+  String get couponTypePercentage;
+
+  /// No description provided for @pointsTypeEarn.
+  ///
+  /// In en, this message translates to:
+  /// **'Points Earned'**
+  String get pointsTypeEarn;
+
+  /// No description provided for @pointsTypeSpend.
+  ///
+  /// In en, this message translates to:
+  /// **'Points Spent'**
+  String get pointsTypeSpend;
+
+  /// No description provided for @pointsTypeRefund.
+  ///
+  /// In en, this message translates to:
+  /// **'Points Refunded'**
+  String get pointsTypeRefund;
+
+  /// No description provided for @pointsTypeExpire.
+  ///
+  /// In en, this message translates to:
+  /// **'Points Expired'**
+  String get pointsTypeExpire;
+
+  /// No description provided for @pointsTypeCouponRedeem.
+  ///
+  /// In en, this message translates to:
+  /// **'Coupon Redeemed'**
+  String get pointsTypeCouponRedeem;
+
   /// No description provided for @timeJustNow.
   ///
   /// In en, this message translates to:

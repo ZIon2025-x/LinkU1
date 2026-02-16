@@ -175,7 +175,7 @@ class _ApprovalPaymentPageState extends State<ApprovalPaymentPage> {
 
   void _loadCouponsIfTaskPayment() {
     setState(() => _loadingCoupons = true);
-    context.read<CouponPointsRepository>().getMyCoupons(status: 'active').then((list) {
+    context.read<CouponPointsRepository>().getMyCoupons(status: 'unused').then((list) {
       if (mounted) {
         setState(() {
           _availableCoupons = list;

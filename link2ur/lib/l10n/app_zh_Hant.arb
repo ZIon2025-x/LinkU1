@@ -546,6 +546,13 @@
   "couponStatusUnused": "未使用",
   "couponStatusUsed": "已使用",
   "couponStatusExpired": "已過期",
+  "couponTypeFixedAmount": "滿減券",
+  "couponTypePercentage": "折扣券",
+  "pointsTypeEarn": "獲得積分",
+  "pointsTypeSpend": "使用積分",
+  "pointsTypeRefund": "退回積分",
+  "pointsTypeExpire": "積分過期",
+  "pointsTypeCouponRedeem": "優惠券兌換",
   "timeJustNow": "剛剛",
   "timeMinutesAgo": "{param1}分鐘前",
   "@timeMinutesAgo": {

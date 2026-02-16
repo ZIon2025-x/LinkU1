@@ -36,7 +36,7 @@ class TaskExpertRefreshRequested extends TaskExpertEvent {
 class TaskExpertLoadDetail extends TaskExpertEvent {
   const TaskExpertLoadDetail(this.expertId);
 
-  final int expertId;
+  final String expertId;
 
   @override
   List<Object?> get props => [expertId];
@@ -457,16 +457,16 @@ class TaskExpertBloc extends Bloc<TaskExpertEvent, TaskExpertState> {
 
     try {
       final expert =
-          await _taskExpertRepository.getExpertById(event.expertId.toString());
+          await _taskExpertRepository.getExpertById(event.expertId);
       final services =
-          await _taskExpertRepository.getExpertServices(event.expertId.toString());
+          await _taskExpertRepository.getExpertServices(event.expertId);
 
       List<Activity> activities = const [];
       final activityRepo = _activityRepository;
       if (activityRepo != null) {
         try {
           final res = await activityRepo.getActivities(
-            expertId: event.expertId.toString(),
+            expertId: event.expertId,
             status: 'open',
             pageSize: 20,
           );

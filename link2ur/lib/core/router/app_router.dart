@@ -457,7 +457,7 @@ class AppRouter {
         path: AppRoutes.taskExpertDetail,
         name: 'taskExpertDetail',
         pageBuilder: (context, state) {
-          final id = int.tryParse(state.pathParameters['id'] ?? '') ?? 0;
+          final id = state.pathParameters['id'] ?? '';
           return SpringSlideTransitionPage(
             key: state.pageKey,
             child: TaskExpertDetailView(expertId: id),
@@ -850,8 +850,9 @@ extension GoRouterExtension on BuildContext {
   }
 
   /// 跳转到达人详情
-  void goToTaskExpertDetail(int expertId) {
+  void goToTaskExpertDetail(String expertId) {
     if (!_NavigationThrottle.acquire()) return;
+    if (expertId.isEmpty) return;
     push('/task-experts/$expertId');
   }
 

@@ -1742,6 +1742,27 @@ class AppLocalizationsEn extends AppLocalizations {
   String get couponStatusExpired => 'Expired';
 
   @override
+  String get couponTypeFixedAmount => 'Fixed Discount';
+
+  @override
+  String get couponTypePercentage => 'Percentage Off';
+
+  @override
+  String get pointsTypeEarn => 'Points Earned';
+
+  @override
+  String get pointsTypeSpend => 'Points Spent';
+
+  @override
+  String get pointsTypeRefund => 'Points Refunded';
+
+  @override
+  String get pointsTypeExpire => 'Points Expired';
+
+  @override
+  String get pointsTypeCouponRedeem => 'Coupon Redeemed';
+
+  @override
   String get timeJustNow => 'Just now';
 
   @override

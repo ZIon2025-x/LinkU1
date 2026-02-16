@@ -33,6 +33,47 @@ from app.models import TaskExpertService, TaskExpert
 router = APIRouter(prefix="/api", tags=["multi-participant-tasks"])
 
 
+def _get_actual_participants_for_time_slot(db: Session, time_slot_id: int) -> int:
+    """
+    动态计算时间段的实际参与者数量（与 get_service_time_slots 逻辑一致）。
+    用于申请时的"是否已满"校验，避免依赖可能漂移的数据库字段。
+    """
+    relations = db.query(TaskTimeSlotRelation).filter(
+        TaskTimeSlotRelation.time_slot_id == time_slot_id,
+        TaskTimeSlotRelation.relation_mode == "fixed",
+    ).all()
+    if not relations:
+        return 0
+
+    task_ids = [r.task_id for r in relations]
+    tasks = db.query(Task).filter(
+        Task.id.in_(task_ids),
+        Task.status != "cancelled",
+    ).all()
+    if not tasks:
+        return 0
+
+    multi_task_ids = [t.id for t in tasks if t.is_multi_participant]
+    participants_count_by_task: dict[int, int] = {}
+    if multi_task_ids:
+        rows = db.query(
+            TaskParticipant.task_id,
+            func.count(TaskParticipant.id).label("cnt"),
+        ).filter(
+            TaskParticipant.task_id.in_(multi_task_ids),
+            TaskParticipant.status.in_(["accepted", "in_progress", "completed"]),
+        ).group_by(TaskParticipant.task_id).all()
+        participants_count_by_task = {r.task_id: r.cnt for r in rows}
+
+    actual = 0
+    for task in tasks:
+        if task.is_multi_participant:
+            actual += participants_count_by_task.get(task.id, 0)
+        elif task.status in ("open", "taken", "in_progress"):
+            actual += 1
+    return actual
+
+
 # ===========================================
 # 管理员API：创建官方多人任务
 # ===========================================
@@ -351,8 +392,9 @@ def apply_to_activity(
             if not time_slot:
                 raise HTTPException(status_code=404, detail="时间段不存在或已被删除")
             
-            # 检查时间段是否已满
-            if time_slot.current_participants >= time_slot.max_participants:
+            # 检查时间段是否已满（使用动态计算，避免数据库漂移导致超卖或误拒）
+            actual_participants = _get_actual_participants_for_time_slot(db, request.time_slot_id)
+            if actual_participants >= time_slot.max_participants:
                 raise HTTPException(status_code=400, detail="该时间段已满")
             
             # 检查时间段是否已过期
@@ -405,9 +447,7 @@ def apply_to_activity(
         )
         db.add(participant)
         
-        # 更新任务的参与者数量
-        if db_activity.has_time_slots:
-            existing_task.current_participants += 1
+        # 注意：Task.current_participants 由触发器 trg_update_task_participants_count 自动维护，无需手动更新
         
         db.commit()
         db.refresh(participant)
@@ -660,9 +700,10 @@ def apply_to_activity(
             logger.warning(f"活动 {activity_id} 申请失败: 时间段 {request.time_slot_id} 已被其他活动 {other_relation.activity_id} 使用")
             raise HTTPException(status_code=400, detail="该时间段已被其他活动使用")
         
-        # 检查时间段是否已满（在锁定的情况下检查，防止并发超卖）
-        if time_slot.current_participants >= time_slot.max_participants:
-            logger.warning(f"活动 {activity_id} 申请失败: 时间段 {request.time_slot_id} 已满 (当前: {time_slot.current_participants}, 最大: {time_slot.max_participants})")
+        # 检查时间段是否已满（使用动态计算，避免数据库漂移导致超卖或误拒；行锁防止并发超卖）
+        actual_participants = _get_actual_participants_for_time_slot(db, request.time_slot_id)
+        if actual_participants >= time_slot.max_participants:
+            logger.warning(f"活动 {activity_id} 申请失败: 时间段 {request.time_slot_id} 已满 (实际: {actual_participants}, 最大: {time_slot.max_participants})")
             raise HTTPException(status_code=400, detail="该时间段已满")
         
         # 检查时间段是否已过期
@@ -817,7 +858,8 @@ def apply_to_multi_participant_task(
     
     if db_task.auto_accept:
         participant.accepted_at = get_utc_time()
-        db_task.current_participants += 1
+    
+    # 注意：Task.current_participants 由触发器 trg_update_task_participants_count 自动维护，无需手动更新
     
     db.add(participant)
     db.commit()
@@ -1593,6 +1635,8 @@ def create_expert_activity(
     """
     任务达人创建活动（新API，使用Activity表）
     """
+    import logging
+    logger = logging.getLogger(__name__)
     # 验证用户是否为任务达人
     expert = db.query(TaskExpert).filter(TaskExpert.id == current_user.id).first()
     if not expert or expert.status != "active":
@@ -2342,11 +2386,7 @@ def admin_approve_exit(
     participant.status = "exited"
     participant.exited_at = get_utc_time()
     
-    # 更新任务的参与者数量（如果是多人任务且参与者之前是accepted或in_progress状态）
-    if db_task.is_multi_participant and participant.previous_status in ("accepted", "in_progress"):
-        if db_task.current_participants > 0:
-            db_task.current_participants -= 1
-        db.add(db_task)
+    # 注意：Task.current_participants 由触发器 trg_update_task_participants_count 自动维护
     
     db.commit()
     
@@ -2400,11 +2440,7 @@ def expert_approve_exit(
     participant.status = "exited"
     participant.exited_at = get_utc_time()
     
-    # 更新任务的参与者数量（如果是多人任务且参与者之前是accepted或in_progress状态）
-    if db_task.is_multi_participant and participant.previous_status in ("accepted", "in_progress"):
-        if db_task.current_participants > 0:
-            db_task.current_participants -= 1
-        db.add(db_task)
+    # 注意：Task.current_participants 由触发器 trg_update_task_participants_count 自动维护
     
     # 更新时间段的参与者数量（如果参与者有关联的时间段）
     time_slot_id_to_update = None

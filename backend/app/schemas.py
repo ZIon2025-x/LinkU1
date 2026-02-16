@@ -479,22 +479,17 @@ class TaskOut(TaskBase):
     
     @staticmethod
     def _calculate_current_participants(obj):
-        """计算当前参与者数量（只统计有效状态的参与者）"""
+        """计算当前参与者数量（占坑数，与触发器 trg_update_task_participants_count 口径一致）"""
         # 如果不是多人任务，返回数据库字段值
         if not getattr(obj, 'is_multi_participant', False):
             return getattr(obj, 'current_participants', 0) or 0
         
-        # 如果是多人任务，动态计算：只统计状态为accepted, in_progress, completed的参与者
-        # 检查是否有participants关系（可能未加载）
+        # 如果是多人任务，动态计算：与触发器一致，统计 pending, accepted, in_progress, exit_requested
         if hasattr(obj, 'participants') and obj.participants is not None:
-            # 如果participants已加载，直接计算
-            valid_statuses = ["accepted", "in_progress", "completed"]
-            count = sum(1 for p in obj.participants if p.status in valid_statuses)
-            return count
-        else:
-            # 如果participants未加载，使用数据库字段（可能不准确，但避免额外查询）
-            # 注意：这种情况下可能不准确，但为了性能考虑，暂时使用数据库字段
-            return getattr(obj, 'current_participants', 0) or 0
+            occupying_statuses = ("pending", "accepted", "in_progress", "exit_requested")
+            return sum(1 for p in obj.participants if p.status in occupying_statuses)
+        # participants 未加载时使用数据库字段（由触发器维护，口径一致）
+        return getattr(obj, 'current_participants', 0) or 0
     
     @classmethod
     def from_orm(cls, obj):
@@ -627,8 +622,7 @@ class TaskOut(TaskBase):
             "expert_creator_id": getattr(obj, 'expert_creator_id', None),
             "max_participants": getattr(obj, 'max_participants', None),
             "min_participants": getattr(obj, 'min_participants', None),
-            # 动态计算current_participants：如果是多人任务，只统计有效状态的参与者
-            # 有效状态：accepted, in_progress, completed（排除pending, exit_requested, exited, rejected等）
+            # 动态计算 current_participants：与触发器一致，统计占坑数（pending, accepted, in_progress, exit_requested）
             "current_participants": cls._calculate_current_participants(obj),
             "task_source": getattr(obj, 'task_source', None) or 'normal',  # 任务来源：normal、expert_service、expert_activity、flea_market（如果为None则默认为normal）
             "time_slot_start_time": obj.time_slot_start_time.isoformat() if hasattr(obj, 'time_slot_start_time') and isinstance(obj.time_slot_start_time, time) else (str(obj.time_slot_start_time) if hasattr(obj, 'time_slot_start_time') and obj.time_slot_start_time else None),

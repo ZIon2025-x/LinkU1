@@ -1657,6 +1657,27 @@ class AppLocalizationsZh extends AppLocalizations {
   String get couponStatusExpired => '已过期';
 
   @override
+  String get couponTypeFixedAmount => '满减券';
+
+  @override
+  String get couponTypePercentage => '折扣券';
+
+  @override
+  String get pointsTypeEarn => '获得积分';
+
+  @override
+  String get pointsTypeSpend => '使用积分';
+
+  @override
+  String get pointsTypeRefund => '退回积分';
+
+  @override
+  String get pointsTypeExpire => '积分过期';
+
+  @override
+  String get pointsTypeCouponRedeem => '优惠券兑换';
+
+  @override
   String get timeJustNow => '刚刚';
 
   @override
@@ -9507,6 +9528,27 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get couponStatusExpired => '已過期';
+
+  @override
+  String get couponTypeFixedAmount => '滿減券';
+
+  @override
+  String get couponTypePercentage => '折扣券';
+
+  @override
+  String get pointsTypeEarn => '獲得積分';
+
+  @override
+  String get pointsTypeSpend => '使用積分';
+
+  @override
+  String get pointsTypeRefund => '退回積分';
+
+  @override
+  String get pointsTypeExpire => '積分過期';
+
+  @override
+  String get pointsTypeCouponRedeem => '優惠券兌換';
 
   @override
   String get timeJustNow => '剛剛';

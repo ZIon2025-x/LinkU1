@@ -365,7 +365,7 @@ class _TransactionRow extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  transaction.description ?? transaction.typeText,
+                  transaction.description ?? _localizePointsType(context, transaction.type),
                   style: AppTypography.bodyBold.copyWith(
                     color: isDark
                         ? AppColors.textPrimaryDark
@@ -556,7 +556,7 @@ class _AvailableCouponCard extends StatelessWidget {
                   ),
                 ),
                 Text(
-                  coupon.typeText,
+                  _localizeCouponType(context, coupon.type),
                   style: AppTypography.caption2.copyWith(
                     color: AppColors.primary,
                   ),
@@ -654,7 +654,7 @@ class _MyCouponCard extends StatelessWidget {
                     ),
                   ),
                   Text(
-                    coupon.statusText,
+                    _localizeCouponStatus(context, coupon.status),
                     style: AppTypography.caption.copyWith(
                       color: isUsable ? AppColors.success : Colors.grey,
                     ),
@@ -874,3 +874,33 @@ class _CheckInTab extends StatelessWidget {
 }
 
 // _RewardRow 已移除 —— 签到奖励区域改为占位文案
+
+String _localizePointsType(BuildContext context, String type) {
+  final l10n = context.l10n;
+  switch (type) {
+    case 'earn':
+      return l10n.pointsTypeEarn;
+    case 'spend':
+      return l10n.pointsTypeSpend;
+    case 'refund':
+      return l10n.pointsTypeRefund;
+    case 'expire':
+      return l10n.pointsTypeExpire;
+    case 'coupon_redeem':
+      return l10n.pointsTypeCouponRedeem;
+    default:
+      return type;
+  }
+}
+
+String _localizeCouponType(BuildContext context, String type) {
+  final l10n = context.l10n;
+  switch (type) {
+    case 'fixed_amount':
+      return l10n.couponTypeFixedAmount;
+    case 'percentage':
+      return l10n.couponTypePercentage;
+    default:
+      return type;
+  }
+}
