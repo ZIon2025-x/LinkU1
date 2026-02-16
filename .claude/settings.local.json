@@ -17,7 +17,8 @@
       "Bash(del \"F:\\\\python_work\\\\LinkU\\\\link2ur\\\\assets\\\\images\\\\student_verification_banner.png\")",
       "Bash(export PATH=\"/f/flutter/bin:$PATH\")",
       "Bash(export PUB_CACHE=\"/f/DevCache/.pub-cache\")",
-      "Bash(flutter test:*)"
+      "Bash(flutter test:*)",
+      "Bash(flutter gen-l10n:*)"
     ]
   }
 }

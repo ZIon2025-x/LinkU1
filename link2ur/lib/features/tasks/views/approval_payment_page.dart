@@ -14,6 +14,7 @@ import '../../../core/utils/logger.dart';
 import '../../../core/widgets/buttons.dart';
 import '../../../data/models/coupon_points.dart';
 import '../../../data/repositories/coupon_points_repository.dart';
+import '../../../data/models/payment.dart' show TaskPaymentResponse;
 import '../../../data/repositories/payment_repository.dart';
 import '../../../data/services/payment_service.dart';
 import '../../../core/constants/app_assets.dart';
@@ -53,6 +54,8 @@ class _ApprovalPaymentPageState extends State<ApprovalPaymentPage> {
   String? _effectiveCustomerId;
   String? _effectiveEphemeralKeySecret;
   String? _effectiveAmountDisplay;
+  // createTaskPayment 返回的完整响应（用于 Apple Pay amount 等）
+  TaskPaymentResponse? _paymentResponse;
   // 支付宝单独 PaymentIntent（选择支付宝时懒加载）
   String? _alipayClientSecret;
   String? _alipayCustomerId;
@@ -205,6 +208,7 @@ class _ApprovalPaymentPageState extends State<ApprovalPaymentPage> {
       );
       if (!mounted) return;
       setState(() {
+        _paymentResponse = response;
         _effectiveClientSecret = response.clientSecret;
         _effectiveCustomerId = response.customerId;
         _effectiveEphemeralKeySecret = response.ephemeralKeySecret;
@@ -279,18 +283,39 @@ class _ApprovalPaymentPageState extends State<ApprovalPaymentPage> {
     }
   }
 
-  IconData _payButtonIcon() {
+  IconData? _payButtonIcon() {
     switch (_selectedMethod) {
       case _PaymentMethod.applePay:
         return defaultTargetPlatform == TargetPlatform.iOS
             ? Icons.apple
             : Icons.account_balance_wallet;
       case _PaymentMethod.alipay:
-        return Icons.payment;
       case _PaymentMethod.wechatPay:
-        return Icons.chat; // 微信图标占位，底部按钮无图可用 Icons
+        return null; // 使用 leading 显示 logo
       case _PaymentMethod.card:
         return Icons.credit_card;
+    }
+  }
+
+  Widget? _payButtonLeading() {
+    switch (_selectedMethod) {
+      case _PaymentMethod.alipay:
+        return Image.asset(
+          AppAssets.alipay,
+          width: 20,
+          height: 20,
+          fit: BoxFit.contain,
+        );
+      case _PaymentMethod.wechatPay:
+        return Image.asset(
+          AppAssets.wechatPay,
+          width: 20,
+          height: 20,
+          fit: BoxFit.contain,
+        );
+      case _PaymentMethod.card:
+      case _PaymentMethod.applePay:
+        return null;
     }
   }
 
@@ -338,12 +363,13 @@ class _ApprovalPaymentPageState extends State<ApprovalPaymentPage> {
         );
         if (!mounted) return;
         if (url.isEmpty) throw Exception('No checkout URL');
-        final result = await Navigator.of(context).push<bool>(
+        final nav = Navigator.of(context);
+        final result = await nav.push<bool>(
           MaterialPageRoute(
-            builder: (_) => WeChatPayWebView(
+            builder: (routeContext) => WeChatPayWebView(
               checkoutUrl: url,
-              onPaymentSuccess: () => Navigator.of(context).pop(true),
-              onPaymentCancel: () => Navigator.of(context).pop(false),
+              onPaymentSuccess: () => Navigator.of(routeContext).pop(true),
+              onPaymentCancel: () => Navigator.of(routeContext).pop(false),
             ),
           ),
         );
@@ -438,10 +464,8 @@ class _ApprovalPaymentPageState extends State<ApprovalPaymentPage> {
       const paymentTimeout = Duration(seconds: 90);
       bool success = false;
       if (_selectedMethod == _PaymentMethod.applePay) {
-        final amountDisplay = _effectiveAmountDisplay ?? widget.paymentData.amountDisplay;
-        final amountPence = amountDisplay != null
-            ? (double.tryParse(amountDisplay) ?? 0) * 100
-            : 0;
+        final amountPence = _paymentResponse?.finalAmount
+            ?? ((double.tryParse(widget.paymentData.amountDisplay ?? '') ?? 0) * 100).round();
         success = await PaymentService.instance.presentApplePay(
           clientSecret: clientSecret,
           amount: amountPence.round(),
@@ -518,7 +542,9 @@ class _ApprovalPaymentPageState extends State<ApprovalPaymentPage> {
         widget.paymentData.paymentExpiresAt!.isNotEmpty;
     final isExpired = showCountdown && _secondsRemaining <= 0;
 
-    return Stack(
+    return PopScope(
+      canPop: !_isProcessing,
+      child: Stack(
       children: [
         Scaffold(
       appBar: AppBar(
@@ -658,7 +684,7 @@ class _ApprovalPaymentPageState extends State<ApprovalPaymentPage> {
                         ],
                         const SizedBox(height: 12),
                         _PaymentMethodOption(
-                          icon: Icons.payment,
+                          imageAsset: AppAssets.alipay,
                           label: l10n.paymentPayWithAlipay,
                           isSelected: _selectedMethod == _PaymentMethod.alipay,
                           onTap: () {
@@ -725,6 +751,7 @@ class _ApprovalPaymentPageState extends State<ApprovalPaymentPage> {
                       PrimaryButton(
                         text: _payButtonText(l10n),
                         icon: _payButtonIcon(),
+                        leading: _payButtonLeading(),
                         isLoading: _isProcessing,
                         onPressed: (_isProcessing || _alreadyPaid) ? null : _pay,
                       ),
@@ -774,7 +801,7 @@ class _ApprovalPaymentPageState extends State<ApprovalPaymentPage> {
           ),
           ),
       ],
-    );
+    ));
   }
 }
 

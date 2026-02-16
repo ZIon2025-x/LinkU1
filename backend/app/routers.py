@@ -6039,7 +6039,7 @@ def create_payment(
                 "price_data": {
                     "currency": "gbp",
                     "product_data": {"name": task.title},
-                    "unit_amount": int((float(task.agreed_reward) if task.agreed_reward is not None else float(task.base_reward) if task.base_reward is not None else 0.0) * 100),
+                    "unit_amount": round((float(task.agreed_reward) if task.agreed_reward is not None else float(task.base_reward) if task.base_reward is not None else 0.0) * 100),
                 },
                 "quantity": 1,
             }
@@ -6090,11 +6090,11 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
     # 只有通过 Stripe 签名验证的请求才能处理
     if not endpoint_secret:
         logger.error(f"❌ [WEBHOOK] 安全错误：STRIPE_WEBHOOK_SECRET 未配置")
-        return {"error": "Webhook secret not configured"}, 500
+        return JSONResponse(status_code=500, content={"error": "Webhook secret not configured"})
     
     if not sig_header:
         logger.error(f"❌ [WEBHOOK] 安全错误：缺少 Stripe 签名头")
-        return {"error": "Missing stripe-signature header"}, 400
+        return JSONResponse(status_code=400, content={"error": "Missing stripe-signature header"})
     
     try:
         # 严格验证 Webhook 签名
@@ -6103,18 +6103,18 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
     except ValueError as e:
         logger.error(f"❌ [WEBHOOK] Invalid payload: {e}")
         logger.error(f"  - Payload 内容 (前500字符): {payload[:500].decode('utf-8', errors='ignore')}")
-        return {"error": "Invalid payload"}, 400
+        return JSONResponse(status_code=400, content={"error": "Invalid payload"})
     except stripe.error.SignatureVerificationError as e:
         logger.error(f"❌ [WEBHOOK] 安全错误：签名验证失败: {e}")
         logger.error(f"  - 提供的 Signature: {sig_header[:50]}...")
-        logger.error(f"  - 使用的 Secret: {endpoint_secret[:10]}...")
+        logger.error(f"  - 使用的 Secret: ***{endpoint_secret[-4:]}")
         logger.error(f"  - 这可能是恶意请求或配置错误，已拒绝处理")
-        return {"error": "Invalid signature"}, 400
+        return JSONResponse(status_code=400, content={"error": "Invalid signature"})
     except Exception as e:
         logger.error(f"❌ [WEBHOOK] 处理错误: {type(e).__name__}: {e}")
         import traceback
         logger.error(f"  - 错误堆栈: {traceback.format_exc()}")
-        return {"error": str(e)}, 400
+        return JSONResponse(status_code=400, content={"error": str(e)})
     
     event_type = event["type"]
     event_id = event.get("id")
@@ -6168,7 +6168,7 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
                 raise
     else:
         logger.error(f"❌ [WEBHOOK] 事件缺少 event_id，拒绝处理以保证幂等性: event_type={event_type}")
-        return {"error": "Missing event_id, cannot guarantee idempotency"}, 400
+        return JSONResponse(status_code=400, content={"error": "Missing event_id, cannot guarantee idempotency"})
     
     # 标记事件开始处理
     processing_started = False
@@ -6220,9 +6220,9 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
                 # 🔒 安全修复：始终使用后端计算的服务费，不信任metadata中的金额
                 # metadata仅作为交叉校验参考
                 from app.utils.fee_calculator import calculate_application_fee_pence
-                task_amount_pence = int(task_amount * 100)
+                task_amount_pence = round(task_amount * 100)
                 application_fee_pence = calculate_application_fee_pence(task_amount_pence)
-                
+
                 # 交叉校验metadata中的费用（仅记录差异，不使用metadata值）
                 metadata = payment_intent.get("metadata", {})
                 metadata_fee = int(metadata.get("application_fee", 0))
@@ -7086,15 +7086,18 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
         logger.info(f"[WEBHOOK] Checkout Session 完成: session_id={session.get('id')}, task_id={task_id}, payment_type={payment_type}")
         
         if task_id:
-            task = crud.get_task(db, task_id)
+            locked_task_query = select(models.Task).where(
+                models.Task.id == task_id
+            ).with_for_update()
+            task = db.execute(locked_task_query).scalar_one_or_none()
             if task and not task.is_paid:
                 task.is_paid = 1
                 # 获取任务金额（使用最终成交价或原始标价）
                 task_amount = float(task.agreed_reward) if task.agreed_reward is not None else float(task.base_reward) if task.base_reward is not None else 0.0
-                
+
                 # 🔒 安全修复：始终使用后端计算的服务费，不信任metadata中的金额
                 from app.utils.fee_calculator import calculate_application_fee_pence
-                task_amount_pence = int(task_amount * 100)
+                task_amount_pence = round(task_amount * 100)
                 application_fee_pence = calculate_application_fee_pence(task_amount_pence)
                 
                 # 交叉校验metadata中的费用（仅记录差异，不使用metadata值）

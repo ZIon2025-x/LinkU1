@@ -1747,7 +1747,7 @@ def create_payout(
             )
         
         # 创建提现（转换为便士）
-        amount_pence = int(payout_request.amount * 100)
+        amount_pence = round(payout_request.amount * 100)
         
         payout = stripe.Payout.create(
             amount=amount_pence,

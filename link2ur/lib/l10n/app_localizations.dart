@@ -14959,6 +14959,72 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'View your sold flea market items'**
   String get profileMySoldItemsSubtitle;
+
+  /// No description provided for @commonDefault.
+  ///
+  /// In en, this message translates to:
+  /// **'Default'**
+  String get commonDefault;
+
+  /// No description provided for @paymentIncorrectCvc.
+  ///
+  /// In en, this message translates to:
+  /// **'Incorrect CVC'**
+  String get paymentIncorrectCvc;
+
+  /// No description provided for @paymentIncorrectCardNumber.
+  ///
+  /// In en, this message translates to:
+  /// **'Incorrect card number'**
+  String get paymentIncorrectCardNumber;
+
+  /// No description provided for @paymentAuthenticationRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Authentication required'**
+  String get paymentAuthenticationRequired;
+
+  /// No description provided for @paymentProcessingError.
+  ///
+  /// In en, this message translates to:
+  /// **'Payment processing error'**
+  String get paymentProcessingError;
+
+  /// No description provided for @paymentTooManyRequests.
+  ///
+  /// In en, this message translates to:
+  /// **'Too many requests, please try later'**
+  String get paymentTooManyRequests;
+
+  /// No description provided for @paymentInvalidRequest.
+  ///
+  /// In en, this message translates to:
+  /// **'Invalid payment request'**
+  String get paymentInvalidRequest;
+
+  /// No description provided for @transactionTypePayment.
+  ///
+  /// In en, this message translates to:
+  /// **'Payment'**
+  String get transactionTypePayment;
+
+  /// No description provided for @transactionTypePayout.
+  ///
+  /// In en, this message translates to:
+  /// **'Payout'**
+  String get transactionTypePayout;
+
+  /// No description provided for @transactionTypeRefund.
+  ///
+  /// In en, this message translates to:
+  /// **'Refund'**
+  String get transactionTypeRefund;
+
+  /// No description provided for @transactionTypeFee.
+  ///
+  /// In en, this message translates to:
+  /// **'Service Fee'**
+  String get transactionTypeFee;
 }
 
 class _AppLocalizationsDelegate

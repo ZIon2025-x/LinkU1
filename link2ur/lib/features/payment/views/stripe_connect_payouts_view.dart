@@ -1032,9 +1032,9 @@ class _ExternalAccountCard extends StatelessWidget {
                 color: AppColors.success.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(8),
               ),
-              child: const Text(
-                'Default',
-                style: TextStyle(
+              child: Text(
+                context.l10n.commonDefault,
+                style: const TextStyle(
                   fontSize: 11,
                   color: AppColors.success,
                   fontWeight: FontWeight.w500,

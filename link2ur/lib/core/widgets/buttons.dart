@@ -129,16 +129,20 @@ class PrimaryButton extends StatelessWidget {
     this.isLoading = false,
     this.isDisabled = false,
     this.icon,
+    this.leading,
     this.width,
     this.height = 50,
     this.gradient,
-  });
+  }) : assert(icon == null || leading == null, 'icon 与 leading 只能二选一');
 
   final String text;
   final VoidCallback? onPressed;
   final bool isLoading;
   final bool isDisabled;
+  /// 图标（与 [leading] 二选一）
   final IconData? icon;
+  /// 自定义前置组件（如支付方式 logo 图片，与 [icon] 二选一）
+  final Widget? leading;
   final double? width;
   final double height;
   final Gradient? gradient;
@@ -198,7 +202,10 @@ class PrimaryButton extends StatelessWidget {
                         mainAxisSize: MainAxisSize.max,
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          if (icon != null) ...[
+                          if (leading != null) ...[
+                            leading!,
+                            AppSpacing.hSm,
+                          ] else if (icon != null) ...[
                             Icon(icon, color: Colors.white, size: 20),
                             AppSpacing.hSm,
                           ],

@@ -3826,5 +3826,19 @@
   "profileDirectRequestHintTaskType": "Task type",
   "profileDirectRequestSubmit": "Send Request",
   "profileMySoldItems": "My Sold Items",
-  "profileMySoldItemsSubtitle": "View your sold flea market items"
+  "profileMySoldItemsSubtitle": "View your sold flea market items",
+
+  "commonDefault": "Default",
+
+  "paymentIncorrectCvc": "Incorrect CVC",
+  "paymentIncorrectCardNumber": "Incorrect card number",
+  "paymentAuthenticationRequired": "Authentication required",
+  "paymentProcessingError": "Payment processing error",
+  "paymentTooManyRequests": "Too many requests, please try later",
+  "paymentInvalidRequest": "Invalid payment request",
+
+  "transactionTypePayment": "Payment",
+  "transactionTypePayout": "Payout",
+  "transactionTypeRefund": "Refund",
+  "transactionTypeFee": "Service Fee"
 }

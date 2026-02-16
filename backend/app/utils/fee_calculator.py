@@ -65,5 +65,5 @@ def calculate_application_fee_pence(task_amount_pence: int) -> int:
     if task_amount_pence < 1000:  # 小于10镑（1000便士）
         return 100  # 固定收取1镑（100便士）
     else:
-        return int(task_amount_pence * 0.10)  # 大于等于10镑，按10%计算
+        return task_amount_pence // 10  # 大于等于10镑，按10%计算（整数除法避免浮点精度问题）
 

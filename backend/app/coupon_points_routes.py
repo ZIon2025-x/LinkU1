@@ -836,7 +836,7 @@ def create_task_payment(
             detail="任务金额必须大于0，无法进行支付"
         )
     
-    task_amount_pence = int(task_amount * 100)  # 转换为最小货币单位
+    task_amount_pence = round(task_amount * 100)  # 转换为最小货币单位
     
     # 计算平台服务费（从接受人端扣除）
     # 规则：小于10镑固定收取1镑，大于等于10镑按10%计算

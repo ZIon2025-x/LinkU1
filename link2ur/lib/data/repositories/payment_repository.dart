@@ -151,7 +151,7 @@ class PaymentRepository {
     );
 
     if (!response.isSuccess || response.data == null) {
-      return [];
+      throw PaymentException(response.message ?? 'Failed to load payment methods');
     }
 
     final items = response.data!['items'] as List<dynamic>? ?? [];
@@ -353,7 +353,7 @@ class PaymentRepository {
     );
 
     if (!response.isSuccess || response.data == null) {
-      return [];
+      throw PaymentException(response.message ?? 'Failed to load external accounts');
     }
 
     final items = response.data!['items'] as List<dynamic>? ?? [];

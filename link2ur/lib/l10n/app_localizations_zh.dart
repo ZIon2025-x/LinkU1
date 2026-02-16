@@ -7821,6 +7821,39 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get profileMySoldItemsSubtitle => '查看已售出的闲置物品';
+
+  @override
+  String get commonDefault => '默认';
+
+  @override
+  String get paymentIncorrectCvc => 'CVC 验证码不正确';
+
+  @override
+  String get paymentIncorrectCardNumber => '卡号不正确';
+
+  @override
+  String get paymentAuthenticationRequired => '需要身份验证';
+
+  @override
+  String get paymentProcessingError => '支付处理错误';
+
+  @override
+  String get paymentTooManyRequests => '请求过于频繁，请稍后再试';
+
+  @override
+  String get paymentInvalidRequest => '无效的支付请求';
+
+  @override
+  String get transactionTypePayment => '支付';
+
+  @override
+  String get transactionTypePayout => '收款';
+
+  @override
+  String get transactionTypeRefund => '退款';
+
+  @override
+  String get transactionTypeFee => '服务费';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -15640,4 +15673,37 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get profileMySoldItemsSubtitle => '查看已售出的閒置物品';
+
+  @override
+  String get commonDefault => '預設';
+
+  @override
+  String get paymentIncorrectCvc => 'CVC 驗證碼不正確';
+
+  @override
+  String get paymentIncorrectCardNumber => '卡號不正確';
+
+  @override
+  String get paymentAuthenticationRequired => '需要身份驗證';
+
+  @override
+  String get paymentProcessingError => '支付處理錯誤';
+
+  @override
+  String get paymentTooManyRequests => '請求過於頻繁，請稍後再試';
+
+  @override
+  String get paymentInvalidRequest => '無效的支付請求';
+
+  @override
+  String get transactionTypePayment => '支付';
+
+  @override
+  String get transactionTypePayout => '收款';
+
+  @override
+  String get transactionTypeRefund => '退款';
+
+  @override
+  String get transactionTypeFee => '服務費';
 }

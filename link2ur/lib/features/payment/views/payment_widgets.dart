@@ -22,11 +22,17 @@ class _CouponSelectorSheetState extends State<_CouponSelectorSheet> {
 
   Future<void> _loadCoupons() async {
     try {
-      final repo = context.read<PaymentRepository>();
-      final methods = await repo.getPaymentMethods();
+      final repo = context.read<CouponPointsRepository>();
+      final result = await repo.getMyCoupons();
       if (mounted) {
         setState(() {
-          _coupons = methods;
+          _coupons = result
+              .map((c) => {
+                    'id': c.id,
+                    'name': c.coupon.name,
+                    'description': c.coupon.discountValueDisplay,
+                  })
+              .toList();
           _isLoading = false;
         });
       }

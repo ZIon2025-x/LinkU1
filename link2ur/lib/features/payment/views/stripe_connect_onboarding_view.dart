@@ -146,10 +146,15 @@ class _StripeConnectOnboardingViewState
       // 优先从 AppConfig 获取（通过 --dart-define 传入）
       var publishableKey = AppConfig.instance.stripePublishableKey;
       
-      // 如果未配置，根据当前环境选择回退 key
-      // ⚠️ publishable key 必须与后端 STRIPE_SECRET_KEY 的模式匹配（同为 test 或同为 live）
+      // publishable key 必须通过 --dart-define 传入
       if (publishableKey.isEmpty) {
-        publishableKey = "pk_test_51SePW98JTHo8ClgaUWRjX9HHabiw09tJQLJlQdJXYCNMVDFr9B9ZeWNwkH9D8NRxreIew4AfQ7hByO6l37KdEkAa00yqY1lz0P";
+        if (mounted) {
+          setState(() {
+            _viewState = _ViewState.error;
+            _error = 'Stripe publishable key not configured. Please rebuild with --dart-define.';
+          });
+        }
+        return;
       }
 
       final result = await StripeConnectService.instance.openOnboarding(
@@ -492,9 +497,9 @@ class _ExternalAccountCard extends StatelessWidget {
                 color: AppColors.success.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(8),
               ),
-              child: const Text(
-                'Default',
-                style: TextStyle(
+              child: Text(
+                context.l10n.commonDefault,
+                style: const TextStyle(
                   fontSize: 11,
                   color: AppColors.success,
                   fontWeight: FontWeight.w500,

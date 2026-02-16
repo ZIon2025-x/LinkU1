@@ -215,21 +215,6 @@ class Transaction extends Equatable {
   String get amountDisplay =>
       '${isIncome ? '+' : ''}£${amount.abs().toStringAsFixed(2)}';
 
-  String get typeText {
-    switch (type) {
-      case 'payment':
-        return '支付';
-      case 'payout':
-        return '收款';
-      case 'refund':
-        return '退款';
-      case 'fee':
-        return '服务费';
-      default:
-        return type;
-    }
-  }
-
   factory Transaction.fromJson(Map<String, dynamic> json) {
     return Transaction(
       id: json['id'] as int,
@@ -285,11 +270,11 @@ class StripeConnectBalance extends Equatable {
     final pending = json['pending'];
 
     double parseAmount(dynamic val) {
-      if (val is num) return val.toDouble();
+      if (val is num) return val.toDouble() / 100;
       if (val is List && val.isNotEmpty) {
         final first = val.first;
         if (first is Map<String, dynamic>) {
-          return (first['amount'] as num?)?.toDouble() ?? 0;
+          return ((first['amount'] as num?)?.toDouble() ?? 0) / 100;
         }
       }
       return 0;

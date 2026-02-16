@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/constants/app_assets.dart';
 import '../../../core/design/app_colors.dart';
 import '../../../core/utils/haptic_feedback.dart';
 import '../../../core/design/app_spacing.dart';
@@ -12,6 +13,7 @@ import '../../../core/utils/l10n_extension.dart';
 import '../../../core/widgets/buttons.dart';
 
 import '../../../core/widgets/loading_view.dart';
+import '../../../data/repositories/coupon_points_repository.dart';
 import '../../../data/repositories/payment_repository.dart';
 import '../../../data/services/payment_service.dart';
 import '../../../data/models/payment.dart';
@@ -97,6 +99,7 @@ class _PaymentContent extends StatefulWidget {
 class _PaymentContentState extends State<_PaymentContent> {
   // 仅保留 UI 本地状态（支付方式选择 & 倒计时），其余状态由 BLoC 管理
   PaymentMethod _selectedPaymentMethod = PaymentMethod.card;
+  bool _alreadyPaid = false;
   Timer? _countdownTimer;
   Duration? _remainingTime;
 
@@ -206,6 +209,7 @@ class _PaymentContentState extends State<_PaymentContent> {
   /// - Alipay：Stripe PaymentSheet（PaymentIntent 已配置 alipay 方式）
   /// - WeChat：Stripe Checkout Session + WebView
   Future<void> _processPayment() async {
+    if (_alreadyPaid) return;
     final bloc = context.read<PaymentBloc>();
     final state = bloc.state;
     if (state.paymentResponse == null) return;
@@ -344,12 +348,13 @@ class _PaymentContentState extends State<_PaymentContent> {
   /// 对齐 iOS WeChatPayWebView.swift
   /// 通过 URL 检测 payment-success / payment-cancel 判断支付结果
   Future<void> _openWeChatWebView(String checkoutUrl) async {
-    final result = await Navigator.of(context).push<bool>(
+    final nav = Navigator.of(context);
+    final result = await nav.push<bool>(
       MaterialPageRoute(
-        builder: (_) => WeChatPayWebView(
+        builder: (routeContext) => WeChatPayWebView(
           checkoutUrl: checkoutUrl,
-          onPaymentSuccess: () => Navigator.of(context).pop(true),
-          onPaymentCancel: () => Navigator.of(context).pop(false),
+          onPaymentSuccess: () => Navigator.of(routeContext).pop(true),
+          onPaymentCancel: () => Navigator.of(routeContext).pop(false),
         ),
       ),
     );
@@ -489,6 +494,7 @@ class _PaymentContentState extends State<_PaymentContent> {
       listener: (context, state) {
         // 支付成功 → 弹出成功对话框
         if (state.status == PaymentStatus.success) {
+          _alreadyPaid = true;
           _showPaymentSuccess();
         }
         // 微信支付 Checkout URL 就绪 → 打开 WebView
@@ -499,7 +505,9 @@ class _PaymentContentState extends State<_PaymentContent> {
       },
       child: BlocBuilder<PaymentBloc, PaymentState>(
         builder: (context, state) {
-          return Scaffold(
+          return PopScope(
+            canPop: !state.isProcessing,
+            child: Scaffold(
             appBar: AppBar(title: Text(context.l10n.paymentConfirmPayment)),
             body: state.isLoading
                 ? const LoadingView()
@@ -563,7 +571,7 @@ class _PaymentContentState extends State<_PaymentContent> {
                       ],
                     ),
                   ),
-          );
+          ));
         },
       ),
     );
@@ -600,6 +608,36 @@ class _PaymentContentState extends State<_PaymentContent> {
     );
   }
 
+  String _localizeError(String key) {
+    final l10n = context.l10n;
+    switch (key) {
+      case 'error_insufficient_funds':
+        return l10n.errorInsufficientFunds;
+      case 'error_card_declined':
+        return l10n.errorCardDeclined;
+      case 'error_expired_card':
+        return l10n.errorExpiredCard;
+      case 'error_incorrect_cvc':
+        return l10n.paymentIncorrectCvc;
+      case 'error_incorrect_number':
+        return l10n.paymentIncorrectCardNumber;
+      case 'error_authentication_required':
+        return l10n.paymentAuthenticationRequired;
+      case 'error_processing':
+        return l10n.paymentProcessingError;
+      case 'error_rate_limit':
+        return l10n.paymentTooManyRequests;
+      case 'error_invalid_request':
+        return l10n.paymentInvalidRequest;
+      case 'error_network_connection':
+        return l10n.paymentNetworkConnectionFailed;
+      case 'error_network_timeout':
+        return l10n.paymentRequestTimeout;
+      default:
+        return key;
+    }
+  }
+
   Widget _buildErrorBanner(String errorMessage) {
     return Container(
       padding: AppSpacing.allMd,
@@ -616,7 +654,7 @@ class _PaymentContentState extends State<_PaymentContent> {
           const SizedBox(width: 8),
           Expanded(
             child: Text(
-              errorMessage,
+              _localizeError(errorMessage),
               style: const TextStyle(color: AppColors.error, fontSize: 13),
             ),
           ),
@@ -739,23 +777,11 @@ class _PaymentContentState extends State<_PaymentContent> {
         ),
         AppSpacing.vSm,
         _PaymentMethodTile(
-          iconWidget: Container(
+          iconWidget: Image.asset(
+            AppAssets.alipay,
             width: 24,
             height: 24,
-            decoration: BoxDecoration(
-              color: AppColors.alipayBlue,
-              borderRadius: BorderRadius.circular(4),
-            ),
-            child: const Center(
-              child: Text(
-                '支',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 14,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
+            fit: BoxFit.contain,
           ),
           title: context.l10n.paymentAlipay,
           subtitle: 'Alipay (Stripe)',
@@ -826,6 +852,42 @@ class _PaymentContentState extends State<_PaymentContent> {
     );
   }
 
+  /// 底部支付按钮图标（与 leading 二选一，仅卡/Apple Pay 用 icon）
+  IconData? _payButtonIconData() {
+    switch (_selectedPaymentMethod) {
+      case PaymentMethod.card:
+        return Icons.credit_card;
+      case PaymentMethod.applePay:
+        return Icons.apple;
+      case PaymentMethod.wechatPay:
+      case PaymentMethod.alipay:
+        return null;
+    }
+  }
+
+  /// 底部支付按钮前置图（与 icon 二选一，仅支付宝/微信用 logo）
+  Widget? _payButtonLeadingWidget() {
+    switch (_selectedPaymentMethod) {
+      case PaymentMethod.wechatPay:
+        return Image.asset(
+          AppAssets.wechatPay,
+          width: 20,
+          height: 20,
+          fit: BoxFit.contain,
+        );
+      case PaymentMethod.alipay:
+        return Image.asset(
+          AppAssets.alipay,
+          width: 20,
+          height: 20,
+          fit: BoxFit.contain,
+        );
+      case PaymentMethod.card:
+      case PaymentMethod.applePay:
+        return null;
+    }
+  }
+
   Widget _buildPayButton(PaymentState state) {
     final response = state.paymentResponse;
     final amount = response != null
@@ -854,7 +916,9 @@ class _PaymentContentState extends State<_PaymentContent> {
         child: PrimaryButton(
           text: isFree ? context.l10n.paymentConfirmFree : context.l10n.paymentPayNow(amount),
           isLoading: state.isProcessing,
-          onPressed: state.isProcessing ? null : _processPayment,
+          onPressed: (state.isProcessing || _alreadyPaid) ? null : _processPayment,
+          icon: _payButtonIconData(),
+          leading: _payButtonLeadingWidget(),
         ),
       ),
     );

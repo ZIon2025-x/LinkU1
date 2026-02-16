@@ -8134,4 +8134,37 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get profileMySoldItemsSubtitle => 'View your sold flea market items';
+
+  @override
+  String get commonDefault => 'Default';
+
+  @override
+  String get paymentIncorrectCvc => 'Incorrect CVC';
+
+  @override
+  String get paymentIncorrectCardNumber => 'Incorrect card number';
+
+  @override
+  String get paymentAuthenticationRequired => 'Authentication required';
+
+  @override
+  String get paymentProcessingError => 'Payment processing error';
+
+  @override
+  String get paymentTooManyRequests => 'Too many requests, please try later';
+
+  @override
+  String get paymentInvalidRequest => 'Invalid payment request';
+
+  @override
+  String get transactionTypePayment => 'Payment';
+
+  @override
+  String get transactionTypePayout => 'Payout';
+
+  @override
+  String get transactionTypeRefund => 'Refund';
+
+  @override
+  String get transactionTypeFee => 'Service Fee';
 }

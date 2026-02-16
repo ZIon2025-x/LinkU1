@@ -3754,5 +3754,19 @@
   "profileDirectRequestHintTaskType": "任务类型",
   "profileDirectRequestSubmit": "发送请求",
   "profileMySoldItems": "已售闲置",
-  "profileMySoldItemsSubtitle": "查看已售出的闲置物品"
+  "profileMySoldItemsSubtitle": "查看已售出的闲置物品",
+
+  "commonDefault": "默认",
+
+  "paymentIncorrectCvc": "CVC 验证码不正确",
+  "paymentIncorrectCardNumber": "卡号不正确",
+  "paymentAuthenticationRequired": "需要身份验证",
+  "paymentProcessingError": "支付处理错误",
+  "paymentTooManyRequests": "请求过于频繁，请稍后再试",
+  "paymentInvalidRequest": "无效的支付请求",
+
+  "transactionTypePayment": "支付",
+  "transactionTypePayout": "收款",
+  "transactionTypeRefund": "退款",
+  "transactionTypeFee": "服务费"
 }

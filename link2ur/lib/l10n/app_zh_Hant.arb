@@ -3693,5 +3693,19 @@
   "profileDirectRequestHintTaskType": "任務類型",
   "profileDirectRequestSubmit": "發送請求",
   "profileMySoldItems": "已售閒置",
-  "profileMySoldItemsSubtitle": "查看已售出的閒置物品"
+  "profileMySoldItemsSubtitle": "查看已售出的閒置物品",
+
+  "commonDefault": "預設",
+
+  "paymentIncorrectCvc": "CVC 驗證碼不正確",
+  "paymentIncorrectCardNumber": "卡號不正確",
+  "paymentAuthenticationRequired": "需要身份驗證",
+  "paymentProcessingError": "支付處理錯誤",
+  "paymentTooManyRequests": "請求過於頻繁，請稍後再試",
+  "paymentInvalidRequest": "無效的支付請求",
+
+  "transactionTypePayment": "支付",
+  "transactionTypePayout": "收款",
+  "transactionTypeRefund": "退款",
+  "transactionTypeFee": "服務費"
 }

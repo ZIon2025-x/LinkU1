@@ -136,7 +136,6 @@ class PaymentService {
         (ephemeralKeySecret != null && ephemeralKeySecret.isNotEmpty);
     AppLogger.info(
       'PaymentSheet: ${hasCustomer ? "Customer + EphemeralKey" : "guest flow (no customer)"}, '
-      'clientSecret=${clientSecret.substring(0, clientSecret.length.clamp(0, 25))}..., '
       'publishableKey=${Stripe.publishableKey.substring(0, Stripe.publishableKey.length.clamp(0, 15))}...',
     );
 
