@@ -16,7 +16,7 @@ from app.ai_schemas import AIMessageRequest
 from app.config import Config
 from app.csrf import csrf_cookie_bearer
 from app.deps import get_async_db_dependency
-from app.services.ai_agent import AIAgent, _check_daily_budget
+from app.services.ai_agent import AIAgent
 
 logger = logging.getLogger(__name__)
 
@@ -149,18 +149,14 @@ async def send_message(
     db: AsyncSession = Depends(get_async_db_dependency),
 ):
     """发送消息并获取 AI 回复（SSE 流式）"""
-    # API Key 检查
-    if not Config.ANTHROPIC_API_KEY:
+    # API Key 检查：至少要有一个可用的 provider key
+    has_key = bool(Config.ANTHROPIC_API_KEY or Config.AI_MODEL_SMALL_API_KEY or Config.AI_MODEL_LARGE_API_KEY)
+    if not has_key:
         raise HTTPException(status_code=503, detail="AI 服务未配置")
 
     # 限流检查（每分钟）
     if not _check_rate_limit(current_user.id):
         raise HTTPException(status_code=429, detail="请求过于频繁，请稍后再试")
-
-    # 每日预算检查（提前拦截，避免进入 SSE 流后才报错）
-    ok, reason = _check_daily_budget(current_user.id)
-    if not ok:
-        raise HTTPException(status_code=429, detail=reason)
 
     # 验证对话属于当前用户
     from sqlalchemy import select, and_

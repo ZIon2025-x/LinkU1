@@ -8379,4 +8379,31 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get supportChatDivider => 'Connected to human support';
+
+  @override
+  String get aiChatTitle => 'AI Assistant';
+
+  @override
+  String get aiChatNewConversation => 'New conversation';
+
+  @override
+  String get aiChatReplying => 'AI is replying...';
+
+  @override
+  String get aiChatInputHint => 'Type a message...';
+
+  @override
+  String get aiChatViewMyTasks => 'View my tasks';
+
+  @override
+  String get aiChatSearchTasks => 'Search available tasks';
+
+  @override
+  String get aiChatWelcomeTitle => 'Welcome!';
+
+  @override
+  String get aiChatWelcomeSubtitle => 'How can I help you?';
+
+  @override
+  String get aiChatQuickStart => 'Quick start';
 }

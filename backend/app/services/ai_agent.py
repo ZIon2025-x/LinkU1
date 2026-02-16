@@ -26,7 +26,7 @@ from app import models
 from app.config import Config
 from app.services.ai_llm_client import LLMClient
 from app.services.ai_tools import TOOLS
-from app.services.ai_tool_executor import ToolExecutor, PLATFORM_FAQ
+from app.services.ai_tool_executor import ToolExecutor
 from app.utils.time_utils import get_utc_time
 
 logger = logging.getLogger(__name__)
@@ -43,8 +43,9 @@ def get_llm_client() -> LLMClient:
     return _llm_client
 
 
-# ==================== FAQ 缓存（内存，可扩展到 Redis） ====================
+# ==================== FAQ 缓存（内存，带大小上限） ====================
 
+_FAQ_CACHE_MAX_SIZE = 500
 _faq_cache: dict[str, tuple[str, float]] = {}  # key → (answer, expire_ts)
 
 
@@ -52,22 +53,50 @@ def _get_faq_cache(key: str) -> str | None:
     entry = _faq_cache.get(key)
     if entry and entry[1] > time.time():
         return entry[0]
+    if entry:
+        del _faq_cache[key]  # 过期则删除
     return None
 
 
 def _set_faq_cache(key: str, answer: str):
+    # 超过上限时清理过期条目
+    if len(_faq_cache) >= _FAQ_CACHE_MAX_SIZE:
+        now = time.time()
+        expired = [k for k, (_, ts) in _faq_cache.items() if ts <= now]
+        for k in expired:
+            del _faq_cache[k]
+        # 仍超过上限则清除最早 20%
+        if len(_faq_cache) >= _FAQ_CACHE_MAX_SIZE:
+            to_remove = list(_faq_cache.keys())[:_FAQ_CACHE_MAX_SIZE // 5]
+            for k in to_remove:
+                del _faq_cache[k]
     _faq_cache[key] = (answer, time.time() + Config.AI_FAQ_CACHE_TTL)
 
 
-# ==================== 每用户每日预算追踪（内存，可扩展到 Redis） ====================
+# ==================== 每用户每日预算追踪（内存，带自动清理） ====================
 
+_DAILY_USAGE_MAX_USERS = 5000
 # {user_id: {"date": "2026-02-16", "tokens": 12345, "requests": 50}}
 _daily_usage: dict[str, dict] = {}
+_last_usage_cleanup = 0.0
 
 
 def _get_today() -> str:
     from datetime import datetime, timezone
     return datetime.now(timezone.utc).strftime("%Y-%m-%d")
+
+
+def _cleanup_daily_usage():
+    """清理非今日的过期条目"""
+    global _last_usage_cleanup
+    now = time.time()
+    if now - _last_usage_cleanup < 300:  # 最多每 5 分钟清理一次
+        return
+    _last_usage_cleanup = now
+    today = _get_today()
+    stale = [uid for uid, v in _daily_usage.items() if v.get("date") != today]
+    for uid in stale:
+        del _daily_usage[uid]
 
 
 def _check_daily_budget(user_id: str) -> tuple[bool, str]:
@@ -77,6 +106,8 @@ def _check_daily_budget(user_id: str) -> tuple[bool, str]:
 
     if not usage or usage["date"] != today:
         # 新的一天，重置
+        if len(_daily_usage) >= _DAILY_USAGE_MAX_USERS:
+            _cleanup_daily_usage()
         _daily_usage[user_id] = {"date": today, "tokens": 0, "requests": 0}
         return True, ""
 
@@ -126,17 +157,29 @@ _OFF_TOPIC_PATTERNS = [
 _OFF_TOPIC_RE = re.compile("|".join(_OFF_TOPIC_PATTERNS), re.IGNORECASE)
 
 # FAQ 关键词 → 直接命中本地FAQ（零 LLM 消耗）
+# 覆盖全部 20 个 faq_sections
 _FAQ_KEYWORDS = {
-    "faq_publish": ["怎么发布", "如何发布", "how to post", "how to create task", "发任务", "创建任务", "发布流程"],
-    "faq_accept": ["怎么接单", "如何接任务", "how to accept", "how to take", "接任务", "接单流程", "接受任务"],
-    "faq_payment": ["支付", "付款", "怎么付", "how to pay", "payment", "转账", "收款", "怎么收款", "何时到账"],
-    "faq_fee": ["费用", "手续费", "服务费", "收费", "fee", "charge", "多少钱", "cost", "费率"],
-    "faq_dispute": ["争议", "投诉", "退款", "dispute", "refund", "complain", "纠纷", "申诉"],
-    "faq_account": ["改密码", "修改密码", "change password", "修改头像", "个人资料", "profile settings", "账户设置", "绑定账户"],
-    "faq_wallet": ["钱包", "提现", "withdraw", "到账", "收款账户", "payout", "怎么提现", "绑定收款"],
+    "faq_about": ["link2ur是什么", "什么是link2ur", "what is link2ur", "谁可以使用", "who can use", "平台介绍"],
+    "faq_publish": ["怎么发布", "如何发布", "how to post", "how to create task", "发任务", "创建任务", "发布流程", "发布技巧"],
+    "faq_accept": ["怎么接单", "如何接任务", "how to accept", "how to take", "接任务", "接单流程", "接受任务", "任务流程", "basic task flow"],
+    "faq_payment": ["支付", "付款", "怎么付", "how to pay", "payment", "转账", "收款", "怎么收款", "何时到账", "退款", "refund"],
+    "faq_fee": ["费用", "手续费", "服务费", "收费", "fee", "charge", "多少钱", "cost", "费率", "支付方式", "payment method", "stripe", "apple pay"],
+    "faq_dispute": ["争议", "投诉", "dispute", "complain", "纠纷", "申诉", "未确认", "拒绝确认", "not confirm"],
+    "faq_account": ["改密码", "修改密码", "change password", "修改头像", "个人资料", "profile settings", "账户设置", "绑定账户", "无法登录", "can't log in", "forgot password", "忘记密码", "掉线", "注销账户", "delete account", "修改邮箱", "change email"],
+    "faq_wallet": ["钱包", "提现", "withdraw", "到账", "收款账户", "payout", "怎么提现", "绑定收款", "stripe connect"],
+    "faq_cancel": ["取消任务", "cancel task", "取消已发布", "取消已接", "取消审核", "客服审核取消"],
+    "faq_report": ["举报", "report", "不实信息", "违法", "诈骗", "fraud", "安全", "safety", "保护自己"],
+    "faq_privacy": ["隐私", "privacy", "数据", "data", "账户安全", "account security", "封禁", "ban", "暂停", "suspend", "申诉"],
+    "faq_flea": ["跳蚤", "二手", "flea", "闲置", "求购", "卖东西", "买二手", "议价", "make an offer", "flea market"],
+    "faq_forum": ["论坛", "forum", "发帖", "社区", "community", "板块", "帖子被删"],
+    "faq_application": ["申请任务", "apply for task", "task application", "议价", "negotiate", "申请被拒"],
+    "faq_review": ["评价", "review", "rating", "差评", "信用", "reputation", "修改评价"],
+    "faq_student": ["学生认证", "student verification", "学校邮箱", "school email", "认证失败"],
+    "faq_expert": ["任务达人", "task expert", "成为达人", "become expert", "预约达人", "book expert"],
+    "faq_activity": ["活动", "activity", "多人任务", "报名活动", "join activity", "活动专区"],
     "faq_coupon": ["优惠券", "coupon", "积分", "points", "抵扣", "折扣", "如何使用优惠券"],
-    "faq_activity": ["活动", "activity", "活动专区", "有什么活动", "如何参与"],
-    "faq_flea": ["跳蚤", "二手", "flea", "闲置", "求购", "卖东西", "买二手"],
+    "faq_notification": ["通知", "notification", "收不到通知", "推送", "push", "消息和通知区别"],
+    "faq_message_support": ["客服在线时间", "support hours", "消息未送达", "message not delivered"],
 }
 
 # 任务相关关键词
@@ -197,37 +240,47 @@ def classify_intent(message: str) -> str:
     platform_words = ["link2ur", "平台", "platform", "帮助", "help", "使用", "怎么用",
                       "how to", "功能", "feature", "钱包", "wallet", "积分", "points",
                       "优惠券", "coupon", "活动", "activity", "达人", "expert",
-                      "论坛", "forum", "跳蚤", "flea"]
+                      "论坛", "forum", "跳蚤", "flea", "认证", "verify",
+                      "排行", "leaderboard", "通知", "notification", "消息", "message"]
     if any(w in msg_lower for w in platform_words):
         return IntentType.UNKNOWN  # 让 LLM 判断具体需求
 
-    # 6. 默认：不确定 → 让 Haiku 快速判别
+    # 7. 默认：不确定 → 让 Haiku 快速判别
     return IntentType.UNKNOWN
 
 
-def _get_faq_answer(message: str, lang: str) -> str | None:
-    """尝试从本地FAQ数据直接返回答案（零 LLM 消耗）"""
+# faq_key（_FAQ_KEYWORDS 的 key）→ 主题（用于查 DB 的 TOPIC_TO_SECTION_KEY）
+_FAQ_KEY_TO_TOPIC = {
+    "faq_about": "about",
+    "faq_publish": "publish",
+    "faq_accept": "accept",
+    "faq_payment": "payment",
+    "faq_fee": "fee",
+    "faq_dispute": "dispute",
+    "faq_account": "account",
+    "faq_wallet": "wallet",
+    "faq_cancel": "cancel",
+    "faq_report": "report",
+    "faq_privacy": "privacy",
+    "faq_flea": "flea",
+    "faq_forum": "forum",
+    "faq_application": "application",
+    "faq_review": "review",
+    "faq_student": "student",
+    "faq_expert": "expert",
+    "faq_activity": "activity",
+    "faq_coupon": "coupon",
+    "faq_notification": "notification",
+    "faq_message_support": "message_support",
+}
+
+
+def _get_matched_faq_topic(message: str) -> str | None:
+    """根据关键词命中返回对应 FAQ 主题（publish/accept/...），供从 DB 取答案。"""
     msg_lower = message.lower()
-    lang_key = "en" if lang.startswith("en") else "zh"
-
-    faq_topic_map = {
-        "faq_publish": "publish",
-        "faq_accept": "accept",
-        "faq_payment": "payment",
-        "faq_fee": "fee",
-        "faq_dispute": "dispute",
-        "faq_account": "account",
-        "faq_wallet": "wallet",
-        "faq_coupon": "coupon",
-        "faq_activity": "activity",
-        "faq_flea": "flea",
-    }
-
     for faq_key, keywords in _FAQ_KEYWORDS.items():
         if any(kw in msg_lower for kw in keywords):
-            topic = faq_topic_map[faq_key]
-            return PLATFORM_FAQ[topic][lang_key]
-
+            return _FAQ_KEY_TO_TOPIC.get(faq_key)
     return None
 
 
@@ -444,7 +497,9 @@ class AIAgent:
         # ---- 3a. 离题 → 直接拒绝 ----
         if intent == IntentType.OFF_TOPIC:
             reply = _OFF_TOPIC_RESPONSES[lang]
+            _record_usage(self.user.id, 0)
             await self._save_assistant_message(conversation_id, reply, "local", 0, 0)
+            await self.db.commit()
             yield self._make_text_sse(reply)
             yield self._make_done_sse()
             return
@@ -471,21 +526,32 @@ class AIAgent:
             else:
                 reply = "暂无在线客服，请发送邮件至 support@link2ur.com 联系我们。" if lang == "zh" else "No agents are currently online. Please email support@link2ur.com for assistance."
 
+            _record_usage(self.user.id, 0)
             await self._save_assistant_message(conversation_id, reply, "local_cs_check", 0, 0)
+            await self.db.commit()
             yield self._make_text_sse(reply)
             yield self._make_done_sse()
             return
 
-        # ---- 3c. FAQ → 本地回答 + 缓存 ----
+        # ---- 3c. FAQ → 从数据库取答案 + 缓存 ----
         if intent == IntentType.FAQ:
             cache_key = f"faq:{lang}:{user_message[:100]}"
             cached = _get_faq_cache(cache_key)
             if cached:
                 reply = cached
             else:
-                reply = _get_faq_answer(user_message, lang) or _OFF_TOPIC_RESPONSES[lang]
+                topic = _get_matched_faq_topic(user_message)
+                reply = None
+                if topic:
+                    reply = await self.executor.get_faq_for_agent(topic, lang)
+                if not reply:
+                    reply = await self.executor.get_faq_by_message(user_message, lang)
+                if not reply:
+                    reply = _OFF_TOPIC_RESPONSES[lang]
                 _set_faq_cache(cache_key, reply)
+            _record_usage(self.user.id, 0)
             await self._save_assistant_message(conversation_id, reply, "local_faq", 0, 0)
+            await self.db.commit()
             yield self._make_text_sse(reply)
             yield self._make_done_sse()
             return
@@ -509,85 +575,95 @@ class AIAgent:
         model_used = ""
 
         # 工具调用循环（最多 3 轮，限制 token 消耗）
-        for _round in range(3):
-            response = await self.llm.chat(
-                messages=messages,
-                system=system_prompt,
-                tools=TOOLS,
-                model_tier=model_tier,
-            )
-            model_used = response.model
-            total_input_tokens += response.usage.input_tokens
-            total_output_tokens += response.usage.output_tokens
+        try:
+            for _round in range(3):
+                response = await self.llm.chat(
+                    messages=messages,
+                    system=system_prompt,
+                    tools=TOOLS,
+                    model_tier=model_tier,
+                )
+                model_used = response.model
+                total_input_tokens += response.usage.input_tokens
+                total_output_tokens += response.usage.output_tokens
 
-            tool_use_blocks = [b for b in response.content if b.type == "tool_use"]
+                tool_use_blocks = [b for b in response.content if b.type == "tool_use"]
 
-            if not tool_use_blocks:
+                if not tool_use_blocks:
+                    for block in response.content:
+                        if block.type == "text":
+                            full_response += block.text
+                            yield self._make_text_sse(block.text)
+                    break
+
+                # 有工具调用
+                for block in response.content:
+                    if block.type == "text" and block.text:
+                        full_response += block.text
+                        yield self._make_text_sse(block.text)
+
+                assistant_content = []
                 for block in response.content:
                     if block.type == "text":
-                        full_response += block.text
-                        # 按 chunk 发送（非逐字，减少 SSE 帧数）
-                        yield self._make_text_sse(block.text)
-                break
+                        assistant_content.append({"type": "text", "text": block.text})
+                    elif block.type == "tool_use":
+                        assistant_content.append({
+                            "type": "tool_use",
+                            "id": block.id,
+                            "name": block.name,
+                            "input": block.input,
+                        })
 
-            # 有工具调用
-            for block in response.content:
-                if block.type == "text" and block.text:
-                    full_response += block.text
-                    yield self._make_text_sse(block.text)
+                messages.append({"role": "assistant", "content": assistant_content})
 
-            assistant_content = []
-            for block in response.content:
-                if block.type == "text":
-                    assistant_content.append({"type": "text", "text": block.text})
-                elif block.type == "tool_use":
-                    assistant_content.append({
-                        "type": "tool_use",
-                        "id": block.id,
-                        "name": block.name,
-                        "input": block.input,
-                    })
-
-            messages.append({"role": "assistant", "content": assistant_content})
-
-            tool_result_blocks = []
-            for block in tool_use_blocks:
-                yield ServerSentEvent(
-                    data=json.dumps({"tool": block.name, "input": block.input}, ensure_ascii=False),
-                    event="tool_call",
-                )
-
-                result = await self.executor.execute(block.name, block.input)
-                all_tool_calls.append({"id": block.id, "name": block.name, "input": block.input})
-                all_tool_results.append({"tool_use_id": block.id, "result": result})
-
-                yield ServerSentEvent(
-                    data=json.dumps({"tool": block.name, "result": result}, ensure_ascii=False),
-                    event="tool_result",
-                )
-
-                # 如果 LLM 主动调用了 check_cs_availability，也发射 cs_available 事件
-                if block.name == "check_cs_availability":
+                tool_result_blocks = []
+                for block in tool_use_blocks:
                     yield ServerSentEvent(
-                        data=json.dumps({
-                            "available": result.get("available", False),
-                            "online_count": result.get("online_count", 0),
-                            "contact_email": "support@link2ur.com",
-                        }, ensure_ascii=False),
-                        event="cs_available",
+                        data=json.dumps({"tool": block.name, "input": block.input}, ensure_ascii=False),
+                        event="tool_call",
                     )
 
-                tool_result_blocks.append({
-                    "type": "tool_result",
-                    "tool_use_id": block.id,
-                    "content": json.dumps(result, ensure_ascii=False),
-                })
+                    result = await self.executor.execute(block.name, block.input)
+                    all_tool_calls.append({"id": block.id, "name": block.name, "input": block.input})
+                    all_tool_results.append({"tool_use_id": block.id, "result": result})
 
-            messages.append({"role": "user", "content": tool_result_blocks})
+                    yield ServerSentEvent(
+                        data=json.dumps({"tool": block.name, "result": result}, ensure_ascii=False),
+                        event="tool_result",
+                    )
 
-            # 工具结果后如果需要大模型处理复杂推理，升级 tier
-            if _round == 0 and len(tool_use_blocks) >= 2:
-                model_tier = "large"
+                    # 如果 LLM 主动调用了 check_cs_availability，也发射 cs_available 事件
+                    if block.name == "check_cs_availability":
+                        yield ServerSentEvent(
+                            data=json.dumps({
+                                "available": result.get("available", False),
+                                "online_count": result.get("online_count", 0),
+                                "contact_email": "support@link2ur.com",
+                            }, ensure_ascii=False),
+                            event="cs_available",
+                        )
+
+                    tool_result_blocks.append({
+                        "type": "tool_result",
+                        "tool_use_id": block.id,
+                        "content": json.dumps(result, ensure_ascii=False),
+                    })
+
+                messages.append({"role": "user", "content": tool_result_blocks})
+
+                # 工具结果后如果需要大模型处理复杂推理，升级 tier
+                if _round == 0 and len(tool_use_blocks) >= 2:
+                    model_tier = "large"
+
+        except Exception as e:
+            logger.error(f"LLM call error for user {self.user.id}: {e}", exc_info=True)
+            error_reply = "抱歉，AI 服务暂时不可用，请稍后重试。" if lang == "zh" else "Sorry, AI service is temporarily unavailable. Please try again later."
+            if not full_response:
+                full_response = error_reply
+            yield ServerSentEvent(
+                data=json.dumps({"error": error_reply}, ensure_ascii=False),
+                event="error",
+            )
 
         # ---- 5. 保存 & 记录用量 ----
         total_tokens = total_input_tokens + total_output_tokens

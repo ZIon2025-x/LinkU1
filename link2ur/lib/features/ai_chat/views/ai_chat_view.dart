@@ -4,6 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_radius.dart';
+import '../../../core/utils/l10n_extension.dart';
 import '../../../data/services/ai_chat_service.dart';
 import '../bloc/ai_chat_bloc.dart';
 import '../widgets/ai_message_bubble.dart';
@@ -82,7 +83,7 @@ class _AIChatContentState extends State<_AIChatContent> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('AI 助手'),
+        title: Text(context.l10n.aiChatTitle),
         centerTitle: true,
         actions: [
           IconButton(
@@ -90,7 +91,7 @@ class _AIChatContentState extends State<_AIChatContent> {
             onPressed: () {
               context.read<AIChatBloc>().add(const AIChatCreateConversation());
             },
-            tooltip: '新对话',
+            tooltip: context.l10n.aiChatNewConversation,
           ),
         ],
       ),
@@ -226,14 +227,14 @@ class _WelcomeView extends StatelessWidget {
             ),
             const SizedBox(height: AppSpacing.lg),
             Text(
-              'Link2Ur AI 助手',
+              context.l10n.aiChatWelcomeTitle,
               style: Theme.of(context).textTheme.titleLarge?.copyWith(
                     fontWeight: FontWeight.w600,
                   ),
             ),
             const SizedBox(height: AppSpacing.sm),
             Text(
-              '我可以帮你查询任务、了解平台功能',
+              context.l10n.aiChatWelcomeSubtitle,
               style: TextStyle(
                 color: isDark ? Colors.white54 : Colors.black45,
                 fontSize: 14,
@@ -247,20 +248,12 @@ class _WelcomeView extends StatelessWidget {
               alignment: WrapAlignment.center,
               children: [
                 _QuickAction(
-                  label: '查看我的任务',
-                  onTap: () => _sendQuickMessage(context, '查看我的任务'),
+                  label: context.l10n.aiChatViewMyTasks,
+                  onTap: () => _sendQuickMessage(context, context.l10n.aiChatViewMyTasks),
                 ),
                 _QuickAction(
-                  label: '搜索可接的任务',
-                  onTap: () => _sendQuickMessage(context, '搜索可以接的任务'),
-                ),
-                _QuickAction(
-                  label: '如何发布任务？',
-                  onTap: () => _sendQuickMessage(context, '如何发布任务？'),
-                ),
-                _QuickAction(
-                  label: '支付流程说明',
-                  onTap: () => _sendQuickMessage(context, '支付流程是怎样的？'),
+                  label: context.l10n.aiChatSearchTasks,
+                  onTap: () => _sendQuickMessage(context, context.l10n.aiChatSearchTasks),
                 ),
               ],
             ),
@@ -359,7 +352,7 @@ class _InputBar extends StatelessWidget {
                   textInputAction: TextInputAction.send,
                   onSubmitted: (_) => onSend(),
                   decoration: InputDecoration(
-                    hintText: state.isReplying ? 'AI 正在回复...' : '输入消息...',
+                    hintText: state.isReplying ? context.l10n.aiChatReplying : context.l10n.aiChatInputHint,
                     hintStyle: TextStyle(
                       color: isDark ? Colors.white38 : Colors.black38,
                     ),

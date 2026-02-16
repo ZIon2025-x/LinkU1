@@ -1,5 +1,6 @@
 """
 AI 工具安全执行器 — 自动鉴权，只能访问当前用户有权限的数据
+FAQ 答案从数据库 faq_sections / faq_items 读取，与 Web/iOS 一致。
 """
 
 import json
@@ -15,48 +16,30 @@ from app.utils.time_utils import format_iso_utc
 
 logger = logging.getLogger(__name__)
 
-# 平台 FAQ 数据（静态，后续可迁移到数据库/Redis）
-PLATFORM_FAQ = {
-    "publish": {
-        "zh": "发布任务流程：1. 点击首页「发布任务」 2. 填写标题、描述、报酬、截止日期 3. 选择任务类型和位置 4. 提交后预付款到平台托管 5. 等待接单者接单。",
-        "en": "How to post a task: 1. Click 'Post Task' on the home page 2. Fill in title, description, reward, deadline 3. Select task type and location 4. Submit and prepay to platform escrow 5. Wait for someone to accept.",
-    },
-    "accept": {
-        "zh": "接单流程：1. 浏览或搜索任务 2. 查看任务详情 3. 点击「接受任务」 4. 完成后标记完成 5. 发布者确认后报酬自动到账。",
-        "en": "How to accept a task: 1. Browse or search tasks 2. View task details 3. Click 'Accept Task' 4. Mark as completed when done 5. After poster confirms, payment is transferred automatically.",
-    },
-    "payment": {
-        "zh": "支付与收款：平台使用 Stripe。发布时预付到托管，任务确认后自动转给接单者。接单者需在个人中心绑定 Stripe 收款账户才能提现。退款联系客服。",
-        "en": "Payment: The platform uses Stripe. Reward is pre-paid to escrow when posting; after confirmation it is transferred to the taker. Link a Stripe payout account in your profile to receive funds. Refunds via customer support.",
-    },
-    "fee": {
-        "zh": "费用说明：平台对每笔交易收取服务费（比例见发布页）。接单者实收 = 报酬 - 服务费。",
-        "en": "Fees: A service fee is charged per transaction (see posting page for rates). Taker receives reward minus the service fee.",
-    },
-    "dispute": {
-        "zh": "争议处理：在任务详情页提交争议，客服会在约 48 小时内介入。争议期间款项保持托管。",
-        "en": "Disputes: Submit a dispute on the task detail page. Support will step in within about 48 hours. Funds stay in escrow during the dispute.",
-    },
-    "account": {
-        "zh": "账户管理：个人中心可修改头像、昵称、简介、密码，以及绑定 Stripe 收款账户。邮箱/手机可用于登录。",
-        "en": "Account: In your profile you can update avatar, name, bio, password, and link a Stripe payout account. Email or phone can be used to log in.",
-    },
-    "wallet": {
-        "zh": "钱包与提现：任务确认完成后，款项会自动转入接单方。需在个人中心绑定 Stripe 收款账户才能提现到银行卡。平台不直接打款到支付宝/微信。",
-        "en": "Wallet & withdrawal: After task confirmation, funds are transferred to the taker. You must link a Stripe payout account in your profile to withdraw to your bank. The platform does not pay out to Alipay/WeChat.",
-    },
-    "coupon": {
-        "zh": "优惠券与积分：可通过活动或奖励获得优惠券和积分，支付时可选可用优惠券抵扣。具体规则见活动说明或「我的优惠券」页面。",
-        "en": "Coupons & points: You can earn coupons and points through activities or rewards. Apply eligible coupons at checkout. See activity details or 'My Coupons' for rules.",
-    },
-    "activity": {
-        "zh": "活动：平台不定期推出活动，可在首页或活动专区查看。参与活动可获得奖励、优惠券或积分。",
-        "en": "Activities: The platform runs activities from time to time. Check the home page or activity section. Joining can earn rewards, coupons, or points.",
-    },
-    "flea": {
-        "zh": "跳蚤市场：可发布二手闲置或求购信息，流程类似任务（填写信息、支付托管、交易完成后结算）。在「跳蚤市场」入口发布或浏览。",
-        "en": "Flea market: You can list second-hand items or wanted posts. Flow is similar to tasks (list details, pay to escrow, settle after completion). Use the Flea Market section to post or browse.",
-    },
+# AI 本地 FAQ 主题 → 数据库 faq_sections.key
+# 覆盖全部 20 个 faq_sections，每个 section 有唯一 topic
+TOPIC_TO_SECTION_KEY = {
+    "about": "about",
+    "publish": "posting_taking",
+    "accept": "task_flow",
+    "payment": "payment_refunds",
+    "fee": "payment_methods",
+    "dispute": "confirmation_disputes",
+    "account": "account_login",
+    "wallet": "payment_methods",
+    "cancel": "cancel_task",
+    "report": "report_safety",
+    "privacy": "privacy_security",
+    "flea": "flea_market",
+    "forum": "forum",
+    "application": "task_application",
+    "review": "reviews_reputation",
+    "student": "student_verification",
+    "expert": "task_experts",
+    "activity": "activities",
+    "coupon": "others",
+    "notification": "notifications",
+    "message_support": "messaging_support",
 }
 
 
@@ -97,6 +80,54 @@ class ToolExecutor:
         except Exception as e:
             logger.error(f"Tool execution error: {tool_name} — {e}")
             return {"error": "工具执行失败，请稍后重试"}
+
+    def _faq_lang_key(self) -> str:
+        lang = self.user.language_preference or "zh"
+        return "en" if lang.startswith("en") else "zh"
+
+    async def get_faq_for_agent(self, topic: str, lang: str) -> str | None:
+        """按 AI 主题从数据库取该分类下所有 FAQ，拼接为结构化回答。"""
+        section_key = TOPIC_TO_SECTION_KEY.get(topic)
+        if not section_key:
+            return None
+        lang_key = "en" if lang.startswith("en") else "zh"
+        q = (
+            select(models.FaqItem)
+            .join(models.FaqSection, models.FaqItem.section_id == models.FaqSection.id)
+            .where(models.FaqSection.key == section_key)
+            .order_by(models.FaqItem.sort_order.asc())
+            .limit(5)
+        )
+        rows = (await self.db.execute(q)).scalars().all()
+        if not rows:
+            return None
+        if len(rows) == 1:
+            return getattr(rows[0], f"answer_{lang_key}")
+        # 多条时拼接：Q: ... A: ...
+        parts = []
+        for row in rows:
+            question = getattr(row, f"question_{lang_key}")
+            answer = getattr(row, f"answer_{lang_key}")
+            parts.append(f"**{question}**\n{answer}")
+        return "\n\n".join(parts)
+
+    async def get_faq_by_message(self, message: str, lang: str) -> str | None:
+        """按用户消息在 faq_items 的 question 中模糊匹配，返回第一条答案。"""
+        if not message or len(message.strip()) < 2:
+            return None
+        lang_key = "en" if lang.startswith("en") else "zh"
+        q_col = getattr(models.FaqItem, f"question_{lang_key}")
+        pattern = f"%{message.strip()[:80]}%"
+        q = (
+            select(models.FaqItem)
+            .where(q_col.ilike(pattern))
+            .order_by(models.FaqItem.sort_order.asc())
+            .limit(1)
+        )
+        row = (await self.db.execute(q)).scalar_one_or_none()
+        if not row:
+            return None
+        return getattr(row, f"answer_{lang_key}")
 
     async def _query_my_tasks(self, input: dict) -> dict:
         status_filter = input.get("status", "all")
@@ -240,38 +271,36 @@ class ToolExecutor:
         }
 
     async def _get_platform_faq(self, input: dict) -> dict:
-        question = (input.get("question") or "").lower()
-        lang = self.user.language_preference or "zh"
-        lang_key = "en" if lang.startswith("en") else "zh"
+        """从数据库 faq_items 按问题关键词匹配或返回全部分类首条。"""
+        question = (input.get("question") or "").strip().lower()
+        lang_key = self._faq_lang_key()
+        question_col = getattr(models.FaqItem, f"question_{lang_key}")
 
-        # 关键词匹配（与 ai_agent._FAQ_KEYWORDS 对应）
-        matches = []
-        keyword_map = {
-            "publish": ["发布", "post", "create", "创建", "发任务"],
-            "accept": ["接单", "接受", "accept", "take", "接任务"],
-            "payment": ["支付", "付款", "pay", "payment", "转账", "transfer", "收款", "到账"],
-            "fee": ["费用", "fee", "charge", "服务费", "cost", "price", "费率"],
-            "dispute": ["争议", "dispute", "投诉", "complain", "refund", "退款", "纠纷", "申诉"],
-            "account": ["账户", "account", "profile", "个人", "密码", "password", "绑定账户"],
-            "wallet": ["钱包", "提现", "withdraw", "payout", "收款账户", "绑定收款"],
-            "coupon": ["优惠券", "coupon", "积分", "points", "抵扣", "折扣"],
-            "activity": ["活动", "activity", "活动专区", "参与活动"],
-            "flea": ["跳蚤", "二手", "flea", "闲置", "求购", "卖东西"],
-        }
-
-        for topic, keywords in keyword_map.items():
-            if any(kw in question for kw in keywords):
-                matches.append({
-                    "topic": topic,
-                    "answer": PLATFORM_FAQ[topic][lang_key],
-                })
-
-        # 如果没有匹配，返回所有 FAQ
-        if not matches:
-            matches = [
-                {"topic": topic, "answer": data[lang_key]}
-                for topic, data in PLATFORM_FAQ.items()
-            ]
+        if question and len(question) >= 2:
+            pattern = f"%{question[:100]}%"
+            q = (
+                select(models.FaqItem, models.FaqSection.key)
+                .join(models.FaqSection, models.FaqItem.section_id == models.FaqSection.id)
+                .where(question_col.ilike(pattern))
+                .order_by(models.FaqSection.sort_order, models.FaqItem.sort_order)
+                .limit(10)
+            )
+            rows = (await self.db.execute(q)).all()
+            matches = [{"topic": key, "answer": getattr(item, f"answer_{lang_key}")} for item, key in rows]
+        else:
+            q_sec = select(models.FaqSection).order_by(models.FaqSection.sort_order.asc())
+            sections = (await self.db.execute(q_sec)).scalars().all()
+            matches = []
+            for sec in sections:
+                q_item = (
+                    select(models.FaqItem)
+                    .where(models.FaqItem.section_id == sec.id)
+                    .order_by(models.FaqItem.sort_order.asc())
+                    .limit(1)
+                )
+                item = (await self.db.execute(q_item)).scalar_one_or_none()
+                if item:
+                    matches.append({"topic": sec.key, "answer": getattr(item, f"answer_{lang_key}")})
 
         return {"faq": matches}
 

@@ -27,6 +27,8 @@ class ToolCallCard extends StatelessWidget {
         return '获取个人资料';
       case 'get_platform_faq':
         return '查询常见问题';
+      case 'check_cs_availability':
+        return '检查客服在线';
       default:
         return toolName;
     }
@@ -44,6 +46,8 @@ class ToolCallCard extends StatelessWidget {
         return Icons.person;
       case 'get_platform_faq':
         return Icons.help_outline;
+      case 'check_cs_availability':
+        return Icons.support_agent;
       default:
         return Icons.build;
     }

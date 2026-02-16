@@ -200,11 +200,11 @@ class UnifiedChatBloc extends Bloc<UnifiedChatEvent, UnifiedChatState> {
   StreamSubscription<CustomerServiceState>? _csSubscription;
 
   @override
-  Future<void> close() {
-    _aiSubscription?.cancel();
-    _csSubscription?.cancel();
-    _aiBloc.close();
-    _csBloc.close();
+  Future<void> close() async {
+    await _aiSubscription?.cancel();
+    await _csSubscription?.cancel();
+    await _aiBloc.close();
+    await _csBloc.close();
     return super.close();
   }
 

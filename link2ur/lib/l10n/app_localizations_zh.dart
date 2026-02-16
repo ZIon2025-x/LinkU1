@@ -8063,6 +8063,33 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get supportChatDivider => '已连接人工客服';
+
+  @override
+  String get aiChatTitle => 'AI 助手';
+
+  @override
+  String get aiChatNewConversation => '新对话';
+
+  @override
+  String get aiChatReplying => 'AI 正在回复...';
+
+  @override
+  String get aiChatInputHint => '输入消息...';
+
+  @override
+  String get aiChatViewMyTasks => '查看我的任务';
+
+  @override
+  String get aiChatSearchTasks => '搜索可接的任务';
+
+  @override
+  String get aiChatWelcomeTitle => '欢迎！';
+
+  @override
+  String get aiChatWelcomeSubtitle => '有什么可以帮助你的？';
+
+  @override
+  String get aiChatQuickStart => '快捷操作';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -16124,4 +16151,31 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get supportChatDivider => '已連接人工客服';
+
+  @override
+  String get aiChatTitle => 'AI 助手';
+
+  @override
+  String get aiChatNewConversation => '新對話';
+
+  @override
+  String get aiChatReplying => 'AI 正在回覆...';
+
+  @override
+  String get aiChatInputHint => '輸入訊息...';
+
+  @override
+  String get aiChatViewMyTasks => '查看我的任務';
+
+  @override
+  String get aiChatSearchTasks => '搜尋可接的任務';
+
+  @override
+  String get aiChatWelcomeTitle => '歡迎！';
+
+  @override
+  String get aiChatWelcomeSubtitle => '有什麼可以幫助你的？';
+
+  @override
+  String get aiChatQuickStart => '快捷操作';
 }

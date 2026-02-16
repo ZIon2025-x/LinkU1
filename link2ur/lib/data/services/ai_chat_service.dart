@@ -190,6 +190,11 @@ class AIChatService {
             csAvailable: json['available'] as bool? ?? false,
             contactEmail: json['contact_email'] as String?,
           );
+        case 'error':
+          return AIChatEvent(
+            type: AIChatEventType.error,
+            error: json['error'] as String? ?? 'Unknown error',
+          );
         default:
           return null;
       }

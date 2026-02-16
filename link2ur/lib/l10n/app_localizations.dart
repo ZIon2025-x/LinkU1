@@ -15427,6 +15427,60 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Connected to human support'**
   String get supportChatDivider;
+
+  /// No description provided for @aiChatTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'AI Assistant'**
+  String get aiChatTitle;
+
+  /// No description provided for @aiChatNewConversation.
+  ///
+  /// In en, this message translates to:
+  /// **'New conversation'**
+  String get aiChatNewConversation;
+
+  /// No description provided for @aiChatReplying.
+  ///
+  /// In en, this message translates to:
+  /// **'AI is replying...'**
+  String get aiChatReplying;
+
+  /// No description provided for @aiChatInputHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Type a message...'**
+  String get aiChatInputHint;
+
+  /// No description provided for @aiChatViewMyTasks.
+  ///
+  /// In en, this message translates to:
+  /// **'View my tasks'**
+  String get aiChatViewMyTasks;
+
+  /// No description provided for @aiChatSearchTasks.
+  ///
+  /// In en, this message translates to:
+  /// **'Search available tasks'**
+  String get aiChatSearchTasks;
+
+  /// No description provided for @aiChatWelcomeTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Welcome!'**
+  String get aiChatWelcomeTitle;
+
+  /// No description provided for @aiChatWelcomeSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'How can I help you?'**
+  String get aiChatWelcomeSubtitle;
+
+  /// No description provided for @aiChatQuickStart.
+  ///
+  /// In en, this message translates to:
+  /// **'Quick start'**
+  String get aiChatQuickStart;
 }
 
 class _AppLocalizationsDelegate

@@ -109,51 +109,70 @@ class AnthropicProvider:
 class OpenAICompatibleProvider:
     """OpenAI-Compatible API（GLM / DeepSeek / Qwen / Moonshot / ...）
 
-    使用 openai SDK 的 AsyncOpenAI，兼容所有 OpenAI 协议 API。
-    不需要额外依赖 — 使用 httpx 直接调用。
+    使用 httpx 直接调用，兼容所有 OpenAI 协议 API。
     """
 
     def __init__(self, api_key: str, base_url: str, timeout: float = 30.0):
         self._api_key = api_key
         self._base_url = base_url.rstrip("/")
         self._timeout = timeout
+        # 复用连接池
+        import httpx
+        self._client = httpx.AsyncClient(
+            timeout=timeout,
+            headers={
+                "Authorization": f"Bearer {api_key}",
+                "Content-Type": "application/json",
+            },
+            limits=httpx.Limits(max_connections=20, max_keepalive_connections=10),
+        )
 
     async def chat(
         self, model: str, messages: list[dict], system: str,
         tools: list[dict] | None, max_tokens: int,
     ) -> LLMResponse:
-        import httpx
-
         # 构建 OpenAI 格式的 messages
-        oai_messages = [{"role": "system", "content": system}]
+        oai_messages: list[dict[str, Any]] = [{"role": "system", "content": system}]
         for msg in messages:
             if isinstance(msg.get("content"), str):
                 oai_messages.append({"role": msg["role"], "content": msg["content"]})
             elif isinstance(msg.get("content"), list):
-                # Anthropic 格式的 tool_result → OpenAI 格式
+                # Anthropic 混合 content blocks → OpenAI 格式
+                # 收集同一 assistant turn 的 text + tool_use，合并为一条消息
+                text_parts = []
+                tool_calls_list = []
+                tool_results = []
+
                 for block in msg["content"]:
                     if block.get("type") == "tool_result":
-                        oai_messages.append({
+                        tool_results.append({
                             "role": "tool",
                             "tool_call_id": block["tool_use_id"],
                             "content": block.get("content", ""),
                         })
                     elif block.get("type") == "tool_use":
-                        # assistant 的工具调用 → OpenAI function call 格式
-                        oai_messages.append({
-                            "role": "assistant",
-                            "content": None,
-                            "tool_calls": [{
-                                "id": block["id"],
-                                "type": "function",
-                                "function": {
-                                    "name": block["name"],
-                                    "arguments": json.dumps(block["input"], ensure_ascii=False),
-                                },
-                            }],
+                        tool_calls_list.append({
+                            "id": block["id"],
+                            "type": "function",
+                            "function": {
+                                "name": block["name"],
+                                "arguments": json.dumps(block["input"], ensure_ascii=False),
+                            },
                         })
                     elif block.get("type") == "text":
-                        oai_messages.append({"role": msg["role"], "content": block["text"]})
+                        text_parts.append(block["text"])
+
+                # assistant 消息：text + tool_calls 合为一条
+                if msg["role"] == "assistant" and (text_parts or tool_calls_list):
+                    assistant_msg: dict[str, Any] = {"role": "assistant", "content": " ".join(text_parts) if text_parts else None}
+                    if tool_calls_list:
+                        assistant_msg["tool_calls"] = tool_calls_list
+                    oai_messages.append(assistant_msg)
+                elif text_parts:
+                    oai_messages.append({"role": msg["role"], "content": " ".join(text_parts)})
+
+                # tool_result 单独追加
+                oai_messages.extend(tool_results)
 
         # 构建 OpenAI 格式的 tools
         oai_tools = None
@@ -177,17 +196,12 @@ class OpenAICompatibleProvider:
         if oai_tools:
             body["tools"] = oai_tools
 
-        async with httpx.AsyncClient(timeout=self._timeout) as client:
-            resp = await client.post(
-                f"{self._base_url}/chat/completions",
-                json=body,
-                headers={
-                    "Authorization": f"Bearer {self._api_key}",
-                    "Content-Type": "application/json",
-                },
-            )
-            resp.raise_for_status()
-            data = resp.json()
+        resp = await self._client.post(
+            f"{self._base_url}/chat/completions",
+            json=body,
+        )
+        resp.raise_for_status()
+        data = resp.json()
 
         # 解析 OpenAI 响应 → 统一格式
         choice = data["choices"][0]

@@ -72,22 +72,25 @@ Link2Ur 平台 AI 客服助手 — 用户通过自然语言查询任务、了解
 
 ## FAQ 覆盖范围
 
-本地 FAQ（关键词命中即直接返回，零 LLM 消耗）覆盖以下主题，中英文均有对应文案：
+FAQ 答案**从数据库读取**（`faq_sections` + `faq_items`），与 Web/iOS 使用的 GET `/faq` 同源；后台维护 FAQ 后无需改代码即可更新 AI 回答。
 
-| 主题 | 示例关键词 |
-|------|------------|
-| 发布任务 | 怎么发布、如何发布、发任务、创建任务、how to post |
-| 接单 | 怎么接单、如何接任务、接任务、how to accept |
-| 支付/收款 | 支付、付款、怎么付、转账、收款、怎么收款、何时到账、payment |
-| 费用 | 费用、手续费、服务费、收费、fee、charge、费率 |
-| 争议/退款 | 争议、投诉、退款、dispute、refund、纠纷、申诉 |
-| 账户 | 改密码、修改头像、个人资料、profile settings、绑定账户 |
-| 钱包/提现 | 钱包、提现、withdraw、到账、收款账户、怎么提现、绑定收款 |
-| 优惠券/积分 | 优惠券、coupon、积分、points、抵扣、折扣 |
-| 活动 | 活动、activity、活动专区、有什么活动、如何参与 |
-| 跳蚤市场 | 跳蚤、二手、flea、闲置、求购、卖东西、买二手 |
+- **意图判定**：关键词命中（`ai_agent._FAQ_KEYWORDS`）→ 判定为 FAQ 意图，零 LLM 消耗。
+- **答案来源**：按主题映射到 `faq_sections.key`（`ai_tool_executor.TOPIC_TO_SECTION_KEY`），取该分类下第一条；若无映射或未命中则按用户消息在 `faq_items.question_zh/question_en` 上模糊匹配。
+- **工具 get_platform_faq**：LLM 调用时同样查 DB，按问题关键词 ILIKE 或返回各分类首条。
 
-数据与关键词定义：`ai_tool_executor.PLATFORM_FAQ`、`ai_agent._FAQ_KEYWORDS`。
+主题与示例关键词（命中后对应 DB 分类）：
+
+| 主题 | 对应 section.key | 示例关键词 |
+|------|------------------|------------|
+| 发布任务 | posting_taking | 怎么发布、发任务、创建任务、how to post |
+| 接单 | task_flow | 怎么接单、接任务、how to accept |
+| 支付/收款 | payment_refunds | 支付、付款、转账、收款、payment |
+| 费用 | payment_methods | 费用、手续费、fee、charge、费率 |
+| 争议/退款 | confirmation_disputes | 争议、投诉、退款、dispute、refund |
+| 账户 | account_login | 改密码、个人资料、profile settings、绑定账户 |
+| 钱包/提现 | payment_methods | 钱包、提现、withdraw、绑定收款 |
+| 优惠券/活动 | activities | 优惠券、coupon、积分、活动、activity |
+| 跳蚤市场 | flea_market | 跳蚤、二手、flea、闲置、求购、卖东西 |
 
 ## 换模型示例
 

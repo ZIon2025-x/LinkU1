@@ -3860,5 +3860,14 @@
   "supportChatConnected": "人工客服",
   "supportChatEnded": "对话已结束",
   "supportChatReturnToAI": "返回 AI",
-  "supportChatDivider": "已连接人工客服"
+  "supportChatDivider": "已连接人工客服",
+  "aiChatTitle": "AI 助手",
+  "aiChatNewConversation": "新对话",
+  "aiChatReplying": "AI 正在回复...",
+  "aiChatInputHint": "输入消息...",
+  "aiChatViewMyTasks": "查看我的任务",
+  "aiChatSearchTasks": "搜索可接的任务",
+  "aiChatWelcomeTitle": "欢迎！",
+  "aiChatWelcomeSubtitle": "有什么可以帮助你的？",
+  "aiChatQuickStart": "快捷操作"
 }

@@ -3932,5 +3932,14 @@
   "supportChatConnected": "Human Support",
   "supportChatEnded": "Conversation ended",
   "supportChatReturnToAI": "Back to AI",
-  "supportChatDivider": "Connected to human support"
+  "supportChatDivider": "Connected to human support",
+  "aiChatTitle": "AI Assistant",
+  "aiChatNewConversation": "New conversation",
+  "aiChatReplying": "AI is replying...",
+  "aiChatInputHint": "Type a message...",
+  "aiChatViewMyTasks": "View my tasks",
+  "aiChatSearchTasks": "Search available tasks",
+  "aiChatWelcomeTitle": "Welcome!",
+  "aiChatWelcomeSubtitle": "How can I help you?",
+  "aiChatQuickStart": "Quick start"
 }

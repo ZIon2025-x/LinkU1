@@ -3799,5 +3799,14 @@
   "supportChatConnected": "人工客服",
   "supportChatEnded": "對話已結束",
   "supportChatReturnToAI": "返回 AI",
-  "supportChatDivider": "已連接人工客服"
+  "supportChatDivider": "已連接人工客服",
+  "aiChatTitle": "AI 助手",
+  "aiChatNewConversation": "新對話",
+  "aiChatReplying": "AI 正在回覆...",
+  "aiChatInputHint": "輸入訊息...",
+  "aiChatViewMyTasks": "查看我的任務",
+  "aiChatSearchTasks": "搜尋可接的任務",
+  "aiChatWelcomeTitle": "歡迎！",
+  "aiChatWelcomeSubtitle": "有什麼可以幫助你的？",
+  "aiChatQuickStart": "快捷操作"
 }

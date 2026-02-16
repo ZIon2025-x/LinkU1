@@ -316,41 +316,72 @@ class _UnifiedChatContentState extends State<_UnifiedChatContent> {
           prev.activeToolCall != curr.activeToolCall ||
           prev.mode != curr.mode,
       builder: (context, state) {
+        // 构建虚拟列表项
+        final items = <_ChatListItem>[];
+
+        // AI 消息
+        for (var i = 0; i < state.aiMessages.length; i++) {
+          items.add(_ChatListItem.ai(state.aiMessages[i], i));
+        }
+
+        // 工具调用指示器
+        if (state.activeToolCall != null) {
+          items.add(_ChatListItem.tool(state.activeToolCall!));
+        }
+
+        // 流式回复
+        if (state.streamingContent.isNotEmpty) {
+          items.add(_ChatListItem.streaming(state.streamingContent));
+        }
+
+        // 分割线
+        final showDivider = state.csMessages.isNotEmpty ||
+            state.mode == ChatMode.csConnected ||
+            state.mode == ChatMode.csEnded;
+        if (showDivider) {
+          items.add(_ChatListItem.divider());
+        }
+
+        // CS 消息
+        for (var i = 0; i < state.csMessages.length; i++) {
+          items.add(_ChatListItem.cs(state.csMessages[i], i));
+        }
+
         return GestureDetector(
           onTap: () => _focusNode.unfocus(),
-          child: ListView(
+          child: ListView.builder(
             controller: _scrollController,
             padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
-            children: [
-              // AI 消息
-              for (final msg in state.aiMessages)
-                AIMessageBubble(key: ValueKey('ai_${msg.id}'), message: msg),
-
-              // 工具调用指示器
-              if (state.activeToolCall != null)
-                ToolCallCard(toolName: state.activeToolCall!),
-
-              // 流式回复
-              if (state.streamingContent.isNotEmpty)
-                AIMessageBubble(
-                  message: AIMessage(
-                    role: 'assistant',
-                    content: state.streamingContent,
+            itemCount: items.length,
+            itemBuilder: (context, index) {
+              final item = items[index];
+              switch (item.type) {
+                case _ChatItemType.ai:
+                  return AIMessageBubble(
+                    key: ValueKey('ai_${item.aiMessage!.id ?? 'local_${item.index}'}'),
+                    message: item.aiMessage!,
+                  );
+                case _ChatItemType.tool:
+                  return ToolCallCard(
+                    key: ValueKey('tool_${item.toolName}'),
+                    toolName: item.toolName!,
+                  );
+                case _ChatItemType.streaming:
+                  return AIMessageBubble(
+                    key: const ValueKey('ai_streaming'),
+                    message: AIMessage(
+                      role: 'assistant',
+                      content: item.streamingContent!,
+                      isStreaming: true,
+                    ),
                     isStreaming: true,
-                  ),
-                  isStreaming: true,
-                ),
-
-              // 分割线（仅在有 CS 消息时显示）
-              if (state.csMessages.isNotEmpty ||
-                  state.mode == ChatMode.csConnected ||
-                  state.mode == ChatMode.csEnded)
-                _buildDivider(isDark),
-
-              // CS 消息
-              for (final msg in state.csMessages)
-                _buildCSMessageBubble(msg, isDark),
-            ],
+                  );
+                case _ChatItemType.dividerItem:
+                  return _buildDivider(isDark);
+                case _ChatItemType.cs:
+                  return _buildCSMessageBubble(item.csMessage!, isDark);
+              }
+            },
           ),
         );
       },
@@ -672,4 +703,41 @@ class _UnifiedChatContentState extends State<_UnifiedChatContent> {
       },
     );
   }
+}
+
+// ==================== ListView.builder helper ====================
+
+enum _ChatItemType { ai, tool, streaming, dividerItem, cs }
+
+class _ChatListItem {
+  const _ChatListItem._({
+    required this.type,
+    this.aiMessage,
+    this.csMessage,
+    this.toolName,
+    this.streamingContent,
+    this.index = 0,
+  });
+
+  final _ChatItemType type;
+  final AIMessage? aiMessage;
+  final CustomerServiceMessage? csMessage;
+  final String? toolName;
+  final String? streamingContent;
+  final int index;
+
+  factory _ChatListItem.ai(AIMessage msg, int index) =>
+      _ChatListItem._(type: _ChatItemType.ai, aiMessage: msg, index: index);
+
+  factory _ChatListItem.tool(String name) =>
+      _ChatListItem._(type: _ChatItemType.tool, toolName: name);
+
+  factory _ChatListItem.streaming(String content) =>
+      _ChatListItem._(type: _ChatItemType.streaming, streamingContent: content);
+
+  factory _ChatListItem.divider() =>
+      const _ChatListItem._(type: _ChatItemType.dividerItem);
+
+  factory _ChatListItem.cs(CustomerServiceMessage msg, int index) =>
+      _ChatListItem._(type: _ChatItemType.cs, csMessage: msg, index: index);
 }
