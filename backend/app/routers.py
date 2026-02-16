@@ -11739,15 +11739,20 @@ def get_public_task_experts(
             models.FeaturedTaskExpert.is_active == 1
         )
         
-        # 关键词搜索
+        # 关键词搜索（支持中英文：同时匹配中文字段和英文字段）
         if keyword:
             keyword_pattern = f"%{keyword}%"
             query = query.filter(
                 or_(
                     models.FeaturedTaskExpert.name.ilike(keyword_pattern),
                     models.FeaturedTaskExpert.bio.ilike(keyword_pattern),
+                    models.FeaturedTaskExpert.bio_en.ilike(keyword_pattern),
                     models.FeaturedTaskExpert.expertise_areas.ilike(keyword_pattern),
+                    models.FeaturedTaskExpert.expertise_areas_en.ilike(keyword_pattern),
                     models.FeaturedTaskExpert.featured_skills.ilike(keyword_pattern),
+                    models.FeaturedTaskExpert.featured_skills_en.ilike(keyword_pattern),
+                    models.FeaturedTaskExpert.achievements.ilike(keyword_pattern),
+                    models.FeaturedTaskExpert.achievements_en.ilike(keyword_pattern),
                     models.FeaturedTaskExpert.category.ilike(keyword_pattern),
                 )
             )
