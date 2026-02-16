@@ -266,14 +266,18 @@ _SYSTEM_PROMPT_TEMPLATE = """你是 Link2Ur 技能互助平台的官方 AI 客�
 助手：平台对每笔交易收取服务费，具体比例在发布页面显示。接单者最终收到 = 报酬 - 服务费。详细费率可在发布任务页面查看。"""
 
 
-def _build_system_prompt(user: models.User) -> str:
-    lang = user.language_preference or "zh"
-    if lang.startswith("en"):
+def _build_system_prompt(user: models.User, resolved_lang: str | None = None) -> str:
+    """resolved_lang: 已解析的 zh/en，若传入则优先于 user.language_preference（与 FAQ/离题一致）。"""
+    lang = resolved_lang
+    if not lang and user.language_preference and user.language_preference.strip():
+        lang = user.language_preference.strip().lower()
+    if not lang:
+        lang = "zh"
+    lang = "en" if lang.startswith("en") else "zh"
+    if lang == "en":
         lang_instruction = "Reply in English"
-    elif lang.startswith("zh"):
-        lang_instruction = "用中文回复"
     else:
-        lang_instruction = f"根据用户消息语言回复，默认 {lang}"
+        lang_instruction = "用中文回复"
 
     return _SYSTEM_PROMPT_TEMPLATE.format(
         user_name=user.name,
@@ -306,9 +310,16 @@ class AIAgent:
     6. COMPLEX → 大模型 Sonnet（极少数情况）
     """
 
-    def __init__(self, db: AsyncSession, user: models.User):
+    def __init__(
+        self,
+        db: AsyncSession,
+        user: models.User,
+        *,
+        accept_lang: str | None = None,
+    ):
         self.db = db
         self.user = user
+        self._accept_lang = accept_lang  # "zh" | "en" from Accept-Language header
         self.llm = get_llm_client()
         self.executor = ToolExecutor(db, user)
 
@@ -365,7 +376,14 @@ class AIAgent:
         return messages
 
     def _get_lang(self) -> str:
-        lang = self.user.language_preference or "zh"
+        # 优先用户资料中的语言偏好，其次请求头 Accept-Language（与 App 当前语言一致），默认 zh
+        lang = None
+        if self.user.language_preference and self.user.language_preference.strip():
+            lang = self.user.language_preference.strip().lower()
+        if not lang and self._accept_lang:
+            lang = self._accept_lang
+        if not lang:
+            lang = "zh"
         return "en" if lang.startswith("en") else "zh"
 
     async def process_message_stream(
@@ -432,7 +450,7 @@ class AIAgent:
         # 加载历史
         history = await self._load_history(conversation_id)
         messages = history + [{"role": "user", "content": user_message}]
-        system_prompt = _build_system_prompt(self.user)
+        system_prompt = _build_system_prompt(self.user, self._get_lang())
 
         full_response = ""
         all_tool_calls = []

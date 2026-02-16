@@ -103,16 +103,26 @@ class AIChatService {
 
       await for (final chunk in stream) {
         buffer += utf8.decode(chunk);
+        // 统一为 \n，便于按 \n\n 分割（后端可能发 CRLF \r\n）
+        buffer = buffer.replaceAll('\r\n', '\n');
         // 按双换行分割 SSE 事件
         while (buffer.contains('\n\n')) {
           final idx = buffer.indexOf('\n\n');
-          final eventBlock = buffer.substring(0, idx);
+          final eventBlock = buffer.substring(0, idx).trim();
           buffer = buffer.substring(idx + 2);
 
+          if (eventBlock.isEmpty) continue;
           final event = _parseSSEEvent(eventBlock);
           if (event != null && !controller.isClosed) {
             controller.add(event);
           }
+        }
+      }
+      // 处理流结束后的剩余内容（最后一个事件可能无尾部 \n\n）
+      if (buffer.trim().isNotEmpty) {
+        final event = _parseSSEEvent(buffer.trim());
+        if (event != null && !controller.isClosed) {
+          controller.add(event);
         }
       }
     } on DioException catch (e) {
@@ -136,10 +146,11 @@ class AIChatService {
     String? data;
 
     for (final line in block.split('\n')) {
-      if (line.startsWith('event: ')) {
-        eventType = line.substring(7).trim();
-      } else if (line.startsWith('data: ')) {
-        data = line.substring(6);
+      final trimmed = line.trim();
+      if (trimmed.startsWith('event: ')) {
+        eventType = trimmed.substring(7).trim();
+      } else if (trimmed.startsWith('data: ')) {
+        data = trimmed.substring(6).trim();
       }
     }
 

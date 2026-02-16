@@ -28,6 +28,19 @@ _RATE_LIMIT_CLEANUP_INTERVAL = 300  # 5 分钟清理一次
 _last_cleanup = 0.0
 
 
+def _parse_accept_language(header_value: str | None) -> str | None:
+    """从 Accept-Language 解析出 zh 或 en，供 AI 回复语言使用。"""
+    if not header_value or not header_value.strip():
+        return None
+    for part in header_value.split(","):
+        part = part.split(";")[0].strip().lower()
+        if part.startswith("zh"):
+            return "zh"
+        if part.startswith("en"):
+            return "en"
+    return None
+
+
 def _check_rate_limit(user_id: str) -> bool:
     """检查用户是否超过 AI 请求限流（每分钟 N 次）"""
     global _last_cleanup
@@ -162,7 +175,8 @@ async def send_message(
     if not conv:
         raise HTTPException(status_code=404, detail="对话不存在或已归档")
 
-    agent = AIAgent(db, current_user)
+    accept_lang = _parse_accept_language(request.headers.get("Accept-Language"))
+    agent = AIAgent(db, current_user, accept_lang=accept_lang)
 
     return EventSourceResponse(
         agent.process_message_stream(conversation_id, request_body.content),

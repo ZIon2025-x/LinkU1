@@ -154,7 +154,7 @@ class _Link2UrAppState extends State<Link2UrApp> {
         providers: [
           BlocProvider<AuthBloc>.value(value: _authBloc),
           BlocProvider<SettingsBloc>(
-            create: (context) => SettingsBloc(),
+            create: (context) => SettingsBloc(userRepository: _userRepository),
           ),
           BlocProvider<NotificationBloc>(
             create: (context) => NotificationBloc(

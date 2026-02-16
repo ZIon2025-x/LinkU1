@@ -4,6 +4,7 @@ import 'package:equatable/equatable.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../../../data/repositories/user_repository.dart';
 import '../../../data/services/storage_service.dart';
 import '../../../data/services/api_service.dart';
 import '../../../core/utils/cache_manager.dart';
@@ -141,8 +142,9 @@ class SettingsState extends Equatable {
 // ==================== Bloc ====================
 
 class SettingsBloc extends Bloc<SettingsEvent, SettingsState> {
-  SettingsBloc({this.apiService})
-      : super(SettingsState(locale: _getDeviceLocaleString())) {
+  SettingsBloc({this.apiService, UserRepository? userRepository})
+      : _userRepository = userRepository,
+        super(SettingsState(locale: _getDeviceLocaleString())) {
     on<SettingsLoadRequested>(_onLoadRequested);
     on<SettingsThemeChanged>(_onThemeChanged);
     on<SettingsLanguageChanged>(_onLanguageChanged);
@@ -154,6 +156,7 @@ class SettingsBloc extends Bloc<SettingsEvent, SettingsState> {
   }
 
   final ApiService? apiService;
+  final UserRepository? _userRepository;
 
   Future<void> _onLoadRequested(
     SettingsLoadRequested event,
@@ -236,6 +239,17 @@ class SettingsBloc extends Bloc<SettingsEvent, SettingsState> {
   ) async {
     await StorageService.instance.saveLanguage(event.locale);
     emit(state.copyWith(locale: event.locale));
+    // 同步到后端语言偏好，便于 AI 等多端一致
+    final repo = _userRepository;
+    if (repo != null) {
+      final backendLang =
+          event.locale.startsWith('zh') ? 'zh' : 'en';
+      try {
+        await repo.updateProfile(languagePreference: backendLang);
+      } catch (_) {
+        // 未登录或网络错误时忽略
+      }
+    }
   }
 
   Future<void> _onNotificationToggled(

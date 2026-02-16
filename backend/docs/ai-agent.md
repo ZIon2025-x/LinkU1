@@ -64,6 +64,12 @@ Link2Ur 平台 AI 客服助手 — 用户通过自然语言查询任务、了解
 | `AI_LLM_SMALL_TIMEOUT` | `60` | 小模型 HTTP 请求超时（秒）。GLM/智谱等首 token 可能较慢，建议 ≥60 以免 ReadTimeout |
 | `AI_LLM_LARGE_TIMEOUT` | `90` | 大模型 HTTP 请求超时（秒） |
 
+## 多语言
+
+- **回复语言**：优先使用用户资料中的 `language_preference`（zh/en）；若未设置，则使用请求头 `Accept-Language` 解析出的语言（与 App 当前语言一致）；默认 `zh`。
+- **Flutter**：每次请求会带 `Accept-Language`（来自设置中的语言）；在设置里切换语言时，会同步 PATCH 到后端 `language_preference`，便于多端一致。
+- **FAQ / 离题 / LLM 系统提示**：均按上述解析出的 `zh`/`en` 返回对应语言内容。
+
 ## 换模型示例
 
 ### 小模型换成智谱 GLM-4-Flash
