@@ -38,6 +38,8 @@ import '../../features/activity/views/activity_list_view.dart';
 import '../../features/activity/views/activity_detail_view.dart';
 import '../../features/student_verification/views/student_verification_view.dart';
 import '../../features/onboarding/views/onboarding_view.dart';
+import '../../features/ai_chat/views/ai_chat_view.dart';
+import '../../features/ai_chat/views/ai_chat_list_view.dart';
 import '../../features/customer_service/views/customer_service_view.dart';
 import '../../features/coupon_points/views/coupon_points_view.dart';
 import '../../features/info/views/info_views.dart';
@@ -167,6 +169,10 @@ class AppRoutes {
 
   // 搜索
   static const String search = '/search';
+
+  // AI 助手
+  static const String aiChatList = '/ai-chat-list';
+  static const String aiChat = '/ai-chat';
 
   // 信息
   static const String faq = '/faq';
@@ -655,6 +661,25 @@ class AppRouter {
         ),
       ),
 
+      // AI 助手
+      GoRoute(
+        path: AppRoutes.aiChatList,
+        name: 'aiChatList',
+        builder: (context, state) => const AIChatListView(),
+      ),
+      GoRoute(
+        path: AppRoutes.aiChat,
+        name: 'aiChat',
+        builder: (context, state) => const AIChatView(),
+      ),
+      GoRoute(
+        path: '${AppRoutes.aiChat}/:conversationId',
+        name: 'aiChatConversation',
+        builder: (context, state) => AIChatView(
+          conversationId: state.pathParameters['conversationId'],
+        ),
+      ),
+
       // 客服
       GoRoute(
         path: AppRoutes.customerService,
@@ -920,6 +945,18 @@ extension GoRouterExtension on BuildContext {
   void goToTaskExpertSearch() {
     if (!_NavigationThrottle.acquire()) return;
     push('/task-experts/search');
+  }
+
+  /// 跳转到 AI 助手
+  void goToAIChat() {
+    if (!_NavigationThrottle.acquire()) return;
+    push(AppRoutes.aiChat);
+  }
+
+  /// 跳转到 AI 对话列表
+  void goToAIChatList() {
+    if (!_NavigationThrottle.acquire()) return;
+    push(AppRoutes.aiChatList);
   }
 }
 

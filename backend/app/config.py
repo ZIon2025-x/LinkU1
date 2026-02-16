@@ -287,6 +287,30 @@ class Config:
     # 环境配置
     ENVIRONMENT = os.getenv("ENVIRONMENT", "development")
     
+    # AI Agent 配置
+    # ---- 小模型（意图识别/简单问答） ----
+    AI_MODEL_SMALL = os.getenv("AI_MODEL_SMALL", "claude-haiku-4-5-20251001")
+    AI_MODEL_SMALL_PROVIDER = os.getenv("AI_MODEL_SMALL_PROVIDER", "anthropic")  # anthropic / openai_compatible
+    AI_MODEL_SMALL_API_KEY = os.getenv("AI_MODEL_SMALL_API_KEY", "")  # 空则复用 ANTHROPIC_API_KEY
+    AI_MODEL_SMALL_BASE_URL = os.getenv("AI_MODEL_SMALL_BASE_URL", "")  # OpenAI 兼容 API base URL
+    # ---- 大模型（复杂推理/多步工具调用） ----
+    AI_MODEL_LARGE = os.getenv("AI_MODEL_LARGE", "claude-sonnet-4-5-20250929")
+    AI_MODEL_LARGE_PROVIDER = os.getenv("AI_MODEL_LARGE_PROVIDER", "anthropic")  # anthropic / openai_compatible
+    AI_MODEL_LARGE_API_KEY = os.getenv("AI_MODEL_LARGE_API_KEY", "")  # 空则复用 ANTHROPIC_API_KEY
+    AI_MODEL_LARGE_BASE_URL = os.getenv("AI_MODEL_LARGE_BASE_URL", "")  # OpenAI 兼容 API base URL
+    # ---- 通用 ----
+    ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY", "")  # 默认 API Key（Anthropic）
+    # Token 限制
+    AI_MAX_OUTPUT_TOKENS = int(os.getenv("AI_MAX_OUTPUT_TOKENS", "1024"))  # 单次回复上限
+    AI_MAX_HISTORY_TURNS = int(os.getenv("AI_MAX_HISTORY_TURNS", "10"))   # 保留最近 N 轮
+    # 速率与预算
+    AI_RATE_LIMIT_RPM = int(os.getenv("AI_RATE_LIMIT_RPM", "10"))         # 每分钟请求数
+    AI_DAILY_REQUEST_LIMIT = int(os.getenv("AI_DAILY_REQUEST_LIMIT", "100"))  # 每用户每天请求数
+    AI_DAILY_TOKEN_BUDGET = int(os.getenv("AI_DAILY_TOKEN_BUDGET", "50000"))  # 每用户每天 token 预算
+    AI_SESSION_TTL_HOURS = int(os.getenv("AI_SESSION_TTL_HOURS", "24"))
+    # FAQ 缓存 TTL（秒）
+    AI_FAQ_CACHE_TTL = int(os.getenv("AI_FAQ_CACHE_TTL", "3600"))  # 1 小时
+
     # 搜索配置
     USE_PG_TRGM = os.getenv("USE_PG_TRGM", "false").lower() == "true"  # 是否使用pg_trgm扩展
     SEARCH_LANGUAGE = os.getenv("SEARCH_LANGUAGE", "english")  # 全文搜索语言

@@ -77,4 +77,9 @@ pytest>=7.0.0,<9.0.0
 # Apple App Store Server (IAP Webhook V2 验证)
 app-store-server-library>=2.0.0,<3.0.0
 
-# 依赖更新日期: 2026-01-15 (强制 Docker 重新构建缓存层)
+# AI Agent 服务
+anthropic>=0.42.0,<1.0.0
+sse-starlette>=2.2.1,<3.0.0
+tiktoken>=0.8.0,<1.0.0
+
+# 依赖更新日期: 2026-02-16 (添加 AI Agent 依赖)

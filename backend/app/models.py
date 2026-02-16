@@ -3156,3 +3156,40 @@ class OAuthRefreshToken(Base):
     scope = Column(String(512), nullable=False)
     expires_at = Column(DateTime(timezone=True), nullable=False)
     created_at = Column(DateTime(timezone=True), nullable=False, default=get_utc_time)
+
+
+# ==================== AI Agent ====================
+
+class AIConversation(Base):
+    """AI 对话会话"""
+    __tablename__ = "ai_conversations"
+
+    id = Column(String(36), primary_key=True)
+    user_id = Column(String(8), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    title = Column(String(200), default="")
+    status = Column(String(20), default="active")  # active, archived
+    model_used = Column(String(50), default="")
+    total_tokens = Column(Integer, default=0)
+    created_at = Column(DateTime(timezone=True), default=get_utc_time)
+    updated_at = Column(DateTime(timezone=True), default=get_utc_time, onupdate=get_utc_time)
+
+    messages = relationship("AIMessage", back_populates="conversation", cascade="all, delete-orphan", order_by="AIMessage.created_at")
+    user = relationship("User")
+
+
+class AIMessage(Base):
+    """AI 对话消息"""
+    __tablename__ = "ai_messages"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    conversation_id = Column(String(36), ForeignKey("ai_conversations.id", ondelete="CASCADE"), nullable=False, index=True)
+    role = Column(String(20), nullable=False)  # user, assistant, system, tool_result
+    content = Column(Text, nullable=False)
+    tool_calls = Column(Text, nullable=True)    # JSON: AI 请求调用的工具
+    tool_results = Column(Text, nullable=True)  # JSON: 工具执行结果
+    model_used = Column(String(50), default="")
+    input_tokens = Column(Integer, default=0)
+    output_tokens = Column(Integer, default=0)
+    created_at = Column(DateTime(timezone=True), default=get_utc_time)
+
+    conversation = relationship("AIConversation", back_populates="messages")

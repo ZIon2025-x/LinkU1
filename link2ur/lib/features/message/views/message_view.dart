@@ -280,6 +280,18 @@ class _QuickActionBar extends StatelessWidget {
                 context.push('/notifications/interaction');
               },
             ),
+            // AI 助手
+            _QuickActionButton(
+              icon: Icons.auto_awesome,
+              label: 'AI',
+              color: const Color(0xFF7C3AED),
+              unreadCount: 0,
+              isDark: isDark,
+              onTap: () {
+                AppHaptics.selection();
+                context.push('/ai-chat');
+              },
+            ),
           ],
         );
       },

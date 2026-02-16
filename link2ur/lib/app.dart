@@ -29,6 +29,7 @@ import 'data/repositories/payment_repository.dart';
 import 'data/repositories/student_verification_repository.dart';
 import 'data/repositories/common_repository.dart';
 import 'data/repositories/discovery_repository.dart';
+import 'data/services/ai_chat_service.dart';
 import 'data/services/api_service.dart';
 import 'data/services/push_notification_service.dart';
 import 'l10n/app_localizations.dart';
@@ -57,6 +58,7 @@ class _Link2UrAppState extends State<Link2UrApp> {
   late final StudentVerificationRepository _studentVerificationRepository;
   late final CommonRepository _commonRepository;
   late final DiscoveryRepository _discoveryRepository;
+  late final AIChatService _aiChatService;
   late final AuthBloc _authBloc;
   late final AppRouter _appRouter;
   final GlobalKey<NavigatorState> _rootNavigatorKey = GlobalKey<NavigatorState>();
@@ -81,6 +83,7 @@ class _Link2UrAppState extends State<Link2UrApp> {
         StudentVerificationRepository(apiService: _apiService);
     _commonRepository = CommonRepository(apiService: _apiService);
     _discoveryRepository = DiscoveryRepository(apiService: _apiService);
+    _aiChatService = AIChatService(apiService: _apiService);
 
     // 创建 AuthBloc 并连接 Token 刷新失败回调
     _authBloc = AuthBloc(authRepository: _authRepository)
@@ -145,6 +148,7 @@ class _Link2UrAppState extends State<Link2UrApp> {
             value: _commonRepository),
         RepositoryProvider<DiscoveryRepository>.value(
             value: _discoveryRepository),
+        RepositoryProvider<AIChatService>.value(value: _aiChatService),
       ],
       child: MultiBlocProvider(
         providers: [

@@ -26,6 +26,9 @@ class ApiService {
 
   late final Dio _dio;
 
+  /// 暴露 Dio 实例（供 SSE 流式请求等特殊用途）
+  Dio get dio => _dio;
+
   // Token刷新相关
   bool _isRefreshing = false;
   final List<Completer<void>> _refreshCompleters = [];

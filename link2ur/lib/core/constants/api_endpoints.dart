@@ -445,4 +445,12 @@ class ApiEndpoints {
   static String faq({String lang = 'zh'}) => '/api/faq?lang=$lang';
   static String legalDocument({required String type, String lang = 'zh'}) =>
       '/api/legal/$type?lang=$lang';
+
+  // ==================== AI Agent ====================
+  // 后端: ai_agent_routes.py (prefix: /api/ai)
+  static const String aiConversations = '/api/ai/conversations';
+  static String aiConversationDetail(String id) =>
+      '/api/ai/conversations/$id';
+  static String aiSendMessage(String conversationId) =>
+      '/api/ai/conversations/$conversationId/messages';
 }

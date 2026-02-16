@@ -445,6 +445,10 @@ app.include_router(admin_banner_router, tags=["管理员-Banner广告管理"])
 from app.upload_routes import router as upload_v2_router
 app.include_router(upload_v2_router, tags=["图片上传V2"])
 
+# AI Agent 路由
+from app.ai_agent_routes import router as ai_agent_router
+app.include_router(ai_agent_router, tags=["AI Agent"])
+
 # 创建上传目录
 import os
 RAILWAY_ENVIRONMENT = os.getenv("RAILWAY_ENVIRONMENT")
@@ -1097,7 +1101,9 @@ async def startup_event():
             ServiceTimeSlot, PaymentHistory, PaymentTransfer, WebhookEvent,
             Banner, ForumCategory, ForumPost, ForumReply, CustomLeaderboard,
             StudentVerification, VIPSubscription, LegalDocument, FaqSection, FaqItem,
-            OAuthClient, TaskExpert, TaskExpertService, Coupon, PointsAccount
+            OAuthClient, TaskExpert, TaskExpertService, Coupon, PointsAccount,
+            # AI Agent
+            AIConversation, AIMessage
         )
 
         # 🔧 自动检测并修复迁移状态（如果启用）
