@@ -99,23 +99,35 @@ def _cleanup_daily_usage():
         del _daily_usage[uid]
 
 
-def _check_daily_budget(user_id: str) -> tuple[bool, str]:
-    """检查用户是否超过每日预算。返回 (ok, reason)"""
+_BUDGET_REASONS = {
+    "zh": {
+        "requests": "今日 AI 对话次数已用完，明天再来吧",
+        "tokens": "今日 AI 使用额度已用完，明天再来吧",
+    },
+    "en": {
+        "requests": "Daily AI chat limit reached. Please try again tomorrow.",
+        "tokens": "Daily AI usage limit reached. Please try again tomorrow.",
+    },
+}
+
+
+def _check_daily_budget(user_id: str, lang: str = "en") -> tuple[bool, str]:
+    """检查用户是否超过每日预算。返回 (ok, reason)，reason 按 lang 返回中/英文。"""
     today = _get_today()
     usage = _daily_usage.get(user_id)
+    msgs = _BUDGET_REASONS.get(lang, _BUDGET_REASONS["en"])
 
     if not usage or usage["date"] != today:
-        # 新的一天，重置
         if len(_daily_usage) >= _DAILY_USAGE_MAX_USERS:
             _cleanup_daily_usage()
         _daily_usage[user_id] = {"date": today, "tokens": 0, "requests": 0}
         return True, ""
 
     if usage["requests"] >= Config.AI_DAILY_REQUEST_LIMIT:
-        return False, "今日 AI 对话次数已用完，明天再来吧"
+        return False, msgs["requests"]
 
     if usage["tokens"] >= Config.AI_DAILY_TOKEN_BUDGET:
-        return False, "今日 AI 使用额度已用完，明天再来吧"
+        return False, msgs["tokens"]
 
     return True, ""
 
@@ -347,7 +359,7 @@ def _build_system_prompt(user: models.User, resolved_lang: str | None = None) ->
     if not lang and user.language_preference and user.language_preference.strip():
         lang = user.language_preference.strip().lower()
     if not lang:
-        lang = "zh"
+        lang = "en"
     lang = "en" if lang.startswith("en") else "zh"
     if lang == "en":
         lang_instruction = "Reply in English"
@@ -369,6 +381,27 @@ _OFF_TOPIC_RESPONSES = {
     "zh": "抱歉，我只能回答 Link2Ur 平台相关的问题。如需帮助请描述您在平台上遇到的具体问题，例如任务查询、支付流程、费用说明等。",
     "en": "Sorry, I can only answer questions related to the Link2Ur platform. Please describe your specific platform question, such as task queries, payment process, or fee details.",
 }
+
+
+def _is_cjk(c: str) -> bool:
+    """常见 CJK 字符范围（中文、日文汉字等）。"""
+    o = ord(c)
+    return (0x4E00 <= o <= 0x9FFF) or (0x3400 <= o <= 0x4DBF)
+
+
+def _infer_reply_lang_from_message(message: str) -> str:
+    """根据用户消息推断回复语言：以中文为主则回中文，否则默认回英文。"""
+    if not message or not message.strip():
+        return "en"
+    text = message.strip()
+    cjk = sum(1 for c in text if _is_cjk(c))
+    # 可视为“有意义的字”的字符数（字母 + CJK）
+    letter_like = sum(1 for c in text if c.isalpha() or _is_cjk(c))
+    if letter_like == 0:
+        return "en"
+    if cjk / letter_like >= 0.3:
+        return "zh"
+    return "en"
 
 
 # ==================== AI Agent ====================
@@ -451,14 +484,14 @@ class AIAgent:
         return messages
 
     def _get_lang(self) -> str:
-        # 优先用户资料中的语言偏好，其次请求头 Accept-Language（与 App 当前语言一致），默认 zh
+        # 优先用户资料中的语言偏好，其次请求头 Accept-Language，默认英文
         lang = None
         if self.user.language_preference and self.user.language_preference.strip():
             lang = self.user.language_preference.strip().lower()
         if not lang and self._accept_lang:
             lang = self._accept_lang
         if not lang:
-            lang = "zh"
+            lang = "en"
         return "en" if lang.startswith("en") else "zh"
 
     async def process_message_stream(
@@ -475,7 +508,7 @@ class AIAgent:
         lang = self._get_lang()
 
         # ---- 0. 每日预算检查 ----
-        ok, reason = _check_daily_budget(self.user.id)
+        ok, reason = _check_daily_budget(self.user.id, lang)
         if not ok:
             yield self._make_text_sse(reason)
             yield self._make_done_sse()
@@ -494,9 +527,10 @@ class AIAgent:
         intent = classify_intent(user_message)
         logger.info(f"AI intent: {intent} for user {self.user.id}: {user_message[:50]}")
 
-        # ---- 3a. 离题 → 直接拒绝 ----
+        # ---- 3a. 离题 → 直接拒绝（按用户消息语言回：说英文则回英文） ----
         if intent == IntentType.OFF_TOPIC:
-            reply = _OFF_TOPIC_RESPONSES[lang]
+            reply_lang = _infer_reply_lang_from_message(user_message)
+            reply = _OFF_TOPIC_RESPONSES.get(reply_lang, _OFF_TOPIC_RESPONSES["zh"])
             _record_usage(self.user.id, 0)
             await self._save_assistant_message(conversation_id, reply, "local", 0, 0)
             await self.db.commit()
@@ -751,11 +785,12 @@ class AIAgent:
         )
         rows = (await self.db.execute(q)).scalars().all()
 
+        default_title = "New conversation" if self._get_lang() == "en" else "新对话"
         conversations = []
         for c in rows:
             conversations.append({
                 "id": c.id,
-                "title": c.title or "新对话",
+                "title": c.title or default_title,
                 "model_used": c.model_used,
                 "total_tokens": c.total_tokens,
                 "created_at": c.created_at.isoformat() if c.created_at else None,

@@ -305,7 +305,7 @@ class _SettingsViewState extends State<SettingsView> {
                         _SettingsNavRow(
                           icon: Icons.support_agent,
                           title: context.l10n.settingsContactSupport,
-                          onTap: () => context.push('/customer-service'),
+                          onTap: () => context.push('/support-chat'),
                         ),
                       ],
                     ),

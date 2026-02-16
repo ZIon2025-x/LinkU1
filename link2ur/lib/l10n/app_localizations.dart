@@ -15377,7 +15377,7 @@ abstract class AppLocalizations {
   /// No description provided for @supportChatTitle.
   ///
   /// In en, this message translates to:
-  /// **'AI Support'**
+  /// **'Linker'**
   String get supportChatTitle;
 
   /// No description provided for @supportChatConnecting.

@@ -3924,7 +3924,7 @@
   "transactionTypeRefund": "Refund",
   "transactionTypeFee": "Service Fee",
 
-  "supportChatTitle": "AI Support",
+  "supportChatTitle": "Linker",
   "supportChatConnecting": "Connecting...",
   "supportChatHumanOnline": "Human agent is online",
   "supportChatConnectButton": "Connect",

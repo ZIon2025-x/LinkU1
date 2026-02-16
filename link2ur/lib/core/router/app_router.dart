@@ -41,7 +41,6 @@ import '../../features/onboarding/views/onboarding_view.dart';
 import '../../features/ai_chat/views/ai_chat_view.dart';
 import '../../features/ai_chat/views/unified_chat_view.dart';
 import '../../features/ai_chat/views/ai_chat_list_view.dart';
-import '../../features/customer_service/views/customer_service_view.dart';
 import '../../features/coupon_points/views/coupon_points_view.dart';
 import '../../features/info/views/info_views.dart';
 import '../../features/info/views/vip_purchase_view.dart';
@@ -155,9 +154,6 @@ class AppRoutes {
 
   // 引导
   static const String onboarding = '/onboarding';
-
-  // 客服
-  static const String customerService = '/customer-service';
 
   // 支付
   static const String payment = '/payment';
@@ -682,14 +678,7 @@ class AppRouter {
         ),
       ),
 
-      // 客服
-      GoRoute(
-        path: AppRoutes.customerService,
-        name: 'customerService',
-        builder: (context, state) => const CustomerServiceView(),
-      ),
-
-      // 统一 AI + 客服聊天
+      // 统一聊天（Linter：AI + 转人工，不再保留独立客服中心入口）
       GoRoute(
         path: AppRoutes.supportChat,
         name: 'supportChat',

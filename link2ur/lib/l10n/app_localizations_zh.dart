@@ -8038,7 +8038,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get transactionTypeFee => '服务费';
 
   @override
-  String get supportChatTitle => 'AI 客服';
+  String get supportChatTitle => 'Linker';
 
   @override
   String get supportChatConnecting => '连接中...';
@@ -16126,7 +16126,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get transactionTypeFee => '服務費';
 
   @override
-  String get supportChatTitle => 'AI 客服';
+  String get supportChatTitle => 'Linker';
 
   @override
   String get supportChatConnecting => '連接中...';

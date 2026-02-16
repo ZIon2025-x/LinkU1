@@ -53,9 +53,9 @@ class _GreetingSection extends StatelessWidget {
               ],
             ),
           ),
-          // 右侧：客服按钮
+          // 右侧：Linter（统一聊天）入口
           GestureDetector(
-            onTap: () => context.push('/customer-service'),
+            onTap: () => context.push('/support-chat'),
             child: Container(
               width: 44,
               height: 44,
@@ -68,7 +68,7 @@ class _GreetingSection extends StatelessWidget {
                 shape: BoxShape.circle,
               ),
               child: const Icon(
-                Icons.headset_mic,
+                Icons.auto_awesome,
                 color: Colors.white,
                 size: 20,
               ),

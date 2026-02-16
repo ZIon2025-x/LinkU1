@@ -8353,7 +8353,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get transactionTypeFee => 'Service Fee';
 
   @override
-  String get supportChatTitle => 'AI Support';
+  String get supportChatTitle => 'Linker';
 
   @override
   String get supportChatConnecting => 'Connecting...';

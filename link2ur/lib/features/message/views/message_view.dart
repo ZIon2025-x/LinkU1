@@ -18,7 +18,6 @@ import '../../../core/widgets/content_constraint.dart';
 import '../../../core/widgets/swipe_action_cell.dart';
 import '../../../data/models/message.dart';
 import '../../auth/bloc/auth_bloc.dart';
-import '../../customer_service/views/customer_service_view.dart';
 import '../bloc/message_bloc.dart';
 
 /// 消息列表页
@@ -251,7 +250,7 @@ class _QuickActionBar extends StatelessWidget {
                 context.push('/notifications/system');
               },
             ),
-            // AI 客服（统一入口）
+            // Linter（统一聊天入口，含 AI + 转人工）
             _QuickActionButton(
               icon: Icons.auto_awesome,
               label: context.l10n.supportChatTitle,
@@ -273,23 +272,6 @@ class _QuickActionBar extends StatelessWidget {
               onTap: () {
                 AppHaptics.selection();
                 context.push('/notifications/interaction');
-              },
-            ),
-            // 客服中心（独立入口保留）
-            _QuickActionButton(
-              icon: Icons.headset_mic,
-              label: context.l10n.messagesCustomerService,
-              color: AppColors.success,
-              unreadCount: 0,
-              isDark: isDark,
-              onTap: () {
-                AppHaptics.selection();
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => const CustomerServiceView(),
-                  ),
-                );
               },
             ),
           ],

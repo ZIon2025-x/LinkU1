@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../../../core/design/app_colors.dart';
@@ -107,7 +109,7 @@ class _AIAvatar extends StatelessWidget {
   }
 }
 
-/// 流式回复气泡（带闪烁光标效果）
+/// 流式回复气泡（打字机效果：一字一字出现 + 闪烁光标）
 class StreamingBubble extends StatelessWidget {
   const StreamingBubble({
     super.key,
@@ -150,24 +152,91 @@ class StreamingBubble extends StatelessWidget {
               ),
               child: content.isEmpty
                   ? _ThinkingIndicator(isDark: isDark)
-                  : SelectableText.rich(
-                      TextSpan(
-                        children: [
-                          TextSpan(
-                            text: content,
-                            style: theme.textTheme.bodyMedium?.copyWith(
-                              color: isDark ? Colors.white : Colors.black87,
-                              height: 1.4,
-                            ),
-                          ),
-                          const TextSpan(
-                            text: ' ▍',
-                            style: TextStyle(color: AppColors.primary),
-                          ),
-                        ],
+                  : _TypewriterText(
+                      content: content,
+                      isDark: isDark,
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: isDark ? Colors.white : Colors.black87,
+                        height: 1.4,
                       ),
                     ),
             ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// 打字机效果：将已有内容逐字显示（每 40ms 多显示 1 个字符）
+class _TypewriterText extends StatefulWidget {
+  const _TypewriterText({
+    required this.content,
+    required this.isDark,
+    this.style,
+  });
+
+  final String content;
+  final bool isDark;
+  final TextStyle? style;
+
+  @override
+  State<_TypewriterText> createState() => _TypewriterTextState();
+}
+
+class _TypewriterTextState extends State<_TypewriterText> {
+  int _visibleLength = 0;
+  Timer? _timer;
+
+  static const _interval = Duration(milliseconds: 40);
+
+  @override
+  void initState() {
+    super.initState();
+    _startTimer();
+  }
+
+  @override
+  void didUpdateWidget(_TypewriterText oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.content != widget.content) {
+      if (widget.content.length < _visibleLength) {
+        _visibleLength = widget.content.length;
+      }
+      _startTimer();
+    }
+  }
+
+  void _startTimer() {
+    _timer?.cancel();
+    if (widget.content.isEmpty) return;
+    if (_visibleLength >= widget.content.length) return;
+    _timer = Timer.periodic(_interval, (_) {
+      if (!mounted) return;
+      if (_visibleLength < widget.content.length) {
+        setState(() => _visibleLength += 1);
+      } else {
+        _timer?.cancel();
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final visible = widget.content.substring(0, _visibleLength.clamp(0, widget.content.length));
+    return SelectableText.rich(
+      TextSpan(
+        children: [
+          TextSpan(text: visible, style: widget.style),
+          const TextSpan(
+            text: ' ▍',
+            style: TextStyle(color: AppColors.primary),
           ),
         ],
       ),

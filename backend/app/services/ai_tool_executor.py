@@ -54,6 +54,22 @@ def _decimal_to_float(obj: Any) -> Any:
     return obj
 
 
+_TOOL_ERRORS = {
+    "zh": {
+        "execution_failed": "工具执行失败，请稍后重试",
+        "task_id_required": "需要提供 task_id",
+        "task_not_found": "任务不存在",
+        "task_no_permission": "无权查看此任务",
+    },
+    "en": {
+        "execution_failed": "Tool execution failed. Please try again later.",
+        "task_id_required": "task_id is required",
+        "task_not_found": "Task not found",
+        "task_no_permission": "You do not have permission to view this task",
+    },
+}
+
+
 class ToolExecutor:
     """安全执行 AI 请求的工具调用"""
 
@@ -69,9 +85,15 @@ class ToolExecutor:
             "check_cs_availability": self._check_cs_availability,
         }
 
+    def _tool_lang(self) -> str:
+        """与 AI agent 一致：默认英文。"""
+        lang = (self.user.language_preference or "").strip().lower()
+        return "en" if lang.startswith("en") else "zh"
+
     async def execute(self, tool_name: str, tool_input: dict) -> dict:
         """执行工具，返回结果（自动鉴权）"""
         handler = self._handlers.get(tool_name)
+        msgs = _TOOL_ERRORS.get(self._tool_lang(), _TOOL_ERRORS["en"])
         if not handler:
             return {"error": f"Unknown tool: {tool_name}"}
         try:
@@ -79,10 +101,10 @@ class ToolExecutor:
             return _decimal_to_float(result)
         except Exception as e:
             logger.error(f"Tool execution error: {tool_name} — {e}")
-            return {"error": "工具执行失败，请稍后重试"}
+            return {"error": msgs["execution_failed"]}
 
     def _faq_lang_key(self) -> str:
-        lang = self.user.language_preference or "zh"
+        lang = (self.user.language_preference or "en").strip().lower()
         return "en" if lang.startswith("en") else "zh"
 
     async def get_faq_for_agent(self, topic: str, lang: str) -> str | None:
@@ -174,19 +196,20 @@ class ToolExecutor:
         return {"tasks": tasks, "total": total, "page": page, "page_size": page_size}
 
     async def _get_task_detail(self, input: dict) -> dict:
+        msgs = _TOOL_ERRORS.get(self._tool_lang(), _TOOL_ERRORS["en"])
         task_id = input.get("task_id")
         if not task_id:
-            return {"error": "task_id is required"}
+            return {"error": msgs["task_id_required"]}
 
         q = select(models.Task).where(models.Task.id == task_id)
         task = (await self.db.execute(q)).scalar_one_or_none()
         if not task:
-            return {"error": "任务不存在"}
+            return {"error": msgs["task_not_found"]}
 
         # 权限检查：公开任务或自己的任务
         is_owner = task.poster_id == self.user.id or task.taker_id == self.user.id
         if not task.is_public and not is_owner:
-            return {"error": "无权查看此任务"}
+            return {"error": msgs["task_no_permission"]}
 
         return {
             "id": task.id,

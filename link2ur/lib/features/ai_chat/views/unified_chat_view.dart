@@ -313,6 +313,7 @@ class _UnifiedChatContentState extends State<_UnifiedChatContent> {
           prev.aiMessages != curr.aiMessages ||
           prev.csMessages != curr.csMessages ||
           prev.streamingContent != curr.streamingContent ||
+          prev.isTyping != curr.isTyping ||
           prev.activeToolCall != curr.activeToolCall ||
           prev.mode != curr.mode,
       builder: (context, state) {
@@ -329,8 +330,8 @@ class _UnifiedChatContentState extends State<_UnifiedChatContent> {
           items.add(_ChatListItem.tool(state.activeToolCall!));
         }
 
-        // 流式回复
-        if (state.streamingContent.isNotEmpty) {
+        // 流式回复（含等待中：isTyping 时显示三点动画，有内容时显示文字+光标）
+        if (state.isTyping || state.streamingContent.isNotEmpty) {
           items.add(_ChatListItem.streaming(state.streamingContent));
         }
 
@@ -367,14 +368,9 @@ class _UnifiedChatContentState extends State<_UnifiedChatContent> {
                     toolName: item.toolName!,
                   );
                 case _ChatItemType.streaming:
-                  return AIMessageBubble(
+                  return StreamingBubble(
                     key: const ValueKey('ai_streaming'),
-                    message: AIMessage(
-                      role: 'assistant',
-                      content: item.streamingContent!,
-                      isStreaming: true,
-                    ),
-                    isStreaming: true,
+                    content: item.streamingContent!,
                   );
                 case _ChatItemType.dividerItem:
                   return _buildDivider(isDark);
