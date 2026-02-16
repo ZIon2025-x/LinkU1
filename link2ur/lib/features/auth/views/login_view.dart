@@ -1073,7 +1073,7 @@ class _LoginViewState extends State<LoginView>
 
         const SizedBox(height: AppSpacing.sm),
 
-        // 提示
+        // 提示（窄屏时“Login with verification code”可换行，避免溢出）
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
@@ -1086,11 +1086,17 @@ class _LoginViewState extends State<LoginView>
               ),
             ),
             const SizedBox(width: AppSpacing.xs),
-            Text(
-              l10n.authNoAccountUseCode,
-              style: AppTypography.subheadline.copyWith(
-                color: AppColors.primary,
-                fontWeight: FontWeight.w600,
+            Flexible(
+              child: GestureDetector(
+                onTap: () => _onMethodChanged(LoginMethod.emailCode),
+                child: Text(
+                  l10n.authNoAccountUseCode,
+                  style: AppTypography.subheadline.copyWith(
+                    color: AppColors.primary,
+                    fontWeight: FontWeight.w600,
+                  ),
+                  softWrap: true,
+                ),
               ),
             ),
           ],

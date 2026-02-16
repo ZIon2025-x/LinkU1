@@ -17,6 +17,8 @@ import time
 import uuid
 from typing import AsyncIterator
 
+from sse_starlette.sse import ServerSentEvent
+
 from sqlalchemy import select, desc, func, and_
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -368,7 +370,7 @@ class AIAgent:
 
     async def process_message_stream(
         self, conversation_id: str, user_message: str
-    ) -> AsyncIterator[str]:
+    ) -> AsyncIterator[ServerSentEvent]:
         """处理用户消息，返回 SSE 事件流
 
         节省 token 的完整链路：
@@ -483,13 +485,19 @@ class AIAgent:
 
             tool_result_blocks = []
             for block in tool_use_blocks:
-                yield f"event: tool_call\ndata: {json.dumps({'tool': block.name, 'input': block.input}, ensure_ascii=False)}\n\n"
+                yield ServerSentEvent(
+                    data=json.dumps({"tool": block.name, "input": block.input}, ensure_ascii=False),
+                    event="tool_call",
+                )
 
                 result = await self.executor.execute(block.name, block.input)
                 all_tool_calls.append({"id": block.id, "name": block.name, "input": block.input})
                 all_tool_results.append({"tool_use_id": block.id, "result": result})
 
-                yield f"event: tool_result\ndata: {json.dumps({'tool': block.name, 'result': result}, ensure_ascii=False)}\n\n"
+                yield ServerSentEvent(
+                    data=json.dumps({"tool": block.name, "result": result}, ensure_ascii=False),
+                    event="tool_result",
+                )
 
                 tool_result_blocks.append({
                     "type": "tool_result",
@@ -547,12 +555,18 @@ class AIAgent:
         self.db.add(msg)
 
     @staticmethod
-    def _make_text_sse(text: str) -> str:
-        return f"event: token\ndata: {json.dumps({'content': text}, ensure_ascii=False)}\n\n"
+    def _make_text_sse(text: str) -> ServerSentEvent:
+        return ServerSentEvent(
+            data=json.dumps({"content": text}, ensure_ascii=False),
+            event="token",
+        )
 
     @staticmethod
-    def _make_done_sse(input_tokens: int = 0, output_tokens: int = 0) -> str:
-        return f"event: done\ndata: {json.dumps({'input_tokens': input_tokens, 'output_tokens': output_tokens})}\n\n"
+    def _make_done_sse(input_tokens: int = 0, output_tokens: int = 0) -> ServerSentEvent:
+        return ServerSentEvent(
+            data=json.dumps({"input_tokens": input_tokens, "output_tokens": output_tokens}),
+            event="done",
+        )
 
     # ==================== CRUD 方法（不变） ====================
 
