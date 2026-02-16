@@ -487,6 +487,7 @@ class _ExpertCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final locale = Localizations.localeOf(context);
 
     return GestureDetector(
       onTap: () {
@@ -528,7 +529,7 @@ class _ExpertCard extends StatelessWidget {
               child: Center(
                 child: AvatarView(
                   imageUrl: expert.avatar,
-                  name: expert.displayName,
+                  name: expert.displayNameWith(context.l10n),
                   size: 68,
                 ),
               ),
@@ -544,7 +545,7 @@ class _ExpertCard extends StatelessWidget {
                     children: [
                       Flexible(
                         child: Text(
-                          expert.displayName,
+                          expert.displayNameWith(context.l10n),
                           style: AppTypography.bodyBold.copyWith(
                             color: isDark
                                 ? AppColors.textPrimaryDark
@@ -565,11 +566,11 @@ class _ExpertCard extends StatelessWidget {
                   // 简介 — 为空时显示占位文本
                   const SizedBox(height: 4),
                   Text(
-                    (expert.displayBio != null && expert.displayBio!.isNotEmpty)
-                        ? expert.displayBio!
+                    (expert.displayBio(locale)?.isNotEmpty ?? false)
+                        ? expert.displayBio(locale)!
                         : context.l10n.taskExpertNoIntro,
                     style: AppTypography.caption.copyWith(
-                      color: (expert.displayBio != null && expert.displayBio!.isNotEmpty)
+                      color: (expert.displayBio(locale)?.isNotEmpty ?? false)
                           ? (isDark
                               ? AppColors.textSecondaryDark
                               : AppColors.textSecondaryLight)

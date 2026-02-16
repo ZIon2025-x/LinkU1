@@ -23,6 +23,7 @@ import '../../../core/utils/responsive.dart';
 import '../../../core/utils/l10n_extension.dart';
 import '../../../core/utils/date_formatter.dart';
 import '../../../core/utils/task_type_helper.dart';
+import '../../../core/utils/task_status_helper.dart';
 import '../../../data/models/task.dart';
 import '../../../data/models/review.dart';
 import '../../../data/models/user.dart';
@@ -291,10 +292,11 @@ class _TaskDetailContent extends StatelessWidget {
                 title: Text(l10n.taskDetailShare),
                 onTap: () {
                   Navigator.pop(context);
+                  final locale = Localizations.localeOf(context);
                   CustomSharePanel.show(
                     context,
-                    title: task.displayTitle,
-                    description: task.displayDescription ?? '',
+                    title: task.displayTitle(locale),
+                    description: task.displayDescription(locale) ?? '',
                     url: 'https://link2ur.com/tasks/${task.id}',
                   );
                 },
@@ -308,6 +310,7 @@ class _TaskDetailContent extends StatelessWidget {
 
   /// 显示争议时间线 - 对标iOS showDisputeTimeline
   void _showDisputeTimeline(BuildContext context, Task task) {
+    final locale = Localizations.localeOf(context);
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -317,7 +320,7 @@ class _TaskDetailContent extends StatelessWidget {
       ),
       builder: (ctx) => _DisputeTimelineSheet(
         taskId: task.id,
-        taskTitle: task.displayTitle,
+        taskTitle: task.displayTitle(locale),
         repository: context.read<TaskRepository>(),
       ),
     );
@@ -673,7 +676,7 @@ class _TaskDetailContent extends StatelessWidget {
 
     // 默认：显示状态文本
     return PrimaryButton(
-      text: task.statusText,
+      text: TaskStatusHelper.getLocalizedLabel(task.status, context.l10n),
       onPressed: null,
     );
   }
@@ -967,6 +970,7 @@ class _TaskHeaderCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final locale = Localizations.localeOf(context);
     return Container(
       width: double.infinity,
       margin: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
@@ -1002,7 +1006,7 @@ class _TaskHeaderCard extends StatelessWidget {
             spacing: AppSpacing.sm,
             runSpacing: AppSpacing.xs,
             children: [
-              _buildStatusBadge(),
+              _buildStatusBadge(context),
               TaskLevelBadge(task: task),
               TaskSourceBadge(task: task),
             ],
@@ -1011,7 +1015,7 @@ class _TaskHeaderCard extends StatelessWidget {
 
           // 标题
           Text(
-            task.displayTitle,
+            task.displayTitle(locale),
             style: AppTypography.title2.copyWith(
               color: isDark
                   ? AppColors.textPrimaryDark
@@ -1031,7 +1035,9 @@ class _TaskHeaderCard extends StatelessWidget {
             runSpacing: AppSpacing.sm,
             children: [
               _buildTag(
-                text: task.displayCategoryText,
+                text: (task.isFleaMarketTask && task.fleaMarketCategory != null)
+                    ? task.fleaMarketCategory!
+                    : TaskTypeHelper.getLocalizedLabel(task.taskType, context.l10n),
                 icon: task.isFleaMarketTask
                     ? Icons.shopping_bag
                     : Icons.local_offer,
@@ -1051,7 +1057,7 @@ class _TaskHeaderCard extends StatelessWidget {
     );
   }
 
-  Widget _buildStatusBadge() {
+  Widget _buildStatusBadge(BuildContext context) {
     final color = AppColors.taskStatusColor(task.status);
     final isPulse = task.status == AppConstants.taskStatusInProgress;
 
@@ -1081,7 +1087,7 @@ class _TaskHeaderCard extends StatelessWidget {
             const SizedBox(width: 6),
           ],
           Text(
-            task.statusText,
+            TaskStatusHelper.getLocalizedLabel(task.status, context.l10n),
             style: AppTypography.caption.copyWith(
               color: color,
               fontWeight: FontWeight.w600,
@@ -1238,6 +1244,7 @@ class _TaskInfoCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final locale = Localizations.localeOf(context);
     return Container(
       width: double.infinity,
       margin: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
@@ -1253,8 +1260,7 @@ class _TaskInfoCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // 描述
-          if (task.displayDescription != null &&
-              task.displayDescription!.isNotEmpty) ...[
+          if (task.displayDescription(locale)?.isNotEmpty ?? false) ...[
             Row(
               children: [
                 const Icon(
@@ -1275,7 +1281,7 @@ class _TaskInfoCard extends StatelessWidget {
             ),
             const SizedBox(height: AppSpacing.md),
             Text(
-              task.displayDescription!,
+              task.displayDescription(locale)!,
               style: AppTypography.body.copyWith(
                 color: isDark
                     ? AppColors.textSecondaryDark

@@ -35,6 +35,22 @@
   "commonNotProvided": "Not provided",
   "commonPleaseSelect": "Please select",
   "commonUser": "User",
+  "commonUserWithId": "User {id}",
+  "@commonUserWithId": {
+    "placeholders": {
+      "id": {
+        "type": "String"
+      }
+    }
+  },
+  "taskExpertWithId": "Expert {id}",
+  "@taskExpertWithId": {
+    "placeholders": {
+      "id": {
+        "type": "String"
+      }
+    }
+  },
   "appName": "Link²Ur",
   "appTagline": "Connect you and me, create value",
   "appUser": "Link²Ur User",
@@ -467,6 +483,9 @@
   "studentVerificationConfirmChange": "Confirm Change",
   "studentVerificationVerified": "Verified",
   "studentVerificationUnverified": "Unverified",
+  "studentVerificationStatusPending": "Pending",
+  "studentVerificationStatusExpired": "Expired",
+  "studentVerificationStatusRevoked": "Revoked",
   "studentVerificationBenefitsTitleVerified": "Student Benefits You Enjoy",
   "studentVerificationBenefitsTitleUnverified": "After verification, you will get",
   "customerServiceCustomerService": "Customer Service",
@@ -1905,6 +1924,7 @@
   "taskStatusCancelled": "Cancelled",
   "taskStatusPendingConfirmation": "Pending Confirmation",
   "taskStatusPendingPayment": "Pending Payment",
+  "taskStatusDisputed": "Disputed",
   "myPostsTitle": "My Items",
   "taskLocationAddress": "Task Address",
   "taskLocationCoordinates": "Coordinates",
@@ -3027,11 +3047,25 @@
   "commonRetryText": "Retry",
   "locationTaskLocation": "Task Location",
   "locationGetFailed": "Failed to get location",
+  "locationEnableLocationService": "Please enable location services on your device first",
+  "locationOpenMapFailed": "Failed to open map",
   "notificationPermissionTitle": "Notification Permission Required",
   "notificationPermissionMessage": "You have denied notification permission. Please enable it in system settings.",
   "notificationPermissionLater": "Maybe Later",
   "permissionRequired": "{permissionName} permission required",
+  "permissionEnableInSettings": "Please enable {permissionName} permission in system settings and try again",
+  "permissionRequiredForFeature": "This feature requires {permissionName} permission to work",
   "@permissionRequired": {
+    "placeholders": {
+      "permissionName": { "type": "String" }
+    }
+  },
+  "@permissionEnableInSettings": {
+    "placeholders": {
+      "permissionName": { "type": "String" }
+    }
+  },
+  "@permissionRequiredForFeature": {
     "placeholders": {
       "permissionName": { "type": "String" }
     }
@@ -3612,6 +3646,12 @@
   "publishTaskCardLabel": "Post Task",
   "publishFleaCardLabel": "Sell Item",
   "publishPostCardLabel": "Forum Post",
+  "publishRelatedContent": "Related Content",
+  "publishSearchHint": "Search services, activities, items, leaderboards...",
+  "publishRelatedToMe": "Related to me",
+  "publishSearchResults": "Search results",
+  "publishNoResultsTryKeywords": "No results, try other keywords",
+  "publishSearchAndLink": "Search and link",
 
   "profileUpdateFailed": "Update failed",
   "profileAvatarUpdated": "Avatar updated",

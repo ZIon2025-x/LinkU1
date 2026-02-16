@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../data/models/activity.dart';
 import '../../../core/design/app_colors.dart';
+import '../../../core/utils/l10n_extension.dart';
 
 /// 活动价格显示：有折扣时展示原价（删除线）+ 折后价，与 HTML mockup 一致
 class ActivityPriceWidget extends StatelessWidget {
@@ -51,8 +52,10 @@ class ActivityPriceWidget extends StatelessWidget {
       );
     }
 
+    final isFree = activity.discountedPricePerParticipant == null &&
+        activity.originalPricePerParticipant == null;
     return Text(
-      activity.priceDisplay,
+      isFree ? context.l10n.activityFree : activity.priceDisplay,
       style: TextStyle(
         fontSize: fontSize,
         fontWeight: FontWeight.bold,

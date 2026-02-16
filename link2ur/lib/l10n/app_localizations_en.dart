@@ -114,6 +114,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get commonUser => 'User';
 
   @override
+  String commonUserWithId(String id) {
+    return 'User $id';
+  }
+
+  @override
+  String taskExpertWithId(String id) {
+    return 'Expert $id';
+  }
+
+  @override
   String get appName => 'Link²Ur';
 
   @override
@@ -1224,6 +1234,15 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get studentVerificationUnverified => 'Unverified';
+
+  @override
+  String get studentVerificationStatusPending => 'Pending';
+
+  @override
+  String get studentVerificationStatusExpired => 'Expired';
+
+  @override
+  String get studentVerificationStatusRevoked => 'Revoked';
 
   @override
   String get studentVerificationBenefitsTitleVerified =>
@@ -4160,6 +4179,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get taskStatusPendingPayment => 'Pending Payment';
 
   @override
+  String get taskStatusDisputed => 'Disputed';
+
+  @override
   String get myPostsTitle => 'My Posts';
 
   @override
@@ -6332,6 +6354,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get locationGetFailed => 'Failed to get location';
 
   @override
+  String get locationEnableLocationService =>
+      'Please enable location services on your device first';
+
+  @override
+  String get locationOpenMapFailed => 'Failed to open map';
+
+  @override
   String get notificationPermissionMessage =>
       'You have denied notification permission. Please enable it in system settings.';
 
@@ -6341,6 +6370,16 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String permissionRequired(String permissionName) {
     return '$permissionName permission required';
+  }
+
+  @override
+  String permissionEnableInSettings(String permissionName) {
+    return 'Please enable $permissionName permission in system settings and try again';
+  }
+
+  @override
+  String permissionRequiredForFeature(String permissionName) {
+    return 'This feature requires $permissionName permission to work';
   }
 
   @override
@@ -7764,6 +7803,25 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get publishPostCardLabel => 'Forum Post';
+
+  @override
+  String get publishRelatedContent => 'Related Content';
+
+  @override
+  String get publishSearchHint =>
+      'Search services, activities, items, leaderboards...';
+
+  @override
+  String get publishRelatedToMe => 'Related to me';
+
+  @override
+  String get publishSearchResults => 'Search results';
+
+  @override
+  String get publishNoResultsTryKeywords => 'No results, try other keywords';
+
+  @override
+  String get publishSearchAndLink => 'Search and link';
 
   @override
   String get profileUpdateFailed => 'Update failed';

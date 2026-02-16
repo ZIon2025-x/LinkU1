@@ -309,6 +309,18 @@ abstract class AppLocalizations {
   /// **'User'**
   String get commonUser;
 
+  /// No description provided for @commonUserWithId.
+  ///
+  /// In en, this message translates to:
+  /// **'User {id}'**
+  String commonUserWithId(String id);
+
+  /// No description provided for @taskExpertWithId.
+  ///
+  /// In en, this message translates to:
+  /// **'Expert {id}'**
+  String taskExpertWithId(String id);
+
   /// No description provided for @appName.
   ///
   /// In en, this message translates to:
@@ -2396,6 +2408,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Unverified'**
   String get studentVerificationUnverified;
+
+  /// No description provided for @studentVerificationStatusPending.
+  ///
+  /// In en, this message translates to:
+  /// **'Pending'**
+  String get studentVerificationStatusPending;
+
+  /// No description provided for @studentVerificationStatusExpired.
+  ///
+  /// In en, this message translates to:
+  /// **'Expired'**
+  String get studentVerificationStatusExpired;
+
+  /// No description provided for @studentVerificationStatusRevoked.
+  ///
+  /// In en, this message translates to:
+  /// **'Revoked'**
+  String get studentVerificationStatusRevoked;
 
   /// No description provided for @studentVerificationBenefitsTitleVerified.
   ///
@@ -7701,6 +7731,12 @@ abstract class AppLocalizations {
   /// **'Pending Payment'**
   String get taskStatusPendingPayment;
 
+  /// No description provided for @taskStatusDisputed.
+  ///
+  /// In en, this message translates to:
+  /// **'Disputed'**
+  String get taskStatusDisputed;
+
   /// No description provided for @myPostsTitle.
   ///
   /// In en, this message translates to:
@@ -11576,6 +11612,18 @@ abstract class AppLocalizations {
   /// **'Failed to get location'**
   String get locationGetFailed;
 
+  /// No description provided for @locationEnableLocationService.
+  ///
+  /// In en, this message translates to:
+  /// **'Please enable location services on your device first'**
+  String get locationEnableLocationService;
+
+  /// No description provided for @locationOpenMapFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to open map'**
+  String get locationOpenMapFailed;
+
   /// No description provided for @notificationPermissionMessage.
   ///
   /// In en, this message translates to:
@@ -11593,6 +11641,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{permissionName} permission required'**
   String permissionRequired(String permissionName);
+
+  /// No description provided for @permissionEnableInSettings.
+  ///
+  /// In en, this message translates to:
+  /// **'Please enable {permissionName} permission in system settings and try again'**
+  String permissionEnableInSettings(String permissionName);
+
+  /// No description provided for @permissionRequiredForFeature.
+  ///
+  /// In en, this message translates to:
+  /// **'This feature requires {permissionName} permission to work'**
+  String permissionRequiredForFeature(String permissionName);
 
   /// No description provided for @badgeStudent.
   ///
@@ -14287,6 +14347,42 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Forum Post'**
   String get publishPostCardLabel;
+
+  /// No description provided for @publishRelatedContent.
+  ///
+  /// In en, this message translates to:
+  /// **'Related Content'**
+  String get publishRelatedContent;
+
+  /// No description provided for @publishSearchHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Search services, activities, items, leaderboards...'**
+  String get publishSearchHint;
+
+  /// No description provided for @publishRelatedToMe.
+  ///
+  /// In en, this message translates to:
+  /// **'Related to me'**
+  String get publishRelatedToMe;
+
+  /// No description provided for @publishSearchResults.
+  ///
+  /// In en, this message translates to:
+  /// **'Search results'**
+  String get publishSearchResults;
+
+  /// No description provided for @publishNoResultsTryKeywords.
+  ///
+  /// In en, this message translates to:
+  /// **'No results, try other keywords'**
+  String get publishNoResultsTryKeywords;
+
+  /// No description provided for @publishSearchAndLink.
+  ///
+  /// In en, this message translates to:
+  /// **'Search and link'**
+  String get publishSearchAndLink;
 
   /// No description provided for @profileUpdateFailed.
   ///

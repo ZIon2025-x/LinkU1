@@ -1,5 +1,7 @@
 import 'package:equatable/equatable.dart';
 
+import '../../l10n/app_localizations.dart';
+
 /// 用户模型
 /// 参考iOS User.swift
 class User extends Equatable {
@@ -44,8 +46,12 @@ class User extends Equatable {
   /// 头像URL
   String? get avatarUrl => avatar;
 
-  /// 显示名称
+  /// 显示名称（硬编码回退，国际化请使用 displayNameWith(l10n)）
   String get displayName => name.isNotEmpty ? name : '用户$id';
+
+  /// 显示名称（国际化，name 为空时使用 l10n.commonUserWithId）
+  String displayNameWith(AppLocalizations l10n) =>
+      name.isNotEmpty ? name : l10n.commonUserWithId(id);
 
   /// 评分显示
   String get ratingDisplay => avgRating != null 

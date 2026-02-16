@@ -1,4 +1,8 @@
+import 'dart:ui' show Locale;
+
 import 'package:equatable/equatable.dart';
+
+import '../../core/utils/localized_string.dart';
 import 'user.dart';
 
 /// 论坛分类（对标iOS ForumCategory）
@@ -81,12 +85,13 @@ class ForumCategory extends Equatable {
 
   // ==================== 显示辅助 ====================
 
-  /// 显示名称
-  String get displayName => nameZh ?? nameEn ?? name;
+  /// 显示名称（根据 locale 选择 zh/en）
+  String displayName(Locale locale) =>
+      localizedString(nameZh, nameEn, name, locale);
 
-  /// 显示描述
-  String? get displayDescription =>
-      descriptionZh ?? descriptionEn ?? description;
+  /// 显示描述（根据 locale 选择 zh/en）
+  String? displayDescription(Locale locale) =>
+      localizedStringOrNull(descriptionZh, descriptionEn, description, locale);
 
   factory ForumCategory.fromJson(Map<String, dynamic> json) {
     return ForumCategory(
@@ -147,12 +152,14 @@ class LatestPostInfo {
   final int replyCount;
   final int viewCount;
 
-  /// 显示标题
-  String get displayTitle => titleZh ?? titleEn ?? title;
+  /// 显示标题（根据 locale 选择 zh/en）
+  String displayTitle(Locale locale) =>
+      localizedString(titleZh, titleEn, title, locale);
 
-  /// 显示内容预览
-  String? get displayContentPreview =>
-      contentPreviewZh ?? contentPreviewEn ?? contentPreview;
+  /// 显示内容预览（根据 locale 选择 zh/en）
+  String? displayContentPreview(Locale locale) =>
+      localizedStringOrNull(
+          contentPreviewZh, contentPreviewEn, contentPreview, locale);
 
   factory LatestPostInfo.fromJson(Map<String, dynamic> json) {
     return LatestPostInfo(
@@ -180,8 +187,14 @@ class ForumPost extends Equatable {
   const ForumPost({
     required this.id,
     required this.title,
+    this.titleEn,
+    this.titleZh,
     this.content,
+    this.contentEn,
+    this.contentZh,
     this.contentPreview,
+    this.contentPreviewEn,
+    this.contentPreviewZh,
     this.images = const [],
     this.linkedItemType,
     this.linkedItemId,
@@ -204,8 +217,14 @@ class ForumPost extends Equatable {
 
   final int id;
   final String title;
+  final String? titleEn;
+  final String? titleZh;
   final String? content;
+  final String? contentEn;
+  final String? contentZh;
   final String? contentPreview;
+  final String? contentPreviewEn;
+  final String? contentPreviewZh;
   final List<String> images;
   final String? linkedItemType; // service/expert/activity/product/ranking/forum_post
   final String? linkedItemId;
@@ -225,8 +244,15 @@ class ForumPost extends Equatable {
   final DateTime? updatedAt;
   final DateTime? lastReplyAt;
 
-  /// 显示内容：优先用完整内容，其次用预览
-  String? get displayContent => content ?? contentPreview;
+  /// 显示标题（根据 locale 选择 zh/en）
+  String displayTitle(Locale locale) =>
+      localizedString(titleZh, titleEn, title, locale);
+
+  /// 显示内容（根据 locale 选择 zh/en，优先完整内容再预览）
+  String? displayContent(Locale locale) =>
+      localizedStringOrNull(contentZh, contentEn, content, locale) ??
+      localizedStringOrNull(
+          contentPreviewZh, contentPreviewEn, contentPreview, locale);
 
   /// 第一张图片
   String? get firstImage => images.isNotEmpty ? images.first : null;
@@ -247,8 +273,14 @@ class ForumPost extends Equatable {
           json['title_en'] as String? ??
           json['title'] as String? ??
           '',
+      titleEn: json['title_en'] as String?,
+      titleZh: json['title_zh'] as String?,
       content: json['content'] as String?,
+      contentEn: json['content_en'] as String?,
+      contentZh: json['content_zh'] as String?,
       contentPreview: contentPreview,
+      contentPreviewEn: json['content_preview_en'] as String?,
+      contentPreviewZh: json['content_preview_zh'] as String?,
       images: (json['images'] as List<dynamic>?)
               ?.map((e) => e as String)
               .toList() ??
@@ -319,8 +351,14 @@ class ForumPost extends Equatable {
     return ForumPost(
       id: id,
       title: title,
+      titleEn: titleEn,
+      titleZh: titleZh,
       content: content ?? this.content,
+      contentEn: contentEn,
+      contentZh: contentZh,
       contentPreview: contentPreview,
+      contentPreviewEn: contentPreviewEn,
+      contentPreviewZh: contentPreviewZh,
       images: images,
       categoryId: categoryId,
       category: category,

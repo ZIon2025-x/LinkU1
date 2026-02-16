@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
-/// 统一的任务类型图标映射
+import '../../l10n/app_localizations.dart';
+
+/// 统一的任务类型图标与国际化文案映射
 ///
 /// 后端 task_type 字段有多种格式：
 /// - 老格式（展示名）: "Housekeeping", "Campus Life", "Errand Running" 等
@@ -10,6 +12,56 @@ import 'package:flutter/material.dart';
 /// 此工具类统一覆盖所有变体，避免各个卡片组件各自维护映射导致遗漏。
 class TaskTypeHelper {
   TaskTypeHelper._();
+
+  /// 根据 taskType 获取国际化显示文案（随 locale 切换）
+  static String getLocalizedLabel(String taskType, AppLocalizations l10n) {
+    final key = _labelKeyMap[taskType] ?? _labelKeyMap[taskType.toLowerCase()];
+    if (key != null) return key(l10n);
+    return taskType;
+  }
+
+  static final Map<String, String Function(AppLocalizations)> _labelKeyMap = {
+    'Housekeeping': (l) => l.taskTypeHousekeeping,
+    'Campus Life': (l) => l.taskTypeCampusLife,
+    'Second-hand & Rental': (l) => l.taskTypeSecondHandRental,
+    'Errand Running': (l) => l.taskTypeErrandRunning,
+    'Skill Service': (l) => l.taskTypeSkillService,
+    'Social Help': (l) => l.taskTypeSocialHelp,
+    'Transportation': (l) => l.taskTypeTransportation,
+    'Pet Care': (l) => l.taskTypePetCare,
+    'Life Convenience': (l) => l.taskTypeLifeConvenience,
+    'Other': (l) => l.taskTypeOther,
+    'housekeeping': (l) => l.taskTypeHousekeeping,
+    'campus life': (l) => l.taskTypeCampusLife,
+    'campus': (l) => l.taskTypeCampusLife,
+    'second-hand & rental': (l) => l.taskTypeSecondHandRental,
+    'secondhand': (l) => l.taskTypeSecondHandRental,
+    'errand running': (l) => l.taskTypeErrandRunning,
+    'skill service': (l) => l.taskTypeSkillService,
+    'skill': (l) => l.taskTypeSkillService,
+    'social help': (l) => l.taskTypeSocialHelp,
+    'social': (l) => l.taskTypeSocialHelp,
+    'transportation': (l) => l.taskTypeTransportation,
+    'transport': (l) => l.taskTypeTransportation,
+    'pet care': (l) => l.taskTypePetCare,
+    'pet_care': (l) => l.taskTypePetCare,
+    'life convenience': (l) => l.taskTypeLifeConvenience,
+    'life': (l) => l.taskTypeLifeConvenience,
+    'other': (l) => l.taskTypeOther,
+    'delivery': (l) => l.createTaskCategoryDelivery,
+    'shopping': (l) => l.createTaskCategoryShopping,
+    'tutoring': (l) => l.createTaskCategoryTutoring,
+    'translation': (l) => l.createTaskCategoryTranslation,
+    'design': (l) => l.createTaskCategoryDesign,
+    'programming': (l) => l.createTaskCategoryProgramming,
+    'writing': (l) => l.createTaskCategoryWriting,
+    'photography': (l) => l.taskTypeSkillService,
+    'moving': (l) => l.taskTypeTransportation,
+    'cleaning': (l) => l.taskTypeHousekeeping,
+    'repair': (l) => l.taskTypeSkillService,
+    'errand': (l) => l.taskTypeErrandRunning,
+    '其他': (l) => l.taskTypeOther,
+  };
 
   /// 根据 taskType 获取对应的 Material Icon
   static IconData getIcon(String taskType) {

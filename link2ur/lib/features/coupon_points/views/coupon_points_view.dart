@@ -904,3 +904,17 @@ String _localizeCouponType(BuildContext context, String type) {
       return type;
   }
 }
+
+String _localizeCouponStatus(BuildContext context, String status) {
+  final l10n = context.l10n;
+  switch (status) {
+    case 'unused':
+      return l10n.couponStatusUnused;
+    case 'used':
+      return l10n.couponStatusUsed;
+    case 'expired':
+      return l10n.couponStatusExpired;
+    default:
+      return status;
+  }
+}

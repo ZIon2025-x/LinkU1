@@ -587,7 +587,7 @@ class _TaskChatItem extends StatelessWidget {
                       ],
                       Expanded(
                         child: Text(
-                          taskChat.displayTitle,
+                          taskChat.displayTitle(Localizations.localeOf(context)),
                           style: TextStyle(
                             fontSize: 16,
                             fontWeight:

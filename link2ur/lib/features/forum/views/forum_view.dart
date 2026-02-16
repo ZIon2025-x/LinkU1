@@ -603,6 +603,7 @@ class _CategoryCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final locale = Localizations.localeOf(context);
     final colors = _gradient;
 
     return GestureDetector(
@@ -649,7 +650,7 @@ class _CategoryCard extends StatelessWidget {
                 children: [
                   // 标题（对标iOS body bold）
                   Text(
-                    category.displayName,
+                    category.displayName(locale),
                     style: AppTypography.bodyBold.copyWith(
                       color: isDark
                           ? AppColors.textPrimaryDark
@@ -660,11 +661,10 @@ class _CategoryCard extends StatelessWidget {
                   ),
 
                   // 描述（对标iOS subheadline）
-                  if (category.displayDescription != null &&
-                      category.displayDescription!.isNotEmpty) ...[
+                  if (category.displayDescription(locale)?.isNotEmpty ?? false) ...[
                     const SizedBox(height: 4),
                     Text(
-                      category.displayDescription!,
+                      category.displayDescription(locale)!,
                       style: AppTypography.caption.copyWith(
                         color: isDark
                             ? AppColors.textSecondaryDark
@@ -769,7 +769,7 @@ class _CategoryCard extends StatelessWidget {
             const SizedBox(width: 4),
             Expanded(
               child: Text(
-                post.displayTitle,
+                post.displayTitle(Localizations.localeOf(context)),
                 style: AppTypography.caption.copyWith(
                   fontWeight: FontWeight.w500,
                   color: isDark
@@ -891,6 +891,7 @@ class _LeaderboardCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final locale = Localizations.localeOf(context);
     final colors = _gradient;
 
     return GestureDetector(
@@ -951,7 +952,7 @@ class _LeaderboardCard extends StatelessWidget {
                     children: [
                       // 标题 (对标iOS title3 bold, lineLimit 1)
                       Text(
-                        leaderboard.displayName,
+                        leaderboard.displayName(locale),
                         style: AppTypography.bodyBold.copyWith(
                           fontSize: 17,
                           color: isDark
@@ -962,10 +963,10 @@ class _LeaderboardCard extends StatelessWidget {
                         overflow: TextOverflow.ellipsis,
                       ),
                       // 描述 (对标iOS caption, lineLimit 2)
-                      if (leaderboard.displayDescription != null) ...[
+                      if (leaderboard.displayDescription(locale) != null) ...[
                         const SizedBox(height: 4),
                         Text(
-                          leaderboard.displayDescription!,
+                          leaderboard.displayDescription(locale)!,
                           style: AppTypography.caption.copyWith(
                             color: isDark
                                 ? AppColors.textSecondaryDark

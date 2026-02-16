@@ -1,4 +1,8 @@
+import 'dart:ui' show Locale;
+
 import 'package:equatable/equatable.dart';
+
+import '../../core/utils/localized_string.dart';
 import 'user.dart';
 
 /// 聊天联系人
@@ -262,8 +266,9 @@ class TaskChat extends Equatable {
   final DateTime? lastMessageTime;
   final int unreadCount;
 
-  /// 多语言显示标题（对齐iOS displayTitle）
-  String get displayTitle => titleZh ?? titleEn ?? taskTitle;
+  /// 多语言显示标题（根据 locale 选择 zh/en）
+  String displayTitle(Locale locale) =>
+      localizedString(titleZh, titleEn, taskTitle, locale);
 
   factory TaskChat.fromJson(Map<String, dynamic> json) {
     // 解析 last_message：兼容 String 或 Object 两种格式

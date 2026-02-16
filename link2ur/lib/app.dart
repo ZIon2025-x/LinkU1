@@ -308,6 +308,9 @@ class _DeferredBlocLoaderState extends State<_DeferredBlocLoader>
 }
 
 Locale _localeFromString(String s) {
+  if (s == 'zh_Hant') {
+    return const Locale.fromSubtags(languageCode: 'zh', scriptCode: 'Hant');
+  }
   if (s.contains('-')) {
     final parts = s.split('-');
     return Locale(parts[0], parts[1]);

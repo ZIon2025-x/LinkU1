@@ -100,7 +100,7 @@ Widget _buildUserInfoSection(
           children: [
             Flexible(
               child: Text(
-                user.displayName,
+                user.displayNameWith(context.l10n),
                 style: const TextStyle(
                   fontSize: 24,
                   fontWeight: FontWeight.bold,

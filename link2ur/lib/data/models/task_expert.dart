@@ -1,4 +1,9 @@
+import 'dart:ui' show Locale;
+
 import 'package:equatable/equatable.dart';
+
+import '../../core/utils/localized_string.dart';
+import '../../l10n/app_localizations.dart';
 
 /// 任务达人模型
 /// 后端实际返回格式参考 React 前端 TaskExperts.tsx 的 interface TaskExpert
@@ -79,30 +84,37 @@ class TaskExpert extends Equatable {
   // 模式：zh → en → 默认字段（与 ForumCategory.displayName 一致）
   // 默认字段已由后端根据 Accept-Language 选择，作为最终回退
 
-  /// 显示名称
+  /// 显示名称（硬编码回退，国际化请使用 displayNameWith(l10n)）
   String get displayName => expertName ?? '达人$id';
+
+  /// 显示名称（国际化，expertName 为空时使用 l10n.taskExpertWithId）
+  String displayNameWith(AppLocalizations l10n) =>
+      (expertName != null && expertName!.isNotEmpty)
+          ? expertName!
+          : l10n.taskExpertWithId(id);
 
   /// name 别名（兼容视图层）
   String get name => displayName;
 
-  /// 显示简介（双语）
-  String? get displayBio => bioZh ?? bioEn ?? bio;
+  /// 显示简介（根据 locale 选择 zh/en）
+  String? displayBio(Locale locale) =>
+      localizedStringOrNull(bioZh, bioEn, bio, locale);
 
-  /// 显示专业领域（双语）
-  List<String>? get displaySpecialties =>
-      specialtiesZh ?? specialtiesEn ?? specialties;
+  /// 显示专业领域（根据 locale 选择 zh/en）
+  List<String> displaySpecialties(Locale locale) =>
+      localizedList(specialtiesZh, specialtiesEn, specialties, locale);
 
-  /// 显示特色技能（双语）
-  List<String>? get displayFeaturedSkills =>
-      featuredSkillsZh ?? featuredSkillsEn ?? featuredSkills;
+  /// 显示特色技能（根据 locale 选择 zh/en）
+  List<String> displayFeaturedSkills(Locale locale) =>
+      localizedList(featuredSkillsZh, featuredSkillsEn, featuredSkills, locale);
 
-  /// 显示成就（双语）
-  List<String>? get displayAchievements =>
-      achievementsZh ?? achievementsEn ?? achievements;
+  /// 显示成就（根据 locale 选择 zh/en）
+  List<String> displayAchievements(Locale locale) =>
+      localizedList(achievementsZh, achievementsEn, achievements, locale);
 
-  /// 显示响应时间（双语）
-  String? get displayResponseTime =>
-      responseTimeZh ?? responseTimeEn ?? responseTime;
+  /// 显示响应时间（根据 locale 选择 zh/en）
+  String? displayResponseTime(Locale locale) =>
+      localizedStringOrNull(responseTimeZh, responseTimeEn, responseTime, locale);
 
   /// 平均评分（可空版本，兼容视图层）
   double? get avgRating => rating > 0 ? rating : null;

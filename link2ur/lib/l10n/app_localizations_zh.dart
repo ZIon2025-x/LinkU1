@@ -114,6 +114,16 @@ class AppLocalizationsZh extends AppLocalizations {
   String get commonUser => '用户';
 
   @override
+  String commonUserWithId(String id) {
+    return '用户 $id';
+  }
+
+  @override
+  String taskExpertWithId(String id) {
+    return '达人 $id';
+  }
+
+  @override
   String get appName => 'Link²Ur';
 
   @override
@@ -1183,6 +1193,15 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get studentVerificationUnverified => '未认证';
+
+  @override
+  String get studentVerificationStatusPending => '审核中';
+
+  @override
+  String get studentVerificationStatusExpired => '已过期';
+
+  @override
+  String get studentVerificationStatusRevoked => '已撤销';
 
   @override
   String get studentVerificationBenefitsTitleVerified => '您已享有的学生特权';
@@ -4000,6 +4019,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get taskStatusPendingPayment => '待支付';
 
   @override
+  String get taskStatusDisputed => '争议中';
+
+  @override
   String get myPostsTitle => '我的帖子';
 
   @override
@@ -6063,6 +6085,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get locationGetFailed => '获取位置失败';
 
   @override
+  String get locationEnableLocationService => '请先开启设备的定位服务';
+
+  @override
+  String get locationOpenMapFailed => '打开地图失败';
+
+  @override
   String get notificationPermissionMessage => '您已拒绝通知权限，请在系统设置中手动开启。';
 
   @override
@@ -6071,6 +6099,16 @@ class AppLocalizationsZh extends AppLocalizations {
   @override
   String permissionRequired(String permissionName) {
     return '需要$permissionName权限';
+  }
+
+  @override
+  String permissionEnableInSettings(String permissionName) {
+    return '请在系统设置中开启$permissionName权限后重试';
+  }
+
+  @override
+  String permissionRequiredForFeature(String permissionName) {
+    return '此功能需要$permissionName权限才能正常使用';
   }
 
   @override
@@ -7462,6 +7500,24 @@ class AppLocalizationsZh extends AppLocalizations {
   String get publishPostCardLabel => '发帖子';
 
   @override
+  String get publishRelatedContent => '关联内容';
+
+  @override
+  String get publishSearchHint => '输入关键词搜索服务、活动、商品、排行榜…';
+
+  @override
+  String get publishRelatedToMe => '与我相关';
+
+  @override
+  String get publishSearchResults => '搜索结果';
+
+  @override
+  String get publishNoResultsTryKeywords => '无结果，换关键词试试';
+
+  @override
+  String get publishSearchAndLink => '搜索并关联';
+
+  @override
   String get profileUpdateFailed => '更新失败';
 
   @override
@@ -7985,6 +8041,16 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get commonUser => '用戶';
+
+  @override
+  String commonUserWithId(String id) {
+    return '用戶 $id';
+  }
+
+  @override
+  String taskExpertWithId(String id) {
+    return '達人 $id';
+  }
 
   @override
   String get appName => 'Link²Ur';
@@ -9056,6 +9122,15 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get studentVerificationUnverified => '未認證';
+
+  @override
+  String get studentVerificationStatusPending => '審核中';
+
+  @override
+  String get studentVerificationStatusExpired => '已過期';
+
+  @override
+  String get studentVerificationStatusRevoked => '已撤銷';
 
   @override
   String get studentVerificationBenefitsTitleVerified => '您已享有的學生特權';
@@ -11873,6 +11948,9 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get taskStatusPendingPayment => '待支付';
 
   @override
+  String get taskStatusDisputed => '爭議中';
+
+  @override
   String get myPostsTitle => '我的帖子';
 
   @override
@@ -13936,6 +14014,12 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get locationGetFailed => '取得位置失敗';
 
   @override
+  String get locationEnableLocationService => '請先開啟裝置的定位服務';
+
+  @override
+  String get locationOpenMapFailed => '打開地圖失敗';
+
+  @override
   String get notificationPermissionMessage => '您已拒絕通知權限，請在系統設定中手動開啟。';
 
   @override
@@ -13944,6 +14028,16 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   @override
   String permissionRequired(String permissionName) {
     return '需要$permissionName權限';
+  }
+
+  @override
+  String permissionEnableInSettings(String permissionName) {
+    return '請在系統設定中開啟$permissionName權限後重試';
+  }
+
+  @override
+  String permissionRequiredForFeature(String permissionName) {
+    return '此功能需要$permissionName權限才能正常使用';
   }
 
   @override
@@ -15333,6 +15427,24 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get publishPostCardLabel => '發帖子';
+
+  @override
+  String get publishRelatedContent => '關聯內容';
+
+  @override
+  String get publishSearchHint => '輸入關鍵詞搜尋服務、活動、商品、排行榜…';
+
+  @override
+  String get publishRelatedToMe => '與我相關';
+
+  @override
+  String get publishSearchResults => '搜尋結果';
+
+  @override
+  String get publishNoResultsTryKeywords => '無結果，換關鍵詞試試';
+
+  @override
+  String get publishSearchAndLink => '搜尋並關聯';
 
   @override
   String get profileUpdateFailed => '更新失敗';

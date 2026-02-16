@@ -1,4 +1,8 @@
+import 'dart:ui' show Locale;
+
 import 'package:equatable/equatable.dart';
+
+import '../../core/utils/localized_string.dart';
 
 /// 通知模型
 /// 参考后端 NotificationOut
@@ -33,11 +37,13 @@ class AppNotification extends Equatable {
   final Map<String, dynamic>? variables;
   final DateTime? createdAt;
 
-  /// 显示标题
-  String get displayTitle => title;
+  /// 显示标题（根据 locale 选择 zh/en，title 为默认/中文）
+  String displayTitle(Locale locale) =>
+      localizedString(title, titleEn, title, locale);
 
-  /// 显示内容
-  String get displayContent => content;
+  /// 显示内容（根据 locale 选择 zh/en，content 为默认/中文）
+  String displayContent(Locale locale) =>
+      localizedString(content, contentEn, content, locale);
 
   /// 通知类型图标名称
   String get typeIcon {

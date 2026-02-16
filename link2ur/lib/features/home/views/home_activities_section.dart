@@ -385,7 +385,7 @@ class _SliverDiscoveryFeed extends StatelessWidget {
                             onPressed: () => context
                                 .read<HomeBloc>()
                                 .add(const HomeLoadMoreDiscovery()),
-                            child: const Text('加载更多'),
+                            child: Text(context.l10n.commonLoadMore),
                           ),
                   ),
                 ),

@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../core/constants/app_constants.dart';
+import '../../../core/utils/task_type_helper.dart';
+import '../../../core/utils/task_status_helper.dart';
 import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_radius.dart';
@@ -371,7 +373,7 @@ class _TaskCard extends StatelessWidget {
                       style: const TextStyle(fontWeight: FontWeight.w500),
                     ),
                     Text(
-                      task.taskTypeText,
+                      TaskTypeHelper.getLocalizedLabel(task.taskType, context.l10n),
                       style: const TextStyle(
                         fontSize: 12,
                         color: AppColors.textTertiaryLight,
@@ -387,7 +389,7 @@ class _TaskCard extends StatelessWidget {
                   borderRadius: AppRadius.allTiny,
                 ),
                 child: Text(
-                  task.statusText,
+                  TaskStatusHelper.getLocalizedLabel(task.status, context.l10n),
                   style: TextStyle(
                     color: _statusColor(task.status),
                     fontSize: 12,
@@ -413,7 +415,7 @@ class _TaskCard extends StatelessWidget {
 
           // 标题
           Text(
-            task.displayTitle,
+            task.displayTitle(Localizations.localeOf(context)),
             style: const TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.w600,
@@ -421,10 +423,10 @@ class _TaskCard extends StatelessWidget {
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
           ),
-          if (task.displayDescription != null) ...[
+          if (task.displayDescription(Localizations.localeOf(context)) != null) ...[
             AppSpacing.vSm,
             Text(
-              task.displayDescription!,
+              task.displayDescription(Localizations.localeOf(context))!,
               style: const TextStyle(
                 fontSize: 14,
                 color: AppColors.textSecondaryLight,

@@ -164,7 +164,7 @@ Widget _buildDesktopUserCard(
                 children: [
                   Flexible(
                     child: Text(
-                      user.displayName,
+                      user.displayNameWith(context.l10n),
                       style: TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.bold,

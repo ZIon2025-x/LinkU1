@@ -174,7 +174,7 @@ class _LeaderboardCard extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        leaderboard.displayName,
+                        leaderboard.displayName(Localizations.localeOf(context)),
                         style: AppTypography.bodyBold.copyWith(
                           fontSize: 17,
                           color: isDark
@@ -184,10 +184,10 @@ class _LeaderboardCard extends StatelessWidget {
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
-                      if (leaderboard.displayDescription != null) ...[
+                      if (leaderboard.displayDescription(Localizations.localeOf(context)) != null) ...[
                         const SizedBox(height: 4),
                         Text(
-                          leaderboard.displayDescription!,
+                          leaderboard.displayDescription(Localizations.localeOf(context))!,
                           style: AppTypography.caption.copyWith(
                             color: isDark
                                 ? AppColors.textSecondaryDark

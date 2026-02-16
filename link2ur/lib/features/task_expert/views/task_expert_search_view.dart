@@ -181,7 +181,7 @@ class _ExpertCard extends StatelessWidget {
               child: Center(
                 child: AvatarView(
                   imageUrl: expert.avatar,
-                  name: expert.displayName,
+                  name: expert.displayNameWith(context.l10n),
                   size: 54,
                 ),
               ),
@@ -196,7 +196,7 @@ class _ExpertCard extends StatelessWidget {
                     children: [
                       Flexible(
                         child: Text(
-                          expert.displayName,
+                          expert.displayNameWith(context.l10n),
                           style: AppTypography.bodyBold.copyWith(
                             color: isDark
                                 ? AppColors.textPrimaryDark
@@ -216,10 +216,9 @@ class _ExpertCard extends StatelessWidget {
                   ),
                   const SizedBox(height: 4),
                   // 专长标签
-                  if (expert.displaySpecialties != null &&
-                      expert.displaySpecialties!.isNotEmpty)
+                  if (expert.displaySpecialties(Localizations.localeOf(context)).isNotEmpty)
                     Text(
-                      expert.displaySpecialties!.join(' · '),
+                      expert.displaySpecialties(Localizations.localeOf(context)).join(' · '),
                       style: AppTypography.caption.copyWith(
                         color: isDark
                             ? AppColors.textSecondaryDark

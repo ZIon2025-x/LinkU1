@@ -300,7 +300,7 @@ class _NotificationItem extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    notification.displayTitle,
+                    notification.displayTitle(Localizations.localeOf(context)),
                     style: TextStyle(
                       fontWeight: notification.isRead
                           ? FontWeight.normal
@@ -309,7 +309,7 @@ class _NotificationItem extends StatelessWidget {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    notification.displayContent,
+                    notification.displayContent(Localizations.localeOf(context)),
                     style: const TextStyle(
                       fontSize: 14,
                       color: AppColors.textSecondaryLight,

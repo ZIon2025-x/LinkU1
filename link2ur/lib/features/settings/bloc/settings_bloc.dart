@@ -1,5 +1,6 @@
-import 'package:equatable/equatable.dart';
+import 'dart:ui' as ui;
 
+import 'package:equatable/equatable.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -140,7 +141,8 @@ class SettingsState extends Equatable {
 // ==================== Bloc ====================
 
 class SettingsBloc extends Bloc<SettingsEvent, SettingsState> {
-  SettingsBloc({this.apiService}) : super(const SettingsState()) {
+  SettingsBloc({this.apiService})
+      : super(SettingsState(locale: _getDeviceLocaleString())) {
     on<SettingsLoadRequested>(_onLoadRequested);
     on<SettingsThemeChanged>(_onThemeChanged);
     on<SettingsLanguageChanged>(_onLanguageChanged);
@@ -160,7 +162,8 @@ class SettingsBloc extends Bloc<SettingsEvent, SettingsState> {
     try {
       final themeModeStr = StorageService.instance.getThemeMode();
       final themeMode = _parseThemeMode(themeModeStr);
-      final locale = StorageService.instance.getLanguage() ?? 'zh';
+      final locale =
+          StorageService.instance.getLanguage() ?? _getDeviceLocaleString();
       final notificationsEnabled =
           StorageService.instance.isNotificationEnabled();
       final soundEnabled =
@@ -178,6 +181,22 @@ class SettingsBloc extends Bloc<SettingsEvent, SettingsState> {
     } catch (e) {
       AppLogger.error('Failed to load settings', e);
     }
+  }
+
+  /// 根据设备语言返回应用支持的 locale 字符串
+  /// 仅中文、英文有对应翻译；其他语言一律回退到英文
+  static String _getDeviceLocaleString() {
+    final deviceLocale = ui.PlatformDispatcher.instance.locale;
+    if (deviceLocale.languageCode == 'zh') {
+      if (deviceLocale.scriptCode == 'Hant' ||
+          deviceLocale.countryCode == 'TW' ||
+          deviceLocale.countryCode == 'HK') {
+        return 'zh_Hant';
+      }
+      return 'zh';
+    }
+    // 英文或任何其他语言均使用英文
+    return 'en';
   }
 
   ThemeMode _parseThemeMode(String? mode) {

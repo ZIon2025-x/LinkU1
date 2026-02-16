@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:permission_handler/permission_handler.dart';
 
+import 'l10n_extension.dart';
 import 'logger.dart';
 
 /// 权限管理器
@@ -108,27 +109,28 @@ class PermissionManager {
     required String permissionName,
     bool isPermanentlyDenied = false,
   }) async {
+    final l10n = context.l10n;
     await showDialog<void>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text('需要$permissionName权限'),
+      builder: (ctx) => AlertDialog(
+        title: Text(l10n.permissionRequired(permissionName)),
         content: Text(
           isPermanentlyDenied
-              ? '请在系统设置中开启$permissionName权限后重试'
-              : '此功能需要$permissionName权限才能正常使用',
+              ? l10n.permissionEnableInSettings(permissionName)
+              : l10n.permissionRequiredForFeature(permissionName),
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('取消'),
+            onPressed: () => Navigator.pop(ctx),
+            child: Text(l10n.commonCancel),
           ),
           if (isPermanentlyDenied)
             TextButton(
               onPressed: () {
-                Navigator.pop(context);
+                Navigator.pop(ctx);
                 openAppSettings();
               },
-              child: const Text('去设置'),
+              child: Text(l10n.commonGoSetup),
             ),
         ],
       ),

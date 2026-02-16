@@ -83,15 +83,15 @@ class _LeaderboardDetailContent extends StatelessWidget {
       if (lb == null) return;
       CustomSharePanel.show(
         context,
-        title: lb.displayName,
-        description: lb.displayDescription ?? '',
+        title: lb.displayName(Localizations.localeOf(context)),
+        description: lb.displayDescription(Localizations.localeOf(context)) ?? '',
         url: 'https://link2ur.com/leaderboard/${lb.id}',
       );
     }
 
     if (!hasHero) {
       return AppBar(
-        title: Text(state.selectedLeaderboard?.displayName ??
+        title: Text(state.selectedLeaderboard?.displayName(Localizations.localeOf(context)) ??
             context.l10n.leaderboardLeaderboard),
         actions: [
           IconButton(
@@ -185,14 +185,14 @@ class _LeaderboardDetailContent extends StatelessWidget {
           ),
 
           // 描述
-          if (lb.displayDescription != null &&
-              lb.displayDescription!.isNotEmpty)
+          if (lb.displayDescription(Localizations.localeOf(context)) != null &&
+              lb.displayDescription(Localizations.localeOf(context))!.isNotEmpty)
             SliverToBoxAdapter(
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(
                     AppSpacing.md, AppSpacing.md, AppSpacing.md, 0),
                 child: Text(
-                  lb.displayDescription!,
+                  lb.displayDescription(Localizations.localeOf(context))!,
                   style: AppTypography.body.copyWith(
                     color: isDark
                         ? AppColors.textSecondaryDark
@@ -433,7 +433,7 @@ class _HeroSection extends StatelessWidget {
             right: AppSpacing.md,
             bottom: 20,
             child: Text(
-              leaderboard.displayName,
+              leaderboard.displayName(Localizations.localeOf(context)),
               style: const TextStyle(
                 fontSize: 28,
                 fontWeight: FontWeight.bold,

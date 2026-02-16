@@ -48,6 +48,22 @@
   "commonNotProvided": "未提供",
   "commonPleaseSelect": "请选择",
   "commonUser": "用户",
+  "commonUserWithId": "用户 {id}",
+  "@commonUserWithId": {
+    "placeholders": {
+      "id": {
+        "type": "String"
+      }
+    }
+  },
+  "taskExpertWithId": "达人 {id}",
+  "@taskExpertWithId": {
+    "placeholders": {
+      "id": {
+        "type": "String"
+      }
+    }
+  },
   "appName": "Link²Ur",
   "appTagline": "连接你我，创造价值",
   "appUser": "Link²Ur用户",
@@ -475,6 +491,9 @@
   "studentVerificationConfirmChange": "确认更换",
   "studentVerificationVerified": "已认证",
   "studentVerificationUnverified": "未认证",
+  "studentVerificationStatusPending": "审核中",
+  "studentVerificationStatusExpired": "已过期",
+  "studentVerificationStatusRevoked": "已撤销",
   "studentVerificationBenefitsTitleVerified": "您已享有的学生特权",
   "studentVerificationBenefitsTitleUnverified": "完成认证后，您将获得",
   "customerServiceCustomerService": "客服中心",
@@ -2236,6 +2255,7 @@
   "taskStatusCancelled": "已取消",
   "taskStatusPendingConfirmation": "待确认",
   "taskStatusPendingPayment": "待支付",
+  "taskStatusDisputed": "争议中",
   "myPostsTitle": "我的闲置",
   "taskLocationAddress": "任务地址",
   "taskLocationCoordinates": "坐标",
@@ -3027,11 +3047,25 @@
   "commonRetryText": "重试",
   "locationTaskLocation": "任务地点",
   "locationGetFailed": "获取位置失败",
+  "locationEnableLocationService": "请先开启设备的定位服务",
+  "locationOpenMapFailed": "打开地图失败",
   "notificationPermissionTitle": "需要通知权限",
   "notificationPermissionMessage": "您已拒绝通知权限，请在系统设置中手动开启。",
   "notificationPermissionLater": "稍后再说",
   "permissionRequired": "需要{permissionName}权限",
+  "permissionEnableInSettings": "请在系统设置中开启{permissionName}权限后重试",
+  "permissionRequiredForFeature": "此功能需要{permissionName}权限才能正常使用",
   "@permissionRequired": {
+    "placeholders": {
+      "permissionName": { "type": "String" }
+    }
+  },
+  "@permissionEnableInSettings": {
+    "placeholders": {
+      "permissionName": { "type": "String" }
+    }
+  },
+  "@permissionRequiredForFeature": {
     "placeholders": {
       "permissionName": { "type": "String" }
     }
@@ -3612,6 +3646,12 @@
   "publishTaskCardLabel": "发布任务",
   "publishFleaCardLabel": "发布闲置",
   "publishPostCardLabel": "发帖子",
+  "publishRelatedContent": "关联内容",
+  "publishSearchHint": "输入关键词搜索服务、活动、商品、排行榜…",
+  "publishRelatedToMe": "与我相关",
+  "publishSearchResults": "搜索结果",
+  "publishNoResultsTryKeywords": "无结果，换关键词试试",
+  "publishSearchAndLink": "搜索并关联",
 
   "profileUpdateFailed": "更新失败",
   "profileAvatarUpdated": "头像已更新",

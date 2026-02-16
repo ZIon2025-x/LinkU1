@@ -1340,7 +1340,7 @@ class _PosterInfoRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final avatarUrl = expert?.avatar;
-    final expertName = expert?.displayName;
+    final expertName = expert?.displayNameWith(context.l10n);
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),

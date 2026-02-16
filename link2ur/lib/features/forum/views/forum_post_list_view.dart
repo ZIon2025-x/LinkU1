@@ -62,12 +62,13 @@ class _ForumPostListViewContentState
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
+    final locale = Localizations.localeOf(context);
 
     return Scaffold(
       backgroundColor: AppColors.backgroundFor(Theme.of(context).brightness),
       appBar: AppBar(
         title: Text(
-            widget.category?.displayName ?? l10n.forumAllPosts),
+            widget.category?.displayName(locale) ?? l10n.forumAllPosts),
         actions: [
           IconButton(
             icon: const Icon(Icons.add_circle, color: AppColors.primary),
@@ -200,6 +201,7 @@ class _PostCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final locale = Localizations.localeOf(context);
     return GestureDetector(
       onTap: onTap,
       child: Container(
@@ -245,7 +247,7 @@ class _PostCard extends StatelessWidget {
 
             // 标题
             Text(
-              post.title,
+              post.displayTitle(locale),
               style: const TextStyle(
                   fontSize: 16, fontWeight: FontWeight.w600),
               maxLines: 2,
@@ -253,10 +255,10 @@ class _PostCard extends StatelessWidget {
             ),
 
             // 内容预览（后端列表接口返回 content_preview，支持 \n 换行）
-            if (post.displayContent != null && post.displayContent!.isNotEmpty) ...[
+            if (post.displayContent(locale)?.isNotEmpty ?? false) ...[
               const SizedBox(height: 6),
               Text(
-                Helpers.normalizeContentNewlines(post.displayContent!),
+                Helpers.normalizeContentNewlines(post.displayContent(locale)!),
                 style: const TextStyle(
                     fontSize: 14, color: AppColors.textSecondary),
                 maxLines: 2,

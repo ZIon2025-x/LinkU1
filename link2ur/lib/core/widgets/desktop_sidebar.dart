@@ -225,7 +225,7 @@ class DesktopDrawer extends StatelessWidget {
   /// 用户信息区（对齐 frontend .user-info 居中样式）
   Widget _buildUserInfo(
       BuildContext context, AuthState authState, bool isDark) {
-    final userName = authState.user?.name ?? '用户';
+    final userName = authState.user?.name ?? context.l10n.commonUser;
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),

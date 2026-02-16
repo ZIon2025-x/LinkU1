@@ -48,6 +48,22 @@
   "commonNotProvided": "未提供",
   "commonPleaseSelect": "請選擇",
   "commonUser": "用戶",
+  "commonUserWithId": "用戶 {id}",
+  "@commonUserWithId": {
+    "placeholders": {
+      "id": {
+        "type": "String"
+      }
+    }
+  },
+  "taskExpertWithId": "達人 {id}",
+  "@taskExpertWithId": {
+    "placeholders": {
+      "id": {
+        "type": "String"
+      }
+    }
+  },
   "appName": "Link²Ur",
   "appTagline": "連接你我，創造價值",
   "appUser": "Link²Ur用戶",
@@ -475,6 +491,9 @@
   "studentVerificationConfirmChange": "確認更換",
   "studentVerificationVerified": "已認證",
   "studentVerificationUnverified": "未認證",
+  "studentVerificationStatusPending": "審核中",
+  "studentVerificationStatusExpired": "已過期",
+  "studentVerificationStatusRevoked": "已撤銷",
   "studentVerificationBenefitsTitleVerified": "您已享有的學生特權",
   "studentVerificationBenefitsTitleUnverified": "完成認證後，您將獲得",
   "customerServiceCustomerService": "客服中心",
@@ -2236,6 +2255,7 @@
   "taskStatusCancelled": "已取消",
   "taskStatusPendingConfirmation": "待確認",
   "taskStatusPendingPayment": "待支付",
+  "taskStatusDisputed": "爭議中",
   "myPostsTitle": "我的閒置",
   "taskLocationAddress": "任務地址",
   "taskLocationCoordinates": "坐標",
@@ -2966,11 +2986,25 @@
   "commonRetryText": "重試",
   "locationTaskLocation": "任務地點",
   "locationGetFailed": "取得位置失敗",
+  "locationEnableLocationService": "請先開啟裝置的定位服務",
+  "locationOpenMapFailed": "打開地圖失敗",
   "notificationPermissionTitle": "需要通知權限",
   "notificationPermissionMessage": "您已拒絕通知權限，請在系統設定中手動開啟。",
   "notificationPermissionLater": "稍後再說",
   "permissionRequired": "需要{permissionName}權限",
+  "permissionEnableInSettings": "請在系統設定中開啟{permissionName}權限後重試",
+  "permissionRequiredForFeature": "此功能需要{permissionName}權限才能正常使用",
   "@permissionRequired": {
+    "placeholders": {
+      "permissionName": { "type": "String" }
+    }
+  },
+  "@permissionEnableInSettings": {
+    "placeholders": {
+      "permissionName": { "type": "String" }
+    }
+  },
+  "@permissionRequiredForFeature": {
     "placeholders": {
       "permissionName": { "type": "String" }
     }
@@ -3551,6 +3585,12 @@
   "publishTaskCardLabel": "發佈任務",
   "publishFleaCardLabel": "發佈閒置",
   "publishPostCardLabel": "發帖子",
+  "publishRelatedContent": "關聯內容",
+  "publishSearchHint": "輸入關鍵詞搜尋服務、活動、商品、排行榜…",
+  "publishRelatedToMe": "與我相關",
+  "publishSearchResults": "搜尋結果",
+  "publishNoResultsTryKeywords": "無結果，換關鍵詞試試",
+  "publishSearchAndLink": "搜尋並關聯",
 
   "profileUpdateFailed": "更新失敗",
   "profileAvatarUpdated": "頭像已更新",

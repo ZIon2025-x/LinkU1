@@ -5,6 +5,7 @@ import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_radius.dart';
 import '../../../core/utils/l10n_extension.dart';
+import '../../../core/utils/verification_status_helper.dart';
 import '../../../core/widgets/loading_view.dart';
 import '../../../core/widgets/error_state_view.dart';
 import '../../../core/widgets/buttons.dart';
@@ -164,7 +165,7 @@ class _StudentVerificationContentState
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      verification.statusText,
+                      VerificationStatusHelper.getLocalizedLabel(verification.status, context.l10n),
                       style: const TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.bold,

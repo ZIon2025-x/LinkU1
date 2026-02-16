@@ -179,7 +179,7 @@ class _HorizontalTaskCard extends StatelessWidget {
                           ),
                           const SizedBox(width: 3),
                           Text(
-                            task.taskTypeText,
+                            TaskTypeHelper.getLocalizedLabel(task.taskType, context.l10n),
                             style: const TextStyle(
                               fontSize: 11,
                               color: Colors.white,
@@ -247,7 +247,7 @@ class _HorizontalTaskCard extends StatelessWidget {
                 children: [
                   // 标题（对标iOS .body字号 + lineLimit(2)）
                   Text(
-                    task.displayTitle,
+                    task.displayTitle(Localizations.localeOf(context)),
                     style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w600,

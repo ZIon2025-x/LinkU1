@@ -882,6 +882,7 @@ class _DesktopTaskCardState extends State<_DesktopTaskCard> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final locale = Localizations.localeOf(context);
     final task = widget.task;
 
     return MouseRegion(
@@ -1020,17 +1021,17 @@ class _DesktopTaskCardState extends State<_DesktopTaskCard> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        task.displayTitle,
+                        task.displayTitle(locale),
                         style: TextStyle(
                           fontSize: 14, fontWeight: FontWeight.w600,
                           color: isDark ? AppColors.textPrimaryDark : AppColors.desktopTextLight,
                         ),
                         maxLines: 1, overflow: TextOverflow.ellipsis,
                       ),
-                      if (task.displayDescription != null) ...[
+                      if (task.displayDescription(locale) != null) ...[
                         const SizedBox(height: 3),
                         Text(
-                          task.displayDescription!,
+                          task.displayDescription(locale)!,
                           style: TextStyle(
                             fontSize: 12, color: isDark ? AppColors.textSecondaryDark : AppColors.desktopPlaceholderLight,
                             height: 1.4,
@@ -1058,7 +1059,7 @@ class _DesktopTaskCardState extends State<_DesktopTaskCard> {
                                 Icon(_taskTypeIcon(task.taskType), size: 10, color: Colors.white),
                                 const SizedBox(width: 2),
                                 Text(
-                                  task.taskTypeText,
+                                  TaskTypeHelper.getLocalizedLabel(task.taskType, context.l10n),
                                   style: const TextStyle(
                                     fontSize: 10,
                                     color: Colors.white,

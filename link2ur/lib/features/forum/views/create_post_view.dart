@@ -106,7 +106,7 @@ class _CreatePostViewState extends State<CreatePostView> {
                     items: state.categories.map((category) {
                       return DropdownMenuItem<int>(
                         value: category.id,
-                        child: Text(category.displayName),
+                        child: Text(category.displayName(Localizations.localeOf(context))),
                       );
                     }).toList(),
                     onChanged: (value) {

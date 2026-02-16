@@ -7,6 +7,7 @@ import '../../data/services/location_picker_service.dart';
 import '../design/app_colors.dart';
 import '../design/app_spacing.dart';
 import '../design/app_radius.dart';
+import '../utils/l10n_extension.dart';
 import '../utils/permission_manager.dart';
 
 /// 位置输入组件
@@ -94,7 +95,7 @@ class _LocationInputFieldState extends State<LocationInputField> {
       final serviceEnabled = await Geolocator.isLocationServiceEnabled();
       if (!serviceEnabled && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('请先开启设备的定位服务')),
+          SnackBar(content: Text(context.l10n.locationEnableLocationService)),
         );
         return;
       }
@@ -339,7 +340,7 @@ class TaskLocationDetailView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('任务地点')),
+      appBar: AppBar(title: Text(context.l10n.locationTaskLocation)),
       body: Padding(
         padding: AppSpacing.allLg,
         child: Column(
@@ -507,7 +508,7 @@ class TaskLocationDetailView extends StatelessWidget {
     } catch (e) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('打开地图失败: $e')),
+          SnackBar(content: Text('${context.l10n.locationOpenMapFailed}: $e')),
         );
       }
     }

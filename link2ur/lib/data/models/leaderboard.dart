@@ -1,4 +1,8 @@
+import 'dart:ui' show Locale;
+
 import 'package:equatable/equatable.dart';
+
+import '../../core/utils/localized_string.dart';
 import 'user.dart';
 
 /// 排行榜模型
@@ -44,12 +48,13 @@ class Leaderboard extends Equatable {
   final DateTime? createdAt;
   final DateTime? updatedAt;
 
-  /// 显示名称
-  String get displayName => nameZh ?? nameEn ?? name;
+  /// 显示名称（根据 locale 选择 zh/en）
+  String displayName(Locale locale) =>
+      localizedString(nameZh, nameEn, name, locale);
 
-  /// 显示描述
-  String? get displayDescription =>
-      descriptionZh ?? descriptionEn ?? description;
+  /// 显示描述（根据 locale 选择 zh/en）
+  String? displayDescription(Locale locale) =>
+      localizedStringOrNull(descriptionZh, descriptionEn, description, locale);
 
   /// 是否活跃
   bool get isActive => status == 'active';

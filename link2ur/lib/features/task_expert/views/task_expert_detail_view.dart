@@ -62,9 +62,9 @@ class TaskExpertDetailView extends StatelessWidget {
                       SharePlus.instance.share(
                         ShareParams(
                           text:
-                              '${context.l10n.taskExpertShareText(expert.displayName)}\nhttps://link2ur.com/task-experts/${expert.id}',
+                              '${context.l10n.taskExpertShareText(expert.displayNameWith(context.l10n))}\nhttps://link2ur.com/task-experts/${expert.id}',
                           subject: context.l10n
-                              .taskExpertShareTitle(expert.displayName),
+                              .taskExpertShareTitle(expert.displayNameWith(context.l10n)),
                         ),
                       );
                     }
@@ -155,6 +155,7 @@ class _DetailBody extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final locale = Localizations.localeOf(context);
     return SingleChildScrollView(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -178,10 +179,9 @@ class _DetailBody extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 // 3. 专业领域标签
-                if (expert.displaySpecialties != null &&
-                    expert.displaySpecialties!.isNotEmpty) ...[
+                if (expert.displaySpecialties(locale).isNotEmpty) ...[
                   _SpecialtiesSection(
-                      specialties: expert.displaySpecialties!),
+                      specialties: expert.displaySpecialties(locale)),
                   const SizedBox(height: 24),
                 ],
 
@@ -290,6 +290,7 @@ class _ProfileCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final locale = Localizations.localeOf(context);
 
     return Container(
       width: double.infinity,
@@ -324,7 +325,7 @@ class _ProfileCard extends StatelessWidget {
             ),
             child: AvatarView(
               imageUrl: expert.avatar,
-              name: expert.displayName,
+              name: expert.displayNameWith(context.l10n),
               size: 90,
             ),
           ),
@@ -336,7 +337,7 @@ class _ProfileCard extends StatelessWidget {
             children: [
               Flexible(
                 child: Text(
-                  expert.displayName,
+                  expert.displayNameWith(context.l10n),
                   style: const TextStyle(
                     fontSize: 22,
                     fontWeight: FontWeight.bold,
@@ -355,13 +356,12 @@ class _ProfileCard extends StatelessWidget {
           ),
 
           // 简介（对标iOS: font 14, textSecondary, centered, lineLimit 3）
-          if (expert.displayBio != null &&
-              expert.displayBio!.isNotEmpty) ...[
+          if (expert.displayBio(locale)?.isNotEmpty ?? false) ...[
             const SizedBox(height: 8),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20),
               child: Text(
-                expert.displayBio!,
+                expert.displayBio(locale)!,
                 style: TextStyle(
                   fontSize: 14,
                   color: isDark

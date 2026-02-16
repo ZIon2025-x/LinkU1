@@ -125,7 +125,7 @@ class _UserProfileViewState extends State<UserProfileView> {
           // 头像（使用 AvatarView 正确处理相对路径）
           AvatarView(
             imageUrl: user.avatar,
-            name: user.displayName,
+            name: user.displayNameWith(context.l10n),
             size: 88,
           ),
           const SizedBox(height: AppSpacing.md),
@@ -135,7 +135,7 @@ class _UserProfileViewState extends State<UserProfileView> {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Text(
-                user.displayName,
+                user.displayNameWith(context.l10n),
                 style: const TextStyle(
                     fontSize: 20, fontWeight: FontWeight.bold),
               ),

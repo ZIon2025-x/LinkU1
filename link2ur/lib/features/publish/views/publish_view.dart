@@ -141,7 +141,7 @@ class _PostLinkSearchDialogContentState extends State<_PostLinkSearchDialogConte
   Widget build(BuildContext context) {
     final isDark = widget.isDark;
     return AlertDialog(
-      title: const Text('关联内容'),
+      title: Text(context.l10n.publishRelatedContent),
       content: SingleChildScrollView(
         child: SizedBox(
           width: double.maxFinite,
@@ -154,9 +154,9 @@ class _PostLinkSearchDialogContentState extends State<_PostLinkSearchDialogConte
                   Expanded(
                     child: TextField(
                       controller: _queryCtrl,
-                      decoration: const InputDecoration(
-                        hintText: '输入关键词搜索服务、活动、商品、排行榜…',
-                        border: OutlineInputBorder(),
+                      decoration: InputDecoration(
+                        hintText: context.l10n.publishSearchHint,
+                        border: const OutlineInputBorder(),
                       ),
                       onSubmitted: _runSearch,
                     ),
@@ -172,8 +172,8 @@ class _PostLinkSearchDialogContentState extends State<_PostLinkSearchDialogConte
               if (widget.userRelated.isNotEmpty) ...[
                 Align(
                   alignment: Alignment.centerLeft,
-                  child: Text(
-                    '与我相关',
+                    child: Text(
+                    context.l10n.publishRelatedToMe,
                     style: TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w600,
@@ -189,8 +189,8 @@ class _PostLinkSearchDialogContentState extends State<_PostLinkSearchDialogConte
               if (!_loading && _results.isNotEmpty) ...[
                 Align(
                   alignment: Alignment.centerLeft,
-                  child: Text(
-                    '搜索结果',
+                    child: Text(
+                    context.l10n.publishSearchResults,
                     style: TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w600,
@@ -202,9 +202,9 @@ class _PostLinkSearchDialogContentState extends State<_PostLinkSearchDialogConte
                 _buildLinkableList(_results, 220),
               ],
               if (!_loading && _results.isEmpty && _queryCtrl.text.trim().isNotEmpty)
-                const Padding(
-                  padding: EdgeInsets.all(12),
-                  child: Text('无结果，换关键词试试'),
+                Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: Text(context.l10n.publishNoResultsTryKeywords),
                 ),
             ],
           ),
@@ -1259,7 +1259,7 @@ class _PublishContentState extends State<_PublishContent>
               hint: context.l10n.forumSelectCategory,
               icon: Icons.forum_outlined,
               items: postableCategories
-                  .map((c) => DropdownMenuItem(value: c.id, child: Text(c.displayName)))
+                  .map((c) => DropdownMenuItem(value: c.id, child: Text(c.displayName(Localizations.localeOf(context)))))
                   .toList(),
               onChanged: (v) => setState(() => _postCategoryId = v),
             ),
@@ -1699,7 +1699,7 @@ class _PublishContentState extends State<_PublishContent>
       child: OutlinedButton.icon(
         onPressed: () => _showPostLinkSearchDialog(isDark),
         icon: const Icon(Icons.add_link, size: 20),
-        label: const Text('搜索并关联'),
+        label: Text(context.l10n.publishSearchAndLink),
       ),
     );
   }

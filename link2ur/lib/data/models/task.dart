@@ -1,5 +1,9 @@
+import 'dart:ui' show Locale;
+
 import 'package:equatable/equatable.dart';
+
 import '../../core/constants/app_constants.dart';
+import '../../core/utils/localized_string.dart';
 import 'user.dart';
 
 /// 任务模型
@@ -108,11 +112,13 @@ class Task extends Equatable {
     return '<${km.toStringAsFixed(1)}km';
   }
 
-  /// 显示标题（根据语言）
-  String get displayTitle => titleZh ?? titleEn ?? title;
+  /// 显示标题（根据 locale 选择 zh/en）
+  String displayTitle(Locale locale) =>
+      localizedString(titleZh, titleEn, title, locale);
 
-  /// 显示描述（根据语言）
-  String? get displayDescription => descriptionZh ?? descriptionEn ?? description;
+  /// 显示描述（根据 locale 选择 zh/en）
+  String? displayDescription(Locale locale) =>
+      localizedStringOrNull(descriptionZh, descriptionEn, description, locale);
 
   /// 是否是线上任务
   bool get isOnline => location == null || location == 'online';
@@ -227,7 +233,7 @@ class Task extends Equatable {
   /// 后端创建任务时在描述末尾追加 "Category: {分类}"
   String? get fleaMarketCategory {
     if (!isFleaMarketTask) return null;
-    final desc = displayDescription ?? '';
+    final desc = description ?? descriptionZh ?? descriptionEn ?? '';
     const prefix = 'Category: ';
     final idx = desc.lastIndexOf(prefix);
     if (idx < 0) return null;
@@ -239,7 +245,8 @@ class Task extends Equatable {
   String get displayCategoryText =>
       (isFleaMarketTask ? fleaMarketCategory : null) ?? taskTypeText;
 
-  /// 状态显示文本
+  /// 状态显示文本（国际化请使用 TaskStatusHelper.getLocalizedLabel(status, l10n)）
+  @Deprecated('Use TaskStatusHelper.getLocalizedLabel(status, l10n) for localized display')
   String get statusText {
     switch (status) {
       case AppConstants.taskStatusOpen:
@@ -261,7 +268,7 @@ class Task extends Equatable {
     }
   }
 
-  /// 任务类型显示文本（对齐后端 TASK_TYPES）
+  /// 任务类型显示文本（国际化请使用 TaskTypeHelper.getLocalizedLabel(taskType, l10n)）
   String get taskTypeText {
     switch (taskType) {
       case 'Housekeeping':

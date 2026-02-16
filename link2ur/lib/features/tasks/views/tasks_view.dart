@@ -850,7 +850,7 @@ class _TaskGridCard extends StatelessWidget {
                 ),
                 const SizedBox(width: 3),
                 Text(
-                  task.taskTypeText,
+                  TaskTypeHelper.getLocalizedLabel(task.taskType, context.l10n),
                   style: AppTypography.caption.copyWith(
                     color: Colors.white,
                     fontWeight: FontWeight.w600,
@@ -899,7 +899,7 @@ class _TaskGridCard extends StatelessWidget {
         children: [
           // 标题 (单行 + 省略号)
           Text(
-            task.displayTitle,
+            task.displayTitle(Localizations.localeOf(context)),
             style: AppTypography.body.copyWith(
               fontSize: 14,
               fontWeight: FontWeight.w600,
