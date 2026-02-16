@@ -337,7 +337,7 @@ async def get_flea_market_items(
         if category and category.strip().lower() != "all":
             query = query.where(models.FleaMarketItem.category == category)
         
-        # 关键词搜索（标题和描述）
+        # 关键词搜索（标题、描述、地址、分类，支持中英文）
         if keyword:
             # 安全：转义 LIKE 通配符并限制长度
             keyword_safe = keyword.strip()[:100].replace('%', r'\%').replace('_', r'\_')
@@ -346,6 +346,8 @@ async def get_flea_market_items(
                 or_(
                     models.FleaMarketItem.title.ilike(keyword_pattern),
                     models.FleaMarketItem.description.ilike(keyword_pattern),
+                    models.FleaMarketItem.location.ilike(keyword_pattern),
+                    models.FleaMarketItem.category.ilike(keyword_pattern),
                 )
             )
         
@@ -3329,7 +3331,7 @@ async def get_flea_market_items_admin(
         if category and category.strip().lower() != "all":
             query = query.where(models.FleaMarketItem.category == category)
         
-        # 关键词搜索（标题和描述）
+        # 关键词搜索（标题、描述、地址、分类，支持中英文）
         if keyword:
             # 安全：转义 LIKE 通配符并限制长度
             keyword_safe = keyword.strip()[:100].replace('%', r'\%').replace('_', r'\_')
@@ -3338,6 +3340,8 @@ async def get_flea_market_items_admin(
                 or_(
                     models.FleaMarketItem.title.ilike(keyword_pattern),
                     models.FleaMarketItem.description.ilike(keyword_pattern),
+                    models.FleaMarketItem.location.ilike(keyword_pattern),
+                    models.FleaMarketItem.category.ilike(keyword_pattern),
                 )
             )
         

@@ -2619,12 +2619,17 @@ async def get_posts(
         await assert_forum_visible(current_user, category_id, db, raise_exception=True)
         query = query.where(models.ForumPost.category_id == category_id)
     
-    # 搜索关键词（简单 LIKE 查询）
+    # 搜索关键词（支持中英文字段）
     if q:
+        q_pattern = f"%{q}%"
         query = query.where(
             or_(
-                models.ForumPost.title.ilike(f"%{q}%"),
-                models.ForumPost.content.ilike(f"%{q}%")
+                models.ForumPost.title.ilike(q_pattern),
+                models.ForumPost.content.ilike(q_pattern),
+                models.ForumPost.title_en.ilike(q_pattern),
+                models.ForumPost.title_zh.ilike(q_pattern),
+                models.ForumPost.content_en.ilike(q_pattern),
+                models.ForumPost.content_zh.ilike(q_pattern),
             )
         )
     
@@ -4970,9 +4975,17 @@ async def search_posts(
         search_condition = or_(
             func.similarity(models.ForumPost.title, q) > 0.2,
             func.similarity(models.ForumPost.content, q) > 0.2,
+            func.similarity(models.ForumPost.title_en, q) > 0.2,
+            func.similarity(models.ForumPost.title_zh, q) > 0.2,
+            func.similarity(models.ForumPost.content_en, q) > 0.2,
+            func.similarity(models.ForumPost.content_zh, q) > 0.2,
             # 同时保留 ILIKE 作为兜底，确保能匹配到结果
             models.ForumPost.title.ilike(f"%{q}%"),
-            models.ForumPost.content.ilike(f"%{q}%")
+            models.ForumPost.content.ilike(f"%{q}%"),
+            models.ForumPost.title_en.ilike(f"%{q}%"),
+            models.ForumPost.title_zh.ilike(f"%{q}%"),
+            models.ForumPost.content_en.ilike(f"%{q}%"),
+            models.ForumPost.content_zh.ilike(f"%{q}%"),
         )
         query = query.where(search_condition)
         
@@ -4983,10 +4996,14 @@ async def search_posts(
             models.ForumPost.created_at.desc()  # 相似度相同时按时间倒序
         )
     else:
-        # 降级方案：使用 ILIKE 模糊搜索（如果未启用 pg_trgm）
+        # 降级方案：使用 ILIKE 模糊搜索（如果未启用 pg_trgm，支持中英文字段）
         search_condition = or_(
             models.ForumPost.title.ilike(f"%{q}%"),
-            models.ForumPost.content.ilike(f"%{q}%")
+            models.ForumPost.content.ilike(f"%{q}%"),
+            models.ForumPost.title_en.ilike(f"%{q}%"),
+            models.ForumPost.title_zh.ilike(f"%{q}%"),
+            models.ForumPost.content_en.ilike(f"%{q}%"),
+            models.ForumPost.content_zh.ilike(f"%{q}%"),
         )
         query = query.where(search_condition)
         query = query.order_by(models.ForumPost.created_at.desc())
@@ -7096,6 +7113,8 @@ async def search_linkable_content(
                 or_(
                     models.FleaMarketItem.title.ilike(search_term),
                     models.FleaMarketItem.description.ilike(search_term),
+                    models.FleaMarketItem.location.ilike(search_term),
+                    models.FleaMarketItem.category.ilike(search_term),
                 )
             )
             .limit(limit_per_type)
@@ -7131,7 +7150,7 @@ async def search_linkable_content(
                 "is_experienced": is_experienced,
             })
     
-    # 搜索活动
+        # 搜索活动（含 location，支持按地址/城市搜索）
     if type in ("all", "activity"):
         activity_query = (
             select(
@@ -7143,7 +7162,11 @@ async def search_linkable_content(
             .join(models.User, models.Activity.expert_id == models.User.id)
             .where(
                 models.Activity.status.in_(["published", "registration_open"]),
-                models.Activity.title.ilike(search_term),
+                or_(
+                    models.Activity.title.ilike(search_term),
+                    models.Activity.description.ilike(search_term),
+                    models.Activity.location.ilike(search_term),
+                ),
             )
             .limit(limit_per_type)
         )
@@ -7188,7 +7211,14 @@ async def search_linkable_content(
             )
             .where(
                 models.CustomLeaderboard.status == "active",
-                models.CustomLeaderboard.name.ilike(search_term),
+                or_(
+                    models.CustomLeaderboard.name.ilike(search_term),
+                    models.CustomLeaderboard.name_en.ilike(search_term),
+                    models.CustomLeaderboard.name_zh.ilike(search_term),
+                    models.CustomLeaderboard.description.ilike(search_term),
+                    models.CustomLeaderboard.description_en.ilike(search_term),
+                    models.CustomLeaderboard.description_zh.ilike(search_term),
+                ),
             )
             .limit(limit_per_type)
         )
@@ -7213,7 +7243,14 @@ async def search_linkable_content(
             .where(
                 models.ForumPost.is_deleted == False,
                 models.ForumPost.is_visible == True,
-                models.ForumPost.title.ilike(search_term),
+                or_(
+                    models.ForumPost.title.ilike(search_term),
+                    models.ForumPost.title_en.ilike(search_term),
+                    models.ForumPost.title_zh.ilike(search_term),
+                    models.ForumPost.content.ilike(search_term),
+                    models.ForumPost.content_en.ilike(search_term),
+                    models.ForumPost.content_zh.ilike(search_term),
+                ),
             )
             .order_by(desc(models.ForumPost.created_at))
             .limit(limit_per_type)
