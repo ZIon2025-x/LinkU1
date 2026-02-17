@@ -90,4 +90,98 @@ TOOLS = [
             "properties": {},
         },
     },
+    {
+        "name": "get_my_points_and_coupons",
+        "description": "查询当前用户的积分余额和可用优惠券列表。Get user's points balance and available coupons.",
+        "input_schema": {
+            "type": "object",
+            "properties": {},
+        },
+    },
+    {
+        "name": "list_activities",
+        "description": "浏览平台进行中的公开活动，支持关键词搜索。List active public activities, with optional keyword search.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "keyword": {
+                    "type": "string",
+                    "description": "搜索关键词（匹配标题/描述）",
+                },
+            },
+        },
+    },
+    {
+        "name": "get_my_notifications_summary",
+        "description": "获取当前用户的未读通知数和最近通知。Get user's unread notification count and recent notifications.",
+        "input_schema": {
+            "type": "object",
+            "properties": {},
+        },
+    },
+    {
+        "name": "list_my_forum_posts",
+        "description": "查询当前用户发布的论坛帖子。List the current user's forum posts.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "page": {
+                    "type": "integer",
+                    "description": "页码，默认 1",
+                    "default": 1,
+                },
+            },
+        },
+    },
+    {
+        "name": "search_flea_market",
+        "description": "搜索跳蚤市场商品，支持关键词、分类、价格范围筛选。Search flea market items by keyword, category, price range.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "keyword": {
+                    "type": "string",
+                    "description": "搜索关键词",
+                },
+                "category": {
+                    "type": "string",
+                    "description": "商品分类",
+                },
+                "min_price": {
+                    "type": "number",
+                    "description": "最低价格（GBP）",
+                },
+                "max_price": {
+                    "type": "number",
+                    "description": "最高价格（GBP）",
+                },
+            },
+        },
+    },
+    {
+        "name": "get_leaderboard_summary",
+        "description": "查看排行榜概览或单个排行榜详情。View leaderboard overview or a specific leaderboard's details.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "leaderboard_id": {
+                    "type": "integer",
+                    "description": "排行榜 ID（不传则返回所有活跃排行榜列表）",
+                },
+            },
+        },
+    },
+    {
+        "name": "list_task_experts",
+        "description": "浏览平台活跃的任务达人，支持关键词搜索。List active task experts, with optional keyword search.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "keyword": {
+                    "type": "string",
+                    "description": "搜索关键词（匹配姓名/简介）",
+                },
+            },
+        },
+    },
 ]

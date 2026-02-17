@@ -29,6 +29,20 @@ class ToolCallCard extends StatelessWidget {
         return '查询常见问题';
       case 'check_cs_availability':
         return '检查客服在线';
+      case 'get_my_points_and_coupons':
+        return '查询积分和优惠券';
+      case 'list_activities':
+        return '浏览活动';
+      case 'get_my_notifications_summary':
+        return '查看通知';
+      case 'list_my_forum_posts':
+        return '查询我的帖子';
+      case 'search_flea_market':
+        return '搜索跳蚤市场';
+      case 'get_leaderboard_summary':
+        return '查看排行榜';
+      case 'list_task_experts':
+        return '浏览达人';
       default:
         return toolName;
     }
@@ -48,6 +62,20 @@ class ToolCallCard extends StatelessWidget {
         return Icons.help_outline;
       case 'check_cs_availability':
         return Icons.support_agent;
+      case 'get_my_points_and_coupons':
+        return Icons.monetization_on;
+      case 'list_activities':
+        return Icons.event;
+      case 'get_my_notifications_summary':
+        return Icons.notifications;
+      case 'list_my_forum_posts':
+        return Icons.forum;
+      case 'search_flea_market':
+        return Icons.storefront;
+      case 'get_leaderboard_summary':
+        return Icons.leaderboard;
+      case 'list_task_experts':
+        return Icons.star;
       default:
         return Icons.build;
     }

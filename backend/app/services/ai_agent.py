@@ -212,14 +212,31 @@ _TRANSFER_CS_KEYWORDS = [
 ]
 
 
+# 个性化数据关键词 — 命中则跳过 FAQ，走 LLM + 工具获取用户真实数据
+_PERSONAL_DATA_KEYWORDS = [
+    "我的积分", "my points", "积分余额", "points balance", "几张券",
+    "我的优惠券", "my coupon", "可用优惠券", "有没有券",
+    "我的通知", "未读通知", "unread notification", "几条未读", "未读消息",
+    "我的帖子", "my post", "我发过", "我发的帖",
+    "有什么活动", "最近活动", "current activities", "哪些活动",
+    "有没有二手", "搜索跳蚤", "search flea", "二手市场",
+    "排行榜", "榜单", "leaderboard", "谁排第一",
+    "有哪些达人", "推荐达人", "哪个达人", "达人列表",
+    "我的余额", "my balance",
+]
+
+
 def classify_intent(message: str) -> str:
     """本地意图分类（零 LLM 消耗）
 
     优先级：
     1. 离题检测 → 直接拒绝
-    2. FAQ 精确匹配 → 本地回答
-    3. 任务/资料关键词 → 小模型
-    4. 无法判断 → 让 Haiku 判别（很少走到这一步）
+    2. 转人工客服 → 检查在线
+    3. 个性化数据 → LLM + 工具（跳过 FAQ）
+    4. FAQ 精确匹配 → 本地回答
+    5. 任务/资料关键词 → 小模型
+    6. 平台相关词 → LLM 判别
+    7. 默认 → Haiku 快速判别
     """
     msg_lower = message.lower().strip()
 
@@ -235,20 +252,24 @@ def classify_intent(message: str) -> str:
     if any(kw in msg_lower for kw in _TRANSFER_CS_KEYWORDS):
         return IntentType.TRANSFER_TO_CS
 
-    # 3. FAQ 精确匹配
+    # 3. 个性化数据查询（优先于 FAQ，避免 FAQ 拦截个性化请求）
+    if any(kw in msg_lower for kw in _PERSONAL_DATA_KEYWORDS):
+        return IntentType.UNKNOWN  # 走 LLM + 新工具
+
+    # 4. FAQ 精确匹配
     for faq_key, keywords in _FAQ_KEYWORDS.items():
         if any(kw in msg_lower for kw in keywords):
             return IntentType.FAQ
 
-    # 4. 任务相关
+    # 5. 任务相关
     if any(kw in msg_lower for kw in _TASK_KEYWORDS):
         return IntentType.TASK_QUERY
 
-    # 5. 个人资料
+    # 6. 个人资料
     if any(kw in msg_lower for kw in _PROFILE_KEYWORDS):
         return IntentType.PROFILE
 
-    # 6. 包含平台相关词（宽泛匹配）
+    # 7. 包含平台相关词（宽泛匹配）
     platform_words = ["link2ur", "平台", "platform", "帮助", "help", "使用", "怎么用",
                       "how to", "功能", "feature", "钱包", "wallet", "积分", "points",
                       "优惠券", "coupon", "活动", "activity", "达人", "expert",
@@ -257,7 +278,7 @@ def classify_intent(message: str) -> str:
     if any(w in msg_lower for w in platform_words):
         return IntentType.UNKNOWN  # 让 LLM 判断具体需求
 
-    # 7. 默认：不确定 → 让 Haiku 快速判别
+    # 8. 默认：不确定 → 让 Haiku 快速判别
     return IntentType.UNKNOWN
 
 
@@ -311,6 +332,9 @@ _SYSTEM_PROMPT_TEMPLATE = """你是 Link2Ur 技能互助平台的官方 AI 客�
 3. 搜索平台上的公开任务
 4. 查看用户个人资料和统计
 5. 解答平台规则和常见问题
+6. 查询用户积分余额和可用优惠券
+7. 浏览平台活动、跳蚤市场商品、论坛帖子
+8. 查看通知摘要、排行榜、任务达人信息
 
 【严格禁止 — 必须拒绝的请求】
 - 任何与 Link2Ur 平台无关的问题（闲聊、写作文、编程、数学、翻译、新闻等）
@@ -599,7 +623,9 @@ class AIAgent:
         # 加载历史
         history = await self._load_history(conversation_id)
         messages = history + [{"role": "user", "content": user_message}]
-        system_prompt = _build_system_prompt(self.user, self._get_lang())
+        # 按用户当前消息语言决定回复语言，避免用户说英文却收到中文回复
+        reply_lang = _infer_reply_lang_from_message(user_message)
+        system_prompt = _build_system_prompt(self.user, reply_lang)
 
         full_response = ""
         all_tool_calls = []

@@ -83,6 +83,13 @@ class ToolExecutor:
             "get_my_profile": self._get_my_profile,
             "get_platform_faq": self._get_platform_faq,
             "check_cs_availability": self._check_cs_availability,
+            "get_my_points_and_coupons": self._get_my_points_and_coupons,
+            "list_activities": self._list_activities,
+            "get_my_notifications_summary": self._get_my_notifications_summary,
+            "list_my_forum_posts": self._list_my_forum_posts,
+            "search_flea_market": self._search_flea_market,
+            "get_leaderboard_summary": self._get_leaderboard_summary,
+            "list_task_experts": self._list_task_experts,
         }
 
     def _tool_lang(self) -> str:
@@ -279,6 +286,28 @@ class ToolExecutor:
 
     async def _get_my_profile(self, input: dict) -> dict:
         u = self.user
+
+        # 积分余额
+        pa_q = select(models.PointsAccount.balance).where(
+            models.PointsAccount.user_id == u.id
+        )
+        points_balance = (await self.db.execute(pa_q)).scalar() or 0
+
+        # 可用优惠券数量
+        from app.utils.time_utils import get_utc_time
+        now = get_utc_time()
+        coupon_count_q = (
+            select(func.count())
+            .select_from(models.UserCoupon)
+            .join(models.Coupon, models.UserCoupon.coupon_id == models.Coupon.id)
+            .where(and_(
+                models.UserCoupon.user_id == u.id,
+                models.UserCoupon.status == "unused",
+                models.Coupon.valid_until > now,
+            ))
+        )
+        available_coupons_count = (await self.db.execute(coupon_count_q)).scalar() or 0
+
         return {
             "id": u.id,
             "name": u.name,
@@ -290,6 +319,9 @@ class ToolExecutor:
             "avg_rating": u.avg_rating,
             "is_verified": bool(u.is_verified),
             "language_preference": u.language_preference,
+            "points_balance": int(points_balance),
+            "available_coupons_count": available_coupons_count,
+            "note": "余额请在 App 钱包页查看 / Check wallet page for balance",
             "created_at": format_iso_utc(u.created_at) if u.created_at else None,
         }
 
@@ -335,3 +367,284 @@ class ToolExecutor:
         )
         online_count = (await self.db.execute(count_q)).scalar() or 0
         return {"available": online_count > 0, "online_count": online_count}
+
+    async def _get_my_points_and_coupons(self, input: dict) -> dict:
+        """积分余额 + 可用优惠券列表"""
+        from app.utils.time_utils import get_utc_time
+        now = get_utc_time()
+
+        # 积分账户
+        pa_q = select(models.PointsAccount).where(
+            models.PointsAccount.user_id == self.user.id
+        )
+        pa = (await self.db.execute(pa_q)).scalar_one_or_none()
+        points = {
+            "balance": int(pa.balance) if pa else 0,
+            "total_earned": int(pa.total_earned) if pa else 0,
+            "total_spent": int(pa.total_spent) if pa else 0,
+        }
+
+        # 可用优惠券
+        coupon_q = (
+            select(models.UserCoupon, models.Coupon)
+            .join(models.Coupon, models.UserCoupon.coupon_id == models.Coupon.id)
+            .where(and_(
+                models.UserCoupon.user_id == self.user.id,
+                models.UserCoupon.status == "unused",
+                models.Coupon.valid_until > now,
+            ))
+            .order_by(models.Coupon.valid_until.asc())
+            .limit(10)
+        )
+        rows = (await self.db.execute(coupon_q)).all()
+        coupons = []
+        for uc, c in rows:
+            coupons.append({
+                "name": c.name,
+                "type": c.type,
+                "discount_value": int(c.discount_value) if c.discount_value else 0,
+                "currency": c.currency,
+                "valid_until": format_iso_utc(c.valid_until) if c.valid_until else None,
+            })
+
+        return {"points": points, "coupons": coupons}
+
+    async def _list_activities(self, input: dict) -> dict:
+        """进行中的公开活动"""
+        keyword = input.get("keyword", "")
+        conditions = [
+            models.Activity.status == "open",
+            models.Activity.is_public == True,
+        ]
+        if keyword:
+            like_kw = f"%{keyword}%"
+            conditions.append(
+                or_(
+                    models.Activity.title.ilike(like_kw),
+                    models.Activity.description.ilike(like_kw),
+                )
+            )
+
+        q = (
+            select(models.Activity)
+            .where(and_(*conditions))
+            .order_by(desc(models.Activity.created_at))
+            .limit(10)
+        )
+        rows = (await self.db.execute(q)).scalars().all()
+
+        activities = []
+        for a in rows:
+            activities.append({
+                "id": a.id,
+                "title": a.title,
+                "location": a.location,
+                "max_participants": a.max_participants,
+                "reward_type": a.reward_type,
+                "deadline": format_iso_utc(a.deadline) if a.deadline else None,
+                "created_at": format_iso_utc(a.created_at) if a.created_at else None,
+            })
+
+        return {"activities": activities, "count": len(activities)}
+
+    async def _get_my_notifications_summary(self, input: dict) -> dict:
+        """未读通知数 + 最近 5 条通知"""
+        # 未读数
+        unread_q = (
+            select(func.count())
+            .select_from(models.Notification)
+            .where(and_(
+                models.Notification.user_id == self.user.id,
+                models.Notification.is_read == 0,
+            ))
+        )
+        unread_count = (await self.db.execute(unread_q)).scalar() or 0
+
+        # 最近 5 条
+        recent_q = (
+            select(models.Notification)
+            .where(models.Notification.user_id == self.user.id)
+            .order_by(desc(models.Notification.created_at))
+            .limit(5)
+        )
+        rows = (await self.db.execute(recent_q)).scalars().all()
+
+        recent = []
+        for n in rows:
+            recent.append({
+                "type": n.type,
+                "title": n.title or "",
+                "title_en": n.title_en or "",
+                "is_read": bool(n.is_read),
+                "created_at": format_iso_utc(n.created_at) if n.created_at else None,
+            })
+
+        return {"unread_count": unread_count, "recent": recent}
+
+    async def _list_my_forum_posts(self, input: dict) -> dict:
+        """用户发布的论坛帖子"""
+        page = max(1, input.get("page", 1))
+        page_size = 10
+
+        conditions = [
+            models.ForumPost.author_id == self.user.id,
+            models.ForumPost.is_deleted == False,
+        ]
+
+        count_q = (
+            select(func.count())
+            .select_from(models.ForumPost)
+            .where(and_(*conditions))
+        )
+        total = (await self.db.execute(count_q)).scalar() or 0
+
+        q = (
+            select(models.ForumPost, models.ForumCategory.name)
+            .join(models.ForumCategory, models.ForumPost.category_id == models.ForumCategory.id)
+            .where(and_(*conditions))
+            .order_by(desc(models.ForumPost.created_at))
+            .offset((page - 1) * page_size)
+            .limit(page_size)
+        )
+        rows = (await self.db.execute(q)).all()
+
+        posts = []
+        for post, category_name in rows:
+            posts.append({
+                "id": post.id,
+                "title": post.title,
+                "category_name": category_name,
+                "view_count": post.view_count,
+                "reply_count": post.reply_count,
+                "created_at": format_iso_utc(post.created_at) if post.created_at else None,
+            })
+
+        return {"posts": posts, "total": total}
+
+    async def _search_flea_market(self, input: dict) -> dict:
+        """搜索跳蚤市场商品"""
+        keyword = input.get("keyword", "")
+        category = input.get("category")
+        min_price = input.get("min_price")
+        max_price = input.get("max_price")
+
+        conditions = [models.FleaMarketItem.status == "active"]
+        if keyword:
+            like_kw = f"%{keyword}%"
+            conditions.append(
+                or_(
+                    models.FleaMarketItem.title.ilike(like_kw),
+                    models.FleaMarketItem.description.ilike(like_kw),
+                )
+            )
+        if category:
+            conditions.append(models.FleaMarketItem.category == category)
+        if min_price is not None:
+            conditions.append(models.FleaMarketItem.price >= min_price)
+        if max_price is not None:
+            conditions.append(models.FleaMarketItem.price <= max_price)
+
+        q = (
+            select(models.FleaMarketItem)
+            .where(and_(*conditions))
+            .order_by(desc(models.FleaMarketItem.created_at))
+            .limit(10)
+        )
+        rows = (await self.db.execute(q)).scalars().all()
+
+        items = []
+        for item in rows:
+            items.append({
+                "id": item.id,
+                "title": item.title,
+                "price": float(item.price),
+                "currency": item.currency,
+                "location": item.location,
+                "category": item.category,
+                "created_at": format_iso_utc(item.created_at) if item.created_at else None,
+            })
+
+        return {"items": items, "count": len(items)}
+
+    async def _get_leaderboard_summary(self, input: dict) -> dict:
+        """排行榜概览或单榜详情"""
+        leaderboard_id = input.get("leaderboard_id")
+
+        if leaderboard_id:
+            # 单个排行榜详情
+            lb_q = select(models.CustomLeaderboard).where(
+                models.CustomLeaderboard.id == leaderboard_id
+            )
+            lb = (await self.db.execute(lb_q)).scalar_one_or_none()
+            if not lb:
+                return {"error": "排行榜不存在 / Leaderboard not found"}
+
+            items_q = (
+                select(models.LeaderboardItem)
+                .where(models.LeaderboardItem.leaderboard_id == leaderboard_id)
+                .order_by(desc(models.LeaderboardItem.net_votes))
+                .limit(10)
+            )
+            rows = (await self.db.execute(items_q)).scalars().all()
+            items = []
+            for item in rows:
+                items.append({
+                    "name": item.name,
+                    "description": item.description,
+                    "net_votes": item.net_votes,
+                })
+            return {"name": lb.name, "description": lb.description, "items": items}
+
+        # 所有活跃排行榜
+        q = (
+            select(models.CustomLeaderboard)
+            .where(models.CustomLeaderboard.status == "active")
+            .order_by(desc(models.CustomLeaderboard.vote_count))
+            .limit(10)
+        )
+        rows = (await self.db.execute(q)).scalars().all()
+        leaderboards = []
+        for lb in rows:
+            leaderboards.append({
+                "id": lb.id,
+                "name": lb.name,
+                "location": lb.location,
+                "item_count": lb.item_count,
+                "vote_count": lb.vote_count,
+            })
+        return {"leaderboards": leaderboards}
+
+    async def _list_task_experts(self, input: dict) -> dict:
+        """活跃达人列表"""
+        keyword = input.get("keyword", "")
+
+        conditions = [models.TaskExpert.status == "active"]
+        if keyword:
+            like_kw = f"%{keyword}%"
+            conditions.append(
+                or_(
+                    models.TaskExpert.expert_name.ilike(like_kw),
+                    models.TaskExpert.bio.ilike(like_kw),
+                )
+            )
+
+        q = (
+            select(models.TaskExpert, models.User.name)
+            .join(models.User, models.TaskExpert.id == models.User.id)
+            .where(and_(*conditions))
+            .order_by(desc(models.TaskExpert.rating))
+            .limit(10)
+        )
+        rows = (await self.db.execute(q)).all()
+
+        experts = []
+        for expert, user_name in rows:
+            experts.append({
+                "id": expert.id,
+                "name": expert.expert_name or user_name,
+                "bio": (expert.bio or "")[:100],
+                "rating": float(expert.rating) if expert.rating else 0,
+                "completed_tasks": expert.completed_tasks,
+            })
+
+        return {"experts": experts, "count": len(experts)}
