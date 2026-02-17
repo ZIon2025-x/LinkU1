@@ -8406,4 +8406,85 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get aiChatQuickStart => 'Quick start';
+
+  @override
+  String get toolCallQueryMyTasks => 'Query my tasks';
+
+  @override
+  String get toolCallGetTaskDetail => 'Get task details';
+
+  @override
+  String get toolCallSearchTasks => 'Search tasks';
+
+  @override
+  String get toolCallGetMyProfile => 'Get my profile';
+
+  @override
+  String get toolCallGetPlatformFaq => 'Query FAQ';
+
+  @override
+  String get toolCallCheckCsAvailability => 'Check support online';
+
+  @override
+  String get toolCallGetMyPointsAndCoupons => 'Points & coupons';
+
+  @override
+  String get toolCallListActivities => 'Browse activities';
+
+  @override
+  String get toolCallGetMyNotificationsSummary => 'View notifications';
+
+  @override
+  String get toolCallListMyForumPosts => 'My forum posts';
+
+  @override
+  String get toolCallSearchFleaMarket => 'Search flea market';
+
+  @override
+  String get toolCallGetLeaderboardSummary => 'View leaderboard';
+
+  @override
+  String get toolCallListTaskExperts => 'Browse experts';
+
+  @override
+  String get toolCallLoadingQueryMyTasks => 'Checking your tasks…';
+
+  @override
+  String get toolCallLoadingGetTaskDetail => 'Fetching task details…';
+
+  @override
+  String get toolCallLoadingSearchTasks => 'Searching tasks…';
+
+  @override
+  String get toolCallLoadingGetMyProfile => 'Loading your profile…';
+
+  @override
+  String get toolCallLoadingGetPlatformFaq => 'Looking up FAQ…';
+
+  @override
+  String get toolCallLoadingCheckCsAvailability =>
+      'Checking if support is online…';
+
+  @override
+  String get toolCallLoadingGetMyPointsAndCoupons =>
+      'Loading points & coupons…';
+
+  @override
+  String get toolCallLoadingListActivities => 'Loading activities…';
+
+  @override
+  String get toolCallLoadingGetMyNotificationsSummary =>
+      'Loading notifications…';
+
+  @override
+  String get toolCallLoadingListMyForumPosts => 'Loading your posts…';
+
+  @override
+  String get toolCallLoadingSearchFleaMarket => 'Searching flea market…';
+
+  @override
+  String get toolCallLoadingGetLeaderboardSummary => 'Loading leaderboard…';
+
+  @override
+  String get toolCallLoadingListTaskExperts => 'Loading experts…';
 }

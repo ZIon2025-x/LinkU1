@@ -37,9 +37,11 @@ TOPIC_TO_SECTION_KEY = {
     "student": "student_verification",
     "expert": "task_experts",
     "activity": "activities",
-    "coupon": "others",
+    "coupon": "coupons_points",
     "notification": "notifications",
     "message_support": "messaging_support",
+    "vip": "vip",
+    "linker": "linker_ai",
 }
 
 
@@ -60,12 +62,14 @@ _TOOL_ERRORS = {
         "task_id_required": "需要提供 task_id",
         "task_not_found": "任务不存在",
         "task_no_permission": "无权查看此任务",
+        "leaderboard_not_found": "排行榜不存在",
     },
     "en": {
         "execution_failed": "Tool execution failed. Please try again later.",
         "task_id_required": "task_id is required",
         "task_not_found": "Task not found",
         "task_no_permission": "You do not have permission to view this task",
+        "leaderboard_not_found": "Leaderboard not found",
     },
 }
 
@@ -125,7 +129,7 @@ class ToolExecutor:
             .join(models.FaqSection, models.FaqItem.section_id == models.FaqSection.id)
             .where(models.FaqSection.key == section_key)
             .order_by(models.FaqItem.sort_order.asc())
-            .limit(5)
+            .limit(8)
         )
         rows = (await self.db.execute(q)).scalars().all()
         if not rows:
@@ -577,7 +581,8 @@ class ToolExecutor:
             )
             lb = (await self.db.execute(lb_q)).scalar_one_or_none()
             if not lb:
-                return {"error": "排行榜不存在 / Leaderboard not found"}
+                msgs = _TOOL_ERRORS.get(self._tool_lang(), _TOOL_ERRORS["en"])
+                return {"error": msgs["leaderboard_not_found"]}
 
             items_q = (
                 select(models.LeaderboardItem)

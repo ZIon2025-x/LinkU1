@@ -8090,6 +8090,84 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get aiChatQuickStart => '快捷操作';
+
+  @override
+  String get toolCallQueryMyTasks => '查询我的任务';
+
+  @override
+  String get toolCallGetTaskDetail => '获取任务详情';
+
+  @override
+  String get toolCallSearchTasks => '搜索任务';
+
+  @override
+  String get toolCallGetMyProfile => '获取个人资料';
+
+  @override
+  String get toolCallGetPlatformFaq => '查询常见问题';
+
+  @override
+  String get toolCallCheckCsAvailability => '检查客服在线';
+
+  @override
+  String get toolCallGetMyPointsAndCoupons => '查询积分和优惠券';
+
+  @override
+  String get toolCallListActivities => '浏览活动';
+
+  @override
+  String get toolCallGetMyNotificationsSummary => '查看通知';
+
+  @override
+  String get toolCallListMyForumPosts => '查询我的帖子';
+
+  @override
+  String get toolCallSearchFleaMarket => '搜索跳蚤市场';
+
+  @override
+  String get toolCallGetLeaderboardSummary => '查看排行榜';
+
+  @override
+  String get toolCallListTaskExperts => '浏览达人';
+
+  @override
+  String get toolCallLoadingQueryMyTasks => '正在查询你的任务…';
+
+  @override
+  String get toolCallLoadingGetTaskDetail => '正在获取任务详情…';
+
+  @override
+  String get toolCallLoadingSearchTasks => '正在搜索任务…';
+
+  @override
+  String get toolCallLoadingGetMyProfile => '正在加载个人资料…';
+
+  @override
+  String get toolCallLoadingGetPlatformFaq => '正在查询常见问题…';
+
+  @override
+  String get toolCallLoadingCheckCsAvailability => '正在检查客服是否在线…';
+
+  @override
+  String get toolCallLoadingGetMyPointsAndCoupons => '正在加载积分和优惠券…';
+
+  @override
+  String get toolCallLoadingListActivities => '正在加载活动…';
+
+  @override
+  String get toolCallLoadingGetMyNotificationsSummary => '正在加载通知…';
+
+  @override
+  String get toolCallLoadingListMyForumPosts => '正在加载你的帖子…';
+
+  @override
+  String get toolCallLoadingSearchFleaMarket => '正在搜索跳蚤市场…';
+
+  @override
+  String get toolCallLoadingGetLeaderboardSummary => '正在加载排行榜…';
+
+  @override
+  String get toolCallLoadingListTaskExperts => '正在加载达人…';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -16178,4 +16256,82 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get aiChatQuickStart => '快捷操作';
+
+  @override
+  String get toolCallQueryMyTasks => '查詢我的任務';
+
+  @override
+  String get toolCallGetTaskDetail => '取得任務詳情';
+
+  @override
+  String get toolCallSearchTasks => '搜尋任務';
+
+  @override
+  String get toolCallGetMyProfile => '取得個人資料';
+
+  @override
+  String get toolCallGetPlatformFaq => '查詢常見問題';
+
+  @override
+  String get toolCallCheckCsAvailability => '檢查客服在線';
+
+  @override
+  String get toolCallGetMyPointsAndCoupons => '查詢積分和優惠券';
+
+  @override
+  String get toolCallListActivities => '瀏覽活動';
+
+  @override
+  String get toolCallGetMyNotificationsSummary => '查看通知';
+
+  @override
+  String get toolCallListMyForumPosts => '查詢我的帖子';
+
+  @override
+  String get toolCallSearchFleaMarket => '搜尋跳蚤市場';
+
+  @override
+  String get toolCallGetLeaderboardSummary => '查看排行榜';
+
+  @override
+  String get toolCallListTaskExperts => '瀏覽達人';
+
+  @override
+  String get toolCallLoadingQueryMyTasks => '正在查詢你的任務…';
+
+  @override
+  String get toolCallLoadingGetTaskDetail => '正在取得任務詳情…';
+
+  @override
+  String get toolCallLoadingSearchTasks => '正在搜尋任務…';
+
+  @override
+  String get toolCallLoadingGetMyProfile => '正在載入個人資料…';
+
+  @override
+  String get toolCallLoadingGetPlatformFaq => '正在查詢常見問題…';
+
+  @override
+  String get toolCallLoadingCheckCsAvailability => '正在檢查客服是否在線…';
+
+  @override
+  String get toolCallLoadingGetMyPointsAndCoupons => '正在載入積分和優惠券…';
+
+  @override
+  String get toolCallLoadingListActivities => '正在載入活動…';
+
+  @override
+  String get toolCallLoadingGetMyNotificationsSummary => '正在載入通知…';
+
+  @override
+  String get toolCallLoadingListMyForumPosts => '正在載入你的帖子…';
+
+  @override
+  String get toolCallLoadingSearchFleaMarket => '正在搜尋跳蚤市場…';
+
+  @override
+  String get toolCallLoadingGetLeaderboardSummary => '正在載入排行榜…';
+
+  @override
+  String get toolCallLoadingListTaskExperts => '正在載入達人…';
 }

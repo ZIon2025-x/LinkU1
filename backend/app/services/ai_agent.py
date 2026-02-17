@@ -171,7 +171,7 @@ _OFF_TOPIC_RE = re.compile("|".join(_OFF_TOPIC_PATTERNS), re.IGNORECASE)
 # FAQ 关键词 → 直接命中本地FAQ（零 LLM 消耗）
 # 覆盖全部 20 个 faq_sections
 _FAQ_KEYWORDS = {
-    "faq_about": ["link2ur是什么", "什么是link2ur", "what is link2ur", "谁可以使用", "who can use", "平台介绍"],
+    "faq_about": ["link2ur是什么", "什么是link2ur", "what is link2ur", "谁可以使用", "who can use", "平台介绍", "如何加入", "加入你们", "怎么加入", "how to join", "可以合作吗", "合作", "partner", "partnership", "collaborate", "成为合作伙伴", "become partner"],
     "faq_publish": ["怎么发布", "如何发布", "how to post", "how to create task", "发任务", "创建任务", "发布流程", "发布技巧"],
     "faq_accept": ["怎么接单", "如何接任务", "how to accept", "how to take", "接任务", "接单流程", "接受任务", "任务流程", "basic task flow"],
     "faq_payment": ["支付", "付款", "怎么付", "how to pay", "payment", "转账", "收款", "怎么收款", "何时到账", "退款", "refund"],
@@ -192,6 +192,8 @@ _FAQ_KEYWORDS = {
     "faq_coupon": ["优惠券", "coupon", "积分", "points", "抵扣", "折扣", "如何使用优惠券"],
     "faq_notification": ["通知", "notification", "收不到通知", "推送", "push", "消息和通知区别"],
     "faq_message_support": ["客服在线时间", "support hours", "消息未送达", "message not delivered"],
+    "faq_vip": ["vip", "会员", "membership", "开通会员", "购买会员", "升级会员", "取消会员", "vip权益", "vip benefits", "超级vip", "super vip"],
+    "faq_linker": ["linker", "智能助手", "ai助手", "ai客服", "机器人", "bot", "linker能做什么", "what can linker", "小助手"],
 }
 
 # 任务相关关键词
@@ -305,6 +307,8 @@ _FAQ_KEY_TO_TOPIC = {
     "faq_coupon": "coupon",
     "faq_notification": "notification",
     "faq_message_support": "message_support",
+    "faq_vip": "vip",
+    "faq_linker": "linker",
 }
 
 

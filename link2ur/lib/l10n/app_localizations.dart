@@ -15481,6 +15481,162 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Quick start'**
   String get aiChatQuickStart;
+
+  /// No description provided for @toolCallQueryMyTasks.
+  ///
+  /// In en, this message translates to:
+  /// **'Query my tasks'**
+  String get toolCallQueryMyTasks;
+
+  /// No description provided for @toolCallGetTaskDetail.
+  ///
+  /// In en, this message translates to:
+  /// **'Get task details'**
+  String get toolCallGetTaskDetail;
+
+  /// No description provided for @toolCallSearchTasks.
+  ///
+  /// In en, this message translates to:
+  /// **'Search tasks'**
+  String get toolCallSearchTasks;
+
+  /// No description provided for @toolCallGetMyProfile.
+  ///
+  /// In en, this message translates to:
+  /// **'Get my profile'**
+  String get toolCallGetMyProfile;
+
+  /// No description provided for @toolCallGetPlatformFaq.
+  ///
+  /// In en, this message translates to:
+  /// **'Query FAQ'**
+  String get toolCallGetPlatformFaq;
+
+  /// No description provided for @toolCallCheckCsAvailability.
+  ///
+  /// In en, this message translates to:
+  /// **'Check support online'**
+  String get toolCallCheckCsAvailability;
+
+  /// No description provided for @toolCallGetMyPointsAndCoupons.
+  ///
+  /// In en, this message translates to:
+  /// **'Points & coupons'**
+  String get toolCallGetMyPointsAndCoupons;
+
+  /// No description provided for @toolCallListActivities.
+  ///
+  /// In en, this message translates to:
+  /// **'Browse activities'**
+  String get toolCallListActivities;
+
+  /// No description provided for @toolCallGetMyNotificationsSummary.
+  ///
+  /// In en, this message translates to:
+  /// **'View notifications'**
+  String get toolCallGetMyNotificationsSummary;
+
+  /// No description provided for @toolCallListMyForumPosts.
+  ///
+  /// In en, this message translates to:
+  /// **'My forum posts'**
+  String get toolCallListMyForumPosts;
+
+  /// No description provided for @toolCallSearchFleaMarket.
+  ///
+  /// In en, this message translates to:
+  /// **'Search flea market'**
+  String get toolCallSearchFleaMarket;
+
+  /// No description provided for @toolCallGetLeaderboardSummary.
+  ///
+  /// In en, this message translates to:
+  /// **'View leaderboard'**
+  String get toolCallGetLeaderboardSummary;
+
+  /// No description provided for @toolCallListTaskExperts.
+  ///
+  /// In en, this message translates to:
+  /// **'Browse experts'**
+  String get toolCallListTaskExperts;
+
+  /// No description provided for @toolCallLoadingQueryMyTasks.
+  ///
+  /// In en, this message translates to:
+  /// **'Checking your tasks…'**
+  String get toolCallLoadingQueryMyTasks;
+
+  /// No description provided for @toolCallLoadingGetTaskDetail.
+  ///
+  /// In en, this message translates to:
+  /// **'Fetching task details…'**
+  String get toolCallLoadingGetTaskDetail;
+
+  /// No description provided for @toolCallLoadingSearchTasks.
+  ///
+  /// In en, this message translates to:
+  /// **'Searching tasks…'**
+  String get toolCallLoadingSearchTasks;
+
+  /// No description provided for @toolCallLoadingGetMyProfile.
+  ///
+  /// In en, this message translates to:
+  /// **'Loading your profile…'**
+  String get toolCallLoadingGetMyProfile;
+
+  /// No description provided for @toolCallLoadingGetPlatformFaq.
+  ///
+  /// In en, this message translates to:
+  /// **'Looking up FAQ…'**
+  String get toolCallLoadingGetPlatformFaq;
+
+  /// No description provided for @toolCallLoadingCheckCsAvailability.
+  ///
+  /// In en, this message translates to:
+  /// **'Checking if support is online…'**
+  String get toolCallLoadingCheckCsAvailability;
+
+  /// No description provided for @toolCallLoadingGetMyPointsAndCoupons.
+  ///
+  /// In en, this message translates to:
+  /// **'Loading points & coupons…'**
+  String get toolCallLoadingGetMyPointsAndCoupons;
+
+  /// No description provided for @toolCallLoadingListActivities.
+  ///
+  /// In en, this message translates to:
+  /// **'Loading activities…'**
+  String get toolCallLoadingListActivities;
+
+  /// No description provided for @toolCallLoadingGetMyNotificationsSummary.
+  ///
+  /// In en, this message translates to:
+  /// **'Loading notifications…'**
+  String get toolCallLoadingGetMyNotificationsSummary;
+
+  /// No description provided for @toolCallLoadingListMyForumPosts.
+  ///
+  /// In en, this message translates to:
+  /// **'Loading your posts…'**
+  String get toolCallLoadingListMyForumPosts;
+
+  /// No description provided for @toolCallLoadingSearchFleaMarket.
+  ///
+  /// In en, this message translates to:
+  /// **'Searching flea market…'**
+  String get toolCallLoadingSearchFleaMarket;
+
+  /// No description provided for @toolCallLoadingGetLeaderboardSummary.
+  ///
+  /// In en, this message translates to:
+  /// **'Loading leaderboard…'**
+  String get toolCallLoadingGetLeaderboardSummary;
+
+  /// No description provided for @toolCallLoadingListTaskExperts.
+  ///
+  /// In en, this message translates to:
+  /// **'Loading experts…'**
+  String get toolCallLoadingListTaskExperts;
 }
 
 class _AppLocalizationsDelegate

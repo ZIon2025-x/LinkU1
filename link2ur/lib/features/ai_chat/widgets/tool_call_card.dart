@@ -3,8 +3,9 @@ import 'package:flutter/material.dart';
 import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_radius.dart';
 import '../../../core/design/app_spacing.dart';
+import '../../../core/utils/l10n_extension.dart';
 
-/// 工具调用指示卡片
+/// 工具调用指示卡片（展示名称随系统语言切换）
 class ToolCallCard extends StatelessWidget {
   const ToolCallCard({
     super.key,
@@ -15,36 +16,72 @@ class ToolCallCard extends StatelessWidget {
   final String toolName;
   final bool isLoading;
 
-  String get _displayName {
+  String _displayName(BuildContext context) {
+    final l10n = context.l10n;
     switch (toolName) {
       case 'query_my_tasks':
-        return '查询我的任务';
+        return l10n.toolCallQueryMyTasks;
       case 'get_task_detail':
-        return '获取任务详情';
+        return l10n.toolCallGetTaskDetail;
       case 'search_tasks':
-        return '搜索任务';
+        return l10n.toolCallSearchTasks;
       case 'get_my_profile':
-        return '获取个人资料';
+        return l10n.toolCallGetMyProfile;
       case 'get_platform_faq':
-        return '查询常见问题';
+        return l10n.toolCallGetPlatformFaq;
       case 'check_cs_availability':
-        return '检查客服在线';
+        return l10n.toolCallCheckCsAvailability;
       case 'get_my_points_and_coupons':
-        return '查询积分和优惠券';
+        return l10n.toolCallGetMyPointsAndCoupons;
       case 'list_activities':
-        return '浏览活动';
+        return l10n.toolCallListActivities;
       case 'get_my_notifications_summary':
-        return '查看通知';
+        return l10n.toolCallGetMyNotificationsSummary;
       case 'list_my_forum_posts':
-        return '查询我的帖子';
+        return l10n.toolCallListMyForumPosts;
       case 'search_flea_market':
-        return '搜索跳蚤市场';
+        return l10n.toolCallSearchFleaMarket;
       case 'get_leaderboard_summary':
-        return '查看排行榜';
+        return l10n.toolCallGetLeaderboardSummary;
       case 'list_task_experts':
-        return '浏览达人';
+        return l10n.toolCallListTaskExperts;
       default:
         return toolName;
+    }
+  }
+
+  /// 工具执行中时显示的「正在…」提示，分步感更明显
+  String _loadingHint(BuildContext context) {
+    final l10n = context.l10n;
+    switch (toolName) {
+      case 'query_my_tasks':
+        return l10n.toolCallLoadingQueryMyTasks;
+      case 'get_task_detail':
+        return l10n.toolCallLoadingGetTaskDetail;
+      case 'search_tasks':
+        return l10n.toolCallLoadingSearchTasks;
+      case 'get_my_profile':
+        return l10n.toolCallLoadingGetMyProfile;
+      case 'get_platform_faq':
+        return l10n.toolCallLoadingGetPlatformFaq;
+      case 'check_cs_availability':
+        return l10n.toolCallLoadingCheckCsAvailability;
+      case 'get_my_points_and_coupons':
+        return l10n.toolCallLoadingGetMyPointsAndCoupons;
+      case 'list_activities':
+        return l10n.toolCallLoadingListActivities;
+      case 'get_my_notifications_summary':
+        return l10n.toolCallLoadingGetMyNotificationsSummary;
+      case 'list_my_forum_posts':
+        return l10n.toolCallLoadingListMyForumPosts;
+      case 'search_flea_market':
+        return l10n.toolCallLoadingSearchFleaMarket;
+      case 'get_leaderboard_summary':
+        return l10n.toolCallLoadingGetLeaderboardSummary;
+      case 'list_task_experts':
+        return l10n.toolCallLoadingListTaskExperts;
+      default:
+        return _displayName(context);
     }
   }
 
@@ -116,7 +153,7 @@ class ToolCallCard extends StatelessWidget {
             ),
             const SizedBox(width: AppSpacing.sm),
             Text(
-              _displayName,
+              isLoading ? _loadingHint(context) : _displayName(context),
               style: TextStyle(
                 fontSize: 13,
                 color: isDark ? Colors.white70 : Colors.black54,
