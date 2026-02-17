@@ -10876,11 +10876,11 @@ def update_task_expert(
     try:
         expert = db.query(models.FeaturedTaskExpert).filter(
             models.FeaturedTaskExpert.id == expert_id
-        ).first()
-        
+        ).with_for_update().first()
+
         if not expert:
             raise HTTPException(status_code=404, detail="任务达人不存在")
-        
+
         # 1. 禁止修改 user_id 和 id（主键不能修改）
         if 'user_id' in expert_data and expert_data['user_id'] != expert.user_id:
             raise HTTPException(status_code=400, detail="不允许修改 user_id，如需更换用户请删除后重新创建")
@@ -10907,9 +10907,7 @@ def update_task_expert(
         expert_data.pop('id', None)
         expert_data.pop('user_id', None)
         
-        # 保存旧头像URL，用于后续删除
-        # 注意：只要 expert_data 中包含 'avatar' 字段（无论值是什么），都应该保存旧头像URL
-        # 这样即使传入空字符串清空头像，也能删除旧头像文件
+        # 保存旧头像URL，用于后续删除（仅在新头像有效时才删除旧头像）
         old_avatar_url = expert.avatar if 'avatar' in expert_data else None
         
         # 记录要更新的字段（用于调试）
@@ -10988,7 +10986,8 @@ def update_task_expert(
         logger.info(f"更新后的 location 值: {expert.location}")
         
         # 如果更换了头像，删除旧头像
-        if old_avatar_url and 'avatar' in expert_data and old_avatar_url != expert_data['avatar']:
+        # 注意：只有当头像实际被更新（expert.avatar 不再等于旧值）时才删除旧文件
+        if old_avatar_url and 'avatar' in expert_data and expert.avatar != old_avatar_url:
             from app.image_cleanup import delete_expert_avatar
             try:
                 delete_expert_avatar(expert_id, old_avatar_url)
@@ -11174,16 +11173,24 @@ def delete_expert_service_admin(
             models.Activity.expert_service_id == service_id
         ).count()
         
-        if tasks_using_service > 0 or activities_using_service > 0:
+        # 检查是否有进行中的服务申请
+        pending_applications = db.query(models.ServiceApplication).filter(
+            models.ServiceApplication.service_id == service_id,
+            models.ServiceApplication.status.in_(["pending", "negotiating", "price_agreed"])
+        ).count()
+
+        if tasks_using_service > 0 or activities_using_service > 0 or pending_applications > 0:
             error_msg = "无法删除服务，因为"
             reasons = []
             if tasks_using_service > 0:
                 reasons.append(f"有 {tasks_using_service} 个任务正在使用此服务")
             if activities_using_service > 0:
                 reasons.append(f"有 {activities_using_service} 个活动正在使用此服务")
+            if pending_applications > 0:
+                reasons.append(f"有 {pending_applications} 个待处理的服务申请")
             error_msg += "、" .join(reasons) + "。请先处理相关任务和活动后再删除。"
             raise HTTPException(status_code=400, detail=error_msg)
-        
+
         # 检查是否有未过期且仍有参与者的时间段
         from app.utils.time_utils import get_utc_time
         current_utc = get_utc_time()
@@ -11739,12 +11746,11 @@ def get_public_task_experts(
         
         experts = query.all()
         
-        # 🔒 性能修复：批量计算完成率为0的专家，避免 N+1 查询
+        # 批量计算完成率为0的专家（只读，不写回数据库）
         from app.models import Task
         zero_rate_ids = [e.id for e in experts if e.completion_rate == 0.0]
         completion_rate_map = {}
         if zero_rate_ids:
-            # 一次查询获取所有需要计算的专家的任务统计
             from sqlalchemy import case
             stats = db.query(
                 Task.taker_id,
@@ -11753,24 +11759,11 @@ def get_public_task_experts(
             ).filter(
                 Task.taker_id.in_(zero_rate_ids)
             ).group_by(Task.taker_id).all()
-            
+
             for taker_id, total, completed in stats:
                 if total > 0:
                     completion_rate_map[taker_id] = (completed / total) * 100.0
-            
-            # 批量更新数据库中的值
-            for expert in experts:
-                if expert.id in completion_rate_map:
-                    try:
-                        expert.completion_rate = completion_rate_map[expert.id]
-                    except Exception:
-                        pass
-            try:
-                db.commit()
-            except Exception as e:
-                logger.warning(f"批量更新任务达人完成率失败: {e}")
-                db.rollback()
-        
+
         result_experts = []
         for expert in experts:
             completion_rate = completion_rate_map.get(expert.id, expert.completion_rate)

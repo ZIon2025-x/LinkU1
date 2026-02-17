@@ -245,29 +245,6 @@ class Task extends Equatable {
   String get displayCategoryText =>
       (isFleaMarketTask ? fleaMarketCategory : null) ?? taskTypeText;
 
-  /// 状态显示文本（国际化请使用 TaskStatusHelper.getLocalizedLabel(status, l10n)）
-  @Deprecated('Use TaskStatusHelper.getLocalizedLabel(status, l10n) for localized display')
-  String get statusText {
-    switch (status) {
-      case AppConstants.taskStatusOpen:
-        return '招募中';
-      case AppConstants.taskStatusInProgress:
-        return '进行中';
-      case AppConstants.taskStatusPendingConfirmation:
-        return '待确认';
-      case AppConstants.taskStatusPendingPayment:
-        return '待支付';
-      case AppConstants.taskStatusCompleted:
-        return '已完成';
-      case AppConstants.taskStatusCancelled:
-        return '已取消';
-      case AppConstants.taskStatusDisputed:
-        return '争议中';
-      default:
-        return status;
-    }
-  }
-
   /// 任务类型显示文本（国际化请使用 TaskTypeHelper.getLocalizedLabel(taskType, l10n)）
   String get taskTypeText {
     switch (taskType) {

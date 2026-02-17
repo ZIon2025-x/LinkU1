@@ -152,11 +152,12 @@ async def get_my_application(
     current_user: models.User = Depends(get_current_user_secure_async_csrf),
     db: AsyncSession = Depends(get_async_db_dependency),
 ):
-    """获取用户的申请状态"""
+    """获取用户的最新申请状态"""
     application = await db.execute(
         select(models.TaskExpertApplication)
         .where(models.TaskExpertApplication.user_id == current_user.id)
         .order_by(models.TaskExpertApplication.created_at.desc())
+        .limit(1)
     )
     application = application.scalar_one_or_none()
     if not application:
@@ -743,7 +744,7 @@ async def update_service(
         import json
         try:
             old_images = json.loads(old_images) if old_images else []
-        except:
+        except Exception:
             old_images = []
     elif not isinstance(old_images, list):
         old_images = []
@@ -1143,7 +1144,7 @@ async def delete_service(
         logger.error(f"删除服务失败 {service_id}: {e}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"删除服务失败: {str(e)}"
+            detail="删除服务失败，请稍后重试"
         )
 
 
@@ -1681,7 +1682,7 @@ async def auto_add_time_slots_to_activities(
     for relation in recurring_relations:
         # 检查活动是否已结束（通过截至日期）
         if relation.activity_end_date:
-            today = date.today()
+            today = get_utc_time().date()
             if today > relation.activity_end_date:
                 # 活动已超过截至日期，不再添加时间段
                 continue
@@ -1886,7 +1887,7 @@ async def check_and_end_activities(db: AsyncSession):
         
         # 检查是否达到截至日期
         if recurring_relation and recurring_relation.activity_end_date:
-            today = date.today()
+            today = get_utc_time().date()
             if today > recurring_relation.activity_end_date:
                 should_end = True
                 end_reason = f"已达到活动截至日期 {recurring_relation.activity_end_date}"
@@ -2067,8 +2068,8 @@ async def get_service_time_slots_public(
     # 构建查询（加载活动关联信息）
     from sqlalchemy.orm import selectinload
     query = select(models.ServiceTimeSlot).where(
-        models.ServiceTimeSlot.service_id == service_id
-        # 注意：不再过滤is_available，让已满的时间段也能显示
+        models.ServiceTimeSlot.service_id == service_id,
+        models.ServiceTimeSlot.is_manually_deleted == False,  # 排除已手动删除的时间段
     ).options(
         selectinload(models.ServiceTimeSlot.activity_relations).selectinload(models.ActivityTimeSlotRelation.activity),
         selectinload(models.ServiceTimeSlot.task_relations)  # 加载任务关联，用于动态计算参与者数量
@@ -2233,21 +2234,24 @@ async def get_service_detail(
     service = await db.execute(
         select(models.TaskExpertService)
         .where(models.TaskExpertService.id == service_id)
+        .where(models.TaskExpertService.status == "active")
     )
     service = service.scalar_one_or_none()
     if not service:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="服务不存在"
+            status_code=status.HTTP_404_NOT_FOUND, detail="服务不存在或未上架"
         )
     
-    # 增加浏览次数
-    await db.execute(
-        update(models.TaskExpertService)
-        .where(models.TaskExpertService.id == service_id)
-        .values(view_count=models.TaskExpertService.view_count + 1)
-    )
-    await db.commit()
-    await db.refresh(service)
+    # 增加浏览次数（仅已登录用户，避免 bot/爬虫虚增）
+    if current_user:
+        await db.execute(
+            update(models.TaskExpertService)
+            .where(models.TaskExpertService.id == service_id)
+            .values(view_count=models.TaskExpertService.view_count + 1)
+        )
+        await db.commit()
+        await db.refresh(service)
+
     
     # 查询用户申请的服务申请信息（如果用户已登录）
     user_application_id = None
@@ -2614,11 +2618,7 @@ async def apply_for_service(
         # 如果服务启用了时间段，不需要截至日期（时间段已经包含了日期信息）
         deadline = None
     
-    # 8. 达人服务一律需要达人审核（时间安排、任务强度等）
-    should_auto_approve = False
-    
-    # 9. 创建申请记录
-    initial_status = "pending"
+    # 8. 创建申请记录（达人服务一律需要达人审核）
     new_application = models.ServiceApplication(
         service_id=service_id,
         applicant_id=current_user.id,
@@ -2629,18 +2629,9 @@ async def apply_for_service(
         currency=application_data.currency,
         deadline=deadline,
         is_flexible=application_data.is_flexible or 0,
-        status=initial_status,
+        status="pending",
     )
-    
-    # 如果自动批准，设置最终价格和批准时间
-    if should_auto_approve:
-        # 使用时间段的价格，如果没有则使用服务基础价格
-        if time_slot:
-            new_application.final_price = time_slot.price_per_participant
-        else:
-            new_application.final_price = service.base_price
-        new_application.approved_at = get_utc_time()
-    
+
     db.add(new_application)
     
     # 10. 如果选择了时间段，更新时间段的参与者数量（在提交前更新，避免并发问题）
@@ -2678,218 +2669,27 @@ async def apply_for_service(
             detail="您已申请过此服务，请等待处理（并发冲突）"
         )
     
-    # 12. 如果自动批准，创建任务
-    if should_auto_approve:
-        from datetime import timedelta
-        
-        # 获取任务达人的位置信息（使用和approve_service_application相同的逻辑）
-        location = None
-        featured_expert = await db.get(models.FeaturedTaskExpert, service.expert_id)
-        if featured_expert and featured_expert.location:
-            location = featured_expert.location.strip() if featured_expert.location else None
-        
-        # 如果 FeaturedTaskExpert 没有 location，从 User 表获取 residence_city
-        if not location:
-            from app import async_crud
-            expert_user = await async_crud.async_user_crud.get_user_by_id(db, service.expert_id)
-            if expert_user and expert_user.residence_city:
-                location = expert_user.residence_city.strip() if expert_user.residence_city else None
-        
-        # 如果仍然没有 location，使用默认值 "线上"
-        if not location:
-            location = "线上"
-        # 如果 location 是 "Online" 或 "线上"（不区分大小写），统一为 "线上"
-        elif location.lower() in ["online", "线上"]:
-            location = "线上"
-        
-        # 确定任务价格
-        price = new_application.final_price
-        
-        # 确定任务截止日期
-        if service.has_time_slots and time_slot:
-            # 使用时间段的结束时间作为任务截止日期
-            task_deadline = time_slot.slot_end_datetime
-        elif deadline:
-            task_deadline = deadline
-        else:
-            # 默认7天后
-            task_deadline = get_utc_time() + timedelta(days=7)
-        
-        # 处理图片：TaskExpertService.images是JSONB（list），Task.images是Text（JSON字符串）
-        import json
-        images_json = None
-        if service.images:
-            if isinstance(service.images, list):
-                images_json = json.dumps(service.images) if service.images else None
-            elif isinstance(service.images, str):
-                # 如果已经是字符串，直接使用
-                images_json = service.images
-            else:
-                # 其他类型，尝试转换为JSON
-                try:
-                    images_json = json.dumps(service.images)
-                except:
-                    images_json = None
-        
-        # 检查任务达人是否有Stripe Connect账户（用于接收任务奖励）
-        expert_user = await db.get(models.User, service.expert_id)
-        taker_stripe_account_id = expert_user.stripe_account_id if expert_user else None
-        
-        if not taker_stripe_account_id:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="任务达人尚未创建 Stripe Connect 收款账户，无法完成支付。请联系任务达人先创建收款账户。",
-                headers={"X-Stripe-Connect-Required": "true"}
-            )
-        
-        # 创建任务（任务达人服务创建的任务等级为 expert）
-        # ⚠️ 需要支付，设置为pending_payment状态
-        new_task = models.Task(
-            title=service.service_name,
-            description=service.description,
-            deadline=task_deadline,
-            is_flexible=application_data.is_flexible or 0,
-            reward=price,
-            base_reward=service.base_price,
-            agreed_reward=price,
+    # 12. 发送通知和邮件给任务达人（需要达人审核）
+    from app.task_notifications import send_service_application_notification
+    try:
+        await send_service_application_notification(
+            db=db,
+            expert_id=service.expert_id,
+            applicant_id=current_user.id,
+            service_id=service_id,
+            service_name=service.service_name,
+            negotiated_price=application_data.negotiated_price,
+            service_description=service.description,
+            base_price=service.base_price,
+            application_message=application_data.application_message,
             currency=application_data.currency or service.currency,
-            location=location,
-            task_type="其他",
-            task_level="expert",
-            poster_id=current_user.id,  # 申请用户是发布人
-            taker_id=service.expert_id,  # 任务达人接收方
-            status="pending_payment",  # ⚠️ 需要支付，等待支付完成
-            is_paid=0,  # 明确标记为未支付
-            payment_expires_at=get_utc_time() + timedelta(minutes=30),  # 支付过期时间（30分钟）
-            images=images_json,  # 存储为JSON字符串
-            accepted_at=get_utc_time(),
-            task_source="expert_service",  # 达人服务任务
+            deadline=deadline,
+            is_flexible=(application_data.is_flexible == 1),
+            application_time=new_application.created_at
         )
-        
-        db.add(new_task)
-        await db.flush()  # 获取任务ID
-        
-        # ⚠️ 创建支付意图
-        task_amount_pence = int(float(price) * 100)
-        from app.utils.fee_calculator import calculate_application_fee_pence
-        application_fee_pence = calculate_application_fee_pence(task_amount_pence)
-        
-        try:
-            from app.secure_auth import get_wechat_pay_payment_method_options
-            payment_method_options = get_wechat_pay_payment_method_options(request)
-            create_pi_kw = {
-                "amount": task_amount_pence,
-                "currency": (application_data.currency or service.currency).lower(),
-                "payment_method_types": ["card", "wechat_pay", "alipay"],
-                "metadata": {
-                    "task_id": str(new_task.id),
-                    "application_id": str(new_application.id),
-                    "poster_id": current_user.id,
-                    "taker_id": service.expert_id,
-                    "taker_stripe_account_id": taker_stripe_account_id,
-                    "application_fee": str(application_fee_pence),
-                    "task_amount": str(task_amount_pence),
-                    "task_type": "service_application",
-                },
-                "description": f"服务申请支付 - {service.service_name}",
-            }
-            if payment_method_options:
-                create_pi_kw["payment_method_options"] = payment_method_options
-            payment_intent = stripe.PaymentIntent.create(**create_pi_kw)
-            new_task.payment_intent_id = payment_intent.id
-            logger.info(f"创建支付意图成功: payment_intent_id={payment_intent.id}, task_id={new_task.id}")
-        except Exception as e:
-            await db.rollback()
-            logger.error(f"创建支付意图失败: {e}")
-            raise HTTPException(status_code=500, detail=f"创建支付意图失败: {str(e)}")
-        
-        # 更新申请记录，关联任务ID
-        new_application.task_id = new_task.id
-        await db.commit()
-        await db.refresh(new_task)
-        
-        # 发送通知给申请用户（任务已创建）
-        from app.task_notifications import send_service_application_approved_notification
-        try:
-            await send_service_application_approved_notification(
-                db=db,
-                applicant_id=current_user.id,
-                expert_id=service.expert_id,
-                task_id=new_task.id,
-                service_name=service.service_name
-            )
-        except Exception as e:
-            logger.error(f"Failed to send notification: {e}")
-        
-        # 发送邮件通知给任务达人（自动批准的情况）
-        from app.task_notifications import send_service_application_notification
-        try:
-            await send_service_application_notification(
-                db=db,
-                expert_id=service.expert_id,
-                applicant_id=current_user.id,
-                service_id=service_id,
-                service_name=service.service_name,
-                negotiated_price=None,  # 自动批准，没有议价
-                service_description=service.description,
-                base_price=service.base_price,
-                application_message=application_data.application_message,
-                currency=application_data.currency or service.currency,
-                deadline=deadline,
-                is_flexible=(application_data.is_flexible == 1),
-                application_time=new_application.created_at
-            )
-        except Exception as e:
-            logger.error(f"Failed to send email notification to expert: {e}")
-    else:
-        # 13. 发送通知和邮件给任务达人（需要批准）
-        from app.task_notifications import send_service_application_notification
-        try:
-            await send_service_application_notification(
-                db=db,
-                expert_id=service.expert_id,
-                applicant_id=current_user.id,
-                service_id=service_id,
-                service_name=service.service_name,
-                negotiated_price=application_data.negotiated_price,
-                service_description=service.description,
-                base_price=service.base_price,
-                application_message=application_data.application_message,
-                currency=application_data.currency or service.currency,
-                deadline=deadline,
-                is_flexible=(application_data.is_flexible == 1),
-                application_time=new_application.created_at
-            )
-        except Exception as e:
-            logger.error(f"Failed to send notification: {e}")
-    
-    # ⚠️ 重新查询后的对象所有属性都已加载，不需要再"预热"
-    # 如果需要支付，添加支付信息到返回对象
-    if new_task.status == "pending_payment" and new_task.payment_intent_id:
-        try:
-            # 重新获取 PaymentIntent 以获取 client_secret
-            payment_intent = stripe.PaymentIntent.retrieve(new_task.payment_intent_id)
-            
-            # 使用 Pydantic 的 model_dump 和 model_validate 来添加额外字段
-            from pydantic import model_validate
-            application_dict = {
-                **new_application.__dict__,
-                "payment_intent_id": payment_intent.id,
-                "client_secret": payment_intent.client_secret,
-                "payment_amount": payment_intent.amount,
-                "payment_amount_display": f"{payment_intent.amount / 100:.2f}",
-                "payment_currency": payment_intent.currency.upper(),
-                "customer_id": customer_id,
-                "ephemeral_key_secret": ephemeral_key_secret,
-                "payment_required": True,
-                "payment_expires_at": new_task.payment_expires_at.isoformat() if new_task.payment_expires_at else None
-            }
-            return schemas.ServiceApplicationOut(**application_dict)
-        except Exception as e:
-            logger.error(f"获取支付信息失败: {e}")
-            # 支付信息获取失败不影响主流程，返回原始对象
-    
-    # 直接返回对象即可（响应模型会自动序列化已加载的属性）
+    except Exception as e:
+        logger.error(f"Failed to send notification: {e}")
+
     return new_application
 
 
@@ -3110,7 +2910,7 @@ async def approve_service_application(
             # 其他类型，尝试转换为JSON
             try:
                 images_json = json.dumps(service.images)
-            except:
+            except Exception:
                 images_json = None
     
     # ⚠️ 安全修复：任务达人服务创建任务需要支付，不能直接进入 in_progress
@@ -3790,19 +3590,21 @@ async def reject_service_application(
     background_tasks: BackgroundTasks = BackgroundTasks(),
 ):
     """任务达人拒绝申请"""
-    # ⚠️ 性能优化：移除 with_for_update()，拒绝操作不需要锁定
+    # 使用 FOR UPDATE 锁防止与 approve 并发冲突
     application = await db.execute(
         select(models.ServiceApplication)
         .where(models.ServiceApplication.id == application_id)
         .where(models.ServiceApplication.expert_id == current_expert.id)
+        .with_for_update()
     )
     application = application.scalar_one_or_none()
-    
+
     if not application:
         raise HTTPException(status_code=404, detail="申请不存在")
-    
-    if application.status != "pending":
-        raise HTTPException(status_code=400, detail="只能拒绝待处理的申请")
+
+    rejectable_statuses = ("pending", "negotiating", "price_agreed")
+    if application.status not in rejectable_statuses:
+        raise HTTPException(status_code=400, detail=f"当前状态({application.status})不允许拒绝")
     
     # 保存通知所需的数据（在更新状态前）
     applicant_id = application.applicant_id
@@ -3810,10 +3612,19 @@ async def reject_service_application(
     service_id = application.service_id
     reject_reason = reject_data.reject_reason
     
+    # 如果申请关联了时间段，回退 current_participants
+    if application.time_slot_id:
+        await db.execute(
+            update(models.ServiceTimeSlot)
+            .where(models.ServiceTimeSlot.id == application.time_slot_id)
+            .where(models.ServiceTimeSlot.current_participants > 0)
+            .values(current_participants=models.ServiceTimeSlot.current_participants - 1)
+        )
+
     application.status = "rejected"
     application.rejected_at = get_utc_time()
     application.updated_at = get_utc_time()
-    
+
     await db.commit()
     
     # ⚠️ 性能优化：将通知发送改为后台任务，不阻塞响应

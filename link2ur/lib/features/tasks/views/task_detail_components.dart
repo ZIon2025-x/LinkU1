@@ -21,54 +21,7 @@ import '../../../data/models/task_application.dart';
 import '../../../data/models/review.dart';
 import '../../../data/models/refund_request.dart';
 import '../bloc/task_detail_bloc.dart';
-
-// ============================================================
-// 角色辅助：根据任务来源返回角色称谓
-// ============================================================
-
-/// 获取发布者角色称谓
-String getPosterRoleText(Task task, BuildContext context) {
-  switch (task.taskSource) {
-    case AppConstants.taskSourceFleaMarket:
-      return context.l10n.taskDetailBuyer;
-    case AppConstants.taskSourceExpertService:
-      return context.l10n.taskDetailPublisher; // 用户
-    case AppConstants.taskSourceExpertActivity:
-      return context.l10n.taskDetailPublisher; // 参与者
-    default:
-      return context.l10n.taskDetailPublisher;
-  }
-}
-
-/// 获取接单者角色称谓
-String getTakerRoleText(Task task, BuildContext context) {
-  switch (task.taskSource) {
-    case AppConstants.taskSourceFleaMarket:
-      return context.l10n.taskDetailSeller;
-    case AppConstants.taskSourceExpertService:
-      return context.l10n.taskSourceExpertService; // 达人
-    case AppConstants.taskSourceExpertActivity:
-      return context.l10n.taskSourceExpertActivity; // 组织者
-    default:
-      return context.l10n.actionsContactRecipient;
-  }
-}
-
-/// 获取联系按钮文本
-String getContactButtonText(
-    Task task, bool isPoster, BuildContext context) {
-  if (isPoster) {
-    // 发布者联系接单者
-    return task.isFleaMarketTask
-        ? context.l10n.taskDetailSeller
-        : context.l10n.actionsContactRecipient;
-  } else {
-    // 接单者联系发布者
-    return task.isFleaMarketTask
-        ? context.l10n.taskDetailBuyer
-        : context.l10n.actionsContactPoster;
-  }
-}
+import 'task_detail_helpers.dart';
 
 // ============================================================
 // 任务来源标签
@@ -637,6 +590,7 @@ class ApplicationsListView extends StatelessWidget {
           else
             ...applications
                 .map((app) => _ApplicationItem(
+                      key: ValueKey(app.id),
                       application: app,
                       isDark: isDark,
                     ))
@@ -649,6 +603,7 @@ class ApplicationsListView extends StatelessWidget {
 
 class _ApplicationItem extends StatelessWidget {
   const _ApplicationItem({
+    super.key,
     required this.application,
     required this.isDark,
   });
@@ -2304,6 +2259,7 @@ class RefundHistorySheet extends StatelessWidget {
                     itemBuilder: (context, index) {
                       final refund = state.refundHistory[index];
                       return _RefundHistoryItem(
+                        key: ValueKey(refund.id),
                         refund: refund,
                         isDark: isDark,
                       );
@@ -2321,6 +2277,7 @@ class RefundHistorySheet extends StatelessWidget {
 /// 退款历史单条记录
 class _RefundHistoryItem extends StatelessWidget {
   const _RefundHistoryItem({
+    super.key,
     required this.refund,
     required this.isDark,
   });

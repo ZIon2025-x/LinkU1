@@ -924,6 +924,8 @@ class _DesktopTaskCardState extends State<_DesktopTaskCard> {
                         width: double.infinity,
                         height: double.infinity,
                         fit: BoxFit.cover,
+                        memCacheWidth: 360,
+                        memCacheHeight: 270,
                       )
                     else
                       Container(

@@ -249,10 +249,12 @@ class AppColors {
   static const Color busy = Color(0xFFFF9500);
 
   // ==================== 任务状态颜色 ====================
+  /// 单色，用于标签、圆点等。与任务详情、首页任务卡一致。
   static Color taskStatusColor(String status) {
     switch (status) {
       case AppConstants.taskStatusOpen:
         return success;
+      case 'assigned':
       case AppConstants.taskStatusInProgress:
         return primary;
       case AppConstants.taskStatusPendingConfirmation:
@@ -268,6 +270,12 @@ class AppColors {
       default:
         return textSecondaryLight;
     }
+  }
+
+  /// 由 [taskStatusColor] 派生的双色渐变，用于消息列表等需要渐变背景的展示。语义与单色一致。
+  static List<Color> taskStatusGradient(String status) {
+    final c = taskStatusColor(status);
+    return [c, c.withValues(alpha: 0.8)];
   }
 
   // ==================== 便捷颜色（默认浅色模式） ====================

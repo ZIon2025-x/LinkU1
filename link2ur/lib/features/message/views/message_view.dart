@@ -434,23 +434,9 @@ class _TaskChatItem extends StatelessWidget {
     }
   }
 
-  /// 根据任务状态返回渐变颜色
-  List<Color> get _statusGradient {
-    switch (taskChat.taskStatus) {
-      case AppConstants.taskStatusOpen:
-        return AppColors.gradientBlueTeal;
-      case 'assigned':
-      case AppConstants.taskStatusInProgress:
-        return AppColors.gradientOrange;
-      case AppConstants.taskStatusCompleted:
-        return [AppColors.success, const Color(0xFF30D158)];
-      case AppConstants.taskStatusPendingConfirmation:
-      case AppConstants.taskStatusPendingPayment:
-        return AppColors.gradientOrange;
-      default:
-        return [AppColors.primary, const Color(0xFF5856D6)];
-    }
-  }
+  /// 任务状态渐变，与 [AppColors.taskStatusColor] 一致（复用统一语义）
+  List<Color> get _statusGradient =>
+      AppColors.taskStatusGradient(taskChat.taskStatus ?? '');
 
   /// 本地化任务状态
   String _localizedStatus(BuildContext context) {

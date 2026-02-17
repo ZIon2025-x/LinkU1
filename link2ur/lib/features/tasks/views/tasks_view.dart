@@ -748,6 +748,7 @@ class _TaskGridCard extends StatelessWidget {
       builder: (context, constraints) {
         final w = constraints.maxWidth;
         final h = constraints.maxHeight;
+        final dpr = MediaQuery.devicePixelRatioOf(context);
         return ClipRect(
           child: Stack(
             fit: StackFit.expand,
@@ -761,6 +762,8 @@ class _TaskGridCard extends StatelessWidget {
                     width: w,
                     height: h,
                     fit: BoxFit.cover,
+                    memCacheWidth: (w * dpr).round(),
+                    memCacheHeight: (h * dpr).round(),
                   ),
                 )
               else

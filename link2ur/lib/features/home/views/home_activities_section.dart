@@ -534,6 +534,8 @@ class _PostCard extends StatelessWidget {
                 child: AsyncImageView(
                   imageUrl: item.firstImage!,
                   fit: BoxFit.cover,
+                  memCacheWidth: 360,
+                  memCacheHeight: 270,
                 ),
               ),
             // 文字内容
@@ -679,6 +681,8 @@ class _ProductCard extends StatelessWidget {
                 child: AsyncImageView(
                   imageUrl: item.firstImage!,
                   fit: BoxFit.cover,
+                  memCacheWidth: 300,
+                  memCacheHeight: 300,
                 ),
               ),
             Padding(
@@ -1072,6 +1076,8 @@ class _RankingCard extends StatelessWidget {
                 child: AsyncImageView(
                   imageUrl: item.firstImage!,
                   fit: BoxFit.cover,
+                  memCacheWidth: 360,
+                  memCacheHeight: 202,
                 ),
               ),
             Padding(
@@ -1199,6 +1205,8 @@ class _ServiceCard extends StatelessWidget {
                 child: AsyncImageView(
                   imageUrl: item.firstImage!,
                   fit: BoxFit.cover,
+                  memCacheWidth: 360,
+                  memCacheHeight: 270,
                 ),
               ),
             Padding(
@@ -1454,6 +1462,8 @@ class _TargetItemTag extends StatelessWidget {
                 child: AsyncImageView(
                   imageUrl: target.thumbnail!,
                   fit: BoxFit.cover,
+                  memCacheWidth: 84,
+                  memCacheHeight: 84,
                 ),
               ),
             )
