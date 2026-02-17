@@ -191,7 +191,7 @@ class _LeaderboardDetailContent extends StatelessWidget {
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(
                     AppSpacing.md, AppSpacing.md, AppSpacing.md, 0),
-                child: Text(
+                child: SelectableText(
                   lb.displayDescription(Localizations.localeOf(context))!,
                   style: AppTypography.body.copyWith(
                     color: isDark
@@ -242,7 +242,7 @@ class _LeaderboardDetailContent extends StatelessWidget {
                         ],
                       ),
                       const SizedBox(height: 8),
-                      Text(
+                      SelectableText(
                         lb.rules!,
                         style: AppTypography.caption.copyWith(
                           color: isDark
@@ -432,7 +432,7 @@ class _HeroSection extends StatelessWidget {
             left: AppSpacing.md,
             right: AppSpacing.md,
             bottom: 20,
-            child: Text(
+            child: SelectableText(
               leaderboard.displayName(Localizations.localeOf(context)),
               style: const TextStyle(
                 fontSize: 28,
@@ -447,7 +447,6 @@ class _HeroSection extends StatelessWidget {
                 ],
               ),
               maxLines: 2,
-              overflow: TextOverflow.ellipsis,
             ),
           ),
         ],
@@ -666,7 +665,7 @@ class _RankItemCard extends StatelessWidget {
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       )
-                    : Text(
+                    : SelectableText(
                         item.name,
                         style: AppTypography.bodyBold.copyWith(
                           color: isDark
@@ -674,7 +673,6 @@ class _RankItemCard extends StatelessWidget {
                               : AppColors.textPrimaryLight,
                         ),
                         maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
                       ),
                 const SizedBox(height: 6),
                 VoteComparisonBar(

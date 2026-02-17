@@ -12,6 +12,12 @@ from sqlalchemy import select, and_, or_, func, desc
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app import models
+from app.utils.task_activity_display import (
+    get_activity_display_title as _activity_title,
+    get_activity_display_description as _activity_description,
+    get_task_display_title as _task_title,
+    get_task_display_description as _task_description,
+)
 from app.utils.time_utils import format_iso_utc
 
 logger = logging.getLogger(__name__)
@@ -124,6 +130,28 @@ class ToolExecutor:
         """与 _tool_lang 一致，供 FAQ 等按语言取字段。"""
         return "en" if self._tool_lang() == "en" else "zh"
 
+    @staticmethod
+    def _forum_post_display_title(post: models.ForumPost, lang: str) -> str:
+        """按 lang 取帖子标题（title_zh/title_en），缺则回退 title。"""
+        col = getattr(post, "title_zh" if lang == "zh" else "title_en", None)
+        return (col or "") if col else (post.title or "")
+
+    @staticmethod
+    def _notification_display_title(n: models.Notification, lang: str) -> str:
+        """按 lang 取通知标题：zh 用 title，en 用 title_en 或 title。"""
+        if lang == "zh":
+            return n.title or ""
+        return getattr(n, "title_en", None) or n.title or ""
+
+    @staticmethod
+    def _leaderboard_display_name_desc(lb: models.CustomLeaderboard, lang: str) -> tuple[str, str]:
+        """按 lang 取排行榜 name/description（name_zh/name_en 等），缺则回退。"""
+        name_col = getattr(lb, "name_zh" if lang == "zh" else "name_en", None)
+        desc_col = getattr(lb, "description_zh" if lang == "zh" else "description_en", None)
+        name = (name_col or "") if name_col else (lb.name or "")
+        desc = (desc_col or "") if desc_col else (lb.description or "")
+        return name, desc
+
     async def get_faq_for_agent(self, topic: str, lang: str) -> str | None:
         """按 AI 主题从数据库取该分类下所有 FAQ，拼接为结构化回答。"""
         section_key = TOPIC_TO_SECTION_KEY.get(topic)
@@ -196,11 +224,12 @@ class ToolExecutor:
         )
         rows = (await self.db.execute(q)).scalars().all()
 
+        lang = self._tool_lang()
         tasks = []
         for t in rows:
             tasks.append({
                 "id": t.id,
-                "title": t.title,
+                "title": _task_title(t, lang),
                 "status": t.status,
                 "reward": t.reward,
                 "currency": t.currency,
@@ -228,10 +257,11 @@ class ToolExecutor:
         if not task.is_public and not is_owner:
             return {"error": msgs["task_no_permission"]}
 
+        lang = self._tool_lang()
         return {
             "id": task.id,
-            "title": task.title,
-            "description": task.description,
+            "title": _task_title(task, lang),
+            "description": _task_description(task, lang),
             "status": task.status,
             "reward": task.reward,
             "currency": task.currency,
@@ -279,11 +309,12 @@ class ToolExecutor:
         )
         rows = (await self.db.execute(q)).scalars().all()
 
+        lang = self._tool_lang()
         tasks = []
         for t in rows:
             tasks.append({
                 "id": t.id,
-                "title": t.title,
+                "title": _task_title(t, lang),
                 "reward": t.reward,
                 "currency": t.currency,
                 "task_type": t.task_type,
@@ -443,11 +474,12 @@ class ToolExecutor:
         )
         rows = (await self.db.execute(q)).scalars().all()
 
+        lang = self._tool_lang()
         activities = []
         for a in rows:
             activities.append({
                 "id": a.id,
-                "title": a.title,
+                "title": _activity_title(a, lang),
                 "location": a.location,
                 "max_participants": a.max_participants,
                 "reward_type": a.reward_type,
@@ -479,12 +511,12 @@ class ToolExecutor:
         )
         rows = (await self.db.execute(recent_q)).scalars().all()
 
+        lang = self._tool_lang()
         recent = []
         for n in rows:
             recent.append({
                 "type": n.type,
-                "title": n.title or "",
-                "title_en": n.title_en or "",
+                "title": self._notification_display_title(n, lang),
                 "is_read": bool(n.is_read),
                 "created_at": format_iso_utc(n.created_at) if n.created_at else None,
             })
@@ -518,11 +550,12 @@ class ToolExecutor:
         )
         rows = (await self.db.execute(q)).all()
 
+        lang = self._tool_lang()
         posts = []
         for post, category_name in rows:
             posts.append({
                 "id": post.id,
-                "title": post.title,
+                "title": self._forum_post_display_title(post, lang),
                 "category_name": category_name,
                 "view_count": post.view_count,
                 "reply_count": post.reply_count,
@@ -604,7 +637,8 @@ class ToolExecutor:
                     "description": item.description,
                     "net_votes": item.net_votes,
                 })
-            return {"name": lb.name, "description": lb.description, "items": items}
+            lb_name, lb_desc = self._leaderboard_display_name_desc(lb, self._tool_lang())
+            return {"name": lb_name, "description": lb_desc, "items": items}
 
         # 所有活跃排行榜
         q = (
@@ -614,11 +648,13 @@ class ToolExecutor:
             .limit(10)
         )
         rows = (await self.db.execute(q)).scalars().all()
+        lang = self._tool_lang()
         leaderboards = []
         for lb in rows:
+            lb_name, _ = self._leaderboard_display_name_desc(lb, lang)
             leaderboards.append({
                 "id": lb.id,
-                "name": lb.name,
+                "name": lb_name,
                 "location": lb.location,
                 "item_count": lb.item_count,
                 "vote_count": lb.vote_count,

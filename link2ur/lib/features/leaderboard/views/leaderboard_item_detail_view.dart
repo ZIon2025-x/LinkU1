@@ -533,7 +533,7 @@ class _NameCard extends StatelessWidget {
         ),
         child: Column(
           children: [
-            Text(
+            SelectableText(
               item.name,
               style: TextStyle(
                 fontSize: 26,
@@ -725,7 +725,7 @@ class _DescriptionCard extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 12),
-            Text(
+            SelectableText(
               description,
               style: TextStyle(
                 fontSize: 15,
@@ -1085,7 +1085,7 @@ class _CommentCard extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           // 评论内容
-          Text(
+          SelectableText(
             comment,
             style: TextStyle(
               fontSize: 14,

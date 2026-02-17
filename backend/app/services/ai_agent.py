@@ -558,7 +558,7 @@ class AIAgent:
         # ---- 3a. 离题 → 直接拒绝（按用户消息语言回：说英文则回英文） ----
         if intent == IntentType.OFF_TOPIC:
             reply_lang = _infer_reply_lang_from_message(user_message)
-            reply = _OFF_TOPIC_RESPONSES.get(reply_lang, _OFF_TOPIC_RESPONSES["zh"])
+            reply = _OFF_TOPIC_RESPONSES.get(reply_lang, _OFF_TOPIC_RESPONSES["en"])
             _record_usage(self.user.id, 0)
             await self._save_assistant_message(conversation_id, reply, "local", 0, 0)
             await self.db.commit()

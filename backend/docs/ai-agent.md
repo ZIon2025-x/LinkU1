@@ -66,9 +66,10 @@ Link2Ur 平台 AI 客服助手 — 用户通过自然语言查询任务、了解
 
 ## 多语言
 
-- **回复语言**：优先使用用户资料中的 `language_preference`（zh/en）；若未设置，则使用请求头 `Accept-Language` 解析出的语言（与 App 当前语言一致）；默认 `zh`。
+- **回复语言**：优先使用用户资料中的 `language_preference`（zh/en）；若未设置，则使用请求头 `Accept-Language` 解析出的语言（与 App 当前语言一致）；**默认 `en`**。实际回复语言由**用户当前消息**推断（`_infer_reply_lang_from_message`），用户用中文问则中文答，用英文问则英文答。
 - **Flutter**：每次请求会带 `Accept-Language`（来自设置中的语言）；在设置里切换语言时，会同步 PATCH 到后端 `language_preference`，便于多端一致。
 - **FAQ / 离题 / LLM 系统提示**：均按上述解析出的 `zh`/`en` 返回对应语言内容。
+- **工具返回给 AI 的数据**：任务、活动、帖子、通知、排行榜等工具按 request_lang 使用双语字段（如「检查我的任务」→ zh 字段，「check my tasks」→ en 字段），使模型看到与用户语言一致的单语数据。详见 [双语与 AI 回复约定](bilingual-and-ai-response.md)。
 
 ## FAQ 覆盖范围
 
