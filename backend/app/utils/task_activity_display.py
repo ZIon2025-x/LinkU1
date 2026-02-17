@@ -117,6 +117,49 @@ def get_task_display_description(task: models.Task, lang: str) -> str:
     return col if col else (task.description or "")
 
 
+# ---------- 同步版 ensure（供同步路由当次请求内补齐双语并 commit） ----------
+
+
+def ensure_task_title_for_lang_sync(task: models.Task, lang: str) -> str:
+    """同步：若对应列为空则翻译 title 并写入该列后返回。调用方负责 db.commit()。"""
+    mgr = get_translation_manager()
+    target = _api_target_lang(lang)
+    if lang == "zh":
+        if getattr(task, "title_zh", None):
+            return task.title_zh
+        text = mgr.translate(task.title or "", target, source_lang="auto", max_retries=2)
+        if text:
+            task.title_zh = text
+        return text or task.title or ""
+    else:
+        if getattr(task, "title_en", None):
+            return task.title_en
+        text = mgr.translate(task.title or "", target, source_lang="auto", max_retries=2)
+        if text:
+            task.title_en = text
+        return text or task.title or ""
+
+
+def ensure_task_description_for_lang_sync(task: models.Task, lang: str) -> str:
+    """同步：若对应列为空则翻译 description 并写入该列后返回。调用方负责 db.commit()。"""
+    mgr = get_translation_manager()
+    target = _api_target_lang(lang)
+    if lang == "zh":
+        if getattr(task, "description_zh", None):
+            return task.description_zh
+        text = mgr.translate(task.description or "", target, source_lang="auto", max_retries=2)
+        if text:
+            task.description_zh = text
+        return text or task.description or ""
+    else:
+        if getattr(task, "description_en", None):
+            return task.description_en
+        text = mgr.translate(task.description or "", target, source_lang="auto", max_retries=2)
+        if text:
+            task.description_en = text
+        return text or task.description or ""
+
+
 # ---------- Activity ----------
 
 

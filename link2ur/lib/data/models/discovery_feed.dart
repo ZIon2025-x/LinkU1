@@ -1,13 +1,22 @@
+import 'dart:ui' show Locale;
+
 import 'package:equatable/equatable.dart';
+
+import '../../core/utils/localized_string.dart';
 
 /// Discovery Feed 内容项
 /// 统一表示 6 种类型: forum_post / product / competitor_review / service_review / ranking / service
+/// 支持双语字段 title_zh/title_en、description_zh/description_en，按 locale 展示
 class DiscoveryFeedItem extends Equatable {
   const DiscoveryFeedItem({
     required this.id,
     required this.feedType,
     this.title,
+    this.titleZh,
+    this.titleEn,
     this.description,
+    this.descriptionZh,
+    this.descriptionEn,
     this.images,
     this.userId,
     this.userName,
@@ -33,7 +42,11 @@ class DiscoveryFeedItem extends Equatable {
   final String id;
   final String feedType;
   final String? title;
+  final String? titleZh;
+  final String? titleEn;
   final String? description;
+  final String? descriptionZh;
+  final String? descriptionEn;
   final List<String>? images;
   final String? userId;
   final String? userName;
@@ -88,12 +101,39 @@ class DiscoveryFeedItem extends Equatable {
     return null;
   }
 
+  /// 按语言展示标题（优先 zh/en 列，缺则回退 title）
+  String displayTitle(Locale locale) =>
+      localizedString(titleZh, titleEn, title ?? '', locale);
+
+  /// 按语言展示描述（优先 zh/en 列，缺则回退 description）
+  String? displayDescription(Locale locale) =>
+      localizedStringOrNull(descriptionZh, descriptionEn, description, locale);
+
+  /// 板块名称（仅帖子有 extra_data.category_name_zh / _en / category_name）
+  String? displayCategoryName(Locale locale) {
+    final extra = extraData;
+    if (extra == null) return null;
+    final preferZh = locale.languageCode.startsWith('zh');
+    if (preferZh) {
+      return extra['category_name_zh'] as String? ??
+          extra['category_name_en'] as String? ??
+          extra['category_name'] as String?;
+    }
+    return extra['category_name_en'] as String? ??
+        extra['category_name_zh'] as String? ??
+        extra['category_name'] as String?;
+  }
+
   factory DiscoveryFeedItem.fromJson(Map<String, dynamic> json) {
     return DiscoveryFeedItem(
       id: json['id'] as String? ?? '',
       feedType: json['feed_type'] as String? ?? '',
       title: json['title'] as String?,
+      titleZh: json['title_zh'] as String?,
+      titleEn: json['title_en'] as String?,
       description: json['description'] as String?,
+      descriptionZh: json['description_zh'] as String?,
+      descriptionEn: json['description_en'] as String?,
       images: (json['images'] as List<dynamic>?)?.map((e) => e as String).toList(),
       userId: json['user_id'] as String?,
       userName: json['user_name'] as String?,
@@ -191,6 +231,8 @@ class ActivityBrief extends Equatable {
   const ActivityBrief({
     required this.activityId,
     this.activityTitle,
+    this.activityTitleZh,
+    this.activityTitleEn,
     this.originalPrice,
     this.discountedPrice,
     this.discountPercentage,
@@ -199,10 +241,16 @@ class ActivityBrief extends Equatable {
 
   final int activityId;
   final String? activityTitle;
+  final String? activityTitleZh;
+  final String? activityTitleEn;
   final double? originalPrice;
   final double? discountedPrice;
   final double? discountPercentage;
   final String currency;
+
+  /// 按语言展示活动标题
+  String displayActivityTitle(Locale locale) =>
+      localizedString(activityTitleZh, activityTitleEn, activityTitle ?? '', locale);
 
   /// 是否有折扣
   bool get hasDiscount =>
@@ -222,6 +270,8 @@ class ActivityBrief extends Equatable {
     return ActivityBrief(
       activityId: json['activity_id'] as int? ?? 0,
       activityTitle: json['activity_title'] as String?,
+      activityTitleZh: json['activity_title_zh'] as String?,
+      activityTitleEn: json['activity_title_en'] as String?,
       originalPrice: (json['original_price'] as num?)?.toDouble(),
       discountedPrice: (json['discounted_price'] as num?)?.toDouble(),
       discountPercentage: (json['discount_percentage'] as num?)?.toDouble(),

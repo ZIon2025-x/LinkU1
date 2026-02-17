@@ -1200,6 +1200,23 @@ def update_timezone(
 #     return {"tasks": tasks, "total": total, "page": page, "page_size": page_size}
 
 
+def _request_lang_sync(request: Request, current_user: Optional[models.User]) -> str:
+    """展示语言：登录用户用 language_preference，游客用 query lang 或 Accept-Language。与 async_routers._request_lang 一致。"""
+    if current_user and (getattr(current_user, "language_preference", None) or "").strip().lower().startswith("zh"):
+        return "zh"
+    q = (request.query_params.get("lang") or "").strip().lower()
+    if q in ("zh", "zh-cn", "zh_cn"):
+        return "zh"
+    accept = request.headers.get("accept-language") or ""
+    for part in accept.split(","):
+        part = part.split(";")[0].strip().lower()
+        if part.startswith("zh"):
+            return "zh"
+        if part.startswith("en"):
+            return "en"
+    return "en"
+
+
 @router.get("/tasks/{task_id}", response_model=schemas.TaskOut)
 def get_task_detail(
     task_id: int,
@@ -1211,7 +1228,11 @@ def get_task_detail(
     from app.services.task_service import TaskService
     from app.models import TaskApplication, TaskParticipant
     from sqlalchemy import and_
-    
+    from app.utils.task_activity_display import (
+        ensure_task_title_for_lang_sync,
+        ensure_task_description_for_lang_sync,
+    )
+
     task = crud.get_task(db, task_id)
     if not task:
         raise HTTPException(status_code=404, detail="Task not found")
@@ -1281,39 +1302,25 @@ def get_task_detail(
         except Exception as e:
             logger.warning(f"记录用户浏览行为失败: {e}")
     
-    task = TaskService.get_task_cached(task_id=task_id, db=db)
-    # 标题/描述双语已从任务表列 title_zh、title_en、description_zh、description_en 读取
-    
-    # 对于没有翻译的任务，在后台触发翻译（不阻塞响应）
-    needs_translation = (
-        not getattr(task, 'title_en', None) or not getattr(task, 'title_zh', None) or
-        not getattr(task, 'description_en', None) or not getattr(task, 'description_zh', None)
+    # 当次请求内按展示语言补齐双语（缺则翻译并写入任务表），与异步任务详情行为一致
+    lang = _request_lang_sync(request, current_user)
+    needs_ensure = (
+        (lang == "zh" and not getattr(task, "title_zh", None))
+        or (lang == "en" and not getattr(task, "title_en", None))
+        or (lang == "zh" and not getattr(task, "description_zh", None))
+        or (lang == "en" and not getattr(task, "description_en", None))
     )
-    if needs_translation:
-        import threading
-        from app.utils.translation_prefetch import prefetch_task_by_id
-        import asyncio
+    if needs_ensure:
+        try:
+            ensure_task_title_for_lang_sync(task, lang)
+            ensure_task_description_for_lang_sync(task, lang)
+            db.commit()
+            TaskService.invalidate_cache(task_id)
+        except Exception as e:
+            logger.warning(f"同步任务双语补齐失败 task_id=%s: %s", task_id, e)
+            db.rollback()
 
-        def trigger_translations_sync():
-            try:
-                sync_db = next(get_db())
-                try:
-                    loop = asyncio.new_event_loop()
-                    asyncio.set_event_loop(loop)
-                    try:
-                        loop.run_until_complete(
-                            prefetch_task_by_id(sync_db, task_id, target_languages=['en', 'zh'])
-                        )
-                    finally:
-                        loop.close()
-                finally:
-                    sync_db.close()
-            except Exception as e:
-                logger.error(f"后台翻译任务失败: {e}")
-
-        thread = threading.Thread(target=trigger_translations_sync, daemon=True)
-        thread.start()
-    
+    task = TaskService.get_task_cached(task_id=task_id, db=db)
     # 与活动详情一致：在详情响应中带上「当前用户是否已申请」及申请状态，便于客户端直接显示「已申请」状态
     if current_user:
         user_id_str = str(current_user.id)

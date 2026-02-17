@@ -145,7 +145,11 @@ async def _fetch_forum_posts(db: AsyncSession, limit: int, visible_category_ids:
         select(
             models.ForumPost.id,
             models.ForumPost.title,
+            getattr(models.ForumPost, "title_zh", None).label("title_zh"),
+            getattr(models.ForumPost, "title_en", None).label("title_en"),
             models.ForumPost.content,
+            getattr(models.ForumPost, "content_zh", None).label("content_zh"),
+            getattr(models.ForumPost, "content_en", None).label("content_en"),
             models.ForumPost.images,
             models.ForumPost.linked_item_type,
             models.ForumPost.linked_item_id,
@@ -157,6 +161,8 @@ async def _fetch_forum_posts(db: AsyncSession, limit: int, visible_category_ids:
             models.User.name.label("author_name"),
             models.User.avatar.label("author_avatar"),
             models.ForumCategory.name.label("category_name"),
+            getattr(models.ForumCategory, "name_zh", None).label("category_name_zh"),
+            getattr(models.ForumCategory, "name_en", None).label("category_name_en"),
         )
         .join(models.ForumCategory, models.ForumPost.category_id == models.ForumCategory.id)
         .outerjoin(models.User, models.ForumPost.author_id == models.User.id)
@@ -178,18 +184,35 @@ async def _fetch_forum_posts(db: AsyncSession, limit: int, visible_category_ids:
     items = []
     for row in result:
         content_preview = (row.content or "")[:100]
-        
+        title_zh = getattr(row, "title_zh", None)
+        title_en = getattr(row, "title_en", None)
+        content_zh_raw = getattr(row, "content_zh", None)
+        content_en_raw = getattr(row, "content_en", None)
+        description_zh = (content_zh_raw.strip()[:100] or None) if content_zh_raw else None
+        description_en = (content_en_raw.strip()[:100] or None) if content_en_raw else None
+
         linked_item = None
         if row.linked_item_type and row.linked_item_id:
             linked_item = await _resolve_linked_item(db, row.linked_item_type, row.linked_item_id)
-        
+
         post_images = _parse_images(row.images)
-        
+        extra = {}
+        if row.category_name:
+            extra["category_name"] = row.category_name
+        if getattr(row, "category_name_zh", None):
+            extra["category_name_zh"] = row.category_name_zh
+        if getattr(row, "category_name_en", None):
+            extra["category_name_en"] = row.category_name_en
+
         items.append({
             "feed_type": "forum_post",
             "id": f"post_{row.id}",
             "title": row.title,
+            "title_zh": title_zh,
+            "title_en": title_en,
             "description": content_preview,
+            "description_zh": description_zh,
+            "description_en": description_en,
             "images": post_images if post_images else None,
             "user_id": str(row.author_id) if row.author_id else None,
             "user_name": row.author_name or "匿名用户",
@@ -207,7 +230,7 @@ async def _fetch_forum_posts(db: AsyncSession, limit: int, visible_category_ids:
             "target_item": None,
             "activity_info": None,
             "is_experienced": None,
-            "extra_data": {"category_name": row.category_name} if row.category_name else None,
+            "extra_data": extra if extra else None,
             "created_at": row.created_at.isoformat() if row.created_at else None,
         })
     return items
@@ -381,6 +404,8 @@ async def _fetch_service_reviews(db: AsyncSession, limit: int) -> list:
             models.TaskExpertService.service_name,
             models.TaskExpertService.images.label("service_images"),
             models.Activity.title.label("activity_title"),
+            getattr(models.Activity, "title_zh", None).label("activity_title_zh"),
+            getattr(models.Activity, "title_en", None).label("activity_title_en"),
             models.Activity.original_price_per_participant,
             models.Activity.discounted_price_per_participant,
             models.Activity.discount_percentage,
@@ -411,6 +436,8 @@ async def _fetch_service_reviews(db: AsyncSession, limit: int) -> list:
             activity_info = {
                 "activity_id": row.parent_activity_id,
                 "activity_title": row.activity_title,
+                "activity_title_zh": getattr(row, "activity_title_zh", None),
+                "activity_title_en": getattr(row, "activity_title_en", None),
                 "original_price": float(row.original_price_per_participant) if row.original_price_per_participant else None,
                 "discounted_price": float(row.discounted_price_per_participant) if row.discounted_price_per_participant else None,
                 "discount_percentage": float(row.discount_percentage) if row.discount_percentage else None,
@@ -466,7 +493,11 @@ async def _fetch_rankings(db: AsyncSession, limit: int) -> list:
         select(
             models.CustomLeaderboard.id,
             models.CustomLeaderboard.name,
+            getattr(models.CustomLeaderboard, "name_zh", None).label("name_zh"),
+            getattr(models.CustomLeaderboard, "name_en", None).label("name_en"),
             models.CustomLeaderboard.description,
+            getattr(models.CustomLeaderboard, "description_zh", None).label("description_zh"),
+            getattr(models.CustomLeaderboard, "description_en", None).label("description_en"),
             models.CustomLeaderboard.cover_image,
             models.CustomLeaderboard.created_at,
         )
@@ -506,11 +537,19 @@ async def _fetch_rankings(db: AsyncSession, limit: int) -> list:
         if not top3:
             continue
         
+        name_zh = getattr(row, "name_zh", None)
+        name_en = getattr(row, "name_en", None)
+        desc_zh = getattr(row, "description_zh", None)
+        desc_en = getattr(row, "description_en", None)
         items.append({
             "feed_type": "ranking",
             "id": f"ranking_{row.id}",
             "title": row.name,
+            "title_zh": name_zh,
+            "title_en": name_en,
             "description": (row.description or "")[:80],
+            "description_zh": (desc_zh or "")[:80] if desc_zh else None,
+            "description_en": (desc_en or "")[:80] if desc_en else None,
             "images": [row.cover_image] if row.cover_image else None,
             "user_name": None,
             "user_avatar": None,

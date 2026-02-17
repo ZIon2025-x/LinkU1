@@ -501,6 +501,10 @@ class _PostCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final locale = Localizations.localeOf(context);
+    final displayTitle = item.displayTitle(locale);
+    final displayDesc = item.displayDescription(locale);
+    final categoryName = item.displayCategoryName(locale);
 
     return GestureDetector(
       onTap: () {
@@ -541,11 +545,11 @@ class _PostCard extends StatelessWidget {
                   Row(
                     children: [
                       const _FeedTypeBadge(feedType: 'forum_post'),
-                      if (item.extraData?['category_name'] != null) ...[
+                      if (categoryName != null && categoryName.isNotEmpty) ...[
                         const SizedBox(width: 6),
                         Flexible(
                           child: Text(
-                            item.extraData!['category_name'] as String,
+                            categoryName,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: TextStyle(
@@ -560,9 +564,9 @@ class _PostCard extends StatelessWidget {
                     ],
                   ),
                   const SizedBox(height: 6),
-                  if (item.title != null)
+                  if (displayTitle.isNotEmpty)
                     Text(
-                      item.title!,
+                      displayTitle,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
@@ -573,10 +577,10 @@ class _PostCard extends StatelessWidget {
                             : AppColors.textPrimaryLight,
                       ),
                     ),
-                  if (item.description != null) ...[
+                  if (displayDesc != null && displayDesc.isNotEmpty) ...[
                     const SizedBox(height: 4),
                     Text(
-                      item.description!,
+                      displayDesc,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
@@ -642,6 +646,9 @@ class _ProductCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final locale = Localizations.localeOf(context);
+    final displayTitle = item.displayTitle(locale);
+    final displayDesc = item.displayDescription(locale);
 
     return GestureDetector(
       onTap: () {
@@ -681,9 +688,9 @@ class _ProductCard extends StatelessWidget {
                 children: [
                   const _FeedTypeBadge(feedType: 'product'),
                   const SizedBox(height: 6),
-                  if (item.title != null)
+                  if (displayTitle.isNotEmpty)
                     Text(
-                      item.title!,
+                      displayTitle,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
@@ -694,10 +701,10 @@ class _ProductCard extends StatelessWidget {
                             : AppColors.textPrimaryLight,
                       ),
                     ),
-                  if (item.description != null) ...[
+                  if (displayDesc != null && displayDesc.isNotEmpty) ...[
                     const SizedBox(height: 2),
                     Text(
-                      item.description!,
+                      displayDesc,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
@@ -765,6 +772,8 @@ class _CompetitorReviewCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final locale = Localizations.localeOf(context);
+    final displayDesc = item.displayDescription(locale);
 
     return GestureDetector(
       onTap: () {
@@ -791,7 +800,7 @@ class _CompetitorReviewCard extends StatelessWidget {
             const _FeedTypeBadge(feedType: 'competitor_review'),
             const SizedBox(height: 8),
             // 引用框（与原型 review-quote 一致）
-            if (item.description != null)
+            if (displayDesc != null && displayDesc.isNotEmpty)
               Container(
                 width: double.infinity,
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
@@ -815,7 +824,7 @@ class _CompetitorReviewCard extends StatelessWidget {
                   ),
                 ),
                 child: Text(
-                  item.description!,
+                  displayDesc,
                   maxLines: 4,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
@@ -871,6 +880,8 @@ class _ServiceReviewCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final locale = Localizations.localeOf(context);
+    final displayDesc = item.displayDescription(locale);
     final hasActivity = item.activityInfo != null;
 
     return GestureDetector(
@@ -915,7 +926,7 @@ class _ServiceReviewCard extends StatelessWidget {
                     const SizedBox(width: 4),
                     Expanded(
                       child: Text(
-                        '来自 ${item.activityInfo!.activityTitle ?? "活动"}',
+                        '来自 ${item.activityInfo!.displayActivityTitle(locale)}',
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
@@ -936,7 +947,7 @@ class _ServiceReviewCard extends StatelessWidget {
                   const _FeedTypeBadge(feedType: 'service_review'),
                   const SizedBox(height: 8),
                   // 引用框（与竞品评价一致）
-                  if (item.description != null)
+                  if (displayDesc != null && displayDesc.isNotEmpty)
                     Container(
                       width: double.infinity,
                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
@@ -960,7 +971,7 @@ class _ServiceReviewCard extends StatelessWidget {
                         ),
                       ),
                       child: Text(
-                        item.description!,
+                        displayDesc,
                         maxLines: 4,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
@@ -1007,6 +1018,7 @@ class _RankingCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final locale = Localizations.localeOf(context);
     final top3 = item.top3;
 
     return GestureDetector(
@@ -1059,7 +1071,7 @@ class _RankingCard extends StatelessWidget {
                       const SizedBox(width: 4),
                       Expanded(
                         child: Text(
-                          item.title ?? '',
+                          item.displayTitle(locale),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
@@ -1140,6 +1152,8 @@ class _ServiceCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final locale = Localizations.localeOf(context);
+    final displayTitle = item.displayTitle(locale);
 
     return GestureDetector(
       onTap: () {
@@ -1177,9 +1191,9 @@ class _ServiceCard extends StatelessWidget {
                 children: [
                   const _FeedTypeBadge(feedType: 'service'),
                   const SizedBox(height: 6),
-                  if (item.title != null)
+                  if (displayTitle.isNotEmpty)
                     Text(
-                      item.title!,
+                      displayTitle,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
