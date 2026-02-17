@@ -450,8 +450,8 @@ class _PostHeader extends StatelessWidget {
               ),
             ),
 
-          // 标题 - 对标iOS 22pt bold（双语）
-          Text(
+          // 标题 - 对标iOS 22pt bold（双语），可框选复制
+          SelectableText(
             post.displayTitle(locale),
             style: AppTypography.title2.copyWith(
               color: isDark
@@ -591,7 +591,7 @@ class _PostContent extends StatelessWidget {
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
-      child: Text(
+      child: SelectableText(
         Helpers.normalizeContentNewlines(content),
         style: AppTypography.body.copyWith(
           color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
@@ -903,10 +903,10 @@ class _ReplyCard extends StatelessWidget {
                   ),
 
                 const SizedBox(height: 6),
-                // 内容（支持后端返回的字面量 \n 换行）
+                // 内容（支持后端返回的字面量 \n 换行），可框选复制
                 Padding(
                   padding: const EdgeInsets.only(right: 42),
-                  child: Text(
+                  child: SelectableText(
                     Helpers.normalizeContentNewlines(reply.content),
                     style: (isSubReply ? AppTypography.footnote : AppTypography.subheadline).copyWith(
                       fontSize: isSubReply ? 14 : null,

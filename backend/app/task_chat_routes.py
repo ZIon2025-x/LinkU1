@@ -171,12 +171,13 @@ async def get_task_chat_list(
         
         # 总数就是去重后的任务ID数量
         total = len(task_ids_set)
-        
+        task_ids_list = list(task_ids_set)
+
         # 任务双语标题从任务表列读取（title_zh, title_en）
         # 批量查询所有游标（优化性能）
         cursors_query = select(models.MessageReadCursor).where(
             and_(
-                models.MessageReadCursor.task_id.in_(task_ids),
+                models.MessageReadCursor.task_id.in_(task_ids_list),
                 models.MessageReadCursor.user_id == current_user.id
             )
         )
@@ -198,7 +199,7 @@ async def get_task_chat_list(
             )
             .where(
                 and_(
-                    models.Message.task_id.in_(task_ids),
+                    models.Message.task_id.in_(task_ids_list),
                     models.Message.conversation_type == 'task'
                 )
             )
