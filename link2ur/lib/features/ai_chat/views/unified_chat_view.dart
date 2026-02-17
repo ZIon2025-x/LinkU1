@@ -320,6 +320,16 @@ class _UnifiedChatContentState extends State<_UnifiedChatContent> {
         // 构建虚拟列表项
         final items = <_ChatListItem>[];
 
+        // AI 模式且无任何消息时：显示 Linker 欢迎气泡
+        final showWelcome = state.mode == ChatMode.ai &&
+            state.aiMessages.isEmpty &&
+            state.activeToolCall == null &&
+            !state.isTyping &&
+            state.streamingContent.isEmpty;
+        if (showWelcome) {
+          items.add(_ChatListItem.welcome());
+        }
+
         // AI 消息
         for (var i = 0; i < state.aiMessages.length; i++) {
           items.add(_ChatListItem.ai(state.aiMessages[i], i));
@@ -357,6 +367,8 @@ class _UnifiedChatContentState extends State<_UnifiedChatContent> {
             itemBuilder: (context, index) {
               final item = items[index];
               switch (item.type) {
+                case _ChatItemType.welcome:
+                  return _buildLinkerWelcome(isDark);
                 case _ChatItemType.ai:
                   return AIMessageBubble(
                     key: ValueKey('ai_${item.aiMessage!.id ?? 'local_${item.index}'}'),
@@ -381,6 +393,108 @@ class _UnifiedChatContentState extends State<_UnifiedChatContent> {
           ),
         );
       },
+    );
+  }
+
+  /// Linker 欢迎气泡：自我介绍 + 快捷问题（与 ai_chat_view 一致）
+  Widget _buildLinkerWelcome(bool isDark) {
+    final theme = Theme.of(context);
+    final bubbleBg = isDark
+        ? const Color(0xFF2C2C2E)
+        : const Color(0xFFF2F2F7);
+
+    return Padding(
+      padding: const EdgeInsets.only(
+        top: AppSpacing.md,
+        left: AppSpacing.md,
+        right: AppSpacing.md,
+        bottom: AppSpacing.sm,
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          ClipRRect(
+            borderRadius: BorderRadius.circular(AppRadius.medium),
+            child: Image.asset(
+              AppAssets.any,
+              width: 36,
+              height: 36,
+              fit: BoxFit.cover,
+            ),
+          ),
+          const SizedBox(width: AppSpacing.sm),
+          Flexible(
+            child: Container(
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.md,
+                vertical: AppSpacing.md,
+              ),
+              decoration: BoxDecoration(
+                color: bubbleBg,
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(AppRadius.large),
+                  topRight: Radius.circular(AppRadius.large),
+                  bottomLeft: Radius.circular(AppRadius.tiny),
+                  bottomRight: Radius.circular(AppRadius.large),
+                ),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    context.l10n.aiChatWelcomeTitle,
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w600,
+                      color: isDark ? Colors.white : Colors.black87,
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
+                  Text(
+                    context.l10n.aiChatWelcomeIntro,
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      height: 1.45,
+                      color: isDark ? Colors.white70 : Colors.black87,
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.lg),
+                  Text(
+                    context.l10n.aiChatQuickStart,
+                    style: theme.textTheme.labelMedium?.copyWith(
+                      color: isDark ? Colors.white54 : Colors.black45,
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
+                  Wrap(
+                    spacing: AppSpacing.sm,
+                    runSpacing: AppSpacing.sm,
+                    children: [
+                      _UnifiedQuickAction(
+                        label: context.l10n.aiChatViewMyTasks,
+                        onTap: () {
+                          context.read<UnifiedChatBloc>().add(
+                                UnifiedChatSendMessage(
+                                    context.l10n.aiChatViewMyTasks),
+                              );
+                        },
+                      ),
+                      _UnifiedQuickAction(
+                        label: context.l10n.aiChatSearchTasks,
+                        onTap: () {
+                          context.read<UnifiedChatBloc>().add(
+                                UnifiedChatSendMessage(
+                                    context.l10n.aiChatSearchTasks),
+                              );
+                        },
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -703,7 +817,7 @@ class _UnifiedChatContentState extends State<_UnifiedChatContent> {
 
 // ==================== ListView.builder helper ====================
 
-enum _ChatItemType { ai, tool, streaming, dividerItem, cs }
+enum _ChatItemType { welcome, ai, tool, streaming, dividerItem, cs }
 
 class _ChatListItem {
   const _ChatListItem._({
@@ -722,6 +836,9 @@ class _ChatListItem {
   final String? streamingContent;
   final int index;
 
+  factory _ChatListItem.welcome() =>
+      const _ChatListItem._(type: _ChatItemType.welcome);
+
   factory _ChatListItem.ai(AIMessage msg, int index) =>
       _ChatListItem._(type: _ChatItemType.ai, aiMessage: msg, index: index);
 
@@ -736,4 +853,44 @@ class _ChatListItem {
 
   factory _ChatListItem.cs(CustomerServiceMessage msg, int index) =>
       _ChatListItem._(type: _ChatItemType.cs, csMessage: msg, index: index);
+}
+
+/// 合并聊天页内的快捷问题按钮
+class _UnifiedQuickAction extends StatelessWidget {
+  const _UnifiedQuickAction({
+    required this.label,
+    required this.onTap,
+  });
+
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(AppRadius.large),
+      child: Container(
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.md,
+          vertical: AppSpacing.sm,
+        ),
+        decoration: BoxDecoration(
+          border: Border.all(
+            color: isDark ? Colors.white24 : Colors.black12,
+          ),
+          borderRadius: BorderRadius.circular(AppRadius.large),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 13,
+            color: isDark ? Colors.white70 : Colors.black54,
+          ),
+        ),
+      ),
+    );
+  }
 }

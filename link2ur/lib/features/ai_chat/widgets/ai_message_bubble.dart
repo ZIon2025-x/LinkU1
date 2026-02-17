@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
+import '../../../core/constants/app_assets.dart';
 import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_radius.dart';
 import '../../../core/design/app_spacing.dart';
@@ -81,7 +82,7 @@ class AIMessageBubble extends StatelessWidget {
   }
 }
 
-/// AI 头像
+/// AI 头像（使用 any 图标）
 class _AIAvatar extends StatelessWidget {
   const _AIAvatar({required this.isDark});
 
@@ -89,21 +90,13 @@ class _AIAvatar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: 32,
-      height: 32,
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFF7C3AED), Color(0xFF2563EB)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(AppRadius.medium),
-      ),
-      child: const Icon(
-        Icons.auto_awesome,
-        color: Colors.white,
-        size: 18,
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(AppRadius.medium),
+      child: Image.asset(
+        AppAssets.any,
+        width: 32,
+        height: 32,
+        fit: BoxFit.cover,
       ),
     );
   }

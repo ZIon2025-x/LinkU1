@@ -179,6 +179,10 @@ class Task(Base):
     id = Column(Integer, primary_key=True, index=True)
     title = Column(String(100), nullable=False)
     description = Column(Text, nullable=False)
+    title_zh = Column(String(200), nullable=True)  # 中文标题，首次翻译后写入
+    title_en = Column(String(200), nullable=True)  # 英文标题，首次翻译后写入
+    description_zh = Column(Text, nullable=True)  # 中文描述，首次翻译后写入
+    description_en = Column(Text, nullable=True)  # 英文描述，首次翻译后写入
     deadline = Column(DateTime(timezone=True), nullable=True)  # 允许为 NULL，支持灵活模式任务（无截止日期）
     is_flexible = Column(Integer, default=0)  # 是否灵活时间（1=灵活，无截止日期；0=有截止日期）
     reward = Column(DECIMAL(12, 2), nullable=False)  # 价格字段（与base_reward同步，使用DECIMAL保持精度一致）
@@ -1972,6 +1976,10 @@ class Activity(Base):
     id = Column(Integer, primary_key=True, index=True)
     title = Column(String(200), nullable=False)
     description = Column(Text, nullable=False)
+    title_zh = Column(String(200), nullable=True)  # 中文标题，首次翻译后写入
+    title_en = Column(String(200), nullable=True)  # 英文标题，首次翻译后写入
+    description_zh = Column(Text, nullable=True)  # 中文描述，首次翻译后写入
+    description_en = Column(Text, nullable=True)  # 英文描述，首次翻译后写入
     expert_id = Column(String(8), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     expert_service_id = Column(Integer, ForeignKey("task_expert_services.id", ondelete="RESTRICT"), nullable=False)
     location = Column(String(100), nullable=False)

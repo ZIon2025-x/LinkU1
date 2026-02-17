@@ -9,8 +9,21 @@ from datetime import datetime, timedelta
 
 logger = logging.getLogger(__name__)
 
-# 常用目标语言（按优先级排序）
-COMMON_TARGET_LANGUAGES = ['en', 'zh-CN', 'zh-TW']
+# 仅预取 en/zh，写入任务表 title_zh/title_en、description_zh/description_en（任务翻译表已停用）
+COMMON_TARGET_LANGUAGES = ['en', 'zh']
+
+# (field_type, target_lang) -> task 表列名（支持 zh / zh-CN）
+_FIELD_LANG_COLUMN = {
+    ('title', 'en'): 'title_en',
+    ('title', 'zh'): 'title_zh',
+    ('title', 'zh-CN'): 'title_zh',
+    ('description', 'en'): 'description_en',
+    ('description', 'zh'): 'description_zh',
+    ('description', 'zh-CN'): 'description_zh',
+}
+
+def _api_target_lang(lang: str) -> str:
+    return 'zh-CN' if lang in ('zh', 'zh-CN') else 'en'
 
 
 async def prefetch_popular_tasks(
@@ -61,40 +74,24 @@ async def prefetch_popular_tasks(
         async def prefetch_task_translation(task, field_type, target_lang):
             async with semaphore:
                 try:
-                    # 检查是否已有翻译
-                    existing = crud.get_task_translation(
-                        db, task.id, field_type, target_lang, validate=False
-                    )
-                    if existing:
-                        return False  # 已有翻译，跳过
-                    
-                    # 获取原始文本
+                    col = _FIELD_LANG_COLUMN.get((field_type, target_lang))
+                    if not col or getattr(task, col, None):
+                        return False  # 仅支持 en/zh 或该列已有值，跳过
                     original_text = getattr(task, field_type, None)
                     if not original_text:
                         return False
-                    
-                    # 执行翻译
+                    api_lang = _api_target_lang(target_lang)
                     translated_text = await translate_async(
                         translation_manager,
                         text=original_text,
-                        target_lang=target_lang,
+                        target_lang=api_lang,
                         source_lang='auto',
                         max_retries=2
                     )
-                    
                     if translated_text:
-                        # 保存到数据库
-                        crud.create_or_update_task_translation(
-                            db,
-                            task_id=task.id,
-                            field_type=field_type,
-                            original_text=original_text,
-                            translated_text=translated_text,
-                            source_language='auto',
-                            target_language=target_lang
-                        )
+                        setattr(task, col, translated_text)
+                        db.commit()
                         return True
-                    
                     return False
                 except Exception as e:
                     logger.error(f"预翻译失败: task_id={task.id}, field={field_type}, lang={target_lang}, error={e}")
@@ -161,35 +158,21 @@ async def prefetch_task_by_id(
             original_text = getattr(task, field_type, None)
             if not original_text:
                 continue
-            
             for target_lang in target_languages:
-                # 检查是否已有翻译
-                existing = crud.get_task_translation(
-                    db, task_id, field_type, target_lang, validate=False
-                )
-                if existing:
+                col = _FIELD_LANG_COLUMN.get((field_type, target_lang))
+                if not col or getattr(task, col, None):
                     continue
-                
-                # 执行翻译
+                api_lang = _api_target_lang(target_lang)
                 translated_text = await translate_async(
                     translation_manager,
                     text=original_text,
-                    target_lang=target_lang,
+                    target_lang=api_lang,
                     source_lang='auto',
                     max_retries=2
                 )
-                
                 if translated_text:
-                    # 保存到数据库
-                    crud.create_or_update_task_translation(
-                        db,
-                        task_id=task_id,
-                        field_type=field_type,
-                        original_text=original_text,
-                        translated_text=translated_text,
-                        source_language='auto',
-                        target_language=target_lang
-                    )
+                    setattr(task, col, translated_text)
+                    db.commit()
                     prefetched_count += 1
         
         logger.info(f"预翻译任务完成: task_id={task_id}, 预翻译了 {prefetched_count} 条")

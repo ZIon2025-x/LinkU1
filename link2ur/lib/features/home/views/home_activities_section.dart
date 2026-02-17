@@ -435,7 +435,7 @@ class _FeedTypeBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final (String label, Color bg, Color fg) = _style(feedType, isDark);
+    final (String label, Color bg, Color fg) = _style(context, feedType, isDark);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
       decoration: BoxDecoration(
@@ -453,38 +453,39 @@ class _FeedTypeBadge extends StatelessWidget {
     );
   }
 
-  (String, Color, Color) _style(String type, bool isDark) {
+  (String, Color, Color) _style(BuildContext context, String type, bool isDark) {
     if (isDark) {
       final bg = Colors.white.withValues(alpha: 0.15);
       const fg = Colors.white;
-      return (_label(type), bg, fg);
+      return (_label(context, type), bg, fg);
     }
     switch (type) {
       case 'forum_post':
-        return (_label(type), const Color(0xFFEDE9FE), const Color(0xFF7C3AED));
+        return (_label(context, type), const Color(0xFFEDE9FE), const Color(0xFF7C3AED));
       case 'product':
-        return (_label(type), const Color(0xFFFEF3C7), const Color(0xFFD97706));
+        return (_label(context, type), const Color(0xFFFEF3C7), const Color(0xFFD97706));
       case 'competitor_review':
       case 'service_review':
-        return (_label(type), const Color(0xFFFCE7F3), const Color(0xFFDB2777));
+        return (_label(context, type), const Color(0xFFFCE7F3), const Color(0xFFDB2777));
       case 'ranking':
-        return (_label(type), const Color(0xFFDBEAFE), const Color(0xFF2563EB));
+        return (_label(context, type), const Color(0xFFDBEAFE), const Color(0xFF2563EB));
       case 'service':
-        return (_label(type), const Color(0xFFFFF7ED), const Color(0xFFEA580C));
+        return (_label(context, type), const Color(0xFFFFF7ED), const Color(0xFFEA580C));
       default:
-        return (_label(type), const Color(0xFFE5E7EB), const Color(0xFF6B7280));
+        return (_label(context, type), const Color(0xFFE5E7EB), const Color(0xFF6B7280));
     }
   }
 
-  String _label(String type) {
+  String _label(BuildContext context, String type) {
+    final l10n = context.l10n;
     switch (type) {
-      case 'forum_post': return '💬 帖子';
-      case 'product': return '🏷️ 商品';
-      case 'competitor_review': return '⭐ 竞品评价';
-      case 'service_review': return '⭐ 服务评价';
-      case 'ranking': return '🏆 排行榜';
-      case 'service': return '👨‍🏫 达人服务';
-      default: return '发现';
+      case 'forum_post': return '💬 ${l10n.discoveryFeedTypePost}';
+      case 'product': return '🏷️ ${l10n.discoveryFeedTypeProduct}';
+      case 'competitor_review': return '⭐ ${l10n.discoveryFeedTypeCompetitorReview}';
+      case 'service_review': return '⭐ ${l10n.discoveryFeedTypeServiceReview}';
+      case 'ranking': return '🏆 ${l10n.discoveryFeedTypeRanking}';
+      case 'service': return '👨‍🏫 ${l10n.discoveryFeedTypeService}';
+      default: return l10n.sidebarDiscover;
     }
   }
 }

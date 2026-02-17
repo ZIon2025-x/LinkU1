@@ -1,3 +1,5 @@
+import 'dart:ui' show Locale;
+
 import 'package:equatable/equatable.dart';
 
 import '../../l10n/app_localizations.dart';
@@ -346,6 +348,8 @@ class UserProfileTask {
   const UserProfileTask({
     required this.id,
     required this.title,
+    this.titleEn,
+    this.titleZh,
     required this.status,
     required this.reward,
     this.createdAt,
@@ -354,15 +358,28 @@ class UserProfileTask {
 
   final int id;
   final String title;
+  final String? titleEn;
+  final String? titleZh;
   final String status;
   final double reward;
   final String? createdAt;
   final String? taskType;
 
+  /// 按当前语言显示标题（后端返回 title_en / title_zh）
+  String displayTitle(Locale locale) {
+    final preferZh = locale.languageCode.startsWith('zh');
+    if (preferZh) {
+      return titleZh ?? titleEn ?? title;
+    }
+    return titleEn ?? titleZh ?? title;
+  }
+
   factory UserProfileTask.fromJson(Map<String, dynamic> json) {
     return UserProfileTask(
       id: json['id'] as int,
       title: json['title'] as String? ?? '',
+      titleEn: json['title_en'] as String?,
+      titleZh: json['title_zh'] as String?,
       status: json['status'] as String? ?? '',
       reward: (json['reward'] as num?)?.toDouble() ?? 0,
       createdAt: json['created_at']?.toString(),
@@ -412,6 +429,8 @@ class UserProfileForumPost {
   const UserProfileForumPost({
     required this.id,
     required this.title,
+    this.titleEn,
+    this.titleZh,
     this.contentPreview,
     this.images = const [],
     this.likeCount = 0,
@@ -422,6 +441,8 @@ class UserProfileForumPost {
 
   final int id;
   final String title;
+  final String? titleEn;
+  final String? titleZh;
   final String? contentPreview;
   final List<String> images;
   final int likeCount;
@@ -429,10 +450,19 @@ class UserProfileForumPost {
   final int viewCount;
   final String? createdAt;
 
+  /// 按当前语言显示标题（后端返回 title_en / title_zh）
+  String displayTitle(Locale locale) {
+    final preferZh = locale.languageCode.startsWith('zh');
+    if (preferZh) return titleZh ?? titleEn ?? title;
+    return titleEn ?? titleZh ?? title;
+  }
+
   factory UserProfileForumPost.fromJson(Map<String, dynamic> json) {
     return UserProfileForumPost(
       id: json['id'] as int,
       title: json['title'] as String? ?? '',
+      titleEn: json['title_en'] as String?,
+      titleZh: json['title_zh'] as String?,
       contentPreview: json['content_preview'] as String?,
       images: (json['images'] as List<dynamic>?)
               ?.map((e) => e.toString())

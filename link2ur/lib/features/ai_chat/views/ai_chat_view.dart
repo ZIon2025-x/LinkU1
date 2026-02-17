@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../../../core/constants/app_assets.dart';
 import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_radius.dart';
@@ -194,7 +195,7 @@ class _AIChatContentState extends State<_AIChatContent> {
   }
 }
 
-/// 欢迎页面
+/// 欢迎区域：Linker 自我介绍 + 快捷问题，以聊天气泡形式展示
 class _WelcomeView extends StatelessWidget {
   const _WelcomeView({required this.isDark});
 
@@ -202,69 +203,110 @@ class _WelcomeView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(AppSpacing.xl),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
+    final theme = Theme.of(context);
+    final bubbleBg = isDark ? const Color(0xFF2C2C2E) : const Color(0xFFF2F2F7);
+
+    return ListView(
+      padding: const EdgeInsets.only(
+        top: AppSpacing.md,
+        left: AppSpacing.md,
+        right: AppSpacing.md,
+        bottom: AppSpacing.sm,
+      ),
+      children: [
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Container(
-              width: 64,
-              height: 64,
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [Color(0xFF7C3AED), Color(0xFF2563EB)],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
+            _LinkerAvatar(isDark: isDark),
+            const SizedBox(width: AppSpacing.sm),
+            Flexible(
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.md,
+                  vertical: AppSpacing.md,
                 ),
-                borderRadius: BorderRadius.circular(AppRadius.large),
-              ),
-              child: const Icon(
-                Icons.auto_awesome,
-                color: Colors.white,
-                size: 32,
-              ),
-            ),
-            const SizedBox(height: AppSpacing.lg),
-            Text(
-              context.l10n.aiChatWelcomeTitle,
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.w600,
+                decoration: BoxDecoration(
+                  color: bubbleBg,
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(AppRadius.large),
+                    topRight: Radius.circular(AppRadius.large),
+                    bottomLeft: Radius.circular(AppRadius.tiny),
+                    bottomRight: Radius.circular(AppRadius.large),
                   ),
-            ),
-            const SizedBox(height: AppSpacing.sm),
-            Text(
-              context.l10n.aiChatWelcomeSubtitle,
-              style: TextStyle(
-                color: isDark ? Colors.white54 : Colors.black45,
-                fontSize: 14,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      context.l10n.aiChatWelcomeTitle,
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w600,
+                        color: isDark ? Colors.white : Colors.black87,
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
+                    Text(
+                      context.l10n.aiChatWelcomeIntro,
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        height: 1.45,
+                        color: isDark ? Colors.white70 : Colors.black87,
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.lg),
+                    Text(
+                      context.l10n.aiChatQuickStart,
+                      style: theme.textTheme.labelMedium?.copyWith(
+                        color: isDark ? Colors.white54 : Colors.black45,
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
+                    Wrap(
+                      spacing: AppSpacing.sm,
+                      runSpacing: AppSpacing.sm,
+                      children: [
+                        _QuickAction(
+                          label: context.l10n.aiChatViewMyTasks,
+                          onTap: () => _sendQuickMessage(context, context.l10n.aiChatViewMyTasks),
+                        ),
+                        _QuickAction(
+                          label: context.l10n.aiChatSearchTasks,
+                          onTap: () => _sendQuickMessage(context, context.l10n.aiChatSearchTasks),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
-            ),
-            const SizedBox(height: AppSpacing.xl),
-            // 快捷提问
-            Wrap(
-              spacing: AppSpacing.sm,
-              runSpacing: AppSpacing.sm,
-              alignment: WrapAlignment.center,
-              children: [
-                _QuickAction(
-                  label: context.l10n.aiChatViewMyTasks,
-                  onTap: () => _sendQuickMessage(context, context.l10n.aiChatViewMyTasks),
-                ),
-                _QuickAction(
-                  label: context.l10n.aiChatSearchTasks,
-                  onTap: () => _sendQuickMessage(context, context.l10n.aiChatSearchTasks),
-                ),
-              ],
             ),
           ],
         ),
-      ),
+      ],
     );
   }
 
   void _sendQuickMessage(BuildContext context, String message) {
     context.read<AIChatBloc>().add(AIChatSendMessage(message));
+  }
+}
+
+/// Linker 头像（使用 any 图标）
+class _LinkerAvatar extends StatelessWidget {
+  const _LinkerAvatar({required this.isDark});
+
+  final bool isDark;
+
+  @override
+  Widget build(BuildContext context) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(AppRadius.medium),
+      child: Image.asset(
+        AppAssets.any,
+        width: 36,
+        height: 36,
+        fit: BoxFit.cover,
+      ),
+    );
   }
 }
 

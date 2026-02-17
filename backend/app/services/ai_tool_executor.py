@@ -97,26 +97,32 @@ class ToolExecutor:
         }
 
     def _tool_lang(self) -> str:
-        """与 AI agent 一致：默认英文。"""
-        lang = (self.user.language_preference or "").strip().lower()
-        return "en" if lang.startswith("en") else "zh"
+        """当前请求的回复语言。优先 request_lang（由 agent 按用户消息推断传入），否则按用户偏好，空/未设则默认英文。"""
+        if getattr(self, "_request_lang", None) is not None:
+            return self._request_lang
+        pref = (self.user.language_preference or "").strip().lower()
+        return "zh" if pref.startswith("zh") else "en"
 
-    async def execute(self, tool_name: str, tool_input: dict) -> dict:
-        """执行工具，返回结果（自动鉴权）"""
+    async def execute(self, tool_name: str, tool_input: dict, request_lang: str | None = None) -> dict:
+        """执行工具，返回结果（自动鉴权）。request_lang 由 agent 按用户消息推断传入时，工具返回内容语种与其一致。"""
         handler = self._handlers.get(tool_name)
-        msgs = _TOOL_ERRORS.get(self._tool_lang(), _TOOL_ERRORS["en"])
-        if not handler:
-            return {"error": f"Unknown tool: {tool_name}"}
+        self._request_lang = request_lang
         try:
-            result = await handler(tool_input)
-            return _decimal_to_float(result)
-        except Exception as e:
-            logger.error(f"Tool execution error: {tool_name} — {e}")
-            return {"error": msgs["execution_failed"]}
+            msgs = _TOOL_ERRORS.get(self._tool_lang(), _TOOL_ERRORS["en"])
+            if not handler:
+                return {"error": f"Unknown tool: {tool_name}"}
+            try:
+                result = await handler(tool_input)
+                return _decimal_to_float(result)
+            except Exception as e:
+                logger.error(f"Tool execution error: {tool_name} — {e}")
+                return {"error": msgs["execution_failed"]}
+        finally:
+            self._request_lang = None
 
     def _faq_lang_key(self) -> str:
-        lang = (self.user.language_preference or "en").strip().lower()
-        return "en" if lang.startswith("en") else "zh"
+        """与 _tool_lang 一致，供 FAQ 等按语言取字段。"""
+        return "en" if self._tool_lang() == "en" else "zh"
 
     async def get_faq_for_agent(self, topic: str, lang: str) -> str | None:
         """按 AI 主题从数据库取该分类下所有 FAQ，拼接为结构化回答。"""

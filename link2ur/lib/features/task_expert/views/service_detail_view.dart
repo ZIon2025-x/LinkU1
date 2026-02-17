@@ -953,7 +953,7 @@ class _RelatedActivityMiniCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      activity.title,
+                      activity.displayTitle(Localizations.localeOf(context)),
                       style: const TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w600,

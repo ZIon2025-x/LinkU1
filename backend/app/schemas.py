@@ -2717,6 +2717,10 @@ class ActivityOut(BaseModel):
     id: int
     title: str
     description: str
+    title_en: Optional[str] = None
+    title_zh: Optional[str] = None
+    description_en: Optional[str] = None
+    description_zh: Optional[str] = None
     expert_id: str
     expert_service_id: int
     location: str
@@ -2776,6 +2780,10 @@ class ActivityOut(BaseModel):
             "id": obj.id,
             "title": obj.title,
             "description": obj.description,
+            "title_en": getattr(obj, "title_en", None),
+            "title_zh": getattr(obj, "title_zh", None),
+            "description_en": getattr(obj, "description_en", None),
+            "description_zh": getattr(obj, "description_zh", None),
             "expert_id": obj.expert_id,
             "expert_service_id": obj.expert_service_id,
             "location": obj.location,

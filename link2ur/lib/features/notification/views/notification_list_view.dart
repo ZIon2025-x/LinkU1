@@ -241,7 +241,7 @@ class _NotificationCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    notification.title,
+                    notification.displayTitle(Localizations.localeOf(context)),
                     style: TextStyle(
                       fontSize: 14,
                       fontWeight: notification.isRead
@@ -249,10 +249,10 @@ class _NotificationCard extends StatelessWidget {
                           : FontWeight.w600,
                     ),
                   ),
-                  if (notification.content.isNotEmpty) ...[
+                  if (notification.displayContent(Localizations.localeOf(context)).isNotEmpty) ...[
                     const SizedBox(height: 4),
                     Text(
-                      notification.content,
+                      notification.displayContent(Localizations.localeOf(context)),
                       style: const TextStyle(
                           fontSize: 13,
                           color: AppColors.textSecondary),

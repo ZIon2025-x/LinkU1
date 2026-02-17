@@ -218,7 +218,7 @@ class _TaskChatRow extends StatelessWidget {
           ],
           Expanded(
             child: Text(
-              chat.taskTitle,
+              chat.displayTitle(Localizations.localeOf(context)),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15),

@@ -6755,6 +6755,27 @@ class AppLocalizationsZh extends AppLocalizations {
   String get homeBrowseExperts => '浏览达人';
 
   @override
+  String get homeDiscoverMore => '发现更多';
+
+  @override
+  String get discoveryFeedTypePost => '帖子';
+
+  @override
+  String get discoveryFeedTypeProduct => '商品';
+
+  @override
+  String get discoveryFeedTypeCompetitorReview => '竞品评价';
+
+  @override
+  String get discoveryFeedTypeServiceReview => '服务评价';
+
+  @override
+  String get discoveryFeedTypeRanking => '排行榜';
+
+  @override
+  String get discoveryFeedTypeService => '达人服务';
+
+  @override
   String get mainPublishFleaMarket => '发布闲置';
 
   @override
@@ -8083,10 +8104,14 @@ class AppLocalizationsZh extends AppLocalizations {
   String get aiChatSearchTasks => '搜索可接的任务';
 
   @override
-  String get aiChatWelcomeTitle => '欢迎！';
+  String get aiChatWelcomeTitle => '你好，我是 Linker';
 
   @override
   String get aiChatWelcomeSubtitle => '有什么可以帮助你的？';
+
+  @override
+  String get aiChatWelcomeIntro =>
+      '我是 Link2Ur 的智能助手，可以帮你查询任务状态、搜索任务、解答平台规则、查看积分与优惠券等。直接输入问题，或点击下方快捷问题开始吧。';
 
   @override
   String get aiChatQuickStart => '快捷操作';
@@ -14921,6 +14946,27 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get homeBrowseExperts => '瀏覽達人';
 
   @override
+  String get homeDiscoverMore => '發現更多';
+
+  @override
+  String get discoveryFeedTypePost => '帖子';
+
+  @override
+  String get discoveryFeedTypeProduct => '商品';
+
+  @override
+  String get discoveryFeedTypeCompetitorReview => '競品評價';
+
+  @override
+  String get discoveryFeedTypeServiceReview => '服務評價';
+
+  @override
+  String get discoveryFeedTypeRanking => '排行榜';
+
+  @override
+  String get discoveryFeedTypeService => '達人服務';
+
+  @override
   String get mainPublishFleaMarket => '發佈閒置';
 
   @override
@@ -16249,10 +16295,14 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get aiChatSearchTasks => '搜尋可接的任務';
 
   @override
-  String get aiChatWelcomeTitle => '歡迎！';
+  String get aiChatWelcomeTitle => '你好，我是 Linker';
 
   @override
   String get aiChatWelcomeSubtitle => '有什麼可以幫助你的？';
+
+  @override
+  String get aiChatWelcomeIntro =>
+      '我是 Link2Ur 的智能助手，可以幫你查詢任務狀態、搜尋任務、解答平台規則、查看積分與優惠券等。直接輸入問題，或點擊下方快捷問題開始吧。';
 
   @override
   String get aiChatQuickStart => '快捷操作';

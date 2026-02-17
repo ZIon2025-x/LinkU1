@@ -11,7 +11,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request, status, B
 from fastapi.security import HTTPAuthorizationCredentials
 from typing import Optional
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, and_
+from sqlalchemy import select, and_, func
 
 from app import async_crud, models, schemas
 from app.database import check_database_health, get_pool_status
@@ -144,11 +144,7 @@ async def get_tasks(
             parent_activity_id=parent_activity_id,
         )
         
-        # 批量获取任务翻译
-        task_ids = [task.id for task in tasks]
-        from app.utils.task_translation_helper import get_task_translations_batch, get_task_title_translations
-        translations_dict = await get_task_translations_batch(db, task_ids, field_type='title')
-        
+        # 任务双语标题直接从任务表列读取（title_zh, title_en）
         # 批量获取发布者会员等级（用于「会员发布」角标）
         poster_ids = list({task.poster_id for task in tasks if task.poster_id})
         poster_levels = {}
@@ -181,9 +177,9 @@ async def get_tasks(
                 float(task.longitude) if task.longitude is not None else None
             )
             
-            # 获取双语标题
-            title_en, title_zh = get_task_title_translations(translations_dict, task.id)
-            
+            # 双语标题从任务表列读取
+            title_en = getattr(task, "title_en", None)
+            title_zh = getattr(task, "title_zh", None)
             task_data = {
                 "id": task.id,
                 "title": task.title,
@@ -260,11 +256,7 @@ async def get_tasks(
         user_longitude=user_longitude,
     )
     
-    # 批量获取任务翻译
-    task_ids = [task.id for task in tasks]
-    from app.utils.task_translation_helper import get_task_translations_batch, get_task_title_translations
-    translations_dict = await get_task_translations_batch(db, task_ids, field_type='title')
-    
+    # 任务双语标题直接从任务表列读取（title_zh, title_en）
     # 批量获取发布者会员等级（用于「会员发布」角标）
     poster_ids = list({task.poster_id for task in tasks if task.poster_id})
     poster_levels = {}
@@ -292,10 +284,9 @@ async def get_tasks(
             except (json.JSONDecodeError, TypeError):
                 images_list = []
         
-        # 获取双语标题
-        title_en, title_zh = get_task_title_translations(translations_dict, task.id)
-        
-        # 构建格式化的任务数据
+        # 双语标题从任务表列读取
+        title_en = getattr(task, "title_en", None)
+        title_zh = getattr(task, "title_zh", None)
         task_data = {
             "id": task.id,
             "title": task.title,
@@ -351,13 +342,32 @@ async def get_tasks(
     }
 
 
+def _request_lang(request: Request, current_user: Optional[models.User]) -> str:
+    """展示语言：登录用户用 language_preference，游客用 query lang 或 Accept-Language。"""
+    if current_user and (current_user.language_preference or "").strip().lower().startswith("zh"):
+        return "zh"
+    q = (request.query_params.get("lang") or "").strip().lower()
+    if q in ("zh", "zh-cn", "zh_cn"):
+        return "zh"
+    accept = request.headers.get("accept-language") or ""
+    # 简单取第一个偏好：zh 优先于 en
+    for part in accept.split(","):
+        part = part.split(";")[0].strip().lower()
+        if part.startswith("zh"):
+            return "zh"
+        if part.startswith("en"):
+            return "en"
+    return "en"
+
+
 @async_router.get("/tasks/{task_id}", response_model=schemas.TaskOut)
 async def get_task_by_id(
     task_id: int,
+    request: Request,
     db: AsyncSession = Depends(get_async_db_dependency),
     current_user: Optional[models.User] = Depends(get_current_user_optional),
 ):
-    """根据ID获取任务信息（异步版本）"""
+    """根据ID获取任务信息（异步版本）；按请求语言 ensure 双语列，缺则翻译并写入后返回。"""
     task = await async_crud.async_task_crud.get_task_by_id(db, task_id)
     if not task:
         raise HTTPException(status_code=404, detail="Task not found")
@@ -406,22 +416,20 @@ async def get_task_by_id(
         if not is_poster and not is_taker and not is_participant and not is_applicant:
             raise HTTPException(status_code=403, detail="无权限查看此任务")
     
-    # 获取任务翻译（标题和描述）
-    from app.utils.task_translation_helper import (
-        get_task_translations_batch, 
-        get_task_title_translations,
-        get_task_description_translations
+    # 按请求语言确保标题/描述有对应语种（缺则翻译并写入任务表列）；游客用 query lang 或 Accept-Language
+    from app.utils.task_activity_display import (
+        ensure_task_title_for_lang,
+        ensure_task_description_for_lang,
     )
-    title_translations_dict = await get_task_translations_batch(db, [task_id], field_type='title')
-    description_translations_dict = await get_task_translations_batch(db, [task_id], field_type='description')
-    title_en, title_zh = get_task_title_translations(title_translations_dict, task_id)
-    description_en, description_zh = get_task_description_translations(description_translations_dict, task_id)
-    
-    # 将翻译添加到任务对象
-    task.title_en = title_en
-    task.title_zh = title_zh
-    task.description_en = description_en
-    task.description_zh = description_zh
+    lang = _request_lang(request, current_user)
+    await ensure_task_title_for_lang(db, task, lang)
+    await ensure_task_description_for_lang(db, task, lang)
+    await db.commit()
+    # 响应中带上双语列（已从 task 列或刚写入）
+    task.title_en = getattr(task, "title_en", None)
+    task.title_zh = getattr(task, "title_zh", None)
+    task.description_en = getattr(task, "description_en", None)
+    task.description_zh = getattr(task, "description_zh", None)
     
     # 与活动详情一致：在详情响应中带上「当前用户是否已申请」及申请状态，便于客户端直接显示「已申请」按钮而不依赖单独接口
     if current_user:
@@ -820,22 +828,13 @@ async def get_user_applications(
         applications_result = await db.execute(applications_query)
         applications = applications_result.scalars().all()
         
-        # 获取所有任务的翻译
-        task_ids = [app.task_id for app in applications if app.task]
-        from app.utils.task_translation_helper import get_task_translations_batch
-        translations_dict = {}
-        if task_ids:
-            translations_dict = await get_task_translations_batch(db, task_ids, 'title')
-        
-        # 直接使用关联数据，无需额外查询
+        # 直接使用关联数据，任务双语标题从任务表列读取
         result = []
         for app in applications:
             task = app.task  # 已预加载，无需查询
             if task:
-                # 获取任务标题翻译（键格式为 (task_id, target_language)）
-                title_en = translations_dict.get((task.id, 'en'))
-                title_zh = translations_dict.get((task.id, 'zh-CN'))
-                
+                title_en = getattr(task, "title_en", None)
+                title_zh = getattr(task, "title_zh", None)
                 result.append({
                     "id": app.id,
                     "task_id": app.task_id,
@@ -1037,25 +1036,7 @@ async def get_user_tasks(
         taken_skip=taken_skip, taken_limit=taken_limit
     )
     
-    # 获取所有任务的翻译
-    all_task_ids = []
-    if 'posted_tasks' in tasks:
-        all_task_ids.extend([task.id for task in tasks['posted_tasks']])
-    if 'taken_tasks' in tasks:
-        all_task_ids.extend([task.id for task in tasks['taken_tasks']])
-    
-    if all_task_ids:
-        from app.utils.task_translation_helper import get_task_translations_batch, get_task_title_translations
-        translations_dict = await get_task_translations_batch(db, all_task_ids, field_type='title')
-        
-        # 为每个任务添加翻译字段
-        for task_list_key in ['posted_tasks', 'taken_tasks']:
-            if task_list_key in tasks:
-                for task in tasks[task_list_key]:
-                    title_en, title_zh = get_task_title_translations(translations_dict, task.id)
-                    task.title_en = title_en
-                    task.title_zh = title_zh
-    
+    # 任务双语标题已由查询加载在任务表列（title_zh, title_en），无需再查
     return tasks
 
 
@@ -1468,6 +1449,129 @@ async def confirm_task_completion_async(
     except Exception as e:
         logger.error(f"Error confirming task completion: {e}")
         raise HTTPException(status_code=500, detail=f"Failed to confirm task completion: {str(e)}")
+
+
+# ---------- 活动详情（异步，按语言 ensure 双语列）----------
+@async_router.get("/activities/{activity_id}/i18n", response_model=schemas.ActivityOut)
+async def get_activity_detail_async(
+    activity_id: int,
+    request: Request,
+    lang: str = Query("en", description="展示语言: en 或 zh"),
+    db: AsyncSession = Depends(get_async_db_dependency),
+):
+    """
+    获取活动详情（异步）。根据 lang 确保 title/description 的对应语言列有值，缺则翻译并写入后返回。
+    路径为 /api/activities/{activity_id}/i18n?lang=en|zh，与 sync 的 GET /api/activities/{activity_id} 并存。
+    """
+    from sqlalchemy.orm import selectinload
+
+    # 规范 lang：仅支持 zh / en
+    if lang and (lang.startswith("zh") or lang.lower() == "zh-cn"):
+        lang = "zh"
+    else:
+        lang = "en"
+
+    # 加载活动及关联服务
+    stmt = (
+        select(models.Activity)
+        .options(selectinload(models.Activity.service))
+        .where(models.Activity.id == activity_id)
+    )
+    result = await db.execute(stmt)
+    activity = result.scalar_one_or_none()
+    if not activity:
+        raise HTTPException(status_code=404, detail="Activity not found")
+
+    # 按需翻译并写入双语列
+    from app.utils.task_activity_display import (
+        ensure_activity_title_for_lang,
+        ensure_activity_description_for_lang,
+    )
+    await ensure_activity_title_for_lang(db, activity, lang)
+    await ensure_activity_description_for_lang(db, activity, lang)
+    await db.commit()
+
+    # 参与者数量：多人任务参与者 + 单任务数
+    multi_stmt = (
+        select(func.count(models.TaskParticipant.id))
+        .select_from(models.TaskParticipant)
+        .join(models.Task, models.TaskParticipant.task_id == models.Task.id)
+        .where(
+            models.Task.parent_activity_id == activity_id,
+            models.Task.is_multi_participant == True,
+            models.Task.status != "cancelled",
+            models.TaskParticipant.status.in_(["accepted", "in_progress", "completed"]),
+        )
+    )
+    multi_result = await db.execute(multi_stmt)
+    multi_count = multi_result.scalar() or 0
+    single_stmt = (
+        select(func.count(models.Task.id))
+        .where(
+            models.Task.parent_activity_id == activity_id,
+            models.Task.is_multi_participant == False,
+            models.Task.status.in_(["open", "taken", "in_progress"]),
+        )
+    )
+    single_result = await db.execute(single_stmt)
+    single_count = single_result.scalar() or 0
+    current_count = multi_count + single_count
+
+    # 当前用户是否已申请
+    has_applied = None
+    user_task_id = None
+    user_task_status = None
+    user_task_is_paid = None
+    user_task_has_negotiation = None
+    try:
+        current_user = await get_current_user_optional(request, db)
+    except HTTPException:
+        current_user = None
+    if current_user:
+        multi_task_stmt = (
+            select(models.Task)
+            .join(models.TaskParticipant, models.Task.id == models.TaskParticipant.task_id)
+            .where(
+                models.Task.parent_activity_id == activity_id,
+                models.Task.is_multi_participant == True,
+                models.TaskParticipant.user_id == current_user.id,
+                models.TaskParticipant.status.in_(["pending", "accepted", "in_progress", "completed"]),
+            )
+        )
+        single_task_stmt = (
+            select(models.Task)
+            .where(
+                models.Task.parent_activity_id == activity_id,
+                models.Task.is_multi_participant == False,
+                models.Task.originating_user_id == current_user.id,
+                models.Task.status.in_(["open", "taken", "in_progress", "pending_payment", "completed"]),
+            )
+        )
+        multi_task_result = await db.execute(multi_task_stmt)
+        multi_task = multi_task_result.scalar_one_or_none()
+        single_task_result = await db.execute(single_task_stmt)
+        single_task = single_task_result.scalar_one_or_none()
+        user_task = single_task if single_task else multi_task
+        has_applied = user_task is not None
+        if user_task:
+            user_task_id = user_task.id
+            user_task_status = user_task.status
+            user_task_is_paid = bool(user_task.is_paid)
+            user_task_has_negotiation = (
+                user_task.agreed_reward is not None
+                and user_task.base_reward is not None
+                and float(user_task.agreed_reward) != float(user_task.base_reward)
+            )
+
+    return schemas.ActivityOut.from_orm_with_participants(
+        activity,
+        current_count,
+        has_applied=has_applied,
+        user_task_id=user_task_id,
+        user_task_status=user_task_status,
+        user_task_is_paid=user_task_is_paid,
+        user_task_has_negotiation=user_task_has_negotiation,
+    )
 
 
 # 批量操作路由

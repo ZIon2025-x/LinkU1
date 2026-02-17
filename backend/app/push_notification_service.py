@@ -289,29 +289,25 @@ def send_push_notification(
                     task_id = device_template_vars.get('task_id')
                     original_task_title = device_template_vars.get('task_title')
                     
-                    # 尝试从翻译表获取任务标题的翻译
+                    # 从任务表双语列读取标题（任务翻译表已停用）
                     if task_id and original_task_title:
                         try:
-                            from app.crud import get_task_translation
-                            # 确保 task_id 是整数类型
+                            from app import crud
                             task_id_int = int(task_id) if isinstance(task_id, str) else task_id
-                            
-                            translation = get_task_translation(
-                                db=db,
-                                task_id=task_id_int,
-                                field_type='title',
-                                target_language=device_language
-                            )
-                            if translation and translation.translated_text:
-                                # 使用翻译后的标题
-                                device_template_vars['task_title'] = translation.translated_text
-                                logger.debug(f"设备 {device_token.id} 使用翻译后的任务标题（{device_language}）: {translation.translated_text[:50]}...")
-                            else:
-                                logger.debug(f"任务 {task_id_int} 没有 {device_language} 语言的翻译，使用原始标题")
+                            task = crud.get_task(db, task_id_int)
+                            if task:
+                                is_zh = device_language and (device_language == 'zh-CN' or str(device_language).lower() == 'zh')
+                                col = 'title_zh' if is_zh else 'title_en'
+                                text = getattr(task, col, None)
+                                if text:
+                                    device_template_vars['task_title'] = text
+                                    logger.debug(f"设备 {device_token.id} 使用双语标题（{device_language}）: {text[:50]}...")
+                                else:
+                                    logger.debug(f"任务 {task_id_int} 没有 {device_language} 列，使用原始标题")
                         except (ValueError, TypeError) as e:
                             logger.warning(f"task_id 类型错误: {e}，使用原始标题")
                         except Exception as e:
-                            logger.warning(f"获取任务翻译失败: {e}，使用原始标题")
+                            logger.warning(f"获取任务双语标题失败: {e}，使用原始标题")
                 
                 # 生成该设备的推送通知标题和内容（根据设备语言）
                 if title is None or body is None:

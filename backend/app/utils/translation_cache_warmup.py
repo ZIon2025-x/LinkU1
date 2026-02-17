@@ -54,22 +54,20 @@ def warmup_task_translations(
             for field_type in field_types:
                 for target_lang in languages:
                     try:
-                        # 检查缓存是否已存在
                         cached = get_cached_task_translation(task_id, field_type, target_lang)
                         if cached:
-                            continue  # 已缓存，跳过
-                        
-                        # 从数据库获取翻译
-                        translation = crud.get_task_translation(
-                            db, task_id, field_type, target_lang, validate=False
-                        )
-                        
-                        if translation:
-                            # 缓存到Redis
+                            continue
+                        # 从任务表双语列读取（任务翻译表已停用）
+                        task = crud.get_task(db, task_id)
+                        if not task:
+                            stats["missed"] += 1
+                            continue
+                        is_zh = target_lang in ('zh-CN', 'zh')
+                        col = (field_type + '_zh') if is_zh else (field_type + '_en')
+                        text = getattr(task, col, None)
+                        if text:
                             success = cache_task_translation(
-                                task_id, field_type, target_lang,
-                                translation.translated_text,
-                                translation.source_language
+                                task_id, field_type, target_lang, text, "auto"
                             )
                             if success:
                                 stats["cached"] += 1

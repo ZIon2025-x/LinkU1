@@ -7034,6 +7034,27 @@ class AppLocalizationsEn extends AppLocalizations {
   String get homeBrowseExperts => 'Browse Experts';
 
   @override
+  String get homeDiscoverMore => 'Discover More';
+
+  @override
+  String get discoveryFeedTypePost => 'Post';
+
+  @override
+  String get discoveryFeedTypeProduct => 'Product';
+
+  @override
+  String get discoveryFeedTypeCompetitorReview => 'Competitor Review';
+
+  @override
+  String get discoveryFeedTypeServiceReview => 'Service Review';
+
+  @override
+  String get discoveryFeedTypeRanking => 'Leaderboard';
+
+  @override
+  String get discoveryFeedTypeService => 'Expert Service';
+
+  @override
   String get mainPublishFleaMarket => 'List Item';
 
   @override
@@ -8399,10 +8420,14 @@ class AppLocalizationsEn extends AppLocalizations {
   String get aiChatSearchTasks => 'Search available tasks';
 
   @override
-  String get aiChatWelcomeTitle => 'Welcome!';
+  String get aiChatWelcomeTitle => 'Hi, I\'m Linker';
 
   @override
   String get aiChatWelcomeSubtitle => 'How can I help you?';
+
+  @override
+  String get aiChatWelcomeIntro =>
+      'I\'m Link2Ur\'s AI assistant. I can help you check task status, search tasks, answer platform rules, view points and coupons, and more. Type your question below or tap a quick question to get started.';
 
   @override
   String get aiChatQuickStart => 'Quick start';

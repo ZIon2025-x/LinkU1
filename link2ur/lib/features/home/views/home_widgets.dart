@@ -53,24 +53,15 @@ class _GreetingSection extends StatelessWidget {
               ],
             ),
           ),
-          // 右侧：Linter（统一聊天）入口
+          // 右侧：Linker（统一聊天）入口，使用 any 图标
           GestureDetector(
             onTap: () => context.push('/support-chat'),
-            child: Container(
-              width: 44,
-              height: 44,
-              decoration: const BoxDecoration(
-                gradient: LinearGradient(
-                  colors: AppColors.gradientPrimary,
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(
-                Icons.auto_awesome,
-                color: Colors.white,
-                size: 20,
+            child: ClipOval(
+              child: Image.asset(
+                AppAssets.any,
+                width: 44,
+                height: 44,
+                fit: BoxFit.cover,
               ),
             ),
           ),

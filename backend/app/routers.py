@@ -1282,32 +1282,19 @@ def get_task_detail(
             logger.warning(f"记录用户浏览行为失败: {e}")
     
     task = TaskService.get_task_cached(task_id=task_id, db=db)
-    
-    # 获取任务翻译（标题和描述）
-    from app.crud import get_task_translation
-    # 标题翻译
-    title_trans_en = get_task_translation(db, task_id, 'title', 'en', validate=False)
-    title_trans_zh = get_task_translation(db, task_id, 'title', 'zh-CN', validate=False)
-    task.title_en = title_trans_en.translated_text if title_trans_en else None
-    task.title_zh = title_trans_zh.translated_text if title_trans_zh else None
-    # 描述翻译
-    desc_trans_en = get_task_translation(db, task_id, 'description', 'en', validate=False)
-    desc_trans_zh = get_task_translation(db, task_id, 'description', 'zh-CN', validate=False)
-    task.description_en = desc_trans_en.translated_text if desc_trans_en else None
-    task.description_zh = desc_trans_zh.translated_text if desc_trans_zh else None
+    # 标题/描述双语已从任务表列 title_zh、title_en、description_zh、description_en 读取
     
     # 对于没有翻译的任务，在后台触发翻译（不阻塞响应）
     needs_translation = (
-        not task.title_en or not task.title_zh or 
-        not task.description_en or not task.description_zh
+        not getattr(task, 'title_en', None) or not getattr(task, 'title_zh', None) or
+        not getattr(task, 'description_en', None) or not getattr(task, 'description_zh', None)
     )
     if needs_translation:
         import threading
         from app.utils.translation_prefetch import prefetch_task_by_id
         import asyncio
-        
+
         def trigger_translations_sync():
-            """在后台线程中触发翻译任务"""
             try:
                 sync_db = next(get_db())
                 try:
@@ -1315,7 +1302,7 @@ def get_task_detail(
                     asyncio.set_event_loop(loop)
                     try:
                         loop.run_until_complete(
-                            prefetch_task_by_id(sync_db, task_id, target_languages=['en', 'zh-CN'])
+                            prefetch_task_by_id(sync_db, task_id, target_languages=['en', 'zh'])
                         )
                     finally:
                         loop.close()
@@ -1323,7 +1310,7 @@ def get_task_detail(
                     sync_db.close()
             except Exception as e:
                 logger.error(f"后台翻译任务失败: {e}")
-        
+
         thread = threading.Thread(target=trigger_translations_sync, daemon=True)
         thread.start()
     
@@ -1487,33 +1474,25 @@ def get_recommendations(
             longitude=longitude
         )
         
-        # 🔒 性能修复：批量获取所有任务的翻译，避免 N+1 查询
+        # 任务双语标题从任务表列读取；缺失时后台触发预取
         task_ids = [item["task"].id for item in recommendations]
-        translations_dict = {}
-        if task_ids:
-            translations = db.query(models.TaskTranslation).filter(
-                models.TaskTranslation.task_id.in_(task_ids),
-                models.TaskTranslation.field_type == 'title'
-            ).all()
-            for t in translations:
-                translations_dict[(t.task_id, t.target_language)] = t.translated_text
-        
-        # 对于没有翻译的任务，在后台触发翻译（不阻塞响应）
-        missing_task_ids = [task_id for task_id in task_ids 
-                           if (task_id, 'en') not in translations_dict or (task_id, 'zh-CN') not in translations_dict]
+        missing_task_ids = []
+        for item in recommendations:
+            t = item["task"]
+            if not getattr(t, "title_en", None) or not getattr(t, "title_zh", None):
+                missing_task_ids.append(t.id)
         if missing_task_ids:
             _trigger_background_translation_prefetch(
                 missing_task_ids,
-                target_languages=["en", "zh-CN"],
+                target_languages=["en", "zh"],
                 label="后台翻译任务标题",
             )
-        
-        # 转换为响应格式
+
         result = []
         for item in recommendations:
             task = item["task"]
-            title_en = translations_dict.get((task.id, 'en'))
-            title_zh = translations_dict.get((task.id, 'zh-CN'))
+            title_en = getattr(task, "title_en", None)
+            title_zh = getattr(task, "title_zh", None)
             
             # 解析图片字段
             images_list = []
@@ -4620,50 +4599,19 @@ def get_my_tasks(
         role=role, status=status,
     )
 
-    # 获取所有任务的翻译（标题和描述）
+    # 任务双语字段已由 ORM 从任务表列加载；缺失时后台触发预取
     task_ids = [task.id for task in tasks]
-    if task_ids:
-        from app.crud import get_task_translation
-        title_translations_dict = {}
-        description_translations_dict = {}
-        
-        for task_id in task_ids:
-            # 获取标题翻译
-            title_en = get_task_translation(db, task_id, 'title', 'en', validate=False)
-            if title_en:
-                title_translations_dict[(task_id, 'en')] = title_en.translated_text
-            title_zh = get_task_translation(db, task_id, 'title', 'zh-CN', validate=False)
-            if title_zh:
-                title_translations_dict[(task_id, 'zh-CN')] = title_zh.translated_text
-            
-            # 获取描述翻译
-            desc_en = get_task_translation(db, task_id, 'description', 'en', validate=False)
-            if desc_en:
-                description_translations_dict[(task_id, 'en')] = desc_en.translated_text
-            desc_zh = get_task_translation(db, task_id, 'description', 'zh-CN', validate=False)
-            if desc_zh:
-                description_translations_dict[(task_id, 'zh-CN')] = desc_zh.translated_text
-        
-        # 为每个任务添加翻译字段
-        for task in tasks:
-            task.title_en = title_translations_dict.get((task.id, 'en'))
-            task.title_zh = title_translations_dict.get((task.id, 'zh-CN'))
-            task.description_en = description_translations_dict.get((task.id, 'en'))
-            task.description_zh = description_translations_dict.get((task.id, 'zh-CN'))
-        
-        # 对于没有翻译的任务，在后台触发翻译（不阻塞响应）
-        missing_title_task_ids = [task_id for task_id in task_ids 
-                                 if (task_id, 'en') not in title_translations_dict or (task_id, 'zh-CN') not in title_translations_dict]
-        missing_desc_task_ids = [task_id for task_id in task_ids 
-                                if (task_id, 'en') not in description_translations_dict or (task_id, 'zh-CN') not in description_translations_dict]
-        missing_task_ids = list(set(missing_title_task_ids + missing_desc_task_ids))
-        
-        if missing_task_ids:
-            _trigger_background_translation_prefetch(
-                missing_task_ids,
-                target_languages=["en", "zh-CN"],
-                label="后台翻译任务",
-            )
+    missing_task_ids = [
+        t.id for t in tasks
+        if not getattr(t, "title_en", None) or not getattr(t, "title_zh", None)
+        or not getattr(t, "description_en", None) or not getattr(t, "description_zh", None)
+    ]
+    if missing_task_ids:
+        _trigger_background_translation_prefetch(
+            missing_task_ids,
+            target_languages=["en", "zh"],
+            label="后台翻译任务",
+        )
 
     return {
         "tasks": [schemas.TaskOut.model_validate(t) for t in tasks],
@@ -4748,36 +4696,18 @@ def user_profile(
         if t.taker_id == user_id and t.is_public == 1 and t.status == "completed"
     ]
     
-    # 获取所有任务的翻译
+    # 任务双语标题已从任务表列加载；缺失时后台触发预取
     all_display_tasks = posted_tasks + taken_tasks
-    task_ids = [task.id for task in all_display_tasks]
-    if task_ids:
-        from app.crud import get_task_translation
-        translations_dict = {}
-        for task_id in task_ids:
-            # 获取英文翻译
-            trans_en = get_task_translation(db, task_id, 'title', 'en', validate=False)
-            if trans_en:
-                translations_dict[(task_id, 'en')] = trans_en.translated_text
-            # 获取中文翻译
-            trans_zh = get_task_translation(db, task_id, 'title', 'zh-CN', validate=False)
-            if trans_zh:
-                translations_dict[(task_id, 'zh-CN')] = trans_zh.translated_text
-        
-        # 为每个任务添加翻译字段
-        for task in all_display_tasks:
-            task.title_en = translations_dict.get((task.id, 'en'))
-            task.title_zh = translations_dict.get((task.id, 'zh-CN'))
-        
-        # 对于没有翻译的任务，在后台触发翻译（不阻塞响应）
-        missing_task_ids = [task_id for task_id in task_ids 
-                           if (task_id, 'en') not in translations_dict or (task_id, 'zh-CN') not in translations_dict]
-        if missing_task_ids:
-            _trigger_background_translation_prefetch(
-                missing_task_ids,
-                target_languages=["en", "zh-CN"],
-                label="后台翻译任务标题",
-            )
+    missing_task_ids = [
+        t.id for t in all_display_tasks
+        if not getattr(t, "title_en", None) or not getattr(t, "title_zh", None)
+    ]
+    if missing_task_ids:
+        _trigger_background_translation_prefetch(
+            missing_task_ids,
+            target_languages=["en", "zh"],
+            label="后台翻译任务标题",
+        )
 
     # 获取用户收到的评价
     reviews = crud.get_reviews_received_by_user(
@@ -12332,7 +12262,7 @@ async def translate_batch(
         raise HTTPException(status_code=500, detail=f"批量翻译失败: {str(e)}")
 
 
-# 任务翻译API - 获取或创建任务翻译
+# 任务翻译API - 从任务表 zh/en 列读取（任务翻译表已停用）
 @router.get("/translate/task/{task_id}")
 def get_task_translation(
     task_id: int,
@@ -12341,44 +12271,31 @@ def get_task_translation(
     db: Session = Depends(get_db),
 ):
     """
-    获取任务翻译（如果存在）
-    
-    参数:
-    - task_id: 任务ID
-    - field_type: 字段类型（title 或 description）
-    - target_language: 目标语言代码
-    
-    返回:
-    - translated_text: 翻译后的文本（如果存在）
-    - exists: 是否存在翻译
+    获取任务翻译（从任务表 title_zh/title_en、description_zh/description_en 读取）
     """
     try:
         from app import crud
-        
-        # 验证字段类型
+
         if field_type not in ['title', 'description']:
             raise HTTPException(status_code=400, detail="field_type必须是'title'或'description'")
-        
-        # 检查任务是否存在
+
         task = crud.get_task(db, task_id)
         if not task:
             raise HTTPException(status_code=404, detail="任务不存在")
-        
-        # 获取翻译
-        translation = crud.get_task_translation(db, task_id, field_type, target_language)
-        
-        if translation:
+
+        # 映射到任务表列：en -> *_en, zh-CN/zh -> *_zh
+        is_zh = target_language and (target_language == 'zh-CN' or target_language.lower() == 'zh')
+        col = (field_type + '_zh') if is_zh else (field_type + '_en')
+        translated_text = getattr(task, col, None)
+
+        if translated_text:
             return {
-                "translated_text": translation.translated_text,
+                "translated_text": translated_text,
                 "exists": True,
-                "source_language": translation.source_language,
-                "target_language": translation.target_language
+                "source_language": "auto",
+                "target_language": target_language or (is_zh and "zh-CN" or "en"),
             }
-        else:
-            return {
-                "translated_text": None,
-                "exists": False
-            }
+        return {"translated_text": None, "exists": False}
     except HTTPException:
         raise
     except Exception as e:
@@ -12476,24 +12393,21 @@ async def translate_and_save_task(
                 "from_cache": True
             }
         
-        # 2. 检查数据库中是否已有翻译
-        existing_translation = crud.get_task_translation(db, task_id, field_type, target_lang, validate=True)
-        if existing_translation:
-            logger.debug(f"任务翻译数据库命中: task_id={task_id}, field={field_type}, lang={target_lang}")
-            # 缓存到Redis
-            cache_task_translation(
-                task_id, field_type, target_lang,
-                existing_translation.translated_text,
-                existing_translation.source_language
-            )
+        # 2. 检查任务表列是否已有翻译（任务翻译表已停用）
+        is_zh = target_lang in ('zh-CN', 'zh')
+        col = (field_type + '_zh') if is_zh else (field_type + '_en')
+        existing_text = getattr(task, col, None)
+        if existing_text:
+            logger.debug(f"任务翻译列命中: task_id={task_id}, field={field_type}, lang={target_lang}")
+            cache_task_translation(task_id, field_type, target_lang, existing_text, "auto")
             return {
-                "translated_text": existing_translation.translated_text,
+                "translated_text": existing_text,
                 "saved": True,
-                "source_language": existing_translation.source_language,
-                "target_language": existing_translation.target_language,
-                "from_cache": False
+                "source_language": "auto",
+                "target_language": target_lang,
+                "from_cache": False,
             }
-        
+
         # 3. 检查通用翻译缓存（基于文本内容）
         cache_key_data = f"{original_text}|{source_lang}|{target_lang}"
         cache_key_hash = hashlib.md5(cache_key_data.encode('utf-8')).hexdigest()
@@ -12505,11 +12419,8 @@ async def translate_and_save_task(
         
         if cached_result:
             translated_text = cached_result.get("translated_text")
-            # 保存到数据库
-            crud.create_or_update_task_translation(
-                db, task_id, field_type, original_text, translated_text, 
-                cached_result.get("source_language", source_lang), target_lang
-            )
+            setattr(task, col, translated_text)
+            db.commit()
             # 缓存到任务翻译专用缓存
             cache_task_translation(
                 task_id, field_type, target_lang,
@@ -12548,13 +12459,9 @@ async def translate_and_save_task(
         logger.debug(f"翻译完成: {translated_text[:50]}...")
         
         detected_source = source_lang if source_lang != 'auto' else 'auto'
-        
-        # 4. 保存到数据库
-        crud.create_or_update_task_translation(
-            db, task_id, field_type, original_text, translated_text, 
-            detected_source, target_lang
-        )
-        logger.debug(f"任务翻译已保存到数据库: task_id={task_id}, field={field_type}")
+        setattr(task, col, translated_text)
+        db.commit()
+        logger.debug(f"任务翻译已写入任务表列: task_id={task_id}, field={field_type}")
         
         # 5. 保存到缓存（任务翻译专用缓存 + 通用翻译缓存）
         # 5.1 任务翻译专用缓存
@@ -12649,26 +12556,28 @@ async def get_task_translations_batch(
                 "from_cache": True
             }
         
-        # 2. 从数据库批量获取翻译（优化：分批查询，限制最大数量）
-        # 限制最大查询数量，避免性能问题
+        # 2. 从任务表列批量读取（任务翻译表已停用）
         MAX_BATCH_SIZE = 1000
         if len(task_ids) > MAX_BATCH_SIZE:
             logger.warning(f"批量查询任务翻译数量过大: {len(task_ids)}，限制为{MAX_BATCH_SIZE}")
             task_ids = task_ids[:MAX_BATCH_SIZE]
-        
-        translations_dict = crud.get_task_translations_batch(db, task_ids, field_type, target_lang)
-        
-        # 3. 转换为响应格式并填充缓存
+
+        from app.models import Task
+        is_zh = target_lang in ('zh-CN', 'zh')
+        col = (field_type + '_zh') if is_zh else (field_type + '_en')
+        tasks_batch = db.query(Task).filter(Task.id.in_(task_ids)).all()
+        task_map = {t.id: t for t in tasks_batch}
+
         result = {}
-        missing_task_ids = []  # 记录缺少翻译的任务ID
-        
+        missing_task_ids = []
         for task_id in task_ids:
-            if task_id in translations_dict:
-                translation = translations_dict[task_id]
+            task = task_map.get(task_id)
+            text = getattr(task, col, None) if task else None
+            if text:
                 result[task_id] = {
-                    "translated_text": translation.translated_text,
-                    "source_language": translation.source_language,
-                    "target_language": translation.target_language
+                    "translated_text": text,
+                    "source_language": "auto",
+                    "target_language": target_lang,
                 }
             else:
                 missing_task_ids.append(task_id)

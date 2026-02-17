@@ -202,61 +202,67 @@ class _MyPostCard extends StatelessWidget {
             ),
           ],
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              post.title,
-              style: const TextStyle(
-                  fontSize: 16, fontWeight: FontWeight.w600),
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-            ),
-            if (post.content != null && post.content!.isNotEmpty) ...[
-              const SizedBox(height: 6),
-              Text(
-                Helpers.normalizeContentNewlines(post.content!),
-                style: const TextStyle(
-                    fontSize: 14, color: AppColors.textSecondary),
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ],
-            const SizedBox(height: AppSpacing.sm),
-            Row(
+        child: Builder(
+          builder: (context) {
+            final locale = Localizations.localeOf(context);
+            final content = post.displayContent(locale);
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Icon(Icons.visibility,
-                    size: 14, color: AppColors.textTertiary),
-                const SizedBox(width: 4),
-                Text('${post.viewCount}',
+                Text(
+                  post.displayTitle(locale),
+                  style: const TextStyle(
+                      fontSize: 16, fontWeight: FontWeight.w600),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                if (content != null && content.isNotEmpty) ...[
+                  const SizedBox(height: 6),
+                  Text(
+                    Helpers.normalizeContentNewlines(content),
                     style: const TextStyle(
-                        fontSize: 12,
-                        color: AppColors.textTertiary)),
-                const SizedBox(width: 12),
-                const Icon(Icons.chat_bubble_outline,
-                    size: 14, color: AppColors.textTertiary),
-                const SizedBox(width: 4),
-                Text('${post.replyCount}',
-                    style: const TextStyle(
-                        fontSize: 12,
-                        color: AppColors.textTertiary)),
-                const SizedBox(width: 12),
-                Icon(
-                    post.isLiked
-                        ? Icons.favorite
-                        : Icons.favorite_border,
-                    size: 14,
-                    color: post.isLiked
-                        ? AppColors.error
-                        : AppColors.textTertiary),
-                const SizedBox(width: 4),
-                Text('${post.likeCount}',
-                    style: const TextStyle(
-                        fontSize: 12,
-                        color: AppColors.textTertiary)),
+                        fontSize: 14, color: AppColors.textSecondary),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+                const SizedBox(height: AppSpacing.sm),
+                Row(
+                  children: [
+                    const Icon(Icons.visibility,
+                        size: 14, color: AppColors.textTertiary),
+                    const SizedBox(width: 4),
+                    Text('${post.viewCount}',
+                        style: const TextStyle(
+                            fontSize: 12,
+                            color: AppColors.textTertiary)),
+                    const SizedBox(width: 12),
+                    const Icon(Icons.chat_bubble_outline,
+                        size: 14, color: AppColors.textTertiary),
+                    const SizedBox(width: 4),
+                    Text('${post.replyCount}',
+                        style: const TextStyle(
+                            fontSize: 12,
+                            color: AppColors.textTertiary)),
+                    const SizedBox(width: 12),
+                    Icon(
+                        post.isLiked
+                            ? Icons.favorite
+                            : Icons.favorite_border,
+                        size: 14,
+                        color: post.isLiked
+                            ? AppColors.error
+                            : AppColors.textTertiary),
+                    const SizedBox(width: 4),
+                    Text('${post.likeCount}',
+                        style: const TextStyle(
+                            fontSize: 12,
+                            color: AppColors.textTertiary)),
+                  ],
+                ),
               ],
-            ),
-          ],
+            );
+          },
         ),
       ),
     );

@@ -69,7 +69,7 @@ class _SearchContentState extends State<_SearchContent> {
   void _onSearch() {
     final query = _searchController.text.trim();
     if (query.isNotEmpty) {
-      context.read<SearchBloc>().add(SearchSubmitted(query));
+      context.read<SearchBloc>().add(SearchSubmitted(query, Localizations.localeOf(context)));
     }
   }
 

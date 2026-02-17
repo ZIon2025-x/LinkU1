@@ -568,8 +568,8 @@ class AIAgent:
 
         # ---- 3b. 转人工客服 → 检查在线状态 + 发射 SSE 事件 ----
         if intent == IntentType.TRANSFER_TO_CS:
-            # 调用工具检查客服在线状态
-            cs_result = await self.executor.execute("check_cs_availability", {})
+            # 调用工具检查客服在线状态（按当前用户语言）
+            cs_result = await self.executor.execute("check_cs_availability", {}, request_lang=lang)
             available = cs_result.get("available", False)
             online_count = cs_result.get("online_count", 0)
 
@@ -687,7 +687,9 @@ class AIAgent:
                         event="tool_call",
                     )
 
-                    result = await self.executor.execute(block.name, block.input)
+                    result = await self.executor.execute(
+                        block.name, block.input, request_lang=reply_lang
+                    )
                     all_tool_calls.append({"id": block.id, "name": block.name, "input": block.input})
                     all_tool_results.append({"tool_use_id": block.id, "result": result})
 

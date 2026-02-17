@@ -1,3 +1,5 @@
+import 'dart:ui' show Locale;
+
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -20,12 +22,14 @@ abstract class SearchEvent extends Equatable {
 
 /// 执行搜索
 class SearchSubmitted extends SearchEvent {
-  const SearchSubmitted(this.query);
+  const SearchSubmitted(this.query, [this.locale]);
 
   final String query;
+  /// 用于任务/活动标题展示语言
+  final Locale? locale;
 
   @override
-  List<Object?> get props => [query];
+  List<Object?> get props => [query, locale];
 }
 
 /// 清除搜索
@@ -155,13 +159,14 @@ class SearchBloc extends Bloc<SearchEvent, SearchState> {
     ));
 
     try {
-      // 并行搜索六个模块
+      // 并行搜索六个模块（传入 locale 用于任务/活动双语标题）
+      final locale = event.locale;
       final results = await Future.wait([
-        _searchTasks(query),
+        _searchTasks(query, locale),
         _searchForum(query),
         _searchFleaMarket(query),
         _searchExperts(query),
-        _searchActivities(query),
+        _searchActivities(query, locale),
         _searchLeaderboards(query),
       ]);
 
@@ -190,7 +195,7 @@ class SearchBloc extends Bloc<SearchEvent, SearchState> {
     emit(const SearchState());
   }
 
-  Future<List<Map<String, dynamic>>> _searchTasks(String query) async {
+  Future<List<Map<String, dynamic>>> _searchTasks(String query, Locale? locale) async {
     try {
       final response = await _taskRepository.getTasks(
         keyword: query,
@@ -200,9 +205,13 @@ class SearchBloc extends Bloc<SearchEvent, SearchState> {
       return response.tasks
           .map((t) => {
                 'id': t.id,
-                'title': t.titleZh ?? t.titleEn ?? t.title,
+                'title': locale != null
+                    ? t.displayTitle(locale)
+                    : (t.titleZh ?? t.titleEn ?? t.title),
                 'type': 'task',
-                'description': t.descriptionZh ?? t.descriptionEn ?? '',
+                'description': locale != null
+                    ? (t.displayDescription(locale) ?? '')
+                    : (t.descriptionZh ?? t.descriptionEn ?? ''),
                 'status': t.status,
               })
           .toList();
@@ -272,7 +281,7 @@ class SearchBloc extends Bloc<SearchEvent, SearchState> {
     }
   }
 
-  Future<List<Map<String, dynamic>>> _searchActivities(String query) async {
+  Future<List<Map<String, dynamic>>> _searchActivities(String query, Locale? locale) async {
     try {
       final response = await _activityRepository.getActivities(
         keyword: query,
@@ -282,9 +291,13 @@ class SearchBloc extends Bloc<SearchEvent, SearchState> {
       return response.activities
           .map((a) => {
                 'id': a.id,
-                'title': a.title,
+                'title': locale != null
+                    ? a.displayTitle(locale)
+                    : a.title,
                 'type': 'activity',
-                'description': a.description,
+                'description': locale != null
+                    ? a.displayDescription(locale)
+                    : a.description,
               })
           .toList();
     } catch (_) {

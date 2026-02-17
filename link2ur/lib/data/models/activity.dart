@@ -1,12 +1,20 @@
+import 'dart:ui' show Locale;
+
 import 'package:equatable/equatable.dart';
 
+import '../../core/utils/localized_string.dart';
+
 /// 活动模型
-/// 参考后端 ActivityOut
+/// 参考后端 ActivityOut（含 title_en/title_zh/description_en/description_zh）
 class Activity extends Equatable {
   const Activity({
     required this.id,
     required this.title,
+    this.titleEn,
+    this.titleZh,
     this.description = '',
+    this.descriptionEn,
+    this.descriptionZh,
     required this.expertId,
     required this.expertServiceId,
     this.location = '',
@@ -48,7 +56,11 @@ class Activity extends Equatable {
 
   final int id;
   final String title;
+  final String? titleEn;
+  final String? titleZh;
   final String description;
+  final String? descriptionEn;
+  final String? descriptionZh;
   final String expertId;
   final int expertServiceId;
   final String location;
@@ -118,6 +130,14 @@ class Activity extends Equatable {
   bool get hasDiscount =>
       discountPercentage != null && discountPercentage! > 0;
 
+  /// 按 locale 显示标题（优先 zh/en 列，缺则 fallback 到 title）
+  String displayTitle(Locale locale) =>
+      localizedString(titleZh, titleEn, title, locale);
+
+  /// 按 locale 显示描述
+  String displayDescription(Locale locale) =>
+      localizedString(descriptionZh, descriptionEn, description, locale);
+
   /// 显示价格
   String get priceDisplay {
     if (discountedPricePerParticipant != null) {
@@ -133,7 +153,11 @@ class Activity extends Equatable {
     return Activity(
       id: json['id'] as int,
       title: json['title'] as String? ?? '',
+      titleEn: json['title_en'] as String?,
+      titleZh: json['title_zh'] as String?,
       description: json['description'] as String? ?? '',
+      descriptionEn: json['description_en'] as String?,
+      descriptionZh: json['description_zh'] as String?,
       expertId: json['expert_id']?.toString() ?? '',
       expertServiceId: json['expert_service_id'] as int? ?? 0,
       location: json['location'] as String? ?? '',
@@ -194,7 +218,11 @@ class Activity extends Equatable {
     return {
       'id': id,
       'title': title,
+      'title_en': titleEn,
+      'title_zh': titleZh,
       'description': description,
+      'description_en': descriptionEn,
+      'description_zh': descriptionZh,
       'expert_id': expertId,
       'expert_service_id': expertServiceId,
       'location': location,
@@ -224,7 +252,11 @@ class Activity extends Equatable {
   Activity copyWith({
     int? id,
     String? title,
+    String? titleEn,
+    String? titleZh,
     String? description,
+    String? descriptionEn,
+    String? descriptionZh,
     String? expertId,
     int? expertServiceId,
     String? location,
@@ -266,7 +298,11 @@ class Activity extends Equatable {
     return Activity(
       id: id ?? this.id,
       title: title ?? this.title,
+      titleEn: titleEn ?? this.titleEn,
+      titleZh: titleZh ?? this.titleZh,
       description: description ?? this.description,
+      descriptionEn: descriptionEn ?? this.descriptionEn,
+      descriptionZh: descriptionZh ?? this.descriptionZh,
       expertId: expertId ?? this.expertId,
       expertServiceId: expertServiceId ?? this.expertServiceId,
       location: location ?? this.location,

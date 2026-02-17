@@ -12932,6 +12932,48 @@ abstract class AppLocalizations {
   /// **'Browse Experts'**
   String get homeBrowseExperts;
 
+  /// No description provided for @homeDiscoverMore.
+  ///
+  /// In en, this message translates to:
+  /// **'Discover More'**
+  String get homeDiscoverMore;
+
+  /// No description provided for @discoveryFeedTypePost.
+  ///
+  /// In en, this message translates to:
+  /// **'Post'**
+  String get discoveryFeedTypePost;
+
+  /// No description provided for @discoveryFeedTypeProduct.
+  ///
+  /// In en, this message translates to:
+  /// **'Product'**
+  String get discoveryFeedTypeProduct;
+
+  /// No description provided for @discoveryFeedTypeCompetitorReview.
+  ///
+  /// In en, this message translates to:
+  /// **'Competitor Review'**
+  String get discoveryFeedTypeCompetitorReview;
+
+  /// No description provided for @discoveryFeedTypeServiceReview.
+  ///
+  /// In en, this message translates to:
+  /// **'Service Review'**
+  String get discoveryFeedTypeServiceReview;
+
+  /// No description provided for @discoveryFeedTypeRanking.
+  ///
+  /// In en, this message translates to:
+  /// **'Leaderboard'**
+  String get discoveryFeedTypeRanking;
+
+  /// No description provided for @discoveryFeedTypeService.
+  ///
+  /// In en, this message translates to:
+  /// **'Expert Service'**
+  String get discoveryFeedTypeService;
+
   /// No description provided for @mainPublishFleaMarket.
   ///
   /// In en, this message translates to:
@@ -15467,7 +15509,7 @@ abstract class AppLocalizations {
   /// No description provided for @aiChatWelcomeTitle.
   ///
   /// In en, this message translates to:
-  /// **'Welcome!'**
+  /// **'Hi, I\'m Linker'**
   String get aiChatWelcomeTitle;
 
   /// No description provided for @aiChatWelcomeSubtitle.
@@ -15475,6 +15517,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'How can I help you?'**
   String get aiChatWelcomeSubtitle;
+
+  /// No description provided for @aiChatWelcomeIntro.
+  ///
+  /// In en, this message translates to:
+  /// **'I\'m Link2Ur\'s AI assistant. I can help you check task status, search tasks, answer platform rules, view points and coupons, and more. Type your question below or tap a quick question to get started.'**
+  String get aiChatWelcomeIntro;
 
   /// No description provided for @aiChatQuickStart.
   ///

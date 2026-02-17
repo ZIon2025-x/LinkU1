@@ -367,7 +367,7 @@ class _UserProfileViewState extends State<UserProfileView> {
                   key: ValueKey('task_${t.id}'),
                   padding: const EdgeInsets.only(bottom: AppSpacing.sm),
                   child: ListTile(
-                    title: Text(t.title,
+                    title: Text(t.displayTitle(Localizations.localeOf(context)),
                         maxLines: 2, overflow: TextOverflow.ellipsis),
                     subtitle: Text(
                       '${t.status} · £${t.reward.toStringAsFixed(2)}',
@@ -617,7 +617,7 @@ class _UserProfileViewState extends State<UserProfileView> {
                 key: ValueKey('post_${p.id}'),
                 padding: const EdgeInsets.only(bottom: AppSpacing.sm),
                 child: ListTile(
-                  title: Text(p.title,
+                  title: Text(p.displayTitle(Localizations.localeOf(context)),
                       maxLines: 1, overflow: TextOverflow.ellipsis),
                   subtitle: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,

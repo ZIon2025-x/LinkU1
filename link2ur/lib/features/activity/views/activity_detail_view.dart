@@ -139,10 +139,11 @@ class _ActivityDetailViewContent extends StatelessWidget {
             onPressed: () {
               AppHaptics.selection();
               final activity = state.activityDetail!;
+              final locale = Localizations.localeOf(context);
               CustomSharePanel.show(
                 context,
-                title: activity.title,
-                description: activity.description,
+                title: activity.displayTitle(locale),
+                description: activity.displayDescription(locale),
                 url: 'https://link2ur.com/activities/${activity.id}',
               );
             },
@@ -263,10 +264,14 @@ class _ActivityDetailViewContent extends StatelessWidget {
                 const SizedBox(height: AppSpacing.md),
 
                 // 描述卡片 - 对标iOS ActivityDescriptionCard
-                if (activity.description.isNotEmpty)
+                if (activity.description.isNotEmpty ||
+                    activity.descriptionEn?.isNotEmpty == true ||
+                    activity.descriptionZh?.isNotEmpty == true)
                   _ActivityDescriptionCard(
                       activity: activity, isDark: isDark),
-                if (activity.description.isNotEmpty)
+                if (activity.description.isNotEmpty ||
+                    activity.descriptionEn?.isNotEmpty == true ||
+                    activity.descriptionZh?.isNotEmpty == true)
                   const SizedBox(height: AppSpacing.md),
 
                 // 信息网格卡片 - 对标iOS ActivityInfoGrid
@@ -741,7 +746,7 @@ class _ActivityHeaderCard extends StatelessWidget {
               children: [
                 Expanded(
                   child: Text(
-                    activity.title,
+                    activity.displayTitle(Localizations.localeOf(context)),
                     style: const TextStyle(
                       fontSize: 24,
                       fontWeight: FontWeight.bold,
@@ -1110,7 +1115,7 @@ class _ActivityDescriptionCard extends StatelessWidget {
             ),
             const SizedBox(height: AppSpacing.md),
             Text(
-              activity.description,
+              activity.displayDescription(Localizations.localeOf(context)),
               style: AppTypography.body.copyWith(
                 color: isDark
                     ? AppColors.textSecondaryDark

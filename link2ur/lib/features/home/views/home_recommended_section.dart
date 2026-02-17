@@ -303,7 +303,7 @@ class _RecommendedTab extends StatelessWidget {
                             ),
                             const SizedBox(width: 8),
                             Text(
-                              '发现更多',
+                              context.l10n.homeDiscoverMore,
                               style: AppTypography.title3.copyWith(
                                 fontWeight: FontWeight.w700,
                                 fontSize: 18,
@@ -348,7 +348,7 @@ class _RecommendedTab extends StatelessWidget {
                                   ),
                                   const SizedBox(width: 4),
                                   Text(
-                                    '筛选',
+                                    context.l10n.commonFilter,
                                     style: TextStyle(
                                       fontSize: 13,
                                       color: isDark
@@ -384,7 +384,7 @@ class _RecommendedTab extends StatelessWidget {
                                   ),
                                   const SizedBox(width: 8),
                                   Text(
-                                    '发现更多',
+                                    context.l10n.homeDiscoverMore,
                                     style: AppTypography.title3.copyWith(
                                       fontWeight: FontWeight.w700,
                                       fontSize: 18,

@@ -637,7 +637,7 @@ class _ExpertActivityCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    activity.title,
+                    activity.displayTitle(Localizations.localeOf(context)),
                     style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w600,

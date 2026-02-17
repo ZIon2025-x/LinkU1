@@ -404,9 +404,9 @@ class ActivityCardView extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // 标题（对齐iOS单行）
+                  // 标题（按当前语言显示双语列）
                   Text(
-                    activity.title,
+                    activity.displayTitle(Localizations.localeOf(context)),
                     style: TextStyle(
                       fontSize: 15,
                       fontWeight: FontWeight.w600,
