@@ -365,6 +365,7 @@ async def _fetch_competitor_reviews(db: AsyncSession, limit: int) -> list:
             "comment_count": None,
             "upvote_count": row.item_upvotes or 0,
             "downvote_count": row.item_downvotes or 0,
+            "vote_type": row.vote_type,
             "linked_item": None,
             "target_item": {
                 "item_type": "competitor",

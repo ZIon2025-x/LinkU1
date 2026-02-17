@@ -31,6 +31,7 @@ class DiscoveryFeedItem extends Equatable {
     this.commentCount,
     this.upvoteCount,
     this.downvoteCount,
+    this.voteType,
     this.linkedItem,
     this.targetItem,
     this.activityInfo,
@@ -62,6 +63,8 @@ class DiscoveryFeedItem extends Equatable {
   final int? commentCount;
   final int? upvoteCount;
   final int? downvoteCount;
+  /// 竞品评论的投票类型：upvote=赞成，downvote=反对
+  final String? voteType;
   final LinkedItemBrief? linkedItem;
   final TargetItemBrief? targetItem;
   final ActivityBrief? activityInfo;
@@ -148,6 +151,7 @@ class DiscoveryFeedItem extends Equatable {
       commentCount: json['comment_count'] as int?,
       upvoteCount: json['upvote_count'] as int?,
       downvoteCount: json['downvote_count'] as int?,
+      voteType: json['vote_type'] as String?,
       linkedItem: json['linked_item'] != null
           ? LinkedItemBrief.fromJson(json['linked_item'] as Map<String, dynamic>)
           : null,
@@ -166,7 +170,7 @@ class DiscoveryFeedItem extends Equatable {
   }
 
   @override
-  List<Object?> get props => [id, feedType];
+  List<Object?> get props => [id, feedType, voteType];
 }
 
 /// 帖子关联的内容简要信息

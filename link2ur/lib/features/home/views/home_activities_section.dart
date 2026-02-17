@@ -774,6 +774,7 @@ class _CompetitorReviewCard extends StatelessWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final locale = Localizations.localeOf(context);
     final displayDesc = item.displayDescription(locale);
+    final isUpvote = item.voteType == 'upvote';
 
     return GestureDetector(
       onTap: () {
@@ -799,7 +800,7 @@ class _CompetitorReviewCard extends StatelessWidget {
           children: [
             const _FeedTypeBadge(feedType: 'competitor_review'),
             const SizedBox(height: 8),
-            // 引用框（与原型 review-quote 一致）
+            // 引用框：赞成=绿色，反对=保持原样（紫/粉）
             if (displayDesc != null && displayDesc.isNotEmpty)
               Container(
                 width: double.infinity,
@@ -808,9 +809,25 @@ class _CompetitorReviewCard extends StatelessWidget {
                   gradient: LinearGradient(
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
-                    colors: isDark
-                        ? [Colors.white.withValues(alpha: 0.06), Colors.white.withValues(alpha: 0.03)]
-                        : [const Color(0xFFF8F7FF), const Color(0xFFFFF0F5)],
+                    colors: isUpvote
+                        ? (isDark
+                            ? [
+                                AppColors.success.withValues(alpha: 0.15),
+                                AppColors.success.withValues(alpha: 0.06),
+                              ]
+                            : [
+                                AppColors.successLight,
+                                const Color(0xFFC8E6C9),
+                              ])
+                        : (isDark
+                            ? [
+                                Colors.white.withValues(alpha: 0.06),
+                                Colors.white.withValues(alpha: 0.03),
+                              ]
+                            : [
+                                const Color(0xFFF8F7FF),
+                                const Color(0xFFFFF0F5),
+                              ]),
                   ),
                   borderRadius: const BorderRadius.only(
                     topRight: Radius.circular(8),

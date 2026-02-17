@@ -93,6 +93,26 @@ FAQ 答案**从数据库读取**（`faq_sections` + `faq_items`），与 Web/iOS
 | 优惠券/活动 | activities | 优惠券、coupon、积分、活动、activity |
 | 跳蚤市场 | flea_market | 跳蚤、二手、flea、闲置、求购、卖东西 |
 
+## 工具列表（Phase 1 只读）
+
+| 工具名 | 说明 |
+|--------|------|
+| query_my_tasks | 查询当前用户的任务列表（支持按状态筛选、分页） |
+| get_task_detail | 查询单个任务详情 |
+| search_tasks | 搜索公开任务（关键词、类型、价格范围） |
+| get_my_profile | 当前用户资料、评分、任务统计 |
+| get_platform_faq | 平台 FAQ（按问题关键词或分类） |
+| check_cs_availability | 是否有人工客服在线 |
+| get_my_points_and_coupons | 积分余额与可用优惠券 |
+| list_activities | 进行中的公开活动（可关键词搜索） |
+| get_my_notifications_summary | 未读通知数 + 最近通知 |
+| list_my_forum_posts | 当前用户发布的论坛帖子 |
+| search_flea_market | 搜索跳蚤市场商品 |
+| get_leaderboard_summary | 排行榜概览或单榜详情 |
+| list_task_experts | 活跃任务达人列表 |
+
+工具返回给模型的数据按 request_lang 使用双语字段，见 [双语与 AI 回复约定](bilingual-and-ai-response.md)。
+
 ## 换模型示例
 
 ### 小模型换成智谱 GLM-4-Flash
@@ -168,10 +188,10 @@ ANTHROPIC_API_KEY=sk-ant-api03-xxxxx
 
 | 文件 | 职责 |
 |------|------|
-| `app/config.py` | AI 环境变量配置（14 个变量） |
+| `app/config.py` | AI 环境变量配置（见上「环境变量」表） |
 | `app/models.py` | `AIConversation` + `AIMessage` 数据库表 |
 | `app/services/ai_llm_client.py` | LLM 多 provider 客户端（Anthropic + OpenAI 兼容） |
-| `app/services/ai_tools.py` | 5 个只读工具定义（JSON Schema） |
+| `app/services/ai_tools.py` | 13 个只读工具定义（JSON Schema） |
 | `app/services/ai_tool_executor.py` | 工具安全执行器 + FAQ 数据 |
 | `app/services/ai_agent.py` | Agent 调度器（意图分类 + 工具循环 + 预算控制） |
 | `app/ai_agent_routes.py` | 5 个 API 端点（SSE 流式） |
@@ -286,9 +306,9 @@ data: data: {"content": "..."}
 
 ## 当前限制
 
-1. **FAQ 数据静态** — 写在代码里，需要改代码才能更新
-2. **预算追踪基于内存** — 重启后重置，生产环境应迁移到 Redis
-3. **意图分类基于关键词** — 可能误判，复杂场景需要 LLM 辅助
-4. **无对话摘要** — 超出历史轮数的内容直接丢弃，不做摘要压缩
-5. **工具调用最多 3 轮** — 超过则截断
-6. **无 streaming** — 当前用非流式调用 + 逐块推送模拟，大模型响应慢时用户需等待较久
+1. **FAQ 数据来源** — 答案从数据库（`faq_sections` + `faq_items`）读取，与 Web/iOS 同源；主题与关键词映射在代码中维护（`_FAQ_KEYWORDS`、`TOPIC_TO_SECTION_KEY`）。
+2. **预算追踪基于内存** — 重启后重置，生产环境应迁移到 Redis。
+3. **意图分类基于关键词** — 可能误判，复杂场景由 LLM 兜底。
+4. **无对话摘要** — 超出历史轮数的内容直接丢弃，不做摘要压缩。
+5. **工具调用最多 3 轮** — 超过则截断。
+6. **流式实现** — 回复为 SSE 流式（token 逐块推送、tool_call/tool_result 事件）；LLM 调用本身为请求-响应，大模型首 token 慢时用户可能短暂等待。

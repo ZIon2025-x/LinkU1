@@ -20,6 +20,7 @@
 
 ## AI 回复语言（单语）
 
+- **默认语言为英文（en）**：未设置用户偏好且无 Accept-Language 时，按 en 处理；离题/错误等 fallback 文案亦为 en。
 - AI **回复**与用户当前消息语言一致：用户用中文问 → 中文答；用英文问 → 英文答。
 - 回复语言由 `_infer_reply_lang_from_message(user_message)` 推断，并用于系统提示、离题文案、FAQ 等，**不**在一条回复中同时输出中英双语。
 
