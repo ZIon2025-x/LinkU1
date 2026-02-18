@@ -199,7 +199,6 @@ class SearchBloc extends Bloc<SearchEvent, SearchState> {
     try {
       final response = await _taskRepository.getTasks(
         keyword: query,
-        page: 1,
         pageSize: 10,
       );
       return response.tasks
@@ -224,7 +223,6 @@ class SearchBloc extends Bloc<SearchEvent, SearchState> {
     try {
       final response = await _forumRepository.searchPosts(
         keyword: query,
-        page: 1,
         pageSize: 10,
       );
       return response.posts
@@ -244,7 +242,6 @@ class SearchBloc extends Bloc<SearchEvent, SearchState> {
     try {
       final response = await _fleaMarketRepository.getItems(
         keyword: query,
-        page: 1,
         pageSize: 10,
       );
       return response.items
@@ -265,7 +262,6 @@ class SearchBloc extends Bloc<SearchEvent, SearchState> {
     try {
       final experts = await _taskExpertRepository.searchExperts(
         keyword: query,
-        page: 1,
         pageSize: 10,
       );
       return experts
@@ -285,7 +281,6 @@ class SearchBloc extends Bloc<SearchEvent, SearchState> {
     try {
       final response = await _activityRepository.getActivities(
         keyword: query,
-        page: 1,
         pageSize: 10,
       );
       return response.activities
@@ -309,7 +304,6 @@ class SearchBloc extends Bloc<SearchEvent, SearchState> {
     try {
       final response = await _leaderboardRepository.getLeaderboards(
         keyword: query,
-        page: 1,
         pageSize: 10,
       );
       return response.leaderboards

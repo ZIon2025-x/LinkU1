@@ -201,7 +201,6 @@ class _ActivityDetailViewContent extends StatelessWidget {
             imageUrl: avatarUrl,
             width: 32,
             height: 32,
-            fit: BoxFit.cover,
           ),
         ),
       );
@@ -407,8 +406,6 @@ class _ActivityDetailViewContent extends StatelessWidget {
                 customerId: resp.customerId ?? '',
                 ephemeralKeySecret: resp.ephemeralKeySecret ?? '',
                 amountDisplay: resp.finalAmountDisplay,
-                applicationId: null,
-                paymentExpiresAt: null,
               );
               final result = await Navigator.of(context).push<bool>(
                 MaterialPageRoute(
@@ -503,8 +500,6 @@ class _ActivityDetailViewContent extends StatelessWidget {
         decoration: BoxDecoration(
           gradient: const LinearGradient(
             colors: AppColors.gradientDeepBlue,
-            begin: Alignment.centerLeft,
-            end: Alignment.centerRight,
           ),
           borderRadius: BorderRadius.circular(12),
         ),
@@ -593,7 +588,6 @@ class _ActivityImageCarouselState extends State<_ActivityImageCarousel> {
                   imageUrl: images[index],
                   width: double.infinity,
                   height: 300,
-                  fit: BoxFit.cover,
                 ),
               );
             },
@@ -1448,7 +1442,6 @@ class _PosterInfoRow extends StatelessWidget {
             imageUrl: avatarUrl,
             width: 52,
             height: 52,
-            fit: BoxFit.cover,
           ),
         ),
       );

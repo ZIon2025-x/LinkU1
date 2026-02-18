@@ -296,11 +296,7 @@ class _FleaMarketViewContentState extends State<_FleaMarketViewContent> {
     if (state.isLoading && state.items.isEmpty) {
       return const SkeletonGrid(
         key: ValueKey('skeleton'),
-        crossAxisCount: 2,
-        itemCount: 6,
         aspectRatio: 0.7,
-        imageFlex: 5,
-        contentFlex: 3,
       );
     }
 
@@ -432,7 +428,6 @@ class _FleaMarketItemCard extends StatelessWidget {
                                 imageUrl: item.firstImage!,
                                 width: double.infinity,
                                 height: double.infinity,
-                                fit: BoxFit.cover,
                               ),
                             )
                           : Container(

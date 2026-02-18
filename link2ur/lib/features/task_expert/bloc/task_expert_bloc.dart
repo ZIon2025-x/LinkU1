@@ -336,7 +336,6 @@ class TaskExpertBloc extends Bloc<TaskExpertEvent, TaskExpertState> {
 
     try {
       final response = await _taskExpertRepository.getExperts(
-        page: 1,
         keyword: keyword,
         category: _categoryParam(state.selectedCategory),
         location: _cityParam(state.selectedCity),
@@ -389,7 +388,6 @@ class TaskExpertBloc extends Bloc<TaskExpertEvent, TaskExpertState> {
   ) async {
     try {
       final response = await _taskExpertRepository.getExperts(
-        page: 1,
         keyword: (state.searchKeyword?.isNotEmpty ?? false) ? state.searchKeyword : null,
         category: _categoryParam(state.selectedCategory),
         location: _cityParam(state.selectedCity),
@@ -423,7 +421,6 @@ class TaskExpertBloc extends Bloc<TaskExpertEvent, TaskExpertState> {
 
     try {
       final response = await _taskExpertRepository.getExperts(
-        page: 1,
         keyword: (state.searchKeyword?.isNotEmpty ?? false) ? state.searchKeyword : null,
         category: _categoryParam(newCategory),
         location: _cityParam(newCity),
@@ -468,7 +465,6 @@ class TaskExpertBloc extends Bloc<TaskExpertEvent, TaskExpertState> {
           final res = await activityRepo.getActivities(
             expertId: event.expertId,
             status: 'open',
-            pageSize: 20,
           );
           activities = res.activities;
         } catch (e) {
@@ -538,7 +534,6 @@ class TaskExpertBloc extends Bloc<TaskExpertEvent, TaskExpertState> {
           final res = await activityRepo.getActivities(
             expertId: service.expertId,
             status: 'open',
-            pageSize: 20,
           );
           activities = res.activities;
         } catch (e) {

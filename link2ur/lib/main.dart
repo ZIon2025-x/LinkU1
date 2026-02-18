@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_native_splash/flutter_native_splash.dart';
@@ -24,6 +25,9 @@ void main() {
     () async {
       // Web 上使用路径 URL 策略（去掉 # 号）
       usePathUrlStrategy();
+
+      // 禁用运行时字体下载，使用 assets 打包的 Inter 字体
+      GoogleFonts.config.allowRuntimeFetching = false;
 
       WidgetsBinding widgetsBinding =
           WidgetsFlutterBinding.ensureInitialized();

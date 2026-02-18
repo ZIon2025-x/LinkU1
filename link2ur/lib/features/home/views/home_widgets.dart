@@ -158,7 +158,6 @@ class _BannerCarouselState extends State<_BannerCarousel> {
                       imagePath: AppAssets.fleaMarketBanner,
                       imageAlignment: const Alignment(0.0, 0.4),
                       onTap: () => context.push('/flea-market'),
-                      parallaxOffset: 0, // 视差由外部 Transform 控制
                     ),
                     _BannerItem(
                       title: context.l10n.homeStudentVerification,
@@ -167,7 +166,6 @@ class _BannerCarouselState extends State<_BannerCarousel> {
                       icon: Icons.school,
                       imagePath: AppAssets.studentVerificationBanner,
                       onTap: () => context.push('/student-verification'),
-                      parallaxOffset: 0,
                     ),
                     _BannerItem(
                       title: context.l10n.homeBecomeExpert,
@@ -175,7 +173,6 @@ class _BannerCarouselState extends State<_BannerCarousel> {
                       gradient: AppColors.gradientOrange,
                       icon: Icons.star,
                       onTap: () => context.push('/task-experts/intro'),
-                      parallaxOffset: 0,
                     ),
                   ];
 
@@ -191,7 +188,6 @@ class _BannerCarouselState extends State<_BannerCarousel> {
                       final scale = (1.0 - (offset * 0.05)).clamp(0.92, 1.0);
                       return Transform.scale(
                         scale: scale,
-                        alignment: Alignment.center,
                         child: child,
                       );
                     },
@@ -220,8 +216,6 @@ class _BannerCarouselState extends State<_BannerCarousel> {
                     gradient: isActive
                         ? const LinearGradient(
                             colors: AppColors.gradientPrimary,
-                            begin: Alignment.centerLeft,
-                            end: Alignment.centerRight,
                           )
                         : null,
                     color: isActive ? null : AppColors.primary.withValues(alpha: 0.2),
@@ -245,6 +239,7 @@ class _BannerItem extends StatelessWidget {
     required this.icon,
     required this.onTap,
     this.imagePath,
+    // ignore: unused_element_parameter - reserved for future parallax effect
     this.parallaxOffset = 0.0,
     this.imageAlignment = Alignment.center,
   });

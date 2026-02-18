@@ -31,7 +31,7 @@ void main() {
       type: 'earn',
       amount: 100,
       description: 'Daily check-in',
-      createdAt: DateTime(2026, 1, 1),
+      createdAt: DateTime(2026),
     ),
     PointsTransaction(
       id: 2,
@@ -101,17 +101,14 @@ void main() {
             status: WalletStatus.loaded,
             pointsAccount: testAccount,
             transactions: testTransactions,
-            coupons: testCoupons,
             stripeConnectStatus: testStripeStatus,
-            transactionPage: 1,
             hasMoreTransactions: false, // 2 < 20
           ),
         ],
         verify: (_) {
           verify(() => mockCouponPointsRepo.getPointsAccount()).called(1);
           verify(() => mockCouponPointsRepo.getPointsTransactions(
-                page: 1,
-                pageSize: 20,
+                
               )).called(1);
           verify(() => mockCouponPointsRepo.getMyCoupons()).called(1);
           verify(() => mockPaymentRepo.getStripeConnectStatus()).called(1);
@@ -128,7 +125,7 @@ void main() {
               id: i,
               type: 'earn',
               amount: 10,
-              createdAt: DateTime(2026, 1, 1),
+              createdAt: DateTime(2026),
             ),
           );
           when(() => mockCouponPointsRepo.getPointsAccount())
@@ -200,8 +197,6 @@ void main() {
         seed: () => WalletState(
           status: WalletStatus.loaded,
           transactions: testTransactions,
-          transactionPage: 1,
-          hasMoreTransactions: true,
         ),
         act: (bloc) => bloc.add(const WalletLoadMoreTransactions()),
         expect: () => [
@@ -238,7 +233,6 @@ void main() {
         seed: () => WalletState(
           status: WalletStatus.loaded,
           transactions: testTransactions,
-          hasMoreTransactions: true,
         ),
         act: (bloc) => bloc.add(const WalletLoadMoreTransactions()),
         expect: () => [], // 静默失败，不改变状态

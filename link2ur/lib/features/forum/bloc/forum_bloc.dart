@@ -327,7 +327,6 @@ class ForumBloc extends Bloc<ForumEvent, ForumState> {
 
     try {
       final response = await _forumRepository.getPosts(
-        page: 1,
         categoryId: event.categoryId ?? state.selectedCategoryId,
         keyword: state.searchQuery.isEmpty ? null : state.searchQuery,
       );
@@ -395,7 +394,6 @@ class ForumBloc extends Bloc<ForumEvent, ForumState> {
       // 如果当前有选中分类，也刷新帖子
       if (state.selectedCategoryId != null) {
         final response = await _forumRepository.getPosts(
-          page: 1,
           categoryId: state.selectedCategoryId,
         );
         emit(state.copyWith(
@@ -430,7 +428,6 @@ class ForumBloc extends Bloc<ForumEvent, ForumState> {
 
     try {
       final response = await _forumRepository.getPosts(
-        page: 1,
         keyword: event.query.isEmpty ? null : event.query,
         categoryId: state.selectedCategoryId,
       );
@@ -463,7 +460,6 @@ class ForumBloc extends Bloc<ForumEvent, ForumState> {
 
     try {
       final response = await _forumRepository.getPosts(
-        page: 1,
         categoryId: event.categoryId,
       );
 

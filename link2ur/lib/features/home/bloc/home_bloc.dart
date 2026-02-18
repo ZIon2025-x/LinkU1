@@ -61,14 +61,12 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
       if (currentUser != null) {
         try {
           result = await _taskRepository.getRecommendedTasks(
-            page: 1,
-            pageSize: 20,
+            
           );
         } catch (_) {
           AppLogger.info('Recommendations unavailable, falling back to public tasks');
           result = await _taskRepository.getTasks(
-            page: 1,
-            pageSize: 20,
+            
           );
         }
 
@@ -77,8 +75,7 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
           AppLogger.info('Recommendations empty, falling back to public tasks');
           try {
             result = await _taskRepository.getTasks(
-              page: 1,
-              pageSize: 20,
+              
             );
           } catch (_) {
             // 公开任务也失败，保持空列表
@@ -87,8 +84,7 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
       } else {
         // 未登录：直接请求公开任务列表
         result = await _taskRepository.getTasks(
-          page: 1,
-          pageSize: 20,
+          
         );
       }
 
@@ -96,8 +92,6 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
       List<Activity> openList = [];
       try {
         final actRes = await _activityRepository.getActivities(
-          page: 1,
-          pageSize: 20,
           status: 'open',
         );
         openList = actRes.activities;
@@ -142,34 +136,30 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
       if (currentUser != null) {
         try {
           result = await _taskRepository.getRecommendedTasks(
-            page: 1,
-            pageSize: 20,
+            
           );
         } catch (_) {
           result = await _taskRepository.getTasks(
-            page: 1,
-            pageSize: 20,
+            
           );
         }
 
         // 推荐为空时降级到公开任务
         if (result.tasks.isEmpty) {
           try {
-            result = await _taskRepository.getTasks(page: 1, pageSize: 20);
+            result = await _taskRepository.getTasks();
           } catch (e) {
             AppLogger.warning('Fallback to public tasks failed', e);
           }
         }
       } else {
-        result = await _taskRepository.getTasks(page: 1, pageSize: 20);
+        result = await _taskRepository.getTasks();
       }
 
       // 刷新开放中的活动（首页「热门活动」）
       List<Activity> openList = [];
       try {
         final actRes = await _activityRepository.getActivities(
-          page: 1,
-          pageSize: 20,
           status: 'open',
         );
         openList = actRes.activities;
@@ -215,12 +205,10 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
       try {
         result = await _taskRepository.getRecommendedTasks(
           page: page,
-          pageSize: 20,
         );
       } catch (_) {
         result = await _taskRepository.getTasks(
           page: page,
-          pageSize: 20,
         );
       }
 
@@ -261,7 +249,6 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
         latitude: event.latitude,
         longitude: event.longitude,
         page: page,
-        pageSize: 20,
         city: event.city,
       );
 
@@ -341,7 +328,7 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
     emit(state.copyWith(isLoadingDiscovery: true));
 
     try {
-      final response = await _discoveryRepository.getFeed(page: 1, limit: 20);
+      final response = await _discoveryRepository.getFeed();
       emit(state.copyWith(
         discoveryItems: response.items,
         hasMoreDiscovery: response.hasMore,
@@ -367,7 +354,6 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
       final nextPage = state.discoveryPage + 1;
       final response = await _discoveryRepository.getFeed(
         page: nextPage,
-        limit: 20,
       );
       emit(state.copyWith(
         discoveryItems: [...state.discoveryItems, ...response.items],

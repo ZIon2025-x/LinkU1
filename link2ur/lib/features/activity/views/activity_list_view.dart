@@ -116,7 +116,6 @@ class _ActivityListContentState extends State<_ActivityListContent> {
                 if (stateKey == 'skeleton') {
                   content = const SkeletonTopImageCardList(
                     key: ValueKey('skeleton'),
-                    itemCount: 3,
                     imageHeight: 160,
                   );
                 } else if (stateKey == 'error') {

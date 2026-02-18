@@ -1095,7 +1095,6 @@ class _CouponSelectionCard extends StatelessWidget {
           // 不使用优惠券
           _CouponRow(
             label: l10n.paymentDoNotUseCoupon,
-            subtitle: null,
             isSelected: selectedUserCoupon == null,
             onTap: onSelectNone,
           ),

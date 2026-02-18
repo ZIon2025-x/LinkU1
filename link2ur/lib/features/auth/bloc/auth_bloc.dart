@@ -73,7 +73,6 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   ) async {
     emit(state.copyWith(
       status: AuthStatus.loading,
-      errorMessage: null,
     ));
 
     try {
@@ -107,7 +106,6 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   ) async {
     emit(state.copyWith(
       status: AuthStatus.loading,
-      errorMessage: null,
     ));
 
     try {
@@ -141,7 +139,6 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   ) async {
     emit(state.copyWith(
       status: AuthStatus.loading,
-      errorMessage: null,
     ));
 
     try {
@@ -175,7 +172,6 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   ) async {
     emit(state.copyWith(
       status: AuthStatus.loading,
-      errorMessage: null,
     ));
 
     try {
@@ -225,7 +221,6 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   ) async {
     emit(state.copyWith(
       codeSendStatus: CodeSendStatus.sending,
-      errorMessage: null,
     ));
 
     try {
@@ -251,7 +246,6 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   ) async {
     emit(state.copyWith(
       codeSendStatus: CodeSendStatus.sending,
-      errorMessage: null,
     ));
 
     try {
@@ -304,7 +298,6 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   ) async {
     emit(state.copyWith(
       resetPasswordStatus: ResetPasswordStatus.loading,
-      resetPasswordMessage: null,
     ));
 
     try {

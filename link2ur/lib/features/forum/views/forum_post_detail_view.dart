@@ -80,7 +80,6 @@ class _ForumPostDetailViewState extends State<ForumPostDetailView> {
                 CustomSharePanel.show(
                   context,
                   title: context.l10n.forumPostDetail,
-                  description: '',
                   url: 'https://link2ur.com/forum/posts/${widget.postId}',
                 );
               },
@@ -125,7 +124,7 @@ class _ForumPostDetailViewState extends State<ForumPostDetailView> {
             // 评论区使用 SliverList 实现懒加载，避免一次性构建所有评论 widget
             return CustomScrollView(
               slivers: [
-                // 帖子头部 + 内容 + 图片 + 统计（固定内容，非列表项）
+                // 帖子头部 + 内容 + 图片（1-2张）
                 SliverToBoxAdapter(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -133,8 +132,20 @@ class _ForumPostDetailViewState extends State<ForumPostDetailView> {
                       _PostHeader(post: post, isDark: isDark),
                       const Divider(height: 1),
                       _PostContent(post: post, isDark: isDark),
-                      if (post.images.isNotEmpty)
+                      if (post.images.isNotEmpty && post.images.length < 3)
                         _PostImages(images: post.images),
+                    ],
+                  ),
+                ),
+
+                // 3+ 张图片网格 — SliverGrid 实现视口懒加载
+                if (post.images.length >= 3) _PostImageGridSliver(images: post.images),
+
+                // 统计 + 分隔线
+                SliverToBoxAdapter(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
                       _PostStats(
                         post: post,
                         isDark: isDark,
@@ -969,6 +980,52 @@ class _ReplyCard extends StatelessWidget {
 
 // ==================== 帖子图片区域 ====================
 
+/// 3+ 张图片网格 — 使用 SliverGrid 实现视口懒加载，避免 shrinkWrap
+class _PostImageGridSliver extends StatelessWidget {
+  const _PostImageGridSliver({required this.images});
+  final List<String> images;
+
+  void _openFullScreen(BuildContext context, int index) {
+    Navigator.of(context).push(MaterialPageRoute(
+      builder: (_) => FullScreenImageView(
+        images: images,
+        initialIndex: index,
+      ),
+    ));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SliverPadding(
+      padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
+      sliver: SliverGrid(
+        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 3,
+          mainAxisSpacing: 4,
+          crossAxisSpacing: 4,
+        ),
+        delegate: SliverChildBuilderDelegate(
+          (context, index) {
+            return GestureDetector(
+              onTap: () => _openFullScreen(context, index),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: AspectRatio(
+                  aspectRatio: 1,
+                  child: AsyncImageView(
+                    imageUrl: images[index],
+                  ),
+                ),
+              ),
+            );
+          },
+          childCount: images.length,
+        ),
+      ),
+    );
+  }
+}
+
 class _PostImages extends StatelessWidget {
   const _PostImages({required this.images});
   final List<String> images;
@@ -998,7 +1055,6 @@ class _PostImages extends StatelessWidget {
                   imageUrl: images[0],
                   width: w,
                   height: 220,
-                  fit: BoxFit.cover,
                 ),
               ),
             ),
@@ -1029,7 +1085,6 @@ class _PostImages extends StatelessWidget {
                         imageUrl: images[0],
                         width: w,
                         height: 180,
-                        fit: BoxFit.cover,
                       ),
                     ),
                   ),
@@ -1056,7 +1111,6 @@ class _PostImages extends StatelessWidget {
                         imageUrl: images[1],
                         width: w,
                         height: 180,
-                        fit: BoxFit.cover,
                       ),
                     ),
                   ),
@@ -1068,41 +1122,9 @@ class _PostImages extends StatelessWidget {
       );
     }
 
-    // 3+ 张网格，等比例裁剪不拉伸变形
-    return GridView.builder(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 3,
-        mainAxisSpacing: 4,
-        crossAxisSpacing: 4,
-        childAspectRatio: 1,
-      ),
-      itemCount: images.length,
-      itemBuilder: (context, index) {
-        return GestureDetector(
-          onTap: () => _openFullScreen(context, index),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(8),
-            child: LayoutBuilder(
-              builder: (context, constraints) {
-                final size = constraints.maxWidth;
-                return SizedBox(
-                  width: size,
-                  height: size,
-                  child: AsyncImageView(
-                    imageUrl: images[index],
-                    width: size,
-                    height: size,
-                    fit: BoxFit.cover,
-                  ),
-                );
-              },
-            ),
-          ),
-        );
-      },
-    );
+    // 3+ 张由 _PostImageGridSliver 渲染，不会走到这里
+    assert(false, '_PostImages should not be called with ${images.length} images (>=3)');
+    return const SizedBox.shrink();
   }
 
   void _openFullScreen(BuildContext context, int index) {

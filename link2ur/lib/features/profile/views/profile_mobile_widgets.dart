@@ -87,7 +87,6 @@ Widget _buildUserInfoSection(
               ),
               MemberBadgeAvatarOverlay(
                 userLevel: user.userLevel,
-                size: 28,
               ),
             ],
           ),
@@ -122,7 +121,6 @@ Widget _buildUserInfoSection(
           userLevel: user.userLevel,
           isExpert: user.isExpert,
           isStudentVerified: user.isStudentVerified,
-          compact: false,
         ),
         const SizedBox(height: 6),
 

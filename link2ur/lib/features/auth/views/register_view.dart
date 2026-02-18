@@ -724,7 +724,6 @@ class _RegisterViewState extends State<RegisterView>
       },
       behavior: HitTestBehavior.opaque,
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           // 自定义复选框
           AnimatedContainer(
@@ -808,8 +807,6 @@ class _RegisterViewState extends State<RegisterView>
             borderRadius: AppRadius.allMedium,
             gradient: const LinearGradient(
               colors: AppColors.gradientPrimary,
-              begin: Alignment.centerLeft,
-              end: Alignment.centerRight,
             ),
             boxShadow: [
               BoxShadow(

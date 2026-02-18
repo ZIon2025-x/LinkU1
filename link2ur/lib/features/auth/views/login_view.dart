@@ -484,7 +484,6 @@ class _LoginViewState extends State<LoginView>
             color: isDark
                 ? Colors.orange.shade700.withValues(alpha: 0.5)
                 : Colors.orange.shade200,
-            width: 1,
           ),
         ),
         child: Row(
@@ -968,8 +967,6 @@ class _LoginViewState extends State<LoginView>
             borderRadius: AppRadius.allMedium,
             gradient: const LinearGradient(
               colors: AppColors.gradientPrimary,
-              begin: Alignment.centerLeft,
-              end: Alignment.centerRight,
             ),
             boxShadow: [
               BoxShadow(

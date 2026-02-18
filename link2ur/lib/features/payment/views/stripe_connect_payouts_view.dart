@@ -51,7 +51,7 @@ class _StripeConnectPayoutsViewState extends State<StripeConnectPayoutsView> {
     try {
       final results = await Future.wait([
         _repo.getStripeConnectBalanceTyped(),
-        _repo.getStripeConnectTransactions(limit: 100),
+        _repo.getStripeConnectTransactions(),
       ]);
 
       if (!mounted) return;

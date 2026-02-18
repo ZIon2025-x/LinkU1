@@ -318,7 +318,6 @@ class _EditFleaMarketItemViewContentState
                                 imageUrl: url,
                                 width: 90,
                                 height: 90,
-                                fit: BoxFit.cover,
                               ),
                               onRemove: () => _removeExistingImage(url),
                             )),
@@ -329,7 +328,6 @@ class _EditFleaMarketItemViewContentState
                                 xFile: entry.value,
                                 width: 90,
                                 height: 90,
-                                fit: BoxFit.cover,
                               ),
                               onRemove: () => _removeNewImage(entry.key),
                             )),
@@ -347,7 +345,6 @@ class _EditFleaMarketItemViewContentState
                                     BorderRadius.circular(AppRadius.medium),
                                 border: Border.all(
                                   color: AppColors.primary.withValues(alpha: 0.3),
-                                  style: BorderStyle.solid,
                                 ),
                                 color: AppColors.background,
                               ),

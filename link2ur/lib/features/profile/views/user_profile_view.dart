@@ -317,7 +317,6 @@ class _UserProfileViewState extends State<UserProfileView> {
                 '🏆': experience,
               },
               size: 160,
-              maxValue: 1.0,
               color: AppColors.primary,
             ),
           ),
@@ -716,7 +715,6 @@ class _UserProfileViewState extends State<UserProfileView> {
                                   imageUrl: item.images.first,
                                   width: 120,
                                   height: 80,
-                                  fit: BoxFit.cover,
                                 )
                               : Container(
                                   width: 120,

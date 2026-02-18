@@ -206,7 +206,6 @@ class _ChatContentState extends State<_ChatContent> {
               FullScreenImageView.show(
                 context,
                 images: [url],
-                initialIndex: 0,
               );
             },
           ),
@@ -319,7 +318,7 @@ class _ChatContentState extends State<_ChatContent> {
             if (state.isSending)
               const Padding(
                 padding: EdgeInsets.all(8.0),
-                child: LoadingIndicator(size: 24),
+                child: LoadingIndicator(),
               )
             else
               // 渐变发送按钮 - 与iOS对齐

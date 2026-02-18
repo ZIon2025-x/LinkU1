@@ -94,6 +94,7 @@ class _NotificationListViewContent extends StatelessWidget {
                         itemBuilder: (context, index) {
                           final notification = notifications[index];
                           return _NotificationCard(
+                            key: ValueKey(notification.id),
                             notification: notification,
                             onTap: () =>
                                 _handleNotificationTap(context, notification),
@@ -197,6 +198,7 @@ class _NotificationListViewContent extends StatelessWidget {
 
 class _NotificationCard extends StatelessWidget {
   const _NotificationCard({
+    super.key,
     required this.notification,
     this.onTap,
   });
@@ -217,7 +219,7 @@ class _NotificationCard extends StatelessWidget {
           borderRadius: BorderRadius.circular(AppRadius.medium),
           border: !notification.isRead
               ? Border.all(
-                  color: AppColors.primary.withValues(alpha: 0.2), width: 1)
+                  color: AppColors.primary.withValues(alpha: 0.2))
               : null,
         ),
         child: Row(

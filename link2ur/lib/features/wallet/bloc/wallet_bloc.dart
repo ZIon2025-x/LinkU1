@@ -119,7 +119,7 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
     try {
       final results = await Future.wait([
         _couponPointsRepo.getPointsAccount(),
-        _couponPointsRepo.getPointsTransactions(page: 1, pageSize: 20),
+        _couponPointsRepo.getPointsTransactions(),
         _couponPointsRepo.getMyCoupons(),
         _paymentRepo.getStripeConnectStatus(),
       ]);
@@ -162,7 +162,6 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
       final nextPage = state.transactionPage + 1;
       final more = await _couponPointsRepo.getPointsTransactions(
         page: nextPage,
-        pageSize: 20,
       );
 
       emit(state.copyWith(

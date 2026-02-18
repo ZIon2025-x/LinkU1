@@ -343,7 +343,6 @@ class _QuickActionButton extends StatelessWidget {
                     child: Container(
                       padding: EdgeInsets.symmetric(
                         horizontal: unreadCount > 9 ? 5 : 0,
-                        vertical: 0,
                       ),
                       constraints: const BoxConstraints(
                         minWidth: 20,
@@ -641,7 +640,6 @@ class _TaskChatItem extends StatelessWidget {
             imageUrl: taskChat.images.first,
             width: imageSize,
             height: imageSize,
-            fit: BoxFit.cover,
             borderRadius: BorderRadius.circular(16),
             placeholder: Container(
               width: imageSize,

@@ -583,7 +583,6 @@ class _TaskDetailContent extends StatelessWidget {
     if (state.isSubmitting) {
       return PrimaryButton(
         text: context.l10n.taskDetailProcessing,
-        onPressed: null,
         isLoading: true,
       );
     }
@@ -627,7 +626,6 @@ class _TaskDetailContent extends StatelessWidget {
     if (!isPoster && task.hasApplied && task.userApplicationStatus == 'pending') {
       return PrimaryButton(
         text: context.l10n.taskDetailWaitingPosterConfirm,
-        onPressed: null,
       );
     }
 
@@ -677,7 +675,6 @@ class _TaskDetailContent extends StatelessWidget {
     // 默认：显示状态文本
     return PrimaryButton(
       text: TaskStatusHelper.getLocalizedLabel(task.status, context.l10n),
-      onPressed: null,
     );
   }
 
@@ -706,8 +703,6 @@ class _TaskDetailContent extends StatelessWidget {
         customerId: resp.customerId ?? '',
         ephemeralKeySecret: resp.ephemeralKeySecret ?? '',
         amountDisplay: resp.finalAmountDisplay,
-        applicationId: null,
-        paymentExpiresAt: null,
       );
       final result = await Navigator.of(context).push<bool>(
         MaterialPageRoute(
@@ -839,7 +834,6 @@ class _TaskImageCarouselState extends State<_TaskImageCarousel> {
                 imageUrl: images[index],
                 width: double.infinity,
                 height: 300,
-                fit: BoxFit.cover,
               );
               return GestureDetector(
                 onTap: () {
@@ -1577,7 +1571,6 @@ class _CounterpartyCard extends StatelessWidget {
             name: task.taker!.name,
             avatar: task.taker!.avatar,
             isVerified: task.taker!.isVerified,
-            isExpert: false,
             roleLabel: task.isExpertActivityTask
                 ? context.l10n.taskDetailParticipant
                 : context.l10n.taskDetailApplicant,
@@ -1623,7 +1616,6 @@ class _CounterpartyCard extends StatelessWidget {
           name: task.taker!.name,
           avatar: task.taker!.avatar,
           isVerified: task.taker!.isVerified,
-          isExpert: false,
           roleLabel: context.l10n.taskDetailSeller,
           onTap: () {
             AppHaptics.selection();
@@ -1637,7 +1629,6 @@ class _CounterpartyCard extends StatelessWidget {
           name: task.poster!.name,
           avatar: task.poster!.avatar,
           isVerified: task.poster!.isVerified,
-          isExpert: false,
           roleLabel: context.l10n.taskDetailBuyer,
           onTap: () {
             AppHaptics.selection();
@@ -1655,7 +1646,6 @@ class _CounterpartyCard extends StatelessWidget {
         name: task.taker!.name,
         avatar: task.taker!.avatar,
         isVerified: task.taker!.isVerified,
-        isExpert: false,
         roleLabel: context.l10n.taskDetailRecipient,
         onTap: () {
           AppHaptics.selection();
@@ -1669,7 +1659,6 @@ class _CounterpartyCard extends StatelessWidget {
         name: task.poster!.name,
         avatar: task.poster!.avatar,
         isVerified: task.poster!.isVerified,
-        isExpert: false,
         roleLabel: context.l10n.taskDetailPublisher,
         onTap: () {
           AppHaptics.selection();
@@ -2104,14 +2093,12 @@ class _TimelineItemTile extends StatelessWidget {
                                 FullScreenImageView.show(
                                   context,
                                   images: [url],
-                                  initialIndex: 0,
                                 );
                               },
                               child: AsyncImageView(
                                 imageUrl: url,
                                 width: 80,
                                 height: 80,
-                                fit: BoxFit.cover,
                                 borderRadius:
                                     BorderRadius.circular(6),
                               ),

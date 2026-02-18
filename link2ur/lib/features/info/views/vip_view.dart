@@ -219,7 +219,7 @@ class VipView extends StatelessWidget {
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
           gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: ResponsiveUtils.gridColumnCount(context, type: GridItemType.standard),
+            crossAxisCount: ResponsiveUtils.gridColumnCount(context),
             crossAxisSpacing: 12,
             mainAxisSpacing: 12,
             childAspectRatio: 1.6,

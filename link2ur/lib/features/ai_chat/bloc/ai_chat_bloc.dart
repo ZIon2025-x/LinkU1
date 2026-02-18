@@ -350,7 +350,7 @@ class AIChatBloc extends Bloc<AIChatEvent, AIChatState> {
     Emitter<AIChatState> emit,
   ) {
     // 工具结果到达，清除 activeToolCall（LLM 会继续生成）
-    emit(state.copyWith(activeToolCall: null));
+    emit(state.copyWith());
   }
 
   void _onMessageCompleted(

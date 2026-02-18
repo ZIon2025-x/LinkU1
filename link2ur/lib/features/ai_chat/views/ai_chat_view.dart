@@ -139,7 +139,6 @@ class _AIChatContentState extends State<_AIChatContent> {
                     if (state.activeToolCall != null && adjustedIndex == 0) {
                       return ToolCallCard(
                         toolName: state.activeToolCall!,
-                        isLoading: true,
                       );
                     }
 

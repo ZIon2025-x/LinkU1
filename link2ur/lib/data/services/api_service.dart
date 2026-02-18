@@ -55,7 +55,7 @@ class ApiService {
   }
 
   /// 内存缓存实例（GET 请求短时缓存）
-  final _cache = _MemoryCache(maxEntries: 100);
+  final _cache = _MemoryCache();
 
   /// 配置拦截器
   void _setupInterceptors() {
@@ -73,8 +73,6 @@ class ApiService {
     // 自动重试拦截器
     _dio.interceptors.add(_RetryInterceptor(
       dio: _dio,
-      maxRetries: ApiConfig.maxRetries,
-      retryDelayMs: ApiConfig.retryDelayMs,
     ));
 
     // 网络监控拦截器（NetworkLogger + PerformanceMonitor）
@@ -703,11 +701,9 @@ class ApiException extends AppException {
 /// 自动重试拦截器
 /// 对连接超时、发送超时、接收超时和连接错误自动重试
 class _RetryInterceptor extends Interceptor {
-  _RetryInterceptor({
-    required this.dio,
-    this.maxRetries = 3,
-    this.retryDelayMs = 1000,
-  });
+  _RetryInterceptor({required this.dio})
+      : maxRetries = 3,
+        retryDelayMs = 1000;
 
   final Dio dio;
   final int maxRetries;
@@ -780,7 +776,7 @@ class _CacheEntry {
 
 /// 简单的 LRU 内存缓存，用于 GET 请求响应
 class _MemoryCache {
-  _MemoryCache({this.maxEntries = 100});
+  _MemoryCache() : maxEntries = 100;
 
   final int maxEntries;
   final LinkedHashMap<String, _CacheEntry> _store = LinkedHashMap();

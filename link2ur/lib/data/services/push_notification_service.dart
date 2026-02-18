@@ -151,9 +151,7 @@ class PushNotificationService {
   Future<void> _initLocalNotifications() async {
     const androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
     const iosSettings = DarwinInitializationSettings(
-      requestAlertPermission: true,
-      requestBadgePermission: true,
-      requestSoundPermission: true,
+      
     );
     const settings = InitializationSettings(
       android: androidSettings,
@@ -303,7 +301,6 @@ class PushNotificationService {
       channelDescription: 'Link²Ur 应用通知',
       importance: Importance.high,
       priority: Priority.high,
-      showWhen: true,
     );
     const iosDetails = DarwinNotificationDetails(
       presentAlert: true,

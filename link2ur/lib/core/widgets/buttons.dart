@@ -10,7 +10,7 @@ import 'loading_view.dart';
 /// iOS 风格弹簧曲线
 /// 模拟 SwiftUI spring(response: 0.3, dampingFraction: 0.6)
 class _SpringCurve extends Curve {
-  const _SpringCurve({this.damping = 0.6, this.response = 0.3});
+  const _SpringCurve() : damping = 0.6, response = 0.3;
 
   final double damping;
   final double response;
@@ -74,7 +74,7 @@ class ScaleTapWrapperState extends State<ScaleTapWrapper>
       parent: _controller,
       curve: Curves.easeOutCubic,
       // iOS BouncyButtonStyle 弹簧回弹效果
-      reverseCurve: const _SpringCurve(damping: 0.6, response: 0.3),
+      reverseCurve: const _SpringCurve(),
     ));
   }
 
@@ -151,8 +151,6 @@ class PrimaryButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final effectiveGradient = gradient ?? const LinearGradient(
       colors: AppColors.gradientPrimary,
-      begin: Alignment.centerLeft,
-      end: Alignment.centerRight,
     );
 
     final isActive = !isDisabled && !isLoading;
@@ -183,7 +181,7 @@ class PrimaryButton extends StatelessWidget {
                   ? BorderRadius.circular(height / 2) // 圆形
                   : AppRadius.button,
               boxShadow: isActive || isLoading
-                  ? AppShadows.primary(opacity: 0.2)
+                  ? AppShadows.primary()
                   : null,
             ),
             child: Center(
@@ -199,7 +197,6 @@ class PrimaryButton extends StatelessWidget {
                     ? const ButtonLoadingIndicator(key: ValueKey('loading'))
                     : Row(
                         key: const ValueKey('content'),
-                        mainAxisSize: MainAxisSize.max,
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           if (leading != null) ...[
@@ -290,7 +287,6 @@ class SecondaryButton extends StatelessWidget {
                   )
                 : Row(
                     key: const ValueKey('content'),
-                    mainAxisSize: MainAxisSize.max,
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       if (icon != null) ...[

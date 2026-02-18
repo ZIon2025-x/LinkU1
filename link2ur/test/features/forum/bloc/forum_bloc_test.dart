@@ -32,10 +32,7 @@ void main() {
     likeCount: 5,
     replyCount: 3,
     viewCount: 100,
-    isLiked: false,
-    isFavorited: false,
-    createdAt: DateTime(2025, 1, 1),
-    images: const [],
+    createdAt: DateTime(2025),
   );
 
   final testPostListResponse = ForumPostListResponse(
@@ -76,7 +73,6 @@ void main() {
           status: ForumStatus.loaded,
           posts: [testPost],
           total: 1,
-          page: 1,
           hasMore: false,
         ),
       ],
@@ -134,7 +130,6 @@ void main() {
           selectedCategoryId: 1,
           posts: [testPost],
           total: 1,
-          page: 1,
           hasMore: false,
         ),
       ],
@@ -165,7 +160,6 @@ void main() {
           searchQuery: 'test',
           posts: [testPost],
           total: 1,
-          page: 1,
           hasMore: false,
         ),
       ],
@@ -277,8 +271,6 @@ void main() {
       seed: () => ForumState(
         status: ForumStatus.loaded,
         posts: [testPost],
-        page: 1,
-        hasMore: true,
       ),
       act: (bloc) => bloc.add(const ForumLoadMorePosts()),
       expect: () => [
@@ -309,7 +301,6 @@ void main() {
       'emits [refreshing, loaded] when refresh succeeds',
       build: () {
         when(() => mockForumRepository.getPosts(
-              page: 1,
               categoryId: any(named: 'categoryId'),
               keyword: any(named: 'keyword'),
             )).thenAnswer((_) async => testPostListResponse);

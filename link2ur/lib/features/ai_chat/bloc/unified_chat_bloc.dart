@@ -265,7 +265,6 @@ class UnifiedChatBloc extends Bloc<UnifiedChatEvent, UnifiedChatState> {
   ) async {
     emit(state.copyWith(
       mode: ChatMode.ai,
-      csOnlineStatus: null,
     ));
   }
 

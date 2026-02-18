@@ -129,7 +129,6 @@ class _ExpertsTabContentState extends State<_ExpertsTabContent> {
                       borderRadius: AppRadius.allMedium,
                       borderSide: const BorderSide(
                         color: AppColors.primary,
-                        width: 1,
                       ),
                     ),
                   ),
@@ -724,7 +723,6 @@ class _TaskCard extends StatelessWidget {
                       imageUrl: task.firstImage!,
                       width: double.infinity,
                       height: 140,
-                      fit: BoxFit.cover,
                     )
                   else
                     Container(

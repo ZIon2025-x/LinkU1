@@ -70,7 +70,6 @@ class _HorizontalTaskCard extends StatelessWidget {
                           imageUrl: task.firstImage!,
                           width: 220,
                           height: 170,
-                          fit: BoxFit.cover,
                         ),
                       )
                   else
@@ -466,7 +465,7 @@ class _NearbyTabState extends State<_NearbyTab> {
   Widget build(BuildContext context) {
     final isDesktop = ResponsiveUtils.isDesktop(context);
     if (_locationLoading) {
-      const body = SkeletonTopImageCardList(itemCount: 3, imageHeight: 140);
+      const body = SkeletonTopImageCardList();
       return isDesktop ? const ContentConstraint(child: body) : body;
     }
 
@@ -477,7 +476,7 @@ class _NearbyTabState extends State<_NearbyTab> {
           prev.isLoading != curr.isLoading,
       builder: (context, state) {
         if (state.isLoading && state.nearbyTasks.isEmpty) {
-          const body = SkeletonTopImageCardList(itemCount: 3, imageHeight: 140);
+          const body = SkeletonTopImageCardList();
           return isDesktop ? const ContentConstraint(child: body) : body;
         }
 

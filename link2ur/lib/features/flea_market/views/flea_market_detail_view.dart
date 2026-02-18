@@ -616,7 +616,6 @@ class _FleaMarketDetailContent extends StatelessWidget {
                   ephemeralKeySecret:
                       item.pendingPaymentEphemeralKeySecret ?? '',
                   amountDisplay: item.pendingPaymentAmountDisplay,
-                  applicationId: null,
                   paymentExpiresAt: item.pendingPaymentExpiresAt,
                   taskSource: AppConstants.taskSourceFleaMarket,
                   fleaMarketItemId: itemId,
@@ -1105,14 +1104,12 @@ class _ImageGalleryState extends State<_ImageGallery> {
                           imageUrl: images[index],
                           width: double.infinity,
                           height: 340,
-                          fit: BoxFit.cover,
                         ),
                       )
                     : AsyncImageView(
                         imageUrl: images[index],
                         width: double.infinity,
                         height: 340,
-                        fit: BoxFit.cover,
                       ),
               );
             },

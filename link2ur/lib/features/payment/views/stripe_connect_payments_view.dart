@@ -87,8 +87,8 @@ class _StripeConnectPaymentsViewState
 
       // 并行加载 Stripe Connect 交易记录和任务支付记录
       final results = await Future.wait([
-        repo.getStripeConnectTransactions(limit: 100),
-        repo.getTaskPaymentRecords(limit: 100),
+        repo.getStripeConnectTransactions(),
+        repo.getTaskPaymentRecords(),
       ]);
 
       if (!mounted) return;
@@ -154,11 +154,22 @@ class _StripeConnectPaymentsViewState
                             const SizedBox(height: AppSpacing.sm),
                         itemBuilder: (context, index) {
                           final record = _records[index];
-                          return switch (record) {
+                          final key = switch (record) {
                             StripeConnectRecord r =>
-                              _StripeTransactionCard(transaction: r.transaction),
+                              ValueKey('stripe_${r.transaction.id}'),
                             TaskPaymentRecordItem r =>
-                              _TaskPaymentCard(payment: r.payment),
+                              ValueKey('task_${r.payment.id}'),
+                          };
+                          return switch (record) {
+                            StripeConnectRecord r => KeyedSubtree(
+                                key: key,
+                                child: _StripeTransactionCard(
+                                    transaction: r.transaction),
+                              ),
+                            TaskPaymentRecordItem r => KeyedSubtree(
+                                key: key,
+                                child: _TaskPaymentCard(payment: r.payment),
+                              ),
                           };
                         },
                       ),

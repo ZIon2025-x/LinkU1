@@ -22,12 +22,8 @@ class AppTheme {
       colorScheme: const ColorScheme.light(
         primary: AppColors.primary,
         secondary: AppColors.accent,
-        surface: AppColors.cardBackgroundLight,
         error: AppColors.error,
-        onPrimary: Colors.white,
         onSecondary: Colors.white,
-        onSurface: AppColors.textPrimaryLight,
-        onError: Colors.white,
       ),
 
       // AppBar主题
@@ -236,7 +232,6 @@ class AppTheme {
         error: AppColors.error,
         onPrimary: Colors.white,
         onSecondary: Colors.white,
-        onSurface: AppColors.textPrimaryDark,
         onError: Colors.white,
       ),
 

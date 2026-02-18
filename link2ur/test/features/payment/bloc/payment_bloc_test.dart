@@ -25,7 +25,6 @@ void main() {
     const testPaymentResponse = TaskPaymentResponse(
       originalAmount: 9999, // 99.99 pounds in pence
       finalAmount: 8999, // 89.99 pounds in pence
-      currency: 'GBP',
       clientSecret: 'pi_test_secret',
       customerId: 'cus_test',
       ephemeralKeySecret: 'ek_test_secret',
@@ -64,7 +63,6 @@ void main() {
         verify: (_) {
           verify(() => mockPaymentRepository.createPaymentIntent(
                 taskId: 1,
-                userCouponId: null,
                 preferredPaymentMethod: 'card',
               )).called(1);
         },
@@ -124,7 +122,6 @@ void main() {
             status: PaymentStatus.ready,
             paymentResponse: testPaymentResponse,
             preferredPaymentMethod: 'alipay',
-            isMethodSwitching: false,
           ),
         ],
       );
@@ -158,8 +155,7 @@ void main() {
         act: (bloc) => bloc.add(const PaymentRemoveCoupon()),
         expect: () => [
           const PaymentState(
-            selectedCouponId: null,
-            selectedCouponName: null,
+            
           ),
         ],
       );

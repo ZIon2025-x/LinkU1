@@ -25,7 +25,6 @@ void main() {
     final testUser = createTestUser(
       id: '123',
       name: 'Test User',
-      email: 'test@example.com',
     );
 
     test('initial state is correct', () {
@@ -404,7 +403,6 @@ void main() {
           final updatedUser = createTestUser(
             id: '123',
             name: 'Updated Name',
-            email: 'test@example.com',
           );
           bloc.add(AuthUserUpdated(user: updatedUser));
         },

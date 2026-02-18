@@ -73,7 +73,6 @@ class BiometricAuthManager {
         options: AuthenticationOptions(
           useErrorDialogs: useErrorDialogs,
           stickyAuth: stickyAuth,
-          biometricOnly: false,
         ),
       );
 

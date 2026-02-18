@@ -52,17 +52,17 @@ class _MyForumPostsViewState extends State<MyForumPostsView>
     switch (_tabController.index) {
       case 0:
         if (state.myForumPosts.isEmpty) {
-          bloc.add(const ProfileLoadMyForumActivity(type: 'posts', page: 1));
+          bloc.add(const ProfileLoadMyForumActivity(type: 'posts'));
         }
         break;
       case 1:
         if (state.favoritedPosts.isEmpty) {
-          bloc.add(const ProfileLoadMyForumActivity(type: 'favorited', page: 1));
+          bloc.add(const ProfileLoadMyForumActivity(type: 'favorited'));
         }
         break;
       case 2:
         if (state.likedPosts.isEmpty) {
-          bloc.add(const ProfileLoadMyForumActivity(type: 'liked', page: 1));
+          bloc.add(const ProfileLoadMyForumActivity(type: 'liked'));
         }
         break;
     }
@@ -77,7 +77,7 @@ class _MyForumPostsViewState extends State<MyForumPostsView>
         userRepository: context.read<UserRepository>(),
         taskRepository: context.read<TaskRepository>(),
         forumRepository: context.read<ForumRepository>(),
-      )..add(const ProfileLoadMyForumActivity(type: 'posts', page: 1)),
+      )..add(const ProfileLoadMyForumActivity(type: 'posts')),
       child: BlocBuilder<ProfileBloc, ProfileState>(
         key: _blocProviderKey,
         builder: (context, state) {
@@ -156,7 +156,7 @@ class _MyForumPostsViewState extends State<MyForumPostsView>
     return RefreshIndicator(
       onRefresh: () async {
         context.read<ProfileBloc>().add(
-              ProfileLoadMyForumActivity(type: type, page: 1),
+              ProfileLoadMyForumActivity(type: type),
             );
       },
       child: ListView.separated(

@@ -46,19 +46,12 @@ class _Link2UrAppState extends State<Link2UrApp> {
   late final AuthRepository _authRepository;
   late final TaskRepository _taskRepository;
   late final UserRepository _userRepository;
-  late final FleaMarketRepository _fleaMarketRepository;
-  late final TaskExpertRepository _taskExpertRepository;
   late final ForumRepository _forumRepository;
   late final LeaderboardRepository _leaderboardRepository;
   late final MessageRepository _messageRepository;
   late final NotificationRepository _notificationRepository;
   late final ActivityRepository _activityRepository;
-  late final CouponPointsRepository _couponPointsRepository;
-  late final PaymentRepository _paymentRepository;
-  late final StudentVerificationRepository _studentVerificationRepository;
-  late final CommonRepository _commonRepository;
   late final DiscoveryRepository _discoveryRepository;
-  late final AIChatService _aiChatService;
   late final AuthBloc _authBloc;
   late final AppRouter _appRouter;
   final GlobalKey<NavigatorState> _rootNavigatorKey = GlobalKey<NavigatorState>();
@@ -70,20 +63,12 @@ class _Link2UrAppState extends State<Link2UrApp> {
     _authRepository = AuthRepository(apiService: _apiService);
     _taskRepository = TaskRepository(apiService: _apiService);
     _userRepository = UserRepository(apiService: _apiService);
-    _fleaMarketRepository = FleaMarketRepository(apiService: _apiService);
-    _taskExpertRepository = TaskExpertRepository(apiService: _apiService);
     _forumRepository = ForumRepository(apiService: _apiService);
     _leaderboardRepository = LeaderboardRepository(apiService: _apiService);
     _messageRepository = MessageRepository(apiService: _apiService);
     _notificationRepository = NotificationRepository(apiService: _apiService);
     _activityRepository = ActivityRepository(apiService: _apiService);
-    _couponPointsRepository = CouponPointsRepository(apiService: _apiService);
-    _paymentRepository = PaymentRepository(apiService: _apiService);
-    _studentVerificationRepository =
-        StudentVerificationRepository(apiService: _apiService);
-    _commonRepository = CommonRepository(apiService: _apiService);
     _discoveryRepository = DiscoveryRepository(apiService: _apiService);
-    _aiChatService = AIChatService(apiService: _apiService);
 
     // 创建 AuthBloc 并连接 Token 刷新失败回调
     _authBloc = AuthBloc(authRepository: _authRepository)
@@ -125,10 +110,6 @@ class _Link2UrAppState extends State<Link2UrApp> {
         RepositoryProvider<AuthRepository>.value(value: _authRepository),
         RepositoryProvider<TaskRepository>.value(value: _taskRepository),
         RepositoryProvider<UserRepository>.value(value: _userRepository),
-        RepositoryProvider<FleaMarketRepository>.value(
-            value: _fleaMarketRepository),
-        RepositoryProvider<TaskExpertRepository>.value(
-            value: _taskExpertRepository),
         RepositoryProvider<ForumRepository>.value(value: _forumRepository),
         RepositoryProvider<LeaderboardRepository>.value(
             value: _leaderboardRepository),
@@ -138,17 +119,37 @@ class _Link2UrAppState extends State<Link2UrApp> {
             value: _notificationRepository),
         RepositoryProvider<ActivityRepository>.value(
             value: _activityRepository),
-        RepositoryProvider<CouponPointsRepository>.value(
-            value: _couponPointsRepository),
-        RepositoryProvider<PaymentRepository>.value(
-            value: _paymentRepository),
-        RepositoryProvider<StudentVerificationRepository>.value(
-            value: _studentVerificationRepository),
-        RepositoryProvider<CommonRepository>.value(
-            value: _commonRepository),
         RepositoryProvider<DiscoveryRepository>.value(
             value: _discoveryRepository),
-        RepositoryProvider<AIChatService>.value(value: _aiChatService),
+        // 懒加载：首次访问时创建
+        RepositoryProvider<FleaMarketRepository>(
+          create: (context) =>
+              FleaMarketRepository(apiService: context.read<ApiService>()),
+        ),
+        RepositoryProvider<TaskExpertRepository>(
+          create: (context) =>
+              TaskExpertRepository(apiService: context.read<ApiService>()),
+        ),
+        RepositoryProvider<CouponPointsRepository>(
+          create: (context) => CouponPointsRepository(
+              apiService: context.read<ApiService>()),
+        ),
+        RepositoryProvider<PaymentRepository>(
+          create: (context) =>
+              PaymentRepository(apiService: context.read<ApiService>()),
+        ),
+        RepositoryProvider<StudentVerificationRepository>(
+          create: (context) => StudentVerificationRepository(
+              apiService: context.read<ApiService>()),
+        ),
+        RepositoryProvider<CommonRepository>(
+          create: (context) =>
+              CommonRepository(apiService: context.read<ApiService>()),
+        ),
+        RepositoryProvider<AIChatService>(
+          create: (context) =>
+              AIChatService(apiService: context.read<ApiService>()),
+        ),
       ],
       child: MultiBlocProvider(
         providers: [

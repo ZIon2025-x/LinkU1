@@ -48,8 +48,8 @@ class ProfileView extends StatelessWidget {
             forumRepository: context.read<ForumRepository>(),
           )
             ..add(const ProfileLoadRequested())
-            ..add(const ProfileLoadMyTasks(pageSize: 20))
-            ..add(const ProfileLoadMyTasks(isPosted: true, pageSize: 20)),
+            ..add(const ProfileLoadMyTasks())
+            ..add(const ProfileLoadMyTasks(isPosted: true)),
           child: _ProfileContent(authState: authState),
         );
       },
@@ -221,8 +221,8 @@ class _ProfileContent extends StatelessWidget {
               final bloc = context.read<ProfileBloc>();
               bloc
                 ..add(const ProfileLoadRequested())
-                ..add(const ProfileLoadMyTasks(pageSize: 20))
-                ..add(const ProfileLoadMyTasks(isPosted: true, pageSize: 20));
+                ..add(const ProfileLoadMyTasks())
+                ..add(const ProfileLoadMyTasks(isPosted: true));
               // 等待 BLoC 状态变为非 loading（使用 where + first 避免 orElse 缺陷）
               await bloc.stream
                   .where((s) => s.status != ProfileStatus.loading)

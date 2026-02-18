@@ -235,11 +235,11 @@ class NotificationBloc extends Bloc<NotificationEvent, NotificationState> {
         // 互动消息：合并论坛通知 + 排行榜相关的系统通知
         // 先加载论坛通知
         final forumResponse = await _notificationRepository.getForumNotifications(
-          page: 1,
+          
         );
         // 再加载系统通知中的排行榜部分
         final systemResponse = await _notificationRepository.getNotifications(
-          page: 1,
+          
         );
 
         // 合并：论坛通知 + 系统通知中 leaderboard_* 类型
@@ -268,7 +268,6 @@ class NotificationBloc extends Bloc<NotificationEvent, NotificationState> {
       } else {
         // 系统消息或全部
         response = await _notificationRepository.getNotifications(
-          page: 1,
           type: event.type,
         );
       }

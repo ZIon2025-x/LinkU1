@@ -212,7 +212,6 @@ class UserRepository {
     final response = await _apiService.uploadFile<Map<String, dynamic>>(
       ApiEndpoints.uploadPublicImage,
       filePath: filePath,
-      fieldName: 'file',
     );
 
     if (!response.isSuccess || response.data == null) {
@@ -227,7 +226,6 @@ class UserRepository {
     final response = await _apiService.uploadFile<Map<String, dynamic>>(
       ApiEndpoints.uploadFile,
       filePath: filePath,
-      fieldName: 'file',
     );
 
     if (!response.isSuccess || response.data == null) {

@@ -45,7 +45,6 @@ class BrandRefreshIndicator extends StatelessWidget {
       backgroundColor: Theme.of(context).brightness == Brightness.dark
           ? AppColors.cardBackgroundDark
           : Colors.white,
-      notificationPredicate: defaultScrollNotificationPredicate,
       child: child,
     );
   }

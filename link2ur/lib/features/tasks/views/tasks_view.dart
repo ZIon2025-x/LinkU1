@@ -362,11 +362,7 @@ class _TasksViewContentState extends State<_TasksViewContent> {
         if (state.isLoading && state.tasks.isEmpty) {
           return const SkeletonGrid(
             key: ValueKey('skeleton'),
-            crossAxisCount: 2,
-            itemCount: 6,
             aspectRatio: 0.68,
-            imageFlex: 5,
-            contentFlex: 3,
           );
         }
 
@@ -761,7 +757,6 @@ class _TaskGridCard extends StatelessWidget {
                     imageUrl: task.firstImage!,
                     width: w,
                     height: h,
-                    fit: BoxFit.cover,
                     memCacheWidth: (w * dpr).round(),
                     memCacheHeight: (h * dpr).round(),
                   ),

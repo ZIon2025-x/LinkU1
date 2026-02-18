@@ -356,7 +356,6 @@ class TaskLocationDetailView extends StatelessWidget {
                   borderRadius: AppRadius.allMedium,
                   border: Border.all(
                     color: AppColors.dividerLight,
-                    width: 1,
                   ),
                 ),
                 child: Column(

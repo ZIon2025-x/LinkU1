@@ -38,9 +38,7 @@ import '../../features/activity/views/activity_list_view.dart';
 import '../../features/activity/views/activity_detail_view.dart';
 import '../../features/student_verification/views/student_verification_view.dart';
 import '../../features/onboarding/views/onboarding_view.dart';
-import '../../features/ai_chat/views/ai_chat_view.dart';
-import '../../features/ai_chat/views/unified_chat_view.dart';
-import '../../features/ai_chat/views/ai_chat_list_view.dart';
+import '../../features/ai_chat/views/ai_chat_routes.dart' deferred as ai_chat;
 import '../../features/coupon_points/views/coupon_points_view.dart';
 import '../../features/info/views/info_views.dart';
 import '../../features/info/views/vip_purchase_view.dart';
@@ -235,7 +233,6 @@ class AppRouter {
   late final GoRouter router = GoRouter(
     navigatorKey: _navigatorKey,
     initialLocation: AppRoutes.main,
-    debugLogDiagnostics: false,
     // 监听 AuthBloc 状态变化，自动触发路由重定向（如 Token 失效时跳转登录页）
     refreshListenable: _GoRouterBlocRefreshStream(_authBloc.stream),
     redirect: (BuildContext context, GoRouterState state) {
@@ -663,18 +660,48 @@ class AppRouter {
       GoRoute(
         path: AppRoutes.aiChatList,
         name: 'aiChatList',
-        builder: (context, state) => const AIChatListView(),
+        builder: (context, state) => FutureBuilder(
+          future: ai_chat.loadLibrary(),
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.done) {
+              return ai_chat.AIChatListView();
+            }
+            return const Scaffold(
+              body: Center(child: CircularProgressIndicator()),
+            );
+          },
+        ),
       ),
       GoRoute(
         path: AppRoutes.aiChat,
         name: 'aiChat',
-        builder: (context, state) => const AIChatView(),
+        builder: (context, state) => FutureBuilder(
+          future: ai_chat.loadLibrary(),
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.done) {
+              return ai_chat.AIChatView();
+            }
+            return const Scaffold(
+              body: Center(child: CircularProgressIndicator()),
+            );
+          },
+        ),
       ),
       GoRoute(
         path: '${AppRoutes.aiChat}/:conversationId',
         name: 'aiChatConversation',
-        builder: (context, state) => AIChatView(
-          conversationId: state.pathParameters['conversationId'],
+        builder: (context, state) => FutureBuilder(
+          future: ai_chat.loadLibrary(),
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.done) {
+              return ai_chat.AIChatView(
+                conversationId: state.pathParameters['conversationId'],
+              );
+            }
+            return const Scaffold(
+              body: Center(child: CircularProgressIndicator()),
+            );
+          },
         ),
       ),
 
@@ -682,7 +709,17 @@ class AppRouter {
       GoRoute(
         path: AppRoutes.supportChat,
         name: 'supportChat',
-        builder: (context, state) => const UnifiedChatView(),
+        builder: (context, state) => FutureBuilder(
+          future: ai_chat.loadLibrary(),
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.done) {
+              return ai_chat.UnifiedChatView();
+            }
+            return const Scaffold(
+              body: Center(child: CircularProgressIndicator()),
+            );
+          },
+        ),
       ),
 
       // 积分与优惠券

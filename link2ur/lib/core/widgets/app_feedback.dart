@@ -71,7 +71,7 @@ class AppFeedback {
 
   /// 信息提示
   static void showInfo(BuildContext context, String message) {
-    showToast(context, message: message, type: FeedbackType.info);
+    showToast(context, message: message);
   }
 
   // ==================== 结果弹窗 ====================

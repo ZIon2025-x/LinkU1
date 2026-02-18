@@ -187,7 +187,6 @@ Widget _buildDesktopUserCard(
                 userLevel: user.userLevel,
                 isExpert: user.isExpert,
                 isStudentVerified: user.isStudentVerified,
-                compact: false,
               ),
               const SizedBox(height: 4),
               Text(

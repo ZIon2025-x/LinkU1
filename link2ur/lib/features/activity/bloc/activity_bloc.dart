@@ -199,7 +199,6 @@ class ActivityBloc extends Bloc<ActivityEvent, ActivityState> {
 
     try {
       final response = await _activityRepository.getActivities(
-        page: 1,
         status: event.status,
       );
 
@@ -253,7 +252,7 @@ class ActivityBloc extends Bloc<ActivityEvent, ActivityState> {
     await CacheManager.shared.invalidateActivitiesCache();
 
     try {
-      final response = await _activityRepository.getActivities(page: 1);
+      final response = await _activityRepository.getActivities();
 
       emit(state.copyWith(
         status: ActivityStatus.loaded,

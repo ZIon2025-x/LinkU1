@@ -176,7 +176,6 @@ class StatusTag extends StatelessWidget {
   factory StatusTag.info(String text, {TagSize size = TagSize.medium}) {
     return StatusTag(
       text: text,
-      color: AppColors.primary,
       backgroundColor: AppColors.infoLight,
       size: size,
     );

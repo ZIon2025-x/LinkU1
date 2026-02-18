@@ -93,7 +93,7 @@ class _CreateTaskContentState extends State<_CreateTaskContent> {
       });
     } else if (mounted) {
       setState(() {
-        _deadline = DateTime(date.year, date.month, date.day, 12, 0);
+        _deadline = DateTime(date.year, date.month, date.day, 12);
       });
     }
   }

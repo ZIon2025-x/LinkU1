@@ -1222,7 +1222,6 @@ class _ImageSectionState extends State<_ImageSection> {
                   imageUrl: widget.images[index],
                   width: double.infinity,
                   height: double.infinity,
-                  fit: BoxFit.cover,
                 ),
               );
             },

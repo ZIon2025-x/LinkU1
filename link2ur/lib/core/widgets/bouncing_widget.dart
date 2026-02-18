@@ -31,8 +31,6 @@ class _BouncingWidgetState extends State<BouncingWidget>
     _controller = AnimationController(
       vsync: this,
       duration: widget.duration,
-      lowerBound: 0.0,
-      upperBound: 1.0,
     );
     _scaleAnimation = Tween<double>(
       begin: 1.0,

@@ -506,7 +506,6 @@ class _TransactionsSection extends StatelessWidget {
                   .toList(),
               height: 50,
               color: AppColors.primary,
-              fillGradient: true,
               lineWidth: 1.5,
             ),
           ),

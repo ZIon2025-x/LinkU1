@@ -326,8 +326,7 @@ class MessageBloc extends Bloc<MessageEvent, MessageState> {
       _loadPreferences(emit);
 
       final taskChats = await _messageRepository.getTaskChats(
-        page: 1,
-        pageSize: _pageSize,
+        
       );
       emit(state.copyWith(
         status: MessageStatus.loaded,
@@ -359,7 +358,6 @@ class MessageBloc extends Bloc<MessageEvent, MessageState> {
       final nextPage = state.taskChatsPage + 1;
       final newTaskChats = await _messageRepository.getTaskChats(
         page: nextPage,
-        pageSize: _pageSize,
       );
 
       emit(state.copyWith(
@@ -385,8 +383,7 @@ class MessageBloc extends Bloc<MessageEvent, MessageState> {
 
       final contacts = await _messageRepository.getContacts();
       final taskChats = await _messageRepository.getTaskChats(
-        page: 1,
-        pageSize: _pageSize,
+        
       );
       emit(state.copyWith(
         status: MessageStatus.loaded,

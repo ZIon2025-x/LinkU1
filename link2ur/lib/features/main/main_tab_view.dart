@@ -563,7 +563,6 @@ class _DesktopTopBar extends StatelessWidget {
             ? Border(
                 bottom: BorderSide(
                   color: Colors.white.withValues(alpha: 0.06),
-                  width: 1,
                 ),
               )
             : null,
@@ -643,7 +642,6 @@ class _DesktopTopBar extends StatelessWidget {
                           color: isDark
                               ? Colors.white.withValues(alpha: 0.08)
                               : AppColors.desktopBorderLight,
-                          width: 1,
                         ),
                       ),
                       child: Row(
@@ -826,7 +824,6 @@ class _NotificationTabIcon extends StatelessWidget {
     return IconWithBadge(
       icon: isSelected ? tab.activeIcon : tab.icon,
       count: totalUnread,
-      iconSize: 24,
       iconColor: isSelected ? selectedColor : unselectedColor,
     );
   }

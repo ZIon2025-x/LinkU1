@@ -374,7 +374,6 @@ class FleaMarketBloc extends Bloc<FleaMarketEvent, FleaMarketState> {
 
     try {
       final response = await _fleaMarketRepository.getItems(
-        page: 1,
         category: state.selectedCategory,
         keyword: state.searchQuery.isEmpty ? null : state.searchQuery,
       );
@@ -406,7 +405,6 @@ class FleaMarketBloc extends Bloc<FleaMarketEvent, FleaMarketState> {
 
     try {
       final response = await _fleaMarketRepository.getItems(
-        page: 1,
         category: state.selectedCategory,
       );
 
@@ -462,7 +460,6 @@ class FleaMarketBloc extends Bloc<FleaMarketEvent, FleaMarketState> {
 
     try {
       final response = await _fleaMarketRepository.getItems(
-        page: 1,
         category: event.category,
       );
 
@@ -492,7 +489,6 @@ class FleaMarketBloc extends Bloc<FleaMarketEvent, FleaMarketState> {
 
     try {
       final response = await _fleaMarketRepository.getItems(
-        page: 1,
         keyword: event.query.isEmpty ? null : event.query,
         category: state.selectedCategory,
       );
@@ -558,7 +554,6 @@ class FleaMarketBloc extends Bloc<FleaMarketEvent, FleaMarketState> {
       customerId: (payload['customer_id'] as String?) ?? '',
       ephemeralKeySecret: (payload['ephemeral_key_secret'] as String?) ?? '',
       amountDisplay: payload['amount_display'] as String?,
-      applicationId: null,
       paymentExpiresAt: payload['payment_expires_at'] as String?,
       taskSource: itemId != null ? AppConstants.taskSourceFleaMarket : null,
       fleaMarketItemId: itemId,
@@ -571,8 +566,6 @@ class FleaMarketBloc extends Bloc<FleaMarketEvent, FleaMarketState> {
   ) async {
     emit(state.copyWith(
       isSubmitting: true,
-      actionMessage: null,
-      errorMessage: null,
     ));
 
     try {
@@ -618,8 +611,6 @@ class FleaMarketBloc extends Bloc<FleaMarketEvent, FleaMarketState> {
   ) async {
     emit(state.copyWith(
       isSubmitting: true,
-      actionMessage: null,
-      errorMessage: null,
     ));
 
     try {
@@ -691,8 +682,6 @@ class FleaMarketBloc extends Bloc<FleaMarketEvent, FleaMarketState> {
   ) async {
     emit(state.copyWith(
       isSubmitting: true,
-      actionMessage: null,
-      errorMessage: null,
     ));
 
     try {
@@ -735,8 +724,6 @@ class FleaMarketBloc extends Bloc<FleaMarketEvent, FleaMarketState> {
     emit(state.copyWith(
       isSubmitting: true,
       isUploadingImage: event.newImagesToUpload.isNotEmpty,
-      actionMessage: null,
-      errorMessage: null,
     ));
 
     try {
@@ -838,7 +825,6 @@ class FleaMarketBloc extends Bloc<FleaMarketEvent, FleaMarketState> {
   ) async {
     try {
       final favResponse = await _fleaMarketRepository.getFavoriteItems(
-        page: 1,
         pageSize: 100,
       );
       final favoriteIds = favResponse.items.map((e) => e.id).toSet();
@@ -907,8 +893,6 @@ class FleaMarketBloc extends Bloc<FleaMarketEvent, FleaMarketState> {
   ) async {
     emit(state.copyWith(
       isUploadingImage: true,
-      uploadedImageUrl: null,
-      errorMessage: null,
     ));
 
     try {

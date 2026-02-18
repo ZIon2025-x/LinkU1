@@ -209,7 +209,6 @@ class _ImageGalleryState extends State<_ImageGallery> {
               itemBuilder: (context, index) {
                 return AsyncImageView(
                   imageUrl: images[index],
-                  fit: BoxFit.cover,
                   width: double.infinity,
                   height: double.infinity,
                 );

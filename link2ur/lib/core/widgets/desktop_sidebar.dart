@@ -188,7 +188,6 @@ class DesktopDrawer extends StatelessWidget {
             color: isDark
                 ? Colors.white.withValues(alpha: 0.06)
                 : const Color(0xFFE2E8F0),
-            width: 1,
           ),
         ),
       ),

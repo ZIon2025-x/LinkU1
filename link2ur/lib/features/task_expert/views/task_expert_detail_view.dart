@@ -691,7 +691,7 @@ class _ExpertActivityCard extends StatelessWidget {
                         ),
                       ),
                       const Spacer(),
-                      ActivityPriceWidget(activity: activity, fontSize: 18),
+                      ActivityPriceWidget(activity: activity),
                       Icon(
                         Icons.chevron_right,
                         size: 20,
@@ -1019,7 +1019,6 @@ class _ServiceCard extends StatelessWidget {
                     imageUrl: service.firstImage,
                     width: 100,
                     height: 100,
-                    fit: BoxFit.cover,
                     errorWidget: _buildPlaceholder(isDark),
                   ),
                 )

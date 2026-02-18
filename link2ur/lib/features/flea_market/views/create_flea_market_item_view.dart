@@ -388,7 +388,6 @@ class _CreateFleaMarketItemContentState
                   xFile: entry.value,
                   width: 80,
                   height: 80,
-                  fit: BoxFit.cover,
                 ),
               ),
               Positioned(
@@ -429,7 +428,6 @@ class _CreateFleaMarketItemContentState
                 borderRadius: AppRadius.allSmall,
                 border: Border.all(
                   color: AppColors.textTertiaryLight.withValues(alpha: 0.5),
-                  style: BorderStyle.solid,
                 ),
               ),
               child: Column(

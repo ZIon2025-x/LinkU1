@@ -133,10 +133,7 @@ class _MyTasksViewState extends State<MyTasksView>
     try {
       final repo = context.read<TaskRepository>();
       final response = await repo.getMyTasks(
-        page: 1,
         pageSize: 100,
-        status: null,
-        role: null,
       );
       if (mounted) {
         setState(() {
@@ -224,7 +221,7 @@ class _MyTasksViewState extends State<MyTasksView>
     final l10n = context.l10n;
 
     if (loading && _allMyTasks.isEmpty) {
-      return const SkeletonList(itemCount: 5, hasImage: false);
+      return const SkeletonList(hasImage: false);
     }
 
     if (error != null && _allMyTasks.isEmpty) {
@@ -265,7 +262,7 @@ class _MyTasksViewState extends State<MyTasksView>
     final l10n = context.l10n;
 
     if (_pendingLoading && _pendingApplications.isEmpty) {
-      return const SkeletonList(itemCount: 5, hasImage: false);
+      return const SkeletonList(hasImage: false);
     }
 
     if (_pendingError != null && _pendingApplications.isEmpty) {

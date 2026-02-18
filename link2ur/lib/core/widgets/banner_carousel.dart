@@ -146,7 +146,6 @@ class _BannerCarouselState extends State<BannerCarousel> {
                   onTap: () => _handleBannerTap(banner),
                   child: AsyncImageView(
                     imageUrl: imageUrl,
-                    fit: BoxFit.cover,
                     width: double.infinity,
                     placeholder: Container(
                       color: AppColors.skeletonBase,

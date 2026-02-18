@@ -208,7 +208,6 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
         // 任务聊天：后端游标分页 limit + cursor
         final result = await _messageRepository.getTaskChatMessages(
           event.taskId!,
-          limit: 50,
         );
         emit(state.copyWith(
           status: ChatStatus.loaded,
@@ -221,7 +220,6 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
         // 私聊
         final messages = await _messageRepository.getMessagesWith(
           event.userId,
-          page: 1,
         );
         emit(state.copyWith(
           status: ChatStatus.loaded,
@@ -259,7 +257,6 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
         }
         final result = await _messageRepository.getTaskChatMessages(
           state.taskId!,
-          limit: 50,
           cursor: state.nextCursor,
         );
         // 更早的消息追加到列表末尾（后端返回仍为 新→旧，所以 result.messages 是比当前 state.messages 更旧的一批）

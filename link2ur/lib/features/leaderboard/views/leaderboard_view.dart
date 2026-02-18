@@ -82,6 +82,7 @@ class LeaderboardView extends StatelessWidget {
                     );
                   }
                   return _LeaderboardCard(
+                    key: ValueKey(state.leaderboards[index].id),
                     leaderboard: state.leaderboards[index],
                   );
                 },
@@ -97,7 +98,7 @@ class LeaderboardView extends StatelessWidget {
 /// 排行榜卡片 - 对标iOS LeaderboardCard样式
 /// 封面图(90x90) + 标题 + 描述 + 位置 + 分隔线 + 统计行(项目/投票/浏览)
 class _LeaderboardCard extends StatelessWidget {
-  const _LeaderboardCard({required this.leaderboard});
+  const _LeaderboardCard({super.key, required this.leaderboard});
 
   final Leaderboard leaderboard;
 
@@ -160,7 +161,6 @@ class _LeaderboardCard extends StatelessWidget {
                         imageUrl: leaderboard.coverImage,
                         width: 90,
                         height: 90,
-                        fit: BoxFit.cover,
                         borderRadius: BorderRadius.circular(14),
                         errorWidget: _buildPlaceholderIcon(colors),
                       )

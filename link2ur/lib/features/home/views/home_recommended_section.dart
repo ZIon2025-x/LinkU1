@@ -639,45 +639,38 @@ class _RecommendedTab extends StatelessWidget {
     );
   }
 
-  /// 桌面端 3 列 Grid 任务卡片（ContentConstraint 内，全宽滚动时内容 1200 居中）
+  /// 桌面端 3 列 Grid 任务卡片（SliverGrid 实现视口懒加载，替代 shrinkWrap）
   Widget _buildDesktopTaskGrid(BuildContext context, HomeState state) {
     final tasks = _getFilteredTasks(state).take(9).toList();
     final crossAxisCount = ResponsiveUtils.gridColumnCount(context, type: GridItemType.task);
     const spacing = 14.0;
     const aspectRatio = 0.82;
 
-    return SliverToBoxAdapter(
-      child: ContentConstraint(
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            final width = constraints.maxWidth;
-            final cellWidth = (width - spacing * (crossAxisCount - 1)) / crossAxisCount;
-            final cellHeight = cellWidth / aspectRatio;
-            final rowCount = (tasks.length / crossAxisCount).ceil();
-            final gridHeight = rowCount * cellHeight + spacing * (rowCount - 1);
-            return SizedBox(
-              height: gridHeight,
-              child: GridView.builder(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: crossAxisCount,
-                  mainAxisSpacing: spacing,
-                  crossAxisSpacing: spacing,
-                  childAspectRatio: aspectRatio,
-                ),
-                itemCount: tasks.length,
-                itemBuilder: (context, index) => RepaintBoundary(
-                  child: _DesktopTaskCard(
-                    key: ValueKey(tasks[index].id),
-                    task: tasks[index],
-                  ),
+    return SliverLayoutBuilder(
+      builder: (context, constraints) {
+        final pad = ((constraints.crossAxisExtent - Breakpoints.maxContentWidth) / 2)
+            .clamp(0.0, double.infinity);
+        return SliverPadding(
+          padding: EdgeInsets.symmetric(horizontal: pad),
+          sliver: SliverGrid(
+            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: crossAxisCount,
+              mainAxisSpacing: spacing,
+              crossAxisSpacing: spacing,
+              childAspectRatio: aspectRatio,
+            ),
+            delegate: SliverChildBuilderDelegate(
+              (context, index) => RepaintBoundary(
+                child: _DesktopTaskCard(
+                  key: ValueKey(tasks[index].id),
+                  task: tasks[index],
                 ),
               ),
-            );
-          },
-        ),
-      ),
+              childCount: tasks.length,
+            ),
+          ),
+        );
+      },
     );
   }
 
@@ -903,7 +896,6 @@ class _DesktopTaskCardState extends State<_DesktopTaskCard> {
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
               color: isDark ? Colors.white.withValues(alpha: 0.06) : AppColors.desktopBorderLight,
-              width: 1,
             ),
             boxShadow: [
               BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 6, offset: const Offset(0, 2)),
@@ -923,7 +915,6 @@ class _DesktopTaskCardState extends State<_DesktopTaskCard> {
                         imageUrl: task.firstImage!,
                         width: double.infinity,
                         height: double.infinity,
-                        fit: BoxFit.cover,
                         memCacheWidth: 360,
                         memCacheHeight: 270,
                       )
@@ -1132,10 +1123,7 @@ class _SkeletonHorizontalCards extends StatelessWidget {
     if (isDesktop) {
       return const SkeletonGrid(
         crossAxisCount: 3,
-        itemCount: 6,
         aspectRatio: 0.82,
-        imageFlex: 5,
-        contentFlex: 3,
       );
     }
 

@@ -198,7 +198,6 @@ class _ApplyLeaderboardViewState extends State<ApplyLeaderboardView> {
                   xFile: _coverImage!,
                   width: double.infinity,
                   height: 180,
-                  fit: BoxFit.cover,
                 ),
               ),
               Positioned(
@@ -261,7 +260,6 @@ class _ApplyLeaderboardViewState extends State<ApplyLeaderboardView> {
                   color: isDark
                       ? Colors.white.withValues(alpha: 0.12)
                       : AppColors.separatorLight.withValues(alpha: 0.5),
-                  style: BorderStyle.solid,
                 ),
               ),
               child: Column(

@@ -25,7 +25,6 @@ class QRCodeGenerator {
   }) {
     return QrImageView(
       data: data,
-      version: QrVersions.auto,
       size: size,
       errorCorrectionLevel: errorCorrectionLevel,
       eyeStyle: QrEyeStyle(

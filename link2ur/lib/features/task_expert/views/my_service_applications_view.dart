@@ -75,7 +75,7 @@ class _MyServiceApplicationsViewState extends State<MyServiceApplicationsView>
     });
 
     try {
-      final response = await repo.getMyActivities(type: 'all');
+      final response = await repo.getMyActivities();
       if (!mounted) return;
 
       final all = response.activities;

@@ -209,7 +209,6 @@ class _TaskChatContentState extends State<_TaskChatContent> {
                   onTaskDetail: () {
                     context.safePush('/tasks/${widget.taskId}');
                   },
-                  onViewLocation: null,
                 ),
 
               // 输入区域
@@ -408,7 +407,6 @@ class _TaskChatContentState extends State<_TaskChatContent> {
             FullScreenImageView.show(
               context,
               images: [url],
-              initialIndex: 0,
             );
           },
         );
@@ -489,7 +487,7 @@ class _TaskChatContentState extends State<_TaskChatContent> {
                 if (state.isSending)
                   const Padding(
                     padding: EdgeInsets.all(8.0),
-                    child: LoadingIndicator(size: 24),
+                    child: LoadingIndicator(),
                   )
                 else
                   ValueListenableBuilder<TextEditingValue>(

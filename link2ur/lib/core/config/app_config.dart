@@ -39,7 +39,7 @@ class AppConfig {
   /// 通过 --dart-define=MOBILE_APP_SECRET=xxx 传入；不传则不发签名，后端会 fallback 会话验证但打 WARNING。
   /// 构建说明见：link2ur/docs/mobile-app-secret.md
   static String get mobileAppSecret =>
-      const String.fromEnvironment('MOBILE_APP_SECRET', defaultValue: '');
+      const String.fromEnvironment('MOBILE_APP_SECRET');
 
   /// Stripe公钥
   String get stripePublishableKey {
@@ -48,12 +48,10 @@ class AppConfig {
       case AppEnvironment.staging:
         return const String.fromEnvironment(
           'STRIPE_PUBLISHABLE_KEY_TEST',
-          defaultValue: '',
         );
       case AppEnvironment.production:
         return const String.fromEnvironment(
           'STRIPE_PUBLISHABLE_KEY_LIVE',
-          defaultValue: '',
         );
     }
   }

@@ -243,7 +243,6 @@ class CouponPointsBloc extends Bloc<CouponPointsEvent, CouponPointsState> {
   ) async {
     try {
       final transactions = await _repository.getPointsTransactions(
-        page: 1,
         type: event.type,
       );
 

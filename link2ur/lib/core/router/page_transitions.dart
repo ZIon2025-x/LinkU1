@@ -263,7 +263,6 @@ class ContainerTransformPage<T> extends CustomTransitionPage<T> {
               opacity: fadeAnimation,
               child: ScaleTransition(
                 scale: scaleAnimation,
-                alignment: Alignment.center,
                 child: ClipRRect(
                   borderRadius:
                       BorderRadius.circular(radiusAnimation.value),

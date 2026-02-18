@@ -637,7 +637,6 @@ class _ApplicationItem extends StatelessWidget {
                 AvatarView(
                   imageUrl: application.applicantAvatar,
                   name: application.applicantName,
-                  size: 40,
                 ),
                 const SizedBox(width: AppSpacing.sm),
                 Expanded(
@@ -873,7 +872,6 @@ class _ReviewItem extends StatelessWidget {
                 rating: review.rating,
                 size: 14,
                 spacing: 2,
-                allowHalfRating: true,
               ),
               if (review.createdAt != null) ...[
                 const SizedBox(width: AppSpacing.sm),
@@ -1081,7 +1079,6 @@ class TaskActionButtonsView extends StatelessWidget {
           child: PrimaryButton(
             text: context.l10n.taskDetailWaitingPosterConfirm,
             icon: Icons.access_time,
-            onPressed: null,
           ),
         );
       }
@@ -1097,7 +1094,6 @@ class TaskActionButtonsView extends StatelessWidget {
           child: PrimaryButton(
             text: context.l10n.taskDetailWaitingPosterConfirm,
             icon: Icons.access_time,
-            onPressed: null,
           ),
         );
       }
@@ -1106,7 +1102,6 @@ class TaskActionButtonsView extends StatelessWidget {
         child: PrimaryButton(
           text: context.l10n.taskDetailAlreadyApplied,
           icon: Icons.check_circle,
-          onPressed: null,
         ),
       );
     }
@@ -1409,7 +1404,6 @@ class TaskActionButtonsView extends StatelessWidget {
         child: PrimaryButton(
           text: context.l10n.taskDetailTaskAlreadyReviewed,
           icon: Icons.check_circle,
-          onPressed: null,
         ),
       );
     }
@@ -2250,9 +2244,9 @@ class RefundHistorySheet extends StatelessWidget {
                   ),
                 )
               else
-                Flexible(
+                SizedBox(
+                  height: (MediaQuery.sizeOf(context).height * 0.5).clamp(200.0, 400.0),
                   child: ListView.separated(
-                    shrinkWrap: true,
                     itemCount: state.refundHistory.length,
                     separatorBuilder: (_, __) =>
                         const SizedBox(height: 10),

@@ -937,7 +937,6 @@ class _LeaderboardCard extends StatelessWidget {
                         imageUrl: leaderboard.coverImage,
                         width: 90,
                         height: 90,
-                        fit: BoxFit.cover,
                         borderRadius: BorderRadius.circular(14),
                         errorWidget: _buildPlaceholderIcon(colors),
                       )

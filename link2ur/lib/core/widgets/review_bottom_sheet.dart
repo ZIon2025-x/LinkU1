@@ -84,7 +84,6 @@ class _ReviewBottomSheetState extends State<ReviewBottomSheet> {
                 size: 36,
                 spacing: 6,
                 activeColor: const Color(0xFFFFB300),
-                allowHalfRating: true,
                 onRatingChanged: _isSubmitting
                     ? null
                     : (v) => setState(() {

@@ -325,7 +325,7 @@ class SettingsBloc extends Bloc<SettingsEvent, SettingsState> {
     Emitter<SettingsState> emit,
   ) async {
     try {
-      emit(state.copyWith(isDeletingAccount: true, deleteAccountError: null));
+      emit(state.copyWith(isDeletingAccount: true));
 
       if (apiService != null) {
         await apiService!.delete('/api/users/me');

@@ -65,6 +65,7 @@ class _AIChatListContent extends StatelessWidget {
             itemBuilder: (context, index) {
               final conv = state.conversations[index];
               return _ConversationTile(
+                key: ValueKey(conv.id),
                 conversation: conv,
                 onTap: () => context.push('/ai-chat/${conv.id}'),
                 onDelete: () {
@@ -83,6 +84,7 @@ class _AIChatListContent extends StatelessWidget {
 
 class _ConversationTile extends StatelessWidget {
   const _ConversationTile({
+    super.key,
     required this.conversation,
     required this.onTap,
     required this.onDelete,

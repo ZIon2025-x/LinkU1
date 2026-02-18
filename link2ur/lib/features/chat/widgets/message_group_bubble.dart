@@ -380,7 +380,6 @@ class _SystemMessageBubble extends StatelessWidget {
               imageUrl: url,
               width: 80,
               height: 80,
-              fit: BoxFit.cover,
             ),
           ),
         );
@@ -560,7 +559,6 @@ class _GroupBubbleItemState extends State<_GroupBubbleItem>
                 imageUrl: displayUrl,
                 width: 200,
                 height: 200,
-                fit: BoxFit.cover,
                 borderRadius: borderRadius,
               ),
             ),

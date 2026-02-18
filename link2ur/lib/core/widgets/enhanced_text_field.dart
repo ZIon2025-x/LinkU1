@@ -237,7 +237,6 @@ class _EnhancedTextFieldState extends State<EnhancedTextField>
                         : (isDark
                             ? AppColors.dividerDark
                             : AppColors.dividerLight),
-                    width: 1,
                   ),
                 ),
                 focusedBorder: OutlineInputBorder(
@@ -253,7 +252,6 @@ class _EnhancedTextFieldState extends State<EnhancedTextField>
                   borderRadius: AppRadius.allMedium,
                   borderSide: const BorderSide(
                     color: AppColors.error,
-                    width: 1,
                   ),
                 ),
               ),

@@ -136,7 +136,7 @@ class _MyPostsViewState extends State<MyPostsView>
     setState(() => _favoriteLoading = true);
     try {
       final repo = context.read<FleaMarketRepository>();
-      final response = await repo.getFavoriteItems(page: 1, pageSize: 100);
+      final response = await repo.getFavoriteItems(pageSize: 100);
       if (mounted) {
         setState(() {
           _favoriteItems = response.items;
@@ -269,6 +269,7 @@ class _MyPostsViewState extends State<MyPostsView>
         itemBuilder: (context, index) {
           final item = items[index];
           return AnimatedListItem(
+            key: ValueKey(item.id),
             index: index,
             child: _FleaMarketItemCard(
               item: item,

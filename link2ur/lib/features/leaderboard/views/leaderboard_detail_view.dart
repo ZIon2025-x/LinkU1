@@ -360,7 +360,6 @@ class _SortFilterRow extends StatelessWidget {
                     color: isActive
                         ? AppColors.primary
                         : AppColors.textTertiaryLight.withValues(alpha: 0.3),
-                    width: 1,
                   ),
                 ),
                 child: Text(
@@ -401,7 +400,6 @@ class _HeroSection extends StatelessWidget {
               imageUrl: leaderboard.coverImage!,
               width: double.infinity,
               height: 240,
-              fit: BoxFit.cover,
             )
           else
             Container(
@@ -644,7 +642,6 @@ class _RankItemCard extends StatelessWidget {
                       imageUrl: item.firstImage!,
                       width: 64,
                       height: 64,
-                      fit: BoxFit.cover,
                     ),
                   )
                 : const Icon(Icons.image,
@@ -679,7 +676,6 @@ class _RankItemCard extends StatelessWidget {
                   upvotes: item.upvotes,
                   downvotes: item.downvotes,
                   height: 5,
-                  showLabels: true,
                 ),
               ],
             ),

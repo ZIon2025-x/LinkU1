@@ -98,7 +98,7 @@ class _PostLinkSearchDialogContentState extends State<_PostLinkSearchDialogConte
     if (q.trim().isEmpty) return;
     setState(() => _loading = true);
     try {
-      final list = await widget.discoveryRepo.searchLinkableContent(query: q.trim(), type: 'all');
+      final list = await widget.discoveryRepo.searchLinkableContent(query: q.trim());
       if (mounted) {
         setState(() {
           _results = list;
@@ -117,7 +117,6 @@ class _PostLinkSearchDialogContentState extends State<_PostLinkSearchDialogConte
     return SizedBox(
       height: height,
       child: ListView.builder(
-        shrinkWrap: true,
         itemCount: list.length,
         itemBuilder: (context, i) {
           final r = list[i];
@@ -495,7 +494,7 @@ class _PublishContentState extends State<_PublishContent>
     } else if (mounted) {
       // 只选了日期未选时间时，使用 12:00
       setState(() {
-        _taskDeadline = DateTime(date.year, date.month, date.day, 12, 0);
+        _taskDeadline = DateTime(date.year, date.month, date.day, 12);
       });
     }
   }
@@ -1486,7 +1485,7 @@ class _PublishContentState extends State<_PublishContent>
             children: [
               ClipRRect(
                 borderRadius: AppRadius.allSmall,
-                child: CrossPlatformImage(xFile: entry.value, width: 80, height: 80, fit: BoxFit.cover),
+                child: CrossPlatformImage(xFile: entry.value, width: 80, height: 80),
               ),
               Positioned(
                 top: -4,
@@ -1554,7 +1553,7 @@ class _PublishContentState extends State<_PublishContent>
             children: [
               ClipRRect(
                 borderRadius: AppRadius.allSmall,
-                child: CrossPlatformImage(xFile: entry.value, width: 80, height: 80, fit: BoxFit.cover),
+                child: CrossPlatformImage(xFile: entry.value, width: 80, height: 80),
               ),
               Positioned(
                 top: -4,
@@ -1622,7 +1621,7 @@ class _PublishContentState extends State<_PublishContent>
             children: [
               ClipRRect(
                 borderRadius: AppRadius.allSmall,
-                child: CrossPlatformImage(xFile: entry.value, width: 80, height: 80, fit: BoxFit.cover),
+                child: CrossPlatformImage(xFile: entry.value, width: 80, height: 80),
               ),
               Positioned(
                 top: -4,

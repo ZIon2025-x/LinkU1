@@ -533,7 +533,6 @@ class _PostCard extends StatelessWidget {
                 aspectRatio: 4 / 3,
                 child: AsyncImageView(
                   imageUrl: item.firstImage!,
-                  fit: BoxFit.cover,
                   memCacheWidth: 360,
                   memCacheHeight: 270,
                 ),
@@ -680,7 +679,6 @@ class _ProductCard extends StatelessWidget {
                 aspectRatio: 1,
                 child: AsyncImageView(
                   imageUrl: item.firstImage!,
-                  fit: BoxFit.cover,
                   memCacheWidth: 300,
                   memCacheHeight: 300,
                 ),
@@ -1075,7 +1073,6 @@ class _RankingCard extends StatelessWidget {
                 aspectRatio: 16 / 9,
                 child: AsyncImageView(
                   imageUrl: item.firstImage!,
-                  fit: BoxFit.cover,
                   memCacheWidth: 360,
                   memCacheHeight: 202,
                 ),
@@ -1204,7 +1201,6 @@ class _ServiceCard extends StatelessWidget {
                 aspectRatio: 4 / 3,
                 child: AsyncImageView(
                   imageUrl: item.firstImage!,
-                  fit: BoxFit.cover,
                   memCacheWidth: 360,
                   memCacheHeight: 270,
                 ),
@@ -1232,7 +1228,6 @@ class _ServiceCard extends StatelessWidget {
                   const SizedBox(height: 8),
                   // 底部一行：左下角达人头像+名字，右下角金额+评分
                   Row(
-                    crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
                       Expanded(
                         child: _DiscoveryUserRow(
@@ -1461,7 +1456,6 @@ class _TargetItemTag extends StatelessWidget {
                 height: 28,
                 child: AsyncImageView(
                   imageUrl: target.thumbnail!,
-                  fit: BoxFit.cover,
                   memCacheWidth: 84,
                   memCacheHeight: 84,
                 ),

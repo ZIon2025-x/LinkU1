@@ -259,7 +259,6 @@ class LeaderboardBloc extends Bloc<LeaderboardEvent, LeaderboardState> {
 
     try {
       final response = await _leaderboardRepository.getLeaderboards(
-        page: 1,
         keyword: event.category,
       );
 
@@ -309,7 +308,6 @@ class LeaderboardBloc extends Bloc<LeaderboardEvent, LeaderboardState> {
   ) async {
     try {
       final response = await _leaderboardRepository.getLeaderboards(
-        page: 1,
         keyword: state.selectedCategory,
       );
 
@@ -432,7 +430,6 @@ class LeaderboardBloc extends Bloc<LeaderboardEvent, LeaderboardState> {
             ? item.netVotes - 1
             : item.netVotes + 1,
         voteScore: item.voteScore,
-        userVote: null,
         createdAt: item.createdAt,
         updatedAt: item.updatedAt,
       );
@@ -519,7 +516,7 @@ class LeaderboardBloc extends Bloc<LeaderboardEvent, LeaderboardState> {
     LeaderboardApplyRequested event,
     Emitter<LeaderboardState> emit,
   ) async {
-    emit(state.copyWith(isSubmitting: true, actionMessage: null));
+    emit(state.copyWith(isSubmitting: true));
 
     try {
       // 如果有封面图片，先上传获取 URL
@@ -554,7 +551,7 @@ class LeaderboardBloc extends Bloc<LeaderboardEvent, LeaderboardState> {
     LeaderboardSubmitItem event,
     Emitter<LeaderboardState> emit,
   ) async {
-    emit(state.copyWith(isSubmitting: true, actionMessage: null));
+    emit(state.copyWith(isSubmitting: true));
 
     try {
       await _leaderboardRepository.submitItem(

@@ -195,7 +195,6 @@ Widget _buildLogoutButton(BuildContext context, bool isDark) {
           borderRadius: AppRadius.allLarge,
           border: Border.all(
             color: AppColors.error.withValues(alpha: 0.2),
-            width: 1,
           ),
         ),
         child: Row(

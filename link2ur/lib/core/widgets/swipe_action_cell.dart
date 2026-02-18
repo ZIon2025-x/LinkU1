@@ -162,7 +162,6 @@ class SwipeActionCellState extends State<SwipeActionCell>
               final shift = _animation.value * _totalShift;
 
               return Stack(
-                clipBehavior: Clip.hardEdge,
                 children: [
                   // ── 主内容：向左平移 ──
                   Transform.translate(

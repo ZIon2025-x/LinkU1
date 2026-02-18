@@ -118,7 +118,6 @@ class _ShimmerWrap extends StatelessWidget {
     return Shimmer.fromColors(
       baseColor: isDark ? Colors.grey[800]! : AppColors.skeletonBase,
       highlightColor: isDark ? Colors.grey[700]! : AppColors.skeletonHighlight,
-      period: const Duration(milliseconds: 1500),
       child: child,
     );
   }
@@ -429,7 +428,7 @@ class SkeletonDetail extends StatelessWidget {
             // 标题
             _Line(width: double.infinity, height: 24),
             AppSpacing.vSm,
-            _Line(width: 200, height: 16),
+            _Line(width: 200),
             AppSpacing.vLg,
             // 内容段落
             _Line(width: double.infinity),
@@ -448,7 +447,7 @@ class SkeletonDetail extends StatelessWidget {
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _Line(width: 100, height: 16),
+                    _Line(width: 100),
                     SizedBox(height: 4),
                     _Line(width: 60, height: 12),
                   ],
@@ -486,7 +485,7 @@ class SkeletonPostDetail extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        _Line(width: 100, height: 16),
+                        _Line(width: 100),
                         SizedBox(height: 6),
                         _Line(width: 70, height: 12),
                       ],
@@ -720,7 +719,7 @@ class SkeletonFleaMarketDetail extends StatelessWidget {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                _Line(width: 100, height: 16),
+                                _Line(width: 100),
                                 SizedBox(height: 6),
                                 _Line(width: 140, height: 12),
                               ],
@@ -772,7 +771,7 @@ class SkeletonLeaderboardDetail extends StatelessWidget {
                     children: [
                       _Line(width: 200, height: 28),
                       SizedBox(height: 8),
-                      _Line(width: 140, height: 16),
+                      _Line(width: 140),
                     ],
                   ),
                 ),
@@ -893,7 +892,7 @@ class _SkeletonRankItem extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _Line(width: 140, height: 16),
+                _Line(width: 140),
                 SizedBox(height: 6),
                 _Line(width: 100, height: 12),
               ],
