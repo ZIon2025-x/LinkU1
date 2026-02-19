@@ -681,10 +681,9 @@ def check_expired_payment_tasks(db: Session):
                             send_push_notification(
                                 db=db,
                                 user_id=task.poster_id,
-                                title="任务支付已过期",
-                                body=f'您的任务"{task.title}"因支付超时已自动取消',
                                 notification_type="task_cancelled",
-                                data={"task_id": task.id, "reason": "payment_expired"}
+                                data={"task_id": task.id, "reason": "payment_expired"},
+                                template_vars={"task_title": task.title, "task_id": task.id}
                             )
                         except Exception as e:
                             logger.warning(f"发送支付过期取消推送通知失败（任务 {task.id}，用户 {task.poster_id}）: {e}")
@@ -711,10 +710,9 @@ def check_expired_payment_tasks(db: Session):
                             send_push_notification(
                                 db=db,
                                 user_id=task.taker_id,
-                                title="任务已取消",
-                                body=f'您接受的任务"{task.title}"因支付超时已自动取消',
                                 notification_type="task_cancelled",
-                                data={"task_id": task.id, "reason": "payment_expired"}
+                                data={"task_id": task.id, "reason": "payment_expired"},
+                                template_vars={"task_title": task.title, "task_id": task.id}
                             )
                         except Exception as e:
                             logger.warning(f"发送支付过期取消推送通知失败（任务 {task.id}，用户 {task.taker_id}）: {e}")

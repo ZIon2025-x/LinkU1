@@ -1002,8 +1002,14 @@ async def send_task_message(
                         # WebSocket发送失败，说明用户不在app中，需要发送推送通知
                         logger.debug(f"Task message WebSocket failed for participant {participant_id} (user is not in app, sending push notification)")
                         try:
-                            # 截取消息内容（最多50个字符）
-                            message_preview = new_message.content[:50] + ("..." if len(new_message.content) > 50 else "")
+                            # 截取消息内容（最多50个字符），图片/附件等无文本内容时使用描述性占位
+                            raw_content = (new_message.content or "").strip()
+                            if raw_content:
+                                message_preview = raw_content[:50] + ("..." if len(raw_content) > 50 else "")
+                            elif getattr(new_message, 'message_type', 'normal') == 'image':
+                                message_preview = "[图片]"
+                            else:
+                                message_preview = None  # 由 get_push_notification_text 使用兜底文案
                             send_push_notification_async_safe(
                                 async_db=db,
                                 user_id=participant_id,
@@ -2943,8 +2949,8 @@ async def send_application_message(
             # 如果是议价通知，添加议价金额
             if notification_type == "negotiation_offer" and request.negotiated_price is not None:
                 template_vars["negotiated_price"] = float(request.negotiated_price)
-            elif notification_type == "application_message" and request.message:
-                template_vars["message"] = request.message
+            elif notification_type == "application_message":
+                template_vars["message"] = (request.message or "").strip() or None  # 空时传 None，由模板使用兜底文案
             
             send_push_notification_async_safe(
                 async_db=db,

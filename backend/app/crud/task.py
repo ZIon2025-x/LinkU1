@@ -530,10 +530,9 @@ def cancel_task(
         send_push_notification(
             db=db,
             user_id=task.poster_id,
-            title="任务已取消",
-            body=f'您的任务"{task.title}"已被取消',
             notification_type="task_cancelled",
             data={"task_id": task.id},
+            template_vars={"task_title": task.title, "task_id": task.id},
         )
     except Exception as e:
         logger.warning(f"发送任务取消推送通知失败（发布者）: {e}")
@@ -553,10 +552,9 @@ def cancel_task(
             send_push_notification(
                 db=db,
                 user_id=task.taker_id,
-                title="任务已取消",
-                body=f'您接受的任务"{task.title}"已被取消',
                 notification_type="task_cancelled",
                 data={"task_id": task.id},
+                template_vars={"task_title": task.title, "task_id": task.id},
             )
         except Exception as e:
             logger.warning(f"发送任务取消推送通知失败（接受者）: {e}")

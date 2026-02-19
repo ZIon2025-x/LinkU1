@@ -1963,10 +1963,9 @@ def reject_task_taker(
                 send_push_notification(
                     db=db,
                     user_id=rejected_taker_id,
-                    title="任务申请被拒绝",
-                    body=f"您的任务申请 '{db_task.title}' 已被发布者拒绝，任务已重新开放",
                     notification_type="task_rejected",
-                    data={"task_id": task_id}
+                    data={"task_id": task_id},
+                    template_vars={"task_title": db_task.title, "task_id": task_id}
                 )
             except Exception as e:
                 logger.warning(f"发送任务拒绝推送通知失败: {e}")
@@ -4003,10 +4002,9 @@ def confirm_task_completion(
                                 send_push_notification(
                                     db=db,
                                     user_id=task.taker_id,
-                                    title="活动奖励积分已发放",
-                                    body=f"您完成活动「{activity.title}」的任务，获得 {points_to_give} 积分奖励",
                                     notification_type="activity_reward_points",
-                                    data={"activity_id": task.parent_activity_id, "task_id": task_id, "points": points_to_give}
+                                    data={"activity_id": task.parent_activity_id, "task_id": task_id, "points": points_to_give},
+                                    template_vars={"activity_title": activity.title, "points": points_to_give}
                                 )
                             except Exception as e:
                                 logger.warning(f"发送活动奖励积分推送通知失败: {e}")
@@ -4099,10 +4097,9 @@ def confirm_task_completion(
                                             send_push_notification(
                                                 db=db,
                                                 user_id=task.taker_id,
-                                                title="活动现金奖励已发放",
-                                                body=f"您完成活动「{activity.title}」的任务，获得 £{cash_amount:.2f} 现金奖励",
                                                 notification_type="activity_reward_cash",
-                                                data={"activity_id": task.parent_activity_id, "task_id": task_id, "amount": cash_amount}
+                                                data={"activity_id": task.parent_activity_id, "task_id": task_id, "amount": cash_amount},
+                                                template_vars={"activity_title": activity.title, "amount": cash_amount}
                                             )
                                         except Exception as e:
                                             logger.warning(f"发送活动现金奖励推送通知失败: {e}")
@@ -7194,10 +7191,9 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
                                 send_push_notification(
                                     db=db,
                                     user_id=transfer_record.taker_id,
-                                    title="任务金已发放",
-                                    body=notification_content,
                                     notification_type="task_reward_paid",
-                                    data={"task_id": task.id, "amount": str(transfer_record.amount)}
+                                    data={"task_id": task.id, "amount": str(transfer_record.amount)},
+                                    template_vars={"task_title": task.title, "task_id": task.id}
                                 )
                             except Exception as e:
                                 logger.warning(f"发送任务金发放推送通知失败: {e}")
@@ -8940,10 +8936,9 @@ def cs_review_cancel_request(
                 send_push_notification(
                     db=db,
                     user_id=cancel_request.requester_id,
-                    title="取消请求已通过",
-                    body=f'您的任务 "{task.title}" 取消请求已通过审核',
                     notification_type="cancel_request_approved",
-                    data={"task_id": task.id}
+                    data={"task_id": task.id},
+                    template_vars={"task_title": task.title, "task_id": task.id}
                 )
             except Exception as e:
                 logger.warning(f"发送取消请求通过推送通知失败: {e}")
@@ -8970,10 +8965,9 @@ def cs_review_cancel_request(
                     send_push_notification(
                         db=db,
                         user_id=other_user_id,
-                        title="任务已取消",
-                        body=f'任务 "{task.title}" 已被取消',
                         notification_type="task_cancelled",
-                        data={"task_id": task.id}
+                        data={"task_id": task.id},
+                        template_vars={"task_title": task.title, "task_id": task.id}
                     )
                 except Exception as e:
                     logger.warning(f"发送任务取消推送通知失败: {e}")
@@ -8997,10 +8991,9 @@ def cs_review_cancel_request(
                 send_push_notification(
                     db=db,
                     user_id=cancel_request.requester_id,
-                    title="取消请求被拒绝",
-                    body=f'您的任务 "{task.title}" 取消请求被拒绝，原因：{review.admin_comment or "无"}',
                     notification_type="cancel_request_rejected",
-                    data={"task_id": task.id}
+                    data={"task_id": task.id},
+                    template_vars={"task_title": task.title, "task_id": task.id}
                 )
             except Exception as e:
                 logger.warning(f"发送取消请求拒绝推送通知失败: {e}")
@@ -9338,8 +9331,6 @@ def activate_vip(
             send_push_notification(
                 db=db,
                 user_id=current_user.id,
-                title="VIP激活成功",
-                body=f"恭喜您成为VIP会员！现在可以享受所有VIP权益了。",
                 notification_type="vip_activated",
                 data={"type": "vip_activated", "subscription_id": subscription.id}
             )

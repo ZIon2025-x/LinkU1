@@ -3,6 +3,7 @@
 支持多语言的推送通知标题和内容
 """
 import logging
+import re
 
 logger = logging.getLogger(__name__)
 
@@ -429,7 +430,139 @@ PUSH_NOTIFICATION_TEMPLATES = {
             "body_template": "任务「{task_title}」将在{time_text}后到期，请及时关注任务进度。"
         }
     },
-    
+
+    # 任务取消
+    "task_cancelled": {
+        "en": {
+            "title": "Task Cancelled",
+            "body_template": "Task「{task_title}」has been cancelled"
+        },
+        "zh": {
+            "title": "任务已取消",
+            "body_template": "任务「{task_title}」已被取消"
+        }
+    },
+
+    # 退款申请
+    "refund_request": {
+        "en": {
+            "title": "💳 Refund Request",
+            "body_template": "{poster_name} requested a refund for「{task_title}」({reason_type})"
+        },
+        "zh": {
+            "title": "💳 退款申请",
+            "body_template": "{poster_name} 对「{task_title}」发起了退款申请（{reason_type}）"
+        }
+    },
+
+    # 取消请求通过
+    "cancel_request_approved": {
+        "en": {
+            "title": "✅ Cancel Request Approved",
+            "body_template": "Your cancel request for「{task_title}」has been approved"
+        },
+        "zh": {
+            "title": "✅ 取消请求已通过",
+            "body_template": "您对「{task_title}」的取消请求已通过审核"
+        }
+    },
+
+    # 取消请求被拒绝
+    "cancel_request_rejected": {
+        "en": {
+            "title": "Cancel Request Rejected",
+            "body_template": "Your cancel request for「{task_title}」has been rejected"
+        },
+        "zh": {
+            "title": "取消请求被拒绝",
+            "body_template": "您对「{task_title}」的取消请求被拒绝"
+        }
+    },
+
+    # 活动奖励积分
+    "activity_reward_points": {
+        "en": {
+            "title": "🎉 Activity Reward",
+            "body_template": "You earned {points} points for completing activity「{activity_title}」"
+        },
+        "zh": {
+            "title": "🎉 活动奖励",
+            "body_template": "您完成活动「{activity_title}」的任务，获得 {points} 积分奖励"
+        }
+    },
+
+    # 活动现金奖励
+    "activity_reward_cash": {
+        "en": {
+            "title": "💰 Cash Reward",
+            "body_template": "You earned £{amount:.2f} for completing activity「{activity_title}」"
+        },
+        "zh": {
+            "title": "💰 现金奖励",
+            "body_template": "您完成活动「{activity_title}」的任务，获得 £{amount:.2f} 现金奖励"
+        }
+    },
+
+    # 任务奖励已支付
+    "task_reward_paid": {
+        "en": {
+            "title": "💰 Reward Paid",
+            "body_template": "The reward for task「{task_title}」has been paid to your account"
+        },
+        "zh": {
+            "title": "💰 任务金已发放",
+            "body_template": "任务「{task_title}」的报酬已发放到您的账户"
+        }
+    },
+
+    # VIP 激活
+    "vip_activated": {
+        "en": {
+            "title": "⭐ VIP Activated!",
+            "body_template": "Congratulations! You are now a VIP member. Enjoy all VIP benefits!"
+        },
+        "zh": {
+            "title": "⭐ VIP 已激活！",
+            "body_template": "恭喜您成为VIP会员！现在可以享受所有VIP权益了。"
+        }
+    },
+
+    # 论坛板块申请通过
+    "forum_category_approved": {
+        "en": {
+            "title": "✅ Category Approved",
+            "body_template": "Your forum category application「{category_name}」has been approved!"
+        },
+        "zh": {
+            "title": "✅ 板块申请已通过",
+            "body_template": "您申请的板块「{category_name}」已通过审核！"
+        }
+    },
+
+    # 论坛板块申请被拒绝
+    "forum_category_rejected": {
+        "en": {
+            "title": "Category Application Rejected",
+            "body_template": "Your forum category application「{category_name}」was not approved"
+        },
+        "zh": {
+            "title": "板块申请未通过",
+            "body_template": "很抱歉，您申请的板块「{category_name}」未通过审核"
+        }
+    },
+
+    # 确认完成提醒
+    "confirmation_reminder": {
+        "en": {
+            "title": "⏰ Confirmation Reminder",
+            "body_template": "Task「{task_title}」is awaiting your confirmation ({hours_remaining}h remaining)"
+        },
+        "zh": {
+            "title": "⏰ 确认提醒",
+            "body_template": "任务「{task_title}」等待您确认完成（剩余 {hours_remaining} 小时）"
+        }
+    },
+
     # 通用通知
     "general": {
         "en": {
@@ -444,6 +577,18 @@ PUSH_NOTIFICATION_TEMPLATES = {
 }
 
 
+_TEMPLATE_VAR_RE = re.compile(r"\{(\w+)(?:[^}]*)?\}")
+
+_NOTIFICATION_FALLBACK = {
+    "zh": "您有一条新通知",
+    "en": "You have a new notification",
+}
+_MESSAGE_FALLBACK = {
+    "zh": "您有一条新消息",
+    "en": "You have a new message",
+}
+
+
 def get_push_notification_text(
     notification_type: str,
     language: str = "en",
@@ -451,47 +596,61 @@ def get_push_notification_text(
 ) -> tuple[str, str]:
     """
     获取推送通知的标题和内容（根据语言）
-    
+
     Args:
         notification_type: 通知类型（如 "task_application", "task_completed" 等）
         language: 语言代码（"en" 或 "zh"）
         **kwargs: 模板变量（如 applicant_name, task_title 等）
-    
+
     Returns:
         tuple: (title, body) 推送通知的标题和内容
     """
-    # 默认使用英文
-    if language not in ["en", "zh"]:
+    if language not in ("en", "zh"):
         language = "en"
-    
-    # 获取模板
+
     templates = PUSH_NOTIFICATION_TEMPLATES.get(notification_type)
     if not templates:
-        # 如果没有找到对应的通知类型，使用通用模板
         templates = PUSH_NOTIFICATION_TEMPLATES.get("general", {})
-    
-    # 获取指定语言的模板
-    template = templates.get(language)
-    if not template:
-        # 如果指定语言不存在，回退到英文
-        template = templates.get("en", {"title": "Notification", "body_template": "{message}"})
-    
-    # 格式化标题和内容
+
+    template = templates.get(language) or templates.get("en", {
+        "title": "Notification",
+        "body_template": "{message}",
+    })
+
     title = template.get("title", "Notification")
     body_template = template.get("body_template", "{message}")
-    
-    # 如果 body_template 中没有变量，直接返回
+
+    # ---- 预填缺失 / 空白的模板变量 ----
+    kwargs = dict(kwargs)  # 避免修改原始 dict
+
+    # {message} 特殊处理：空/None 时使用友好文案
+    if "{message}" in body_template:
+        msg = kwargs.get("message")
+        if msg is None or (isinstance(msg, str) and not msg.strip()):
+            kwargs["message"] = _MESSAGE_FALLBACK[language]
+
+    # 检查模板所需的所有变量，为缺失的变量填入空字符串避免 KeyError
+    required_vars = set(_TEMPLATE_VAR_RE.findall(body_template))
+    for var in required_vars:
+        if var not in kwargs:
+            kwargs[var] = ""
+
+    # ---- 格式化 ----
     try:
         body = body_template.format(**kwargs)
-    except KeyError as e:
-        # 如果缺少必需的变量，使用默认值
-        logger.warning(f"Missing template variable {e} for notification type {notification_type}")
-        # 尝试使用 message 作为后备
-        if "message" in kwargs:
+    except (KeyError, ValueError, IndexError) as e:
+        logger.warning(
+            f"Template format error for notification_type={notification_type}: {e}"
+        )
+        if kwargs.get("message"):
             body = kwargs["message"]
         else:
-            body = body_template
-    
+            body = _NOTIFICATION_FALLBACK[language]
+
+    # 最终安全检查：空正文兜底
+    if not body or not body.strip():
+        body = _NOTIFICATION_FALLBACK[language]
+
     return title, body
 
 
