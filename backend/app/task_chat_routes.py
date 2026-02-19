@@ -808,16 +808,16 @@ async def send_task_message(
                 detail="无权限发送消息"
             )
         
-        # 任务状态检查
-        can_send_normal = (task.status == "in_progress" or task.taker_id is not None)
-        can_send_prenote = (task.status == "open" and is_poster)
-        
-        if not can_send_normal and not can_send_prenote:
+        # 任务状态检查：仅拒绝「已结束」状态（已完成、已取消、已关闭、已过期），其余状态（含待确认、待支付、进行中等）均可发
+        _ended_statuses = ("completed", "cancelled", "closed", "expired")
+        if task.status in _ended_statuses:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail="当前任务状态不允许发送消息"
+                detail="任务已结束，无法发送消息"
             )
-        
+        # 说明类消息（任务开始前说明）仅允许在 open 且为发布者时发送
+        can_send_prenote = task.status == "open" and is_poster
+
         # 如果是说明类消息，检查频率限制
         is_prenote = False
         if request.meta and request.meta.get("is_prestart_note"):

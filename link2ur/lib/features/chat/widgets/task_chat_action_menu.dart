@@ -13,12 +13,14 @@ class TaskChatActionMenu extends StatelessWidget {
   const TaskChatActionMenu({
     super.key,
     required this.onImagePicker,
+    required this.onCameraPick,
     required this.onTaskDetail,
     this.onViewLocation,
     this.isExpanded = false,
   });
 
   final VoidCallback onImagePicker;
+  final VoidCallback onCameraPick;
   final VoidCallback onTaskDetail;
   final VoidCallback? onViewLocation;
   final bool isExpanded;
@@ -50,6 +52,13 @@ class TaskChatActionMenu extends StatelessWidget {
                 label: context.l10n.chatImageLabel,
                 color: AppColors.success,
                 onTap: onImagePicker,
+              ),
+              const SizedBox(width: AppSpacing.xl),
+              _ChatActionButton(
+                icon: Icons.camera_alt,
+                label: context.l10n.chatCameraLabel,
+                color: AppColors.primary,
+                onTap: onCameraPick,
               ),
               const SizedBox(width: AppSpacing.xl),
               _ChatActionButton(

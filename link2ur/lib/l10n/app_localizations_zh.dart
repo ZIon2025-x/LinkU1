@@ -4284,6 +4284,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get forumCreatePostPublishNow => '立即发布';
 
   @override
+  String get forumCreatePostImages => '图片';
+
+  @override
+  String get forumCreatePostAddImage => '添加图片';
+
+  @override
   String get fleaMarketCreatePublishing => '发布中...';
 
   @override
@@ -6299,6 +6305,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get chatImageLabel => '图片';
 
   @override
+  String get chatSendImageConfirmTitle => '发送图片';
+
+  @override
   String get chatCameraLabel => '拍照';
 
   @override
@@ -7642,6 +7651,27 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get publishSearchAndLink => '搜索并关联';
+
+  @override
+  String get publishRecentSectionTitle => '最近发布';
+
+  @override
+  String get publishTipsSectionTitle => '发布小贴士';
+
+  @override
+  String get publishRecentEmpty => '暂无最近发布';
+
+  @override
+  String get publishTip1 => '标题写清楚、写具体，更容易被看到、被接单';
+
+  @override
+  String get publishTip2 => '上传清晰实拍图，能提高浏览和成交率';
+
+  @override
+  String get publishTip3 => '报酬或价格写明确，减少沟通成本';
+
+  @override
+  String get publishTip4 => '选对分类，曝光更精准';
 
   @override
   String get profileUpdateFailed => '更新失败';
@@ -12475,6 +12505,12 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get forumCreatePostPublishNow => '立即發布';
 
   @override
+  String get forumCreatePostImages => '圖片';
+
+  @override
+  String get forumCreatePostAddImage => '添加圖片';
+
+  @override
   String get fleaMarketCreatePublishing => '發布中...';
 
   @override
@@ -14490,6 +14526,9 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get chatImageLabel => '圖片';
 
   @override
+  String get chatSendImageConfirmTitle => '發送圖片';
+
+  @override
   String get chatCameraLabel => '拍照';
 
   @override
@@ -15833,6 +15872,27 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get publishSearchAndLink => '搜尋並關聯';
+
+  @override
+  String get publishRecentSectionTitle => '最近發布';
+
+  @override
+  String get publishTipsSectionTitle => '發布小貼士';
+
+  @override
+  String get publishRecentEmpty => '暫無最近發布';
+
+  @override
+  String get publishTip1 => '標題寫清楚、寫具體，更容易被看到、被接單';
+
+  @override
+  String get publishTip2 => '上傳清晰實拍圖，能提高瀏覽和成交率';
+
+  @override
+  String get publishTip3 => '報酬或價格寫明確，減少溝通成本';
+
+  @override
+  String get publishTip4 => '選對分類，曝光更精準';
 
   @override
   String get profileUpdateFailed => '更新失敗';

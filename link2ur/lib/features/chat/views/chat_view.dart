@@ -13,6 +13,7 @@ import '../../../core/widgets/error_state_view.dart';
 import '../../../data/repositories/message_repository.dart';
 import '../../../data/services/storage_service.dart';
 import '../bloc/chat_bloc.dart';
+import '../widgets/image_send_confirm_dialog.dart';
 import '../widgets/message_group_bubble.dart';
 
 /// 私信聊天页
@@ -89,18 +90,22 @@ class _ChatContentState extends State<_ChatContent> {
     }
   }
 
+  /// 相册选图：使用系统多选界面，用户在相册内勾选后点「完成」确认，支持多选
+  static const int _kMaxGalleryImages = 9;
+
   Future<void> _pickImage() async {
-    final image = await _imagePicker.pickImage(
-      source: ImageSource.gallery,
+    final images = await _imagePicker.pickMultiImage(
       imageQuality: 80,
       maxWidth: 1200,
+      limit: _kMaxGalleryImages,
     );
-    if (image != null && mounted) {
-      context.read<ChatBloc>().add(
-            ChatSendImage(filePath: image.path),
-          );
-      setState(() => _showAttachMenu = false);
+    if (images.isEmpty || !mounted) return;
+    final toSend = images.take(_kMaxGalleryImages).where((f) => f.path.isNotEmpty).toList();
+    for (final file in toSend) {
+      if (!mounted) break;
+      context.read<ChatBloc>().add(ChatSendImage(filePath: file.path));
     }
+    if (mounted) setState(() => _showAttachMenu = false);
   }
 
   @override
@@ -241,7 +246,9 @@ class _ChatContentState extends State<_ChatContent> {
                 source: ImageSource.camera,
                 imageQuality: 80,
               );
-              if (image != null && mounted) {
+              if (image == null || !mounted) return;
+              final confirmed = await showImageSendConfirmDialog(context, image);
+              if (confirmed == true && mounted) {
                 context.read<ChatBloc>().add(
                       ChatSendImage(filePath: image.path),
                     );

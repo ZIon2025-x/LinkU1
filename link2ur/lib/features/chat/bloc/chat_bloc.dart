@@ -205,7 +205,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
 
     try {
       if (event.taskId != null) {
-        // 任务聊天：后端游标分页 limit + cursor
+        // 任务聊天：后端游标分页 limit + cursor，并写入任务状态用于 UI（进行中/已关闭、关闭提示条等）
         final result = await _messageRepository.getTaskChatMessages(
           event.taskId!,
         );
@@ -215,6 +215,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
           page: 1,
           hasMore: result.hasMore,
           nextCursor: result.nextCursor,
+          taskStatus: result.taskStatus,
         ));
       } else {
         // 私聊
@@ -260,10 +261,12 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
           cursor: state.nextCursor,
         );
         // 更早的消息追加到列表末尾（后端返回仍为 新→旧，所以 result.messages 是比当前 state.messages 更旧的一批）
+        // 若首屏未拿到 taskStatus，加载更多时也可补上
         emit(state.copyWith(
           messages: [...state.messages, ...result.messages],
           hasMore: result.hasMore,
           nextCursor: result.nextCursor,
+          taskStatus: result.taskStatus ?? state.taskStatus,
           isLoadingMore: false,
         ));
       } else {

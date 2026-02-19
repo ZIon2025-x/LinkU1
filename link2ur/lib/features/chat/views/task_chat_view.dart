@@ -3,7 +3,9 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 
+import '../../../core/constants/app_constants.dart';
 import '../../../core/design/app_colors.dart';
+import '../../../core/utils/task_type_helper.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_radius.dart';
 import '../../../core/utils/l10n_extension.dart';
@@ -12,9 +14,12 @@ import '../../../core/widgets/buttons.dart';
 import '../../../core/widgets/full_screen_image_view.dart';
 import '../../../core/widgets/loading_view.dart';
 import '../../../core/widgets/error_state_view.dart';
+import '../../../data/models/task.dart';
 import '../../../data/repositories/message_repository.dart';
+import '../../../data/repositories/task_repository.dart';
 import '../../../data/services/storage_service.dart';
 import '../bloc/chat_bloc.dart';
+import '../widgets/image_send_confirm_dialog.dart';
 import '../widgets/message_group_bubble.dart';
 import '../widgets/task_chat_action_menu.dart';
 
@@ -58,6 +63,10 @@ class _TaskChatContentState extends State<_TaskChatContent> {
   String? _currentUserId;
   bool _showActionMenu = false;
 
+  /// 任务标题用于 AppBar，加载一次
+  Future<Task?>? _taskFuture;
+  bool _taskFutureInitialized = false;
+
   /// 字符限制 - 对齐iOS (500字符)
   static const int _maxCharacters = 500;
   static const int _showCounterThreshold = 400;
@@ -68,6 +77,15 @@ class _TaskChatContentState extends State<_TaskChatContent> {
     _currentUserId = StorageService.instance.getUserId();
     _scrollController.addListener(_onScroll);
     _messageController.addListener(_onTextChanged);
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_taskFutureInitialized) {
+      _taskFutureInitialized = true;
+      _taskFuture = context.read<TaskRepository>().getTaskById(widget.taskId);
+    }
   }
 
   @override
@@ -114,18 +132,36 @@ class _TaskChatContentState extends State<_TaskChatContent> {
   }
 
 
+  /// 相册选图：使用系统多选界面，用户在相册内勾选后点「完成」确认，支持多选
+  static const int _kMaxGalleryImages = 9;
+
   Future<void> _pickImage() async {
+    final images = await _imagePicker.pickMultiImage(
+      imageQuality: 70,
+      maxWidth: 1200,
+      limit: _kMaxGalleryImages,
+    );
+    if (images.isEmpty || !mounted) return;
+    final toSend = images.take(_kMaxGalleryImages).where((f) => f.path.isNotEmpty).toList();
+    for (final file in toSend) {
+      if (!mounted) break;
+      context.read<ChatBloc>().add(ChatSendImage(filePath: file.path));
+    }
+    if (mounted) setState(() => _showActionMenu = false);
+  }
+
+  /// 拍照发送：拍完后弹出确认再发送
+  Future<void> _pickCameraImage() async {
     final image = await _imagePicker.pickImage(
-      source: ImageSource.gallery,
+      source: ImageSource.camera,
       imageQuality: 70,
       maxWidth: 1200,
     );
-    if (image != null && mounted) {
-      context.read<ChatBloc>().add(
-            ChatSendImage(filePath: image.path),
-          );
+    if (image == null || !mounted) return;
+    final confirmed = await showImageSendConfirmDialog(context, image);
+    if (confirmed == true && mounted) {
+      context.read<ChatBloc>().add(ChatSendImage(filePath: image.path));
       setState(() => _showActionMenu = false);
-      // reverse: true 模式下，新消息自动出现在 position 0
     }
   }
 
@@ -156,16 +192,20 @@ class _TaskChatContentState extends State<_TaskChatContent> {
         return Scaffold(
           backgroundColor: AppColors.backgroundFor(Theme.of(context).brightness),
           appBar: AppBar(
-            title: Text(context.l10n.chatTaskTitle(widget.taskId)),
+            title: FutureBuilder<Task?>(
+              future: _taskFuture,
+              builder: (context, snapshot) {
+                if (snapshot.hasData && snapshot.data != null) {
+                  return Text(
+                    snapshot.data!.displayTitle(Localizations.localeOf(context)),
+                    overflow: TextOverflow.ellipsis,
+                  );
+                }
+                return Text(context.l10n.chatTaskTitle(widget.taskId));
+              },
+            ),
             actions: [
-              // 任务详情按钮
-              IconButton(
-                icon: const Icon(Icons.info_outline),
-                onPressed: () {
-                  context.safePush('/tasks/${widget.taskId}');
-                },
-              ),
-              // 更多菜单 - 对齐iOS toolbar menu
+              // 更多菜单（含任务详情等）
               PopupMenuButton<String>(
                 onSelected: (value) {
                   if (value == 'task_detail') {
@@ -206,6 +246,7 @@ class _TaskChatContentState extends State<_TaskChatContent> {
                 TaskChatActionMenu(
                   isExpanded: _showActionMenu,
                   onImagePicker: _pickImage,
+                  onCameraPick: _pickCameraImage,
                   onTaskDetail: () {
                     context.safePush('/tasks/${widget.taskId}');
                   },
@@ -222,6 +263,11 @@ class _TaskChatContentState extends State<_TaskChatContent> {
 
 
   Widget _buildTaskInfoCard(ChatState state) {
+    final statusText = _taskStatusDisplayText(context, state.taskStatus, state.isTaskClosed);
+    final statusColor = state.isTaskClosed
+        ? AppColors.textTertiaryLight
+        : AppColors.success;
+
     return Container(
       padding: AppSpacing.allMd,
       decoration: BoxDecoration(
@@ -232,15 +278,20 @@ class _TaskChatContentState extends State<_TaskChatContent> {
       ),
       child: Row(
         children: [
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: AppColors.primary.withValues(alpha: 0.15),
-              borderRadius: AppRadius.allSmall,
-            ),
-            child:
-                const Icon(Icons.task_alt, color: AppColors.primary, size: 20),
+          FutureBuilder<Task?>(
+            future: _taskFuture,
+            builder: (context, snapshot) {
+              final icon = _taskCardIcon(snapshot.data);
+              return Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withValues(alpha: 0.15),
+                  borderRadius: AppRadius.allSmall,
+                ),
+                child: Icon(icon, color: AppColors.primary, size: 20),
+              );
+            },
           ),
           AppSpacing.hMd,
           Expanded(
@@ -250,18 +301,13 @@ class _TaskChatContentState extends State<_TaskChatContent> {
                 Text(
                   context.l10n.chatTaskTitle(widget.taskId),
                   style: const TextStyle(fontWeight: FontWeight.w600),
+                  overflow: TextOverflow.ellipsis,
+                  maxLines: 1,
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  state.isTaskClosed
-                      ? context.l10n.chatTaskClosed
-                      : context.l10n.chatInProgress,
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: state.isTaskClosed
-                        ? AppColors.textTertiaryLight
-                        : AppColors.success,
-                  ),
+                  statusText,
+                  style: TextStyle(fontSize: 12, color: statusColor),
                 ),
               ],
             ),
@@ -275,6 +321,57 @@ class _TaskChatContentState extends State<_TaskChatContent> {
         ],
       ),
     );
+  }
+
+  /// 任务信息卡片图标：按任务来源显示（达人服务/跳蚤市场/达人活动用各自 icon，普通任务用任务类型 icon）
+  IconData _taskCardIcon(Task? task) {
+    if (task == null) return Icons.task_alt;
+    final source = task.taskSource ?? AppConstants.taskSourceNormal;
+    switch (source) {
+      case AppConstants.taskSourceFleaMarket:
+        return Icons.shopping_bag;
+      case AppConstants.taskSourceExpertService:
+        return Icons.star;
+      case AppConstants.taskSourceExpertActivity:
+        return Icons.groups;
+      default:
+        return TaskTypeHelper.getIcon(task.taskType);
+    }
+  }
+
+  /// 根据 taskStatus 返回对应文案（与 AppConstants 及 l10n 对齐）
+  String _taskStatusDisplayText(
+    BuildContext context,
+    String? taskStatus,
+    bool isTaskClosed,
+  ) {
+    if (taskStatus == null || taskStatus.isEmpty) {
+      return isTaskClosed
+          ? context.l10n.chatTaskClosed
+          : context.l10n.chatInProgress;
+    }
+    final l10n = context.l10n;
+    switch (taskStatus) {
+      case AppConstants.taskStatusOpen:
+        return l10n.taskStatusOpen;
+      case AppConstants.taskStatusInProgress:
+        return l10n.taskStatusInProgress;
+      case AppConstants.taskStatusCompleted:
+        return l10n.taskStatusCompleted;
+      case AppConstants.taskStatusCancelled:
+        return l10n.taskStatusCancelled;
+      case AppConstants.taskStatusPendingConfirmation:
+        return l10n.taskStatusPendingConfirmation;
+      case AppConstants.taskStatusPendingPayment:
+        return l10n.taskStatusPendingPayment;
+      case AppConstants.taskStatusDisputed:
+        return l10n.taskStatusDisputed;
+      case 'expired':
+      case 'closed':
+        return l10n.chatTaskClosed;
+      default:
+        return isTaskClosed ? l10n.chatTaskClosed : l10n.chatInProgress;
+    }
   }
 
   /// 任务已关闭提示栏 - 对齐iOS closedTaskStatusBar

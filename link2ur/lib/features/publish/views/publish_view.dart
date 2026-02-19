@@ -274,6 +274,11 @@ class _PublishContentState extends State<_PublishContent>
   // ── 关闭动画 ──
   late final AnimationController _closeAnimCtrl;
 
+  // ── 折叠区块（最近发布 + 发布小贴士）──
+  bool _recentSectionExpanded = false;
+  bool _tipsSectionExpanded = false;
+  List<_RecentPublishItem>? _recentItems; // null = loading, [] = empty
+
   @override
   void initState() {
     super.initState();
@@ -281,6 +286,53 @@ class _PublishContentState extends State<_PublishContent>
       vsync: this,
       duration: AppConstants.animationDuration,
     );
+    _loadRecentItems();
+  }
+
+  Future<void> _loadRecentItems() async {
+    try {
+      final taskRepo = context.read<TaskRepository>();
+      final forumRepo = context.read<ForumRepository>();
+      final fleaRepo = context.read<FleaMarketRepository>();
+      final locale = Localizations.localeOf(context);
+
+      final results = await Future.wait([
+        taskRepo.getMyTasks(role: 'poster', pageSize: 2),
+        forumRepo.getMyPosts(pageSize: 2),
+        fleaRepo.getMyItems(pageSize: 2),
+      ]);
+
+      final items = <_RecentPublishItem>[];
+      for (final task in (results[0] as TaskListResponse).tasks) {
+        items.add(_RecentPublishItem(
+          type: _RecentItemType.task,
+          id: task.id.toString(),
+          title: task.displayTitle(locale),
+          createdAt: task.createdAt ?? DateTime(1970),
+        ));
+      }
+      for (final post in (results[1] as ForumPostListResponse).posts) {
+        items.add(_RecentPublishItem(
+          type: _RecentItemType.post,
+          id: post.id.toString(),
+          title: post.displayTitle(locale),
+          createdAt: post.createdAt ?? DateTime(1970),
+        ));
+      }
+      for (final fleaItem in (results[2] as FleaMarketListResponse).items) {
+        items.add(_RecentPublishItem(
+          type: _RecentItemType.fleaMarket,
+          id: fleaItem.id,
+          title: fleaItem.title,
+          createdAt: fleaItem.createdAt ?? DateTime(1970),
+        ));
+      }
+      items.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      final top3 = items.take(3).toList();
+      if (mounted) setState(() => _recentItems = top3);
+    } catch (_) {
+      if (mounted) setState(() => _recentItems = []);
+    }
   }
 
   @override
@@ -730,6 +782,10 @@ class _PublishContentState extends State<_PublishContent>
                           setState(() => _selectedType = _PublishType.post);
                         },
                       ),
+                      const SizedBox(height: 12),
+                      _buildRecentSection(isDark),
+                      const SizedBox(height: 8),
+                      _buildTipsSection(isDark),
                       SizedBox(height: bottomPadding + 24),
                     ],
                   ),
@@ -740,6 +796,175 @@ class _PublishContentState extends State<_PublishContent>
         ),
         _buildCloseButton(isDark, bottomPadding),
       ],
+    );
+  }
+
+  Widget _buildRecentSection(bool isDark) {
+    return _buildCollapsibleSection(
+      isDark: isDark,
+      title: context.l10n.publishRecentSectionTitle,
+      expanded: _recentSectionExpanded,
+      onTap: () {
+        AppHaptics.selection();
+        setState(() => _recentSectionExpanded = !_recentSectionExpanded);
+      },
+      child: _recentItems == null
+          ? Padding(
+              padding: const EdgeInsets.symmetric(vertical: 12),
+              child: Center(
+                child: SizedBox(
+                  width: 24,
+                  height: 24,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: isDark ? AppColors.textTertiaryDark : AppColors.textTertiaryLight,
+                  ),
+                ),
+              ),
+            )
+          : _recentItems!.isEmpty
+              ? Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  child: Text(
+                    context.l10n.publishRecentEmpty,
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: isDark ? AppColors.textTertiaryDark : AppColors.textTertiaryLight,
+                    ),
+                  ),
+                )
+              : Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: _recentItems!
+                      .map((item) => _RecentPublishListItem(
+                            isDark: isDark,
+                            item: item,
+                            onTap: () {
+                              AppHaptics.selection();
+                              switch (item.type) {
+                                case _RecentItemType.task:
+                                  context.push('/tasks/${item.id}');
+                                  break;
+                                case _RecentItemType.fleaMarket:
+                                  context.push('/flea-market/${item.id}');
+                                  break;
+                                case _RecentItemType.post:
+                                  context.push('/forum/posts/${item.id}');
+                                  break;
+                              }
+                            },
+                          ))
+                      .toList(),
+                ),
+    );
+  }
+
+  Widget _buildTipsSection(bool isDark) {
+    final List<String> tips = [
+      context.l10n.publishTip1,
+      context.l10n.publishTip2,
+      context.l10n.publishTip3,
+      context.l10n.publishTip4,
+    ];
+    return _buildCollapsibleSection(
+      isDark: isDark,
+      title: context.l10n.publishTipsSectionTitle,
+      expanded: _tipsSectionExpanded,
+      onTap: () {
+        AppHaptics.selection();
+        setState(() => _tipsSectionExpanded = !_tipsSectionExpanded);
+      },
+      child: Padding(
+        padding: const EdgeInsets.only(top: 4, bottom: 12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: tips
+              .map<Widget>(
+                (String t) => Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Icon(
+                        Icons.lightbulb_outline_rounded,
+                        size: 18,
+                        color: isDark ? AppColors.textTertiaryDark : AppColors.textTertiaryLight,
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          t,
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: isDark ? AppColors.textTertiaryDark : AppColors.textTertiaryLight,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              )
+              .toList(),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCollapsibleSection({
+    required bool isDark,
+    required String title,
+    required bool expanded,
+    required VoidCallback onTap,
+    required Widget child,
+  }) {
+    return Container(
+      decoration: BoxDecoration(
+        color: isDark ? AppColors.cardBackgroundDark : AppColors.cardBackgroundLight,
+        borderRadius: AppRadius.allMedium,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          InkWell(
+            onTap: onTap,
+            borderRadius: AppRadius.allMedium,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              child: Row(
+                children: [
+                  Text(
+                    title,
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                      color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+                    ),
+                  ),
+                  const Spacer(),
+                  AnimatedRotation(
+                    turns: expanded ? 0.5 : 0,
+                    duration: const Duration(milliseconds: 200),
+                    child: Icon(
+                      Icons.keyboard_arrow_down_rounded,
+                      size: 24,
+                      color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          AnimatedCrossFade(
+            firstChild: const SizedBox.shrink(),
+            secondChild: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+              child: child,
+            ),
+            crossFadeState: expanded ? CrossFadeState.showSecond : CrossFadeState.showFirst,
+            duration: const Duration(milliseconds: 200),
+          ),
+        ],
+      ),
     );
   }
 
@@ -1773,6 +1998,80 @@ class _PublishContentState extends State<_PublishContent>
         borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
       ),
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+    );
+  }
+}
+
+// ── 最近发布数据与列表项 ──
+enum _RecentItemType { task, fleaMarket, post }
+
+class _RecentPublishItem {
+  const _RecentPublishItem({
+    required this.type,
+    required this.id,
+    required this.title,
+    required this.createdAt,
+  });
+  final _RecentItemType type;
+  final String id;
+  final String title;
+  final DateTime createdAt;
+}
+
+class _RecentPublishListItem extends StatelessWidget {
+  const _RecentPublishListItem({
+    required this.isDark,
+    required this.item,
+    required this.onTap,
+  });
+  final bool isDark;
+  final _RecentPublishItem item;
+  final VoidCallback onTap;
+
+  IconData get _icon {
+    switch (item.type) {
+      case _RecentItemType.task:
+        return Icons.task_alt_rounded;
+      case _RecentItemType.fleaMarket:
+        return Icons.storefront_rounded;
+      case _RecentItemType.post:
+        return Icons.article_rounded;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 10),
+        child: Row(
+          children: [
+            Icon(
+              _icon,
+              size: 20,
+              color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                item.title,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 15,
+                  color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+                ),
+              ),
+            ),
+            Icon(
+              Icons.chevron_right_rounded,
+              size: 20,
+              color: isDark ? AppColors.textTertiaryDark : AppColors.textTertiaryLight,
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

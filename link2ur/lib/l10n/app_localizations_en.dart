@@ -4454,6 +4454,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get forumCreatePostPublishNow => 'Publish Now';
 
   @override
+  String get forumCreatePostImages => 'Images';
+
+  @override
+  String get forumCreatePostAddImage => 'Add image';
+
+  @override
   String get fleaMarketCreatePublishing => 'Publishing...';
 
   @override
@@ -6572,6 +6578,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get chatImageLabel => 'Photo';
 
   @override
+  String get chatSendImageConfirmTitle => 'Send image';
+
+  @override
   String get chatCameraLabel => 'Camera';
 
   @override
@@ -7948,6 +7957,27 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get publishSearchAndLink => 'Search and link';
+
+  @override
+  String get publishRecentSectionTitle => 'Recent Publishes';
+
+  @override
+  String get publishTipsSectionTitle => 'Publish Tips';
+
+  @override
+  String get publishRecentEmpty => 'No recent publishes';
+
+  @override
+  String get publishTip1 => 'Clear, specific titles get more visibility';
+
+  @override
+  String get publishTip2 => 'Clear photos increase views and sales';
+
+  @override
+  String get publishTip3 => 'State reward or price upfront to save time';
+
+  @override
+  String get publishTip4 => 'Pick the right category for better exposure';
 
   @override
   String get profileUpdateFailed => 'Update failed';

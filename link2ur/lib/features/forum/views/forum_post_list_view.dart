@@ -71,7 +71,7 @@ class _ForumPostListViewContentState
             widget.category?.displayName(locale) ?? l10n.forumAllPosts),
         actions: [
           IconButton(
-            icon: const Icon(Icons.add_circle, color: AppColors.primary),
+            icon: const Icon(Icons.post_add, color: AppColors.primary),
             onPressed: () async {
               await context.push('/forum/posts/create');
               if (context.mounted) {

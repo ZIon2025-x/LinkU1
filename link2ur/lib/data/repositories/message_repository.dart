@@ -305,8 +305,13 @@ class MessageRepository {
   }
 
   /// 获取任务聊天消息（后端使用 limit + cursor 分页，非 page）
-  Future<({List<Message> messages, String? nextCursor, bool hasMore})>
-      getTaskChatMessages(
+  /// 返回 [taskStatus] 用于 UI 显示「进行中/已关闭」及是否展示关闭提示条
+  Future<({
+    List<Message> messages,
+    String? nextCursor,
+    bool hasMore,
+    String? taskStatus,
+  })> getTaskChatMessages(
     int taskId, {
     int limit = 50,
     String? cursor,
@@ -336,6 +341,8 @@ class MessageRepository {
       final messages = parseTaskChatMessagesResponse(data);
       final nextCursor = data['next_cursor'] as String?;
       final hasMore = data['has_more'] as bool? ?? false;
+      final taskMap = data['task'] as Map<String, dynamic>?;
+      final taskStatus = taskMap?['status'] as String?;
 
       if (cursor == null || cursor.isEmpty) {
         final rawMessages = data['messages'] as List<dynamic>? ?? [];
@@ -345,23 +352,31 @@ class MessageRepository {
             'messages': rawMessages,
             'next_cursor': nextCursor,
             'has_more': hasMore,
+            'task_status': taskStatus,
           },
           ttl: CacheManager.defaultTTL,
         );
       }
 
-      return (messages: messages, nextCursor: nextCursor, hasMore: hasMore);
+      return (
+        messages: messages,
+        nextCursor: nextCursor,
+        hasMore: hasMore,
+        taskStatus: taskStatus,
+      );
     } catch (e) {
       if (cursor == null || cursor.isEmpty) {
         final stale = _cache.getStale<Map<String, dynamic>>(cacheKey);
         if (stale != null) {
           final list = stale['messages'] as List<dynamic>? ?? const [];
+          final staleTaskStatus = stale['task_status'] as String?;
           return (
             messages: list
                 .map((e) => Message.fromJson(e as Map<String, dynamic>))
                 .toList(),
             nextCursor: stale['next_cursor'] as String?,
             hasMore: stale['has_more'] as bool? ?? false,
+            taskStatus: staleTaskStatus,
           );
         }
       }

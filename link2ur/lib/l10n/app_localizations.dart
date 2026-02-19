@@ -8253,6 +8253,18 @@ abstract class AppLocalizations {
   /// **'Publish Now'**
   String get forumCreatePostPublishNow;
 
+  /// No description provided for @forumCreatePostImages.
+  ///
+  /// In en, this message translates to:
+  /// **'Images'**
+  String get forumCreatePostImages;
+
+  /// No description provided for @forumCreatePostAddImage.
+  ///
+  /// In en, this message translates to:
+  /// **'Add image'**
+  String get forumCreatePostAddImage;
+
   /// No description provided for @fleaMarketCreatePublishing.
   ///
   /// In en, this message translates to:
@@ -12020,6 +12032,12 @@ abstract class AppLocalizations {
   /// **'Photo'**
   String get chatImageLabel;
 
+  /// No description provided for @chatSendImageConfirmTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Send image'**
+  String get chatSendImageConfirmTitle;
+
   /// No description provided for @chatCameraLabel.
   ///
   /// In en, this message translates to:
@@ -14635,6 +14653,48 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Search and link'**
   String get publishSearchAndLink;
+
+  /// No description provided for @publishRecentSectionTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Recent Publishes'**
+  String get publishRecentSectionTitle;
+
+  /// No description provided for @publishTipsSectionTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Publish Tips'**
+  String get publishTipsSectionTitle;
+
+  /// No description provided for @publishRecentEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No recent publishes'**
+  String get publishRecentEmpty;
+
+  /// No description provided for @publishTip1.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear, specific titles get more visibility'**
+  String get publishTip1;
+
+  /// No description provided for @publishTip2.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear photos increase views and sales'**
+  String get publishTip2;
+
+  /// No description provided for @publishTip3.
+  ///
+  /// In en, this message translates to:
+  /// **'State reward or price upfront to save time'**
+  String get publishTip3;
+
+  /// No description provided for @publishTip4.
+  ///
+  /// In en, this message translates to:
+  /// **'Pick the right category for better exposure'**
+  String get publishTip4;
 
   /// No description provided for @profileUpdateFailed.
   ///
