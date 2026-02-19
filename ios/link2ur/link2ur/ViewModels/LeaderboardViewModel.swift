@@ -6,7 +6,12 @@ class LeaderboardViewModel: ObservableObject {
     private let performanceMonitor = PerformanceMonitor.shared
     @Published var leaderboards: [CustomLeaderboard] = []
     @Published var isLoading = false
+    @Published var isLoadingMore = false
+    @Published var hasMore = true
     @Published var errorMessage: String?
+    
+    private let pageSize = 20
+    private var currentOffset = 0
     
     // 使用依赖注入获取服务
     private let apiService: APIService
@@ -27,37 +32,47 @@ class LeaderboardViewModel: ObservableObject {
     private var currentSort: String = "latest" // 保存当前排序方式
     
     func loadLeaderboards(location: String? = nil, sort: String = "latest", forceRefresh: Bool = false) {
+        currentOffset = 0
+        hasMore = true
+        performFetch(location: location, sort: sort, forceRefresh: forceRefresh, isLoadMore: false)
+    }
+    
+    func loadMore(location: String? = nil, sort: String = "latest") {
+        guard hasMore, !isLoadingMore, !isLoading else { return }
+        performFetch(location: location, sort: sort, forceRefresh: false, isLoadMore: true)
+    }
+    
+    private func performFetch(location: String? = nil, sort: String = "latest", forceRefresh: Bool = false, isLoadMore: Bool = false) {
         let startTime = Date()
         
-        // 防止重复请求
         guard !isRequesting else {
             Logger.warning("排行榜请求已在进行中，跳过重复请求", category: .api)
             return
         }
         
         isRequesting = true
-        // 只有在没有现有数据时才显示加载状态，避免刷新时闪烁
-        let hasExistingData = !leaderboards.isEmpty
-        if !hasExistingData {
-            isLoading = true
+        if isLoadMore {
+            isLoadingMore = true
+        } else {
+            let hasExistingData = !leaderboards.isEmpty
+            if !hasExistingData { isLoading = true }
         }
-        errorMessage = nil
+        if !isLoadMore { errorMessage = nil }
         
-        // 尝试从缓存加载数据（仅在没有筛选条件时，且非强制刷新）
-        if location == nil && sort == "latest" && !forceRefresh {
+        if !isLoadMore && location == nil && sort == "latest" && !forceRefresh {
             if let cachedLeaderboards = CacheManager.shared.loadLeaderboards(location: nil, sort: "latest") {
                 self.leaderboards = cachedLeaderboards
+                self.rawLeaderboards = cachedLeaderboards
                 Logger.success("从缓存加载了 \(self.leaderboards.count) 个排行榜", category: .cache)
                 isLoading = false
-                // 继续在后台刷新数据，但不重置 isRequesting，让后台请求继续
             }
         }
         
-        // 构建URL参数
         var queryParams: [String] = [
             "status=active",
             "sort=\(sort.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? sort)",
-            "limit=20"
+            "limit=\(pageSize)",
+            "offset=\(isLoadMore ? currentOffset : 0)"
         ]
         if let location = location, !location.isEmpty {
             let encodedLocation = location.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? location
@@ -71,6 +86,7 @@ class LeaderboardViewModel: ObservableObject {
             .sink(receiveCompletion: { [weak self] result in
                 let duration = Date().timeIntervalSince(startTime)
                 self?.isLoading = false
+                self?.isLoadingMore = false
                 self?.isRequesting = false
                 if case .failure(let error) = result {
                     // 使用 ErrorHandler 统一处理错误
@@ -97,11 +113,21 @@ class LeaderboardViewModel: ObservableObject {
             }, receiveValue: { [weak self] response in
                 guard let self = self else { return }
                 
-                // 保存原始数据和排序方式
-                var items = response.items
+                let fetchedItems = response.items
+                self.hasMore = response.hasMore ?? (fetchedItems.count >= self.pageSize)
+                if isLoadMore {
+                    self.currentOffset += fetchedItems.count
+                }
+                
+                var items: [CustomLeaderboard]
+                if isLoadMore {
+                    items = self.rawLeaderboards + fetchedItems
+                } else {
+                    items = fetchedItems
+                }
                 
                 // 批量获取收藏状态（如果用户已登录）
-                if !items.isEmpty {
+                if !fetchedItems.isEmpty {
                     let leaderboardIds = items.map { $0.id }
                     self.apiService.getLeaderboardFavoritesBatch(leaderboardIds: leaderboardIds)
                         .sink(receiveCompletion: { result in
@@ -117,14 +143,13 @@ class LeaderboardViewModel: ObservableObject {
                             self.rawLeaderboards = items
                             self.currentSort = sort
                             
-                            // 只在默认状态（latest）时应用距离+浏览量排序
                             if sort == "latest" {
                                 self.sortLeaderboardsByDistance(sort: sort, location: location)
                             } else {
-                                // 其他排序方式直接使用后端返回的结果
                                 DispatchQueue.main.async {
                                     self.leaderboards = items
                                     self.isLoading = false
+                                    self.isLoadingMore = false
                                 }
                             }
                             
@@ -145,13 +170,13 @@ class LeaderboardViewModel: ObservableObject {
                     // 只在默认状态（latest）时应用距离+浏览量排序
                     if sort == "latest" {
                         self.sortLeaderboardsByDistance(sort: sort, location: location)
-                    } else {
-                        // 其他排序方式直接使用后端返回的结果
-                        DispatchQueue.main.async {
-                            self.leaderboards = items
-                            self.isLoading = false
-                        }
-                    }
+                            } else {
+                                DispatchQueue.main.async {
+                                    self.leaderboards = items
+                                    self.isLoading = false
+                                    self.isLoadingMore = false
+                                }
+                            }
                     
                     self.isRequesting = false
                     Logger.success("排行榜加载成功，共\(self.leaderboards.count)条", category: .api)
@@ -182,6 +207,7 @@ class LeaderboardViewModel: ObservableObject {
         guard !rawLeaderboards.isEmpty else {
             DispatchQueue.main.async {
                 self.isLoading = false
+                self.isLoadingMore = false
             }
             return
         }
@@ -235,6 +261,7 @@ class LeaderboardViewModel: ObservableObject {
         DispatchQueue.main.async { [weak self] in
             self?.leaderboards = leaderboards
             self?.isLoading = false
+            self?.isLoadingMore = false
         }
     }
     

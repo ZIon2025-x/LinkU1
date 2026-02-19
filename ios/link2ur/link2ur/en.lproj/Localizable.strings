@@ -112,6 +112,13 @@
 "home.no_recommended_tasks" = "No recommended tasks";
 "home.no_recommended_tasks_message" = "No recommended tasks yet. Check out the task hall!";
 "home.latest_activity" = "Discover more";
+"home.discover_more" = "Discover More";
+"discovery.feed_type_post" = "Post";
+"discovery.feed_type_product" = "Product";
+"discovery.feed_type_competitor_review" = "Competitor Review";
+"discovery.feed_type_service_review" = "Service Review";
+"discovery.feed_type_ranking" = "Leaderboard";
+"discovery.feed_type_service" = "Expert Service";
 "home.no_activity" = "No activity";
 "home.no_activity_message" = "No latest activity yet";
 "home.no_more_activity" = "Above are the latest activities";
@@ -270,6 +277,10 @@
 "leaderboard.anonymous_user" = "Anonymous User";
 "leaderboard.user" = "User";
 "leaderboard.net_score" = "Net Score";
+"leaderboard.net_votes_count" = "Net %d";
+"leaderboard.rank_first" = "#1";
+"leaderboard.rank_second" = "#2";
+"leaderboard.rank_third" = "#3";
 "leaderboard.basic_info" = "Basic Information";
 "leaderboard.contact_info" = "Contact Information (Optional)";
 "leaderboard.image_display" = "Image Display (Optional)";

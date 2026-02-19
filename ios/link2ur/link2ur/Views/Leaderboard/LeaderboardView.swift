@@ -22,7 +22,14 @@ struct LeaderboardView: View {
                 .ignoresSafeArea()
             
             if viewModel.isLoading && viewModel.leaderboards.isEmpty {
-                ProgressView()
+                ListSkeleton(itemCount: 5, itemHeight: 90)
+                    .padding(.horizontal, AppSpacing.md)
+            } else if viewModel.errorMessage != nil && viewModel.leaderboards.isEmpty {
+                ErrorStateView(
+                    title: LocalizationKey.tasksLoadFailed.localized,
+                    message: viewModel.errorMessage ?? "",
+                    retryAction: { viewModel.loadLeaderboards(sort: selectedSort, forceRefresh: true) }
+                )
             } else if viewModel.leaderboards.isEmpty {
                 VStack(spacing: AppSpacing.xl) {
                     EmptyStateView(
@@ -49,19 +56,39 @@ struct LeaderboardView: View {
                 }
             } else {
                 ScrollView {
-                    LazyVStack(spacing: DeviceInfo.isPad ? AppSpacing.lg : AppSpacing.md) {
-                        ForEach(sortedLeaderboards) { leaderboard in
+                    LazyVStack(spacing: AppSpacing.md) {
+                        ForEach(Array(sortedLeaderboards.enumerated()), id: \.element.id) { index, leaderboard in
                             NavigationLink(destination: LeaderboardDetailView(leaderboardId: leaderboard.id)) {
                                 LeaderboardCard(leaderboard: leaderboard)
                                     .environmentObject(appState)
                             }
                             .buttonStyle(ScaleButtonStyle())
+                            .onAppear {
+                                if index >= sortedLeaderboards.count - 3 && viewModel.hasMore && !viewModel.isLoadingMore && !viewModel.isLoading {
+                                    viewModel.loadMore(location: nil, sort: selectedSort)
+                                }
+                            }
+                        }
+                        if viewModel.isLoadingMore {
+                            HStack {
+                                Spacer()
+                                ProgressView().padding()
+                                Spacer()
+                            }
+                        } else if viewModel.hasMore && !viewModel.leaderboards.isEmpty {
+                            Button(action: { viewModel.loadMore(location: nil, sort: selectedSort) }) {
+                                Text(LocalizationKey.commonLoadMore.localized)
+                                    .font(AppTypography.caption)
+                                    .foregroundColor(AppColors.primary)
+                            }
+                            .padding(.vertical, 12)
+                            .frame(maxWidth: .infinity)
                         }
                     }
                     .padding(.horizontal, DeviceInfo.isPad ? AppSpacing.xl : AppSpacing.md)
                     .padding(.vertical, DeviceInfo.isPad ? AppSpacing.md : AppSpacing.sm)
-                    .frame(maxWidth: DeviceInfo.isPad ? 900 : .infinity) // iPad上限制最大宽度
-                    .frame(maxWidth: .infinity, alignment: .center) // 确保在iPad上居中
+                    .frame(maxWidth: DeviceInfo.isPad ? 900 : .infinity)
+                    .frame(maxWidth: .infinity, alignment: .center)
                 }
             }
         }
@@ -122,7 +149,7 @@ struct LeaderboardView: View {
     }
 }
 
-// 排行榜卡片 - 美化版
+// 排行榜卡片 - 与 Flutter _LeaderboardCard 一致：90x90 封面、每卡独立渐变
 struct LeaderboardCard: View {
     let leaderboard: CustomLeaderboard
     @EnvironmentObject var appState: AppState
@@ -136,28 +163,30 @@ struct LeaderboardCard: View {
             VStack(alignment: .leading, spacing: AppSpacing.md) {
                 // 封面和标题
                 HStack(spacing: DeviceInfo.isPad ? AppSpacing.lg : AppSpacing.md) {
-                // 封面图片
+                // 封面图片 - Flutter 使用 90x90
+                let coverSize: CGFloat = DeviceInfo.isPad ? 90 : 90
+                let gradientColors = leaderboardGradient(for: leaderboard.id)
                 if let coverImage = leaderboard.coverImage, !coverImage.isEmpty {
                     AsyncImageView(
                         urlString: coverImage,
                         placeholder: Image(systemName: "photo.fill")
                     )
                     .aspectRatio(contentMode: .fill)
-                    .frame(width: DeviceInfo.isPad ? 120 : 100, height: DeviceInfo.isPad ? 120 : 100)
-                    .clipShape(RoundedRectangle(cornerRadius: AppCornerRadius.medium, style: .continuous))
+                    .frame(width: coverSize, height: coverSize)
+                    .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
                 } else {
                     ZStack {
-                        RoundedRectangle(cornerRadius: AppCornerRadius.medium, style: .continuous)
+                        RoundedRectangle(cornerRadius: 14, style: .continuous)
                             .fill(
                                 LinearGradient(
-                                    gradient: Gradient(colors: AppColors.gradientPrimary),
+                                    gradient: Gradient(colors: gradientColors),
                                     startPoint: .topLeading,
                                     endPoint: .bottomTrailing
                                 )
                             )
-                            .frame(width: DeviceInfo.isPad ? 120 : 100, height: DeviceInfo.isPad ? 120 : 100)
+                            .frame(width: coverSize, height: coverSize)
                         
-                        IconStyle.icon("trophy.fill", size: DeviceInfo.isPad ? 50 : 40)
+                        IconStyle.icon("trophy.fill", size: 36)
                             .foregroundColor(.white)
                     }
                 }
@@ -204,7 +233,8 @@ struct LeaderboardCard: View {
             .padding(DeviceInfo.isPad ? AppSpacing.lg : AppSpacing.md)
             .background(AppColors.cardBackground)
             .cornerRadius(AppCornerRadius.large)
-            .shadow(color: AppShadow.small.color, radius: AppShadow.small.radius, x: AppShadow.small.x, y: AppShadow.small.y)
+            .shadow(color: Color.black.opacity(0.06), radius: 12, x: 0, y: 4)
+            .shadow(color: Color.black.opacity(0.02), radius: 2, x: 0, y: 1)
             
             // 收藏图标提示（仅在已收藏时显示）
             if (isFavorited ?? leaderboard.isFavorited ?? false) {
@@ -227,6 +257,18 @@ struct LeaderboardCard: View {
         .onChange(of: leaderboard.isFavorited) { newValue in
             isFavorited = newValue
         }
+    }
+    
+    private func leaderboardGradient(for id: Int) -> [Color] {
+        let gradients: [[Color]] = [
+            [Color(red: 1, green: 0.4, blue: 0.4), Color(red: 1, green: 0.6, blue: 0.5)],
+            [Color(red: 0.6, green: 0.4, blue: 1), Color(red: 0.8, green: 0.6, blue: 1)],
+            [Color(red: 0.2, green: 0.8, blue: 0.6), Color(red: 0.4, green: 0.9, blue: 0.7)],
+            [Color(red: 1, green: 0.6, blue: 0.2), Color(red: 1, green: 0.8, blue: 0.4)],
+            [Color(red: 0.4, green: 0.5, blue: 1), Color(red: 0.6, green: 0.7, blue: 1)]
+        ]
+        let idx = (id % gradients.count + gradients.count) % gradients.count
+        return gradients[idx]
     }
     
     private func handleToggleFavorite() {

@@ -977,9 +977,9 @@ class PaymentViewModel: NSObject, ObservableObject, ApplePayContextDelegate, STP
         stopPollingPaymentStatus()
         paymentStatusPollCount = 0
         paymentStatusPollTimer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: false) { [weak self] _ in
-            guard let self = self else { return }
+            guard let viewModel = self else { return }
             _Concurrency.Task { @MainActor in
-                self.firePaymentStatusPoll()
+                viewModel.firePaymentStatusPoll()
             }
         }
         RunLoop.main.add(paymentStatusPollTimer!, forMode: .common)
@@ -993,26 +993,26 @@ class PaymentViewModel: NSObject, ObservableObject, ApplePayContextDelegate, STP
             return
         }
         checkPaymentStatus { [weak self] alreadyPaid in
+            guard let viewModel = self else { return }
             _Concurrency.Task { @MainActor in
-                guard let self = self else { return }
                 if alreadyPaid {
                     Logger.info("✅ 轮询检测到支付已完成", category: .api)
-                    self.stopPollingPaymentStatus()
-                    self.paymentSuccess = true
-                    self.errorMessage = nil
+                    viewModel.stopPollingPaymentStatus()
+                    viewModel.paymentSuccess = true
+                    viewModel.errorMessage = nil
                     CacheManager.shared.invalidatePaymentCache()
-                    self.dismissTopPresentedIfNeeded()
+                    viewModel.dismissTopPresentedIfNeeded()
                     return
                 }
-                let interval: TimeInterval = self.paymentStatusPollCount <= 30 ? 1.0 : 2.0
-                self.paymentStatusPollTimer?.invalidate()
-                self.paymentStatusPollTimer = Timer.scheduledTimer(withTimeInterval: interval, repeats: false) { [weak self] _ in
-                    guard let self = self else { return }
+                let interval: TimeInterval = viewModel.paymentStatusPollCount <= 30 ? 1.0 : 2.0
+                viewModel.paymentStatusPollTimer?.invalidate()
+                viewModel.paymentStatusPollTimer = Timer.scheduledTimer(withTimeInterval: interval, repeats: false) { [weak self] _ in
+                    guard let vm = self else { return }
                     _Concurrency.Task { @MainActor in
-                        self.firePaymentStatusPoll()
+                        vm.firePaymentStatusPoll()
                     }
                 }
-                RunLoop.main.add(self.paymentStatusPollTimer!, forMode: .common)
+                RunLoop.main.add(viewModel.paymentStatusPollTimer!, forMode: .common)
             }
         }
     }

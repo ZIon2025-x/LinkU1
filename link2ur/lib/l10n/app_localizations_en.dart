@@ -7626,6 +7626,15 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get leaderboardRankFirst => '#1';
+
+  @override
+  String get leaderboardRankSecond => '#2';
+
+  @override
+  String get leaderboardRankThird => '#3';
+
+  @override
   String get leaderboardDetails => 'Details';
 
   @override

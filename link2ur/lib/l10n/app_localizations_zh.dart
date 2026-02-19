@@ -7340,6 +7340,15 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
+  String get leaderboardRankFirst => '第1';
+
+  @override
+  String get leaderboardRankSecond => '第2';
+
+  @override
+  String get leaderboardRankThird => '第3';
+
+  @override
   String get leaderboardDetails => '详情';
 
   @override
@@ -15559,6 +15568,15 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String leaderboardNetVotesCount(int count) {
     return '淨 $count';
   }
+
+  @override
+  String get leaderboardRankFirst => '第1';
+
+  @override
+  String get leaderboardRankSecond => '第2';
+
+  @override
+  String get leaderboardRankThird => '第3';
 
   @override
   String get leaderboardDetails => '詳情';

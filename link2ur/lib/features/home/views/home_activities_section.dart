@@ -502,8 +502,10 @@ class _PostCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final locale = Localizations.localeOf(context);
-    final displayTitle = item.displayTitle(locale);
-    final displayDesc = item.displayDescription(locale);
+    final displayTitle = Helpers.normalizeContentNewlines(item.displayTitle(locale));
+    final displayDesc = item.displayDescription(locale) != null
+        ? Helpers.normalizeContentNewlines(item.displayDescription(locale)!)
+        : null;
     final categoryName = item.displayCategoryName(locale);
 
     return GestureDetector(
@@ -648,8 +650,10 @@ class _ProductCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final locale = Localizations.localeOf(context);
-    final displayTitle = item.displayTitle(locale);
-    final displayDesc = item.displayDescription(locale);
+    final displayTitle = Helpers.normalizeContentNewlines(item.displayTitle(locale));
+    final displayDesc = item.displayDescription(locale) != null
+        ? Helpers.normalizeContentNewlines(item.displayDescription(locale)!)
+        : null;
 
     return GestureDetector(
       onTap: () {
@@ -775,7 +779,9 @@ class _CompetitorReviewCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final locale = Localizations.localeOf(context);
-    final displayDesc = item.displayDescription(locale);
+    final displayDesc = item.displayDescription(locale) != null
+        ? Helpers.normalizeContentNewlines(item.displayDescription(locale)!)
+        : null;
     final isUpvote = item.voteType == 'upvote';
 
     return GestureDetector(
@@ -900,7 +906,9 @@ class _ServiceReviewCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final locale = Localizations.localeOf(context);
-    final displayDesc = item.displayDescription(locale);
+    final displayDesc = item.displayDescription(locale) != null
+        ? Helpers.normalizeContentNewlines(item.displayDescription(locale)!)
+        : null;
     final hasActivity = item.activityInfo != null;
 
     return GestureDetector(
@@ -1069,12 +1077,15 @@ class _RankingCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             if (item.hasImages)
-              AspectRatio(
-                aspectRatio: 16 / 9,
-                child: AsyncImageView(
-                  imageUrl: item.firstImage!,
-                  memCacheWidth: 360,
-                  memCacheHeight: 202,
+              ClipRect(
+                child: AspectRatio(
+                  aspectRatio: 16 / 9,
+                  child: AsyncImageView(
+                    imageUrl: item.firstImage!,
+                    fit: BoxFit.cover,
+                    memCacheWidth: 360,
+                    memCacheHeight: 202,
+                  ),
                 ),
               ),
             Padding(
@@ -1091,7 +1102,7 @@ class _RankingCard extends StatelessWidget {
                       const SizedBox(width: 4),
                       Expanded(
                         child: Text(
-                          item.displayTitle(locale),
+                          Helpers.normalizeContentNewlines(item.displayTitle(locale)),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
@@ -1110,7 +1121,11 @@ class _RankingCard extends StatelessWidget {
                     ...top3.take(3).toList().asMap().entries.map((entry) {
                       final i = entry.key;
                       final data = entry.value;
-                      final medals = ['🥇', '🥈', '🥉'];
+                      final rankLabels = [
+                        context.l10n.leaderboardRankFirst,
+                        context.l10n.leaderboardRankSecond,
+                        context.l10n.leaderboardRankThird,
+                      ];
                       return Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
@@ -1119,7 +1134,14 @@ class _RankingCard extends StatelessWidget {
                             padding: const EdgeInsets.symmetric(vertical: 6),
                             child: Row(
                               children: [
-                                Text(medals[i], style: const TextStyle(fontSize: 16)),
+                                Text(
+                                  rankLabels[i],
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.bold,
+                                    color: const Color(0xFF2563EB),
+                                  ),
+                                ),
                                 const SizedBox(width: 8),
                                 Expanded(
                                   child: Text(
@@ -1136,7 +1158,9 @@ class _RankingCard extends StatelessWidget {
                                   ),
                                 ),
                                 Text(
-                                  '⭐ ${(data['rating'] as num?)?.toStringAsFixed(1) ?? '0'}',
+                                  context.l10n.leaderboardNetVotesCount(
+                                    ((data['rating'] as num?)?.round() ?? 0),
+                                  ),
                                   style: TextStyle(
                                     fontSize: 10,
                                     color: isDark
@@ -1173,7 +1197,7 @@ class _ServiceCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final locale = Localizations.localeOf(context);
-    final displayTitle = item.displayTitle(locale);
+    final displayTitle = Helpers.normalizeContentNewlines(item.displayTitle(locale));
 
     return GestureDetector(
       onTap: () {

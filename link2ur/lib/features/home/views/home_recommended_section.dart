@@ -447,20 +447,26 @@ class _RecommendedTab extends StatelessWidget {
                         ),
                 ),
 
-                // 发现更多瀑布流 — 桌面端约束 1200 居中（SliverLayoutBuilder 取宽后算 padding）
-                if (isDesktop)
-                  SliverLayoutBuilder(
-                    builder: (context, constraints) {
-                      final pad = ((constraints.crossAxisExtent - Breakpoints.maxContentWidth) / 2)
-                          .clamp(0.0, double.infinity);
-                      return SliverPadding(
-                        padding: EdgeInsets.symmetric(horizontal: pad),
-                        sliver: const _SliverDiscoveryFeed(horizontalPadding: 24),
-                      );
-                    },
-                  )
-                else
-                  const _SliverDiscoveryFeed(horizontalPadding: 0),
+                // 发现更多瀑布流 — 桌面端约束 1200 居中；移动端限制最大 520 避免卡片过宽
+                SliverLayoutBuilder(
+                  builder: (context, constraints) {
+                    final w = constraints.crossAxisExtent;
+                    final double outerPad;
+                    final double innerPad;
+                    if (isDesktop) {
+                      outerPad = ((w - Breakpoints.maxContentWidth) / 2).clamp(0.0, double.infinity);
+                      innerPad = 24;
+                    } else {
+                      // 限制最大宽度 520，居中，避免平板/横屏时卡片过宽
+                      outerPad = w > 520 ? (w - 520) / 2 : 10;
+                      innerPad = 0; // _SliverDiscoveryFeed 内部会转为 10
+                    }
+                    return SliverPadding(
+                      padding: EdgeInsets.symmetric(horizontal: outerPad),
+                      sliver: _SliverDiscoveryFeed(horizontalPadding: innerPad),
+                    );
+                  },
+                ),
               ],
 
               const SliverPadding(padding: EdgeInsets.only(bottom: 20)),

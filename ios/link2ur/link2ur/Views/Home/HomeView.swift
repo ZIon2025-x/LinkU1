@@ -1838,7 +1838,7 @@ struct RecentActivitiesSection: View {
                     Image(systemName: "sparkles")
                         .font(.system(size: 22))
                         .foregroundColor(AppColors.primary)
-                    Text(LocalizationKey.homeLatestActivity.localized)
+                    Text(LocalizationKey.homeDiscoverMore.localized)
                         .font(.system(size: 18, weight: .bold))
                         .foregroundColor(AppColors.textPrimary)
                 }
@@ -1911,11 +1911,13 @@ struct RecentActivitiesSection: View {
                 .padding(AppSpacing.md)
                 .frame(maxWidth: .infinity)
             } else {
-                // 两列瀑布流（与 Flutter SliverMasonryGrid 一致，每列独立高度）
+                // 两列瀑布流（与 Flutter SliverMasonryGrid 一致：等宽两列，间距 10）
+                // 限制最大宽度，避免 iPad/横屏时卡片过宽
                 HStack(alignment: .top, spacing: 10) {
                     LazyVStack(spacing: 10) {
-                        ForEach(Array(viewModel.items.enumerated().filter { $0.offset % 2 == 0 }), id: \.element.id) { index, item in
+                        ForEach(Array(viewModel.items.enumerated().filter { $0.offset % 2 == 0 }), id: \.offset) { index, item in
                             DiscoveryFeedCardView(item: item)
+                                .frame(maxWidth: .infinity, alignment: .topLeading)
                                 .listItemAppear(index: index, totalItems: viewModel.items.count)
                                 .onAppear {
                                     if index >= viewModel.items.count - 4 && viewModel.hasMore && !viewModel.isLoadingMore && !viewModel.isLoading {
@@ -1924,9 +1926,11 @@ struct RecentActivitiesSection: View {
                                 }
                         }
                     }
+                    .frame(maxWidth: .infinity)
                     LazyVStack(spacing: 10) {
-                        ForEach(Array(viewModel.items.enumerated().filter { $0.offset % 2 == 1 }), id: \.element.id) { index, item in
+                        ForEach(Array(viewModel.items.enumerated().filter { $0.offset % 2 == 1 }), id: \.offset) { index, item in
                             DiscoveryFeedCardView(item: item)
+                                .frame(maxWidth: .infinity, alignment: .topLeading)
                                 .listItemAppear(index: index, totalItems: viewModel.items.count)
                                 .onAppear {
                                     if index >= viewModel.items.count - 4 && viewModel.hasMore && !viewModel.isLoadingMore && !viewModel.isLoading {
@@ -1935,7 +1939,10 @@ struct RecentActivitiesSection: View {
                                 }
                         }
                     }
+                    .frame(maxWidth: .infinity)
                 }
+                .frame(maxWidth: 520)
+                .frame(maxWidth: .infinity)
                 .padding(.horizontal, AppSpacing.md)
                 
                 if viewModel.isLoadingMore {
@@ -2000,35 +2007,29 @@ struct DiscoveryFeedCardView: View {
     private var postCard: some View {
         // 与 Flutter 一致：图片、徽章、分类、标题、描述、用户行、赞/评数
         let content = VStack(alignment: .leading, spacing: 0) {
-            if item.hasImages, let urlString = item.firstImage, let url = URL(string: urlString) {
-                AsyncImage(url: url) { phase in
-                    if let image = phase.image {
-                        image.resizable().aspectRatio(contentMode: .fill)
-                    } else {
-                        Rectangle().fill(AppColors.background)
-                    }
-                }
-                .aspectRatio(4/3, contentMode: .fill)
-                .clipped()
+            if item.hasImages, let urlString = item.firstImage, !urlString.isEmpty {
+                AsyncImageView(urlString: urlString, placeholder: Image(systemName: "photo"), contentMode: .fill, placeholderBackground: AppColors.cardBackground)
+                    .aspectRatio(4/3, contentMode: .fill)
+                    .clipped()
             }
             VStack(alignment: .leading, spacing: 6) {
                 HStack(spacing: 6) {
-                    discoveryBadge(label: "💬 帖子", bg: Color(red: 0.93, green: 0.91, blue: 0.996), fg: Color(red: 0.49, green: 0.24, blue: 0.93))
-                    if let name = item.categoryName, !name.isEmpty {
+                    discoveryBadge(label: "💬 \(LocalizationKey.discoveryFeedTypePost.localized)", bg: Color(red: 0.93, green: 0.91, blue: 0.996), fg: Color(red: 0.49, green: 0.24, blue: 0.93))
+                    if let name = item.displayCategoryName(), !name.isEmpty {
                         Text(name)
                             .font(.system(size: 10))
                             .foregroundColor(AppColors.textTertiary)
                             .lineLimit(1)
                     }
                 }
-                if let title = item.title, !title.isEmpty {
-                    Text(title)
+                if !item.displayTitle().isEmpty {
+                    Text(ContentFormatter.decodeContent(item.displayTitle()))
                         .font(.system(size: 14, weight: .semibold))
                         .foregroundColor(AppColors.textPrimary)
                         .lineLimit(2)
                 }
-                if let desc = item.description, !desc.isEmpty {
-                    Text(desc)
+                if let desc = item.displayDescription(), !desc.isEmpty {
+                    Text(ContentFormatter.decodeContent(desc))
                         .font(.system(size: 12))
                         .foregroundColor(AppColors.textSecondary)
                         .lineLimit(2)
@@ -2072,20 +2073,14 @@ struct DiscoveryFeedCardView: View {
     private var productCard: some View {
         // 与 Flutter 一致：1:1 图、徽章、价格、标题、描述、喜欢数
         let content = VStack(alignment: .leading, spacing: 0) {
-            if item.hasImages, let urlString = item.firstImage, let url = URL(string: urlString) {
-                AsyncImage(url: url) { phase in
-                    if let image = phase.image {
-                        image.resizable().aspectRatio(contentMode: .fill)
-                    } else {
-                        Rectangle().fill(AppColors.background)
-                    }
-                }
-                .aspectRatio(1, contentMode: .fill)
-                .clipped()
+            if item.hasImages, let urlString = item.firstImage, !urlString.isEmpty {
+                AsyncImageView(urlString: urlString, placeholder: Image(systemName: "photo"), contentMode: .fill, placeholderBackground: AppColors.cardBackground)
+                    .aspectRatio(1, contentMode: .fill)
+                    .clipped()
             }
             VStack(alignment: .leading, spacing: 6) {
                 HStack(spacing: 6) {
-                    discoveryBadge(label: "🏷️ 商品", bg: Color(red: 1, green: 0.95, blue: 0.78), fg: Color(red: 0.85, green: 0.47, blue: 0.02))
+                    discoveryBadge(label: "🏷️ \(LocalizationKey.discoveryFeedTypeProduct.localized)", bg: Color(red: 1, green: 0.95, blue: 0.78), fg: Color(red: 0.85, green: 0.47, blue: 0.02))
                     Spacer()
                     if let price = item.price {
                         Text(priceFormat(price))
@@ -2093,14 +2088,14 @@ struct DiscoveryFeedCardView: View {
                             .foregroundColor(AppColors.primary)
                     }
                 }
-                if let title = item.title, !title.isEmpty {
-                    Text(title)
+                if !item.displayTitle().isEmpty {
+                    Text(ContentFormatter.decodeContent(item.displayTitle()))
                         .font(.system(size: 14, weight: .semibold))
                         .foregroundColor(AppColors.textPrimary)
                         .lineLimit(2)
                 }
-                if let desc = item.description, !desc.isEmpty {
-                    Text(desc)
+                if let desc = item.displayDescription(), !desc.isEmpty {
+                    Text(ContentFormatter.decodeContent(desc))
                         .font(.system(size: 12))
                         .foregroundColor(AppColors.textSecondary)
                         .lineLimit(2)
@@ -2128,47 +2123,43 @@ struct DiscoveryFeedCardView: View {
     }
     
     private var rankingCard: some View {
-        // 与 Flutter 一致：渐变背景、16:9 图、TOP3 列表
+        // 与 Flutter 一致：渐变背景、16:9 图、TOP3 列表（宽图裁剪填满，不撑大卡片）
         let content = VStack(alignment: .leading, spacing: 0) {
-            if item.hasImages, let urlString = item.firstImage, let url = URL(string: urlString) {
-                AsyncImage(url: url) { phase in
-                    if let image = phase.image {
-                        image.resizable().aspectRatio(contentMode: .fill)
-                    } else {
-                        Rectangle().fill(AppColors.background)
-                    }
-                }
-                .aspectRatio(16/9, contentMode: .fill)
-                .clipped()
+            if item.hasImages, let urlString = item.firstImage, !urlString.isEmpty {
+                AsyncImageView(urlString: urlString, placeholder: Image(systemName: "photo"), contentMode: .fill, placeholderBackground: AppColors.cardBackground)
+                    .frame(maxWidth: .infinity)
+                    .aspectRatio(16/9, contentMode: .fill)
+                    .clipped()
             }
             VStack(alignment: .leading, spacing: 6) {
-                discoveryBadge(label: "🏆 排行榜", bg: Color(red: 0.86, green: 0.92, blue: 0.99), fg: Color(red: 0.15, green: 0.39, blue: 0.92))
+                discoveryBadge(label: "🏆 \(LocalizationKey.discoveryFeedTypeRanking.localized)", bg: Color(red: 0.86, green: 0.92, blue: 0.99), fg: Color(red: 0.15, green: 0.39, blue: 0.92))
                 HStack(spacing: 4) {
                     Image(systemName: "trophy.fill")
                         .font(.system(size: 16))
                         .foregroundColor(Color(red: 1, green: 0.7, blue: 0))
-                    Text(item.title ?? "")
+                    Text(ContentFormatter.decodeContent(item.displayTitle()))
                         .font(.system(size: 14, weight: .semibold))
                         .foregroundColor(AppColors.textPrimary)
                         .lineLimit(1)
                 }
                 if let top3 = item.top3, !top3.isEmpty {
                     VStack(spacing: 0) {
-                        let medals = ["🥇", "🥈", "🥉"]
+                        let rankLabels: [LocalizationKey] = [.leaderboardRankFirst, .leaderboardRankSecond, .leaderboardRankThird]
                         ForEach(Array(top3.prefix(3).enumerated()), id: \.offset) { i, entry in
                             if i > 0 {
                                 Divider()
                                     .background(Color(red: 0.9, green: 0.91, blue: 0.92))
                             }
                             HStack(spacing: 8) {
-                                Text(medals[i])
-                                    .font(.system(size: 16))
+                                Text(rankLabels[i].localized)
+                                    .font(.system(size: 12, weight: .bold))
+                                    .foregroundColor(Color(red: 0.15, green: 0.39, blue: 0.92))
                                 Text(entry.name ?? "")
                                     .font(.system(size: 12, weight: .semibold))
                                     .foregroundColor(AppColors.textPrimary)
                                     .lineLimit(1)
                                 Spacer()
-                                Text("⭐ \(String(format: "%.1f", entry.rating))")
+                                Text(String(format: LocalizationKey.leaderboardNetVotesCount.localized, Int(entry.rating)))
                                     .font(.system(size: 10))
                                     .foregroundColor(AppColors.textTertiary)
                             }
@@ -2202,21 +2193,15 @@ struct DiscoveryFeedCardView: View {
     private var serviceCard: some View {
         // 与 Flutter 一致：图片、徽章、标题、用户行、价格、评分
         let content = VStack(alignment: .leading, spacing: 0) {
-            if item.hasImages, let urlString = item.firstImage, let url = URL(string: urlString) {
-                AsyncImage(url: url) { phase in
-                    if let image = phase.image {
-                        image.resizable().aspectRatio(contentMode: .fill)
-                    } else {
-                        Rectangle().fill(AppColors.background)
-                    }
-                }
-                .aspectRatio(4/3, contentMode: .fill)
-                .clipped()
+            if item.hasImages, let urlString = item.firstImage, !urlString.isEmpty {
+                AsyncImageView(urlString: urlString, placeholder: Image(systemName: "photo"), contentMode: .fill, placeholderBackground: AppColors.cardBackground)
+                    .aspectRatio(4/3, contentMode: .fill)
+                    .clipped()
             }
             VStack(alignment: .leading, spacing: 6) {
-                discoveryBadge(label: "👨‍🏫 达人服务", bg: Color(red: 1, green: 0.97, blue: 0.93), fg: Color(red: 0.92, green: 0.35, blue: 0.05))
-                if let title = item.title, !title.isEmpty {
-                    Text(title)
+                discoveryBadge(label: "👨‍🏫 \(LocalizationKey.discoveryFeedTypeService.localized)", bg: Color(red: 1, green: 0.97, blue: 0.93), fg: Color(red: 0.92, green: 0.35, blue: 0.05))
+                if !item.displayTitle().isEmpty {
+                    Text(ContentFormatter.decodeContent(item.displayTitle()))
                         .font(.system(size: 14, weight: .semibold))
                         .foregroundColor(AppColors.textPrimary)
                         .lineLimit(2)
@@ -2260,9 +2245,9 @@ struct DiscoveryFeedCardView: View {
     private var competitorReviewCard: some View {
         // 与 Flutter 一致：无图、引用框、用户行、目标标签、赞踩
         let content = VStack(alignment: .leading, spacing: 8) {
-            discoveryBadge(label: "⭐ 竞品评价", bg: Color(red: 0.99, green: 0.91, blue: 0.95), fg: Color(red: 0.86, green: 0.15, blue: 0.47))
-            if let desc = item.description, !desc.isEmpty {
-                quoteBox(text: desc)
+            discoveryBadge(label: "⭐ \(LocalizationKey.discoveryFeedTypeCompetitorReview.localized)", bg: Color(red: 0.99, green: 0.91, blue: 0.95), fg: Color(red: 0.86, green: 0.15, blue: 0.47))
+            if let desc = item.displayDescription(), !desc.isEmpty {
+                quoteBox(text: ContentFormatter.decodeContent(desc))
             }
             discoveryUserRow
             if let t = item.targetItem {
@@ -2310,7 +2295,7 @@ struct DiscoveryFeedCardView: View {
                     Image(systemName: "flame.fill")
                         .font(.system(size: 14))
                         .foregroundColor(Color(red: 1, green: 0.42, blue: 0.42))
-                    Text("来自 \(act.activityTitle ?? "活动")")
+                    Text("来自 \(act.displayActivityTitle().isEmpty ? "活动" : act.displayActivityTitle())")
                         .font(.system(size: 11, weight: .semibold))
                         .foregroundColor(Color(red: 1, green: 0.42, blue: 0.42))
                         .lineLimit(1)
@@ -2330,9 +2315,9 @@ struct DiscoveryFeedCardView: View {
                 )
             }
             VStack(alignment: .leading, spacing: 8) {
-                discoveryBadge(label: "⭐ 服务评价", bg: Color(red: 0.99, green: 0.91, blue: 0.95), fg: Color(red: 0.86, green: 0.15, blue: 0.47))
-                if let desc = item.description, !desc.isEmpty {
-                    quoteBox(text: desc)
+                discoveryBadge(label: "⭐ \(LocalizationKey.discoveryFeedTypeServiceReview.localized)", bg: Color(red: 0.99, green: 0.91, blue: 0.95), fg: Color(red: 0.86, green: 0.15, blue: 0.47))
+                if let desc = item.displayDescription(), !desc.isEmpty {
+                    quoteBox(text: ContentFormatter.decodeContent(desc))
                 }
                 discoveryUserRow
                 if let t = item.targetItem {
@@ -2373,14 +2358,8 @@ struct DiscoveryFeedCardView: View {
         @ViewBuilder destination: () -> D
     ) -> some View {
         let content = VStack(alignment: .leading, spacing: 0) {
-            if item.hasImages, let urlString = item.firstImage, let url = URL(string: urlString) {
-                AsyncImage(url: url) { phase in
-                    if let image = phase.image {
-                        image.resizable().aspectRatio(contentMode: .fill)
-                    } else {
-                        Rectangle().fill(AppColors.background)
-                    }
-                }
+            if item.hasImages, let urlString = item.firstImage, !urlString.isEmpty {
+                AsyncImageView(urlString: urlString, placeholder: Image(systemName: "photo"), contentMode: .fill, placeholderBackground: AppColors.cardBackground)
                 .aspectRatio(imageAspect, contentMode: .fill)
                 .clipped()
             }
@@ -2396,13 +2375,13 @@ struct DiscoveryFeedCardView: View {
                     extra()
                 }
                 if let title = item.title, !title.isEmpty {
-                    Text(title)
+                    Text(ContentFormatter.decodeContent(title))
                         .font(.system(size: 14, weight: .semibold))
                         .foregroundColor(AppColors.textPrimary)
                         .lineLimit(2)
                 }
                 if let desc = item.description, !desc.isEmpty {
-                    Text(desc)
+                    Text(ContentFormatter.decodeContent(desc))
                         .font(.system(size: 12))
                         .foregroundColor(AppColors.textSecondary)
                         .lineLimit(2)

@@ -6,7 +6,11 @@ struct DiscoveryFeedItem: Identifiable, Decodable {
     let id: String
     let feedType: String
     let title: String?
+    let titleZh: String?
+    let titleEn: String?
     let description: String?
+    let descriptionZh: String?
+    let descriptionEn: String?
     let images: [String]?
     let userId: String?
     let userName: String?
@@ -30,7 +34,13 @@ struct DiscoveryFeedItem: Identifiable, Decodable {
     enum CodingKeys: String, CodingKey {
         case id
         case feedType = "feed_type"
-        case title, description, images
+        case title
+        case titleZh = "title_zh"
+        case titleEn = "title_en"
+        case description
+        case descriptionZh = "description_zh"
+        case descriptionEn = "description_en"
+        case images
         case userId = "user_id"
         case userName = "user_name"
         case userAvatar = "user_avatar"
@@ -53,23 +63,54 @@ struct DiscoveryFeedItem: Identifiable, Decodable {
     var hasImages: Bool { (images?.isEmpty ?? true) == false }
     var firstImage: String? { images?.first }
     
-    /// 帖子分类名（extra_data.category_name）
+    /// 按语言展示标题（与 Flutter displayTitle 一致）
+    func displayTitle() -> String {
+        let preferZh = LocalizationHelper.currentLanguage.hasPrefix("zh")
+        if preferZh, let zh = titleZh, !zh.isEmpty { return zh }
+        if !preferZh, let en = titleEn, !en.isEmpty { return en }
+        return title ?? ""
+    }
+    
+    /// 按语言展示描述（与 Flutter displayDescription 一致）
+    func displayDescription() -> String? {
+        let preferZh = LocalizationHelper.currentLanguage.hasPrefix("zh")
+        if preferZh, let zh = descriptionZh, !zh.isEmpty { return zh }
+        if !preferZh, let en = descriptionEn, !en.isEmpty { return en }
+        return description
+    }
+    
+    /// 帖子分类名（extra_data.category_name_zh / _en / category_name）
+    func displayCategoryName() -> String? {
+        guard let data = extraData else { return nil }
+        let preferZh = LocalizationHelper.currentLanguage.hasPrefix("zh")
+        if preferZh {
+            return (data["category_name_zh"]?.value as? String)
+                ?? (data["category_name_en"]?.value as? String)
+                ?? (data["category_name"]?.value as? String)
+        }
+        return (data["category_name_en"]?.value as? String)
+            ?? (data["category_name_zh"]?.value as? String)
+            ?? (data["category_name"]?.value as? String)
+    }
+    
+    /// 兼容：直接取 category_name
     var categoryName: String? {
         guard let data = extraData else { return nil }
         return data["category_name"]?.value as? String
     }
     
     /// 排行榜 TOP 3（extra_data.top3），每项含 name/image/rating/review_count
+    /// 注意：AnyCodable 解码后 value 为 [String: Any]，非 [String: AnyCodable]
     var top3: [Top3Entry]? {
         guard let data = extraData, let top3Any = data["top3"]?.value,
               let arr = top3Any as? [Any] else { return nil }
         return arr.compactMap { item -> Top3Entry? in
-            guard let dict = item as? [String: AnyCodable] else { return nil }
-            let name = dict["name"]?.value as? String
-            let image = dict["image"]?.value as? String
-            let rating = (dict["rating"]?.value as? NSNumber)?.doubleValue ?? (dict["rating"]?.value as? Double)
-            let reviewCount = (dict["review_count"]?.value as? NSNumber)?.intValue ?? (dict["review_count"]?.value as? Int)
-            return Top3Entry(name: name, image: image, rating: rating ?? 0, reviewCount: reviewCount ?? 0)
+            guard let dict = item as? [String: Any] else { return nil }
+            let name = dict["name"] as? String
+            let image = dict["image"] as? String
+            let rating = (dict["rating"] as? NSNumber)?.doubleValue ?? (dict["rating"] as? Double) ?? 0
+            let reviewCount = (dict["review_count"] as? NSNumber)?.intValue ?? (dict["review_count"] as? Int) ?? 0
+            return Top3Entry(name: name, image: image, rating: rating, reviewCount: reviewCount)
         }
     }
 }
@@ -99,6 +140,8 @@ struct LinkedItemBrief: Decodable {
 struct ActivityBrief: Decodable {
     let activityId: Int
     let activityTitle: String?
+    let activityTitleZh: String?
+    let activityTitleEn: String?
     let originalPrice: Double?
     let discountedPrice: Double?
     let discountPercentage: Double?
@@ -107,10 +150,20 @@ struct ActivityBrief: Decodable {
     enum CodingKeys: String, CodingKey {
         case activityId = "activity_id"
         case activityTitle = "activity_title"
+        case activityTitleZh = "activity_title_zh"
+        case activityTitleEn = "activity_title_en"
         case originalPrice = "original_price"
         case discountedPrice = "discounted_price"
         case discountPercentage = "discount_percentage"
         case currency
+    }
+    
+    /// 按语言展示活动标题（与 Flutter displayActivityTitle 一致）
+    func displayActivityTitle() -> String {
+        let preferZh = LocalizationHelper.currentLanguage.hasPrefix("zh")
+        if preferZh, let zh = activityTitleZh, !zh.isEmpty { return zh }
+        if !preferZh, let en = activityTitleEn, !en.isEmpty { return en }
+        return activityTitle ?? ""
     }
     
     var hasDiscount: Bool {

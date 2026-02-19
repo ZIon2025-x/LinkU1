@@ -102,6 +102,13 @@
 "home.no_recommended_tasks" = "暫無推薦任務";
 "home.no_recommended_tasks_message" = "還沒有推薦任務，快去任務大廳看看吧！";
 "home.latest_activity" = "發現更多";
+"home.discover_more" = "發現更多";
+"discovery.feed_type_post" = "帖子";
+"discovery.feed_type_product" = "商品";
+"discovery.feed_type_competitor_review" = "競品評價";
+"discovery.feed_type_service_review" = "服務評價";
+"discovery.feed_type_ranking" = "排行榜";
+"discovery.feed_type_service" = "達人服務";
 "home.no_activity" = "暫無動態";
 "home.no_activity_message" = "還沒有最新動態";
 "home.no_more_activity" = "以上為最新動態";
@@ -1466,6 +1473,10 @@
 "leaderboard.name" = "榜单名称";
 "leaderboard.name_placeholder" = "例如：最受欢迎的中餐厅";
 "leaderboard.net_score" = "净分";
+"leaderboard.net_votes_count" = "淨 %d";
+"leaderboard.rank_first" = "第1";
+"leaderboard.rank_second" = "第2";
+"leaderboard.rank_third" = "第3";
 "leaderboard.no_comments" = "暂无留言，快来发表你的看法吧";
 "leaderboard.no_description" = "暂无描述信息";
 "leaderboard.no_images" = "暂无图片";

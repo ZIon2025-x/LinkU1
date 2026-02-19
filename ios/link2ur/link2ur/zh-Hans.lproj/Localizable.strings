@@ -118,6 +118,13 @@
 "home.no_recommended_tasks" = "暂无推荐任务";
 "home.no_recommended_tasks_message" = "还没有推荐任务，快去任务大厅看看吧！";
 "home.latest_activity" = "发现更多";
+"home.discover_more" = "发现更多";
+"discovery.feed_type_post" = "帖子";
+"discovery.feed_type_product" = "商品";
+"discovery.feed_type_competitor_review" = "竞品评价";
+"discovery.feed_type_service_review" = "服务评价";
+"discovery.feed_type_ranking" = "排行榜";
+"discovery.feed_type_service" = "达人服务";
 "home.no_activity" = "暂无动态";
 "home.no_activity_message" = "还没有最新动态";
 "home.no_more_activity" = "以上为最新动态";
@@ -312,6 +319,10 @@
 "leaderboard.oppose_reason" = "反对理由";
 "leaderboard.anonymous_user" = "匿名用户";
 "leaderboard.net_score" = "净分";
+"leaderboard.net_votes_count" = "净 %d";
+"leaderboard.rank_first" = "第1";
+"leaderboard.rank_second" = "第2";
+"leaderboard.rank_third" = "第3";
 "leaderboard.basic_info" = "基本信息";
 "leaderboard.contact_info" = "联系方式 (可选)";
 "leaderboard.image_display" = "图片展示 (可选)";

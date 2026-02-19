@@ -14054,6 +14054,24 @@ abstract class AppLocalizations {
   /// **'Net {count}'**
   String leaderboardNetVotesCount(int count);
 
+  /// No description provided for @leaderboardRankFirst.
+  ///
+  /// In en, this message translates to:
+  /// **'#1'**
+  String get leaderboardRankFirst;
+
+  /// No description provided for @leaderboardRankSecond.
+  ///
+  /// In en, this message translates to:
+  /// **'#2'**
+  String get leaderboardRankSecond;
+
+  /// No description provided for @leaderboardRankThird.
+  ///
+  /// In en, this message translates to:
+  /// **'#3'**
+  String get leaderboardRankThird;
+
   /// No description provided for @leaderboardDetails.
   ///
   /// In en, this message translates to:
