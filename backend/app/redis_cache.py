@@ -71,30 +71,19 @@ class RedisCache:
         else:
             logger.info("Redis未配置，使用内存缓存")
     
+    def _json_default(self, obj: Any) -> Any:
+        """JSON 序列化时处理非常规类型（datetime、对象等），避免使用 pickle"""
+        if hasattr(obj, "isoformat"):  # datetime, date
+            return obj.isoformat()
+        return str(obj)
+
     def _serialize(self, data: Any) -> bytes:
-        """序列化数据
-        
-        优先使用 JSON 序列化（安全、可读），
-        只有在 JSON 无法序列化时才使用 pickle（向后兼容）。
-        """
-        # 优先尝试 JSON 序列化（字典、列表等标准类型）
-        if isinstance(data, (dict, list, str, int, float, bool, type(None))):
-            try:
-                return json.dumps(data, default=str).encode('utf-8')
-            except (TypeError, ValueError):
-                # JSON 序列化失败，回退到 pickle
-                pass
-        
-        # 对于其他类型（如复杂对象），使用 pickle（向后兼容）
+        """序列化数据，仅使用 JSON（安全），不再使用 pickle"""
         try:
-            return pickle.dumps(data)
-        except Exception as e:
-            logger.error(f"序列化失败: {e}")
-            # 最后兜底：尝试 JSON（可能丢失信息）
-            try:
-                return json.dumps(data, default=str).encode('utf-8')
-            except:
-                return str(data).encode('utf-8')
+            return json.dumps(data, default=self._json_default).encode("utf-8")
+        except (TypeError, ValueError) as e:
+            logger.warning(f"Redis 序列化失败，跳过缓存: {type(data).__name__}, {e}")
+            raise ValueError(f"无法序列化为 JSON: {e}") from e
     
     def _deserialize(self, data: bytes) -> Any:
         """反序列化数据（安全优先：JSON优先，拒绝pickle防止RCE）"""
@@ -104,11 +93,11 @@ class RedisCache:
         except Exception:
             pass
         
-        # 2. 尝试 pickle（向后兼容，仅用于迁移过渡期）
-        # TODO: 完全移除 pickle 支持。当所有缓存条目过期后可删除此分支。
+        # 2. 尝试 pickle（向后兼容，仅用于读取旧数据；新写入已全部使用 JSON）
+        # TODO: 所有缓存条目过期后可删除此分支
         try:
             result = pickle.loads(data)
-            logger.warning("反序列化使用了pickle（向后兼容）。新数据应使用JSON格式。")
+            logger.debug("反序列化使用了pickle（旧数据），将逐渐过期")
             return result
         except Exception:
             pass
@@ -138,8 +127,11 @@ class RedisCache:
         try:
             serialized_data = self._serialize(value)
             return self.redis_client.setex(key, ttl, serialized_data)
-        except RedisError as e:
-            logger.error(f"Redis设置失败: {e}")
+        except (RedisError, ValueError) as e:
+            if isinstance(e, ValueError):
+                logger.debug(f"Redis 跳过缓存（序列化失败）: {e}")
+            else:
+                logger.error(f"Redis设置失败: {e}")
             return False
     
     def setex(self, key: str, ttl: int, value: Any) -> bool:
@@ -154,8 +146,11 @@ class RedisCache:
             else:
                 serialized_data = self._serialize(value)
             return self.redis_client.setex(key, ttl, serialized_data)
-        except RedisError as e:
-            logger.error(f"Redis设置失败: {e}")
+        except (RedisError, ValueError) as e:
+            if isinstance(e, ValueError):
+                logger.debug(f"Redis 跳过缓存（序列化失败）: {e}")
+            else:
+                logger.error(f"Redis设置失败: {e}")
             return False
     
     def delete(self, key: str) -> bool:
