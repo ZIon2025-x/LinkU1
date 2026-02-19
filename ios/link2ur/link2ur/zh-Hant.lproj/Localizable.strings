@@ -109,6 +109,7 @@
 "discovery.feed_type_service_review" = "服務評價";
 "discovery.feed_type_ranking" = "排行榜";
 "discovery.feed_type_service" = "達人服務";
+"discovery.service_price_from" = "起";
 "home.no_activity" = "暫無動態";
 "home.no_activity_message" = "還沒有最新動態";
 "home.no_more_activity" = "以上為最新動態";

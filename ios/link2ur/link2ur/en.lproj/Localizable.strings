@@ -119,6 +119,7 @@
 "discovery.feed_type_service_review" = "Service Review";
 "discovery.feed_type_ranking" = "Leaderboard";
 "discovery.feed_type_service" = "Expert Service";
+"discovery.service_price_from" = " up";
 "home.no_activity" = "No activity";
 "home.no_activity_message" = "No latest activity yet";
 "home.no_more_activity" = "Above are the latest activities";

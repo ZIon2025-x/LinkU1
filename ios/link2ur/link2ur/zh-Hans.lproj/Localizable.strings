@@ -125,6 +125,7 @@
 "discovery.feed_type_service_review" = "服务评价";
 "discovery.feed_type_ranking" = "排行榜";
 "discovery.feed_type_service" = "达人服务";
+"discovery.service_price_from" = "起";
 "home.no_activity" = "暂无动态";
 "home.no_activity_message" = "还没有最新动态";
 "home.no_more_activity" = "以上为最新动态";

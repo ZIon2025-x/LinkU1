@@ -194,6 +194,7 @@ public enum LocalizationKey: String {
     case discoveryFeedTypeServiceReview = "discovery.feed_type_service_review"
     case discoveryFeedTypeRanking = "discovery.feed_type_ranking"
     case discoveryFeedTypeService = "discovery.feed_type_service"
+    case discoveryServicePriceFrom = "discovery.service_price_from"
     case homeNoActivityMessage = "home.no_activity_message"
     case homeNoMoreActivity = "home.no_more_activity"
     case homeHotEvents = "home.hot_events"

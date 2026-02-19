@@ -25,11 +25,13 @@ struct DiscoveryFeedItem: Identifiable, Decodable {
     let commentCount: Int?
     let upvoteCount: Int?
     let downvoteCount: Int?
+    let voteType: String?
     let extraData: [String: AnyCodable]?
     let createdAt: String?
     let targetItem: TargetItemBrief?
     let linkedItem: LinkedItemBrief?
     let activityInfo: ActivityBrief?
+    let isExperienced: Bool?
     
     enum CodingKeys: String, CodingKey {
         case id
@@ -53,15 +55,18 @@ struct DiscoveryFeedItem: Identifiable, Decodable {
         case commentCount = "comment_count"
         case upvoteCount = "upvote_count"
         case downvoteCount = "downvote_count"
+        case voteType = "vote_type"
         case extraData = "extra_data"
         case createdAt = "created_at"
         case targetItem = "target_item"
         case linkedItem = "linked_item"
         case activityInfo = "activity_info"
+        case isExperienced = "is_experienced"
     }
     
     var hasImages: Bool { (images?.isEmpty ?? true) == false }
     var firstImage: String? { images?.first }
+    var isUpvote: Bool { voteType == "upvote" }
     
     /// 按语言展示标题（与 Flutter displayTitle 一致）
     func displayTitle() -> String {

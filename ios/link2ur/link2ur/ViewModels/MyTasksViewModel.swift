@@ -69,6 +69,11 @@ enum TaskStatusFilter: String, CaseIterable {
     }
 }
 
+/// /api/users/my-tasks 返回 {"tasks": [...]}
+private struct MyTasksResponse: Decodable {
+    let tasks: [Task]
+}
+
 // 标签页类型（参考 frontend）
 enum TaskTab: String, CaseIterable {
     case all
@@ -406,16 +411,16 @@ class MyTasksViewModel: ObservableObject {
         }
         
         // 加载任务列表
-        let mainRequest = apiService.request([Task].self, endpoint, method: "GET")
+        let mainRequest = apiService.request(MyTasksResponse.self, endpoint, method: "GET")
             .sink(receiveCompletion: { [weak self] completion in
                 self?.isLoading = false
                 if case .failure(let error) = completion {
-                    // 使用 ErrorHandler 统一处理错误
                     ErrorHandler.shared.handle(error, context: "加载我的任务")
                     self?.errorMessage = error.userFriendlyMessage
                 }
-            }, receiveValue: { [weak self] tasks in
+            }, receiveValue: { [weak self] response in
                 guard let self = self else { return }
+                let tasks = response.tasks
                 
                 // 客户端过滤：确保只显示与当前用户相关的任务
                 var filteredTasks = tasks
@@ -639,16 +644,16 @@ class MyTasksViewModel: ObservableObject {
             break
         }
         
-        apiService.request([Task].self, endpoint, method: "GET")
+        apiService.request(MyTasksResponse.self, endpoint, method: "GET")
             .sink(receiveCompletion: { completion in
                 defer { group.leave() }
                 if case .failure(let error) = completion {
                     ErrorHandler.shared.handle(error, context: "加载我的任务")
                     hasError = true
                 }
-            }, receiveValue: { tasks in
+            }, receiveValue: { response in
                 lock.lock()
-                // 过滤与用户相关的任务，并排除已完成的任务（已完成的任务会从另一个API加载）
+                let tasks = response.tasks
                 let userTasks = tasks.filter { task in
                     // 先检查是否与用户相关
                     let isPoster = task.posterId != nil && String(task.posterId!) == userId

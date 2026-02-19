@@ -19,11 +19,14 @@ class DiscoveryFeedViewModel: ObservableObject {
         self.apiService = apiService ?? APIService.shared
     }
     
+    private var seenIds = Set<String>()
+    
     func loadFeed() {
         guard !isLoading else { return }
         isLoading = true
         errorMessage = nil
         currentPage = 1
+        seenIds.removeAll()
         
         apiService.getDiscoveryFeed(page: 1, limit: pageSize)
             .receive(on: DispatchQueue.main)
@@ -33,9 +36,11 @@ class DiscoveryFeedViewModel: ObservableObject {
                     self?.errorMessage = error.localizedDescription
                 }
             } receiveValue: { [weak self] response in
-                self?.items = response.items
-                self?.hasMore = response.hasMore
-                self?.currentPage = 1
+                guard let self = self else { return }
+                let unique = response.items.filter { self.seenIds.insert($0.id).inserted }
+                self.items = unique
+                self.hasMore = response.hasMore
+                self.currentPage = 1
             }
             .store(in: &cancellables)
     }
@@ -53,10 +58,12 @@ class DiscoveryFeedViewModel: ObservableObject {
                     self?.errorMessage = error.localizedDescription
                 }
             } receiveValue: { [weak self] response in
-                self?.errorMessage = nil
-                self?.items.append(contentsOf: response.items)
-                self?.hasMore = response.hasMore
-                self?.currentPage = nextPage
+                guard let self = self else { return }
+                self.errorMessage = nil
+                let unique = response.items.filter { self.seenIds.insert($0.id).inserted }
+                self.items.append(contentsOf: unique)
+                self.hasMore = response.hasMore
+                self.currentPage = nextPage
             }
             .store(in: &cancellables)
     }
