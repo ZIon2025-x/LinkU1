@@ -239,7 +239,7 @@ struct CreatePostView: View {
     }
     
     private func handleImageSelection() {
-        Task {
+        _Concurrency.Task {
             for item in selectedItems {
                 if let data = try? await item.loadTransferable(type: Data.self),
                    let image = UIImage(data: data) {

@@ -977,8 +977,9 @@ class PaymentViewModel: NSObject, ObservableObject, ApplePayContextDelegate, STP
         stopPollingPaymentStatus()
         paymentStatusPollCount = 0
         paymentStatusPollTimer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: false) { [weak self] _ in
-            Task { @MainActor in
-                self?.firePaymentStatusPoll()
+            guard let self = self else { return }
+            _Concurrency.Task { @MainActor in
+                self.firePaymentStatusPoll()
             }
         }
         RunLoop.main.add(paymentStatusPollTimer!, forMode: .common)
@@ -992,7 +993,7 @@ class PaymentViewModel: NSObject, ObservableObject, ApplePayContextDelegate, STP
             return
         }
         checkPaymentStatus { [weak self] alreadyPaid in
-            Task { @MainActor in
+            _Concurrency.Task { @MainActor in
                 guard let self = self else { return }
                 if alreadyPaid {
                     Logger.info("✅ 轮询检测到支付已完成", category: .api)
@@ -1006,8 +1007,9 @@ class PaymentViewModel: NSObject, ObservableObject, ApplePayContextDelegate, STP
                 let interval: TimeInterval = self.paymentStatusPollCount <= 30 ? 1.0 : 2.0
                 self.paymentStatusPollTimer?.invalidate()
                 self.paymentStatusPollTimer = Timer.scheduledTimer(withTimeInterval: interval, repeats: false) { [weak self] _ in
-                    Task { @MainActor in
-                        self?.firePaymentStatusPoll()
+                    guard let self = self else { return }
+                    _Concurrency.Task { @MainActor in
+                        self.firePaymentStatusPoll()
                     }
                 }
                 RunLoop.main.add(self.paymentStatusPollTimer!, forMode: .common)

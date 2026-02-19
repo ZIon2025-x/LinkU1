@@ -285,7 +285,7 @@ struct ForumPost: Codable, Identifiable {
     }
     
     // 手动初始化器（用于从搜索结果构造）
-    init(id: Int, title: String, titleEn: String? = nil, titleZh: String? = nil, content: String?, contentEn: String? = nil, contentZh: String? = nil, contentPreview: String?, contentPreviewEn: String? = nil, contentPreviewZh: String? = nil, category: ForumCategory?, author: User?, viewCount: Int, replyCount: Int, likeCount: Int, favoriteCount: Int, isPinned: Bool, isFeatured: Bool, isLocked: Bool, isLiked: Bool? = nil, isFavorited: Bool? = nil, createdAt: String, lastReplyAt: String?) {
+    init(id: Int, title: String, titleEn: String? = nil, titleZh: String? = nil, content: String?, contentEn: String? = nil, contentZh: String? = nil, contentPreview: String?, contentPreviewEn: String? = nil, contentPreviewZh: String? = nil, category: ForumCategory?, author: User?, viewCount: Int, replyCount: Int, likeCount: Int, favoriteCount: Int, isPinned: Bool, isFeatured: Bool, isLocked: Bool, isLiked: Bool? = nil, isFavorited: Bool? = nil, createdAt: String, lastReplyAt: String?, images: [String]? = nil) {
         self.id = id
         self.title = title
         self.titleEn = titleEn
@@ -309,6 +309,7 @@ struct ForumPost: Codable, Identifiable {
         self.isFavorited = isFavorited
         self.createdAt = createdAt
         self.lastReplyAt = lastReplyAt
+        self.images = images
     }
 }
 
