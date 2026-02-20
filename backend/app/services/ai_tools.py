@@ -184,4 +184,135 @@ TOOLS = [
             },
         },
     },
+    # ── Phase 2 新增只读工具 ──────────────────────────────────
+    {
+        "name": "get_activity_detail",
+        "description": "查询单个活动的详细信息（标题、描述、地点、价格、参与人数等）。Get detailed info for a specific activity.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "activity_id": {
+                    "type": "integer",
+                    "description": "活动 ID",
+                },
+            },
+            "required": ["activity_id"],
+        },
+    },
+    {
+        "name": "get_expert_detail",
+        "description": "查询达人详情及其服务列表。Get expert profile and their service list.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "expert_id": {
+                    "type": "string",
+                    "description": "达人 ID（用户 ID）",
+                },
+            },
+            "required": ["expert_id"],
+        },
+    },
+    {
+        "name": "get_forum_post_detail",
+        "description": "查询论坛帖子详情（标题、内容、分类、互动数据等）。Get forum post details.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "post_id": {
+                    "type": "integer",
+                    "description": "帖子 ID",
+                },
+            },
+            "required": ["post_id"],
+        },
+    },
+    {
+        "name": "get_flea_market_item_detail",
+        "description": "查询跳蚤市场商品详情（标题、描述、价格、卖家等）。Get flea market item details.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "item_id": {
+                    "type": "integer",
+                    "description": "商品 ID",
+                },
+            },
+            "required": ["item_id"],
+        },
+    },
+    {
+        "name": "list_my_applications",
+        "description": "查询当前用户的任务申请列表（普通任务申请）。List the current user's task applications.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "status": {
+                    "type": "string",
+                    "enum": ["all", "pending", "approved", "rejected"],
+                    "description": "申请状态筛选，默认 all",
+                },
+                "page": {
+                    "type": "integer",
+                    "description": "页码，默认 1",
+                    "default": 1,
+                },
+            },
+        },
+    },
+    {
+        "name": "list_my_service_applications",
+        "description": "查询当前用户的达人服务预约列表。List the current user's expert service applications.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "status": {
+                    "type": "string",
+                    "enum": ["all", "pending", "negotiating", "price_agreed", "approved", "rejected", "cancelled"],
+                    "description": "预约状态筛选，默认 all",
+                },
+                "page": {
+                    "type": "integer",
+                    "description": "页码，默认 1",
+                    "default": 1,
+                },
+            },
+        },
+    },
+    {
+        "name": "list_my_activities",
+        "description": "查询当前用户参与或收藏的活动。List activities the user participated in or favorited.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "type": {
+                    "type": "string",
+                    "enum": ["participated", "favorited"],
+                    "description": "查询类型：participated（参与的）或 favorited（收藏的），默认 participated",
+                },
+            },
+        },
+    },
+    {
+        "name": "list_forum_categories",
+        "description": "获取论坛分类列表。Get the list of forum categories.",
+        "input_schema": {
+            "type": "object",
+            "properties": {},
+        },
+    },
+    {
+        "name": "get_task_reviews",
+        "description": "查询任务的评价列表（评分、评论、评价者）。Get reviews for a specific task.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "task_id": {
+                    "type": "integer",
+                    "description": "任务 ID",
+                },
+            },
+            "required": ["task_id"],
+        },
+    },
 ]
