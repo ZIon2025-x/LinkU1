@@ -89,9 +89,7 @@ const TaskManagement: React.FC<TaskManagementProps> = ({ onClose }) => {
     total: 0
   });
 
-  // 多人任务相关状态
-  const [taskParticipants, setTaskParticipants] = useState<{[key: number]: any[]}>({});
-  const [loadingParticipants, setLoadingParticipants] = useState<number | null>(null);
+  // 多人任务相关状态（participant操作在TaskDetailModal内部处理）
 
   const loadTasks = async () => {
     try {
@@ -143,14 +141,25 @@ const TaskManagement: React.FC<TaskManagementProps> = ({ onClose }) => {
     setShowEditModal(true);
   };
 
+  const handleCancelTask = async (taskId: number) => {
+    if (!window.confirm('确定要取消此任务吗？此操作将通知所有参与者。')) return;
+    try {
+      await updateAdminTask(taskId, { status: 'cancelled' });
+      await loadTasks();
+      alert('任务已取消');
+    } catch (error) {
+      alert('取消任务失败');
+    }
+  };
+
   const handleDeleteTask = async (taskId: number) => {
-    if (window.confirm('确定要删除这个任务吗？')) {
+    if (window.confirm('确定要删除此任务吗？此操作不可恢复！')) {
       try {
         await deleteAdminTask(taskId);
         await loadTasks();
-        alert('任务删除成功');
+        alert('任务已删除');
       } catch (error) {
-                alert('删除任务失败');
+        alert('删除任务失败');
       }
     }
   };
@@ -461,6 +470,22 @@ const TaskManagement: React.FC<TaskManagementProps> = ({ onClose }) => {
                         >
                           编辑
                         </button>
+                        {task.status !== 'cancelled' && task.status !== 'completed' && (
+                          <button
+                            onClick={() => handleCancelTask(task.id)}
+                            style={{
+                              padding: '4px 8px',
+                              border: 'none',
+                              background: '#fd7e14',
+                              color: 'white',
+                              borderRadius: '3px',
+                              cursor: 'pointer',
+                              fontSize: '12px'
+                            }}
+                          >
+                            取消
+                          </button>
+                        )}
                         <button
                           onClick={() => handleDeleteTask(task.id)}
                           style={{
@@ -569,22 +594,80 @@ const TaskManagement: React.FC<TaskManagementProps> = ({ onClose }) => {
 const TaskDetailModal: React.FC<{ task: Task; onClose: () => void }> = ({ task, onClose }) => {
   const [participants, setParticipants] = useState<any[]>([]);
   const [loadingParticipants, setLoadingParticipants] = useState(false);
-  
+  const isMultiParticipant = (task as any).is_multi_participant;
+
+  const loadParticipants = () => {
+    setLoadingParticipants(true);
+    getTaskParticipants(task.id)
+      .then((data: any) => {
+        setParticipants(data.participants || []);
+      })
+      .catch(() => {})
+      .finally(() => {
+        setLoadingParticipants(false);
+      });
+  };
+
   // 如果是多人任务，加载参与者列表
   useEffect(() => {
-    if ((task as any).is_multi_participant) {
-      setLoadingParticipants(true);
-      getTaskParticipants(task.id)
-        .then((data: any) => {
-          setParticipants(data.participants || []);
-        })
-        .catch((error) => {
-                  })
-        .finally(() => {
-          setLoadingParticipants(false);
-        });
+    if (isMultiParticipant) {
+      loadParticipants();
     }
   }, [task]);
+
+  const handleApproveParticipant = async (participantId: number) => {
+    if (!window.confirm('确定要批准此参与者吗？')) return;
+    try {
+      await approveParticipant(task.id, participantId);
+      alert('参与者已批准');
+      loadParticipants();
+    } catch {
+      alert('操作失败');
+    }
+  };
+
+  const handleRejectParticipant = async (participantId: number) => {
+    if (!window.confirm('确定要拒绝此参与者吗？')) return;
+    try {
+      await rejectParticipant(task.id, participantId);
+      alert('参与者已拒绝');
+      loadParticipants();
+    } catch {
+      alert('操作失败');
+    }
+  };
+
+  const handleApproveExit = async (participantId: number) => {
+    if (!window.confirm('确定要批准此退出申请吗？')) return;
+    try {
+      await approveExitRequest(task.id, participantId);
+      alert('退出申请已批准');
+      loadParticipants();
+    } catch {
+      alert('操作失败');
+    }
+  };
+
+  const handleRejectExit = async (participantId: number) => {
+    if (!window.confirm('确定要拒绝此退出申请吗？')) return;
+    try {
+      await rejectExitRequest(task.id, participantId);
+      alert('退出申请已拒绝');
+      loadParticipants();
+    } catch {
+      alert('操作失败');
+    }
+  };
+
+  const handleStartMultiTask = async () => {
+    if (!window.confirm('确定要启动此多人任务吗？')) return;
+    try {
+      await startMultiParticipantTask(task.id);
+      alert('任务已启动');
+    } catch {
+      alert('操作失败');
+    }
+  };
 
   return (
     <div style={{
@@ -706,6 +789,88 @@ const TaskDetailModal: React.FC<{ task: Task; onClose: () => void }> = ({ task, 
               </div>
             )}
           </div>
+
+          {/* 多人任务参与者管理 */}
+          {isMultiParticipant && (
+            <div style={{ marginTop: '20px', paddingTop: '15px', borderTop: '1px solid #eee' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                <strong>参与者管理</strong>
+                <button
+                  onClick={handleStartMultiTask}
+                  style={{
+                    padding: '4px 10px',
+                    border: 'none',
+                    background: '#17a2b8',
+                    color: 'white',
+                    borderRadius: '4px',
+                    cursor: 'pointer',
+                    fontSize: '13px'
+                  }}
+                >
+                  启动任务
+                </button>
+              </div>
+              {loadingParticipants ? (
+                <div style={{ textAlign: 'center', padding: '10px', color: '#666' }}>加载参与者...</div>
+              ) : participants.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '10px', color: '#999' }}>暂无参与者</div>
+              ) : (
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
+                  <thead>
+                    <tr style={{ backgroundColor: '#f8f9fa' }}>
+                      <th style={{ padding: '8px', border: '1px solid #ddd', textAlign: 'left' }}>用户ID</th>
+                      <th style={{ padding: '8px', border: '1px solid #ddd', textAlign: 'left' }}>状态</th>
+                      <th style={{ padding: '8px', border: '1px solid #ddd', textAlign: 'left' }}>操作</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {participants.map((p: any) => (
+                      <tr key={p.id}>
+                        <td style={{ padding: '8px', border: '1px solid #ddd' }}>{p.user_id || p.id}</td>
+                        <td style={{ padding: '8px', border: '1px solid #ddd' }}>{p.status || '-'}</td>
+                        <td style={{ padding: '8px', border: '1px solid #ddd' }}>
+                          <div style={{ display: 'flex', gap: '5px', flexWrap: 'wrap' }}>
+                            {p.status === 'pending' && (
+                              <>
+                                <button
+                                  onClick={() => handleApproveParticipant(p.id)}
+                                  style={{ padding: '3px 8px', border: 'none', background: '#28a745', color: 'white', borderRadius: '3px', cursor: 'pointer', fontSize: '12px' }}
+                                >
+                                  批准
+                                </button>
+                                <button
+                                  onClick={() => handleRejectParticipant(p.id)}
+                                  style={{ padding: '3px 8px', border: 'none', background: '#dc3545', color: 'white', borderRadius: '3px', cursor: 'pointer', fontSize: '12px' }}
+                                >
+                                  拒绝
+                                </button>
+                              </>
+                            )}
+                            {p.exit_requested && (
+                              <>
+                                <button
+                                  onClick={() => handleApproveExit(p.id)}
+                                  style={{ padding: '3px 8px', border: 'none', background: '#fd7e14', color: 'white', borderRadius: '3px', cursor: 'pointer', fontSize: '12px' }}
+                                >
+                                  批准退出
+                                </button>
+                                <button
+                                  onClick={() => handleRejectExit(p.id)}
+                                  style={{ padding: '3px 8px', border: 'none', background: '#6c757d', color: 'white', borderRadius: '3px', cursor: 'pointer', fontSize: '12px' }}
+                                >
+                                  拒绝退出
+                                </button>
+                              </>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
+          )}
         </div>
       </div>
     </div>
