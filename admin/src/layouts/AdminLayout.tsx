@@ -1,8 +1,10 @@
-import React, { useState, ReactNode } from 'react';
+import React, { useState, useRef, ReactNode } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { adminLogout } from '../api';
 import { message } from 'antd';
 import styles from './AdminLayout.module.css';
+import NotificationBell, { NotificationBellRef } from '../components/NotificationBell';
+import NotificationModal from '../components/NotificationModal';
 
 export interface MenuItem {
   key: string;
@@ -124,6 +126,8 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({
   const location = useLocation();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
+  const [showNotificationModal, setShowNotificationModal] = useState(false);
+  const notificationBellRef = useRef<NotificationBellRef>(null);
 
   const handleLogout = async () => {
     try {
@@ -188,6 +192,11 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({
           </div>
 
           <div className={styles.topBarActions}>
+            <NotificationBell
+              ref={notificationBellRef}
+              userType="admin"
+              onOpenModal={() => setShowNotificationModal(true)}
+            />
             {/* User Menu */}
             <div className={styles.userMenuContainer}>
               <button
@@ -238,6 +247,13 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({
           <p>© 2025 LinkU. All rights reserved.</p>
         </footer>
       </div>
+
+      <NotificationModal
+        isOpen={showNotificationModal}
+        onClose={() => setShowNotificationModal(false)}
+        userType="admin"
+        onNotificationRead={() => notificationBellRef.current?.refreshUnreadCount()}
+      />
     </div>
   );
 };
