@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../design/app_colors.dart';
 import '../utils/l10n_extension.dart';
+import '../utils/logger.dart';
 import '../utils/responsive.dart';
 import '../../features/auth/bloc/auth_bloc.dart';
 import '../../features/notification/bloc/notification_bloc.dart';
@@ -298,7 +299,9 @@ class DesktopDrawer extends StatelessWidget {
         int chatCount = 0;
         try {
           chatCount = context.read<MessageBloc>().state.totalUnread;
-        } catch (_) {}
+        } catch (e) {
+          AppLogger.debug('MessageBloc not available in desktop sidebar: $e');
+        }
         final total = notifCount + chatCount;
         if (total <= 0) return const SizedBox.shrink();
         return Container(

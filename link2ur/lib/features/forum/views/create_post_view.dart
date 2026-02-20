@@ -7,6 +7,7 @@ import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_radius.dart';
 import '../../../core/utils/l10n_extension.dart';
+import '../../../core/utils/logger.dart';
 import '../../../core/widgets/app_feedback.dart';
 import '../../../core/widgets/cross_platform_image.dart';
 import '../../../data/repositories/discovery_repository.dart';
@@ -73,7 +74,9 @@ class _CreatePostViewState extends State<CreatePostView> {
     List<Map<String, dynamic>> userRelated = [];
     try {
       userRelated = await discoveryRepo.getLinkableContentForUser();
-    } catch (_) {}
+    } catch (e) {
+      AppLogger.warning('Failed to load linkable content: $e');
+    }
     if (!mounted) return;
 
     final result = await showDialog<Map<String, String>>(
@@ -113,7 +116,7 @@ class _CreatePostViewState extends State<CreatePostView> {
       return;
     }
 
-    List<String> imageUrls = [];
+    final List<String> imageUrls = [];
     if (_selectedImages.isNotEmpty) {
       setState(() => _isUploadingImages = true);
       try {

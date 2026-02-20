@@ -587,7 +587,7 @@ class ApiService {
   /// 使用错误码标识，由 UI 层通过 l10n 转为本地化文本
   ApiResponse<T> _handleError<T>(DioException error) {
     String message;
-    int? statusCode = error.response?.statusCode;
+    final statusCode = error.response?.statusCode;
 
     switch (error.type) {
       case DioExceptionType.connectionTimeout:

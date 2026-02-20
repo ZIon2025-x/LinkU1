@@ -9,6 +9,7 @@ import '../../../core/widgets/buttons.dart';
 import '../../../core/constants/app_assets.dart';
 import '../../../core/router/app_router.dart';
 import '../../../core/utils/l10n_extension.dart';
+import '../../../core/utils/logger.dart';
 
 // ==================== FAQ ====================
 
@@ -274,7 +275,9 @@ class _AboutViewState extends State<AboutView> {
         _version = info.version;
         _buildNumber = info.buildNumber;
       });
-    } catch (_) {}
+    } catch (e) {
+      AppLogger.warning('Failed to load package info: $e');
+    }
   }
 
   @override

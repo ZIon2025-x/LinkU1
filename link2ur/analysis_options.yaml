@@ -28,5 +28,28 @@ linter:
     use_super_parameters: true
     avoid_redundant_argument_values: true
 
+    # 稳定性：防止异步上下文中误用 BuildContext
+    use_build_context_synchronously: true
+
+    # 稳定性：空分支检测
+    avoid_empty_else: true
+
+    # 可读性：优先使用 isEmpty/isNotEmpty
+    prefer_is_empty: true
+    prefer_is_not_empty: true
+
+    # 可读性：优先使用 final 局部变量
+    prefer_final_locals: true
+
+    # 安全性：避免 print（应使用 AppLogger）
+    avoid_print: true
+
+    # 可维护性：优先使用 const 字面量
+    prefer_const_literals_to_create_immutables: true
+
+    # 稳定性：空安全相关
+    avoid_null_checks_in_equality_operators: true
+    no_leading_underscores_for_local_identifiers: true
+
 # Additional information about this file can be found at
 # https://dart.dev/guides/language/analysis-options

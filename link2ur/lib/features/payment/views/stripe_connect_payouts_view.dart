@@ -6,6 +6,7 @@ import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_radius.dart';
 import '../../../core/utils/l10n_extension.dart';
+import '../../../core/utils/logger.dart';
 import '../../../core/widgets/buttons.dart';
 import '../../../core/widgets/external_web_view.dart';
 import '../../../core/widgets/loading_view.dart';
@@ -83,7 +84,9 @@ class _StripeConnectPayoutsViewState extends State<StripeConnectPayoutsView> {
         _accountDetails = results[0] as StripeConnectAccountDetails;
         _externalAccounts = results[1] as List<ExternalAccount>;
       });
-    } catch (_) {}
+    } catch (e) {
+      AppLogger.warning('Failed to load Stripe account details: $e');
+    }
   }
 
   Future<void> _createPayout(double amount, String currency) async {

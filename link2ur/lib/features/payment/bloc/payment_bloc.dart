@@ -212,6 +212,8 @@ class PaymentBloc extends Bloc<PaymentEvent, PaymentState> {
     PaymentCreateIntent event,
     Emitter<PaymentState> emit,
   ) async {
+    if (state.status == PaymentStatus.loading || state.status == PaymentStatus.processing) return;
+
     if (event.isMethodSwitch) {
       // 方法切换：不清空 UI，保留旧的 paymentResponse 显示金额信息
       emit(state.copyWith(
@@ -286,6 +288,8 @@ class PaymentBloc extends Bloc<PaymentEvent, PaymentState> {
     PaymentCreateWeChatSession event,
     Emitter<PaymentState> emit,
   ) async {
+    if (state.status == PaymentStatus.processing) return;
+
     emit(state.copyWith(status: PaymentStatus.processing, clearError: true));
 
     try {

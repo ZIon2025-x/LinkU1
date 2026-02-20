@@ -364,6 +364,7 @@ def _request_lang(request: Request, current_user: Optional[models.User]) -> str:
 async def get_task_by_id(
     task_id: int,
     request: Request,
+    background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_async_db_dependency),
     current_user: Optional[models.User] = Depends(get_current_user_optional),
 ):
@@ -372,61 +373,67 @@ async def get_task_by_id(
     if not task:
         raise HTTPException(status_code=404, detail="Task not found")
     
-    # 权限检查：除了 open 状态的任务，其他状态的任务只有任务相关人才能看到
+    # 权限检查：除了 open 状态的任务，其他状态的任务只有任务相关人才能看到详情
+    # 未登录用户（含搜索引擎爬虫）可看到公开摘要，便于 SEO 索引
+    _is_summary_only = False
     if task.status != "open":
         if not current_user:
-            raise HTTPException(status_code=403, detail="需要登录才能查看此任务")
-        
-        # 检查是否是任务相关人（统一转为 str 比较，避免 applicant_id 与 current_user.id 类型不一致）
-        user_id_str = str(current_user.id)
-        is_poster = task.poster_id is not None and (str(task.poster_id) == user_id_str)
-        is_taker = task.taker_id is not None and (str(task.taker_id) == user_id_str)
-        is_participant = False
-        is_applicant = False
-        
-        # 如果是多人任务，检查是否是参与者
-        if task.is_multi_participant:
-            # 检查是否是任务达人（创建者）
-            if task.created_by_expert and task.expert_creator_id and str(task.expert_creator_id) == user_id_str:
-                is_participant = True
-            else:
-                # 检查是否是TaskParticipant
-                participant_query = select(models.TaskParticipant).where(
+            _is_summary_only = True
+        else:
+            user_id_str = str(current_user.id)
+            is_poster = task.poster_id is not None and (str(task.poster_id) == user_id_str)
+            is_taker = task.taker_id is not None and (str(task.taker_id) == user_id_str)
+            is_participant = False
+            is_applicant = False
+            
+            if task.is_multi_participant:
+                if task.created_by_expert and task.expert_creator_id and str(task.expert_creator_id) == user_id_str:
+                    is_participant = True
+                else:
+                    participant_query = select(models.TaskParticipant).where(
+                        and_(
+                            models.TaskParticipant.task_id == task_id,
+                            models.TaskParticipant.user_id == user_id_str,
+                            models.TaskParticipant.status.in_(["accepted", "in_progress"])
+                        )
+                    )
+                    participant_result = await db.execute(participant_query)
+                    is_participant = participant_result.scalar_one_or_none() is not None
+            
+            if not is_poster and not is_taker and not is_participant:
+                application_query = select(models.TaskApplication).where(
                     and_(
-                        models.TaskParticipant.task_id == task_id,
-                        models.TaskParticipant.user_id == user_id_str,
-                        models.TaskParticipant.status.in_(["accepted", "in_progress"])
+                        models.TaskApplication.task_id == task_id,
+                        models.TaskApplication.applicant_id == user_id_str
                     )
                 )
-                participant_result = await db.execute(participant_query)
-                is_participant = participant_result.scalar_one_or_none() is not None
-        
-        # 检查是否是申请者
-        if not is_poster and not is_taker and not is_participant:
-            application_query = select(models.TaskApplication).where(
-                and_(
-                    models.TaskApplication.task_id == task_id,
-                    models.TaskApplication.applicant_id == user_id_str
-                )
-            )
-            application_result = await db.execute(application_query)
-            is_applicant = application_result.scalar_one_or_none() is not None
-        
-        # 如果都不是，拒绝访问
-        if not is_poster and not is_taker and not is_participant and not is_applicant:
-            raise HTTPException(status_code=403, detail="无权限查看此任务")
+                application_result = await db.execute(application_query)
+                is_applicant = application_result.scalar_one_or_none() is not None
+            
+            if not is_poster and not is_taker and not is_participant and not is_applicant:
+                raise HTTPException(status_code=403, detail="无权限查看此任务")
 
-    # 增加任务浏览量（仅存库，不展示到前端）
-    try:
-        await db.execute(
-            update(models.Task)
-            .where(models.Task.id == task_id)
-            .values(view_count=models.Task.view_count + 1)
-        )
-        await db.commit()
-    except Exception as e:
-        logger.warning("增加任务浏览量失败: %s", e)
-        await db.rollback()
+    # 未登录用户看摘要：返回公开字段，隐藏敏感字段
+    if _is_summary_only:
+        setattr(task, "has_applied", None)
+        setattr(task, "user_application_status", None)
+        task.taker_id = None
+        task.poster_id = None
+        return task
+
+    # view_count 移到后台任务，不阻塞响应
+    def _bg_view_count(t_id: int):
+        from app.database import SessionLocal
+        bg_db = SessionLocal()
+        try:
+            bg_db.execute(update(models.Task).where(models.Task.id == t_id).values(view_count=models.Task.view_count + 1))
+            bg_db.commit()
+        except Exception as e:
+            logger.warning("增加任务浏览量失败: %s", e)
+            bg_db.rollback()
+        finally:
+            bg_db.close()
+    background_tasks.add_task(_bg_view_count, task_id)
     
     # 按请求语言确保标题/描述有对应语种（缺则翻译并写入任务表列）；游客用 query lang 或 Accept-Language
     from app.utils.task_activity_display import (
@@ -437,7 +444,6 @@ async def get_task_by_id(
     await ensure_task_title_for_lang(db, task, lang)
     await ensure_task_description_for_lang(db, task, lang)
     await db.commit()
-    # 响应中带上双语列（已从 task 列或刚写入）
     task.title_en = getattr(task, "title_en", None)
     task.title_zh = getattr(task, "title_zh", None)
     task.description_en = getattr(task, "description_en", None)

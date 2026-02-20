@@ -155,18 +155,18 @@ class _StripeConnectPaymentsViewState
                         itemBuilder: (context, index) {
                           final record = _records[index];
                           final key = switch (record) {
-                            StripeConnectRecord r =>
+                            final StripeConnectRecord r =>
                               ValueKey('stripe_${r.transaction.id}'),
-                            TaskPaymentRecordItem r =>
+                            final TaskPaymentRecordItem r =>
                               ValueKey('task_${r.payment.id}'),
                           };
                           return switch (record) {
-                            StripeConnectRecord r => KeyedSubtree(
+                            final StripeConnectRecord r => KeyedSubtree(
                                 key: key,
                                 child: _StripeTransactionCard(
                                     transaction: r.transaction),
                               ),
-                            TaskPaymentRecordItem r => KeyedSubtree(
+                            final TaskPaymentRecordItem r => KeyedSubtree(
                                 key: key,
                                 child: _TaskPaymentCard(payment: r.payment),
                               ),

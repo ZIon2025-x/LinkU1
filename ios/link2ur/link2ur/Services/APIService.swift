@@ -58,11 +58,11 @@ public class APIService {
             "X-Platform": "iOS"
         ]
         
-        // 配置图片缓存
+        // 配置 HTTP 响应缓存（与 ImageCache 使用独立目录，避免冲突）
         let cache = URLCache(
             memoryCapacity: 50 * 1024 * 1024, // 50MB 内存缓存
             diskCapacity: 200 * 1024 * 1024,  // 200MB 磁盘缓存
-            diskPath: "ImageCache"
+            diskPath: "Link2UrURLCache"
         )
         configuration.urlCache = cache
         URLCache.shared = cache

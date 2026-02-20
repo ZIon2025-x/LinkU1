@@ -283,9 +283,9 @@ class _RadarPainter extends CustomPainter {
         textDirection: TextDirection.ltr,
       )..layout();
 
-      // 根据角度调整对齐方式
-      double dx = labelPoint.dx - textPainter.width / 2;
-      double dy = labelPoint.dy - textPainter.height / 2;
+      // 根据角度调整对齐方式（dx 需要根据 cos(angle) 重新赋值）
+      double dx = labelPoint.dx - textPainter.width / 2; // ignore: prefer_final_locals
+      final double dy = labelPoint.dy - textPainter.height / 2;
 
       // 左右边缘偏移
       if (math.cos(angle) > 0.3) {

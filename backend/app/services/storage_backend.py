@@ -687,8 +687,23 @@ class S3StorageBackend(StorageBackend):
         except:
             return None
     
+    EXTENSION_CONTENT_TYPES = {
+        '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg',
+        '.png': 'image/png', '.gif': 'image/gif',
+        '.webp': 'image/webp',
+        '.heic': 'image/heic', '.heif': 'image/heif',
+        '.avif': 'image/avif',
+        '.pdf': 'application/pdf',
+        '.mp3': 'audio/mpeg', '.wav': 'audio/wav', '.ogg': 'audio/ogg',
+        '.mp4': 'video/mp4', '.webm': 'video/webm',
+    }
+
     def _get_content_type(self, path: str) -> str:
-        """根据文件扩展名获取 Content-Type"""
+        """根据文件扩展名获取 Content-Type，优先使用显式映射以避免 mimetypes 在某些环境下缺失条目"""
+        import os
+        ext = os.path.splitext(path)[1].lower()
+        if ext in self.EXTENSION_CONTENT_TYPES:
+            return self.EXTENSION_CONTENT_TYPES[ext]
         import mimetypes
         content_type, _ = mimetypes.guess_type(path)
         return content_type or 'application/octet-stream'

@@ -1,12 +1,15 @@
 import 'dart:io';
 import 'package:path_provider/path_provider.dart';
 
+import 'logger.dart';
+
 /// IO implementation — calculates the size of the temporary cache directory.
 Future<int> calculateCacheDirectorySize() async {
   try {
     final cacheDir = await getTemporaryDirectory();
     return await _calculateDirectorySize(cacheDir);
-  } catch (_) {
+  } catch (e) {
+    AppLogger.warning('Failed to calculate cache directory size: $e');
     return 0;
   }
 }
@@ -28,7 +31,9 @@ Future<void> clearCacheDirectory() async {
         }
       }
     }
-  } catch (_) {}
+  } catch (e) {
+    AppLogger.warning('Failed to clear cache directory: $e');
+  }
 }
 
 Future<int> _calculateDirectorySize(Directory dir) async {
@@ -42,6 +47,8 @@ Future<int> _calculateDirectorySize(Directory dir) async {
         }
       }
     }
-  } catch (_) {}
+  } catch (e) {
+    AppLogger.warning('Failed to calculate directory size: $e');
+  }
   return totalSize;
 }

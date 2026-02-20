@@ -87,9 +87,9 @@ class MemoryMonitor {
     // 获取内存信息的近似值
     // Flutter 不直接暴露 Dart VM 内存信息到生产代码中
     // 这里使用近似估算
-    int usedBytes = 0;
-    int heapSizeBytes = 0;
-    int externalBytes = 0;
+    const int usedBytes = 0;
+    const int heapSizeBytes = 0;
+    const int externalBytes = 0;
 
     // 注意：精确内存追踪需要通过 DevTools / Observatory
     // 这里提供基础的框架，实际数值可在 profile 模式下获取

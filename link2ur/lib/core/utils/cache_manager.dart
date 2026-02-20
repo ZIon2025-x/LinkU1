@@ -288,7 +288,9 @@ class CacheManager {
             diskData['expiresAt'] as int);
         return DateTime.now().isBefore(expiresAt);
       }
-    } catch (_) {}
+    } catch (e) {
+      AppLogger.warning('CacheManager.has disk check failed for key "$key": $e');
+    }
     return false;
   }
 
@@ -552,7 +554,9 @@ class CacheManager {
           size += value.length * 2;
         }
       }
-    } catch (_) {}
+    } catch (e) {
+      AppLogger.warning('CacheManager.diskCacheSizeBytes calculation failed: $e');
+    }
     return size;
   }
 

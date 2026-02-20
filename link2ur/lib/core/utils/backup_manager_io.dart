@@ -4,6 +4,8 @@ import 'dart:typed_data';
 
 import 'package:path_provider/path_provider.dart';
 
+import 'logger.dart';
+
 /// IO implementation — uses file system for backup operations.
 
 Future<String> getBackupDirPath() async {
@@ -60,7 +62,9 @@ Future<List<Map<String, dynamic>>> listBackupFiles(String dirPath) async {
     if (await metaFile.exists()) {
       try {
         metadata = jsonDecode(await metaFile.readAsString()) as Map<String, dynamic>;
-      } catch (_) {}
+      } catch (e) {
+        AppLogger.warning('Failed to parse backup metadata ${metaFile.path}: $e');
+      }
     }
 
     results.add({

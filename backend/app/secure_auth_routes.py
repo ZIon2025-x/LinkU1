@@ -441,8 +441,10 @@ def refresh_session_with_token(
 ):
     """使用refresh_token刷新会话 - 当session_id过期时使用"""
     try:
-        # 从Cookie中获取refresh_token
+        # 从Cookie中获取refresh_token，若无则尝试从header获取
         refresh_token = request.cookies.get("refresh_token")
+        if not refresh_token:
+            refresh_token = request.headers.get("X-Refresh-Token")
         if not refresh_token:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED, 

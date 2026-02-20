@@ -518,7 +518,7 @@ class _EditFleaMarketItemViewContentState
     final categories = _getCategories(context);
     final keys = categories.map((e) => e.$1).toList();
     final value = _selectedCategory.isEmpty ? null : _selectedCategory;
-    List<DropdownMenuItem<String>> menuItems = categories
+    final menuItems = categories
         .map((e) => DropdownMenuItem(value: e.$1, child: Text(e.$2)))
         .toList();
     if (value != null && !keys.contains(value)) {

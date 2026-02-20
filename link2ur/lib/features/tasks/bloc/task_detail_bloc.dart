@@ -453,7 +453,7 @@ class TaskDetailBloc extends Bloc<TaskDetailEvent, TaskDetailState> {
     TaskDetailApplyRequested event,
     Emitter<TaskDetailState> emit,
   ) async {
-    if (_taskId == null) return;
+    if (_taskId == null || state.isSubmitting) return;
     emit(state.copyWith(isSubmitting: true));
 
     try {
@@ -483,7 +483,7 @@ class TaskDetailBloc extends Bloc<TaskDetailEvent, TaskDetailState> {
     TaskDetailCancelApplicationRequested event,
     Emitter<TaskDetailState> emit,
   ) async {
-    if (_taskId == null) return;
+    if (_taskId == null || state.isSubmitting) return;
     emit(state.copyWith(isSubmitting: true));
 
     try {
@@ -509,7 +509,7 @@ class TaskDetailBloc extends Bloc<TaskDetailEvent, TaskDetailState> {
     TaskDetailAcceptApplicant event,
     Emitter<TaskDetailState> emit,
   ) async {
-    if (_taskId == null) return;
+    if (_taskId == null || state.isSubmitting) return;
     emit(state.copyWith(isSubmitting: true));
 
     try {
@@ -575,7 +575,7 @@ class TaskDetailBloc extends Bloc<TaskDetailEvent, TaskDetailState> {
     TaskDetailRejectApplicant event,
     Emitter<TaskDetailState> emit,
   ) async {
-    if (_taskId == null) return;
+    if (_taskId == null || state.isSubmitting) return;
     emit(state.copyWith(isSubmitting: true));
 
     try {
@@ -606,7 +606,7 @@ class TaskDetailBloc extends Bloc<TaskDetailEvent, TaskDetailState> {
     TaskDetailCompleteRequested event,
     Emitter<TaskDetailState> emit,
   ) async {
-    if (_taskId == null) return;
+    if (_taskId == null || state.isSubmitting) return;
     emit(state.copyWith(isSubmitting: true));
 
     try {
@@ -632,7 +632,7 @@ class TaskDetailBloc extends Bloc<TaskDetailEvent, TaskDetailState> {
     TaskDetailConfirmCompletionRequested event,
     Emitter<TaskDetailState> emit,
   ) async {
-    if (_taskId == null) return;
+    if (_taskId == null || state.isSubmitting) return;
     emit(state.copyWith(isSubmitting: true));
 
     try {
@@ -655,7 +655,7 @@ class TaskDetailBloc extends Bloc<TaskDetailEvent, TaskDetailState> {
     TaskDetailCancelRequested event,
     Emitter<TaskDetailState> emit,
   ) async {
-    if (_taskId == null) return;
+    if (_taskId == null || state.isSubmitting) return;
     emit(state.copyWith(isSubmitting: true));
 
     try {
@@ -681,7 +681,7 @@ class TaskDetailBloc extends Bloc<TaskDetailEvent, TaskDetailState> {
     TaskDetailReviewRequested event,
     Emitter<TaskDetailState> emit,
   ) async {
-    if (_taskId == null) return;
+    if (_taskId == null || state.isSubmitting) return;
     emit(state.copyWith(isSubmitting: true));
 
     try {
@@ -713,7 +713,7 @@ class TaskDetailBloc extends Bloc<TaskDetailEvent, TaskDetailState> {
     TaskDetailRequestRefund event,
     Emitter<TaskDetailState> emit,
   ) async {
-    if (_taskId == null) return;
+    if (_taskId == null || state.isSubmitting) return;
     emit(state.copyWith(isSubmitting: true));
 
     try {
@@ -768,7 +768,7 @@ class TaskDetailBloc extends Bloc<TaskDetailEvent, TaskDetailState> {
     TaskDetailCancelRefund event,
     Emitter<TaskDetailState> emit,
   ) async {
-    if (_taskId == null) return;
+    if (_taskId == null || state.isSubmitting) return;
     emit(state.copyWith(isSubmitting: true));
 
     try {
@@ -792,7 +792,7 @@ class TaskDetailBloc extends Bloc<TaskDetailEvent, TaskDetailState> {
     TaskDetailSubmitRebuttal event,
     Emitter<TaskDetailState> emit,
   ) async {
-    if (_taskId == null) return;
+    if (_taskId == null || state.isSubmitting) return;
     emit(state.copyWith(isSubmitting: true));
 
     try {

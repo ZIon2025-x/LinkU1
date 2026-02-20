@@ -29,7 +29,7 @@ void main() {
       // 禁用运行时字体下载，使用 assets 打包的 Inter 字体
       GoogleFonts.config.allowRuntimeFetching = false;
 
-      WidgetsBinding widgetsBinding =
+      final widgetsBinding =
           WidgetsFlutterBinding.ensureInitialized();
 
       // 保持原生启动画面直到 Flutter 初始化完毕（Web 上为 no-op）

@@ -122,6 +122,7 @@ class _StripeConnectOnboardingViewState
       } else if (clientSecret != null && clientSecret.isNotEmpty) {
         await _startNativeOnboarding(clientSecret);
       } else {
+        if (!mounted) return;
         setState(() {
           _viewState = _ViewState.error;
           _error = context.l10n.stripeOnboardingCreateFailed;
@@ -144,7 +145,7 @@ class _StripeConnectOnboardingViewState
     try {
       // 获取 Publishable Key
       // 优先从 AppConfig 获取（通过 --dart-define 传入）
-      var publishableKey = AppConfig.instance.stripePublishableKey;
+      final publishableKey = AppConfig.instance.stripePublishableKey;
       
       // publishable key 必须通过 --dart-define 传入
       if (publishableKey.isEmpty) {
@@ -167,7 +168,7 @@ class _StripeConnectOnboardingViewState
       if (result == 'completed') {
         // 完成后重新检查状态
         _loadOnboardingSession();
-      } else {
+      } else if (mounted) {
         // 取消或失败：显示具体原因，并提示常见问题
         setState(() {
           _viewState = _ViewState.error;

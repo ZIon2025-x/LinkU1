@@ -10,6 +10,7 @@ import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_radius.dart';
 import '../../../core/widgets/cross_platform_image.dart';
 import '../../../core/utils/haptic_feedback.dart';
+import '../../../core/utils/logger.dart';
 import '../../../core/utils/l10n_extension.dart';
 import '../../../core/utils/responsive.dart';
 import '../../../core/utils/validators.dart';
@@ -398,7 +399,7 @@ class _PublishContentState extends State<_PublishContent>
       AppFeedback.showWarning(context, context.l10n.feedbackSelectCategory);
       return;
     }
-    List<String> imageUrls = [];
+    final List<String> imageUrls = [];
     if (_taskImages.isNotEmpty) {
       setState(() => _postUploadingImages = true);
       try {
@@ -474,7 +475,7 @@ class _PublishContentState extends State<_PublishContent>
       AppFeedback.showWarning(context, context.l10n.feedbackSelectCategory);
       return;
     }
-    List<String> imageUrls = [];
+    final List<String> imageUrls = [];
     if (_postImages.isNotEmpty) {
       setState(() => _postUploadingImages = true);
       try {
@@ -1933,7 +1934,9 @@ class _PublishContentState extends State<_PublishContent>
     List<Map<String, dynamic>> userRelated = [];
     try {
       userRelated = await discoveryRepo.getLinkableContentForUser();
-    } catch (_) {}
+    } catch (e) {
+      AppLogger.warning('Failed to load linkable content for post: $e');
+    }
     if (!mounted) return;
 
     final result = await showDialog<Map<String, String>>(

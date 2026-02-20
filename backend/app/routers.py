@@ -1221,6 +1221,7 @@ def _request_lang_sync(request: Request, current_user: Optional[models.User]) ->
 def get_task_detail(
     task_id: int,
     request: Request,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
     current_user: Optional[models.User] = Depends(get_current_user_optional),
 ):
@@ -1237,80 +1238,85 @@ def get_task_detail(
     if not task:
         raise HTTPException(status_code=404, detail="Task not found")
     
-    # 权限检查：除了 open 状态的任务，其他状态的任务只有任务相关人才能看到
+    # 权限检查：除了 open 状态的任务，其他状态的任务只有任务相关人才能看到详情
+    # 未登录用户（含搜索引擎爬虫）可看到公开摘要，便于 SEO 索引
+    _is_summary_only = False
     if task.status != "open":
         if not current_user:
-            raise HTTPException(status_code=403, detail="需要登录才能查看此任务")
-        
-        # 检查是否是任务相关人（统一转为 str 比较，避免 applicant_id 与 current_user.id 类型不一致）
-        user_id_str = str(current_user.id)
-        is_poster = task.poster_id is not None and (str(task.poster_id) == user_id_str)
-        is_taker = task.taker_id is not None and (str(task.taker_id) == user_id_str)
-        is_participant = False
-        is_applicant = False
-        
-        # 如果是多人任务，检查是否是参与者
-        if task.is_multi_participant:
-            # 检查是否是任务达人（创建者）
-            if task.created_by_expert and task.expert_creator_id and str(task.expert_creator_id) == user_id_str:
-                is_participant = True
-            else:
-                # 检查是否是TaskParticipant
-                participant = db.query(TaskParticipant).filter(
+            _is_summary_only = True
+        else:
+            user_id_str = str(current_user.id)
+            is_poster = task.poster_id is not None and (str(task.poster_id) == user_id_str)
+            is_taker = task.taker_id is not None and (str(task.taker_id) == user_id_str)
+            is_participant = False
+            is_applicant = False
+            
+            if task.is_multi_participant:
+                if task.created_by_expert and task.expert_creator_id and str(task.expert_creator_id) == user_id_str:
+                    is_participant = True
+                else:
+                    participant = db.query(TaskParticipant).filter(
+                        and_(
+                            TaskParticipant.task_id == task_id,
+                            TaskParticipant.user_id == user_id_str,
+                            TaskParticipant.status.in_(["accepted", "in_progress"])
+                        )
+                    ).first()
+                    is_participant = participant is not None
+            
+            if not is_poster and not is_taker and not is_participant:
+                application = db.query(TaskApplication).filter(
                     and_(
-                        TaskParticipant.task_id == task_id,
-                        TaskParticipant.user_id == user_id_str,
-                        TaskParticipant.status.in_(["accepted", "in_progress"])
+                        TaskApplication.task_id == task_id,
+                        TaskApplication.applicant_id == user_id_str
                     )
                 ).first()
-                is_participant = participant is not None
-        
-        # 检查是否是申请者
-        if not is_poster and not is_taker and not is_participant:
-            application = db.query(TaskApplication).filter(
-                and_(
-                    TaskApplication.task_id == task_id,
-                    TaskApplication.applicant_id == user_id_str
-                )
-            ).first()
-            is_applicant = application is not None
-        
-        # 如果都不是，拒绝访问
-        if not is_poster and not is_taker and not is_participant and not is_applicant:
-            raise HTTPException(status_code=403, detail="无权限查看此任务")
+                is_applicant = application is not None
+            
+            if not is_poster and not is_taker and not is_participant and not is_applicant:
+                raise HTTPException(status_code=403, detail="无权限查看此任务")
     
-    # 增加任务浏览量（仅存库，不展示到前端）
-    try:
-        db.execute(update(models.Task).where(models.Task.id == task_id).values(view_count=models.Task.view_count + 1))
-        db.commit()
-    except Exception as e:
-        logger.warning("增加任务浏览量失败: %s", e)
-        db.rollback()
+    # 未登录用户看摘要：返回公开字段（标题、描述、状态、类型、图片等），隐藏敏感字段
+    if _is_summary_only:
+        setattr(task, "has_applied", None)
+        setattr(task, "user_application_status", None)
+        setattr(task, "completion_evidence", None)
+        task.taker_id = None
+        task.poster_id = None
+        return schemas.TaskOut.from_orm(task)
+    
+    # view_count + 用户行为记录 移到后台任务，不阻塞响应
+    user_id_for_bg = current_user.id if current_user else None
+    ua_for_bg = request.headers.get("User-Agent", "") if hasattr(request, 'headers') else ""
 
-    # 记录用户浏览行为（异步记录，不阻塞响应）
-    if current_user:
+    def _bg_view_count_and_track(t_id: int, uid, ua: str):
+        from app.database import SessionLocal
+        bg_db = SessionLocal()
         try:
-            from app.user_behavior_tracker import UserBehaviorTracker
-            tracker = UserBehaviorTracker(db)
-            # 简单判断设备类型
-            device_type = None
-            if hasattr(request, 'headers'):
-                ua = request.headers.get("User-Agent", "").lower()
-                if "mobile" in ua or "android" in ua or "iphone" in ua:
+            bg_db.execute(update(models.Task).where(models.Task.id == t_id).values(view_count=models.Task.view_count + 1))
+            bg_db.commit()
+        except Exception as e:
+            logger.warning("增加任务浏览量失败: %s", e)
+            bg_db.rollback()
+        if uid:
+            try:
+                from app.user_behavior_tracker import UserBehaviorTracker
+                tracker = UserBehaviorTracker(bg_db)
+                ua_lower = ua.lower()
+                if "mobile" in ua_lower or "android" in ua_lower or "iphone" in ua_lower:
                     device_type = "mobile"
-                elif "tablet" in ua or "ipad" in ua:
+                elif "tablet" in ua_lower or "ipad" in ua_lower:
                     device_type = "tablet"
                 else:
                     device_type = "desktop"
-            tracker.record_view(
-                user_id=current_user.id,
-                task_id=task_id,
-                device_type=device_type
-            )
-        except Exception as e:
-            logger.warning(f"记录用户浏览行为失败: {e}")
+                tracker.record_view(user_id=uid, task_id=t_id, device_type=device_type)
+            except Exception as e:
+                logger.warning(f"记录用户浏览行为失败: {e}")
+        bg_db.close()
+
+    background_tasks.add_task(_bg_view_count_and_track, task_id, user_id_for_bg, ua_for_bg)
     
-    # 当次请求内按展示语言补齐双语（缺则翻译并写入任务表），与异步任务详情行为一致
+    # 按展示语言补齐双语（缺则翻译），放到后台任务避免阻塞
     lang = _request_lang_sync(request, current_user)
     needs_ensure = (
         (lang == "zh" and not getattr(task, "title_zh", None))
@@ -1319,16 +1325,24 @@ def get_task_detail(
         or (lang == "en" and not getattr(task, "description_en", None))
     )
     if needs_ensure:
-        try:
-            ensure_task_title_for_lang_sync(task, lang)
-            ensure_task_description_for_lang_sync(task, lang)
-            db.commit()
-            TaskService.invalidate_cache(task_id)
-        except Exception as e:
-            logger.warning(f"同步任务双语补齐失败 task_id=%s: %s", task_id, e)
-            db.rollback()
+        def _bg_ensure_translation(t_id: int, target_lang: str):
+            from app.database import SessionLocal
+            bg_db = SessionLocal()
+            try:
+                bg_task = crud.get_task(bg_db, t_id)
+                if bg_task:
+                    ensure_task_title_for_lang_sync(bg_task, target_lang)
+                    ensure_task_description_for_lang_sync(bg_task, target_lang)
+                    bg_db.commit()
+                    TaskService.invalidate_cache(t_id)
+            except Exception as e:
+                logger.warning(f"后台任务双语补齐失败 task_id=%s: %s", t_id, e)
+                bg_db.rollback()
+            finally:
+                bg_db.close()
+        background_tasks.add_task(_bg_ensure_translation, task_id, lang)
 
-    task = TaskService.get_task_cached(task_id=task_id, db=db)
+    # 直接使用已加载的 task ORM 对象构建响应，不再重复查询
     # 与活动详情一致：在详情响应中带上「当前用户是否已申请」及申请状态，便于客户端直接显示「已申请」状态
     if current_user:
         user_id_str = str(current_user.id)

@@ -235,7 +235,9 @@ class _ApprovalPaymentPageState extends State<ApprovalPaymentPage> {
     DateTime? expiry;
     try {
       expiry = DateTime.parse(expiresAt);
-    } catch (_) {}
+    } catch (e) {
+      AppLogger.warning('Failed to parse payment expiry date "$expiresAt": $e');
+    }
     if (expiry == null) return;
     void update() {
       if (!mounted) return;
@@ -446,16 +448,28 @@ class _ApprovalPaymentPageState extends State<ApprovalPaymentPage> {
           if (isPaid || piStatus == 'succeeded') {
             _handlePaymentSuccess();
           }
-        } catch (_) { /* 忽略单次轮询失败 */ }
+        } catch (e) {
+          AppLogger.debug('Payment poll failed (will retry): $e');
+        }
       }
       // 首次 0.5 秒后轮询，之后前 30 秒每 1 秒、再后每 2 秒（尽快发现支付宝/卡支付成功，减少用户误以为未成功而重复支付）
       Timer(const Duration(milliseconds: 500), doPoll);
       _paymentPollTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+        if (!mounted) {
+          _paymentPollTimer?.cancel();
+          return;
+        }
         doPoll();
         _paymentPollCount++;
-        if (_paymentPollCount == 30 && mounted) {
+        if (_paymentPollCount == 30) {
           _paymentPollTimer?.cancel();
-          _paymentPollTimer = Timer.periodic(const Duration(seconds: 2), (_) => doPoll());
+          _paymentPollTimer = Timer.periodic(const Duration(seconds: 2), (_) {
+            if (!mounted) {
+              _paymentPollTimer?.cancel();
+              return;
+            }
+            doPoll();
+          });
         }
       });
     }

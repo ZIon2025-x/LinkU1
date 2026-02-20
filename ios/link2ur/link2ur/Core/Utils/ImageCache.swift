@@ -9,6 +9,9 @@ public final class ImageCache: ObservableObject {
     private let cache = NSCache<NSString, UIImage>()
     private let fileManager = FileManager.default
     private let cacheDirectory: URL
+    /// 磁盘缓存总大小限制（100MB），防止长期使用后占用过多空间
+    private let maxDiskCacheSize: Int64 = 100 * 1024 * 1024
+    private let diskCacheLock = NSLock()
     
     private init() {
         // 配置内存缓存（优化：减少内存占用，防止内存溢出）
@@ -17,7 +20,8 @@ public final class ImageCache: ObservableObject {
         
         let cacheDir = fileManager.urls(for: .cachesDirectory, in: .userDomainMask).first
             ?? fileManager.temporaryDirectory
-        cacheDirectory = cacheDir.appendingPathComponent("ImageCache")
+        // 使用独立目录，避免与 URLCache 的 diskPath 冲突
+        cacheDirectory = cacheDir.appendingPathComponent("Link2UrImageCache")
         
         if !fileManager.fileExists(atPath: cacheDirectory.path) {
             try? fileManager.createDirectory(at: cacheDirectory, withIntermediateDirectories: true)
@@ -151,7 +155,50 @@ public final class ImageCache: ObservableObject {
             return
         }
         
+        diskCacheLock.lock()
+        defer { diskCacheLock.unlock() }
+        
+        // 写入前检查磁盘总大小，超限则清理最旧文件
+        checkAndCleanDiskCacheIfNeeded()
+        
         try? finalData.write(to: fileURL)
+    }
+    
+    /// 检查并清理磁盘缓存（超过 maxDiskCacheSize 时删除最旧文件，清理到 80% 以下）
+    private func checkAndCleanDiskCacheIfNeeded() {
+        guard let files = try? fileManager.contentsOfDirectory(at: cacheDirectory, includingPropertiesForKeys: [.fileSizeKey, .contentModificationDateKey]) else {
+            return
+        }
+        
+        var totalSize: Int64 = 0
+        var fileInfos: [(url: URL, size: Int64, date: Date)] = []
+        
+        for file in files {
+            if let resourceValues = try? file.resourceValues(forKeys: [.fileSizeKey, .contentModificationDateKey]),
+               let size = resourceValues.fileSize,
+               let date = resourceValues.contentModificationDate {
+                totalSize += Int64(size)
+                fileInfos.append((url: file, size: Int64(size), date: date))
+            }
+        }
+        
+        guard totalSize > maxDiskCacheSize else { return }
+        
+        fileInfos.sort { $0.date < $1.date }
+        var removedSize: Int64 = 0
+        
+        for fileInfo in fileInfos {
+            if totalSize - removedSize <= maxDiskCacheSize * 8 / 10 {
+                break
+            }
+            try? fileManager.removeItem(at: fileInfo.url)
+            removedSize += fileInfo.size
+            totalSize -= fileInfo.size
+        }
+        
+        if removedSize > 0 {
+            Logger.debug("磁盘图片缓存超限，已清理 \(removedSize / 1024 / 1024)MB（最旧文件）", category: .cache)
+        }
     }
     
     private func loadFromDisk(url: String) -> UIImage? {
