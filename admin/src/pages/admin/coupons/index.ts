@@ -1,2 +1,2 @@
-export { CouponManagement } from './CouponManagement.refactored';
+export { CouponManagement } from './CouponManagement';
 export * from './types';
