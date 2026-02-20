@@ -35,7 +35,7 @@ const ReportManagement: React.FC = () => {
         page: forumPage,
         page_size: 20
       });
-      setForumReports(response.items || []);
+      setForumReports(response.reports || response.items || []);
       setForumTotal(response.total || 0);
     } catch (error: any) {
       message.error(getErrorMessage(error));
@@ -52,7 +52,7 @@ const ReportManagement: React.FC = () => {
         page: fleaPage,
         page_size: 20
       });
-      setFleaReports(response.items || []);
+      setFleaReports(response.reports || response.items || []);
       setFleaTotal(response.total || 0);
     } catch (error: any) {
       message.error(getErrorMessage(error));

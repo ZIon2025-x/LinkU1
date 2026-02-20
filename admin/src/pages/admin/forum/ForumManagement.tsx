@@ -45,7 +45,7 @@ const ForumManagement: React.FC = () => {
     setLoading(true);
     try {
       const response = await getForumCategories();
-      setCategories(response.items || response || []);
+      setCategories(response.categories || response.items || []);
     } catch (error: any) {
       message.error(getErrorMessage(error));
     } finally {

@@ -72,7 +72,7 @@ const InvitationManagement: React.FC = () => {
         limit: 20,
         status: statusFilter as 'active' | 'inactive' | undefined
       });
-      setCodes(response.items || []);
+      setCodes(response.data || response.items || []);
       setTotal(response.total || 0);
     } catch (error: any) {
       message.error(getErrorMessage(error));

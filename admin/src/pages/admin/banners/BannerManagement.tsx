@@ -9,6 +9,7 @@ import {
   uploadBannerImage
 } from '../../../api';
 import { getErrorMessage } from '../../../utils/errorHandler';
+import { resolveImageUrl } from '../../../utils/urlUtils';
 import LazyImage from '../../../components/LazyImage';
 
 interface Banner {
@@ -61,7 +62,8 @@ const BannerManagement: React.FC = () => {
     setLoading(true);
     try {
       const response = await getBannersAdmin({ page, limit: 20 });
-      setBanners(response.items || []);
+      // 后端返回 data 而非 items
+      setBanners(response.data || response.items || []);
       setTotal(response.total || 0);
     } catch (error: any) {
       message.error(getErrorMessage(error));
@@ -221,7 +223,7 @@ const BannerManagement: React.FC = () => {
             >
               <div style={{ position: 'relative', height: '150px', overflow: 'hidden' }}>
                 <LazyImage
-                  src={banner.image_url}
+                  src={resolveImageUrl(banner.image_url)}
                   alt={banner.title}
                   style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                 />
@@ -294,7 +296,7 @@ const BannerManagement: React.FC = () => {
             {uploading && <span style={{ marginLeft: '10px', color: '#666' }}>上传中...</span>}
             {form.image_url && (
               <div style={{ marginTop: '10px' }}>
-                <img src={form.image_url} alt="Preview" style={{ maxWidth: '200px', maxHeight: '100px', objectFit: 'cover', borderRadius: '4px' }} />
+                <img src={resolveImageUrl(form.image_url)} alt="Preview" style={{ maxWidth: '200px', maxHeight: '100px', objectFit: 'cover', borderRadius: '4px' }} />
               </div>
             )}
           </div>
