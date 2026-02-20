@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { message } from 'antd';
 import { clearCache } from '../../../api';
 import { getErrorMessage } from '../../../utils/errorHandler';
+import { API_BASE_URL } from '../../../config';
 
 /**
  * 系统设置组件
@@ -62,23 +63,32 @@ const Settings: React.FC = () => {
             </div>
             <div>
               <div style={{ color: '#666', fontSize: '12px', marginBottom: '4px' }}>环境</div>
-              <div style={{ fontWeight: '500' }}>{process.env.NODE_ENV || 'development'}</div>
+              <div style={{ fontWeight: '500' }}>
+                {process.env.NODE_ENV === 'production' ? '生产环境' : '开发环境'}
+              </div>
             </div>
             <div>
-              <div style={{ color: '#666', fontSize: '12px', marginBottom: '4px' }}>构建时间</div>
-              <div style={{ fontWeight: '500' }}>{new Date().toLocaleDateString('zh-CN')}</div>
+              <div style={{ color: '#666', fontSize: '12px', marginBottom: '4px' }}>后端地址</div>
+              <div style={{ fontWeight: '500', fontSize: '12px', wordBreak: 'break-all' }}>{API_BASE_URL}</div>
             </div>
           </div>
         </div>
 
-        {/* 帮助信息 */}
-        <div style={{ background: '#e7f3ff', padding: '16px 20px', borderRadius: '8px', border: '1px solid #b3d7ff' }}>
-          <h4 style={{ margin: '0 0 12px 0', color: '#0056b3' }}>帮助信息</h4>
-          <ul style={{ margin: 0, paddingLeft: '20px', color: '#333' }}>
-            <li>如遇到问题，请先尝试清理缓存</li>
-            <li>管理员操作将被记录在系统日志中</li>
-            <li>如需技术支持，请联系开发团队</li>
-          </ul>
+        {/* 安全设置 */}
+        <div style={{ background: 'white', padding: '24px', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
+          <h3 style={{ margin: '0 0 16px 0', fontSize: '16px' }}>安全设置</h3>
+          <p style={{ color: '#666', marginBottom: '16px', fontSize: '14px' }}>
+            管理双因素认证 (2FA) 和账号安全。
+          </p>
+          <button
+            onClick={() => window.location.href = '/2fa-settings'}
+            style={{
+              padding: '10px 20px', border: '1px solid #d9d9d9', background: 'white',
+              borderRadius: '4px', cursor: 'pointer', fontSize: '14px'
+            }}
+          >
+            🔐 管理双因素认证 (2FA)
+          </button>
         </div>
       </div>
     </div>
