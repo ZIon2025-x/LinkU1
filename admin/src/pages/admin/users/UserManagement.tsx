@@ -1,9 +1,11 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState } from 'react';
 import { message } from 'antd';
 import dayjs from 'dayjs';
 import { getUsersForAdmin, updateUserByAdmin } from '../../../api';
 import { getErrorMessage } from '../../../utils/errorHandler';
-import { User, UserUpdateData, USER_LEVEL_LABELS, UserLevel } from './types';
+import { User, USER_LEVEL_LABELS } from './types';
+import { useAdminTable, useModalForm } from '../../../hooks';
+import { AdminTable, AdminPagination, AdminModal, Column } from '../../../components/admin';
 import styles from './UserManagement.module.css';
 
 /**
@@ -11,52 +13,36 @@ import styles from './UserManagement.module.css';
  * 提供用户列表查看、搜索、等级修改、封禁/暂停等功能
  */
 const UserManagement: React.FC = () => {
-  // 数据状态
-  const [users, setUsers] = useState<User[]>([]);
-  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  
-  // 分页状态
-  const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-  const [searchTerm, setSearchTerm] = useState('');
-  
-  // 操作状态
   const [userActionLoading, setUserActionLoading] = useState<string | null>(null);
-  
-  // 暂停模态框状态
-  const [showSuspendModal, setShowSuspendModal] = useState(false);
-  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
-  const [suspendDuration, setSuspendDuration] = useState(1);
 
-  // 加载用户列表
-  const loadUsers = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const response = await getUsersForAdmin(currentPage, 20, searchTerm || undefined);
-      setUsers(response.users || []);
-      setTotalPages(response.total_pages || 1);
-    } catch (err: any) {
-      const errorMsg = getErrorMessage(err);
-      setError(errorMsg);
-      console.error('Failed to load users:', err);
-    } finally {
-      setLoading(false);
-    }
-  }, [currentPage, searchTerm]);
+  const table = useAdminTable<User>({
+    fetchData: async ({ page, pageSize, searchTerm }) => {
+      const response = await getUsersForAdmin(page, pageSize, searchTerm || undefined);
+      return {
+        data: response.users || [],
+        total: (response.total_pages || 1) * pageSize,
+      };
+    },
+    initialPageSize: 20,
+    onError: (err) => setError(getErrorMessage(err)),
+  });
 
-  useEffect(() => {
-    loadUsers();
-  }, [loadUsers]);
-
-  // 搜索防抖
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setCurrentPage(1);
-    }, 300);
-    return () => clearTimeout(timer);
-  }, [searchTerm]);
+  interface SuspendForm { userId: string; days: number; }
+  const suspendModal = useModalForm<SuspendForm>({
+    initialValues: { userId: '', days: 1 },
+    onSubmit: async (values) => {
+      const suspendUntil = new Date();
+      suspendUntil.setDate(suspendUntil.getDate() + values.days);
+      await updateUserByAdmin(values.userId, {
+        is_suspended: 1,
+        suspend_until: suspendUntil.toISOString(),
+      });
+      message.success(`用户已暂停${values.days}天`);
+      table.refresh();
+    },
+    onError: (err) => message.error(getErrorMessage(err)),
+  });
 
   // 更新用户等级
   const handleUpdateUserLevel = async (userId: string, newLevel: string) => {
@@ -64,9 +50,9 @@ const UserManagement: React.FC = () => {
     try {
       await updateUserByAdmin(userId, { user_level: newLevel });
       message.success('用户等级更新成功！');
-      loadUsers();
-    } catch (error: any) {
-      message.error(getErrorMessage(error));
+      table.refresh();
+    } catch (err: any) {
+      message.error(getErrorMessage(err));
     } finally {
       setUserActionLoading(null);
     }
@@ -78,56 +64,26 @@ const UserManagement: React.FC = () => {
     try {
       await updateUserByAdmin(userId, { is_banned: isBanned });
       message.success(isBanned ? '用户已封禁' : '用户已解封');
-      loadUsers();
-    } catch (error: any) {
-      message.error(getErrorMessage(error));
+      table.refresh();
+    } catch (err: any) {
+      message.error(getErrorMessage(err));
     } finally {
       setUserActionLoading(null);
     }
   };
 
   // 暂停/恢复用户
-  const handleSuspendUser = async (userId: string, isSuspended: number, suspendUntil?: string) => {
+  const handleSuspendUser = async (userId: string, isSuspended: number) => {
     setUserActionLoading(userId);
     try {
-      const updateData: UserUpdateData = { is_suspended: isSuspended };
-      if (isSuspended && suspendUntil) {
-        updateData.suspend_until = suspendUntil;
-      }
-      await updateUserByAdmin(userId, updateData);
-      message.success(isSuspended ? `用户已暂停${suspendDuration}天` : '用户已恢复');
-      loadUsers();
-    } catch (error: any) {
-      message.error(getErrorMessage(error));
+      await updateUserByAdmin(userId, { is_suspended: isSuspended });
+      message.success(isSuspended ? '用户已暂停' : '用户已恢复');
+      table.refresh();
+    } catch (err: any) {
+      message.error(getErrorMessage(err));
     } finally {
       setUserActionLoading(null);
     }
-  };
-
-  // 点击暂停按钮
-  const handleSuspendClick = (userId: string) => {
-    setSelectedUserId(userId);
-    setShowSuspendModal(true);
-  };
-
-  // 确认暂停
-  const handleConfirmSuspend = () => {
-    if (!selectedUserId) return;
-    
-    const suspendUntil = new Date();
-    suspendUntil.setDate(suspendUntil.getDate() + suspendDuration);
-    
-    handleSuspendUser(selectedUserId, 1, suspendUntil.toISOString());
-    setShowSuspendModal(false);
-    setSelectedUserId(null);
-    setSuspendDuration(1);
-  };
-
-  // 取消暂停模态框
-  const handleCancelSuspend = () => {
-    setShowSuspendModal(false);
-    setSelectedUserId(null);
-    setSuspendDuration(1);
   };
 
   // 获取状态样式
@@ -146,204 +102,149 @@ const UserManagement: React.FC = () => {
     return '未激活';
   };
 
+  const columns: Column<User>[] = [
+    { key: 'id', title: 'ID', dataIndex: 'id', fixed: 'left', width: 80 },
+    { key: 'name', title: '用户名', dataIndex: 'name', fixed: 'left', width: 120 },
+    { key: 'email', title: '邮箱', dataIndex: 'email', width: 200 },
+    {
+      key: 'user_level', title: '等级', width: 120,
+      render: (_, user) => (
+        <select
+          value={user.user_level}
+          onChange={e => handleUpdateUserLevel(user.id, e.target.value)}
+          disabled={userActionLoading === user.id}
+          className={styles.levelSelect}
+        >
+          {Object.entries(USER_LEVEL_LABELS).map(([v, l]) => (
+            <option key={v} value={v}>{l}</option>
+          ))}
+        </select>
+      ),
+    },
+    {
+      key: 'status', title: '状态', width: 100,
+      render: (_, user) => (
+        <span className={`${styles.statusBadge} ${getStatusClassName(user)}`}>
+          {getStatusText(user)}
+        </span>
+      ),
+    },
+    { key: 'task_count', title: '任务数', dataIndex: 'task_count', width: 80 },
+    { key: 'avg_rating', title: '评分', width: 80, render: (_, u) => u.avg_rating.toFixed(1) },
+    {
+      key: 'invitation_code_text', title: '邀请码', width: 120,
+      render: (_, u) => u.invitation_code_text
+        ? <span className={styles.inviteCode}>{u.invitation_code_text}</span>
+        : <span className={styles.placeholder}>-</span>,
+    },
+    {
+      key: 'inviter_id', title: '邀请人', width: 120,
+      render: (_, u) => u.inviter_id
+        ? <span className={styles.inviterId} onClick={() => table.setSearchTerm(u.inviter_id!)} title="点击查看邀请人信息">{u.inviter_id}</span>
+        : <span className={styles.placeholder}>-</span>,
+    },
+    {
+      key: 'created_at', title: '注册时间', width: 120,
+      render: (_, u) => dayjs(u.created_at).format('YYYY-MM-DD'),
+    },
+    {
+      key: 'actions', title: '操作', width: 220,
+      render: (_, user) => (
+        <div className={styles.actionGroup}>
+          <button
+            onClick={() => handleBanUser(user.id, user.is_banned ? 0 : 1)}
+            disabled={userActionLoading === user.id}
+            className={`${styles.actionBtn} ${user.is_banned ? styles.btnSuccess : styles.btnDanger}`}
+          >
+            {user.is_banned ? '解封' : '封禁'}
+          </button>
+          <button
+            onClick={() => user.is_suspended
+              ? handleSuspendUser(user.id, 0)
+              : suspendModal.open({ userId: user.id, days: 1 })}
+            disabled={userActionLoading === user.id}
+            className={`${styles.actionBtn} ${user.is_suspended ? styles.btnSuccess : styles.btnWarning}`}
+          >
+            {user.is_suspended ? '恢复' : '暂停'}
+          </button>
+          <button
+            onClick={() => handleUpdateUserLevel(user.id, 'normal')}
+            disabled={userActionLoading === user.id}
+            className={`${styles.actionBtn} ${styles.btnPrimary}`}
+          >
+            重置等级
+          </button>
+        </div>
+      ),
+    },
+  ];
+
   return (
     <div className={styles.container}>
       <div className={styles.header}>
         <h2 className={styles.title}>用户管理</h2>
       </div>
 
-      {/* 搜索框 */}
       <div className={styles.searchContainer}>
         <input
           type="text"
           placeholder="搜索用户ID、用户名或邮箱..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
+          value={table.searchTerm}
+          onChange={e => table.setSearchTerm(e.target.value)}
           className={styles.searchInput}
         />
       </div>
 
-      {/* 错误提示 */}
-      {error && (
-        <div className={styles.errorMessage}>{error}</div>
-      )}
+      {error && <div className={styles.errorMessage}>{error}</div>}
 
-      {/* 用户表格 */}
-      <div className={styles.tableContainer}>
-        <table className={styles.table}>
-          <thead className={styles.tableHeader}>
-            <tr>
-              <th className={`${styles.tableHeaderCell} ${styles.stickyCell} ${styles.stickyIdCell}`}>ID</th>
-              <th className={`${styles.tableHeaderCell} ${styles.stickyCell} ${styles.stickyNameCell}`}>用户名</th>
-              <th className={styles.tableHeaderCell} style={{ minWidth: '200px' }}>邮箱</th>
-              <th className={styles.tableHeaderCell} style={{ minWidth: '120px' }}>等级</th>
-              <th className={styles.tableHeaderCell} style={{ minWidth: '100px' }}>状态</th>
-              <th className={styles.tableHeaderCell} style={{ minWidth: '80px' }}>任务数</th>
-              <th className={styles.tableHeaderCell} style={{ minWidth: '80px' }}>评分</th>
-              <th className={styles.tableHeaderCell} style={{ minWidth: '120px' }}>邀请码</th>
-              <th className={styles.tableHeaderCell} style={{ minWidth: '120px' }}>邀请人</th>
-              <th className={styles.tableHeaderCell} style={{ minWidth: '120px' }}>注册时间</th>
-              <th className={styles.tableHeaderCell} style={{ minWidth: '200px' }}>操作</th>
-            </tr>
-          </thead>
-          <tbody>
-            {loading ? (
-              <tr>
-                <td colSpan={11} className={styles.emptyRow}>加载中...</td>
-              </tr>
-            ) : users && users.length > 0 ? (
-              users.map(user => (
-                <tr key={user.id} className={styles.tableRow}>
-                  {/* ID */}
-                  <td className={`${styles.tableCell} ${styles.tableCellSticky} ${styles.stickyCell} ${styles.stickyIdCell}`}>
-                    {user.id}
-                  </td>
-                  {/* 用户名 */}
-                  <td className={`${styles.tableCell} ${styles.tableCellSticky} ${styles.stickyCell} ${styles.stickyNameCell}`}>
-                    {user.name}
-                  </td>
-                  {/* 邮箱 */}
-                  <td className={styles.tableCell}>{user.email}</td>
-                  {/* 等级选择 */}
-                  <td className={styles.tableCell}>
-                    <select
-                      value={user.user_level}
-                      onChange={(e) => handleUpdateUserLevel(user.id, e.target.value)}
-                      disabled={userActionLoading === user.id}
-                      className={styles.levelSelect}
-                    >
-                      {Object.entries(USER_LEVEL_LABELS).map(([value, label]) => (
-                        <option key={value} value={value}>{label}</option>
-                      ))}
-                    </select>
-                  </td>
-                  {/* 状态 */}
-                  <td className={styles.tableCell}>
-                    <span className={`${styles.statusBadge} ${getStatusClassName(user)}`}>
-                      {getStatusText(user)}
-                    </span>
-                  </td>
-                  {/* 任务数 */}
-                  <td className={styles.tableCell}>{user.task_count}</td>
-                  {/* 评分 */}
-                  <td className={styles.tableCell}>{user.avg_rating.toFixed(1)}</td>
-                  {/* 邀请码 */}
-                  <td className={styles.tableCell}>
-                    {user.invitation_code_text ? (
-                      <span className={styles.inviteCode}>{user.invitation_code_text}</span>
-                    ) : (
-                      <span className={styles.placeholder}>-</span>
-                    )}
-                  </td>
-                  {/* 邀请人 */}
-                  <td className={styles.tableCell}>
-                    {user.inviter_id ? (
-                      <span 
-                        className={styles.inviterId}
-                        onClick={() => setSearchTerm(user.inviter_id || '')}
-                        title="点击查看邀请人信息"
-                      >
-                        {user.inviter_id}
-                      </span>
-                    ) : (
-                      <span className={styles.placeholder}>-</span>
-                    )}
-                  </td>
-                  {/* 注册时间 */}
-                  <td className={styles.tableCell}>
-                    {dayjs(user.created_at).format('YYYY-MM-DD')}
-                  </td>
-                  {/* 操作按钮 */}
-                  <td className={styles.tableCell}>
-                    <div className={styles.actionGroup}>
-                      <button
-                        onClick={() => handleBanUser(user.id, user.is_banned ? 0 : 1)}
-                        disabled={userActionLoading === user.id}
-                        className={`${styles.actionBtn} ${user.is_banned ? styles.btnSuccess : styles.btnDanger}`}
-                      >
-                        {user.is_banned ? '解封' : '封禁'}
-                      </button>
-                      <button
-                        onClick={() => user.is_suspended ? handleSuspendUser(user.id, 0) : handleSuspendClick(user.id)}
-                        disabled={userActionLoading === user.id}
-                        className={`${styles.actionBtn} ${user.is_suspended ? styles.btnSuccess : styles.btnWarning}`}
-                      >
-                        {user.is_suspended ? '恢复' : '暂停'}
-                      </button>
-                      <button
-                        onClick={() => handleUpdateUserLevel(user.id, 'normal')}
-                        disabled={userActionLoading === user.id}
-                        className={`${styles.actionBtn} ${styles.btnPrimary}`}
-                      >
-                        重置等级
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))
-            ) : (
-              <tr>
-                <td colSpan={11} className={styles.emptyRow}>暂无用户数据</td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
+      <AdminTable
+        columns={columns}
+        data={table.data}
+        loading={table.loading}
+        rowKey="id"
+        emptyText="暂无用户数据"
+      />
 
-      {/* 分页 */}
-      {users && users.length > 0 && (
-        <div className={styles.pagination}>
-          <button
-            disabled={currentPage === 1 || loading}
-            onClick={() => setCurrentPage(currentPage - 1)}
-            className={styles.pageBtn}
-          >
-            上一页
-          </button>
-          <span className={styles.pageInfo}>
-            第 {currentPage} 页，共 {totalPages} 页
-          </span>
-          <button
-            disabled={currentPage === totalPages || loading}
-            onClick={() => setCurrentPage(currentPage + 1)}
-            className={styles.pageBtn}
-          >
-            下一页
-          </button>
-        </div>
-      )}
+      <AdminPagination
+        currentPage={table.currentPage}
+        totalPages={table.totalPages}
+        total={table.total}
+        pageSize={table.pageSize}
+        onPageChange={table.setCurrentPage}
+      />
 
-      {/* 暂停用户模态框 */}
-      {showSuspendModal && (
-        <div className={styles.modal} onClick={handleCancelSuspend}>
-          <div className={styles.modalContent} onClick={e => e.stopPropagation()}>
-            <h3 className={styles.modalTitle}>暂停用户</h3>
-            <label className={styles.modalLabel}>暂停天数</label>
-            <input
-              type="number"
-              min="1"
-              max="365"
-              value={suspendDuration}
-              onChange={(e) => setSuspendDuration(parseInt(e.target.value) || 1)}
-              className={styles.modalInput}
-            />
-            <div className={styles.modalActions}>
-              <button 
-                onClick={handleCancelSuspend}
-                className={`${styles.modalBtn} ${styles.modalBtnCancel}`}
-              >
-                取消
-              </button>
-              <button 
-                onClick={handleConfirmSuspend}
-                className={`${styles.modalBtn} ${styles.modalBtnConfirm}`}
-              >
-                确认暂停
-              </button>
-            </div>
+      {/* Suspend modal */}
+      <AdminModal
+        isOpen={suspendModal.isOpen}
+        onClose={suspendModal.close}
+        title="暂停用户"
+        footer={
+          <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+            <button onClick={suspendModal.close} style={{ padding: '8px 16px', border: '1px solid #d9d9d9', borderRadius: '4px', cursor: 'pointer', background: 'white' }}>
+              取消
+            </button>
+            <button
+              onClick={suspendModal.handleSubmit}
+              disabled={suspendModal.loading}
+              style={{ padding: '8px 16px', border: 'none', borderRadius: '4px', cursor: 'pointer', background: '#faad14', color: 'white' }}
+            >
+              {suspendModal.loading ? '处理中...' : '确认暂停'}
+            </button>
           </div>
+        }
+      >
+        <div style={{ padding: '8px 0' }}>
+          <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500' }}>暂停天数</label>
+          <input
+            type="number"
+            min="1"
+            max="365"
+            value={suspendModal.formData.days}
+            onChange={e => suspendModal.updateField('days', parseInt(e.target.value) || 1)}
+            style={{ width: '100%', padding: '8px', border: '1px solid #d9d9d9', borderRadius: '4px', fontSize: '14px' }}
+          />
         </div>
-      )}
+      </AdminModal>
     </div>
   );
 };
