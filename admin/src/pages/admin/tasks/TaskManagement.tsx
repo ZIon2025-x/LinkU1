@@ -14,9 +14,9 @@ import {
   approveExitRequest,
   rejectExitRequest,
   completeTaskAndDistributeRewardsEqual,
-} from '../api';
+} from '../../../api';
 import dayjs from 'dayjs';
-import { TimeHandlerV2 } from '../utils/timeUtils';
+import { TimeHandlerV2 } from '../../../utils/timeUtils';
 
 // 实际的任务类型和城市定义
 const TASK_TYPES = [

@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import TaskManagement from '../../../components/TaskManagement';
+import TaskManagement from './TaskManagement';
 
 /**
  * 任务管理页面
