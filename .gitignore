@@ -80,3 +80,6 @@ stripe-sample-code (1)/
 # Windows reserved names
 nul
 
+# Git worktrees
+.worktrees/
+
