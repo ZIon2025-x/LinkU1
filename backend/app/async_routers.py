@@ -11,7 +11,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request, status, B
 from fastapi.security import HTTPAuthorizationCredentials
 from typing import Optional
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, and_, func
+from sqlalchemy import select, and_, func, update
 
 from app import async_crud, models, schemas
 from app.database import check_database_health, get_pool_status
@@ -415,6 +415,18 @@ async def get_task_by_id(
         # 如果都不是，拒绝访问
         if not is_poster and not is_taker and not is_participant and not is_applicant:
             raise HTTPException(status_code=403, detail="无权限查看此任务")
+
+    # 增加任务浏览量（仅存库，不展示到前端）
+    try:
+        await db.execute(
+            update(models.Task)
+            .where(models.Task.id == task_id)
+            .values(view_count=models.Task.view_count + 1)
+        )
+        await db.commit()
+    except Exception as e:
+        logger.warning("增加任务浏览量失败: %s", e)
+        await db.rollback()
     
     # 按请求语言确保标题/描述有对应语种（缺则翻译并写入任务表列）；游客用 query lang 或 Accept-Language
     from app.utils.task_activity_display import (

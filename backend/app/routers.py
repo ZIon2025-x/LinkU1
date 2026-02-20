@@ -46,7 +46,7 @@ from app.utils.time_utils import get_utc_time, format_iso_utc
 
 import stripe
 from pydantic import BaseModel, Field
-from sqlalchemy import or_, and_, select, func
+from sqlalchemy import or_, and_, select, func, update
 
 from app.security import verify_password
 from app.security import create_access_token
@@ -1279,6 +1279,14 @@ def get_task_detail(
         if not is_poster and not is_taker and not is_participant and not is_applicant:
             raise HTTPException(status_code=403, detail="无权限查看此任务")
     
+    # 增加任务浏览量（仅存库，不展示到前端）
+    try:
+        db.execute(update(models.Task).where(models.Task.id == task_id).values(view_count=models.Task.view_count + 1))
+        db.commit()
+    except Exception as e:
+        logger.warning("增加任务浏览量失败: %s", e)
+        db.rollback()
+
     # 记录用户浏览行为（异步记录，不阻塞响应）
     if current_user:
         try:

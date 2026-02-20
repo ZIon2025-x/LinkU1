@@ -246,6 +246,7 @@ class Task(Base):
     originating_user_id = Column(String(8), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
     # 任务来源：normal（普通任务）、expert_service（达人服务）、expert_activity（达人活动）、flea_market（跳蚤市场）
     task_source = Column(String(20), default="normal", nullable=False)
+    view_count = Column(Integer, default=0, nullable=False)  # 浏览量（仅存库，不展示）
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=get_utc_time)
     
     # 关系
