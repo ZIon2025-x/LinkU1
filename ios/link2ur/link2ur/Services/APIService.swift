@@ -41,9 +41,9 @@ public class APIService {
         configuration.timeoutIntervalForRequest = Constants.API.timeoutInterval
         configuration.timeoutIntervalForResource = Constants.API.timeoutInterval * 2
         
-        // 启用等待连接功能 - 当网络暂时不可用时，等待连接恢复而不是立即失败
-        // 这有助于处理网络切换、短暂断开等情况
-        configuration.waitsForConnectivity = true
+        // 关闭 waitsForConnectivity，避免无网络/弱网时请求阻塞 60+ 秒导致启动页卡死
+        // 无网络时应快速失败（超时 30s），让用户进入主界面后重试
+        configuration.waitsForConnectivity = false
         
         // 允许使用蜂窝网络
         configuration.allowsCellularAccess = true

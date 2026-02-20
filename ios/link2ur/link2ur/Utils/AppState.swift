@@ -282,6 +282,18 @@ public class AppState: ObservableObject {
         if let token = KeychainHelper.shared.read(service: Constants.Keychain.service, account: Constants.Keychain.accessTokenKey), !token.isEmpty {
             // 有 token 即先视为已登录，避免 /me 返回前或用户跳过加载时点击需登录功能误弹登录框；/me 失败且刷新失败时会在 receiveCompletion 或 APIService 中置为 false
             isAuthenticated = true
+            
+            // 安全兜底：15 秒内若 /me 未返回（如网络卡住、waitsForConnectivity 残留影响），强制退出启动页
+            let safetyTimeout: TimeInterval = 15.0
+            DispatchQueue.main.asyncAfter(deadline: .now() + safetyTimeout) { [weak self] in
+                guard let self = self else { return }
+                if self.isCheckingLoginStatus {
+                    Logger.warning("登录检查超时（\(Int(safetyTimeout))s），强制进入主界面", category: .auth)
+                    self.isCheckingLoginStatus = false
+                    self.isCheckingLogin = false
+                }
+            }
+            
             // 验证 Token 有效性并加载用户信息
             apiService.request(User.self, "/api/users/profile/me", method: "GET")
                 .sink(receiveCompletion: { [weak self] result in

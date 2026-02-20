@@ -270,8 +270,7 @@ public struct ContentView: View {
     
     // 检查引导教程状态
     private func checkOnboardingStatus() {
-        // 优化：同步读取 UserDefaults，确保获取最新值
-        UserDefaults.standard.synchronize()
+        // UserDefaults 在现代 iOS 上会自动持久化，无需 synchronize()
         let hasSeenOnboarding = UserDefaults.standard.bool(forKey: "has_seen_onboarding")
         
         // 调试日志
