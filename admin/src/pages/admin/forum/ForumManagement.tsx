@@ -1,5 +1,7 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useCallback } from 'react';
 import { message, Modal } from 'antd';
+import { useAdminTable, useModalForm } from '../../../hooks';
+import { AdminTable, AdminPagination, StatusBadge, Column } from '../../../components/admin';
 import {
   getForumCategories,
   createForumCategory,
@@ -17,7 +19,7 @@ interface Category {
   post_count?: number;
 }
 
-interface FormData {
+interface CategoryForm {
   id?: number;
   name: string;
   description: string;
@@ -25,7 +27,7 @@ interface FormData {
   is_active: boolean;
 }
 
-const initialForm: FormData = {
+const initialForm: CategoryForm = {
   name: '',
   description: '',
   sort_order: 0,
@@ -36,77 +38,61 @@ const initialForm: FormData = {
  * 论坛分类管理组件
  */
 const ForumManagement: React.FC = () => {
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [showModal, setShowModal] = useState(false);
-  const [form, setForm] = useState<FormData>(initialForm);
-
-  const loadCategories = useCallback(async () => {
-    setLoading(true);
-    try {
-      const response = await getForumCategories();
-      setCategories(response.categories || response.items || []);
-    } catch (error: any) {
-      message.error(getErrorMessage(error));
-    } finally {
-      setLoading(false);
-    }
+  const fetchCategories = useCallback(async () => {
+    const response = await getForumCategories();
+    const data = response.categories || response.items || [];
+    return { data, total: data.length };
   }, []);
 
-  useEffect(() => {
-    loadCategories();
-  }, [loadCategories]);
+  const handleFetchError = useCallback((error: any) => {
+    message.error(getErrorMessage(error));
+  }, []);
 
-  const handleCreate = async () => {
-    if (!form.name) {
-      message.warning('请填写分类名称');
-      return;
-    }
+  const table = useAdminTable<Category>({
+    fetchData: fetchCategories,
+    initialPageSize: 100,
+    onError: handleFetchError,
+  });
 
-    try {
-      await createForumCategory({
-        name: form.name,
-        description: form.description || undefined,
-        sort_order: form.sort_order,
-        is_visible: form.is_active
-      });
-      message.success('分类创建成功！');
-      setShowModal(false);
-      setForm(initialForm);
-      loadCategories();
-    } catch (error: any) {
+  const modal = useModalForm<CategoryForm>({
+    initialValues: initialForm,
+    onSubmit: async (values, isEdit) => {
+      if (!values.name) {
+        message.warning('请填写分类名称');
+        throw new Error('分类名称不能为空');
+      }
+      if (isEdit && values.id) {
+        await updateForumCategory(values.id, {
+          name: values.name,
+          description: values.description || undefined,
+          sort_order: values.sort_order,
+          is_visible: values.is_active
+        });
+        message.success('分类更新成功！');
+      } else {
+        await createForumCategory({
+          name: values.name,
+          description: values.description || undefined,
+          sort_order: values.sort_order,
+          is_visible: values.is_active
+        });
+        message.success('分类创建成功！');
+      }
+      table.refresh();
+    },
+    onError: (error) => {
       message.error(getErrorMessage(error));
-    }
-  };
-
-  const handleUpdate = async () => {
-    if (!form.id) return;
-
-    try {
-      await updateForumCategory(form.id, {
-        name: form.name,
-        description: form.description || undefined,
-        sort_order: form.sort_order,
-        is_visible: form.is_active
-      });
-      message.success('分类更新成功！');
-      setShowModal(false);
-      setForm(initialForm);
-      loadCategories();
-    } catch (error: any) {
-      message.error(getErrorMessage(error));
-    }
-  };
+    },
+  });
 
   const handleEdit = (category: Category) => {
-    setForm({
+    modal.open({
       id: category.id,
       name: category.name,
       description: category.description || '',
       sort_order: category.sort_order,
       is_active: category.is_active
     });
-    setShowModal(true);
   };
 
   const handleDelete = (id: number) => {
@@ -120,7 +106,7 @@ const ForumManagement: React.FC = () => {
         try {
           await deleteForumCategory(id);
           message.success('分类删除成功！');
-          loadCategories();
+          table.refresh();
         } catch (error: any) {
           message.error(getErrorMessage(error));
         }
@@ -128,12 +114,102 @@ const ForumManagement: React.FC = () => {
     });
   };
 
+  const columns: Column<Category>[] = [
+    {
+      key: 'id',
+      title: 'ID',
+      dataIndex: 'id',
+      width: 80,
+    },
+    {
+      key: 'name',
+      title: '名称',
+      dataIndex: 'name',
+      width: 200,
+      render: (value) => <strong>{value}</strong>,
+    },
+    {
+      key: 'description',
+      title: '描述',
+      dataIndex: 'description',
+      width: 250,
+      render: (value) => (
+        <span style={{ maxWidth: 250, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block' }}>
+          {value || '-'}
+        </span>
+      ),
+    },
+    {
+      key: 'post_count',
+      title: '帖子数',
+      dataIndex: 'post_count',
+      width: 100,
+      render: (value) => value || 0,
+    },
+    {
+      key: 'sort_order',
+      title: '排序',
+      dataIndex: 'sort_order',
+      width: 80,
+    },
+    {
+      key: 'is_active',
+      title: '状态',
+      dataIndex: 'is_active',
+      width: 100,
+      render: (value) => (
+        <StatusBadge
+          text={value ? '启用' : '禁用'}
+          variant={value ? 'success' : 'danger'}
+        />
+      ),
+    },
+    {
+      key: 'actions',
+      title: '操作',
+      width: 150,
+      align: 'center',
+      render: (_, record) => (
+        <div style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
+          <button
+            onClick={() => handleEdit(record)}
+            style={{
+              padding: '4px 8px',
+              border: '1px solid #007bff',
+              background: 'white',
+              color: '#007bff',
+              borderRadius: '4px',
+              cursor: 'pointer',
+              fontSize: '12px'
+            }}
+          >
+            编辑
+          </button>
+          <button
+            onClick={() => handleDelete(record.id)}
+            style={{
+              padding: '4px 8px',
+              border: '1px solid #dc3545',
+              background: 'white',
+              color: '#dc3545',
+              borderRadius: '4px',
+              cursor: 'pointer',
+              fontSize: '12px'
+            }}
+          >
+            删除
+          </button>
+        </div>
+      ),
+    },
+  ];
+
   return (
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
         <h2 style={{ margin: 0 }}>论坛分类管理</h2>
         <button
-          onClick={() => { setForm(initialForm); setShowModal(true); }}
+          onClick={() => modal.open(initialForm, true)}
           style={{
             padding: '10px 20px',
             border: 'none',
@@ -149,93 +225,33 @@ const ForumManagement: React.FC = () => {
         </button>
       </div>
 
-      {/* 分类列表 */}
-      <div style={{ background: 'white', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)', overflow: 'hidden' }}>
-        {loading ? (
-          <div style={{ padding: '40px', textAlign: 'center' }}>加载中...</div>
-        ) : categories.length === 0 ? (
-          <div style={{ padding: '40px', textAlign: 'center', color: '#999' }}>暂无分类</div>
-        ) : (
-          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-            <thead>
-              <tr style={{ background: '#f8f9fa' }}>
-                <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #dee2e6', fontWeight: '600' }}>ID</th>
-                <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #dee2e6', fontWeight: '600' }}>名称</th>
-                <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #dee2e6', fontWeight: '600' }}>描述</th>
-                <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #dee2e6', fontWeight: '600' }}>帖子数</th>
-                <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #dee2e6', fontWeight: '600' }}>排序</th>
-                <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #dee2e6', fontWeight: '600' }}>状态</th>
-                <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #dee2e6', fontWeight: '600' }}>操作</th>
-              </tr>
-            </thead>
-            <tbody>
-              {categories.map((category) => (
-                <tr key={category.id} style={{ borderBottom: '1px solid #dee2e6' }}>
-                  <td style={{ padding: '12px' }}>{category.id}</td>
-                  <td style={{ padding: '12px', fontWeight: '500' }}>{category.name}</td>
-                  <td style={{ padding: '12px', maxWidth: '250px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {category.description || '-'}
-                  </td>
-                  <td style={{ padding: '12px' }}>{category.post_count || 0}</td>
-                  <td style={{ padding: '12px' }}>{category.sort_order}</td>
-                  <td style={{ padding: '12px' }}>
-                    <span style={{
-                      padding: '4px 8px',
-                      borderRadius: '4px',
-                      background: category.is_active ? '#d4edda' : '#f8d7da',
-                      color: category.is_active ? '#155724' : '#721c24',
-                      fontSize: '12px',
-                      fontWeight: '500'
-                    }}>
-                      {category.is_active ? '启用' : '禁用'}
-                    </span>
-                  </td>
-                  <td style={{ padding: '12px' }}>
-                    <div style={{ display: 'flex', gap: '8px' }}>
-                      <button
-                        onClick={() => handleEdit(category)}
-                        style={{
-                          padding: '4px 8px',
-                          border: '1px solid #007bff',
-                          background: 'white',
-                          color: '#007bff',
-                          borderRadius: '4px',
-                          cursor: 'pointer',
-                          fontSize: '12px'
-                        }}
-                      >
-                        编辑
-                      </button>
-                      <button
-                        onClick={() => handleDelete(category.id)}
-                        style={{
-                          padding: '4px 8px',
-                          border: '1px solid #dc3545',
-                          background: 'white',
-                          color: '#dc3545',
-                          borderRadius: '4px',
-                          cursor: 'pointer',
-                          fontSize: '12px'
-                        }}
-                      >
-                        删除
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </div>
+      <AdminTable
+        columns={columns}
+        data={table.data}
+        loading={table.loading}
+        rowKey="id"
+        emptyText="暂无分类"
+      />
 
-      {/* 模态框 */}
+      {table.total > table.pageSize && (
+        <AdminPagination
+          currentPage={table.currentPage}
+          totalPages={table.totalPages}
+          total={table.total}
+          pageSize={table.pageSize}
+          onPageChange={table.setCurrentPage}
+          onPageSizeChange={table.setPageSize}
+        />
+      )}
+
+      {/* 创建/编辑模态框 */}
       <Modal
-        title={form.id ? '编辑分类' : '创建分类'}
-        open={showModal}
-        onCancel={() => { setShowModal(false); setForm(initialForm); }}
-        onOk={form.id ? handleUpdate : handleCreate}
-        okText={form.id ? '更新' : '创建'}
+        title={modal.isEdit ? '编辑分类' : '创建分类'}
+        open={modal.isOpen}
+        onCancel={modal.close}
+        onOk={modal.handleSubmit}
+        confirmLoading={modal.loading}
+        okText={modal.isEdit ? '更新' : '创建'}
         cancelText="取消"
         width={500}
       >
@@ -246,22 +262,23 @@ const ForumManagement: React.FC = () => {
             </label>
             <input
               type="text"
-              value={form.name}
-              onChange={(e) => setForm({ ...form, name: e.target.value })}
+              value={modal.formData.name}
+              onChange={(e) => modal.updateField('name', e.target.value)}
               placeholder="请输入分类名称"
               style={{
                 width: '100%',
                 padding: '8px',
                 border: '1px solid #ddd',
-                borderRadius: '4px'
+                borderRadius: '4px',
+                boxSizing: 'border-box'
               }}
             />
           </div>
           <div style={{ marginBottom: '15px' }}>
             <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>描述</label>
             <textarea
-              value={form.description}
-              onChange={(e) => setForm({ ...form, description: e.target.value })}
+              value={modal.formData.description}
+              onChange={(e) => modal.updateField('description', e.target.value)}
               placeholder="请输入分类描述（可选）"
               rows={3}
               style={{
@@ -269,7 +286,8 @@ const ForumManagement: React.FC = () => {
                 padding: '8px',
                 border: '1px solid #ddd',
                 borderRadius: '4px',
-                resize: 'vertical'
+                resize: 'vertical',
+                boxSizing: 'border-box'
               }}
             />
           </div>
@@ -279,13 +297,14 @@ const ForumManagement: React.FC = () => {
             </label>
             <input
               type="number"
-              value={form.sort_order}
-              onChange={(e) => setForm({ ...form, sort_order: parseInt(e.target.value) || 0 })}
+              value={modal.formData.sort_order}
+              onChange={(e) => modal.updateField('sort_order', parseInt(e.target.value) || 0)}
               style={{
                 width: '100%',
                 padding: '8px',
                 border: '1px solid #ddd',
-                borderRadius: '4px'
+                borderRadius: '4px',
+                boxSizing: 'border-box'
               }}
             />
           </div>
@@ -293,8 +312,8 @@ const ForumManagement: React.FC = () => {
             <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
               <input
                 type="checkbox"
-                checked={form.is_active}
-                onChange={(e) => setForm({ ...form, is_active: e.target.checked })}
+                checked={modal.formData.is_active}
+                onChange={(e) => modal.updateField('is_active', e.target.checked)}
               />
               <span>启用状态</span>
             </label>
