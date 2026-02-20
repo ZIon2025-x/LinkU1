@@ -1,5 +1,7 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { message, Modal } from 'antd';
+import { useAdminTable, useModalForm } from '../../../hooks';
+import { AdminTable, AdminPagination, Column } from '../../../components/admin';
 import {
   getAdminRefundRequests,
   approveRefundRequest,
@@ -18,72 +20,98 @@ import {
 } from './types';
 import styles from './RefundManagement.module.css';
 
+interface ActionForm {
+  action: RefundAction;
+  adminComment: string;
+  refundAmount: number | undefined;
+  refund: RefundRequest | null;
+}
+
+const initialActionForm: ActionForm = {
+  action: 'approve',
+  adminComment: '',
+  refundAmount: undefined,
+  refund: null,
+};
+
 /**
  * 退款管理组件
  * 提供退款申请列表查看、详情查看、批准/拒绝等功能
  */
 const RefundManagement: React.FC = () => {
-  // 列表状态
-  const [refundRequests, setRefundRequests] = useState<RefundRequest[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [page, setPage] = useState(1);
-  const [total, setTotal] = useState(0);
-  const pageSize = 20;
-
-  // 筛选状态
   const [statusFilter, setStatusFilter] = useState<string>('');
   const [searchKeyword, setSearchKeyword] = useState<string>('');
 
-  // 详情弹窗状态
+  // 详情弹窗状态（只读，不提交）
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [selectedRefund, setSelectedRefund] = useState<RefundRequest | null>(null);
 
-  // 处理弹窗状态
-  const [showActionModal, setShowActionModal] = useState(false);
-  const [refundAction, setRefundAction] = useState<RefundAction>('approve');
-  const [adminComment, setAdminComment] = useState('');
-  const [refundAmount, setRefundAmount] = useState<number | undefined>();
-  const [processing, setProcessing] = useState(false);
-
-  // 时间线弹窗状态
+  // 时间线弹窗状态（只读，不提交）
   const [showTimelineModal, setShowTimelineModal] = useState(false);
   const [timeline, setTimeline] = useState<DisputeTimeline | null>(null);
   const [loadingTimeline, setLoadingTimeline] = useState(false);
 
-  // 加载退款申请列表
-  const loadRefundRequests = useCallback(async () => {
-    try {
-      setLoading(true);
-      const response = await getAdminRefundRequests({
-        skip: (page - 1) * pageSize,
-        limit: pageSize,
-        status: statusFilter || undefined,
-        keyword: searchKeyword.trim() || undefined
-      });
-      setRefundRequests(response.items || []);
-      setTotal(response.total || 0);
-    } catch (error: any) {
-      message.error(getErrorMessage(error));
-    } finally {
-      setLoading(false);
-    }
-  }, [page, statusFilter, searchKeyword]);
+  // 获取退款申请列表
+  const fetchRefundRequests = useCallback(async ({ page, pageSize, filters }: { page: number; pageSize: number; searchTerm?: string; filters?: Record<string, any> }) => {
+    const response = await getAdminRefundRequests({
+      skip: (page - 1) * pageSize,
+      limit: pageSize,
+      status: filters?.status || undefined,
+      keyword: filters?.keyword || undefined,
+    });
+    return {
+      data: response.items || [],
+      total: response.total || 0,
+    };
+  }, []);
 
-  // 初始加载和依赖变化时重新加载
-  useEffect(() => {
-    loadRefundRequests();
-  }, [loadRefundRequests]);
+  const handleFetchError = useCallback((error: any) => {
+    message.error(getErrorMessage(error));
+  }, []);
+
+  const table = useAdminTable<RefundRequest>({
+    fetchData: fetchRefundRequests,
+    initialPageSize: 20,
+    onError: handleFetchError,
+  });
+
+  // 处理弹窗（带提交，使用 useModalForm）
+  const actionModal = useModalForm<ActionForm>({
+    initialValues: initialActionForm,
+    onSubmit: async (values) => {
+      if (!values.refund) return;
+
+      if (values.action === 'reject' && !values.adminComment.trim()) {
+        message.error('请输入拒绝理由');
+        throw new Error('请输入拒绝理由');
+      }
+
+      if (values.action === 'approve') {
+        await approveRefundRequest(values.refund.id, {
+          admin_comment: values.adminComment.trim() || undefined,
+          refund_amount: values.refundAmount
+        });
+        message.success('退款申请已批准，正在处理退款...');
+      } else {
+        await rejectRefundRequest(values.refund.id, values.adminComment.trim());
+        message.success('退款申请已拒绝');
+      }
+      table.refresh();
+    },
+    onError: (error) => {
+      message.error(getErrorMessage(error));
+    },
+  });
 
   // 自动刷新待处理申请（每30秒）
   useEffect(() => {
     const refreshInterval = setInterval(() => {
-      if (!loading && (!statusFilter || statusFilter === 'pending')) {
-        loadRefundRequests();
+      if (!table.loading && (!statusFilter || statusFilter === 'pending')) {
+        table.refresh();
       }
     }, 30000);
-
     return () => clearInterval(refreshInterval);
-  }, [loading, statusFilter, loadRefundRequests]);
+  }, [table.loading, statusFilter, table.refresh]);
 
   // 查看详情
   const handleViewDetail = (refund: RefundRequest) => {
@@ -107,62 +135,36 @@ const RefundManagement: React.FC = () => {
 
   // 打开处理弹窗
   const handleOpenAction = (refund: RefundRequest, action: RefundAction) => {
-    setSelectedRefund(refund);
-    setRefundAction(action);
-    setAdminComment('');
-    setRefundAmount(undefined);
-    setShowActionModal(true);
-  };
-
-  // 执行处理操作
-  const handleAction = async () => {
-    if (!selectedRefund) return;
-
-    if (refundAction === 'reject' && !adminComment.trim()) {
-      message.error('请输入拒绝理由');
-      return;
-    }
-
-    try {
-      setProcessing(true);
-      if (refundAction === 'approve') {
-        await approveRefundRequest(selectedRefund.id, {
-          admin_comment: adminComment.trim() || undefined,
-          refund_amount: refundAmount
-        });
-        message.success('退款申请已批准，正在处理退款...');
-      } else {
-        await rejectRefundRequest(selectedRefund.id, adminComment.trim());
-        message.success('退款申请已拒绝');
-      }
-      setShowActionModal(false);
-      setAdminComment('');
-      setRefundAmount(undefined);
-      setSelectedRefund(null);
-      await loadRefundRequests();
-    } catch (error: any) {
-      message.error(getErrorMessage(error));
-    } finally {
-      setProcessing(false);
-    }
+    actionModal.open({ action, adminComment: '', refundAmount: undefined, refund });
   };
 
   // 搜索处理
   const handleSearch = () => {
-    setPage(1);
-    loadRefundRequests();
+    table.setFilters({
+      status: statusFilter || undefined,
+      keyword: searchKeyword.trim() || undefined,
+    });
+    table.setCurrentPage(1);
   };
 
   // 清除搜索
   const handleClearSearch = () => {
     setSearchKeyword('');
-    setPage(1);
+    table.setFilters({
+      status: statusFilter || undefined,
+      keyword: undefined,
+    });
+    table.setCurrentPage(1);
   };
 
   // 状态筛选变化
   const handleStatusFilterChange = (value: string) => {
     setStatusFilter(value);
-    setPage(1);
+    table.setFilters({
+      status: value || undefined,
+      keyword: searchKeyword.trim() || undefined,
+    });
+    table.setCurrentPage(1);
   };
 
   // 复制任务ID
@@ -187,7 +189,133 @@ const RefundManagement: React.FC = () => {
     return colors[actor] || colors.admin;
   };
 
-  const totalPages = Math.ceil(total / pageSize);
+  // 表格列定义
+  const columns: Column<RefundRequest>[] = [
+    {
+      key: 'id',
+      title: '申请ID',
+      dataIndex: 'id',
+      width: 80,
+    },
+    {
+      key: 'task_id',
+      title: '任务ID',
+      width: 90,
+      render: (_, record) => (
+        <span
+          className={styles.taskIdLink}
+          onClick={() => handleCopyTaskId(record.task_id)}
+          title="点击复制任务ID"
+        >
+          #{record.task_id}
+        </span>
+      ),
+    },
+    {
+      key: 'task_title',
+      title: '任务',
+      width: 180,
+      render: (_, record) => (
+        <span className={styles.tableCellTruncate}>
+          {record.task?.title || `任务 #${record.task_id}`}
+        </span>
+      ),
+    },
+    {
+      key: 'poster',
+      title: '发布者',
+      width: 120,
+      render: (_, record) => record.poster?.name || record.poster_id,
+    },
+    {
+      key: 'reason_type',
+      title: '退款原因类型',
+      width: 120,
+      render: (_, record) => record.reason_type_display || record.reason_type || '-',
+    },
+    {
+      key: 'refund_type',
+      title: '退款类型',
+      width: 100,
+      render: (_, record) => (
+        <span
+          className={styles.statusBadge}
+          style={{
+            background: record.refund_type === 'full' ? '#d4edda' : '#fff3cd',
+            color: record.refund_type === 'full' ? '#155724' : '#856404'
+          }}
+        >
+          {record.refund_type_display || (record.refund_type === 'full' ? '全额退款' : record.refund_type === 'partial' ? '部分退款' : '-')}
+        </span>
+      ),
+    },
+    {
+      key: 'refund_amount',
+      title: '退款金额',
+      width: 130,
+      render: (_, record) =>
+        record.refund_amount != null
+          ? `£${Number(record.refund_amount).toFixed(2)}${record.refund_percentage ? ` (${record.refund_percentage.toFixed(1)}%)` : ''}`
+          : '全额退款',
+    },
+    {
+      key: 'status',
+      title: '状态',
+      dataIndex: 'status',
+      width: 100,
+      render: (value) => (
+        <span className={styles.statusBadge} style={getStatusStyle(value as RefundStatus)}>
+          {REFUND_STATUS_LABELS[value as RefundStatus]}
+        </span>
+      ),
+    },
+    {
+      key: 'created_at',
+      title: '创建时间',
+      dataIndex: 'created_at',
+      width: 160,
+      render: (value) => new Date(value).toLocaleString('zh-CN'),
+    },
+    {
+      key: 'actions',
+      title: '操作',
+      width: 200,
+      align: 'center',
+      render: (_, record) => (
+        <div className={styles.actionGroup}>
+          <button
+            onClick={() => handleViewDetail(record)}
+            className={`${styles.actionBtn} ${styles.btnView}`}
+          >
+            查看
+          </button>
+          <button
+            onClick={() => handleViewTimeline(record.task_id)}
+            disabled={loadingTimeline}
+            className={`${styles.actionBtn} ${styles.btnTimeline}`}
+          >
+            {loadingTimeline ? '加载中...' : '争议详情'}
+          </button>
+          {record.status === 'pending' && (
+            <>
+              <button
+                onClick={() => handleOpenAction(record, 'approve')}
+                className={`${styles.actionBtn} ${styles.btnApprove}`}
+              >
+                批准
+              </button>
+              <button
+                onClick={() => handleOpenAction(record, 'reject')}
+                className={`${styles.actionBtn} ${styles.btnReject}`}
+              >
+                拒绝
+              </button>
+            </>
+          )}
+        </div>
+      ),
+    },
+  ];
 
   return (
     <div className={styles.container}>
@@ -227,139 +355,25 @@ const RefundManagement: React.FC = () => {
       </div>
 
       {/* 退款申请列表 */}
-      <div className={styles.tableContainer}>
-        {loading ? (
-          <div className={styles.loadingState}>加载中...</div>
-        ) : refundRequests.length === 0 ? (
-          <div className={styles.emptyState}>
-            {searchKeyword ? '未找到匹配的退款申请记录' : '暂无退款申请记录'}
-          </div>
-        ) : (
-          <table className={styles.table}>
-            <thead className={styles.tableHeader}>
-              <tr>
-                <th className={styles.tableHeaderCell}>申请ID</th>
-                <th className={styles.tableHeaderCell}>任务ID</th>
-                <th className={styles.tableHeaderCell}>任务</th>
-                <th className={styles.tableHeaderCell}>发布者</th>
-                <th className={styles.tableHeaderCell}>退款原因类型</th>
-                <th className={styles.tableHeaderCell}>退款类型</th>
-                <th className={styles.tableHeaderCell}>退款金额</th>
-                <th className={styles.tableHeaderCell}>状态</th>
-                <th className={styles.tableHeaderCell}>创建时间</th>
-                <th className={styles.tableHeaderCell}>操作</th>
-              </tr>
-            </thead>
-            <tbody>
-              {refundRequests.map((refund) => (
-                <tr key={refund.id} className={styles.tableRow}>
-                  <td className={styles.tableCell}>{refund.id}</td>
-                  <td className={styles.tableCell}>
-                    <span
-                      className={styles.taskIdLink}
-                      onClick={() => handleCopyTaskId(refund.task_id)}
-                      title="点击复制任务ID"
-                    >
-                      #{refund.task_id}
-                    </span>
-                  </td>
-                  <td className={`${styles.tableCell} ${styles.tableCellTruncate}`}>
-                    {refund.task?.title || `任务 #${refund.task_id}`}
-                  </td>
-                  <td className={styles.tableCell}>
-                    {refund.poster?.name || refund.poster_id}
-                  </td>
-                  <td className={styles.tableCell}>
-                    {refund.reason_type_display || refund.reason_type || '-'}
-                  </td>
-                  <td className={styles.tableCell}>
-                    <span
-                      className={styles.statusBadge}
-                      style={{
-                        background: refund.refund_type === 'full' ? '#d4edda' : '#fff3cd',
-                        color: refund.refund_type === 'full' ? '#155724' : '#856404'
-                      }}
-                    >
-                      {refund.refund_type_display || (refund.refund_type === 'full' ? '全额退款' : refund.refund_type === 'partial' ? '部分退款' : '-')}
-                    </span>
-                  </td>
-                  <td className={styles.tableCell}>
-                    {refund.refund_amount != null
-                      ? `£${Number(refund.refund_amount).toFixed(2)}${refund.refund_percentage ? ` (${refund.refund_percentage.toFixed(1)}%)` : ''}`
-                      : '全额退款'}
-                  </td>
-                  <td className={styles.tableCell}>
-                    <span className={styles.statusBadge} style={getStatusStyle(refund.status)}>
-                      {REFUND_STATUS_LABELS[refund.status]}
-                    </span>
-                  </td>
-                  <td className={styles.tableCell}>
-                    {new Date(refund.created_at).toLocaleString('zh-CN')}
-                  </td>
-                  <td className={styles.tableCell}>
-                    <div className={styles.actionGroup}>
-                      <button
-                        onClick={() => handleViewDetail(refund)}
-                        className={`${styles.actionBtn} ${styles.btnView}`}
-                      >
-                        查看
-                      </button>
-                      <button
-                        onClick={() => handleViewTimeline(refund.task_id)}
-                        disabled={loadingTimeline}
-                        className={`${styles.actionBtn} ${styles.btnTimeline}`}
-                      >
-                        {loadingTimeline ? '加载中...' : '争议详情'}
-                      </button>
-                      {refund.status === 'pending' && (
-                        <>
-                          <button
-                            onClick={() => handleOpenAction(refund, 'approve')}
-                            className={`${styles.actionBtn} ${styles.btnApprove}`}
-                          >
-                            批准
-                          </button>
-                          <button
-                            onClick={() => handleOpenAction(refund, 'reject')}
-                            className={`${styles.actionBtn} ${styles.btnReject}`}
-                          >
-                            拒绝
-                          </button>
-                        </>
-                      )}
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </div>
+      <AdminTable
+        columns={columns}
+        data={table.data}
+        loading={table.loading}
+        rowKey="id"
+        emptyText={searchKeyword ? '未找到匹配的退款申请记录' : '暂无退款申请记录'}
+      />
 
       {/* 分页 */}
-      {total > pageSize && (
-        <div className={styles.pagination}>
-          <button
-            onClick={() => setPage((prev) => Math.max(1, prev - 1))}
-            disabled={page === 1}
-            className={styles.pageBtn}
-          >
-            上一页
-          </button>
-          <span className={styles.pageInfo}>
-            第 {page} 页，共 {totalPages} 页
-          </span>
-          <button
-            onClick={() => setPage((prev) => prev + 1)}
-            disabled={page >= totalPages}
-            className={styles.pageBtn}
-          >
-            下一页
-          </button>
-        </div>
-      )}
+      <AdminPagination
+        currentPage={table.currentPage}
+        totalPages={table.totalPages}
+        total={table.total}
+        pageSize={table.pageSize}
+        onPageChange={table.setCurrentPage}
+        onPageSizeChange={table.setPageSize}
+      />
 
-      {/* 退款申请详情弹窗 */}
+      {/* 退款申请详情弹窗（只读） */}
       <Modal
         title={`退款申请详情 #${selectedRefund?.id || ''}`}
         open={showDetailModal}
@@ -492,7 +506,7 @@ const RefundManagement: React.FC = () => {
         )}
       </Modal>
 
-      {/* 时间线弹窗 */}
+      {/* 时间线弹窗（只读） */}
       <Modal
         title={`争议详情 - 任务 #${timeline?.task_id || ''}`}
         open={showTimelineModal}
@@ -559,37 +573,32 @@ const RefundManagement: React.FC = () => {
 
       {/* 处理退款申请弹窗 */}
       <Modal
-        title={refundAction === 'approve' ? '批准退款申请' : '拒绝退款申请'}
-        open={showActionModal}
-        onCancel={() => {
-          setShowActionModal(false);
-          setAdminComment('');
-          setRefundAmount(undefined);
-          setSelectedRefund(null);
-        }}
-        onOk={handleAction}
-        confirmLoading={processing}
-        okText={refundAction === 'approve' ? '批准' : '拒绝'}
+        title={actionModal.formData.action === 'approve' ? '批准退款申请' : '拒绝退款申请'}
+        open={actionModal.isOpen}
+        onCancel={actionModal.close}
+        onOk={actionModal.handleSubmit}
+        confirmLoading={actionModal.loading}
+        okText={actionModal.formData.action === 'approve' ? '批准' : '拒绝'}
         cancelText="取消"
         width={600}
       >
-        {selectedRefund && (
+        {actionModal.formData.refund && (
           <div className={styles.actionForm}>
             <div className={styles.actionFormField}>
               <span className={styles.modalLabel}>任务：</span>
               <span className={styles.modalValue}>
-                {selectedRefund.task?.title || `任务 #${selectedRefund.task_id}`}
+                {actionModal.formData.refund.task?.title || `任务 #${actionModal.formData.refund.task_id}`}
               </span>
             </div>
             <div className={styles.actionFormField}>
               <span className={styles.modalLabel}>申请退款金额：</span>
               <span className={styles.modalValue}>
-                {selectedRefund.refund_amount != null
-                  ? `£${Number(selectedRefund.refund_amount).toFixed(2)}`
+                {actionModal.formData.refund.refund_amount != null
+                  ? `£${Number(actionModal.formData.refund.refund_amount).toFixed(2)}`
                   : '全额退款'}
               </span>
             </div>
-            {refundAction === 'approve' && (
+            {actionModal.formData.action === 'approve' && (
               <div className={styles.actionFormField}>
                 <label className={styles.actionFormLabel}>
                   实际退款金额（可选，留空则按申请金额退款）：
@@ -598,8 +607,8 @@ const RefundManagement: React.FC = () => {
                   type="number"
                   step="0.01"
                   min="0"
-                  value={refundAmount || ''}
-                  onChange={(e) => setRefundAmount(e.target.value ? parseFloat(e.target.value) : undefined)}
+                  value={actionModal.formData.refundAmount || ''}
+                  onChange={(e) => actionModal.updateField('refundAmount', e.target.value ? parseFloat(e.target.value) : undefined)}
                   placeholder="£0.00"
                   className={styles.actionFormInput}
                 />
@@ -607,12 +616,12 @@ const RefundManagement: React.FC = () => {
             )}
             <div className={styles.actionFormField}>
               <label className={styles.actionFormLabel}>
-                {refundAction === 'approve' ? '管理员备注（可选）：' : '拒绝理由：'}
+                {actionModal.formData.action === 'approve' ? '管理员备注（可选）：' : '拒绝理由：'}
               </label>
               <textarea
-                value={adminComment}
-                onChange={(e) => setAdminComment(e.target.value)}
-                placeholder={refundAction === 'approve' ? '请输入备注...' : '请输入拒绝理由...'}
+                value={actionModal.formData.adminComment}
+                onChange={(e) => actionModal.updateField('adminComment', e.target.value)}
+                placeholder={actionModal.formData.action === 'approve' ? '请输入备注...' : '请输入拒绝理由...'}
                 rows={4}
                 className={styles.actionFormTextarea}
               />
