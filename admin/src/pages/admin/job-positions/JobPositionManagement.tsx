@@ -32,7 +32,7 @@ import {
   updateJobPosition,
   deleteJobPosition,
   toggleJobPositionStatus
-} from '../api';
+} from '../../../api';
 
 const { Title } = Typography;
 const { Option } = Select;

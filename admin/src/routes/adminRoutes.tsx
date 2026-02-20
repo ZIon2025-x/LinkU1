@@ -20,7 +20,7 @@ const BannerManagement = lazy(() => import('../pages/admin/banners/BannerManagem
 const ReportManagement = lazy(() => import('../pages/admin/reports/ReportManagement'));
 const Settings = lazy(() => import('../pages/admin/settings/Settings'));
 const TaskManagementPage = lazy(() => import('../pages/admin/tasks/TaskManagementPage'));
-const JobPositionManagement = lazy(() => import('../pages/JobPositionManagement'));
+const JobPositionManagement = lazy(() => import('../pages/admin/job-positions').then(m => ({ default: m.JobPositionManagement })));
 const CustomerServicePage = lazy(() => import('../pages/admin/customer-service/CustomerServicePage'));
 
 // Loading component
