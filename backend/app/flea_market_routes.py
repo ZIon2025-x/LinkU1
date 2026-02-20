@@ -308,9 +308,10 @@ async def get_flea_market_items(
             from app.redis_cache import redis_cache
             cache_key = get_cache_key_for_items(page, pageSize, category, keyword, status_filter)
             cached_result = redis_cache.get(cache_key)
-            if cached_result:
+            if cached_result is not None:
                 logger.debug(f"缓存命中: {cache_key}")
-                return cached_result
+                # 缓存中存的是 model_dump() 的 dict，需重建为 Pydantic 模型再返回，否则 FastAPI 会拿到 str 导致 ResponseValidationError
+                return schemas.FleaMarketItemListResponse.model_validate(cached_result)
         
         # 构建查询
         query = select(models.FleaMarketItem)
@@ -446,12 +447,13 @@ async def get_flea_market_items(
             hasMore=skip + len(processed_items) < total
         )
         
-        # 缓存结果（5分钟）
-        try:
-            from app.redis_cache import redis_cache
-            redis_cache.set(cache_key, response, ttl=300)
-        except:
-            pass
+        # 缓存结果（5分钟）：仅在不按卖家筛选时缓存；必须存 dict，否则 json 会变成 str(obj) 导致取回时 ResponseValidationError
+        if not seller_id:
+            try:
+                from app.redis_cache import redis_cache
+                redis_cache.set(cache_key, response.model_dump(), ttl=300)
+            except Exception:
+                pass
         
         return response
     except Exception as e:
