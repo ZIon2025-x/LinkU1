@@ -1080,9 +1080,8 @@ class _RankingCard extends StatelessWidget {
               ClipRect(
                 child: AspectRatio(
                   aspectRatio: 16 / 9,
-                  child: AsyncImageView(
+                    child: AsyncImageView(
                     imageUrl: item.firstImage!,
-                    fit: BoxFit.cover,
                     memCacheWidth: 360,
                     memCacheHeight: 202,
                   ),
@@ -1136,10 +1135,10 @@ class _RankingCard extends StatelessWidget {
                               children: [
                                 Text(
                                   rankLabels[i],
-                                  style: TextStyle(
+                                  style: const TextStyle(
                                     fontSize: 12,
                                     fontWeight: FontWeight.bold,
-                                    color: const Color(0xFF2563EB),
+                                    color: Color(0xFF2563EB),
                                   ),
                                 ),
                                 const SizedBox(width: 8),

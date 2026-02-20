@@ -26,7 +26,7 @@ linter:
     prefer_const_constructors: true
     prefer_const_declarations: true
     use_super_parameters: true
-    # avoid_redundant_argument_values: true  # 产生 100+ info，暂不启用
+    avoid_redundant_argument_values: true
 
 # Additional information about this file can be found at
 # https://dart.dev/guides/language/analysis-options

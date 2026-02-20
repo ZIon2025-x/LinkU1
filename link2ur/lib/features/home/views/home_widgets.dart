@@ -157,6 +157,7 @@ class _BannerCarouselState extends State<_BannerCarousel> {
                       icon: Icons.storefront,
                       imagePath: AppAssets.fleaMarketBanner,
                       imageAlignment: const Alignment(0.0, 0.4),
+                      parallaxOffset: 0,
                       onTap: () => context.push('/flea-market'),
                     ),
                     _BannerItem(
@@ -165,6 +166,7 @@ class _BannerCarouselState extends State<_BannerCarousel> {
                       gradient: AppColors.gradientIndigo,
                       icon: Icons.school,
                       imagePath: AppAssets.studentVerificationBanner,
+                      parallaxOffset: 0,
                       onTap: () => context.push('/student-verification'),
                     ),
                     _BannerItem(
@@ -172,6 +174,7 @@ class _BannerCarouselState extends State<_BannerCarousel> {
                       subtitle: context.l10n.homeBecomeExpertSubtitle,
                       gradient: AppColors.gradientOrange,
                       icon: Icons.star,
+                      parallaxOffset: 0,
                       onTap: () => context.push('/task-experts/intro'),
                     ),
                   ];
@@ -239,8 +242,7 @@ class _BannerItem extends StatelessWidget {
     required this.icon,
     required this.onTap,
     this.imagePath,
-    // ignore: unused_element_parameter - reserved for future parallax effect
-    this.parallaxOffset = 0.0,
+    required this.parallaxOffset,
     this.imageAlignment = Alignment.center,
   });
 

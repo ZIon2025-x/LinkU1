@@ -1013,6 +1013,7 @@ class TaskActionButtonsView extends StatelessWidget {
     required this.isTaker,
     required this.isDark,
     required this.state,
+    this.onPosterPay,
   });
 
   final Task task;
@@ -1020,6 +1021,8 @@ class TaskActionButtonsView extends StatelessWidget {
   final bool isTaker;
   final bool isDark;
   final TaskDetailState state;
+  /// 发布者点击「支付平台服务费」时的回调，由调用方打开支付页
+  final VoidCallback? onPosterPay;
 
   @override
   Widget build(BuildContext context) {
@@ -1057,11 +1060,7 @@ class TaskActionButtonsView extends StatelessWidget {
       child: PrimaryButton(
         text: context.l10n.taskDetailPlatformServiceFee,
         icon: Icons.credit_card,
-        onPressed: task.isPaymentExpired
-            ? null
-            : () {
-                // TODO(支付): 跳转任务支付页，可复用 approval_payment 流程或 payment 路由
-              },
+        onPressed: task.isPaymentExpired ? null : onPosterPay,
       ),
     );
   }
@@ -1460,12 +1459,7 @@ class TaskActionButtonsView extends StatelessWidget {
     }
 
     return TextButton(
-      onPressed: () {
-        // TODO(任务): 取消前先弹出确认弹窗（文案、确认/取消），确认后再 dispatch TaskDetailCancelRequested
-        context
-            .read<TaskDetailBloc>()
-            .add(const TaskDetailCancelRequested());
-      },
+      onPressed: () => _showCancelConfirm(context),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
@@ -1481,6 +1475,31 @@ class TaskActionButtonsView extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  void _showCancelConfirm(BuildContext context) {
+    final l10n = context.l10n;
+    showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(l10n.taskDetailCancelTask),
+        content: Text(l10n.taskDetailCancelTaskConfirm),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: Text(l10n.actionsCancel),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            style: FilledButton.styleFrom(backgroundColor: AppColors.error),
+            child: Text(l10n.taskDetailCancelTask),
+          ),
+        ],
+      ),
+    ).then((confirmed) {
+      if (!context.mounted || confirmed != true) return;
+      context.read<TaskDetailBloc>().add(const TaskDetailCancelRequested());
+    });
   }
 }
 

@@ -242,13 +242,21 @@ class _TaskDetailContent extends StatelessWidget {
     );
   }
 
-  /// 更多菜单 - 对标iOS ellipsis.circle Menu（分享 + 争议详情）
+  /// 更多菜单 - 对标iOS ellipsis.circle Menu（分享 + 争议详情 + 取消任务）
   void _showMoreMenu(BuildContext context, TaskDetailState state) {
     final task = state.task;
     if (task == null) return;
     final l10n = context.l10n;
     final hasDisputeOrRefund = state.refundRequest != null ||
         task.status == AppConstants.taskStatusPendingConfirmation;
+    final currentUserId = context.read<AuthBloc>().state.user?.id;
+    final isPoster = currentUserId != null && task.posterId == currentUserId;
+    final isTaker = currentUserId != null &&
+        task.takerId != null &&
+        task.takerId == currentUserId;
+    final canCancel = (isPoster || isTaker) &&
+        (task.status == AppConstants.taskStatusOpen ||
+            task.status == AppConstants.taskStatusInProgress);
 
     showModalBottomSheet(
       context: context,
@@ -286,6 +294,19 @@ class _TaskDetailContent extends StatelessWidget {
                     _showDisputeTimeline(context, task);
                   },
                 ),
+              // 取消任务（条件显示）- 发布者/接单者 + open/in_progress
+              if (canCancel)
+                ListTile(
+                  leading: const Icon(Icons.cancel_outlined, color: AppColors.error),
+                  title: Text(
+                    l10n.actionsCancelTask,
+                    style: const TextStyle(color: AppColors.error, fontWeight: FontWeight.w500),
+                  ),
+                  onTap: () {
+                    Navigator.pop(context);
+                    _showCancelTaskConfirm(context, task.id);
+                  },
+                ),
               // 分享 - 对标iOS share
               ListTile(
                 leading: const Icon(Icons.share_outlined),
@@ -306,6 +327,32 @@ class _TaskDetailContent extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  /// 取消任务确认弹窗
+  void _showCancelTaskConfirm(BuildContext context, int taskId) {
+    final l10n = context.l10n;
+    showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(l10n.taskDetailCancelTask),
+        content: Text(l10n.taskDetailCancelTaskConfirm),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: Text(l10n.actionsCancel),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            style: FilledButton.styleFrom(backgroundColor: AppColors.error),
+            child: Text(l10n.taskDetailCancelTask),
+          ),
+        ],
+      ),
+    ).then((confirmed) {
+      if (!context.mounted || confirmed != true) return;
+      context.read<TaskDetailBloc>().add(const TaskDetailCancelRequested());
+    });
   }
 
   /// 显示争议时间线 - 对标iOS showDisputeTimeline
