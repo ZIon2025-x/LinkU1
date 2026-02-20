@@ -5,9 +5,9 @@ import {
   updateAdminCustomerServiceRequest,
   getAdminCustomerServiceChatMessages,
   sendAdminCustomerServiceChatMessage
-} from '../api';
+} from '../../../api';
 import dayjs from 'dayjs';
-import { TimeHandlerV2 } from '../utils/timeUtils';
+import { TimeHandlerV2 } from '../../../utils/timeUtils';
 
 interface CustomerServiceRequest {
   id: number;

@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import CustomerServiceManagement from '../../../components/CustomerServiceManagement';
+import CustomerServiceManagement from './CustomerServiceManagement';
 
 /**
  * 客服管理页面
