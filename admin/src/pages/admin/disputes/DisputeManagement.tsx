@@ -1,5 +1,7 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { message, Modal } from 'antd';
+import { useAdminTable, useModalForm } from '../../../hooks';
+import { AdminTable, AdminPagination, Column } from '../../../components/admin';
 import {
   getAdminTaskDisputes,
   getAdminTaskDisputeDetail,
@@ -18,66 +20,85 @@ import {
 } from './types';
 import styles from './DisputeManagement.module.css';
 
+interface ActionForm {
+  action: DisputeAction;
+  resolutionNote: string;
+  dispute: TaskDispute | null;
+}
+
+const initialActionForm: ActionForm = {
+  action: 'resolve',
+  resolutionNote: '',
+  dispute: null,
+};
+
 /**
  * 争议管理组件
  * 提供任务争议列表查看、详情查看、解决/驳回等功能
  */
 const DisputeManagement: React.FC = () => {
-  // 列表状态
-  const [disputes, setDisputes] = useState<TaskDispute[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [page, setPage] = useState(1);
-  const [total, setTotal] = useState(0);
-  const pageSize = 20;
-
-  // 筛选状态
   const [statusFilter, setStatusFilter] = useState<string>('');
   const [searchKeyword, setSearchKeyword] = useState<string>('');
 
-  // 详情弹窗状态
+  // 详情弹窗状态（只读，不提交，用简单 state）
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [selectedDispute, setSelectedDispute] = useState<TaskDispute | null>(null);
 
-  // 处理弹窗状态
-  const [showActionModal, setShowActionModal] = useState(false);
-  const [disputeAction, setDisputeAction] = useState<DisputeAction>('resolve');
-  const [resolutionNote, setResolutionNote] = useState('');
-  const [processing, setProcessing] = useState(false);
+  // 获取争议列表
+  const fetchDisputes = useCallback(async ({ page, pageSize, filters }: { page: number; pageSize: number; searchTerm?: string; filters?: Record<string, any> }) => {
+    const response = await getAdminTaskDisputes({
+      skip: (page - 1) * pageSize,
+      limit: pageSize,
+      status: filters?.status || undefined,
+      keyword: filters?.keyword || undefined,
+    });
+    return {
+      data: response.disputes || [],
+      total: response.total || 0,
+    };
+  }, []);
 
-  // 加载争议列表
-  const loadDisputes = useCallback(async () => {
-    try {
-      setLoading(true);
-      const response = await getAdminTaskDisputes({
-        skip: (page - 1) * pageSize,
-        limit: pageSize,
-        status: statusFilter || undefined,
-        keyword: searchKeyword.trim() || undefined
-      });
-      setDisputes(response.disputes || []);
-      setTotal(response.total || 0);
-    } catch (error: any) {
+  const handleFetchError = useCallback((error: any) => {
+    message.error(getErrorMessage(error));
+  }, []);
+
+  const table = useAdminTable<TaskDispute>({
+    fetchData: fetchDisputes,
+    initialPageSize: 20,
+    onError: handleFetchError,
+  });
+
+  // 处理弹窗（带提交，使用 useModalForm）
+  const actionModal = useModalForm<ActionForm>({
+    initialValues: initialActionForm,
+    onSubmit: async (values) => {
+      if (!values.dispute || !values.resolutionNote.trim()) {
+        message.error('请输入处理备注');
+        throw new Error('请输入处理备注');
+      }
+      if (values.action === 'resolve') {
+        await resolveTaskDispute(values.dispute.id, values.resolutionNote.trim());
+        message.success('争议已解决');
+      } else {
+        await dismissTaskDispute(values.dispute.id, values.resolutionNote.trim());
+        message.success('争议已驳回');
+      }
+      table.refresh();
+    },
+    onError: (error) => {
       message.error(getErrorMessage(error));
-    } finally {
-      setLoading(false);
-    }
-  }, [page, statusFilter, searchKeyword]);
-
-  // 初始加载和依赖变化时重新加载
-  useEffect(() => {
-    loadDisputes();
-  }, [loadDisputes]);
+    },
+  });
 
   // 自动刷新待处理争议（每30秒）
   useEffect(() => {
     const refreshInterval = setInterval(() => {
-      if (!loading && (!statusFilter || statusFilter === 'pending')) {
-        loadDisputes();
+      if (!table.loading && (!statusFilter || statusFilter === 'pending')) {
+        table.refresh();
       }
     }, 30000);
-
     return () => clearInterval(refreshInterval);
-  }, [loading, statusFilter, loadDisputes]);
+  }, [table.loading, statusFilter, table.refresh]);
 
   // 查看争议详情
   const handleViewDetail = async (disputeId: number) => {
@@ -92,55 +113,36 @@ const DisputeManagement: React.FC = () => {
 
   // 打开处理弹窗
   const handleOpenAction = (dispute: TaskDispute, action: DisputeAction) => {
-    setSelectedDispute(dispute);
-    setDisputeAction(action);
-    setResolutionNote('');
-    setShowActionModal(true);
-  };
-
-  // 执行处理操作
-  const handleAction = async () => {
-    if (!selectedDispute || !resolutionNote.trim()) {
-      message.error('请输入处理备注');
-      return;
-    }
-
-    try {
-      setProcessing(true);
-      if (disputeAction === 'resolve') {
-        await resolveTaskDispute(selectedDispute.id, resolutionNote.trim());
-        message.success('争议已解决');
-      } else {
-        await dismissTaskDispute(selectedDispute.id, resolutionNote.trim());
-        message.success('争议已驳回');
-      }
-      setShowActionModal(false);
-      setResolutionNote('');
-      setSelectedDispute(null);
-      await loadDisputes();
-    } catch (error: any) {
-      message.error(getErrorMessage(error));
-    } finally {
-      setProcessing(false);
-    }
+    actionModal.open({ action, resolutionNote: '', dispute });
   };
 
   // 搜索处理
   const handleSearch = () => {
-    setPage(1);
-    loadDisputes();
+    table.setFilters({
+      status: statusFilter || undefined,
+      keyword: searchKeyword.trim() || undefined,
+    });
+    table.setCurrentPage(1);
   };
 
   // 清除搜索
   const handleClearSearch = () => {
     setSearchKeyword('');
-    setPage(1);
+    table.setFilters({
+      status: statusFilter || undefined,
+      keyword: undefined,
+    });
+    table.setCurrentPage(1);
   };
 
   // 状态筛选变化
   const handleStatusFilterChange = (value: string) => {
     setStatusFilter(value);
-    setPage(1);
+    table.setFilters({
+      status: value || undefined,
+      keyword: searchKeyword.trim() || undefined,
+    });
+    table.setCurrentPage(1);
   };
 
   // 获取状态样式
@@ -155,7 +157,88 @@ const DisputeManagement: React.FC = () => {
     return { background: colors.bg, color: colors.color };
   };
 
-  const totalPages = Math.ceil(total / pageSize);
+  // 表格列定义
+  const columns: Column<TaskDispute>[] = [
+    {
+      key: 'id',
+      title: 'ID',
+      dataIndex: 'id',
+      width: 80,
+    },
+    {
+      key: 'task',
+      title: '任务',
+      width: 200,
+      render: (_, record) => (
+        <span className={styles.tableCellTruncate}>
+          {record.task_title} (#{record.task_id})
+        </span>
+      ),
+    },
+    {
+      key: 'poster_name',
+      title: '发布者',
+      dataIndex: 'poster_name',
+      width: 120,
+    },
+    {
+      key: 'reason',
+      title: '争议原因',
+      dataIndex: 'reason',
+      width: 250,
+      render: (value) => <span className={styles.tableCellReason}>{value}</span>,
+    },
+    {
+      key: 'status',
+      title: '状态',
+      dataIndex: 'status',
+      width: 100,
+      render: (value) => (
+        <span className={styles.statusBadge} style={getStatusStyle(value as DisputeStatus)}>
+          {DISPUTE_STATUS_LABELS[value as DisputeStatus]}
+        </span>
+      ),
+    },
+    {
+      key: 'created_at',
+      title: '创建时间',
+      dataIndex: 'created_at',
+      width: 160,
+      render: (value) => new Date(value).toLocaleString('zh-CN'),
+    },
+    {
+      key: 'actions',
+      title: '操作',
+      width: 180,
+      align: 'center',
+      render: (_, record) => (
+        <div className={styles.actionGroup}>
+          <button
+            onClick={() => handleViewDetail(record.id)}
+            className={`${styles.actionBtn} ${styles.btnView}`}
+          >
+            查看
+          </button>
+          {record.status === 'pending' && (
+            <>
+              <button
+                onClick={() => handleOpenAction(record, 'resolve')}
+                className={`${styles.actionBtn} ${styles.btnResolve}`}
+              >
+                解决
+              </button>
+              <button
+                onClick={() => handleOpenAction(record, 'dismiss')}
+                className={`${styles.actionBtn} ${styles.btnDismiss}`}
+              >
+                驳回
+              </button>
+            </>
+          )}
+        </div>
+      ),
+    },
+  ];
 
   return (
     <div className={styles.container}>
@@ -192,105 +275,25 @@ const DisputeManagement: React.FC = () => {
       </div>
 
       {/* 争议列表 */}
-      <div className={styles.tableContainer}>
-        {loading ? (
-          <div className={styles.loadingState}>加载中...</div>
-        ) : disputes.length === 0 ? (
-          <div className={styles.emptyState}>
-            {searchKeyword ? '未找到匹配的争议记录' : '暂无争议记录'}
-          </div>
-        ) : (
-          <table className={styles.table}>
-            <thead className={styles.tableHeader}>
-              <tr>
-                <th className={styles.tableHeaderCell}>ID</th>
-                <th className={styles.tableHeaderCell}>任务</th>
-                <th className={styles.tableHeaderCell}>发布者</th>
-                <th className={styles.tableHeaderCell}>争议原因</th>
-                <th className={styles.tableHeaderCell}>状态</th>
-                <th className={styles.tableHeaderCell}>创建时间</th>
-                <th className={styles.tableHeaderCell}>操作</th>
-              </tr>
-            </thead>
-            <tbody>
-              {disputes.map((dispute) => (
-                <tr key={dispute.id} className={styles.tableRow}>
-                  <td className={styles.tableCell}>{dispute.id}</td>
-                  <td className={`${styles.tableCell} ${styles.tableCellTruncate}`}>
-                    {dispute.task_title} (#{dispute.task_id})
-                  </td>
-                  <td className={styles.tableCell}>{dispute.poster_name}</td>
-                  <td className={`${styles.tableCell} ${styles.tableCellReason}`}>
-                    {dispute.reason}
-                  </td>
-                  <td className={styles.tableCell}>
-                    <span 
-                      className={styles.statusBadge} 
-                      style={getStatusStyle(dispute.status)}
-                    >
-                      {DISPUTE_STATUS_LABELS[dispute.status]}
-                    </span>
-                  </td>
-                  <td className={styles.tableCell}>
-                    {new Date(dispute.created_at).toLocaleString('zh-CN')}
-                  </td>
-                  <td className={styles.tableCell}>
-                    <div className={styles.actionGroup}>
-                      <button
-                        onClick={() => handleViewDetail(dispute.id)}
-                        className={`${styles.actionBtn} ${styles.btnView}`}
-                      >
-                        查看
-                      </button>
-                      {dispute.status === 'pending' && (
-                        <>
-                          <button
-                            onClick={() => handleOpenAction(dispute, 'resolve')}
-                            className={`${styles.actionBtn} ${styles.btnResolve}`}
-                          >
-                            解决
-                          </button>
-                          <button
-                            onClick={() => handleOpenAction(dispute, 'dismiss')}
-                            className={`${styles.actionBtn} ${styles.btnDismiss}`}
-                          >
-                            驳回
-                          </button>
-                        </>
-                      )}
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </div>
+      <AdminTable
+        columns={columns}
+        data={table.data}
+        loading={table.loading}
+        rowKey="id"
+        emptyText={searchKeyword ? '未找到匹配的争议记录' : '暂无争议记录'}
+      />
 
       {/* 分页 */}
-      {total > pageSize && (
-        <div className={styles.pagination}>
-          <button
-            onClick={() => setPage((prev) => Math.max(1, prev - 1))}
-            disabled={page === 1}
-            className={styles.pageBtn}
-          >
-            上一页
-          </button>
-          <span className={styles.pageInfo}>
-            第 {page} 页，共 {totalPages} 页
-          </span>
-          <button
-            onClick={() => setPage((prev) => prev + 1)}
-            disabled={page >= totalPages}
-            className={styles.pageBtn}
-          >
-            下一页
-          </button>
-        </div>
-      )}
+      <AdminPagination
+        currentPage={table.currentPage}
+        totalPages={table.totalPages}
+        total={table.total}
+        pageSize={table.pageSize}
+        onPageChange={table.setCurrentPage}
+        onPageSizeChange={table.setPageSize}
+      />
 
-      {/* 争议详情弹窗 */}
+      {/* 争议详情弹窗（只读） */}
       <Modal
         title={`争议详情 #${selectedDispute?.id || ''}`}
         open={showDetailModal}
@@ -322,7 +325,7 @@ const DisputeManagement: React.FC = () => {
               )}
               <div className={styles.modalField}>
                 <span className={styles.modalLabel}>任务状态：</span>
-                <span 
+                <span
                   className={styles.statusBadge}
                   style={{ ...getTaskStatusStyle(selectedDispute.task_status || ''), marginLeft: '8px' }}
                 >
@@ -381,9 +384,9 @@ const DisputeManagement: React.FC = () => {
               </div>
               <div className={styles.modalField}>
                 <span className={styles.modalLabel}>支付状态：</span>
-                <span 
+                <span
                   className={styles.statusBadge}
-                  style={{ 
+                  style={{
                     background: selectedDispute.is_paid ? '#d4edda' : '#f8d7da',
                     color: selectedDispute.is_paid ? '#155724' : '#721c24',
                     marginLeft: '8px'
@@ -415,8 +418,8 @@ const DisputeManagement: React.FC = () => {
               </div>
               <div className={styles.modalField}>
                 <span className={styles.modalLabel}>状态：</span>
-                <span 
-                  className={styles.statusBadge} 
+                <span
+                  className={styles.statusBadge}
                   style={getStatusStyle(selectedDispute.status)}
                 >
                   {DISPUTE_STATUS_LABELS[selectedDispute.status]}
@@ -455,39 +458,35 @@ const DisputeManagement: React.FC = () => {
 
       {/* 处理争议弹窗 */}
       <Modal
-        title={disputeAction === 'resolve' ? '解决争议' : '驳回争议'}
-        open={showActionModal}
-        onCancel={() => {
-          setShowActionModal(false);
-          setResolutionNote('');
-          setSelectedDispute(null);
-        }}
-        onOk={handleAction}
-        confirmLoading={processing}
-        okText={disputeAction === 'resolve' ? '解决' : '驳回'}
+        title={actionModal.formData.action === 'resolve' ? '解决争议' : '驳回争议'}
+        open={actionModal.isOpen}
+        onCancel={actionModal.close}
+        onOk={actionModal.handleSubmit}
+        confirmLoading={actionModal.loading}
+        okText={actionModal.formData.action === 'resolve' ? '解决' : '驳回'}
         cancelText="取消"
         width={600}
       >
-        {selectedDispute && (
+        {actionModal.formData.dispute && (
           <div className={styles.actionForm}>
             <div className={styles.actionFormField}>
               <span className={styles.modalLabel}>任务：</span>
               <span className={styles.modalValue}>
-                {selectedDispute.task_title || `任务 #${selectedDispute.task_id}`}
+                {actionModal.formData.dispute.task_title || `任务 #${actionModal.formData.dispute.task_id}`}
               </span>
             </div>
             <div className={styles.actionFormField}>
               <span className={styles.modalLabel}>争议原因：</span>
-              <div className={styles.modalTextBlock}>{selectedDispute.reason}</div>
+              <div className={styles.modalTextBlock}>{actionModal.formData.dispute.reason}</div>
             </div>
             <div className={styles.actionFormField}>
               <label className={styles.actionFormLabel}>
-                {disputeAction === 'resolve' ? '处理备注' : '驳回理由'}：
+                {actionModal.formData.action === 'resolve' ? '处理备注' : '驳回理由'}：
               </label>
               <textarea
-                value={resolutionNote}
-                onChange={(e) => setResolutionNote(e.target.value)}
-                placeholder={disputeAction === 'resolve' ? '请输入处理备注...' : '请输入驳回理由...'}
+                value={actionModal.formData.resolutionNote}
+                onChange={(e) => actionModal.updateField('resolutionNote', e.target.value)}
+                placeholder={actionModal.formData.action === 'resolve' ? '请输入处理备注...' : '请输入驳回理由...'}
                 rows={6}
                 className={styles.actionFormTextarea}
               />
