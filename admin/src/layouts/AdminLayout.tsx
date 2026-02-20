@@ -1,7 +1,7 @@
 import React, { useState, useRef, ReactNode } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { adminLogout } from '../api';
-import { message } from 'antd';
+import { message, Breadcrumb } from 'antd';
 import styles from './AdminLayout.module.css';
 import NotificationBell, { NotificationBellRef } from '../components/NotificationBell';
 import NotificationModal from '../components/NotificationModal';
@@ -118,6 +118,26 @@ const defaultMenuItems: MenuItem[] = [
   },
 ];
 
+const PATH_LABELS: Record<string, string> = {
+  '/admin': '仪表盘',
+  '/admin/users': '用户管理',
+  '/admin/experts': '专家管理',
+  '/admin/tasks': '任务管理',
+  '/admin/job-positions': '岗位管理',
+  '/admin/customer-service': '客服管理',
+  '/admin/coupons': '优惠券管理',
+  '/admin/disputes': '纠纷管理',
+  '/admin/refunds': '退款管理',
+  '/admin/notifications': '通知管理',
+  '/admin/invitations': '邀请码管理',
+  '/admin/forum': '论坛管理',
+  '/admin/flea-market': '跳蚤市场',
+  '/admin/leaderboard': '排行榜',
+  '/admin/banners': 'Banner管理',
+  '/admin/reports': '举报管理',
+  '/admin/settings': '设置',
+};
+
 export const AdminLayout: React.FC<AdminLayoutProps> = ({
   children,
   menuItems = defaultMenuItems,
@@ -128,6 +148,15 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showNotificationModal, setShowNotificationModal] = useState(false);
   const notificationBellRef = useRef<NotificationBellRef>(null);
+
+  const breadcrumbItems = React.useMemo(() => {
+    const pathname = location.pathname;
+    const items: { title: string }[] = [{ title: 'LinkU 管理后台' }];
+    if (PATH_LABELS[pathname] && pathname !== '/admin') {
+      items.push({ title: PATH_LABELS[pathname] });
+    }
+    return items;
+  }, [location.pathname]);
 
   const handleLogout = async () => {
     try {
@@ -187,9 +216,7 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({
       <div className={styles.mainContainer}>
         {/* Top Bar */}
         <header className={styles.topBar}>
-          <div className={styles.breadcrumb}>
-            {/* Breadcrumb can be added later */}
-          </div>
+          <Breadcrumb items={breadcrumbItems} className={styles.breadcrumb} />
 
           <div className={styles.topBarActions}>
             <NotificationBell
