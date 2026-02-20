@@ -37,6 +37,28 @@ TOOLS = [
         },
     },
     {
+        "name": "recommend_tasks",
+        "description": "获取为当前用户个性化推荐的任务（基于内容、协同过滤、位置等）。Get personalized task recommendations for the current user.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "limit": {
+                    "type": "integer",
+                    "description": "返回数量，默认 10，最大 20",
+                    "default": 10,
+                },
+                "task_type": {
+                    "type": "string",
+                    "description": "任务类型筛选（可选）",
+                },
+                "keyword": {
+                    "type": "string",
+                    "description": "关键词筛选（可选）",
+                },
+            },
+        },
+    },
+    {
         "name": "search_tasks",
         "description": "搜索平台上的公开任务（按关键词、类型、价格范围）。Search public tasks on the platform.",
         "input_schema": {

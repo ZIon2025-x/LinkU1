@@ -99,6 +99,7 @@ FAQ 答案**从数据库读取**（`faq_sections` + `faq_items`），与 Web/iOS
 |--------|------|
 | query_my_tasks | 查询当前用户的任务列表（支持按状态筛选、分页） |
 | get_task_detail | 查询单个任务详情 |
+| recommend_tasks | 获取为当前用户个性化推荐的任务（基于内容、协同、位置等） |
 | search_tasks | 搜索公开任务（关键词、类型、价格范围） |
 | get_my_profile | 当前用户资料、评分、任务统计 |
 | get_platform_faq | 平台 FAQ（按问题关键词或分类） |

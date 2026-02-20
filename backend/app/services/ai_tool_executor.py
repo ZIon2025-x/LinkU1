@@ -98,6 +98,7 @@ class ToolExecutor:
         self._handlers = {
             "query_my_tasks": self._query_my_tasks,
             "get_task_detail": self._get_task_detail,
+            "recommend_tasks": self._recommend_tasks,
             "search_tasks": self._search_tasks,
             "get_my_profile": self._get_my_profile,
             "get_platform_faq": self._get_platform_faq,
@@ -276,6 +277,54 @@ class ToolExecutor:
             })
 
         return {"tasks": tasks, "total": total, "page": page, "page_size": page_size}
+
+    async def _recommend_tasks(self, input: dict) -> dict:
+        """个性化任务推荐（调用平台推荐引擎）"""
+        limit = min(20, max(1, input.get("limit", 10)))
+        task_type = input.get("task_type")
+        keyword = input.get("keyword")
+        lang = self._tool_lang()
+
+        def _sync_recommend(session):
+            from app.task_recommendation import get_task_recommendations
+            from app.utils.task_activity_display import get_task_display_title
+            recs = get_task_recommendations(
+                db=session,
+                user_id=self.user.id,
+                limit=limit,
+                algorithm="hybrid",
+                task_type=task_type,
+                location=None,
+                keyword=keyword,
+                latitude=None,
+                longitude=None,
+            )
+            tasks = []
+            for item in recs:
+                t = item.get("task")
+                if not t:
+                    continue
+                tasks.append({
+                    "id": t.id,
+                    "title": get_task_display_title(t, lang),
+                    "reward": t.reward,
+                    "currency": t.currency,
+                    "task_type": t.task_type,
+                    "location": t.location,
+                    "match_score": round(item.get("score", 0), 2),
+                    "reason": item.get("reason", ""),
+                    "created_at": format_iso_utc(t.created_at) if t.created_at else None,
+                    "deadline": format_iso_utc(t.deadline) if t.deadline else None,
+                })
+            return tasks
+
+        try:
+            tasks = await self.db.run_sync(_sync_recommend)
+        except Exception as e:
+            logger.warning("recommend_tasks failed: %s", e)
+            return {"tasks": [], "count": 0, "reason": str(e)}
+
+        return {"tasks": tasks, "count": len(tasks)}
 
     async def _get_task_detail(self, input: dict) -> dict:
         msgs = _TOOL_ERRORS.get(self._tool_lang(), _TOOL_ERRORS["en"])
