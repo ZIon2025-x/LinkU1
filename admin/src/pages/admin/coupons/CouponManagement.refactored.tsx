@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { message } from 'antd';
 import { useAdminTable, useModalForm } from '../../../hooks';
 import { AdminTable, AdminPagination, StatusBadge, Column } from '../../../components/admin';
 import { getCoupons, createCoupon, updateCoupon, deleteCoupon } from '../../../api';
+import { getErrorMessage } from '../../../utils/errorHandler';
 import { Coupon, CouponForm, initialCouponForm, createInitialCouponForm } from './types';
 import { CouponFormModal } from './CouponFormModal';
 import styles from './CouponManagement.module.css';
@@ -10,24 +11,29 @@ import styles from './CouponManagement.module.css';
 export const CouponManagement: React.FC = () => {
   const [statusFilter, setStatusFilter] = useState<string>('');
 
+  // 使用 useCallback 避免 fetchData 引用变化导致 useAdminTable 无限重试
+  const fetchCoupons = useCallback(async ({ page, pageSize, filters }: { page: number; pageSize: number; searchTerm?: string; filters?: Record<string, any> }) => {
+    const response = await getCoupons({
+      page,
+      limit: pageSize,
+      status: filters?.status as 'active' | 'inactive' | 'expired' | undefined,
+    });
+    return {
+      data: response.data || [],
+      total: response.total || 0,
+    };
+  }, []);
+
+  const handleFetchError = useCallback((error: any) => {
+    message.error(`加载优惠券列表失败：${getErrorMessage(error)}`);
+    console.error('Coupon list fetch error:', error);
+  }, []);
+
   // 使用共享的表格 Hook
   const table = useAdminTable<Coupon>({
-    fetchData: async ({ page, pageSize, searchTerm, filters }) => {
-      const response = await getCoupons({
-        page,
-        limit: pageSize,
-        status: filters?.status as 'active' | 'inactive' | 'expired' | undefined,
-      });
-      return {
-        data: response.data || [],
-        total: response.total || 0,
-      };
-    },
+    fetchData: fetchCoupons,
     initialPageSize: 20,
-    onError: (error) => {
-      message.error('加载优惠券列表失败');
-      console.error(error);
-    },
+    onError: handleFetchError,
   });
 
   // 使用共享的模态框表单 Hook

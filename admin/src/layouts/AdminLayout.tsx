@@ -31,6 +31,24 @@ const defaultMenuItems: MenuItem[] = [
     path: '/admin/users',
   },
   {
+    key: 'tasks',
+    label: '任务管理',
+    icon: '📋',
+    path: '/admin/tasks',
+  },
+  {
+    key: 'customer-service',
+    label: '客服管理',
+    icon: '🎧',
+    path: '/admin/customer-service',
+  },
+  {
+    key: 'job-positions',
+    label: '岗位管理',
+    icon: '💼',
+    path: '/admin/job-positions',
+  },
+  {
     key: 'experts',
     label: '专家管理',
     icon: '⭐',

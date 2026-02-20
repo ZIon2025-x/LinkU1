@@ -19,6 +19,9 @@ const LeaderboardManagement = lazy(() => import('../pages/admin/leaderboard/Lead
 const BannerManagement = lazy(() => import('../pages/admin/banners/BannerManagement'));
 const ReportManagement = lazy(() => import('../pages/admin/reports/ReportManagement'));
 const Settings = lazy(() => import('../pages/admin/settings/Settings'));
+const TaskManagementPage = lazy(() => import('../pages/admin/tasks/TaskManagementPage'));
+const JobPositionManagement = lazy(() => import('../pages/JobPositionManagement'));
+const CustomerServicePage = lazy(() => import('../pages/admin/customer-service/CustomerServicePage'));
 
 // Loading component
 const LoadingFallback = () => (
@@ -51,6 +54,15 @@ export const AdminRoutes: React.FC = () => {
 
           {/* User Management */}
           <Route path="users" element={<UserManagement />} />
+
+          {/* Task Management */}
+          <Route path="tasks" element={<TaskManagementPage />} />
+
+          {/* Job Position Management */}
+          <Route path="job-positions" element={<JobPositionManagement />} />
+
+          {/* Customer Service Management */}
+          <Route path="customer-service" element={<CustomerServicePage />} />
 
           {/* Expert Management */}
           <Route path="experts" element={<ExpertManagement />} />
