@@ -276,7 +276,14 @@ def refresh_session(
             # 记录诊断信息
             logger.info(f"[SECURE_AUTH] Refresh token诊断 - 来源: {refresh_token_source}, 有token: {bool(refresh_token)}")
             if not refresh_token:
-                logger.warning("[SECURE_AUTH] 未找到refresh_token - Cookie和Header中都没有")
+                cookie_keys = list(request.cookies.keys())
+                user_agent = request.headers.get("user-agent", "unknown")[:100]
+                origin = request.headers.get("origin", "unknown")
+                referer = request.headers.get("referer", "unknown")
+                logger.warning(
+                    f"[SECURE_AUTH] 未找到refresh_token - Cookie和Header中都没有 | "
+                    f"cookie_keys={cookie_keys}, origin={origin}, referer={referer}, ua={user_agent}"
+                )
             
             if refresh_token:
                 # 使用refresh_token恢复session

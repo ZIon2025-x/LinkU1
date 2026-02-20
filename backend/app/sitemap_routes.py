@@ -1,10 +1,11 @@
 """
-动态Sitemap生成路由
+动态Sitemap & robots.txt 路由
 用于SEO优化，让搜索引擎能够索引所有任务
 """
 
 import logging
 from datetime import datetime
+from pathlib import Path
 from fastapi import APIRouter, Depends, Response
 from sqlalchemy.orm import Session
 from sqlalchemy import or_, and_
@@ -17,6 +18,44 @@ logger = logging.getLogger(__name__)
 
 # 创建sitemap路由器
 sitemap_router = APIRouter()
+
+# 缓存 robots.txt 内容（启动时加载一次）
+_robots_txt_content: str | None = None
+
+def _load_robots_txt() -> str:
+    """加载 robots.txt 内容，优先从文件读取，否则使用内置默认值"""
+    robots_paths = [
+        Path(__file__).parent.parent / "robots.txt",
+        Path(__file__).parent / "robots.txt",
+    ]
+    for p in robots_paths:
+        if p.exists():
+            return p.read_text(encoding="utf-8")
+
+    return (
+        "User-agent: *\n"
+        "Allow: /api/sitemap.xml\n"
+        "Allow: /api/og-image/\n"
+        "Allow: /\n"
+        "Disallow: /api/v*\n"
+        "Disallow: /admin/\n"
+        "Disallow: /customer-service/\n"
+        "\n"
+        "Sitemap: https://www.link2ur.com/sitemap.xml\n"
+    )
+
+
+@sitemap_router.get("/robots.txt")
+def robots_txt():
+    """提供 robots.txt，避免搜索引擎收到 404"""
+    global _robots_txt_content
+    if _robots_txt_content is None:
+        _robots_txt_content = _load_robots_txt()
+    return Response(
+        content=_robots_txt_content,
+        media_type="text/plain",
+        headers={"Cache-Control": "public, max-age=86400"},
+    )
 
 
 @sitemap_router.get("/sitemap.xml")

@@ -1485,7 +1485,16 @@ async def websocket_chat(
             logger.debug(f"Found session_id/token in query params for user {user_id}")
     
     if not session_id:
-        logger.warning(f"WebSocket connection rejected: Missing session_id/token for user {user_id}")
+        has_cookies = bool(cookies)
+        cookie_keys = list(cookies.keys()) if cookies else []
+        query_params = dict(websocket.query_params)
+        origin = websocket.headers.get("origin", "unknown")
+        user_agent = websocket.headers.get("user-agent", "unknown")
+        logger.warning(
+            f"WebSocket connection rejected: Missing session_id/token for user {user_id} | "
+            f"origin={origin}, has_cookies={has_cookies}, cookie_keys={cookie_keys}, "
+            f"query_params_keys={list(query_params.keys())}, ua={user_agent[:80]}"
+        )
         await websocket.close(code=1008, reason="Missing session_id")
         return
 

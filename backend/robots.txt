@@ -1,0 +1,99 @@
+# https://www.robotstxt.org/robotstxt.html
+User-agent: *
+# ⚠️ 重要：Allow 必须写在 Disallow 前面，否则会被覆盖
+# 允许动态 sitemap 和 og 图片（这些是 SEO 必需的）
+Allow: /api/sitemap.xml
+Allow: /api/og-image/
+Allow: /static/public/
+Allow: /favicon.ico
+Allow: /favicon.png
+Allow: /static/favicon.ico
+Allow: /static/favicon.png
+Allow: /
+# 精准匹配 API 路径（避免误禁 /api-docs 等）
+Disallow: /api/v*
+# 允许AI友好的公开端点
+Allow: /api/ai/
+Allow: /api/sitemap.xml
+Disallow: /admin/
+Disallow: /customer-service/
+Disallow: /static/private/
+
+# ========== AI 爬虫优化 - 让AI能够访问和推荐网站 ==========
+# ChatGPT (OpenAI)
+User-agent: GPTBot
+Allow: /
+Crawl-delay: 1
+
+# Claude (Anthropic)
+User-agent: anthropic-ai
+Allow: /
+Crawl-delay: 1
+
+# Google Bard / Gemini
+User-agent: Google-Extended
+Allow: /
+Crawl-delay: 1
+
+# Perplexity AI
+User-agent: PerplexityBot
+Allow: /
+Crawl-delay: 1
+
+# Common Crawl (被很多AI使用)
+User-agent: CCBot
+Allow: /
+Crawl-delay: 1
+
+# Apple AI
+User-agent: Applebot-Extended
+Allow: /
+Crawl-delay: 1
+
+# Meta AI (Facebook)
+User-agent: FacebookBot
+Allow: /
+Crawl-delay: 1
+
+# 字节跳动AI
+User-agent: Bytespider
+Allow: /
+Crawl-delay: 1
+
+# Diffbot (AI数据提取)
+User-agent: Diffbot
+Allow: /
+Crawl-delay: 1
+
+# Bing AI预览
+User-agent: BingPreview
+Allow: /
+Crawl-delay: 1
+
+# 通用AI爬虫（匹配所有包含AI的User-Agent）
+User-agent: *bot*
+Allow: /
+Crawl-delay: 2
+
+# ========== 传统搜索引擎优化 ==========
+User-agent: Googlebot
+Allow: /
+Crawl-delay: 1
+
+User-agent: Bingbot
+Allow: /
+Crawl-delay: 1
+
+User-agent: Baiduspider
+Allow: /
+Crawl-delay: 2
+
+# Sitemap location - 使用动态生成的sitemap（包含所有任务、商品、帖子等）
+Sitemap: https://www.link2ur.com/sitemap.xml
+
+# AI信息文件 - 帮助AI理解网站
+# AI Information: https://www.link2ur.com/.well-known/ai.txt
+# AI API: https://api.link2ur.com/api/ai/site-info
+
+# 爬取延迟
+Crawl-delay: 1

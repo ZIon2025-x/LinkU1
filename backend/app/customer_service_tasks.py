@@ -444,7 +444,10 @@ def send_timeout_warnings(db: Session, warning_minutes: int = 1) -> Dict[str, An
                 continue
         
         db.commit()
-        logger.info(f"Sent {warning_count} timeout warnings")
+        if warning_count > 0:
+            logger.info(f"Sent {warning_count} timeout warnings")
+        else:
+            logger.debug("Sent 0 timeout warnings")
         
         return {
             "message": f"Sent {warning_count} timeout warnings",

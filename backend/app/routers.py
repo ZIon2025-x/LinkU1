@@ -5638,9 +5638,7 @@ def register_device_token(
     else:
         device_language = 'en'  # 默认英文
     
-    logger.info(f"[DEVICE_TOKEN] 用户 {current_user.id} 尝试注册设备令牌: platform={platform}, app_version={app_version}, device_id={device_id or '未提供'}, device_language={device_language}")
-    logger.debug(f"[DEVICE_TOKEN] 请求头: X-Platform={request.headers.get('X-Platform')}, X-Session-ID={'已设置' if request.headers.get('X-Session-ID') else '未设置'}, X-App-Signature={'已设置' if request.headers.get('X-App-Signature') else '未设置'}")
-    logger.debug(f"[DEVICE_TOKEN] 请求体: device_token={device_token[:20] if device_token else 'None'}..., device_id={device_id}, platform={platform}")
+    logger.debug(f"[DEVICE_TOKEN] 用户 {current_user.id} 尝试注册设备令牌: platform={platform}, app_version={app_version}, device_id={device_id or '未提供'}, device_language={device_language}")
     
     if not device_token:
         raise HTTPException(status_code=400, detail="device_token is required")
@@ -5651,11 +5649,27 @@ def register_device_token(
         models.DeviceToken.device_token == device_token
     ).first()
     
+    # ---- 节流：如果令牌已存在且信息无变化，10 分钟内跳过写库 ----
+    from datetime import timedelta
+    THROTTLE_MINUTES = 10
+    if existing_token and existing_token.is_active:
+        now = get_utc_time()
+        recently_updated = (
+            existing_token.last_used_at
+            and (now - existing_token.last_used_at) < timedelta(minutes=THROTTLE_MINUTES)
+        )
+        info_unchanged = (
+            existing_token.platform == platform
+            and existing_token.device_language == device_language
+            and (not (device_id and device_id.strip()) or existing_token.device_id == device_id)
+            and (not (app_version and app_version.strip()) or existing_token.app_version == app_version)
+        )
+        if recently_updated and info_unchanged:
+            logger.debug(f"[DEVICE_TOKEN] 用户 {current_user.id} 的设备令牌无变化且在 {THROTTLE_MINUTES} 分钟内已更新，跳过写库: token_id={existing_token.id}")
+            return {"message": "Device token up-to-date", "token_id": existing_token.id}
+    
     # 在注册/更新令牌前，禁用同一 device_id 的所有其他旧令牌（包括其他用户的）
-    # 同一台物理设备同一时间只能有一个用户登录，切换账号后旧用户的 token 会失效
-    # 如果不禁用，推送到旧用户时会收到 BadDeviceToken 错误
     if device_id and device_id.strip():
-        # 1) 禁用同一 device_id 上当前用户的其他旧令牌
         deactivated_own = db.query(models.DeviceToken).filter(
             models.DeviceToken.user_id == current_user.id,
             models.DeviceToken.device_id == device_id,
@@ -5665,7 +5679,6 @@ def register_device_token(
         if deactivated_own > 0:
             logger.info(f"[DEVICE_TOKEN] 已禁用同一 device_id 的 {deactivated_own} 个当前用户旧令牌: user_id={current_user.id}, device_id={device_id}")
         
-        # 2) 禁用同一 device_id 上其他用户的令牌（账号切换场景）
         deactivated_others = db.query(models.DeviceToken).filter(
             models.DeviceToken.user_id != current_user.id,
             models.DeviceToken.device_id == device_id,
@@ -5674,7 +5687,6 @@ def register_device_token(
         if deactivated_others > 0:
             logger.info(f"[DEVICE_TOKEN] 已禁用同一 device_id 上其他用户的 {deactivated_others} 个令牌（账号切换）: device_id={device_id}")
     
-    # 3) 禁用其他用户持有的相同 device_token（同一 APNs token 不能属于多个用户）
     deactivated_same_token = db.query(models.DeviceToken).filter(
         models.DeviceToken.user_id != current_user.id,
         models.DeviceToken.device_token == device_token,
@@ -5684,24 +5696,17 @@ def register_device_token(
         logger.info(f"[DEVICE_TOKEN] 已禁用其他用户持有的相同 device_token 的 {deactivated_same_token} 个记录")
     
     if existing_token:
-        # 更新现有令牌
         existing_token.is_active = True
         existing_token.platform = platform
-        existing_token.device_language = device_language  # 更新设备语言
+        existing_token.device_language = device_language
         
-        # 更新 device_id：如果请求中提供了 device_id（非空），则更新
-        # 如果 device_id 为 None（字段不存在）或空字符串，保持原有值不变
-        if device_id and device_id.strip():  # 非空字符串才更新
+        if device_id and device_id.strip():
             old_device_id = existing_token.device_id
             existing_token.device_id = device_id
             if old_device_id != device_id:
                 logger.debug(f"[DEVICE_TOKEN] device_id 已更新: {old_device_id or '未设置'} -> {device_id}")
-        elif device_id is None:
-            # 字段不存在，不更新（保持原有值）
-            logger.debug(f"[DEVICE_TOKEN] device_id 字段未提供，保持原有值: {existing_token.device_id or '未设置'}")
         
-        # 更新 app_version：如果请求中提供了 app_version（非空），则更新
-        if app_version and app_version.strip():  # 非空字符串才更新
+        if app_version and app_version.strip():
             existing_token.app_version = app_version
         
         existing_token.updated_at = get_utc_time()

@@ -197,18 +197,15 @@ class CookieManager:
         )
         
         # 设置刷新令牌Cookie（长期，用于刷新会话）
-        # refresh_token 使用 SameSite=None 以支持跨域请求
-        # 只有 HTTP localhost 需要使用 lax + Secure=False
-        is_http_localhost = origin and origin.startswith("http://") and ("localhost" in origin or "127.0.0.1" in origin)
-        refresh_samesite = "lax" if is_http_localhost else "none"
-        refresh_secure = False if is_http_localhost else True
+        # refresh_token 与 session_id 使用相同的 SameSite 策略，
+        # 避免 Safari ITP 等浏览器隐私机制拒绝 SameSite=none 的第一方 cookie
         response.set_cookie(
             key="refresh_token",
             value=refresh_token,
             max_age=refresh_max_age,
             httponly=Config.COOKIE_HTTPONLY,
-            secure=refresh_secure,
-            samesite=refresh_samesite,
+            secure=secure_value,
+            samesite=samesite_value,
             path=cookie_path,
             domain=cookie_domain
         )
