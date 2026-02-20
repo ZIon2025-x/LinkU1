@@ -52,6 +52,7 @@ import '../../features/profile/views/my_forum_posts_view.dart';
 import '../../features/task_expert/views/task_expert_search_view.dart';
 import '../../features/task_expert/views/service_detail_view.dart';
 import '../../features/task_expert/views/my_service_applications_view.dart';
+import '../../features/task_expert/views/expert_applications_management_view.dart';
 import '../../features/task_expert/views/task_experts_intro_view.dart';
 import '../../features/tasks/views/task_filter_view.dart';
 import '../../features/leaderboard/views/leaderboard_item_detail_view.dart';
@@ -102,6 +103,7 @@ class AppRoutes {
   static const String taskExpertsIntro = '/task-experts/intro';
   static const String serviceDetail = '/service/:id';
   static const String myServiceApplications = '/my-service-applications';
+  static const String expertApplicationsManagement = '/expert-applications-management';
 
   // 论坛
   static const String forum = '/forum';
@@ -705,7 +707,7 @@ class AppRouter {
         ),
       ),
 
-      // 统一聊天（Linter：AI + 转人工，不再保留独立客服中心入口）
+      // AI 助手聊天
       GoRoute(
         path: AppRoutes.supportChat,
         name: 'supportChat',
@@ -821,6 +823,13 @@ class AppRouter {
         path: AppRoutes.myServiceApplications,
         name: 'myServiceApplications',
         builder: (context, state) => const MyServiceApplicationsView(),
+      ),
+
+      // 达人服务申请管理（达人审核收到的申请）
+      GoRoute(
+        path: AppRoutes.expertApplicationsManagement,
+        name: 'expertApplicationsManagement',
+        builder: (context, state) => const ExpertApplicationsManagementView(),
       ),
 
 
@@ -994,7 +1003,7 @@ extension GoRouterExtension on BuildContext {
     push(AppRoutes.aiChatList);
   }
 
-  /// 跳转到统一 AI + 客服聊天
+  /// 跳转到 AI 助手聊天
   void goToSupportChat() {
     if (!_NavigationThrottle.acquire()) return;
     push(AppRoutes.supportChat);

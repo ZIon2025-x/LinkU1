@@ -161,6 +161,34 @@ class FleaMarketClearAcceptPaymentData extends FleaMarketEvent {
   const FleaMarketClearAcceptPaymentData();
 }
 
+/// 卖家批准购买申请 - 对标iOS approvePurchaseRequest
+class FleaMarketApprovePurchaseRequest extends FleaMarketEvent {
+  const FleaMarketApprovePurchaseRequest(this.requestId, this.itemId);
+  final String requestId;
+  final String itemId;
+  @override
+  List<Object?> get props => [requestId, itemId];
+}
+
+/// 卖家拒绝购买申请 - 对标iOS rejectPurchaseRequest
+class FleaMarketRejectPurchaseRequest extends FleaMarketEvent {
+  const FleaMarketRejectPurchaseRequest(this.requestId, this.itemId);
+  final String requestId;
+  final String itemId;
+  @override
+  List<Object?> get props => [requestId, itemId];
+}
+
+/// 卖家还价 - 对标iOS counterOfferPurchaseRequest
+class FleaMarketCounterOffer extends FleaMarketEvent {
+  const FleaMarketCounterOffer(this.itemId, {required this.price, this.message});
+  final String itemId;
+  final double price;
+  final String? message;
+  @override
+  List<Object?> get props => [itemId, price, message];
+}
+
 class FleaMarketUploadImage extends FleaMarketEvent {
   const FleaMarketUploadImage({
     required this.imageBytes,
@@ -362,6 +390,9 @@ class FleaMarketBloc extends Bloc<FleaMarketEvent, FleaMarketState> {
     on<FleaMarketUploadImage>(_onUploadImage);
     on<FleaMarketToggleFavorite>(_onToggleFavorite);
     on<FleaMarketClearAcceptPaymentData>(_onClearAcceptPaymentData);
+    on<FleaMarketApprovePurchaseRequest>(_onApprovePurchaseRequest);
+    on<FleaMarketRejectPurchaseRequest>(_onRejectPurchaseRequest);
+    on<FleaMarketCounterOffer>(_onCounterOffer);
   }
 
   final FleaMarketRepository _fleaMarketRepository;
@@ -931,6 +962,81 @@ class FleaMarketBloc extends Bloc<FleaMarketEvent, FleaMarketState> {
     } catch (e) {
       AppLogger.error('Failed to toggle favorite', e);
       emit(state.copyWith(isTogglingFavorite: false));
+    }
+  }
+
+  /// 卖家批准购买申请
+  Future<void> _onApprovePurchaseRequest(
+    FleaMarketApprovePurchaseRequest event,
+    Emitter<FleaMarketState> emit,
+  ) async {
+    emit(state.copyWith(isSubmitting: true));
+    try {
+      final result = await _fleaMarketRepository.approvePurchaseRequest(event.requestId);
+      final paymentData = _parseDirectPurchasePaymentData(
+        result,
+        itemId: event.itemId,
+      );
+      emit(state.copyWith(
+        isSubmitting: false,
+        actionMessage: paymentData != null ? 'open_payment' : 'approve_success',
+        acceptPaymentData: paymentData,
+      ));
+      add(FleaMarketLoadPurchaseRequests(event.itemId));
+    } catch (e) {
+      AppLogger.error('Failed to approve purchase request', e);
+      emit(state.copyWith(
+        isSubmitting: false,
+        actionMessage: e.toString(),
+      ));
+    }
+  }
+
+  /// 卖家拒绝购买申请
+  Future<void> _onRejectPurchaseRequest(
+    FleaMarketRejectPurchaseRequest event,
+    Emitter<FleaMarketState> emit,
+  ) async {
+    emit(state.copyWith(isSubmitting: true));
+    try {
+      await _fleaMarketRepository.rejectPurchase(event.requestId);
+      emit(state.copyWith(
+        isSubmitting: false,
+        actionMessage: 'reject_success',
+      ));
+      add(FleaMarketLoadPurchaseRequests(event.itemId));
+    } catch (e) {
+      AppLogger.error('Failed to reject purchase request', e);
+      emit(state.copyWith(
+        isSubmitting: false,
+        actionMessage: e.toString(),
+      ));
+    }
+  }
+
+  /// 卖家还价
+  Future<void> _onCounterOffer(
+    FleaMarketCounterOffer event,
+    Emitter<FleaMarketState> emit,
+  ) async {
+    emit(state.copyWith(isSubmitting: true));
+    try {
+      await _fleaMarketRepository.counterOffer(
+        event.itemId,
+        price: event.price,
+        message: event.message,
+      );
+      emit(state.copyWith(
+        isSubmitting: false,
+        actionMessage: 'counter_offer_success',
+      ));
+      add(FleaMarketLoadPurchaseRequests(event.itemId));
+    } catch (e) {
+      AppLogger.error('Failed to counter offer', e);
+      emit(state.copyWith(
+        isSubmitting: false,
+        actionMessage: e.toString(),
+      ));
     }
   }
 }

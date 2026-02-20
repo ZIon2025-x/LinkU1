@@ -853,8 +853,8 @@ const TaskExpertDashboard: React.FC = () => {
       // 任务达人头像上传：传递expert_id（即user.id）作为resource_id
       const expertId = user?.id || expert?.id;
       const uploadUrl = expertId 
-        ? `/api/upload/public-image?category=expert_avatar&resource_id=${expertId}`
-        : '/api/upload/public-image?category=expert_avatar';
+        ? `/api/v2/upload/image?category=expert_avatar&resource_id=${expertId}`
+        : '/api/v2/upload/image?category=expert_avatar';
       
       const res = await api.post(uploadUrl, formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
@@ -4308,8 +4308,8 @@ const ServiceEditModal: React.FC<ServiceEditModalProps> = ({ service, onClose, o
                       // 任务达人ID等于用户ID
                       const expertId = currentUser?.id;
                       const uploadUrl = expertId 
-                        ? `/api/upload/public-image?category=service_image&resource_id=${expertId}`
-                        : '/api/upload/public-image?category=service_image';
+                        ? `/api/v2/upload/image?category=service_image&resource_id=${expertId}`
+                        : '/api/v2/upload/image?category=service_image';
                       
                       const response = await api.post(uploadUrl, formDataUpload, {
                         headers: {

@@ -18,7 +18,15 @@
       "Bash(export PATH=\"/f/flutter/bin:$PATH\")",
       "Bash(export PUB_CACHE=\"/f/DevCache/.pub-cache\")",
       "Bash(flutter test:*)",
-      "Bash(flutter gen-l10n:*)"
+      "Bash(flutter gen-l10n:*)",
+      "Bash(npx tsc:*)",
+      "Bash(git add:*)",
+      "Bash(\"F:/python_work/LinkU/admin/src/pages/admin/customer-service/CustomerServicePage.tsx\":*)",
+      "Bash(git commit:*)",
+      "Bash(node --version:*)",
+      "Bash(node -e:*)",
+      "Bash(\"F:/python_work/LinkU/admin/src/pages/admin/settings/Settings.tsx\":*)",
+      "Bash(F:/python_work/LinkU/admin/src/api.ts:*)"
     ]
   }
 }

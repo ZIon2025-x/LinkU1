@@ -1,91 +1,276 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 
 import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_radius.dart';
 import '../../../core/utils/l10n_extension.dart';
+import '../../../core/utils/logger.dart';
 import '../../../core/utils/responsive.dart';
+import '../../../data/repositories/user_repository.dart';
+import '../../../data/services/api_service.dart';
+import '../../../data/services/iap_service.dart';
+import '../../auth/bloc/auth_bloc.dart';
 
 /// VIP 会员中心页
 /// 参考iOS VIPView.swift
 /// 展示会员状态、权益、历史记录
-class VipView extends StatelessWidget {
+class VipView extends StatefulWidget {
   const VipView({super.key});
 
   @override
+  State<VipView> createState() => _VipViewState();
+}
+
+class _VipViewState extends State<VipView> {
+  Map<String, dynamic>? _vipStatus;
+  bool _isLoadingStatus = false;
+  bool? _localAutoRenew;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadVipInfo();
+  }
+
+  Future<void> _loadVipInfo() async {
+    final user = context.read<AuthBloc>().state.user;
+    final level = user?.userLevel;
+    final isVip = level == 'vip' || level == 'super';
+    if (!isVip) return;
+
+    setState(() => _isLoadingStatus = true);
+
+    try {
+      final status =
+          await context.read<UserRepository>().getVipStatus();
+      if (mounted) {
+        setState(() {
+          _vipStatus = status;
+          _isLoadingStatus = false;
+        });
+      }
+    } catch (e) {
+      AppLogger.error('Failed to load VIP status', e);
+      if (mounted) setState(() => _isLoadingStatus = false);
+    }
+
+    _loadLocalSubscriptionInfo();
+  }
+
+  Future<void> _loadLocalSubscriptionInfo() async {
+    try {
+      final iap = IAPService.instance;
+      final apiService = context.read<ApiService>();
+      await iap.ensureInitialized(apiService: apiService);
+
+      final autoRenew = _vipStatus?['subscription']?['auto_renew_status'];
+      if (mounted && autoRenew is bool) {
+        setState(() => _localAutoRenew = autoRenew);
+      }
+    } catch (e) {
+      AppLogger.error('Failed to load local subscription info', e);
+    }
+  }
+
+  String _formatExpiryDate(String? dateString) {
+    if (dateString == null) return '';
+    try {
+      final date = DateTime.parse(dateString);
+      return DateFormat.yMMMd().format(date);
+    } catch (_) {
+      return dateString;
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: CustomScrollView(
-        slivers: [
-          // 顶部渐变 AppBar
-          SliverAppBar(
-            expandedHeight: 200,
-            pinned: true,
-            flexibleSpace: FlexibleSpaceBar(
-              title: Text(context.l10n.settingsMembership),
-              background: Container(
-                decoration: const BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: AppColors.gradientGold,
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
+    return BlocBuilder<AuthBloc, AuthState>(
+      buildWhen: (prev, curr) => prev.user?.userLevel != curr.user?.userLevel,
+      builder: (context, authState) {
+        final isVip = authState.user?.userLevel == 'vip' ||
+            authState.user?.userLevel == 'super';
+
+        return Scaffold(
+          body: CustomScrollView(
+            slivers: [
+              SliverAppBar(
+                expandedHeight: 200,
+                pinned: true,
+                flexibleSpace: FlexibleSpaceBar(
+                  title: Text(context.l10n.settingsMembership),
+                  background: Container(
+                    decoration: const BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: AppColors.gradientGold,
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                    ),
+                    child: Center(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const SizedBox(height: 40),
+                          Icon(
+                            isVip ? Icons.workspace_premium : Icons.star_outline,
+                            size: 56,
+                            color: Colors.white,
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            context.l10n.vipMember,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 22,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
                 ),
-                child: Center(
+              ),
+
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: AppSpacing.allLg,
                   child: Column(
-                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      const SizedBox(height: 40),
-                      const Icon(Icons.workspace_premium,
-                          size: 56, color: Colors.white),
-                      const SizedBox(height: 8),
-                      Text(
-                        context.l10n.vipMember,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 22,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
+                      _buildStatusCard(context, isVip),
+                      AppSpacing.vLg,
+                      _buildBenefitsSection(context),
+                      AppSpacing.vLg,
+                      _buildPlansSection(context),
+                      AppSpacing.vLg,
+                      _buildFaqSection(context),
                     ],
                   ),
                 ),
               ),
-            ),
+            ],
           ),
+        );
+      },
+    );
+  }
 
-          // 内容
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: AppSpacing.allLg,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  // 当前状态卡片
-                  _buildStatusCard(context),
-                  AppSpacing.vLg,
+  Widget _buildStatusCard(BuildContext context, bool isVip) {
+    if (isVip) {
+      return _buildVipActiveCard(context);
+    }
+    return _buildNonVipCard(context);
+  }
 
-                  // VIP 权益
-                  _buildBenefitsSection(context),
-                  AppSpacing.vLg,
+  Widget _buildVipActiveCard(BuildContext context) {
+    final subscription =
+        _vipStatus?['subscription'] as Map<String, dynamic>?;
+    final expiresDate = subscription?['expires_date'] as String?;
 
-                  // 会员套餐
-                  _buildPlansSection(context),
-                  AppSpacing.vLg,
-
-                  // 常见问题
-                  _buildFaqSection(context),
-                ],
+    return Container(
+      padding: AppSpacing.allLg,
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: AppColors.gradientGold,
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: AppRadius.allLarge,
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.gold.withValues(alpha: 0.3),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.check_circle, color: Colors.white, size: 20),
+              const SizedBox(width: 6),
+              Text(
+                context.l10n.vipAlreadyVip,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+          AppSpacing.vSm,
+          Text(
+            context.l10n.vipThankYou,
+            style: TextStyle(
+              color: Colors.white.withValues(alpha: 0.85),
+              fontSize: 14,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          if (_isLoadingStatus) ...[
+            AppSpacing.vMd,
+            const SizedBox(
+              width: 20,
+              height: 20,
+              child: CircularProgressIndicator(
+                color: Colors.white,
+                strokeWidth: 2,
               ),
             ),
-          ),
+          ] else if (expiresDate != null) ...[
+            AppSpacing.vMd,
+            Text(
+              context.l10n.vipExpiryTime(_formatExpiryDate(expiresDate)),
+              style: TextStyle(
+                color: Colors.white.withValues(alpha: 0.8),
+                fontSize: 13,
+              ),
+            ),
+            if (_localAutoRenew != null) ...[
+              const SizedBox(height: 4),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    _localAutoRenew!
+                        ? Icons.autorenew
+                        : Icons.error_outline,
+                    size: 14,
+                    color: _localAutoRenew!
+                        ? Colors.white
+                        : Colors.orange.shade100,
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    _localAutoRenew!
+                        ? context.l10n.vipWillAutoRenew
+                        : context.l10n.vipAutoRenewCancelled,
+                    style: TextStyle(
+                      color: _localAutoRenew!
+                          ? Colors.white
+                          : Colors.orange.shade100,
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ],
         ],
       ),
     );
   }
 
-  Widget _buildStatusCard(BuildContext context) {
+  Widget _buildNonVipCard(BuildContext context) {
     return Container(
       padding: AppSpacing.allLg,
       decoration: BoxDecoration(
@@ -109,7 +294,8 @@ class VipView extends StatelessWidget {
           Row(
             children: [
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                 decoration: BoxDecoration(
                   color: AppColors.gold.withValues(alpha: 0.2),
                   borderRadius: AppRadius.allPill,

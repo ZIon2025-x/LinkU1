@@ -8232,6 +8232,99 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get toolCallLoadingListTaskExperts => '正在加载达人…';
+
+  @override
+  String get expertApplicationsTitle => '服务申请管理';
+
+  @override
+  String get expertApplicationsEmpty => '暂无申请';
+
+  @override
+  String get expertApplicationsEmptyMessage => '您还没有收到任何服务申请。';
+
+  @override
+  String get expertApplicationApprove => '同意';
+
+  @override
+  String get expertApplicationReject => '拒绝';
+
+  @override
+  String get expertApplicationCounterOffer => '议价';
+
+  @override
+  String get expertApplicationApproved => '申请已同意';
+
+  @override
+  String get expertApplicationRejected => '申请已拒绝';
+
+  @override
+  String get expertApplicationCounterOfferSent => '议价已发送';
+
+  @override
+  String get expertApplicationActionFailed => '操作失败，请重试';
+
+  @override
+  String get expertApplicationRejectReason => '拒绝原因（可选）';
+
+  @override
+  String get expertApplicationRejectReasonHint => '请输入拒绝原因…';
+
+  @override
+  String get expertApplicationCounterPrice => '您的报价';
+
+  @override
+  String get expertApplicationCounterPriceHint => '输入您的议价金额';
+
+  @override
+  String get expertApplicationCounterMessage => '留言（可选）';
+
+  @override
+  String get expertApplicationCounterMessageHint => '添加议价说明…';
+
+  @override
+  String get expertApplicationConfirmApprove => '确认同意';
+
+  @override
+  String get expertApplicationConfirmApproveMessage => '确定同意此申请吗？将会创建任务并生成支付。';
+
+  @override
+  String get expertApplicationConfirmReject => '确认拒绝';
+
+  @override
+  String get expertApplicationConfirmRejectMessage => '确定拒绝此申请吗？';
+
+  @override
+  String get expertApplicationStatusPending => '待处理';
+
+  @override
+  String get expertApplicationStatusNegotiating => '议价中';
+
+  @override
+  String get expertApplicationStatusPriceAgreed => '价格已达成';
+
+  @override
+  String get expertApplicationStatusApproved => '已同意';
+
+  @override
+  String get expertApplicationStatusRejected => '已拒绝';
+
+  @override
+  String get expertApplicationStatusCancelled => '已取消';
+
+  @override
+  String get expertApplicationApplicant => '申请人';
+
+  @override
+  String get expertApplicationService => '服务';
+
+  @override
+  String get expertApplicationMessage => '留言';
+
+  @override
+  String get expertApplicationPrice => '出价';
+
+  @override
+  String get expertApplicationBasePrice => '基础价格';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -16462,4 +16555,97 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get toolCallLoadingListTaskExperts => '正在載入達人…';
+
+  @override
+  String get expertApplicationsTitle => '服務申請管理';
+
+  @override
+  String get expertApplicationsEmpty => '暫無申請';
+
+  @override
+  String get expertApplicationsEmptyMessage => '您還沒有收到任何服務申請。';
+
+  @override
+  String get expertApplicationApprove => '同意';
+
+  @override
+  String get expertApplicationReject => '拒絕';
+
+  @override
+  String get expertApplicationCounterOffer => '議價';
+
+  @override
+  String get expertApplicationApproved => '申請已同意';
+
+  @override
+  String get expertApplicationRejected => '申請已拒絕';
+
+  @override
+  String get expertApplicationCounterOfferSent => '議價已發送';
+
+  @override
+  String get expertApplicationActionFailed => '操作失敗，請重試';
+
+  @override
+  String get expertApplicationRejectReason => '拒絕原因（可選）';
+
+  @override
+  String get expertApplicationRejectReasonHint => '請輸入拒絕原因…';
+
+  @override
+  String get expertApplicationCounterPrice => '您的報價';
+
+  @override
+  String get expertApplicationCounterPriceHint => '輸入您的議價金額';
+
+  @override
+  String get expertApplicationCounterMessage => '留言（可選）';
+
+  @override
+  String get expertApplicationCounterMessageHint => '添加議價說明…';
+
+  @override
+  String get expertApplicationConfirmApprove => '確認同意';
+
+  @override
+  String get expertApplicationConfirmApproveMessage => '確定同意此申請嗎？將會創建任務並生成支付。';
+
+  @override
+  String get expertApplicationConfirmReject => '確認拒絕';
+
+  @override
+  String get expertApplicationConfirmRejectMessage => '確定拒絕此申請嗎？';
+
+  @override
+  String get expertApplicationStatusPending => '待處理';
+
+  @override
+  String get expertApplicationStatusNegotiating => '議價中';
+
+  @override
+  String get expertApplicationStatusPriceAgreed => '價格已達成';
+
+  @override
+  String get expertApplicationStatusApproved => '已同意';
+
+  @override
+  String get expertApplicationStatusRejected => '已拒絕';
+
+  @override
+  String get expertApplicationStatusCancelled => '已取消';
+
+  @override
+  String get expertApplicationApplicant => '申請人';
+
+  @override
+  String get expertApplicationService => '服務';
+
+  @override
+  String get expertApplicationMessage => '留言';
+
+  @override
+  String get expertApplicationPrice => '出價';
+
+  @override
+  String get expertApplicationBasePrice => '基礎價格';
 }

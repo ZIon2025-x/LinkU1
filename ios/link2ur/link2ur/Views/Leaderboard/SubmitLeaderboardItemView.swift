@@ -269,7 +269,7 @@ struct SubmitLeaderboardItemView: View {
                 if success {
                     submitItemWithImages()
                 } else {
-                    errorMessage = "图片上传失败"
+                    errorMessage = "图片上传失败或超时，请检查网络后重试"
                 }
             }
         } else {
@@ -292,9 +292,13 @@ struct SubmitLeaderboardItemView: View {
             }
             
             // 榜单竞品图片使用公开图片上传API（所有人可访问，永久URL）
+            // 添加 45 秒超时，避免弱网/服务器无响应时无限转圈
             apiService.uploadPublicImage(imageData, filename: "item_\(UUID().uuidString).jpg", category: "leaderboard_item")
-                .sink(receiveCompletion: { completion in
-                    if case .failure = completion {
+                .timeout(45, scheduler: DispatchQueue.main) {
+                    APIError.requestFailed(NSError(domain: "UploadTimeout", code: NSURLErrorTimedOut, userInfo: [NSLocalizedDescriptionKey: "图片上传超时"]))
+                }
+                .sink(receiveCompletion: { comp in
+                    if case .failure = comp {
                         uploadErrors.append(NSError(domain: "UploadError", code: 0))
                     }
                     uploadGroup.leave()

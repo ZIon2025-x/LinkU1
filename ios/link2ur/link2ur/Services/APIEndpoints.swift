@@ -354,7 +354,7 @@ enum APIEndpoints {
     // MARK: - Common (通用)
     enum Common {
         static let uploadImage = "/api/upload/image"  // 私密图片（任务聊天、客服聊天）
-        static let uploadPublicImage = "/api/upload/public-image"  // 公开图片（任务图片、头像等）
+        static let uploadPublicImage = "/api/v2/upload/image"  // 公开图片（任务图片、头像等），统一使用V2
         static let uploadFile = "/api/upload/file"  // 私密文件（任务证据文件等）
         static let banners = "/api/banners"
         /// 健康检查端点（用于网络连通性测试）

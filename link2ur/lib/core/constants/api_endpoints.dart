@@ -177,7 +177,14 @@ class ApiEndpoints {
   // --- 达人资料更新请求 [RESERVED] ---
   static const String myExpertProfileUpdateRequest =
       '/api/task-experts/me/profile-update-request';
-  // --- 用户服务申请操作 [RESERVED] ---
+  // --- 达人审核申请操作 ---
+  static String approveServiceApplication(int applicationId) =>
+      '/api/task-experts/applications/$applicationId/approve';
+  static String rejectServiceApplication(int applicationId) =>
+      '/api/task-experts/applications/$applicationId/reject';
+  static String counterOfferServiceApplication(int applicationId) =>
+      '/api/task-experts/applications/$applicationId/counter-offer';
+  // --- 用户服务申请操作 ---
   static String respondServiceCounterOffer(int applicationId) =>
       '/api/users/me/service-applications/$applicationId/respond-counter-offer';
   static String cancelServiceApplication(int applicationId) =>
@@ -434,7 +441,7 @@ class ApiEndpoints {
   static const String uploadImage = '/api/upload/image';
   /// 优化版公开图片上传（任务/论坛/跳蚤等），返回公开 URL，支持临时目录迁移
   static const String uploadImageV2 = '/api/v2/upload/image';
-  static const String uploadPublicImage = '/api/upload/public-image';
+  static const String uploadPublicImage = '/api/v2/upload/image'; // 公开图片统一使用V2
   static const String uploadFile = '/api/upload/file';
   static const String refreshImageUrl = '/api/refresh-image-url';
   static String privateImage(String imageId) => // [RESERVED]

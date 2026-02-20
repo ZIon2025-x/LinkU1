@@ -133,6 +133,16 @@ class ForumReplyPost extends ForumEvent {
   List<Object?> get props => [postId, content, parentReplyId];
 }
 
+class ForumReportPost extends ForumEvent {
+  const ForumReportPost(this.postId, {required this.reason});
+
+  final int postId;
+  final String reason;
+
+  @override
+  List<Object?> get props => [postId, reason];
+}
+
 // ==================== State ====================
 
 enum ForumStatus { initial, loading, loaded, error }
@@ -159,6 +169,7 @@ class ForumState extends Equatable {
     this.favoritedPosts = const [],
     this.isLoadingMyPosts = false,
     this.isLoadingFavoritedPosts = false,
+    this.reportSuccess = false,
   });
 
   final ForumStatus status;
@@ -183,6 +194,7 @@ class ForumState extends Equatable {
   final List<ForumPost> favoritedPosts;
   final bool isLoadingMyPosts;
   final bool isLoadingFavoritedPosts;
+  final bool reportSuccess;
 
   bool get isLoading => status == ForumStatus.loading;
 
@@ -208,6 +220,7 @@ class ForumState extends Equatable {
     List<ForumPost>? favoritedPosts,
     bool? isLoadingMyPosts,
     bool? isLoadingFavoritedPosts,
+    bool? reportSuccess,
   }) {
     return ForumState(
       status: status ?? this.status,
@@ -232,6 +245,7 @@ class ForumState extends Equatable {
       isLoadingMyPosts: isLoadingMyPosts ?? this.isLoadingMyPosts,
       isLoadingFavoritedPosts:
           isLoadingFavoritedPosts ?? this.isLoadingFavoritedPosts,
+      reportSuccess: reportSuccess ?? this.reportSuccess,
     );
   }
 
@@ -257,6 +271,7 @@ class ForumState extends Equatable {
         favoritedPosts,
         isLoadingMyPosts,
         isLoadingFavoritedPosts,
+        reportSuccess,
       ];
 }
 
@@ -278,6 +293,7 @@ class ForumBloc extends Bloc<ForumEvent, ForumState> {
     on<ForumLoadReplies>(_onLoadReplies);
     on<ForumCreatePost>(_onCreatePost);
     on<ForumReplyPost>(_onReplyPost);
+    on<ForumReportPost>(_onReportPost);
     on<ForumLoadMyPosts>(_onLoadMyPosts);
     on<ForumLoadFavoritedPosts>(_onLoadFavoritedPosts);
   }
@@ -629,6 +645,22 @@ class ForumBloc extends Bloc<ForumEvent, ForumState> {
       emit(state.copyWith(
         isReplying: false,
         errorMessage: e.toString(),
+      ));
+    }
+  }
+
+  Future<void> _onReportPost(
+    ForumReportPost event,
+    Emitter<ForumState> emit,
+  ) async {
+    try {
+      await _forumRepository.reportPost(event.postId, reason: event.reason);
+      emit(state.copyWith(reportSuccess: true));
+      emit(state.copyWith(reportSuccess: false));
+    } catch (e) {
+      AppLogger.error('Failed to report post', e);
+      emit(state.copyWith(
+        errorMessage: e is AppException ? e.message : e.toString(),
       ));
     }
   }

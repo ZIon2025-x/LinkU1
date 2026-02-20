@@ -491,6 +491,54 @@ class TaskExpertRepository {
     }
   }
 
+  /// 达人同意申请（创建任务+支付）
+  Future<Map<String, dynamic>> approveServiceApplication(int applicationId) async {
+    final response = await _apiService.post<Map<String, dynamic>>(
+      ApiEndpoints.approveServiceApplication(applicationId),
+    );
+
+    if (!response.isSuccess || response.data == null) {
+      throw TaskExpertException(response.message ?? '同意申请失败');
+    }
+
+    return response.data!;
+  }
+
+  /// 达人拒绝申请
+  Future<void> rejectServiceApplication(int applicationId, {String? reason}) async {
+    final response = await _apiService.post(
+      ApiEndpoints.rejectServiceApplication(applicationId),
+      data: {
+        if (reason != null && reason.isNotEmpty) 'reject_reason': reason,
+      },
+    );
+
+    if (!response.isSuccess) {
+      throw TaskExpertException(response.message ?? '拒绝申请失败');
+    }
+  }
+
+  /// 达人再次议价
+  Future<Map<String, dynamic>> counterOfferServiceApplication(
+    int applicationId, {
+    required double counterPrice,
+    String? message,
+  }) async {
+    final response = await _apiService.post<Map<String, dynamic>>(
+      ApiEndpoints.counterOfferServiceApplication(applicationId),
+      data: {
+        'counter_price': counterPrice,
+        if (message != null && message.isNotEmpty) 'message': message,
+      },
+    );
+
+    if (!response.isSuccess || response.data == null) {
+      throw TaskExpertException(response.message ?? '议价失败');
+    }
+
+    return response.data!;
+  }
+
   /// 回应服务还价
   Future<void> respondServiceCounterOffer(int applicationId, {required bool accept}) async {
     final response = await _apiService.post(

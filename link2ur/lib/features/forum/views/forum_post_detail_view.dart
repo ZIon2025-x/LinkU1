@@ -60,6 +60,43 @@ class _ForumPostDetailViewState extends State<ForumPostDetailView> {
     });
   }
 
+  void _showReportDialog(BuildContext context) {
+    final reasonController = TextEditingController();
+    final bloc = context.read<ForumBloc>();
+
+    showDialog<void>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: Text(context.l10n.commonReport),
+          content: TextField(
+            controller: reasonController,
+            maxLines: 3,
+            decoration: InputDecoration(
+              hintText: context.l10n.commonReportReason,
+              border: const OutlineInputBorder(),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: Text(context.l10n.commonCancel),
+            ),
+            FilledButton(
+              onPressed: () {
+                final reason = reasonController.text.trim();
+                if (reason.isEmpty) return;
+                bloc.add(ForumReportPost(widget.postId, reason: reason));
+                Navigator.pop(dialogContext);
+              },
+              child: Text(context.l10n.commonConfirm),
+            ),
+          ],
+        );
+      },
+    ).then((_) => reasonController.dispose());
+  }
+
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
@@ -68,7 +105,22 @@ class _ForumPostDetailViewState extends State<ForumPostDetailView> {
       )
         ..add(ForumLoadPostDetail(widget.postId))
         ..add(ForumLoadReplies(widget.postId)),
-      child: Scaffold(
+      child: BlocListener<ForumBloc, ForumState>(
+        listenWhen: (prev, curr) =>
+            !prev.reportSuccess && curr.reportSuccess ||
+            prev.errorMessage != curr.errorMessage && curr.errorMessage != null,
+        listener: (context, state) {
+          if (state.reportSuccess) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text(context.l10n.commonReportSubmitted)),
+            );
+          } else if (state.errorMessage != null) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text(state.errorMessage!)),
+            );
+          }
+        },
+        child: Scaffold(
         backgroundColor: AppColors.backgroundFor(Theme.of(context).brightness),
         appBar: AppBar(
           title: Text(context.l10n.forumPostDetail),
@@ -83,6 +135,26 @@ class _ForumPostDetailViewState extends State<ForumPostDetailView> {
                   url: 'https://link2ur.com/forum/posts/${widget.postId}',
                 );
               },
+            ),
+            PopupMenuButton<String>(
+              icon: const Icon(Icons.more_vert),
+              onSelected: (value) {
+                if (value == 'report') {
+                  _showReportDialog(context);
+                }
+              },
+              itemBuilder: (context) => [
+                PopupMenuItem<String>(
+                  value: 'report',
+                  child: Row(
+                    children: [
+                      const Icon(Icons.flag_outlined, size: 20),
+                      const SizedBox(width: 8),
+                      Text(context.l10n.commonReport),
+                    ],
+                  ),
+                ),
+              ],
             ),
           ],
         ),
@@ -239,6 +311,7 @@ class _ForumPostDetailViewState extends State<ForumPostDetailView> {
         ),
         // 底部回复栏 - 对标iOS bottomReplyBar with ultraThinMaterial
         bottomNavigationBar: _buildBottomReplyBar(context),
+      ),
       ),
     );
   }

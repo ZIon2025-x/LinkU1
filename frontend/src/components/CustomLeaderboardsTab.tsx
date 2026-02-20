@@ -145,7 +145,7 @@ const CustomLeaderboardsTab: React.FC<CustomLeaderboardsTabProps> = ({ onShowLog
       
       // 使用 leaderboard_cover category
       const resourceId = user?.id ? `temp_${user.id}` : 'temp_anonymous';
-      const uploadUrl = `/api/upload/public-image?category=leaderboard_cover&resource_id=${encodeURIComponent(resourceId)}`;
+      const uploadUrl = `/api/v2/upload/image?category=leaderboard_cover&resource_id=${encodeURIComponent(resourceId)}`;
                   const response = await api.post(
         uploadUrl,
         formData,

@@ -120,6 +120,44 @@ class TaskExpertFilterChanged extends TaskExpertEvent {
   List<Object?> get props => [category, city];
 }
 
+/// 加载达人收到的申请列表
+class TaskExpertLoadExpertApplications extends TaskExpertEvent {
+  const TaskExpertLoadExpertApplications();
+}
+
+/// 达人同意申请
+class TaskExpertApproveApplication extends TaskExpertEvent {
+  const TaskExpertApproveApplication(this.applicationId);
+
+  final int applicationId;
+
+  @override
+  List<Object?> get props => [applicationId];
+}
+
+/// 达人拒绝申请
+class TaskExpertRejectApplication extends TaskExpertEvent {
+  const TaskExpertRejectApplication(this.applicationId, {this.reason});
+
+  final int applicationId;
+  final String? reason;
+
+  @override
+  List<Object?> get props => [applicationId, reason];
+}
+
+/// 达人再次议价
+class TaskExpertCounterOffer extends TaskExpertEvent {
+  const TaskExpertCounterOffer(this.applicationId, {required this.counterPrice, this.message});
+
+  final int applicationId;
+  final double counterPrice;
+  final String? message;
+
+  @override
+  List<Object?> get props => [applicationId, counterPrice, message];
+}
+
 /// 增强版申请服务事件（支持议价/时间段/期限/灵活时间）
 class TaskExpertApplyServiceEnhanced extends TaskExpertEvent {
   const TaskExpertApplyServiceEnhanced(
@@ -164,6 +202,7 @@ class TaskExpertState extends Equatable {
     this.serviceDetail,
     this.selectedService,
     this.applications = const [],
+    this.expertApplications = const [],
     this.searchResults = const [],
     this.reviews = const [],
     this.isLoadingReviews = false,
@@ -190,6 +229,8 @@ class TaskExpertState extends Equatable {
   final Map<String, dynamic>? serviceDetail;
   final TaskExpertService? selectedService;
   final List<Map<String, dynamic>> applications;
+  /// 达人收到的申请列表（别人申请我的服务）
+  final List<Map<String, dynamic>> expertApplications;
   final List<TaskExpert> searchResults;
   final List<Map<String, dynamic>> reviews;
   final bool isLoadingReviews;
@@ -226,6 +267,7 @@ class TaskExpertState extends Equatable {
     Map<String, dynamic>? serviceDetail,
     TaskExpertService? selectedService,
     List<Map<String, dynamic>>? applications,
+    List<Map<String, dynamic>>? expertApplications,
     List<TaskExpert>? searchResults,
     List<Map<String, dynamic>>? reviews,
     bool? isLoadingReviews,
@@ -251,6 +293,7 @@ class TaskExpertState extends Equatable {
       serviceDetail: serviceDetail,
       selectedService: selectedService ?? this.selectedService,
       applications: applications ?? this.applications,
+      expertApplications: expertApplications ?? this.expertApplications,
       searchResults: searchResults ?? this.searchResults,
       reviews: reviews ?? this.reviews,
       isLoadingReviews: isLoadingReviews ?? this.isLoadingReviews,
@@ -279,6 +322,7 @@ class TaskExpertState extends Equatable {
         serviceDetail,
         selectedService,
         applications,
+        expertApplications,
         searchResults,
         reviews,
         isLoadingReviews,
@@ -312,6 +356,10 @@ class TaskExpertBloc extends Bloc<TaskExpertEvent, TaskExpertState> {
     on<TaskExpertLoadServiceTimeSlots>(_onLoadServiceTimeSlots);
     on<TaskExpertApplyServiceEnhanced>(_onApplyServiceEnhanced);
     on<TaskExpertFilterChanged>(_onFilterChanged);
+    on<TaskExpertLoadExpertApplications>(_onLoadExpertApplications);
+    on<TaskExpertApproveApplication>(_onApproveApplication);
+    on<TaskExpertRejectApplication>(_onRejectApplication);
+    on<TaskExpertCounterOffer>(_onCounterOffer);
   }
 
   final TaskExpertRepository _taskExpertRepository;
@@ -690,6 +738,111 @@ class TaskExpertBloc extends Bloc<TaskExpertEvent, TaskExpertState> {
       emit(state.copyWith(
         isSubmitting: false,
         actionMessage: 'application_failed',
+        errorMessage: e.toString(),
+      ));
+    }
+  }
+
+  Future<void> _onLoadExpertApplications(
+    TaskExpertLoadExpertApplications event,
+    Emitter<TaskExpertState> emit,
+  ) async {
+    emit(state.copyWith(status: TaskExpertStatus.loading));
+
+    try {
+      final expertApplications =
+          await _taskExpertRepository.getMyExpertApplications();
+
+      emit(state.copyWith(
+        status: TaskExpertStatus.loaded,
+        expertApplications: expertApplications,
+      ));
+    } catch (e) {
+      AppLogger.error('Failed to load expert applications', e);
+      emit(state.copyWith(
+        status: TaskExpertStatus.error,
+        errorMessage: e.toString(),
+      ));
+    }
+  }
+
+  Future<void> _onApproveApplication(
+    TaskExpertApproveApplication event,
+    Emitter<TaskExpertState> emit,
+  ) async {
+    emit(state.copyWith(isSubmitting: true));
+
+    try {
+      await _taskExpertRepository.approveServiceApplication(event.applicationId);
+
+      emit(state.copyWith(
+        isSubmitting: false,
+        actionMessage: 'application_approved',
+      ));
+
+      add(const TaskExpertLoadExpertApplications());
+    } catch (e) {
+      AppLogger.error('Failed to approve application', e);
+      emit(state.copyWith(
+        isSubmitting: false,
+        actionMessage: 'application_action_failed',
+        errorMessage: e.toString(),
+      ));
+    }
+  }
+
+  Future<void> _onRejectApplication(
+    TaskExpertRejectApplication event,
+    Emitter<TaskExpertState> emit,
+  ) async {
+    emit(state.copyWith(isSubmitting: true));
+
+    try {
+      await _taskExpertRepository.rejectServiceApplication(
+        event.applicationId,
+        reason: event.reason,
+      );
+
+      emit(state.copyWith(
+        isSubmitting: false,
+        actionMessage: 'application_rejected',
+      ));
+
+      add(const TaskExpertLoadExpertApplications());
+    } catch (e) {
+      AppLogger.error('Failed to reject application', e);
+      emit(state.copyWith(
+        isSubmitting: false,
+        actionMessage: 'application_action_failed',
+        errorMessage: e.toString(),
+      ));
+    }
+  }
+
+  Future<void> _onCounterOffer(
+    TaskExpertCounterOffer event,
+    Emitter<TaskExpertState> emit,
+  ) async {
+    emit(state.copyWith(isSubmitting: true));
+
+    try {
+      await _taskExpertRepository.counterOfferServiceApplication(
+        event.applicationId,
+        counterPrice: event.counterPrice,
+        message: event.message,
+      );
+
+      emit(state.copyWith(
+        isSubmitting: false,
+        actionMessage: 'counter_offer_sent',
+      ));
+
+      add(const TaskExpertLoadExpertApplications());
+    } catch (e) {
+      AppLogger.error('Failed to send counter offer', e);
+      emit(state.copyWith(
+        isSubmitting: false,
+        actionMessage: 'application_action_failed',
         errorMessage: e.toString(),
       ));
     }

@@ -709,7 +709,7 @@ const CustomLeaderboardDetail: React.FC = () => {
       // 传递 resource_id 为临时标识（因为上传时 item 还未创建）
       const resourceId = user?.id ? `temp_${user.id}` : 'temp_anonymous';
       const response = await api.post(
-        `/api/upload/public-image?category=leaderboard_item&resource_id=${encodeURIComponent(resourceId)}`,
+        `/api/v2/upload/image?category=leaderboard_item&resource_id=${encodeURIComponent(resourceId)}`,
         formData,
         {
           headers: {

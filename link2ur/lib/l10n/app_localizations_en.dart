@@ -8551,4 +8551,104 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get toolCallLoadingListTaskExperts => 'Loading experts…';
+
+  @override
+  String get expertApplicationsTitle => 'Service Applications';
+
+  @override
+  String get expertApplicationsEmpty => 'No Applications';
+
+  @override
+  String get expertApplicationsEmptyMessage =>
+      'You haven\'t received any service applications yet.';
+
+  @override
+  String get expertApplicationApprove => 'Approve';
+
+  @override
+  String get expertApplicationReject => 'Reject';
+
+  @override
+  String get expertApplicationCounterOffer => 'Counter Offer';
+
+  @override
+  String get expertApplicationApproved => 'Application approved successfully';
+
+  @override
+  String get expertApplicationRejected => 'Application rejected';
+
+  @override
+  String get expertApplicationCounterOfferSent => 'Counter offer sent';
+
+  @override
+  String get expertApplicationActionFailed =>
+      'Operation failed, please try again';
+
+  @override
+  String get expertApplicationRejectReason => 'Reject Reason (Optional)';
+
+  @override
+  String get expertApplicationRejectReasonHint =>
+      'Please enter the reason for rejection…';
+
+  @override
+  String get expertApplicationCounterPrice => 'Your Price';
+
+  @override
+  String get expertApplicationCounterPriceHint =>
+      'Enter your counter offer price';
+
+  @override
+  String get expertApplicationCounterMessage => 'Message (Optional)';
+
+  @override
+  String get expertApplicationCounterMessageHint =>
+      'Add a note about your counter offer…';
+
+  @override
+  String get expertApplicationConfirmApprove => 'Confirm Approve';
+
+  @override
+  String get expertApplicationConfirmApproveMessage =>
+      'Are you sure you want to approve this application? A task and payment will be created.';
+
+  @override
+  String get expertApplicationConfirmReject => 'Confirm Reject';
+
+  @override
+  String get expertApplicationConfirmRejectMessage =>
+      'Are you sure you want to reject this application?';
+
+  @override
+  String get expertApplicationStatusPending => 'Pending';
+
+  @override
+  String get expertApplicationStatusNegotiating => 'Negotiating';
+
+  @override
+  String get expertApplicationStatusPriceAgreed => 'Price Agreed';
+
+  @override
+  String get expertApplicationStatusApproved => 'Approved';
+
+  @override
+  String get expertApplicationStatusRejected => 'Rejected';
+
+  @override
+  String get expertApplicationStatusCancelled => 'Cancelled';
+
+  @override
+  String get expertApplicationApplicant => 'Applicant';
+
+  @override
+  String get expertApplicationService => 'Service';
+
+  @override
+  String get expertApplicationMessage => 'Message';
+
+  @override
+  String get expertApplicationPrice => 'Offered Price';
+
+  @override
+  String get expertApplicationBasePrice => 'Base Price';
 }

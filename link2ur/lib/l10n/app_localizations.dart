@@ -15763,6 +15763,192 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Loading experts…'**
   String get toolCallLoadingListTaskExperts;
+
+  /// No description provided for @expertApplicationsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Service Applications'**
+  String get expertApplicationsTitle;
+
+  /// No description provided for @expertApplicationsEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No Applications'**
+  String get expertApplicationsEmpty;
+
+  /// No description provided for @expertApplicationsEmptyMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'You haven\'t received any service applications yet.'**
+  String get expertApplicationsEmptyMessage;
+
+  /// No description provided for @expertApplicationApprove.
+  ///
+  /// In en, this message translates to:
+  /// **'Approve'**
+  String get expertApplicationApprove;
+
+  /// No description provided for @expertApplicationReject.
+  ///
+  /// In en, this message translates to:
+  /// **'Reject'**
+  String get expertApplicationReject;
+
+  /// No description provided for @expertApplicationCounterOffer.
+  ///
+  /// In en, this message translates to:
+  /// **'Counter Offer'**
+  String get expertApplicationCounterOffer;
+
+  /// No description provided for @expertApplicationApproved.
+  ///
+  /// In en, this message translates to:
+  /// **'Application approved successfully'**
+  String get expertApplicationApproved;
+
+  /// No description provided for @expertApplicationRejected.
+  ///
+  /// In en, this message translates to:
+  /// **'Application rejected'**
+  String get expertApplicationRejected;
+
+  /// No description provided for @expertApplicationCounterOfferSent.
+  ///
+  /// In en, this message translates to:
+  /// **'Counter offer sent'**
+  String get expertApplicationCounterOfferSent;
+
+  /// No description provided for @expertApplicationActionFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Operation failed, please try again'**
+  String get expertApplicationActionFailed;
+
+  /// No description provided for @expertApplicationRejectReason.
+  ///
+  /// In en, this message translates to:
+  /// **'Reject Reason (Optional)'**
+  String get expertApplicationRejectReason;
+
+  /// No description provided for @expertApplicationRejectReasonHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Please enter the reason for rejection…'**
+  String get expertApplicationRejectReasonHint;
+
+  /// No description provided for @expertApplicationCounterPrice.
+  ///
+  /// In en, this message translates to:
+  /// **'Your Price'**
+  String get expertApplicationCounterPrice;
+
+  /// No description provided for @expertApplicationCounterPriceHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter your counter offer price'**
+  String get expertApplicationCounterPriceHint;
+
+  /// No description provided for @expertApplicationCounterMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Message (Optional)'**
+  String get expertApplicationCounterMessage;
+
+  /// No description provided for @expertApplicationCounterMessageHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Add a note about your counter offer…'**
+  String get expertApplicationCounterMessageHint;
+
+  /// No description provided for @expertApplicationConfirmApprove.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm Approve'**
+  String get expertApplicationConfirmApprove;
+
+  /// No description provided for @expertApplicationConfirmApproveMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Are you sure you want to approve this application? A task and payment will be created.'**
+  String get expertApplicationConfirmApproveMessage;
+
+  /// No description provided for @expertApplicationConfirmReject.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm Reject'**
+  String get expertApplicationConfirmReject;
+
+  /// No description provided for @expertApplicationConfirmRejectMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Are you sure you want to reject this application?'**
+  String get expertApplicationConfirmRejectMessage;
+
+  /// No description provided for @expertApplicationStatusPending.
+  ///
+  /// In en, this message translates to:
+  /// **'Pending'**
+  String get expertApplicationStatusPending;
+
+  /// No description provided for @expertApplicationStatusNegotiating.
+  ///
+  /// In en, this message translates to:
+  /// **'Negotiating'**
+  String get expertApplicationStatusNegotiating;
+
+  /// No description provided for @expertApplicationStatusPriceAgreed.
+  ///
+  /// In en, this message translates to:
+  /// **'Price Agreed'**
+  String get expertApplicationStatusPriceAgreed;
+
+  /// No description provided for @expertApplicationStatusApproved.
+  ///
+  /// In en, this message translates to:
+  /// **'Approved'**
+  String get expertApplicationStatusApproved;
+
+  /// No description provided for @expertApplicationStatusRejected.
+  ///
+  /// In en, this message translates to:
+  /// **'Rejected'**
+  String get expertApplicationStatusRejected;
+
+  /// No description provided for @expertApplicationStatusCancelled.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancelled'**
+  String get expertApplicationStatusCancelled;
+
+  /// No description provided for @expertApplicationApplicant.
+  ///
+  /// In en, this message translates to:
+  /// **'Applicant'**
+  String get expertApplicationApplicant;
+
+  /// No description provided for @expertApplicationService.
+  ///
+  /// In en, this message translates to:
+  /// **'Service'**
+  String get expertApplicationService;
+
+  /// No description provided for @expertApplicationMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Message'**
+  String get expertApplicationMessage;
+
+  /// No description provided for @expertApplicationPrice.
+  ///
+  /// In en, this message translates to:
+  /// **'Offered Price'**
+  String get expertApplicationPrice;
+
+  /// No description provided for @expertApplicationBasePrice.
+  ///
+  /// In en, this message translates to:
+  /// **'Base Price'**
+  String get expertApplicationBasePrice;
 }
 
 class _AppLocalizationsDelegate

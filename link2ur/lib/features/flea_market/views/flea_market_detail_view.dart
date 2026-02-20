@@ -1708,6 +1708,7 @@ class _PurchaseRequestsCard extends StatelessWidget {
                   _PurchaseRequestItem(
                     request: request,
                     isDark: isDark,
+                    itemId: state.selectedItem?.id ?? '',
                   )),
           ],
         ),
@@ -1722,9 +1723,11 @@ class _PurchaseRequestItem extends StatelessWidget {
   const _PurchaseRequestItem({
     required this.request,
     required this.isDark,
+    required this.itemId,
   });
   final PurchaseRequest request;
   final bool isDark;
+  final String itemId;
 
   @override
   Widget build(BuildContext context) {
@@ -1740,7 +1743,6 @@ class _PurchaseRequestItem extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // 买家信息行
           Row(
             children: [
               Container(
@@ -1777,11 +1779,9 @@ class _PurchaseRequestItem extends StatelessWidget {
                   ],
                 ),
               ),
-              // 状态标签
               _buildStatusLabel(context, request.status),
             ],
           ),
-          // 卖家议价显示
           if (request.status == 'seller_negotiating' &&
               request.sellerCounterPrice != null) ...[
             const SizedBox(height: 8),
@@ -1809,6 +1809,124 @@ class _PurchaseRequestItem extends StatelessWidget {
               ),
             ),
           ],
+          if (request.status == 'pending') ...[
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: () => _showRejectConfirmDialog(context),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppColors.error,
+                      side: const BorderSide(color: AppColors.error),
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                    child: Text(context.l10n.actionsReject, style: const TextStyle(fontSize: 13)),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: () => _showCounterOfferDialog(context),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: Colors.orange,
+                      side: const BorderSide(color: Colors.orange),
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                    child: Text(context.l10n.fleaMarketNegotiate, style: const TextStyle(fontSize: 13)),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: FilledButton(
+                    onPressed: () {
+                      context.read<FleaMarketBloc>().add(
+                        FleaMarketApprovePurchaseRequest(request.id, itemId),
+                      );
+                    },
+                    style: FilledButton.styleFrom(
+                      backgroundColor: AppColors.success,
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                    child: Text(context.l10n.actionsApprove, style: const TextStyle(fontSize: 13, color: Colors.white)),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  void _showRejectConfirmDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(context.l10n.fleaMarketRejectPurchaseConfirmTitle),
+        content: Text(context.l10n.fleaMarketRejectPurchaseConfirmMessage),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: Text(context.l10n.actionsCancel),
+          ),
+          FilledButton(
+            onPressed: () {
+              Navigator.pop(dialogContext);
+              context.read<FleaMarketBloc>().add(
+                FleaMarketRejectPurchaseRequest(request.id, itemId),
+              );
+            },
+            style: FilledButton.styleFrom(backgroundColor: AppColors.error),
+            child: Text(context.l10n.actionsConfirm, style: const TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showCounterOfferDialog(BuildContext context) {
+    final controller = TextEditingController(
+      text: request.proposedPrice?.toStringAsFixed(2) ?? '',
+    );
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(context.l10n.fleaMarketNegotiate),
+        content: TextField(
+          controller: controller,
+          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+          decoration: InputDecoration(
+            labelText: context.l10n.fleaMarketPrice,
+            prefixText: '£',
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: Text(context.l10n.actionsCancel),
+          ),
+          FilledButton(
+            onPressed: () {
+              final price = double.tryParse(controller.text);
+              if (price != null && price > 0) {
+                Navigator.pop(dialogContext);
+                context.read<FleaMarketBloc>().add(
+                  FleaMarketCounterOffer(itemId, price: price),
+                );
+              }
+            },
+            child: Text(context.l10n.actionsConfirm),
+          ),
         ],
       ),
     );

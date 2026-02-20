@@ -136,7 +136,7 @@ const PublishTask: React.FC = () => {
         const formData = new FormData();
         formData.append('image', compressedFile);
 
-        const response = await api.post('/api/upload/public-image', formData, {
+        const response = await api.post('/api/v2/upload/image', formData, {
           headers: {
             'Content-Type': 'multipart/form-data',
           },
