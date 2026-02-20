@@ -1,7 +1,19 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { message } from 'antd';
 import { sendAdminNotification } from '../../../api';
 import { getErrorMessage } from '../../../utils/errorHandler';
+
+interface NotificationForm {
+  title: string;
+  content: string;
+  user_ids: string[];
+}
+
+const initialForm: NotificationForm = {
+  title: '',
+  content: '',
+  user_ids: [],
+};
 
 /**
  * 通知管理组件
@@ -9,13 +21,9 @@ import { getErrorMessage } from '../../../utils/errorHandler';
  */
 const NotificationManagement: React.FC = () => {
   const [loading, setLoading] = useState(false);
-  const [form, setForm] = useState({
-    title: '',
-    content: '',
-    user_ids: [] as string[]
-  });
+  const [form, setForm] = useState<NotificationForm>(initialForm);
 
-  const handleSendNotification = async () => {
+  const handleSendNotification = useCallback(async () => {
     if (!form.title || !form.content) {
       message.warning('请填写通知标题和内容');
       return;
@@ -26,32 +34,36 @@ const NotificationManagement: React.FC = () => {
       await sendAdminNotification({
         title: form.title,
         content: form.content,
-        user_ids: form.user_ids.length > 0 ? form.user_ids : []
+        user_ids: form.user_ids.length > 0 ? form.user_ids : [],
       });
       message.success('通知发送成功！');
-      setForm({ title: '', content: '', user_ids: [] });
+      setForm(initialForm);
     } catch (error: any) {
       message.error(getErrorMessage(error));
     } finally {
       setLoading(false);
     }
-  };
+  }, [form]);
 
-  const handleUserIdsChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleUserIdsChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const ids = e.target.value.split(',').map(id => id.trim()).filter(id => id.length > 0);
-    setForm({ ...form, user_ids: ids });
-  };
+    setForm(prev => ({ ...prev, user_ids: ids }));
+  }, []);
+
+  const handleReset = useCallback(() => {
+    setForm(initialForm);
+  }, []);
 
   return (
     <div style={{ padding: '0' }}>
       <h2 style={{ marginBottom: '20px' }}>发送通知</h2>
-      
-      <div style={{ 
-        background: 'white', 
-        padding: '24px', 
-        borderRadius: '8px', 
+
+      <div style={{
+        background: 'white',
+        padding: '24px',
+        borderRadius: '8px',
         boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-        marginBottom: '20px'
+        marginBottom: '20px',
       }}>
         <div style={{ marginBottom: '20px' }}>
           <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600' }}>
@@ -61,13 +73,13 @@ const NotificationManagement: React.FC = () => {
             type="text"
             placeholder="请输入通知标题"
             value={form.title}
-            onChange={(e) => setForm({ ...form, title: e.target.value })}
+            onChange={(e) => setForm(prev => ({ ...prev, title: e.target.value }))}
             style={{
               width: '100%',
               padding: '10px 14px',
               border: '1px solid #d9d9d9',
               borderRadius: '6px',
-              fontSize: '14px'
+              fontSize: '14px',
             }}
           />
         </div>
@@ -79,7 +91,7 @@ const NotificationManagement: React.FC = () => {
           <textarea
             placeholder="请输入通知内容"
             value={form.content}
-            onChange={(e) => setForm({ ...form, content: e.target.value })}
+            onChange={(e) => setForm(prev => ({ ...prev, content: e.target.value }))}
             rows={6}
             style={{
               width: '100%',
@@ -87,7 +99,7 @@ const NotificationManagement: React.FC = () => {
               border: '1px solid #d9d9d9',
               borderRadius: '6px',
               fontSize: '14px',
-              resize: 'vertical'
+              resize: 'vertical',
             }}
           />
         </div>
@@ -105,7 +117,7 @@ const NotificationManagement: React.FC = () => {
               padding: '10px 14px',
               border: '1px solid #d9d9d9',
               borderRadius: '6px',
-              fontSize: '14px'
+              fontSize: '14px',
             }}
           />
           <small style={{ color: '#666', fontSize: '12px', marginTop: '4px', display: 'block' }}>
@@ -126,13 +138,13 @@ const NotificationManagement: React.FC = () => {
               fontSize: '14px',
               fontWeight: '500',
               cursor: loading || !form.title || !form.content ? 'not-allowed' : 'pointer',
-              opacity: loading || !form.title || !form.content ? 0.6 : 1
+              opacity: loading || !form.title || !form.content ? 0.6 : 1,
             }}
           >
             {loading ? '发送中...' : '发送通知'}
           </button>
           <button
-            onClick={() => setForm({ title: '', content: '', user_ids: [] })}
+            onClick={handleReset}
             style={{
               padding: '10px 24px',
               border: '1px solid #d9d9d9',
@@ -140,7 +152,7 @@ const NotificationManagement: React.FC = () => {
               background: 'white',
               color: '#333',
               fontSize: '14px',
-              cursor: 'pointer'
+              cursor: 'pointer',
             }}
           >
             清空表单
@@ -148,11 +160,11 @@ const NotificationManagement: React.FC = () => {
         </div>
       </div>
 
-      <div style={{ 
-        background: '#e7f3ff', 
-        padding: '16px 20px', 
+      <div style={{
+        background: '#e7f3ff',
+        padding: '16px 20px',
         borderRadius: '8px',
-        border: '1px solid #b3d7ff'
+        border: '1px solid #b3d7ff',
       }}>
         <h4 style={{ margin: '0 0 12px 0', color: '#0056b3' }}>通知发送说明：</h4>
         <ul style={{ margin: 0, paddingLeft: '20px', color: '#333' }}>
