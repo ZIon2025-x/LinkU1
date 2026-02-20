@@ -1325,3 +1325,27 @@ export async function regenerate2FABackupCodes(): Promise<any> {
 }
 
 export default api;
+
+// ===== Dashboard Stats Trends =====
+
+export interface TrendDataPoint {
+  date: string;
+  count: number;
+}
+
+export interface TrendResponse {
+  dates: string[];
+  counts: number[];
+}
+
+export async function getUserGrowthStats(period: '7d' | '30d' | '90d'): Promise<TrendDataPoint[]> {
+  const response = await api.get<TrendResponse>(`/api/admin/stats/user-growth?period=${period}`);
+  const { dates, counts } = response.data;
+  return dates.map((date, i) => ({ date, count: counts[i] ?? 0 }));
+}
+
+export async function getTaskGrowthStats(period: '7d' | '30d' | '90d'): Promise<TrendDataPoint[]> {
+  const response = await api.get<TrendResponse>(`/api/admin/stats/task-growth?period=${period}`);
+  const { dates, counts } = response.data;
+  return dates.map((date, i) => ({ date, count: counts[i] ?? 0 }));
+}
