@@ -160,3 +160,58 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* Period switcher */
+.periodBtn {
+  padding: 4px 12px;
+  border: 1px solid #d9d9d9;
+  background: white;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 13px;
+  color: #666;
+  transition: all 0.2s;
+}
+.periodBtn:hover {
+  border-color: #1890ff;
+  color: #1890ff;
+}
+.periodBtnActive {
+  border-color: #1890ff;
+  color: #1890ff;
+  background: #e6f7ff;
+  font-weight: 500;
+}
+
+/* Trend charts */
+.chartsGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-top: 24px;
+}
+@media (max-width: 900px) {
+  .chartsGrid {
+    grid-template-columns: 1fr;
+  }
+}
+.chartCard {
+  background: white;
+  border-radius: 8px;
+  padding: 20px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+.chartTitle {
+  font-size: 15px;
+  font-weight: 600;
+  margin: 0 0 16px 0;
+  color: #333;
+}
+.chartLoading {
+  height: 240px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #999;
+  font-size: 14px;
+}

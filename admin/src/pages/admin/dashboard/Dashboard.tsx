@@ -1,8 +1,17 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { message } from 'antd';
-import api, { getDashboardStats } from '../../../api';
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+} from 'recharts';
+import api, { getDashboardStats, getUserGrowthStats, getTaskGrowthStats, TrendDataPoint } from '../../../api';
 import { getErrorMessage } from '../../../utils/errorHandler';
-import { DashboardStats, StatCardProps } from './types';
+import { DashboardStats, StatCardProps, StatPeriod } from './types';
 import styles from './Dashboard.module.css';
 
 /**
@@ -17,6 +26,12 @@ const StatCard: React.FC<StatCardProps> = ({ label, value, prefix = '', suffix =
   </div>
 );
 
+const PERIOD_LABELS: Record<StatPeriod, string> = {
+  '7d': '7天',
+  '30d': '30天',
+  '90d': '90天',
+};
+
 /**
  * Dashboard 仪表盘组件
  * 显示系统统计数据和管理功能入口
@@ -26,6 +41,10 @@ const Dashboard: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [cleanupLoading, setCleanupLoading] = useState(false);
+  const [period, setPeriod] = useState<StatPeriod>('30d');
+  const [userTrend, setUserTrend] = useState<TrendDataPoint[]>([]);
+  const [taskTrend, setTaskTrend] = useState<TrendDataPoint[]>([]);
+  const [chartLoading, setChartLoading] = useState(false);
 
   // 加载统计数据
   const fetchStats = useCallback(async () => {
@@ -43,13 +62,31 @@ const Dashboard: React.FC = () => {
     }
   }, []);
 
+  const fetchTrends = useCallback(async () => {
+    setChartLoading(true);
+    try {
+      const [users, tasks] = await Promise.all([
+        getUserGrowthStats(period),
+        getTaskGrowthStats(period),
+      ]);
+      setUserTrend(users);
+      setTaskTrend(tasks);
+    } catch (err: any) {
+      message.warning('趋势数据加载失败: ' + getErrorMessage(err));
+    } finally {
+      setChartLoading(false);
+    }
+  }, [period]);
+
   useEffect(() => {
     fetchStats();
   }, [fetchStats]);
 
+  useEffect(() => { fetchTrends(); }, [fetchTrends]);
+
   // 处理清理旧任务文件
   const handleCleanupOldTasks = useCallback(async () => {
-    const confirmMessage = 
+    const confirmMessage =
       '确定要清理所有已完成或已取消任务的所有图片和文件吗？\n\n' +
       '清理内容包括：\n' +
       '- 公开图片（任务相关图片）\n' +
@@ -82,7 +119,7 @@ const Dashboard: React.FC = () => {
   // 统计卡片渲染
   const statsCards = useMemo(() => {
     if (!stats) return null;
-    
+
     return (
       <div className={styles.statsGrid}>
         <StatCard label="总用户数" value={stats.total_users} />
@@ -121,22 +158,62 @@ const Dashboard: React.FC = () => {
     <div className={styles.dashboardSection}>
       <div className={styles.dashboardHeader}>
         <h2 className={styles.dashboardTitle}>数据概览</h2>
-        <button
-          onClick={handleCleanupOldTasks}
-          disabled={cleanupLoading}
-          className={styles.cleanupBtn}
-        >
-          {cleanupLoading ? (
-            <>
-              <span className={styles.spinner}></span>
-              清理中...
-            </>
-          ) : (
-            <>🗑️ 一键清理已完成和过期任务文件</>
-          )}
-        </button>
+        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+          {(['7d', '30d', '90d'] as StatPeriod[]).map(p => (
+            <button
+              key={p}
+              onClick={() => setPeriod(p)}
+              className={`${styles.periodBtn} ${period === p ? styles.periodBtnActive : ''}`}
+            >
+              {PERIOD_LABELS[p]}
+            </button>
+          ))}
+          {/* existing cleanup button unchanged */}
+          <button onClick={handleCleanupOldTasks} disabled={cleanupLoading} className={styles.cleanupBtn}>
+            {cleanupLoading ? (
+              <><span className={styles.spinner}></span>清理中...</>
+            ) : (
+              <>🗑️ 一键清理已完成和过期任务文件</>
+            )}
+          </button>
+        </div>
       </div>
       {statsCards}
+      {/* Trend charts */}
+      <div className={styles.chartsGrid}>
+        <div className={styles.chartCard}>
+          <h3 className={styles.chartTitle}>📈 用户注册趋势</h3>
+          {chartLoading ? (
+            <div className={styles.chartLoading}>加载中...</div>
+          ) : (
+            <ResponsiveContainer width="100%" height={240}>
+              <LineChart data={userTrend} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="date" tick={{ fontSize: 11 }} />
+                <YAxis tick={{ fontSize: 11 }} />
+                <Tooltip />
+                <Line type="monotone" dataKey="count" stroke="#1890ff" dot={false} strokeWidth={2} name="新增用户" />
+              </LineChart>
+            </ResponsiveContainer>
+          )}
+        </div>
+        <div className={styles.chartCard}>
+          <h3 className={styles.chartTitle}>📊 任务发布趋势</h3>
+          {chartLoading ? (
+            <div className={styles.chartLoading}>加载中...</div>
+          ) : (
+            <ResponsiveContainer width="100%" height={240}>
+              <LineChart data={taskTrend} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="date" tick={{ fontSize: 11 }} />
+                <YAxis tick={{ fontSize: 11 }} />
+                <Tooltip />
+                <Line type="monotone" dataKey="count" stroke="#52c41a" dot={false} strokeWidth={2} name="新增任务" />
+              </LineChart>
+            </ResponsiveContainer>
+          )}
+        </div>
+      </div>
     </div>
   );
 };

@@ -23,3 +23,10 @@ export interface StatCardProps {
   prefix?: string;
   suffix?: string;
 }
+
+export type StatPeriod = '7d' | '30d' | '90d';
+
+export interface TrendDataPoint {
+  date: string;
+  count: number;
+}
