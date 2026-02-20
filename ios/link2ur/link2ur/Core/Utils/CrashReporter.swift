@@ -76,8 +76,9 @@ public final class CrashReporter {
     // MARK: - Initialization
     
     private init() {
-        let urls = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)
-        logFile = urls[0].appendingPathComponent("crash_logs.json")
+        let docsDir = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first
+            ?? FileManager.default.temporaryDirectory
+        logFile = docsDir.appendingPathComponent("crash_logs.json")
         loadCrashLogs()
         setupCrashHandlers()
         setupMemoryWarningObserver()
@@ -100,21 +101,14 @@ public final class CrashReporter {
     }
     
     /// 设置信号处理器
+    /// 注意：信号处理器内只能调用 async-signal-safe 函数。queue.sync、文件 I/O、Logger 等均不安全，
+    /// 会在 SIGSEGV 等场景下导致死锁或二次崩溃。因此 handler 仅恢复默认并重新抛出信号。
     private func setupSignalHandlers() {
-        // 常见的导致崩溃的信号
-        let signals: [Int32] = [
-            SIGABRT,  // 异常终止
-            SIGILL,   // 非法指令
-            SIGSEGV,  // 段错误
-            SIGFPE,   // 浮点异常
-            SIGBUS,   // 总线错误
-            SIGPIPE,  // 管道破裂
-            SIGTRAP   // 跟踪陷阱
-        ]
-        
+        let signals: [Int32] = [SIGABRT, SIGILL, SIGSEGV, SIGFPE, SIGBUS, SIGPIPE, SIGTRAP]
         for sig in signals {
-            signal(sig) { signal in
-                CrashReporter.shared.handleSignal(signal)
+            signal(sig) { s in
+                Foundation.signal(s, SIG_DFL)
+                raise(s)
             }
         }
     }
@@ -285,21 +279,7 @@ public final class CrashReporter {
         Thread.sleep(forTimeInterval: 0.5)
     }
     
-    /// 处理信号
-    private func handleSignal(_ signal: Int32) {
-        let signalName = signalName(for: signal)
-        recordCrash(
-            reason: "Signal \(signalName) received",
-            severity: .critical,
-            userInfo: ["signal": signal, "signal_name": signalName]
-        )
-        
-        // 恢复默认信号处理并重新发送
-        Foundation.signal(signal, SIG_DFL)
-        raise(signal)
-    }
-    
-    /// 获取信号名称
+    /// 获取信号名称（供 recordCrash 等非信号上下文使用）
     private func signalName(for signal: Int32) -> String {
         switch signal {
         case SIGABRT: return "SIGABRT"

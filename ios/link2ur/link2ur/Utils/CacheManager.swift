@@ -71,8 +71,8 @@ nonisolated public class CacheManager: @unchecked Sendable {
         memoryCache.countLimit = 100 // 最多缓存100个对象
         memoryCache.totalCostLimit = 50 * 1024 * 1024 // 50MB 内存限制
         
-        // 配置磁盘缓存目录
-        let cachesPath = fileManager.urls(for: .cachesDirectory, in: .userDomainMask)[0]
+        let cachesPath = fileManager.urls(for: .cachesDirectory, in: .userDomainMask).first
+            ?? fileManager.temporaryDirectory
         cacheDirectory = cachesPath.appendingPathComponent("Link2UrCache", isDirectory: true)
         
         // 创建缓存目录（如果不存在）

@@ -15,9 +15,9 @@ public final class ImageCache: ObservableObject {
         cache.countLimit = 30  // 进一步减少缓存数量（从50降到30）
         cache.totalCostLimit = 20 * 1024 * 1024 // 20MB（从30MB降到20MB，防止内存溢出）
         
-        // 创建磁盘缓存目录
-        let urls = fileManager.urls(for: .cachesDirectory, in: .userDomainMask)
-        cacheDirectory = urls[0].appendingPathComponent("ImageCache")
+        let cacheDir = fileManager.urls(for: .cachesDirectory, in: .userDomainMask).first
+            ?? fileManager.temporaryDirectory
+        cacheDirectory = cacheDir.appendingPathComponent("ImageCache")
         
         if !fileManager.fileExists(atPath: cacheDirectory.path) {
             try? fileManager.createDirectory(at: cacheDirectory, withIntermediateDirectories: true)

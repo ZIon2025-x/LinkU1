@@ -121,8 +121,8 @@ public final class APICache {
     // MARK: - Initialization
     
     private init() {
-        // 初始化缓存目录
-        let cacheDir = fileManager.urls(for: .cachesDirectory, in: .userDomainMask).first!
+        let cacheDir = fileManager.urls(for: .cachesDirectory, in: .userDomainMask).first
+            ?? fileManager.temporaryDirectory
         cacheDirectory = cacheDir.appendingPathComponent("APICache", isDirectory: true)
         
         try? fileManager.createDirectory(at: cacheDirectory, withIntermediateDirectories: true)

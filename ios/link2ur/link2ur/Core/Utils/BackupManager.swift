@@ -8,8 +8,9 @@ public class BackupManager {
     private let backupDirectory: URL
     
     private init() {
-        let urls = fileManager.urls(for: .documentDirectory, in: .userDomainMask)
-        backupDirectory = urls[0].appendingPathComponent("Backups")
+        let docsDir = fileManager.urls(for: .documentDirectory, in: .userDomainMask).first
+            ?? fileManager.temporaryDirectory
+        backupDirectory = docsDir.appendingPathComponent("Backups")
         fileManager.createDirectoryIfNeeded(at: backupDirectory)
     }
     

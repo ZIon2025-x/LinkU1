@@ -3,19 +3,19 @@ import Foundation
 /// FileManager 扩展 - 企业级文件管理工具
 extension FileManager {
     
-    /// 文档目录 URL
+    /// 文档目录 URL（iOS 通常保证非空，空时回退到临时目录以避免崩溃）
     public var documentsDirectory: URL {
-        return urls(for: .documentDirectory, in: .userDomainMask)[0]
+        return urls(for: .documentDirectory, in: .userDomainMask).first ?? temporaryDirectory
     }
     
     /// 缓存目录 URL
     public var cachesDirectory: URL {
-        return urls(for: .cachesDirectory, in: .userDomainMask)[0]
+        return urls(for: .cachesDirectory, in: .userDomainMask).first ?? temporaryDirectory
     }
     
     /// 应用支持目录 URL
     public var applicationSupportDirectory: URL {
-        return urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+        return urls(for: .applicationSupportDirectory, in: .userDomainMask).first ?? temporaryDirectory
     }
     
     // MARK: - 文件操作

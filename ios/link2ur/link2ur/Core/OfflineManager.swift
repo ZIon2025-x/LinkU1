@@ -119,7 +119,8 @@ public final class OfflineManager: ObservableObject {
     // MARK: - Initialization
     
     private init() {
-        let documentsDir = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!
+        let documentsDir = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first
+            ?? FileManager.default.temporaryDirectory
         operationsFile = documentsDir.appendingPathComponent("offline_operations.json")
         
         loadPendingOperations()
@@ -466,7 +467,8 @@ public final class OfflineDataStore {
     private let queue = DispatchQueue(label: "com.link2ur.offlinestore", qos: .utility)
     
     private init() {
-        let documentsDir = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!
+        let documentsDir = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first
+            ?? FileManager.default.temporaryDirectory
         storeDirectory = documentsDir.appendingPathComponent("OfflineData", isDirectory: true)
         
         try? FileManager.default.createDirectory(at: storeDirectory, withIntermediateDirectories: true)

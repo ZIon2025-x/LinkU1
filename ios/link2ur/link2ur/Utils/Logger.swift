@@ -124,8 +124,8 @@ public final class LogStorage {
     private var currentFileSize: Int64 = 0
     
     private init() {
-        // 创建日志目录
-        let cacheDir = fileManager.urls(for: .cachesDirectory, in: .userDomainMask).first!
+        let cacheDir = fileManager.urls(for: .cachesDirectory, in: .userDomainMask).first
+            ?? fileManager.temporaryDirectory
         logDirectory = cacheDir.appendingPathComponent("Logs", isDirectory: true)
         
         try? fileManager.createDirectory(at: logDirectory, withIntermediateDirectories: true)
