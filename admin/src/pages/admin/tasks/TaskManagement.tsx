@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  getAdminTasks, 
-  getAdminTaskDetail, 
-  updateAdminTask, 
+import {
+  getAdminTasks,
+  getAdminTaskDetail,
+  updateAdminTask,
   deleteAdminTask,
   batchUpdateAdminTasks,
   batchDeleteAdminTasks,
@@ -17,6 +17,17 @@ import {
 } from '../../../api';
 import dayjs from 'dayjs';
 import { TimeHandlerV2 } from '../../../utils/timeUtils';
+import { exportToCSV, ExportColumn } from '../../../utils/exportUtils';
+
+const TASK_EXPORT_COLUMNS: ExportColumn[] = [
+  { key: 'id', label: 'ID' },
+  { key: 'title', label: '标题' },
+  { key: 'task_type', label: '类型' },
+  { key: 'location', label: '城市' },
+  { key: 'status', label: '状态' },
+  { key: 'reward', label: '悬赏', format: v => `£${Number(v).toFixed(2)}` },
+  { key: 'created_at', label: '创建时间', format: v => dayjs(v).format('YYYY-MM-DD') },
+];
 
 // 实际的任务类型和城市定义
 const TASK_TYPES = [
@@ -191,6 +202,14 @@ const TaskManagement: React.FC<TaskManagementProps> = ({ onClose }) => {
     }
   };
 
+  const handleExport = () => {
+    exportToCSV(
+      tasks as Record<string, any>[],
+      `tasks-${dayjs().format('YYYY-MM-DD')}`,
+      TASK_EXPORT_COLUMNS
+    );
+  };
+
   return (
     <div style={{
       position: 'fixed',
@@ -224,19 +243,36 @@ const TaskManagement: React.FC<TaskManagementProps> = ({ onClose }) => {
           borderBottom: '1px solid #eee'
         }}>
           <h2 style={{ margin: 0, color: '#333' }}>任务管理</h2>
-          <button
-            onClick={onClose}
-            style={{
-              padding: '8px 16px',
-              border: 'none',
-              background: '#dc3545',
-              color: 'white',
-              borderRadius: '4px',
-              cursor: 'pointer'
-            }}
-          >
-            关闭
-          </button>
+          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+            <button
+              onClick={handleExport}
+              disabled={tasks.length === 0}
+              style={{
+                padding: '8px 16px',
+                border: '1px solid #52c41a',
+                background: 'white',
+                color: '#52c41a',
+                borderRadius: '4px',
+                cursor: 'pointer',
+                fontSize: '14px',
+              }}
+            >
+              导出 CSV
+            </button>
+            <button
+              onClick={onClose}
+              style={{
+                padding: '8px 16px',
+                border: 'none',
+                background: '#dc3545',
+                color: 'white',
+                borderRadius: '4px',
+                cursor: 'pointer'
+              }}
+            >
+              关闭
+            </button>
+          </div>
         </div>
 
         {/* 筛选和搜索 */}

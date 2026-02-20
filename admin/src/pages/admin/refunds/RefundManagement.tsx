@@ -1,5 +1,6 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { message, Modal } from 'antd';
+import dayjs from 'dayjs';
 import { useAdminTable, useModalForm } from '../../../hooks';
 import { AdminTable, AdminPagination, Column } from '../../../components/admin';
 import {
@@ -18,7 +19,19 @@ import {
   REFUND_STATUS_COLORS,
   TIMELINE_ICONS
 } from './types';
+import { exportToCSV, ExportColumn } from '../../../utils/exportUtils';
 import styles from './RefundManagement.module.css';
+
+const REFUND_EXPORT_COLUMNS: ExportColumn[] = [
+  { key: 'id', label: 'ID' },
+  { key: 'task_id', label: '任务ID' },
+  { key: 'poster_id', label: '发布者ID' },
+  { key: 'reason_type', label: '退款原因类型' },
+  { key: 'refund_type', label: '退款类型', format: v => v === 'full' ? '全额退款' : v === 'partial' ? '部分退款' : '-' },
+  { key: 'refund_amount', label: '退款金额', format: v => v != null ? `£${Number(v).toFixed(2)}` : '全额退款' },
+  { key: 'status', label: '状态', format: v => REFUND_STATUS_LABELS[v as RefundStatus] || v },
+  { key: 'created_at', label: '申请时间', format: v => dayjs(v).format('YYYY-MM-DD HH:mm') },
+];
 
 interface ActionForm {
   action: RefundAction;
@@ -165,6 +178,14 @@ const RefundManagement: React.FC = () => {
       keyword: searchKeyword.trim() || undefined,
     });
     table.setCurrentPage(1);
+  };
+
+  const handleExport = () => {
+    exportToCSV(
+      table.data as Record<string, any>[],
+      `refunds-${dayjs().format('YYYY-MM-DD')}`,
+      REFUND_EXPORT_COLUMNS
+    );
   };
 
   // 复制任务ID
@@ -319,7 +340,24 @@ const RefundManagement: React.FC = () => {
 
   return (
     <div className={styles.container}>
-      <h2 className={styles.title}>退款申请管理</h2>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
+        <h2 className={styles.title} style={{ margin: 0 }}>退款申请管理</h2>
+        <button
+          onClick={handleExport}
+          disabled={table.data.length === 0}
+          style={{
+            padding: '8px 16px',
+            border: '1px solid #52c41a',
+            background: 'white',
+            color: '#52c41a',
+            borderRadius: '4px',
+            cursor: 'pointer',
+            fontSize: '14px',
+          }}
+        >
+          导出 CSV
+        </button>
+      </div>
 
       {/* 筛选和搜索 */}
       <div className={styles.filterContainer}>

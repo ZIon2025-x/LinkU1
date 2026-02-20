@@ -3,10 +3,23 @@ import { message } from 'antd';
 import dayjs from 'dayjs';
 import { getUsersForAdmin, updateUserByAdmin } from '../../../api';
 import { getErrorMessage } from '../../../utils/errorHandler';
-import { User, USER_LEVEL_LABELS } from './types';
+import { User, USER_LEVEL_LABELS, UserLevel } from './types';
 import { useAdminTable, useModalForm } from '../../../hooks';
 import { AdminTable, AdminPagination, AdminModal, Column } from '../../../components/admin';
+import { exportToCSV, ExportColumn } from '../../../utils/exportUtils';
 import styles from './UserManagement.module.css';
+
+const USER_EXPORT_COLUMNS: ExportColumn[] = [
+  { key: 'id', label: 'ID' },
+  { key: 'name', label: '用户名' },
+  { key: 'email', label: '邮箱' },
+  { key: 'user_level', label: '等级', format: v => USER_LEVEL_LABELS[v as UserLevel] || v },
+  { key: 'is_banned', label: '封禁', format: v => v ? '是' : '否' },
+  { key: 'is_suspended', label: '暂停', format: v => v ? '是' : '否' },
+  { key: 'task_count', label: '任务数' },
+  { key: 'avg_rating', label: '评分', format: v => Number(v).toFixed(1) },
+  { key: 'created_at', label: '注册时间', format: v => dayjs(v).format('YYYY-MM-DD') },
+];
 
 /**
  * 用户管理组件
@@ -84,6 +97,14 @@ const UserManagement: React.FC = () => {
     } finally {
       setUserActionLoading(null);
     }
+  };
+
+  const handleExport = () => {
+    exportToCSV(
+      table.data as Record<string, any>[],
+      `users-${dayjs().format('YYYY-MM-DD')}`,
+      USER_EXPORT_COLUMNS
+    );
   };
 
   // 获取状态样式
@@ -183,6 +204,21 @@ const UserManagement: React.FC = () => {
     <div className={styles.container}>
       <div className={styles.header}>
         <h2 className={styles.title}>用户管理</h2>
+        <button
+          onClick={handleExport}
+          disabled={table.data.length === 0}
+          style={{
+            padding: '8px 16px',
+            border: '1px solid #52c41a',
+            background: 'white',
+            color: '#52c41a',
+            borderRadius: '4px',
+            cursor: 'pointer',
+            fontSize: '14px',
+          }}
+        >
+          导出 CSV
+        </button>
       </div>
 
       <div className={styles.searchContainer}>
