@@ -645,7 +645,7 @@ abstract class AppLocalizations {
   /// **'Hello, {param1}'**
   String homeGreeting(String param1);
 
-  /// No description provided for @homeWhatToDo.
+  /// Home page greeting prompt for suggested actions
   ///
   /// In en, this message translates to:
   /// **'What would you like to do today?'**

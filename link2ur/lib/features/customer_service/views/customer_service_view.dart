@@ -8,6 +8,7 @@ import '../../../core/design/app_typography.dart';
 import '../../../core/design/app_radius.dart';
 import '../../../core/utils/error_localizer.dart';
 import '../../../core/utils/l10n_extension.dart';
+import '../../../core/utils/sheet_adaptation.dart';
 import '../../../core/widgets/loading_view.dart';
 import '../../../data/models/customer_service.dart';
 import '../../../data/repositories/common_repository.dart';
@@ -147,7 +148,7 @@ class _CustomerServiceContentState extends State<_CustomerServiceContent> {
     final messages =
         context.read<CustomerServiceBloc>().state.messages;
 
-    showModalBottomSheet(
+    SheetAdaptation.showAdaptiveModalBottomSheet(
       context: context,
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(

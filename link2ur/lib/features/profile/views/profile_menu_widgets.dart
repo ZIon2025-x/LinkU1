@@ -219,7 +219,7 @@ Widget _buildLogoutButton(BuildContext context, bool isDark) {
 }
 
 void _showLogoutDialog(BuildContext context) {
-  showDialog(
+  SheetAdaptation.showAdaptiveDialog(
     context: context,
     builder: (ctx) => AlertDialog(
       title: Text(context.l10n.profileConfirmLogout),

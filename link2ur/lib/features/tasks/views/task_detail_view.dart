@@ -20,6 +20,7 @@ import '../../../core/widgets/user_identity_badges.dart';
 import '../../../core/widgets/animated_list_item.dart';
 import '../../../core/router/app_router.dart';
 import '../../../core/utils/responsive.dart';
+import '../../../core/utils/sheet_adaptation.dart';
 import '../../../core/utils/l10n_extension.dart';
 import '../../../core/utils/date_formatter.dart';
 import '../../../core/utils/task_type_helper.dart';
@@ -258,7 +259,7 @@ class _TaskDetailContent extends StatelessWidget {
         (task.status == AppConstants.taskStatusOpen ||
             task.status == AppConstants.taskStatusInProgress);
 
-    showModalBottomSheet(
+    SheetAdaptation.showAdaptiveModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
       builder: (_) => Container(
@@ -332,7 +333,7 @@ class _TaskDetailContent extends StatelessWidget {
   /// 取消任务确认弹窗
   void _showCancelTaskConfirm(BuildContext context, int taskId) {
     final l10n = context.l10n;
-    showDialog<bool>(
+    SheetAdaptation.showAdaptiveDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
         title: Text(l10n.taskDetailCancelTask),
@@ -358,7 +359,7 @@ class _TaskDetailContent extends StatelessWidget {
   /// 显示争议时间线 - 对标iOS showDisputeTimeline
   void _showDisputeTimeline(BuildContext context, Task task) {
     final locale = Localizations.localeOf(context);
-    showModalBottomSheet(
+    SheetAdaptation.showAdaptiveModalBottomSheet(
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
@@ -651,7 +652,7 @@ class _TaskDetailContent extends StatelessWidget {
         text: context.l10n.actionsApplyForTask,
         onPressed: () {
           final bloc = context.read<TaskDetailBloc>();
-          showModalBottomSheet<void>(
+          SheetAdaptation.showAdaptiveModalBottomSheet<void>(
             context: context,
             isScrollControlled: true,
             backgroundColor: Colors.transparent,
@@ -784,7 +785,7 @@ class _TaskDetailContent extends StatelessWidget {
 
   /// 显示评价弹窗
   void _showReviewDialog(BuildContext context) {
-    showModalBottomSheet(
+    SheetAdaptation.showAdaptiveModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,

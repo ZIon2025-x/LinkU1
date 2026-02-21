@@ -5,6 +5,7 @@ import 'package:webview_flutter/webview_flutter.dart';
 import '../design/app_colors.dart';
 import '../design/app_typography.dart';
 import '../utils/l10n_extension.dart';
+import '../utils/sheet_adaptation.dart';
 
 /// 外部 WebView - 应用内显示外部链接
 /// 对齐 iOS ExternalWebView.swift
@@ -40,16 +41,17 @@ class ExternalWebView extends StatefulWidget {
     );
   }
 
-  /// 便捷方法 - 显示为底部 Sheet
+  /// 便捷方法 - 显示为底部 Sheet（iPad/平板适配）
   static void showAsSheet(
     BuildContext context, {
     required String url,
     String? title,
   }) {
-    showModalBottomSheet(
+    SheetAdaptation.showAdaptiveModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
+      maxWidth: SheetAdaptation.tabletSheetMaxWidthLarge,
       builder: (context) => DraggableScrollableSheet(
         initialChildSize: 0.9,
         minChildSize: 0.5,

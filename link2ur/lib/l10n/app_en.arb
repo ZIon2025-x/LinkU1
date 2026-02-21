@@ -120,6 +120,9 @@
     }
   },
   "homeWhatToDo": "What would you like to do today?",
+  "@homeWhatToDo": {
+    "description": "Home page greeting prompt for suggested actions"
+  },
   "homeMenu": "Menu",
   "homeSearchExperts": "Search Experts",
   "homeSearch": "Search",

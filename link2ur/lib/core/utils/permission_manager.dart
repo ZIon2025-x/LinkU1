@@ -3,6 +3,7 @@ import 'package:permission_handler/permission_handler.dart';
 
 import 'l10n_extension.dart';
 import 'logger.dart';
+import 'sheet_adaptation.dart';
 
 /// 权限管理器
 /// 参考iOS PermissionManager.swift
@@ -110,7 +111,7 @@ class PermissionManager {
     bool isPermanentlyDenied = false,
   }) async {
     final l10n = context.l10n;
-    await showDialog<void>(
+    await SheetAdaptation.showAdaptiveDialog<void>(
       context: context,
       builder: (ctx) => AlertDialog(
         title: Text(l10n.permissionRequired(permissionName)),

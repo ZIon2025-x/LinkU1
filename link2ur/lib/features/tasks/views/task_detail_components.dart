@@ -15,6 +15,7 @@ import '../../../core/widgets/bouncing_widget.dart';
 import '../../../core/widgets/animated_star_rating.dart';
 import '../../../core/widgets/review_bottom_sheet.dart';
 import '../../../core/utils/l10n_extension.dart';
+import '../../../core/utils/sheet_adaptation.dart';
 import '../../../core/utils/date_formatter.dart';
 import '../../../data/models/task.dart';
 import '../../../data/models/task_application.dart';
@@ -1118,7 +1119,7 @@ class TaskActionButtonsView extends StatelessWidget {
               ? null
               : () {
                   final bloc = context.read<TaskDetailBloc>();
-                  showModalBottomSheet<void>(
+                  SheetAdaptation.showAdaptiveModalBottomSheet<void>(
                     context: context,
                     isScrollControlled: true,
                     backgroundColor: Colors.transparent,
@@ -1223,7 +1224,7 @@ class TaskActionButtonsView extends StatelessWidget {
                       onPressed: () {
                         context.read<TaskDetailBloc>().add(
                             const TaskDetailLoadRefundHistory());
-                        showModalBottomSheet(
+                        SheetAdaptation.showAdaptiveModalBottomSheet(
                           context: context,
                           isScrollControlled: true,
                           shape: const RoundedRectangleBorder(
@@ -1251,7 +1252,7 @@ class TaskActionButtonsView extends StatelessWidget {
               icon: Icons.undo,
               onPressed: () {
                 final bloc = context.read<TaskDetailBloc>();
-                showModalBottomSheet<bool>(
+                SheetAdaptation.showAdaptiveModalBottomSheet<bool>(
                   context: context,
                   isScrollControlled: true,
                   shape: const RoundedRectangleBorder(
@@ -1308,7 +1309,7 @@ class TaskActionButtonsView extends StatelessWidget {
               icon: Icons.gavel,
               onPressed: () {
                 final bloc = context.read<TaskDetailBloc>();
-                showModalBottomSheet<bool>(
+                SheetAdaptation.showAdaptiveModalBottomSheet<bool>(
                   context: context,
                   isScrollControlled: true,
                   shape: const RoundedRectangleBorder(
@@ -1413,7 +1414,7 @@ class TaskActionButtonsView extends StatelessWidget {
         text: context.l10n.actionsRateTask,
         icon: Icons.star,
         onPressed: () {
-          showModalBottomSheet(
+          SheetAdaptation.showAdaptiveModalBottomSheet(
             context: context,
             isScrollControlled: true,
             backgroundColor: Colors.transparent,
@@ -1479,7 +1480,7 @@ class TaskActionButtonsView extends StatelessWidget {
 
   void _showCancelConfirm(BuildContext context) {
     final l10n = context.l10n;
-    showDialog<bool>(
+    SheetAdaptation.showAdaptiveDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
         title: Text(l10n.taskDetailCancelTask),

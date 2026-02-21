@@ -15,6 +15,7 @@ import '../../../core/design/app_typography.dart';
 import '../../../core/design/app_radius.dart';
 import '../../../core/utils/l10n_extension.dart';
 import '../../../core/utils/responsive.dart';
+import '../../../core/utils/sheet_adaptation.dart';
 import '../../../core/utils/helpers.dart';
 import '../../../core/utils/task_type_helper.dart';
 import '../../../core/utils/task_status_helper.dart';
@@ -293,10 +294,14 @@ class _HomeViewContentState extends State<_HomeViewContent> {
   }
 
   void _showMenuSheet(BuildContext context) {
-    showModalBottomSheet(
-      context: context, isScrollControlled: true, backgroundColor: Colors.transparent,
+    SheetAdaptation.showAdaptiveModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
       builder: (context) => DraggableScrollableSheet(
-        initialChildSize: 0.85, minChildSize: 0.5, maxChildSize: 0.95,
+        initialChildSize: 0.85,
+        minChildSize: 0.5,
+        maxChildSize: 0.95,
         builder: (context, scrollController) => const _MenuView(),
       ),
     );

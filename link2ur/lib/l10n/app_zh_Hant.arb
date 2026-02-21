@@ -133,6 +133,9 @@
     }
   },
   "homeWhatToDo": "今天想做點什麼？",
+  "@homeWhatToDo": {
+    "description": "Home page greeting prompt for suggested actions"
+  },
   "homeMenu": "菜單",
   "homeSearchExperts": "搜尋達人",
   "homeSearch": "搜尋",

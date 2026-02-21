@@ -6,7 +6,9 @@ import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_radius.dart';
 import '../../../core/utils/l10n_extension.dart';
+import '../../../core/utils/error_localizer.dart';
 import '../../../core/utils/logger.dart';
+import '../../../core/utils/sheet_adaptation.dart';
 import '../../../core/widgets/buttons.dart';
 import '../../../core/widgets/external_web_view.dart';
 import '../../../core/widgets/loading_view.dart';
@@ -66,7 +68,7 @@ class _StripeConnectPayoutsViewState extends State<StripeConnectPayoutsView> {
       if (!mounted) return;
       setState(() {
         _isLoading = false;
-        _error = e.toString();
+        _error = ErrorLocalizer.localizeFromException(context, e);
       });
     }
   }
@@ -103,11 +105,7 @@ class _StripeConnectPayoutsViewState extends State<StripeConnectPayoutsView> {
       await _loadAll();
     } catch (e) {
       if (!mounted) return;
-      var message = e.toString();
-      final colonIndex = message.indexOf(': ');
-      if (colonIndex > 0 && colonIndex < 30) {
-        message = message.substring(colonIndex + 2);
-      }
+      final message = ErrorLocalizer.localizeFromException(context, e);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(message), backgroundColor: AppColors.error),
       );
@@ -277,7 +275,7 @@ class _StripeConnectPayoutsViewState extends State<StripeConnectPayoutsView> {
   }
 
   void _showPayoutSheet() {
-    showModalBottomSheet(
+    SheetAdaptation.showAdaptiveModalBottomSheet(
       context: context,
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(
@@ -292,7 +290,7 @@ class _StripeConnectPayoutsViewState extends State<StripeConnectPayoutsView> {
   }
 
   void _showAccountDetailsSheet() {
-    showModalBottomSheet(
+    SheetAdaptation.showAdaptiveModalBottomSheet(
       context: context,
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(
@@ -313,7 +311,7 @@ class _StripeConnectPayoutsViewState extends State<StripeConnectPayoutsView> {
   }
 
   void _showTransactionDetailSheet(StripeConnectTransaction transaction) {
-    showModalBottomSheet(
+    SheetAdaptation.showAdaptiveModalBottomSheet(
       context: context,
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(

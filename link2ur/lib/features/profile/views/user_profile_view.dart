@@ -5,6 +5,7 @@ import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_radius.dart';
 import '../../../core/utils/l10n_extension.dart';
+import '../../../core/utils/sheet_adaptation.dart';
 import '../../../core/widgets/loading_view.dart';
 import '../../../core/widgets/error_state_view.dart';
 import '../../../core/widgets/stat_item.dart';
@@ -419,7 +420,7 @@ class _UserProfileViewState extends State<UserProfileView> {
     String selectedTaskType = AppConstants.taskTypes.first;
     bool isSubmitting = false;
 
-    showModalBottomSheet(
+    SheetAdaptation.showAdaptiveModalBottomSheet(
       context: context,
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(

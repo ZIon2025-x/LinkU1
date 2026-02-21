@@ -7,6 +7,7 @@ import '../design/app_spacing.dart';
 import '../design/app_typography.dart';
 import '../design/app_radius.dart';
 import '../utils/l10n_extension.dart';
+import '../utils/sheet_adaptation.dart';
 
 /// 通知权限引导视图
 /// 参考iOS NotificationPermissionView.swift
@@ -144,7 +145,7 @@ class NotificationPermissionView extends StatelessWidget {
 
   void _showSettingsDialog(BuildContext context) {
     final l10n = context.l10n;
-    showDialog(
+    SheetAdaptation.showAdaptiveDialog(
       context: context,
       builder: (ctx) => AlertDialog(
         title: Text(l10n.notificationPermSettingsTitle),

@@ -6,6 +6,30 @@ import '../utils/l10n_extension.dart';
 class ErrorLocalizer {
   ErrorLocalizer._();
 
+  /// 从异常对象提取用户可读的本地化消息
+  /// 处理 DioException、SocketException 等常见网络/请求异常
+  static String localizeFromException(BuildContext context, Object? error) {
+    if (error == null) return context.l10n.errorUnknownGeneric;
+    final msg = error.toString();
+    if (msg.isEmpty) return context.l10n.errorUnknownGeneric;
+    // 网络超时
+    if (msg.contains('connection timeout') ||
+        msg.contains('Connection timeout') ||
+        msg.contains('TimeoutException')) {
+      return context.l10n.errorNetworkTimeout;
+    }
+    // 网络连接失败
+    if (msg.contains('connection refused') ||
+        msg.contains('SocketException') ||
+        msg.contains('connection reset')) {
+      return context.l10n.errorNetworkConnection;
+    }
+    // 请求取消
+    if (msg.contains('cancel')) return context.l10n.errorRequestCancelled;
+    // 否则走通用本地化
+    return localize(context, msg);
+  }
+
   /// 将错误消息转为本地化文本
   /// 如果是已知错误码，返回对应翻译；否则原样返回
   static String localize(BuildContext context, String? errorMessage) {

@@ -9,6 +9,7 @@ import '../design/app_typography.dart';
 import '../design/app_radius.dart';
 import '../constants/app_assets.dart';
 import '../utils/l10n_extension.dart';
+import '../utils/sheet_adaptation.dart';
 import '../utils/wechat_share_manager.dart';
 import '../utils/qq_share_manager.dart';
 import '../../l10n/app_localizations.dart';
@@ -155,14 +156,14 @@ class CustomSharePanel extends StatelessWidget {
   final String? url;
   final VoidCallback? onDismiss;
 
-  /// 便捷方法 - 显示分享面板
+  /// 便捷方法 - 显示分享面板（iPad/平板适配）
   static void show(
     BuildContext context, {
     required String title,
     String description = '',
     String? url,
   }) {
-    showModalBottomSheet(
+    SheetAdaptation.showAdaptiveModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
       isScrollControlled: true,

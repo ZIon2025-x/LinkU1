@@ -307,7 +307,7 @@ class _ExpertsTabContentState extends State<_ExpertsTabContent> {
     String tempCategory = currentState.selectedCategory;
     String tempCity = currentState.selectedCity;
 
-    showModalBottomSheet(
+    SheetAdaptation.showAdaptiveModalBottomSheet(
       context: context,
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(

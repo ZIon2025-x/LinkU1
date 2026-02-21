@@ -37,8 +37,8 @@ class Breakpoints {
   /// 内容区最大宽度（桌面端居中约束，对齐 frontend 1200px）
   static const double maxContentWidth = 1200;
 
-  /// 详情页最大宽度（防止大屏拉伸过宽）
-  static const double maxDetailWidth = 960;
+  /// 详情页最大宽度（防止大屏拉伸过宽，对齐 iOS 900px）
+  static const double maxDetailWidth = 900;
 
   /// 抽屉宽度（对齐 frontend HamburgerMenu 350-400px）
   static const double drawerWidth = 360;
@@ -173,7 +173,7 @@ class ResponsiveLayout extends StatelessWidget {
   /// 移动端布局（< 768px）
   final Widget mobile;
 
-  /// 平板布局（保留兼容性，不再单独使用）
+  /// 平板布局（768-1200px 使用；未提供时回退到 desktop）
   final Widget? tablet;
 
   /// 桌面布局（>= 768px）
@@ -183,10 +183,15 @@ class ResponsiveLayout extends StatelessWidget {
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        if (constraints.maxWidth >= Breakpoints.mobile) {
-          return desktop;
+        final w = constraints.maxWidth;
+        if (w < Breakpoints.mobile) {
+          return mobile;
         }
-        return mobile;
+        // 平板横屏区间 (768-1200)：若提供 tablet 则使用，否则 desktop
+        if (tablet != null && w >= Breakpoints.mobile && w < Breakpoints.expanded) {
+          return tablet!;
+        }
+        return desktop;
       },
     );
   }

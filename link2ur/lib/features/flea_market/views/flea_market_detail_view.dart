@@ -16,6 +16,7 @@ import '../../../core/widgets/full_screen_image_view.dart';
 import '../../../core/widgets/custom_share_panel.dart';
 import '../../../core/utils/l10n_extension.dart';
 import '../../../core/utils/responsive.dart';
+import '../../../core/utils/sheet_adaptation.dart';
 import '../../../data/repositories/flea_market_repository.dart';
 import '../../../data/models/flea_market.dart';
 import '../../../features/auth/bloc/auth_bloc.dart';
@@ -701,7 +702,7 @@ class _FleaMarketPurchaseSheet extends StatefulWidget {
 
   static void show(BuildContext context, FleaMarketItem item, String itemId) {
     final bloc = context.read<FleaMarketBloc>();
-    showModalBottomSheet<void>(
+    SheetAdaptation.showAdaptiveModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,

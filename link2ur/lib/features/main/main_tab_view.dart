@@ -465,10 +465,13 @@ class _MainTabViewState extends State<MainTabView>
     }
 
     return Expanded(
-      child: GestureDetector(
-        onTap: () => _onMobileTabTapped(index),
-        behavior: HitTestBehavior.opaque,
-        child: Column(
+      child: Semantics(
+        label: _getTabLabel(context, tab.label),
+        button: true,
+        child: GestureDetector(
+          onTap: () => _onMobileTabTapped(index),
+          behavior: HitTestBehavior.opaque,
+          child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             iconWidget,
@@ -499,14 +502,19 @@ class _MainTabViewState extends State<MainTabView>
           ],
         ),
       ),
-    );
+    ),
+  );
   }
 
   Widget _buildCenterButton() {
     // RepaintBoundary 隔离脉冲动画的重绘区域，避免动画帧导致整个底部导航栏重绘
     return RepaintBoundary(
-      child: _PulsingCenterButton(
-        onTap: () => _onMobileTabTapped(2),
+      child: Semantics(
+        label: context.l10n.publishTitle,
+        button: true,
+        child: _PulsingCenterButton(
+          onTap: () => _onMobileTabTapped(2),
+        ),
       ),
     );
   }

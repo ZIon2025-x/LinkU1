@@ -5,6 +5,7 @@ import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_typography.dart';
 import '../../../core/design/app_radius.dart';
 import '../../../core/utils/l10n_extension.dart';
+import '../../../core/utils/sheet_adaptation.dart';
 import '../../../core/widgets/buttons.dart';
 import '../../../core/widgets/empty_state_view.dart';
 import '../../../core/widgets/loading_view.dart';
@@ -286,7 +287,7 @@ class _PointsTab extends StatelessWidget {
 
   void _showRedemptionCodeDialog(BuildContext context) {
     final controller = TextEditingController();
-    showDialog<void>(
+    SheetAdaptation.showAdaptiveDialog<void>(
       context: context,
       builder: (ctx) => AlertDialog(
         title: Text(context.l10n.couponEnterInviteCodeTitle),

@@ -11,6 +11,7 @@ import '../../../core/router/app_router.dart';
 import '../../../core/utils/l10n_extension.dart';
 import '../../../core/utils/haptic_feedback.dart';
 import '../../../core/utils/responsive.dart';
+import '../../../core/utils/sheet_adaptation.dart';
 import '../../../core/widgets/loading_view.dart';
 import '../../../core/widgets/error_state_view.dart';
 import '../../../core/widgets/async_image_view.dart';
@@ -1206,7 +1207,7 @@ class _ApplyServiceSheet extends StatefulWidget {
 
   static void show(
       BuildContext context, TaskExpertService service, int serviceId) {
-    showModalBottomSheet(
+    SheetAdaptation.showAdaptiveModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,

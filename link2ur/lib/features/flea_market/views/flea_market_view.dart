@@ -10,6 +10,7 @@ import '../../../core/utils/haptic_feedback.dart';
 import '../../../core/design/app_radius.dart';
 import '../../../core/utils/l10n_extension.dart';
 import '../../../core/utils/responsive.dart';
+import '../../../core/utils/sheet_adaptation.dart';
 import '../../../core/widgets/animated_list_item.dart';
 import '../../../core/widgets/skeleton_view.dart';
 import '../../../core/widgets/error_state_view.dart';
@@ -69,7 +70,7 @@ class _FleaMarketViewContentState extends State<_FleaMarketViewContent> {
     final categories = _getCategories(context);
     final bloc = context.read<FleaMarketBloc>();
 
-    showModalBottomSheet(
+    SheetAdaptation.showAdaptiveModalBottomSheet(
       context: context,
       backgroundColor: isDark ? AppColors.cardBackgroundDark : Colors.white,
       shape: const RoundedRectangleBorder(

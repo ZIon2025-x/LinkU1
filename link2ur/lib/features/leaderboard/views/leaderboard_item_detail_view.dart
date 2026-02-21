@@ -13,6 +13,7 @@ import '../../../core/design/app_typography.dart';
 import '../../../core/router/app_router.dart';
 import '../../../core/utils/l10n_extension.dart';
 import '../../../core/utils/responsive.dart';
+import '../../../core/utils/sheet_adaptation.dart';
 import '../../../core/widgets/skeleton_view.dart';
 import '../../../core/widgets/error_state_view.dart';
 import '../../../core/widgets/async_image_view.dart';
@@ -315,7 +316,7 @@ class _ItemDetailContent extends StatelessWidget {
   void _showVoteSheet(
       BuildContext context, String voteType, LeaderboardItem item) {
     AppHaptics.selection();
-    showModalBottomSheet(
+    SheetAdaptation.showAdaptiveModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,

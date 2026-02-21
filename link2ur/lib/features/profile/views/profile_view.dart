@@ -10,6 +10,7 @@ import '../../../core/design/app_typography.dart';
 import '../../../core/design/app_radius.dart';
 import '../../../core/utils/l10n_extension.dart';
 import '../../../core/utils/responsive.dart';
+import '../../../core/utils/sheet_adaptation.dart';
 import '../../../core/widgets/user_identity_badges.dart';
 import '../../../core/widgets/async_image_view.dart';
 import '../../../core/widgets/content_constraint.dart';

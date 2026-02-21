@@ -10,6 +10,7 @@ import '../../../core/design/app_typography.dart';
 import '../../../core/constants/uk_cities.dart';
 import '../../../core/utils/haptic_feedback.dart';
 import '../../../core/utils/l10n_extension.dart';
+import '../../../core/utils/sheet_adaptation.dart';
 import '../../../core/widgets/loading_view.dart';
 import '../../../core/widgets/error_state_view.dart';
 import '../../../core/widgets/empty_state_view.dart';
@@ -252,7 +253,7 @@ class _TaskExpertListViewContentState extends State<_TaskExpertListViewContent> 
     String tempCategory = currentState.selectedCategory;
     String tempCity = currentState.selectedCity;
 
-    showModalBottomSheet(
+    SheetAdaptation.showAdaptiveModalBottomSheet(
       context: context,
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(

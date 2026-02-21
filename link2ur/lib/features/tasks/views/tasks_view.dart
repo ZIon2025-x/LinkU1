@@ -12,6 +12,7 @@ import '../../../core/design/app_typography.dart';
 import '../../../core/utils/debouncer.dart';
 import '../../../core/utils/l10n_extension.dart';
 import '../../../core/utils/responsive.dart';
+import '../../../core/utils/sheet_adaptation.dart';
 import '../../../core/utils/task_type_helper.dart';
 import '../../../core/widgets/async_image_view.dart';
 import '../../../core/widgets/animated_list_item.dart';
@@ -445,7 +446,7 @@ class _TasksViewContentState extends State<_TasksViewContent> {
     String tempSortBy = currentState.sortBy;
     String tempCity = currentState.selectedCity;
 
-    showModalBottomSheet(
+    SheetAdaptation.showAdaptiveModalBottomSheet(
       context: context,
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(

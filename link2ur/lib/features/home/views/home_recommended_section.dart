@@ -524,7 +524,7 @@ class _RecommendedTab extends StatelessWidget {
     var selectedCategory = state.recommendedFilterCategory;
     var selectedSort = state.recommendedSortBy;
 
-    showModalBottomSheet(
+    SheetAdaptation.showAdaptiveModalBottomSheet(
       context: context,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),

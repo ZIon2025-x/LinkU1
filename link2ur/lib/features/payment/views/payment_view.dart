@@ -10,6 +10,7 @@ import '../../../core/utils/haptic_feedback.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_radius.dart';
 import '../../../core/utils/l10n_extension.dart';
+import '../../../core/utils/sheet_adaptation.dart';
 import '../../../core/widgets/buttons.dart';
 
 import '../../../core/widgets/loading_view.dart';
@@ -179,7 +180,7 @@ class _PaymentContentState extends State<_PaymentContent> {
   }
 
   void _showPaymentExpiredDialog() {
-    showDialog(
+    SheetAdaptation.showAdaptiveDialog(
       context: context,
       barrierDismissible: false,
       builder: (ctx) => AlertDialog(
@@ -389,7 +390,7 @@ class _PaymentContentState extends State<_PaymentContent> {
 
   void _showPaymentSuccess() {
     AppHaptics.heavy();
-    showDialog(
+    SheetAdaptation.showAdaptiveDialog(
       context: context,
       barrierDismissible: false,
       builder: (ctx) => AlertDialog(
@@ -446,7 +447,7 @@ class _PaymentContentState extends State<_PaymentContent> {
   // ==================== 优惠券 ====================
 
   Future<void> _showCouponSelector() async {
-    final result = await showModalBottomSheet<Map<String, dynamic>>(
+    final result = await SheetAdaptation.showAdaptiveModalBottomSheet<Map<String, dynamic>>(
       context: context,
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(
