@@ -414,8 +414,9 @@ def send_timeout_warnings(db: Session, warning_minutes: int = 1) -> Dict[str, An
                 # 通过WebSocket推送通知更新事件
                 try:
                     from app.websocket_manager import get_ws_manager
+                    from app.state import get_main_event_loop
                     import asyncio
-                    
+
                     ws_manager = get_ws_manager()
                     notification_update = {
                         "type": "notification_created",
@@ -424,20 +425,20 @@ def send_timeout_warnings(db: Session, warning_minutes: int = 1) -> Dict[str, An
                         "title": "对话即将超时",
                         "content": "您的客服对话即将因超时（2分钟无活动）自动结束，请尽快回复。"
                     }
-                    
-                    # 使用 WebSocketManager 发送消息
-                    try:
-                        loop = asyncio.get_event_loop()
-                        if loop.is_running():
-                            # 从后台线程安全地调度协程到主事件循环（fire-and-forget）
+
+                    # 使用 run_coroutine_threadsafe 将协程提交到主事件循环（fire-and-forget）
+                    # 与 scheduled_tasks.py 中的模式一致
+                    loop = get_main_event_loop()
+                    if loop is None or not loop.is_running():
+                        logger.debug("主事件循环未就绪，跳过 WebSocket 超时通知")
+                    else:
+                        try:
                             asyncio.run_coroutine_threadsafe(
                                 ws_manager.send_to_user(chat.user_id, notification_update),
                                 loop
                             )
-                        else:
-                            asyncio.run(ws_manager.send_to_user(chat.user_id, notification_update))
-                    except Exception as e:
-                        logger.debug(f"WebSocket超时通知跳过（后台线程上下文）: {e}")
+                        except RuntimeError as e:
+                            logger.warning(f"调度 WebSocket 超时通知失败（事件循环已关闭？）: {e}")
                 except Exception as e:
                     logger.error(f"Failed to push timeout warning notification via WebSocket: {e}")
                 
