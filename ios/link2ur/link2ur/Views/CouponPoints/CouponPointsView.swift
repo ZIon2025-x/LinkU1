@@ -678,10 +678,15 @@ struct CouponCardView: View {
             // Left Section (Value)
             VStack(spacing: 4) {
                 HStack(alignment: .firstTextBaseline, spacing: 2) {
-                    Text("£")
-                        .font(.system(size: 14, weight: .bold))
-                    Text(formatDiscount(coupon.discountValue))
-                        .font(.system(size: 32, weight: .bold, design: .rounded))
+                    if coupon.type == "percentage" {
+                        Text(formatDiscount(coupon.discountValue, isPercentage: true))
+                            .font(.system(size: 32, weight: .bold, design: .rounded))
+                    } else {
+                        Text("£")
+                            .font(.system(size: 14, weight: .bold))
+                        Text(formatDiscount(coupon.discountValue, isPercentage: false))
+                            .font(.system(size: 32, weight: .bold, design: .rounded))
+                    }
                 }
                 .foregroundColor(.white)
                 
@@ -856,8 +861,16 @@ struct CouponCardView: View {
         }
     }
     
-    private func formatDiscount(_ value: Int) -> String {
-        return "\(value / 100)"
+    /// 格式化优惠券折扣显示
+    /// - Parameters:
+    ///   - value: 折扣值。percentage 时为基点(800=8%)，fixed_amount 时为便士(800=£8)
+    ///   - isPercentage: 是否为百分比类型
+    private func formatDiscount(_ value: Int, isPercentage: Bool) -> String {
+        if isPercentage {
+            return "\(value / 100)%"
+        } else {
+            return "\(value / 100)"
+        }
     }
     
     private func formatDate(_ dateStr: String) -> String {
