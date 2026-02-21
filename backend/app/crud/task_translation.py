@@ -120,6 +120,8 @@ def cleanup_stale_task_translations(db: Session, batch_size: int = 100) -> int:
     """
     清理过期的任务翻译（通过content_hash验证）
     
+    优化：批量加载任务文本字段，避免 N+1 查询（每批 1 次 tasks 查询替代每条约 7 次）
+    
     参数:
     - db: 数据库会话
     - batch_size: 每批处理的翻译数量（避免一次性处理太多）
@@ -127,63 +129,76 @@ def cleanup_stale_task_translations(db: Session, batch_size: int = 100) -> int:
     返回:
     - 清理的翻译数量
     """
+    from sqlalchemy.orm import load_only
+
     from app.utils.translation_validator import is_translation_valid
-    
+
     try:
-        # 分批处理，避免一次性加载太多数据
         total_cleaned = 0
         offset = 0
-        
+
         while True:
-            # 获取一批翻译记录
             translations = db.query(models.TaskTranslation).offset(offset).limit(batch_size).all()
-            
+
             if not translations:
                 break
-            
-            # 检查每个翻译是否过期
+
+            # 批量加载本批翻译涉及的任务（仅加载文本字段，避免加载 poster/taker/participants 等）
+            task_ids = list({t.task_id for t in translations})
+            tasks = (
+                db.query(models.Task)
+                .options(
+                    load_only(
+                        models.Task.id,
+                        models.Task.title,
+                        models.Task.title_zh,
+                        models.Task.title_en,
+                        models.Task.description,
+                        models.Task.description_zh,
+                        models.Task.description_en,
+                    )
+                )
+                .filter(models.Task.id.in_(task_ids))
+                .all()
+            )
+            task_map = {t.id: t for t in tasks}
+
             stale_translations = []
             for translation in translations:
-                # 获取对应的任务
-                task = get_task(db, translation.task_id)
+                task = task_map.get(translation.task_id)
                 if not task:
-                    # 任务已删除，翻译也应该删除（级联删除应该已经处理，但以防万一）
+                    # 任务已删除，翻译也应删除
                     stale_translations.append(translation.id)
                     continue
-                
-                # 获取当前任务内容
+
                 current_text = getattr(task, translation.field_type, None)
                 if not current_text:
-                    # 字段不存在，删除翻译
                     stale_translations.append(translation.id)
                     continue
-                
-                # 验证翻译是否过期
+
                 if not is_translation_valid(translation, current_text):
                     stale_translations.append(translation.id)
-            
-            # 删除过期的翻译
+
             if stale_translations:
                 deleted_count = db.query(models.TaskTranslation).filter(
                     models.TaskTranslation.id.in_(stale_translations)
                 ).delete(synchronize_session=False)
                 total_cleaned += deleted_count
                 logger.debug(f"清理了 {deleted_count} 条过期翻译")
-            
-            # 如果这批没有清理完，继续下一批
+
             if len(translations) < batch_size:
                 break
-            
+
             offset += batch_size
-        
+
         if total_cleaned > 0:
             db.commit()
             logger.info(f"清理过期翻译完成，共清理 {total_cleaned} 条")
         else:
             logger.debug("未发现需要清理的过期翻译")
-        
+
         return total_cleaned
-        
+
     except Exception as e:
         logger.error(f"清理过期翻译失败: {e}", exc_info=True)
         db.rollback()

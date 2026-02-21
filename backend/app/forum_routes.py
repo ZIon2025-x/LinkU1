@@ -1001,6 +1001,135 @@ async def get_post_display_view_count(post_id: int, db_view_count: int) -> int:
     return db_view_count
 
 
+async def _batch_get_user_liked_favorited_posts(
+    db: AsyncSession,
+    user_id: str,
+    post_ids: list[int],
+) -> tuple[set[int], set[int]]:
+    """
+    批量获取当前用户对帖子的点赞/收藏状态，避免 N+1 查询。
+    返回 (liked_post_ids, favorited_post_ids)
+    """
+    if not post_ids or not user_id:
+        return set(), set()
+
+    liked_result = await db.execute(
+        select(models.ForumLike.target_id).where(
+            models.ForumLike.target_type == "post",
+            models.ForumLike.target_id.in_(post_ids),
+            models.ForumLike.user_id == user_id,
+        )
+    )
+    liked_ids = {row[0] for row in liked_result.all()}
+
+    favorited_result = await db.execute(
+        select(models.ForumFavorite.post_id).where(
+            models.ForumFavorite.post_id.in_(post_ids),
+            models.ForumFavorite.user_id == user_id,
+        )
+    )
+    favorited_ids = {row[0] for row in favorited_result.all()}
+
+    return liked_ids, favorited_ids
+
+
+async def _batch_get_users_by_ids_async(db: AsyncSession, user_ids: list[str]) -> dict[str, models.User]:
+    """批量获取用户，避免 N+1 查询"""
+    if not user_ids:
+        return {}
+    user_ids = list(set(uid for uid in user_ids if uid))
+    if not user_ids:
+        return {}
+    result_query = await db.execute(
+        select(models.User).where(models.User.id.in_(user_ids))
+    )
+    users = result_query.scalars().all()
+    return {u.id: u for u in users}
+
+
+async def _batch_get_post_display_view_counts(
+    posts: list,
+) -> dict[int, int]:
+    """
+    批量获取帖子的显示浏览量（数据库值 + Redis 增量），避免多次 Redis 调用。
+    返回 {post_id: display_count}
+    """
+    if not posts:
+        return {}
+
+    result = {p.id: (p.view_count or 0) for p in posts}
+    try:
+        from app.redis_cache import get_redis_client
+        redis_client = get_redis_client()
+        if redis_client:
+            keys = [f"forum:post:view_count:{p.id}" for p in posts]
+            redis_values = redis_client.mget(keys)
+            for post, val in zip(posts, redis_values or []):
+                redis_count = int(val or 0)
+                if redis_count > 0:
+                    result[post.id] = (post.view_count or 0) + redis_count
+    except Exception as e:
+        logger.debug(f"Redis MGET for view counts failed: {e}")
+    return result
+
+
+async def _batch_get_category_post_counts_and_latest_posts(
+    db: AsyncSession,
+    category_ids: list[int],
+) -> tuple[dict[int, int], dict[int, models.ForumPost]]:
+    """
+    批量获取板块的帖子数和最新帖子，避免 N+1 查询。
+    返回 (post_counts: {category_id: count}, latest_posts: {category_id: ForumPost})
+    """
+    if not category_ids:
+        return {}, {}
+
+    # 1. 批量获取帖子数
+    count_result = await db.execute(
+        select(models.ForumPost.category_id, func.count(models.ForumPost.id).label("cnt"))
+        .where(
+            models.ForumPost.category_id.in_(category_ids),
+            models.ForumPost.is_deleted == False,
+            models.ForumPost.is_visible == True,
+        )
+        .group_by(models.ForumPost.category_id)
+    )
+    post_counts = {row[0]: row[1] for row in count_result.all()}
+
+    # 2. 使用 ROW_NUMBER 批量获取每个板块的最新帖子
+    rank = (
+        func.row_number()
+        .over(
+            partition_by=models.ForumPost.category_id,
+            order_by=func.coalesce(
+                models.ForumPost.last_reply_at,
+                models.ForumPost.created_at,
+            ).desc(),
+        )
+        .label("rn")
+    )
+    subq = (
+        select(models.ForumPost.id, models.ForumPost.category_id, rank)
+        .where(
+            models.ForumPost.category_id.in_(category_ids),
+            models.ForumPost.is_deleted == False,
+            models.ForumPost.is_visible == True,
+        )
+    ).subquery()
+    latest_ids_stmt = select(subq.c.id).where(subq.c.rn == 1)
+    latest_posts_result = await db.execute(
+        select(models.ForumPost)
+        .where(models.ForumPost.id.in_(latest_ids_stmt))
+        .options(
+            selectinload(models.ForumPost.author),
+            selectinload(models.ForumPost.admin_author),
+        )
+    )
+    latest_posts = {p.category_id: p for p in latest_posts_result.scalars().all()}
+
+    return post_counts, latest_posts
+
+
 async def update_category_stats(category_id: int, db: AsyncSession):
     """更新板块统计信息"""
     # 统计可见帖子数
@@ -1092,53 +1221,19 @@ async def get_visible_forums(
                     
                     # 如果需要包含最新帖子信息
                     if include_latest_post:
+                        category_ids = [c.id for c in forums]
+                        post_counts, latest_posts = await _batch_get_category_post_counts_and_latest_posts(
+                            db, category_ids
+                        )
                         category_list = []
                         for category in forums:
-                            # 实时统计可见帖子数
-                            post_count_result = await db.execute(
-                                select(func.count(models.ForumPost.id))
-                                .where(
-                                    models.ForumPost.category_id == category.id,
-                                    models.ForumPost.is_deleted == False,
-                                    models.ForumPost.is_visible == True
-                                )
-                            )
-                            real_post_count = post_count_result.scalar() or 0
-                            
-                            # 获取最新可见帖子
-                            latest_post = None
-                            try:
-                                latest_post_result = await db.execute(
-                                    select(models.ForumPost)
-                                    .where(
-                                        models.ForumPost.category_id == category.id,
-                                        models.ForumPost.is_deleted == False,
-                                        models.ForumPost.is_visible == True
-                                    )
-                                    .order_by(
-                                        func.coalesce(
-                                            models.ForumPost.last_reply_at,
-                                            models.ForumPost.created_at
-                                        ).desc()
-                                    )
-                                    .limit(1)
-                                    .options(
-                                        selectinload(models.ForumPost.author),
-                                        selectinload(models.ForumPost.admin_author)
-                                    )
-                                )
-                                latest_post = latest_post_result.scalar_one_or_none()
-                            except Exception as e:
-                                logger.error(f"查询板块 {category.id} 的最新帖子时出错: {e}", exc_info=True)
-                                latest_post = None
-                            
-                            # 添加最新帖子信息
+                            real_post_count = post_counts.get(category.id, 0)
+                            latest_post = latest_posts.get(category.id)
                             latest_post_info = None
                             if latest_post:
                                 latest_post_info = await create_latest_post_info(
                                     latest_post, db, request, current_user
                                 )
-                            
                             category_out = schemas.ForumCategoryOut(
                                 id=category.id,
                                 name=category.name,
@@ -1187,53 +1282,19 @@ async def get_visible_forums(
                 
                 # 如果需要包含最新帖子信息
                 if include_latest_post:
+                    category_ids = [c.id for c in all_forums]
+                    post_counts, latest_posts = await _batch_get_category_post_counts_and_latest_posts(
+                        db, category_ids
+                    )
                     category_list = []
                     for category in all_forums:
-                        # 实时统计可见帖子数
-                        post_count_result = await db.execute(
-                            select(func.count(models.ForumPost.id))
-                            .where(
-                                models.ForumPost.category_id == category.id,
-                                models.ForumPost.is_deleted == False,
-                                models.ForumPost.is_visible == True
-                            )
-                        )
-                        real_post_count = post_count_result.scalar() or 0
-                        
-                        # 获取最新可见帖子
-                        latest_post = None
-                        try:
-                            latest_post_result = await db.execute(
-                                select(models.ForumPost)
-                                .where(
-                                    models.ForumPost.category_id == category.id,
-                                    models.ForumPost.is_deleted == False,
-                                    models.ForumPost.is_visible == True
-                                )
-                                .order_by(
-                                    func.coalesce(
-                                        models.ForumPost.last_reply_at,
-                                        models.ForumPost.created_at
-                                    ).desc()
-                                )
-                                .limit(1)
-                                .options(
-                                    selectinload(models.ForumPost.author),
-                                    selectinload(models.ForumPost.admin_author)
-                                )
-                            )
-                            latest_post = latest_post_result.scalar_one_or_none()
-                        except Exception as e:
-                            logger.error(f"查询板块 {category.id} 的最新帖子时出错: {e}", exc_info=True)
-                            latest_post = None
-                        
-                        # 添加最新帖子信息
+                        real_post_count = post_counts.get(category.id, 0)
+                        latest_post = latest_posts.get(category.id)
                         latest_post_info = None
                         if latest_post:
                             latest_post_info = await create_latest_post_info(
                                 latest_post, db, request, current_user
                             )
-                        
                         category_out = schemas.ForumCategoryOut(
                             id=category.id,
                             name=category.name,
@@ -1277,53 +1338,19 @@ async def get_visible_forums(
                 
                 # 如果需要包含最新帖子信息
                 if include_latest_post:
+                    category_ids = [c.id for c in forums]
+                    post_counts, latest_posts = await _batch_get_category_post_counts_and_latest_posts(
+                        db, category_ids
+                    )
                     category_list = []
                     for category in forums:
-                        # 实时统计可见帖子数
-                        post_count_result = await db.execute(
-                            select(func.count(models.ForumPost.id))
-                            .where(
-                                models.ForumPost.category_id == category.id,
-                                models.ForumPost.is_deleted == False,
-                                models.ForumPost.is_visible == True
-                            )
-                        )
-                        real_post_count = post_count_result.scalar() or 0
-                        
-                        # 获取最新可见帖子
-                        latest_post = None
-                        try:
-                            latest_post_result = await db.execute(
-                                select(models.ForumPost)
-                                .where(
-                                    models.ForumPost.category_id == category.id,
-                                    models.ForumPost.is_deleted == False,
-                                    models.ForumPost.is_visible == True
-                                )
-                                .order_by(
-                                    func.coalesce(
-                                        models.ForumPost.last_reply_at,
-                                        models.ForumPost.created_at
-                                    ).desc()
-                                )
-                                .limit(1)
-                                .options(
-                                    selectinload(models.ForumPost.author),
-                                    selectinload(models.ForumPost.admin_author)
-                                )
-                            )
-                            latest_post = latest_post_result.scalar_one_or_none()
-                        except Exception as e:
-                            logger.error(f"查询板块 {category.id} 的最新帖子时出错: {e}", exc_info=True)
-                            latest_post = None
-                        
-                        # 添加最新帖子信息
+                        real_post_count = post_counts.get(category.id, 0)
+                        latest_post = latest_posts.get(category.id)
                         latest_post_info = None
                         if latest_post:
                             latest_post_info = await create_latest_post_info(
                                 latest_post, db, request, current_user
                             )
-                        
                         category_out = schemas.ForumCategoryOut(
                             id=category.id,
                             name=category.name,
@@ -1377,53 +1404,19 @@ async def get_visible_forums(
         
         # 如果需要包含最新帖子信息
         if include_latest_post:
+            category_ids = [c.id for c in forums]
+            post_counts, latest_posts = await _batch_get_category_post_counts_and_latest_posts(
+                db, category_ids
+            )
             category_list = []
             for category in forums:
-                # 实时统计可见帖子数
-                post_count_result = await db.execute(
-                    select(func.count(models.ForumPost.id))
-                    .where(
-                        models.ForumPost.category_id == category.id,
-                        models.ForumPost.is_deleted == False,
-                        models.ForumPost.is_visible == True
-                    )
-                )
-                real_post_count = post_count_result.scalar() or 0
-                
-                # 获取最新可见帖子
-                latest_post = None
-                try:
-                    latest_post_result = await db.execute(
-                        select(models.ForumPost)
-                        .where(
-                            models.ForumPost.category_id == category.id,
-                            models.ForumPost.is_deleted == False,
-                            models.ForumPost.is_visible == True
-                        )
-                        .order_by(
-                            func.coalesce(
-                                models.ForumPost.last_reply_at,
-                                models.ForumPost.created_at
-                            ).desc()
-                        )
-                        .limit(1)
-                        .options(
-                            selectinload(models.ForumPost.author),
-                            selectinload(models.ForumPost.admin_author)
-                        )
-                    )
-                    latest_post = latest_post_result.scalar_one_or_none()
-                except Exception as e:
-                    logger.error(f"查询板块 {category.id} 的最新帖子时出错: {e}", exc_info=True)
-                    latest_post = None
-                
-                # 添加最新帖子信息
+                real_post_count = post_counts.get(category.id, 0)
+                latest_post = latest_posts.get(category.id)
                 latest_post_info = None
                 if latest_post:
                     latest_post_info = await create_latest_post_info(
                         latest_post, db, request, current_user
                     )
-                
                 category_out = schemas.ForumCategoryOut(
                     id=category.id,
                     name=category.name,
@@ -1467,53 +1460,19 @@ async def get_visible_forums(
         
         # 如果需要包含最新帖子信息
         if include_latest_post:
+            category_ids = [c.id for c in forums]
+            post_counts, latest_posts = await _batch_get_category_post_counts_and_latest_posts(
+                db, category_ids
+            )
             category_list = []
             for category in forums:
-                # 实时统计可见帖子数
-                post_count_result = await db.execute(
-                    select(func.count(models.ForumPost.id))
-                    .where(
-                        models.ForumPost.category_id == category.id,
-                        models.ForumPost.is_deleted == False,
-                        models.ForumPost.is_visible == True
-                    )
-                )
-                real_post_count = post_count_result.scalar() or 0
-                
-                # 获取最新可见帖子
-                latest_post = None
-                try:
-                    latest_post_result = await db.execute(
-                        select(models.ForumPost)
-                        .where(
-                            models.ForumPost.category_id == category.id,
-                            models.ForumPost.is_deleted == False,
-                            models.ForumPost.is_visible == True
-                        )
-                        .order_by(
-                            func.coalesce(
-                                models.ForumPost.last_reply_at,
-                                models.ForumPost.created_at
-                            ).desc()
-                        )
-                        .limit(1)
-                        .options(
-                            selectinload(models.ForumPost.author),
-                            selectinload(models.ForumPost.admin_author)
-                        )
-                    )
-                    latest_post = latest_post_result.scalar_one_or_none()
-                except Exception as e:
-                    logger.error(f"查询板块 {category.id} 的最新帖子时出错: {e}", exc_info=True)
-                    latest_post = None
-                
-                # 添加最新帖子信息
+                real_post_count = post_counts.get(category.id, 0)
+                latest_post = latest_posts.get(category.id)
                 latest_post_info = None
                 if latest_post:
                     latest_post_info = await create_latest_post_info(
                         latest_post, db, request, current_user
                     )
-                
                 category_out = schemas.ForumCategoryOut(
                     id=category.id,
                     name=category.name,
@@ -1562,53 +1521,19 @@ async def get_visible_forums(
     
     # 如果需要包含最新帖子信息
     if include_latest_post:
+        category_ids = [c.id for c in all_forums]
+        post_counts, latest_posts = await _batch_get_category_post_counts_and_latest_posts(
+            db, category_ids
+        )
         category_list = []
         for category in all_forums:
-            # 实时统计可见帖子数
-            post_count_result = await db.execute(
-                select(func.count(models.ForumPost.id))
-                .where(
-                    models.ForumPost.category_id == category.id,
-                    models.ForumPost.is_deleted == False,
-                    models.ForumPost.is_visible == True
-                )
-            )
-            real_post_count = post_count_result.scalar() or 0
-            
-            # 获取最新可见帖子
-            latest_post = None
-            try:
-                latest_post_result = await db.execute(
-                    select(models.ForumPost)
-                    .where(
-                        models.ForumPost.category_id == category.id,
-                        models.ForumPost.is_deleted == False,
-                        models.ForumPost.is_visible == True
-                    )
-                    .order_by(
-                        func.coalesce(
-                            models.ForumPost.last_reply_at,
-                            models.ForumPost.created_at
-                        ).desc()
-                    )
-                    .limit(1)
-                    .options(
-                        selectinload(models.ForumPost.author),
-                        selectinload(models.ForumPost.admin_author)
-                    )
-                )
-                latest_post = latest_post_result.scalar_one_or_none()
-            except Exception as e:
-                logger.error(f"查询板块 {category.id} 的最新帖子时出错: {e}", exc_info=True)
-                latest_post = None
-            
-            # 添加最新帖子信息
+            real_post_count = post_counts.get(category.id, 0)
+            latest_post = latest_posts.get(category.id)
             latest_post_info = None
             if latest_post:
                 latest_post_info = await create_latest_post_info(
                     latest_post, db, request, None
                 )
-            
             category_out = schemas.ForumCategoryOut(
                 id=category.id,
                 name=category.name,
@@ -1630,9 +1555,7 @@ async def get_visible_forums(
                 updated_at=category.updated_at
             )
             category_list.append(category_out)
-        
         return {"categories": category_list}
-    
     return {"categories": [schemas.ForumCategoryOut.model_validate(f) for f in all_forums]}
 
 
@@ -1659,56 +1582,19 @@ async def get_categories(
     
     # 如果需要包含最新帖子信息，需要手动构建响应
     if include_latest_post:
+        category_ids = [c.id for c in categories]
+        post_counts, latest_posts = await _batch_get_category_post_counts_and_latest_posts(
+            db, category_ids
+        )
         category_list = []
         for category in categories:
-            # 实时统计可见帖子数（对普通用户可见的帖子）
-            post_count_result = await db.execute(
-                select(func.count(models.ForumPost.id))
-                .where(
-                    models.ForumPost.category_id == category.id,
-                    models.ForumPost.is_deleted == False,
-                    models.ForumPost.is_visible == True
-                )
-            )
-            real_post_count = post_count_result.scalar() or 0
-            
-            # 获取该板块的最新可见帖子（只显示对普通用户可见的帖子）
-            # 排序逻辑：优先按最后回复时间，如果没有回复（last_reply_at 为 NULL）则按创建时间
-            # func.coalesce() 确保即使帖子没有回复，也会使用 created_at 进行排序并显示在预览中
-            latest_post = None
-            try:
-                latest_post_result = await db.execute(
-                    select(models.ForumPost)
-                    .where(
-                        models.ForumPost.category_id == category.id,
-                        models.ForumPost.is_deleted == False,
-                        models.ForumPost.is_visible == True
-                    )
-                    .order_by(
-                        func.coalesce(
-                            models.ForumPost.last_reply_at,
-                            models.ForumPost.created_at
-                        ).desc()
-                    )
-                    .limit(1)
-                    .options(
-                        selectinload(models.ForumPost.author),
-                        selectinload(models.ForumPost.admin_author)
-                    )
-                )
-                latest_post = latest_post_result.scalar_one_or_none()
-            except Exception as e:
-                logger.error(f"查询板块 {category.id} 的最新帖子时出错: {e}", exc_info=True)
-                latest_post = None
-            
-            # 添加最新帖子信息（如果存在）
+            real_post_count = post_counts.get(category.id, 0)
+            latest_post = latest_posts.get(category.id)
             latest_post_info = None
             if latest_post:
                 latest_post_info = await create_latest_post_info(
                     latest_post, db, request, None
                 )
-            
-            # 构建板块信息（使用 Pydantic 模型，包含 latest_post）
             category_out = schemas.ForumCategoryOut(
                 id=category.id,
                 name=category.name,
@@ -2694,38 +2580,23 @@ async def get_posts(
         selectinload(models.ForumPost.author),
         selectinload(models.ForumPost.admin_author)
     )
-    
+
     result = await db.execute(query)
     posts = result.scalars().all()
-    
-    # 转换为列表项格式
+
+    # 批量加载点赞/收藏状态与浏览量，避免 N+1 查询
+    post_ids = [p.id for p in posts]
+    liked_ids, favorited_ids = await _batch_get_user_liked_favorited_posts(
+        db, current_user.id if current_user else "", post_ids
+    )
+    view_counts = await _batch_get_post_display_view_counts(posts)
+
     post_items = []
     for post in posts:
-        # 检查当前用户是否已点赞/收藏
-        is_liked = False
-        is_favorited = False
-        if current_user:
-            like_result = await db.execute(
-                select(models.ForumLike).where(
-                    models.ForumLike.target_type == "post",
-                    models.ForumLike.target_id == post.id,
-                    models.ForumLike.user_id == current_user.id
-                )
-            )
-            is_liked = like_result.scalar_one_or_none() is not None
-            
-            favorite_result = await db.execute(
-                select(models.ForumFavorite).where(
-                    models.ForumFavorite.post_id == post.id,
-                    models.ForumFavorite.user_id == current_user.id
-                )
-            )
-            is_favorited = favorite_result.scalar_one_or_none() is not None
-        
-        # 计算帖子的浏览量（数据库值 + Redis增量）
-        display_view_count = await get_post_display_view_count(post.id, post.view_count)
-        
-        # 生成内容预览（支持双语）
+        is_liked = post.id in liked_ids
+        is_favorited = post.id in favorited_ids
+        display_view_count = view_counts.get(post.id, post.view_count or 0)
+
         content_preview = strip_markdown(post.content)
         content_preview_en = None
         content_preview_zh = None
@@ -2733,7 +2604,7 @@ async def get_posts(
             content_preview_en = strip_markdown(post.content_en)
         if hasattr(post, 'content_zh') and post.content_zh:
             content_preview_zh = strip_markdown(post.content_zh)
-        
+
         post_items.append(schemas.ForumPostListItem(
             id=post.id,
             title=post.title,
@@ -2758,7 +2629,7 @@ async def get_posts(
             created_at=post.created_at,
             last_reply_at=post.last_reply_at
         ))
-    
+
     return {
         "posts": post_items,
         "total": total,
@@ -5036,38 +4907,23 @@ async def search_posts(
     
     result = await db.execute(query)
     posts = result.scalars().all()
-    
-    # 转换为列表项格式
+
+    post_ids = [p.id for p in posts]
+    liked_ids, favorited_ids = await _batch_get_user_liked_favorited_posts(
+        db, current_user.id if current_user else "", post_ids
+    )
+    view_counts = await _batch_get_post_display_view_counts(posts)
+
     post_items = []
     for post in posts:
-        # 检查当前用户是否已点赞/收藏
-        is_liked = False
-        is_favorited = False
-        if current_user:
-            like_result = await db.execute(
-                select(models.ForumLike).where(
-                    models.ForumLike.target_type == "post",
-                    models.ForumLike.target_id == post.id,
-                    models.ForumLike.user_id == current_user.id
-                )
-            )
-            is_liked = like_result.scalar_one_or_none() is not None
-            
-            favorite_result = await db.execute(
-                select(models.ForumFavorite).where(
-                    models.ForumFavorite.post_id == post.id,
-                    models.ForumFavorite.user_id == current_user.id
-                )
-            )
-            is_favorited = favorite_result.scalar_one_or_none() is not None
-        
+        display_view_count = view_counts.get(post.id, post.view_count or 0)
         post_items.append(schemas.ForumPostListItem(
             id=post.id,
             title=post.title,
             content_preview=strip_markdown(post.content),
             category=schemas.CategoryInfo(id=post.category.id, name=post.category.name),
             author=await get_post_author_info(db, post, request),
-            view_count=post.view_count,
+            view_count=display_view_count,
             reply_count=post.reply_count,
             like_count=post.like_count,
             is_pinned=post.is_pinned,
@@ -5940,23 +5796,43 @@ async def get_my_likes(
     
     result = await db.execute(query)
     likes = result.scalars().all()
-    
-    # 转换为输出格式
+
+    # 批量加载帖子和回复，避免 N+1 查询
+    post_ids = [l.target_id for l in likes if l.target_type == "post"]
+    reply_ids = [l.target_id for l in likes if l.target_type == "reply"]
+    post_map = {}
+    reply_map = {}
+    if post_ids:
+        posts_result = await db.execute(
+            select(models.ForumPost)
+            .where(models.ForumPost.id.in_(post_ids))
+            .where(models.ForumPost.is_deleted == False)
+            .where(models.ForumPost.is_visible == True)
+            .options(
+                selectinload(models.ForumPost.category),
+                selectinload(models.ForumPost.author),
+                selectinload(models.ForumPost.admin_author)
+            )
+        )
+        post_map = {p.id: p for p in posts_result.scalars().all()}
+    if reply_ids:
+        replies_result = await db.execute(
+            select(models.ForumReply)
+            .where(models.ForumReply.id.in_(reply_ids))
+            .where(models.ForumReply.is_deleted == False)
+            .where(models.ForumReply.is_visible == True)
+            .options(
+                selectinload(models.ForumReply.post),
+                selectinload(models.ForumReply.author)
+            )
+        )
+        reply_map = {r.id: r for r in replies_result.scalars().all()}
+
     like_list = []
     for like in likes:
         if like.target_type == "post":
-            # 手动查询关联的帖子
-            post_result = await db.execute(
-                select(models.ForumPost)
-                .where(models.ForumPost.id == like.target_id)
-                .options(
-                    selectinload(models.ForumPost.category),
-                    selectinload(models.ForumPost.author),
-                    selectinload(models.ForumPost.admin_author)
-                )
-            )
-            post = post_result.scalar_one_or_none()
-            if post and post.is_deleted == False and post.is_visible == True:
+            post = post_map.get(like.target_id)
+            if post:
                 # 使用统一的作者信息获取函数（支持管理员和普通用户）
                 author_info = await get_post_author_info(db, post, request)
                 
@@ -5991,17 +5867,8 @@ async def get_my_likes(
                     "created_at": like.created_at
                 })
         elif like.target_type == "reply":
-            # 手动查询关联的回复
-            reply_result = await db.execute(
-                select(models.ForumReply)
-                .where(models.ForumReply.id == like.target_id)
-                .options(
-                    selectinload(models.ForumReply.post),
-                    selectinload(models.ForumReply.author)
-                )
-            )
-            reply = reply_result.scalar_one_or_none()
-            if reply and reply.is_deleted == False and reply.is_visible == True:
+            reply = reply_map.get(like.target_id)
+            if reply:
                 like_list.append({
                     "target_type": "reply",
                     "reply": {
@@ -6431,35 +6298,19 @@ async def get_hot_posts(
     
     result = await db.execute(query)
     posts = result.scalars().all()
-    
-    # 转换为列表项格式
+
+    post_ids = [p.id for p in posts]
+    liked_ids, favorited_ids = await _batch_get_user_liked_favorited_posts(
+        db, current_user.id if current_user else "", post_ids
+    )
+    view_counts = await _batch_get_post_display_view_counts(posts)
+
     post_items = []
     for post in posts:
-        # 检查当前用户是否已点赞/收藏
-        is_liked = False
-        is_favorited = False
-        if current_user:
-            like_result = await db.execute(
-                select(models.ForumLike).where(
-                    models.ForumLike.target_type == "post",
-                    models.ForumLike.target_id == post.id,
-                    models.ForumLike.user_id == current_user.id
-                )
-            )
-            is_liked = like_result.scalar_one_or_none() is not None
-            
-            favorite_result = await db.execute(
-                select(models.ForumFavorite).where(
-                    models.ForumFavorite.post_id == post.id,
-                    models.ForumFavorite.user_id == current_user.id
-                )
-            )
-            is_favorited = favorite_result.scalar_one_or_none() is not None
-        
-        # 计算帖子的浏览量（数据库值 + Redis增量）
-        display_view_count = await get_post_display_view_count(post.id, post.view_count)
-        
-        # 生成内容预览（支持双语）
+        is_liked = post.id in liked_ids
+        is_favorited = post.id in favorited_ids
+        display_view_count = view_counts.get(post.id, post.view_count or 0)
+
         content_preview = strip_markdown(post.content)
         content_preview_en = None
         content_preview_zh = None
@@ -6467,7 +6318,7 @@ async def get_hot_posts(
             content_preview_en = strip_markdown(post.content_en)
         if hasattr(post, 'content_zh') and post.content_zh:
             content_preview_zh = strip_markdown(post.content_zh)
-        
+
         post_items.append(schemas.ForumPostListItem(
             id=post.id,
             title=post.title,
@@ -6492,7 +6343,7 @@ async def get_hot_posts(
             created_at=post.created_at,
             last_reply_at=post.last_reply_at
         ))
-    
+
     return {
         "posts": post_items,
         "total": len(post_items),
@@ -6652,35 +6503,19 @@ async def get_user_hot_posts(
     
     result = await db.execute(query)
     posts = result.scalars().all()
-    
-    # 转换为列表项格式
+
+    post_ids = [p.id for p in posts]
+    liked_ids, favorited_ids = await _batch_get_user_liked_favorited_posts(
+        db, current_user.id if current_user else "", post_ids
+    )
+    view_counts = await _batch_get_post_display_view_counts(posts)
+
     post_items = []
     for post in posts:
-        # 检查当前用户是否已点赞/收藏
-        is_liked = False
-        is_favorited = False
-        if current_user:
-            like_result = await db.execute(
-                select(models.ForumLike).where(
-                    models.ForumLike.target_type == "post",
-                    models.ForumLike.target_id == post.id,
-                    models.ForumLike.user_id == current_user.id
-                )
-            )
-            is_liked = like_result.scalar_one_or_none() is not None
-            
-            favorite_result = await db.execute(
-                select(models.ForumFavorite).where(
-                    models.ForumFavorite.post_id == post.id,
-                    models.ForumFavorite.user_id == current_user.id
-                )
-            )
-            is_favorited = favorite_result.scalar_one_or_none() is not None
-        
-        # 计算帖子的浏览量（数据库值 + Redis增量）
-        display_view_count = await get_post_display_view_count(post.id, post.view_count)
-        
-        # 生成内容预览（支持双语）
+        is_liked = post.id in liked_ids
+        is_favorited = post.id in favorited_ids
+        display_view_count = view_counts.get(post.id, post.view_count or 0)
+
         content_preview = strip_markdown(post.content)
         content_preview_en = None
         content_preview_zh = None
@@ -6688,7 +6523,7 @@ async def get_user_hot_posts(
             content_preview_en = strip_markdown(post.content_en)
         if hasattr(post, 'content_zh') and post.content_zh:
             content_preview_zh = strip_markdown(post.content_zh)
-        
+
         post_items.append(schemas.ForumPostListItem(
             id=post.id,
             title=post.title,
@@ -6713,7 +6548,7 @@ async def get_user_hot_posts(
             created_at=post.created_at,
             last_reply_at=post.last_reply_at
         ))
-    
+
     return {
         "posts": post_items,
         "total": len(post_items),
@@ -6764,15 +6599,14 @@ async def get_top_posts_leaderboard(
     
     result = await db.execute(query)
     top_users = result.all()
-    
-    # 获取用户信息
+
+    user_ids = [uid for uid, _ in top_users if uid]
+    user_map = await _batch_get_users_by_ids_async(db, user_ids)
+
     user_list = []
     rank = 1
     for user_id, post_count in top_users:
-        user_result = await db.execute(
-            select(models.User).where(models.User.id == user_id)
-        )
-        user = user_result.scalar_one_or_none()
+        user = user_map.get(user_id)
         if user:
             user_list.append({
                 "user": schemas.UserInfo(
@@ -6784,7 +6618,7 @@ async def get_top_posts_leaderboard(
                 "rank": rank
             })
             rank += 1
-    
+
     return {
         "period": period,
         "users": user_list
@@ -6831,16 +6665,15 @@ async def get_top_favorites_leaderboard(
     
     result = await db.execute(query)
     top_users = result.all()
-    
-    # 获取用户信息
+
+    user_ids = [uid for uid, _ in top_users if uid]
+    user_map = await _batch_get_users_by_ids_async(db, user_ids)
+
     user_list = []
     rank = 1
     for user_id, favorite_count in top_users:
-        if user_id:  # 排除管理员发帖（admin_author_id）
-            user_result = await db.execute(
-                select(models.User).where(models.User.id == user_id)
-            )
-            user = user_result.scalar_one_or_none()
+        if user_id:
+            user = user_map.get(user_id)
             if user:
                 user_list.append({
                     "user": schemas.UserInfo(
@@ -6852,7 +6685,7 @@ async def get_top_favorites_leaderboard(
                     "rank": rank
                 })
                 rank += 1
-    
+
     return {
         "period": period,
         "users": user_list
@@ -6916,15 +6749,14 @@ async def get_top_likes_leaderboard(
     
     # 排序并取前N名
     sorted_users = sorted(total_likes.items(), key=lambda x: x[1], reverse=True)[:limit]
-    
-    # 获取用户信息
+
+    user_ids = [uid for uid, _ in sorted_users]
+    user_map = await _batch_get_users_by_ids_async(db, user_ids)
+
     user_list = []
     rank = 1
     for user_id, likes_count in sorted_users:
-        user_result = await db.execute(
-            select(models.User).where(models.User.id == user_id)
-        )
-        user = user_result.scalar_one_or_none()
+        user = user_map.get(user_id)
         if user:
             user_list.append({
                 "user": schemas.UserInfo(
@@ -6936,7 +6768,7 @@ async def get_top_likes_leaderboard(
                 "rank": rank
             })
             rank += 1
-    
+
     return {
         "period": period,
         "users": user_list

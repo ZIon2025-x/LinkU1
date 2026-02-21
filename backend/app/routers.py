@@ -8902,19 +8902,23 @@ def cs_get_cancel_requests(
     其他管理操作需要通过 /customer-service/admin-requests 向管理员请求。
     """
     from app.models import TaskCancelRequest, Task, User
-    
+
     requests = crud.get_task_cancel_requests(db, status)
-    
-    # 为每个请求添加任务信息和用户身份
+
+    # 批量加载任务和用户，避免 N+1 查询
+    task_ids = list({r.task_id for r in requests})
+    requester_ids = list({r.requester_id for r in requests})
+    task_map = {t.id: t for t in db.query(Task).filter(Task.id.in_(task_ids)).all()} if task_ids else {}
+    user_map = {u.id: u for u in db.query(User).filter(User.id.in_(requester_ids)).all()} if requester_ids else {}
+
     result = []
     for req in requests:
-        task = crud.get_task(db, req.task_id)
-        requester = crud.get_user_by_id(db, req.requester_id)
-        
-        # 判断请求者是发布者还是接收者
+        task = task_map.get(req.task_id)
+        requester = user_map.get(req.requester_id)
+
         is_poster = task and task.poster_id == req.requester_id
         is_taker = task and task.taker_id == req.requester_id
-        
+
         result.append({
             "id": req.id,
             "task_id": req.task_id,
