@@ -238,8 +238,55 @@ def update_coupon(db: Session, coupon_id: int, coupon_update: schemas.CouponUpda
     return db_coupon
 
 
+def _user_can_still_claim_coupon(db: Session, user_id: str, coupon: models.Coupon) -> bool:
+    """检查用户是否还能领取该优惠券（与 claim_coupon 的限领逻辑一致）"""
+    now = get_utc_time()
+    coupon_id = coupon.id
+
+    # 每用户每周期限领
+    window = getattr(coupon, "per_user_limit_window", None)
+    window = (window or "").strip().lower() or None
+    limit_in_window = getattr(coupon, "per_user_per_window_limit", None)
+    if limit_in_window is None and getattr(coupon, "per_user_per_month_limit", None) is not None:
+        limit_in_window = coupon.per_user_per_month_limit
+        window = "month" if not window else window
+    if window and limit_in_window is not None and limit_in_window > 0:
+        if window not in VALID_LIMIT_WINDOWS:
+            window = "month"
+        start_of_window_utc, _ = _start_of_window_utc(now, window)
+        window_claim_count = db.query(models.UserCoupon).filter(
+            models.UserCoupon.user_id == user_id,
+            models.UserCoupon.coupon_id == coupon_id,
+            models.UserCoupon.obtained_at >= start_of_window_utc,
+            models.UserCoupon.obtained_at <= now
+        ).count()
+        if window_claim_count >= limit_in_window:
+            return False
+
+    # 每用户总限领（per_user_limit）
+    if coupon.per_user_limit:
+        user_coupon_count = db.query(models.UserCoupon).filter(
+            models.UserCoupon.user_id == user_id,
+            models.UserCoupon.coupon_id == coupon_id,
+            models.UserCoupon.status.in_(["unused", "used", "expired"])
+        ).count()
+        if user_coupon_count >= coupon.per_user_limit:
+            return False
+
+    # 全局余量
+    if coupon.total_quantity:
+        total_issued = db.query(models.UserCoupon).filter(
+            models.UserCoupon.coupon_id == coupon_id,
+            models.UserCoupon.status.in_(["unused", "used", "expired"])
+        ).count()
+        if total_issued >= coupon.total_quantity:
+            return False
+
+    return True
+
+
 def get_available_coupons(db: Session, user_id: Optional[str] = None) -> List[models.Coupon]:
-    """获取可用优惠券列表（会员专属券仅对 vip/super 用户展示，非会员在 SQL 层过滤）"""
+    """获取可用优惠券列表（会员专属券仅对 vip/super 用户展示，已领满的券不展示）"""
     now = get_utc_time()
     query = db.query(models.Coupon).filter(
         models.Coupon.status == "active",
@@ -256,7 +303,11 @@ def get_available_coupons(db: Session, user_id: Optional[str] = None) -> List[mo
                     models.Coupon.eligibility_type != "member"
                 )
             )
-    return query.all()
+    coupons = query.all()
+    # 已登录用户：过滤掉已领满的券
+    if user_id:
+        coupons = [c for c in coupons if _user_can_still_claim_coupon(db, user_id, c)]
+    return coupons
 
 
 def get_user_coupons(

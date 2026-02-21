@@ -642,7 +642,7 @@ class _CouponItem extends StatelessWidget {
         child: const Icon(Icons.card_giftcard, color: AppColors.primary),
       ),
       title: Text(coupon.name),
-      subtitle: Text('${_localizeCouponType(context, coupon.type)} · ${coupon.discountValueDisplay}'),
+      subtitle: Text('${_localizeCouponType(context, coupon.type)} · ${coupon.discountDisplayFormatted}'),
       trailing: Container(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
         decoration: BoxDecoration(

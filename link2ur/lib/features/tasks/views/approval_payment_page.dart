@@ -1134,7 +1134,7 @@ class _CouponSelectionCard extends StatelessWidget {
                 padding: const EdgeInsets.only(top: 12),
                 child: _CouponRow(
                   label: c.name,
-                  subtitle: '${c.discountValueDisplay} · $subtitle',
+                  subtitle: '${c.discountDisplayFormatted} · $subtitle',
                   isSelected: selectedUserCoupon?.id == uc.id,
                   onTap: () => onSelectCoupon(uc),
                 ),

@@ -30,7 +30,7 @@ class _CouponSelectorSheetState extends State<_CouponSelectorSheet> {
               .map((c) => {
                     'id': c.id,
                     'name': c.coupon.name,
-                    'description': c.coupon.discountValueDisplay,
+                    'description': c.coupon.discountDisplayFormatted,
                   })
               .toList();
           _isLoading = false;

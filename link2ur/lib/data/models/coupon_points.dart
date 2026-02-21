@@ -169,6 +169,16 @@ class Coupon extends Equatable {
     }
   }
 
+  /// 格式化后的折扣显示（根据类型区分：percentage 为 8%，fixed_amount 为 £8.00）
+  /// discountValue: percentage 时为基点(800=8%)，fixed_amount 时为便士(800=£8)
+  String get discountDisplayFormatted {
+    if (type == 'percentage') {
+      return '${discountValue ~/ 100}%';
+    } else {
+      return '£${(discountValue / 100).toStringAsFixed(2)}';
+    }
+  }
+
   factory Coupon.fromJson(Map<String, dynamic> json) {
     return Coupon(
       id: json['id'] as int,

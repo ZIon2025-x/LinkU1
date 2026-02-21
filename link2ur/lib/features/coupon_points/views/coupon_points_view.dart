@@ -548,9 +548,7 @@ class _AvailableCouponCard extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Text(
-                  coupon.discountValueDisplay.isNotEmpty
-                      ? coupon.discountValueDisplay
-                      : '${coupon.discountValue}',
+                  coupon.discountDisplayFormatted,
                   style: AppTypography.bodyBold.copyWith(
                     color: AppColors.primary,
                     fontSize: 16,
