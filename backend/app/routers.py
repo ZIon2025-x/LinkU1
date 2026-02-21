@@ -27,7 +27,7 @@ from typing import Optional, List
 from sqlalchemy.orm import Session
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app import crud, models, schemas
+from app import async_crud, crud, models, schemas
 from app.database import get_async_db
 from app.rate_limiting import rate_limit
 from app.deps import get_current_user_secure_sync_csrf
@@ -56,9 +56,11 @@ from app.deps import (
     get_current_admin_user,
     get_current_customer_service_or_user,
     get_current_user_secure_sync_csrf,
+    get_current_user_secure_async_csrf,
     get_current_user_optional,
     get_db,
     get_sync_db,
+    get_async_db_dependency,
 )
 from app.separate_auth_deps import (
     get_current_admin,
@@ -416,24 +418,24 @@ async def register(
     inviter_id = None
     invitation_code_text = None
     if validated_data.get('invitation_code'):
-        from app.coupon_points_crud import process_invitation_input
-        from app.database import SessionLocal
-        
-        # 使用同步数据库处理邀请码或用户ID
-        sync_db = SessionLocal()
-        try:
-            inviter_id, invitation_code_id, invitation_code_text, error_msg = process_invitation_input(
-                sync_db, validated_data['invitation_code']
-            )
-            if inviter_id:
-                logger.debug(f"邀请人ID验证成功: {inviter_id}")
-            elif invitation_code_id:
-                logger.debug(f"邀请码验证成功: {invitation_code_text}, ID: {invitation_code_id}")
-            elif error_msg:
-                logger.debug(f"邀请码/用户ID验证失败: {error_msg}")
-                # 邀请码/用户ID无效不影响注册，只记录警告
-        finally:
-            sync_db.close()
+        def _process_invitation_sync():
+            from app.database import SessionLocal
+            from app.coupon_points_crud import process_invitation_input
+            _db = SessionLocal()
+            try:
+                return process_invitation_input(_db, validated_data['invitation_code'])
+            finally:
+                _db.close()
+        inviter_id, invitation_code_id, invitation_code_text, error_msg = await asyncio.to_thread(
+            _process_invitation_sync
+        )
+        if inviter_id:
+            logger.debug(f"邀请人ID验证成功: {inviter_id}")
+        elif invitation_code_id:
+            logger.debug(f"邀请码验证成功: {invitation_code_text}, ID: {invitation_code_id}")
+        elif error_msg:
+            logger.debug(f"邀请码/用户ID验证失败: {error_msg}")
+            # 邀请码/用户ID无效不影响注册，只记录警告
     
     # 检查是否跳过邮件验证（开发环境）
     if Config.SKIP_EMAIL_VERIFICATION:
@@ -462,17 +464,19 @@ async def register(
         
         # 处理邀请码奖励（开发环境：用户创建成功后立即发放）
         if invitation_code_id:
-            from app.coupon_points_crud import use_invitation_code
-            from app.database import SessionLocal
-            sync_db = SessionLocal()
-            try:
-                success, error_msg = use_invitation_code(sync_db, new_user.id, invitation_code_id)
-                if success:
-                    logger.info(f"邀请码奖励发放成功: 用户 {new_user.id}, 邀请码ID {invitation_code_id}")
-                else:
-                    logger.warning(f"邀请码奖励发放失败: {error_msg}")
-            finally:
-                sync_db.close()
+            def _use_invitation_sync():
+                from app.database import SessionLocal
+                from app.coupon_points_crud import use_invitation_code
+                _db = SessionLocal()
+                try:
+                    return use_invitation_code(_db, new_user.id, invitation_code_id)
+                finally:
+                    _db.close()
+            success, error_msg = await asyncio.to_thread(_use_invitation_sync)
+            if success:
+                logger.info(f"邀请码奖励发放成功: 用户 {new_user.id}, 邀请码ID {invitation_code_id}")
+            else:
+                logger.warning(f"邀请码奖励发放失败: {error_msg}")
         
         # 开发环境：用户注册成功，无需邮箱验证
         logger.info(f"用户注册成功（开发环境）: user_id={new_user.id}, email={validated_data['email']}")
@@ -493,13 +497,15 @@ async def register(
         # 创建待验证用户（这里需要同步操作，因为EmailVerificationManager使用同步数据库）
         user_data = schemas.UserCreate(**validated_data)
         
-        # 临时使用同步数据库操作创建待验证用户
-        from app.database import SessionLocal
-        sync_db = SessionLocal()
-        try:
-            pending_user = EmailVerificationManager.create_pending_user(sync_db, user_data, verification_token)
-        finally:
-            sync_db.close()
+        # 通过 asyncio.to_thread 在线程池中执行同步 DB 操作，避免阻塞事件循环
+        def _create_pending_user_sync():
+            from app.database import SessionLocal
+            _db = SessionLocal()
+            try:
+                return EmailVerificationManager.create_pending_user(_db, user_data, verification_token)
+            finally:
+                _db.close()
+        pending_user = await asyncio.to_thread(_create_pending_user_sync)
         
         # 发送验证邮件（新用户注册，默认使用英文，因为还没有用户记录，user_id为None）
         send_verification_email_with_token(background_tasks, validated_data['email'], verification_token, language='en', db=None, user_id=None)
@@ -5550,64 +5556,92 @@ def mark_chat_messages_read_api(
 # 已迁移到 admin_customer_service_routes.py: /admin/messages
 
 
-# 通知相关API
+# 通知相关API（已迁移为 async 以提升并发）
 @router.get("/notifications", response_model=list[schemas.NotificationOut])
 @cache_response(ttl=30, key_prefix="notifications")
-def get_notifications_api(
-    current_user=Depends(check_user_status),
-    db: Session = Depends(get_db),
-    limit: int = Query(20, ge=1, le=100),
+async def get_notifications_api(
+    current_user: models.User = Depends(get_current_user_secure_async_csrf),
+    db: AsyncSession = Depends(get_async_db_dependency),
+    page: int = Query(1, ge=1, description="页码（与 page_size 配套）"),
+    page_size: int = Query(20, ge=1, le=100, description="每页数量"),
+    limit: Optional[int] = Query(None, ge=1, le=100, description="兼容旧版：直接限制条数"),
 ):
-    from app.utils.notification_utils import enrich_notifications_with_task_id_sync
-    
-    notifications = crud.get_user_notifications(db, current_user.id, limit)
-    return enrich_notifications_with_task_id_sync(notifications, db)
+    """获取通知列表。支持 page+page_size（Flutter）或 limit（兼容）"""
+    from app.utils.notification_utils import enrich_notifications_with_task_id_async
+
+    if limit is not None:
+        skip, take = 0, limit
+    else:
+        skip, take = (page - 1) * page_size, page_size
+
+    notifications = await async_crud.async_notification_crud.get_user_notifications(
+        db, current_user.id, skip=skip, limit=take, unread_only=False
+    )
+    return await enrich_notifications_with_task_id_async(notifications, db)
 
 
 @router.get("/notifications/unread", response_model=list[schemas.NotificationOut])
-def get_unread_notifications_api(
-    current_user=Depends(check_user_status), db: Session = Depends(get_db)
+async def get_unread_notifications_api(
+    current_user: models.User = Depends(get_current_user_secure_async_csrf),
+    db: AsyncSession = Depends(get_async_db_dependency),
+    page: int = Query(1, ge=1),
+    page_size: int = Query(20, ge=1, le=100),
 ):
-    from app.utils.notification_utils import enrich_notifications_with_task_id_sync
-    
-    notifications = crud.get_unread_notifications(db, current_user.id)
-    return enrich_notifications_with_task_id_sync(notifications, db)
+    """获取未读通知，支持分页（Flutter 传 page、page_size）"""
+    from app.utils.notification_utils import enrich_notifications_with_task_id_async
+
+    notifications = await async_crud.async_notification_crud.get_user_notifications(
+        db, current_user.id, skip=(page - 1) * page_size, limit=page_size, unread_only=True
+    )
+    return await enrich_notifications_with_task_id_async(notifications, db)
 
 
 @router.get("/notifications/with-recent-read", response_model=list[schemas.NotificationOut])
-def get_notifications_with_recent_read_api(
-    current_user=Depends(check_user_status), 
-    db: Session = Depends(get_db),
+async def get_notifications_with_recent_read_api(
+    current_user: models.User = Depends(get_current_user_secure_async_csrf),
+    db: AsyncSession = Depends(get_async_db_dependency),
     recent_read_limit: int = Query(10, ge=1, le=100),
 ):
     """获取所有未读通知和最近N条已读通知"""
-    from app.utils.notification_utils import enrich_notifications_with_task_id_sync
-    
-    notifications = crud.get_notifications_with_recent_read(db, current_user.id, recent_read_limit)
-    return enrich_notifications_with_task_id_sync(notifications, db)
+    from app.utils.notification_utils import enrich_notifications_with_task_id_async
+
+    notifications = await async_crud.async_notification_crud.get_notifications_with_recent_read(
+        db, current_user.id, recent_read_limit
+    )
+    return await enrich_notifications_with_task_id_async(notifications, db)
 
 
 @router.get("/notifications/unread/count")
 @cache_response(ttl=30, key_prefix="notifications")
-def get_unread_notification_count_api(
-    current_user=Depends(check_user_status), db: Session = Depends(get_db)
+async def get_unread_notification_count_api(
+    current_user: models.User = Depends(get_current_user_secure_async_csrf),
+    db: AsyncSession = Depends(get_async_db_dependency),
 ):
-    return {"unread_count": crud.get_unread_notification_count(db, current_user.id)}
+    count = await async_crud.async_notification_crud.get_unread_notification_count(
+        db, current_user.id
+    )
+    return {"unread_count": count}
 
 
 @router.post(
     "/notifications/{notification_id}/read", response_model=schemas.NotificationOut
 )
-def mark_notification_read_api(
+async def mark_notification_read_api(
     notification_id: int,
-    current_user=Depends(get_current_user_secure_sync_csrf),
-    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user_secure_async_csrf),
+    db: AsyncSession = Depends(get_async_db_dependency),
 ):
-    from app.utils.notification_utils import enrich_notification_dict_with_task_id_sync
-    
-    notification = crud.mark_notification_read(db, notification_id, current_user.id)
+    from app.utils.notification_utils import enrich_notification_dict_with_task_id_async
+
+    notification = await async_crud.async_notification_crud.mark_notification_as_read(
+        db, notification_id, current_user.id
+    )
+    if not notification:
+        raise HTTPException(status_code=404, detail="Notification not found")
     notification_dict = schemas.NotificationOut.model_validate(notification).model_dump()
-    enriched_dict = enrich_notification_dict_with_task_id_sync(notification, notification_dict, db)
+    enriched_dict = await enrich_notification_dict_with_task_id_async(
+        notification, notification_dict, db
+    )
     return schemas.NotificationOut(**enriched_dict)
 
 
@@ -5919,19 +5953,22 @@ def delete_user_account(
 
 
 @router.post("/notifications/read-all")
-def mark_all_notifications_read_api(
-    current_user=Depends(get_current_user_secure_sync_csrf), db: Session = Depends(get_db)
+async def mark_all_notifications_read_api(
+    current_user: models.User = Depends(get_current_user_secure_async_csrf),
+    db: AsyncSession = Depends(get_async_db_dependency),
 ):
     """
     标记主通知系统的所有通知为已读
-    
+
     注意：此端点仅处理主通知系统（Notification 模型）。
     论坛通知系统（ForumNotification 模型）有独立的端点：
     PUT /api/forum/notifications/read-all（定义在 forum_routes.py）
-    
+
     两个通知系统是独立设计的，请勿合并。
     """
-    crud.mark_all_notifications_read(db, current_user.id)
+    await async_crud.async_notification_crud.mark_all_notifications_read(
+        db, current_user.id
+    )
     return {"message": "All notifications marked as read"}
 
 
