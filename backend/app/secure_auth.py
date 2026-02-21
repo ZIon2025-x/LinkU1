@@ -539,6 +539,32 @@ def get_client_ip(request: Request) -> str:
         return forwarded_for.split(",")[0].strip()
     return request.client.host if request.client else "unknown"
 
+def _normalize_user_agent(user_agent: str, request: Request) -> str:
+    """
+    归一化 User-Agent，消除同一设备因不同网络层产生的 UA 差异。
+    
+    iOS 同一设备会交替发送两种 UA：
+      - "Link2Ur-iOS/1.0"（应用层 URLSession 配置的自定义 UA）
+      - "Link2Ur/1 CFNetwork/... Darwin/..."（系统底层 / WKWebView 的默认 UA）
+    两者指纹不同，导致设备指纹不停切换并产生大量 warning 日志。
+    
+    归一化规则：当 X-Platform 为 ios 且 UA 属于上述任一模式时，统一为 "Link2Ur-iOS"。
+    """
+    platform = (request.headers.get("x-platform") or "").lower()
+    ua_lower = user_agent.lower()
+    
+    if platform == "ios" or "link2ur" in ua_lower:
+        if ua_lower.startswith("link2ur-ios") or ua_lower.startswith("link2ur/"):
+            return "Link2Ur-iOS"
+        if "cfnetwork" in ua_lower and "darwin" in ua_lower:
+            return "Link2Ur-iOS"
+    
+    if platform == "android" and "link2ur" in ua_lower:
+        return "Link2Ur-Android"
+    
+    return user_agent
+
+
 def get_device_fingerprint(request: Request) -> str:
     """
     生成设备指纹
@@ -554,14 +580,11 @@ def get_device_fingerprint(request: Request) -> str:
     
     # 如果 User-Agent 为空，尝试使用其他头部信息
     if not user_agent:
-        # 尝试从其他头部获取信息
         accept_language = request.headers.get("accept-language", "")
         accept_encoding = request.headers.get("accept-encoding", "")
         device_string = f"unknown|{accept_language}|{accept_encoding}"
     else:
-        # 只使用 User-Agent，这是最稳定的特征
-        # 移除可能变化的部分（如扩展信息），但保留核心信息
-        device_string = user_agent
+        device_string = _normalize_user_agent(user_agent, request)
     
     # 生成哈希指纹
     return hashlib.sha256(device_string.encode()).hexdigest()[:16]
@@ -820,13 +843,14 @@ def validate_session(request: Request) -> Optional[SessionInfo]:
     # ========== 验证User-Agent（作为额外的安全检查）==========
     current_user_agent = request.headers.get("user-agent", "")
     if session.user_agent and current_user_agent and session.user_agent != current_user_agent:
-        # User-Agent不匹配，记录警告但不强制拒绝（因为某些浏览器可能会更新User-Agent）
-        logger.warning(f"[SECURE_AUTH] User-Agent不匹配 - session: {session_id[:8]}...")
-        logger.warning(f"  会话User-Agent: {session.user_agent[:100]}")
-        logger.warning(f"  当前User-Agent: {current_user_agent[:100]}")
-        # 更新User-Agent（允许浏览器更新）
-        session.user_agent = current_user_agent
-        SecureAuthManager.update_session(session_id, session)
+        normalized_session_ua = _normalize_user_agent(session.user_agent, request)
+        normalized_current_ua = _normalize_user_agent(current_user_agent, request)
+        if normalized_session_ua != normalized_current_ua:
+            logger.warning(f"[SECURE_AUTH] User-Agent不匹配 - session: {session_id[:8]}...")
+            logger.warning(f"  会话User-Agent: {session.user_agent[:100]}")
+            logger.warning(f"  当前User-Agent: {current_user_agent[:100]}")
+            session.user_agent = current_user_agent
+            SecureAuthManager.update_session(session_id, session)
     
     logger.debug(f"[SECURE_AUTH] 会话验证通过 - session: {session_id[:8]}..., user: {session.user_id}, IP: {current_ip}")
     return session
