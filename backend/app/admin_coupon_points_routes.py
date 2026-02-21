@@ -89,7 +89,7 @@ def create_coupon(
         # 生成唯一代码：COUPON + 时间戳 + 随机数
         import random
         import string
-        timestamp = int(datetime.now(tz).timestamp())
+        timestamp = int(datetime.now(tz.utc).timestamp())
         random_suffix = ''.join(random.choices(string.ascii_uppercase + string.digits, k=4))
         coupon_code = f"COUPON{timestamp}{random_suffix}"
         # 确保代码唯一

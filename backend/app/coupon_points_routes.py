@@ -304,39 +304,44 @@ def claim_coupon_api(
     if request.coupon_id:
         coupon_id = request.coupon_id
     elif request.promotion_code:
-        # 通过兑换码查找优惠券
+        # 优先通过 PromotionCode 表查找（邀请码/活动码）
         promo_code = db.query(models.PromotionCode).filter(
             models.PromotionCode.code.ilike(request.promotion_code),
             models.PromotionCode.is_active == True
         ).first()
         
-        if not promo_code:
-            raise HTTPException(status_code=404, detail="兑换码无效或已失效")
-        
-        # 检查兑换码有效期
-        now = get_utc_time()
-        if promo_code.valid_from > now or promo_code.valid_until < now:
-            raise HTTPException(status_code=400, detail="兑换码不在有效期内")
-        
-        # 检查兑换码使用次数
-        if promo_code.max_uses:
-            used_count = db.query(models.UserCoupon).filter(
-                models.UserCoupon.promotion_code_id == promo_code.id
-            ).count()
-            if used_count >= promo_code.max_uses:
-                raise HTTPException(status_code=400, detail="兑换码已达到使用上限")
-        
-        # 检查用户是否已使用过此兑换码
-        if promo_code.per_user_limit:
-            user_used_count = db.query(models.UserCoupon).filter(
-                models.UserCoupon.user_id == current_user.id,
-                models.UserCoupon.promotion_code_id == promo_code.id
-            ).count()
-            if user_used_count >= promo_code.per_user_limit:
-                raise HTTPException(status_code=400, detail="您已使用过此兑换码")
-        
-        coupon_id = promo_code.coupon_id
-        promotion_code_id = promo_code.id
+        if promo_code:
+            # 检查兑换码有效期
+            now = get_utc_time()
+            if promo_code.valid_from > now or promo_code.valid_until < now:
+                raise HTTPException(status_code=400, detail="兑换码不在有效期内")
+            
+            # 检查兑换码使用次数
+            if promo_code.max_uses:
+                used_count = db.query(models.UserCoupon).filter(
+                    models.UserCoupon.promotion_code_id == promo_code.id
+                ).count()
+                if used_count >= promo_code.max_uses:
+                    raise HTTPException(status_code=400, detail="兑换码已达到使用上限")
+            
+            # 检查用户是否已使用过此兑换码
+            if promo_code.per_user_limit:
+                user_used_count = db.query(models.UserCoupon).filter(
+                    models.UserCoupon.user_id == current_user.id,
+                    models.UserCoupon.promotion_code_id == promo_code.id
+                ).count()
+                if user_used_count >= promo_code.per_user_limit:
+                    raise HTTPException(status_code=400, detail="您已使用过此兑换码")
+            
+            coupon_id = promo_code.coupon_id
+            promotion_code_id = promo_code.id
+        else:
+            # 回退：按优惠券自身代码查找（管理员创建的券可填代码，无 PromotionCode 记录）
+            coupon_by_code = get_coupon_by_code(db, request.promotion_code.strip())
+            if not coupon_by_code:
+                raise HTTPException(status_code=404, detail="兑换码无效或已失效")
+            coupon_id = coupon_by_code.id
+            # promotion_code_id 保持 None
     else:
         raise HTTPException(status_code=400, detail="必须提供coupon_id或promotion_code")
     
