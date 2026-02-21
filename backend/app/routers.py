@@ -464,12 +464,14 @@ async def register(
         
         # 处理邀请码奖励（开发环境：用户创建成功后立即发放）
         if invitation_code_id:
+            _user_id_str = new_user.id  # str, 提前提取基本类型，避免 ORM 对象跨线程访问
+            _inv_code_id = invitation_code_id
             def _use_invitation_sync():
                 from app.database import SessionLocal
                 from app.coupon_points_crud import use_invitation_code
                 _db = SessionLocal()
                 try:
-                    return use_invitation_code(_db, new_user.id, invitation_code_id)
+                    return use_invitation_code(_db, _user_id_str, _inv_code_id)
                 finally:
                     _db.close()
             success, error_msg = await asyncio.to_thread(_use_invitation_sync)
@@ -505,7 +507,7 @@ async def register(
                 return EmailVerificationManager.create_pending_user(_db, user_data, verification_token)
             finally:
                 _db.close()
-        pending_user = await asyncio.to_thread(_create_pending_user_sync)
+        await asyncio.to_thread(_create_pending_user_sync)
         
         # 发送验证邮件（新用户注册，默认使用英文，因为还没有用户记录，user_id为None）
         send_verification_email_with_token(background_tasks, validated_data['email'], verification_token, language='en', db=None, user_id=None)
