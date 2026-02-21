@@ -62,13 +62,20 @@ normalize_phone_number = StringValidator.normalize_phone
 secure_auth_router = APIRouter(prefix="/api/secure-auth", tags=["安全认证"])
 
 @secure_auth_router.get("/captcha-site-key", response_model=Dict[str, Any])
-def get_captcha_site_key():
-    """获取 CAPTCHA site key（前端使用）"""
+def get_captcha_site_key(request: Request):
+    """获取 CAPTCHA site key（前端使用）。移动端请求返回 enabled=false，不展示人机验证界面。"""
     site_key = captcha_verifier.get_site_key()
-    logger.info(f"CAPTCHA 配置查询: enabled={captcha_verifier.is_enabled()}, type={'recaptcha' if captcha_verifier.use_recaptcha else 'hcaptcha' if captcha_verifier.use_hcaptcha else None}, site_key前10字符={site_key[:10] if site_key else 'N/A'}")
+    backend_enabled = captcha_verifier.is_enabled()
+    is_mobile = is_mobile_app_request(request)
+    # 移动端应用不展示 CAPTCHA（避免 WebView 显示不全/被遮挡），发送验证码时后端已豁免校验
+    effective_enabled = backend_enabled and not is_mobile
+    logger.info(
+        f"CAPTCHA 配置查询: 后端enabled={backend_enabled}, 移动端={is_mobile}, "
+        f"返回enabled={effective_enabled}, type={'recaptcha' if captcha_verifier.use_recaptcha else 'hcaptcha' if captcha_verifier.use_hcaptcha else None}"
+    )
     return {
         "site_key": site_key,
-        "enabled": captcha_verifier.is_enabled(),
+        "enabled": effective_enabled,
         "type": "recaptcha" if captcha_verifier.use_recaptcha else "hcaptcha" if captcha_verifier.use_hcaptcha else None
     }
 

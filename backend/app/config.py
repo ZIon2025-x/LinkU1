@@ -75,6 +75,7 @@ class Config:
     TWILIO_VERIFY_SERVICE_SID = os.getenv("TWILIO_VERIFY_SERVICE_SID", None)  # Verify API 需要（不需要购买手机号，推荐）
     
     # CAPTCHA 配置
+    # CAPTCHA_DISABLED=true 可临时关闭所有人机验证（无需移除密钥）
     RECAPTCHA_SECRET_KEY = os.getenv("RECAPTCHA_SECRET_KEY", None)  # Google reCAPTCHA v3 Secret Key
     RECAPTCHA_SITE_KEY = os.getenv("RECAPTCHA_SITE_KEY", None)  # Google reCAPTCHA v3 Site Key
     HCAPTCHA_SECRET_KEY = os.getenv("HCAPTCHA_SECRET_KEY", None)  # hCaptcha Secret Key

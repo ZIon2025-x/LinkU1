@@ -12,10 +12,18 @@ from fastapi import HTTPException, status
 logger = logging.getLogger(__name__)
 
 
+def _is_captcha_disabled_by_env() -> bool:
+    """CAPTCHA_DISABLED=true 时临时关闭所有人机验证（便于排查问题或紧急恢复体验）"""
+    val = os.getenv("CAPTCHA_DISABLED", "").strip().lower()
+    return val in ("true", "1", "yes", "on", "disabled")
+
 class CaptchaVerifier:
     """CAPTCHA 验证器"""
     
     def __init__(self):
+        self._force_disabled = _is_captcha_disabled_by_env()
+        if self._force_disabled:
+            logger.warning("CAPTCHA: 已通过 CAPTCHA_DISABLED 环境变量临时禁用")
         # Google reCAPTCHA v2 配置（交互式验证）
         self.recaptcha_secret_key = os.getenv("RECAPTCHA_SECRET_KEY", None)
         self.recaptcha_site_key = os.getenv("RECAPTCHA_SITE_KEY", None)
@@ -27,8 +35,8 @@ class CaptchaVerifier:
         self.hcaptcha_enabled = bool(self.hcaptcha_secret_key and self.hcaptcha_site_key)
         
         # 默认使用 reCAPTCHA，如果没有配置则使用 hCaptcha
-        self.use_recaptcha = self.recaptcha_enabled
-        self.use_hcaptcha = self.hcaptcha_enabled and not self.recaptcha_enabled
+        self.use_recaptcha = self.recaptcha_enabled and not self._force_disabled
+        self.use_hcaptcha = (self.hcaptcha_enabled and not self.recaptcha_enabled) and not self._force_disabled
         
         if self.use_recaptcha:
             logger.info(f"CAPTCHA: 使用 Google reCAPTCHA v2（交互式验证）")
@@ -126,7 +134,10 @@ class CaptchaVerifier:
     
     def verify(self, token: str, remote_ip: Optional[str] = None) -> Dict[str, Any]:
         """验证 CAPTCHA token（自动选择服务）"""
-        # 开发环境：如果没有配置 CAPTCHA，允许通过
+        # CAPTCHA_DISABLED 时始终通过
+        if self._force_disabled:
+            return {"success": True, "bypass": True}
+        # 未配置 CAPTCHA 时：开发环境通过，生产环境拒绝
         if not self.use_recaptcha and not self.use_hcaptcha:
             env = os.getenv("ENVIRONMENT", "development")
             if env == "development":
