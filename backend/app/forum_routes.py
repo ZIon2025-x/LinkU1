@@ -2571,6 +2571,7 @@ async def delete_category(
 
 @router.get("/posts", response_model=schemas.ForumPostListResponse)
 @measure_api_performance("list_forum_posts")
+@cache_response(ttl=60, key_prefix="forum")
 async def get_posts(
     category_id: Optional[int] = Query(None),
     page: int = Query(1, ge=1),
@@ -3092,6 +3093,11 @@ async def create_post(
     await db.commit()
     await db.refresh(db_post)
     
+    # 失效帖子列表 + 发现页缓存
+    from app.redis_cache import invalidate_forum_cache, invalidate_discovery_cache
+    invalidate_forum_cache()
+    invalidate_discovery_cache()
+    
     # 加载关联数据
     await db.refresh(db_post, ["category"])
     if db_post.author_id:
@@ -3432,6 +3438,10 @@ async def delete_post(
         await update_category_stats(db_post.category_id, db)
     
     await db.commit()
+    
+    from app.redis_cache import invalidate_forum_cache, invalidate_discovery_cache
+    invalidate_forum_cache()
+    invalidate_discovery_cache()
     
     return {"message": "帖子删除成功"}
 

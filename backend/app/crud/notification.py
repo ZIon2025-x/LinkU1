@@ -53,6 +53,11 @@ def create_notification(
         if auto_commit:
             db.commit()
             db.refresh(notification)
+            try:
+                from app.redis_cache import invalidate_notification_cache
+                invalidate_notification_cache(user_id)
+            except Exception:
+                pass
         return notification
     except IntegrityError:
         if auto_commit:
@@ -151,6 +156,11 @@ def mark_notification_read(db: Session, notification_id: int, user_id: str):
         notification.is_read = 1
         db.commit()
         db.refresh(notification)
+        try:
+            from app.redis_cache import invalidate_notification_cache
+            invalidate_notification_cache(user_id)
+        except Exception:
+            pass
     return notification
 
 
@@ -159,3 +169,8 @@ def mark_all_notifications_read(db: Session, user_id: str):
         Notification.user_id == user_id, Notification.is_read == 0
     ).update({Notification.is_read: 1})
     db.commit()
+    try:
+        from app.redis_cache import invalidate_notification_cache
+        invalidate_notification_cache(user_id)
+    except Exception:
+        pass

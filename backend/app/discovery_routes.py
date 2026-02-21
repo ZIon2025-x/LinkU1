@@ -18,6 +18,7 @@ from sqlalchemy.orm import selectinload
 from app import models, schemas
 from app.deps import get_async_db_dependency
 from app.forum_routes import get_current_user_optional, visible_forums
+from app.cache import cache_response
 
 logger = logging.getLogger(__name__)
 
@@ -27,6 +28,7 @@ router = APIRouter(prefix="/api/discovery", tags=["发现"])
 # ==================== Feed 聚合接口 ====================
 
 @router.get("/feed")
+@cache_response(ttl=120, key_prefix="discovery")
 async def get_discovery_feed(
     page: int = Query(1, ge=1, description="页码"),
     limit: int = Query(20, ge=1, le=50, description="每页数量"),

@@ -19,6 +19,7 @@ from app.deps import get_async_db_dependency
 from app import models, schemas
 from app.utils.time_utils import get_utc_time
 from app.rate_limiting import rate_limit
+from app.cache import cache_response
 from app.config import Config
 
 logger = logging.getLogger(__name__)
@@ -630,6 +631,7 @@ async def apply_leaderboard(
 # ==================== 榜单列表 ====================
 
 @router.get("", response_model=schemas.CustomLeaderboardListResponse)
+@cache_response(ttl=120, key_prefix="leaderboard")
 async def get_leaderboards(
     location: Optional[str] = Query(None, description="地区筛选"),
     status: Optional[str] = Query("active", description="状态筛选：active（公开接口仅支持active）"),
@@ -767,6 +769,7 @@ async def get_leaderboards(
 # ==================== 榜单详情 ====================
 
 @router.get("/{leaderboard_id}", response_model=schemas.CustomLeaderboardOut)
+@cache_response(ttl=300, key_prefix="leaderboard")
 async def get_leaderboard_detail(
     leaderboard_id: int,
     db: AsyncSession = Depends(get_async_db_dependency),
@@ -1198,6 +1201,11 @@ async def submit_item(
         except Exception as e:
             logger.warning(f"移动竞品图片失败: {e}")
     
+    # 失效排行榜缓存
+    from app.redis_cache import invalidate_leaderboard_cache, invalidate_discovery_cache
+    invalidate_leaderboard_cache()
+    invalidate_discovery_cache()
+    
     # 构建返回数据，解析images字段
     images_list = None
     if new_item.images:
@@ -1206,7 +1214,6 @@ async def submit_item(
         except Exception:
             images_list = None
     
-    # 确保 created_at 和 updated_at 不为 None（处理旧数据）
     created_at = new_item.created_at if new_item.created_at is not None else get_utc_time()
     updated_at = new_item.updated_at if new_item.updated_at is not None else get_utc_time()
     
@@ -1814,6 +1821,9 @@ async def vote_item(
     calculate_vote_score(item)
     
     await db.commit()
+    
+    from app.redis_cache import invalidate_leaderboard_cache
+    invalidate_leaderboard_cache()
     
     # 重新查询当前用户的投票记录（投票后可能已更新）
     user_vote = None

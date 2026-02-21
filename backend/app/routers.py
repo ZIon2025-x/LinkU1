@@ -5552,6 +5552,7 @@ def mark_chat_messages_read_api(
 
 # 通知相关API
 @router.get("/notifications", response_model=list[schemas.NotificationOut])
+@cache_response(ttl=30, key_prefix="notifications")
 def get_notifications_api(
     current_user=Depends(check_user_status),
     db: Session = Depends(get_db),
@@ -5587,6 +5588,7 @@ def get_notifications_with_recent_read_api(
 
 
 @router.get("/notifications/unread/count")
+@cache_response(ttl=30, key_prefix="notifications")
 def get_unread_notification_count_api(
     current_user=Depends(check_user_status), db: Session = Depends(get_db)
 ):

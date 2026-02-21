@@ -53,17 +53,17 @@ def cache_response(ttl: int = 300, key_prefix: str = "cache"):
         async def async_wrapper(*args, **kwargs):
             redis_client = get_redis_client()
             if not redis_client:
-                # Redis不可用时，直接执行函数
                 return await func(*args, **kwargs)
             
             try:
-                # 生成缓存键（基于函数名和参数）
-                # 排除request对象（不可序列化）
-                cache_params = {
-                    k: v for k, v in kwargs.items() 
-                    if k != 'request' and k != 'db' and not k.startswith('_')
-                }
-                # 将参数转换为可序列化的格式
+                cache_params = {}
+                for k, v in kwargs.items():
+                    if k in ('request', 'db') or k.startswith('_'):
+                        continue
+                    if k == 'current_user':
+                        cache_params['_uid'] = getattr(v, 'id', None) if v else None
+                        continue
+                    cache_params[k] = v
                 params_str = json.dumps(cache_params, sort_keys=True, default=str)
                 cache_key = f"{key_prefix}:{func.__name__}:{hashlib.md5(params_str.encode()).hexdigest()}"
                 
@@ -107,15 +107,17 @@ def cache_response(ttl: int = 300, key_prefix: str = "cache"):
         def sync_wrapper(*args, **kwargs):
             redis_client = get_redis_client()
             if not redis_client:
-                # Redis不可用时，直接执行函数
                 return func(*args, **kwargs)
             
             try:
-                # 生成缓存键
-                cache_params = {
-                    k: v for k, v in kwargs.items() 
-                    if k != 'request' and k != 'db' and not k.startswith('_')
-                }
+                cache_params = {}
+                for k, v in kwargs.items():
+                    if k in ('request', 'db') or k.startswith('_'):
+                        continue
+                    if k == 'current_user':
+                        cache_params['_uid'] = getattr(v, 'id', None) if v else None
+                        continue
+                    cache_params[k] = v
                 params_str = json.dumps(cache_params, sort_keys=True, default=str)
                 cache_key = f"{key_prefix}:{func.__name__}:{hashlib.md5(params_str.encode()).hexdigest()}"
                 

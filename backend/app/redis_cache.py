@@ -454,6 +454,63 @@ def invalidate_tasks_cache():
     redis_cache.delete_pattern(f"{CACHE_PREFIXES['TASKS']}:*")
     redis_cache.delete_pattern(f"{CACHE_PREFIXES['TASK_DETAIL']}:*")
 
+
+# ==================== 用户维度缓存 ====================
+
+def get_user_cache(prefix: str, user_id: str, params: Optional[dict] = None) -> Optional[Any]:
+    """获取用户维度的缓存数据"""
+    import hashlib
+    suffix = ""
+    if params:
+        import json
+        suffix = ":" + hashlib.md5(json.dumps(params, sort_keys=True, default=str).encode()).hexdigest()[:12]
+    return redis_cache.get(f"{prefix}:{user_id}{suffix}")
+
+
+def set_user_cache(prefix: str, user_id: str, data: Any, ttl: int = 30, params: Optional[dict] = None) -> bool:
+    """设置用户维度的缓存数据"""
+    import hashlib
+    suffix = ""
+    if params:
+        import json
+        suffix = ":" + hashlib.md5(json.dumps(params, sort_keys=True, default=str).encode()).hexdigest()[:12]
+    return redis_cache.set(f"{prefix}:{user_id}{suffix}", data, ttl)
+
+
+def invalidate_user_dimension_cache(prefix: str, user_id: str):
+    """失效用户维度的所有缓存（按前缀+用户ID模式清除）"""
+    redis_cache.delete_pattern(f"{prefix}:{user_id}*")
+
+
+def invalidate_task_chat_cache(user_id: str):
+    """失效任务聊天相关缓存（列表 + 未读数）"""
+    invalidate_user_dimension_cache("task_chats", user_id)
+    invalidate_user_dimension_cache("task_chats_unread", user_id)
+
+
+def invalidate_notification_cache(user_id: str):
+    """失效通知列表缓存"""
+    invalidate_user_dimension_cache("notifications", user_id)
+
+
+def invalidate_forum_cache():
+    """失效论坛帖子列表缓存"""
+    from app.cache import invalidate_cache
+    invalidate_cache("forum:*")
+
+
+def invalidate_leaderboard_cache():
+    """失效排行榜缓存"""
+    from app.cache import invalidate_cache
+    invalidate_cache("leaderboard:*")
+
+
+def invalidate_discovery_cache():
+    """失效发现页缓存"""
+    from app.cache import invalidate_cache
+    invalidate_cache("discovery:*")
+
+
 def get_redis_client():
     """获取Redis客户端实例"""
     return redis_cache.redis_client if redis_cache.enabled else None

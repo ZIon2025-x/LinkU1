@@ -37,13 +37,8 @@ def get_user_by_id(db: Session, user_id: str):
     cached_user = get_user_info(user_id)
 
     if cached_user and isinstance(cached_user, dict):
-        user = db.query(models.User).filter(models.User.id == user_id).first()
-        if user:
-            cache_user_info(user_id, user)
-        return user
-
-    if cached_user and hasattr(cached_user, "__table__"):
-        return cached_user
+        # 缓存命中但为 dict：仍需查 DB 获取 ORM 对象（不重复写缓存）
+        return db.query(models.User).filter(models.User.id == user_id).first()
 
     user = db.query(models.User).filter(models.User.id == user_id).first()
     if user:

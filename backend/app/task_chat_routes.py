@@ -76,6 +76,13 @@ async def get_task_chat_list(
     返回当前用户作为发布者或接受者的所有任务，包含未读计数和最后消息
     """
     try:
+        # Redis 缓存：用户维度，TTL 30 秒
+        from app.redis_cache import get_user_cache, set_user_cache
+        cache_params = {"limit": limit, "offset": offset}
+        cached = get_user_cache("task_chats", current_user.id, params=cache_params)
+        if cached is not None:
+            return cached
+
         # 查询用户相关的任务（作为发布者、接受者或多人任务参与者）
         # 获取所有相关的任务ID
         task_ids_set = set()
@@ -325,10 +332,12 @@ async def get_task_chat_list(
             }
             task_list.append(task_data)
         
-        return {
+        result = {
             "tasks": task_list,
             "total": total
         }
+        set_user_cache("task_chats", current_user.id, result, ttl=30, params=cache_params)
+        return result
     
     except Exception as e:
         logger.error(f"获取任务聊天列表失败: {e}")
@@ -348,6 +357,12 @@ async def get_task_chat_unread_count(
     返回当前用户所有任务聊天消息的未读总数
     """
     try:
+        # Redis 缓存：用户维度，TTL 30 秒
+        from app.redis_cache import get_user_cache, set_user_cache
+        cached = get_user_cache("task_chats_unread", current_user.id)
+        if cached is not None:
+            return cached
+
         from app.task_chat_business_logic import UnreadCountLogic
         
         # 查询用户相关的任务（作为发布者、接受者或多人任务参与者）
@@ -415,7 +430,9 @@ async def get_task_chat_unread_count(
         )
         total_unread = sum(unread_counts.values())
         
-        return {"unread_count": total_unread}
+        result = {"unread_count": total_unread}
+        set_user_cache("task_chats_unread", current_user.id, result, ttl=30)
+        return result
     
     except Exception as e:
         import traceback
@@ -1033,8 +1050,12 @@ async def send_task_message(
             # WebSocket广播失败不应该影响消息发送
             logger.error(f"Failed to broadcast task message via WebSocket: {e}", exc_info=True)
         
-        # 确保 sender_id 为字符串，与 iOS Message 模型 decodeIfPresent(String.self) 兼容；
-        # 补全 message_type、is_read、sender_name、sender_avatar，与 GET 消息格式一致，便于发送后即展示
+        # 失效所有参与者的聊天列表 + 未读数缓存
+        from app.redis_cache import invalidate_task_chat_cache
+        for pid in participant_ids:
+            invalidate_task_chat_cache(pid)
+        invalidate_task_chat_cache(current_user.id)
+
         return {
             "id": new_message.id,
             "sender_id": str(new_message.sender_id) if new_message.sender_id is not None else None,
@@ -1271,6 +1292,10 @@ async def mark_messages_read(
                     db.add(new_cursor)
         
         await db.commit()
+        
+        # 失效当前用户的聊天列表 + 未读数缓存
+        from app.redis_cache import invalidate_task_chat_cache
+        invalidate_task_chat_cache(current_user.id)
         
         return {
             "marked_count": marked_count,
