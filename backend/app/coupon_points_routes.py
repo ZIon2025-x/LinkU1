@@ -398,7 +398,10 @@ def get_my_coupons(
                 "discount_value": coupon.discount_value,
                 "discount_value_display": discount_value_display,
                 "min_amount": coupon.min_amount,
-                "min_amount_display": min_amount_display
+                "min_amount_display": min_amount_display,
+                "currency": getattr(coupon, "currency", None) or "GBP",
+                "valid_until": coupon.valid_until,
+                "usage_conditions": getattr(coupon, "usage_conditions", None)
             },
             "status": uc.status,
             "obtained_at": uc.obtained_at,
