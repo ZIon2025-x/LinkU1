@@ -7,7 +7,7 @@ if [ "$CELERY_TYPE" = "beat" ]; then
     celery -A app.celery_app beat --loglevel=info
 elif [ "$CELERY_TYPE" = "worker" ]; then
     echo "Starting Celery Worker..."
-    celery -A app.celery_app worker --loglevel=info --concurrency=2
+    celery -A app.celery_app worker --loglevel=info --concurrency=${CELERY_CONCURRENCY:-4}
 else
     echo "Error: CELERY_TYPE environment variable must be set to 'worker' or 'beat'"
     exit 1
