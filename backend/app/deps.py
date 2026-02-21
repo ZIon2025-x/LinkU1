@@ -455,6 +455,108 @@ def get_current_user_secure_sync_csrf(
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="认证失败")
 
 
+# CSRF保护的异步认证依赖（用于 async 路由迁移）
+async def get_current_user_secure_async_csrf(
+    request: Request,
+    db: AsyncSession = Depends(get_async_db_dependency),
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(csrf_cookie_bearer),
+) -> models.User:
+    """CSRF保护的安全用户认证（异步版本）"""
+    from app.secure_auth import validate_session
+
+    session = validate_session(request)
+    if session:
+        user_id = session.user_id
+        user = await async_crud.async_user_crud.get_user_by_id(db, user_id)
+        if user:
+            if hasattr(user, "is_suspended") and user.is_suspended:
+                client_ip = get_client_ip(request)
+                log_security_event(
+                    "SUSPENDED_USER_ACCESS", user_id, client_ip, "被暂停用户尝试访问"
+                )
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN, detail="账户已被暂停"
+                )
+
+            if hasattr(user, "is_banned") and user.is_banned:
+                client_ip = get_client_ip(request)
+                log_security_event(
+                    "BANNED_USER_ACCESS", user_id, client_ip, "被封禁用户尝试访问"
+                )
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN, detail="账户已被封禁"
+                )
+
+            return user
+    else:
+        x_session_id = request.headers.get("X-Session-ID")
+        x_platform = request.headers.get("X-Platform")
+        x_app_signature = request.headers.get("X-App-Signature")
+        logger.warning(
+            "[AUTH] 会话认证失败 - URL: %s, X-Session-ID: %s, X-Platform: %s, X-App-Signature: %s",
+            request.url.path,
+            "已设置" if x_session_id else "未设置",
+            x_platform,
+            "已设置" if x_app_signature else "未设置",
+        )
+
+    # 会话认证失败，回退到 JWT 认证
+    if not credentials:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="未提供认证信息"
+        )
+
+    try:
+        payload = verify_token(credentials.credentials, "access")
+        user_id = payload.get("sub")
+
+        if not user_id:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED, detail="无效的token"
+            )
+
+        user = await async_crud.async_user_crud.get_user_by_id(db, user_id)
+        if not user:
+            client_ip = get_client_ip(request)
+            log_security_event(
+                "INVALID_USER", user_id, client_ip, "Token中的用户不存在"
+            )
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED, detail="用户不存在"
+            )
+
+        if hasattr(user, "is_suspended") and user.is_suspended:
+            client_ip = get_client_ip(request)
+            log_security_event(
+                "SUSPENDED_USER_ACCESS", user_id, client_ip, "被暂停用户尝试访问"
+            )
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN, detail="账户已被暂停"
+            )
+
+        if hasattr(user, "is_banned") and user.is_banned:
+            client_ip = get_client_ip(request)
+            log_security_event(
+                "BANNED_USER_ACCESS", user_id, client_ip, "被封禁用户尝试访问"
+            )
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN, detail="账户已被封禁"
+            )
+
+        return user
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        client_ip = get_client_ip(request)
+        log_security_event(
+            "AUTH_ERROR", "unknown", client_ip, f"认证错误: {str(e)}"
+        )
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="认证失败"
+        )
+
+
 # 旧的JWT认证函数已删除，请使用新的会话认证系统
 
 

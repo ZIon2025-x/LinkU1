@@ -419,6 +419,7 @@ class AsyncTaskCRUD:
                     # query = query.order_by(func.ts_rank(ts_vector, ts_query).desc())
 
             # 排序（如果关键词搜索已经设置了排序，则跳过）
+            now_utc = get_utc_time()
             if not has_keyword_sort:
                 if sort_by == "latest":
                     # 优先显示新任务（24小时内）
@@ -446,7 +447,7 @@ class AsyncTaskCRUD:
                 elif sort_by == "deadline_desc":
                     query = query.order_by(models.Task.deadline.desc())
                 else:
-                    # 默认也支持新任务优先
+                    # 默认也支持新任务优先（now_utc 已在上一分支前定义）
                     from datetime import timedelta
                     from sqlalchemy import case
                     recent_24h = now_utc - timedelta(hours=24)
@@ -623,7 +624,7 @@ class AsyncTaskCRUD:
             # 尝试从缓存获取总数
             try:
                 # 使用异步Redis客户端（使用上下文管理器确保正确关闭）
-                import redis.asyncio as aioredis
+                import redis.asyncio as aioredis  # type: ignore[import-untyped]
                 redis_url = Config.REDIS_URL or f"redis://{Config.REDIS_HOST}:{Config.REDIS_PORT}/{Config.REDIS_DB}"
                 
                 async with aioredis.from_url(redis_url, decode_responses=True) as async_redis:
@@ -1698,14 +1699,93 @@ class AsyncNotificationCRUD:
             return []
 
     @staticmethod
+    async def get_unread_notifications(
+        db: AsyncSession, user_id: str
+    ) -> List[models.Notification]:
+        """获取用户所有未读通知"""
+        try:
+            result = await db.execute(
+                select(models.Notification)
+                .where(
+                    models.Notification.user_id == user_id,
+                    models.Notification.is_read == 0,
+                )
+                .order_by(models.Notification.created_at.desc())
+            )
+            return list(result.scalars().all())
+        except Exception as e:
+            logger.error(f"Error getting unread notifications for user {user_id}: {e}")
+            return []
+
+    @staticmethod
+    async def get_unread_notification_count(
+        db: AsyncSession, user_id: str
+    ) -> int:
+        """获取用户未读通知数量"""
+        try:
+            from sqlalchemy import func
+            result = await db.execute(
+                select(func.count()).select_from(models.Notification).where(
+                    models.Notification.user_id == user_id,
+                    models.Notification.is_read == 0,
+                )
+            )
+            return result.scalar() or 0
+        except Exception as e:
+            logger.error(f"Error getting unread count for user {user_id}: {e}")
+            return 0
+
+    @staticmethod
+    async def get_notifications_with_recent_read(
+        db: AsyncSession, user_id: str, recent_read_limit: int = 10
+    ) -> List[models.Notification]:
+        """获取所有未读通知和最近N条已读通知"""
+        try:
+            unread_result = await db.execute(
+                select(models.Notification)
+                .where(
+                    models.Notification.user_id == user_id,
+                    models.Notification.is_read == 0,
+                )
+                .order_by(models.Notification.created_at.desc())
+            )
+            unread_notifications = list(unread_result.scalars().all())
+
+            recent_read_result = await db.execute(
+                select(models.Notification)
+                .where(
+                    models.Notification.user_id == user_id,
+                    models.Notification.is_read == 1,
+                )
+                .order_by(models.Notification.created_at.desc())
+                .limit(recent_read_limit)
+            )
+            recent_read_notifications = list(recent_read_result.scalars().all())
+
+            all_notifications = unread_notifications + recent_read_notifications
+            all_notifications.sort(
+                key=lambda x: x.created_at.timestamp() if x.created_at else 0,
+                reverse=True,
+            )
+            return all_notifications
+        except Exception as e:
+            logger.error(
+                f"Error getting notifications with recent read for user {user_id}: {e}"
+            )
+            return []
+
+    @staticmethod
     async def mark_notification_as_read(
-        db: AsyncSession, notification_id: int
+        db: AsyncSession, notification_id: int, user_id: str
     ) -> Optional[models.Notification]:
-        """标记通知为已读"""
+        """标记通知为已读（仅限本人）"""
         try:
             result = await db.execute(
                 update(models.Notification)
-                .where(models.Notification.id == notification_id)
+                .where(
+                    models.Notification.id == notification_id,
+                    models.Notification.user_id == user_id,
+                )
                 .values(is_read=1, read_at=get_utc_time())
                 .returning(models.Notification)
             )
@@ -1713,11 +1793,39 @@ class AsyncNotificationCRUD:
             if notification:
                 await db.commit()
                 await db.refresh(notification)
+                try:
+                    from app.redis_cache import invalidate_notification_cache
+                    invalidate_notification_cache(user_id)
+                except Exception:
+                    pass
             return notification
         except Exception as e:
             await db.rollback()
             logger.error(f"Error marking notification as read: {e}")
             return None
+
+    @staticmethod
+    async def mark_all_notifications_read(db: AsyncSession, user_id: str) -> None:
+        """标记用户所有通知为已读"""
+        try:
+            await db.execute(
+                update(models.Notification)
+                .where(
+                    models.Notification.user_id == user_id,
+                    models.Notification.is_read == 0,
+                )
+                .values(is_read=1)
+            )
+            await db.commit()
+            try:
+                from app.redis_cache import invalidate_notification_cache
+                invalidate_notification_cache(user_id)
+            except Exception:
+                pass
+        except Exception as e:
+            await db.rollback()
+            logger.error(f"Error marking all notifications as read: {e}")
+            raise
 
 
 # 批量操作工具

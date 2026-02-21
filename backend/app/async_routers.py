@@ -1107,45 +1107,7 @@ async def get_conversation_messages(
     return messages
 
 
-# 异步通知路由
-@async_router.get("/notifications", response_model=List[schemas.NotificationOut])
-async def get_notifications(
-    skip: int = Query(0, ge=0),
-    limit: int = Query(20, ge=1, le=100),
-    unread_only: bool = Query(False),
-    current_user: models.User = Depends(get_current_user_secure_async_csrf),
-    db: AsyncSession = Depends(get_async_db_dependency),
-):
-    """获取用户通知（异步版本）"""
-    notifications = await async_crud.async_notification_crud.get_user_notifications(
-        db, current_user.id, skip=skip, limit=limit, unread_only=unread_only
-    )
-    
-    # 对于任务相关通知，设置 task_id 字段
-    from app.utils.notification_utils import enrich_notifications_with_task_id_async
-    return await enrich_notifications_with_task_id_async(notifications, db)
-
-
-@async_router.put(
-    "/notifications/{notification_id}/read", response_model=schemas.NotificationOut
-)
-async def mark_notification_as_read(
-    notification_id: int,
-    current_user: models.User = Depends(get_current_user_secure_async_csrf),
-    db: AsyncSession = Depends(get_async_db_dependency),
-):
-    """标记通知为已读（异步版本）"""
-    from app.utils.notification_utils import enrich_notification_dict_with_task_id_async
-    
-    notification = await async_crud.async_notification_crud.mark_notification_as_read(
-        db, notification_id
-    )
-    if not notification:
-        raise HTTPException(status_code=404, detail="Notification not found")
-    
-    notification_dict = schemas.NotificationOut.model_validate(notification).model_dump()
-    enriched_dict = await enrich_notification_dict_with_task_id_async(notification, notification_dict, db)
-    return schemas.NotificationOut(**enriched_dict)
+# 通知路由已迁移至 routers.py（GET/POST /api/notifications、/api/users/notifications）
 
 
 # 系统监控路由
