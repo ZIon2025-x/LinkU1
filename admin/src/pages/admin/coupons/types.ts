@@ -41,17 +41,22 @@ export interface Coupon {
   discount_value: number;
   min_amount: number;
   max_discount?: number;
-  currency: string;
+  currency?: string;
   total_quantity?: number;
   used_quantity: number;
   remaining_quantity?: number;
-  per_user_limit: number;
-  can_combine: boolean;
+  per_user_limit?: number;
+  can_combine?: boolean;
   status: 'active' | 'inactive' | 'expired';
   valid_from: string;
   valid_until: string;
-  points_required: number;
+  points_required?: number;
   applicable_scenarios?: string[];
+  eligibility_type?: string;
+  eligibility_value?: string;
+  per_user_limit_window?: string;
+  per_user_per_window_limit?: number;
+  per_day_limit?: number;
   usage_conditions?: {
     task_types?: string[];
     locations?: string[];
@@ -59,8 +64,8 @@ export interface Coupon {
     min_task_amount?: number;
     max_task_amount?: number;
   };
-  created_at: string;
-  updated_at: string;
+  created_at?: string;
+  updated_at?: string;
 }
 
 // 获取默认有效期（当前时间 ~ 一个月后）

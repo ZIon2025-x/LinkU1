@@ -546,6 +546,9 @@ export interface CouponData {
   usage_conditions?: {
     locations?: string[];
     task_types?: string[];
+    excluded_task_types?: string[];
+    min_task_amount?: number;
+    max_task_amount?: number;
   };
   /** 积分兑换所需积分（0表示不支持积分兑换） */
   points_required?: number;
@@ -592,6 +595,9 @@ export const updateCoupon = async (couponId: number, data: {
   per_user_per_month_limit?: number;
   per_user_limit_window?: string;
   per_user_per_window_limit?: number;
+  per_day_limit?: number;
+  eligibility_type?: string;
+  eligibility_value?: string;
 }) => {
   const res = await api.put(`/api/admin/coupons/${couponId}`, data);
   return res.data;

@@ -57,11 +57,14 @@ export const CouponManagement: React.FC = () => {
         apply_order: values.apply_order || 0,
         valid_from: values.valid_from,
         valid_until: values.valid_until,
-        // usage_conditions 包含 locations, task_types
+        // usage_conditions 包含 locations, task_types, excluded_task_types, min_task_amount, max_task_amount
         usage_conditions: (() => {
           const conditions: any = {};
           if (values.task_types.length > 0) conditions.task_types = values.task_types;
           if (values.locations.length > 0) conditions.locations = values.locations;
+          if (values.excluded_task_types.length > 0) conditions.excluded_task_types = values.excluded_task_types;
+          if (values.min_task_amount != null && values.min_task_amount > 0) conditions.min_task_amount = values.min_task_amount;
+          if (values.max_task_amount != null && values.max_task_amount > 0) conditions.max_task_amount = values.max_task_amount;
           return Object.keys(conditions).length > 0 ? conditions : undefined;
         })(),
         // points_required 和 applicable_scenarios 是顶级字段
@@ -70,8 +73,8 @@ export const CouponManagement: React.FC = () => {
         per_device_limit: values.per_device_limit,
         per_ip_limit: values.per_ip_limit,
         per_day_limit: values.per_day_limit,
-        eligibility_type: values.eligibility_type || undefined,
-        eligibility_value: values.eligibility_value || undefined,
+        eligibility_type: values.eligibility_type ? values.eligibility_type : (isEdit ? '' : undefined),
+        eligibility_value: values.eligibility_value ? values.eligibility_value : (isEdit ? '' : undefined),
         per_user_limit_window: values.per_user_limit_window || undefined,
         per_user_per_window_limit: values.per_user_per_window_limit ?? undefined,
       };
@@ -108,6 +111,11 @@ export const CouponManagement: React.FC = () => {
 
   // 处理编辑
   const handleEdit = (coupon: Coupon) => {
+    const toDatetimeLocal = (v: string | undefined) => {
+      if (!v) return '';
+      const d = new Date(v);
+      return d.toISOString().slice(0, 16);
+    };
     const formData: CouponForm = {
       id: coupon.id,
       code: coupon.code,
@@ -115,24 +123,24 @@ export const CouponManagement: React.FC = () => {
       description: coupon.description || '',
       type: coupon.type,
       discount_value: coupon.discount_value,
-      min_amount: coupon.min_amount,
+      min_amount: coupon.min_amount ?? 0,
       max_discount: coupon.max_discount,
-      currency: coupon.currency,
+      currency: coupon.currency || 'GBP',
       total_quantity: coupon.total_quantity,
-      per_user_limit: coupon.per_user_limit,
+      per_user_limit: coupon.per_user_limit ?? 1,
       per_device_limit: undefined,
       per_ip_limit: undefined,
-      can_combine: coupon.can_combine,
+      can_combine: coupon.can_combine ?? false,
       combine_limit: 1,
       apply_order: 0,
-      valid_from: coupon.valid_from,
-      valid_until: coupon.valid_until,
-      points_required: coupon.points_required,
-      eligibility_type: '',
-      eligibility_value: '',
-      per_day_limit: undefined,
-      per_user_limit_window: '',
-      per_user_per_window_limit: undefined,
+      valid_from: toDatetimeLocal(coupon.valid_from),
+      valid_until: toDatetimeLocal(coupon.valid_until),
+      points_required: coupon.points_required ?? 0,
+      eligibility_type: (coupon.eligibility_type as CouponForm['eligibility_type']) || '',
+      eligibility_value: (coupon.eligibility_value as CouponForm['eligibility_value']) || '',
+      per_day_limit: coupon.per_day_limit,
+      per_user_limit_window: (coupon.per_user_limit_window as CouponForm['per_user_limit_window']) || '',
+      per_user_per_window_limit: coupon.per_user_per_window_limit,
       vat_category: '',
       applicable_scenarios: coupon.applicable_scenarios || [],
       task_types: coupon.usage_conditions?.task_types || [],

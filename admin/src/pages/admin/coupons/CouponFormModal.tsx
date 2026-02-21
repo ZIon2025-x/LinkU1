@@ -40,6 +40,30 @@ const APPLICABLE_SCENARIOS: { value: string; label: string }[] = [
   { value: 'all', label: '全部场景' },
 ];
 
+const ELIGIBILITY_TYPES: { value: string; label: string }[] = [
+  { value: '', label: '不限制' },
+  { value: 'member', label: '会员专属' },
+  { value: 'first_order', label: '首单专属' },
+  { value: 'new_user', label: '新用户专属' },
+  { value: 'user_type', label: '按用户类型' },
+  { value: 'all', label: '全部用户' },
+];
+
+const ELIGIBILITY_VALUES: { value: string; label: string }[] = [
+  { value: '', label: '—' },
+  { value: 'vip', label: 'VIP' },
+  { value: 'super', label: 'Super' },
+  { value: 'vip,super', label: 'VIP 或 Super' },
+];
+
+const LIMIT_WINDOWS: { value: string; label: string }[] = [
+  { value: '', label: '不限制' },
+  { value: 'day', label: '每天' },
+  { value: 'week', label: '每周' },
+  { value: 'month', label: '每月' },
+  { value: 'year', label: '每年' },
+];
+
 const inputStyle: React.CSSProperties = {
   width: '100%',
   padding: '8px',
@@ -93,6 +117,14 @@ export const CouponFormModal: React.FC<CouponFormModalProps> = ({
       alert('请填写折扣金额');
       return;
     }
+    if (formData.type === 'percentage' && (formData.discount_value < 1 || formData.discount_value > 10000)) {
+      alert('百分比折扣的折扣值必须在 1–10000 之间（0.01%–100%）');
+      return;
+    }
+    if (new Date(formData.valid_until) <= new Date(formData.valid_from)) {
+      alert('失效时间必须晚于生效时间');
+      return;
+    }
     onSubmit();
   };
 
@@ -118,8 +150,8 @@ export const CouponFormModal: React.FC<CouponFormModalProps> = ({
         padding: '30px',
         borderRadius: '8px',
         boxShadow: '0 4px 20px rgba(0, 0, 0, 0.3)',
-        minWidth: '500px',
-        maxWidth: '600px',
+        minWidth: '520px',
+        maxWidth: '680px',
         maxHeight: '90vh',
         overflowY: 'auto',
       }}>
@@ -277,6 +309,79 @@ export const CouponFormModal: React.FC<CouponFormModalProps> = ({
           />
         </div>
 
+        {/* 资格类型（领取限制） */}
+        <div style={fieldStyle}>
+          <label style={labelStyle}>资格类型</label>
+          <select
+            value={formData.eligibility_type}
+            onChange={(e) => updateField('eligibility_type', e.target.value as CouponForm['eligibility_type'])}
+            style={inputStyle}
+          >
+            {ELIGIBILITY_TYPES.map((opt) => (
+              <option key={opt.value} value={opt.value}>{opt.label}</option>
+            ))}
+          </select>
+          <small style={hintStyle}>会员专属仅 VIP/Super 用户可领取</small>
+        </div>
+
+        {/* 资格值（当 user_type 或 member 时） */}
+        {(formData.eligibility_type === 'user_type' || formData.eligibility_type === 'member') && (
+          <div style={fieldStyle}>
+            <label style={labelStyle}>资格值</label>
+            <select
+              value={formData.eligibility_value}
+              onChange={(e) => updateField('eligibility_value', e.target.value as CouponForm['eligibility_value'])}
+              style={inputStyle}
+            >
+              {ELIGIBILITY_VALUES.map((opt) => (
+                <option key={opt.value} value={opt.value}>{opt.label}</option>
+              ))}
+            </select>
+          </div>
+        )}
+
+        {/* 限领周期 + 每周期限领 */}
+        <div style={{ ...fieldStyle, display: 'flex', gap: '15px', flexWrap: 'wrap' }}>
+          <div style={{ flex: 1, minWidth: '140px' }}>
+            <label style={labelStyle}>限领周期</label>
+            <select
+              value={formData.per_user_limit_window}
+              onChange={(e) => updateField('per_user_limit_window', e.target.value as CouponForm['per_user_limit_window'])}
+              style={inputStyle}
+            >
+              {LIMIT_WINDOWS.map((opt) => (
+                <option key={opt.value} value={opt.value}>{opt.label}</option>
+              ))}
+            </select>
+          </div>
+          {formData.per_user_limit_window && (
+            <div style={{ flex: 1, minWidth: '140px' }}>
+              <label style={labelStyle}>每周期限领次数</label>
+              <input
+                type="number"
+                value={formData.per_user_per_window_limit ?? ''}
+                onChange={(e) => updateField('per_user_per_window_limit', e.target.value ? Number(e.target.value) : undefined)}
+                placeholder="例如: 1"
+                min="1"
+                style={inputStyle}
+              />
+            </div>
+          )}
+        </div>
+
+        {/* 每日限领 */}
+        <div style={fieldStyle}>
+          <label style={labelStyle}>每日限领次数</label>
+          <input
+            type="number"
+            value={formData.per_day_limit ?? ''}
+            onChange={(e) => updateField('per_day_limit', e.target.value ? Number(e.target.value) : undefined)}
+            placeholder="留空表示不限制"
+            min="1"
+            style={inputStyle}
+          />
+        </div>
+
         {/* 适用场景 */}
         <div style={fieldStyle}>
           <label style={labelStyle}>适用场景</label>
@@ -323,6 +428,58 @@ export const CouponFormModal: React.FC<CouponFormModalProps> = ({
                 {type.label}
               </label>
             ))}
+          </div>
+          <small style={hintStyle}>不选表示不限任务类型</small>
+        </div>
+
+        {/* 排除的任务类型 */}
+        <div style={fieldStyle}>
+          <label style={labelStyle}>排除的任务类型</label>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', marginTop: '5px' }}>
+            {TASK_TYPES.map((type) => (
+              <label key={type.value} style={{ display: 'flex', alignItems: 'center', gap: '5px', cursor: 'pointer' }}>
+                <input
+                  type="checkbox"
+                  checked={formData.excluded_task_types.includes(type.value)}
+                  onChange={(e) => {
+                    if (e.target.checked) {
+                      updateField('excluded_task_types', [...formData.excluded_task_types, type.value]);
+                    } else {
+                      updateField('excluded_task_types', formData.excluded_task_types.filter(t => t !== type.value));
+                    }
+                  }}
+                  style={{ width: '16px', height: '16px', cursor: 'pointer' }}
+                />
+                {type.label}
+              </label>
+            ))}
+          </div>
+          <small style={hintStyle}>勾选的任务类型不可使用此优惠券</small>
+        </div>
+
+        {/* 任务金额范围 */}
+        <div style={{ ...fieldStyle, display: 'flex', gap: '15px', flexWrap: 'wrap' }}>
+          <div style={{ flex: 1, minWidth: '140px' }}>
+            <label style={labelStyle}>最低任务金额 (便士)</label>
+            <input
+              type="number"
+              value={formData.min_task_amount ?? ''}
+              onChange={(e) => updateField('min_task_amount', e.target.value ? Number(e.target.value) : undefined)}
+              placeholder="留空不限制"
+              min="0"
+              style={inputStyle}
+            />
+          </div>
+          <div style={{ flex: 1, minWidth: '140px' }}>
+            <label style={labelStyle}>最高任务金额 (便士)</label>
+            <input
+              type="number"
+              value={formData.max_task_amount ?? ''}
+              onChange={(e) => updateField('max_task_amount', e.target.value ? Number(e.target.value) : undefined)}
+              placeholder="留空不限制"
+              min="0"
+              style={inputStyle}
+            />
           </div>
         </div>
 

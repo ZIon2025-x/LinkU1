@@ -154,6 +154,8 @@ def create_coupon(
         per_user_per_window_limit=coupon_data.per_user_per_window_limit,
         per_day_limit=coupon_data.per_day_limit,
         vat_category=coupon_data.vat_category,
+        points_required=coupon_data.points_required or 0,
+        applicable_scenarios=coupon_data.applicable_scenarios,
         status="active"
     )
     
@@ -276,7 +278,17 @@ def update_coupon(
         coupon.per_user_limit_window = coupon_data.per_user_limit_window
     if coupon_data.per_user_per_window_limit is not None:
         coupon.per_user_per_window_limit = coupon_data.per_user_per_window_limit
-    
+    if coupon_data.points_required is not None:
+        coupon.points_required = coupon_data.points_required
+    if coupon_data.applicable_scenarios is not None:
+        coupon.applicable_scenarios = coupon_data.applicable_scenarios
+    if coupon_data.per_day_limit is not None:
+        coupon.per_day_limit = coupon_data.per_day_limit
+    if coupon_data.eligibility_type is not None:
+        coupon.eligibility_type = coupon_data.eligibility_type
+    if coupon_data.eligibility_value is not None:
+        coupon.eligibility_value = coupon_data.eligibility_value
+
     db.commit()
     db.refresh(coupon)
     
@@ -352,17 +364,29 @@ def get_coupons_list(
             "id": coupon.id,
             "code": coupon.code,
             "name": coupon.name,
+            "description": coupon.description,
             "type": coupon.type,
             "discount_value": coupon.discount_value,
             "discount_value_display": discount_value_display,
             "min_amount": coupon.min_amount,
             "min_amount_display": min_amount_display,
+            "currency": coupon.currency or "GBP",
+            "max_discount": coupon.max_discount,
             "valid_from": coupon.valid_from,
             "valid_until": coupon.valid_until,
             "status": coupon.status,
             "usage_conditions": coupon.usage_conditions,
             "total_quantity": coupon.total_quantity,
-            "used_quantity": used_count
+            "used_quantity": used_count,
+            "per_user_limit": coupon.per_user_limit,
+            "can_combine": coupon.can_combine,
+            "points_required": coupon.points_required or 0,
+            "applicable_scenarios": coupon.applicable_scenarios or [],
+            "eligibility_type": coupon.eligibility_type,
+            "eligibility_value": coupon.eligibility_value,
+            "per_user_limit_window": coupon.per_user_limit_window,
+            "per_user_per_window_limit": coupon.per_user_per_window_limit,
+            "per_day_limit": coupon.per_day_limit,
         })
     
     return {

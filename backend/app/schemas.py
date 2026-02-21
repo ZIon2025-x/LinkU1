@@ -1406,8 +1406,11 @@ class CouponUpdate(BaseModel):
     per_user_per_month_limit: Optional[int] = None
     per_user_limit_window: Optional[str] = None
     per_user_per_window_limit: Optional[int] = None
+    per_day_limit: Optional[int] = None
     points_required: Optional[int] = None
     applicable_scenarios: Optional[List[str]] = None
+    eligibility_type: Optional[str] = None
+    eligibility_value: Optional[str] = None
 
     @validator("per_user_limit_window")
     def validate_limit_window(cls, v: Optional[str]) -> Optional[str]:
@@ -1637,6 +1640,12 @@ class CouponAdminOut(CouponOut):
     per_user_per_month_limit: Optional[int] = None
     per_user_limit_window: Optional[str] = None
     per_user_per_window_limit: Optional[int] = None
+    per_user_limit: Optional[int] = None
+    can_combine: Optional[bool] = None
+    points_required: Optional[int] = None
+    applicable_scenarios: Optional[List[str]] = None
+    per_day_limit: Optional[int] = None
+    max_discount: Optional[int] = None
 
     class Config:
         from_attributes = True
