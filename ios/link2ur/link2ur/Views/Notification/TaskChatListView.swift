@@ -24,7 +24,7 @@ struct TaskChatListView: View {
                 ErrorStateView(
                     message: error,
                     retryAction: {
-                        viewModel.loadTaskChats()
+                        viewModel.loadTaskChats(forceRefresh: true)
                     }
                 )
             } else if viewModel.taskChats.isEmpty {
@@ -51,7 +51,7 @@ struct TaskChatListView: View {
             }
         }
         .refreshable {
-            viewModel.loadTaskChats()
+            viewModel.loadTaskChats(forceRefresh: true)
         }
         .onAppear {
             if viewModel.taskChats.isEmpty {

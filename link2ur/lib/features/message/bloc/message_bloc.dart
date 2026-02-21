@@ -22,8 +22,13 @@ class MessageLoadContacts extends MessageEvent {
   const MessageLoadContacts();
 }
 
+/// 加载任务聊天列表。forceRefresh 为 true 时跳过节流（下拉刷新、重试时使用）
 class MessageLoadTaskChats extends MessageEvent {
-  const MessageLoadTaskChats();
+  const MessageLoadTaskChats({this.forceRefresh = false});
+  final bool forceRefresh;
+
+  @override
+  List<Object?> get props => [forceRefresh];
 }
 
 class MessageLoadMoreTaskChats extends MessageEvent {
@@ -243,6 +248,10 @@ class MessageBloc extends Bloc<MessageEvent, MessageState> {
   Timer? _pollingTimer;
   static const Duration _pollingInterval = Duration(seconds: 60);
 
+  /// 节流：2.5 秒内不重复请求 loadTaskChats（onAppear/Tab 切换时生效，下拉刷新不节流）
+  DateTime? _lastTaskChatsLoadTime;
+  static const Duration _loadThrottleInterval = Duration(milliseconds: 2500);
+
   @override
   Future<void> close() {
     _wsSubscription?.cancel();
@@ -321,13 +330,20 @@ class MessageBloc extends Bloc<MessageEvent, MessageState> {
     MessageLoadTaskChats event,
     Emitter<MessageState> emit,
   ) async {
+    // 节流：非强制刷新时，2.5 秒内跳过
+    if (!event.forceRefresh && _lastTaskChatsLoadTime != null) {
+      final elapsed = DateTime.now().difference(_lastTaskChatsLoadTime!);
+      if (elapsed < _loadThrottleInterval) {
+        return;
+      }
+    }
+    _lastTaskChatsLoadTime = DateTime.now();
+
     try {
       // 同步加载本地偏好
       _loadPreferences(emit);
 
-      final taskChats = await _messageRepository.getTaskChats(
-        
-      );
+      final taskChats = await _messageRepository.getTaskChats();
       emit(state.copyWith(
         status: MessageStatus.loaded,
         taskChats: taskChats,
@@ -382,9 +398,7 @@ class MessageBloc extends Bloc<MessageEvent, MessageState> {
       _loadPreferences(emit);
 
       final contacts = await _messageRepository.getContacts();
-      final taskChats = await _messageRepository.getTaskChats(
-        
-      );
+      final taskChats = await _messageRepository.getTaskChats();
       emit(state.copyWith(
         status: MessageStatus.loaded,
         contacts: contacts,

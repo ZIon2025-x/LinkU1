@@ -61,7 +61,7 @@ class _TaskChatListViewContent extends StatelessWidget {
       return ErrorStateView.loadFailed(
         message: state.errorMessage ?? context.l10n.activityLoadFailed,
         onRetry: () {
-          context.read<MessageBloc>().add(const MessageLoadTaskChats());
+          context.read<MessageBloc>().add(const MessageLoadTaskChats(forceRefresh: true));
         },
       );
     }

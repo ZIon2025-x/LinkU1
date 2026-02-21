@@ -28,7 +28,7 @@ struct MessageView: View {
                     ErrorStateView(
                         message: error,
                         retryAction: {
-                            viewModel.loadTaskChats()
+                            viewModel.loadTaskChats(forceRefresh: true)
                         }
                     )
                 } else {
@@ -85,7 +85,7 @@ struct MessageView: View {
             .toolbarBackground(.visible, for: .navigationBar)
             .enableSwipeBack()
             .refreshable {
-                viewModel.loadTaskChats()
+                viewModel.loadTaskChats(forceRefresh: true)
                 notificationViewModel.loadNotifications()
             }
             .onAppear {

@@ -12,6 +12,10 @@ class TaskChatViewModel: ObservableObject {
     private var cancellables = Set<AnyCancellable>()
     private var isRequesting = false // 防止重复请求
     
+    /// 节流：2.5 秒内不重复请求（onAppear/Tab 切换时生效，下拉刷新不节流）
+    private var lastLoadTime: Date?
+    private let loadThrottleInterval: TimeInterval = 2.5
+    
     init(apiService: APIService? = nil) {
         self.apiService = apiService ?? APIService.shared
     }
@@ -20,15 +24,26 @@ class TaskChatViewModel: ObservableObject {
         cancellables.removeAll()
     }
     
-    func loadTaskChats() {
+    /// - Parameter forceRefresh: 为 true 时跳过节流（下拉刷新、重试时使用）
+    func loadTaskChats(forceRefresh: Bool = false) {
         let startTime = Date()
         let endpoint = "/api/messages/tasks"
+        
+        // 节流：非强制刷新时，2.5 秒内跳过
+        if !forceRefresh {
+            if let last = lastLoadTime, Date().timeIntervalSince(last) < loadThrottleInterval {
+                Logger.debug("任务聊天列表节流跳过（距上次 \(String(format: "%.1f", Date().timeIntervalSince(last))) 秒）", category: .api)
+                return
+            }
+        }
         
         // 防止重复请求
         guard !isRequesting else {
             Logger.warning("任务聊天列表请求已在进行中，跳过重复请求", category: .api)
             return
         }
+        
+        lastLoadTime = Date()
         
         isRequesting = true
         isLoading = true
