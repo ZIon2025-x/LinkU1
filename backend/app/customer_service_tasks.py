@@ -429,11 +429,15 @@ def send_timeout_warnings(db: Session, warning_minutes: int = 1) -> Dict[str, An
                     try:
                         loop = asyncio.get_event_loop()
                         if loop.is_running():
-                            asyncio.create_task(ws_manager.send_to_user(chat.user_id, notification_update))
+                            # 从后台线程安全地调度协程到主事件循环（fire-and-forget）
+                            asyncio.run_coroutine_threadsafe(
+                                ws_manager.send_to_user(chat.user_id, notification_update),
+                                loop
+                            )
                         else:
-                            loop.run_until_complete(ws_manager.send_to_user(chat.user_id, notification_update))
-                    except RuntimeError:
-                        asyncio.run(ws_manager.send_to_user(chat.user_id, notification_update))
+                            asyncio.run(ws_manager.send_to_user(chat.user_id, notification_update))
+                    except Exception as e:
+                        logger.debug(f"WebSocket超时通知跳过（后台线程上下文）: {e}")
                 except Exception as e:
                     logger.error(f"Failed to push timeout warning notification via WebSocket: {e}")
                 
