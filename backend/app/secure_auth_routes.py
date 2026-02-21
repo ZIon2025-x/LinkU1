@@ -20,6 +20,7 @@ from app.secure_auth import (
     SecureAuthManager,
     get_client_ip,
     get_device_fingerprint,
+    is_mobile_app_request,
     validate_session
 )
 from app.cookie_manager import CookieManager
@@ -1046,11 +1047,12 @@ def send_email_verification_code(
 ):
     """发送邮箱验证码"""
     try:
-        # CAPTCHA 验证（强制要求，防止恶意刷验证码）
+        # CAPTCHA 验证（移动端原生应用豁免，Web 端强制要求）
         captcha_enabled = captcha_verifier.is_enabled()
-        logger.info(f"发送邮箱验证码请求: email={request_data.email}, CAPTCHA启用={captcha_enabled}, 收到token={bool(request_data.captcha_token)}")
+        is_from_mobile_app = is_mobile_app_request(request)
+        logger.info(f"发送邮箱验证码请求: email={request_data.email}, CAPTCHA启用={captcha_enabled}, 移动端={is_from_mobile_app}, 收到token={bool(request_data.captcha_token)}")
         
-        if captcha_enabled:
+        if captcha_enabled and not is_from_mobile_app:
             if not request_data.captcha_token:
                 logger.warning(f"发送验证码请求缺少 CAPTCHA token: email={request_data.email}, IP={get_client_ip(request)}")
                 raise HTTPException(
@@ -1062,7 +1064,6 @@ def send_email_verification_code(
             captcha_result = captcha_verifier.verify(request_data.captcha_token, client_ip)
             if not captcha_result.get("success"):
                 logger.warning(f"CAPTCHA 验证失败: email={request_data.email}, IP={client_ip}, error={captcha_result.get('error')}")
-                # 记录安全事件
                 log_security_event(
                     "CAPTCHA_FAILED", request_data.email, client_ip, f"CAPTCHA验证失败: {captcha_result.get('error')}"
                 )
@@ -1071,6 +1072,8 @@ def send_email_verification_code(
                     detail="人机验证失败，请重新完成验证后再试"
                 )
             logger.info(f"CAPTCHA 验证成功: email={request_data.email}")
+        elif captcha_enabled and is_from_mobile_app:
+            logger.info(f"移动端应用请求，豁免 CAPTCHA: email={request_data.email}")
         else:
             logger.info(f"CAPTCHA 未启用，跳过验证: email={request_data.email}")
         
@@ -1206,11 +1209,12 @@ def send_phone_verification_code(
 ):
     """发送手机验证码"""
     try:
-        # CAPTCHA 验证（强制要求，防止恶意刷验证码）
+        # CAPTCHA 验证（移动端原生应用豁免，Web 端强制要求）
         captcha_enabled = captcha_verifier.is_enabled()
-        logger.info(f"发送手机验证码请求: phone={request_data.phone}, CAPTCHA启用={captcha_enabled}, 收到token={bool(request_data.captcha_token)}")
+        is_from_mobile_app = is_mobile_app_request(request)
+        logger.info(f"发送手机验证码请求: phone={request_data.phone}, CAPTCHA启用={captcha_enabled}, 移动端={is_from_mobile_app}, 收到token={bool(request_data.captcha_token)}")
         
-        if captcha_enabled:
+        if captcha_enabled and not is_from_mobile_app:
             if not request_data.captcha_token:
                 logger.warning(f"发送验证码请求缺少 CAPTCHA token: phone={request_data.phone}, IP={get_client_ip(request)}")
                 raise HTTPException(
@@ -1222,7 +1226,6 @@ def send_phone_verification_code(
             captcha_result = captcha_verifier.verify(request_data.captcha_token, client_ip)
             if not captcha_result.get("success"):
                 logger.warning(f"CAPTCHA 验证失败: phone={request_data.phone}, IP={client_ip}, error={captcha_result.get('error')}")
-                # 记录安全事件
                 log_security_event(
                     "CAPTCHA_FAILED", request_data.phone, client_ip, f"CAPTCHA验证失败: {captcha_result.get('error')}"
                 )
@@ -1231,6 +1234,8 @@ def send_phone_verification_code(
                     detail="人机验证失败，请重新完成验证后再试"
                 )
             logger.info(f"CAPTCHA 验证成功: phone={request_data.phone}")
+        elif captcha_enabled and is_from_mobile_app:
+            logger.info(f"移动端应用请求，豁免 CAPTCHA: phone={request_data.phone}")
         else:
             logger.info(f"CAPTCHA 未启用，跳过验证: phone={request_data.phone}")
         
