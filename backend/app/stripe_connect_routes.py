@@ -1251,6 +1251,20 @@ def create_connect_account_embedded(
         )
 
 
+def _is_valid_stripe_account_id(account_id) -> bool:
+    """检查是否为有效的 Stripe 账户 ID。排除 None、空串、字面量 'NULL'/'NONE'。"""
+    if account_id is None:
+        return False
+    if not isinstance(account_id, str):
+        return False
+    s = (account_id or "").strip()
+    if not s:
+        return False
+    if s.upper() in ("NULL", "NONE"):
+        return False
+    return True
+
+
 @router.get("/account/status")
 def get_account_status(
     current_user: models.User = Depends(get_current_user_secure_sync_csrf),
@@ -1260,7 +1274,17 @@ def get_account_status(
     获取 Stripe Connect 账户状态
     如果没有账户，返回空状态而不是 404
     """
-    if not current_user.stripe_account_id:
+    if not _is_valid_stripe_account_id(current_user.stripe_account_id):
+        # 如数据库存了无效值（如字面量 "NULL"），清理以便后续请求正常
+        if current_user.stripe_account_id:
+            try:
+                db_user = db.query(models.User).filter(models.User.id == current_user.id).first()
+                if db_user and db_user.stripe_account_id:
+                    db_user.stripe_account_id = None
+                    db.commit()
+                    logger.info(f"Cleared invalid stripe_account_id for user {current_user.id}")
+            except Exception as e:
+                logger.warning(f"Failed to clear invalid stripe_account_id for user {current_user.id}: {e}")
         return {
             "account_id": None,
             "details_submitted": False,
@@ -1423,7 +1447,7 @@ def get_account_details(
     
     返回账户的详细信息，包括账户ID、状态、能力、仪表板登录链接等
     """
-    if not current_user.stripe_account_id:
+    if not _is_valid_stripe_account_id(current_user.stripe_account_id):
         raise HTTPException(
             status_code=404,
             detail="未找到 Stripe Connect 账户，请先创建账户"
@@ -1544,7 +1568,7 @@ def get_account_balance(
     
     返回账户的可用余额、待处理余额等
     """
-    if not current_user.stripe_account_id:
+    if not _is_valid_stripe_account_id(current_user.stripe_account_id):
         raise HTTPException(
             status_code=404,
             detail="未找到 Stripe Connect 账户，请先创建账户"
@@ -1610,7 +1634,7 @@ def get_external_accounts(
     
     返回账户关联的银行卡和银行账户列表
     """
-    if not current_user.stripe_account_id:
+    if not _is_valid_stripe_account_id(current_user.stripe_account_id):
         raise HTTPException(
             status_code=404,
             detail="未找到 Stripe Connect 账户，请先创建账户"
@@ -1709,7 +1733,7 @@ def create_payout(
     
     从 Stripe Connect 账户提现到银行账户
     """
-    if not current_user.stripe_account_id:
+    if not _is_valid_stripe_account_id(current_user.stripe_account_id):
         raise HTTPException(
             status_code=404,
             detail="未找到 Stripe Connect 账户，请先创建账户"
@@ -1794,7 +1818,7 @@ def get_account_transactions(
     
     返回账户的收入（charges）和支出（transfers/payouts）记录
     """
-    if not current_user.stripe_account_id:
+    if not _is_valid_stripe_account_id(current_user.stripe_account_id):
         raise HTTPException(
             status_code=404,
             detail="未找到 Stripe Connect 账户，请先创建账户"
@@ -2026,7 +2050,7 @@ def create_onboarding_session(
     
     用于重新开始或继续账户设置流程，返回 client_secret 用于嵌入式组件
     """
-    if not current_user.stripe_account_id:
+    if not _is_valid_stripe_account_id(current_user.stripe_account_id):
         raise HTTPException(
             status_code=404,
             detail="未找到 Stripe Connect 账户，请先创建账户"
@@ -2148,7 +2172,7 @@ def create_onboarding_session(
     用于在 Web 和 iOS 应用中嵌入 Stripe Connect onboarding 表单
     返回 client_secret，前端可以使用 Stripe Connect Embedded Components
     """
-    if not current_user.stripe_account_id:
+    if not _is_valid_stripe_account_id(current_user.stripe_account_id):
         raise HTTPException(
             status_code=404,
             detail="未找到 Stripe Connect 账户，请先创建账户"
