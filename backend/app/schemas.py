@@ -3025,7 +3025,9 @@ class ForumCategoryRequestCreate(BaseModel):
     description_zh: Optional[str] = Field(None, max_length=500, description="中文描述（最多500字符）")
     icon: Optional[str] = Field(None, max_length=200, description="板块图标（emoji或URL）")
     type: str = Field("general", pattern="^(general|root|university)$", description="板块类型: general(普通), root(国家/地区级大板块), university(大学级小板块)")
-    
+    country: Optional[str] = Field(None, max_length=10, description="国家代码（如 UK），仅 type=root 时使用")
+    university_code: Optional[str] = Field(None, max_length=50, description="大学编码（如 UOB），仅 type=university 时使用")
+
     @validator('name')
     def validate_name(cls, v):
         """验证板块名称：去除首尾空格，检查是否只包含空格"""
