@@ -1737,6 +1737,7 @@ async def request_new_category(
         
         return {
             "message": "申请已提交，等待管理员审核",
+            "id": new_request.id,
             "request": {
                 "id": new_request.id,
                 "name": new_request.name,
