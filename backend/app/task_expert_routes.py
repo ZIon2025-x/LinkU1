@@ -303,6 +303,7 @@ async def get_experts_list(
     
     # 分页查询
     query = query.order_by(
+        models.TaskExpert.is_official.desc(),
         models.TaskExpert.created_at.desc()
     ).offset(offset).limit(limit)
     

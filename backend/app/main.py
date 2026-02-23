@@ -452,6 +452,8 @@ app.include_router(ai_agent_router, tags=["AI Agent"])
 # 官方账号 & 官方活动管理路由
 from app.admin_official_routes import admin_official_router
 app.include_router(admin_official_router, tags=["管理员-官方账号与活动"])
+from app.official_activity_routes import official_activity_router
+app.include_router(official_activity_router)
 
 # 创建上传目录
 import os
