@@ -1298,15 +1298,30 @@ def get_task_detail(
     ua_for_bg = request.headers.get("User-Agent", "") if hasattr(request, 'headers') else ""
 
     def _bg_view_count_and_track(t_id: int, uid, ua: str):
-        from app.database import SessionLocal
-        bg_db = SessionLocal()
-        try:
-            bg_db.execute(update(models.Task).where(models.Task.id == t_id).values(view_count=models.Task.view_count + 1))
-            bg_db.commit()
-        except Exception as e:
-            logger.warning("增加任务浏览量失败: %s", e)
-            bg_db.rollback()
+        from app.redis_cache import get_redis_client
+        redis_client = get_redis_client()
+        if redis_client:
+            try:
+                redis_client.incr(f"task:view_count:{t_id}")
+            except Exception as e:
+                logger.warning("Redis 增加任务浏览量失败, 回退到直写: %s", e)
+                redis_client = None
+
+        if not redis_client:
+            from app.database import SessionLocal
+            bg_db = SessionLocal()
+            try:
+                bg_db.execute(update(models.Task).where(models.Task.id == t_id).values(view_count=models.Task.view_count + 1))
+                bg_db.commit()
+            except Exception as e:
+                logger.warning("增加任务浏览量失败: %s", e)
+                bg_db.rollback()
+            finally:
+                bg_db.close()
+
         if uid:
+            from app.database import SessionLocal
+            bg_db = SessionLocal()
             try:
                 from app.user_behavior_tracker import UserBehaviorTracker
                 tracker = UserBehaviorTracker(bg_db)
@@ -1320,7 +1335,8 @@ def get_task_detail(
                 tracker.record_view(user_id=uid, task_id=t_id, device_type=device_type)
             except Exception as e:
                 logger.warning(f"记录用户浏览行为失败: {e}")
-        bg_db.close()
+            finally:
+                bg_db.close()
 
     background_tasks.add_task(_bg_view_count_and_track, task_id, user_id_for_bg, ua_for_bg)
     
@@ -3092,8 +3108,23 @@ def get_task_dispute_timeline(
         models.RefundRequest.task_id == task_id
     ).order_by(models.RefundRequest.created_at.asc()).all()
     
+    # Batch-load all evidence attachments to avoid N+1 queries
+    all_evidence_file_ids = set()
+    for rr in refund_requests:
+        for field in (rr.evidence_files, rr.rebuttal_evidence_files):
+            if field:
+                try:
+                    all_evidence_file_ids.update(json.loads(field))
+                except Exception:
+                    pass
+    attachment_map = {}
+    if all_evidence_file_ids:
+        attachments = db.query(models.MessageAttachment).filter(
+            models.MessageAttachment.blob_id.in_(list(all_evidence_file_ids))
+        ).all()
+        attachment_map = {att.blob_id: att for att in attachments}
+    
     for refund_request in refund_requests:
-        # 解析退款原因
         reason_type = None
         refund_type = None
         reason_text = refund_request.reason
@@ -3105,21 +3136,17 @@ def get_task_dispute_timeline(
                 refund_type = parts[1]
                 reason_text = parts[2]
         
-        # 获取退款申请证据
         refund_evidence = []
         if refund_request.evidence_files:
             try:
                 evidence_file_ids = json.loads(refund_request.evidence_files)
-                # 从MessageAttachment中获取文件信息
                 for file_id in evidence_file_ids:
-                    attachment = db.query(models.MessageAttachment).filter(
-                        models.MessageAttachment.blob_id == file_id
-                    ).first()
-                    if attachment:
+                    att = attachment_map.get(file_id)
+                    if att:
                         refund_evidence.append({
-                            "type": attachment.attachment_type,
-                            "url": attachment.url,
-                            "file_id": attachment.blob_id
+                            "type": att.attachment_type,
+                            "url": att.url,
+                            "file_id": att.blob_id
                         })
             except Exception as e:
                 logger.warning(f"解析退款证据附件失败: {e}")
@@ -3140,20 +3167,17 @@ def get_task_dispute_timeline(
         
         # 4. 反驳时间线（如果有）
         if refund_request.rebuttal_text:
-            # 获取反驳证据
             rebuttal_evidence = []
             if refund_request.rebuttal_evidence_files:
                 try:
                     rebuttal_file_ids = json.loads(refund_request.rebuttal_evidence_files)
                     for file_id in rebuttal_file_ids:
-                        attachment = db.query(models.MessageAttachment).filter(
-                            models.MessageAttachment.blob_id == file_id
-                        ).first()
-                        if attachment:
+                        att = attachment_map.get(file_id)
+                        if att:
                             rebuttal_evidence.append({
-                                "type": attachment.attachment_type,
-                                "url": attachment.url,
-                                "file_id": attachment.blob_id
+                                "type": att.attachment_type,
+                                "url": att.url,
+                                "file_id": att.blob_id
                             })
                 except Exception as e:
                     logger.warning(f"解析反驳证据附件失败: {e}")
@@ -4483,13 +4507,12 @@ def get_my_profile(
         if fresh_user:
             current_user = fresh_user
         
-        # 计算平均评分
         from app.models import Review
-        user_reviews = db.query(Review).filter(Review.user_id == current_user.id).all()
-        avg_rating = 0.0
-        if user_reviews:
-            total_rating = sum(r.rating for r in user_reviews)
-            avg_rating = round(total_rating / len(user_reviews), 1)
+        from sqlalchemy import func as sa_func
+        rating_row = db.query(
+            sa_func.avg(Review.rating), sa_func.count(Review.id)
+        ).filter(Review.user_id == current_user.id).first()
+        avg_rating = round(float(rating_row[0]), 1) if rating_row and rating_row[0] else 0.0
         
         # 获取并清理字符串字段（去除首尾空格）
         residence_city = getattr(current_user, 'residence_city', None)
@@ -5487,20 +5510,19 @@ def get_unread_count_by_contact_api(
     获取每个联系人的未读消息数量（已废弃）
     """
     from app.models import Message
+    from sqlalchemy import func as sa_func
     
-    # 查询所有未读消息，按发送者分组
-    unread_messages = (
-        db.query(Message)
-        .filter(Message.receiver_id == current_user.id, Message.is_read == 0)
+    rows = (
+        db.query(Message.sender_id, sa_func.count(Message.id))
+        .filter(
+            Message.receiver_id == current_user.id,
+            Message.is_read == 0,
+            Message.sender_id.isnot(None),
+        )
+        .group_by(Message.sender_id)
         .all()
     )
-    
-    # 按发送者ID分组计数
-    contact_counts = {}
-    for msg in unread_messages:
-        sender_id = msg.sender_id
-        if sender_id:
-            contact_counts[sender_id] = contact_counts.get(sender_id, 0) + 1
+    contact_counts = {str(sender_id): cnt for sender_id, cnt in rows}
     
     return {"contact_unread_counts": contact_counts}
 
@@ -6927,13 +6949,13 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
                             f"您参与的任务「{task.title}」（ID: {task_id}）的支付发生 Stripe 争议，任务状态已冻结。原因: {reason}，金额: £{amount:.2f}",
                             related_id=str(task_id), auto_commit=False
                         )
-            # 通知所有管理员
-            admins = db.query(models.AdminUser).filter(models.AdminUser.is_active == True).all()
+            admins = db.query(models.AdminUser.id).filter(models.AdminUser.is_active == True).all()
             admin_content = f"Stripe 争议: charge={charge_id}, task_id={task_id or 'N/A'}, reason={reason}, amount=£{amount:.2f}"
-            for admin in admins:
+            related = str(task_id) if task_id else (charge_id or "")
+            for (admin_id,) in admins:
                 crud.create_notification(
-                    db, admin.id, "stripe_dispute", "Stripe 支付争议", admin_content,
-                    related_id=str(task_id) if task_id else (charge_id or ""), auto_commit=False
+                    db, admin_id, "stripe_dispute", "Stripe 支付争议", admin_content,
+                    related_id=related, auto_commit=False
                 )
         except Exception as e:
             logger.error(f"charge.dispute.created 通知处理失败: {e}", exc_info=True)
@@ -7540,6 +7562,7 @@ def confirm_task_complete(
 
 # 管理员处理客服请求相关API
 @router.get("/admin/customer-service-requests")
+@cache_response(ttl=60, key_prefix="admin_cs_requests")
 def admin_get_customer_service_requests(
     status: str = None,
     priority: str = None,
@@ -7561,18 +7584,19 @@ def admin_get_customer_service_requests(
 
     requests = query.order_by(AdminRequest.created_at.desc()).all()
 
-    # 为每个请求添加客服信息
+    requester_ids = {r.requester_id for r in requests if r.requester_id}
+    cs_map = {}
+    if requester_ids:
+        cs_list = db.query(CustomerService).filter(CustomerService.id.in_(requester_ids)).all()
+        cs_map = {cs.id: cs for cs in cs_list}
+
     result = []
     for request in requests:
-        customer_service = (
-            db.query(CustomerService)
-            .filter(CustomerService.id == request.requester_id)
-            .first()
-        )
+        cs = cs_map.get(request.requester_id)
         request_dict = {
             "id": request.id,
             "requester_id": request.requester_id,
-            "requester_name": customer_service.name if customer_service else "未知客服",
+            "requester_name": cs.name if cs else "未知客服",
             "type": request.type,
             "title": request.title,
             "description": request.description,
@@ -7658,19 +7682,19 @@ def admin_get_customer_service_chat_messages(
         db.query(AdminChatMessage).order_by(AdminChatMessage.created_at.asc()).all()
     )
 
-    # 为每个消息添加发送者信息
+    cs_sender_ids = {m.sender_id for m in messages if m.sender_type == "customer_service" and m.sender_id}
+    cs_map = {}
+    if cs_sender_ids:
+        cs_list = db.query(CustomerService).filter(CustomerService.id.in_(cs_sender_ids)).all()
+        cs_map = {cs.id: cs for cs in cs_list}
+
     result = []
     for message in messages:
         sender_name = None
         if message.sender_type == "customer_service" and message.sender_id:
-            customer_service = (
-                db.query(CustomerService)
-                .filter(CustomerService.id == message.sender_id)
-                .first()
-            )
-            sender_name = customer_service.name if customer_service else "未知客服"
+            cs = cs_map.get(message.sender_id)
+            sender_name = cs.name if cs else "未知客服"
         elif message.sender_type == "admin" and message.sender_id:
-            # 这里可以添加管理员信息查询
             sender_name = "管理员"
 
         message_dict = {

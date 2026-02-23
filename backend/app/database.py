@@ -66,10 +66,10 @@ if ASYNC_AVAILABLE:
             "command_timeout": QUERY_TIMEOUT,
             "server_settings": {
                 "application_name": "linku_app",
-                "jit": "off",  # 禁用JIT以提高小查询性能
-                # P2 优化：连接级查询超时配置（毫秒）
-                # 在连接创建时一次性设置，避免每次查询都执行 SET statement_timeout
-                "statement_timeout": str(QUERY_TIMEOUT * 1000),  # 转换为毫秒
+                "jit": "off",
+                "statement_timeout": str(QUERY_TIMEOUT * 1000),
+                "idle_in_transaction_session_timeout": "60000",
+                "lock_timeout": "10000",
             },
         },
     )

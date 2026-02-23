@@ -685,6 +685,84 @@ if CELERY_AVAILABLE:
             raise
 
     @celery_app.task(
+        name='app.celery_tasks.sync_task_view_counts_task',
+        bind=True,
+        max_retries=2,
+        default_retry_delay=300
+    )
+    def sync_task_view_counts_task(self):
+        """Flush task view counts from Redis to PostgreSQL (every 5 minutes)."""
+        logger.info("🔄 开始执行同步任务浏览量任务")
+        start_time = time.time()
+        task_name = 'sync_task_view_counts_task'
+        lock_key = 'task:sync_view_counts:lock'
+
+        if not get_redis_distributed_lock(lock_key, lock_ttl=600):
+            logger.warning("⚠️ 同步任务浏览数已在其他实例执行，跳过")
+            return {"status": "skipped"}
+
+        try:
+            from app.redis_cache import get_redis_client
+            from app.database import SessionLocal
+            from app.models import Task
+            from sqlalchemy import update as sa_update
+
+            redis_client = get_redis_client()
+            if not redis_client:
+                return {"status": "skipped", "message": "Redis not available"}
+
+            db = SessionLocal()
+            try:
+                from app.redis_utils import scan_keys
+                keys = scan_keys(redis_client, "task:view_count:*")
+                if not keys:
+                    return {"status": "success", "synced_count": 0}
+
+                synced_count = 0
+                synced_keys = []
+                for key in keys:
+                    try:
+                        key_str = key.decode('utf-8') if isinstance(key, bytes) else str(key)
+                        task_id = int(key_str.split(":")[-1])
+                        raw = redis_client.get(key)
+                        if raw:
+                            increment = int(raw.decode('utf-8') if isinstance(raw, bytes) else raw)
+                            if increment > 0:
+                                db.execute(
+                                    sa_update(Task)
+                                    .where(Task.id == task_id)
+                                    .values(view_count=Task.view_count + increment)
+                                )
+                                synced_count += 1
+                                synced_keys.append(key)
+                    except Exception as e:
+                        logger.warning(f"同步任务浏览数 key {key} 失败: {e}")
+
+                db.commit()
+
+                for key in synced_keys:
+                    try:
+                        redis_client.delete(key)
+                    except Exception:
+                        pass
+
+                duration = time.time() - start_time
+                logger.info(f"✅ 同步任务浏览数完成，同步了 {synced_count} 个任务 (耗时: {duration:.2f}秒)")
+                _record_task_metrics(task_name, "success", duration)
+                return {"status": "success", "synced_count": synced_count}
+            finally:
+                db.close()
+                release_redis_distributed_lock(lock_key)
+        except Exception as e:
+            duration = time.time() - start_time
+            logger.error(f"同步任务浏览数失败: {e}", exc_info=True)
+            _record_task_metrics(task_name, "error", duration)
+            release_redis_distributed_lock(lock_key)
+            if self.request.retries < self.max_retries:
+                raise self.retry(exc=e)
+            raise
+
+    @celery_app.task(
         name='app.celery_tasks.sync_leaderboard_view_counts_task',
         bind=True,
         max_retries=2,

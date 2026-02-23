@@ -232,6 +232,12 @@ celery_app.conf.beat_schedule = {
         'schedule': 300.0,  # 5分钟
     },
     
+    # 同步任务浏览数 - 每5分钟执行一次
+    'sync-task-view-counts': {
+        'task': 'app.celery_tasks.sync_task_view_counts_task',
+        'schedule': 300.0,  # 5分钟
+    },
+    
     # 同步榜单浏览数 - 每5分钟执行一次
     'sync-leaderboard-view-counts': {
         'task': 'app.celery_tasks.sync_leaderboard_view_counts_task',
