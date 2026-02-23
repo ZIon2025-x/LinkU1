@@ -52,6 +52,18 @@ class Activity extends Equatable {
     this.participantStatus, // 参与状态
     this.createdAt,
     this.updatedAt,
+    this.activityType = 'standard',
+    this.prizeType,
+    this.prizeDescription,
+    this.prizeDescriptionEn,
+    this.prizeCount,
+    this.drawMode,
+    this.drawAt,
+    this.drawnAt,
+    this.winners,
+    this.isDrawn = false,
+    this.isOfficial = false,
+    this.currentApplicants,
   });
 
   final int id;
@@ -105,6 +117,28 @@ class Activity extends Equatable {
 
   final DateTime? createdAt;
   final DateTime? updatedAt;
+  // 活动类型与抽奖字段
+  final String activityType;      // 'standard' | 'lottery' | 'first_come'
+  final String? prizeType;
+  final String? prizeDescription;
+  final String? prizeDescriptionEn;
+  final int? prizeCount;
+  final String? drawMode;
+  final DateTime? drawAt;
+  final DateTime? drawnAt;
+  final List<ActivityWinner>? winners;
+  final bool isDrawn;
+  final bool isOfficial;
+  final int? currentApplicants;
+
+  /// 是否抽奖活动
+  bool get isLottery => activityType == 'lottery';
+
+  /// 是否先到先得活动
+  bool get isFirstCome => activityType == 'first_come';
+
+  /// 是否官方活动（非 standard）
+  bool get isOfficialActivity => activityType != 'standard';
 
   /// 第一张图片
   String? get firstImage {
@@ -211,6 +245,27 @@ class Activity extends Equatable {
       updatedAt: json['updated_at'] != null
           ? DateTime.parse(json['updated_at'])
           : null,
+      // 活动类型与抽奖字段
+      activityType: json['activity_type'] as String? ?? 'standard',
+      prizeType: json['prize_type'] as String?,
+      prizeDescription: json['prize_description'] as String?,
+      prizeDescriptionEn: json['prize_description_en'] as String?,
+      prizeCount: json['prize_count'] as int?,
+      drawMode: json['draw_mode'] as String?,
+      drawAt: json['draw_at'] != null
+          ? DateTime.tryParse(json['draw_at'] as String)
+          : null,
+      drawnAt: json['drawn_at'] != null
+          ? DateTime.tryParse(json['drawn_at'] as String)
+          : null,
+      winners: json['winners'] != null
+          ? (json['winners'] as List)
+              .map((w) => ActivityWinner.fromJson(w as Map<String, dynamic>))
+              .toList()
+          : null,
+      isDrawn: json['is_drawn'] as bool? ?? false,
+      isOfficial: json['is_official'] as bool? ?? false,
+      currentApplicants: json['current_applicants'] as int?,
     );
   }
 
@@ -246,6 +301,18 @@ class Activity extends Equatable {
       'has_time_slots': hasTimeSlots,
       'created_at': createdAt?.toIso8601String(),
       'updated_at': updatedAt?.toIso8601String(),
+      'activity_type': activityType,
+      'prize_type': prizeType,
+      'prize_description': prizeDescription,
+      'prize_description_en': prizeDescriptionEn,
+      'prize_count': prizeCount,
+      'draw_mode': drawMode,
+      'draw_at': drawAt?.toIso8601String(),
+      'drawn_at': drawnAt?.toIso8601String(),
+      'winners': winners?.map((w) => w.toJson()).toList(),
+      'is_drawn': isDrawn,
+      'is_official': isOfficial,
+      'current_applicants': currentApplicants,
     };
   }
 
@@ -294,6 +361,18 @@ class Activity extends Equatable {
     String? participantStatus,
     DateTime? createdAt,
     DateTime? updatedAt,
+    String? activityType,
+    String? prizeType,
+    String? prizeDescription,
+    String? prizeDescriptionEn,
+    int? prizeCount,
+    String? drawMode,
+    DateTime? drawAt,
+    DateTime? drawnAt,
+    List<ActivityWinner>? winners,
+    bool? isDrawn,
+    bool? isOfficial,
+    int? currentApplicants,
   }) {
     return Activity(
       id: id ?? this.id,
@@ -340,11 +419,23 @@ class Activity extends Equatable {
       participantStatus: participantStatus ?? this.participantStatus,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
+      activityType: activityType ?? this.activityType,
+      prizeType: prizeType ?? this.prizeType,
+      prizeDescription: prizeDescription ?? this.prizeDescription,
+      prizeDescriptionEn: prizeDescriptionEn ?? this.prizeDescriptionEn,
+      prizeCount: prizeCount ?? this.prizeCount,
+      drawMode: drawMode ?? this.drawMode,
+      drawAt: drawAt ?? this.drawAt,
+      drawnAt: drawnAt ?? this.drawnAt,
+      winners: winners ?? this.winners,
+      isDrawn: isDrawn ?? this.isDrawn,
+      isOfficial: isOfficial ?? this.isOfficial,
+      currentApplicants: currentApplicants ?? this.currentApplicants,
     );
   }
 
   @override
-  List<Object?> get props => [id, title, status, updatedAt];
+  List<Object?> get props => [id, title, status, updatedAt, activityType, isDrawn, isOfficial];
 }
 
 /// 活动列表响应
@@ -398,4 +489,36 @@ class ActivityListResponse {
       pageSize: pageSize,
     );
   }
+}
+
+/// 活动获奖者模型
+class ActivityWinner extends Equatable {
+  final String userId;
+  final String name;
+  final String? avatarUrl;
+  final int? prizeIndex;
+
+  const ActivityWinner({
+    required this.userId,
+    required this.name,
+    this.avatarUrl,
+    this.prizeIndex,
+  });
+
+  factory ActivityWinner.fromJson(Map<String, dynamic> json) => ActivityWinner(
+        userId: json['user_id'] as String,
+        name: json['name'] as String,
+        avatarUrl: json['avatar_url'] as String?,
+        prizeIndex: json['prize_index'] as int?,
+      );
+
+  Map<String, dynamic> toJson() => {
+        'user_id': userId,
+        'name': name,
+        'avatar_url': avatarUrl,
+        'prize_index': prizeIndex,
+      };
+
+  @override
+  List<Object?> get props => [userId, name, avatarUrl, prizeIndex];
 }

@@ -41,6 +41,8 @@ class TaskExpert extends Equatable {
     this.category,
     this.totalTasks = 0,
     this.createdAt,
+    this.isOfficial = false,
+    this.officialBadge,
   });
 
   final String id;
@@ -79,6 +81,9 @@ class TaskExpert extends Equatable {
   final String? category;
   final int totalTasks;
   final DateTime? createdAt;
+  // 官方账号字段
+  final bool isOfficial;
+  final String? officialBadge;
 
   // ==================== 双语 display 访问器 ====================
   // 模式：zh → en → 默认字段（与 ForumCategory.displayName 一致）
@@ -168,6 +173,9 @@ class TaskExpert extends Equatable {
       createdAt: json['created_at'] != null
           ? DateTime.parse(json['created_at'])
           : null,
+      // 官方账号字段
+      isOfficial: json['is_official'] as bool? ?? false,
+      officialBadge: json['official_badge'] as String?,
     );
   }
 
@@ -212,11 +220,83 @@ class TaskExpert extends Equatable {
       'category': category,
       'total_tasks': totalTasks,
       'created_at': createdAt?.toIso8601String(),
+      'is_official': isOfficial,
+      'official_badge': officialBadge,
     };
   }
 
+  TaskExpert copyWith({
+    String? id,
+    String? expertName,
+    String? bio,
+    String? bioEn,
+    String? bioZh,
+    String? avatar,
+    String? status,
+    double? rating,
+    int? totalServices,
+    int? completedTasks,
+    List<String>? specialties,
+    List<String>? specialtiesEn,
+    List<String>? specialtiesZh,
+    List<String>? featuredSkills,
+    List<String>? featuredSkillsEn,
+    List<String>? featuredSkillsZh,
+    List<String>? achievements,
+    List<String>? achievementsEn,
+    List<String>? achievementsZh,
+    String? responseTime,
+    String? responseTimeEn,
+    String? responseTimeZh,
+    String? location,
+    bool? isVerified,
+    String? userLevel,
+    double? completionRate,
+    double? successRate,
+    String? category,
+    int? totalTasks,
+    DateTime? createdAt,
+    bool? isOfficial,
+    String? officialBadge,
+  }) {
+    return TaskExpert(
+      id: id ?? this.id,
+      expertName: expertName ?? this.expertName,
+      bio: bio ?? this.bio,
+      bioEn: bioEn ?? this.bioEn,
+      bioZh: bioZh ?? this.bioZh,
+      avatar: avatar ?? this.avatar,
+      status: status ?? this.status,
+      rating: rating ?? this.rating,
+      totalServices: totalServices ?? this.totalServices,
+      completedTasks: completedTasks ?? this.completedTasks,
+      specialties: specialties ?? this.specialties,
+      specialtiesEn: specialtiesEn ?? this.specialtiesEn,
+      specialtiesZh: specialtiesZh ?? this.specialtiesZh,
+      featuredSkills: featuredSkills ?? this.featuredSkills,
+      featuredSkillsEn: featuredSkillsEn ?? this.featuredSkillsEn,
+      featuredSkillsZh: featuredSkillsZh ?? this.featuredSkillsZh,
+      achievements: achievements ?? this.achievements,
+      achievementsEn: achievementsEn ?? this.achievementsEn,
+      achievementsZh: achievementsZh ?? this.achievementsZh,
+      responseTime: responseTime ?? this.responseTime,
+      responseTimeEn: responseTimeEn ?? this.responseTimeEn,
+      responseTimeZh: responseTimeZh ?? this.responseTimeZh,
+      location: location ?? this.location,
+      isVerified: isVerified ?? this.isVerified,
+      userLevel: userLevel ?? this.userLevel,
+      completionRate: completionRate ?? this.completionRate,
+      successRate: successRate ?? this.successRate,
+      category: category ?? this.category,
+      totalTasks: totalTasks ?? this.totalTasks,
+      createdAt: createdAt ?? this.createdAt,
+      isOfficial: isOfficial ?? this.isOfficial,
+      officialBadge: officialBadge ?? this.officialBadge,
+    );
+  }
+
   @override
-  List<Object?> get props => [id, expertName, rating, status, bio, specialties];
+  List<Object?> get props => [id, expertName, rating, status, bio, specialties, isOfficial, officialBadge];
 }
 
 /// 任务达人服务模型
