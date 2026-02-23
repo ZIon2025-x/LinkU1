@@ -691,7 +691,7 @@ if CELERY_AVAILABLE:
         default_retry_delay=300
     )
     def sync_task_view_counts_task(self):
-        """Flush task view counts from Redis to PostgreSQL (every 5 minutes)."""
+        """同步任务浏览数从 Redis 到数据库 - Celery任务包装（每5分钟执行）"""
         logger.info("🔄 开始执行同步任务浏览量任务")
         start_time = time.time()
         task_name = 'sync_task_view_counts_task'
@@ -705,7 +705,7 @@ if CELERY_AVAILABLE:
             from app.redis_cache import get_redis_client
             from app.database import SessionLocal
             from app.models import Task
-            from sqlalchemy import update as sa_update
+            from sqlalchemy import update
 
             redis_client = get_redis_client()
             if not redis_client:
@@ -729,7 +729,7 @@ if CELERY_AVAILABLE:
                             increment = int(raw.decode('utf-8') if isinstance(raw, bytes) else raw)
                             if increment > 0:
                                 db.execute(
-                                    sa_update(Task)
+                                    update(Task)
                                     .where(Task.id == task_id)
                                     .values(view_count=Task.view_count + increment)
                                 )

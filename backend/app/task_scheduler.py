@@ -674,6 +674,18 @@ def init_scheduler():
         description="同步榜单浏览数（Redis → DB）"
     )
     
+    # 同步任务浏览数（Redis → DB）- 每5分钟
+    scheduler.register_task(
+        'sync_task_view_counts',
+        lambda: sync_redis_view_counts(
+            "task:view_count:*",
+            __import__('app.models', fromlist=['Task']).Task,
+            "任务"
+        ),
+        interval_seconds=300,
+        description="同步任务浏览数（Redis → DB）"
+    )
+    
     # 检查过期优惠券 - 每15分钟
     scheduler.register_task(
         'check_expired_coupons',
