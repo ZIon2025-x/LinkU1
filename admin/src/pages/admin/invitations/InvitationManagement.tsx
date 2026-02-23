@@ -100,14 +100,6 @@ const InvitationManagement: React.FC = () => {
     onError: handleFetchError,
   });
 
-  useEffect(() => {
-    if (modal.isOpen) {
-      getCoupons({ limit: 500, status: 'active' })
-        .then((res: any) => setCoupons(res.data || []))
-        .catch(() => setCoupons([]));
-    }
-  }, [modal.isOpen]);
-
   const modal = useModalForm<FormData>({
     initialValues: initialForm,
     onSubmit: async (values, isEdit) => {
@@ -160,6 +152,14 @@ const InvitationManagement: React.FC = () => {
       }
     },
   });
+
+  useEffect(() => {
+    if (modal.isOpen) {
+      getCoupons({ limit: 500, status: 'active' })
+        .then((res: any) => setCoupons(res.data || []))
+        .catch(() => setCoupons([]));
+    }
+  }, [modal.isOpen]);
 
   const handleEdit = useCallback(async (id: number) => {
     try {
