@@ -562,6 +562,25 @@ class _ExpertCard extends StatelessWidget {
                         size: 16,
                         color: AppColors.primary,
                       ),
+                      if (expert.isOfficial) ...[
+                        const SizedBox(width: 4),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFFFD700),
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: Text(
+                            expert.officialBadge ?? '官方',
+                            style: const TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.black87,
+                            ),
+                          ),
+                        ),
+                      ],
                     ],
                   ),
                   // 简介 — 为空时显示占位文本

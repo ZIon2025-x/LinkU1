@@ -351,7 +351,11 @@ class _ActivityDetailViewContent extends StatelessWidget {
               ),
               const SizedBox(width: AppSpacing.md),
               // 主按钮
-              Expanded(child: _buildCTAButton(context, state, activity)),
+              Expanded(
+                child: activity.isOfficialActivity
+                    ? _buildOfficialActionBar(activity, context, state)
+                    : _buildCTAButton(context, state, activity),
+              ),
             ],
           ),
         ),
@@ -533,6 +537,152 @@ class _ActivityDetailViewContent extends StatelessWidget {
         return status;
     }
   }
+
+  // ── Official activity helpers ──
+
+  Widget _buildOfficialActionBar(
+      Activity activity, BuildContext context, ActivityState state) {
+    return BlocBuilder<ActivityBloc, ActivityState>(
+      buildWhen: (prev, curr) =>
+          prev.officialApplyStatus != curr.officialApplyStatus ||
+          prev.officialResult != curr.officialResult,
+      builder: (context, state) {
+        final remaining =
+            (activity.prizeCount ?? 0) - (activity.currentApplicants ?? 0);
+        return Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _buildPrizeSection(activity),
+            if (activity.isLottery) ...[
+              if (activity.isDrawn ||
+                  state.officialResult?.isDrawn == true) ...[
+                _buildWinnersSection(activity, state),
+              ] else ...[
+                if (activity.drawAt != null)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 4),
+                    child: Text(
+                      '报名截止：${_formatDeadline(activity.drawAt!)}',
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
+                  ),
+                if (activity.currentApplicants != null)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 4),
+                    child: Text('当前报名：${activity.currentApplicants} 人'),
+                  ),
+                _buildOfficialApplyButton(
+                    '参与抽奖', activity.id, context, state),
+              ],
+            ] else if (activity.isFirstCome) ...[
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 4),
+                child: Text('剩余名额：$remaining'),
+              ),
+              _buildOfficialApplyButton(
+                remaining > 0 ? '立即报名' : '已抢完',
+                activity.id,
+                context,
+                state,
+                disabled: remaining <= 0,
+              ),
+            ],
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildPrizeSection(Activity activity) {
+    const prizeLabels = {
+      'points': '🎯 积分奖励',
+      'physical': '🎁 实物奖品',
+      'voucher_code': '🎫 优惠券码',
+      'in_person': '🍽️ 线下到场',
+    };
+    if (activity.prizeType == null) return const SizedBox.shrink();
+    return Container(
+      padding: const EdgeInsets.all(12),
+      margin: const EdgeInsets.symmetric(vertical: 8),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFF9E6),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: const Color(0xFFFFD700)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            prizeLabels[activity.prizeType] ?? '🎁 奖品',
+            style: const TextStyle(fontWeight: FontWeight.bold),
+          ),
+          if (activity.prizeDescription != null)
+            Padding(
+              padding: const EdgeInsets.only(top: 4),
+              child: Text(activity.prizeDescription!),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildOfficialApplyButton(
+    String label,
+    int activityId,
+    BuildContext context,
+    ActivityState state, {
+    bool disabled = false,
+  }) {
+    final isLoading =
+        state.officialApplyStatus == OfficialApplyStatus.applying;
+    final isApplied =
+        state.officialApplyStatus == OfficialApplyStatus.applied;
+    return SizedBox(
+      width: double.infinity,
+      child: ElevatedButton(
+        onPressed: (disabled || isLoading || isApplied)
+            ? null
+            : () => context
+                .read<ActivityBloc>()
+                .add(ActivityApplyOfficial(activityId: activityId)),
+        child: isLoading
+            ? const SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              )
+            : Text(isApplied ? '已报名' : label),
+      ),
+    );
+  }
+
+  Widget _buildWinnersSection(Activity activity, ActivityState state) {
+    final winners =
+        state.officialResult?.winners ?? activity.winners ?? [];
+    if (winners.isEmpty) return const Text('暂无中奖名单');
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Padding(
+          padding: EdgeInsets.symmetric(vertical: 8),
+          child: Text('🏆 中奖名单',
+              style: TextStyle(fontWeight: FontWeight.bold)),
+        ),
+        ...winners.map((w) => Padding(
+              padding: const EdgeInsets.symmetric(vertical: 2),
+              child: Text(w.name),
+            )),
+      ],
+    );
+  }
+
+  String _formatDeadline(DateTime dt) {
+    return '${dt.year}-${dt.month.toString().padLeft(2, '0')}-'
+        '${dt.day.toString().padLeft(2, '0')} '
+        '${dt.hour.toString().padLeft(2, '0')}:'
+        '${dt.minute.toString().padLeft(2, '0')}';
+  }
+
 }
 
 // ==================== 图片轮播 ====================
