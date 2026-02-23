@@ -2105,6 +2105,8 @@ class TaskExpertOut(BaseModel):
     total_services: int
     completed_tasks: int
     created_at: datetime.datetime
+    is_official: bool = False
+    official_badge: Optional[str] = None
     
     class Config:
         from_attributes = True
@@ -2767,6 +2769,18 @@ class ActivityOut(BaseModel):
     user_task_has_negotiation: Optional[bool] = None  # 是否有议价（通过检查agreed_reward是否与base_reward不同）
     created_at: datetime.datetime
     updated_at: datetime.datetime
+    activity_type: str = "standard"
+    prize_type: Optional[str] = None
+    prize_description: Optional[str] = None
+    prize_description_en: Optional[str] = None
+    prize_count: Optional[int] = None
+    draw_mode: Optional[str] = None
+    draw_at: Optional[datetime.datetime] = None
+    drawn_at: Optional[datetime.datetime] = None
+    winners: Optional[List[dict]] = None
+    is_drawn: bool = False
+    is_official: bool = False
+    current_applicants: Optional[int] = None
     
     class Config:
         from_attributes = True
@@ -3926,3 +3940,67 @@ class OAuthClientUpdate(BaseModel):
     client_uri: Optional[str] = None
     logo_uri: Optional[str] = None
     is_active: Optional[bool] = None
+
+# ---------- Official Activity Schemas ----------
+
+class ActivityWinner(BaseModel):
+    user_id: str
+    name: str
+    avatar_url: Optional[str] = None
+    prize_index: Optional[int] = None
+
+class OfficialActivityCreate(BaseModel):
+    title: str
+    title_en: Optional[str] = None
+    title_zh: Optional[str] = None
+    description: str
+    description_en: Optional[str] = None
+    description_zh: Optional[str] = None
+    location: Optional[str] = None
+    activity_type: str  # "lottery" or "first_come"
+    prize_type: str     # "points" / "physical" / "voucher_code" / "in_person"
+    prize_description: Optional[str] = None
+    prize_description_en: Optional[str] = None
+    prize_count: int
+    voucher_codes: Optional[List[str]] = None
+    draw_mode: Optional[str] = None   # "auto" / "manual" (lottery only)
+    draw_at: Optional[datetime.datetime] = None
+    deadline: Optional[datetime.datetime] = None
+    images: Optional[List[str]] = None
+    is_public: bool = True
+
+class OfficialActivityUpdate(BaseModel):
+    title: Optional[str] = None
+    title_en: Optional[str] = None
+    description: Optional[str] = None
+    description_en: Optional[str] = None
+    prize_description: Optional[str] = None
+    prize_count: Optional[int] = None
+    voucher_codes: Optional[List[str]] = None
+    draw_at: Optional[datetime.datetime] = None
+    deadline: Optional[datetime.datetime] = None
+    images: Optional[List[str]] = None
+    status: Optional[str] = None
+
+class OfficialActivityApplicationOut(BaseModel):
+    id: int
+    activity_id: int
+    user_id: str
+    applied_at: datetime.datetime
+    status: str
+    prize_index: Optional[int] = None
+    notified_at: Optional[datetime.datetime] = None
+
+    class Config:
+        from_attributes = True
+
+class OfficialActivityResultOut(BaseModel):
+    is_drawn: bool
+    drawn_at: Optional[datetime.datetime] = None
+    winners: List[ActivityWinner] = []
+    my_status: Optional[str] = None
+    my_voucher_code: Optional[str] = None
+
+class OfficialAccountSetup(BaseModel):
+    user_id: str
+    official_badge: Optional[str] = "官方"
