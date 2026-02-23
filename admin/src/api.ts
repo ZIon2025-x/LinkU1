@@ -732,9 +732,7 @@ export const toggleJobPositionStatus = async (positionId: number) => {
 // ==================== 论坛管理 API ====================
 
 export const getForumCategories = async (includeLatestPost: boolean = false) => {
-  const res = await api.get('/api/forum/categories', {
-    params: { include_latest_post: includeLatestPost }
-  });
+  const res = await api.get('/api/forum/admin/categories');
   return res.data;
 };
 

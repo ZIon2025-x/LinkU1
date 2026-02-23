@@ -6118,6 +6118,46 @@ async def get_forum_stats(
     }
 
 
+@router.get("/admin/categories")
+async def get_admin_categories(
+    request: Request,
+    current_admin: models.AdminUser = Depends(get_current_admin_async),
+    db: AsyncSession = Depends(get_async_db_dependency),
+):
+    """获取所有板块列表（管理员，包含隐藏板块）"""
+    result = await db.execute(
+        select(models.ForumCategory)
+        .order_by(models.ForumCategory.sort_order.asc(), models.ForumCategory.id.asc())
+    )
+    categories = result.scalars().all()
+
+    category_list = []
+    for category in categories:
+        category_out = schemas.ForumCategoryOut(
+            id=category.id,
+            name=category.name,
+            name_en=getattr(category, 'name_en', None),
+            name_zh=getattr(category, 'name_zh', None),
+            description=category.description,
+            description_en=getattr(category, 'description_en', None),
+            description_zh=getattr(category, 'description_zh', None),
+            icon=category.icon,
+            sort_order=category.sort_order,
+            is_visible=category.is_visible,
+            is_admin_only=getattr(category, 'is_admin_only', False),
+            type=getattr(category, 'type', 'general'),
+            country=getattr(category, 'country', None),
+            university_code=getattr(category, 'university_code', None),
+            post_count=category.post_count,
+            last_post_at=category.last_post_at,
+            created_at=category.created_at,
+            updated_at=category.updated_at
+        )
+        category_list.append(category_out)
+
+    return {"categories": category_list}
+
+
 @router.get("/admin/pending-requests/count")
 async def get_pending_requests_count(
     current_admin: models.AdminUser = Depends(get_current_admin_async),
