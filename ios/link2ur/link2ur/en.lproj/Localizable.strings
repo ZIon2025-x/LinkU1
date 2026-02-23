@@ -1974,3 +1974,14 @@
 "common.unknown" = "Unknown";
 
 "common.or" = "or";
+// Official Activity
+"official" = "Official";
+"activity_type_lottery" = "Lottery";
+"activity_type_first_come" = "First Come First Served";
+"prize_type_points" = "Points Reward";
+"prize_type_physical" = "Physical Prize";
+"prize_type_voucher" = "Voucher Code";
+"prize_type_in_person" = "In-Person Event";
+"draw_pending" = "Awaiting Draw";
+"draw_won" = "Congratulations, You Won!";
+"draw_lost" = "Better luck next time!";

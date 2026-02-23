@@ -1974,3 +1974,14 @@
 "common.unknown" = "未知";
 
 "common.or" = "或";
+// Official Activity
+"official" = "官方";
+"activity_type_lottery" = "抽奖活动";
+"activity_type_first_come" = "限量抢位";
+"prize_type_points" = "积分奖励";
+"prize_type_physical" = "实物奖品";
+"prize_type_voucher" = "优惠券码";
+"prize_type_in_person" = "线下到场";
+"draw_pending" = "等待开奖";
+"draw_won" = "恭喜中奖！";
+"draw_lost" = "未中奖，下次加油";
