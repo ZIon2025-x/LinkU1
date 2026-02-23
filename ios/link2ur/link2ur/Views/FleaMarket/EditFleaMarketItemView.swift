@@ -684,7 +684,7 @@ class EditFleaMarketItemViewModel: ObservableObject {
     }
     
     func updateItem(itemId: String, completion: @escaping (Bool) -> Void) {
-        guard !title.isEmpty, !description.isEmpty, let price = price, price > 0 else {
+        guard !title.isEmpty, !description.isEmpty, let price = price, price >= 0 else {
             errorMessage = LocalizationKey.fleaMarketFillRequiredFields.localized
             return
         }

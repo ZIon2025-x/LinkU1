@@ -461,13 +461,19 @@ struct FleaMarketDetailView: View {
         VStack(alignment: .leading, spacing: 16) {
             // 价格行
             HStack(alignment: .firstTextBaseline, spacing: 4) {
-                Text("£")
-                    .font(.system(size: 20, weight: .bold, design: .rounded))
-                    .foregroundColor(Color(red: 0.9, green: 0.3, blue: 0.2))
-                
-                Text(String(format: "%.2f", item.price))
-                    .font(.system(size: 32, weight: .bold, design: .rounded))
-                    .foregroundColor(Color(red: 0.9, green: 0.3, blue: 0.2))
+                if item.price == 0 {
+                    Text(LocalizationKey.commonFree.localized)
+                        .font(.system(size: 32, weight: .bold, design: .rounded))
+                        .foregroundColor(.green)
+                } else {
+                    Text("£")
+                        .font(.system(size: 20, weight: .bold, design: .rounded))
+                        .foregroundColor(Color(red: 0.9, green: 0.3, blue: 0.2))
+                    
+                    Text(String(format: "%.2f", item.price))
+                        .font(.system(size: 32, weight: .bold, design: .rounded))
+                        .foregroundColor(Color(red: 0.9, green: 0.3, blue: 0.2))
+                }
                 
                 Spacer()
                 
@@ -962,9 +968,9 @@ struct FleaMarketDetailView: View {
                             }
                         }) {
                             HStack(spacing: 8) {
-                                Image(systemName: "cart.fill")
+                                Image(systemName: item.price == 0 ? "gift.fill" : "cart.fill")
                                     .font(.system(size: 16, weight: .semibold))
-                                Text(LocalizationKey.fleaMarketBuyNow.localized)
+                                Text(item.price == 0 ? LocalizationKey.commonFree.localized : LocalizationKey.fleaMarketBuyNow.localized)
                                     .font(.system(size: 16, weight: .semibold))
                             }
                             .foregroundColor(.white)
@@ -1042,13 +1048,19 @@ struct PurchaseDetailView: View {
                                 .lineLimit(2)
                                 .foregroundColor(AppColors.textPrimary)
                             
-                            HStack(alignment: .firstTextBaseline, spacing: 2) {
-                                Text("£")
-                                    .font(.system(size: 14, weight: .bold))
-                                Text(String(format: "%.2f", item.price))
+                            if item.price == 0 {
+                                Text(LocalizationKey.commonFree.localized)
                                     .font(.system(size: 22, weight: .bold, design: .rounded))
+                                    .foregroundColor(.green)
+                            } else {
+                                HStack(alignment: .firstTextBaseline, spacing: 2) {
+                                    Text("£")
+                                        .font(.system(size: 14, weight: .bold))
+                                    Text(String(format: "%.2f", item.price))
+                                        .font(.system(size: 22, weight: .bold, design: .rounded))
+                                }
+                                .foregroundColor(Color(red: 0.9, green: 0.3, blue: 0.2))
                             }
-                            .foregroundColor(Color(red: 0.9, green: 0.3, blue: 0.2))
                         }
                         
                         Spacer()
@@ -1057,7 +1069,8 @@ struct PurchaseDetailView: View {
                     .background(Color(UIColor.secondarySystemBackground))
                     .clipShape(RoundedRectangle(cornerRadius: 16))
                     
-                    // 我要议价复选框
+                    // 我要议价复选框（免费商品不显示议价）
+                    if item.price > 0 {
                     VStack(alignment: .leading, spacing: 12) {
                         // 检查用户是否已有待处理的议价请求
                         if let requestStatus = item.userPurchaseRequestStatus,
@@ -1132,6 +1145,7 @@ struct PurchaseDetailView: View {
                     .background(Color(UIColor.secondarySystemBackground))
                     .clipShape(RoundedRectangle(cornerRadius: 16))
                     .animation(.easeInOut(duration: 0.2), value: wantsNegotiate)
+                    }
                     
                     // 留言输入
                     VStack(alignment: .leading, spacing: 10) {

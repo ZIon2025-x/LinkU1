@@ -40,6 +40,7 @@
 "common.not_provided" = "未提供";
 "common.please_select" = "请选择";
 "common.user" = "用户";
+"common.free" = "免费";
 
 // MARK: - App
 "app.name" = "Link²Ur";

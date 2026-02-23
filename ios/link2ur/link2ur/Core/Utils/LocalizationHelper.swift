@@ -109,6 +109,7 @@ public enum LocalizationKey: String {
     case commonTap = "common.tap"
     case commonLongPressToCopy = "common.long_press_to_copy"
     case commonUser = "common.user"
+    case commonFree = "common.free"
     
     // MARK: - App
     case appName = "app.name"

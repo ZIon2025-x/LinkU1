@@ -29,6 +29,7 @@
 "common.view_all" = "查看全部";
 "common.loading_image" = "載入圖片中...";
 "common.user" = "用戶";
+"common.free" = "免費";
 
 // MARK: - App
 "app.name" = "Link²Ur";

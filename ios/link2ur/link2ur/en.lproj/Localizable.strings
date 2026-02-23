@@ -34,6 +34,7 @@
 "common.not_provided" = "Not provided";
 "common.please_select" = "Please select";
 "common.user" = "User";
+"common.free" = "Free";
 
 // MARK: - App
 "app.name" = "Link²Ur";

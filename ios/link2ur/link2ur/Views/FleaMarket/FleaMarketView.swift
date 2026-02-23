@@ -209,13 +209,19 @@ struct ItemCard: View {
                 
                 // 价格与位置
                 HStack(alignment: .firstTextBaseline, spacing: 2) {
-                    Text("£")
-                        .font(.system(size: 12, weight: .bold))
-                        .foregroundColor(Color(red: 0.9, green: 0.3, blue: 0.2))
-                    
-                    Text(String(format: "%.2f", item.price))
-                        .font(.system(size: 18, weight: .bold, design: .rounded))
-                        .foregroundColor(Color(red: 0.9, green: 0.3, blue: 0.2))
+                    if item.price == 0 {
+                        Text(LocalizationKey.commonFree.localized)
+                            .font(.system(size: 18, weight: .bold, design: .rounded))
+                            .foregroundColor(.green)
+                    } else {
+                        Text("£")
+                            .font(.system(size: 12, weight: .bold))
+                            .foregroundColor(Color(red: 0.9, green: 0.3, blue: 0.2))
+                        
+                        Text(String(format: "%.2f", item.price))
+                            .font(.system(size: 18, weight: .bold, design: .rounded))
+                            .foregroundColor(Color(red: 0.9, green: 0.3, blue: 0.2))
+                    }
                     
                     Spacer()
                     

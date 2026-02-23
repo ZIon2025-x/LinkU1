@@ -97,7 +97,7 @@ class CreateFleaMarketItemViewModel: ObservableObject {
     }
     
     func createItem(completion: @escaping (Bool) -> Void) {
-        guard !title.isEmpty, !description.isEmpty, let price = price, price > 0 else {
+        guard !title.isEmpty, !description.isEmpty, let price = price, price >= 0 else {
             errorMessage = "请填写所有必填项"
             return
         }
