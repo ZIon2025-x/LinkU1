@@ -5,7 +5,7 @@ import random
 from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
-from sqlalchemy import select, func
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app import models, schemas
@@ -78,7 +78,7 @@ async def _perform_draw(db: AsyncSession, activity: models.Activity) -> List[dic
     4. 发站内通知
     5. 更新 activity.is_drawn, drawn_at, winners
     """
-    from app.crud.notification import create_notification
+    from app.async_crud import AsyncNotificationCRUD
 
     apps_result = await db.execute(
         select(models.OfficialActivityApplication, models.User)
@@ -109,25 +109,17 @@ async def _perform_draw(db: AsyncSession, activity: models.Activity) -> List[dic
 
         prize_desc = activity.prize_description or "奖品"
         voucher_info = (
-            f"
-您的优惠码：{voucher_codes[i]}"
+            f"\n您的优惠码：{voucher_codes[i]}"
             if app.prize_index is not None and i < len(voucher_codes)
             else ""
         )
-        create_notification(
+        await AsyncNotificationCRUD.create_notification(
             db=db,
             user_id=app.user_id,
-            type="official_activity_won",
+            notification_type="official_activity_won",
             title="🎉 恭喜中奖！",
             content=f"您参与的活动「{activity.title}」已开奖，您获得了{prize_desc}！{voucher_info}",
-            title_en="🎉 Congratulations!",
-            content_en=(
-                f"You won in activity '{activity.title_en or activity.title}'! "
-                f"Prize: {activity.prize_description_en or prize_desc}{voucher_info}"
-            ),
             related_id=str(activity.id),
-            related_type="activity_id",
-            auto_commit=False,
         )
 
     for app, _ in all_apps:
