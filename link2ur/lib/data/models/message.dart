@@ -29,7 +29,7 @@ class ChatContact extends Equatable {
       user: UserBrief.fromJson(json['user'] as Map<String, dynamic>),
       lastMessage: json['last_message'] as String?,
       lastMessageTime: json['last_message_time'] != null
-          ? DateTime.parse(json['last_message_time'])
+          ? DateTime.tryParse(json['last_message_time'])
           : null,
       unreadCount: json['unread_count'] as int? ?? 0,
       isOnline: json['is_online'] as bool? ?? false,

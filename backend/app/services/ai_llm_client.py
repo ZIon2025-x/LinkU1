@@ -116,7 +116,6 @@ class OpenAICompatibleProvider:
         self._api_key = api_key
         self._base_url = base_url.rstrip("/")
         self._timeout = timeout
-        # 复用连接池
         import httpx
         self._client = httpx.AsyncClient(
             timeout=timeout,
@@ -126,6 +125,9 @@ class OpenAICompatibleProvider:
             },
             limits=httpx.Limits(max_connections=20, max_keepalive_connections=10),
         )
+
+    async def close(self):
+        await self._client.aclose()
 
     async def chat(
         self, model: str, messages: list[dict], system: str,

@@ -242,7 +242,7 @@ class _CreatePostViewState extends State<CreatePostView> {
                 AppSpacing.vMd,
                 // 图片（选填，最多 5 张）
                 Text(
-                  '${context.l10n.forumCreatePostImages}（${_selectedImages.length}/$_kMaxImages）',
+                  '${context.l10n.forumCreatePostImages}（${context.l10n.commonImageCount(_selectedImages.length, _kMaxImages)}）',
                   style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
@@ -460,7 +460,7 @@ class _LinkSearchDialogState extends State<_LinkSearchDialog> {
           final r = list[i];
           final type = r['item_type'] as String? ?? '';
           final name =
-              r['name'] as String? ?? r['title'] as String? ?? '未命名';
+              r['name'] as String? ?? r['title'] as String? ?? context.l10n.commonUnnamed;
           final id = r['item_id']?.toString() ?? '';
           final subtitle = r['subtitle'] as String? ?? type;
           return ListTile(

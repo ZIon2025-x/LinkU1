@@ -221,7 +221,24 @@ void main() {
         'emits success when payment status is paid',
         build: () {
           when(() => mockPaymentRepository.getTaskPaymentStatus(any()))
-              .thenAnswer((_) async => {'status': 'paid'});
+              .thenAnswer((_) async => {'is_paid': true, 'status': 'approved'});
+          return paymentBloc;
+        },
+        act: (bloc) => bloc.add(const PaymentCheckStatus(1)),
+        expect: () => [
+          const PaymentState(status: PaymentStatus.success),
+        ],
+      );
+
+      blocTest<PaymentBloc, PaymentState>(
+        'emits success when payment_details status is succeeded',
+        build: () {
+          when(() => mockPaymentRepository.getTaskPaymentStatus(any()))
+              .thenAnswer((_) async => {
+                    'is_paid': false,
+                    'status': 'approved',
+                    'payment_details': {'status': 'succeeded'},
+                  });
           return paymentBloc;
         },
         act: (bloc) => bloc.add(const PaymentCheckStatus(1)),
@@ -234,7 +251,7 @@ void main() {
         'does not change state when payment is still pending',
         build: () {
           when(() => mockPaymentRepository.getTaskPaymentStatus(any()))
-              .thenAnswer((_) async => {'status': 'pending'});
+              .thenAnswer((_) async => {'is_paid': false, 'status': 'approved'});
           return paymentBloc;
         },
         act: (bloc) => bloc.add(const PaymentCheckStatus(1)),

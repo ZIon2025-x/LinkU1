@@ -123,16 +123,26 @@ class AcceptPaymentData extends Equatable {
 }
 
 class TaskDetailCompleteRequested extends TaskDetailEvent {
-  const TaskDetailCompleteRequested({this.evidence});
+  const TaskDetailCompleteRequested({this.evidenceImages, this.evidenceText});
 
-  final String? evidence;
+  final List<String>? evidenceImages;
+  final String? evidenceText;
 
   @override
-  List<Object?> get props => [evidence];
+  List<Object?> get props => [evidenceImages, evidenceText];
 }
 
 class TaskDetailConfirmCompletionRequested extends TaskDetailEvent {
-  const TaskDetailConfirmCompletionRequested();
+  const TaskDetailConfirmCompletionRequested({
+    this.partialTransferAmount,
+    this.partialTransferReason,
+  });
+
+  final double? partialTransferAmount;
+  final String? partialTransferReason;
+
+  @override
+  List<Object?> get props => [partialTransferAmount, partialTransferReason];
 }
 
 class TaskDetailCancelRequested extends TaskDetailEvent {
@@ -203,6 +213,21 @@ class TaskDetailSubmitRebuttal extends TaskDetailEvent {
 
   @override
   List<Object?> get props => [refundId, content, evidence];
+}
+
+/// 任务发布者给申请者发留言
+class TaskDetailSendApplicationMessage extends TaskDetailEvent {
+  const TaskDetailSendApplicationMessage({
+    required this.applicationId,
+    required this.content,
+    this.negotiatedPrice,
+  });
+  final int applicationId;
+  final String content;
+  final double? negotiatedPrice;
+
+  @override
+  List<Object?> get props => [applicationId, content, negotiatedPrice];
 }
 
 // ==================== State ====================
@@ -345,6 +370,7 @@ class TaskDetailBloc extends Bloc<TaskDetailEvent, TaskDetailState> {
     on<TaskDetailLoadRefundHistory>(_onLoadRefundHistory);
     on<TaskDetailCancelRefund>(_onCancelRefund);
     on<TaskDetailSubmitRebuttal>(_onSubmitRebuttal);
+    on<TaskDetailSendApplicationMessage>(_onSendApplicationMessage);
   }
 
   final TaskRepository _taskRepository;
@@ -405,7 +431,10 @@ class TaskDetailBloc extends Bloc<TaskDetailEvent, TaskDetailState> {
       ));
     } catch (e) {
       AppLogger.error('Failed to load applications', e);
-      emit(state.copyWith(isLoadingApplications: false));
+      emit(state.copyWith(
+        isLoadingApplications: false,
+        errorMessage: e.toString(),
+      ));
     }
   }
 
@@ -445,7 +474,10 @@ class TaskDetailBloc extends Bloc<TaskDetailEvent, TaskDetailState> {
       emit(state.copyWith(reviews: reviews, isLoadingReviews: false));
     } catch (e) {
       AppLogger.error('Failed to load reviews', e);
-      emit(state.copyWith(isLoadingReviews: false));
+      emit(state.copyWith(
+        isLoadingReviews: false,
+        errorMessage: e.toString(),
+      ));
     }
   }
 
@@ -488,6 +520,14 @@ class TaskDetailBloc extends Bloc<TaskDetailEvent, TaskDetailState> {
 
     try {
       final appId = state.userApplication?.id;
+      if (appId == null) {
+        emit(state.copyWith(
+          isSubmitting: false,
+          actionMessage: 'cancel_failed',
+          errorMessage: 'Application ID not found',
+        ));
+        return;
+      }
       await _taskRepository.cancelApplication(_taskId!,
           applicationId: appId);
       final task = await _refreshTask();
@@ -612,7 +652,8 @@ class TaskDetailBloc extends Bloc<TaskDetailEvent, TaskDetailState> {
     try {
       await _taskRepository.completeTask(
         _taskId!,
-        evidence: event.evidence,
+        evidenceImages: event.evidenceImages,
+        evidenceText: event.evidenceText,
       );
       final task = await _refreshTask();
       emit(state.copyWith(
@@ -624,6 +665,7 @@ class TaskDetailBloc extends Bloc<TaskDetailEvent, TaskDetailState> {
       emit(state.copyWith(
         isSubmitting: false,
         actionMessage: 'submit_failed',
+        errorMessage: e.toString(),
       ));
     }
   }
@@ -636,7 +678,11 @@ class TaskDetailBloc extends Bloc<TaskDetailEvent, TaskDetailState> {
     emit(state.copyWith(isSubmitting: true));
 
     try {
-      await _taskRepository.confirmCompletion(_taskId!);
+      await _taskRepository.confirmCompletion(
+        _taskId!,
+        partialTransferAmount: event.partialTransferAmount,
+        partialTransferReason: event.partialTransferReason,
+      );
       final task = await _refreshTask();
       emit(state.copyWith(
         task: task,
@@ -647,6 +693,7 @@ class TaskDetailBloc extends Bloc<TaskDetailEvent, TaskDetailState> {
       emit(state.copyWith(
         isSubmitting: false,
         actionMessage: 'confirm_failed',
+        errorMessage: e.toString(),
       ));
     }
   }
@@ -673,6 +720,7 @@ class TaskDetailBloc extends Bloc<TaskDetailEvent, TaskDetailState> {
       emit(state.copyWith(
         isSubmitting: false,
         actionMessage: 'cancel_failed',
+        errorMessage: e.toString(),
       ));
     }
   }
@@ -739,6 +787,7 @@ class TaskDetailBloc extends Bloc<TaskDetailEvent, TaskDetailState> {
       emit(state.copyWith(
         isSubmitting: false,
         actionMessage: 'refund_failed',
+        errorMessage: e.toString(),
       ));
     }
   }
@@ -760,7 +809,10 @@ class TaskDetailBloc extends Bloc<TaskDetailEvent, TaskDetailState> {
       ));
     } catch (e) {
       AppLogger.error('Failed to load refund history', e);
-      emit(state.copyWith(isLoadingRefundHistory: false));
+      emit(state.copyWith(
+        isLoadingRefundHistory: false,
+        errorMessage: e.toString(),
+      ));
     }
   }
 
@@ -814,6 +866,34 @@ class TaskDetailBloc extends Bloc<TaskDetailEvent, TaskDetailState> {
       emit(state.copyWith(
         isSubmitting: false,
         actionMessage: 'dispute_failed',
+      ));
+    }
+  }
+
+  /// 任务发布者给申请者发留言
+  Future<void> _onSendApplicationMessage(
+    TaskDetailSendApplicationMessage event,
+    Emitter<TaskDetailState> emit,
+  ) async {
+    if (_taskId == null || state.isSubmitting) return;
+    emit(state.copyWith(isSubmitting: true));
+
+    try {
+      await _taskRepository.sendApplicationMessage(
+        _taskId!,
+        event.applicationId,
+        content: event.content,
+      );
+      emit(state.copyWith(
+        isSubmitting: false,
+        actionMessage: 'application_message_sent',
+      ));
+    } catch (e) {
+      AppLogger.error('Failed to send application message', e);
+      emit(state.copyWith(
+        isSubmitting: false,
+        actionMessage: 'application_message_failed',
+        errorMessage: e.toString(),
       ));
     }
   }

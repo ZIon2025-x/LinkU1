@@ -98,6 +98,7 @@ dependencies:
 
   # 原生启动画面
   flutter_native_splash: ^2.4.4
+  stream_transform: ^2.1.1
 
 dev_dependencies:
   flutter_test:

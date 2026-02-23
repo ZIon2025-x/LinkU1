@@ -181,13 +181,13 @@ class FleaMarketRepository {
   /// 发送购买请求（议价）
   Future<Map<String, dynamic>> sendPurchaseRequest(
     String id, {
-    double? proposedPrice,
+    required double proposedPrice,
     String? message,
   }) async {
     final response = await _apiService.post<Map<String, dynamic>>(
       ApiEndpoints.fleaMarketPurchaseRequest(id),
       data: {
-        if (proposedPrice != null) 'proposed_price': proposedPrice,
+        'proposed_price': proposedPrice,
         if (message != null) 'message': message,
       },
     );
@@ -578,10 +578,13 @@ class FleaMarketRepository {
     return items.map((e) => e as Map<String, dynamic>).toList();
   }
 
-  /// 接受购买请求
-  Future<void> acceptPurchase(String id) async {
+  /// 接受购买请求（买家接受卖家议价后创建任务）
+  Future<void> acceptPurchase(String id, {required int purchaseRequestId}) async {
     final response = await _apiService.post(
       ApiEndpoints.fleaMarketAcceptPurchase(id),
+      data: {
+        'purchase_request_id': purchaseRequestId,
+      },
     );
 
     if (!response.isSuccess) {
@@ -593,9 +596,12 @@ class FleaMarketRepository {
   }
 
   /// 拒绝购买请求
-  Future<void> rejectPurchase(String id) async {
+  Future<void> rejectPurchase(String id, {required int purchaseRequestId}) async {
     final response = await _apiService.post(
       ApiEndpoints.fleaMarketRejectPurchase(id),
+      data: {
+        'purchase_request_id': purchaseRequestId,
+      },
     );
 
     if (!response.isSuccess) {
@@ -606,13 +612,17 @@ class FleaMarketRepository {
     await _cache.invalidateMyFleaMarketCache();
   }
 
-  /// 发起还价
-  Future<void> counterOffer(String id, {required double price, String? message}) async {
+  /// 卖家还价
+  Future<void> counterOffer(
+    String id, {
+    required int purchaseRequestId,
+    required double counterPrice,
+  }) async {
     final response = await _apiService.post(
       ApiEndpoints.fleaMarketCounterOffer(id),
       data: {
-        'price': price,
-        if (message != null) 'message': message,
+        'purchase_request_id': purchaseRequestId,
+        'counter_price': counterPrice,
       },
     );
 
@@ -621,13 +631,17 @@ class FleaMarketRepository {
     }
   }
 
-  /// 回应还价
-  Future<void> respondCounterOffer(String id, {required bool accept, double? newPrice}) async {
+  /// 买家回应卖家还价
+  Future<void> respondCounterOffer(
+    String id, {
+    required int purchaseRequestId,
+    required bool accept,
+  }) async {
     final response = await _apiService.post(
       ApiEndpoints.fleaMarketRespondCounterOffer(id),
       data: {
+        'purchase_request_id': purchaseRequestId,
         'accept': accept,
-        if (newPrice != null) 'new_price': newPrice,
       },
     );
 
@@ -640,7 +654,7 @@ class FleaMarketRepository {
 
   /// 同意跳蚤市场须知
   Future<void> agreeNotice() async {
-    final response = await _apiService.post(
+    final response = await _apiService.put(
       ApiEndpoints.fleaMarketAgreeNotice,
     );
 

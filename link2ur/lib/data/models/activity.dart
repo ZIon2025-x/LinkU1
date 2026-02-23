@@ -214,10 +214,10 @@ class Activity extends Equatable {
       isPublic: json['is_public'] as bool? ?? true,
       visibility: json['visibility'] as String? ?? 'public',
       deadline: json['deadline'] != null
-          ? DateTime.parse(json['deadline'])
+          ? DateTime.tryParse(json['deadline'])
           : null,
       activityEndDate: json['activity_end_date'] != null
-          ? DateTime.parse(json['activity_end_date'])
+          ? DateTime.tryParse(json['activity_end_date'])
           : null,
       images: (json['images'] as List<dynamic>?)
           ?.map((e) => e as String)
@@ -240,10 +240,10 @@ class Activity extends Equatable {
       type: json['type'] as String?,
       participantStatus: json['participant_status'] as String?,
       createdAt: json['created_at'] != null
-          ? DateTime.parse(json['created_at'])
+          ? DateTime.tryParse(json['created_at'])
           : null,
       updatedAt: json['updated_at'] != null
-          ? DateTime.parse(json['updated_at'])
+          ? DateTime.tryParse(json['updated_at'])
           : null,
       // 活动类型与抽奖字段
       activityType: json['activity_type'] as String? ?? 'standard',

@@ -225,7 +225,7 @@ class Transaction extends Equatable {
       status: json['status'] as String? ?? 'completed',
       relatedTaskId: json['related_task_id'] as int?,
       createdAt: json['created_at'] != null
-          ? DateTime.parse(json['created_at'])
+          ? DateTime.tryParse(json['created_at'])
           : null,
     );
   }

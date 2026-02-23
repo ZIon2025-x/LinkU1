@@ -869,6 +869,10 @@
   "taskDetailRejectApplication": "拒绝申请",
   "taskDetailRejectApplicationConfirm": "确定要拒绝这个申请吗？拒绝后无法撤销。",
   "taskDetailUnknown": "未知",
+  "taskApplicationMessage": "留言",
+  "taskApplicationMessageHint": "给申请者留言...",
+  "taskApplicationMessageSent": "留言已发送",
+  "taskApplicationMessageFailed": "留言发送失败",
   "taskDetailQualityGood": "工作质量好",
   "taskDetailOnTime": "准时",
   "taskDetailResponsible": "负责任",
@@ -2455,6 +2459,25 @@
   "fleaMarketRequestStatusSellerNegotiating": "卖家已议价",
   "fleaMarketRequestStatusAccepted": "已接受",
   "fleaMarketRequestStatusRejected": "已拒绝",
+  "fleaMarketAcceptCounterOffer": "接受",
+  "fleaMarketRejectCounterOffer": "拒绝",
+  "fleaMarketCounterOfferReceived": "卖家还价 £{price}",
+  "@fleaMarketCounterOfferReceived": {
+    "placeholders": {
+      "price": { "type": "String" }
+    }
+  },
+  "fleaMarketAcceptCounterOfferConfirmTitle": "接受还价",
+  "fleaMarketAcceptCounterOfferConfirmMessage": "确定接受卖家的还价 £{price} 吗？",
+  "@fleaMarketAcceptCounterOfferConfirmMessage": {
+    "placeholders": {
+      "price": { "type": "String" }
+    }
+  },
+  "fleaMarketRejectCounterOfferConfirmTitle": "拒绝还价",
+  "fleaMarketRejectCounterOfferConfirmMessage": "确定要拒绝卖家的还价吗？",
+  "fleaMarketCounterOfferAccepted": "已接受还价",
+  "fleaMarketCounterOfferRejected": "已拒绝还价",
   "applePayNotSupported": "您的设备不支持 Apple Pay",
   "applePayUseOtherMethod": "请使用其他支付方式",
   "applePayTitle": "Apple Pay 支付",
@@ -2902,6 +2925,10 @@
   "leaderboardTitleHint": "输入排行榜标题",
   "leaderboardRules": "规则",
   "leaderboardRulesHint": "描述排行榜规则",
+  "leaderboardLocation": "地区",
+  "leaderboardLocationHint": "输入排行榜所在地区",
+  "leaderboardApplicationReason": "申请理由",
+  "leaderboardApplicationReasonHint": "为什么要创建这个排行榜？",
   "leaderboardFillRequired": "请填写所有必填项",
   "leaderboardSubmitApply": "提交申请",
   "leaderboardApply": "申请排行榜",
@@ -2921,6 +2948,11 @@
   "paymentNoPayoutsMessage": "您还没有任何提现记录",
   "paymentExpired": "支付已过期",
   "paymentExpiredMessage": "支付时间已到，请重新发起支付。",
+  "paymentCountdownExpired": "已过期",
+  "paymentCountdownRemaining": "剩余 {time}",
+  "paymentCountdownTimeout": "支付已超时",
+  "paymentCountdownCompleteInTime": "请在规定时间内完成支付",
+  "paymentCountdownTimeLeft": "距离超时还剩 {time}",
   "paymentApplePayIOSOnly": "Apple Pay 仅在 iOS 设备上可用",
   "paymentApplePayNotSupported": "您的设备不支持 Apple Pay，请使用其他支付方式",
   "paymentNetworkConnectionFailed": "网络连接失败，请检查网络后重试。",
@@ -3599,6 +3631,9 @@
   "taskExpertAccepted": "已接受",
   "taskExpertRejected": "已拒绝",
   "taskExpertAppliedStatus": "已申请",
+  "taskExpertApplicationPending": "您的达人申请正在审核中",
+  "taskExpertApplicationApproved": "您的达人申请已通过！",
+  "taskExpertApplicationRejected": "您的达人申请未通过",
   "taskExpertServiceCount": "{count} 项服务",
   "@taskExpertServiceCount": { "placeholders": { "count": { "type": "int" } } },
   "taskExpertShareTitle": "分享任务达人 - {name}",
@@ -3925,6 +3960,22 @@
   "toolCallLoadingGetLeaderboardSummary": "正在加载排行榜…",
   "toolCallLoadingListTaskExperts": "正在加载达人…",
 
+  "toolCallGetMyWalletSummary": "钱包概况",
+  "toolCallGetMyMessagesSummary": "聊天摘要",
+  "toolCallGetMyVipStatus": "VIP 状态",
+  "toolCallGetMyStudentVerification": "学生认证",
+  "toolCallGetMyCheckinStatus": "签到状态",
+  "toolCallGetMyFleaMarketItems": "我的跳蚤市场",
+  "toolCallSearchForumPosts": "搜索论坛",
+
+  "toolCallLoadingGetMyWalletSummary": "正在查询钱包…",
+  "toolCallLoadingGetMyMessagesSummary": "正在加载聊天摘要…",
+  "toolCallLoadingGetMyVipStatus": "正在查询 VIP 状态…",
+  "toolCallLoadingGetMyStudentVerification": "正在查询认证状态…",
+  "toolCallLoadingGetMyCheckinStatus": "正在查询签到…",
+  "toolCallLoadingGetMyFleaMarketItems": "正在加载您的商品…",
+  "toolCallLoadingSearchForumPosts": "正在搜索论坛…",
+
   "expertApplicationsTitle": "服务申请管理",
   "expertApplicationsEmpty": "暂无申请",
   "expertApplicationsEmptyMessage": "您还没有收到任何服务申请。",
@@ -3955,5 +4006,13 @@
   "expertApplicationService": "服务",
   "expertApplicationMessage": "留言",
   "expertApplicationPrice": "出价",
-  "expertApplicationBasePrice": "基础价格"
+  "expertApplicationBasePrice": "基础价格",
+
+  "commonUnnamed": "未命名",
+  "commonImageUploadFailed": "上传图片失败: {error}",
+  "commonImageCount": "{current}/{max}",
+  "paymentCardSubtitle": "Visa, Mastercard, AMEX",
+  "paymentWeChatPaySubtitle": "微信支付 (Stripe)",
+  "paymentAlipaySubtitle": "支付宝 (Stripe)",
+  "commonCurrencySymbol": "£ "
 }

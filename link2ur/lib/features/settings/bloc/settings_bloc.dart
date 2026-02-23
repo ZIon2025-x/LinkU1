@@ -88,6 +88,7 @@ class SettingsState extends Equatable {
     this.isClearingCache = false,
     this.isDeletingAccount = false,
     this.deleteAccountError,
+    this.errorMessage,
   });
 
   final ThemeMode themeMode;
@@ -99,6 +100,7 @@ class SettingsState extends Equatable {
   final bool isClearingCache;
   final bool isDeletingAccount;
   final String? deleteAccountError;
+  final String? errorMessage;
 
   SettingsState copyWith({
     ThemeMode? themeMode,
@@ -110,6 +112,7 @@ class SettingsState extends Equatable {
     bool? isClearingCache,
     bool? isDeletingAccount,
     String? deleteAccountError,
+    String? errorMessage,
   }) {
     return SettingsState(
       themeMode: themeMode ?? this.themeMode,
@@ -122,6 +125,7 @@ class SettingsState extends Equatable {
       isClearingCache: isClearingCache ?? this.isClearingCache,
       isDeletingAccount: isDeletingAccount ?? this.isDeletingAccount,
       deleteAccountError: deleteAccountError,
+      errorMessage: errorMessage,
     );
   }
 
@@ -136,6 +140,7 @@ class SettingsState extends Equatable {
         isClearingCache,
         isDeletingAccount,
         deleteAccountError,
+        errorMessage,
       ];
 }
 
@@ -183,6 +188,7 @@ class SettingsBloc extends Bloc<SettingsEvent, SettingsState> {
       add(const SettingsCalculateCacheSize());
     } catch (e) {
       AppLogger.error('Failed to load settings', e);
+      emit(state.copyWith(errorMessage: e.toString()));
     }
   }
 

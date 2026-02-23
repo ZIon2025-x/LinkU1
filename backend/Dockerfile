@@ -16,11 +16,13 @@ RUN pip install --no-cache-dir -r requirements.txt
 # 复制应用代码
 COPY . .
 
-# 创建uploads目录
-RUN mkdir -p uploads/images
+# 创建非root用户
+RUN groupadd -r appuser && useradd -r -g appuser -d /app appuser \
+    && mkdir -p uploads/images \
+    && chown -R appuser:appuser /app
 
-# 暴露端口
+USER appuser
+
 EXPOSE 8000
 
-# 启动命令
 CMD ["python", "main.py"]

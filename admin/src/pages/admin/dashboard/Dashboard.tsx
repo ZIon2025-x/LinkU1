@@ -56,7 +56,6 @@ const Dashboard: React.FC = () => {
     } catch (err: any) {
       const errorMsg = getErrorMessage(err);
       setError(errorMsg);
-      console.error('Failed to load dashboard stats:', err);
     } finally {
       setLoading(false);
     }
@@ -73,6 +72,8 @@ const Dashboard: React.FC = () => {
       setTaskTrend(tasks);
     } catch (err: any) {
       message.warning('趋势数据加载失败: ' + getErrorMessage(err));
+      setUserTrend([]);
+      setTaskTrend([]);
     } finally {
       setChartLoading(false);
     }

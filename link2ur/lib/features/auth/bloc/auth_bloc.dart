@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:equatable/equatable.dart';
+import 'package:stream_transform/stream_transform.dart';
 
 import '../../../data/models/user.dart';
 import '../../../data/repositories/auth_repository.dart';
@@ -8,6 +9,10 @@ import '../../../core/utils/logger.dart';
 
 part 'auth_event.dart';
 part 'auth_state.dart';
+
+EventTransformer<E> _throttle<E>(Duration duration) {
+  return (events, mapper) => events.throttle(duration).switchMap(mapper);
+}
 
 /// 认证Bloc
 /// 参考iOS AuthViewModel.swift
@@ -22,8 +27,14 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     on<AuthLoginWithPhoneRequested>(_onLoginWithPhoneRequested);
     on<AuthRegisterRequested>(_onRegisterRequested);
     on<AuthLogoutRequested>(_onLogoutRequested);
-    on<AuthSendEmailCodeRequested>(_onSendEmailCodeRequested);
-    on<AuthSendPhoneCodeRequested>(_onSendPhoneCodeRequested);
+    on<AuthSendEmailCodeRequested>(
+      _onSendEmailCodeRequested,
+      transformer: _throttle(const Duration(seconds: 2)),
+    );
+    on<AuthSendPhoneCodeRequested>(
+      _onSendPhoneCodeRequested,
+      transformer: _throttle(const Duration(seconds: 2)),
+    );
     on<AuthUserUpdated>(_onUserUpdated);
     on<AuthResetPasswordRequested>(_onResetPasswordRequested);
     on<AuthForceLogout>(_onForceLogout);
@@ -301,9 +312,8 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     ));
 
     try {
-      await _authRepository.resetPassword(
-        email: event.email,
-        code: event.code,
+      await _authRepository.resetPasswordWithToken(
+        token: event.token,
         newPassword: event.newPassword,
       );
       emit(state.copyWith(

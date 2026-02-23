@@ -171,7 +171,7 @@ class TaskExpert extends Equatable {
       category: json['category'] as String?,
       totalTasks: json['total_tasks'] as int? ?? 0,
       createdAt: json['created_at'] != null
-          ? DateTime.parse(json['created_at'])
+          ? DateTime.tryParse(json['created_at'])
           : null,
       // 官方账号字段
       isOfficial: json['is_official'] as bool? ?? false,
@@ -382,7 +382,7 @@ class TaskExpertService extends Equatable {
       viewCount: json['view_count'] as int? ?? 0,
       applicationCount: json['application_count'] as int? ?? 0,
       createdAt: json['created_at'] != null
-          ? DateTime.parse(json['created_at'])
+          ? DateTime.tryParse(json['created_at'])
           : null,
       hasTimeSlots: json['has_time_slots'] as bool? ?? false,
       timeSlotDurationMinutes: json['time_slot_duration_minutes'] as int?,

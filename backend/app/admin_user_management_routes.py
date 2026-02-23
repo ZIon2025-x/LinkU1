@@ -4,10 +4,12 @@
 """
 import logging
 import os
+from datetime import datetime, timedelta
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Body
 from sqlalchemy.orm import Session
+from sqlalchemy import func
 
 from app import crud, models, schemas
 from app.audit_logger import log_admin_action
@@ -44,6 +46,66 @@ def get_dashboard_stats(
             raise HTTPException(status_code=500, detail="Internal server error")
         else:
             raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+
+
+def _get_stats_date_range(period: str):
+    """返回 (start_utc, end_utc) 及按天日期列表，用于趋势统计。"""
+    now = get_utc_time()
+    if period == "7d":
+        days = 7
+    elif period == "90d":
+        days = 90
+    else:
+        days = 30  # 30d default
+    start = now - timedelta(days=days)
+    dates = []
+    d = start.date() if hasattr(start, 'date') else start
+    end_date = now.date() if hasattr(now, 'date') else now
+    while d <= end_date:
+        dates.append(d.isoformat())
+        d = d + timedelta(days=1)
+    return start, now, dates
+
+
+@router.get("/admin/stats/user-growth")
+@measure_api_performance("get_user_growth_stats")
+def get_user_growth_stats(
+    period: str = Query("30d", regex="^(7d|30d|90d)$"),
+    current_admin=Depends(get_current_admin),
+    db: Session = Depends(get_db),
+):
+    """获取用户增长趋势（按日统计注册数）。"""
+    start, end, date_list = _get_stats_date_range(period)
+    # 按 created_at 的日期（UTC）分组统计
+    q = (
+        db.query(func.date(models.User.created_at).label("d"), func.count(models.User.id).label("c"))
+        .filter(models.User.created_at >= start, models.User.created_at <= end)
+        .group_by(func.date(models.User.created_at))
+    )
+    rows = q.all()
+    count_by_date = {str(r.d): r.c for r in rows}
+    counts = [count_by_date.get(d, 0) for d in date_list]
+    return {"dates": date_list, "counts": counts}
+
+
+@router.get("/admin/stats/task-growth")
+@measure_api_performance("get_task_growth_stats")
+def get_task_growth_stats(
+    period: str = Query("30d", regex="^(7d|30d|90d)$"),
+    current_admin=Depends(get_current_admin),
+    db: Session = Depends(get_db),
+):
+    """获取任务增长趋势（按日统计创建数）。"""
+    start, end, date_list = _get_stats_date_range(period)
+    q = (
+        db.query(func.date(models.Task.created_at).label("d"), func.count(models.Task.id).label("c"))
+        .filter(models.Task.created_at >= start, models.Task.created_at <= end)
+        .group_by(func.date(models.Task.created_at))
+    )
+    rows = q.all()
+    count_by_date = {str(r.d): r.c for r in rows}
+    counts = [count_by_date.get(d, 0) for d in date_list]
+    return {"dates": date_list, "counts": counts}
 
 
 @router.get("/admin/users")

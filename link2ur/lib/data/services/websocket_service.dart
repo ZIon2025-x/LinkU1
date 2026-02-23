@@ -83,8 +83,8 @@ class WebSocketService extends WidgetsBindingObserver {
       }
 
       // 后端 WebSocket 路径为 /ws/chat/{user_id}，需与 session 中的 user_id 一致
-      final wsUrl = '${AppConfig.instance.wsUrl}/ws/chat/$userId?token=${Uri.encodeComponent(token)}';
-      AppLogger.info('Connecting to WebSocket: ${AppConfig.instance.wsUrl}/ws/chat/$userId');
+      final wsUrl = '${AppConfig.instance.wsUrl}/ws/chat/$userId';
+      AppLogger.info('Connecting to WebSocket: $wsUrl');
 
       _channel = ws_config.createWebSocketChannel(
         Uri.parse(wsUrl),
@@ -100,7 +100,9 @@ class WebSocketService extends WidgetsBindingObserver {
       _isConnected = true;
       _isConnecting = false;
       _reconnectAttempts = 0;
-      _connectionController.add(true);
+      if (!_connectionController.isClosed) {
+        _connectionController.add(true);
+      }
 
       AppLogger.info('WebSocket connected');
 
@@ -164,7 +166,6 @@ class WebSocketService extends WidgetsBindingObserver {
     try {
       final json = jsonEncode(message);
       _channel!.sink.add(json);
-      AppLogger.debug('WebSocket sent: $json');
     } catch (e) {
       AppLogger.error('WebSocket send error', e);
     }
@@ -210,13 +211,26 @@ class WebSocketService extends WidgetsBindingObserver {
     });
   }
 
+  static const int _maxMessageSize = 1024 * 1024; // 1 MB
+
   /// 处理收到的消息
   void _onMessage(dynamic data) {
     try {
-      AppLogger.debug('WebSocket received: $data');
+      if (data is String && data.length > _maxMessageSize) {
+        AppLogger.warning('WebSocket message too large (${data.length} bytes), discarded');
+        return;
+      }
 
       if (data is String) {
         final json = jsonDecode(data) as Map<String, dynamic>;
+        final type = json['type'] as String?;
+
+        // 收到服务器 ping 时，立即回复 pong（不广播给业务层）
+        if (type == 'ping') {
+          send({'type': 'pong'});
+          return;
+        }
+
         final message = WebSocketMessage.fromJson(json);
         _messageController.add(message);
       }
@@ -250,13 +264,15 @@ class WebSocketService extends WidgetsBindingObserver {
   }
 
   /// 开始心跳（根据前台/后台自适应间隔）
+  /// 后端每 20s 发 ping 等 pong，客户端通过 _onMessage 自动回复 pong。
+  /// 此定时器作为额外保活信号，防止某些网络设备关闭空闲连接。
   void _startHeartbeat() {
     _heartbeatTimer?.cancel();
     final interval = _appInForeground
         ? _heartbeatIntervalForeground
         : _heartbeatIntervalBackground;
     _heartbeatTimer = Timer.periodic(interval, (_) {
-      send({'type': 'ping'});
+      send({'type': 'pong'});
     });
   }
 

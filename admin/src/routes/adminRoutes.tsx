@@ -6,7 +6,6 @@ import { AdminLayout } from '../layouts/AdminLayout';
 const Dashboard = lazy(() => import('../pages/admin/dashboard/Dashboard'));
 const CouponManagement = lazy(() => import('../pages/admin/coupons').then(m => ({ default: m.CouponManagement })));
 
-// Placeholder components for other modules (to be extracted later)
 const UserManagement = lazy(() => import('../pages/admin/users/UserManagement'));
 const ExpertManagement = lazy(() => import('../pages/admin/experts/ExpertManagement'));
 const DisputeManagement = lazy(() => import('../pages/admin/disputes/DisputeManagement'));
@@ -19,6 +18,7 @@ const LeaderboardManagement = lazy(() => import('../pages/admin/leaderboard/Lead
 const BannerManagement = lazy(() => import('../pages/admin/banners/BannerManagement'));
 const ReportManagement = lazy(() => import('../pages/admin/reports/ReportManagement'));
 const Settings = lazy(() => import('../pages/admin/settings/Settings'));
+const TwoFASettingsPage = lazy(() => import('../pages/admin/settings/TwoFASettingsPage'));
 const TaskManagementPage = lazy(() => import('../pages/admin/tasks/TaskManagementPage'));
 const JobPositionManagement = lazy(() => import('../pages/admin/job-positions').then(m => ({ default: m.JobPositionManagement })));
 const CustomerServicePage = lazy(() => import('../pages/admin/customer-service/CustomerServicePage'));
@@ -96,6 +96,9 @@ export const AdminRoutes: React.FC = () => {
 
           {/* Settings */}
           <Route path="settings" element={<Settings />} />
+
+          {/* 2FA 设置（由设置页「管理双因素认证」进入） */}
+          <Route path="2fa" element={<TwoFASettingsPage />} />
 
           {/* Catch all - redirect to dashboard */}
           <Route path="*" element={<Navigate to="/admin" replace />} />

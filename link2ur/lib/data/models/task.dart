@@ -22,7 +22,7 @@ class Task extends Equatable {
     this.latitude,
     this.longitude,
     required this.reward,
-    this.currency = 'USD',
+    this.currency = 'GBP',
     required this.status,
     this.images = const [],
     this.deadline,
@@ -220,7 +220,8 @@ class Task extends Equatable {
   bool get isPaymentExpired {
     if (paymentExpiresAt == null || paymentExpiresAt!.isEmpty) return false;
     try {
-      final expiry = DateTime.parse(paymentExpiresAt!);
+      final expiry = DateTime.tryParse(paymentExpiresAt!);
+      if (expiry == null) return false;
       return DateTime.now().isAfter(expiry);
     } catch (_) {
       return false;
@@ -314,7 +315,7 @@ class Task extends Equatable {
               .toList() ??
           [],
       deadline: json['deadline'] != null
-          ? DateTime.parse(json['deadline'])
+          ? DateTime.tryParse(json['deadline'])
           : null,
       posterId: json['poster_id']?.toString() ?? '',
       poster: json['poster'] != null
@@ -340,10 +341,10 @@ class Task extends Equatable {
       expertCreatorId: json['expert_creator_id']?.toString(),
       hasReviewed: json['has_reviewed'] as bool? ?? false,
       createdAt: json['created_at'] != null
-          ? DateTime.parse(json['created_at'])
+          ? DateTime.tryParse(json['created_at'])
           : null,
       updatedAt: json['updated_at'] != null
-          ? DateTime.parse(json['updated_at'])
+          ? DateTime.tryParse(json['updated_at'])
           : null,
       distance: (json['distance'] as num?)?.toDouble(),
     );
@@ -521,7 +522,7 @@ class CreateTaskRequest {
     this.latitude,
     this.longitude,
     required this.reward,
-    this.currency = 'USD',
+    this.currency = 'GBP',
     this.images = const [],
     this.deadline,
     this.isMultiParticipant = false,

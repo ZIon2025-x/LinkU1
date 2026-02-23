@@ -1,15 +1,19 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { message } from 'antd';
 import { clearCache } from '../../../api';
 import { getErrorMessage } from '../../../utils/errorHandler';
 import { API_BASE_URL } from '../../../config';
+import SystemSettings from '../../../components/SystemSettings';
 
 /**
  * 系统设置组件
  */
 const Settings: React.FC = () => {
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [clearingCache, setClearingCache] = useState(false);
+  const [showSystemSettings, setShowSystemSettings] = useState(false);
 
   const handleClearCache = async () => {
     setClearingCache(true);
@@ -28,6 +32,23 @@ const Settings: React.FC = () => {
       <h2 style={{ marginBottom: '20px' }}>系统设置</h2>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+        {/* 系统配置：VIP / 积分 / 签到 */}
+        <div style={{ background: 'white', padding: '24px', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
+          <h3 style={{ margin: '0 0 16px 0', fontSize: '16px' }}>系统配置</h3>
+          <p style={{ color: '#666', marginBottom: '16px', fontSize: '14px' }}>
+            配置 VIP 等级、积分规则、签到奖励等业务参数。
+          </p>
+          <button
+            onClick={() => setShowSystemSettings(true)}
+            style={{
+              padding: '10px 20px', border: '1px solid #d9d9d9', background: 'white',
+              borderRadius: '4px', cursor: 'pointer', fontSize: '14px'
+            }}
+          >
+            ⚙️ 打开系统配置
+          </button>
+        </div>
+
         {/* 缓存管理 */}
         <div style={{ background: 'white', padding: '24px', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
           <h3 style={{ margin: '0 0 16px 0', fontSize: '16px' }}>缓存管理</h3>
@@ -81,7 +102,7 @@ const Settings: React.FC = () => {
             管理双因素认证 (2FA) 和账号安全。
           </p>
           <button
-            onClick={() => window.location.href = '/2fa-settings'}
+            onClick={() => navigate('/admin/2fa')}
             style={{
               padding: '10px 20px', border: '1px solid #d9d9d9', background: 'white',
               borderRadius: '4px', cursor: 'pointer', fontSize: '14px'
@@ -91,6 +112,10 @@ const Settings: React.FC = () => {
           </button>
         </div>
       </div>
+
+      {showSystemSettings && (
+        <SystemSettings onClose={() => setShowSystemSettings(false)} />
+      )}
     </div>
   );
 };

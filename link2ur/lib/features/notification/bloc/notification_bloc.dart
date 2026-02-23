@@ -339,6 +339,7 @@ class NotificationBloc extends Bloc<NotificationEvent, NotificationState> {
       add(const NotificationLoadUnreadNotificationCount());
     } catch (e) {
       AppLogger.error('Failed to mark notification as read', e);
+      emit(state.copyWith(errorMessage: e.toString()));
     }
   }
 
@@ -359,6 +360,7 @@ class NotificationBloc extends Bloc<NotificationEvent, NotificationState> {
       ));
     } catch (e) {
       AppLogger.error('Failed to mark all as read', e);
+      emit(state.copyWith(errorMessage: e.toString()));
     }
   }
 
@@ -375,3 +377,4 @@ class NotificationBloc extends Bloc<NotificationEvent, NotificationState> {
     }
   }
 }
+

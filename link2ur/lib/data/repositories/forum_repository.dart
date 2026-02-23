@@ -76,8 +76,8 @@ class ForumRepository {
       'page': page,
       'page_size': pageSize,
       if (categoryId != null) 'category_id': categoryId,
-      if (keyword != null) 'keyword': keyword,
-      if (sortBy != null) 'sort_by': sortBy,
+      if (keyword != null) 'q': keyword,
+      if (sortBy != null) 'sort': sortBy,
     };
     final cacheKey = keyword == null
         ? CacheManager.buildKey(CacheManager.prefixForumPosts, params)
@@ -251,7 +251,7 @@ class ForumRepository {
       throw ForumException(response.message ?? '获取回复失败');
     }
 
-    final items = response.data!['items'] as List<dynamic>? ?? [];
+    final items = response.data!['replies'] as List<dynamic>? ?? [];
     return items
         .map((e) => ForumReply.fromJson(e as Map<String, dynamic>))
         .toList();
@@ -278,11 +278,23 @@ class ForumRepository {
     return ForumReply.fromJson(response.data!);
   }
 
-  /// 点赞（帖子或回复）
+  /// 点赞帖子
   Future<void> likePost(int postId) async {
     final response = await _apiService.post(
       ApiEndpoints.forumLikes,
-      data: {'post_id': postId},
+      data: {'target_type': 'post', 'target_id': postId},
+    );
+
+    if (!response.isSuccess) {
+      throw ForumException(response.message ?? '点赞失败');
+    }
+  }
+
+  /// 点赞回复
+  Future<void> likeReply(int replyId) async {
+    final response = await _apiService.post(
+      ApiEndpoints.forumLikes,
+      data: {'target_type': 'reply', 'target_id': replyId},
     );
 
     if (!response.isSuccess) {
@@ -337,7 +349,7 @@ class ForumRepository {
   }
 
   /// 获取我的回复
-  Future<ForumPostListResponse> getMyReplies({
+  Future<List<ForumReply>> getMyReplies({
     int page = 1,
     int pageSize = 20,
   }) async {
@@ -353,7 +365,10 @@ class ForumRepository {
       throw ForumException(response.message ?? '获取我的回复失败');
     }
 
-    return ForumPostListResponse.fromJson(response.data!);
+    final items = response.data!['replies'] as List<dynamic>? ?? [];
+    return items
+        .map((e) => ForumReply.fromJson(e as Map<String, dynamic>))
+        .toList();
   }
 
   /// 获取我收藏的帖子
@@ -373,7 +388,18 @@ class ForumRepository {
       throw ForumException(response.message ?? '获取收藏帖子失败');
     }
 
-    return ForumPostListResponse.fromJson(response.data!);
+    final data = response.data!;
+    final rawList = data['favorites'] as List<dynamic>? ??
+        data['posts'] as List<dynamic>? ??
+        [];
+    return ForumPostListResponse(
+      posts: rawList
+          .map((e) => ForumPost.fromJson(e as Map<String, dynamic>))
+          .toList(),
+      total: data['total'] as int? ?? 0,
+      page: data['page'] as int? ?? page,
+      pageSize: data['page_size'] as int? ?? pageSize,
+    );
   }
 
   /// 获取我点赞的帖子
@@ -393,7 +419,18 @@ class ForumRepository {
       throw ForumException(response.message ?? '获取点赞帖子失败');
     }
 
-    return ForumPostListResponse.fromJson(response.data!);
+    final data = response.data!;
+    final rawList = data['likes'] as List<dynamic>? ??
+        data['posts'] as List<dynamic>? ??
+        [];
+    return ForumPostListResponse(
+      posts: rawList
+          .map((e) => ForumPost.fromJson(e as Map<String, dynamic>))
+          .toList(),
+      total: data['total'] as int? ?? 0,
+      page: data['page'] as int? ?? page,
+      pageSize: data['page_size'] as int? ?? pageSize,
+    );
   }
 
   /// 搜索帖子
@@ -405,7 +442,7 @@ class ForumRepository {
     final response = await _apiService.get<Map<String, dynamic>>(
       ApiEndpoints.forumSearch,
       queryParameters: {
-        'keyword': keyword,
+        'q': keyword,
         'page': page,
         'page_size': pageSize,
       },
@@ -478,13 +515,32 @@ class ForumRepository {
     }
   }
 
-  /// 举报帖子/回复
-  Future<void> reportPost(int postId, {required String reason}) async {
+  /// 举报帖子
+  Future<void> reportPost(int postId, {required String reason, String? description}) async {
     final response = await _apiService.post(
       ApiEndpoints.forumReports,
       data: {
-        'post_id': postId,
+        'target_type': 'post',
+        'target_id': postId,
         'reason': reason,
+        if (description != null) 'description': description,
+      },
+    );
+
+    if (!response.isSuccess) {
+      throw ForumException(response.message ?? '举报失败');
+    }
+  }
+
+  /// 举报回复
+  Future<void> reportReply(int replyId, {required String reason, String? description}) async {
+    final response = await _apiService.post(
+      ApiEndpoints.forumReports,
+      data: {
+        'target_type': 'reply',
+        'target_id': replyId,
+        'reason': reason,
+        if (description != null) 'description': description,
       },
     );
 

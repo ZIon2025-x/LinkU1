@@ -82,7 +82,7 @@ class AppNotification extends Equatable {
       taskId: json['task_id'] as int?,
       variables: json['variables'] as Map<String, dynamic>?,
       createdAt: json['created_at'] != null
-          ? DateTime.parse(json['created_at'])
+          ? DateTime.tryParse(json['created_at'])
           : null,
     );
   }
@@ -186,7 +186,7 @@ class UnreadNotificationCount {
 
   factory UnreadNotificationCount.fromJson(Map<String, dynamic> json) {
     return UnreadNotificationCount(
-      count: json['count'] as int? ?? json['unread_count'] as int? ?? 0,
+      count: json['unread_count'] as int? ?? json['count'] as int? ?? 0,
       forumCount: json['forum_count'] as int? ?? 0,
     );
   }

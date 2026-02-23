@@ -81,7 +81,6 @@ export function useModalForm<T extends Record<string, any>>(
       }
       close();
     } catch (error) {
-      console.error('Form submission failed:', error);
       if (onError) {
         onError(error);
       }

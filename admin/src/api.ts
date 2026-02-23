@@ -60,7 +60,7 @@ api.interceptors.request.use(async config => {
         const token = await getCSRFToken();
         config.headers['X-CSRF-Token'] = token;
       } catch (error) {
-        console.error('获取 CSRF token 失败:', error);
+        return Promise.reject(new Error('获取 CSRF token 失败，请刷新页面重试'));
       }
     }
   }
@@ -89,15 +89,14 @@ api.interceptors.response.use(
         '/api/csrf/token'
       ];
       
-      if (originalRequest && !skipRefreshApis.some(skipApi => originalRequest.url?.includes(skipApi))) {
-        // 如果正在刷新，等待刷新完成
+      if (originalRequest && !originalRequest._retried && !skipRefreshApis.some(skipApi => originalRequest.url?.includes(skipApi))) {
+        originalRequest._retried = true;
+
         if (isRefreshing && refreshPromise) {
           try {
             await refreshPromise;
-            // 刷新成功后，重试原始请求
             return api.request(originalRequest);
           } catch (refreshError) {
-            // 刷新失败，跳转到登录页
             if (window.location.pathname !== '/login') {
               window.location.href = '/login';
             }
@@ -105,20 +104,16 @@ api.interceptors.response.use(
           }
         }
         
-        // 开始刷新token
         isRefreshing = true;
         refreshPromise = api.post('/api/auth/admin/refresh');
         
         try {
           await refreshPromise;
-          // 清除CSRF token缓存
           clearCSRFToken();
-          // 刷新成功后，重试原始请求
           isRefreshing = false;
           refreshPromise = null;
           return api.request(originalRequest);
         } catch (refreshError) {
-          // 刷新失败，跳转到登录页
           isRefreshing = false;
           refreshPromise = null;
           if (window.location.pathname !== '/login') {
@@ -140,23 +135,27 @@ export const adminLogin = async (loginData: { username: string; password: string
   return res.data;
 };
 
+const AUTH_COOKIE_NAMES = ['session', 'admin_session', 'csrf_token', 'refresh_token'];
+
+function clearAuthCookies() {
+  const domains = [window.location.hostname, `.${window.location.hostname}`];
+  for (const name of AUTH_COOKIE_NAMES) {
+    document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/`;
+    for (const domain of domains) {
+      document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/;domain=${domain}`;
+    }
+  }
+}
+
 export const adminLogout = async () => {
   try {
     const res = await api.post('/api/auth/admin/logout');
-    document.cookie.split(";").forEach((c) => {
-      const eqPos = c.indexOf("=");
-      const name = eqPos > -1 ? c.substr(0, eqPos).trim() : c.trim();
-      document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/`;
-      document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/;domain=${window.location.hostname}`;
-      document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/;domain=.${window.location.hostname}`;
-    });
+    clearAuthCookies();
+    clearCSRFToken();
     return res.data;
   } catch (error) {
-    document.cookie.split(";").forEach((c) => {
-      const eqPos = c.indexOf("=");
-      const name = eqPos > -1 ? c.substr(0, eqPos).trim() : c.trim();
-      document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/`;
-    });
+    clearAuthCookies();
+    clearCSRFToken();
     throw error;
   }
 };
@@ -656,6 +655,19 @@ export const updateInvitationCode = async (invitationId: number, data: {
 
 export const deleteInvitationCode = async (invitationId: number) => {
   const res = await api.delete(`/api/admin/invitation-codes/${invitationId}`);
+  return res.data;
+};
+
+export const getInvitationCodeUsers = async (invitationId: number, params?: {
+  page?: number;
+  limit?: number;
+}) => {
+  const res = await api.get(`/api/admin/invitation-codes/${invitationId}/users`, { params });
+  return res.data;
+};
+
+export const getInvitationCodeStatistics = async (invitationId: number) => {
+  const res = await api.get(`/api/admin/invitation-codes/${invitationId}/statistics`);
   return res.data;
 };
 

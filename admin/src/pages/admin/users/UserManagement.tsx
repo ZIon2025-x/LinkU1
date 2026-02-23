@@ -34,7 +34,7 @@ const UserManagement: React.FC = () => {
       const response = await getUsersForAdmin(page, pageSize, searchTerm || undefined);
       return {
         data: response.users || [],
-        total: (response.total_pages || 1) * pageSize,
+        total: response.total ?? 0,
       };
     },
     initialPageSize: 20,
@@ -276,7 +276,7 @@ const UserManagement: React.FC = () => {
             min="1"
             max="365"
             value={suspendModal.formData.days}
-            onChange={e => suspendModal.updateField('days', parseInt(e.target.value) || 1)}
+            onChange={e => suspendModal.updateField('days', Math.max(1, Math.min(365, parseInt(e.target.value) || 1)))}
             style={{ width: '100%', padding: '8px', border: '1px solid #d9d9d9', borderRadius: '4px', fontSize: '14px' }}
           />
         </div>

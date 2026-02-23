@@ -7,7 +7,7 @@ services:
       - "8000:8000"
     environment:
       - DATABASE_URL=sqlite:///./app/database.db
-      - SECRET_KEY=your-secret-key-here
+      - SECRET_KEY=${SECRET_KEY:?Set SECRET_KEY in .env or environment}
       - USE_REDIS=false
     volumes:
       - ./uploads:/app/uploads

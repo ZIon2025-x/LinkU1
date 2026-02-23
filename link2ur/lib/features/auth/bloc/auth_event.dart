@@ -108,18 +108,16 @@ class AuthUserUpdated extends AuthEvent {
   List<Object> get props => [user];
 }
 
-/// 重置密码
+/// 重置密码（通过邮件链接中的 token）
 class AuthResetPasswordRequested extends AuthEvent {
   const AuthResetPasswordRequested({
-    required this.email,
-    required this.code,
+    required this.token,
     required this.newPassword,
   });
 
-  final String email;
-  final String code;
+  final String token;
   final String newPassword;
 
   @override
-  List<Object> get props => [email, code, newPassword];
+  List<Object> get props => [token, newPassword];
 }

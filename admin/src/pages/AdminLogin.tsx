@@ -84,13 +84,11 @@ const AdminLogin: React.FC = () => {
         }
       } else {
         // 正常登录成功（未启用 2FA 和邮箱验证）
-        // 登录成功后获取CSRF token
         try {
           await api.get('/api/csrf/token');
-        } catch (error) {
-          console.error('获取CSRF token失败:', error);
-        }
+        } catch (_) { /* CSRF token fetch is best-effort */ }
         
+        setLoginData({ username_or_id: '', password: '' });
         message.success('登录成功');
         navigate('/');
       }
@@ -132,26 +130,22 @@ const AdminLogin: React.FC = () => {
         // 登录成功后获取CSRF token
         try {
           await api.get('/api/csrf/token');
-        } catch (error) {
-          console.error('获取CSRF token失败:', error);
-        }
+        } catch (_) { /* best-effort */ }
         
+        setLoginData({ username_or_id: '', password: '' });
         message.success('登录成功');
         navigate('/');
       } else {
-        // 邮箱验证码验证
-        const response = await api.post('/api/auth/admin/verify-code', {
+        await api.post('/api/auth/admin/verify-code', {
           ...verificationData,
           code: values.code
         });
         
-        // 验证成功后获取CSRF token
         try {
           await api.get('/api/csrf/token');
-        } catch (error) {
-          console.error('获取CSRF token失败:', error);
-        }
+        } catch (_) { /* best-effort */ }
         
+        setLoginData({ username_or_id: '', password: '' });
         message.success('验证成功，正在跳转...');
         navigate('/');
       }
@@ -195,8 +189,9 @@ const AdminLogin: React.FC = () => {
     setStep('login');
     setError('');
     setSuccess('');
-    setCodeValue(''); // 清空验证码输入
+    setCodeValue('');
     setIs2FAMode(false);
+    setLoginData({ username_or_id: '', password: '' });
     setVerificationData({ admin_id: '', code: '' });
     verificationForm.resetFields();
   };

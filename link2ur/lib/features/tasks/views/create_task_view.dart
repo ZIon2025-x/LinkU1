@@ -101,6 +101,16 @@ class _CreateTaskContentState extends State<_CreateTaskContent> {
   void _submitTask() {
     if (!_formKey.currentState!.validate()) return;
 
+    if (_deadline != null && _deadline!.isBefore(DateTime.now())) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(context.l10n.createTaskSelectDeadline),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
     final reward = double.tryParse(_rewardController.text) ?? 0;
 
     final request = CreateTaskRequest(
@@ -169,9 +179,9 @@ class _CreateTaskContentState extends State<_CreateTaskContent> {
                     Expanded(
                       child: TextFormField(
                         controller: _rewardController,
-                        decoration: const InputDecoration(
+                        decoration: InputDecoration(
                           hintText: '0.00',
-                          prefixText: '£ ',
+                          prefixText: context.l10n.commonCurrencySymbol,
                         ),
                         keyboardType: const TextInputType.numberWithOptions(
                             decimal: true),
@@ -322,15 +332,15 @@ class _CreateTaskContentState extends State<_CreateTaskContent> {
               border: Border.all(color: AppColors.dividerLight),
               borderRadius: AppRadius.allMedium,
             ),
-            child: const Column(
+            child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(Icons.add_photo_alternate_outlined,
+                const Icon(Icons.add_photo_alternate_outlined,
                     color: AppColors.textSecondaryLight),
-                SizedBox(height: 4),
+                const SizedBox(height: 4),
                 Text(
-                  '0/9',
-                  style: TextStyle(
+                  context.l10n.commonImageCount(0, 9),
+                  style: const TextStyle(
                     fontSize: 12,
                     color: AppColors.textSecondaryLight,
                   ),

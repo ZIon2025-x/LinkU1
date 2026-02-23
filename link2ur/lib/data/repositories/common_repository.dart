@@ -149,7 +149,7 @@ class CommonRepository {
   /// 获取客服聊天消息
   Future<List<Map<String, dynamic>>> getCustomerServiceMessages(
       String chatId) async {
-    final response = await _apiService.get<Map<String, dynamic>>(
+    final response = await _apiService.get<List<dynamic>>(
       ApiEndpoints.customerServiceMessages(chatId),
     );
 
@@ -157,8 +157,7 @@ class CommonRepository {
       throw CommonException(response.message ?? '获取客服消息失败');
     }
 
-    final items = response.data!['items'] as List<dynamic>? ?? [];
-    return items.map((e) => e as Map<String, dynamic>).toList();
+    return response.data!.map((e) => e as Map<String, dynamic>).toList();
   }
 
   /// 结束客服聊天
@@ -285,8 +284,8 @@ class CommonRepository {
       ApiEndpoints.translate,
       data: {
         'text': text,
-        'target_lang': targetLang,
-        if (sourceLang != null) 'source_lang': sourceLang,
+        'target_language': targetLang,
+        if (sourceLang != null) 'source_language': sourceLang,
       },
     );
 
@@ -339,13 +338,12 @@ class CommonRepository {
       return {'translations': results, 'cached': true};
     }
 
-    // 请求未缓存的部分
     final response = await _apiService.post<Map<String, dynamic>>(
       ApiEndpoints.translateBatch,
       data: {
         'texts': uncachedTexts,
-        'target_lang': targetLang,
-        if (sourceLang != null) 'source_lang': sourceLang,
+        'target_language': targetLang,
+        if (sourceLang != null) 'source_language': sourceLang,
       },
     );
 

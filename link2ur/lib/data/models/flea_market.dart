@@ -33,6 +33,7 @@ class FleaMarketItem extends Equatable {
     this.pendingPaymentEphemeralKeySecret,
     this.pendingPaymentExpiresAt,
     this.isAvailable,
+    this.userPurchaseRequestId,
     this.userPurchaseRequestStatus,
     this.userPurchaseRequestProposedPrice,
     this.myRole,
@@ -77,6 +78,7 @@ class FleaMarketItem extends Equatable {
   final String? pendingPaymentEphemeralKeySecret;
   final String? pendingPaymentExpiresAt;
   final bool? isAvailable;
+  final int? userPurchaseRequestId;
   final String? userPurchaseRequestStatus; // pending, seller_negotiating
   final double? userPurchaseRequestProposedPrice;
 
@@ -149,6 +151,7 @@ class FleaMarketItem extends Equatable {
       pendingPaymentExpiresAt:
           _toStringNullable(json['pending_payment_expires_at']),
       isAvailable: _toBoolNullable(json['is_available']),
+      userPurchaseRequestId: json['user_purchase_request_id'] as int?,
       userPurchaseRequestStatus:
           _toStringNullable(json['user_purchase_request_status']),
       userPurchaseRequestProposedPrice:
@@ -210,6 +213,7 @@ class FleaMarketItem extends Equatable {
     String? pendingPaymentEphemeralKeySecret,
     String? pendingPaymentExpiresAt,
     bool? isAvailable,
+    int? userPurchaseRequestId,
     String? userPurchaseRequestStatus,
     double? userPurchaseRequestProposedPrice,
     String? myRole,
@@ -245,6 +249,7 @@ class FleaMarketItem extends Equatable {
       pendingPaymentEphemeralKeySecret: pendingPaymentEphemeralKeySecret ?? this.pendingPaymentEphemeralKeySecret,
       pendingPaymentExpiresAt: pendingPaymentExpiresAt ?? this.pendingPaymentExpiresAt,
       isAvailable: isAvailable ?? this.isAvailable,
+      userPurchaseRequestId: userPurchaseRequestId ?? this.userPurchaseRequestId,
       userPurchaseRequestStatus: userPurchaseRequestStatus ?? this.userPurchaseRequestStatus,
       userPurchaseRequestProposedPrice: userPurchaseRequestProposedPrice ?? this.userPurchaseRequestProposedPrice,
       myRole: myRole ?? this.myRole,
@@ -350,7 +355,7 @@ class PurchaseRequest extends Equatable {
       status: json['status'] as String? ?? 'pending',
       sellerCounterPrice: _toDoubleNullable(json['seller_counter_price']),
       createdAt: json['created_at'] != null
-          ? DateTime.parse(json['created_at'])
+          ? DateTime.tryParse(json['created_at'])
           : null,
     );
   }

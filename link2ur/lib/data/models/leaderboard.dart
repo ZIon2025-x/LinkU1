@@ -80,10 +80,10 @@ class Leaderboard extends Equatable {
       voteCount: json['vote_count'] as int? ?? 0,
       viewCount: json['view_count'] as int? ?? 0,
       createdAt: json['created_at'] != null
-          ? DateTime.parse(json['created_at'])
+          ? DateTime.tryParse(json['created_at'])
           : null,
       updatedAt: json['updated_at'] != null
-          ? DateTime.parse(json['updated_at'])
+          ? DateTime.tryParse(json['updated_at'])
           : null,
     );
   }
@@ -216,10 +216,10 @@ class LeaderboardItem extends Equatable {
           json['display_comment_info'] as Map<String, dynamic>?,
       rank: json['rank'] as int?,
       createdAt: json['created_at'] != null
-          ? DateTime.parse(json['created_at'])
+          ? DateTime.tryParse(json['created_at'])
           : null,
       updatedAt: json['updated_at'] != null
-          ? DateTime.parse(json['updated_at'])
+          ? DateTime.tryParse(json['updated_at'])
           : null,
     );
   }

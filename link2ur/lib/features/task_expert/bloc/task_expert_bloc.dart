@@ -181,6 +181,11 @@ class TaskExpertApplyServiceEnhanced extends TaskExpertEvent {
       [serviceId, message, counterPrice, timeSlotId, preferredDeadline, isFlexibleTime];
 }
 
+/// 加载我的达人申请状态 — 对标 iOS getMyExpertApplication
+class TaskExpertLoadMyExpertApplicationStatus extends TaskExpertEvent {
+  const TaskExpertLoadMyExpertApplicationStatus();
+}
+
 // ==================== State ====================
 
 enum TaskExpertStatus { initial, loading, loaded, error }
@@ -211,6 +216,7 @@ class TaskExpertState extends Equatable {
     this.selectedCategory = 'all',
     this.selectedCity = 'all',
     this.searchKeyword,
+    this.myExpertApplicationStatus,
   });
 
   final TaskExpertStatus status;
@@ -246,6 +252,9 @@ class TaskExpertState extends Equatable {
   /// 当前搜索关键词
   final String? searchKeyword;
 
+  /// 我的达人申请状态 (pending/approved/rejected/null=未申请)
+  final Map<String, dynamic>? myExpertApplicationStatus;
+
   bool get isLoading => status == TaskExpertStatus.loading;
 
   /// 当前是否有激活的筛选条件（类型非全部 或 城市非全部）
@@ -276,6 +285,8 @@ class TaskExpertState extends Equatable {
     String? selectedCategory,
     String? selectedCity,
     String? searchKeyword,
+    Map<String, dynamic>? myExpertApplicationStatus,
+    bool clearMyExpertApplicationStatus = false,
   }) {
     return TaskExpertState(
       status: status ?? this.status,
@@ -302,6 +313,9 @@ class TaskExpertState extends Equatable {
       selectedCategory: selectedCategory ?? this.selectedCategory,
       selectedCity: selectedCity ?? this.selectedCity,
       searchKeyword: searchKeyword ?? this.searchKeyword,
+      myExpertApplicationStatus: clearMyExpertApplicationStatus
+          ? null
+          : (myExpertApplicationStatus ?? this.myExpertApplicationStatus),
     );
   }
 
@@ -331,6 +345,7 @@ class TaskExpertState extends Equatable {
         selectedCategory,
         selectedCity,
         searchKeyword,
+        myExpertApplicationStatus,
       ];
 }
 
@@ -360,6 +375,7 @@ class TaskExpertBloc extends Bloc<TaskExpertEvent, TaskExpertState> {
     on<TaskExpertApproveApplication>(_onApproveApplication);
     on<TaskExpertRejectApplication>(_onRejectApplication);
     on<TaskExpertCounterOffer>(_onCounterOffer);
+    on<TaskExpertLoadMyExpertApplicationStatus>(_onLoadMyExpertApplicationStatus);
   }
 
   final TaskExpertRepository _taskExpertRepository;
@@ -845,6 +861,20 @@ class TaskExpertBloc extends Bloc<TaskExpertEvent, TaskExpertState> {
         actionMessage: 'application_action_failed',
         errorMessage: e.toString(),
       ));
+    }
+  }
+
+  /// 加载我的达人申请状态 — 对标 iOS getMyExpertApplication
+  Future<void> _onLoadMyExpertApplicationStatus(
+    TaskExpertLoadMyExpertApplicationStatus event,
+    Emitter<TaskExpertState> emit,
+  ) async {
+    try {
+      final result = await _taskExpertRepository.getMyExpertApplication();
+      if (emit.isDone) return;
+      emit(state.copyWith(myExpertApplicationStatus: result));
+    } catch (e) {
+      AppLogger.error('Failed to load my expert application status', e);
     }
   }
 }

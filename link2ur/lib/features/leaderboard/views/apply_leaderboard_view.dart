@@ -24,16 +24,18 @@ class ApplyLeaderboardView extends StatefulWidget {
 
 class _ApplyLeaderboardViewState extends State<ApplyLeaderboardView> {
   final _titleController = TextEditingController();
+  final _locationController = TextEditingController();
   final _descriptionController = TextEditingController();
-  final _rulesController = TextEditingController();
+  final _reasonController = TextEditingController();
   final _imagePicker = ImagePicker();
   XFile? _coverImage;
 
   @override
   void dispose() {
     _titleController.dispose();
+    _locationController.dispose();
     _descriptionController.dispose();
-    _rulesController.dispose();
+    _reasonController.dispose();
     super.dispose();
   }
 
@@ -63,7 +65,7 @@ class _ApplyLeaderboardViewState extends State<ApplyLeaderboardView> {
 
   void _submit() {
     if (_titleController.text.trim().isEmpty ||
-        _descriptionController.text.trim().isEmpty) {
+        _locationController.text.trim().isEmpty) {
       AppFeedback.showWarning(context, context.l10n.leaderboardFillRequired);
       return;
     }
@@ -71,11 +73,14 @@ class _ApplyLeaderboardViewState extends State<ApplyLeaderboardView> {
     AppHaptics.medium();
     context.read<LeaderboardBloc>().add(
           LeaderboardApplyRequested(
-            title: _titleController.text.trim(),
-            description: _descriptionController.text.trim(),
-            rules: _rulesController.text.trim().isEmpty
+            name: _titleController.text.trim(),
+            location: _locationController.text.trim(),
+            description: _descriptionController.text.trim().isEmpty
                 ? null
-                : _rulesController.text.trim(),
+                : _descriptionController.text.trim(),
+            applicationReason: _reasonController.text.trim().isEmpty
+                ? null
+                : _reasonController.text.trim(),
             coverImagePath: _coverImage?.path,
           ),
         );
@@ -116,7 +121,7 @@ class _ApplyLeaderboardViewState extends State<ApplyLeaderboardView> {
                   _buildCoverImagePicker(isDark),
                   const SizedBox(height: AppSpacing.lg),
 
-                  // ── 标题 * ──
+                  // ── 名称 * ──
                   _buildField(
                     label: l10n.leaderboardTitle,
                     controller: _titleController,
@@ -127,25 +132,35 @@ class _ApplyLeaderboardViewState extends State<ApplyLeaderboardView> {
                   ),
                   const SizedBox(height: AppSpacing.lg),
 
-                  // ── 描述 * ──
+                  // ── 地区 * ──
+                  _buildField(
+                    label: l10n.leaderboardLocation,
+                    controller: _locationController,
+                    hint: l10n.leaderboardLocationHint,
+                    icon: Icons.location_on_outlined,
+                    isRequired: true,
+                    isDark: isDark,
+                  ),
+                  const SizedBox(height: AppSpacing.lg),
+
+                  // ── 描述 ──
                   _buildField(
                     label: l10n.leaderboardDescription,
                     controller: _descriptionController,
                     hint: l10n.leaderboardDescriptionHint,
                     icon: Icons.description_outlined,
                     maxLines: 4,
-                    isRequired: true,
                     isDark: isDark,
                   ),
                   const SizedBox(height: AppSpacing.lg),
 
-                  // ── 排行榜规则 ──
+                  // ── 申请理由 ──
                   _buildField(
-                    label: l10n.leaderboardRules,
-                    controller: _rulesController,
-                    hint: l10n.leaderboardRulesHint,
-                    icon: Icons.rule_rounded,
-                    maxLines: 5,
+                    label: l10n.leaderboardApplicationReason,
+                    controller: _reasonController,
+                    hint: l10n.leaderboardApplicationReasonHint,
+                    icon: Icons.question_answer_outlined,
+                    maxLines: 3,
                     isDark: isDark,
                   ),
                   const SizedBox(height: AppSpacing.xl),

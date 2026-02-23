@@ -5,8 +5,11 @@ import 'package:go_router/go_router.dart';
 import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_radius.dart';
+import '../../../core/design/app_typography.dart';
 import '../../../core/utils/l10n_extension.dart';
+import '../../../data/repositories/task_expert_repository.dart';
 import '../../auth/bloc/auth_bloc.dart';
+import '../bloc/task_expert_bloc.dart';
 
 /// 任务达人介绍页
 /// 对标 iOS TaskExpertsIntroView.swift
@@ -20,7 +23,11 @@ class TaskExpertsIntroView extends StatelessWidget {
     final isAuthenticated =
         context.select<AuthBloc, bool>((b) => b.state.isAuthenticated);
 
-    return Scaffold(
+    return BlocProvider(
+      create: (ctx) => TaskExpertBloc(
+        taskExpertRepository: ctx.read<TaskExpertRepository>(),
+      )..add(const TaskExpertLoadMyExpertApplicationStatus()),
+      child: Scaffold(
       appBar: AppBar(
         title: Text(l10n.taskExpertIntro),
       ),
@@ -29,6 +36,20 @@ class TaskExpertsIntroView extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            // 我的申请状态卡片
+            if (isAuthenticated)
+              BlocBuilder<TaskExpertBloc, TaskExpertState>(
+                buildWhen: (p, c) =>
+                    p.myExpertApplicationStatus != c.myExpertApplicationStatus,
+                builder: (ctx, state) {
+                  final app = state.myExpertApplicationStatus;
+                  if (app == null) return const SizedBox.shrink();
+                  return _MyApplicationStatusCard(
+                    applicationData: app,
+                    isDark: isDark,
+                  );
+                },
+              ),
             // ========== Hero Section（对标iOS: star.circle.fill + title + subtitle）==========
             const SizedBox(height: AppSpacing.xl),
             const Icon(
@@ -158,6 +179,7 @@ class TaskExpertsIntroView extends StatelessWidget {
             const SizedBox(height: AppSpacing.xl),
           ],
         ),
+      ),
       ),
     );
   }
@@ -303,6 +325,71 @@ class _BenefitRow extends StatelessWidget {
                   ),
                 ),
               ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// 我的达人申请状态卡片
+class _MyApplicationStatusCard extends StatelessWidget {
+  const _MyApplicationStatusCard({
+    required this.applicationData,
+    required this.isDark,
+  });
+
+  final Map<String, dynamic> applicationData;
+  final bool isDark;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final status = applicationData['status'] as String? ?? 'pending';
+
+    final Color statusColor;
+    final IconData statusIcon;
+    final String statusText;
+
+    switch (status) {
+      case 'approved':
+        statusColor = AppColors.success;
+        statusIcon = Icons.check_circle;
+        statusText = l10n.taskExpertApplicationApproved;
+        break;
+      case 'rejected':
+        statusColor = AppColors.error;
+        statusIcon = Icons.cancel;
+        statusText = l10n.taskExpertApplicationRejected;
+        break;
+      default:
+        statusColor = Colors.orange;
+        statusIcon = Icons.schedule;
+        statusText = l10n.taskExpertApplicationPending;
+    }
+
+    return Container(
+      margin: const EdgeInsets.only(top: AppSpacing.md),
+      padding: const EdgeInsets.all(AppSpacing.md),
+      decoration: BoxDecoration(
+        color: statusColor.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(AppRadius.medium),
+        border: Border.all(
+          color: statusColor.withValues(alpha: 0.3),
+        ),
+      ),
+      child: Row(
+        children: [
+          Icon(statusIcon, color: statusColor, size: 24),
+          const SizedBox(width: AppSpacing.sm),
+          Expanded(
+            child: Text(
+              statusText,
+              style: AppTypography.body.copyWith(
+                color: statusColor,
+                fontWeight: FontWeight.w600,
+              ),
             ),
           ),
         ],

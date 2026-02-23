@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import '../../l10n/app_localizations.dart';
 import '../design/app_colors.dart';
 import '../design/app_spacing.dart';
 import '../design/app_typography.dart';
@@ -108,7 +109,9 @@ class _PaymentCountdownViewState extends State<PaymentCountdownView> {
           ),
           const SizedBox(width: 6),
           Text(
-            _isExpired ? '已过期' : '剩余 $_formattedTime',
+            _isExpired
+                ? AppLocalizations.of(context)!.paymentCountdownExpired
+                : AppLocalizations.of(context)!.paymentCountdownRemaining(_formattedTime),
             style: TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.w600,
@@ -228,14 +231,16 @@ class _PaymentCountdownBannerState extends State<PaymentCountdownBanner> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  _isExpired ? '支付已超时' : '请在规定时间内完成支付',
+                  _isExpired
+                      ? AppLocalizations.of(context)!.paymentCountdownTimeout
+                      : AppLocalizations.of(context)!.paymentCountdownCompleteInTime,
                   style: AppTypography.bodyBold.copyWith(
                     color: statusColor,
                   ),
                 ),
                 if (!_isExpired)
                   Text(
-                    '距离超时还剩 $_formattedTime',
+                    AppLocalizations.of(context)!.paymentCountdownTimeLeft(_formattedTime),
                     style: AppTypography.caption.copyWith(
                       color: AppColors.textSecondaryLight,
                     ),

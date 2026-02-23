@@ -213,6 +213,10 @@ class _ApprovalPaymentPageState extends State<ApprovalPaymentPage> {
         _effectiveCustomerId = response.customerId;
         _effectiveEphemeralKeySecret = response.ephemeralKeySecret;
         _effectiveAmountDisplay = response.finalAmountDisplay;
+        // 优惠券变更后需要重新请求 Alipay PaymentIntent
+        _alipayClientSecret = null;
+        _alipayCustomerId = null;
+        _alipayEphemeralKeySecret = null;
       });
     } catch (e) {
       if (!mounted) return;

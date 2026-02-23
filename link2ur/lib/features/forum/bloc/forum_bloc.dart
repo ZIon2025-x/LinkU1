@@ -1,11 +1,16 @@
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:stream_transform/stream_transform.dart';
 
 import '../../../core/utils/cache_manager.dart';
 import '../../../data/models/forum.dart';
 import '../../../data/repositories/forum_repository.dart';
 import '../../../core/utils/logger.dart';
 import '../../../core/utils/app_exception.dart';
+
+EventTransformer<E> _debounce<E>(Duration duration) {
+  return (events, mapper) => events.debounce(duration).switchMap(mapper);
+}
 
 // ==================== Events ====================
 
@@ -285,7 +290,10 @@ class ForumBloc extends Bloc<ForumEvent, ForumState> {
     on<ForumLoadPosts>(_onLoadPosts);
     on<ForumLoadMorePosts>(_onLoadMorePosts);
     on<ForumRefreshRequested>(_onRefresh);
-    on<ForumSearchChanged>(_onSearchChanged);
+    on<ForumSearchChanged>(
+      _onSearchChanged,
+      transformer: _debounce(const Duration(milliseconds: 500)),
+    );
     on<ForumCategoryChanged>(_onCategoryChanged);
     on<ForumLikePost>(_onLikePost);
     on<ForumFavoritePost>(_onFavoritePost);
@@ -312,13 +320,16 @@ class ForumBloc extends Bloc<ForumEvent, ForumState> {
     }
 
     try {
-      // 使用 getVisibleCategories() 对接后端权限过滤 API
-      // 后端 /api/forum/forums/visible 根据用户 token 返回可见板块
       final categories = await _forumRepository.getVisibleCategories();
       emit(state.copyWith(
         status: ForumStatus.loaded,
         categories: categories,
       ));
+
+      // 对齐 iOS：加载分类后批量获取收藏状态
+      if (categories.isNotEmpty) {
+        await _loadCategoryFavoritesBatch(categories, emit);
+      }
     } catch (e) {
       AppLogger.error('Failed to load forum categories', e);
       if (state.categories.isEmpty) {
@@ -327,6 +338,27 @@ class ForumBloc extends Bloc<ForumEvent, ForumState> {
           errorMessage: e is AppException ? e.message : e.toString(),
         ));
       }
+    }
+  }
+
+  /// 批量获取分类收藏状态并更新 — 对标 iOS ForumViewModel.loadCategoryFavoritesBatch
+  Future<void> _loadCategoryFavoritesBatch(
+    List<ForumCategory> categories,
+    Emitter<ForumState> emit,
+  ) async {
+    try {
+      final ids = categories.map((c) => c.id).toList();
+      final favMap = await _forumRepository.getCategoryFavoritesBatch(ids);
+      if (emit.isDone || favMap.isEmpty) return;
+
+      final updated = state.categories.map((c) {
+        final fav = favMap[c.id];
+        return fav != null ? c.copyWith(isFavorited: fav) : c;
+      }).toList();
+
+      emit(state.copyWith(categories: updated));
+    } catch (e) {
+      AppLogger.error('Failed to load category favorites batch', e);
     }
   }
 
@@ -429,7 +461,11 @@ class ForumBloc extends Bloc<ForumEvent, ForumState> {
         ));
       }
     } catch (e) {
-      emit(state.copyWith(isRefreshing: false));
+      AppLogger.error('Failed to refresh forum', e);
+      emit(state.copyWith(
+        isRefreshing: false,
+        errorMessage: e.toString(),
+      ));
     }
   }
 
@@ -597,6 +633,7 @@ class ForumBloc extends Bloc<ForumEvent, ForumState> {
       emit(state.copyWith(replies: replies));
     } catch (e) {
       AppLogger.error('Failed to load replies', e);
+      emit(state.copyWith(errorMessage: e.toString()));
     }
   }
 

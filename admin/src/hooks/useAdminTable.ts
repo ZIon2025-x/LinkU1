@@ -68,7 +68,6 @@ export function useAdminTable<T = any>(config: TableConfig<T>): UseAdminTableRet
       setData(result.data);
       setTotal(result.total);
     } catch (error) {
-      console.error('Failed to fetch table data:', error);
       if (onError) {
         onError(error);
       }

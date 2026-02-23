@@ -1,13 +1,15 @@
 """
-AI Agent 核心调度器 — 管理对话流程和工具调用循环
+AI Agent 核心调度器 — Pipeline 架构
 
 成本控制策略：
 1. 意图分类（关键词 → 本地处理 / Haiku 判别 → Sonnet 兜底）
 2. 离题拒绝（不回答与平台无关的问题）
-3. FAQ 缓存（Redis/内存，避免重复 LLM 调用）
-4. 每用户每日 token 预算 + 请求次数限制
+3. FAQ 缓存（Redis + 内存 fallback，避免重复 LLM 调用）
+4. 每用户每日 token 预算 + 请求次数限制（Redis + 内存 fallback）
 5. 严格的 max_output_tokens 限制回复长度
 6. 历史轮数裁剪（只保留最近 N 轮）
+7. 工具循环 input token 上限保护
+8. 按意图选择工具子集（减少 ~1000 input tokens/次）
 """
 
 import json
@@ -24,80 +26,199 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app import models
 from app.config import Config
-from app.services.ai_llm_client import LLMClient
-from app.services.ai_tools import TOOLS
-from app.services.ai_tool_executor import ToolExecutor
+from app.services.ai_llm_client import LLMClient, LLMResponse
+from app.services.ai_tool_registry import tool_registry
+from app.services.ai_tools import ToolExecutor
 from app.utils.time_utils import get_utc_time
 
 logger = logging.getLogger(__name__)
 
-# ==================== 单例 ====================
+
+# ==================== LLM 客户端（带健康检查 & 自动重建） ====================
 
 _llm_client: LLMClient | None = None
+_llm_client_created_at: float = 0.0
+_LLM_CLIENT_MAX_AGE = 3600  # 1 小时自动重建
 
 
 def get_llm_client() -> LLMClient:
-    global _llm_client
-    if _llm_client is None:
+    global _llm_client, _llm_client_created_at
+    now = time.time()
+    if _llm_client is None or (now - _llm_client_created_at > _LLM_CLIENT_MAX_AGE):
         _llm_client = LLMClient()
+        _llm_client_created_at = now
+        logger.info("LLM client (re)created")
     return _llm_client
 
 
-# ==================== FAQ 缓存（内存，带大小上限） ====================
-
-_FAQ_CACHE_MAX_SIZE = 500
-_faq_cache: dict[str, tuple[str, float]] = {}  # key → (answer, expire_ts)
-
-
-def _get_faq_cache(key: str) -> str | None:
-    entry = _faq_cache.get(key)
-    if entry and entry[1] > time.time():
-        return entry[0]
-    if entry:
-        del _faq_cache[key]  # 过期则删除
-    return None
+def reset_llm_client():
+    """API Key 更换或 provider 故障时手动重建"""
+    global _llm_client
+    _llm_client = None
 
 
-def _set_faq_cache(key: str, answer: str):
-    # 超过上限时清理过期条目
-    if len(_faq_cache) >= _FAQ_CACHE_MAX_SIZE:
+# ==================== Redis-backed State (with in-memory fallback) ====================
+
+def _get_redis():
+    """获取 Redis 客户端，不可用时返回 None"""
+    try:
+        from app.redis_pool import get_client
+        return get_client(decode_responses=True)
+    except Exception:
+        return None
+
+
+class _StateBackend:
+    """FAQ 缓存 + 每日预算 + 限流的统一后端，优先 Redis，自动降级到内存"""
+
+    _FAQ_PREFIX = "ai:faq:"
+    _BUDGET_PREFIX = "ai:budget:"
+    _RATE_PREFIX = "ai:rate:"
+
+    def __init__(self):
+        self._mem_faq: dict[str, tuple[str, float]] = {}
+        self._mem_faq_max = 500
+        self._mem_budget: dict[str, dict] = {}
+        self._mem_rate: dict[str, list[float]] = {}
+        self._last_cleanup = 0.0
+
+    # ── FAQ 缓存 ──
+
+    def get_faq(self, key: str) -> str | None:
+        r = _get_redis()
+        if r:
+            try:
+                return r.get(f"{self._FAQ_PREFIX}{key}")
+            except Exception:
+                pass
+        entry = self._mem_faq.get(key)
+        if entry and entry[1] > time.time():
+            return entry[0]
+        if entry:
+            del self._mem_faq[key]
+        return None
+
+    def set_faq(self, key: str, answer: str):
+        ttl = Config.AI_FAQ_CACHE_TTL
+        r = _get_redis()
+        if r:
+            try:
+                r.setex(f"{self._FAQ_PREFIX}{key}", ttl, answer)
+                return
+            except Exception:
+                pass
+        if len(self._mem_faq) >= self._mem_faq_max:
+            now = time.time()
+            expired = [k for k, (_, ts) in self._mem_faq.items() if ts <= now]
+            for k in expired:
+                del self._mem_faq[k]
+            if len(self._mem_faq) >= self._mem_faq_max:
+                to_remove = list(self._mem_faq.keys())[:self._mem_faq_max // 5]
+                for k in to_remove:
+                    del self._mem_faq[k]
+        self._mem_faq[key] = (answer, time.time() + ttl)
+
+    # ── 每日预算 ──
+
+    def _today(self) -> str:
+        from datetime import datetime, timezone
+        return datetime.now(timezone.utc).strftime("%Y-%m-%d")
+
+    def check_daily_budget(self, user_id: str, lang: str = "en") -> tuple[bool, str]:
+        msgs = _BUDGET_REASONS.get(lang, _BUDGET_REASONS["en"])
+        today = self._today()
+
+        r = _get_redis()
+        if r:
+            try:
+                rkey = f"{self._BUDGET_PREFIX}{user_id}:{today}"
+                raw = r.get(rkey)
+                if raw:
+                    usage = json.loads(raw)
+                else:
+                    usage = {"tokens": 0, "requests": 0}
+
+                if usage["requests"] >= Config.AI_DAILY_REQUEST_LIMIT:
+                    return False, msgs["requests"]
+                if usage["tokens"] >= Config.AI_DAILY_TOKEN_BUDGET:
+                    return False, msgs["tokens"]
+                return True, ""
+            except Exception:
+                pass
+
+        self._cleanup_mem_budget()
+        usage = self._mem_budget.get(user_id)
+        if not usage or usage.get("date") != today:
+            self._mem_budget[user_id] = {"date": today, "tokens": 0, "requests": 0}
+            return True, ""
+        if usage["requests"] >= Config.AI_DAILY_REQUEST_LIMIT:
+            return False, msgs["requests"]
+        if usage["tokens"] >= Config.AI_DAILY_TOKEN_BUDGET:
+            return False, msgs["tokens"]
+        return True, ""
+
+    def record_usage(self, user_id: str, tokens: int):
+        today = self._today()
+
+        r = _get_redis()
+        if r:
+            try:
+                rkey = f"{self._BUDGET_PREFIX}{user_id}:{today}"
+                raw = r.get(rkey)
+                if raw:
+                    usage = json.loads(raw)
+                    usage["tokens"] += tokens
+                    usage["requests"] += 1
+                else:
+                    usage = {"tokens": tokens, "requests": 1}
+                r.setex(rkey, 86400, json.dumps(usage))
+                return
+            except Exception:
+                pass
+
+        usage = self._mem_budget.get(user_id)
+        if not usage or usage.get("date") != today:
+            self._mem_budget[user_id] = {"date": today, "tokens": tokens, "requests": 1}
+        else:
+            usage["tokens"] += tokens
+            usage["requests"] += 1
+
+    def _cleanup_mem_budget(self):
         now = time.time()
-        expired = [k for k, (_, ts) in _faq_cache.items() if ts <= now]
-        for k in expired:
-            del _faq_cache[k]
-        # 仍超过上限则清除最早 20%
-        if len(_faq_cache) >= _FAQ_CACHE_MAX_SIZE:
-            to_remove = list(_faq_cache.keys())[:_FAQ_CACHE_MAX_SIZE // 5]
-            for k in to_remove:
-                del _faq_cache[k]
-    _faq_cache[key] = (answer, time.time() + Config.AI_FAQ_CACHE_TTL)
+        if now - self._last_cleanup < 300:
+            return
+        self._last_cleanup = now
+        today = self._today()
+        stale = [uid for uid, v in self._mem_budget.items() if v.get("date") != today]
+        for uid in stale:
+            del self._mem_budget[uid]
+
+    # ── 限流 ──
+
+    def check_rate_limit(self, user_id: str) -> bool:
+        r = _get_redis()
+        if r:
+            try:
+                rkey = f"{self._RATE_PREFIX}{user_id}"
+                count = r.incr(rkey)
+                if count == 1:
+                    r.expire(rkey, 60)
+                return count <= Config.AI_RATE_LIMIT_RPM
+            except Exception:
+                pass
+
+        now = time.time()
+        cutoff = now - 60
+        timestamps = self._mem_rate.get(user_id, [])
+        timestamps = [t for t in timestamps if t > cutoff]
+        if len(timestamps) >= Config.AI_RATE_LIMIT_RPM:
+            return False
+        timestamps.append(now)
+        self._mem_rate[user_id] = timestamps
+        return True
 
 
-# ==================== 每用户每日预算追踪（内存，带自动清理） ====================
-
-_DAILY_USAGE_MAX_USERS = 5000
-# {user_id: {"date": "2026-02-16", "tokens": 12345, "requests": 50}}
-_daily_usage: dict[str, dict] = {}
-_last_usage_cleanup = 0.0
-
-
-def _get_today() -> str:
-    from datetime import datetime, timezone
-    return datetime.now(timezone.utc).strftime("%Y-%m-%d")
-
-
-def _cleanup_daily_usage():
-    """清理非今日的过期条目"""
-    global _last_usage_cleanup
-    now = time.time()
-    if now - _last_usage_cleanup < 300:  # 最多每 5 分钟清理一次
-        return
-    _last_usage_cleanup = now
-    today = _get_today()
-    stale = [uid for uid, v in _daily_usage.items() if v.get("date") != today]
-    for uid in stale:
-        del _daily_usage[uid]
-
+_state = _StateBackend()
 
 _BUDGET_REASONS = {
     "zh": {
@@ -111,50 +232,18 @@ _BUDGET_REASONS = {
 }
 
 
-def _check_daily_budget(user_id: str, lang: str = "en") -> tuple[bool, str]:
-    """检查用户是否超过每日预算。返回 (ok, reason)，reason 按 lang 返回中/英文。"""
-    today = _get_today()
-    usage = _daily_usage.get(user_id)
-    msgs = _BUDGET_REASONS.get(lang, _BUDGET_REASONS["en"])
-
-    if not usage or usage["date"] != today:
-        if len(_daily_usage) >= _DAILY_USAGE_MAX_USERS:
-            _cleanup_daily_usage()
-        _daily_usage[user_id] = {"date": today, "tokens": 0, "requests": 0}
-        return True, ""
-
-    if usage["requests"] >= Config.AI_DAILY_REQUEST_LIMIT:
-        return False, msgs["requests"]
-
-    if usage["tokens"] >= Config.AI_DAILY_TOKEN_BUDGET:
-        return False, msgs["tokens"]
-
-    return True, ""
-
-
-def _record_usage(user_id: str, tokens: int):
-    today = _get_today()
-    usage = _daily_usage.get(user_id)
-    if not usage or usage["date"] != today:
-        _daily_usage[user_id] = {"date": today, "tokens": tokens, "requests": 1}
-    else:
-        usage["tokens"] += tokens
-        usage["requests"] += 1
-
-
 # ==================== 意图分类 ====================
 
 class IntentType:
-    FAQ = "faq"              # 平台FAQ → 本地回答，不调LLM
-    TASK_QUERY = "task"      # 任务相关查询 → 小模型 + 工具
-    PROFILE = "profile"      # 个人资料查询 → 小模型 + 工具
-    COMPLEX = "complex"      # 复杂/多步 → 大模型 + 工具
-    OFF_TOPIC = "off_topic"  # 离题 → 直接拒绝，不调LLM
-    UNKNOWN = "unknown"      # 需要 LLM 判别
-    TRANSFER_TO_CS = "transfer_to_cs"  # 用户请求转人工客服
+    FAQ = "faq"
+    TASK_QUERY = "task"
+    PROFILE = "profile"
+    COMPLEX = "complex"
+    OFF_TOPIC = "off_topic"
+    UNKNOWN = "unknown"
+    TRANSFER_TO_CS = "transfer_to_cs"
 
 
-# 离题关键词（高置信度直接拒绝）
 _OFF_TOPIC_PATTERNS = [
     r"写(一篇|个|段|首)(作文|文章|诗|歌|小说|故事|代码|程序|脚本)",
     r"(翻译|帮我翻译|translate)",
@@ -168,8 +257,6 @@ _OFF_TOPIC_PATTERNS = [
 ]
 _OFF_TOPIC_RE = re.compile("|".join(_OFF_TOPIC_PATTERNS), re.IGNORECASE)
 
-# FAQ 关键词 → 直接命中本地FAQ（零 LLM 消耗）
-# 覆盖全部 20 个 faq_sections
 _FAQ_KEYWORDS = {
     "faq_about": ["link2ur是什么", "什么是link2ur", "what is link2ur", "谁可以使用", "who can use", "平台介绍", "如何加入", "加入你们", "怎么加入", "how to join", "可以合作吗", "合作", "partner", "partnership", "collaborate", "成为合作伙伴", "become partner"],
     "faq_publish": ["怎么发布", "如何发布", "how to post", "how to create task", "发任务", "创建任务", "发布流程", "发布技巧"],
@@ -196,16 +283,13 @@ _FAQ_KEYWORDS = {
     "faq_linker": ["linker", "智能助手", "ai助手", "ai客服", "机器人", "bot", "linker能做什么", "what can linker", "小助手"],
 }
 
-# 任务相关关键词
 _TASK_KEYWORDS = ["任务", "task", "我的任务", "my task", "进行中", "已完成", "查看任务",
                   "搜索任务", "search task", "find task", "任务详情", "task detail",
                   "状态", "status", "订单", "order"]
 
-# 个人资料关键词
 _PROFILE_KEYWORDS = ["个人资料", "我的资料", "my profile", "评分", "rating", "等级", "level",
                      "统计", "stats", "我的信息"]
 
-# 转人工客服关键词
 _TRANSFER_CS_KEYWORDS = [
     "转人工", "人工客服", "真人客服", "找客服", "联系客服",
     "connect human", "talk to agent", "human agent", "real person",
@@ -213,107 +297,87 @@ _TRANSFER_CS_KEYWORDS = [
     "transfer to human", "real agent",
 ]
 
-
-# 个性化数据关键词 — 命中则跳过 FAQ，走 LLM + 工具获取用户真实数据
 _PERSONAL_DATA_KEYWORDS = [
+    # 积分 & 优惠券
     "我的积分", "my points", "积分余额", "points balance", "几张券",
     "我的优惠券", "my coupon", "可用优惠券", "有没有券",
+    # 通知
     "我的通知", "未读通知", "unread notification", "几条未读", "未读消息",
+    # 帖子
     "我的帖子", "my post", "我发过", "我发的帖",
+    # 活动 & 平台
     "有什么活动", "最近活动", "current activities", "哪些活动",
     "有没有二手", "搜索跳蚤", "search flea", "二手市场",
     "排行榜", "榜单", "leaderboard", "谁排第一",
     "有哪些达人", "推荐达人", "哪个达人", "达人列表",
-    "我的余额", "my balance",
+    # 钱包 & 余额
+    "我的余额", "my balance", "钱包", "wallet", "余额多少",
+    "收入", "income", "赚了多少", "earnings", "支付记录", "payment history",
+    "提现", "payout", "到账", "收款",
+    # 私聊消息
+    "谁给我发消息", "who messaged me", "未读消息数", "unread messages",
+    "最近聊天", "recent chats", "私聊", "private message",
+    # VIP
+    "我是vip吗", "am i vip", "vip状态", "vip status", "会员到期", "membership expire",
+    "vip什么时候到期", "vip expiry",
+    # 学生认证
+    "认证状态", "verification status", "我的认证", "my verification",
+    "认证过期", "verification expire", "认证到期",
+    # 签到
+    "签到了吗", "checked in", "今天签到", "today checkin", "连续签到",
+    "consecutive checkin", "签到奖励", "checkin reward", "签到天数",
+    # 跳蚤市场个人
+    "我卖的", "my listings", "我的商品", "my items for sale",
+    "收藏的商品", "favorited items", "购买记录", "purchase history",
+    "我买的", "what i bought",
+    # 论坛个人
+    "搜帖子", "search posts", "热帖", "hot posts", "热门帖子",
+    "我收藏的帖子", "my favorite posts", "我的回复", "my replies",
 ]
 
 
 def classify_intent(message: str) -> str:
-    """本地意图分类（零 LLM 消耗）
-
-    优先级：
-    1. 离题检测 → 直接拒绝
-    2. 转人工客服 → 检查在线
-    3. 个性化数据 → LLM + 工具（跳过 FAQ）
-    4. FAQ 精确匹配 → 本地回答
-    5. 任务/资料关键词 → 小模型
-    6. 平台相关词 → LLM 判别
-    7. 默认 → Haiku 快速判别
-    """
     msg_lower = message.lower().strip()
-
-    # 1. 离题检测
     if _OFF_TOPIC_RE.search(msg_lower):
         return IntentType.OFF_TOPIC
-
-    # 超短消息（<3字符）视为无效
     if len(msg_lower) < 3:
         return IntentType.OFF_TOPIC
-
-    # 2. 转人工客服检测（优先于 FAQ）
     if any(kw in msg_lower for kw in _TRANSFER_CS_KEYWORDS):
         return IntentType.TRANSFER_TO_CS
-
-    # 3. 个性化数据查询（优先于 FAQ，避免 FAQ 拦截个性化请求）
     if any(kw in msg_lower for kw in _PERSONAL_DATA_KEYWORDS):
-        return IntentType.UNKNOWN  # 走 LLM + 新工具
-
-    # 4. FAQ 精确匹配
+        return IntentType.UNKNOWN
     for faq_key, keywords in _FAQ_KEYWORDS.items():
         if any(kw in msg_lower for kw in keywords):
             return IntentType.FAQ
-
-    # 5. 任务相关
     if any(kw in msg_lower for kw in _TASK_KEYWORDS):
         return IntentType.TASK_QUERY
-
-    # 6. 个人资料
     if any(kw in msg_lower for kw in _PROFILE_KEYWORDS):
         return IntentType.PROFILE
 
-    # 7. 包含平台相关词（宽泛匹配）
     platform_words = ["link2ur", "平台", "platform", "帮助", "help", "使用", "怎么用",
                       "how to", "功能", "feature", "钱包", "wallet", "积分", "points",
                       "优惠券", "coupon", "活动", "activity", "达人", "expert",
                       "论坛", "forum", "跳蚤", "flea", "认证", "verify",
                       "排行", "leaderboard", "通知", "notification", "消息", "message"]
     if any(w in msg_lower for w in platform_words):
-        return IntentType.UNKNOWN  # 让 LLM 判断具体需求
+        return IntentType.UNKNOWN
 
-    # 8. 默认：不确定 → 让 Haiku 快速判别
     return IntentType.UNKNOWN
 
 
-# faq_key（_FAQ_KEYWORDS 的 key）→ 主题（用于查 DB 的 TOPIC_TO_SECTION_KEY）
 _FAQ_KEY_TO_TOPIC = {
-    "faq_about": "about",
-    "faq_publish": "publish",
-    "faq_accept": "accept",
-    "faq_payment": "payment",
-    "faq_fee": "fee",
-    "faq_dispute": "dispute",
-    "faq_account": "account",
-    "faq_wallet": "wallet",
-    "faq_cancel": "cancel",
-    "faq_report": "report",
-    "faq_privacy": "privacy",
-    "faq_flea": "flea",
-    "faq_forum": "forum",
-    "faq_application": "application",
-    "faq_review": "review",
-    "faq_student": "student",
-    "faq_expert": "expert",
-    "faq_activity": "activity",
-    "faq_coupon": "coupon",
-    "faq_notification": "notification",
-    "faq_message_support": "message_support",
-    "faq_vip": "vip",
-    "faq_linker": "linker",
+    "faq_about": "about", "faq_publish": "publish", "faq_accept": "accept",
+    "faq_payment": "payment", "faq_fee": "fee", "faq_dispute": "dispute",
+    "faq_account": "account", "faq_wallet": "wallet", "faq_cancel": "cancel",
+    "faq_report": "report", "faq_privacy": "privacy", "faq_flea": "flea",
+    "faq_forum": "forum", "faq_application": "application", "faq_review": "review",
+    "faq_student": "student", "faq_expert": "expert", "faq_activity": "activity",
+    "faq_coupon": "coupon", "faq_notification": "notification",
+    "faq_message_support": "message_support", "faq_vip": "vip", "faq_linker": "linker",
 }
 
 
 def _get_matched_faq_topic(message: str) -> str | None:
-    """根据关键词命中返回对应 FAQ 主题（publish/accept/...），供从 DB 取答案。"""
     msg_lower = message.lower()
     for faq_key, keywords in _FAQ_KEYWORDS.items():
         if any(kw in msg_lower for kw in keywords):
@@ -321,9 +385,9 @@ def _get_matched_faq_topic(message: str) -> str | None:
     return None
 
 
-# ==================== System Prompt ====================
+# ==================== System Prompt (config / DB) ====================
 
-_SYSTEM_PROMPT_TEMPLATE = """你是 Link2Ur 技能互助平台的官方 AI 客服助手。你只处理与 Link2Ur 平台相关的问题。
+_DEFAULT_SYSTEM_PROMPT = """你是 Link2Ur 技能互助平台的官方 AI 客服助手。你只处理与 Link2Ur 平台相关的问题。
 
 【当前用户信息】
 - 用户名: {user_name} (ID: {user_id})
@@ -339,6 +403,13 @@ _SYSTEM_PROMPT_TEMPLATE = """你是 Link2Ur 技能互助平台的官方 AI 客�
 6. 查询用户积分余额和可用优惠券
 7. 浏览平台活动、跳蚤市场商品、论坛帖子
 8. 查看通知摘要、排行榜、任务达人信息
+9. 查询钱包概况（积分余额、收款账户状态、支付记录）
+10. 查看私聊消息摘要（未读消息数、最近联系人）
+11. 查询 VIP 会员状态和到期时间
+12. 查询学生认证状态和认证学校
+13. 查看签到状态和奖励进度
+14. 查询跳蚤市场我的商品、收藏和购买记录
+15. 搜索论坛帖子、查看热帖、我的收藏和回复
 
 【严格禁止 — 必须拒绝的请求】
 - 任何与 Link2Ur 平台无关的问题（闲聊、写作文、编程、数学、翻译、新闻等）
@@ -355,46 +426,47 @@ _SYSTEM_PROMPT_TEMPLATE = """你是 Link2Ur 技能互助平台的官方 AI 客�
 - 语言：{lang_instruction}
 - 长度：**每次回复控制在 3-5 句话以内**，不要长篇大论
 - 格式：不要用 markdown 标题（#），适当用列表和加粗
-- 风格：简洁专业，直接解决问题，不要寒暄
+- 风格：简洁专业，直接解决问题，不要寒暄"""
 
-【示例对话】
-
-用户：我的任务现在什么状态？
-助手：我来帮你查询。[调用 query_my_tasks 工具]
-根据查询结果，你目前有 3 个任务：
-- **搬家帮忙**（进行中）— 截止 2/20
-- **遛狗服务**（已完成）
-- **翻译文件**（开放中，等待接单）
-
-用户：帮我写一首诗
-助手：抱歉，我只能回答 Link2Ur 平台相关的问题。如需帮助请描述您在平台上遇到的具体问题。
-
-用户：怎么发布任务？
-助手：发布任务步骤：
-1. 点击首页"发布任务"按钮
-2. 填写标题、描述、报酬和截止日期
-3. 选择任务类型和位置
-4. 提交后预付款到平台托管
-5. 等待接单者接单
-
-用户：平台收费多少？
-助手：平台对每笔交易收取服务费，具体比例在发布页面显示。接单者最终收到 = 报酬 - 服务费。详细费率可在发布任务页面查看。"""
+_db_prompt_cache: tuple[str | None, float] = (None, 0.0)
+_DB_PROMPT_CACHE_TTL = 300  # 5 分钟
 
 
-def _build_system_prompt(user: models.User, resolved_lang: str | None = None) -> str:
-    """resolved_lang: 已解析的 zh/en，若传入则优先于 user.language_preference（与 FAQ/离题一致）。"""
+async def _get_system_prompt_template(db: AsyncSession) -> str:
+    """根据配置获取 system prompt 模板。db 模式会缓存 5 分钟。"""
+    global _db_prompt_cache
+
+    if Config.AI_SYSTEM_PROMPT_SOURCE != "db":
+        return _DEFAULT_SYSTEM_PROMPT
+
+    cached_text, expire_ts = _db_prompt_cache
+    if cached_text and time.time() < expire_ts:
+        return cached_text
+
+    try:
+        q = select(models.AISystemPrompt).where(
+            models.AISystemPrompt.is_active == True
+        ).order_by(desc(models.AISystemPrompt.updated_at)).limit(1)
+        row = (await db.execute(q)).scalar_one_or_none()
+        if row and row.content:
+            _db_prompt_cache = (row.content, time.time() + _DB_PROMPT_CACHE_TTL)
+            return row.content
+    except Exception as e:
+        logger.warning("Failed to load system prompt from DB, using default: %s", e)
+
+    return _DEFAULT_SYSTEM_PROMPT
+
+
+def _build_system_prompt(template: str, user: models.User, resolved_lang: str | None = None) -> str:
     lang = resolved_lang
     if not lang and user.language_preference and user.language_preference.strip():
         lang = user.language_preference.strip().lower()
     if not lang:
         lang = "en"
     lang = "en" if lang.startswith("en") else "zh"
-    if lang == "en":
-        lang_instruction = "Reply in English"
-    else:
-        lang_instruction = "用中文回复"
+    lang_instruction = "Reply in English" if lang == "en" else "用中文回复"
 
-    return _SYSTEM_PROMPT_TEMPLATE.format(
+    return template.format(
         user_name=user.name,
         user_id=user.id,
         lang=lang,
@@ -403,7 +475,7 @@ def _build_system_prompt(user: models.User, resolved_lang: str | None = None) ->
     )
 
 
-# ==================== 离题拒绝消息 ====================
+# ==================== 离题拒绝消息 & 语言推断 ====================
 
 _OFF_TOPIC_RESPONSES = {
     "zh": "抱歉，我只能回答 Link2Ur 平台相关的问题。如需帮助请描述您在平台上遇到的具体问题，例如任务查询、支付流程、费用说明等。",
@@ -412,18 +484,15 @@ _OFF_TOPIC_RESPONSES = {
 
 
 def _is_cjk(c: str) -> bool:
-    """常见 CJK 字符范围（中文、日文汉字等）。"""
     o = ord(c)
     return (0x4E00 <= o <= 0x9FFF) or (0x3400 <= o <= 0x4DBF)
 
 
 def _infer_reply_lang_from_message(message: str) -> str:
-    """根据用户消息推断回复语言：以中文为主则回中文，否则默认回英文。"""
     if not message or not message.strip():
         return "en"
     text = message.strip()
     cjk = sum(1 for c in text if _is_cjk(c))
-    # 可视为“有意义的字”的字符数（字母 + CJK）
     letter_like = sum(1 for c in text if c.isalpha() or _is_cjk(c))
     if letter_like == 0:
         return "en"
@@ -432,369 +501,320 @@ def _infer_reply_lang_from_message(message: str) -> str:
     return "en"
 
 
-# ==================== AI Agent ====================
+# ==================== Pipeline Steps ====================
 
-class AIAgent:
-    """AI Agent 核心调度器
+class _PipelineContext:
+    """在 pipeline 各步骤之间传递的上下文"""
+    __slots__ = (
+        "db", "user", "conversation_id", "user_message", "lang",
+        "reply_lang", "intent", "accept_lang",
+        "full_response", "all_tool_calls", "all_tool_results",
+        "total_input_tokens", "total_output_tokens", "model_used",
+        "terminated",
+    )
 
-    调用链路：
-    1. classify_intent() → 本地关键词分类（零消耗）
-    2. FAQ → 直接返回缓存答案（零消耗）
-    3. OFF_TOPIC → 直接拒绝（零消耗）
-    4. TASK/PROFILE → 小模型 Haiku + 工具调用
-    5. UNKNOWN → Haiku 先判别相关性，再决定是否调用工具
-    6. COMPLEX → 大模型 Sonnet（极少数情况）
-    """
-
-    def __init__(
-        self,
-        db: AsyncSession,
-        user: models.User,
-        *,
-        accept_lang: str | None = None,
-    ):
+    def __init__(self, db: AsyncSession, user: models.User,
+                 conversation_id: str, user_message: str,
+                 accept_lang: str | None = None):
         self.db = db
         self.user = user
-        self._accept_lang = accept_lang  # "zh" | "en" from Accept-Language header
-        self.llm = get_llm_client()
-        self.executor = ToolExecutor(db, user)
+        self.conversation_id = conversation_id
+        self.user_message = user_message
+        self.accept_lang = accept_lang
 
-    async def _load_history(self, conversation_id: str) -> list[dict]:
-        """加载对话历史（最近 N 轮，节省 token）"""
-        max_turns = Config.AI_MAX_HISTORY_TURNS
-        q = (
-            select(models.AIMessage)
-            .where(
-                and_(
-                    models.AIMessage.conversation_id == conversation_id,
-                    models.AIMessage.role.in_(["user", "assistant"]),
-                )
+        pref = (user.language_preference or "").strip().lower()
+        if pref:
+            self.lang = "en" if pref.startswith("en") else "zh"
+        elif accept_lang:
+            self.lang = accept_lang
+        else:
+            self.lang = "en"
+
+        self.reply_lang = _infer_reply_lang_from_message(user_message)
+        self.intent = ""
+        self.full_response = ""
+        self.all_tool_calls: list[dict] = []
+        self.all_tool_results: list[dict] = []
+        self.total_input_tokens = 0
+        self.total_output_tokens = 0
+        self.model_used = ""
+        self.terminated = False
+
+
+async def _step_budget_check(ctx: _PipelineContext) -> AsyncIterator[ServerSentEvent]:
+    ok, reason = _state.check_daily_budget(ctx.user.id, ctx.lang)
+    if not ok:
+        yield _make_text_sse(reason)
+        yield _make_done_sse()
+        ctx.terminated = True
+
+
+async def _step_save_user_message(ctx: _PipelineContext) -> AsyncIterator[ServerSentEvent]:
+    msg = models.AIMessage(conversation_id=ctx.conversation_id, role="user", content=ctx.user_message)
+    ctx.db.add(msg)
+    await ctx.db.flush()
+    return
+    yield  # make this a generator
+
+
+async def _step_intent_classify(ctx: _PipelineContext) -> AsyncIterator[ServerSentEvent]:
+    ctx.intent = classify_intent(ctx.user_message)
+    logger.info("AI intent: %s for user %s: %s", ctx.intent, ctx.user.id, ctx.user_message[:50])
+    return
+    yield
+
+
+async def _step_off_topic(ctx: _PipelineContext) -> AsyncIterator[ServerSentEvent]:
+    if ctx.intent != IntentType.OFF_TOPIC:
+        return
+    reply = _OFF_TOPIC_RESPONSES.get(ctx.reply_lang, _OFF_TOPIC_RESPONSES["en"])
+    _state.record_usage(ctx.user.id, 0)
+    await _save_assistant_message(ctx, reply, "local", 0, 0)
+    await ctx.db.commit()
+    yield _make_text_sse(reply)
+    yield _make_done_sse()
+    ctx.terminated = True
+
+
+async def _step_transfer_cs(ctx: _PipelineContext) -> AsyncIterator[ServerSentEvent]:
+    if ctx.intent != IntentType.TRANSFER_TO_CS:
+        return
+
+    executor = ToolExecutor(ctx.db, ctx.user)
+    cs_result = await executor.execute("check_cs_availability", {}, request_lang=ctx.lang)
+    available = cs_result.get("available", False)
+    online_count = cs_result.get("online_count", 0)
+
+    yield ServerSentEvent(
+        data=json.dumps({"available": available, "online_count": online_count,
+                         "contact_email": "support@link2ur.com"}, ensure_ascii=False),
+        event="cs_available",
+    )
+
+    if available:
+        reply = "有人工客服在线，点击下方按钮连接人工客服。" if ctx.lang == "zh" else "Human agents are online. Tap the button below to connect."
+    else:
+        reply = "暂无在线客服，请发送邮件至 support@link2ur.com 联系我们。" if ctx.lang == "zh" else "No agents are currently online. Please email support@link2ur.com for assistance."
+
+    _state.record_usage(ctx.user.id, 0)
+    await _save_assistant_message(ctx, reply, "local_cs_check", 0, 0)
+    await ctx.db.commit()
+    yield _make_text_sse(reply)
+    yield _make_done_sse()
+    ctx.terminated = True
+
+
+async def _step_faq(ctx: _PipelineContext) -> AsyncIterator[ServerSentEvent]:
+    if ctx.intent != IntentType.FAQ:
+        return
+
+    cache_key = f"{ctx.lang}:{ctx.user_message[:100]}"
+    cached = _state.get_faq(cache_key)
+    if cached:
+        reply = cached
+    else:
+        executor = ToolExecutor(ctx.db, ctx.user)
+        topic = _get_matched_faq_topic(ctx.user_message)
+        reply = None
+        if topic:
+            reply = await executor.get_faq_for_agent(topic, ctx.lang)
+        if not reply:
+            reply = await executor.get_faq_by_message(ctx.user_message, ctx.lang)
+        if not reply:
+            reply = _OFF_TOPIC_RESPONSES[ctx.lang]
+        _state.set_faq(cache_key, reply)
+
+    _state.record_usage(ctx.user.id, 0)
+    await _save_assistant_message(ctx, reply, "local_faq", 0, 0)
+    await ctx.db.commit()
+    yield _make_text_sse(reply)
+    yield _make_done_sse()
+    ctx.terminated = True
+
+
+async def _step_llm(ctx: _PipelineContext) -> AsyncIterator[ServerSentEvent]:
+    """核心 LLM 调用 + 工具循环（带 token 上限保护）"""
+    model_tier = "large" if ctx.intent == IntentType.COMPLEX else "small"
+
+    history = await _load_history(ctx.db, ctx.conversation_id)
+    messages = history + [{"role": "user", "content": ctx.user_message}]
+
+    prompt_template = await _get_system_prompt_template(ctx.db)
+    system_prompt = _build_system_prompt(prompt_template, ctx.user, ctx.reply_lang)
+
+    # 按意图选择工具子集
+    intent_for_tools = ctx.intent
+    if intent_for_tools in (IntentType.TASK_QUERY,):
+        intent_for_tools = "task"
+    elif intent_for_tools in (IntentType.PROFILE,):
+        intent_for_tools = "profile"
+    elif intent_for_tools in (IntentType.COMPLEX,):
+        intent_for_tools = "complex"
+    else:
+        intent_for_tools = "unknown"
+    tools = tool_registry.get_tools_for_intent(intent_for_tools)
+
+    llm = get_llm_client()
+    executor = ToolExecutor(ctx.db, ctx.user)
+    max_rounds = Config.AI_MAX_TOOL_ROUNDS
+    max_loop_input_tokens = Config.AI_MAX_LOOP_INPUT_TOKENS
+
+    try:
+        for _round in range(max_rounds):
+            # Token 上限保护
+            if ctx.total_input_tokens >= max_loop_input_tokens:
+                logger.warning("AI loop input token limit reached (%d/%d) for user %s",
+                               ctx.total_input_tokens, max_loop_input_tokens, ctx.user.id)
+                if not ctx.full_response:
+                    fallback = "抱歉，处理过程中消耗了过多资源，请简化您的问题后重试。" if ctx.lang == "zh" \
+                        else "Sorry, this request consumed too many resources. Please simplify and try again."
+                    ctx.full_response = fallback
+                    yield _make_text_sse(fallback)
+                break
+
+            response: LLMResponse = await llm.chat(
+                messages=messages, system=system_prompt,
+                tools=tools, model_tier=model_tier,
             )
-            .order_by(desc(models.AIMessage.created_at))
-            .limit(max_turns * 2)
+            ctx.model_used = response.model
+            ctx.total_input_tokens += response.usage.input_tokens
+            ctx.total_output_tokens += response.usage.output_tokens
+
+            tool_use_blocks = [b for b in response.content if b.type == "tool_use"]
+
+            if not tool_use_blocks:
+                for block in response.content:
+                    if block.type == "text":
+                        ctx.full_response += block.text
+                        yield _make_text_sse(block.text)
+                break
+
+            for block in response.content:
+                if block.type == "text" and block.text:
+                    ctx.full_response += block.text
+                    yield _make_text_sse(block.text)
+
+            assistant_content = []
+            for block in response.content:
+                if block.type == "text":
+                    assistant_content.append({"type": "text", "text": block.text})
+                elif block.type == "tool_use":
+                    assistant_content.append({
+                        "type": "tool_use", "id": block.id,
+                        "name": block.name, "input": block.input,
+                    })
+            messages.append({"role": "assistant", "content": assistant_content})
+
+            tool_result_blocks = []
+            for block in tool_use_blocks:
+                yield ServerSentEvent(
+                    data=json.dumps({"tool": block.name, "input": block.input}, ensure_ascii=False),
+                    event="tool_call",
+                )
+                result = await executor.execute(block.name, block.input, request_lang=ctx.reply_lang)
+                ctx.all_tool_calls.append({"id": block.id, "name": block.name, "input": block.input})
+                ctx.all_tool_results.append({"tool_use_id": block.id, "result": result})
+
+                yield ServerSentEvent(
+                    data=json.dumps({"tool": block.name, "result": result}, ensure_ascii=False),
+                    event="tool_result",
+                )
+
+                if block.name == "check_cs_availability":
+                    yield ServerSentEvent(
+                        data=json.dumps({
+                            "available": result.get("available", False),
+                            "online_count": result.get("online_count", 0),
+                            "contact_email": "support@link2ur.com",
+                        }, ensure_ascii=False),
+                        event="cs_available",
+                    )
+
+                tool_result_blocks.append({
+                    "type": "tool_result", "tool_use_id": block.id,
+                    "content": json.dumps(result, ensure_ascii=False),
+                })
+
+            messages.append({"role": "user", "content": tool_result_blocks})
+
+            if _round == 0 and len(tool_use_blocks) >= 2:
+                model_tier = "large"
+
+    except Exception as e:
+        logger.error("LLM call error for user %s: %s", ctx.user.id, e, exc_info=True)
+        reset_llm_client()
+        error_reply = "抱歉，AI 服务暂时不可用，请稍后重试。" if ctx.lang == "zh" \
+            else "Sorry, AI service is temporarily unavailable. Please try again later."
+        if not ctx.full_response:
+            ctx.full_response = error_reply
+        yield ServerSentEvent(
+            data=json.dumps({"error": error_reply}, ensure_ascii=False),
+            event="error",
         )
-        rows = (await self.db.execute(q)).scalars().all()
-        rows = list(reversed(rows))
 
-        messages = []
-        for msg in rows:
-            if msg.role == "assistant" and msg.tool_calls:
-                content_blocks = []
-                if msg.content:
-                    content_blocks.append({"type": "text", "text": msg.content})
-                try:
-                    tool_calls = json.loads(msg.tool_calls)
-                    for tc in tool_calls:
-                        content_blocks.append({
-                            "type": "tool_use",
-                            "id": tc["id"],
-                            "name": tc["name"],
-                            "input": tc["input"],
-                        })
-                except (json.JSONDecodeError, KeyError):
-                    pass
-                messages.append({"role": "assistant", "content": content_blocks})
-                if msg.tool_results:
-                    try:
-                        tool_results = json.loads(msg.tool_results)
-                        result_blocks = []
-                        for tr in tool_results:
-                            result_blocks.append({
-                                "type": "tool_result",
-                                "tool_use_id": tr["tool_use_id"],
-                                "content": json.dumps(tr["result"], ensure_ascii=False),
-                            })
-                        messages.append({"role": "user", "content": result_blocks})
-                    except (json.JSONDecodeError, KeyError):
-                        pass
-            else:
-                messages.append({"role": msg.role, "content": msg.content})
-        return messages
+    # 保存 & 记录用量
+    total_tokens = ctx.total_input_tokens + ctx.total_output_tokens
+    _state.record_usage(ctx.user.id, total_tokens)
 
-    def _get_lang(self) -> str:
-        # 优先用户资料中的语言偏好，其次请求头 Accept-Language，默认英文
-        lang = None
-        if self.user.language_preference and self.user.language_preference.strip():
-            lang = self.user.language_preference.strip().lower()
-        if not lang and self._accept_lang:
-            lang = self._accept_lang
-        if not lang:
-            lang = "en"
-        return "en" if lang.startswith("en") else "zh"
+    await _save_assistant_message(
+        ctx, ctx.full_response, ctx.model_used,
+        ctx.total_input_tokens, ctx.total_output_tokens,
+        ctx.all_tool_calls, ctx.all_tool_results,
+    )
+
+    conv_q = select(models.AIConversation).where(models.AIConversation.id == ctx.conversation_id)
+    conv = (await ctx.db.execute(conv_q)).scalar_one_or_none()
+    if conv:
+        conv.total_tokens = (conv.total_tokens or 0) + total_tokens
+        conv.model_used = ctx.model_used
+        conv.updated_at = get_utc_time()
+        if not conv.title and ctx.user_message:
+            conv.title = ctx.user_message[:100]
+
+    await ctx.db.commit()
+    yield _make_done_sse(ctx.total_input_tokens, ctx.total_output_tokens)
+
+
+# ==================== AI Agent ====================
+
+# pipeline: 按顺序执行，任一步骤设置 ctx.terminated=True 则后续跳过
+_PIPELINE = [
+    _step_budget_check,
+    _step_save_user_message,
+    _step_intent_classify,
+    _step_off_topic,
+    _step_transfer_cs,
+    _step_faq,
+    _step_llm,
+]
+
+
+class AIAgent:
+    """AI Agent — pipeline 驱动"""
+
+    def __init__(self, db: AsyncSession, user: models.User, *, accept_lang: str | None = None):
+        self.db = db
+        self.user = user
+        self._accept_lang = accept_lang
 
     async def process_message_stream(
         self, conversation_id: str, user_message: str
     ) -> AsyncIterator[ServerSentEvent]:
-        """处理用户消息，返回 SSE 事件流
-
-        节省 token 的完整链路：
-        1. 每日预算检查
-        2. 意图分类（本地，零消耗）
-        3. FAQ/离题 → 直接返回（零 LLM 消耗）
-        4. 需要 LLM → 选择合适模型 → 调用 → 保存
-        """
-        lang = self._get_lang()
-
-        # ---- 0. 每日预算检查 ----
-        ok, reason = _check_daily_budget(self.user.id, lang)
-        if not ok:
-            yield self._make_text_sse(reason)
-            yield self._make_done_sse()
-            return
-
-        # ---- 1. 保存用户消息 ----
-        user_msg = models.AIMessage(
-            conversation_id=conversation_id,
-            role="user",
-            content=user_message,
-        )
-        self.db.add(user_msg)
-        await self.db.flush()
-
-        # ---- 2. 意图分类（本地，零消耗） ----
-        intent = classify_intent(user_message)
-        logger.info(f"AI intent: {intent} for user {self.user.id}: {user_message[:50]}")
-
-        # ---- 3a. 离题 → 直接拒绝（按用户消息语言回：说英文则回英文） ----
-        if intent == IntentType.OFF_TOPIC:
-            reply_lang = _infer_reply_lang_from_message(user_message)
-            reply = _OFF_TOPIC_RESPONSES.get(reply_lang, _OFF_TOPIC_RESPONSES["en"])
-            _record_usage(self.user.id, 0)
-            await self._save_assistant_message(conversation_id, reply, "local", 0, 0)
-            await self.db.commit()
-            yield self._make_text_sse(reply)
-            yield self._make_done_sse()
-            return
-
-        # ---- 3b. 转人工客服 → 检查在线状态 + 发射 SSE 事件 ----
-        if intent == IntentType.TRANSFER_TO_CS:
-            # 调用工具检查客服在线状态（按当前用户语言）
-            cs_result = await self.executor.execute("check_cs_availability", {}, request_lang=lang)
-            available = cs_result.get("available", False)
-            online_count = cs_result.get("online_count", 0)
-
-            # 发射 cs_available SSE 事件
-            yield ServerSentEvent(
-                data=json.dumps({
-                    "available": available,
-                    "online_count": online_count,
-                    "contact_email": "support@link2ur.com",
-                }, ensure_ascii=False),
-                event="cs_available",
-            )
-
-            if available:
-                reply = "有人工客服在线，点击下方按钮连接人工客服。" if lang == "zh" else "Human agents are online. Tap the button below to connect."
-            else:
-                reply = "暂无在线客服，请发送邮件至 support@link2ur.com 联系我们。" if lang == "zh" else "No agents are currently online. Please email support@link2ur.com for assistance."
-
-            _record_usage(self.user.id, 0)
-            await self._save_assistant_message(conversation_id, reply, "local_cs_check", 0, 0)
-            await self.db.commit()
-            yield self._make_text_sse(reply)
-            yield self._make_done_sse()
-            return
-
-        # ---- 3c. FAQ → 从数据库取答案 + 缓存 ----
-        if intent == IntentType.FAQ:
-            cache_key = f"faq:{lang}:{user_message[:100]}"
-            cached = _get_faq_cache(cache_key)
-            if cached:
-                reply = cached
-            else:
-                topic = _get_matched_faq_topic(user_message)
-                reply = None
-                if topic:
-                    reply = await self.executor.get_faq_for_agent(topic, lang)
-                if not reply:
-                    reply = await self.executor.get_faq_by_message(user_message, lang)
-                if not reply:
-                    reply = _OFF_TOPIC_RESPONSES[lang]
-                _set_faq_cache(cache_key, reply)
-            _record_usage(self.user.id, 0)
-            await self._save_assistant_message(conversation_id, reply, "local_faq", 0, 0)
-            await self.db.commit()
-            yield self._make_text_sse(reply)
-            yield self._make_done_sse()
-            return
-
-        # ---- 4. 需要 LLM ----
-        # 决定模型 tier
-        model_tier = "small"  # 默认 Haiku
-        if intent == IntentType.COMPLEX:
-            model_tier = "large"  # Sonnet（极少走到）
-
-        # 加载历史
-        history = await self._load_history(conversation_id)
-        messages = history + [{"role": "user", "content": user_message}]
-        # 按用户当前消息语言决定回复语言，避免用户说英文却收到中文回复
-        reply_lang = _infer_reply_lang_from_message(user_message)
-        system_prompt = _build_system_prompt(self.user, reply_lang)
-
-        full_response = ""
-        all_tool_calls = []
-        all_tool_results = []
-        total_input_tokens = 0
-        total_output_tokens = 0
-        model_used = ""
-
-        # 工具调用循环（最多 3 轮，限制 token 消耗）
-        try:
-            for _round in range(3):
-                response = await self.llm.chat(
-                    messages=messages,
-                    system=system_prompt,
-                    tools=TOOLS,
-                    model_tier=model_tier,
-                )
-                model_used = response.model
-                total_input_tokens += response.usage.input_tokens
-                total_output_tokens += response.usage.output_tokens
-
-                tool_use_blocks = [b for b in response.content if b.type == "tool_use"]
-
-                if not tool_use_blocks:
-                    for block in response.content:
-                        if block.type == "text":
-                            full_response += block.text
-                            yield self._make_text_sse(block.text)
-                    break
-
-                # 有工具调用
-                for block in response.content:
-                    if block.type == "text" and block.text:
-                        full_response += block.text
-                        yield self._make_text_sse(block.text)
-
-                assistant_content = []
-                for block in response.content:
-                    if block.type == "text":
-                        assistant_content.append({"type": "text", "text": block.text})
-                    elif block.type == "tool_use":
-                        assistant_content.append({
-                            "type": "tool_use",
-                            "id": block.id,
-                            "name": block.name,
-                            "input": block.input,
-                        })
-
-                messages.append({"role": "assistant", "content": assistant_content})
-
-                tool_result_blocks = []
-                for block in tool_use_blocks:
-                    yield ServerSentEvent(
-                        data=json.dumps({"tool": block.name, "input": block.input}, ensure_ascii=False),
-                        event="tool_call",
-                    )
-
-                    result = await self.executor.execute(
-                        block.name, block.input, request_lang=reply_lang
-                    )
-                    all_tool_calls.append({"id": block.id, "name": block.name, "input": block.input})
-                    all_tool_results.append({"tool_use_id": block.id, "result": result})
-
-                    yield ServerSentEvent(
-                        data=json.dumps({"tool": block.name, "result": result}, ensure_ascii=False),
-                        event="tool_result",
-                    )
-
-                    # 如果 LLM 主动调用了 check_cs_availability，也发射 cs_available 事件
-                    if block.name == "check_cs_availability":
-                        yield ServerSentEvent(
-                            data=json.dumps({
-                                "available": result.get("available", False),
-                                "online_count": result.get("online_count", 0),
-                                "contact_email": "support@link2ur.com",
-                            }, ensure_ascii=False),
-                            event="cs_available",
-                        )
-
-                    tool_result_blocks.append({
-                        "type": "tool_result",
-                        "tool_use_id": block.id,
-                        "content": json.dumps(result, ensure_ascii=False),
-                    })
-
-                messages.append({"role": "user", "content": tool_result_blocks})
-
-                # 工具结果后如果需要大模型处理复杂推理，升级 tier
-                if _round == 0 and len(tool_use_blocks) >= 2:
-                    model_tier = "large"
-
-        except Exception as e:
-            logger.error(f"LLM call error for user {self.user.id}: {e}", exc_info=True)
-            error_reply = "抱歉，AI 服务暂时不可用，请稍后重试。" if lang == "zh" else "Sorry, AI service is temporarily unavailable. Please try again later."
-            if not full_response:
-                full_response = error_reply
-            yield ServerSentEvent(
-                data=json.dumps({"error": error_reply}, ensure_ascii=False),
-                event="error",
-            )
-
-        # ---- 5. 保存 & 记录用量 ----
-        total_tokens = total_input_tokens + total_output_tokens
-        _record_usage(self.user.id, total_tokens)
-
-        await self._save_assistant_message(
-            conversation_id, full_response, model_used,
-            total_input_tokens, total_output_tokens,
-            all_tool_calls, all_tool_results,
+        ctx = _PipelineContext(
+            self.db, self.user, conversation_id, user_message,
+            accept_lang=self._accept_lang,
         )
 
-        # 更新对话统计
-        conv_q = select(models.AIConversation).where(models.AIConversation.id == conversation_id)
-        conv = (await self.db.execute(conv_q)).scalar_one_or_none()
-        if conv:
-            conv.total_tokens = (conv.total_tokens or 0) + total_tokens
-            conv.model_used = model_used
-            conv.updated_at = get_utc_time()
-            if not conv.title and user_message:
-                conv.title = user_message[:100]
+        for step in _PIPELINE:
+            if ctx.terminated:
+                break
+            async for event in step(ctx):
+                yield event
 
-        await self.db.commit()
-
-        yield self._make_done_sse(total_input_tokens, total_output_tokens)
-
-    # ==================== 辅助方法 ====================
-
-    async def _save_assistant_message(
-        self, conversation_id: str, content: str, model_used: str,
-        input_tokens: int, output_tokens: int,
-        tool_calls: list | None = None, tool_results: list | None = None,
-    ):
-        msg = models.AIMessage(
-            conversation_id=conversation_id,
-            role="assistant",
-            content=content,
-            tool_calls=json.dumps(tool_calls, ensure_ascii=False) if tool_calls else None,
-            tool_results=json.dumps(tool_results, ensure_ascii=False) if tool_results else None,
-            model_used=model_used,
-            input_tokens=input_tokens,
-            output_tokens=output_tokens,
-        )
-        self.db.add(msg)
-
-    @staticmethod
-    def _make_text_sse(text: str) -> ServerSentEvent:
-        return ServerSentEvent(
-            data=json.dumps({"content": text}, ensure_ascii=False),
-            event="token",
-        )
-
-    @staticmethod
-    def _make_done_sse(input_tokens: int = 0, output_tokens: int = 0) -> ServerSentEvent:
-        return ServerSentEvent(
-            data=json.dumps({"input_tokens": input_tokens, "output_tokens": output_tokens}),
-            event="done",
-        )
-
-    # ==================== CRUD 方法（不变） ====================
+    # ==================== CRUD 方法 ====================
 
     async def create_conversation(self) -> models.AIConversation:
-        conv = models.AIConversation(
-            id=str(uuid.uuid4()),
-            user_id=self.user.id,
-        )
+        conv = models.AIConversation(id=str(uuid.uuid4()), user_id=self.user.id)
         self.db.add(conv)
         await self.db.commit()
         await self.db.refresh(conv)
@@ -805,56 +825,49 @@ class AIAgent:
             models.AIConversation.user_id == self.user.id,
             models.AIConversation.status == "active",
         ]
-        count_q = select(func.count()).select_from(models.AIConversation).where(and_(*conditions))
-        total = (await self.db.execute(count_q)).scalar() or 0
+        total = (await self.db.execute(
+            select(func.count()).select_from(models.AIConversation).where(and_(*conditions))
+        )).scalar() or 0
 
-        q = (
-            select(models.AIConversation)
-            .where(and_(*conditions))
+        rows = (await self.db.execute(
+            select(models.AIConversation).where(and_(*conditions))
             .order_by(desc(models.AIConversation.updated_at))
-            .offset((page - 1) * page_size)
-            .limit(page_size)
-        )
-        rows = (await self.db.execute(q)).scalars().all()
+            .offset((page - 1) * page_size).limit(page_size)
+        )).scalars().all()
 
-        default_title = "New conversation" if self._get_lang() == "en" else "新对话"
-        conversations = []
-        for c in rows:
-            conversations.append({
-                "id": c.id,
-                "title": c.title or default_title,
-                "model_used": c.model_used,
-                "total_tokens": c.total_tokens,
-                "created_at": c.created_at.isoformat() if c.created_at else None,
-                "updated_at": c.updated_at.isoformat() if c.updated_at else None,
-            })
+        lang = self._get_lang()
+        default_title = "New conversation" if lang == "en" else "新对话"
+        conversations = [{
+            "id": c.id,
+            "title": c.title or default_title,
+            "model_used": c.model_used,
+            "total_tokens": c.total_tokens,
+            "created_at": c.created_at.isoformat() if c.created_at else None,
+            "updated_at": c.updated_at.isoformat() if c.updated_at else None,
+        } for c in rows]
 
         return {"conversations": conversations, "total": total, "page": page}
 
     async def get_conversation_messages(self, conversation_id: str) -> list[dict]:
-        conv_q = select(models.AIConversation).where(
-            and_(
+        conv = (await self.db.execute(
+            select(models.AIConversation).where(and_(
                 models.AIConversation.id == conversation_id,
                 models.AIConversation.user_id == self.user.id,
-            )
-        )
-        conv = (await self.db.execute(conv_q)).scalar_one_or_none()
+            ))
+        )).scalar_one_or_none()
         if not conv:
             return []
 
-        q = (
+        rows = (await self.db.execute(
             select(models.AIMessage)
             .where(models.AIMessage.conversation_id == conversation_id)
             .order_by(models.AIMessage.created_at)
-        )
-        rows = (await self.db.execute(q)).scalars().all()
+        )).scalars().all()
 
         messages = []
         for msg in rows:
-            m = {
-                "id": msg.id,
-                "role": msg.role,
-                "content": msg.content,
+            m: dict = {
+                "id": msg.id, "role": msg.role, "content": msg.content,
                 "created_at": msg.created_at.isoformat() if msg.created_at else None,
             }
             if msg.tool_calls:
@@ -872,15 +885,102 @@ class AIAgent:
         return messages
 
     async def archive_conversation(self, conversation_id: str) -> bool:
-        q = select(models.AIConversation).where(
-            and_(
+        conv = (await self.db.execute(
+            select(models.AIConversation).where(and_(
                 models.AIConversation.id == conversation_id,
                 models.AIConversation.user_id == self.user.id,
-            )
-        )
-        conv = (await self.db.execute(q)).scalar_one_or_none()
+            ))
+        )).scalar_one_or_none()
         if not conv:
             return False
         conv.status = "archived"
         await self.db.commit()
         return True
+
+    def _get_lang(self) -> str:
+        lang = None
+        if self.user.language_preference and self.user.language_preference.strip():
+            lang = self.user.language_preference.strip().lower()
+        if not lang and self._accept_lang:
+            lang = self._accept_lang
+        if not lang:
+            lang = "en"
+        return "en" if lang.startswith("en") else "zh"
+
+
+# ==================== 辅助函数（模块级） ====================
+
+async def _load_history(db: AsyncSession, conversation_id: str) -> list[dict]:
+    max_turns = Config.AI_MAX_HISTORY_TURNS
+    q = (
+        select(models.AIMessage)
+        .where(and_(
+            models.AIMessage.conversation_id == conversation_id,
+            models.AIMessage.role.in_(["user", "assistant"]),
+        ))
+        .order_by(desc(models.AIMessage.created_at))
+        .limit(max_turns * 2)
+    )
+    rows = list(reversed((await db.execute(q)).scalars().all()))
+
+    messages = []
+    for msg in rows:
+        if msg.role == "assistant" and msg.tool_calls:
+            content_blocks = []
+            if msg.content:
+                content_blocks.append({"type": "text", "text": msg.content})
+            try:
+                tool_calls = json.loads(msg.tool_calls)
+                for tc in tool_calls:
+                    content_blocks.append({
+                        "type": "tool_use", "id": tc["id"],
+                        "name": tc["name"], "input": tc["input"],
+                    })
+            except (json.JSONDecodeError, KeyError):
+                pass
+            messages.append({"role": "assistant", "content": content_blocks})
+            if msg.tool_results:
+                try:
+                    tool_results = json.loads(msg.tool_results)
+                    result_blocks = [{
+                        "type": "tool_result", "tool_use_id": tr["tool_use_id"],
+                        "content": json.dumps(tr["result"], ensure_ascii=False),
+                    } for tr in tool_results]
+                    messages.append({"role": "user", "content": result_blocks})
+                except (json.JSONDecodeError, KeyError):
+                    pass
+        else:
+            messages.append({"role": msg.role, "content": msg.content})
+    return messages
+
+
+async def _save_assistant_message(
+    ctx: _PipelineContext, content: str, model_used: str,
+    input_tokens: int, output_tokens: int,
+    tool_calls: list | None = None, tool_results: list | None = None,
+):
+    msg = models.AIMessage(
+        conversation_id=ctx.conversation_id,
+        role="assistant",
+        content=content,
+        tool_calls=json.dumps(tool_calls, ensure_ascii=False) if tool_calls else None,
+        tool_results=json.dumps(tool_results, ensure_ascii=False) if tool_results else None,
+        model_used=model_used,
+        input_tokens=input_tokens,
+        output_tokens=output_tokens,
+    )
+    ctx.db.add(msg)
+
+
+def _make_text_sse(text: str) -> ServerSentEvent:
+    return ServerSentEvent(
+        data=json.dumps({"content": text}, ensure_ascii=False),
+        event="token",
+    )
+
+
+def _make_done_sse(input_tokens: int = 0, output_tokens: int = 0) -> ServerSentEvent:
+    return ServerSentEvent(
+        data=json.dumps({"input_tokens": input_tokens, "output_tokens": output_tokens}),
+        event="done",
+    )

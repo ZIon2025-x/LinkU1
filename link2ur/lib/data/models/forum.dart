@@ -120,6 +120,28 @@ class ForumCategory extends Equatable {
     );
   }
 
+  ForumCategory copyWith({bool? isFavorited}) {
+    return ForumCategory(
+      id: id,
+      name: name,
+      nameEn: nameEn,
+      nameZh: nameZh,
+      description: description,
+      descriptionEn: descriptionEn,
+      descriptionZh: descriptionZh,
+      icon: icon,
+      postCount: postCount,
+      sortOrder: sortOrder,
+      type: type,
+      country: country,
+      universityCode: universityCode,
+      isFavorited: isFavorited ?? this.isFavorited,
+      lastPostAt: lastPostAt,
+      latestPost: latestPost,
+      isAdminOnly: isAdminOnly,
+    );
+  }
+
   @override
   List<Object?> get props => [id, name, type, isFavorited];
 }
@@ -428,7 +450,7 @@ class ForumReply extends Equatable {
       likeCount: json['like_count'] as int? ?? 0,
       isLiked: json['is_liked'] as bool? ?? false,
       createdAt: json['created_at'] != null
-          ? DateTime.parse(json['created_at'])
+          ? DateTime.tryParse(json['created_at'])
           : null,
     );
   }

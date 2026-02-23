@@ -196,7 +196,7 @@ void main() {
                 email: any(named: 'email'),
                 password: any(named: 'password'),
                 name: any(named: 'name'),
-                code: any(named: 'code'),
+                invitationCode: any(named: 'invitationCode'),
               )).thenAnswer((_) async => testUser);
           return authBloc;
         },
@@ -204,7 +204,7 @@ void main() {
           email: 'new@example.com',
           password: 'password123',
           name: 'New User',
-          code: '123456',
+          invitationCode: '123456',
         )),
         expect: () => [
           const AuthState(status: AuthStatus.loading),
@@ -222,7 +222,7 @@ void main() {
                 email: any(named: 'email'),
                 password: any(named: 'password'),
                 name: any(named: 'name'),
-                code: any(named: 'code'),
+                invitationCode: any(named: 'invitationCode'),
               )).thenThrow(const AuthException('邮箱已被注册'));
           return authBloc;
         },
@@ -419,16 +419,14 @@ void main() {
       blocTest<AuthBloc, AuthState>(
         'emits [loading, success] when reset password succeeds',
         build: () {
-          when(() => mockAuthRepository.resetPassword(
-                email: any(named: 'email'),
-                code: any(named: 'code'),
+          when(() => mockAuthRepository.resetPasswordWithToken(
+                token: any(named: 'token'),
                 newPassword: any(named: 'newPassword'),
               )).thenAnswer((_) async {});
           return authBloc;
         },
         act: (bloc) => bloc.add(const AuthResetPasswordRequested(
-          email: 'test@example.com',
-          code: '123456',
+          token: 'reset-token-123',
           newPassword: 'newPassword123',
         )),
         expect: () => [
@@ -443,23 +441,21 @@ void main() {
       blocTest<AuthBloc, AuthState>(
         'emits [loading, error] when reset password fails',
         build: () {
-          when(() => mockAuthRepository.resetPassword(
-                email: any(named: 'email'),
-                code: any(named: 'code'),
+          when(() => mockAuthRepository.resetPasswordWithToken(
+                token: any(named: 'token'),
                 newPassword: any(named: 'newPassword'),
-              )).thenThrow(const AuthException('验证码错误'));
+              )).thenThrow(const AuthException('Token 无效'));
           return authBloc;
         },
         act: (bloc) => bloc.add(const AuthResetPasswordRequested(
-          email: 'test@example.com',
-          code: '000000',
+          token: 'invalid-token',
           newPassword: 'newPassword123',
         )),
         expect: () => [
           const AuthState(resetPasswordStatus: ResetPasswordStatus.loading),
           const AuthState(
             resetPasswordStatus: ResetPasswordStatus.error,
-            resetPasswordMessage: '验证码错误',
+            resetPasswordMessage: 'Token 无效',
           ),
         ],
       );

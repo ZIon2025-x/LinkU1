@@ -2156,6 +2156,18 @@ class AppLocalizationsZh extends AppLocalizations {
   String get taskDetailUnknown => '未知';
 
   @override
+  String get taskApplicationMessage => '留言';
+
+  @override
+  String get taskApplicationMessageHint => '给申请者留言...';
+
+  @override
+  String get taskApplicationMessageSent => '留言已发送';
+
+  @override
+  String get taskApplicationMessageFailed => '留言发送失败';
+
+  @override
   String get taskDetailQualityGood => '工作质量好';
 
   @override
@@ -2447,9 +2459,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get taskApplicationSubmitApplication => '提交申请';
 
   @override
-  String get taskApplicationMessage => '留言';
-
-  @override
   String get taskApplicationMessageToApplicant => '给申请者留言...';
 
   @override
@@ -2717,8 +2726,8 @@ class AppLocalizationsZh extends AppLocalizations {
   String get paymentCountdownExpired => '已过期';
 
   @override
-  String paymentCountdownRemaining(String param1) {
-    return '剩余 $param1';
+  String paymentCountdownRemaining(String time) {
+    return '剩余 $time';
   }
 
   @override
@@ -5093,6 +5102,37 @@ class AppLocalizationsZh extends AppLocalizations {
   String get fleaMarketRequestStatusRejected => '已拒绝';
 
   @override
+  String get fleaMarketAcceptCounterOffer => '接受';
+
+  @override
+  String get fleaMarketRejectCounterOffer => '拒绝';
+
+  @override
+  String fleaMarketCounterOfferReceived(String price) {
+    return '卖家还价 £$price';
+  }
+
+  @override
+  String get fleaMarketAcceptCounterOfferConfirmTitle => '接受还价';
+
+  @override
+  String fleaMarketAcceptCounterOfferConfirmMessage(String price) {
+    return '确定接受卖家的还价 £$price 吗？';
+  }
+
+  @override
+  String get fleaMarketRejectCounterOfferConfirmTitle => '拒绝还价';
+
+  @override
+  String get fleaMarketRejectCounterOfferConfirmMessage => '确定要拒绝卖家的还价吗？';
+
+  @override
+  String get fleaMarketCounterOfferAccepted => '已接受还价';
+
+  @override
+  String get fleaMarketCounterOfferRejected => '已拒绝还价';
+
+  @override
   String get applePayNotSupported => '您的设备不支持 Apple Pay';
 
   @override
@@ -5846,6 +5886,18 @@ class AppLocalizationsZh extends AppLocalizations {
   String get leaderboardRulesHint => '描述排行榜规则';
 
   @override
+  String get leaderboardLocation => '地区';
+
+  @override
+  String get leaderboardLocationHint => '输入排行榜所在地区';
+
+  @override
+  String get leaderboardApplicationReason => '申请理由';
+
+  @override
+  String get leaderboardApplicationReasonHint => '为什么要创建这个排行榜？';
+
+  @override
   String get leaderboardFillRequired => '请填写所有必填项';
 
   @override
@@ -5889,6 +5941,17 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get paymentExpiredMessage => '支付时间已到，请重新发起支付。';
+
+  @override
+  String get paymentCountdownTimeout => '支付已超时';
+
+  @override
+  String get paymentCountdownCompleteInTime => '请在规定时间内完成支付';
+
+  @override
+  String paymentCountdownTimeLeft(String time) {
+    return '距离超时还剩 $time';
+  }
 
   @override
   String get paymentApplePayIOSOnly => 'Apple Pay 仅在 iOS 设备上可用';
@@ -7402,6 +7465,15 @@ class AppLocalizationsZh extends AppLocalizations {
   String get taskExpertAppliedStatus => '已申请';
 
   @override
+  String get taskExpertApplicationPending => '您的达人申请正在审核中';
+
+  @override
+  String get taskExpertApplicationApproved => '您的达人申请已通过！';
+
+  @override
+  String get taskExpertApplicationRejected => '您的达人申请未通过';
+
+  @override
   String taskExpertServiceCount(int count) {
     return '$count 项服务';
   }
@@ -8240,6 +8312,48 @@ class AppLocalizationsZh extends AppLocalizations {
   String get toolCallLoadingListTaskExperts => '正在加载达人…';
 
   @override
+  String get toolCallGetMyWalletSummary => '钱包概况';
+
+  @override
+  String get toolCallGetMyMessagesSummary => '聊天摘要';
+
+  @override
+  String get toolCallGetMyVipStatus => 'VIP 状态';
+
+  @override
+  String get toolCallGetMyStudentVerification => '学生认证';
+
+  @override
+  String get toolCallGetMyCheckinStatus => '签到状态';
+
+  @override
+  String get toolCallGetMyFleaMarketItems => '我的跳蚤市场';
+
+  @override
+  String get toolCallSearchForumPosts => '搜索论坛';
+
+  @override
+  String get toolCallLoadingGetMyWalletSummary => '正在查询钱包…';
+
+  @override
+  String get toolCallLoadingGetMyMessagesSummary => '正在加载聊天摘要…';
+
+  @override
+  String get toolCallLoadingGetMyVipStatus => '正在查询 VIP 状态…';
+
+  @override
+  String get toolCallLoadingGetMyStudentVerification => '正在查询认证状态…';
+
+  @override
+  String get toolCallLoadingGetMyCheckinStatus => '正在查询签到…';
+
+  @override
+  String get toolCallLoadingGetMyFleaMarketItems => '正在加载您的商品…';
+
+  @override
+  String get toolCallLoadingSearchForumPosts => '正在搜索论坛…';
+
+  @override
   String get expertApplicationsTitle => '服务申请管理';
 
   @override
@@ -8331,6 +8445,31 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get expertApplicationBasePrice => '基础价格';
+
+  @override
+  String get commonUnnamed => '未命名';
+
+  @override
+  String commonImageUploadFailed(String error) {
+    return '上传图片失败: $error';
+  }
+
+  @override
+  String commonImageCount(int current, int max) {
+    return '$current/$max';
+  }
+
+  @override
+  String get paymentCardSubtitle => 'Visa, Mastercard, AMEX';
+
+  @override
+  String get paymentWeChatPaySubtitle => '微信支付 (Stripe)';
+
+  @override
+  String get paymentAlipaySubtitle => '支付宝 (Stripe)';
+
+  @override
+  String get commonCurrencySymbol => '£ ';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -10485,6 +10624,18 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get taskDetailUnknown => '未知';
 
   @override
+  String get taskApplicationMessage => '留言';
+
+  @override
+  String get taskApplicationMessageHint => '給申請者留言...';
+
+  @override
+  String get taskApplicationMessageSent => '留言已發送';
+
+  @override
+  String get taskApplicationMessageFailed => '留言發送失敗';
+
+  @override
   String get taskDetailQualityGood => '工作質量好';
 
   @override
@@ -10776,9 +10927,6 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get taskApplicationSubmitApplication => '提交申請';
 
   @override
-  String get taskApplicationMessage => '留言';
-
-  @override
   String get taskApplicationMessageToApplicant => '給申請者留言...';
 
   @override
@@ -11046,8 +11194,8 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get paymentCountdownExpired => '已過期';
 
   @override
-  String paymentCountdownRemaining(String param1) {
-    return '剩餘 $param1';
+  String paymentCountdownRemaining(String time) {
+    return '剩餘 $time';
   }
 
   @override
@@ -13422,6 +13570,37 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get fleaMarketRequestStatusRejected => '已拒絕';
 
   @override
+  String get fleaMarketAcceptCounterOffer => '接受';
+
+  @override
+  String get fleaMarketRejectCounterOffer => '拒絕';
+
+  @override
+  String fleaMarketCounterOfferReceived(String price) {
+    return '賣家還價 £$price';
+  }
+
+  @override
+  String get fleaMarketAcceptCounterOfferConfirmTitle => '接受還價';
+
+  @override
+  String fleaMarketAcceptCounterOfferConfirmMessage(String price) {
+    return '確定接受賣家的還價 £$price 嗎？';
+  }
+
+  @override
+  String get fleaMarketRejectCounterOfferConfirmTitle => '拒絕還價';
+
+  @override
+  String get fleaMarketRejectCounterOfferConfirmMessage => '確定要拒絕賣家的還價嗎？';
+
+  @override
+  String get fleaMarketCounterOfferAccepted => '已接受還價';
+
+  @override
+  String get fleaMarketCounterOfferRejected => '已拒絕還價';
+
+  @override
   String get applePayNotSupported => '您的設備不支持 Apple Pay';
 
   @override
@@ -14175,6 +14354,18 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get leaderboardRulesHint => '描述排行榜規則';
 
   @override
+  String get leaderboardLocation => '地區';
+
+  @override
+  String get leaderboardLocationHint => '輸入排行榜所在地區';
+
+  @override
+  String get leaderboardApplicationReason => '申請理由';
+
+  @override
+  String get leaderboardApplicationReasonHint => '為什麼要創建這個排行榜？';
+
+  @override
   String get leaderboardFillRequired => '請填寫所有必填項';
 
   @override
@@ -14218,6 +14409,17 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get paymentExpiredMessage => '支付時間已到，請重新發起支付。';
+
+  @override
+  String get paymentCountdownTimeout => '支付已逾時';
+
+  @override
+  String get paymentCountdownCompleteInTime => '請在規定時間內完成支付';
+
+  @override
+  String paymentCountdownTimeLeft(String time) {
+    return '距離逾時還剩 $time';
+  }
 
   @override
   String get paymentApplePayIOSOnly => 'Apple Pay 僅在 iOS 裝置上可用';
@@ -15731,6 +15933,15 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get taskExpertAppliedStatus => '已申請';
 
   @override
+  String get taskExpertApplicationPending => '您的達人申請正在審核中';
+
+  @override
+  String get taskExpertApplicationApproved => '您的達人申請已通過！';
+
+  @override
+  String get taskExpertApplicationRejected => '您的達人申請未通過';
+
+  @override
   String taskExpertServiceCount(int count) {
     return '$count 項服務';
   }
@@ -16569,6 +16780,48 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get toolCallLoadingListTaskExperts => '正在載入達人…';
 
   @override
+  String get toolCallGetMyWalletSummary => '錢包概況';
+
+  @override
+  String get toolCallGetMyMessagesSummary => '聊天摘要';
+
+  @override
+  String get toolCallGetMyVipStatus => 'VIP 狀態';
+
+  @override
+  String get toolCallGetMyStudentVerification => '學生認證';
+
+  @override
+  String get toolCallGetMyCheckinStatus => '簽到狀態';
+
+  @override
+  String get toolCallGetMyFleaMarketItems => '我的跳蚤市場';
+
+  @override
+  String get toolCallSearchForumPosts => '搜尋論壇';
+
+  @override
+  String get toolCallLoadingGetMyWalletSummary => '正在查詢錢包…';
+
+  @override
+  String get toolCallLoadingGetMyMessagesSummary => '正在載入聊天摘要…';
+
+  @override
+  String get toolCallLoadingGetMyVipStatus => '正在查詢 VIP 狀態…';
+
+  @override
+  String get toolCallLoadingGetMyStudentVerification => '正在查詢認證狀態…';
+
+  @override
+  String get toolCallLoadingGetMyCheckinStatus => '正在查詢簽到…';
+
+  @override
+  String get toolCallLoadingGetMyFleaMarketItems => '正在載入您的商品…';
+
+  @override
+  String get toolCallLoadingSearchForumPosts => '正在搜尋論壇…';
+
+  @override
   String get expertApplicationsTitle => '服務申請管理';
 
   @override
@@ -16660,4 +16913,29 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get expertApplicationBasePrice => '基礎價格';
+
+  @override
+  String get commonUnnamed => '未命名';
+
+  @override
+  String commonImageUploadFailed(String error) {
+    return '上傳圖片失敗: $error';
+  }
+
+  @override
+  String commonImageCount(int current, int max) {
+    return '$current/$max';
+  }
+
+  @override
+  String get paymentCardSubtitle => 'Visa, Mastercard, AMEX';
+
+  @override
+  String get paymentWeChatPaySubtitle => '微信支付 (Stripe)';
+
+  @override
+  String get paymentAlipaySubtitle => '支付寶 (Stripe)';
+
+  @override
+  String get commonCurrencySymbol => '£ ';
 }

@@ -270,8 +270,10 @@ class PaymentBloc extends Bloc<PaymentEvent, PaymentState> {
   ) async {
     try {
       final statusData = await _repository.getTaskPaymentStatus(event.taskId);
-      final paymentStatus = statusData['status'] as String?;
-      if (paymentStatus == 'paid' || paymentStatus == 'succeeded') {
+      final isPaid = statusData['is_paid'] == true;
+      final details = statusData['payment_details'] as Map<String, dynamic>?;
+      final piStatus = details?['status'] as String?;
+      if (isPaid || piStatus == 'succeeded') {
         emit(state.copyWith(status: PaymentStatus.success));
       }
     } catch (e) {

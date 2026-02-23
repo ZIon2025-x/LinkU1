@@ -10,6 +10,7 @@ import 'core/design/app_theme.dart';
 import 'core/design/scroll_behavior.dart';
 import 'core/router/app_router.dart';
 import 'core/utils/deep_link_handler.dart';
+import 'core/utils/logger.dart';
 import 'data/services/websocket_service.dart';
 import 'features/auth/bloc/auth_bloc.dart';
 import 'features/notification/bloc/notification_bloc.dart';
@@ -84,13 +85,19 @@ class _Link2UrAppState extends State<Link2UrApp> {
     );
     // 初始化深度链接处理（含 Stripe 支付回调 link2ur://stripe-redirect）
     unawaited(
-      DeepLinkHandler.instance.initialize(navigatorKey: _rootNavigatorKey),
+      DeepLinkHandler.instance
+          .initialize(navigatorKey: _rootNavigatorKey)
+          .catchError((e, st) => AppLogger.error('DeepLink init failed', e, st)),
     );
 
     // 推送通知：设置 Router/ApiService 并初始化（Token 上传、点击通知导航）
     PushNotificationService.instance.setRouter(_appRouter.router);
     PushNotificationService.instance.setApiService(_apiService);
-    unawaited(PushNotificationService.instance.init());
+    unawaited(
+      PushNotificationService.instance
+          .init()
+          .catchError((e, st) => AppLogger.error('Push notification init failed', e, st)),
+    );
   }
 
   @override

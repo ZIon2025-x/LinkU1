@@ -733,6 +733,10 @@ class _ApplicationItem extends StatelessWidget {
                     },
                   ),
                   const Spacer(),
+                  _ApplicationMessageButton(
+                    application: application,
+                    isDark: isDark,
+                  ),
                 ],
               ),
             ],
@@ -784,6 +788,217 @@ class _ActionCircleButton extends StatelessWidget {
           ],
         ),
         child: Icon(icon, size: 24, color: Colors.white),
+      ),
+    );
+  }
+}
+
+/// 申请留言按钮 — 对标 iOS ApplicationMessageSheet
+class _ApplicationMessageButton extends StatelessWidget {
+  const _ApplicationMessageButton({
+    required this.application,
+    required this.isDark,
+  });
+
+  final TaskApplication application;
+  final bool isDark;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () {
+        AppHaptics.light();
+        _showMessageSheet(context);
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        decoration: BoxDecoration(
+          color: AppColors.primary.withValues(alpha: 0.1),
+          borderRadius: AppRadius.allMedium,
+          border: Border.all(
+            color: AppColors.primary.withValues(alpha: 0.3),
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.message, size: 14, color: AppColors.primary),
+            const SizedBox(width: 4),
+            Text(
+              context.l10n.taskApplicationMessage,
+              style: AppTypography.caption.copyWith(
+                color: AppColors.primary,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showMessageSheet(BuildContext context) {
+    final bloc = context.read<TaskDetailBloc>();
+    final taskId = bloc.state.task?.id;
+    if (taskId == null) return;
+
+    SheetAdaptation.showAdaptiveModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      builder: (ctx) => BlocProvider.value(
+        value: bloc,
+        child: _ApplicationMessageSheet(
+          taskId: taskId,
+          applicationId: application.id,
+          applicantName: application.applicantName,
+        ),
+      ),
+    );
+  }
+}
+
+class _ApplicationMessageSheet extends StatefulWidget {
+  const _ApplicationMessageSheet({
+    required this.taskId,
+    required this.applicationId,
+    this.applicantName,
+  });
+
+  final int taskId;
+  final int applicationId;
+  final String? applicantName;
+
+  @override
+  State<_ApplicationMessageSheet> createState() =>
+      _ApplicationMessageSheetState();
+}
+
+class _ApplicationMessageSheetState extends State<_ApplicationMessageSheet> {
+  final _controller = TextEditingController();
+  bool _isSending = false;
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _send() {
+    final text = _controller.text.trim();
+    if (text.isEmpty) return;
+
+    setState(() => _isSending = true);
+    context.read<TaskDetailBloc>().add(
+      TaskDetailSendApplicationMessage(
+        applicationId: widget.applicationId,
+        content: text,
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final bottomInset = MediaQuery.of(context).viewInsets.bottom;
+
+    return BlocListener<TaskDetailBloc, TaskDetailState>(
+      listenWhen: (p, c) =>
+          c.actionMessage == 'application_message_sent' ||
+          c.actionMessage == 'application_message_failed',
+      listener: (context, state) {
+        if (state.actionMessage == 'application_message_sent') {
+          Navigator.of(context).pop();
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(l10n.taskApplicationMessageSent),
+              backgroundColor: AppColors.success,
+            ),
+          );
+        } else {
+          setState(() => _isSending = false);
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(l10n.taskApplicationMessageFailed),
+              backgroundColor: AppColors.error,
+            ),
+          );
+        }
+      },
+      child: Padding(
+        padding: EdgeInsets.only(
+          left: AppSpacing.lg,
+          right: AppSpacing.lg,
+          top: AppSpacing.lg,
+          bottom: bottomInset + AppSpacing.lg,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(
+                width: 36,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: isDark
+                      ? AppColors.textTertiaryDark
+                      : AppColors.textTertiaryLight,
+                  borderRadius: AppRadius.allPill,
+                ),
+              ),
+            ),
+            const SizedBox(height: AppSpacing.md),
+            Text(
+              l10n.taskApplicationMessage,
+              style: AppTypography.bodyBold.copyWith(
+                color: isDark
+                    ? AppColors.textPrimaryDark
+                    : AppColors.textPrimaryLight,
+              ),
+            ),
+            if (widget.applicantName != null) ...[
+              const SizedBox(height: 4),
+              Text(
+                widget.applicantName!,
+                style: AppTypography.caption.copyWith(
+                  color: isDark
+                      ? AppColors.textSecondaryDark
+                      : AppColors.textSecondaryLight,
+                ),
+              ),
+            ],
+            const SizedBox(height: AppSpacing.md),
+            TextField(
+              controller: _controller,
+              maxLines: 4,
+              minLines: 3,
+              decoration: InputDecoration(
+                hintText: l10n.taskApplicationMessageHint,
+                border: OutlineInputBorder(
+                  borderRadius: AppRadius.allMedium,
+                ),
+              ),
+            ),
+            const SizedBox(height: AppSpacing.md),
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton(
+                onPressed: _isSending || _controller.text.trim().isEmpty
+                    ? null
+                    : _send,
+                child: _isSending
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                            strokeWidth: 2, color: Colors.white),
+                      )
+                    : Text(l10n.messagesSend),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

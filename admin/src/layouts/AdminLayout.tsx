@@ -136,6 +136,7 @@ const PATH_LABELS: Record<string, string> = {
   '/admin/banners': 'Banner管理',
   '/admin/reports': '举报管理',
   '/admin/settings': '设置',
+  '/admin/2fa': '双因素认证',
 };
 
 export const AdminLayout: React.FC<AdminLayoutProps> = ({
@@ -165,7 +166,6 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({
       navigate('/login');
     } catch (error) {
       message.error('登出失败');
-      console.error(error);
     }
   };
 

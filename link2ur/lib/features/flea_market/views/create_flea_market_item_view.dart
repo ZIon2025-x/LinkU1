@@ -156,7 +156,7 @@ class _CreateFleaMarketItemContentState
           setState(() => _isUploadingImages = false);
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('上传图片失败: $e'),
+              content: Text(context.l10n.commonImageUploadFailed(e.toString())),
               backgroundColor: AppColors.error,
             ),
           );
@@ -440,7 +440,7 @@ class _CreateFleaMarketItemContentState
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    '${_selectedImages.length}/5',
+                    context.l10n.commonImageCount(_selectedImages.length, 5),
                     style: const TextStyle(
                       fontSize: 10,
                       color: AppColors.textTertiaryLight,

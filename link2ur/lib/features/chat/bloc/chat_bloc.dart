@@ -71,6 +71,24 @@ class ChatMarkAsRead extends ChatEvent {
   const ChatMarkAsRead();
 }
 
+class ChatPeerTypingReceived extends ChatEvent {
+  const ChatPeerTypingReceived(this.senderId);
+  final String senderId;
+  @override
+  List<Object?> get props => [senderId];
+}
+
+class ChatReadReceiptReceived extends ChatEvent {
+  const ChatReadReceiptReceived(this.senderId);
+  final String senderId;
+  @override
+  List<Object?> get props => [senderId];
+}
+
+class _ChatPeerTypingTimeout extends ChatEvent {
+  const _ChatPeerTypingTimeout();
+}
+
 // ==================== State ====================
 
 enum ChatStatus { initial, loading, loaded, error }
@@ -88,6 +106,7 @@ class ChatState extends Equatable {
     this.isSending = false,
     this.isLoadingMore = false,
     this.errorMessage,
+    this.peerIsTyping = false,
   });
 
   final ChatStatus status;
@@ -102,6 +121,7 @@ class ChatState extends Equatable {
   final bool isSending;
   final bool isLoadingMore;
   final String? errorMessage;
+  final bool peerIsTyping;
 
   bool get isTaskChat => taskId != null;
 
@@ -126,6 +146,7 @@ class ChatState extends Equatable {
     bool? isSending,
     bool? isLoadingMore,
     String? errorMessage,
+    bool? peerIsTyping,
   }) {
     return ChatState(
       status: status ?? this.status,
@@ -139,6 +160,7 @@ class ChatState extends Equatable {
       isSending: isSending ?? this.isSending,
       isLoadingMore: isLoadingMore ?? this.isLoadingMore,
       errorMessage: errorMessage,
+      peerIsTyping: peerIsTyping ?? this.peerIsTyping,
     );
   }
 
@@ -155,6 +177,7 @@ class ChatState extends Equatable {
         isSending,
         isLoadingMore,
         errorMessage,
+        peerIsTyping,
       ];
 }
 
@@ -170,12 +193,31 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     on<ChatSendImage>(_onSendImage);
     on<ChatMessageReceived>(_onMessageReceived);
     on<ChatMarkAsRead>(_onMarkAsRead);
+    on<ChatPeerTypingReceived>(_onPeerTyping);
+    on<ChatReadReceiptReceived>(_onReadReceipt);
+    on<_ChatPeerTypingTimeout>((event, emit) {
+      emit(state.copyWith(peerIsTyping: false));
+    });
 
-    // 监听WebSocket消息（task_message 格式为 { type, message: {...} }，对齐 iOS）
     _wsSubscription = WebSocketService.instance.messageStream.listen(
       (wsMessage) {
-        if (!wsMessage.isChatMessage || wsMessage.data == null) return;
+        if (wsMessage.data == null) return;
         final data = wsMessage.data!;
+
+        if (wsMessage.isReadReceipt) {
+          final senderId = data['sender_id']?.toString() ?? '';
+          if (senderId.isNotEmpty) add(ChatReadReceiptReceived(senderId));
+          return;
+        }
+
+        if (wsMessage.isTyping) {
+          final senderId = data['sender_id']?.toString() ??
+              data['receiver_id']?.toString() ?? '';
+          if (senderId.isNotEmpty) add(ChatPeerTypingReceived(senderId));
+          return;
+        }
+
+        if (!wsMessage.isChatMessage) return;
         final Map<String, dynamic> messageMap =
             (wsMessage.type == 'task_message' && data['message'] is Map<String, dynamic>)
                 ? (data['message'] as Map<String, dynamic>)
@@ -308,7 +350,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
           messageType: event.messageType,
         );
       } else {
-        // 私聊：使用私聊API
+        // 私聊：使用私聊API（后端会通过WebSocket转发给对方，无需重复发送）
         message = await _messageRepository.sendMessage(
           SendMessageRequest(
             receiverId: state.userId,
@@ -316,16 +358,6 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
             messageType: event.messageType,
             taskId: state.taskId,
             imageUrl: event.imageUrl,
-          ),
-        );
-
-        // 私聊同时通过WebSocket发送
-        _messageRepository.sendMessageViaWebSocket(
-          SendMessageRequest(
-            receiverId: state.userId,
-            content: event.content,
-            messageType: event.messageType,
-            taskId: state.taskId,
           ),
         );
       }
@@ -340,7 +372,10 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
       ));
     } catch (e) {
       AppLogger.error('Failed to send message', e);
-      emit(state.copyWith(isSending: false));
+      emit(state.copyWith(
+        isSending: false,
+        errorMessage: e.toString(),
+      ));
     }
   }
 
@@ -392,7 +427,10 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
       ));
     } catch (e) {
       AppLogger.error('Failed to send image', e);
-      emit(state.copyWith(isSending: false));
+      emit(state.copyWith(
+        isSending: false,
+        errorMessage: e.toString(),
+      ));
     }
   }
 
@@ -451,9 +489,37 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     }
   }
 
+  Timer? _typingTimer;
+
+  void _onPeerTyping(
+    ChatPeerTypingReceived event,
+    Emitter<ChatState> emit,
+  ) {
+    if (event.senderId != state.userId) return;
+    emit(state.copyWith(peerIsTyping: true));
+    _typingTimer?.cancel();
+    _typingTimer = Timer(const Duration(seconds: 3), () {
+      if (!isClosed) add(const _ChatPeerTypingTimeout());
+    });
+  }
+
+  void _onReadReceipt(
+    ChatReadReceiptReceived event,
+    Emitter<ChatState> emit,
+  ) {
+    if (event.senderId != state.userId) return;
+    final updated = state.messages.map((m) {
+      if (!m.isRead && m.senderId != state.userId) return m;
+      if (m.isRead) return m;
+      return m.copyWith(isRead: true);
+    }).toList();
+    emit(state.copyWith(messages: updated));
+  }
+
   @override
   Future<void> close() {
     _wsSubscription?.cancel();
+    _typingTimer?.cancel();
     return super.close();
   }
 }

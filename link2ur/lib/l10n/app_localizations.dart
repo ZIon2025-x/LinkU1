@@ -4167,6 +4167,30 @@ abstract class AppLocalizations {
   /// **'Unknown'**
   String get taskDetailUnknown;
 
+  /// No description provided for @taskApplicationMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Message'**
+  String get taskApplicationMessage;
+
+  /// No description provided for @taskApplicationMessageHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Write a message to the applicant...'**
+  String get taskApplicationMessageHint;
+
+  /// No description provided for @taskApplicationMessageSent.
+  ///
+  /// In en, this message translates to:
+  /// **'Message sent'**
+  String get taskApplicationMessageSent;
+
+  /// No description provided for @taskApplicationMessageFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to send message'**
+  String get taskApplicationMessageFailed;
+
   /// No description provided for @taskDetailQualityGood.
   ///
   /// In en, this message translates to:
@@ -4731,12 +4755,6 @@ abstract class AppLocalizations {
   /// **'Submit Application'**
   String get taskApplicationSubmitApplication;
 
-  /// No description provided for @taskApplicationMessage.
-  ///
-  /// In en, this message translates to:
-  /// **'Message'**
-  String get taskApplicationMessage;
-
   /// No description provided for @taskApplicationMessageToApplicant.
   ///
   /// In en, this message translates to:
@@ -5262,8 +5280,8 @@ abstract class AppLocalizations {
   /// No description provided for @paymentCountdownRemaining.
   ///
   /// In en, this message translates to:
-  /// **'{param1} left'**
-  String paymentCountdownRemaining(String param1);
+  /// **'Remaining {time}'**
+  String paymentCountdownRemaining(String time);
 
   /// No description provided for @paymentCountdownBannerTitle.
   ///
@@ -9770,6 +9788,60 @@ abstract class AppLocalizations {
   /// **'Rejected'**
   String get fleaMarketRequestStatusRejected;
 
+  /// No description provided for @fleaMarketAcceptCounterOffer.
+  ///
+  /// In en, this message translates to:
+  /// **'Accept'**
+  String get fleaMarketAcceptCounterOffer;
+
+  /// No description provided for @fleaMarketRejectCounterOffer.
+  ///
+  /// In en, this message translates to:
+  /// **'Decline'**
+  String get fleaMarketRejectCounterOffer;
+
+  /// No description provided for @fleaMarketCounterOfferReceived.
+  ///
+  /// In en, this message translates to:
+  /// **'Seller counter-offered £{price}'**
+  String fleaMarketCounterOfferReceived(String price);
+
+  /// No description provided for @fleaMarketAcceptCounterOfferConfirmTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Accept Counter Offer'**
+  String get fleaMarketAcceptCounterOfferConfirmTitle;
+
+  /// No description provided for @fleaMarketAcceptCounterOfferConfirmMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Are you sure you want to accept the seller\'s counter offer of £{price}?'**
+  String fleaMarketAcceptCounterOfferConfirmMessage(String price);
+
+  /// No description provided for @fleaMarketRejectCounterOfferConfirmTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Decline Counter Offer'**
+  String get fleaMarketRejectCounterOfferConfirmTitle;
+
+  /// No description provided for @fleaMarketRejectCounterOfferConfirmMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Are you sure you want to decline the seller\'s counter offer?'**
+  String get fleaMarketRejectCounterOfferConfirmMessage;
+
+  /// No description provided for @fleaMarketCounterOfferAccepted.
+  ///
+  /// In en, this message translates to:
+  /// **'Counter offer accepted'**
+  String get fleaMarketCounterOfferAccepted;
+
+  /// No description provided for @fleaMarketCounterOfferRejected.
+  ///
+  /// In en, this message translates to:
+  /// **'Counter offer declined'**
+  String get fleaMarketCounterOfferRejected;
+
   /// No description provided for @applePayNotSupported.
   ///
   /// In en, this message translates to:
@@ -11168,6 +11240,30 @@ abstract class AppLocalizations {
   /// **'Describe the rules for this leaderboard'**
   String get leaderboardRulesHint;
 
+  /// No description provided for @leaderboardLocation.
+  ///
+  /// In en, this message translates to:
+  /// **'Location'**
+  String get leaderboardLocation;
+
+  /// No description provided for @leaderboardLocationHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter the location for this leaderboard'**
+  String get leaderboardLocationHint;
+
+  /// No description provided for @leaderboardApplicationReason.
+  ///
+  /// In en, this message translates to:
+  /// **'Application Reason'**
+  String get leaderboardApplicationReason;
+
+  /// No description provided for @leaderboardApplicationReasonHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Why do you want to create this leaderboard?'**
+  String get leaderboardApplicationReasonHint;
+
   /// No description provided for @leaderboardFillRequired.
   ///
   /// In en, this message translates to:
@@ -11257,6 +11353,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Payment time has expired, please initiate payment again.'**
   String get paymentExpiredMessage;
+
+  /// No description provided for @paymentCountdownTimeout.
+  ///
+  /// In en, this message translates to:
+  /// **'Payment Timed Out'**
+  String get paymentCountdownTimeout;
+
+  /// No description provided for @paymentCountdownCompleteInTime.
+  ///
+  /// In en, this message translates to:
+  /// **'Please complete payment within the time limit'**
+  String get paymentCountdownCompleteInTime;
+
+  /// No description provided for @paymentCountdownTimeLeft.
+  ///
+  /// In en, this message translates to:
+  /// **'Time remaining: {time}'**
+  String paymentCountdownTimeLeft(String time);
 
   /// No description provided for @paymentApplePayIOSOnly.
   ///
@@ -14174,6 +14288,24 @@ abstract class AppLocalizations {
   /// **'Applied'**
   String get taskExpertAppliedStatus;
 
+  /// No description provided for @taskExpertApplicationPending.
+  ///
+  /// In en, this message translates to:
+  /// **'Your expert application is under review'**
+  String get taskExpertApplicationPending;
+
+  /// No description provided for @taskExpertApplicationApproved.
+  ///
+  /// In en, this message translates to:
+  /// **'Your expert application has been approved!'**
+  String get taskExpertApplicationApproved;
+
+  /// No description provided for @taskExpertApplicationRejected.
+  ///
+  /// In en, this message translates to:
+  /// **'Your expert application was not approved'**
+  String get taskExpertApplicationRejected;
+
   /// No description provided for @taskExpertServiceCount.
   ///
   /// In en, this message translates to:
@@ -15776,6 +15908,90 @@ abstract class AppLocalizations {
   /// **'Loading experts…'**
   String get toolCallLoadingListTaskExperts;
 
+  /// No description provided for @toolCallGetMyWalletSummary.
+  ///
+  /// In en, this message translates to:
+  /// **'Wallet summary'**
+  String get toolCallGetMyWalletSummary;
+
+  /// No description provided for @toolCallGetMyMessagesSummary.
+  ///
+  /// In en, this message translates to:
+  /// **'Chat summary'**
+  String get toolCallGetMyMessagesSummary;
+
+  /// No description provided for @toolCallGetMyVipStatus.
+  ///
+  /// In en, this message translates to:
+  /// **'VIP status'**
+  String get toolCallGetMyVipStatus;
+
+  /// No description provided for @toolCallGetMyStudentVerification.
+  ///
+  /// In en, this message translates to:
+  /// **'Student verification'**
+  String get toolCallGetMyStudentVerification;
+
+  /// No description provided for @toolCallGetMyCheckinStatus.
+  ///
+  /// In en, this message translates to:
+  /// **'Check-in status'**
+  String get toolCallGetMyCheckinStatus;
+
+  /// No description provided for @toolCallGetMyFleaMarketItems.
+  ///
+  /// In en, this message translates to:
+  /// **'My flea market'**
+  String get toolCallGetMyFleaMarketItems;
+
+  /// No description provided for @toolCallSearchForumPosts.
+  ///
+  /// In en, this message translates to:
+  /// **'Search forum'**
+  String get toolCallSearchForumPosts;
+
+  /// No description provided for @toolCallLoadingGetMyWalletSummary.
+  ///
+  /// In en, this message translates to:
+  /// **'Loading wallet info…'**
+  String get toolCallLoadingGetMyWalletSummary;
+
+  /// No description provided for @toolCallLoadingGetMyMessagesSummary.
+  ///
+  /// In en, this message translates to:
+  /// **'Loading chat summary…'**
+  String get toolCallLoadingGetMyMessagesSummary;
+
+  /// No description provided for @toolCallLoadingGetMyVipStatus.
+  ///
+  /// In en, this message translates to:
+  /// **'Checking VIP status…'**
+  String get toolCallLoadingGetMyVipStatus;
+
+  /// No description provided for @toolCallLoadingGetMyStudentVerification.
+  ///
+  /// In en, this message translates to:
+  /// **'Checking verification…'**
+  String get toolCallLoadingGetMyStudentVerification;
+
+  /// No description provided for @toolCallLoadingGetMyCheckinStatus.
+  ///
+  /// In en, this message translates to:
+  /// **'Checking check-in…'**
+  String get toolCallLoadingGetMyCheckinStatus;
+
+  /// No description provided for @toolCallLoadingGetMyFleaMarketItems.
+  ///
+  /// In en, this message translates to:
+  /// **'Loading your items…'**
+  String get toolCallLoadingGetMyFleaMarketItems;
+
+  /// No description provided for @toolCallLoadingSearchForumPosts.
+  ///
+  /// In en, this message translates to:
+  /// **'Searching forum…'**
+  String get toolCallLoadingSearchForumPosts;
+
   /// No description provided for @expertApplicationsTitle.
   ///
   /// In en, this message translates to:
@@ -15961,6 +16177,48 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Base Price'**
   String get expertApplicationBasePrice;
+
+  /// No description provided for @commonUnnamed.
+  ///
+  /// In en, this message translates to:
+  /// **'Unnamed'**
+  String get commonUnnamed;
+
+  /// No description provided for @commonImageUploadFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Image upload failed: {error}'**
+  String commonImageUploadFailed(String error);
+
+  /// No description provided for @commonImageCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{current}/{max}'**
+  String commonImageCount(int current, int max);
+
+  /// No description provided for @paymentCardSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Visa, Mastercard, AMEX'**
+  String get paymentCardSubtitle;
+
+  /// No description provided for @paymentWeChatPaySubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'WeChat Pay (Stripe)'**
+  String get paymentWeChatPaySubtitle;
+
+  /// No description provided for @paymentAlipaySubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Alipay (Stripe)'**
+  String get paymentAlipaySubtitle;
+
+  /// No description provided for @commonCurrencySymbol.
+  ///
+  /// In en, this message translates to:
+  /// **'£ '**
+  String get commonCurrencySymbol;
 }
 
 class _AppLocalizationsDelegate

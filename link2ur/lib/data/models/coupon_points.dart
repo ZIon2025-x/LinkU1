@@ -84,19 +84,19 @@ class PointsTransaction extends Equatable {
   /// 是否是支出
   bool get isExpense => type == 'spend' || type == 'coupon_redeem';
 
-  /// 类型显示文本
-  String get typeText {
+  /// 类型标识（需要在 View 层通过 l10n 映射为本地化文本）
+  String get typeKey {
     switch (type) {
       case 'earn':
-        return '获得积分';
+        return 'points_type_earn';
       case 'spend':
-        return '使用积分';
+        return 'points_type_spend';
       case 'refund':
-        return '退回积分';
+        return 'points_type_refund';
       case 'expire':
-        return '积分过期';
+        return 'points_type_expire';
       case 'coupon_redeem':
-        return '优惠券兑换';
+        return 'points_type_coupon_redeem';
       default:
         return type;
     }
@@ -115,7 +115,7 @@ class PointsTransaction extends Equatable {
       description: json['description'] as String?,
       batchId: json['batch_id'] as String?,
       createdAt: json['created_at'] != null
-          ? DateTime.parse(json['created_at'])
+          ? DateTime.tryParse(json['created_at'])
           : null,
     );
   }
@@ -157,13 +157,13 @@ class Coupon extends Equatable {
   bool get isExpired =>
       validUntil != null && validUntil!.isBefore(DateTime.now());
 
-  /// 折扣类型显示
-  String get typeText {
+  /// 折扣类型标识（需要在 View 层通过 l10n 映射为本地化文本）
+  String get typeKey {
     switch (type) {
       case 'fixed_amount':
-        return '满减券';
+        return 'coupon_type_fixed';
       case 'percentage':
-        return '折扣券';
+        return 'coupon_type_percentage';
       default:
         return type;
     }
@@ -191,7 +191,7 @@ class Coupon extends Equatable {
       minAmountDisplay: json['min_amount_display'] as String? ?? '',
       currency: json['currency'] as String? ?? 'GBP',
       validUntil: json['valid_until'] != null
-          ? DateTime.parse(json['valid_until'])
+          ? DateTime.tryParse(json['valid_until'])
           : null,
       usageConditions:
           json['usage_conditions'] as Map<String, dynamic>?,
@@ -230,15 +230,15 @@ class UserCoupon extends Equatable {
   /// 是否已使用
   bool get isUsed => status == AppConstants.couponStatusUsed;
 
-  /// 状态显示
-  String get statusText {
+  /// 状态标识（需要在 View 层通过 l10n 映射为本地化文本）
+  String get statusKey {
     switch (status) {
       case AppConstants.couponStatusUnused:
-        return '未使用';
+        return 'coupon_status_unused';
       case AppConstants.couponStatusUsed:
-        return '已使用';
+        return 'coupon_status_used';
       case AppConstants.couponStatusExpired:
-        return '已过期';
+        return 'coupon_status_expired';
       default:
         return status;
     }
@@ -250,10 +250,10 @@ class UserCoupon extends Equatable {
       coupon: Coupon.fromJson(json['coupon'] as Map<String, dynamic>),
       status: json['status'] as String? ?? AppConstants.couponStatusUnused,
       obtainedAt: json['obtained_at'] != null
-          ? DateTime.parse(json['obtained_at'])
+          ? DateTime.tryParse(json['obtained_at'])
           : null,
       validUntil: json['valid_until'] != null
-          ? DateTime.parse(json['valid_until'])
+          ? DateTime.tryParse(json['valid_until'])
           : null,
     );
   }

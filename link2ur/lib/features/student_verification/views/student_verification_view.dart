@@ -40,7 +40,6 @@ class _StudentVerificationContent extends StatefulWidget {
 
 class _StudentVerificationContentState
     extends State<_StudentVerificationContent> {
-  University? _selectedUniversity;
   final TextEditingController _emailController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
 
@@ -285,7 +284,6 @@ class _StudentVerificationContentState
                         context
                             .read<StudentVerificationBloc>()
                             .add(StudentVerificationSubmit(
-                              universityId: _selectedUniversity?.id ?? 0,
                               email: _emailController.text.trim(),
                             ));
                       }

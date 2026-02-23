@@ -137,7 +137,7 @@ class LeaderboardRepository {
   }) async {
     final response = await _apiService.post<Map<String, dynamic>>(
       ApiEndpoints.leaderboardItemVote(itemId),
-      data: {
+      queryParameters: {
         'vote_type': voteType,
         if (comment != null) 'comment': comment,
         'is_anonymous': isAnonymous,
@@ -202,20 +202,20 @@ class LeaderboardRepository {
 
   /// 申请创建排行榜
   Future<Leaderboard> applyLeaderboard({
-    required String title,
-    required String description,
-    String? rules,
-    String? location,
+    required String name,
+    required String location,
+    String? description,
     String? coverImage,
+    String? applicationReason,
   }) async {
     final response = await _apiService.post<Map<String, dynamic>>(
       ApiEndpoints.leaderboardApply,
       data: {
-        'title': title,
-        'description': description,
-        if (rules != null) 'rules': rules,
-        if (location != null) 'location': location,
+        'name': name,
+        'location': location,
+        if (description != null) 'description': description,
         if (coverImage != null) 'cover_image': coverImage,
+        if (applicationReason != null) 'application_reason': applicationReason,
       },
     );
 
@@ -231,15 +231,20 @@ class LeaderboardRepository {
     required int leaderboardId,
     required String name,
     String? description,
-    double? score,
+    String? address,
+    String? phone,
+    String? website,
     List<String>? images,
   }) async {
     final response = await _apiService.post<Map<String, dynamic>>(
-      ApiEndpoints.leaderboardItems(leaderboardId),
+      ApiEndpoints.leaderboardCreateItem,
       data: {
+        'leaderboard_id': leaderboardId,
         'name': name,
         if (description != null) 'description': description,
-        if (score != null) 'score': score,
+        if (address != null) 'address': address,
+        if (phone != null) 'phone': phone,
+        if (website != null) 'website': website,
         if (images != null) 'images': images,
       },
     );
@@ -255,13 +260,13 @@ class LeaderboardRepository {
   Future<void> reviewLeaderboard(
     int leaderboardId, {
     required String action,
-    String? reason,
+    String? comment,
   }) async {
     final response = await _apiService.post(
       ApiEndpoints.leaderboardReview(leaderboardId),
-      data: {
+      queryParameters: {
         'action': action,
-        if (reason != null) 'reason': reason,
+        if (comment != null) 'comment': comment,
       },
     );
 
@@ -304,7 +309,7 @@ class LeaderboardRepository {
       return false;
     }
 
-    return response.data!['is_favorite'] as bool? ?? false;
+    return response.data!['favorited'] as bool? ?? false;
   }
 
   /// 获取我收藏的排行榜

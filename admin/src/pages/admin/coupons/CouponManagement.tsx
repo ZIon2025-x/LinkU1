@@ -26,7 +26,6 @@ export const CouponManagement: React.FC = () => {
 
   const handleFetchError = useCallback((error: any) => {
     message.error(`加载优惠券列表失败：${getErrorMessage(error)}`);
-    console.error('Coupon list fetch error:', error);
   }, []);
 
   // 使用共享的表格 Hook

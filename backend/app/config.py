@@ -28,6 +28,7 @@ class Config:
     # JWT配置
     SECRET_KEY = os.getenv("SECRET_KEY", "")
     SIGNED_URL_SECRET = os.getenv("SIGNED_URL_SECRET", "")
+    _DEV_SECRET_KEY = "linku-dev-only-insecure-key-do-not-use-in-production"
     if not SECRET_KEY:
         import warnings
         warnings.warn(
@@ -37,8 +38,7 @@ class Config:
             RuntimeWarning,
             stacklevel=2
         )
-        # 使用固定的开发密钥（不用随机值，避免多进程/热重载时JWT失效）
-        SECRET_KEY = "linku-dev-only-insecure-key-do-not-use-in-production"
+        SECRET_KEY = _DEV_SECRET_KEY
     ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "15"))
     REFRESH_TOKEN_EXPIRE_HOURS = int(os.getenv("REFRESH_TOKEN_EXPIRE_HOURS", "12"))  # 12小时
     CLOCK_SKEW_TOLERANCE = int(os.getenv("CLOCK_SKEW_TOLERANCE", "300"))
@@ -307,6 +307,8 @@ class Config:
     # Token 限制
     AI_MAX_OUTPUT_TOKENS = int(os.getenv("AI_MAX_OUTPUT_TOKENS", "1024"))  # 单次回复上限
     AI_MAX_HISTORY_TURNS = int(os.getenv("AI_MAX_HISTORY_TURNS", "10"))   # 保留最近 N 轮
+    AI_MAX_LOOP_INPUT_TOKENS = int(os.getenv("AI_MAX_LOOP_INPUT_TOKENS", "20000"))  # 工具循环 input token 上限
+    AI_MAX_TOOL_ROUNDS = int(os.getenv("AI_MAX_TOOL_ROUNDS", "3"))  # 最大工具调用轮数
     # 速率与预算
     AI_RATE_LIMIT_RPM = int(os.getenv("AI_RATE_LIMIT_RPM", "10"))         # 每分钟请求数
     AI_DAILY_REQUEST_LIMIT = int(os.getenv("AI_DAILY_REQUEST_LIMIT", "100"))  # 每用户每天请求数
@@ -314,6 +316,8 @@ class Config:
     AI_SESSION_TTL_HOURS = int(os.getenv("AI_SESSION_TTL_HOURS", "24"))
     # FAQ 缓存 TTL（秒）
     AI_FAQ_CACHE_TTL = int(os.getenv("AI_FAQ_CACHE_TTL", "3600"))  # 1 小时
+    # System Prompt 来源: "config" (硬编码) / "db" (从 ai_system_prompts 表读取)
+    AI_SYSTEM_PROMPT_SOURCE = os.getenv("AI_SYSTEM_PROMPT_SOURCE", "config")
 
     # 搜索配置
     USE_PG_TRGM = os.getenv("USE_PG_TRGM", "false").lower() == "true"  # 是否使用pg_trgm扩展

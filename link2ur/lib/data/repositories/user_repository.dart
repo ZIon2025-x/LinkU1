@@ -46,12 +46,13 @@ class UserRepository {
     return user;
   }
 
-  /// 上传头像
+  /// 上传头像：先上传图片获取 URL，再 PATCH 更新
   Future<User> uploadAvatar(String filePath) async {
-    final response = await _apiService.uploadFile<Map<String, dynamic>>(
+    final imageUrl = await uploadPublicImage(filePath);
+
+    final response = await _apiService.patch<Map<String, dynamic>>(
       ApiEndpoints.uploadAvatar,
-      filePath: filePath,
-      fieldName: 'avatar',
+      data: {'avatar': imageUrl},
     );
 
     if (!response.isSuccess || response.data == null) {
@@ -131,7 +132,7 @@ class UserRepository {
   Future<void> sendEmailUpdateCode(String email) async {
     final response = await _apiService.post(
       ApiEndpoints.sendEmailUpdateCode,
-      data: {'email': email},
+      data: {'new_email': email},
     );
 
     if (!response.isSuccess) {
@@ -143,7 +144,7 @@ class UserRepository {
   Future<void> sendPhoneUpdateCode(String phone) async {
     final response = await _apiService.post(
       ApiEndpoints.sendPhoneUpdateCode,
-      data: {'phone': phone},
+      data: {'new_phone': phone},
     );
 
     if (!response.isSuccess) {
@@ -212,6 +213,7 @@ class UserRepository {
     final response = await _apiService.uploadFile<Map<String, dynamic>>(
       ApiEndpoints.uploadPublicImage,
       filePath: filePath,
+      fieldName: 'image',
     );
 
     if (!response.isSuccess || response.data == null) {
@@ -250,17 +252,17 @@ class UserRepository {
     return WalletInfo.fromJson(response.data!);
   }
 
-  /// 获取交易记录
+  /// 获取交易记录（游标分页）
   Future<List<Transaction>> getTransactions({
-    int page = 1,
-    int pageSize = 20,
+    int limit = 20,
+    String? startingAfter,
     String? type,
   }) async {
     final response = await _apiService.get<Map<String, dynamic>>(
       ApiEndpoints.stripeConnectTransactions,
       queryParameters: {
-        'page': page,
-        'page_size': pageSize,
+        'limit': limit,
+        if (startingAfter != null) 'starting_after': startingAfter,
         if (type != null) 'type': type,
       },
     );
@@ -269,7 +271,7 @@ class UserRepository {
       throw UserException(response.message ?? '获取交易记录失败');
     }
 
-    final items = response.data!['items'] as List<dynamic>? ?? [];
+    final items = response.data!['transactions'] as List<dynamic>? ?? [];
     return items
         .map((e) => Transaction.fromJson(e as Map<String, dynamic>))
         .toList();

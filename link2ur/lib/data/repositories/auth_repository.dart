@@ -1,3 +1,5 @@
+import 'package:dio/dio.dart';
+
 import '../models/user.dart';
 import '../services/api_service.dart';
 import '../services/storage_service.dart';
@@ -67,7 +69,7 @@ class AuthRepository {
       ApiEndpoints.loginWithCode,
       data: {
         'email': email,
-        'code': code,
+        'verification_code': code,
       },
     );
 
@@ -107,7 +109,7 @@ class AuthRepository {
       ApiEndpoints.loginWithPhoneCode,
       data: {
         'phone': phone,
-        'code': code,
+        'verification_code': code,
       },
     );
 
@@ -283,30 +285,11 @@ class AuthRepository {
     final response = await _apiService.post(
       ApiEndpoints.forgotPassword,
       data: {'email': email},
+      options: Options(contentType: 'application/x-www-form-urlencoded'),
     );
 
     if (!response.isSuccess) {
       throw AuthException(response.message ?? '发送重置邮件失败');
-    }
-  }
-
-  /// 重置密码（邮箱+验证码方式）
-  Future<void> resetPassword({
-    required String email,
-    required String code,
-    required String newPassword,
-  }) async {
-    final response = await _apiService.post(
-      ApiEndpoints.forgotPassword,
-      data: {
-        'email': email,
-        'code': code,
-        'new_password': newPassword,
-      },
-    );
-
-    if (!response.isSuccess) {
-      throw AuthException(response.message ?? '重置密码失败');
     }
   }
 
@@ -317,9 +300,8 @@ class AuthRepository {
   }) async {
     final response = await _apiService.post(
       ApiEndpoints.resetPassword(token),
-      data: {
-        'new_password': newPassword,
-      },
+      data: {'new_password': newPassword},
+      options: Options(contentType: 'application/x-www-form-urlencoded'),
     );
 
     if (!response.isSuccess) {

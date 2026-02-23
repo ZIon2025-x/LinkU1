@@ -1067,6 +1067,10 @@
   "taskDetailRejectApplication": "Reject Application",
   "taskDetailRejectApplicationConfirm": "Are you sure you want to reject this application? This action cannot be undone.",
   "taskDetailUnknown": "Unknown",
+  "taskApplicationMessage": "Message",
+  "taskApplicationMessageHint": "Write a message to the applicant...",
+  "taskApplicationMessageSent": "Message sent",
+  "taskApplicationMessageFailed": "Failed to send message",
   "taskDetailQualityGood": "Good Quality",
   "taskDetailOnTime": "On Time",
   "taskDetailResponsible": "Responsible",
@@ -2455,6 +2459,25 @@
   "fleaMarketRequestStatusSellerNegotiating": "Seller Negotiating",
   "fleaMarketRequestStatusAccepted": "Accepted",
   "fleaMarketRequestStatusRejected": "Rejected",
+  "fleaMarketAcceptCounterOffer": "Accept",
+  "fleaMarketRejectCounterOffer": "Decline",
+  "fleaMarketCounterOfferReceived": "Seller counter-offered £{price}",
+  "@fleaMarketCounterOfferReceived": {
+    "placeholders": {
+      "price": { "type": "String" }
+    }
+  },
+  "fleaMarketAcceptCounterOfferConfirmTitle": "Accept Counter Offer",
+  "fleaMarketAcceptCounterOfferConfirmMessage": "Are you sure you want to accept the seller's counter offer of £{price}?",
+  "@fleaMarketAcceptCounterOfferConfirmMessage": {
+    "placeholders": {
+      "price": { "type": "String" }
+    }
+  },
+  "fleaMarketRejectCounterOfferConfirmTitle": "Decline Counter Offer",
+  "fleaMarketRejectCounterOfferConfirmMessage": "Are you sure you want to decline the seller's counter offer?",
+  "fleaMarketCounterOfferAccepted": "Counter offer accepted",
+  "fleaMarketCounterOfferRejected": "Counter offer declined",
   "applePayNotSupported": "Your device does not support Apple Pay",
   "applePayUseOtherMethod": "Please use another payment method",
   "applePayTitle": "Apple Pay",
@@ -2902,6 +2925,10 @@
   "leaderboardTitleHint": "Enter leaderboard title",
   "leaderboardRules": "Rules",
   "leaderboardRulesHint": "Describe the rules for this leaderboard",
+  "leaderboardLocation": "Location",
+  "leaderboardLocationHint": "Enter the location for this leaderboard",
+  "leaderboardApplicationReason": "Application Reason",
+  "leaderboardApplicationReasonHint": "Why do you want to create this leaderboard?",
   "leaderboardFillRequired": "Please fill in all required fields",
   "leaderboardSubmitApply": "Submit Application",
   "leaderboardApply": "Apply for Leaderboard",
@@ -2921,6 +2948,21 @@
   "paymentNoPayoutsMessage": "You don't have any payout records yet",
   "paymentExpired": "Payment Expired",
   "paymentExpiredMessage": "Payment time has expired, please initiate payment again.",
+  "paymentCountdownExpired": "Expired",
+  "paymentCountdownRemaining": "Remaining {time}",
+  "@paymentCountdownRemaining": {
+    "placeholders": {
+      "time": {"type": "String"}
+    }
+  },
+  "paymentCountdownTimeout": "Payment Timed Out",
+  "paymentCountdownCompleteInTime": "Please complete payment within the time limit",
+  "paymentCountdownTimeLeft": "Time remaining: {time}",
+  "@paymentCountdownTimeLeft": {
+    "placeholders": {
+      "time": {"type": "String"}
+    }
+  },
   "paymentApplePayIOSOnly": "Apple Pay is only available on iOS devices",
   "paymentApplePayNotSupported": "Your device does not support Apple Pay, please use another payment method",
   "paymentNetworkConnectionFailed": "Network connection failed, please check your network and try again.",
@@ -3599,6 +3641,9 @@
   "taskExpertAccepted": "Accepted",
   "taskExpertRejected": "Rejected",
   "taskExpertAppliedStatus": "Applied",
+  "taskExpertApplicationPending": "Your expert application is under review",
+  "taskExpertApplicationApproved": "Your expert application has been approved!",
+  "taskExpertApplicationRejected": "Your expert application was not approved",
   "taskExpertServiceCount": "{count} services",
   "@taskExpertServiceCount": { "placeholders": { "count": { "type": "int" } } },
   "taskExpertShareTitle": "Share Expert - {name}",
@@ -3997,6 +4042,22 @@
   "toolCallLoadingGetLeaderboardSummary": "Loading leaderboard…",
   "toolCallLoadingListTaskExperts": "Loading experts…",
 
+  "toolCallGetMyWalletSummary": "Wallet summary",
+  "toolCallGetMyMessagesSummary": "Chat summary",
+  "toolCallGetMyVipStatus": "VIP status",
+  "toolCallGetMyStudentVerification": "Student verification",
+  "toolCallGetMyCheckinStatus": "Check-in status",
+  "toolCallGetMyFleaMarketItems": "My flea market",
+  "toolCallSearchForumPosts": "Search forum",
+
+  "toolCallLoadingGetMyWalletSummary": "Loading wallet info…",
+  "toolCallLoadingGetMyMessagesSummary": "Loading chat summary…",
+  "toolCallLoadingGetMyVipStatus": "Checking VIP status…",
+  "toolCallLoadingGetMyStudentVerification": "Checking verification…",
+  "toolCallLoadingGetMyCheckinStatus": "Checking check-in…",
+  "toolCallLoadingGetMyFleaMarketItems": "Loading your items…",
+  "toolCallLoadingSearchForumPosts": "Searching forum…",
+
   "expertApplicationsTitle": "Service Applications",
   "expertApplicationsEmpty": "No Applications",
   "expertApplicationsEmptyMessage": "You haven't received any service applications yet.",
@@ -4027,5 +4088,24 @@
   "expertApplicationService": "Service",
   "expertApplicationMessage": "Message",
   "expertApplicationPrice": "Offered Price",
-  "expertApplicationBasePrice": "Base Price"
+  "expertApplicationBasePrice": "Base Price",
+
+  "commonUnnamed": "Unnamed",
+  "commonImageUploadFailed": "Image upload failed: {error}",
+  "@commonImageUploadFailed": {
+    "placeholders": {
+      "error": { "type": "String" }
+    }
+  },
+  "commonImageCount": "{current}/{max}",
+  "@commonImageCount": {
+    "placeholders": {
+      "current": { "type": "int" },
+      "max": { "type": "int" }
+    }
+  },
+  "paymentCardSubtitle": "Visa, Mastercard, AMEX",
+  "paymentWeChatPaySubtitle": "WeChat Pay (Stripe)",
+  "paymentAlipaySubtitle": "Alipay (Stripe)",
+  "commonCurrencySymbol": "£ "
 }

@@ -68,15 +68,15 @@ class StudentVerification extends Equatable {
           : null,
       email: json['email'] as String?,
       verifiedAt: json['verified_at'] != null
-          ? DateTime.parse(json['verified_at'])
+          ? DateTime.tryParse(json['verified_at'])
           : null,
       expiresAt: json['expires_at'] != null
-          ? DateTime.parse(json['expires_at'])
+          ? DateTime.tryParse(json['expires_at'])
           : null,
       daysRemaining: json['days_remaining'] as int?,
       canRenew: json['can_renew'] as bool? ?? false,
       renewableFrom: json['renewable_from'] != null
-          ? DateTime.parse(json['renewable_from'])
+          ? DateTime.tryParse(json['renewable_from'])
           : null,
       emailLocked: json['email_locked'] as bool? ?? false,
       tokenExpired: json['token_expired'] as bool? ?? false,

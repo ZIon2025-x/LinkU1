@@ -150,6 +150,7 @@ void main() {
         return forumBloc;
       },
       act: (bloc) => bloc.add(const ForumSearchChanged('test')),
+      wait: const Duration(milliseconds: 600),
       expect: () => [
         const ForumState(
           searchQuery: 'test',

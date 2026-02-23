@@ -27,6 +27,7 @@ class AppConstants {
 
   /// 任务状态
   static const String taskStatusOpen = 'open';
+  static const String taskStatusTaken = 'taken';
   static const String taskStatusInProgress = 'in_progress';
   static const String taskStatusPendingConfirmation = 'pending_confirmation';
   static const String taskStatusPendingPayment = 'pending_payment';

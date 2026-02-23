@@ -29,12 +29,11 @@ class StudentVerificationRepository {
     return StudentVerification.fromJson(data);
   }
 
-  /// 提交学生认证
-  Future<void> submitVerification(
-      SubmitStudentVerificationRequest request) async {
+  /// 提交学生认证（email 作为 query param）
+  Future<void> submitVerification({required String email}) async {
     final response = await _apiService.post(
       ApiEndpoints.submitStudentVerification,
-      data: request.toJson(),
+      queryParameters: {'email': email},
     );
 
     if (!response.isSuccess) {
@@ -42,11 +41,10 @@ class StudentVerificationRepository {
     }
   }
 
-  /// 验证学生邮箱（输入验证码）
-  Future<void> verifyStudentEmail({required String code}) async {
-    final response = await _apiService.post(
-      ApiEndpoints.verifyStudentEmail,
-      data: {'code': code},
+  /// 验证学生邮箱（GET /verify/{token}）
+  Future<void> verifyStudentEmail({required String token}) async {
+    final response = await _apiService.get(
+      ApiEndpoints.verifyStudentEmail(token),
     );
 
     if (!response.isSuccess) {
@@ -54,10 +52,11 @@ class StudentVerificationRepository {
     }
   }
 
-  /// 续期学生认证
-  Future<void> renewVerification() async {
+  /// 续期学生认证（email 作为 query param）
+  Future<void> renewVerification({required String email}) async {
     final response = await _apiService.post(
       ApiEndpoints.renewStudentVerification,
+      queryParameters: {'email': email},
     );
 
     if (!response.isSuccess) {

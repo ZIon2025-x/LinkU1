@@ -26,7 +26,12 @@
       "Bash(node --version:*)",
       "Bash(node -e:*)",
       "Bash(\"F:/python_work/LinkU/admin/src/pages/admin/settings/Settings.tsx\":*)",
-      "Bash(F:/python_work/LinkU/admin/src/api.ts:*)"
+      "Bash(F:/python_work/LinkU/admin/src/api.ts:*)",
+      "Bash(git -C \"F:/python_work/LinkU\" add backend/app/admin_official_routes.py backend/app/main.py)",
+      "Bash(git -C:*)",
+      "Bash(python3:*)",
+      "Bash(export PATH=\"F:/flutter/bin:$PATH\")",
+      "Bash(export PUB_CACHE=\"F:/DevCache/.pub-cache\")"
     ]
   }
 }

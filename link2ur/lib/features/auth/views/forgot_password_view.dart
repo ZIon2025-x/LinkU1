@@ -55,8 +55,7 @@ class _ForgotPasswordViewState extends State<ForgotPasswordView> {
     if (!_formKey.currentState!.validate()) return;
 
     context.read<AuthBloc>().add(AuthResetPasswordRequested(
-          email: _emailController.text.trim(),
-          code: _codeController.text.trim(),
+          token: _codeController.text.trim(),
           newPassword: _passwordController.text,
         ));
   }

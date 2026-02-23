@@ -49,8 +49,9 @@ class NetworkMonitor {
     }
 
     try {
-      // 获取初始状态
-      final results = await _connectivity.checkConnectivity();
+      // 获取初始状态（带超时，防止平台通道挂起）
+      final results = await _connectivity.checkConnectivity()
+          .timeout(const Duration(seconds: 5), onTimeout: () => [ConnectivityResult.none]);
       _currentStatus = _mapStatus(results);
       AppLogger.info('NetworkMonitor - Initial status: $_currentStatus');
 

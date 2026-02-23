@@ -381,13 +381,13 @@ class TaskRepository {
   Future<void> negotiateApplication(
     int taskId,
     int applicationId, {
-    required double proposedPrice,
+    required double negotiatedPrice,
     String? message,
   }) async {
     final response = await _apiService.post(
       ApiEndpoints.negotiateApplication(taskId, applicationId),
       data: {
-        'proposed_price': proposedPrice,
+        'negotiated_price': negotiatedPrice,
         if (message != null) 'message': message,
       },
     );
@@ -397,18 +397,18 @@ class TaskRepository {
     }
   }
 
-  /// 回复议价
+  /// 回复议价（接受/拒绝，需要一次性签名 token 防重放）
   Future<void> respondNegotiation(
     int taskId,
     int applicationId, {
-    required String action, // accept, reject, counter
-    double? counterPrice,
+    required String action,
+    required String token,
   }) async {
     final response = await _apiService.post(
       ApiEndpoints.respondNegotiation(taskId, applicationId),
       data: {
         'action': action,
-        if (counterPrice != null) 'counter_price': counterPrice,
+        'token': token,
       },
     );
 
@@ -418,11 +418,16 @@ class TaskRepository {
   }
 
   /// 完成任务
-  Future<void> completeTask(int taskId, {String? evidence}) async {
+  Future<void> completeTask(
+    int taskId, {
+    List<String>? evidenceImages,
+    String? evidenceText,
+  }) async {
     final response = await _apiService.post(
       ApiEndpoints.completeTask(taskId),
       data: {
-        if (evidence != null) 'completion_evidence': evidence,
+        if (evidenceImages != null) 'evidence_images': evidenceImages,
+        if (evidenceText != null) 'evidence_text': evidenceText,
       },
     );
 
@@ -435,9 +440,21 @@ class TaskRepository {
   }
 
   /// 确认完成
-  Future<void> confirmCompletion(int taskId) async {
+  Future<void> confirmCompletion(
+    int taskId, {
+    double? partialTransferAmount,
+    String? partialTransferReason,
+  }) async {
+    final Map<String, dynamic> data = {};
+    if (partialTransferAmount != null) {
+      data['partial_transfer'] = {
+        'transfer_amount': partialTransferAmount,
+        if (partialTransferReason != null) 'reason': partialTransferReason,
+      };
+    }
     final response = await _apiService.post(
       ApiEndpoints.confirmCompletion(taskId),
+      data: data.isNotEmpty ? data : null,
     );
 
     if (!response.isSuccess) {
@@ -504,7 +521,7 @@ class TaskRepository {
 
   /// 获取任务评价列表
   Future<List<Map<String, dynamic>>> getTaskReviews(int taskId) async {
-    final response = await _apiService.get<Map<String, dynamic>>(
+    final response = await _apiService.get<List<dynamic>>(
       ApiEndpoints.taskReviews(taskId),
     );
 
@@ -512,8 +529,7 @@ class TaskRepository {
       throw TaskException(response.message ?? '获取评价失败');
     }
 
-    final items = response.data!['items'] as List<dynamic>? ?? [];
-    return items.map((e) => e as Map<String, dynamic>).toList();
+    return response.data!.map((e) => e as Map<String, dynamic>).toList();
   }
 
   /// 接受任务
@@ -651,7 +667,7 @@ class TaskRepository {
 
   /// 获取退款历史
   Future<List<Map<String, dynamic>>> getRefundHistory(int taskId) async {
-    final response = await _apiService.get<Map<String, dynamic>>(
+    final response = await _apiService.get<List<dynamic>>(
       ApiEndpoints.refundHistory(taskId),
     );
 
@@ -659,8 +675,7 @@ class TaskRepository {
       throw TaskException(response.message ?? '获取退款历史失败');
     }
 
-    final items = response.data!['items'] as List<dynamic>? ?? [];
-    return items.map((e) => e as Map<String, dynamic>).toList();
+    return response.data!.map((e) => e as Map<String, dynamic>).toList();
   }
 
   /// 取消退款请求
@@ -805,20 +820,11 @@ class TaskRepository {
     }
   }
 
-  /// 取消自己的申请（便捷方法，需要 applicationId）
+  /// 取消自己的申请（需要 applicationId）
   /// BLoC 应在获取申请列表后传入 applicationId 调用 withdrawApplication
   Future<void> cancelApplication(int taskId,
-      {int? applicationId}) async {
-    if (applicationId != null) {
-      return withdrawApplication(taskId, applicationId);
-    }
-    // 如果没有 applicationId，尝试直接 POST cancel
-    final response = await _apiService.post(
-      ApiEndpoints.cancelTask(taskId),
-    );
-    if (!response.isSuccess) {
-      throw TaskException(response.message ?? '取消申请失败');
-    }
+      {required int applicationId}) async {
+    return withdrawApplication(taskId, applicationId);
   }
 
   /// 接受申请人（便捷方法，applicantId 即 applicationId）

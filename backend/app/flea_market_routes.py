@@ -588,6 +588,7 @@ async def get_flea_market_item(
             is_available = False
         
         # ⚠️ 检查当前用户是否有待处理的购买申请（议价请求）
+        user_purchase_request_id = None
         user_purchase_request_status = None
         user_purchase_request_proposed_price = None
         
@@ -602,6 +603,7 @@ async def get_flea_market_item(
             user_purchase_request = purchase_request_result.scalar_one_or_none()
             
             if user_purchase_request:
+                user_purchase_request_id = user_purchase_request.id
                 user_purchase_request_status = user_purchase_request.status
                 user_purchase_request_proposed_price = float(user_purchase_request.proposed_price) if user_purchase_request.proposed_price else None
         
@@ -638,6 +640,7 @@ async def get_flea_market_item(
             pending_payment_ephemeral_key_secret=pending_payment_ephemeral_key_secret,
             pending_payment_expires_at=pending_payment_expires_at,
             is_available=is_available,  # 标识商品是否可购买
+            user_purchase_request_id=user_purchase_request_id,  # 当前用户的购买申请ID
             user_purchase_request_status=user_purchase_request_status,  # 当前用户的购买申请状态
             user_purchase_request_proposed_price=user_purchase_request_proposed_price,  # 议价金额
         )

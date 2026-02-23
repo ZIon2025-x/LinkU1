@@ -2257,6 +2257,19 @@ class AppLocalizationsEn extends AppLocalizations {
   String get taskDetailUnknown => 'Unknown';
 
   @override
+  String get taskApplicationMessage => 'Message';
+
+  @override
+  String get taskApplicationMessageHint =>
+      'Write a message to the applicant...';
+
+  @override
+  String get taskApplicationMessageSent => 'Message sent';
+
+  @override
+  String get taskApplicationMessageFailed => 'Failed to send message';
+
+  @override
   String get taskDetailQualityGood => 'Good Quality';
 
   @override
@@ -2553,9 +2566,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get taskApplicationSubmitApplication => 'Submit Application';
 
   @override
-  String get taskApplicationMessage => 'Message';
-
-  @override
   String get taskApplicationMessageToApplicant => 'Message to applicant...';
 
   @override
@@ -2831,8 +2841,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get paymentCountdownExpired => 'Expired';
 
   @override
-  String paymentCountdownRemaining(String param1) {
-    return '$param1 left';
+  String paymentCountdownRemaining(String time) {
+    return 'Remaining $time';
   }
 
   @override
@@ -5314,6 +5324,39 @@ class AppLocalizationsEn extends AppLocalizations {
   String get fleaMarketRequestStatusRejected => 'Rejected';
 
   @override
+  String get fleaMarketAcceptCounterOffer => 'Accept';
+
+  @override
+  String get fleaMarketRejectCounterOffer => 'Decline';
+
+  @override
+  String fleaMarketCounterOfferReceived(String price) {
+    return 'Seller counter-offered £$price';
+  }
+
+  @override
+  String get fleaMarketAcceptCounterOfferConfirmTitle => 'Accept Counter Offer';
+
+  @override
+  String fleaMarketAcceptCounterOfferConfirmMessage(String price) {
+    return 'Are you sure you want to accept the seller\'s counter offer of £$price?';
+  }
+
+  @override
+  String get fleaMarketRejectCounterOfferConfirmTitle =>
+      'Decline Counter Offer';
+
+  @override
+  String get fleaMarketRejectCounterOfferConfirmMessage =>
+      'Are you sure you want to decline the seller\'s counter offer?';
+
+  @override
+  String get fleaMarketCounterOfferAccepted => 'Counter offer accepted';
+
+  @override
+  String get fleaMarketCounterOfferRejected => 'Counter offer declined';
+
+  @override
   String get applePayNotSupported => 'Your device does not support Apple Pay';
 
   @override
@@ -6099,6 +6142,20 @@ class AppLocalizationsEn extends AppLocalizations {
   String get leaderboardRulesHint => 'Describe the rules for this leaderboard';
 
   @override
+  String get leaderboardLocation => 'Location';
+
+  @override
+  String get leaderboardLocationHint =>
+      'Enter the location for this leaderboard';
+
+  @override
+  String get leaderboardApplicationReason => 'Application Reason';
+
+  @override
+  String get leaderboardApplicationReasonHint =>
+      'Why do you want to create this leaderboard?';
+
+  @override
   String get leaderboardFillRequired => 'Please fill in all required fields';
 
   @override
@@ -6145,6 +6202,18 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get paymentExpiredMessage =>
       'Payment time has expired, please initiate payment again.';
+
+  @override
+  String get paymentCountdownTimeout => 'Payment Timed Out';
+
+  @override
+  String get paymentCountdownCompleteInTime =>
+      'Please complete payment within the time limit';
+
+  @override
+  String paymentCountdownTimeLeft(String time) {
+    return 'Time remaining: $time';
+  }
 
   @override
   String get paymentApplePayIOSOnly =>
@@ -7692,6 +7761,18 @@ class AppLocalizationsEn extends AppLocalizations {
   String get taskExpertAppliedStatus => 'Applied';
 
   @override
+  String get taskExpertApplicationPending =>
+      'Your expert application is under review';
+
+  @override
+  String get taskExpertApplicationApproved =>
+      'Your expert application has been approved!';
+
+  @override
+  String get taskExpertApplicationRejected =>
+      'Your expert application was not approved';
+
+  @override
   String taskExpertServiceCount(int count) {
     return '$count services';
   }
@@ -8560,6 +8641,49 @@ class AppLocalizationsEn extends AppLocalizations {
   String get toolCallLoadingListTaskExperts => 'Loading experts…';
 
   @override
+  String get toolCallGetMyWalletSummary => 'Wallet summary';
+
+  @override
+  String get toolCallGetMyMessagesSummary => 'Chat summary';
+
+  @override
+  String get toolCallGetMyVipStatus => 'VIP status';
+
+  @override
+  String get toolCallGetMyStudentVerification => 'Student verification';
+
+  @override
+  String get toolCallGetMyCheckinStatus => 'Check-in status';
+
+  @override
+  String get toolCallGetMyFleaMarketItems => 'My flea market';
+
+  @override
+  String get toolCallSearchForumPosts => 'Search forum';
+
+  @override
+  String get toolCallLoadingGetMyWalletSummary => 'Loading wallet info…';
+
+  @override
+  String get toolCallLoadingGetMyMessagesSummary => 'Loading chat summary…';
+
+  @override
+  String get toolCallLoadingGetMyVipStatus => 'Checking VIP status…';
+
+  @override
+  String get toolCallLoadingGetMyStudentVerification =>
+      'Checking verification…';
+
+  @override
+  String get toolCallLoadingGetMyCheckinStatus => 'Checking check-in…';
+
+  @override
+  String get toolCallLoadingGetMyFleaMarketItems => 'Loading your items…';
+
+  @override
+  String get toolCallLoadingSearchForumPosts => 'Searching forum…';
+
+  @override
   String get expertApplicationsTitle => 'Service Applications';
 
   @override
@@ -8658,4 +8782,29 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get expertApplicationBasePrice => 'Base Price';
+
+  @override
+  String get commonUnnamed => 'Unnamed';
+
+  @override
+  String commonImageUploadFailed(String error) {
+    return 'Image upload failed: $error';
+  }
+
+  @override
+  String commonImageCount(int current, int max) {
+    return '$current/$max';
+  }
+
+  @override
+  String get paymentCardSubtitle => 'Visa, Mastercard, AMEX';
+
+  @override
+  String get paymentWeChatPaySubtitle => 'WeChat Pay (Stripe)';
+
+  @override
+  String get paymentAlipaySubtitle => 'Alipay (Stripe)';
+
+  @override
+  String get commonCurrencySymbol => '£ ';
 }

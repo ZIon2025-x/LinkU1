@@ -5,7 +5,6 @@ import 'package:in_app_purchase/in_app_purchase.dart';
 
 import '../../core/constants/api_endpoints.dart';
 import '../../core/utils/logger.dart';
-import '../../core/config/api_config.dart';
 import 'api_service.dart';
 
 /// IAP 内购服务
@@ -187,11 +186,9 @@ class IAPService {
         ApiEndpoints.activateVIP,
         data: {
           'product_id': purchase.productID,
-          'transaction_id':
-              purchase.purchaseID ?? '',
-          'receipt_data':
+          'transaction_id': purchase.purchaseID ?? '',
+          'transaction_jws':
               purchase.verificationData.serverVerificationData,
-          'platform': ApiConfig.platformId,
         },
       );
 

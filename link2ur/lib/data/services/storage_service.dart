@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:typed_data';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 
@@ -44,33 +45,41 @@ class StorageService {
     late final Box cacheBox;
     await Future.wait([
       SharedPreferences.getInstance().then((p) => prefs = p),
-      Hive.openBox(StorageKeys.cacheBox).then((b) => cacheBox = b),
+      _openEncryptedCacheBox().then((b) => cacheBox = b),
       CacheManager.shared.init(),
     ]);
     _prefs = prefs;
     _cacheBox = cacheBox;
 
     // 预加载热数据到内存，避免后续 UI 线程同步磁盘读取
-    _loadCachedValues();
+    await _loadCachedValues();
 
     AppLogger.info('StorageService initialized');
   }
 
-  /// 从 SharedPreferences 加载热数据到内存缓存
-  void _loadCachedValues() {
+  /// 从 SharedPreferences / SecureStorage 加载热数据到内存缓存
+  Future<void> _loadCachedValues() async {
     _cachedUserId = _prefs.getString(StorageKeys.userId);
     _cachedLanguage = _prefs.getString(StorageKeys.languageCode);
     _cachedThemeMode = _prefs.getString(StorageKeys.themeMode);
     _cachedNotificationEnabled = _prefs.getBool(StorageKeys.notificationEnabled) ?? true;
     _cachedSoundEnabled = _prefs.getBool('sound_enabled') ?? true;
 
-    // 带 JSON 解析的缓存 — 防止存储损坏导致启动崩溃
+    // 用户信息从 SecureStorage 读取，兼容旧版 SharedPreferences 数据
     try {
-      final userInfoJson = _prefs.getString(StorageKeys.userInfo);
+      var userInfoJson = await _secureStorage.read(key: StorageKeys.userInfo);
+      if (userInfoJson == null || userInfoJson.isEmpty) {
+        userInfoJson = _prefs.getString(StorageKeys.userInfo);
+        if (userInfoJson != null) {
+          await _secureStorage.write(key: StorageKeys.userInfo, value: userInfoJson);
+          await _prefs.remove(StorageKeys.userInfo);
+        }
+      }
       if (userInfoJson != null) {
         _cachedUserInfo = jsonDecode(userInfoJson) as Map<String, dynamic>;
       }
     } catch (_) {
+      _secureStorage.delete(key: StorageKeys.userInfo);
       _prefs.remove(StorageKeys.userInfo);
     }
 
@@ -101,6 +110,28 @@ class StorageService {
       }
     } catch (_) {
       _prefs.remove(StorageKeys.hiddenTaskChats);
+    }
+  }
+
+  /// 打开加密的 Hive 缓存盒，密钥存储在 SecureStorage 中
+  Future<Box> _openEncryptedCacheBox() async {
+    try {
+      const cacheKeyName = 'hive_cache_encryption_key';
+      final existing = await _secureStorage.read(key: cacheKeyName);
+      final Uint8List encryptionKey;
+      if (existing != null && existing.isNotEmpty) {
+        encryptionKey = base64Decode(existing);
+      } else {
+        encryptionKey = Uint8List.fromList(Hive.generateSecureKey());
+        await _secureStorage.write(key: cacheKeyName, value: base64Encode(encryptionKey));
+      }
+      return await Hive.openBox(
+        StorageKeys.cacheBox,
+        encryptionCipher: HiveAesCipher(encryptionKey),
+      );
+    } catch (e) {
+      AppLogger.warning('Failed to open encrypted Hive box, falling back to unencrypted: $e');
+      return await Hive.openBox(StorageKeys.cacheBox);
     }
   }
 
@@ -158,10 +189,13 @@ class StorageService {
   /// 获取用户ID
   String? getUserId() => _cachedUserId;
 
-  /// 保存用户信息JSON
+  /// 保存用户信息JSON（敏感字段存入 SecureStorage）
   Future<void> saveUserInfo(Map<String, dynamic> userInfo) async {
     _cachedUserInfo = userInfo;
-    await _prefs.setString(StorageKeys.userInfo, jsonEncode(userInfo));
+    await _secureStorage.write(
+      key: StorageKeys.userInfo,
+      value: jsonEncode(userInfo),
+    );
   }
 
   /// 获取用户信息
@@ -172,6 +206,8 @@ class StorageService {
     _cachedUserId = null;
     _cachedUserInfo = null;
     await _prefs.remove(StorageKeys.userId);
+    await _secureStorage.delete(key: StorageKeys.userInfo);
+    // 兼容：清除旧版 SharedPreferences 中的用户信息
     await _prefs.remove(StorageKeys.userInfo);
   }
 

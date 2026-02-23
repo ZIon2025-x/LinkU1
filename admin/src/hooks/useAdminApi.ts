@@ -64,7 +64,6 @@ export function useAdminApi<T = any, P extends any[] = any[]>(
 
         return result;
       } catch (err) {
-        console.error('API call failed:', err);
         setError(err);
 
         if (onError) {
@@ -137,7 +136,6 @@ export function useBatchApi<T = any, P extends any[] = any[]>(
             config.onSuccess(result, ...params);
           }
         } catch (err) {
-          console.error('Batch API call failed:', err);
           batchResults.push({ success: false, error: err });
 
           if (config.onError) {

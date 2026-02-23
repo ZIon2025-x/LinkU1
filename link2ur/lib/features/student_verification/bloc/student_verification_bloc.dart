@@ -19,18 +19,16 @@ class StudentVerificationLoadRequested extends StudentVerificationEvent {
   const StudentVerificationLoadRequested();
 }
 
-/// 提交认证
+/// 提交认证（后端根据 email 域名自动匹配大学，无需传 universityId）
 class StudentVerificationSubmit extends StudentVerificationEvent {
   const StudentVerificationSubmit({
-    required this.universityId,
     required this.email,
   });
 
-  final int universityId;
   final String email;
 
   @override
-  List<Object?> get props => [universityId, email];
+  List<Object?> get props => [email];
 }
 
 /// 验证邮箱（输入验证码）
@@ -139,12 +137,7 @@ class StudentVerificationBloc
     emit(state.copyWith(isSubmitting: true));
 
     try {
-      await _repository.submitVerification(
-        SubmitStudentVerificationRequest(
-          universityId: event.universityId,
-          email: event.email,
-        ),
-      );
+      await _repository.submitVerification(email: event.email);
       emit(state.copyWith(
         isSubmitting: false,
         actionMessage: 'verification_submitted',
@@ -168,7 +161,7 @@ class StudentVerificationBloc
     emit(state.copyWith(isSubmitting: true));
 
     try {
-      await _repository.verifyStudentEmail(code: event.code);
+      await _repository.verifyStudentEmail(token: event.code);
       emit(state.copyWith(
         isSubmitting: false,
         actionMessage: 'verification_success',
@@ -191,7 +184,16 @@ class StudentVerificationBloc
     emit(state.copyWith(isSubmitting: true));
 
     try {
-      await _repository.renewVerification();
+      final email = state.verification?.email;
+      if (email == null || email.isEmpty) {
+        emit(state.copyWith(
+          isSubmitting: false,
+          actionMessage: 'renewal_failed',
+          errorMessage: 'Email not found',
+        ));
+        return;
+      }
+      await _repository.renewVerification(email: email);
       emit(state.copyWith(
         isSubmitting: false,
         actionMessage: 'renewal_success',

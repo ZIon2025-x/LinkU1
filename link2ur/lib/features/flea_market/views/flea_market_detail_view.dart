@@ -114,6 +114,8 @@ class _FleaMarketDetailContent extends StatelessWidget {
             'update_failed' => l10n.actionUpdateFailed,
             'refresh_success' => l10n.actionRefreshSuccess,
             'refresh_failed' => l10n.actionRefreshFailed,
+            'counter_offer_accepted' => l10n.fleaMarketCounterOfferAccepted,
+            'counter_offer_rejected' => l10n.fleaMarketCounterOfferRejected,
             _ => state.actionMessage ?? '',
           };
           final displayMessage = state.errorMessage != null
@@ -123,7 +125,9 @@ class _FleaMarketDetailContent extends StatelessWidget {
               state.actionMessage == 'purchase_success' ||
               state.actionMessage == 'negotiate_request_sent' ||
               state.actionMessage == 'item_updated' ||
-              state.actionMessage == 'refresh_success';
+              state.actionMessage == 'refresh_success' ||
+              state.actionMessage == 'counter_offer_accepted' ||
+              state.actionMessage == 'counter_offer_rejected';
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(displayMessage),
@@ -503,11 +507,18 @@ class _FleaMarketDetailContent extends StatelessWidget {
     );
   }
 
-  /// 买家底部栏 - 对标iOS: 聊天 + 继续支付/立即购买/已被预留提示
+  /// 买家底部栏 - 对标iOS: 聊天 + 继续支付/立即购买/回应还价/已被预留提示
   Widget _buildBuyerBottomBar(
       BuildContext context, FleaMarketState state, FleaMarketItem item) {
     // 商品不可购买（被其他人预留）且自己没有待支付订单 → 显示"已被预留"提示
     final isUnavailable = item.isAvailable == false && !item.hasPendingPayment;
+    final hasSellerCounterOffer =
+        item.userPurchaseRequestStatus == 'seller_negotiating';
+
+    // 卖家已还价时，显示还价回应栏（接受/拒绝），而非普通购买按钮
+    if (hasSellerCounterOffer) {
+      return _buildCounterOfferResponseBar(context, state, item);
+    }
 
     return Row(
       children: [
@@ -555,6 +566,180 @@ class _FleaMarketDetailContent extends StatelessWidget {
               : _buildBuyerCTAButton(context, state, item),
         ),
       ],
+    );
+  }
+
+  /// 买家回应卖家还价的底部栏
+  Widget _buildCounterOfferResponseBar(
+      BuildContext context, FleaMarketState state, FleaMarketItem item) {
+    final counterPrice = item.userPurchaseRequestProposedPrice;
+    final priceText = counterPrice != null
+        ? '£${counterPrice.toStringAsFixed(2)}'
+        : '£${item.price.toStringAsFixed(2)}';
+    final l10n = context.l10n;
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          decoration: BoxDecoration(
+            color: Colors.orange.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Row(
+            children: [
+              const Icon(Icons.local_offer, size: 16, color: Colors.orange),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text(
+                  l10n.fleaMarketCounterOfferReceived(priceText),
+                  style: AppTypography.body.copyWith(
+                    color: Colors.orange,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 10),
+        Row(
+          children: [
+            Expanded(
+              child: GestureDetector(
+                onTap: state.isSubmitting
+                    ? null
+                    : () {
+                        AppHaptics.selection();
+                        _showRejectCounterOfferDialog(context, item);
+                      },
+                child: Container(
+                  height: 50,
+                  decoration: BoxDecoration(
+                    border: Border.all(color: AppColors.error),
+                    borderRadius: BorderRadius.circular(25),
+                  ),
+                  child: Center(
+                    child: Text(
+                      l10n.fleaMarketRejectCounterOffer,
+                      style: AppTypography.bodyBold
+                          .copyWith(color: AppColors.error),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              flex: 2,
+              child: GestureDetector(
+                onTap: state.isSubmitting
+                    ? null
+                    : () {
+                        AppHaptics.selection();
+                        _showAcceptCounterOfferDialog(
+                            context, item, priceText);
+                      },
+                child: Container(
+                  height: 50,
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: AppColors.gradientPrimary,
+                    ),
+                    borderRadius: BorderRadius.circular(25),
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppColors.primary.withValues(alpha: 0.4),
+                        blurRadius: 8,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: Center(
+                    child: state.isSubmitting
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                                strokeWidth: 2, color: Colors.white),
+                          )
+                        : Text(
+                            l10n.fleaMarketAcceptCounterOffer,
+                            style: AppTypography.bodyBold
+                                .copyWith(color: Colors.white),
+                          ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  void _showAcceptCounterOfferDialog(
+      BuildContext context, FleaMarketItem item, String priceText) {
+    final l10n = context.l10n;
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(l10n.fleaMarketAcceptCounterOfferConfirmTitle),
+        content: Text(l10n.fleaMarketAcceptCounterOfferConfirmMessage(priceText)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: Text(l10n.actionsCancel),
+          ),
+          FilledButton(
+            onPressed: () {
+              Navigator.pop(dialogContext);
+              context.read<FleaMarketBloc>().add(
+                FleaMarketRespondCounterOffer(
+                  itemId,
+                  purchaseRequestId: item.userPurchaseRequestId ?? 0,
+                  accept: true,
+                ),
+              );
+            },
+            child: Text(l10n.actionsConfirm),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showRejectCounterOfferDialog(
+      BuildContext context, FleaMarketItem item) {
+    final l10n = context.l10n;
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(l10n.fleaMarketRejectCounterOfferConfirmTitle),
+        content: Text(l10n.fleaMarketRejectCounterOfferConfirmMessage),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: Text(l10n.actionsCancel),
+          ),
+          FilledButton(
+            onPressed: () {
+              Navigator.pop(dialogContext);
+              context.read<FleaMarketBloc>().add(
+                FleaMarketRespondCounterOffer(
+                  itemId,
+                  purchaseRequestId: item.userPurchaseRequestId ?? 0,
+                  accept: false,
+                ),
+              );
+            },
+            style: FilledButton.styleFrom(backgroundColor: AppColors.error),
+            child: Text(l10n.actionsConfirm,
+                style: const TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
     );
   }
 
@@ -1761,7 +1946,7 @@ class _PurchaseRequestItem extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      request.buyerName ?? 'Buyer',
+                      request.buyerName ?? context.l10n.taskDetailBuyer,
                       style: AppTypography.bodyBold.copyWith(
                         color: isDark
                             ? AppColors.textPrimaryDark
@@ -1922,7 +2107,11 @@ class _PurchaseRequestItem extends StatelessWidget {
               if (price != null && price > 0) {
                 Navigator.pop(dialogContext);
                 context.read<FleaMarketBloc>().add(
-                  FleaMarketCounterOffer(itemId, price: price),
+                  FleaMarketCounterOffer(
+                    itemId,
+                    purchaseRequestId: int.tryParse(request.id) ?? 0,
+                    counterPrice: price,
+                  ),
                 );
               }
             },

@@ -99,7 +99,7 @@ class CouponPointsRepository {
 
   /// 获取签到奖励配置
   Future<List<Map<String, dynamic>>> getCheckInRewards() async {
-    final response = await _apiService.get<List<dynamic>>(
+    final response = await _apiService.get<Map<String, dynamic>>(
       ApiEndpoints.checkInRewards,
     );
 
@@ -107,7 +107,8 @@ class CouponPointsRepository {
       throw CouponPointsException(response.message ?? '获取奖励配置失败');
     }
 
-    return response.data!.map((e) => e as Map<String, dynamic>).toList();
+    final rewards = response.data!['rewards'] as List<dynamic>? ?? [];
+    return rewards.map((e) => e as Map<String, dynamic>).toList();
   }
 
   // ==================== 优惠券相关 ====================
@@ -166,9 +167,18 @@ class CouponPointsRepository {
   }
 
   /// 使用优惠券
-  Future<Map<String, dynamic>> useCoupon(int couponId) async {
+  Future<Map<String, dynamic>> useCoupon({
+    required int userCouponId,
+    required int taskId,
+    required int orderAmount,
+  }) async {
     final response = await _apiService.post<Map<String, dynamic>>(
-      ApiEndpoints.useCoupon(couponId),
+      ApiEndpoints.useCoupon,
+      data: {
+        'user_coupon_id': userCouponId,
+        'task_id': taskId,
+        'order_amount': orderAmount,
+      },
     );
 
     if (!response.isSuccess || response.data == null) {
@@ -180,14 +190,14 @@ class CouponPointsRepository {
 
   /// 验证优惠券可用性
   Future<Map<String, dynamic>> validateCoupon({
-    required int couponId,
-    int? taskId,
+    required String couponCode,
+    required int orderAmount,
   }) async {
     final response = await _apiService.post<Map<String, dynamic>>(
       ApiEndpoints.validateCoupon,
       data: {
-        'coupon_id': couponId,
-        if (taskId != null) 'task_id': taskId,
+        'coupon_code': couponCode,
+        'order_amount': orderAmount,
       },
     );
 
@@ -212,28 +222,15 @@ class CouponPointsRepository {
     return response.data!;
   }
 
-  /// 使用邀请码
+  /// 验证邀请码（后端无独立"使用"接口，邀请码在注册时自动使用）
   Future<Map<String, dynamic>> useInvitationCode(String code) async {
     final response = await _apiService.post<Map<String, dynamic>>(
-      ApiEndpoints.useInvitationCode,
+      ApiEndpoints.validateInvitationCode,
       data: {'code': code},
     );
 
     if (!response.isSuccess || response.data == null) {
-      throw CouponPointsException(response.message ?? '使用邀请码失败');
-    }
-
-    return response.data!;
-  }
-
-  /// 获取邀请码状态
-  Future<Map<String, dynamic>> getInvitationStatus() async {
-    final response = await _apiService.get<Map<String, dynamic>>(
-      ApiEndpoints.invitationStatus,
-    );
-
-    if (!response.isSuccess || response.data == null) {
-      throw CouponPointsException(response.message ?? '获取邀请状态失败');
+      throw CouponPointsException(response.message ?? '邀请码无效');
     }
 
     return response.data!;

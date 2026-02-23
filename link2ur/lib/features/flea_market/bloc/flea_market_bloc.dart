@@ -2,6 +2,7 @@ import 'dart:typed_data';
 
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:stream_transform/stream_transform.dart';
 
 import '../../../core/constants/app_constants.dart';
 import '../../../core/utils/cache_manager.dart';
@@ -9,6 +10,10 @@ import '../../../data/models/flea_market.dart';
 import '../../../data/repositories/flea_market_repository.dart';
 import '../../../core/utils/logger.dart';
 import '../../tasks/bloc/task_detail_bloc.dart' show AcceptPaymentData;
+
+EventTransformer<E> _debounce<E>(Duration duration) {
+  return (events, mapper) => events.debounce(duration).switchMap(mapper);
+}
 
 // ==================== Events ====================
 
@@ -181,12 +186,30 @@ class FleaMarketRejectPurchaseRequest extends FleaMarketEvent {
 
 /// 卖家还价 - 对标iOS counterOfferPurchaseRequest
 class FleaMarketCounterOffer extends FleaMarketEvent {
-  const FleaMarketCounterOffer(this.itemId, {required this.price, this.message});
+  const FleaMarketCounterOffer(
+    this.itemId, {
+    required this.purchaseRequestId,
+    required this.counterPrice,
+  });
   final String itemId;
-  final double price;
-  final String? message;
+  final int purchaseRequestId;
+  final double counterPrice;
   @override
-  List<Object?> get props => [itemId, price, message];
+  List<Object?> get props => [itemId, purchaseRequestId, counterPrice];
+}
+
+/// 买家回应卖家还价（接受或拒绝）
+class FleaMarketRespondCounterOffer extends FleaMarketEvent {
+  const FleaMarketRespondCounterOffer(
+    this.itemId, {
+    required this.purchaseRequestId,
+    required this.accept,
+  });
+  final String itemId;
+  final int purchaseRequestId;
+  final bool accept;
+  @override
+  List<Object?> get props => [itemId, purchaseRequestId, accept];
 }
 
 class FleaMarketUploadImage extends FleaMarketEvent {
@@ -377,7 +400,10 @@ class FleaMarketBloc extends Bloc<FleaMarketEvent, FleaMarketState> {
     on<FleaMarketRefreshRequested>(_onRefresh);
     on<FleaMarketLoadMore>(_onLoadMore);
     on<FleaMarketCategoryChanged>(_onCategoryChanged);
-    on<FleaMarketSearchChanged>(_onSearchChanged);
+    on<FleaMarketSearchChanged>(
+      _onSearchChanged,
+      transformer: _debounce(const Duration(milliseconds: 500)),
+    );
     on<FleaMarketCreateItem>(_onCreateItem);
     on<FleaMarketPurchaseItem>(_onPurchaseItem);
     on<FleaMarketSubmitPurchaseOrRequest>(_onSubmitPurchaseOrRequest);
@@ -393,6 +419,7 @@ class FleaMarketBloc extends Bloc<FleaMarketEvent, FleaMarketState> {
     on<FleaMarketApprovePurchaseRequest>(_onApprovePurchaseRequest);
     on<FleaMarketRejectPurchaseRequest>(_onRejectPurchaseRequest);
     on<FleaMarketCounterOffer>(_onCounterOffer);
+    on<FleaMarketRespondCounterOffer>(_onRespondCounterOffer);
   }
 
   final FleaMarketRepository _fleaMarketRepository;
@@ -448,7 +475,11 @@ class FleaMarketBloc extends Bloc<FleaMarketEvent, FleaMarketState> {
         isRefreshing: false,
       ));
     } catch (e) {
-      emit(state.copyWith(isRefreshing: false));
+      AppLogger.error('Failed to refresh flea market', e);
+      emit(state.copyWith(
+        isRefreshing: false,
+        errorMessage: e.toString(),
+      ));
     }
   }
 
@@ -653,7 +684,7 @@ class FleaMarketBloc extends Bloc<FleaMarketEvent, FleaMarketState> {
       if (event.proposedPrice != null) {
         await _fleaMarketRepository.sendPurchaseRequest(
           event.itemId,
-          proposedPrice: event.proposedPrice,
+          proposedPrice: event.proposedPrice!,
           message: event.message,
         );
         if (state.selectedItem?.id == event.itemId) {
@@ -1003,7 +1034,15 @@ class FleaMarketBloc extends Bloc<FleaMarketEvent, FleaMarketState> {
   ) async {
     emit(state.copyWith(isSubmitting: true));
     try {
-      await _fleaMarketRepository.rejectPurchase(event.requestId);
+      final requestId = int.tryParse(event.requestId);
+      if (requestId == null) {
+        emit(state.copyWith(isSubmitting: false, actionMessage: 'Invalid request ID'));
+        return;
+      }
+      await _fleaMarketRepository.rejectPurchase(
+        event.itemId,
+        purchaseRequestId: requestId,
+      );
       emit(state.copyWith(
         isSubmitting: false,
         actionMessage: 'reject_success',
@@ -1027,8 +1066,8 @@ class FleaMarketBloc extends Bloc<FleaMarketEvent, FleaMarketState> {
     try {
       await _fleaMarketRepository.counterOffer(
         event.itemId,
-        price: event.price,
-        message: event.message,
+        purchaseRequestId: event.purchaseRequestId,
+        counterPrice: event.counterPrice,
       );
       emit(state.copyWith(
         isSubmitting: false,
@@ -1040,6 +1079,35 @@ class FleaMarketBloc extends Bloc<FleaMarketEvent, FleaMarketState> {
       emit(state.copyWith(
         isSubmitting: false,
         actionMessage: e.toString(),
+      ));
+    }
+  }
+
+  /// 买家回应卖家还价
+  Future<void> _onRespondCounterOffer(
+    FleaMarketRespondCounterOffer event,
+    Emitter<FleaMarketState> emit,
+  ) async {
+    emit(state.copyWith(isSubmitting: true));
+    try {
+      await _fleaMarketRepository.respondCounterOffer(
+        event.itemId,
+        purchaseRequestId: event.purchaseRequestId,
+        accept: event.accept,
+      );
+      emit(state.copyWith(
+        isSubmitting: false,
+        actionMessage: event.accept
+            ? 'counter_offer_accepted'
+            : 'counter_offer_rejected',
+      ));
+      add(FleaMarketLoadDetailRequested(event.itemId));
+    } catch (e) {
+      AppLogger.error('Failed to respond to counter offer', e);
+      emit(state.copyWith(
+        isSubmitting: false,
+        actionMessage: e.toString(),
+        errorMessage: e.toString(),
       ));
     }
   }

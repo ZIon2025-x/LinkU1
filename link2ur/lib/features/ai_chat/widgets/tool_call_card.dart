@@ -45,6 +45,20 @@ class ToolCallCard extends StatelessWidget {
         return l10n.toolCallGetLeaderboardSummary;
       case 'list_task_experts':
         return l10n.toolCallListTaskExperts;
+      case 'get_my_wallet_summary':
+        return l10n.toolCallGetMyWalletSummary;
+      case 'get_my_messages_summary':
+        return l10n.toolCallGetMyMessagesSummary;
+      case 'get_my_vip_status':
+        return l10n.toolCallGetMyVipStatus;
+      case 'get_my_student_verification':
+        return l10n.toolCallGetMyStudentVerification;
+      case 'get_my_checkin_status':
+        return l10n.toolCallGetMyCheckinStatus;
+      case 'get_my_flea_market_items':
+        return l10n.toolCallGetMyFleaMarketItems;
+      case 'search_forum_posts':
+        return l10n.toolCallSearchForumPosts;
       default:
         return toolName;
     }
@@ -80,6 +94,20 @@ class ToolCallCard extends StatelessWidget {
         return l10n.toolCallLoadingGetLeaderboardSummary;
       case 'list_task_experts':
         return l10n.toolCallLoadingListTaskExperts;
+      case 'get_my_wallet_summary':
+        return l10n.toolCallLoadingGetMyWalletSummary;
+      case 'get_my_messages_summary':
+        return l10n.toolCallLoadingGetMyMessagesSummary;
+      case 'get_my_vip_status':
+        return l10n.toolCallLoadingGetMyVipStatus;
+      case 'get_my_student_verification':
+        return l10n.toolCallLoadingGetMyStudentVerification;
+      case 'get_my_checkin_status':
+        return l10n.toolCallLoadingGetMyCheckinStatus;
+      case 'get_my_flea_market_items':
+        return l10n.toolCallLoadingGetMyFleaMarketItems;
+      case 'search_forum_posts':
+        return l10n.toolCallLoadingSearchForumPosts;
       default:
         return _displayName(context);
     }
@@ -113,6 +141,20 @@ class ToolCallCard extends StatelessWidget {
         return Icons.leaderboard;
       case 'list_task_experts':
         return Icons.star;
+      case 'get_my_wallet_summary':
+        return Icons.account_balance_wallet;
+      case 'get_my_messages_summary':
+        return Icons.chat;
+      case 'get_my_vip_status':
+        return Icons.workspace_premium;
+      case 'get_my_student_verification':
+        return Icons.school;
+      case 'get_my_checkin_status':
+        return Icons.calendar_today;
+      case 'get_my_flea_market_items':
+        return Icons.inventory_2;
+      case 'search_forum_posts':
+        return Icons.manage_search;
       default:
         return Icons.build;
     }

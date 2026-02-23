@@ -1,10 +1,15 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:stream_transform/stream_transform.dart';
 
 import '../../../core/utils/cache_manager.dart';
 import '../../../data/repositories/task_repository.dart';
 import '../../../core/utils/logger.dart';
 import 'task_list_event.dart';
 import 'task_list_state.dart';
+
+EventTransformer<E> _debounce<E>(Duration duration) {
+  return (events, mapper) => events.debounce(duration).switchMap(mapper);
+}
 
 /// 任务列表Bloc
 class TaskListBloc extends Bloc<TaskListEvent, TaskListState> {
@@ -14,7 +19,10 @@ class TaskListBloc extends Bloc<TaskListEvent, TaskListState> {
     on<TaskListLoadRequested>(_onLoadRequested);
     on<TaskListRefreshRequested>(_onRefreshRequested);
     on<TaskListLoadMore>(_onLoadMore);
-    on<TaskListSearchChanged>(_onSearchChanged);
+    on<TaskListSearchChanged>(
+      _onSearchChanged,
+      transformer: _debounce(const Duration(milliseconds: 500)),
+    );
     on<TaskListCategoryChanged>(_onCategoryChanged);
     on<TaskListSortChanged>(_onSortChanged);
     on<TaskListCityChanged>(_onCityChanged);

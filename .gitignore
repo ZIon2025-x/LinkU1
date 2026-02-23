@@ -64,6 +64,15 @@ stripe-sample-code (1)/
 .env
 .env.local
 .env.*.local
+backend/.env
+backend/app/.env
+
+# Certificates & keystores
+*.p12
+*.pfx
+*.jks
+*.pem
+!requirements*.txt
 
 # Logs
 *.log

@@ -3242,3 +3242,15 @@ class AIMessage(Base):
     created_at = Column(DateTime(timezone=True), default=get_utc_time)
 
     conversation = relationship("AIConversation", back_populates="messages")
+
+
+class AISystemPrompt(Base):
+    """AI System Prompt 模板（支持后台动态修改，无需重启）"""
+    __tablename__ = "ai_system_prompts"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    name = Column(String(100), nullable=False, default="default")
+    content = Column(Text, nullable=False)
+    is_active = Column(Boolean, default=True)
+    created_at = Column(DateTime(timezone=True), default=get_utc_time)
+    updated_at = Column(DateTime(timezone=True), default=get_utc_time, onupdate=get_utc_time)

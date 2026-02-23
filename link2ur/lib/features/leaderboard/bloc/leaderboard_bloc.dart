@@ -92,19 +92,21 @@ class LeaderboardLikeVote extends LeaderboardEvent {
 
 class LeaderboardApplyRequested extends LeaderboardEvent {
   const LeaderboardApplyRequested({
-    required this.title,
-    required this.description,
-    this.rules,
+    required this.name,
+    required this.location,
+    this.description,
+    this.applicationReason,
     this.coverImagePath,
   });
 
-  final String title;
-  final String description;
-  final String? rules;
-  final String? coverImagePath; // 本地图片路径，会先上传再提交
+  final String name;
+  final String location;
+  final String? description;
+  final String? applicationReason;
+  final String? coverImagePath;
 
   @override
-  List<Object?> get props => [title, description, rules, coverImagePath];
+  List<Object?> get props => [name, location, description, applicationReason, coverImagePath];
 }
 
 class LeaderboardSubmitItem extends LeaderboardEvent {
@@ -527,10 +529,11 @@ class LeaderboardBloc extends Bloc<LeaderboardEvent, LeaderboardState> {
       }
 
       await _leaderboardRepository.applyLeaderboard(
-        title: event.title,
+        name: event.name,
+        location: event.location,
         description: event.description,
-        rules: event.rules,
         coverImage: coverImageUrl,
+        applicationReason: event.applicationReason,
       );
 
       emit(state.copyWith(
@@ -558,7 +561,6 @@ class LeaderboardBloc extends Bloc<LeaderboardEvent, LeaderboardState> {
         leaderboardId: event.leaderboardId,
         name: event.name,
         description: event.description,
-        score: event.score,
       );
 
       emit(state.copyWith(

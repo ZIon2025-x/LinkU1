@@ -97,7 +97,12 @@ class DeepLinkHandler {
           if (id != null) context.push('/user/$id');
           break;
         case _DeepLinkRoute.profileSubRoute:
-          context.safePush(_buildAppPath(uri));
+          final appPath = _buildAppPath(uri);
+          if (_isAllowedProfileSubRoute(appPath)) {
+            context.safePush(appPath);
+          } else {
+            AppLogger.warning('Deep link - blocked suspicious profile path: $appPath');
+          }
           break;
         case _DeepLinkRoute.leaderboard:
           final id = _extractId(path);
@@ -174,6 +179,26 @@ class DeepLinkHandler {
       return segments.last;
     }
     return null;
+  }
+
+  static const _allowedProfileSubRoutes = [
+    '/profile/edit',
+    '/profile/settings',
+    '/profile/wallet',
+    '/profile/student-verification',
+    '/profile/vip',
+    '/profile/favorites',
+    '/profile/points',
+    '/profile/coupons',
+    '/profile/my-tasks',
+    '/profile/my-services',
+    '/profile/reviews',
+  ];
+
+  bool _isAllowedProfileSubRoute(String path) {
+    final normalized = path.split('?').first;
+    if (normalized.contains('..')) return false;
+    return _allowedProfileSubRoutes.any((r) => normalized.startsWith(r));
   }
 
   String _buildAppPath(Uri uri) {
