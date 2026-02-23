@@ -2,7 +2,7 @@ import Foundation
 
 // MARK: - Activity (活动)
 
-struct Activity: Codable, Identifiable {
+struct Activity: Codable, Identifiable, Equatable {
     let id: Int
     let title: String
     let description: String
@@ -161,7 +161,7 @@ struct Activity: Codable, Identifiable {
 
 // MARK: - Activity Winner & Official Result
 
-struct ActivityWinner: Codable, Identifiable {
+struct ActivityWinner: Codable, Identifiable, Equatable {
     let userId: String
     let name: String
     let avatarUrl: String?

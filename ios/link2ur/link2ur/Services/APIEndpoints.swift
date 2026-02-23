@@ -4,6 +4,7 @@ import Foundation
 /// 所有 API 端点路径都在这里定义，便于维护和修改
 enum APIEndpoints {
     // MARK: - Authentication (认证)
+    // 后端: secure_auth_routes.py (prefix: /api/secure-auth)
     enum Auth {
         static let login = "/api/secure-auth/login"
         static let loginWithCode = "/api/secure-auth/login-with-code"
@@ -13,12 +14,20 @@ enum APIEndpoints {
         static let refresh = "/api/secure-auth/refresh"
         static let logout = "/api/secure-auth/logout"
         static let captchaSiteKey = "/api/secure-auth/captcha-site-key"
+        static let logoutAll = "/api/secure-auth/logout-all"
+        static let logoutOthers = "/api/secure-auth/logout-others"
+        static let sessions = "/api/secure-auth/sessions"
+        static func revokeSession(_ sessionId: String) -> String {
+            "/api/secure-auth/sessions/\(sessionId)"
+        }
     }
     
     // MARK: - Users (用户)
+    // 后端: routers.py (prefix: /api/users)
     enum Users {
         static let register = "/api/users/register"
         static let profileMe = "/api/users/profile/me"
+        static let updateProfile = "/api/users/profile"
         static func profile(_ userId: String) -> String {
             "/api/users/profile/\(userId)"
         }
@@ -62,6 +71,7 @@ enum APIEndpoints {
             "/api/users/user/customer-service/chats/\(chatId)/rate"
         }
         static let customerServiceQueueStatus = "/api/users/user/customer-service/queue-status"
+        static let customerServiceAvailability = "/api/users/user/customer-service/availability"
         static func taskComplete(_ taskId: Int) -> String {
             "/api/tasks/\(taskId)/complete"
         }
@@ -69,9 +79,20 @@ enum APIEndpoints {
         static let deleteAccount = "/api/users/account"
         static let activateVIP = "/api/users/vip/activate"
         static let vipStatus = "/api/users/vip/status"
+        static let vipHistory = "/api/users/vip/history"
+        static func taskStatistics(_ userId: String) -> String {
+            "/api/users/\(userId)/task-statistics"
+        }
+        static func sharedTasks(_ userId: String) -> String {
+            "/api/users/shared-tasks/\(userId)"
+        }
+        static func receivedReviews(_ userId: String) -> String {
+            "/api/users/\(userId)/received-reviews"
+        }
     }
     
     // MARK: - Tasks (任务)
+    // 后端: routers.py + async_routers.py + multi_participant_routes.py (prefix: /api)
     enum Tasks {
         static let list = "/api/tasks"
         static func detail(_ id: Int) -> String {
@@ -80,11 +101,20 @@ enum APIEndpoints {
         static func apply(_ id: Int) -> String {
             "/api/tasks/\(id)/apply"
         }
+        static func applyString(_ id: String) -> String {
+            "/api/tasks/\(id)/apply"
+        }
+        static func accept(_ id: Int) -> String {
+            "/api/tasks/\(id)/accept"
+        }
+        static func approve(_ id: Int) -> String {
+            "/api/tasks/\(id)/approve"
+        }
         static func interaction(_ id: Int) -> String {
             "/api/tasks/\(id)/interaction"
         }
-        static func applyString(_ id: String) -> String {
-            "/api/tasks/\(id)/apply"
+        static func matchScore(_ id: Int) -> String {
+            "/api/tasks/\(id)/match-score"
         }
         static func confirmCompletion(_ id: Int) -> String {
             "/api/tasks/\(id)/confirm_completion"
@@ -107,6 +137,19 @@ enum APIEndpoints {
         static func reviews(_ id: Int) -> String {
             "/api/tasks/\(id)/reviews"
         }
+        static func history(_ id: Int) -> String {
+            "/api/tasks/\(id)/history"
+        }
+        static func dispute(_ id: Int) -> String {
+            "/api/tasks/\(id)/dispute"
+        }
+        static func updateReward(_ taskId: Int) -> String {
+            "/api/tasks/\(taskId)/reward"
+        }
+        static func updateVisibility(_ taskId: Int) -> String {
+            "/api/tasks/\(taskId)/visibility"
+        }
+        // --- 退款/争议 ---
         static func refundRequest(_ id: Int) -> String {
             "/api/tasks/\(id)/refund-request"
         }
@@ -125,6 +168,7 @@ enum APIEndpoints {
         static func disputeTimeline(_ taskId: Int) -> String {
             "/api/tasks/\(taskId)/dispute-timeline"
         }
+        // --- 多参与者 ---
         static func participants(_ id: String) -> String {
             "/api/tasks/\(id)/participants"
         }
@@ -134,6 +178,8 @@ enum APIEndpoints {
         static func participantExitRequest(_ id: String) -> String {
             "/api/tasks/\(id)/participants/me/exit-request"
         }
+        // --- 申请管理 ---
+        static let myApplications = "/api/my-applications"
         static func applications(_ id: Int) -> String {
             "/api/tasks/\(id)/applications"
         }
@@ -234,8 +280,15 @@ enum APIEndpoints {
     }
     
     // MARK: - Forum (论坛)
+    // 后端: forum_routes.py (prefix: /api/forum)
     enum Forum {
-        static let categories = "/api/forum/forums/visible"
+        static let visibleForums = "/api/forum/forums/visible"
+        static let categories = "/api/forum/forums/visible" // 别名，保持向后兼容
+        static let allCategories = "/api/forum/categories"
+        static func categoryById(_ id: Int) -> String {
+            "/api/forum/categories/\(id)"
+        }
+        static let categoryRequest = "/api/forum/categories/request"
         static let posts = "/api/forum/posts"
         static func postDetail(_ id: Int) -> String {
             "/api/forum/posts/\(id)"
@@ -243,18 +296,29 @@ enum APIEndpoints {
         static func replies(_ postId: Int) -> String {
             "/api/forum/posts/\(postId)/replies"
         }
+        static func replyById(_ replyId: Int) -> String {
+            "/api/forum/replies/\(replyId)"
+        }
         static let likes = "/api/forum/likes"
         static let favorites = "/api/forum/favorites"
-        static func incrementView(_ postId: Int) -> String {
-            "/api/forum/posts/\(postId)/view"
+        static func postLikes(_ postId: Int) -> String {
+            "/api/forum/posts/\(postId)/likes"
+        }
+        static func replyLikes(_ replyId: Int) -> String {
+            "/api/forum/replies/\(replyId)/likes"
         }
         static let myPosts = "/api/forum/my/posts"
         static let myReplies = "/api/forum/my/replies"
+        static let myFavorites = "/api/forum/my/favorites"
+        static let myLikes = "/api/forum/my/likes"
         static let notifications = "/api/forum/notifications"
         static func markNotificationRead(_ id: Int) -> String {
             "/api/forum/notifications/\(id)/read"
         }
         static let markAllNotificationsRead = "/api/forum/notifications/read-all"
+        static let notificationsUnreadCount = "/api/forum/notifications/unread-count"
+        static let search = "/api/forum/search"
+        static let hotPosts = "/api/forum/hot-posts"
         static let myCategoryRequests = "/api/forum/categories/requests/my"
         static func categoryFavorite(_ categoryId: Int) -> String {
             "/api/forum/categories/\(categoryId)/favorite"
@@ -267,8 +331,10 @@ enum APIEndpoints {
     }
     
     // MARK: - Flea Market (跳蚤市场)
+    // 后端: flea_market_routes.py (prefix: /api/flea-market)
     enum FleaMarket {
         static let items = "/api/flea-market/items"
+        static let categories = "/api/flea-market/categories"
         static func itemDetail(_ id: String) -> String {
             "/api/flea-market/items/\(id)"
         }
@@ -287,11 +353,34 @@ enum APIEndpoints {
         static func report(_ id: String) -> String {
             "/api/flea-market/items/\(id)/report"
         }
+        static func purchaseRequests(_ id: String) -> String {
+            "/api/flea-market/items/\(id)/purchase-requests"
+        }
+        static func acceptPurchase(_ id: String) -> String {
+            "/api/flea-market/items/\(id)/accept-purchase"
+        }
+        static func rejectPurchase(_ id: String) -> String {
+            "/api/flea-market/items/\(id)/reject-purchase"
+        }
+        static func counterOffer(_ id: String) -> String {
+            "/api/flea-market/items/\(id)/counter-offer"
+        }
+        static func respondCounterOffer(_ id: String) -> String {
+            "/api/flea-market/items/\(id)/respond-counter-offer"
+        }
         static let myPurchases = "/api/flea-market/my-purchases"
+        static let myRelatedItems = "/api/flea-market/my-related-items"
+        static let myPurchaseRequests = "/api/flea-market/my/purchase-requests"
         static let favorites = "/api/flea-market/favorites/items"
+        static let uploadImage = "/api/flea-market/upload-image"
+        static let agreeNotice = "/api/flea-market/agree-notice"
+        static func approvePurchaseRequest(_ requestId: String) -> String {
+            "/api/flea-market/purchase-requests/\(requestId)/approve"
+        }
     }
     
     // MARK: - Task Experts (任务达人)
+    // 后端: task_expert_routes.py (prefix: /api/task-experts)
     enum TaskExperts {
         static let list = "/api/task-experts"
         static func detail(_ id: String) -> String {
@@ -300,13 +389,55 @@ enum APIEndpoints {
         static func services(_ expertId: String) -> String {
             "/api/task-experts/\(expertId)/services"
         }
+        static func reviews(_ expertId: String) -> String {
+            "/api/task-experts/\(expertId)/reviews"
+        }
+        static func serviceDetail(_ serviceId: Int) -> String {
+            "/api/task-experts/services/\(serviceId)"
+        }
         static func applyForService(_ serviceId: Int) -> String {
             "/api/task-experts/services/\(serviceId)/apply"
         }
+        static func serviceReviews(_ serviceId: Int) -> String {
+            "/api/task-experts/services/\(serviceId)/reviews"
+        }
+        static func serviceTimeSlots(_ serviceId: Int) -> String {
+            "/api/task-experts/services/\(serviceId)/time-slots"
+        }
         static let apply = "/api/task-experts/apply"
+        static let myApplication = "/api/task-experts/my-application"
+        static let myProfile = "/api/task-experts/me"
+        static let myServices = "/api/task-experts/me/services"
+        static let myApplications = "/api/task-experts/me/applications"
+        static func myServiceTimeSlots(_ serviceId: Int) -> String {
+            "/api/task-experts/me/services/\(serviceId)/time-slots"
+        }
+        static let profileUpdateRequest = "/api/task-experts/me/profile-update-request"
+        // --- 达人审核申请操作 ---
+        static func approveApplication(_ applicationId: Int) -> String {
+            "/api/task-experts/applications/\(applicationId)/approve"
+        }
+        static func rejectApplication(_ applicationId: Int) -> String {
+            "/api/task-experts/applications/\(applicationId)/reject"
+        }
+        static func counterOfferApplication(_ applicationId: Int) -> String {
+            "/api/task-experts/applications/\(applicationId)/counter-offer"
+        }
+    }
+    
+    // MARK: - User Service Applications (用户服务申请)
+    enum UserServiceApplications {
+        static let list = "/api/users/me/service-applications"
+        static func respondCounterOffer(_ applicationId: Int) -> String {
+            "/api/users/me/service-applications/\(applicationId)/respond-counter-offer"
+        }
+        static func cancel(_ applicationId: Int) -> String {
+            "/api/users/me/service-applications/\(applicationId)/cancel"
+        }
     }
     
     // MARK: - Activities (活动)
+    // 后端: multi_participant_routes.py (prefix: /api)
     enum Activities {
         static let list = "/api/activities"
         static func detail(_ id: Int) -> String {
@@ -321,15 +452,43 @@ enum APIEndpoints {
         static func favoriteStatus(_ id: Int) -> String {
             "/api/activities/\(id)/favorite/status"
         }
+        static let myActivities = "/api/my/activities"
+        // 官方活动 (official_activity_routes.py, prefix: /api/official-activities)
+        static func officialApply(_ id: Int) -> String {
+            "/api/official-activities/\(id)/apply"
+        }
+        static func officialResult(_ id: Int) -> String {
+            "/api/official-activities/\(id)/result"
+        }
     }
     
     // MARK: - Leaderboard (排行榜)
+    // 后端: custom_leaderboard_routes.py (prefix: /api/custom-leaderboards)
     enum Leaderboard {
         static let list = "/api/custom-leaderboards"
+        static func detail(_ id: Int) -> String {
+            "/api/custom-leaderboards/\(id)"
+        }
         static func items(_ leaderboardId: Int) -> String {
             "/api/custom-leaderboards/\(leaderboardId)/items"
         }
-        static let vote = "/api/custom-leaderboards/vote"
+        static let createItem = "/api/custom-leaderboards/items"
+        static func itemDetail(_ itemId: Int) -> String {
+            "/api/custom-leaderboards/items/\(itemId)"
+        }
+        static func vote(_ itemId: Int) -> String {
+            "/api/custom-leaderboards/items/\(itemId)/vote"
+        }
+        static func itemVotes(_ itemId: Int) -> String {
+            "/api/custom-leaderboards/items/\(itemId)/votes"
+        }
+        static func voteLike(_ voteId: Int) -> String {
+            "/api/custom-leaderboards/votes/\(voteId)/like"
+        }
+        static let apply = "/api/custom-leaderboards/apply"
+        static func review(_ id: Int) -> String {
+            "/api/custom-leaderboards/\(id)/review"
+        }
         static func report(_ leaderboardId: Int) -> String {
             "/api/custom-leaderboards/\(leaderboardId)/report"
         }
@@ -351,19 +510,49 @@ enum APIEndpoints {
         static let feed = "/api/discovery/feed"
     }
     
+    // MARK: - Stripe Connect (收款账户)
+    // 后端: stripe_connect_routes.py (prefix: /api/stripe/connect)
+    enum StripeConnect {
+        static let createAccount = "/api/stripe/connect/account/create"
+        static let createEmbedded = "/api/stripe/connect/account/create-embedded"
+        static let accountStatus = "/api/stripe/connect/account/status"
+        static let accountDetails = "/api/stripe/connect/account/details"
+        static let accountBalance = "/api/stripe/connect/account/balance"
+        static let externalAccounts = "/api/stripe/connect/account/external-accounts"
+        static let payout = "/api/stripe/connect/account/payout"
+        static let transactions = "/api/stripe/connect/account/transactions"
+        static let onboardingSession = "/api/stripe/connect/account/onboarding-session"
+        static let accountSession = "/api/stripe/connect/account_session"
+    }
+    
+    // MARK: - Translation (翻译)
+    // 后端: routers.py → /translate/*
+    enum Translation {
+        static let translate = "/api/translate"
+        static let batch = "/api/translate/batch"
+        static func task(_ taskId: Int) -> String {
+            "/api/translate/task/\(taskId)"
+        }
+        static let tasksBatch = "/api/translate/tasks/batch"
+    }
+    
     // MARK: - Common (通用)
     enum Common {
-        static let uploadImage = "/api/upload/image"  // 私密图片（任务聊天、客服聊天）
-        static let uploadPublicImage = "/api/v2/upload/image"  // 公开图片（任务图片、头像等），统一使用V2
-        static let uploadFile = "/api/upload/file"  // 私密文件（任务证据文件等）
+        static let uploadImage = "/api/upload/image"
+        static let uploadPublicImage = "/api/v2/upload/image"
+        static let uploadFile = "/api/upload/file"
+        static let refreshImageUrl = "/api/refresh-image-url"
+        static func privateImage(_ imageId: String) -> String {
+            "/api/private-image/\(imageId)"
+        }
+        static let privateFile = "/api/private-file"
         static let banners = "/api/banners"
-        /// 健康检查端点（用于网络连通性测试）
         static let health = "/api/health"
-        /// FAQ 库（按语言）：lang=zh 或 en
+        static let systemSettingsPublic = "/api/system-settings/public"
+        static let jobPositions = "/api/job-positions"
         static func faq(lang: String) -> String {
             "/api/faq?lang=\(lang)"
         }
-        /// 法律文档（隐私/用户协议/Cookie）：type=privacy|terms|cookie，lang=zh|en
         static func legal(type: String, lang: String) -> String {
             "/api/legal/\(type)?lang=\(lang)"
         }
@@ -371,7 +560,7 @@ enum APIEndpoints {
     
     // MARK: - Reports (举报)
     enum Reports {
-        static let forumPost = "/api/posts/reports"
+        static let forumPost = "/api/forum/reports"
     }
     
     // MARK: - User Preferences (用户偏好)
@@ -385,6 +574,18 @@ enum APIEndpoints {
         static let list = "/api/recommendations"
         static func feedback(_ taskId: Int) -> String {
             "/api/recommendations/\(taskId)/feedback"
+        }
+    }
+    
+    // MARK: - AI Agent
+    // 后端: ai_agent_routes.py (prefix: /api/ai)
+    enum AI {
+        static let conversations = "/api/ai/conversations"
+        static func conversationDetail(_ id: String) -> String {
+            "/api/ai/conversations/\(id)"
+        }
+        static func sendMessage(_ conversationId: String) -> String {
+            "/api/ai/conversations/\(conversationId)/messages"
         }
     }
     

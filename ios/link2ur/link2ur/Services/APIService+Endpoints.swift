@@ -936,10 +936,7 @@ extension APIService {
         return request(ForumCategoryListResponse.self, endpoint)
     }
     
-    /// 增加帖子浏览量
-    func incrementPostViewCount(postId: Int) -> AnyPublisher<EmptyResponse, APIError> {
-        return request(EmptyResponse.self, APIEndpoints.Forum.incrementView(postId), method: "POST")
-    }
+    // 帖子浏览量由后端在 GET /posts/{id} 时自动递增，无需单独调用
     
     // MARK: - Task Expert (任务达人)
     
@@ -1185,8 +1182,8 @@ extension APIService {
     
     /// 投票
     func voteLeaderboardItem(itemId: Int, voteType: String) -> AnyPublisher<LeaderboardItemOut, APIError> {
-        let body: [String: Any] = ["item_id": itemId, "vote_type": voteType]
-        return request(LeaderboardItemOut.self, APIEndpoints.Leaderboard.vote, method: "POST", body: body)
+        let endpoint = "\(APIEndpoints.Leaderboard.vote(itemId))?vote_type=\(voteType)"
+        return request(LeaderboardItemOut.self, endpoint, method: "POST")
     }
     
     /// 收藏/取消收藏排行榜
