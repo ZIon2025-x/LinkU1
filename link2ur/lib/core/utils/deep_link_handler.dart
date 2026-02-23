@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:app_links/app_links.dart';
 import 'package:flutter_stripe/flutter_stripe.dart';
+import '../config/app_config.dart';
 import '../router/app_router.dart';
 
 import 'logger.dart';
@@ -54,6 +55,11 @@ class DeepLinkHandler {
   void _handleDeepLink(Uri uri) {
     // 优先交给 Stripe 处理支付重定向（支付宝/3DS 等），与 iOS StripeAPI.handleURLCallback 一致
     if (_isStripeRedirect(uri)) {
+      // 未配置 Stripe 时不要调用 handleURLCallback，否则会抛出 StripeConfigException 红屏
+      if (AppConfig.instance.stripePublishableKey.isEmpty) {
+        AppLogger.warning('Deep link - Stripe redirect ignored (Stripe not configured)');
+        return;
+      }
       Stripe.instance.handleURLCallback(uri.toString()).then((bool handled) {
         if (handled) {
           AppLogger.info('Deep link - Stripe handled redirect: $uri');

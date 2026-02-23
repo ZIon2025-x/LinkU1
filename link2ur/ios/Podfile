@@ -77,6 +77,22 @@ post_install do |installer|
         config.build_settings['HEADER_SEARCH_PATHS'] = "#{existing} #{wechat_headers}"
       end
     end
+
+    # 3. 第三方 Pod 的无关警告抑制（不改动 .pub-cache 源码）
+    case target.name
+    when 'tencent_kit'
+      # 腾讯 SDK 头文件里 @param 注释格式不符合 Clang 文档检查
+      target.build_configurations.each do |config|
+        config.build_settings['CLANG_WARN_DOCUMENTATION_COMMENTS'] = 'NO'
+      end
+    when 'stripe_ios'
+      # Stripe 插件：抑制 ObjC 不完整实现/属性等警告，Swift 弃用等保留可见
+      target.build_configurations.each do |config|
+        existing = config.build_settings['OTHER_CFLAGS'] || '$(inherited)'
+        existing = existing.join(' ') if existing.is_a?(Array)
+        config.build_settings['OTHER_CFLAGS'] = "#{existing} -Wno-documentation -Wno-incomplete-implementation -Wno-objc-property-implementation"
+      end
+    end
   end
 
   # 将 Pods 工程本身的部署目标也设为 13.0

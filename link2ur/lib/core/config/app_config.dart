@@ -52,6 +52,8 @@ class AppConfig {
       case AppEnvironment.production:
         return const String.fromEnvironment(
           'STRIPE_PUBLISHABLE_KEY_LIVE',
+          defaultValue:
+              'pk_live_51SePW15vvXfvzqMhSEXu7QnduEi7axoPiUMc9gNiV8KFAa82b6rFrrbOFW3gmTiaOETlI3gA0SsAz18SSokFKGLx00bALMvCAg',
         );
     }
   }

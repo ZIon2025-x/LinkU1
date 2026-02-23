@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter_stripe/flutter_stripe.dart';
 
 import 'logger.dart';
 
@@ -21,11 +22,19 @@ class CrashReporter {
     try {
       // 捕获 Flutter 框架错误
       FlutterError.onError = (FlutterErrorDetails details) {
-        AppLogger.error(
-          'FlutterError: ${details.exceptionAsString()}',
-          details.exception,
-          details.stack,
-        );
+        if (details.exception is StripeConfigException) {
+          AppLogger.error(
+            'Stripe 未配置。请使用 --dart-define=STRIPE_PUBLISHABLE_KEY_TEST=pk_test_xxx 运行。',
+            details.exception,
+            details.stack,
+          );
+        } else {
+          AppLogger.error(
+            'FlutterError: ${details.exceptionAsString()}',
+            details.exception,
+            details.stack,
+          );
+        }
         if (kDebugMode) {
           FlutterError.dumpErrorToConsole(details);
         }

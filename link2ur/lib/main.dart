@@ -14,6 +14,8 @@ import 'core/config/app_config.dart';
 import 'core/utils/crash_reporter.dart';
 import 'core/utils/logger.dart';
 import 'core/utils/network_monitor.dart';
+import 'package:flutter_stripe/flutter_stripe.dart';
+
 import 'data/services/payment_service.dart';
 import 'data/services/storage_service.dart';
 
@@ -95,6 +97,15 @@ void main() {
       runApp(const Link2UrApp());
     },
     (error, stackTrace) {
+      if (error is StripeConfigException) {
+        AppLogger.error(
+          'Stripe 未配置或未初始化。请使用 '
+          '--dart-define=STRIPE_PUBLISHABLE_KEY_TEST=pk_test_xxx 运行或构建。',
+          error,
+          stackTrace,
+        );
+        return;
+      }
       AppLogger.error('Uncaught zone error', error, stackTrace);
     },
   );
