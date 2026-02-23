@@ -2075,6 +2075,31 @@ class Activity(Base):
     )
 
 
+class OfficialActivityApplication(Base):
+    __tablename__ = "official_activity_applications"
+
+    id = Column(Integer, primary_key=True, index=True)
+    activity_id = Column(Integer, ForeignKey("activities.id", ondelete="CASCADE"), nullable=False)
+    user_id = Column(String(8), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    applied_at = Column(DateTime, default=get_utc_time, nullable=False)
+    status = Column(String(20), default="pending", nullable=False)
+    # status: pending / won / lost / attending
+    prize_index = Column(Integer, nullable=True)   # voucher_codes[prize_index]
+    notified_at = Column(DateTime, nullable=True)
+
+    __table_args__ = (
+        UniqueConstraint("activity_id", "user_id", name="uq_official_app_activity_user"),
+        CheckConstraint(
+            "status IN ('pending','won','lost','attending')",
+            name="ck_official_app_status"
+        ),
+    )
+
+    # Relationships
+    activity = relationship("Activity", backref="official_applications")
+    user = relationship("User", backref="official_activity_applications")
+
+
 class ActivityFavorite(Base):
     """活动收藏模型"""
     __tablename__ = "activity_favorites"
