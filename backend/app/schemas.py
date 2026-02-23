@@ -2520,6 +2520,7 @@ class FleaMarketItemResponse(BaseModel):
     pending_payment_expires_at: Optional[str] = None  # 支付过期时间（ISO 格式）
     is_available: Optional[bool] = True  # 商品是否可购买（未被其他用户购买或预留）
     # 当前用户的购买申请信息（仅当用户有待处理的议价请求时返回）
+    user_purchase_request_id: Optional[int] = None  # 购买申请ID
     user_purchase_request_status: Optional[str] = None  # 购买申请状态：pending, seller_negotiating
     user_purchase_request_proposed_price: Optional[Decimal] = None  # 议价金额
 
@@ -2733,7 +2734,7 @@ class ActivityOut(BaseModel):
     description_en: Optional[str] = None
     description_zh: Optional[str] = None
     expert_id: str
-    expert_service_id: int
+    expert_service_id: Optional[int] = None
     location: str
     task_type: str
     reward_type: str

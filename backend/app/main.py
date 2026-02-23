@@ -553,8 +553,7 @@ if RAILWAY_ENVIRONMENT:
             path=str(file_full_path),
             media_type=media_type,
             headers={
-                "Cache-Control": "public, max-age=31536000",  # 缓存1年
-                "Access-Control-Allow-Origin": "*"  # 允许跨域访问
+                "Cache-Control": "public, max-age=31536000",
             }
         )
 else:
@@ -589,7 +588,6 @@ else:
             media_type=media_type,
             headers={
                 "Cache-Control": "public, max-age=31536000",
-                "Access-Control-Allow-Origin": "*"
             }
         )
 
@@ -612,7 +610,7 @@ else:
         return FileResponse(
             path=str(file_full_path),
             media_type=media_type,
-            headers={"Cache-Control": "public, max-age=31536000", "Access-Control-Allow-Origin": "*"}
+            headers={"Cache-Control": "public, max-age=31536000"}
         )
 
 # 使用 WebSocket 管理器进行连接池管理
@@ -1001,7 +999,8 @@ async def startup_event():
             ("STRIPE_SECRET_KEY", os.getenv("STRIPE_SECRET_KEY"), ["placeholder", "replace_with_real", "replace_with"]),
             ("IMAGE_ACCESS_SECRET", os.getenv("IMAGE_ACCESS_SECRET"), ["your-image-secret", "change-in-production", "change_in_production"]),
             ("STRIPE_WEBHOOK_SECRET", os.getenv("STRIPE_WEBHOOK_SECRET"), ["yourkey", "...yourkey..."]),
-            ("SECRET_KEY", Config.SECRET_KEY, ["change-this-secret-key-in-production", "dev-secret-key-change-in-production", "change-in-production"]),
+            ("SECRET_KEY", Config.SECRET_KEY, ["change-this-secret-key-in-production", "dev-secret-key-change-in-production", "change-in-production", "linku-dev-only"]),
+            ("SIGNED_URL_SECRET", Config.SIGNED_URL_SECRET, []),
         ]
         for _name, _val, _bad in _checks:
             if not _val or not _val.strip():
@@ -1009,7 +1008,7 @@ async def startup_event():
             _v = (_val or "").lower()
             if any(_b in _v for _b in _bad):
                 raise RuntimeError(f"生产环境 {_name} 不得使用占位符/示例值，请配置真实密钥")
-        logger.info("✅ 生产环境密钥校验通过（STRIPE_SECRET_KEY, IMAGE_ACCESS_SECRET, STRIPE_WEBHOOK_SECRET, SECRET_KEY）")
+        logger.info("✅ 生产环境密钥校验通过（STRIPE_SECRET_KEY, IMAGE_ACCESS_SECRET, STRIPE_WEBHOOK_SECRET, SECRET_KEY, SIGNED_URL_SECRET）")
     
     # 环境检测和配置信息
     environment = os.getenv("ENVIRONMENT", "development")
@@ -1107,7 +1106,9 @@ async def startup_event():
             StudentVerification, VIPSubscription, LegalDocument, FaqSection, FaqItem,
             OAuthClient, TaskExpert, TaskExpertService, Coupon, PointsAccount,
             # AI Agent
-            AIConversation, AIMessage
+            AIConversation, AIMessage,
+            # Official accounts & activities
+            OfficialActivityApplication
         )
 
         # 🔧 自动检测并修复迁移状态（如果启用）
@@ -2068,8 +2069,12 @@ def ping():
 
 # ==================== 只读模式管理端点 ====================
 @app.get("/admin/read-only")
-def get_read_only_status():
-    """查询当前只读模式状态"""
+def get_read_only_status(request: Request):
+    """查询当前只读模式状态（需管理员密钥）"""
+    admin_key = request.headers.get("X-Admin-Key", "")
+    expected_key = os.getenv("ADMIN_TOGGLE_KEY", "")
+    if not expected_key or admin_key != expected_key:
+        raise HTTPException(status_code=403, detail="Forbidden")
     return {"read_only": Config.READ_ONLY_MODE}
 
 
@@ -2122,56 +2127,44 @@ def metrics():
         )
 
 
-@app.get("/test-db")
-def test_db(db: Session = Depends(get_db)):
-    try:
-        # 尝试查询用户表
-        from app.models import User
+if not Config.IS_PRODUCTION:
+    @app.get("/test-db")
+    def test_db(db: Session = Depends(get_db)):
+        try:
+            from app.models import User
+            user_count = db.query(User).count()
+            return {"message": "Database connection successful", "user_count": user_count}
+        except Exception:
+            raise HTTPException(status_code=500, detail="Database connection failed")
 
-        user_count = db.query(User).count()
-        return {"message": "Database connection successful", "user_count": user_count}
-    except Exception as e:
-        return {"error": f"Database connection failed: {str(e)}"}
+    @app.get("/test-ws")
+    def test_ws():
+        return {"message": "WebSocket test endpoint"}
 
-
-@app.get("/test-ws")
-def test_ws():
-    return {
-        "message": "WebSocket test endpoint",
-        "example_message": {
-            "receiver_id": 2,
-            "content": "Hello, this is a test message",
-        },
-    }
-
-
-@app.get("/test-users")
-def test_users(db: Session = Depends(get_db)):
-    users = crud.get_all_users(db)
-    return {
-        "users": [
-            {"id": user.id, "name": user.name, "email": user.email} for user in users
-        ]
-    }
+    @app.get("/test-active-connections")
+    def test_active_connections():
+        """测试活跃WebSocket连接"""
+        from app.websocket_manager import get_ws_manager
+        ws_manager = get_ws_manager()
+        stats = ws_manager.get_stats()
+        return {
+            "connection_count": stats['total_connections'],
+            "active_count": stats['active_connections'],
+        }
 
 
-@app.get("/test-active-connections")
-def test_active_connections():
-    """测试活跃WebSocket连接"""
-    from app.websocket_manager import get_ws_manager
-    ws_manager = get_ws_manager()
-    stats = ws_manager.get_stats()
-    return {
-        "active_connections": [conn['user_id'] for conn in stats['connections']],
-        "connection_count": stats['total_connections'],
-        "active_count": stats['active_connections'],
-        "detailed_stats": stats
-    }
+def _verify_admin_key(request: Request):
+    """验证管理员密钥（用于不依赖DB的管理操作）"""
+    admin_key = request.headers.get("X-Admin-Key", "")
+    expected_key = os.getenv("ADMIN_TOGGLE_KEY", "")
+    if not expected_key or admin_key != expected_key:
+        raise HTTPException(status_code=403, detail="Forbidden")
 
 
 @app.post("/api/admin/cancel-expired-tasks")
-def manual_cancel_expired_tasks(db: Session = Depends(get_db)):
-    """手动触发过期任务取消（用于测试）"""
+def manual_cancel_expired_tasks(request: Request, db: Session = Depends(get_db)):
+    """手动触发过期任务取消（需管理员密钥）"""
+    _verify_admin_key(request)
     try:
         cancelled_count = crud.cancel_expired_tasks(db)
         return {
@@ -2180,12 +2173,13 @@ def manual_cancel_expired_tasks(db: Session = Depends(get_db)):
         }
     except Exception as e:
         logger.error(f"手动取消过期任务时出错: {e}")
-        return {"error": str(e)}
+        raise HTTPException(status_code=500, detail="操作失败")
 
 
 @app.post("/api/admin/update-user-statistics")
-def manual_update_user_statistics(db: Session = Depends(get_db)):
-    """手动触发用户统计信息更新（用于测试）"""
+def manual_update_user_statistics(request: Request, db: Session = Depends(get_db)):
+    """手动触发用户统计信息更新（需管理员密钥）"""
+    _verify_admin_key(request)
     try:
         from app.models import User
 
@@ -2205,9 +2199,11 @@ def manual_update_user_statistics(db: Session = Depends(get_db)):
             "updated_count": updated_count,
             "total_users": len(users),
         }
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"手动更新用户统计信息时出错: {e}")
-        return {"error": str(e)}
+        raise HTTPException(status_code=500, detail="操作失败")
 
 
 # 已删除过时的客服会话清理函数
