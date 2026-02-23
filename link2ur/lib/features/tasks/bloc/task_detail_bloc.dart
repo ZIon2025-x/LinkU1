@@ -503,10 +503,13 @@ class TaskDetailBloc extends Bloc<TaskDetailEvent, TaskDetailState> {
       ));
     } catch (e) {
       AppLogger.error('Failed to apply task', e);
+      final isStripeSetup = e is TaskException &&
+          e.message == 'stripe_setup_required';
       emit(state.copyWith(
         isSubmitting: false,
-        actionMessage: 'application_failed',
-        errorMessage: e.toString(),
+        actionMessage:
+            isStripeSetup ? 'stripe_setup_required' : 'application_failed',
+        errorMessage: isStripeSetup ? null : e.toString(),
       ));
     }
   }

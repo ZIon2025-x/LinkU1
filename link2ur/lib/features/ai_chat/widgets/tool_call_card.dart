@@ -59,6 +59,8 @@ class ToolCallCard extends StatelessWidget {
         return l10n.toolCallGetMyFleaMarketItems;
       case 'search_forum_posts':
         return l10n.toolCallSearchForumPosts;
+      case 'prepare_task_draft':
+        return l10n.toolCallPrepareTaskDraft;
       default:
         return toolName;
     }
@@ -108,6 +110,8 @@ class ToolCallCard extends StatelessWidget {
         return l10n.toolCallLoadingGetMyFleaMarketItems;
       case 'search_forum_posts':
         return l10n.toolCallLoadingSearchForumPosts;
+      case 'prepare_task_draft':
+        return l10n.toolCallLoadingPrepareTaskDraft;
       default:
         return _displayName(context);
     }
@@ -155,6 +159,8 @@ class ToolCallCard extends StatelessWidget {
         return Icons.inventory_2;
       case 'search_forum_posts':
         return Icons.manage_search;
+      case 'prepare_task_draft':
+        return Icons.edit_note;
       default:
         return Icons.build;
     }

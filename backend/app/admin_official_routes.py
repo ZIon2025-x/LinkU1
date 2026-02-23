@@ -204,6 +204,61 @@ async def get_official_account(
 
 # ── 官方活动 CRUD ──────────────────────────────────────────
 
+@admin_official_router.get("/activities", response_model=dict)
+async def list_official_activities(
+    page: int = 1,
+    limit: int = 20,
+    db: AsyncSession = Depends(get_async_db_dependency),
+    admin: models.AdminUser = Depends(get_current_admin_async),
+):
+    """获取官方活动列表（仅 lottery/first_come 类型）"""
+    from sqlalchemy import func
+
+    count_q = select(func.count()).select_from(models.Activity).where(
+        models.Activity.activity_type.in_(["lottery", "first_come"])
+    )
+    total = (await db.execute(count_q)).scalar() or 0
+
+    q = (
+        select(models.Activity)
+        .where(models.Activity.activity_type.in_(["lottery", "first_come"]))
+        .order_by(models.Activity.id.desc())
+        .offset((page - 1) * limit)
+        .limit(limit)
+    )
+    rows = (await db.execute(q)).scalars().all()
+
+    items = []
+    for a in rows:
+        items.append({
+            "id": a.id,
+            "title": a.title,
+            "title_en": a.title_en,
+            "title_zh": a.title_zh,
+            "description": a.description or "",
+            "description_en": a.description_en,
+            "description_zh": a.description_zh,
+            "location": a.location,
+            "activity_type": a.activity_type,
+            "prize_type": a.prize_type,
+            "prize_description": a.prize_description,
+            "prize_description_en": a.prize_description_en,
+            "prize_count": a.prize_count,
+            "voucher_codes": a.voucher_codes,
+            "draw_mode": a.draw_mode,
+            "draw_at": a.draw_at.isoformat() if a.draw_at else None,
+            "deadline": a.deadline.isoformat() if a.deadline else None,
+            "images": a.images,
+            "is_public": a.is_public,
+            "status": a.status,
+            "is_drawn": a.is_drawn,
+            "created_at": a.created_at.isoformat() if a.created_at else None,
+            "updated_at": a.updated_at.isoformat() if a.updated_at else None,
+        })
+
+    return {"items": items, "total": total, "page": page, "limit": limit}
+
+
 @admin_official_router.post("/activities", response_model=dict)
 async def create_official_activity(
     data: schemas.OfficialActivityCreate,

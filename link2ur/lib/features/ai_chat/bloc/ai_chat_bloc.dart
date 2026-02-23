@@ -109,6 +109,21 @@ class _AIChatCSAvailable extends AIChatEvent {
   List<Object?> get props => [available, contactEmail];
 }
 
+/// 任务草稿事件（内部事件）
+class _AIChatTaskDraft extends AIChatEvent {
+  const _AIChatTaskDraft(this.draft);
+
+  final Map<String, dynamic> draft;
+
+  @override
+  List<Object?> get props => [draft];
+}
+
+/// 清除任务草稿（用户点击后清除）
+class AIChatClearTaskDraft extends AIChatEvent {
+  const AIChatClearTaskDraft();
+}
+
 /// 归档对话
 class AIChatArchiveConversation extends AIChatEvent {
   const AIChatArchiveConversation(this.conversationId);
@@ -135,18 +150,20 @@ class AIChatState extends Equatable {
     this.errorMessage,
     this.csAvailableSignal,
     this.csContactEmail,
+    this.taskDraft,
   });
 
   final AIChatStatus status;
   final List<AIConversation> conversations;
   final String? currentConversationId;
   final List<AIMessage> messages;
-  final bool isReplying; // AI 正在回复
-  final String streamingContent; // 流式回复的累积内容
-  final String? activeToolCall; // 正在执行的工具名称
+  final bool isReplying;
+  final String streamingContent;
+  final String? activeToolCall;
   final String? errorMessage;
-  final bool? csAvailableSignal; // 瞬态信号：客服在线状态（不加入 props）
-  final String? csContactEmail; // 客服联系邮箱
+  final bool? csAvailableSignal;
+  final String? csContactEmail;
+  final Map<String, dynamic>? taskDraft;
 
   AIChatState copyWith({
     AIChatStatus? status,
@@ -159,6 +176,7 @@ class AIChatState extends Equatable {
     String? errorMessage,
     bool? csAvailableSignal,
     String? csContactEmail,
+    Map<String, dynamic>? taskDraft,
   }) {
     return AIChatState(
       status: status ?? this.status,
@@ -172,6 +190,7 @@ class AIChatState extends Equatable {
       errorMessage: errorMessage,
       csAvailableSignal: csAvailableSignal,
       csContactEmail: csContactEmail,
+      taskDraft: taskDraft,
     );
   }
 
@@ -185,6 +204,7 @@ class AIChatState extends Equatable {
         streamingContent,
         activeToolCall,
         errorMessage,
+        taskDraft,
       ];
 }
 
@@ -204,6 +224,8 @@ class AIChatBloc extends Bloc<AIChatEvent, AIChatState> {
     on<_AIChatMessageCompleted>(_onMessageCompleted);
     on<_AIChatError>(_onError);
     on<_AIChatCSAvailable>(_onCSAvailable);
+    on<_AIChatTaskDraft>(_onTaskDraft);
+    on<AIChatClearTaskDraft>(_onClearTaskDraft);
     on<AIChatArchiveConversation>(_onArchiveConversation);
   }
 
@@ -322,6 +344,8 @@ class AIChatBloc extends Bloc<AIChatEvent, AIChatState> {
         case AIChatEventType.csAvailable:
           return _AIChatCSAvailable(
               sseEvent.csAvailable ?? false, sseEvent.contactEmail);
+        case AIChatEventType.taskDraft:
+          return _AIChatTaskDraft(sseEvent.taskDraft ?? {});
       }
     }).listen(
       (event) => add(event),
@@ -383,6 +407,20 @@ class AIChatBloc extends Bloc<AIChatEvent, AIChatState> {
       csAvailableSignal: event.available,
       csContactEmail: event.contactEmail,
     ));
+  }
+
+  void _onTaskDraft(
+    _AIChatTaskDraft event,
+    Emitter<AIChatState> emit,
+  ) {
+    emit(state.copyWith(taskDraft: event.draft));
+  }
+
+  void _onClearTaskDraft(
+    AIChatClearTaskDraft event,
+    Emitter<AIChatState> emit,
+  ) {
+    emit(state.copyWith());
   }
 
   void _onError(

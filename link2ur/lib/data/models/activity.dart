@@ -30,7 +30,7 @@ class Activity extends Equatable {
     this.currentParticipants,
     this.completionRule = 'all',
     this.rewardDistribution = 'equal',
-    this.status = 'active',
+    this.status = 'open',
     this.isPublic = true,
     this.visibility = 'public',
     this.deadline,
@@ -149,6 +149,17 @@ class Activity extends Equatable {
     return null;
   }
 
+  /// 是否已结束（对标 iOS activity.isEnded）
+  bool get isEnded {
+    const endedStatuses = ['ended', 'cancelled', 'completed', 'closed'];
+    if (endedStatuses.contains(status.toLowerCase())) return true;
+    if (deadline != null && DateTime.now().isAfter(deadline!)) return true;
+    if (activityEndDate != null && DateTime.now().isAfter(activityEndDate!)) {
+      return true;
+    }
+    return false;
+  }
+
   /// 是否已满员
   bool get isFull =>
       currentParticipants != null &&
@@ -210,7 +221,7 @@ class Activity extends Equatable {
       currentParticipants: json['current_participants'] as int?,
       completionRule: json['completion_rule'] as String? ?? 'all',
       rewardDistribution: json['reward_distribution'] as String? ?? 'equal',
-      status: json['status'] as String? ?? 'active',
+      status: json['status'] as String? ?? 'open',
       isPublic: json['is_public'] as bool? ?? true,
       visibility: json['visibility'] as String? ?? 'public',
       deadline: json['deadline'] != null

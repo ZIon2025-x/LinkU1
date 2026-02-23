@@ -255,6 +255,15 @@ class FleaMarketUploadImagesAndUpdateItem extends FleaMarketEvent {
       [itemId, title, description, price, category, existingImageUrls];
 }
 
+class FleaMarketDeleteItem extends FleaMarketEvent {
+  const FleaMarketDeleteItem(this.itemId);
+
+  final String itemId;
+
+  @override
+  List<Object?> get props => [itemId];
+}
+
 // ==================== State ====================
 
 enum FleaMarketStatus { initial, loading, loaded, error }
@@ -420,6 +429,7 @@ class FleaMarketBloc extends Bloc<FleaMarketEvent, FleaMarketState> {
     on<FleaMarketRejectPurchaseRequest>(_onRejectPurchaseRequest);
     on<FleaMarketCounterOffer>(_onCounterOffer);
     on<FleaMarketRespondCounterOffer>(_onRespondCounterOffer);
+    on<FleaMarketDeleteItem>(_onDeleteItem);
   }
 
   final FleaMarketRepository _fleaMarketRepository;
@@ -1104,6 +1114,30 @@ class FleaMarketBloc extends Bloc<FleaMarketEvent, FleaMarketState> {
       add(FleaMarketLoadDetailRequested(event.itemId));
     } catch (e) {
       AppLogger.error('Failed to respond to counter offer', e);
+      emit(state.copyWith(
+        isSubmitting: false,
+        actionMessage: e.toString(),
+        errorMessage: e.toString(),
+      ));
+    }
+  }
+
+  Future<void> _onDeleteItem(
+    FleaMarketDeleteItem event,
+    Emitter<FleaMarketState> emit,
+  ) async {
+    emit(state.copyWith(isSubmitting: true));
+    try {
+      await _fleaMarketRepository.deleteItem(event.itemId);
+      final updatedItems =
+          state.items.where((i) => i.id != event.itemId).toList();
+      emit(state.copyWith(
+        isSubmitting: false,
+        items: updatedItems,
+        actionMessage: 'item_deleted',
+      ));
+    } catch (e) {
+      AppLogger.error('Failed to delete flea market item', e);
       emit(state.copyWith(
         isSubmitting: false,
         actionMessage: e.toString(),

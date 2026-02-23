@@ -97,13 +97,17 @@ class UserRepository {
     return updateProfile(avatar: avatarPath);
   }
 
-  /// 更新用户资料（含头像路径）
+  /// 更新用户资料（含头像路径、邮箱/手机号+验证码）
   Future<User> updateProfile({
     String? name,
     String? bio,
     String? residenceCity,
     String? languagePreference,
     String? avatar,
+    String? email,
+    String? emailVerificationCode,
+    String? phone,
+    String? phoneVerificationCode,
   }) async {
     final data = <String, dynamic>{};
     if (name != null) data['name'] = name;
@@ -113,6 +117,14 @@ class UserRepository {
       data['language_preference'] = languagePreference;
     }
     if (avatar != null) data['avatar'] = avatar;
+    if (email != null) data['email'] = email;
+    if (emailVerificationCode != null) {
+      data['email_verification_code'] = emailVerificationCode;
+    }
+    if (phone != null) data['phone'] = phone;
+    if (phoneVerificationCode != null) {
+      data['phone_verification_code'] = phoneVerificationCode;
+    }
 
     final response = await _apiService.patch<Map<String, dynamic>>(
       ApiEndpoints.updateProfile,
@@ -123,9 +135,8 @@ class UserRepository {
       throw UserException(response.message ?? '更新用户资料失败');
     }
 
-    final user = User.fromJson(response.data!);
-    await StorageService.instance.saveUserInfo(user.toJson());
-    return user;
+    final updatedUser = await getProfile(forceRefresh: true);
+    return updatedUser;
   }
 
   /// 发送邮箱更新验证码

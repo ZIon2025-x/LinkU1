@@ -87,12 +87,13 @@ class TaskExpertLoadServiceReviews extends TaskExpertEvent {
 
 /// 加载达人评价
 class TaskExpertLoadExpertReviews extends TaskExpertEvent {
-  const TaskExpertLoadExpertReviews(this.expertId);
+  const TaskExpertLoadExpertReviews(this.expertId, {this.loadMore = false});
 
   final String expertId;
+  final bool loadMore;
 
   @override
-  List<Object?> get props => [expertId];
+  List<Object?> get props => [expertId, loadMore];
 }
 
 
@@ -211,6 +212,8 @@ class TaskExpertState extends Equatable {
     this.searchResults = const [],
     this.reviews = const [],
     this.isLoadingReviews = false,
+    this.reviewsTotal = 0,
+    this.hasMoreReviews = true,
     this.timeSlots = const [],
     this.isLoadingTimeSlots = false,
     this.selectedCategory = 'all',
@@ -240,6 +243,8 @@ class TaskExpertState extends Equatable {
   final List<TaskExpert> searchResults;
   final List<Map<String, dynamic>> reviews;
   final bool isLoadingReviews;
+  final int reviewsTotal;
+  final bool hasMoreReviews;
   final List<ServiceTimeSlot> timeSlots;
   final bool isLoadingTimeSlots;
 
@@ -280,6 +285,8 @@ class TaskExpertState extends Equatable {
     List<TaskExpert>? searchResults,
     List<Map<String, dynamic>>? reviews,
     bool? isLoadingReviews,
+    int? reviewsTotal,
+    bool? hasMoreReviews,
     List<ServiceTimeSlot>? timeSlots,
     bool? isLoadingTimeSlots,
     String? selectedCategory,
@@ -308,6 +315,8 @@ class TaskExpertState extends Equatable {
       searchResults: searchResults ?? this.searchResults,
       reviews: reviews ?? this.reviews,
       isLoadingReviews: isLoadingReviews ?? this.isLoadingReviews,
+      reviewsTotal: reviewsTotal ?? this.reviewsTotal,
+      hasMoreReviews: hasMoreReviews ?? this.hasMoreReviews,
       timeSlots: timeSlots ?? this.timeSlots,
       isLoadingTimeSlots: isLoadingTimeSlots ?? this.isLoadingTimeSlots,
       selectedCategory: selectedCategory ?? this.selectedCategory,
@@ -340,6 +349,8 @@ class TaskExpertState extends Equatable {
         searchResults,
         reviews,
         isLoadingReviews,
+        reviewsTotal,
+        hasMoreReviews,
         timeSlots,
         isLoadingTimeSlots,
         selectedCategory,
@@ -519,8 +530,11 @@ class TaskExpertBloc extends Bloc<TaskExpertEvent, TaskExpertState> {
     try {
       final expert =
           await _taskExpertRepository.getExpertById(event.expertId);
-      final services =
+      final allServices =
           await _taskExpertRepository.getExpertServices(event.expertId);
+      final services = allServices
+          .where((s) => s.status == 'active')
+          .toList();
 
       List<Activity> activities = const [];
       final activityRepo = _activityRepository;
@@ -689,12 +703,23 @@ class TaskExpertBloc extends Bloc<TaskExpertEvent, TaskExpertState> {
     TaskExpertLoadExpertReviews event,
     Emitter<TaskExpertState> emit,
   ) async {
+    if (event.loadMore && !state.hasMoreReviews) return;
+
     emit(state.copyWith(isLoadingReviews: true));
     try {
-      final reviews =
-          await _taskExpertRepository.getExpertReviews(event.expertId);
+      final offset = event.loadMore ? state.reviews.length : 0;
+      final result = await _taskExpertRepository.getExpertReviews(
+        event.expertId,
+        offset: offset,
+      );
+      final items = result['items'] as List<Map<String, dynamic>>;
+      final total = result['total'] as int;
+      final merged = event.loadMore ? [...state.reviews, ...items] : items;
+
       emit(state.copyWith(
-        reviews: reviews,
+        reviews: merged,
+        reviewsTotal: total,
+        hasMoreReviews: merged.length < total,
         isLoadingReviews: false,
       ));
     } catch (e) {

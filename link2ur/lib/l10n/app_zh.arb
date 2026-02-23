@@ -3601,6 +3601,17 @@
   "activityParticipantsCount": "参与人数",
   "activityRemainingSlots": "剩余名额",
   "activityStatusLabel": "状态",
+  "activityRegistrationDeadline": "报名截止：",
+  "activityCurrentApplicants": "当前报名：",
+  "activityJoinLottery": "参与抽奖",
+  "activityAlreadyRegistered": "已报名",
+  "activityNoWinners": "暂无中奖名单",
+  "activityWinnerList": "中奖名单",
+  "activityPrizePoints": "积分奖励",
+  "activityPrizePhysical": "实物奖品",
+  "activityPrizeVoucher": "优惠券码",
+  "activityPrizeInPerson": "线下到场",
+  "activityPrize": "奖品",
   "activityActivities": "活动",
   "activityPersonCount": "{current}/{max}人",
   "@activityPersonCount": { "placeholders": { "current": { "type": "int" }, "max": { "type": "int" } } },
@@ -3976,6 +3987,12 @@
   "toolCallLoadingGetMyFleaMarketItems": "正在加载您的商品…",
   "toolCallLoadingSearchForumPosts": "正在搜索论坛…",
 
+  "toolCallPrepareTaskDraft": "任务草稿",
+  "toolCallLoadingPrepareTaskDraft": "正在生成任务草稿…",
+
+  "aiTaskDraftTitle": "任务草稿",
+  "aiTaskDraftConfirmButton": "确认并去发布",
+
   "expertApplicationsTitle": "服务申请管理",
   "expertApplicationsEmpty": "暂无申请",
   "expertApplicationsEmptyMessage": "您还没有收到任何服务申请。",
@@ -4014,5 +4031,47 @@
   "paymentCardSubtitle": "Visa, Mastercard, AMEX",
   "paymentWeChatPaySubtitle": "微信支付 (Stripe)",
   "paymentAlipaySubtitle": "支付宝 (Stripe)",
-  "commonCurrencySymbol": "£ "
+  "commonCurrencySymbol": "£ ",
+
+  "forumDeletePostConfirm": "确定要删除这篇帖子吗？此操作不可撤销。",
+  "forumPostDeleted": "帖子已删除",
+  "forumPostUpdated": "帖子已更新",
+  "forumReplyDeleted": "回复已删除",
+  "forumDeleteReplyConfirm": "确定要删除这条回复吗？",
+
+  "fleaMarketDeleteItemConfirm": "确定要删除这个商品吗？此操作不可撤销。",
+  "fleaMarketItemDeleted": "商品已删除",
+
+  "taskEvidenceTitle": "完成证据",
+  "taskEvidenceHint": "您已完成此任务。请上传相关证据图片或填写文字说明（可选），以便发布者确认任务完成情况。",
+  "taskEvidenceTextLabel": "文字说明（可选）",
+  "taskEvidenceTextHint": "描述完成情况...",
+  "taskEvidenceImagesLabel": "证据图片（可选）",
+  "taskEvidenceImageLimit": "单张图片不超过5MB，最多上传5张",
+  "taskEvidenceSubmit": "提交完成",
+  "taskEvidenceUploading": "正在上传图片...",
+
+  "stripeSetupRequired": "请先设置收款账户，然后才能申请任务。",
+  "stripeSetupAction": "立即设置",
+
+  "profileSendCode": "发送验证码",
+  "profileResendCode": "重新发送",
+  "profileCodeSentSuccess": "验证码已发送",
+  "profileEmailCodeSent": "验证码已发送到新邮箱",
+  "profilePhoneCodeSent": "验证码已发送到新手机号",
+  "profileCountdownSeconds": "{seconds}秒",
+  "@profileCountdownSeconds": {
+    "placeholders": {
+      "seconds": {
+        "type": "int"
+      }
+    }
+  },
+  "profileEmailRequired": "请输入邮箱地址以发送验证码",
+  "profilePhoneRequired": "请输入手机号以发送验证码",
+  "profileEmailUnchanged": "请输入不同的邮箱地址",
+  "profilePhoneUnchanged": "请输入不同的手机号",
+  "profileEmailCodeRequired": "请输入邮箱验证码",
+  "profilePhoneCodeRequired": "请输入手机验证码",
+  "profileNormalizePhoneHint": "英国格式: 07XXX 或 +44XXX"
 }

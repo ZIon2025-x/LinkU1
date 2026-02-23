@@ -105,6 +105,12 @@ const defaultMenuItems: MenuItem[] = [
     path: '/admin/leaderboard',
   },
   {
+    key: 'official-activities',
+    label: '官方活动',
+    icon: '🎉',
+    path: '/admin/official-activities',
+  },
+  {
     key: 'banners',
     label: 'Banner管理',
     icon: '🖼️',

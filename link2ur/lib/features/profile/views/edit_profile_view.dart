@@ -6,7 +6,6 @@ import 'package:image_picker/image_picker.dart';
 
 import '../../../core/constants/app_assets.dart';
 import '../../../core/design/app_colors.dart';
-
 import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_radius.dart';
 import '../../../core/utils/l10n_extension.dart';
@@ -20,7 +19,6 @@ import '../../../data/repositories/forum_repository.dart';
 import '../../../core/utils/logger.dart';
 import '../bloc/profile_bloc.dart';
 
-/// 编辑个人资料页面
 class EditProfileView extends StatelessWidget {
   const EditProfileView({super.key});
 
@@ -49,15 +47,26 @@ class _EditProfileContentState extends State<_EditProfileContent> {
   final _nameController = TextEditingController();
   final _bioController = TextEditingController();
   final _residenceCityController = TextEditingController();
+  final _emailController = TextEditingController();
+  final _phoneController = TextEditingController();
+  final _emailCodeController = TextEditingController();
+  final _phoneCodeController = TextEditingController();
 
   XFile? _selectedImageFile;
   bool _initialized = false;
+
+  String? _originalEmail;
+  String? _originalPhone;
 
   @override
   void dispose() {
     _nameController.dispose();
     _bioController.dispose();
     _residenceCityController.dispose();
+    _emailController.dispose();
+    _phoneController.dispose();
+    _emailCodeController.dispose();
+    _phoneCodeController.dispose();
     super.dispose();
   }
 
@@ -67,8 +76,38 @@ class _EditProfileContentState extends State<_EditProfileContent> {
       _nameController.text = user.name;
       _bioController.text = user.bio ?? '';
       _residenceCityController.text = user.residenceCity ?? '';
+      _emailController.text = user.email ?? '';
+      _phoneController.text = user.phone ?? '';
+      _originalEmail = user.email ?? '';
+      _originalPhone = user.phone ?? '';
       _initialized = true;
     }
+  }
+
+  bool get _emailChanged =>
+      _emailController.text.trim() != _originalEmail &&
+      _emailController.text.trim().isNotEmpty;
+
+  bool get _phoneChanged =>
+      _normalizePhone(_phoneController.text.trim()) != _originalPhone &&
+      _phoneController.text.trim().isNotEmpty;
+
+  String _normalizePhone(String phone) {
+    if (phone.isEmpty) return phone;
+    var cleaned = phone.replaceAll(RegExp(r'[\s\-\(\)]'), '');
+    if (cleaned.startsWith('+44')) {
+      final local = cleaned.substring(3);
+      if (local.startsWith('0')) {
+        cleaned = '+44${local.substring(1)}';
+      }
+    } else if (!cleaned.startsWith('+')) {
+      if (cleaned.startsWith('0')) {
+        cleaned = '+44${cleaned.substring(1)}';
+      } else {
+        cleaned = '+44$cleaned';
+      }
+    }
+    return cleaned;
   }
 
   Future<void> _pickImage() async {
@@ -94,21 +133,88 @@ class _EditProfileContentState extends State<_EditProfileContent> {
     } catch (e) {
       AppLogger.error('Failed to pick image', e);
       if (mounted) {
-        AppFeedback.showError(context, context.l10n.feedbackPickImageFailed(e.toString()));
+        AppFeedback.showError(
+            context, context.l10n.feedbackPickImageFailed(e.toString()));
       }
     }
+  }
+
+  void _sendEmailCode() {
+    final email = _emailController.text.trim();
+    if (email.isEmpty) {
+      AppFeedback.showError(context, context.l10n.profileEmailRequired);
+      return;
+    }
+    if (email == _originalEmail) {
+      AppFeedback.showError(context, context.l10n.profileEmailUnchanged);
+      return;
+    }
+    context.read<ProfileBloc>().add(ProfileSendEmailCode(email));
+  }
+
+  void _sendPhoneCode() {
+    final phone = _phoneController.text.trim();
+    if (phone.isEmpty) {
+      AppFeedback.showError(context, context.l10n.profilePhoneRequired);
+      return;
+    }
+    final normalized = _normalizePhone(phone);
+    if (normalized == _originalPhone) {
+      AppFeedback.showError(context, context.l10n.profilePhoneUnchanged);
+      return;
+    }
+    context.read<ProfileBloc>().add(ProfileSendPhoneCode(normalized));
   }
 
   void _saveProfile() {
     if (!_formKey.currentState!.validate()) return;
 
-    context.read<ProfileBloc>().add(ProfileUpdateRequested({
-          'name': _nameController.text.trim(),
-          if (_bioController.text.trim().isNotEmpty)
-            'bio': _bioController.text.trim(),
-          if (_residenceCityController.text.trim().isNotEmpty)
-            'residence_city': _residenceCityController.text.trim(),
-        }));
+    final state = context.read<ProfileBloc>().state;
+    final data = <String, dynamic>{
+      'name': _nameController.text.trim(),
+    };
+
+    final bio = _bioController.text.trim();
+    if (bio.isNotEmpty) data['bio'] = bio;
+
+    final city = _residenceCityController.text.trim();
+    if (city.isNotEmpty) data['residence_city'] = city;
+
+    final email = _emailController.text.trim();
+    if (email != _originalEmail) {
+      data['email'] = email;
+      if (email.isNotEmpty && _emailCodeController.text.trim().isNotEmpty) {
+        data['email_verification_code'] = _emailCodeController.text.trim();
+      }
+    }
+
+    final phone = _phoneController.text.trim();
+    final normalizedPhone = phone.isNotEmpty ? _normalizePhone(phone) : '';
+    if (normalizedPhone != _originalPhone) {
+      data['phone'] = normalizedPhone;
+      if (normalizedPhone.isNotEmpty &&
+          _phoneCodeController.text.trim().isNotEmpty) {
+        data['phone_verification_code'] = _phoneCodeController.text.trim();
+      }
+    }
+
+    // Validate: if email changed & non-empty, must have code
+    if (email != _originalEmail &&
+        email.isNotEmpty &&
+        state.showEmailCodeField &&
+        _emailCodeController.text.trim().isEmpty) {
+      AppFeedback.showError(context, context.l10n.profileEmailCodeRequired);
+      return;
+    }
+    if (normalizedPhone != _originalPhone &&
+        normalizedPhone.isNotEmpty &&
+        state.showPhoneCodeField &&
+        _phoneCodeController.text.trim().isEmpty) {
+      AppFeedback.showError(context, context.l10n.profilePhoneCodeRequired);
+      return;
+    }
+
+    context.read<ProfileBloc>().add(ProfileUpdateRequested(data));
   }
 
   @override
@@ -121,20 +227,31 @@ class _EditProfileContentState extends State<_EditProfileContent> {
           final l10n = context.l10n;
           final isSuccess = state.actionMessage == 'profile_updated' ||
               state.actionMessage == 'avatar_updated';
-          final message = switch (state.actionMessage) {
-            'profile_updated' => l10n.profileUpdated,
-            'update_failed' => l10n.profileUpdateFailed,
-            'avatar_updated' => l10n.profileAvatarUpdated,
-            'upload_failed' => l10n.profileUploadFailed,
-            _ => state.actionMessage!,
-          };
-          if (isSuccess) {
+          final isCodeSent = state.actionMessage == 'email_code_sent' ||
+              state.actionMessage == 'phone_code_sent';
+
+          if (isCodeSent) {
+            final message = state.actionMessage == 'email_code_sent'
+                ? l10n.profileEmailCodeSent
+                : l10n.profilePhoneCodeSent;
             AppFeedback.showSuccess(context, message);
-          } else {
+          } else if (isSuccess) {
+            final message = switch (state.actionMessage) {
+              'profile_updated' => l10n.profileUpdated,
+              'avatar_updated' => l10n.profileAvatarUpdated,
+              _ => state.actionMessage!,
+            };
+            AppFeedback.showSuccess(context, message);
+            if (!state.isUpdating) {
+              context.pop();
+            }
+          } else if (!isCodeSent && !isSuccess) {
+            final message = switch (state.actionMessage) {
+              'update_failed' => l10n.profileUpdateFailed,
+              'upload_failed' => l10n.profileUploadFailed,
+              _ => state.actionMessage!,
+            };
             AppFeedback.showError(context, message);
-          }
-          if (isSuccess && !state.isUpdating) {
-            context.pop();
           }
         }
       },
@@ -169,8 +286,9 @@ class _EditProfileContentState extends State<_EditProfileContent> {
             child: Form(
               key: _formKey,
               child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // 头像
+                  // Avatar
                   Center(
                     child: Stack(
                       children: [
@@ -214,7 +332,7 @@ class _EditProfileContentState extends State<_EditProfileContent> {
                   ),
                   AppSpacing.vLg,
 
-                  // 姓名
+                  // Name
                   TextFormField(
                     controller: _nameController,
                     decoration: InputDecoration(
@@ -236,7 +354,7 @@ class _EditProfileContentState extends State<_EditProfileContent> {
                   ),
                   AppSpacing.vMd,
 
-                  // 个人简介
+                  // Bio
                   TextFormField(
                     controller: _bioController,
                     decoration: InputDecoration(
@@ -251,7 +369,7 @@ class _EditProfileContentState extends State<_EditProfileContent> {
                   ),
                   AppSpacing.vMd,
 
-                  // 居住城市
+                  // City
                   TextFormField(
                     controller: _residenceCityController,
                     decoration: InputDecoration(
@@ -264,7 +382,15 @@ class _EditProfileContentState extends State<_EditProfileContent> {
                   ),
                   AppSpacing.vLg,
 
-                  // 保存按钮
+                  // ---- Email Section ----
+                  _buildEmailSection(context, state),
+                  AppSpacing.vLg,
+
+                  // ---- Phone Section ----
+                  _buildPhoneSection(context, state),
+                  AppSpacing.vLg,
+
+                  // Save button
                   SizedBox(
                     width: double.infinity,
                     child: PrimaryButton(
@@ -282,11 +408,163 @@ class _EditProfileContentState extends State<_EditProfileContent> {
     );
   }
 
-  /// 编辑页头像：支持本地文件、预设头像（本地asset）、网络URL
+  Widget _buildEmailSection(BuildContext context, ProfileState state) {
+    final l10n = context.l10n;
+    final hasExistingEmail =
+        _originalEmail != null && _originalEmail!.isNotEmpty;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Email input
+        TextFormField(
+          controller: _emailController,
+          decoration: InputDecoration(
+            labelText: l10n.profileEmail,
+            hintText: hasExistingEmail
+                ? l10n.profileEnterNewEmail
+                : l10n.profileEnterEmail,
+            prefixIcon: const Icon(Icons.email_outlined),
+            border: OutlineInputBorder(borderRadius: AppRadius.allMedium),
+          ),
+          keyboardType: TextInputType.emailAddress,
+          autocorrect: false,
+          onChanged: (_) => setState(() {}),
+        ),
+
+        // "Send Code" link appears when email differs from original
+        if (_emailChanged) ...[
+          AppSpacing.vSm,
+          Align(
+            alignment: Alignment.centerRight,
+            child: TextButton(
+              onPressed: (state.isSendingEmailCode || state.emailCountdown > 0)
+                  ? null
+                  : _sendEmailCode,
+              child: state.isSendingEmailCode
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : Text(
+                      state.emailCountdown > 0
+                          ? l10n.profileCountdownSeconds(state.emailCountdown)
+                          : (state.showEmailCodeField
+                              ? l10n.profileResendCode
+                              : l10n.profileSendCode),
+                      style: TextStyle(
+                        color: state.emailCountdown > 0
+                            ? Theme.of(context)
+                                .colorScheme
+                                .onSurface
+                                .withValues(alpha: 0.5)
+                            : AppColors.primary,
+                      ),
+                    ),
+            ),
+          ),
+        ],
+
+        // Verification code field
+        if (state.showEmailCodeField && _emailChanged) ...[
+          AppSpacing.vSm,
+          _buildCodeInputRow(
+            controller: _emailCodeController,
+            hintText: l10n.profileEnterVerificationCode,
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildPhoneSection(BuildContext context, ProfileState state) {
+    final l10n = context.l10n;
+    final hasExistingPhone =
+        _originalPhone != null && _originalPhone!.isNotEmpty;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Phone input
+        TextFormField(
+          controller: _phoneController,
+          decoration: InputDecoration(
+            labelText: l10n.profilePhone,
+            hintText: hasExistingPhone
+                ? l10n.profileEnterNewPhone
+                : l10n.profileEnterPhone,
+            prefixIcon: const Icon(Icons.phone_outlined),
+            helperText: l10n.profileNormalizePhoneHint,
+            border: OutlineInputBorder(borderRadius: AppRadius.allMedium),
+          ),
+          keyboardType: TextInputType.phone,
+          onChanged: (_) => setState(() {}),
+        ),
+
+        if (_phoneChanged) ...[
+          AppSpacing.vSm,
+          Align(
+            alignment: Alignment.centerRight,
+            child: TextButton(
+              onPressed: (state.isSendingPhoneCode || state.phoneCountdown > 0)
+                  ? null
+                  : _sendPhoneCode,
+              child: state.isSendingPhoneCode
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : Text(
+                      state.phoneCountdown > 0
+                          ? l10n.profileCountdownSeconds(state.phoneCountdown)
+                          : (state.showPhoneCodeField
+                              ? l10n.profileResendCode
+                              : l10n.profileSendCode),
+                      style: TextStyle(
+                        color: state.phoneCountdown > 0
+                            ? Theme.of(context)
+                                .colorScheme
+                                .onSurface
+                                .withValues(alpha: 0.5)
+                            : AppColors.primary,
+                      ),
+                    ),
+            ),
+          ),
+        ],
+
+        if (state.showPhoneCodeField && _phoneChanged) ...[
+          AppSpacing.vSm,
+          _buildCodeInputRow(
+            controller: _phoneCodeController,
+            hintText: l10n.profileEnterVerificationCode,
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildCodeInputRow({
+    required TextEditingController controller,
+    required String hintText,
+  }) {
+    return TextFormField(
+      controller: controller,
+      decoration: InputDecoration(
+        hintText: hintText,
+        prefixIcon: const Icon(Icons.lock_outline),
+        border: OutlineInputBorder(borderRadius: AppRadius.allMedium),
+      ),
+      keyboardType: TextInputType.number,
+      maxLength: 6,
+    );
+  }
+
   Widget _buildEditAvatar(String? avatarUrl) {
     const double radius = 50;
 
-    // 1. 用户刚选了本地图片文件
     if (_selectedImageFile != null) {
       return FutureBuilder<Uint8List>(
         future: _selectedImageFile!.readAsBytes(),
@@ -294,13 +572,13 @@ class _EditProfileContentState extends State<_EditProfileContent> {
           return CircleAvatar(
             radius: radius,
             backgroundColor: AppColors.primary.withValues(alpha: 0.1),
-            backgroundImage: snapshot.hasData ? MemoryImage(snapshot.data!) : null,
+            backgroundImage:
+                snapshot.hasData ? MemoryImage(snapshot.data!) : null,
           );
         },
       );
     }
 
-    // 2. 预设头像 → 本地 asset
     final localAsset = AppAssets.getLocalAvatarAsset(avatarUrl);
     if (localAsset != null) {
       return ClipOval(
@@ -312,13 +590,13 @@ class _EditProfileContentState extends State<_EditProfileContent> {
           errorBuilder: (_, __, ___) => CircleAvatar(
             radius: radius,
             backgroundColor: AppColors.primary.withValues(alpha: 0.1),
-            child: const Icon(Icons.person, size: 50, color: AppColors.primary),
+            child:
+                const Icon(Icons.person, size: 50, color: AppColors.primary),
           ),
         ),
       );
     }
 
-    // 3. 网络 URL → 使用 AvatarView（带 memCacheWidth/Height 优化）
     if (avatarUrl != null && avatarUrl.isNotEmpty) {
       return AvatarView(
         imageUrl: avatarUrl,
@@ -326,7 +604,6 @@ class _EditProfileContentState extends State<_EditProfileContent> {
       );
     }
 
-    // 4. 无头像
     return CircleAvatar(
       radius: radius,
       backgroundColor: AppColors.primary.withValues(alpha: 0.1),

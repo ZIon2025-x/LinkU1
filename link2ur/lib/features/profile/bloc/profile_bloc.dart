@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -38,6 +40,28 @@ class ProfileUploadAvatar extends ProfileEvent {
 
   @override
   List<Object?> get props => [filePath];
+}
+
+class ProfileSendEmailCode extends ProfileEvent {
+  const ProfileSendEmailCode(this.email);
+  final String email;
+  @override
+  List<Object?> get props => [email];
+}
+
+class ProfileSendPhoneCode extends ProfileEvent {
+  const ProfileSendPhoneCode(this.phone);
+  final String phone;
+  @override
+  List<Object?> get props => [phone];
+}
+
+class ProfileEmailCountdownTick extends ProfileEvent {
+  const ProfileEmailCountdownTick();
+}
+
+class ProfilePhoneCountdownTick extends ProfileEvent {
+  const ProfilePhoneCountdownTick();
 }
 
 class ProfileLoadMyTasks extends ProfileEvent {
@@ -126,19 +150,22 @@ class ProfileState extends Equatable {
     this.errorMessage,
     this.isUpdating = false,
     this.actionMessage,
-    // Pagination for tasks
     this.myTasksPage = 1,
     this.myTasksHasMore = false,
     this.postedTasksPage = 1,
     this.postedTasksHasMore = false,
-    // Pagination for forum posts
     this.forumPostsPage = 1,
     this.forumPostsHasMore = false,
-    // Pagination for favorited/liked posts (independent)
     this.favoritedPostsPage = 1,
     this.favoritedPostsHasMore = false,
     this.likedPostsPage = 1,
     this.likedPostsHasMore = false,
+    this.emailCountdown = 0,
+    this.phoneCountdown = 0,
+    this.isSendingEmailCode = false,
+    this.isSendingPhoneCode = false,
+    this.showEmailCodeField = false,
+    this.showPhoneCodeField = false,
   });
 
   final ProfileStatus status;
@@ -154,19 +181,22 @@ class ProfileState extends Equatable {
   final String? errorMessage;
   final bool isUpdating;
   final String? actionMessage;
-  // Pagination for tasks
   final int myTasksPage;
   final bool myTasksHasMore;
   final int postedTasksPage;
   final bool postedTasksHasMore;
-  // Pagination for forum posts
   final int forumPostsPage;
   final bool forumPostsHasMore;
-  // Pagination for favorited/liked posts (independent)
   final int favoritedPostsPage;
   final bool favoritedPostsHasMore;
   final int likedPostsPage;
   final bool likedPostsHasMore;
+  final int emailCountdown;
+  final int phoneCountdown;
+  final bool isSendingEmailCode;
+  final bool isSendingPhoneCode;
+  final bool showEmailCodeField;
+  final bool showPhoneCodeField;
 
   bool get isLoading => status == ProfileStatus.loading;
 
@@ -194,6 +224,12 @@ class ProfileState extends Equatable {
     bool? favoritedPostsHasMore,
     int? likedPostsPage,
     bool? likedPostsHasMore,
+    int? emailCountdown,
+    int? phoneCountdown,
+    bool? isSendingEmailCode,
+    bool? isSendingPhoneCode,
+    bool? showEmailCodeField,
+    bool? showPhoneCodeField,
   }) {
     return ProfileState(
       status: status ?? this.status,
@@ -219,6 +255,12 @@ class ProfileState extends Equatable {
       favoritedPostsHasMore: favoritedPostsHasMore ?? this.favoritedPostsHasMore,
       likedPostsPage: likedPostsPage ?? this.likedPostsPage,
       likedPostsHasMore: likedPostsHasMore ?? this.likedPostsHasMore,
+      emailCountdown: emailCountdown ?? this.emailCountdown,
+      phoneCountdown: phoneCountdown ?? this.phoneCountdown,
+      isSendingEmailCode: isSendingEmailCode ?? this.isSendingEmailCode,
+      isSendingPhoneCode: isSendingPhoneCode ?? this.isSendingPhoneCode,
+      showEmailCodeField: showEmailCodeField ?? this.showEmailCodeField,
+      showPhoneCodeField: showPhoneCodeField ?? this.showPhoneCodeField,
     );
   }
 
@@ -247,6 +289,12 @@ class ProfileState extends Equatable {
         favoritedPostsHasMore,
         likedPostsPage,
         likedPostsHasMore,
+        emailCountdown,
+        phoneCountdown,
+        isSendingEmailCode,
+        isSendingPhoneCode,
+        showEmailCodeField,
+        showPhoneCodeField,
       ];
 }
 
@@ -270,11 +318,24 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
     on<ProfileLoadMyForumActivity>(_onLoadMyForumActivity);
     on<ProfileLoadPreferences>(_onLoadPreferences);
     on<ProfileUpdatePreferences>(_onUpdatePreferences);
+    on<ProfileSendEmailCode>(_onSendEmailCode);
+    on<ProfileSendPhoneCode>(_onSendPhoneCode);
+    on<ProfileEmailCountdownTick>(_onEmailCountdownTick);
+    on<ProfilePhoneCountdownTick>(_onPhoneCountdownTick);
   }
 
   final UserRepository _userRepository;
   final TaskRepository _taskRepository;
   final ForumRepository _forumRepository;
+  Timer? _emailTimer;
+  Timer? _phoneTimer;
+
+  @override
+  Future<void> close() {
+    _emailTimer?.cancel();
+    _phoneTimer?.cancel();
+    return super.close();
+  }
 
   Future<void> _onLoadRequested(
     ProfileLoadRequested event,
@@ -311,6 +372,10 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
         residenceCity: data['residence_city'] as String?,
         languagePreference: data['language_preference'] as String?,
         avatar: data['avatar'] as String?,
+        email: data['email'] as String?,
+        emailVerificationCode: data['email_verification_code'] as String?,
+        phone: data['phone'] as String?,
+        phoneVerificationCode: data['phone_verification_code'] as String?,
       );
       emit(state.copyWith(
         user: user,
@@ -321,7 +386,7 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
       AppLogger.error('Failed to update profile', e);
       emit(state.copyWith(
         isUpdating: false,
-        actionMessage: 'update_failed',
+        actionMessage: e.toString(),
         errorMessage: e.toString(),
       ));
     }
@@ -522,6 +587,100 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
         isUpdating: false,
         actionMessage: 'update_failed',
       ));
+    }
+  }
+
+  Future<void> _onSendEmailCode(
+    ProfileSendEmailCode event,
+    Emitter<ProfileState> emit,
+  ) async {
+    emit(state.copyWith(
+      isSendingEmailCode: true,
+      showEmailCodeField: true,
+    ));
+
+    try {
+      await _userRepository.sendEmailUpdateCode(event.email);
+      emit(state.copyWith(
+        isSendingEmailCode: false,
+        emailCountdown: 60,
+        actionMessage: 'email_code_sent',
+      ));
+      _startEmailCountdown();
+    } catch (e) {
+      AppLogger.error('Failed to send email code', e);
+      emit(state.copyWith(
+        isSendingEmailCode: false,
+        actionMessage: e.toString(),
+        errorMessage: e.toString(),
+      ));
+    }
+  }
+
+  Future<void> _onSendPhoneCode(
+    ProfileSendPhoneCode event,
+    Emitter<ProfileState> emit,
+  ) async {
+    emit(state.copyWith(
+      isSendingPhoneCode: true,
+      showPhoneCodeField: true,
+    ));
+
+    try {
+      await _userRepository.sendPhoneUpdateCode(event.phone);
+      emit(state.copyWith(
+        isSendingPhoneCode: false,
+        phoneCountdown: 60,
+        actionMessage: 'phone_code_sent',
+      ));
+      _startPhoneCountdown();
+    } catch (e) {
+      AppLogger.error('Failed to send phone code', e);
+      emit(state.copyWith(
+        isSendingPhoneCode: false,
+        actionMessage: e.toString(),
+        errorMessage: e.toString(),
+      ));
+    }
+  }
+
+  void _startEmailCountdown() {
+    _emailTimer?.cancel();
+    _emailTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+      add(const ProfileEmailCountdownTick());
+    });
+  }
+
+  void _startPhoneCountdown() {
+    _phoneTimer?.cancel();
+    _phoneTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+      add(const ProfilePhoneCountdownTick());
+    });
+  }
+
+  void _onEmailCountdownTick(
+    ProfileEmailCountdownTick event,
+    Emitter<ProfileState> emit,
+  ) {
+    final newCount = state.emailCountdown - 1;
+    if (newCount <= 0) {
+      _emailTimer?.cancel();
+      emit(state.copyWith(emailCountdown: 0));
+    } else {
+      emit(state.copyWith(emailCountdown: newCount));
+    }
+  }
+
+  void _onPhoneCountdownTick(
+    ProfilePhoneCountdownTick event,
+    Emitter<ProfileState> emit,
+  ) {
+    final newCount = state.phoneCountdown - 1;
+    if (newCount <= 0) {
+      _phoneTimer?.cancel();
+      emit(state.copyWith(phoneCountdown: 0));
+    } else {
+      emit(state.copyWith(phoneCountdown: newCount));
     }
   }
 }

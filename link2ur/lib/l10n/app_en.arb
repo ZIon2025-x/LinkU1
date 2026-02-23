@@ -3611,6 +3611,17 @@
   "activityParticipantsCount": "Participants",
   "activityRemainingSlots": "Remaining Slots",
   "activityStatusLabel": "Status",
+  "activityRegistrationDeadline": "Registration deadline: ",
+  "activityCurrentApplicants": "Current applicants: ",
+  "activityJoinLottery": "Join Lottery",
+  "activityAlreadyRegistered": "Registered",
+  "activityNoWinners": "No winners yet",
+  "activityWinnerList": "Winner List",
+  "activityPrizePoints": "Points Reward",
+  "activityPrizePhysical": "Physical Prize",
+  "activityPrizeVoucher": "Voucher Code",
+  "activityPrizeInPerson": "In-Person Event",
+  "activityPrize": "Prize",
   "activityActivities": "Activities",
   "activityPersonCount": "{current}/{max}",
   "@activityPersonCount": { "placeholders": { "current": { "type": "int" }, "max": { "type": "int" } } },
@@ -4058,6 +4069,12 @@
   "toolCallLoadingGetMyFleaMarketItems": "Loading your items…",
   "toolCallLoadingSearchForumPosts": "Searching forum…",
 
+  "toolCallPrepareTaskDraft": "Task draft",
+  "toolCallLoadingPrepareTaskDraft": "Preparing task draft…",
+
+  "aiTaskDraftTitle": "Task Draft",
+  "aiTaskDraftConfirmButton": "Review & Publish",
+
   "expertApplicationsTitle": "Service Applications",
   "expertApplicationsEmpty": "No Applications",
   "expertApplicationsEmptyMessage": "You haven't received any service applications yet.",
@@ -4107,5 +4124,47 @@
   "paymentCardSubtitle": "Visa, Mastercard, AMEX",
   "paymentWeChatPaySubtitle": "WeChat Pay (Stripe)",
   "paymentAlipaySubtitle": "Alipay (Stripe)",
-  "commonCurrencySymbol": "£ "
+  "commonCurrencySymbol": "£ ",
+
+  "forumDeletePostConfirm": "Are you sure you want to delete this post? This action cannot be undone.",
+  "forumPostDeleted": "Post deleted",
+  "forumPostUpdated": "Post updated",
+  "forumReplyDeleted": "Reply deleted",
+  "forumDeleteReplyConfirm": "Are you sure you want to delete this reply?",
+
+  "fleaMarketDeleteItemConfirm": "Are you sure you want to delete this listing? This action cannot be undone.",
+  "fleaMarketItemDeleted": "Listing deleted",
+
+  "taskEvidenceTitle": "Completion Evidence",
+  "taskEvidenceHint": "You have completed this task. You may upload evidence images or add a text description (optional) for the poster to confirm.",
+  "taskEvidenceTextLabel": "Text description (optional)",
+  "taskEvidenceTextHint": "Describe what was done...",
+  "taskEvidenceImagesLabel": "Evidence images (optional)",
+  "taskEvidenceImageLimit": "Max 5MB per image, up to 5 images",
+  "taskEvidenceSubmit": "Submit completion",
+  "taskEvidenceUploading": "Uploading images...",
+
+  "stripeSetupRequired": "Please set up your payout account before applying for tasks.",
+  "stripeSetupAction": "Set up now",
+
+  "profileSendCode": "Send Code",
+  "profileResendCode": "Resend",
+  "profileCodeSentSuccess": "Verification code sent",
+  "profileEmailCodeSent": "Code sent to new email",
+  "profilePhoneCodeSent": "Code sent to new phone",
+  "profileCountdownSeconds": "{seconds}s",
+  "@profileCountdownSeconds": {
+    "placeholders": {
+      "seconds": {
+        "type": "int"
+      }
+    }
+  },
+  "profileEmailRequired": "Email is required to send verification code",
+  "profilePhoneRequired": "Phone number is required to send verification code",
+  "profileEmailUnchanged": "Please enter a different email address",
+  "profilePhoneUnchanged": "Please enter a different phone number",
+  "profileEmailCodeRequired": "Please enter the email verification code",
+  "profilePhoneCodeRequired": "Please enter the phone verification code",
+  "profileNormalizePhoneHint": "UK format: 07XXX or +44XXX"
 }

@@ -97,6 +97,20 @@ class ActivityLoadResult extends ActivityEvent {
   List<Object?> get props => [activityId];
 }
 
+class ActivityToggleFavorite extends ActivityEvent {
+  final int activityId;
+  const ActivityToggleFavorite({required this.activityId});
+  @override
+  List<Object?> get props => [activityId];
+}
+
+class ActivityLoadFavoriteStatus extends ActivityEvent {
+  final int activityId;
+  const ActivityLoadFavoriteStatus({required this.activityId});
+  @override
+  List<Object?> get props => [activityId];
+}
+
 // ==================== State ====================
 
 enum OfficialApplyStatus { idle, applying, applied, full, error }
@@ -121,6 +135,8 @@ class ActivityState extends Equatable {
     this.expert,
     this.officialApplyStatus = OfficialApplyStatus.idle,
     this.officialResult,
+    this.isFavorited = false,
+    this.isTogglingFavorite = false,
   });
 
   final ActivityStatus status;
@@ -142,6 +158,8 @@ class ActivityState extends Equatable {
 
   final OfficialApplyStatus officialApplyStatus;
   final OfficialActivityResult? officialResult;
+  final bool isFavorited;
+  final bool isTogglingFavorite;
 
   bool get isLoading => status == ActivityStatus.loading;
   bool get isDetailLoading => detailStatus == ActivityStatus.loading;
@@ -163,6 +181,9 @@ class ActivityState extends Equatable {
     TaskExpert? expert,
     OfficialApplyStatus? officialApplyStatus,
     OfficialActivityResult? officialResult,
+    bool clearOfficialResult = false,
+    bool? isFavorited,
+    bool? isTogglingFavorite,
   }) {
     return ActivityState(
       status: status ?? this.status,
@@ -180,7 +201,9 @@ class ActivityState extends Equatable {
       isLoadingMore: isLoadingMore ?? this.isLoadingMore,
       expert: expert ?? this.expert,
       officialApplyStatus: officialApplyStatus ?? this.officialApplyStatus,
-      officialResult: officialResult ?? this.officialResult,
+      officialResult: clearOfficialResult ? null : (officialResult ?? this.officialResult),
+      isFavorited: isFavorited ?? this.isFavorited,
+      isTogglingFavorite: isTogglingFavorite ?? this.isTogglingFavorite,
     );
   }
 
@@ -202,6 +225,8 @@ class ActivityState extends Equatable {
         expert,
         officialApplyStatus,
         officialResult,
+        isFavorited,
+        isTogglingFavorite,
       ];
 }
 
@@ -223,6 +248,8 @@ class ActivityBloc extends Bloc<ActivityEvent, ActivityState> {
     on<ActivityApplyOfficial>(_onApplyOfficial);
     on<ActivityCancelApplyOfficial>(_onCancelApplyOfficial);
     on<ActivityLoadResult>(_onLoadResult);
+    on<ActivityToggleFavorite>(_onToggleFavorite);
+    on<ActivityLoadFavoriteStatus>(_onLoadFavoriteStatus);
   }
 
   final ActivityRepository _activityRepository;
@@ -341,7 +368,12 @@ class ActivityBloc extends Bloc<ActivityEvent, ActivityState> {
     ActivityLoadDetail event,
     Emitter<ActivityState> emit,
   ) async {
-    emit(state.copyWith(detailStatus: ActivityStatus.loading));
+    emit(state.copyWith(
+      detailStatus: ActivityStatus.loading,
+      officialApplyStatus: OfficialApplyStatus.idle,
+      clearOfficialResult: true,
+      isFavorited: false,
+    ));
 
     try {
       final activity =
@@ -359,9 +391,16 @@ class ActivityBloc extends Bloc<ActivityEvent, ActivityState> {
           emit(state.copyWith(expert: expert));
         } catch (e) {
           AppLogger.warning('Failed to load expert info', e);
-          // 达人信息加载失败不影响活动详情展示
         }
       }
+
+      // 对齐iOS: 官方活动自动加载抽奖/申请结果
+      if (activity.isOfficialActivity) {
+        add(ActivityLoadResult(activityId: activity.id));
+      }
+
+      // 对齐iOS checkFavoriteStatus: 加载收藏状态
+      add(ActivityLoadFavoriteStatus(activityId: activity.id));
     } catch (e) {
       AppLogger.error('Failed to load activity detail', e);
       emit(state.copyWith(
@@ -415,8 +454,15 @@ class ActivityBloc extends Bloc<ActivityEvent, ActivityState> {
     try {
       await _activityRepository.applyOfficialActivity(event.activityId);
       emit(state.copyWith(officialApplyStatus: OfficialApplyStatus.applied));
-    } on Exception {
-      emit(state.copyWith(officialApplyStatus: OfficialApplyStatus.error));
+      // 刷新详情以更新名额计数，并加载结果
+      add(ActivityLoadDetail(event.activityId));
+    } on Exception catch (e) {
+      final msg = e.toString().toLowerCase();
+      if (msg.contains('已满') || msg.contains('full') || msg.contains('no more')) {
+        emit(state.copyWith(officialApplyStatus: OfficialApplyStatus.full));
+      } else {
+        emit(state.copyWith(officialApplyStatus: OfficialApplyStatus.error));
+      }
     }
   }
 
@@ -426,8 +472,10 @@ class ActivityBloc extends Bloc<ActivityEvent, ActivityState> {
   ) async {
     try {
       await _activityRepository.cancelOfficialActivityApplication(event.activityId);
-    } on Exception {
-      // silently fail, UI shows no change
+      emit(state.copyWith(officialApplyStatus: OfficialApplyStatus.idle));
+      add(ActivityLoadDetail(event.activityId));
+    } on Exception catch (e) {
+      AppLogger.warning('Failed to cancel official activity application', e);
     }
   }
 
@@ -441,5 +489,33 @@ class ActivityBloc extends Bloc<ActivityEvent, ActivityState> {
     } on Exception {
       // ignore load errors
     }
+  }
+
+  Future<void> _onToggleFavorite(
+    ActivityToggleFavorite event,
+    Emitter<ActivityState> emit,
+  ) async {
+    if (state.isTogglingFavorite) return;
+    emit(state.copyWith(isTogglingFavorite: true));
+    try {
+      await _activityRepository.toggleFavorite(event.activityId);
+      emit(state.copyWith(
+        isFavorited: !state.isFavorited,
+        isTogglingFavorite: false,
+      ));
+    } catch (e) {
+      AppLogger.warning('Failed to toggle favorite', e);
+      emit(state.copyWith(isTogglingFavorite: false));
+    }
+  }
+
+  Future<void> _onLoadFavoriteStatus(
+    ActivityLoadFavoriteStatus event,
+    Emitter<ActivityState> emit,
+  ) async {
+    try {
+      final isFav = await _activityRepository.getFavoriteStatus(event.activityId);
+      emit(state.copyWith(isFavorited: isFav));
+    } catch (_) {}
   }
 }

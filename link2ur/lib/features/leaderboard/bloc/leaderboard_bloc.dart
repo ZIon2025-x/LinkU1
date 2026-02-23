@@ -135,6 +135,38 @@ class LeaderboardLoadItemDetail extends LeaderboardEvent {
   List<Object?> get props => [itemId];
 }
 
+/// 收藏/取消收藏排行榜
+class LeaderboardToggleFavorite extends LeaderboardEvent {
+  const LeaderboardToggleFavorite(this.leaderboardId);
+
+  final int leaderboardId;
+
+  @override
+  List<Object?> get props => [leaderboardId];
+}
+
+/// 举报排行榜
+class LeaderboardReport extends LeaderboardEvent {
+  const LeaderboardReport(this.leaderboardId, {required this.reason});
+
+  final int leaderboardId;
+  final String reason;
+
+  @override
+  List<Object?> get props => [leaderboardId, reason];
+}
+
+/// 举报排行榜条目
+class LeaderboardReportItem extends LeaderboardEvent {
+  const LeaderboardReportItem(this.itemId, {required this.reason});
+
+  final int itemId;
+  final String reason;
+
+  @override
+  List<Object?> get props => [itemId, reason];
+}
+
 // ==================== State ====================
 
 enum LeaderboardStatus { initial, loading, loaded, error }
@@ -155,6 +187,8 @@ class LeaderboardState extends Equatable {
     this.itemVotes = const [],
     this.isSubmitting = false,
     this.actionMessage,
+    this.isFavorited = false,
+    this.reportSuccess = false,
   });
 
   final LeaderboardStatus status;
@@ -171,6 +205,8 @@ class LeaderboardState extends Equatable {
   final List<Map<String, dynamic>> itemVotes;
   final bool isSubmitting;
   final String? actionMessage;
+  final bool isFavorited;
+  final bool reportSuccess;
 
   bool get isLoading => status == LeaderboardStatus.loading;
 
@@ -189,6 +225,8 @@ class LeaderboardState extends Equatable {
     List<Map<String, dynamic>>? itemVotes,
     bool? isSubmitting,
     String? actionMessage,
+    bool? isFavorited,
+    bool? reportSuccess,
     bool clearItemDetail = false,
   }) {
     return LeaderboardState(
@@ -207,6 +245,8 @@ class LeaderboardState extends Equatable {
       itemVotes: itemVotes ?? this.itemVotes,
       isSubmitting: isSubmitting ?? this.isSubmitting,
       actionMessage: actionMessage,
+      isFavorited: isFavorited ?? this.isFavorited,
+      reportSuccess: reportSuccess ?? this.reportSuccess,
     );
   }
 
@@ -226,6 +266,8 @@ class LeaderboardState extends Equatable {
         itemVotes,
         isSubmitting,
         actionMessage,
+        isFavorited,
+        reportSuccess,
       ];
 }
 
@@ -246,6 +288,9 @@ class LeaderboardBloc extends Bloc<LeaderboardEvent, LeaderboardState> {
     on<LeaderboardApplyRequested>(_onApplyRequested);
     on<LeaderboardSubmitItem>(_onSubmitItem);
     on<LeaderboardLoadItemDetail>(_onLoadItemDetail);
+    on<LeaderboardToggleFavorite>(_onToggleFavorite);
+    on<LeaderboardReport>(_onReport);
+    on<LeaderboardReportItem>(_onReportItem);
   }
 
   final LeaderboardRepository _leaderboardRepository;
@@ -343,6 +388,7 @@ class LeaderboardBloc extends Bloc<LeaderboardEvent, LeaderboardState> {
         status: LeaderboardStatus.loaded,
         selectedLeaderboard: leaderboard,
         items: items,
+        isFavorited: leaderboard.isFavorited,
       ));
     } catch (e) {
       AppLogger.error('Failed to load leaderboard detail', e);
@@ -597,6 +643,70 @@ class LeaderboardBloc extends Bloc<LeaderboardEvent, LeaderboardState> {
       AppLogger.error('Failed to load item detail', e);
       emit(state.copyWith(
         status: LeaderboardStatus.error,
+        errorMessage: e.toString(),
+      ));
+    }
+  }
+
+  /// 收藏/取消收藏 — 乐观更新 isFavorited
+  Future<void> _onToggleFavorite(
+    LeaderboardToggleFavorite event,
+    Emitter<LeaderboardState> emit,
+  ) async {
+    final previous = state.isFavorited;
+    emit(state.copyWith(
+      isFavorited: !previous,
+      selectedLeaderboard:
+          state.selectedLeaderboard?.copyWith(isFavorited: !previous),
+    ));
+
+    try {
+      await _leaderboardRepository.toggleFavorite(event.leaderboardId);
+    } catch (e) {
+      AppLogger.error('Failed to toggle favorite', e);
+      emit(state.copyWith(
+        isFavorited: previous,
+        selectedLeaderboard:
+            state.selectedLeaderboard?.copyWith(isFavorited: previous),
+      ));
+    }
+  }
+
+  /// 举报排行榜
+  Future<void> _onReport(
+    LeaderboardReport event,
+    Emitter<LeaderboardState> emit,
+  ) async {
+    try {
+      await _leaderboardRepository.reportLeaderboard(
+        event.leaderboardId,
+        reason: event.reason,
+      );
+      emit(state.copyWith(reportSuccess: true));
+      emit(state.copyWith(reportSuccess: false));
+    } catch (e) {
+      AppLogger.error('Failed to report leaderboard', e);
+      emit(state.copyWith(
+        errorMessage: e.toString(),
+      ));
+    }
+  }
+
+  /// 举报排行榜条目
+  Future<void> _onReportItem(
+    LeaderboardReportItem event,
+    Emitter<LeaderboardState> emit,
+  ) async {
+    try {
+      await _leaderboardRepository.reportItem(
+        event.itemId,
+        reason: event.reason,
+      );
+      emit(state.copyWith(reportSuccess: true));
+      emit(state.copyWith(reportSuccess: false));
+    } catch (e) {
+      AppLogger.error('Failed to report leaderboard item', e);
+      emit(state.copyWith(
         errorMessage: e.toString(),
       ));
     }

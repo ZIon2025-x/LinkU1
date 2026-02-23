@@ -40,9 +40,18 @@ class LeaderboardDetailView extends StatelessWidget {
   }
 }
 
-class _LeaderboardDetailContent extends StatelessWidget {
+class _LeaderboardDetailContent extends StatefulWidget {
   const _LeaderboardDetailContent({required this.leaderboardId});
   final int leaderboardId;
+
+  @override
+  State<_LeaderboardDetailContent> createState() =>
+      _LeaderboardDetailContentState();
+}
+
+class _LeaderboardDetailContentState
+    extends State<_LeaderboardDetailContent> {
+  int get leaderboardId => widget.leaderboardId;
 
   @override
   Widget build(BuildContext context) {
@@ -76,6 +85,46 @@ class _LeaderboardDetailContent extends StatelessWidget {
     );
   }
 
+  void _showReportDialog(BuildContext context) {
+    final reasonController = TextEditingController();
+    final bloc = context.read<LeaderboardBloc>();
+
+    showDialog<void>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: Text(context.l10n.commonReport),
+          content: TextField(
+            controller: reasonController,
+            maxLines: 3,
+            decoration: InputDecoration(
+              hintText: context.l10n.commonReportReason,
+              border: const OutlineInputBorder(),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: Text(context.l10n.commonCancel),
+            ),
+            FilledButton(
+              onPressed: () {
+                final reason = reasonController.text.trim();
+                if (reason.isEmpty) return;
+                bloc.add(LeaderboardReport(leaderboardId, reason: reason));
+                Navigator.pop(dialogContext);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text(context.l10n.commonReportSubmitted)),
+                );
+              },
+              child: Text(context.l10n.commonConfirm),
+            ),
+          ],
+        );
+      },
+    ).then((_) => reasonController.dispose());
+  }
+
   PreferredSizeWidget _buildAppBar(
       BuildContext context, LeaderboardState state, bool hasHero) {
     void onShare() {
@@ -89,6 +138,13 @@ class _LeaderboardDetailContent extends StatelessWidget {
       );
     }
 
+    void onToggleFavorite() {
+      AppHaptics.selection();
+      context
+          .read<LeaderboardBloc>()
+          .add(LeaderboardToggleFavorite(leaderboardId));
+    }
+
     if (!hasHero) {
       return AppBar(
         title: Text(state.selectedLeaderboard?.displayName(Localizations.localeOf(context)) ??
@@ -97,6 +153,33 @@ class _LeaderboardDetailContent extends StatelessWidget {
           IconButton(
             icon: const Icon(Icons.share_outlined),
             onPressed: onShare,
+          ),
+          IconButton(
+            icon: Icon(
+              state.isFavorited ? Icons.favorite : Icons.favorite_border,
+              color: state.isFavorited ? AppColors.error : null,
+            ),
+            onPressed: onToggleFavorite,
+          ),
+          PopupMenuButton<String>(
+            icon: const Icon(Icons.more_vert),
+            onSelected: (value) {
+              if (value == 'report') {
+                _showReportDialog(context);
+              }
+            },
+            itemBuilder: (_) => [
+              PopupMenuItem<String>(
+                value: 'report',
+                child: Row(
+                  children: [
+                    const Icon(Icons.flag_outlined, size: 20),
+                    const SizedBox(width: 8),
+                    Text(context.l10n.commonReport),
+                  ],
+                ),
+              ),
+            ],
           ),
         ],
       );
@@ -125,23 +208,73 @@ class _LeaderboardDetailContent extends StatelessWidget {
         ),
       ),
       actions: [
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 4),
-          child: GestureDetector(
-            onTap: onShare,
-            child: Container(
-              width: 36,
-              height: 36,
-              decoration: BoxDecoration(
-                color: Colors.black.withValues(alpha: 0.3),
-                shape: BoxShape.circle,
+        _buildHeroCircleButton(
+          context,
+          icon: Icons.share_outlined,
+          onTap: onShare,
+        ),
+        _buildHeroCircleButton(
+          context,
+          icon: state.isFavorited ? Icons.favorite : Icons.favorite_border,
+          color: state.isFavorited ? AppColors.error : Colors.white,
+          onTap: onToggleFavorite,
+        ),
+        _buildHeroCircleButton(
+          context,
+          icon: Icons.more_vert,
+          onTap: () {
+            final RenderBox button = context.findRenderObject() as RenderBox;
+            final position = button.localToGlobal(Offset.zero);
+            showMenu<String>(
+              context: context,
+              position: RelativeRect.fromLTRB(
+                position.dx + button.size.width,
+                position.dy + kToolbarHeight,
+                0,
+                0,
               ),
-              child: const Icon(Icons.share_outlined,
-                  size: 18, color: Colors.white),
-            ),
-          ),
+              items: [
+                PopupMenuItem<String>(
+                  value: 'report',
+                  child: Row(
+                    children: [
+                      const Icon(Icons.flag_outlined, size: 20),
+                      const SizedBox(width: 8),
+                      Text(context.l10n.commonReport),
+                    ],
+                  ),
+                ),
+              ],
+            ).then((value) {
+              if (!mounted) return;
+              if (value == 'report') _showReportDialog(context);
+            });
+          },
         ),
       ],
+    );
+  }
+
+  Widget _buildHeroCircleButton(
+    BuildContext context, {
+    required IconData icon,
+    required VoidCallback onTap,
+    Color? color,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 4),
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          width: 36,
+          height: 36,
+          decoration: BoxDecoration(
+            color: Colors.black.withValues(alpha: 0.3),
+            shape: BoxShape.circle,
+          ),
+          child: Icon(icon, size: 18, color: color ?? Colors.white),
+        ),
+      ),
     );
   }
 

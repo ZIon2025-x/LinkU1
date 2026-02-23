@@ -1371,9 +1371,66 @@ class TaskActionButtonsView extends StatelessWidget {
         onPressed: state.isSubmitting
             ? null
             : () {
-                context
-                    .read<TaskDetailBloc>()
-                    .add(const TaskDetailCompleteRequested());
+                final textController = TextEditingController();
+                final bloc = context.read<TaskDetailBloc>();
+                showModalBottomSheet<void>(
+                  context: context,
+                  isScrollControlled: true,
+                  shape: const RoundedRectangleBorder(
+                    borderRadius:
+                        BorderRadius.vertical(top: Radius.circular(20)),
+                  ),
+                  builder: (sc) => Padding(
+                    padding: EdgeInsets.only(
+                      bottom: MediaQuery.of(sc).viewInsets.bottom,
+                      left: 24, right: 24, top: 24,
+                    ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(context.l10n.taskEvidenceTitle,
+                            style: AppTypography.title3),
+                        const SizedBox(height: 8),
+                        Text(context.l10n.taskEvidenceHint,
+                            style: AppTypography.footnote),
+                        const SizedBox(height: 16),
+                        TextField(
+                          controller: textController,
+                          maxLines: 4,
+                          maxLength: 500,
+                          decoration: InputDecoration(
+                            hintText: context.l10n.taskEvidenceTextHint,
+                            border: const OutlineInputBorder(),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        SizedBox(
+                          width: double.infinity,
+                          child: FilledButton.icon(
+                            onPressed: () {
+                              final text = textController.text.trim();
+                              bloc.add(TaskDetailCompleteRequested(
+                                evidenceText:
+                                    text.isEmpty ? null : text,
+                              ));
+                              Navigator.pop(sc);
+                            },
+                            icon: const Icon(Icons.check_circle),
+                            label:
+                                Text(context.l10n.taskEvidenceSubmit),
+                            style: FilledButton.styleFrom(
+                              backgroundColor: AppColors.success,
+                              padding: const EdgeInsets.symmetric(
+                                  vertical: 14),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 24),
+                      ],
+                    ),
+                  ),
+                ).then((_) => textController.dispose());
               },
         gradient: LinearGradient(
           colors: [AppColors.success, AppColors.success.withValues(alpha: 0.8)],

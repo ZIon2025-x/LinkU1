@@ -22,6 +22,7 @@ const TwoFASettingsPage = lazy(() => import('../pages/admin/settings/TwoFASettin
 const TaskManagementPage = lazy(() => import('../pages/admin/tasks/TaskManagementPage'));
 const JobPositionManagement = lazy(() => import('../pages/admin/job-positions').then(m => ({ default: m.JobPositionManagement })));
 const CustomerServicePage = lazy(() => import('../pages/admin/customer-service/CustomerServicePage'));
+const OfficialActivityManagement = lazy(() => import('../pages/admin/official-activities/OfficialActivityManagement'));
 
 // Loading component
 const LoadingFallback = () => (
@@ -87,6 +88,9 @@ export const AdminRoutes: React.FC = () => {
 
           {/* Leaderboard Management */}
           <Route path="leaderboard" element={<LeaderboardManagement />} />
+
+          {/* Official Activity Management */}
+          <Route path="official-activities" element={<OfficialActivityManagement />} />
 
           {/* Banner Management */}
           <Route path="banners" element={<BannerManagement />} />

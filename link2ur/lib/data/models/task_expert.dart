@@ -373,7 +373,7 @@ class TaskExpertService extends Equatable {
       serviceName: json['service_name'] as String? ?? '',
       description: json['description'] as String? ?? '',
       images: (json['images'] as List<dynamic>?)
-          ?.map((e) => e as String)
+          ?.map((e) => e.toString())
           .toList(),
       basePrice: (json['base_price'] as num?)?.toDouble() ?? 0,
       currency: json['currency'] as String? ?? 'GBP',

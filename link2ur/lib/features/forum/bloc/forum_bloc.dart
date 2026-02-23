@@ -148,6 +148,45 @@ class ForumReportPost extends ForumEvent {
   List<Object?> get props => [postId, reason];
 }
 
+class ForumDeletePost extends ForumEvent {
+  const ForumDeletePost(this.postId);
+
+  final int postId;
+
+  @override
+  List<Object?> get props => [postId];
+}
+
+class ForumEditPost extends ForumEvent {
+  const ForumEditPost(this.postId, {required this.content, this.images});
+
+  final int postId;
+  final String content;
+  final List<String>? images;
+
+  @override
+  List<Object?> get props => [postId, content, images];
+}
+
+class ForumDeleteReply extends ForumEvent {
+  const ForumDeleteReply(this.replyId, {required this.postId});
+
+  final int replyId;
+  final int postId;
+
+  @override
+  List<Object?> get props => [replyId, postId];
+}
+
+class ForumLikeReply extends ForumEvent {
+  const ForumLikeReply(this.replyId);
+
+  final int replyId;
+
+  @override
+  List<Object?> get props => [replyId];
+}
+
 // ==================== State ====================
 
 enum ForumStatus { initial, loading, loaded, error }
@@ -302,6 +341,10 @@ class ForumBloc extends Bloc<ForumEvent, ForumState> {
     on<ForumCreatePost>(_onCreatePost);
     on<ForumReplyPost>(_onReplyPost);
     on<ForumReportPost>(_onReportPost);
+    on<ForumDeletePost>(_onDeletePost);
+    on<ForumEditPost>(_onEditPost);
+    on<ForumDeleteReply>(_onDeleteReply);
+    on<ForumLikeReply>(_onLikeReply);
     on<ForumLoadMyPosts>(_onLoadMyPosts);
     on<ForumLoadFavoritedPosts>(_onLoadFavoritedPosts);
   }
@@ -742,6 +785,102 @@ class ForumBloc extends Bloc<ForumEvent, ForumState> {
         isLoadingFavoritedPosts: false,
         errorMessage: e.toString(),
       ));
+    }
+  }
+
+  Future<void> _onDeletePost(
+    ForumDeletePost event,
+    Emitter<ForumState> emit,
+  ) async {
+    try {
+      await _forumRepository.deletePost(event.postId);
+      final updatedPosts =
+          state.posts.where((p) => p.id != event.postId).toList();
+      final updatedMyPosts =
+          state.myPosts.where((p) => p.id != event.postId).toList();
+      emit(state.copyWith(
+        posts: updatedPosts,
+        myPosts: updatedMyPosts,
+        selectedPost: state.selectedPost?.id == event.postId
+            ? null
+            : state.selectedPost,
+      ));
+    } catch (e) {
+      AppLogger.error('Failed to delete post', e);
+      emit(state.copyWith(
+        errorMessage: e is AppException ? e.message : e.toString(),
+      ));
+    }
+  }
+
+  Future<void> _onEditPost(
+    ForumEditPost event,
+    Emitter<ForumState> emit,
+  ) async {
+    try {
+      final data = <String, dynamic>{'content': event.content};
+      if (event.images != null) data['images'] = event.images;
+      final updated = await _forumRepository.updatePost(event.postId, data);
+      final updatedPosts = state.posts
+          .map((p) => p.id == event.postId ? updated : p)
+          .toList();
+      emit(state.copyWith(
+        posts: updatedPosts,
+        selectedPost:
+            state.selectedPost?.id == event.postId ? updated : state.selectedPost,
+      ));
+    } catch (e) {
+      AppLogger.error('Failed to edit post', e);
+      emit(state.copyWith(
+        errorMessage: e is AppException ? e.message : e.toString(),
+      ));
+    }
+  }
+
+  Future<void> _onDeleteReply(
+    ForumDeleteReply event,
+    Emitter<ForumState> emit,
+  ) async {
+    try {
+      await _forumRepository.deleteReply(event.replyId);
+      final updatedReplies =
+          state.replies.where((r) => r.id != event.replyId).toList();
+      emit(state.copyWith(replies: updatedReplies));
+    } catch (e) {
+      AppLogger.error('Failed to delete reply', e);
+      emit(state.copyWith(
+        errorMessage: e is AppException ? e.message : e.toString(),
+      ));
+    }
+  }
+
+  Future<void> _onLikeReply(
+    ForumLikeReply event,
+    Emitter<ForumState> emit,
+  ) async {
+    try {
+      await _forumRepository.likeReply(event.replyId);
+      final updatedReplies = state.replies.map((r) {
+        if (r.id == event.replyId) {
+          final nowLiked = !r.isLiked;
+          return ForumReply(
+            id: r.id,
+            postId: r.postId,
+            content: r.content,
+            authorId: r.authorId,
+            author: r.author,
+            parentReplyId: r.parentReplyId,
+            parentReplyAuthor: r.parentReplyAuthor,
+            likeCount: r.likeCount + (nowLiked ? 1 : -1),
+            isLiked: nowLiked,
+            createdAt: r.createdAt,
+          );
+        }
+        return r;
+      }).toList();
+      emit(state.copyWith(replies: updatedReplies));
+    } catch (e) {
+      AppLogger.error('Failed to like reply', e);
     }
   }
 }

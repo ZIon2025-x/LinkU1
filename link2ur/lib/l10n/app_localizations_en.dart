@@ -7682,6 +7682,39 @@ class AppLocalizationsEn extends AppLocalizations {
   String get activityStatusLabel => 'Status';
 
   @override
+  String get activityRegistrationDeadline => 'Registration deadline: ';
+
+  @override
+  String get activityCurrentApplicants => 'Current applicants: ';
+
+  @override
+  String get activityJoinLottery => 'Join Lottery';
+
+  @override
+  String get activityAlreadyRegistered => 'Registered';
+
+  @override
+  String get activityNoWinners => 'No winners yet';
+
+  @override
+  String get activityWinnerList => 'Winner List';
+
+  @override
+  String get activityPrizePoints => 'Points Reward';
+
+  @override
+  String get activityPrizePhysical => 'Physical Prize';
+
+  @override
+  String get activityPrizeVoucher => 'Voucher Code';
+
+  @override
+  String get activityPrizeInPerson => 'In-Person Event';
+
+  @override
+  String get activityPrize => 'Prize';
+
+  @override
   String activityPersonCount(int current, int max) {
     return '$current/$max';
   }
@@ -8684,6 +8717,18 @@ class AppLocalizationsEn extends AppLocalizations {
   String get toolCallLoadingSearchForumPosts => 'Searching forum…';
 
   @override
+  String get toolCallPrepareTaskDraft => 'Task draft';
+
+  @override
+  String get toolCallLoadingPrepareTaskDraft => 'Preparing task draft…';
+
+  @override
+  String get aiTaskDraftTitle => 'Task Draft';
+
+  @override
+  String get aiTaskDraftConfirmButton => 'Review & Publish';
+
+  @override
   String get expertApplicationsTitle => 'Service Applications';
 
   @override
@@ -8807,4 +8852,105 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get commonCurrencySymbol => '£ ';
+
+  @override
+  String get forumDeletePostConfirm =>
+      'Are you sure you want to delete this post? This action cannot be undone.';
+
+  @override
+  String get forumPostDeleted => 'Post deleted';
+
+  @override
+  String get forumPostUpdated => 'Post updated';
+
+  @override
+  String get forumReplyDeleted => 'Reply deleted';
+
+  @override
+  String get forumDeleteReplyConfirm =>
+      'Are you sure you want to delete this reply?';
+
+  @override
+  String get fleaMarketDeleteItemConfirm =>
+      'Are you sure you want to delete this listing? This action cannot be undone.';
+
+  @override
+  String get fleaMarketItemDeleted => 'Listing deleted';
+
+  @override
+  String get taskEvidenceTitle => 'Completion Evidence';
+
+  @override
+  String get taskEvidenceHint =>
+      'You have completed this task. You may upload evidence images or add a text description (optional) for the poster to confirm.';
+
+  @override
+  String get taskEvidenceTextLabel => 'Text description (optional)';
+
+  @override
+  String get taskEvidenceTextHint => 'Describe what was done...';
+
+  @override
+  String get taskEvidenceImagesLabel => 'Evidence images (optional)';
+
+  @override
+  String get taskEvidenceImageLimit => 'Max 5MB per image, up to 5 images';
+
+  @override
+  String get taskEvidenceSubmit => 'Submit completion';
+
+  @override
+  String get taskEvidenceUploading => 'Uploading images...';
+
+  @override
+  String get stripeSetupRequired =>
+      'Please set up your payout account before applying for tasks.';
+
+  @override
+  String get stripeSetupAction => 'Set up now';
+
+  @override
+  String get profileSendCode => 'Send Code';
+
+  @override
+  String get profileResendCode => 'Resend';
+
+  @override
+  String get profileCodeSentSuccess => 'Verification code sent';
+
+  @override
+  String get profileEmailCodeSent => 'Code sent to new email';
+
+  @override
+  String get profilePhoneCodeSent => 'Code sent to new phone';
+
+  @override
+  String profileCountdownSeconds(int seconds) {
+    return '${seconds}s';
+  }
+
+  @override
+  String get profileEmailRequired =>
+      'Email is required to send verification code';
+
+  @override
+  String get profilePhoneRequired =>
+      'Phone number is required to send verification code';
+
+  @override
+  String get profileEmailUnchanged => 'Please enter a different email address';
+
+  @override
+  String get profilePhoneUnchanged => 'Please enter a different phone number';
+
+  @override
+  String get profileEmailCodeRequired =>
+      'Please enter the email verification code';
+
+  @override
+  String get profilePhoneCodeRequired =>
+      'Please enter the phone verification code';
+
+  @override
+  String get profileNormalizePhoneHint => 'UK format: 07XXX or +44XXX';
 }

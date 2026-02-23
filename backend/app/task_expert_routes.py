@@ -174,6 +174,7 @@ async def get_experts_list(
     request: Request,
     category: Optional[str] = Query(None, description="分类筛选"),
     location: Optional[str] = Query(None, description="城市位置筛选"),
+    keyword: Optional[str] = Query(None, description="关键词搜索（名称/简介/技能）"),
     status_filter: Optional[str] = Query("active", alias="status"),
     limit: int = Query(50, ge=1, le=100),
     offset: int = Query(0, ge=0),
@@ -210,6 +211,22 @@ async def get_experts_list(
             location_variants.add(CITY_NAME_REVERSE_MAPPING[location])
         featured_query = featured_query.where(
             models.FeaturedTaskExpert.location.in_(location_variants)
+        )
+
+    if keyword and keyword.strip():
+        kw = f"%{keyword.strip()}%"
+        from sqlalchemy import or_
+        featured_query = featured_query.where(
+            or_(
+                models.FeaturedTaskExpert.name.ilike(kw),
+                models.FeaturedTaskExpert.bio.ilike(kw),
+                models.FeaturedTaskExpert.bio_en.ilike(kw),
+                models.FeaturedTaskExpert.expertise_areas.ilike(kw),
+                models.FeaturedTaskExpert.expertise_areas_en.ilike(kw),
+                models.FeaturedTaskExpert.featured_skills.ilike(kw),
+                models.FeaturedTaskExpert.featured_skills_en.ilike(kw),
+                models.FeaturedTaskExpert.category.ilike(kw),
+            )
         )
     
     featured_query = featured_query.order_by(
@@ -300,6 +317,16 @@ async def get_experts_list(
     query = select(models.TaskExpert).where(
         models.TaskExpert.status == status_filter
     )
+
+    if keyword and keyword.strip():
+        kw = f"%{keyword.strip()}%"
+        from sqlalchemy import or_
+        query = query.where(
+            or_(
+                models.TaskExpert.expert_name.ilike(kw),
+                models.TaskExpert.bio.ilike(kw),
+            )
+        )
     
     # 分页查询
     query = query.order_by(

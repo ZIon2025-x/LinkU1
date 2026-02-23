@@ -18,6 +18,11 @@ class ApiEndpoints {
   static const String sendPhoneCode =
       '/api/secure-auth/send-phone-verification-code';
   static const String captchaSiteKey = '/api/secure-auth/captcha-site-key';
+  static const String logoutAll = '/api/secure-auth/logout-all';
+  static const String logoutOthers = '/api/secure-auth/logout-others';
+  static const String activeSessions = '/api/secure-auth/sessions';
+  static String revokeSession(String sessionId) =>
+      '/api/secure-auth/sessions/$sessionId';
 
   // 后端: routers.py (prefix: /api)
   static const String forgotPassword = '/api/forgot_password';
@@ -56,6 +61,9 @@ class ApiEndpoints {
   static String confirmCompletion(int id) => '/api/tasks/$id/confirm_completion';
   static String cancelTask(int id) => '/api/tasks/$id/cancel';
   static String deleteTask(int id) => '/api/tasks/$id/delete';
+  static String updateTaskReward(int taskId) => '/api/tasks/$taskId/reward';
+  static String updateTaskVisibility(int taskId) =>
+      '/api/tasks/$taskId/visibility';
   static String rejectTask(int id) => '/api/tasks/$id/reject';
   static String reviewTask(int id) => '/api/tasks/$id/review';
   static String taskReviews(int id) => '/api/tasks/$id/reviews';
@@ -393,6 +401,10 @@ class ApiEndpoints {
       '/api/student-verification/verify/$token';
   static const String renewStudentVerification =
       '/api/student-verification/renew';
+  static const String changeVerificationEmail =
+      '/api/student-verification/change-email';
+  static const String listUniversities =
+      '/api/student-verification/universities';
 
   // ==================== 客服相关 ====================
   // 后端: routers.py → /user/customer-service/* (prefix: /api/users)

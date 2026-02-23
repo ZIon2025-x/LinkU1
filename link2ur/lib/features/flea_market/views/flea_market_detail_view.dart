@@ -404,6 +404,60 @@ class _FleaMarketDetailContent extends StatelessWidget {
       BuildContext context, FleaMarketState state, FleaMarketItem item) {
     return Row(
       children: [
+        // 删除按钮
+        GestureDetector(
+          onTap: state.isSubmitting
+              ? null
+              : () {
+                  showDialog<void>(
+                    context: context,
+                    builder: (d) => AlertDialog(
+                      title: Text(context.l10n.commonDelete),
+                      content:
+                          Text(context.l10n.fleaMarketDeleteItemConfirm),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(d),
+                          child: Text(context.l10n.commonCancel),
+                        ),
+                        FilledButton(
+                          style: FilledButton.styleFrom(
+                            backgroundColor:
+                                Theme.of(context).colorScheme.error,
+                          ),
+                          onPressed: () {
+                            context
+                                .read<FleaMarketBloc>()
+                                .add(FleaMarketDeleteItem(itemId));
+                            Navigator.pop(d);
+                            Navigator.of(context).pop();
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                  content: Text(context
+                                      .l10n.fleaMarketItemDeleted)),
+                            );
+                          },
+                          child: Text(context.l10n.commonDelete),
+                        ),
+                      ],
+                    ),
+                  );
+                },
+          child: Container(
+            height: 50,
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.error.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(25),
+              border: Border.all(
+                color: Theme.of(context).colorScheme.error.withValues(alpha: 0.3),
+              ),
+            ),
+            child: Icon(Icons.delete_outline,
+                size: 20, color: Theme.of(context).colorScheme.error),
+          ),
+        ),
+        const SizedBox(width: 8),
         // 刷新按钮 - 对标iOS orange gradient
         GestureDetector(
           onTap: state.isSubmitting

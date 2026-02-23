@@ -285,7 +285,10 @@ _FAQ_KEYWORDS = {
 
 _TASK_KEYWORDS = ["任务", "task", "我的任务", "my task", "进行中", "已完成", "查看任务",
                   "搜索任务", "search task", "find task", "任务详情", "task detail",
-                  "状态", "status", "订单", "order"]
+                  "状态", "status", "订单", "order",
+                  "发布任务", "发任务", "帮我发", "post task", "create task", "publish task",
+                  "帮我找人", "帮我请人", "需要帮忙", "need help",
+                  "想找人帮", "找人帮忙", "hire someone", "找人做"]
 
 _PROFILE_KEYWORDS = ["个人资料", "我的资料", "my profile", "评分", "rating", "等级", "level",
                      "统计", "stats", "我的信息"]
@@ -411,9 +414,15 @@ _DEFAULT_SYSTEM_PROMPT = """你是 Link2Ur 技能互助平台的官方 AI 客服
 14. 查询跳蚤市场我的商品、收藏和购买记录
 15. 搜索论坛帖子、查看热帖、我的收藏和回复
 
+【发布任务 — 草稿模式】
+当用户要求帮忙发布任务时，使用 prepare_task_draft 工具生成草稿。
+- 从用户的描述中提取标题、描述、类型、报酬、地点、截止时间
+- 如果缺少必填信息（尤其是报酬金额），先询问用户
+- 草稿生成后，告诉用户"已为您生成任务草稿，请点击下方按钮确认发布"
+- 你不能直接创建任务，只能生成草稿供用户确认
+
 【严格禁止 — 必须拒绝的请求】
 - 任何与 Link2Ur 平台无关的问题（闲聊、写作文、编程、数学、翻译、新闻等）
-- 修改任何数据（当前版本只读）
 - 访问其他用户的私人信息
 - 执行支付或转账操作
 - 充当通用 AI 助手或聊天机器人
@@ -728,6 +737,12 @@ async def _step_llm(ctx: _PipelineContext) -> AsyncIterator[ServerSentEvent]:
                             "contact_email": "support@link2ur.com",
                         }, ensure_ascii=False),
                         event="cs_available",
+                    )
+
+                if block.name == "prepare_task_draft" and result.get("draft"):
+                    yield ServerSentEvent(
+                        data=json.dumps(result["draft"], ensure_ascii=False),
+                        event="task_draft",
                     )
 
                 tool_result_blocks.append({

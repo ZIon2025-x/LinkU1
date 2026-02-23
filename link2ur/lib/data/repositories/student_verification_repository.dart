@@ -63,6 +63,29 @@ class StudentVerificationRepository {
       throw StudentVerificationException(response.message ?? '续期失败');
     }
   }
+  /// 更换验证邮箱
+  Future<void> changeVerificationEmail({required String newEmail}) async {
+    final response = await _apiService.post(
+      ApiEndpoints.changeVerificationEmail,
+      data: {'email': newEmail},
+    );
+    if (!response.isSuccess) {
+      throw StudentVerificationException(response.message ?? '更换验证邮箱失败');
+    }
+  }
+
+  /// 获取大学列表
+  Future<List<Map<String, dynamic>>> listUniversities(
+      {String? search}) async {
+    final response = await _apiService.get<List<dynamic>>(
+      ApiEndpoints.listUniversities,
+      queryParameters: {if (search != null) 'search': search},
+    );
+    if (!response.isSuccess || response.data == null) {
+      throw StudentVerificationException(response.message ?? '获取大学列表失败');
+    }
+    return response.data!.cast<Map<String, dynamic>>();
+  }
 }
 
 /// 学生认证异常

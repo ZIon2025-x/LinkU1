@@ -3540,6 +3540,17 @@
   "activityParticipantsCount": "參與人數",
   "activityRemainingSlots": "剩餘名額",
   "activityStatusLabel": "狀態",
+  "activityRegistrationDeadline": "報名截止：",
+  "activityCurrentApplicants": "當前報名：",
+  "activityJoinLottery": "參與抽獎",
+  "activityAlreadyRegistered": "已報名",
+  "activityNoWinners": "暫無中獎名單",
+  "activityWinnerList": "中獎名單",
+  "activityPrizePoints": "積分獎勵",
+  "activityPrizePhysical": "實物獎品",
+  "activityPrizeVoucher": "優惠券碼",
+  "activityPrizeInPerson": "線下到場",
+  "activityPrize": "獎品",
   "activityActivities": "活動",
   "activityPersonCount": "{current}/{max}人",
   "@activityPersonCount": { "placeholders": { "current": { "type": "int" }, "max": { "type": "int" } } },
@@ -3915,6 +3926,12 @@
   "toolCallLoadingGetMyFleaMarketItems": "正在載入您的商品…",
   "toolCallLoadingSearchForumPosts": "正在搜尋論壇…",
 
+  "toolCallPrepareTaskDraft": "任務草稿",
+  "toolCallLoadingPrepareTaskDraft": "正在生成任務草稿…",
+
+  "aiTaskDraftTitle": "任務草稿",
+  "aiTaskDraftConfirmButton": "確認並去發佈",
+
   "expertApplicationsTitle": "服務申請管理",
   "expertApplicationsEmpty": "暫無申請",
   "expertApplicationsEmptyMessage": "您還沒有收到任何服務申請。",
@@ -3953,5 +3970,47 @@
   "paymentCardSubtitle": "Visa, Mastercard, AMEX",
   "paymentWeChatPaySubtitle": "微信支付 (Stripe)",
   "paymentAlipaySubtitle": "支付寶 (Stripe)",
-  "commonCurrencySymbol": "£ "
+  "commonCurrencySymbol": "£ ",
+
+  "forumDeletePostConfirm": "確定要刪除這篇帖子嗎？此操作不可撤銷。",
+  "forumPostDeleted": "帖子已刪除",
+  "forumPostUpdated": "帖子已更新",
+  "forumReplyDeleted": "回覆已刪除",
+  "forumDeleteReplyConfirm": "確定要刪除這條回覆嗎？",
+
+  "fleaMarketDeleteItemConfirm": "確定要刪除這個商品嗎？此操作不可撤銷。",
+  "fleaMarketItemDeleted": "商品已刪除",
+
+  "taskEvidenceTitle": "完成證據",
+  "taskEvidenceHint": "您已完成此任務。請上傳相關證據圖片或填寫文字說明（可選），以便發佈者確認任務完成情況。",
+  "taskEvidenceTextLabel": "文字說明（可選）",
+  "taskEvidenceTextHint": "描述完成情況...",
+  "taskEvidenceImagesLabel": "證據圖片（可選）",
+  "taskEvidenceImageLimit": "單張圖片不超過5MB，最多上傳5張",
+  "taskEvidenceSubmit": "提交完成",
+  "taskEvidenceUploading": "正在上傳圖片...",
+
+  "stripeSetupRequired": "請先設定收款帳戶，然後才能申請任務。",
+  "stripeSetupAction": "立即設定",
+
+  "profileSendCode": "傳送驗證碼",
+  "profileResendCode": "重新傳送",
+  "profileCodeSentSuccess": "驗證碼已傳送",
+  "profileEmailCodeSent": "驗證碼已傳送到新信箱",
+  "profilePhoneCodeSent": "驗證碼已傳送到新手機號碼",
+  "profileCountdownSeconds": "{seconds}秒",
+  "@profileCountdownSeconds": {
+    "placeholders": {
+      "seconds": {
+        "type": "int"
+      }
+    }
+  },
+  "profileEmailRequired": "請輸入信箱地址以傳送驗證碼",
+  "profilePhoneRequired": "請輸入手機號碼以傳送驗證碼",
+  "profileEmailUnchanged": "請輸入不同的信箱地址",
+  "profilePhoneUnchanged": "請輸入不同的手機號碼",
+  "profileEmailCodeRequired": "請輸入信箱驗證碼",
+  "profilePhoneCodeRequired": "請輸入手機驗證碼",
+  "profileNormalizePhoneHint": "英國格式: 07XXX 或 +44XXX"
 }

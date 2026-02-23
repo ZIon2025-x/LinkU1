@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../../../core/constants/uk_cities.dart';
 import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_radius.dart';
@@ -14,6 +15,20 @@ import '../../../core/router/app_router.dart';
 import '../../../data/models/task_expert.dart';
 import '../../../data/repositories/task_expert_repository.dart';
 import '../bloc/task_expert_bloc.dart';
+
+const List<Map<String, String>> _expertCategories = [
+  {'key': 'all'},
+  {'key': 'programming'},
+  {'key': 'translation'},
+  {'key': 'tutoring'},
+  {'key': 'food'},
+  {'key': 'beverage'},
+  {'key': 'cake'},
+  {'key': 'errand_transport'},
+  {'key': 'social_entertainment'},
+  {'key': 'beauty_skincare'},
+  {'key': 'handicraft'},
+];
 
 /// 任务达人搜索页
 /// 参考iOS TaskExpertSearchView.swift
@@ -43,6 +58,8 @@ class _TaskExpertSearchContentState
     extends State<_TaskExpertSearchContent> {
   final TextEditingController _searchController = TextEditingController();
   bool _hasSearched = false;
+  String _selectedCategory = 'all';
+  String _selectedCity = 'all';
 
   @override
   void dispose() {
@@ -50,17 +67,68 @@ class _TaskExpertSearchContentState
     super.dispose();
   }
 
-  void _search(String keyword) {
-    if (keyword.trim().isEmpty) return;
+  void _search() {
+    final keyword = _searchController.text.trim();
+    if (keyword.isEmpty &&
+        _selectedCategory == 'all' &&
+        _selectedCity == 'all') {
+      return;
+    }
     setState(() => _hasSearched = true);
-    context
-        .read<TaskExpertBloc>()
-        .add(TaskExpertSearchRequested(keyword));
+
+    final bloc = context.read<TaskExpertBloc>();
+    bloc.add(TaskExpertFilterChanged(
+      category: _selectedCategory,
+      city: _selectedCity,
+    ));
+    bloc.add(TaskExpertLoadRequested(
+      skill: keyword.isEmpty ? null : keyword,
+    ));
+  }
+
+  String _categoryLabel(BuildContext context, String key) {
+    final l10n = context.l10n;
+    switch (key) {
+      case 'all':
+        return l10n.expertCategoryAll;
+      case 'programming':
+        return l10n.expertCategoryProgramming;
+      case 'translation':
+        return l10n.expertCategoryTranslation;
+      case 'tutoring':
+        return l10n.expertCategoryTutoring;
+      case 'food':
+        return l10n.expertCategoryFood;
+      case 'beverage':
+        return l10n.expertCategoryBeverage;
+      case 'cake':
+        return l10n.expertCategoryCake;
+      case 'errand_transport':
+        return l10n.expertCategoryErrandTransport;
+      case 'social_entertainment':
+        return l10n.expertCategorySocialEntertainment;
+      case 'beauty_skincare':
+        return l10n.expertCategoryBeautySkincare;
+      case 'handicraft':
+        return l10n.expertCategoryHandicraft;
+      default:
+        return key;
+    }
+  }
+
+  String _cityLabel(BuildContext context, String key) {
+    if (key == 'all') return context.l10n.commonAll;
+    final locale = Localizations.localeOf(context);
+    if (locale.languageCode == 'zh') {
+      return UKCities.zhName[key] ?? key;
+    }
+    return key;
   }
 
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
       appBar: AppBar(
@@ -71,63 +139,199 @@ class _TaskExpertSearchContentState
             hintText: l10n.taskExpertSearchHint,
             border: InputBorder.none,
           ),
-          onSubmitted: _search,
+          onSubmitted: (_) => _search(),
         ),
         actions: [
           IconButton(
             icon: const Icon(Icons.search),
-            onPressed: () => _search(_searchController.text),
+            onPressed: _search,
           ),
         ],
       ),
-      body: BlocBuilder<TaskExpertBloc, TaskExpertState>(
-        builder: (context, state) {
-          final results = state.searchResults;
+      body: Column(
+        children: [
+          _buildFilterRow(context, isDark),
+          Expanded(
+            child: BlocBuilder<TaskExpertBloc, TaskExpertState>(
+              builder: (context, state) {
+                final results = state.experts;
 
-          if (state.isLoading) {
-            return const SkeletonList();
-          }
+                if (state.isLoading) {
+                  return const SkeletonList();
+                }
 
-          if (!_hasSearched) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(Icons.search,
-                      size: 64, color: AppColors.textTertiary),
-                  const SizedBox(height: AppSpacing.md),
-                  Text(l10n.taskExpertSearchPrompt,
-                      style:
-                          const TextStyle(color: AppColors.textSecondary)),
-                ],
-              ),
-            );
-          }
+                if (!_hasSearched) {
+                  return Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(Icons.search,
+                            size: 64, color: AppColors.textTertiary),
+                        const SizedBox(height: AppSpacing.md),
+                        Text(l10n.taskExpertSearchPrompt,
+                            style: const TextStyle(
+                                color: AppColors.textSecondary)),
+                      ],
+                    ),
+                  );
+                }
 
-          if (results.isEmpty) {
-            return EmptyStateView(
-              icon: Icons.search_off,
-              title: l10n.commonNoResults,
-              message: l10n.taskExpertNoResults,
-            );
-          }
+                if (results.isEmpty) {
+                  return EmptyStateView(
+                    icon: Icons.search_off,
+                    title: l10n.commonNoResults,
+                    message: l10n.taskExpertNoResults,
+                  );
+                }
 
-          return ListView.separated(
-            clipBehavior: Clip.none,
-            padding: const EdgeInsets.all(AppSpacing.md),
-            itemCount: results.length,
-            separatorBuilder: (_, __) =>
-                const SizedBox(height: AppSpacing.md),
-            itemBuilder: (context, index) {
-              final expert = results[index];
-              return _ExpertCard(
-                expert: expert,
-                onTap: () =>
-                    context.safePush('/task-experts/${expert.id}'),
-              );
-            },
-          );
-        },
+                return ListView.separated(
+                  clipBehavior: Clip.none,
+                  padding: const EdgeInsets.all(AppSpacing.md),
+                  itemCount: results.length,
+                  separatorBuilder: (_, __) =>
+                      const SizedBox(height: AppSpacing.md),
+                  itemBuilder: (context, index) {
+                    final expert = results[index];
+                    return _ExpertCard(
+                      expert: expert,
+                      onTap: () =>
+                          context.safePush('/task-experts/${expert.id}'),
+                    );
+                  },
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFilterRow(BuildContext context, bool isDark) {
+    final l10n = context.l10n;
+    final dropdownBg =
+        isDark ? AppColors.cardBackgroundDark : AppColors.cardBackgroundLight;
+    final borderColor = (isDark ? AppColors.separatorDark : AppColors.separatorLight)
+        .withValues(alpha: 0.5);
+    final textColor =
+        isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight;
+    final hintColor =
+        isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.md,
+        vertical: AppSpacing.sm,
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: _buildDropdown(
+              value: _selectedCategory,
+              items: _expertCategories
+                  .map((c) => c['key']!)
+                  .map((key) => DropdownMenuItem(
+                        value: key,
+                        child: Text(
+                          _categoryLabel(context, key),
+                          style: AppTypography.body.copyWith(color: textColor),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ))
+                  .toList(),
+              hint: l10n.taskExpertCategory,
+              isDark: isDark,
+              dropdownBg: dropdownBg,
+              borderColor: borderColor,
+              textColor: textColor,
+              hintColor: hintColor,
+              onChanged: (val) {
+                if (val == null) return;
+                setState(() => _selectedCategory = val);
+                if (_hasSearched) _search();
+              },
+            ),
+          ),
+          const SizedBox(width: AppSpacing.sm),
+          Expanded(
+            child: _buildDropdown(
+              value: _selectedCity,
+              items: [
+                DropdownMenuItem(
+                  value: 'all',
+                  child: Text(
+                    l10n.commonAll,
+                    style: AppTypography.body.copyWith(color: textColor),
+                  ),
+                ),
+                ...UKCities.all.map((city) => DropdownMenuItem(
+                      value: city,
+                      child: Text(
+                        _cityLabel(context, city),
+                        style: AppTypography.body.copyWith(color: textColor),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    )),
+              ],
+              hint: l10n.taskFilterCity,
+              isDark: isDark,
+              dropdownBg: dropdownBg,
+              borderColor: borderColor,
+              textColor: textColor,
+              hintColor: hintColor,
+              onChanged: (val) {
+                if (val == null) return;
+                setState(() => _selectedCity = val);
+                if (_hasSearched) _search();
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDropdown({
+    required String value,
+    required List<DropdownMenuItem<String>> items,
+    required String hint,
+    required bool isDark,
+    required Color dropdownBg,
+    required Color borderColor,
+    required Color textColor,
+    required Color hintColor,
+    required ValueChanged<String?> onChanged,
+  }) {
+    final isDefault = value == 'all';
+
+    return Container(
+      height: 40,
+      padding: const EdgeInsets.symmetric(horizontal: 12),
+      decoration: BoxDecoration(
+        color: isDefault ? dropdownBg : AppColors.primary.withValues(alpha: 0.08),
+        borderRadius: AppRadius.allMedium,
+        border: Border.all(
+          color: isDefault ? borderColor : AppColors.primary.withValues(alpha: 0.4),
+          width: 0.5,
+        ),
+      ),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<String>(
+          value: value,
+          items: items,
+          onChanged: onChanged,
+          isExpanded: true,
+          icon: Icon(
+            Icons.keyboard_arrow_down_rounded,
+            size: 18,
+            color: isDefault ? hintColor : AppColors.primary,
+          ),
+          dropdownColor: dropdownBg,
+          style: AppTypography.body.copyWith(
+            color: isDefault ? hintColor : AppColors.primary,
+          ),
+          borderRadius: AppRadius.allMedium,
+        ),
       ),
     );
   }
@@ -163,7 +367,6 @@ class _ExpertCard extends StatelessWidget {
         ),
         child: Row(
           children: [
-            // 头像 + 光晕
             Container(
               width: 60,
               height: 60,
@@ -191,7 +394,6 @@ class _ExpertCard extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // 名称 + 认证徽章
                   Row(
                     children: [
                       Flexible(
@@ -215,7 +417,6 @@ class _ExpertCard extends StatelessWidget {
                     ],
                   ),
                   const SizedBox(height: 4),
-                  // 专长标签
                   if (expert.displaySpecialties(Localizations.localeOf(context)).isNotEmpty)
                     Text(
                       expert.displaySpecialties(Localizations.localeOf(context)).join(' · '),
@@ -230,7 +431,6 @@ class _ExpertCard extends StatelessWidget {
                 ],
               ),
             ),
-            // 评分胶囊
             if (expert.avgRating != null)
               Container(
                 padding:

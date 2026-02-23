@@ -257,6 +257,9 @@ class TaskRepository {
     );
 
     if (!response.isSuccess) {
+      if (response.statusCode == 428) {
+        throw const TaskException('stripe_setup_required');
+      }
       throw TaskException(response.message ?? '申请任务失败');
     }
 
@@ -494,6 +497,31 @@ class TaskRepository {
     }
 
     await _cache.invalidateAllTasksCache();
+  }
+
+  /// 更新任务奖励
+  Future<void> updateTaskReward(int taskId, {required double reward}) async {
+    final response = await _apiService.patch(
+      ApiEndpoints.updateTaskReward(taskId),
+      data: {'reward': reward},
+    );
+    if (!response.isSuccess) {
+      throw TaskException(response.message ?? '更新奖励失败');
+    }
+    await _cache.invalidateTaskDetailCache(taskId);
+  }
+
+  /// 更新任务可见性
+  Future<void> updateTaskVisibility(int taskId,
+      {required bool isPublic}) async {
+    final response = await _apiService.patch(
+      ApiEndpoints.updateTaskVisibility(taskId),
+      data: {'is_public': isPublic},
+    );
+    if (!response.isSuccess) {
+      throw TaskException(response.message ?? '更新可见性失败');
+    }
+    await _cache.invalidateTaskDetailCache(taskId);
   }
 
   /// 拒绝任务

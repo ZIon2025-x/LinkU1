@@ -312,18 +312,29 @@ class TaskExpertRepository {
     return items.map((e) => e as Map<String, dynamic>).toList();
   }
 
-  /// 获取达人评价列表
-  Future<List<Map<String, dynamic>>> getExpertReviews(String expertId) async {
+  /// 获取达人评价列表（支持分页）
+  Future<Map<String, dynamic>> getExpertReviews(
+    String expertId, {
+    int limit = 20,
+    int offset = 0,
+  }) async {
     final response = await _apiService.get<Map<String, dynamic>>(
       ApiEndpoints.taskExpertReviews(expertId),
+      queryParameters: {'limit': limit, 'offset': offset},
     );
 
     if (!response.isSuccess || response.data == null) {
       throw TaskExpertException(response.message ?? '获取达人评价失败');
     }
 
-    final items = response.data!['items'] as List<dynamic>? ?? [];
-    return items.map((e) => e as Map<String, dynamic>).toList();
+    final data = response.data!;
+    final items = (data['items'] as List<dynamic>? ?? [])
+        .map((e) => e as Map<String, dynamic>)
+        .toList();
+    return {
+      'items': items,
+      'total': data['total'] ?? items.length,
+    };
   }
 
   /// 获取我的达人申请状态

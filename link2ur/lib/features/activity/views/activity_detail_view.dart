@@ -324,29 +324,39 @@ class _ActivityDetailViewContent extends StatelessWidget {
           child: Row(
             children: [
               // 收藏按钮 - 对标iOS favorite button
-              SizedBox(
-                width: 50,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      Icons.favorite_border,
-                      size: 20,
-                      color: isDark
-                          ? AppColors.textTertiaryDark
-                          : AppColors.textTertiaryLight,
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      context.l10n.activityFavorite,
-                      style: TextStyle(
-                        fontSize: 10,
-                        color: isDark
-                            ? AppColors.textTertiaryDark
-                            : AppColors.textTertiaryLight,
+              GestureDetector(
+                onTap: state.isTogglingFavorite
+                    ? null
+                    : () => context.read<ActivityBloc>().add(
+                          ActivityToggleFavorite(activityId: activity.id)),
+                child: SizedBox(
+                  width: 50,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        state.isFavorited
+                            ? Icons.favorite
+                            : Icons.favorite_border,
+                        size: 20,
+                        color: state.isFavorited
+                            ? AppColors.error
+                            : isDark
+                                ? AppColors.textTertiaryDark
+                                : AppColors.textTertiaryLight,
                       ),
-                    ),
-                  ],
+                      const SizedBox(height: 2),
+                      Text(
+                        context.l10n.activityFavorite,
+                        style: TextStyle(
+                          fontSize: 10,
+                          color: isDark
+                              ? AppColors.textTertiaryDark
+                              : AppColors.textTertiaryLight,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
               const SizedBox(width: AppSpacing.md),
@@ -368,7 +378,7 @@ class _ActivityDetailViewContent extends StatelessWidget {
   Widget _buildCTAButton(
       BuildContext context, ActivityState state, Activity activity) {
     // 1. 活动已结束/取消 - 对标iOS activity.isEnded
-    if (activity.status != 'active') {
+    if (activity.isEnded) {
       return _buildDisabledButton(_getStatusText(activity.status, context));
     }
 
@@ -527,14 +537,16 @@ class _ActivityDetailViewContent extends StatelessWidget {
 
   String _getStatusText(String status, BuildContext context) {
     switch (status) {
-      case 'active':
+      case 'open':
         return context.l10n.activityInProgress;
       case 'completed':
+      case 'ended':
+      case 'closed':
         return context.l10n.activityEnded;
       case 'cancelled':
         return context.l10n.activityCancelled;
       default:
-        return status;
+        return context.l10n.activityEnded;
     }
   }
 
@@ -545,43 +557,45 @@ class _ActivityDetailViewContent extends StatelessWidget {
     return BlocBuilder<ActivityBloc, ActivityState>(
       buildWhen: (prev, curr) =>
           prev.officialApplyStatus != curr.officialApplyStatus ||
-          prev.officialResult != curr.officialResult,
+          prev.officialResult != curr.officialResult ||
+          prev.activityDetail != curr.activityDetail,
       builder: (context, state) {
+        final latestActivity = state.activityDetail ?? activity;
         final remaining =
-            (activity.prizeCount ?? 0) - (activity.currentApplicants ?? 0);
+            (latestActivity.prizeCount ?? 0) - (latestActivity.currentApplicants ?? 0);
         return Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            _buildPrizeSection(activity),
-            if (activity.isLottery) ...[
-              if (activity.isDrawn ||
+            _buildPrizeSection(latestActivity),
+            if (latestActivity.isLottery) ...[
+              if (latestActivity.isDrawn ||
                   state.officialResult?.isDrawn == true) ...[
-                _buildWinnersSection(activity, state),
+                _buildWinnersSection(latestActivity, state, context),
               ] else ...[
-                if (activity.drawAt != null)
+                if (latestActivity.drawAt != null)
                   Padding(
                     padding: const EdgeInsets.symmetric(vertical: 4),
                     child: Text(
-                      '报名截止：${_formatDeadline(activity.drawAt!)}',
+                      '${context.l10n.activityRegistrationDeadline}${_formatDeadline(latestActivity.drawAt!)}',
                       style: Theme.of(context).textTheme.bodySmall,
                     ),
                   ),
-                if (activity.currentApplicants != null)
+                if (latestActivity.currentApplicants != null)
                   Padding(
                     padding: const EdgeInsets.symmetric(vertical: 4),
-                    child: Text('当前报名：${activity.currentApplicants} 人'),
+                    child: Text('${context.l10n.activityCurrentApplicants}${latestActivity.currentApplicants}'),
                   ),
                 _buildOfficialApplyButton(
-                    '参与抽奖', activity.id, context, state),
+                    context.l10n.activityJoinLottery, latestActivity.id, context, state),
               ],
-            ] else if (activity.isFirstCome) ...[
+            ] else if (latestActivity.isFirstCome) ...[
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 4),
-                child: Text('剩余名额：$remaining'),
+                child: Text('${context.l10n.activityRemainingSlots}$remaining'),
               ),
               _buildOfficialApplyButton(
-                remaining > 0 ? '立即报名' : '已抢完',
-                activity.id,
+                remaining > 0 ? context.l10n.activityRegisterNow : context.l10n.activityFullSlots,
+                latestActivity.id,
                 context,
                 state,
                 disabled: remaining <= 0,
@@ -594,13 +608,14 @@ class _ActivityDetailViewContent extends StatelessWidget {
   }
 
   Widget _buildPrizeSection(Activity activity) {
-    const prizeLabels = {
-      'points': '🎯 积分奖励',
-      'physical': '🎁 实物奖品',
-      'voucher_code': '🎫 优惠券码',
-      'in_person': '🍽️ 线下到场',
-    };
     if (activity.prizeType == null) return const SizedBox.shrink();
+    return Builder(builder: (context) {
+    final prizeLabels = {
+      'points': '🎯 ${context.l10n.activityPrizePoints}',
+      'physical': '🎁 ${context.l10n.activityPrizePhysical}',
+      'voucher_code': '🎫 ${context.l10n.activityPrizeVoucher}',
+      'in_person': '🍽️ ${context.l10n.activityPrizeInPerson}',
+    };
     return Container(
       padding: const EdgeInsets.all(12),
       margin: const EdgeInsets.symmetric(vertical: 8),
@@ -613,7 +628,7 @@ class _ActivityDetailViewContent extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            prizeLabels[activity.prizeType] ?? '🎁 奖品',
+            prizeLabels[activity.prizeType] ?? '🎁 ${context.l10n.activityPrize}',
             style: const TextStyle(fontWeight: FontWeight.bold),
           ),
           if (activity.prizeDescription != null)
@@ -624,6 +639,7 @@ class _ActivityDetailViewContent extends StatelessWidget {
         ],
       ),
     );
+    });
   }
 
   Widget _buildOfficialApplyButton(
@@ -637,10 +653,23 @@ class _ActivityDetailViewContent extends StatelessWidget {
         state.officialApplyStatus == OfficialApplyStatus.applying;
     final isApplied =
         state.officialApplyStatus == OfficialApplyStatus.applied;
+    final isFull =
+        state.officialApplyStatus == OfficialApplyStatus.full;
+    final isDisabled = disabled || isLoading || isApplied || isFull;
+
+    String buttonText;
+    if (isApplied) {
+      buttonText = context.l10n.activityAlreadyRegistered;
+    } else if (isFull) {
+      buttonText = context.l10n.activityFullSlots;
+    } else {
+      buttonText = label;
+    }
+
     return SizedBox(
       width: double.infinity,
       child: ElevatedButton(
-        onPressed: (disabled || isLoading || isApplied)
+        onPressed: isDisabled
             ? null
             : () => context
                 .read<ActivityBloc>()
@@ -651,22 +680,22 @@ class _ActivityDetailViewContent extends StatelessWidget {
                 height: 20,
                 child: CircularProgressIndicator(strokeWidth: 2),
               )
-            : Text(isApplied ? '已报名' : label),
+            : Text(buttonText),
       ),
     );
   }
 
-  Widget _buildWinnersSection(Activity activity, ActivityState state) {
+  Widget _buildWinnersSection(Activity activity, ActivityState state, BuildContext context) {
     final winners =
         state.officialResult?.winners ?? activity.winners ?? [];
-    if (winners.isEmpty) return const Text('暂无中奖名单');
+    if (winners.isEmpty) return Text(context.l10n.activityNoWinners);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Padding(
-          padding: EdgeInsets.symmetric(vertical: 8),
-          child: Text('🏆 中奖名单',
-              style: TextStyle(fontWeight: FontWeight.bold)),
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          child: Text('🏆 ${context.l10n.activityWinnerList}',
+              style: const TextStyle(fontWeight: FontWeight.bold)),
         ),
         ...winners.map((w) => Padding(
               padding: const EdgeInsets.symmetric(vertical: 2),
@@ -1157,9 +1186,11 @@ class _ActivityStatsBar extends StatelessWidget {
 
   Color _getStatusColor(String status) {
     switch (status) {
-      case 'active':
+      case 'open':
         return activity.isFull ? AppColors.error : Colors.orange;
       case 'completed':
+      case 'ended':
+      case 'closed':
         return AppColors.textSecondaryLight;
       case 'cancelled':
         return AppColors.error;
@@ -1169,16 +1200,18 @@ class _ActivityStatsBar extends StatelessWidget {
   }
 
   String _getStatusText(String status, BuildContext context) {
-    if (status == 'active' && activity.isFull) return context.l10n.activityFullSlots;
+    if (status == 'open' && activity.isFull) return context.l10n.activityFullSlots;
     switch (status) {
-      case 'active':
+      case 'open':
         return context.l10n.activityInProgress;
       case 'completed':
+      case 'ended':
+      case 'closed':
         return context.l10n.activityEnded;
       case 'cancelled':
         return context.l10n.activityCancelled;
       default:
-        return status;
+        return context.l10n.activityEnded;
     }
   }
 }

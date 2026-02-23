@@ -1686,3 +1686,134 @@ async def _search_forum_posts(executor: ToolExecutor, input: dict) -> dict:
         "view_count": p.view_count, "reply_count": p.reply_count,
     } for p in rows]
     return {"posts": posts, "count": len(posts), "type": "search"}
+
+
+# =====================================================================
+# Phase 4: 写操作草稿工具（AI 生成草稿 → 用户在 App 中确认发布）
+# =====================================================================
+
+_VALID_TASK_TYPES = [
+    "Housekeeping", "Campus Life", "Second-hand & Rental",
+    "Errand Running", "Skill Service", "Social Help",
+    "Transportation", "Pet Care", "Life Convenience", "Other",
+]
+
+_CATEGORY_KEY_TO_TASK_TYPE = {
+    "delivery": "Errand Running",
+    "shopping": "Errand Running",
+    "tutoring": "Skill Service",
+    "translation": "Skill Service",
+    "design": "Skill Service",
+    "programming": "Skill Service",
+    "writing": "Skill Service",
+    "housekeeping": "Housekeeping",
+    "campus": "Campus Life",
+    "second-hand": "Second-hand & Rental",
+    "rental": "Second-hand & Rental",
+    "social": "Social Help",
+    "transport": "Transportation",
+    "pet": "Pet Care",
+    "life": "Life Convenience",
+    "other": "Other",
+}
+
+_VALID_LOCATIONS = [
+    "Online", "London", "Edinburgh", "Manchester", "Birmingham",
+    "Glasgow", "Bristol", "Sheffield", "Leeds", "Nottingham",
+    "Newcastle", "Southampton", "Liverpool", "Cardiff", "Coventry",
+    "Exeter", "Leicester", "York", "Aberdeen", "Bath", "Dundee",
+    "Reading", "St Andrews", "Belfast", "Brighton", "Durham",
+    "Norwich", "Swansea", "Loughborough", "Lancaster", "Warwick",
+    "Cambridge", "Oxford", "Other",
+]
+
+
+@tool_registry.register(
+    name="prepare_task_draft",
+    description=(
+        "根据用户的自然语言描述，生成任务发布草稿。草稿会展示给用户确认后再正式发布，AI 不会直接创建任务。"
+        "Generate a task draft from user's natural language description. The draft is shown for user confirmation before actual posting."
+    ),
+    input_schema={
+        "type": "object",
+        "properties": {
+            "title": {
+                "type": "string",
+                "description": "任务标题（必填，最多 100 字）",
+            },
+            "description": {
+                "type": "string",
+                "description": "任务详细描述（必填，最多 2000 字）",
+            },
+            "task_type": {
+                "type": "string",
+                "description": "任务类型，必须是以下之一: Housekeeping, Campus Life, Second-hand & Rental, Errand Running, Skill Service, Social Help, Transportation, Pet Care, Life Convenience, Other",
+            },
+            "reward": {
+                "type": "number",
+                "description": "任务报酬金额（GBP），最少 1.0",
+            },
+            "location": {
+                "type": "string",
+                "description": "任务地点城市，必须是平台支持的城市之一（如 London, Bristol, Manchester, Online 等），如不确定用 Online",
+            },
+            "deadline": {
+                "type": "string",
+                "description": "截止时间 ISO 8601 格式（可选），必须在未来",
+            },
+        },
+        "required": ["title", "description", "task_type", "reward", "location"],
+    },
+    categories=[ToolCategory.TASK],
+)
+async def _prepare_task_draft(executor: ToolExecutor, input: dict) -> dict:
+    lang = executor._tool_lang()
+    errors = []
+
+    title = (input.get("title") or "").strip()[:100]
+    if not title:
+        errors.append("标题不能为空" if lang == "zh" else "Title is required")
+
+    description = (input.get("description") or "").strip()[:2000]
+    if not description:
+        errors.append("描述不能为空" if lang == "zh" else "Description is required")
+
+    raw_type = (input.get("task_type") or "").strip()
+    task_type = raw_type if raw_type in _VALID_TASK_TYPES else _CATEGORY_KEY_TO_TASK_TYPE.get(raw_type.lower(), "")
+    if not task_type:
+        task_type = "Other"
+
+    reward = input.get("reward")
+    try:
+        reward = float(reward) if reward is not None else 0.0
+    except (ValueError, TypeError):
+        reward = 0.0
+    if reward < 1.0:
+        errors.append("报酬最少 £1.0" if lang == "zh" else "Minimum reward is £1.0")
+
+    raw_location = (input.get("location") or "").strip()
+    location = next((c for c in _VALID_LOCATIONS if c.lower() == raw_location.lower()), None)
+    if not location:
+        location = "Online"
+
+    deadline_str = (input.get("deadline") or "").strip() or None
+
+    if errors:
+        return {"draft": None, "errors": errors}
+
+    draft = {
+        "title": title,
+        "description": description,
+        "task_type": task_type,
+        "reward": round(reward, 2),
+        "currency": "GBP",
+        "location": location,
+        "deadline": deadline_str,
+    }
+
+    return {
+        "draft": draft,
+        "action": "task_draft",
+        "message": ("已生成任务草稿，请用户确认后发布" if lang == "zh"
+                     else "Task draft generated. Please ask the user to review and confirm."),
+    }

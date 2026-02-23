@@ -1,14 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/constants/app_assets.dart';
+import '../../../core/router/app_router.dart';
 import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_radius.dart';
 import '../../../core/utils/l10n_extension.dart';
 import '../../../data/services/ai_chat_service.dart';
+import '../../tasks/views/create_task_view.dart';
 import '../bloc/ai_chat_bloc.dart';
 import '../widgets/ai_message_bubble.dart';
+import '../widgets/task_draft_card.dart';
 import '../widgets/tool_call_card.dart';
 
 /// AI 聊天页面
@@ -116,17 +120,20 @@ class _AIChatContentState extends State<_AIChatContent> {
                   return _WelcomeView(isDark: isDark);
                 }
 
+                final hasToolCall = state.activeToolCall != null;
+                final hasDraft = state.taskDraft != null;
+                final extraItems = (state.isReplying ? 1 : 0) +
+                    (hasToolCall ? 1 : 0) +
+                    (hasDraft ? 1 : 0);
+
                 return ListView.builder(
                   controller: _scrollController,
                   padding: const EdgeInsets.only(
                     top: AppSpacing.md,
                     bottom: AppSpacing.sm,
                   ),
-                  itemCount: state.messages.length +
-                      (state.isReplying ? 1 : 0) +
-                      (state.activeToolCall != null ? 1 : 0),
+                  itemCount: state.messages.length + extraItems,
                   itemBuilder: (context, index) {
-                    // 消息列表
                     if (index < state.messages.length) {
                       return AIMessageBubble(
                         key: ValueKey(state.messages[index].id ?? index),
@@ -134,18 +141,31 @@ class _AIChatContentState extends State<_AIChatContent> {
                       );
                     }
 
-                    // 工具调用指示器
                     final adjustedIndex = index - state.messages.length;
-                    if (state.activeToolCall != null && adjustedIndex == 0) {
+                    int cursor = 0;
+
+                    if (hasToolCall && adjustedIndex == cursor) {
                       return ToolCallCard(
                         toolName: state.activeToolCall!,
                       );
                     }
+                    if (hasToolCall) cursor++;
 
-                    // 流式回复
-                    if (state.isReplying) {
+                    if (state.isReplying && adjustedIndex == cursor) {
                       return StreamingBubble(
                         content: state.streamingContent,
+                      );
+                    }
+                    if (state.isReplying) cursor++;
+
+                    if (hasDraft && adjustedIndex == cursor) {
+                      return TaskDraftCard(
+                        draft: state.taskDraft!,
+                        onConfirm: () {
+                          final draftData = TaskDraftData.fromJson(state.taskDraft!);
+                          context.read<AIChatBloc>().add(const AIChatClearTaskDraft());
+                          context.push(AppRoutes.createTask, extra: draftData);
+                        },
                       );
                     }
 

@@ -14150,6 +14150,72 @@ abstract class AppLocalizations {
   /// **'Status'**
   String get activityStatusLabel;
 
+  /// No description provided for @activityRegistrationDeadline.
+  ///
+  /// In en, this message translates to:
+  /// **'Registration deadline: '**
+  String get activityRegistrationDeadline;
+
+  /// No description provided for @activityCurrentApplicants.
+  ///
+  /// In en, this message translates to:
+  /// **'Current applicants: '**
+  String get activityCurrentApplicants;
+
+  /// No description provided for @activityJoinLottery.
+  ///
+  /// In en, this message translates to:
+  /// **'Join Lottery'**
+  String get activityJoinLottery;
+
+  /// No description provided for @activityAlreadyRegistered.
+  ///
+  /// In en, this message translates to:
+  /// **'Registered'**
+  String get activityAlreadyRegistered;
+
+  /// No description provided for @activityNoWinners.
+  ///
+  /// In en, this message translates to:
+  /// **'No winners yet'**
+  String get activityNoWinners;
+
+  /// No description provided for @activityWinnerList.
+  ///
+  /// In en, this message translates to:
+  /// **'Winner List'**
+  String get activityWinnerList;
+
+  /// No description provided for @activityPrizePoints.
+  ///
+  /// In en, this message translates to:
+  /// **'Points Reward'**
+  String get activityPrizePoints;
+
+  /// No description provided for @activityPrizePhysical.
+  ///
+  /// In en, this message translates to:
+  /// **'Physical Prize'**
+  String get activityPrizePhysical;
+
+  /// No description provided for @activityPrizeVoucher.
+  ///
+  /// In en, this message translates to:
+  /// **'Voucher Code'**
+  String get activityPrizeVoucher;
+
+  /// No description provided for @activityPrizeInPerson.
+  ///
+  /// In en, this message translates to:
+  /// **'In-Person Event'**
+  String get activityPrizeInPerson;
+
+  /// No description provided for @activityPrize.
+  ///
+  /// In en, this message translates to:
+  /// **'Prize'**
+  String get activityPrize;
+
   /// No description provided for @activityPersonCount.
   ///
   /// In en, this message translates to:
@@ -15992,6 +16058,30 @@ abstract class AppLocalizations {
   /// **'Searching forum…'**
   String get toolCallLoadingSearchForumPosts;
 
+  /// No description provided for @toolCallPrepareTaskDraft.
+  ///
+  /// In en, this message translates to:
+  /// **'Task draft'**
+  String get toolCallPrepareTaskDraft;
+
+  /// No description provided for @toolCallLoadingPrepareTaskDraft.
+  ///
+  /// In en, this message translates to:
+  /// **'Preparing task draft…'**
+  String get toolCallLoadingPrepareTaskDraft;
+
+  /// No description provided for @aiTaskDraftTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Task Draft'**
+  String get aiTaskDraftTitle;
+
+  /// No description provided for @aiTaskDraftConfirmButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Review & Publish'**
+  String get aiTaskDraftConfirmButton;
+
   /// No description provided for @expertApplicationsTitle.
   ///
   /// In en, this message translates to:
@@ -16219,6 +16309,186 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'£ '**
   String get commonCurrencySymbol;
+
+  /// No description provided for @forumDeletePostConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Are you sure you want to delete this post? This action cannot be undone.'**
+  String get forumDeletePostConfirm;
+
+  /// No description provided for @forumPostDeleted.
+  ///
+  /// In en, this message translates to:
+  /// **'Post deleted'**
+  String get forumPostDeleted;
+
+  /// No description provided for @forumPostUpdated.
+  ///
+  /// In en, this message translates to:
+  /// **'Post updated'**
+  String get forumPostUpdated;
+
+  /// No description provided for @forumReplyDeleted.
+  ///
+  /// In en, this message translates to:
+  /// **'Reply deleted'**
+  String get forumReplyDeleted;
+
+  /// No description provided for @forumDeleteReplyConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Are you sure you want to delete this reply?'**
+  String get forumDeleteReplyConfirm;
+
+  /// No description provided for @fleaMarketDeleteItemConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Are you sure you want to delete this listing? This action cannot be undone.'**
+  String get fleaMarketDeleteItemConfirm;
+
+  /// No description provided for @fleaMarketItemDeleted.
+  ///
+  /// In en, this message translates to:
+  /// **'Listing deleted'**
+  String get fleaMarketItemDeleted;
+
+  /// No description provided for @taskEvidenceTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Completion Evidence'**
+  String get taskEvidenceTitle;
+
+  /// No description provided for @taskEvidenceHint.
+  ///
+  /// In en, this message translates to:
+  /// **'You have completed this task. You may upload evidence images or add a text description (optional) for the poster to confirm.'**
+  String get taskEvidenceHint;
+
+  /// No description provided for @taskEvidenceTextLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Text description (optional)'**
+  String get taskEvidenceTextLabel;
+
+  /// No description provided for @taskEvidenceTextHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Describe what was done...'**
+  String get taskEvidenceTextHint;
+
+  /// No description provided for @taskEvidenceImagesLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Evidence images (optional)'**
+  String get taskEvidenceImagesLabel;
+
+  /// No description provided for @taskEvidenceImageLimit.
+  ///
+  /// In en, this message translates to:
+  /// **'Max 5MB per image, up to 5 images'**
+  String get taskEvidenceImageLimit;
+
+  /// No description provided for @taskEvidenceSubmit.
+  ///
+  /// In en, this message translates to:
+  /// **'Submit completion'**
+  String get taskEvidenceSubmit;
+
+  /// No description provided for @taskEvidenceUploading.
+  ///
+  /// In en, this message translates to:
+  /// **'Uploading images...'**
+  String get taskEvidenceUploading;
+
+  /// No description provided for @stripeSetupRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Please set up your payout account before applying for tasks.'**
+  String get stripeSetupRequired;
+
+  /// No description provided for @stripeSetupAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Set up now'**
+  String get stripeSetupAction;
+
+  /// No description provided for @profileSendCode.
+  ///
+  /// In en, this message translates to:
+  /// **'Send Code'**
+  String get profileSendCode;
+
+  /// No description provided for @profileResendCode.
+  ///
+  /// In en, this message translates to:
+  /// **'Resend'**
+  String get profileResendCode;
+
+  /// No description provided for @profileCodeSentSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Verification code sent'**
+  String get profileCodeSentSuccess;
+
+  /// No description provided for @profileEmailCodeSent.
+  ///
+  /// In en, this message translates to:
+  /// **'Code sent to new email'**
+  String get profileEmailCodeSent;
+
+  /// No description provided for @profilePhoneCodeSent.
+  ///
+  /// In en, this message translates to:
+  /// **'Code sent to new phone'**
+  String get profilePhoneCodeSent;
+
+  /// No description provided for @profileCountdownSeconds.
+  ///
+  /// In en, this message translates to:
+  /// **'{seconds}s'**
+  String profileCountdownSeconds(int seconds);
+
+  /// No description provided for @profileEmailRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Email is required to send verification code'**
+  String get profileEmailRequired;
+
+  /// No description provided for @profilePhoneRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Phone number is required to send verification code'**
+  String get profilePhoneRequired;
+
+  /// No description provided for @profileEmailUnchanged.
+  ///
+  /// In en, this message translates to:
+  /// **'Please enter a different email address'**
+  String get profileEmailUnchanged;
+
+  /// No description provided for @profilePhoneUnchanged.
+  ///
+  /// In en, this message translates to:
+  /// **'Please enter a different phone number'**
+  String get profilePhoneUnchanged;
+
+  /// No description provided for @profileEmailCodeRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Please enter the email verification code'**
+  String get profileEmailCodeRequired;
+
+  /// No description provided for @profilePhoneCodeRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Please enter the phone verification code'**
+  String get profilePhoneCodeRequired;
+
+  /// No description provided for @profileNormalizePhoneHint.
+  ///
+  /// In en, this message translates to:
+  /// **'UK format: 07XXX or +44XXX'**
+  String get profileNormalizePhoneHint;
 }
 
 class _AppLocalizationsDelegate

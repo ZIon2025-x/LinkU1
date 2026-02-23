@@ -15,10 +15,49 @@ import '../../../data/models/task.dart';
 import '../../../data/repositories/task_repository.dart';
 import '../bloc/create_task_bloc.dart';
 
+/// 任务草稿预填数据（从 AI 助手生成）
+class TaskDraftData {
+  const TaskDraftData({
+    this.title,
+    this.description,
+    this.taskType,
+    this.reward,
+    this.currency,
+    this.location,
+    this.deadline,
+  });
+
+  final String? title;
+  final String? description;
+  final String? taskType;
+  final double? reward;
+  final String? currency;
+  final String? location;
+  final DateTime? deadline;
+
+  factory TaskDraftData.fromJson(Map<String, dynamic> json) {
+    DateTime? deadline;
+    if (json['deadline'] != null) {
+      deadline = DateTime.tryParse(json['deadline'].toString());
+    }
+    return TaskDraftData(
+      title: json['title'] as String?,
+      description: json['description'] as String?,
+      taskType: json['task_type'] as String?,
+      reward: (json['reward'] as num?)?.toDouble(),
+      currency: json['currency'] as String? ?? 'GBP',
+      location: json['location'] as String?,
+      deadline: deadline,
+    );
+  }
+}
+
 /// 创建任务页
 /// 参考iOS CreateTaskView.swift
 class CreateTaskView extends StatelessWidget {
-  const CreateTaskView({super.key});
+  const CreateTaskView({super.key, this.draft});
+
+  final TaskDraftData? draft;
 
   @override
   Widget build(BuildContext context) {
@@ -26,13 +65,15 @@ class CreateTaskView extends StatelessWidget {
       create: (context) => CreateTaskBloc(
         taskRepository: context.read<TaskRepository>(),
       ),
-      child: const _CreateTaskContent(),
+      child: _CreateTaskContent(draft: draft),
     );
   }
 }
 
 class _CreateTaskContent extends StatefulWidget {
-  const _CreateTaskContent();
+  const _CreateTaskContent({this.draft});
+
+  final TaskDraftData? draft;
 
   @override
   State<_CreateTaskContent> createState() => _CreateTaskContentState();
@@ -50,6 +91,36 @@ class _CreateTaskContentState extends State<_CreateTaskContent> {
   String _selectedCategory = 'delivery';
   String _selectedCurrency = 'GBP';
   DateTime? _deadline;
+
+  static const _taskTypeToCategoryKey = {
+    'Housekeeping': 'other',
+    'Campus Life': 'other',
+    'Second-hand & Rental': 'shopping',
+    'Errand Running': 'delivery',
+    'Skill Service': 'tutoring',
+    'Social Help': 'other',
+    'Transportation': 'delivery',
+    'Pet Care': 'other',
+    'Life Convenience': 'other',
+    'Other': 'other',
+  };
+
+  @override
+  void initState() {
+    super.initState();
+    final d = widget.draft;
+    if (d != null) {
+      if (d.title != null) _titleController.text = d.title!;
+      if (d.description != null) _descriptionController.text = d.description!;
+      if (d.reward != null) _rewardController.text = d.reward!.toStringAsFixed(2);
+      if (d.currency != null) _selectedCurrency = d.currency!;
+      if (d.location != null) _location = d.location;
+      if (d.deadline != null) _deadline = d.deadline;
+      if (d.taskType != null) {
+        _selectedCategory = _taskTypeToCategoryKey[d.taskType] ?? 'other';
+      }
+    }
+  }
 
   List<Map<String, String>> _getCategories(BuildContext context) {
     return [
@@ -208,6 +279,7 @@ class _CreateTaskContentState extends State<_CreateTaskContent> {
 
                 _buildSectionTitle(context.l10n.createTaskLocation),
                 LocationInputField(
+                  initialValue: _location,
                   hintText: context.l10n.createTaskLocationHint,
                   onChanged: (address) {
                     _location = address.isNotEmpty ? address : null;

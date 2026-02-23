@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import '../../../core/utils/haptic_feedback.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
@@ -104,6 +105,31 @@ class _TaskDetailContent extends StatelessWidget {
               );
             }
           });
+          return;
+        }
+
+        if (state.actionMessage == 'stripe_setup_required') {
+          showDialog<void>(
+            context: context,
+            builder: (d) => AlertDialog(
+              icon: const Icon(Icons.account_balance_wallet_outlined,
+                  size: 40, color: AppColors.primary),
+              title: Text(context.l10n.stripeSetupRequired),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(d),
+                  child: Text(context.l10n.commonCancel),
+                ),
+                FilledButton(
+                  onPressed: () {
+                    Navigator.pop(d);
+                    context.push('/wallet');
+                  },
+                  child: Text(context.l10n.stripeSetupAction),
+                ),
+              ],
+            ),
+          );
           return;
         }
 
@@ -677,15 +703,11 @@ class _TaskDetailContent extends StatelessWidget {
       );
     }
 
-    // 接单者 + 进行中 → 标记完成
+    // 接单者 + 进行中 → 标记完成（打开证据收集对话框）
     if (isTaker && task.status == AppConstants.taskStatusInProgress) {
       return PrimaryButton(
         text: context.l10n.actionsMarkComplete,
-        onPressed: () {
-          context
-              .read<TaskDetailBloc>()
-              .add(const TaskDetailCompleteRequested());
-        },
+        onPressed: () => _showCompleteTaskSheet(context),
         gradient: LinearGradient(
           colors: [AppColors.success, AppColors.success.withValues(alpha: 0.8)],
         ),
@@ -724,6 +746,79 @@ class _TaskDetailContent extends StatelessWidget {
     return PrimaryButton(
       text: TaskStatusHelper.getLocalizedLabel(task.status, context.l10n),
     );
+  }
+
+  void _showCompleteTaskSheet(BuildContext context) {
+    final bloc = context.read<TaskDetailBloc>();
+    final textController = TextEditingController();
+
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (sheetContext) => Padding(
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.of(sheetContext).viewInsets.bottom,
+          left: 24,
+          right: 24,
+          top: 24,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(context.l10n.taskEvidenceTitle,
+                style: AppTypography.title3),
+            const SizedBox(height: 8),
+            Text(context.l10n.taskEvidenceHint,
+                style: AppTypography.footnote.copyWith(
+                    color: AppColors.textSecondaryLight)),
+            const SizedBox(height: 16),
+            Text(context.l10n.taskEvidenceTextLabel,
+                style: AppTypography.subheadlineBold),
+            const SizedBox(height: 8),
+            TextField(
+              controller: textController,
+              maxLines: 4,
+              maxLength: 500,
+              decoration: InputDecoration(
+                hintText: context.l10n.taskEvidenceTextHint,
+                border: const OutlineInputBorder(),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text(context.l10n.taskEvidenceImagesLabel,
+                style: AppTypography.subheadlineBold),
+            const SizedBox(height: 4),
+            Text(context.l10n.taskEvidenceImageLimit,
+                style: AppTypography.caption.copyWith(
+                    color: AppColors.textSecondaryLight)),
+            const SizedBox(height: 16),
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton.icon(
+                onPressed: () {
+                  final text = textController.text.trim();
+                  bloc.add(TaskDetailCompleteRequested(
+                    evidenceText: text.isEmpty ? null : text,
+                  ));
+                  Navigator.pop(sheetContext);
+                },
+                icon: const Icon(Icons.check_circle),
+                label: Text(context.l10n.taskEvidenceSubmit),
+                style: FilledButton.styleFrom(
+                  backgroundColor: AppColors.success,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                ),
+              ),
+            ),
+            const SizedBox(height: 24),
+          ],
+        ),
+      ),
+    ).then((_) => textController.dispose());
   }
 
   /// 待支付任务：拉取支付数据并打开支付页

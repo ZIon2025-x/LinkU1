@@ -190,6 +190,11 @@ class AIChatService {
             csAvailable: json['available'] as bool? ?? false,
             contactEmail: json['contact_email'] as String?,
           );
+        case 'task_draft':
+          return AIChatEvent(
+            type: AIChatEventType.taskDraft,
+            taskDraft: json,
+          );
         case 'error':
           return AIChatEvent(
             type: AIChatEventType.error,

@@ -367,10 +367,15 @@ class AppRouter {
       GoRoute(
         path: AppRoutes.createTask,
         name: 'createTask',
-        pageBuilder: (context, state) => SlideUpTransitionPage(
-          key: state.pageKey,
-          child: const CreateTaskView(),
-        ),
+        pageBuilder: (context, state) {
+          final draft = state.extra is TaskDraftData
+              ? state.extra as TaskDraftData
+              : null;
+          return SlideUpTransitionPage(
+            key: state.pageKey,
+            child: CreateTaskView(draft: draft),
+          );
+        },
       ),
       GoRoute(
         path: AppRoutes.taskFilter,
@@ -956,6 +961,12 @@ extension GoRouterExtension on BuildContext {
   void goToTaskDetail(int taskId) {
     if (!_NavigationThrottle.acquire()) return;
     push('/tasks/$taskId');
+  }
+
+  /// 跳转到创建任务页（可选 AI 草稿预填）
+  void goToCreateTask({TaskDraftData? draft}) {
+    if (!_NavigationThrottle.acquire()) return;
+    push(AppRoutes.createTask, extra: draft);
   }
 
   /// 跳转到跳蚤市场详情（id 为后端返回的字符串格式，如 S0001）

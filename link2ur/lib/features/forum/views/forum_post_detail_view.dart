@@ -16,6 +16,7 @@ import '../../../core/widgets/custom_share_panel.dart';
 import '../../../core/widgets/animated_like_button.dart';
 import '../../../data/repositories/forum_repository.dart';
 import '../../../data/models/forum.dart';
+import '../../auth/bloc/auth_bloc.dart';
 import '../bloc/forum_bloc.dart';
 
 /// 帖子详情页 - 对标iOS ForumPostDetailView.swift
@@ -97,6 +98,78 @@ class _ForumPostDetailViewState extends State<ForumPostDetailView> {
     ).then((_) => reasonController.dispose());
   }
 
+  void _showDeletePostDialog(BuildContext context) {
+    final bloc = context.read<ForumBloc>();
+    showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(context.l10n.commonDelete),
+        content: Text(context.l10n.forumDeletePostConfirm),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: Text(context.l10n.commonCancel),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(
+              backgroundColor: Theme.of(context).colorScheme.error,
+            ),
+            onPressed: () {
+              bloc.add(ForumDeletePost(widget.postId));
+              Navigator.pop(dialogContext);
+              Navigator.of(context).pop();
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text(context.l10n.forumPostDeleted)),
+              );
+            },
+            child: Text(context.l10n.commonDelete),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showEditPostDialog(BuildContext context) {
+    final post = context.read<ForumBloc>().state.selectedPost;
+    if (post == null) return;
+    final contentController = TextEditingController(text: post.content);
+    final bloc = context.read<ForumBloc>();
+
+    showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(context.l10n.commonEdit),
+        content: TextField(
+          controller: contentController,
+          maxLines: 8,
+          minLines: 3,
+          decoration: InputDecoration(
+            border: const OutlineInputBorder(),
+            hintText: context.l10n.forumCreatePostContentPlaceholder,
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: Text(context.l10n.commonCancel),
+          ),
+          FilledButton(
+            onPressed: () {
+              final content = contentController.text.trim();
+              if (content.isEmpty) return;
+              bloc.add(ForumEditPost(widget.postId, content: content));
+              Navigator.pop(dialogContext);
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text(context.l10n.forumPostUpdated)),
+              );
+            },
+            child: Text(context.l10n.commonConfirm),
+          ),
+        ],
+      ),
+    ).then((_) => contentController.dispose());
+  }
+
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
@@ -141,20 +214,58 @@ class _ForumPostDetailViewState extends State<ForumPostDetailView> {
               onSelected: (value) {
                 if (value == 'report') {
                   _showReportDialog(context);
+                } else if (value == 'edit') {
+                  _showEditPostDialog(context);
+                } else if (value == 'delete') {
+                  _showDeletePostDialog(context);
                 }
               },
-              itemBuilder: (context) => [
-                PopupMenuItem<String>(
-                  value: 'report',
-                  child: Row(
-                    children: [
-                      const Icon(Icons.flag_outlined, size: 20),
-                      const SizedBox(width: 8),
-                      Text(context.l10n.commonReport),
-                    ],
+              itemBuilder: (context) {
+                final currentUserId =
+                    context.read<AuthBloc>().state.user?.id;
+                final post =
+                    context.read<ForumBloc>().state.selectedPost;
+                final isAuthor = currentUserId != null &&
+                    post != null &&
+                    post.authorId.toString() == currentUserId;
+                return [
+                  if (isAuthor) ...[
+                    PopupMenuItem<String>(
+                      value: 'edit',
+                      child: Row(
+                        children: [
+                          const Icon(Icons.edit_outlined, size: 20),
+                          const SizedBox(width: 8),
+                          Text(context.l10n.commonEdit),
+                        ],
+                      ),
+                    ),
+                    PopupMenuItem<String>(
+                      value: 'delete',
+                      child: Row(
+                        children: [
+                          Icon(Icons.delete_outline, size: 20,
+                              color: Theme.of(context).colorScheme.error),
+                          const SizedBox(width: 8),
+                          Text(context.l10n.commonDelete,
+                              style: TextStyle(
+                                  color: Theme.of(context).colorScheme.error)),
+                        ],
+                      ),
+                    ),
+                  ],
+                  PopupMenuItem<String>(
+                    value: 'report',
+                    child: Row(
+                      children: [
+                        const Icon(Icons.flag_outlined, size: 20),
+                        const SizedBox(width: 8),
+                        Text(context.l10n.commonReport),
+                      ],
+                    ),
                   ),
-                ),
-              ],
+                ];
+              },
             ),
           ],
         ),
@@ -1002,35 +1113,93 @@ class _ReplyCard extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 6),
-                // 回复按钮
-                GestureDetector(
-                  behavior: HitTestBehavior.opaque,
-                  onTap: () {
-                    AppHaptics.selection();
-                    onReplyTo(
-                      reply.id,
-                      reply.author?.name ?? reply.authorId.toString(),
-                    );
-                  },
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 4),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 12, vertical: 8),
-                      decoration: BoxDecoration(
-                        color: AppColors.primary.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Text(
-                        context.l10n.forumReply,
-                        style: const TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w500,
-                          color: AppColors.primary,
+                Row(
+                  children: [
+                    GestureDetector(
+                      behavior: HitTestBehavior.opaque,
+                      onTap: () {
+                        AppHaptics.selection();
+                        onReplyTo(
+                          reply.id,
+                          reply.author?.name ?? reply.authorId.toString(),
+                        );
+                      },
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 4),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 8),
+                          decoration: BoxDecoration(
+                            color: AppColors.primary.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Text(
+                            context.l10n.forumReply,
+                            style: const TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500,
+                              color: AppColors.primary,
+                            ),
+                          ),
                         ),
                       ),
                     ),
-                  ),
+                    Builder(builder: (ctx) {
+                      final currentUserId =
+                          ctx.read<AuthBloc>().state.user?.id;
+                      final isAuthor = currentUserId != null &&
+                          reply.authorId.toString() == currentUserId;
+                      if (!isAuthor) return const SizedBox.shrink();
+                      return Padding(
+                        padding: const EdgeInsets.only(left: 8),
+                        child: GestureDetector(
+                          behavior: HitTestBehavior.opaque,
+                          onTap: () {
+                            showDialog<void>(
+                              context: ctx,
+                              builder: (d) => AlertDialog(
+                                title: Text(ctx.l10n.commonDelete),
+                                content: Text(
+                                    ctx.l10n.forumDeleteReplyConfirm),
+                                actions: [
+                                  TextButton(
+                                    onPressed: () => Navigator.pop(d),
+                                    child: Text(ctx.l10n.commonCancel),
+                                  ),
+                                  FilledButton(
+                                    style: FilledButton.styleFrom(
+                                      backgroundColor: Theme.of(ctx)
+                                          .colorScheme
+                                          .error,
+                                    ),
+                                    onPressed: () {
+                                      ctx.read<ForumBloc>().add(
+                                            ForumDeleteReply(reply.id,
+                                                postId: postId));
+                                      Navigator.pop(d);
+                                      ScaffoldMessenger.of(ctx)
+                                          .showSnackBar(SnackBar(
+                                              content: Text(ctx.l10n
+                                                  .forumReplyDeleted)));
+                                    },
+                                    child: Text(ctx.l10n.commonDelete),
+                                  ),
+                                ],
+                              ),
+                            );
+                          },
+                          child: Padding(
+                            padding:
+                                const EdgeInsets.symmetric(vertical: 4),
+                            child: Icon(Icons.delete_outline,
+                                size: 16,
+                                color:
+                                    Theme.of(ctx).colorScheme.error),
+                          ),
+                        ),
+                      );
+                    }),
+                  ],
                 ),
               ],
             ),

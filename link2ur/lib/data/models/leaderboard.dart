@@ -25,6 +25,7 @@ class Leaderboard extends Equatable {
     this.itemCount = 0,
     this.voteCount = 0,
     this.viewCount = 0,
+    this.isFavorited = false,
     this.createdAt,
     this.updatedAt,
   });
@@ -45,6 +46,7 @@ class Leaderboard extends Equatable {
   final int itemCount;
   final int voteCount;
   final int viewCount;
+  final bool isFavorited;
   final DateTime? createdAt;
   final DateTime? updatedAt;
 
@@ -79,6 +81,7 @@ class Leaderboard extends Equatable {
       itemCount: json['item_count'] as int? ?? 0,
       voteCount: json['vote_count'] as int? ?? 0,
       viewCount: json['view_count'] as int? ?? 0,
+      isFavorited: json['is_favorited'] as bool? ?? false,
       createdAt: json['created_at'] != null
           ? DateTime.tryParse(json['created_at'])
           : null,
@@ -105,13 +108,40 @@ class Leaderboard extends Equatable {
       'item_count': itemCount,
       'vote_count': voteCount,
       'view_count': viewCount,
+      'is_favorited': isFavorited,
       'created_at': createdAt?.toIso8601String(),
       'updated_at': updatedAt?.toIso8601String(),
     };
   }
 
+  Leaderboard copyWith({
+    bool? isFavorited,
+  }) {
+    return Leaderboard(
+      id: id,
+      name: name,
+      nameEn: nameEn,
+      nameZh: nameZh,
+      location: location,
+      description: description,
+      descriptionEn: descriptionEn,
+      descriptionZh: descriptionZh,
+      rules: rules,
+      coverImage: coverImage,
+      applicantId: applicantId,
+      applicant: applicant,
+      status: status,
+      itemCount: itemCount,
+      voteCount: voteCount,
+      viewCount: viewCount,
+      isFavorited: isFavorited ?? this.isFavorited,
+      createdAt: createdAt,
+      updatedAt: updatedAt,
+    );
+  }
+
   @override
-  List<Object?> get props => [id, name, status, itemCount, updatedAt];
+  List<Object?> get props => [id, name, status, itemCount, isFavorited, updatedAt];
 }
 
 /// 排行榜项目模型

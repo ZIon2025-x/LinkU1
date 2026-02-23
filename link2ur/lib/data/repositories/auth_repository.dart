@@ -308,6 +308,32 @@ class AuthRepository {
       throw AuthException(response.message ?? '重置密码失败');
     }
   }
+
+  /// 登出所有设备
+  Future<void> logoutAll() async {
+    final response = await _apiService.post(ApiEndpoints.logoutAll);
+    if (!response.isSuccess) {
+      throw AuthException(response.message ?? '登出所有设备失败');
+    }
+  }
+
+  /// 登出其他设备
+  Future<void> logoutOthers() async {
+    final response = await _apiService.post(ApiEndpoints.logoutOthers);
+    if (!response.isSuccess) {
+      throw AuthException(response.message ?? '登出其他设备失败');
+    }
+  }
+
+  /// 获取活跃会话列表
+  Future<List<Map<String, dynamic>>> getActiveSessions() async {
+    final response =
+        await _apiService.get<List<dynamic>>(ApiEndpoints.activeSessions);
+    if (!response.isSuccess || response.data == null) {
+      throw AuthException(response.message ?? '获取会话列表失败');
+    }
+    return response.data!.cast<Map<String, dynamic>>();
+  }
 }
 
 /// 认证异常

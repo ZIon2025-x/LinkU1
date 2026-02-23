@@ -7390,6 +7390,39 @@ class AppLocalizationsZh extends AppLocalizations {
   String get activityStatusLabel => '状态';
 
   @override
+  String get activityRegistrationDeadline => '报名截止：';
+
+  @override
+  String get activityCurrentApplicants => '当前报名：';
+
+  @override
+  String get activityJoinLottery => '参与抽奖';
+
+  @override
+  String get activityAlreadyRegistered => '已报名';
+
+  @override
+  String get activityNoWinners => '暂无中奖名单';
+
+  @override
+  String get activityWinnerList => '中奖名单';
+
+  @override
+  String get activityPrizePoints => '积分奖励';
+
+  @override
+  String get activityPrizePhysical => '实物奖品';
+
+  @override
+  String get activityPrizeVoucher => '优惠券码';
+
+  @override
+  String get activityPrizeInPerson => '线下到场';
+
+  @override
+  String get activityPrize => '奖品';
+
+  @override
   String activityPersonCount(int current, int max) {
     return '$current/$max人';
   }
@@ -8354,6 +8387,18 @@ class AppLocalizationsZh extends AppLocalizations {
   String get toolCallLoadingSearchForumPosts => '正在搜索论坛…';
 
   @override
+  String get toolCallPrepareTaskDraft => '任务草稿';
+
+  @override
+  String get toolCallLoadingPrepareTaskDraft => '正在生成任务草稿…';
+
+  @override
+  String get aiTaskDraftTitle => '任务草稿';
+
+  @override
+  String get aiTaskDraftConfirmButton => '确认并去发布';
+
+  @override
   String get expertApplicationsTitle => '服务申请管理';
 
   @override
@@ -8470,6 +8515,98 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get commonCurrencySymbol => '£ ';
+
+  @override
+  String get forumDeletePostConfirm => '确定要删除这篇帖子吗？此操作不可撤销。';
+
+  @override
+  String get forumPostDeleted => '帖子已删除';
+
+  @override
+  String get forumPostUpdated => '帖子已更新';
+
+  @override
+  String get forumReplyDeleted => '回复已删除';
+
+  @override
+  String get forumDeleteReplyConfirm => '确定要删除这条回复吗？';
+
+  @override
+  String get fleaMarketDeleteItemConfirm => '确定要删除这个商品吗？此操作不可撤销。';
+
+  @override
+  String get fleaMarketItemDeleted => '商品已删除';
+
+  @override
+  String get taskEvidenceTitle => '完成证据';
+
+  @override
+  String get taskEvidenceHint => '您已完成此任务。请上传相关证据图片或填写文字说明（可选），以便发布者确认任务完成情况。';
+
+  @override
+  String get taskEvidenceTextLabel => '文字说明（可选）';
+
+  @override
+  String get taskEvidenceTextHint => '描述完成情况...';
+
+  @override
+  String get taskEvidenceImagesLabel => '证据图片（可选）';
+
+  @override
+  String get taskEvidenceImageLimit => '单张图片不超过5MB，最多上传5张';
+
+  @override
+  String get taskEvidenceSubmit => '提交完成';
+
+  @override
+  String get taskEvidenceUploading => '正在上传图片...';
+
+  @override
+  String get stripeSetupRequired => '请先设置收款账户，然后才能申请任务。';
+
+  @override
+  String get stripeSetupAction => '立即设置';
+
+  @override
+  String get profileSendCode => '发送验证码';
+
+  @override
+  String get profileResendCode => '重新发送';
+
+  @override
+  String get profileCodeSentSuccess => '验证码已发送';
+
+  @override
+  String get profileEmailCodeSent => '验证码已发送到新邮箱';
+
+  @override
+  String get profilePhoneCodeSent => '验证码已发送到新手机号';
+
+  @override
+  String profileCountdownSeconds(int seconds) {
+    return '$seconds秒';
+  }
+
+  @override
+  String get profileEmailRequired => '请输入邮箱地址以发送验证码';
+
+  @override
+  String get profilePhoneRequired => '请输入手机号以发送验证码';
+
+  @override
+  String get profileEmailUnchanged => '请输入不同的邮箱地址';
+
+  @override
+  String get profilePhoneUnchanged => '请输入不同的手机号';
+
+  @override
+  String get profileEmailCodeRequired => '请输入邮箱验证码';
+
+  @override
+  String get profilePhoneCodeRequired => '请输入手机验证码';
+
+  @override
+  String get profileNormalizePhoneHint => '英国格式: 07XXX 或 +44XXX';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -15858,6 +15995,39 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get activityStatusLabel => '狀態';
 
   @override
+  String get activityRegistrationDeadline => '報名截止：';
+
+  @override
+  String get activityCurrentApplicants => '當前報名：';
+
+  @override
+  String get activityJoinLottery => '參與抽獎';
+
+  @override
+  String get activityAlreadyRegistered => '已報名';
+
+  @override
+  String get activityNoWinners => '暫無中獎名單';
+
+  @override
+  String get activityWinnerList => '中獎名單';
+
+  @override
+  String get activityPrizePoints => '積分獎勵';
+
+  @override
+  String get activityPrizePhysical => '實物獎品';
+
+  @override
+  String get activityPrizeVoucher => '優惠券碼';
+
+  @override
+  String get activityPrizeInPerson => '線下到場';
+
+  @override
+  String get activityPrize => '獎品';
+
+  @override
   String activityPersonCount(int current, int max) {
     return '$current/$max人';
   }
@@ -16822,6 +16992,18 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get toolCallLoadingSearchForumPosts => '正在搜尋論壇…';
 
   @override
+  String get toolCallPrepareTaskDraft => '任務草稿';
+
+  @override
+  String get toolCallLoadingPrepareTaskDraft => '正在生成任務草稿…';
+
+  @override
+  String get aiTaskDraftTitle => '任務草稿';
+
+  @override
+  String get aiTaskDraftConfirmButton => '確認並去發佈';
+
+  @override
   String get expertApplicationsTitle => '服務申請管理';
 
   @override
@@ -16938,4 +17120,96 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get commonCurrencySymbol => '£ ';
+
+  @override
+  String get forumDeletePostConfirm => '確定要刪除這篇帖子嗎？此操作不可撤銷。';
+
+  @override
+  String get forumPostDeleted => '帖子已刪除';
+
+  @override
+  String get forumPostUpdated => '帖子已更新';
+
+  @override
+  String get forumReplyDeleted => '回覆已刪除';
+
+  @override
+  String get forumDeleteReplyConfirm => '確定要刪除這條回覆嗎？';
+
+  @override
+  String get fleaMarketDeleteItemConfirm => '確定要刪除這個商品嗎？此操作不可撤銷。';
+
+  @override
+  String get fleaMarketItemDeleted => '商品已刪除';
+
+  @override
+  String get taskEvidenceTitle => '完成證據';
+
+  @override
+  String get taskEvidenceHint => '您已完成此任務。請上傳相關證據圖片或填寫文字說明（可選），以便發佈者確認任務完成情況。';
+
+  @override
+  String get taskEvidenceTextLabel => '文字說明（可選）';
+
+  @override
+  String get taskEvidenceTextHint => '描述完成情況...';
+
+  @override
+  String get taskEvidenceImagesLabel => '證據圖片（可選）';
+
+  @override
+  String get taskEvidenceImageLimit => '單張圖片不超過5MB，最多上傳5張';
+
+  @override
+  String get taskEvidenceSubmit => '提交完成';
+
+  @override
+  String get taskEvidenceUploading => '正在上傳圖片...';
+
+  @override
+  String get stripeSetupRequired => '請先設定收款帳戶，然後才能申請任務。';
+
+  @override
+  String get stripeSetupAction => '立即設定';
+
+  @override
+  String get profileSendCode => '傳送驗證碼';
+
+  @override
+  String get profileResendCode => '重新傳送';
+
+  @override
+  String get profileCodeSentSuccess => '驗證碼已傳送';
+
+  @override
+  String get profileEmailCodeSent => '驗證碼已傳送到新信箱';
+
+  @override
+  String get profilePhoneCodeSent => '驗證碼已傳送到新手機號碼';
+
+  @override
+  String profileCountdownSeconds(int seconds) {
+    return '$seconds秒';
+  }
+
+  @override
+  String get profileEmailRequired => '請輸入信箱地址以傳送驗證碼';
+
+  @override
+  String get profilePhoneRequired => '請輸入手機號碼以傳送驗證碼';
+
+  @override
+  String get profileEmailUnchanged => '請輸入不同的信箱地址';
+
+  @override
+  String get profilePhoneUnchanged => '請輸入不同的手機號碼';
+
+  @override
+  String get profileEmailCodeRequired => '請輸入信箱驗證碼';
+
+  @override
+  String get profilePhoneCodeRequired => '請輸入手機驗證碼';
+
+  @override
+  String get profileNormalizePhoneHint => '英國格式: 07XXX 或 +44XXX';
 }
