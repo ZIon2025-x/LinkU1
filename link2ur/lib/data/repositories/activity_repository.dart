@@ -169,7 +169,8 @@ class ActivityRepository {
       return false;
     }
 
-    return response.data!['is_favorite'] as bool? ?? false;
+    final data = response.data!['data'] as Map<String, dynamic>? ?? response.data!;
+    return data['is_favorited'] as bool? ?? false;
   }
 
   /// 获取我参与的活动（对齐iOS MyActivitiesViewModel）
@@ -221,6 +222,37 @@ class ActivityRepository {
       }
       rethrow;
     }
+  }
+
+  /// 申请官方活动（抽奖/先到先得）
+  Future<void> applyOfficialActivity(int activityId) async {
+    final response = await _apiService.post(
+      ApiEndpoints.officialActivityApply(activityId),
+    );
+    if (!response.isSuccess) {
+      throw ActivityException(response.message ?? '申请官方活动失败');
+    }
+  }
+
+  /// 取消申请官方活动
+  Future<void> cancelOfficialActivityApplication(int activityId) async {
+    final response = await _apiService.delete(
+      ApiEndpoints.officialActivityApply(activityId),
+    );
+    if (!response.isSuccess) {
+      throw ActivityException(response.message ?? '取消申请失败');
+    }
+  }
+
+  /// 获取官方活动抽奖结果
+  Future<OfficialActivityResult> getOfficialActivityResult(int activityId) async {
+    final response = await _apiService.get<Map<String, dynamic>>(
+      ApiEndpoints.officialActivityResult(activityId),
+    );
+    if (!response.isSuccess || response.data == null) {
+      throw ActivityException(response.message ?? '获取活动结果失败');
+    }
+    return OfficialActivityResult.fromJson(response.data!);
   }
 }
 

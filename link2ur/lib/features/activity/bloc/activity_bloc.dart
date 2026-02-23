@@ -76,7 +76,30 @@ class ActivityLoadTimeSlots extends ActivityEvent {
   List<Object?> get props => [serviceId, activityId];
 }
 
+class ActivityApplyOfficial extends ActivityEvent {
+  final int activityId;
+  const ActivityApplyOfficial({required this.activityId});
+  @override
+  List<Object?> get props => [activityId];
+}
+
+class ActivityCancelApplyOfficial extends ActivityEvent {
+  final int activityId;
+  const ActivityCancelApplyOfficial({required this.activityId});
+  @override
+  List<Object?> get props => [activityId];
+}
+
+class ActivityLoadResult extends ActivityEvent {
+  final int activityId;
+  const ActivityLoadResult({required this.activityId});
+  @override
+  List<Object?> get props => [activityId];
+}
+
 // ==================== State ====================
+
+enum OfficialApplyStatus { idle, applying, applied, full, error }
 
 enum ActivityStatus { initial, loading, loaded, error }
 
@@ -96,6 +119,8 @@ class ActivityState extends Equatable {
     this.isLoadingTimeSlots = false,
     this.isLoadingMore = false,
     this.expert,
+    this.officialApplyStatus = OfficialApplyStatus.idle,
+    this.officialResult,
   });
 
   final ActivityStatus status;
@@ -115,6 +140,9 @@ class ActivityState extends Equatable {
   /// 活动发布者的达人信息（对齐iOS viewModel.expert）
   final TaskExpert? expert;
 
+  final OfficialApplyStatus officialApplyStatus;
+  final OfficialActivityResult? officialResult;
+
   bool get isLoading => status == ActivityStatus.loading;
   bool get isDetailLoading => detailStatus == ActivityStatus.loading;
 
@@ -133,6 +161,8 @@ class ActivityState extends Equatable {
     bool? isLoadingTimeSlots,
     bool? isLoadingMore,
     TaskExpert? expert,
+    OfficialApplyStatus? officialApplyStatus,
+    OfficialActivityResult? officialResult,
   }) {
     return ActivityState(
       status: status ?? this.status,
@@ -149,6 +179,8 @@ class ActivityState extends Equatable {
       isLoadingTimeSlots: isLoadingTimeSlots ?? this.isLoadingTimeSlots,
       isLoadingMore: isLoadingMore ?? this.isLoadingMore,
       expert: expert ?? this.expert,
+      officialApplyStatus: officialApplyStatus ?? this.officialApplyStatus,
+      officialResult: officialResult ?? this.officialResult,
     );
   }
 
@@ -168,6 +200,8 @@ class ActivityState extends Equatable {
         isLoadingTimeSlots,
         isLoadingMore,
         expert,
+        officialApplyStatus,
+        officialResult,
       ];
 }
 
@@ -186,6 +220,9 @@ class ActivityBloc extends Bloc<ActivityEvent, ActivityState> {
     on<ActivityApply>(_onApply);
     on<ActivityLoadDetail>(_onLoadDetail);
     on<ActivityLoadTimeSlots>(_onLoadTimeSlots);
+    on<ActivityApplyOfficial>(_onApplyOfficial);
+    on<ActivityCancelApplyOfficial>(_onCancelApplyOfficial);
+    on<ActivityLoadResult>(_onLoadResult);
   }
 
   final ActivityRepository _activityRepository;
@@ -367,6 +404,42 @@ class ActivityBloc extends Bloc<ActivityEvent, ActivityState> {
         isLoadingTimeSlots: false,
         timeSlots: const [],
       ));
+    }
+  }
+
+  Future<void> _onApplyOfficial(
+    ActivityApplyOfficial event,
+    Emitter<ActivityState> emit,
+  ) async {
+    emit(state.copyWith(officialApplyStatus: OfficialApplyStatus.applying));
+    try {
+      await _activityRepository.applyOfficialActivity(event.activityId);
+      emit(state.copyWith(officialApplyStatus: OfficialApplyStatus.applied));
+    } on Exception {
+      emit(state.copyWith(officialApplyStatus: OfficialApplyStatus.error));
+    }
+  }
+
+  Future<void> _onCancelApplyOfficial(
+    ActivityCancelApplyOfficial event,
+    Emitter<ActivityState> emit,
+  ) async {
+    try {
+      await _activityRepository.cancelOfficialActivityApplication(event.activityId);
+    } on Exception {
+      // silently fail, UI shows no change
+    }
+  }
+
+  Future<void> _onLoadResult(
+    ActivityLoadResult event,
+    Emitter<ActivityState> emit,
+  ) async {
+    try {
+      final result = await _activityRepository.getOfficialActivityResult(event.activityId);
+      emit(state.copyWith(officialResult: result));
+    } on Exception {
+      // ignore load errors
     }
   }
 }

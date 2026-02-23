@@ -522,3 +522,38 @@ class ActivityWinner extends Equatable {
   @override
   List<Object?> get props => [userId, name, avatarUrl, prizeIndex];
 }
+
+/// 官方活动抽奖/申请结果
+class OfficialActivityResult extends Equatable {
+  final bool isDrawn;
+  final DateTime? drawnAt;
+  final List<ActivityWinner> winners;
+  final String? myStatus;
+  final String? myVoucherCode;
+
+  const OfficialActivityResult({
+    required this.isDrawn,
+    this.drawnAt,
+    this.winners = const [],
+    this.myStatus,
+    this.myVoucherCode,
+  });
+
+  factory OfficialActivityResult.fromJson(Map<String, dynamic> json) =>
+      OfficialActivityResult(
+        isDrawn: json['is_drawn'] as bool? ?? false,
+        drawnAt: json['drawn_at'] != null
+            ? DateTime.tryParse(json['drawn_at'] as String)
+            : null,
+        winners: json['winners'] != null
+            ? (json['winners'] as List)
+                .map((w) => ActivityWinner.fromJson(w as Map<String, dynamic>))
+                .toList()
+            : const [],
+        myStatus: json['my_status'] as String?,
+        myVoucherCode: json['my_voucher_code'] as String?,
+      );
+
+  @override
+  List<Object?> get props => [isDrawn, drawnAt, winners, myStatus, myVoucherCode];
+}

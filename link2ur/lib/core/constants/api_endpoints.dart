@@ -100,9 +100,9 @@ class ApiEndpoints {
       '/api/tasks/$taskId/applications/$applicationId/negotiate';
   static String respondNegotiation(int taskId, int applicationId) =>
       '/api/tasks/$taskId/applications/$applicationId/respond-negotiation';
-  static String sendApplicationMessage(int taskId, int applicationId) => // [RESERVED]
+  static String sendApplicationMessage(int taskId, int applicationId) =>
       '/api/tasks/$taskId/applications/$applicationId/send-message';
-  static String replyApplicationMessage(int taskId, int applicationId) => // [RESERVED]
+  static String replyApplicationMessage(int taskId, int applicationId) =>
       '/api/tasks/$taskId/applications/$applicationId/reply-message';
 
   // ==================== 跳蚤市场 ====================
@@ -124,7 +124,6 @@ class ApiEndpoints {
   static const String fleaMarketMyRelatedItems = '/api/flea-market/my-related-items';
   static const String fleaMarketFavorites = '/api/flea-market/favorites/items';
   static const String fleaMarketUploadImage = '/api/flea-market/upload-image';
-  // [RESERVED] 以下跳蚤市场端点已在后端定义但Flutter客户端尚未集成
   static String fleaMarketItemPurchaseRequests(String id) =>
       '/api/flea-market/items/$id/purchase-requests';
   static String fleaMarketAcceptPurchase(String id) =>
@@ -158,7 +157,6 @@ class ApiEndpoints {
   static String taskExpertReviews(String expertId) => // [RESERVED]
       '/api/task-experts/$expertId/reviews';
   static const String applyToBeExpert = '/api/task-experts/apply';
-  // [RESERVED] 以下达人管理端点已在后端定义但Flutter客户端尚未集成
   static const String myExpertApplication = '/api/task-experts/my-application';
   static const String myExpertProfile = '/api/task-experts/me';
   static const String myExpertServices = '/api/task-experts/me/services';
@@ -226,7 +224,7 @@ class ApiEndpoints {
       '/api/forum/categories/$categoryId/favorite';
   static String forumCategoryFavoriteStatus(int categoryId) =>
       '/api/forum/categories/$categoryId/favorite/status';
-  static const String forumCategoryFavoritesBatch = // [RESERVED]
+  static const String forumCategoryFavoritesBatch =
       '/api/forum/categories/favorites/batch';
   static const String myForumCategoryFavorites =
       '/api/forum/my/category-favorites';
@@ -325,6 +323,8 @@ class ApiEndpoints {
   static String activityFavoriteStatus(int id) =>
       '/api/activities/$id/favorite/status';
   static const String myActivities = '/api/my/activities';
+  static String officialActivityApply(int id) => '/api/official-activities/$id/apply';
+  static String officialActivityResult(int id) => '/api/official-activities/$id/result';
 
   // ==================== 积分/优惠券 ====================
   // 后端: coupon_points_routes.py (prefix: /api/coupon-points)
@@ -336,8 +336,7 @@ class ApiEndpoints {
   static const String myCoupons = '/api/coupon-points/coupons/my';
   static const String claimCoupon = '/api/coupon-points/coupons/claim';
   static const String validateCoupon = '/api/coupon-points/coupons/validate';
-  static String useCoupon(int couponId) =>
-      '/api/coupon-points/coupons/$couponId/use';
+  static const String useCoupon = '/api/coupon-points/coupons/use';
   static const String validateInvitationCode =
       '/api/coupon-points/invitation-codes/validate';
   static const String useInvitationCode = '/api/coupon-points/invitation/use';
@@ -387,9 +386,9 @@ class ApiEndpoints {
   static const String studentVerificationStatus =
       '/api/student-verification/status';
   static const String submitStudentVerification =
-      '/api/student-verification/request'; // 后端是 POST /request
-  static const String verifyStudentEmail =
-      '/api/student-verification/verify'; // 后端 POST /verify
+      '/api/student-verification/submit';
+  static String verifyStudentEmail(String token) =>
+      '/api/student-verification/verify/$token';
   static const String renewStudentVerification =
       '/api/student-verification/renew';
 
