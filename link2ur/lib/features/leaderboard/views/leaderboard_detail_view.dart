@@ -246,8 +246,8 @@ class _LeaderboardDetailContentState
                 ),
               ],
             ).then((value) {
-              if (!mounted) return;
-              if (value == 'report') _showReportDialog(context);
+              if (!mounted || value != 'report') return;
+              _showReportDialog(this.context);
             });
           },
         ),

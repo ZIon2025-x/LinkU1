@@ -55,18 +55,29 @@ class _ChatContentState extends State<_ChatContent> {
   final _imagePicker = ImagePicker();
   String? _currentUserId;
   bool _showAttachMenu = false;
+  int _prevMessageCount = 0;
 
   @override
   void initState() {
     super.initState();
     _currentUserId = StorageService.instance.getUserId();
+    _scrollController.addListener(_onScroll);
   }
 
   @override
   void dispose() {
+    _scrollController.removeListener(_onScroll);
     _messageController.dispose();
     _scrollController.dispose();
     super.dispose();
+  }
+
+  void _onScroll() {
+    if (!_scrollController.hasClients) return;
+    if (_scrollController.position.pixels <=
+        _scrollController.position.minScrollExtent + 50) {
+      context.read<ChatBloc>().add(const ChatLoadMore());
+    }
   }
 
   void _sendMessage() {
@@ -112,13 +123,29 @@ class _ChatContentState extends State<_ChatContent> {
   Widget build(BuildContext context) {
     return BlocConsumer<ChatBloc, ChatState>(
       listenWhen: (prev, curr) =>
-          prev.status != curr.status,
+          prev.status != curr.status ||
+          prev.messages.length != curr.messages.length,
       listener: (context, state) {
-        if (state.status == ChatStatus.loaded) {
+        final wasNewLoad = state.status == ChatStatus.loaded &&
+            _prevMessageCount == 0 && state.messages.isNotEmpty;
+        final hasNewMessage = state.messages.length > _prevMessageCount &&
+            _prevMessageCount > 0;
+
+        if (wasNewLoad) {
           WidgetsBinding.instance.addPostFrameCallback((_) {
             _scrollToBottom();
           });
+        } else if (hasNewMessage) {
+          final atBottom = _scrollController.hasClients &&
+              _scrollController.position.pixels >=
+                  _scrollController.position.maxScrollExtent - 100;
+          if (atBottom) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              _scrollToBottom();
+            });
+          }
         }
+        _prevMessageCount = state.messages.length;
       },
       buildWhen: (prev, curr) =>
           prev.status != curr.status ||

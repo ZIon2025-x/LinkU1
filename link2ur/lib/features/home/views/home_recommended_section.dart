@@ -429,7 +429,7 @@ class _RecommendedTab extends StatelessWidget {
                                         ),
                                         const SizedBox(width: 4),
                                         Text(
-                                          '筛选',
+                                          context.l10n.commonFilter,
                                           style: TextStyle(
                                             fontSize: 13,
                                             color: isDark

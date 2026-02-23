@@ -2460,7 +2460,7 @@ class FleaMarketItemBase(BaseModel):
     """跳蚤市场商品基础模型"""
     title: str = Field(..., min_length=1, max_length=200)
     description: str = Field(default="", max_length=5000)  # 可选，空表示无描述
-    price: Decimal = Field(..., gt=0)
+    price: Decimal = Field(..., ge=0)
     images: List[str] = Field(default_factory=list, max_items=5)
     location: Optional[str] = Field(None, max_length=100)  # 位置文本（用于显示）
     latitude: Optional[float] = Field(None, ge=-90, le=90)  # 纬度（用于地图选点和距离计算）
@@ -2478,7 +2478,7 @@ class FleaMarketItemUpdate(BaseModel):
     """更新商品请求"""
     title: Optional[str] = Field(None, min_length=1, max_length=200)
     description: Optional[str] = Field(None, min_length=1)
-    price: Optional[Decimal] = Field(None, gt=0)
+    price: Optional[Decimal] = Field(None, ge=0)
     images: Optional[List[str]] = Field(None, max_items=5)
     location: Optional[str] = Field(None, max_length=100)  # 位置文本（用于显示）
     latitude: Optional[float] = Field(None, ge=-90, le=90)  # 纬度（用于地图选点和距离计算）

@@ -308,7 +308,7 @@ class Task extends Equatable {
       latitude: (json['latitude'] as num?)?.toDouble(),
       longitude: (json['longitude'] as num?)?.toDouble(),
       reward: (json['reward'] as num?)?.toDouble() ?? 0,
-      currency: json['currency'] as String? ?? 'USD',
+      currency: json['currency'] as String? ?? 'GBP',
       status: json['status'] as String? ?? AppConstants.taskStatusOpen,
       images: (json['images'] as List<dynamic>?)
               ?.map((e) => e as String)
@@ -473,7 +473,10 @@ class Task extends Equatable {
   }
 
   @override
-  List<Object?> get props => [id, title, status, updatedAt];
+  List<Object?> get props => [
+        id, title, status, reward, currency, hasApplied,
+        userApplicationStatus, takerId, hasReviewed, updatedAt,
+      ];
 }
 
 /// 任务列表响应

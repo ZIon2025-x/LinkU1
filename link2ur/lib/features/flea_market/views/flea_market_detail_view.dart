@@ -836,9 +836,14 @@ class _FleaMarketDetailContent extends StatelessWidget {
     final hasPendingPayment = item.hasPendingPayment;
     final buttonText = hasPendingPayment
         ? context.l10n.fleaMarketContinuePayment
-        : context.l10n.fleaMarketBuyNow;
-    final buttonIcon =
-        hasPendingPayment ? Icons.credit_card : Icons.shopping_cart;
+        : item.isFree
+            ? context.l10n.commonFree
+            : context.l10n.fleaMarketBuyNow;
+    final buttonIcon = hasPendingPayment
+        ? Icons.credit_card
+        : item.isFree
+            ? Icons.card_giftcard
+            : Icons.shopping_cart;
 
     return GestureDetector(
       onTap: state.isSubmitting
@@ -947,14 +952,7 @@ class _FleaMarketPurchaseSheet extends StatefulWidget {
       backgroundColor: Colors.transparent,
       builder: (ctx) => BlocProvider.value(
         value: bloc,
-        child: BlocListener<FleaMarketBloc, FleaMarketState>(
-          listenWhen: (p, c) =>
-              c.actionMessage == 'purchase_success' ||
-              c.actionMessage == 'negotiate_request_sent' ||
-              c.actionMessage == 'open_payment',
-          listener: (c, _) => Navigator.of(c).pop(),
-          child: _FleaMarketPurchaseSheet(item: item, itemId: itemId),
-        ),
+        child: _FleaMarketPurchaseSheet(item: item, itemId: itemId),
       ),
     );
   }
@@ -1045,7 +1043,20 @@ class _FleaMarketPurchaseSheetState extends State<_FleaMarketPurchaseSheet> {
     final l10n = context.l10n;
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    return DraggableScrollableSheet(
+    return BlocListener<FleaMarketBloc, FleaMarketState>(
+      listenWhen: (p, c) =>
+          c.actionMessage == 'purchase_success' ||
+          c.actionMessage == 'negotiate_request_sent' ||
+          c.actionMessage == 'open_payment' ||
+          c.actionMessage == 'purchase_failed',
+      listener: (c, state) {
+        if (state.actionMessage == 'purchase_failed') {
+          if (mounted) setState(() => _isSubmitting = false);
+        } else {
+          Navigator.of(c).pop();
+        }
+      },
+      child: DraggableScrollableSheet(
       initialChildSize: 0.55,
       minChildSize: 0.4,
       maxChildSize: 0.85,
@@ -1169,6 +1180,7 @@ class _FleaMarketPurchaseSheetState extends State<_FleaMarketPurchaseSheet> {
                         ),
                         const SizedBox(height: 16),
                       ] else ...[
+                        if (!widget.item.isFree) ...[
                         SwitchListTile(
                           value: _showNegotiate,
                           onChanged: (value) {
@@ -1220,6 +1232,7 @@ class _FleaMarketPurchaseSheetState extends State<_FleaMarketPurchaseSheet> {
                           ),
                           const SizedBox(height: 16),
                         ],
+                        ],
                       ],
                       if (_errorMessage != null) ...[
                         const SizedBox(height: 8),
@@ -1269,6 +1282,7 @@ class _FleaMarketPurchaseSheetState extends State<_FleaMarketPurchaseSheet> {
           ),
         );
       },
+    ),
     );
   }
 }
@@ -1453,24 +1467,36 @@ class _PriceTitleCard extends StatelessWidget {
             Row(
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
-                const Text(
-                  '£',
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.priceRed,
-                    height: 1.5,
+                if (item.isFree)
+                  Text(
+                    context.l10n.commonFree,
+                    style: const TextStyle(
+                      fontSize: 32,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.success,
+                      height: 1.1,
+                    ),
+                  )
+                else ...[
+                  const Text(
+                    '£',
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.priceRed,
+                      height: 1.5,
+                    ),
                   ),
-                ),
-                Text(
-                  _priceNumber,
-                  style: const TextStyle(
-                    fontSize: 32,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.priceRed,
-                    height: 1.1,
+                  Text(
+                    _priceNumber,
+                    style: const TextStyle(
+                      fontSize: 32,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.priceRed,
+                      height: 1.1,
+                    ),
                   ),
-                ),
+                ],
                 const Spacer(),
                 // 状态
                 if (!item.isActive)

@@ -94,7 +94,10 @@ class FleaMarketItem extends Equatable {
   /// 是否已售出
   bool get isSold => status == AppConstants.fleaMarketStatusSold;
 
-  /// 价格显示
+  /// 是否免费
+  bool get isFree => price == 0;
+
+  /// 价格显示（不含免费文案，免费时由 View 层用 l10n 显示）
   String get priceDisplay => '£${price.toStringAsFixed(2)}';
 
   /// 是否有待支付

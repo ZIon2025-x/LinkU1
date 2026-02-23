@@ -536,7 +536,6 @@ class _UserProfileViewState extends State<UserProfileView> {
                                       taskType: selectedTaskType,
                                       location: user.residenceCity ?? 'Online',
                                       reward: price,
-                                      currency: 'GBP',
                                       isPublic: 0,
                                       taskSource: 'user_profile',
                                       designatedTakerId: user.id,

@@ -1632,9 +1632,8 @@ async def direct_purchase_item(
         if item.category:
             description = f"{description}\n\nCategory: {item.category}"
         
-        # ⚠️ 安全修复：跳蚤市场直接购买需要支付
-        # 创建任务时设置为 pending_payment 状态，等待支付完成
-        # 注意：跳蚤市场直接购买应该触发支付流程，而不是直接进入 in_progress
+        is_free_item = float(item.price) == 0
+        
         new_task = models.Task(
             title=item.title,
             description=description,
@@ -1646,36 +1645,34 @@ async def direct_purchase_item(
             task_type="Second-hand & Rental",
             poster_id=current_user.id,  # 买家
             taker_id=item.seller_id,  # 卖家
-            status="pending_payment",  # ⚠️ 安全修复：等待支付，不直接进入进行中状态
-            is_paid=0,  # 明确标记为未支付
-            payment_expires_at=get_utc_time() + timedelta(minutes=30),  # 支付过期时间（30分钟）
-            is_flexible=1,  # 灵活时间模式
-            deadline=None,  # 无截止日期
+            status="in_progress" if is_free_item else "pending_payment",
+            is_paid=1 if is_free_item else 0,
+            payment_expires_at=None if is_free_item else (get_utc_time() + timedelta(minutes=30)),
+            is_flexible=1,
+            deadline=None,
             images=json.dumps(images) if images else None,
-            task_source="flea_market",  # 跳蚤市场任务
+            task_source="flea_market",
         )
         db.add(new_task)
-        await db.flush()  # 获取任务ID
+        await db.flush()
         
-        # ⚠️ 优化：不立即更新商品状态为 sold，而是先关联任务ID
-        # 商品状态在支付成功后才更新为 sold（在 webhook 中处理）
-        # 这样可以避免支付失败或超时后商品已下架的问题
-        # 使用条件更新防止并发超卖（检查商品仍然是 active 状态）
+        # 使用条件更新防止并发超卖
+        item_update_values = {"sold_task_id": new_task.id}
+        if is_free_item:
+            item_update_values["status"] = "sold"
+        
         update_result = await db.execute(
             update(models.FleaMarketItem)
             .where(
                 and_(
                     models.FleaMarketItem.id == db_id,
                     models.FleaMarketItem.status == "active",
-                    models.FleaMarketItem.sold_task_id.is_(None)  # 确保商品未被其他购买预留
+                    models.FleaMarketItem.sold_task_id.is_(None)
                 )
             )
-            .values(
-                sold_task_id=new_task.id  # 只关联任务ID，不改变状态
-            )
+            .values(**item_update_values)
         )
         
-        # 检查是否成功更新（受影响行数为0说明已被其他请求售出或预留）
         if update_result.rowcount == 0:
             await db.rollback()
             raise HTTPException(
@@ -1683,122 +1680,112 @@ async def direct_purchase_item(
                 detail="该商品已被其他用户购买或正在处理中"
             )
         
-        # ⚠️ 安全修复：创建支付意图，确保跳蚤市场购买也需要支付
-        # 在提交事务之前，先检查卖家是否有 Stripe Connect 账户
-        seller = await db.get(models.User, item.seller_id)
-        taker_stripe_account_id = seller.stripe_account_id if seller else None
+        payment_intent = None
+        customer_id = None
+        ephemeral_key_secret = None
         
-        if not taker_stripe_account_id:
-            # 如果卖家没有 Stripe Connect 账户，回滚交易
-            await db.rollback()
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="卖家尚未创建 Stripe Connect 收款账户，无法完成购买。请联系卖家先创建收款账户。",
-                headers={"X-Stripe-Connect-Required": "true"}
-            )
-        
-        # 创建 Payment Intent（与任务支付流程一致）
-        # 注意：在提交事务之前创建 PaymentIntent，如果失败可以回滚
-        import stripe
-
-        task_amount_pence = int(float(item.price) * 100)
-        from app.utils.fee_calculator import calculate_application_fee_pence
-        application_fee_pence = calculate_application_fee_pence(task_amount_pence)
-        
-        # ⚠️ 性能优化：使用 asyncio 并行执行多个 Stripe API 调用
-        import asyncio
-        import concurrent.futures
-        
-        # 定义 Stripe API 调用函数（同步函数，将在线程池中执行）
-        def create_payment_intent_sync(customer_id=None):
-            from app.secure_auth import get_wechat_pay_payment_method_options
-            payment_method_options = get_wechat_pay_payment_method_options(request)
-            create_pi_kw = {
-                "amount": task_amount_pence,
-                "currency": "gbp",
-                "payment_method_types": ["card", "wechat_pay", "alipay"],
-                "description": f"跳蚤市场购买 #{new_task.id}: {item.title[:50]}",
-                "metadata": {
-                    "task_id": str(new_task.id),
-                    "task_title": item.title[:200] if item.title else "",
-                    "poster_id": str(current_user.id),
-                    "poster_name": current_user.name or f"User {current_user.id}",
-                    "taker_id": str(item.seller_id),
-                    "taker_name": seller.name if seller else f"User {item.seller_id}",
-                    "taker_stripe_account_id": taker_stripe_account_id,
-                    "application_fee": str(application_fee_pence),
-                    "task_amount": str(task_amount_pence),
-                    "task_amount_display": f"{item.price:.2f}",
-                    "platform": "Link²Ur",
-                    "payment_type": "flea_market_direct_purchase",
-                    "flea_market_item_id": str(item.id)
-                },
-            }
-            if customer_id:
-                create_pi_kw["customer"] = customer_id
-            if payment_method_options:
-                create_pi_kw["payment_method_options"] = payment_method_options
-            return stripe.PaymentIntent.create(**create_pi_kw)
-        
-        def create_ephemeral_key_sync(customer_id):
-            """创建 Ephemeral Key（同步函数）"""
-            ephemeral_key = stripe.EphemeralKey.create(
-                customer=customer_id,
-                stripe_version="2025-01-27.acacia",
-            )
-            return ephemeral_key.secret
-        
-        # 先获取/创建 Customer（优先使用 DB 缓存，首次用户才需要 API 调用）
-        # 然后创建 PI 并关联 customer，确保 PaymentSheet 能正确工作
-        loop = asyncio.get_event_loop()
-        executor = concurrent.futures.ThreadPoolExecutor(max_workers=2)
-        
-        try:
-            from app.utils.stripe_utils import get_or_create_stripe_customer
-            # 同步获取 Customer（优先从 DB 读取，无需 API 调用）
-            # 注意：这里传 db=None，因为异步路由用的是 AsyncSession，不能传给同步函数
-            customer_id = await loop.run_in_executor(
-                executor,
-                get_or_create_stripe_customer,
-                current_user,
-                None
-            )
-            # 异步保存 customer_id 到用户记录（避免下次重复创建）
-            if customer_id and (not current_user.stripe_customer_id or current_user.stripe_customer_id != customer_id):
-                await db.execute(
-                    update(models.User)
-                    .where(models.User.id == current_user.id)
-                    .values(stripe_customer_id=customer_id)
+        if not is_free_item:
+            # 需要支付：检查卖家 Stripe Connect 账户并创建 PaymentIntent
+            seller = await db.get(models.User, item.seller_id)
+            taker_stripe_account_id = seller.stripe_account_id if seller else None
+            
+            if not taker_stripe_account_id:
+                await db.rollback()
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="卖家尚未创建 Stripe Connect 收款账户，无法完成购买。请联系卖家先创建收款账户。",
+                    headers={"X-Stripe-Connect-Required": "true"}
                 )
             
-            # 并行执行：创建 PI 和 Ephemeral Key（将 customer_id 传入 PI 创建函数）
-            pi_future = loop.run_in_executor(
-                executor,
-                lambda: create_payment_intent_sync(customer_id),
-            )
-            ek_future = loop.run_in_executor(executor, create_ephemeral_key_sync, customer_id) if customer_id else None
+            import stripe
+
+            task_amount_pence = int(float(item.price) * 100)
+            from app.utils.fee_calculator import calculate_application_fee_pence
+            application_fee_pence = calculate_application_fee_pence(task_amount_pence)
             
-            if ek_future:
-                payment_intent, ephemeral_key_secret = await asyncio.gather(pi_future, ek_future)
-            else:
-                payment_intent = await pi_future
-                ephemeral_key_secret = None
+            import asyncio
+            import concurrent.futures
             
-            # 更新任务的 payment_intent_id
-            new_task.payment_intent_id = payment_intent.id
-                    
-        except Exception as e:
-            # 如果创建 PaymentIntent 失败，回滚整个事务
-            await db.rollback()
-            logger.error(f"创建 PaymentIntent 或 Customer 失败: {e}", exc_info=True)
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="创建支付失败，请稍后重试"
-            )
-        finally:
-            executor.shutdown(wait=False)
+            def create_payment_intent_sync(customer_id=None):
+                from app.secure_auth import get_wechat_pay_payment_method_options
+                payment_method_options = get_wechat_pay_payment_method_options(request)
+                create_pi_kw = {
+                    "amount": task_amount_pence,
+                    "currency": "gbp",
+                    "payment_method_types": ["card", "wechat_pay", "alipay"],
+                    "description": f"跳蚤市场购买 #{new_task.id}: {item.title[:50]}",
+                    "metadata": {
+                        "task_id": str(new_task.id),
+                        "task_title": item.title[:200] if item.title else "",
+                        "poster_id": str(current_user.id),
+                        "poster_name": current_user.name or f"User {current_user.id}",
+                        "taker_id": str(item.seller_id),
+                        "taker_name": seller.name if seller else f"User {item.seller_id}",
+                        "taker_stripe_account_id": taker_stripe_account_id,
+                        "application_fee": str(application_fee_pence),
+                        "task_amount": str(task_amount_pence),
+                        "task_amount_display": f"{item.price:.2f}",
+                        "platform": "Link²Ur",
+                        "payment_type": "flea_market_direct_purchase",
+                        "flea_market_item_id": str(item.id)
+                    },
+                }
+                if customer_id:
+                    create_pi_kw["customer"] = customer_id
+                if payment_method_options:
+                    create_pi_kw["payment_method_options"] = payment_method_options
+                return stripe.PaymentIntent.create(**create_pi_kw)
+            
+            def create_ephemeral_key_sync(customer_id):
+                ephemeral_key = stripe.EphemeralKey.create(
+                    customer=customer_id,
+                    stripe_version="2025-01-27.acacia",
+                )
+                return ephemeral_key.secret
+            
+            loop = asyncio.get_event_loop()
+            executor = concurrent.futures.ThreadPoolExecutor(max_workers=2)
+            
+            try:
+                from app.utils.stripe_utils import get_or_create_stripe_customer
+                customer_id = await loop.run_in_executor(
+                    executor,
+                    get_or_create_stripe_customer,
+                    current_user,
+                    None
+                )
+                if customer_id and (not current_user.stripe_customer_id or current_user.stripe_customer_id != customer_id):
+                    await db.execute(
+                        update(models.User)
+                        .where(models.User.id == current_user.id)
+                        .values(stripe_customer_id=customer_id)
+                    )
+                
+                pi_future = loop.run_in_executor(
+                    executor,
+                    lambda: create_payment_intent_sync(customer_id),
+                )
+                ek_future = loop.run_in_executor(executor, create_ephemeral_key_sync, customer_id) if customer_id else None
+                
+                if ek_future:
+                    payment_intent, ephemeral_key_secret = await asyncio.gather(pi_future, ek_future)
+                else:
+                    payment_intent = await pi_future
+                    ephemeral_key_secret = None
+                
+                new_task.payment_intent_id = payment_intent.id
+                        
+            except Exception as e:
+                await db.rollback()
+                logger.error(f"创建 PaymentIntent 或 Customer 失败: {e}", exc_info=True)
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail="创建支付失败，请稍后重试"
+                )
+            finally:
+                executor.shutdown(wait=False)
         
-        # ⚠️ 自动拒绝所有待处理的议价请求（因为商品已被直接购买）
+        # 自动拒绝所有待处理的议价请求（因为商品已被直接购买）
         await db.execute(
             update(models.FleaMarketPurchaseRequest)
             .where(
@@ -1810,30 +1797,36 @@ async def direct_purchase_item(
             .values(status="rejected")
         )
         
-        # 提交事务（任务和商品状态都已更新，PaymentIntent 已创建，所有议价请求已拒绝）
         await db.commit()
         
-        # ⚠️ 事务提交成功后，立即清除缓存，确保商品不再显示在列表中
         invalidate_item_cache(item.id)
-        logger.info(f"✅ 商品 {item_id} 已预留，事务已提交，所有待处理的议价请求已自动拒绝，缓存已清除")
+        logger.info(f"✅ 商品 {item_id} {'免费领取' if is_free_item else '已预留'}，事务已提交，所有待处理的议价请求已自动拒绝，缓存已清除")
         
-        # 发送通知给卖家（同步执行，因为需要使用 db session）
-        # 注意：这里不能用 asyncio.create_task，因为 db session 可能在响应返回后关闭
         try:
             await send_direct_purchase_notification(db, item, current_user, new_task.id)
         except Exception as notify_error:
-            # 通知发送失败不影响购买流程
             logger.warning(f"发送直接购买通知失败: {notify_error}")
         
-        # 再次清除缓存（确保缓存已清除，防止通知发送过程中的任何延迟）
         invalidate_item_cache(item.id)
+        
+        if is_free_item:
+            return {
+                "success": True,
+                "data": {
+                    "task_id": str(new_task.id),
+                    "item_status": "sold",
+                    "task_status": "in_progress",
+                    "is_free": True,
+                },
+                "message": "免费商品领取成功！"
+            }
         
         return {
             "success": True,
             "data": {
-                "task_id": str(new_task.id),  # 任务ID直接返回整数（转为字符串），不使用格式化
-                "item_status": "reserved",  # 商品状态为预留，等待支付完成
-                "task_status": "pending_payment",  # 返回任务状态
+                "task_id": str(new_task.id),
+                "item_status": "reserved",
+                "task_status": "pending_payment",
                 "payment_intent_id": payment_intent.id,
                 "client_secret": payment_intent.client_secret,
                 "amount": payment_intent.amount,
@@ -2052,41 +2045,40 @@ async def approve_purchase_request(
         if item.category:
             description = f"{description}\n\nCategory: {item.category}"
         
-        # 检查卖家是否有 Stripe Connect 账户（用于接收任务奖励）
+        is_free_purchase = float(final_price) == 0
+        
         seller = await db.get(models.User, item.seller_id)
         taker_stripe_account_id = seller.stripe_account_id if seller else None
         
-        if not taker_stripe_account_id:
+        if not is_free_purchase and not taker_stripe_account_id:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="卖家尚未创建 Stripe Connect 收款账户，无法完成购买。请联系卖家先创建收款账户。",
                 headers={"X-Stripe-Connect-Required": "true"}
             )
         
-        # 创建任务时设置为 pending_payment 状态，等待支付完成
         new_task = models.Task(
             title=item.title,
             description=description,
             reward=float(final_price),
             base_reward=item.price,
-            agreed_reward=final_price,  # 最终成交价（买家议价）
+            agreed_reward=final_price,
             currency="GBP",
             location=item.location or "Online",
             task_type="Second-hand & Rental",
-            poster_id=purchase_request.buyer_id,  # 买家
-            taker_id=item.seller_id,  # 卖家
-            status="pending_payment",  # 等待支付，不直接进入进行中状态
-            is_paid=0,  # 明确标记为未支付
-            payment_expires_at=get_utc_time() + timedelta(minutes=30),  # 支付过期时间（30分钟）
-            is_flexible=1,  # 灵活时间模式
-            deadline=None,  # 无截止日期
+            poster_id=purchase_request.buyer_id,
+            taker_id=item.seller_id,
+            status="in_progress" if is_free_purchase else "pending_payment",
+            is_paid=1 if is_free_purchase else 0,
+            payment_expires_at=None if is_free_purchase else (get_utc_time() + timedelta(minutes=30)),
+            is_flexible=1,
+            deadline=None,
             images=json.dumps(images) if images else None,
-            task_source="flea_market",  # 跳蚤市场任务
+            task_source="flea_market",
         )
         db.add(new_task)
-        await db.flush()  # 获取任务ID
+        await db.flush()
         
-        # 获取买家信息（用于创建PaymentIntent和发送通知）
         buyer_result = await db.execute(
             select(models.User).where(models.User.id == purchase_request.buyer_id)
         )
@@ -2099,70 +2091,71 @@ async def approve_purchase_request(
                 detail="买家不存在"
             )
         
-        # 创建支付意图
-        import stripe
+        payment_intent = None
+        customer_id = None
+        ephemeral_key_secret = None
+        
+        if not is_free_purchase:
+            import stripe
 
-        task_amount_pence = int(float(final_price) * 100)
-        from app.utils.fee_calculator import calculate_application_fee_pence
-        application_fee_pence = calculate_application_fee_pence(task_amount_pence)
-        
-        try:
-            from app.secure_auth import get_wechat_pay_payment_method_options
-            payment_method_options = get_wechat_pay_payment_method_options(request)
-            create_pi_kw = {
-                "amount": task_amount_pence,
-                "currency": "gbp",
-                "payment_method_types": ["card", "wechat_pay", "alipay"],
-                "description": f"跳蚤市场购买（议价） #{new_task.id}: {item.title[:50]}",
-                "metadata": {
-                    "task_id": str(new_task.id),
-                    "task_title": item.title[:200] if item.title else "",
-                    "poster_id": str(purchase_request.buyer_id),
-                    "poster_name": buyer.name if buyer else f"User {purchase_request.buyer_id}",
-                    "taker_id": str(item.seller_id),
-                    "taker_name": seller.name if seller else f"User {item.seller_id}",
-                    "taker_stripe_account_id": taker_stripe_account_id,
-                    "application_fee": str(application_fee_pence),
-                    "task_amount": str(task_amount_pence),
-                    "task_amount_display": f"{final_price:.2f}",
-                    "platform": "Link²Ur",
-                    "payment_type": "flea_market_purchase_request",
-                    "flea_market_item_id": str(item.id),
-                    "purchase_request_id": str(db_request_id)
-                },
-            }
-            if payment_method_options:
-                create_pi_kw["payment_method_options"] = payment_method_options
-            payment_intent = stripe.PaymentIntent.create(**create_pi_kw)
+            task_amount_pence = int(float(final_price) * 100)
+            from app.utils.fee_calculator import calculate_application_fee_pence
+            application_fee_pence = calculate_application_fee_pence(task_amount_pence)
             
-            # 更新任务的 payment_intent_id
-            new_task.payment_intent_id = payment_intent.id
-        except Exception as e:
-            # 如果创建 PaymentIntent 失败，回滚整个事务
-            await db.rollback()
-            logger.error(f"创建 PaymentIntent 失败: {e}", exc_info=True)
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="创建支付失败，请稍后重试"
-            )
+            try:
+                from app.secure_auth import get_wechat_pay_payment_method_options
+                payment_method_options = get_wechat_pay_payment_method_options(request)
+                create_pi_kw = {
+                    "amount": task_amount_pence,
+                    "currency": "gbp",
+                    "payment_method_types": ["card", "wechat_pay", "alipay"],
+                    "description": f"跳蚤市场购买（议价） #{new_task.id}: {item.title[:50]}",
+                    "metadata": {
+                        "task_id": str(new_task.id),
+                        "task_title": item.title[:200] if item.title else "",
+                        "poster_id": str(purchase_request.buyer_id),
+                        "poster_name": buyer.name if buyer else f"User {purchase_request.buyer_id}",
+                        "taker_id": str(item.seller_id),
+                        "taker_name": seller.name if seller else f"User {item.seller_id}",
+                        "taker_stripe_account_id": taker_stripe_account_id,
+                        "application_fee": str(application_fee_pence),
+                        "task_amount": str(task_amount_pence),
+                        "task_amount_display": f"{final_price:.2f}",
+                        "platform": "Link²Ur",
+                        "payment_type": "flea_market_purchase_request",
+                        "flea_market_item_id": str(item.id),
+                        "purchase_request_id": str(db_request_id)
+                    },
+                }
+                if payment_method_options:
+                    create_pi_kw["payment_method_options"] = payment_method_options
+                payment_intent = stripe.PaymentIntent.create(**create_pi_kw)
+                
+                new_task.payment_intent_id = payment_intent.id
+            except Exception as e:
+                await db.rollback()
+                logger.error(f"创建 PaymentIntent 失败: {e}", exc_info=True)
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail="创建支付失败，请稍后重试"
+                )
         
-        # 不立即更新商品状态为 sold，而是先关联任务ID
-        # 商品状态在支付成功后才更新为 sold（在 webhook 中处理）
+        item_update_values = {"sold_task_id": new_task.id}
+        if is_free_purchase:
+            item_update_values["status"] = "sold"
+        
         update_result = await db.execute(
             update(models.FleaMarketItem)
             .where(
                 and_(
                     models.FleaMarketItem.id == purchase_request.item_id,
                     models.FleaMarketItem.status == "active",
-                    models.FleaMarketItem.sold_task_id.is_(None)  # 确保商品未被其他购买预留
+                    models.FleaMarketItem.sold_task_id.is_(None)
                 )
             )
-            .values(
-                sold_task_id=new_task.id  # 只关联任务ID，不改变状态
-            )
+            .values(**item_update_values)
         )
         
-        # 检查是否成功更新
         if update_result.rowcount == 0:
             await db.rollback()
             raise HTTPException(
@@ -2170,18 +2163,14 @@ async def approve_purchase_request(
                 detail="该商品已被其他用户购买"
             )
         
-        # ⚠️ 立即清除缓存，确保商品不再显示在列表中
         invalidate_item_cache(purchase_request.item_id)
-        logger.info(f"✅ 商品 {purchase_request.item_id} 已预留，已清除缓存")
         
-        # 更新购买申请状态为accepted
         await db.execute(
             update(models.FleaMarketPurchaseRequest)
             .where(models.FleaMarketPurchaseRequest.id == db_request_id)
             .values(status="accepted")
         )
         
-        # 自动拒绝其他pending状态的申请
         await db.execute(
             update(models.FleaMarketPurchaseRequest)
             .where(
@@ -2194,47 +2183,56 @@ async def approve_purchase_request(
             .values(status="rejected")
         )
         
-        # 提交事务（任务和商品状态都已更新，PaymentIntent 已创建）
         await db.commit()
         
-        # 为支付方创建/获取 Customer + EphemeralKey（用于保存卡）
-        customer_id = None
-        ephemeral_key_secret = None
-        try:
-            from app.utils.stripe_utils import get_or_create_stripe_customer
-            customer_id = get_or_create_stripe_customer(buyer)
-            # 保存 customer_id 到买家用户记录
-            if customer_id and buyer and (not buyer.stripe_customer_id or buyer.stripe_customer_id != customer_id):
-                await db.execute(
-                    update(models.User)
-                    .where(models.User.id == buyer.id)
-                    .values(stripe_customer_id=customer_id)
-                )
+        if not is_free_purchase:
+            try:
+                from app.utils.stripe_utils import get_or_create_stripe_customer
+                customer_id = get_or_create_stripe_customer(buyer)
+                if customer_id and buyer and (not buyer.stripe_customer_id or buyer.stripe_customer_id != customer_id):
+                    await db.execute(
+                        update(models.User)
+                        .where(models.User.id == buyer.id)
+                        .values(stripe_customer_id=customer_id)
+                    )
 
-            ephemeral_key = stripe.EphemeralKey.create(
-                customer=customer_id,
-                stripe_version="2025-01-27.acacia",
-            )
-            ephemeral_key_secret = ephemeral_key.secret
-        except Exception as e:
-            logger.warning(f"无法创建 Stripe Customer 或 Ephemeral Key: {e}")
-            customer_id = None
-            ephemeral_key_secret = None
+                import stripe
+                ephemeral_key = stripe.EphemeralKey.create(
+                    customer=customer_id,
+                    stripe_version="2025-01-27.acacia",
+                )
+                ephemeral_key_secret = ephemeral_key.secret
+            except Exception as e:
+                logger.warning(f"无法创建 Stripe Customer 或 Ephemeral Key: {e}")
+                customer_id = None
+                ephemeral_key_secret = None
         
-        # 发送通知给买家
         await send_purchase_accepted_notification(
             db, item, buyer, new_task.id, float(final_price)
         )
         
-        # 清除缓存
         invalidate_item_cache(item.id)
+        
+        if is_free_purchase:
+            return {
+                "success": True,
+                "data": {
+                    "task_id": str(new_task.id),
+                    "item_status": "sold",
+                    "task_status": "in_progress",
+                    "final_price": 0.0,
+                    "purchase_request_status": "accepted",
+                    "is_free": True,
+                },
+                "message": "免费商品领取成功！"
+            }
         
         return {
             "success": True,
             "data": {
-                "task_id": str(new_task.id),  # 任务ID直接返回整数（转为字符串），不使用格式化
-                "item_status": "reserved",  # 商品状态为预留，等待支付完成
-                "task_status": "pending_payment",  # 返回任务状态
+                "task_id": str(new_task.id),
+                "item_status": "reserved",
+                "task_status": "pending_payment",
                 "final_price": float(final_price),
                 "purchase_request_status": "accepted",
                 "payment_intent_id": payment_intent.id,
@@ -2362,107 +2360,105 @@ async def accept_purchase_request(
         if item.category:
             description = f"{description}\n\nCategory: {item.category}"
         
-        # ⚠️ 安全修复：跳蚤市场接受购买申请需要支付
-        # 检查卖家是否有 Stripe Connect 账户（用于接收任务奖励）
+        is_free_purchase = float(final_price) == 0
+        
         seller = await db.get(models.User, item.seller_id)
         taker_stripe_account_id = seller.stripe_account_id if seller else None
         
-        if not taker_stripe_account_id:
+        if not is_free_purchase and not taker_stripe_account_id:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="卖家尚未创建 Stripe Connect 收款账户，无法完成购买。请联系卖家先创建收款账户。",
                 headers={"X-Stripe-Connect-Required": "true"}
             )
         
-        # 创建任务时设置为 pending_payment 状态，等待支付完成
         new_task = models.Task(
             title=item.title,
             description=description,
             reward=float(final_price),
             base_reward=item.price,
-            agreed_reward=final_price,  # 最终成交价（卖家议价）
+            agreed_reward=final_price,
             currency="GBP",
             location=item.location or "Online",
             task_type="Second-hand & Rental",
-            poster_id=purchase_request.buyer_id,  # 买家
-            taker_id=item.seller_id,  # 卖家
-            status="pending_payment",  # ⚠️ 安全修复：等待支付，不直接进入进行中状态
-            is_paid=0,  # 明确标记为未支付
-            payment_expires_at=get_utc_time() + timedelta(minutes=30),  # 支付过期时间（30分钟）
-            is_flexible=1,  # 灵活时间模式
-            deadline=None,  # 无截止日期
+            poster_id=purchase_request.buyer_id,
+            taker_id=item.seller_id,
+            status="in_progress" if is_free_purchase else "pending_payment",
+            is_paid=1 if is_free_purchase else 0,
+            payment_expires_at=None if is_free_purchase else (get_utc_time() + timedelta(minutes=30)),
+            is_flexible=1,
+            deadline=None,
             images=json.dumps(images) if images else None,
-            task_source="flea_market",  # 跳蚤市场任务
+            task_source="flea_market",
         )
         db.add(new_task)
-        await db.flush()  # 获取任务ID
+        await db.flush()
         
-        # ⚠️ 安全修复：创建支付意图，确保跳蚤市场购买也需要支付
-        # 注意：在提交事务之前创建 PaymentIntent，如果失败可以回滚
-        import stripe
+        payment_intent = None
+        customer_id = None
+        ephemeral_key_secret = None
+        
+        if not is_free_purchase:
+            import stripe
 
-        task_amount_pence = int(float(final_price) * 100)
-        from app.utils.fee_calculator import calculate_application_fee_pence
-        application_fee_pence = calculate_application_fee_pence(task_amount_pence)
-        
-        try:
-            from app.secure_auth import get_wechat_pay_payment_method_options
-            payment_method_options = get_wechat_pay_payment_method_options(request)
-            create_pi_kw = {
-                "amount": task_amount_pence,
-                "currency": "gbp",
-                "payment_method_types": ["card", "wechat_pay", "alipay"],
-                "description": f"跳蚤市场购买（议价） #{new_task.id}: {item.title[:50]}",
-                "metadata": {
-                    "task_id": str(new_task.id),
-                    "task_title": item.title[:200] if item.title else "",
-                    "poster_id": str(purchase_request.buyer_id),
-                    "poster_name": purchase_request.buyer.name if purchase_request.buyer else f"User {purchase_request.buyer_id}",
-                    "taker_id": str(item.seller_id),
-                    "taker_name": seller.name if seller else f"User {item.seller_id}",
-                    "taker_stripe_account_id": taker_stripe_account_id,
-                    "application_fee": str(application_fee_pence),
-                    "task_amount": str(task_amount_pence),
-                    "task_amount_display": f"{final_price:.2f}",
-                    "platform": "Link²Ur",
-                    "payment_type": "flea_market_purchase_request",
-                    "flea_market_item_id": str(item.id),
-                    "purchase_request_id": str(accept_data.purchase_request_id)
-                },
-            }
-            if payment_method_options:
-                create_pi_kw["payment_method_options"] = payment_method_options
-            payment_intent = stripe.PaymentIntent.create(**create_pi_kw)
+            task_amount_pence = int(float(final_price) * 100)
+            from app.utils.fee_calculator import calculate_application_fee_pence
+            application_fee_pence = calculate_application_fee_pence(task_amount_pence)
             
-            # 更新任务的 payment_intent_id
-            new_task.payment_intent_id = payment_intent.id
-        except Exception as e:
-            # 如果创建 PaymentIntent 失败，回滚整个事务
-            await db.rollback()
-            logger.error(f"创建 PaymentIntent 失败: {e}", exc_info=True)
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="创建支付失败，请稍后重试"
-            )
+            try:
+                from app.secure_auth import get_wechat_pay_payment_method_options
+                payment_method_options = get_wechat_pay_payment_method_options(request)
+                create_pi_kw = {
+                    "amount": task_amount_pence,
+                    "currency": "gbp",
+                    "payment_method_types": ["card", "wechat_pay", "alipay"],
+                    "description": f"跳蚤市场购买（议价） #{new_task.id}: {item.title[:50]}",
+                    "metadata": {
+                        "task_id": str(new_task.id),
+                        "task_title": item.title[:200] if item.title else "",
+                        "poster_id": str(purchase_request.buyer_id),
+                        "poster_name": purchase_request.buyer.name if purchase_request.buyer else f"User {purchase_request.buyer_id}",
+                        "taker_id": str(item.seller_id),
+                        "taker_name": seller.name if seller else f"User {item.seller_id}",
+                        "taker_stripe_account_id": taker_stripe_account_id,
+                        "application_fee": str(application_fee_pence),
+                        "task_amount": str(task_amount_pence),
+                        "task_amount_display": f"{final_price:.2f}",
+                        "platform": "Link²Ur",
+                        "payment_type": "flea_market_purchase_request",
+                        "flea_market_item_id": str(item.id),
+                        "purchase_request_id": str(accept_data.purchase_request_id)
+                    },
+                }
+                if payment_method_options:
+                    create_pi_kw["payment_method_options"] = payment_method_options
+                payment_intent = stripe.PaymentIntent.create(**create_pi_kw)
+                
+                new_task.payment_intent_id = payment_intent.id
+            except Exception as e:
+                await db.rollback()
+                logger.error(f"创建 PaymentIntent 失败: {e}", exc_info=True)
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail="创建支付失败，请稍后重试"
+                )
         
-        # ⚠️ 优化：不立即更新商品状态为 sold，而是先关联任务ID
-        # 商品状态在支付成功后才更新为 sold（在 webhook 中处理）
-        # 使用条件更新防止并发超卖（检查商品仍然是 active 状态）
+        item_update_values = {"sold_task_id": new_task.id}
+        if is_free_purchase:
+            item_update_values["status"] = "sold"
+        
         update_result = await db.execute(
             update(models.FleaMarketItem)
             .where(
                 and_(
                     models.FleaMarketItem.id == db_id,
                     models.FleaMarketItem.status == "active",
-                    models.FleaMarketItem.sold_task_id.is_(None)  # 确保商品未被其他购买预留
+                    models.FleaMarketItem.sold_task_id.is_(None)
                 )
             )
-            .values(
-                sold_task_id=new_task.id  # 只关联任务ID，不改变状态
-            )
+            .values(**item_update_values)
         )
         
-        # 检查是否成功更新
         if update_result.rowcount == 0:
             await db.rollback()
             raise HTTPException(
@@ -2470,18 +2466,14 @@ async def accept_purchase_request(
                 detail="该商品已被其他用户购买"
             )
         
-        # ⚠️ 立即清除缓存，确保商品不再显示在列表中
         invalidate_item_cache(db_id)
-        logger.info(f"✅ 商品 {item_id} 已预留，已清除缓存")
         
-        # 更新购买申请状态为accepted
         await db.execute(
             update(models.FleaMarketPurchaseRequest)
             .where(models.FleaMarketPurchaseRequest.id == accept_data.purchase_request_id)
             .values(status="accepted")
         )
         
-        # 自动拒绝其他pending和seller_negotiating状态的申请
         await db.execute(
             update(models.FleaMarketPurchaseRequest)
             .where(
@@ -2494,48 +2486,57 @@ async def accept_purchase_request(
             .values(status="rejected")
         )
         
-        # 提交事务（任务和商品状态都已更新，PaymentIntent 已创建）
         await db.commit()
         
-        # 为支付方创建/获取 Customer + EphemeralKey（用于保存卡）
-        customer_id = None
-        ephemeral_key_secret = None
-        try:
-            from app.utils.stripe_utils import get_or_create_stripe_customer
-            buyer_user = purchase_request.buyer
-            customer_id = get_or_create_stripe_customer(buyer_user)
-            # 保存 customer_id 到买家用户记录
-            if customer_id and buyer_user and (not buyer_user.stripe_customer_id or buyer_user.stripe_customer_id != customer_id):
-                await db.execute(
-                    update(models.User)
-                    .where(models.User.id == buyer_user.id)
-                    .values(stripe_customer_id=customer_id)
-                )
+        if not is_free_purchase:
+            try:
+                from app.utils.stripe_utils import get_or_create_stripe_customer
+                buyer_user = purchase_request.buyer
+                customer_id = get_or_create_stripe_customer(buyer_user)
+                if customer_id and buyer_user and (not buyer_user.stripe_customer_id or buyer_user.stripe_customer_id != customer_id):
+                    await db.execute(
+                        update(models.User)
+                        .where(models.User.id == buyer_user.id)
+                        .values(stripe_customer_id=customer_id)
+                    )
 
-            ephemeral_key = stripe.EphemeralKey.create(
-                customer=customer_id,
-                stripe_version="2025-01-27.acacia",
-            )
-            ephemeral_key_secret = ephemeral_key.secret
-        except Exception as e:
-            logger.warning(f"无法创建 Stripe Customer 或 Ephemeral Key: {e}")
-            customer_id = None
-            ephemeral_key_secret = None
+                import stripe
+                ephemeral_key = stripe.EphemeralKey.create(
+                    customer=customer_id,
+                    stripe_version="2025-01-27.acacia",
+                )
+                ephemeral_key_secret = ephemeral_key.secret
+            except Exception as e:
+                logger.warning(f"无法创建 Stripe Customer 或 Ephemeral Key: {e}")
+                customer_id = None
+                ephemeral_key_secret = None
         
-        # 发送通知给卖家
         await send_purchase_accepted_notification(
             db, item, purchase_request.buyer, new_task.id, float(final_price)
         )
         
-        # 清除缓存
         invalidate_item_cache(item.id)
+        
+        if is_free_purchase:
+            return {
+                "success": True,
+                "data": {
+                    "task_id": str(new_task.id),
+                    "item_status": "sold",
+                    "task_status": "in_progress",
+                    "final_price": 0.0,
+                    "purchase_request_status": "accepted",
+                    "is_free": True,
+                },
+                "message": "免费商品领取成功！"
+            }
         
         return {
             "success": True,
             "data": {
-                "task_id": str(new_task.id),  # 任务ID直接返回整数（转为字符串），不使用格式化
-                "item_status": "reserved",  # 商品状态为预留，等待支付完成
-                "task_status": "pending_payment",  # 返回任务状态
+                "task_id": str(new_task.id),
+                "item_status": "reserved",
+                "task_status": "pending_payment",
                 "final_price": float(final_price),
                 "purchase_request_status": "accepted",
                 "payment_intent_id": payment_intent.id,
@@ -3471,7 +3472,7 @@ async def update_flea_market_item_admin(
         if "price" in item_data:
             try:
                 price = Decimal(str(item_data["price"]))
-                if price <= 0 or price > 100000:
+                if price < 0 or price > 100000:
                     raise HTTPException(status_code=400, detail="价格必须在0-100000之间")
                 item.price = price
             except (ValueError, TypeError):

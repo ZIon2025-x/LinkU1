@@ -186,7 +186,7 @@ class WalletInfo extends Equatable {
   }
 
   @override
-  List<Object?> get props => [balance, currency, totalEarned, totalSpent];
+  List<Object?> get props => [balance, currency, totalEarned, totalSpent, pendingBalance, stripeConnectStatus];
 }
 
 /// 交易记录模型

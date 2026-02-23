@@ -126,7 +126,7 @@ class _CreateFleaMarketItemContentState
     if (!_formKey.currentState!.validate()) return;
 
     final price = double.tryParse(_priceController.text.trim());
-    if (price == null || price <= 0) {
+    if (price == null || price < 0) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(context.l10n.fleaMarketInvalidPrice),
@@ -296,7 +296,7 @@ class _CreateFleaMarketItemContentState
                       return context.l10n.fleaMarketPriceRequired;
                     }
                     final price = double.tryParse(value.trim());
-                    if (price == null || price <= 0) {
+                    if (price == null || price < 0) {
                       return context.l10n.fleaMarketInvalidPrice;
                     }
                     return null;

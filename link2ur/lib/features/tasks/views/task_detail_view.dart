@@ -25,6 +25,7 @@ import '../../../core/utils/sheet_adaptation.dart';
 import '../../../core/utils/l10n_extension.dart';
 import '../../../core/utils/date_formatter.dart';
 import '../../../core/utils/task_type_helper.dart';
+import '../../../core/utils/error_localizer.dart';
 import '../../../core/utils/task_status_helper.dart';
 import '../../../data/models/task.dart';
 import '../../../data/models/review.dart';
@@ -52,13 +53,14 @@ class TaskDetailView extends StatelessWidget {
       create: (context) => TaskDetailBloc(
         taskRepository: context.read<TaskRepository>(),
       )..add(TaskDetailLoadRequested(taskId)),
-      child: const _TaskDetailContent(),
+      child: _TaskDetailContent(taskId: taskId),
     );
   }
 }
 
 class _TaskDetailContent extends StatelessWidget {
-  const _TaskDetailContent();
+  const _TaskDetailContent({required this.taskId});
+  final int taskId;
 
   @override
   Widget build(BuildContext context) {
@@ -415,10 +417,7 @@ class _TaskDetailContent extends StatelessWidget {
       return ErrorStateView(
         message: state.errorMessage ?? context.l10n.homeLoadFailed,
         onRetry: () {
-          final bloc = context.read<TaskDetailBloc>();
-          if (state.task != null) {
-            bloc.add(TaskDetailLoadRequested(state.task!.id));
-          }
+          context.read<TaskDetailBloc>().add(TaskDetailLoadRequested(taskId));
         },
       );
     }
@@ -870,7 +869,7 @@ class _TaskDetailContent extends StatelessWidget {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(e.toString()),
+            content: Text(ErrorLocalizer.localizeFromException(context, e)),
             backgroundColor: AppColors.error,
           ),
         );

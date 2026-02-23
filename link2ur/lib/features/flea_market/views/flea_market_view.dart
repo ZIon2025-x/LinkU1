@@ -579,11 +579,15 @@ class _FleaMarketItemCard extends StatelessWidget {
                       // 价格
                       Expanded(
                         child: Text(
-                          item.priceDisplay,
-                          style: const TextStyle(
+                          item.isFree
+                              ? context.l10n.commonFree
+                              : item.priceDisplay,
+                          style: TextStyle(
                             fontSize: 15,
                             fontWeight: FontWeight.bold,
-                            color: AppColors.priceRed,
+                            color: item.isFree
+                                ? AppColors.success
+                                : AppColors.priceRed,
                           ),
                         ),
                       ),
