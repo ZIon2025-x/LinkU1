@@ -1513,6 +1513,8 @@ class TaskExpert(Base):
     updated_at = Column(DateTime(timezone=True), default=get_utc_time, onupdate=get_utc_time, server_default=func.now())
     approved_by = Column(String(5), ForeignKey("admin_users.id", ondelete="SET NULL"), nullable=True)  # 批准者，删除管理员时设为NULL
     approved_at = Column(DateTime(timezone=True), nullable=True)
+    is_official = Column(Boolean, default=False, nullable=False)
+    official_badge = Column(String(50), nullable=True)
     
     # 关系
     user = relationship("User", backref="expert_profile", foreign_keys=[id])
