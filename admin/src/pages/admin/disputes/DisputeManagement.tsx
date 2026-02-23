@@ -279,6 +279,7 @@ const DisputeManagement: React.FC = () => {
         columns={columns}
         data={table.data}
         loading={table.loading}
+        refreshing={table.fetching}
         rowKey="id"
         emptyText={searchKeyword ? '未找到匹配的争议记录' : '暂无争议记录'}
       />

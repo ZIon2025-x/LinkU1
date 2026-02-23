@@ -96,6 +96,23 @@
   color: #495057;
 }
 
+.refreshBar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  z-index: 101;
+  background: linear-gradient(90deg, transparent, #1890ff, transparent);
+  background-size: 200% 100%;
+  animation: refreshSlide 1.2s ease-in-out infinite;
+}
+
+@keyframes refreshSlide {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
 .fixed-left {
   position: sticky;
   left: 0;

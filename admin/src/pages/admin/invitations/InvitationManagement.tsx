@@ -360,6 +360,7 @@ const InvitationManagement: React.FC = () => {
         columns={columns}
         data={table.data}
         loading={table.loading}
+        refreshing={table.fetching}
         rowKey="id"
         emptyText="暂无邀请码数据"
       />

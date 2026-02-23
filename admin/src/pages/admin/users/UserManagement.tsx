@@ -237,6 +237,7 @@ const UserManagement: React.FC = () => {
         columns={columns}
         data={table.data}
         loading={table.loading}
+        refreshing={table.fetching}
         rowKey="id"
         emptyText="暂无用户数据"
       />

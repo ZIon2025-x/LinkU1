@@ -16,6 +16,8 @@ export interface AdminTableProps<T> {
   columns: Column<T>[];
   data: T[];
   loading?: boolean;
+  /** Background refresh in progress — shows a subtle top bar instead of full overlay. */
+  refreshing?: boolean;
   rowKey?: keyof T | ((record: T) => string | number);
   onRowClick?: (record: T) => void;
   emptyText?: string;
@@ -34,6 +36,7 @@ export function AdminTable<T extends Record<string, any>>({
   columns,
   data,
   loading = false,
+  refreshing = false,
   rowKey = 'id' as keyof T,
   onRowClick,
   emptyText = '暂无数据',
@@ -78,6 +81,7 @@ export function AdminTable<T extends Record<string, any>>({
           <div className={styles.spinner}>加载中...</div>
         </div>
       )}
+      {!loading && refreshing && <div className={styles.refreshBar} />}
 
       <div
         className={styles.tableWrapper}

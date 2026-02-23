@@ -397,6 +397,7 @@ const RefundManagement: React.FC = () => {
         columns={columns}
         data={table.data}
         loading={table.loading}
+        refreshing={table.fetching}
         rowKey="id"
         emptyText={searchKeyword ? '未找到匹配的退款申请记录' : '暂无退款申请记录'}
       />

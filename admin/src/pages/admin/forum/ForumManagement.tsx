@@ -366,6 +366,7 @@ const ForumManagement: React.FC = () => {
             columns={columns}
             data={table.data}
             loading={table.loading}
+            refreshing={table.fetching}
             rowKey="id"
             emptyText="暂无板块"
           />
@@ -389,6 +390,7 @@ const ForumManagement: React.FC = () => {
             columns={requestColumns}
             data={requestsTable.data}
             loading={requestsTable.loading}
+            refreshing={requestsTable.fetching}
             rowKey="id"
             emptyText="暂无待审核板块申请"
           />

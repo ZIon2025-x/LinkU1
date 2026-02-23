@@ -73,6 +73,7 @@ const ExpertManagement: React.FC = () => {
     fetchData: fetchExperts,
     initialPageSize: 20,
     onError: (error) => message.error(getErrorMessage(error)),
+    enabled: subTab === 'list',
   });
 
   // ==================== 申请列表 ====================
@@ -88,6 +89,7 @@ const ExpertManagement: React.FC = () => {
     fetchData: fetchApplications,
     initialPageSize: 100,
     onError: (error) => message.error(getErrorMessage(error)),
+    enabled: subTab === 'applications',
   });
 
   // ==================== 资料修改请求列表 ====================
@@ -103,6 +105,7 @@ const ExpertManagement: React.FC = () => {
     fetchData: fetchProfileUpdates,
     initialPageSize: 100,
     onError: (error) => message.error(getErrorMessage(error)),
+    enabled: subTab === 'profile_updates',
   });
 
   // ==================== 审核模态框 ====================
@@ -479,6 +482,7 @@ const ExpertManagement: React.FC = () => {
             columns={expertColumns}
             data={expertsTable.data}
             loading={expertsTable.loading}
+            refreshing={expertsTable.fetching}
             rowKey="id"
             emptyText="暂无达人数据"
           />
@@ -499,6 +503,7 @@ const ExpertManagement: React.FC = () => {
           columns={applicationColumns}
           data={applicationsTable.data}
           loading={applicationsTable.loading}
+          refreshing={applicationsTable.fetching}
           rowKey="id"
           emptyText="暂无待审核申请"
         />
@@ -510,6 +515,7 @@ const ExpertManagement: React.FC = () => {
           columns={profileUpdateColumns}
           data={profileUpdatesTable.data}
           loading={profileUpdatesTable.loading}
+          refreshing={profileUpdatesTable.fetching}
           rowKey="id"
           emptyText="暂无待审核资料修改请求"
         />

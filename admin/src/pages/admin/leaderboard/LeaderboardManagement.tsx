@@ -78,6 +78,7 @@ const LeaderboardManagement: React.FC = () => {
     fetchData: fetchVotes,
     initialPageSize: 50,
     onError: (error) => message.error(getErrorMessage(error)),
+    enabled: subTab === 'votes',
   });
 
   // ---------- 竞品管理 ----------
@@ -90,6 +91,7 @@ const LeaderboardManagement: React.FC = () => {
     fetchData: fetchItems,
     initialPageSize: 20,
     onError: (error) => message.error(getErrorMessage(error)),
+    enabled: subTab === 'items',
   });
 
   const itemModal = useModalForm<ItemForm>({
@@ -131,6 +133,7 @@ const LeaderboardManagement: React.FC = () => {
     fetchData: fetchReviews,
     initialPageSize: 20,
     onError: (error) => message.error(getErrorMessage(error)),
+    enabled: subTab === 'reviews',
   });
 
   const handleDeleteItem = useCallback((id: number) => {
@@ -385,6 +388,7 @@ const LeaderboardManagement: React.FC = () => {
             columns={itemsColumns}
             data={itemsTable.data}
             loading={itemsTable.loading}
+            refreshing={itemsTable.fetching}
             rowKey="id"
             emptyText="暂无竞品"
           />
@@ -452,6 +456,7 @@ const LeaderboardManagement: React.FC = () => {
             columns={votesColumns}
             data={votesTable.data}
             loading={votesTable.loading}
+            refreshing={votesTable.fetching}
             rowKey="id"
             emptyText="暂无投票记录"
           />
@@ -473,6 +478,7 @@ const LeaderboardManagement: React.FC = () => {
             columns={reviewsColumns}
             data={reviewsTable.data}
             loading={reviewsTable.loading}
+            refreshing={reviewsTable.fetching}
             rowKey="id"
             emptyText="暂无待审核竞品"
           />

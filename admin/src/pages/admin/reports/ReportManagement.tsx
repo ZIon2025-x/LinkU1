@@ -58,6 +58,7 @@ const ReportManagement: React.FC = () => {
     }, []),
     initialPageSize: 20,
     onError: useCallback((err: any) => message.error(getErrorMessage(err)), []),
+    enabled: subTab === 'forum',
   });
 
   // 跳蚤市场举报表格
@@ -72,6 +73,7 @@ const ReportManagement: React.FC = () => {
     }, []),
     initialPageSize: 20,
     onError: useCallback((err: any) => message.error(getErrorMessage(err)), []),
+    enabled: subTab === 'flea_market',
   });
 
   const handleProcessForumReport = async (reportId: number, status: 'processed' | 'rejected', action?: string) => {
@@ -323,6 +325,7 @@ const ReportManagement: React.FC = () => {
             columns={forumColumns}
             data={forumTable.data}
             loading={forumTable.loading}
+            refreshing={forumTable.fetching}
             rowKey="id"
             emptyText="暂无举报"
           />
@@ -341,6 +344,7 @@ const ReportManagement: React.FC = () => {
             columns={fleaColumns}
             data={fleaTable.data}
             loading={fleaTable.loading}
+            refreshing={fleaTable.fetching}
             rowKey="id"
             emptyText="暂无举报"
           />

@@ -712,6 +712,7 @@ const OfficialActivityManagement: React.FC = () => {
             columns={activityColumns}
             data={activitiesTable.data}
             loading={activitiesTable.loading}
+            refreshing={activitiesTable.fetching}
             rowKey="id"
             emptyText="暂无活动数据"
           />

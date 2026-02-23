@@ -287,6 +287,7 @@ export const CouponManagement: React.FC = () => {
         columns={columns}
         data={table.data}
         loading={table.loading}
+        refreshing={table.fetching}
         rowKey="id"
         emptyText="暂无优惠券数据"
         className={styles.table}
