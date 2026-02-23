@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 
 export interface TableConfig<T> {
   fetchData: (params: FetchParams) => Promise<{ data: T[]; total: number }>;
@@ -52,12 +52,17 @@ export function useAdminTable<T = any>(config: TableConfig<T>): UseAdminTableRet
   const [sortField, setSortField] = useState<string | undefined>();
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc' | undefined>();
 
+  const fetchDataRef = useRef(fetchData);
+  fetchDataRef.current = fetchData;
+  const onErrorRef = useRef(onError);
+  onErrorRef.current = onError;
+
   const totalPages = Math.ceil(total / pageSize);
 
   const loadData = useCallback(async () => {
     setLoading(true);
     try {
-      const result = await fetchData({
+      const result = await fetchDataRef.current({
         page: currentPage,
         pageSize,
         searchTerm,
@@ -68,15 +73,15 @@ export function useAdminTable<T = any>(config: TableConfig<T>): UseAdminTableRet
       setData(result.data);
       setTotal(result.total);
     } catch (error) {
-      if (onError) {
-        onError(error);
+      if (onErrorRef.current) {
+        onErrorRef.current(error);
       }
       setData([]);
       setTotal(0);
     } finally {
       setLoading(false);
     }
-  }, [currentPage, pageSize, searchTerm, filters, sortField, sortOrder, fetchData, onError]);
+  }, [currentPage, pageSize, searchTerm, filters, sortField, sortOrder]);
 
   useEffect(() => {
     loadData();
