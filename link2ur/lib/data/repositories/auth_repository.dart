@@ -143,7 +143,7 @@ class AuthRepository {
     required String email,
     required String password,
     required String name,
-    String? code,
+    String? invitationCode,
   }) async {
     final response = await _apiService.post<Map<String, dynamic>>(
       ApiEndpoints.register,
@@ -151,7 +151,8 @@ class AuthRepository {
         'email': email,
         'password': password,
         'name': name,
-        if (code != null) 'code': code,
+        if (invitationCode != null && invitationCode.isNotEmpty)
+          'invitation_code': invitationCode,
       },
     );
 

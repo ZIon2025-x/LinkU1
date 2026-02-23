@@ -272,6 +272,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get authPhoneOptional => 'Phone (Optional)';
 
   @override
+  String get authInvitationCodeOptional =>
+      'Invite Code / Inviter ID (Optional)';
+
+  @override
+  String get authInvitationCodeHint => 'Enter invite code or 8-digit user ID';
+
+  @override
   String get authAgreeToTerms => 'I have read and agree to the';
 
   @override

@@ -603,6 +603,18 @@ abstract class AppLocalizations {
   /// **'Phone (Optional)'**
   String get authPhoneOptional;
 
+  /// No description provided for @authInvitationCodeOptional.
+  ///
+  /// In en, this message translates to:
+  /// **'Invite Code / Inviter ID (Optional)'**
+  String get authInvitationCodeOptional;
+
+  /// No description provided for @authInvitationCodeHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter invite code or 8-digit user ID'**
+  String get authInvitationCodeHint;
+
   /// No description provided for @authAgreeToTerms.
   ///
   /// In en, this message translates to:

@@ -267,6 +267,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get authPhoneOptional => '手机号（可选）';
 
   @override
+  String get authInvitationCodeOptional => '邀请码/邀请人ID（选填）';
+
+  @override
+  String get authInvitationCodeHint => '请输入邀请码或8位用户ID';
+
+  @override
   String get authAgreeToTerms => '我已阅读并同意';
 
   @override
@@ -8588,6 +8594,12 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get authPhoneOptional => '手機號（可選）';
+
+  @override
+  String get authInvitationCodeOptional => '邀請碼/邀請人ID（選填）';
+
+  @override
+  String get authInvitationCodeHint => '請輸入邀請碼或8位用戶ID';
 
   @override
   String get authAgreeToTerms => '我已閱讀並同意';

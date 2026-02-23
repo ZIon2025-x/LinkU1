@@ -121,6 +121,16 @@ struct RegisterView: View {
                         )
                         .id("phoneField")
                         
+                        // 邀请码/邀请人ID（可选）
+                        EnhancedTextField(
+                            title: LocalizationKey.authInvitationCodeOptional.localized,
+                            placeholder: LocalizationKey.authInvitationCodeHint.localized,
+                            text: $viewModel.registerInvitationCode,
+                            icon: "giftcard.fill",
+                            autocapitalization: .never
+                        )
+                        .id("invitationCodeField")
+                        
                         // 错误提示
                         if let errorMessage = viewModel.errorMessage {
                             HStack(spacing: AppSpacing.sm) {

@@ -33,6 +33,7 @@ class _RegisterViewState extends State<RegisterView>
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
   final _codeController = TextEditingController();
+  final _invitationCodeController = TextEditingController();
 
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
@@ -85,6 +86,7 @@ class _RegisterViewState extends State<RegisterView>
     _passwordController.dispose();
     _confirmPasswordController.dispose();
     _codeController.dispose();
+    _invitationCodeController.dispose();
     super.dispose();
   }
 
@@ -104,8 +106,8 @@ class _RegisterViewState extends State<RegisterView>
           email: _emailController.text.trim(),
           password: _passwordController.text,
           name: _nameController.text.trim(),
-          code: _codeController.text.trim().isNotEmpty
-              ? _codeController.text.trim()
+          invitationCode: _invitationCodeController.text.trim().isNotEmpty
+              ? _invitationCodeController.text.trim()
               : null,
         ));
   }
@@ -473,6 +475,17 @@ class _RegisterViewState extends State<RegisterView>
                     const SizedBox(width: AppSpacing.sm),
                     _buildSendCodeButton(state, isDark),
                   ],
+                ),
+                const SizedBox(height: AppSpacing.md),
+
+                // 邀请码/邀请人ID（选填）
+                _buildStyledTextField(
+                  controller: _invitationCodeController,
+                  label: context.l10n.authInvitationCodeOptional,
+                  placeholder: context.l10n.authInvitationCodeHint,
+                  icon: Icons.card_giftcard_outlined,
+                  keyboardType: TextInputType.text,
+                  isDark: isDark,
                 ),
                 const SizedBox(height: AppSpacing.md),
 

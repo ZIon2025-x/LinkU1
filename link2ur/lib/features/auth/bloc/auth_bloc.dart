@@ -179,7 +179,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         email: event.email,
         password: event.password,
         name: event.name,
-        code: event.code,
+        invitationCode: event.invitationCode,
       );
 
       emit(state.copyWith(

@@ -105,6 +105,8 @@
   "authEnterUsername": "Enter username",
   "authPasswordHint": "At least 8 characters, including letters and numbers",
   "authPhoneOptional": "Phone (Optional)",
+  "authInvitationCodeOptional": "Invite Code / Inviter ID (Optional)",
+  "authInvitationCodeHint": "Enter invite code or 8-digit user ID",
   "authAgreeToTerms": "I have read and agree to the",
   "authTermsOfService": "Terms of Service",
   "authPrivacyPolicy": "Privacy Policy",

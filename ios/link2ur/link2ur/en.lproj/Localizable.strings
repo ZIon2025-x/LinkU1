@@ -85,6 +85,8 @@
 "auth.enter_username" = "Enter username";
 "auth.password_hint" = "At least 8 characters, including letters and numbers";
 "auth.phone_optional" = "Phone (Optional)";
+"auth.invitation_code_optional" = "Invite Code / Inviter ID (Optional)";
+"auth.invitation_code_hint" = "Enter invite code or 8-digit user ID";
 "auth.agree_to_terms" = "I have read and agree to the";
 "auth.terms_of_service" = "Terms of Service";
 "auth.privacy_policy" = "Privacy Policy";

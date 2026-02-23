@@ -152,6 +152,8 @@ public enum LocalizationKey: String {
     case authEnterUsername = "auth.enter_username"
     case authPasswordHint = "auth.password_hint"
     case authPhoneOptional = "auth.phone_optional"
+    case authInvitationCodeOptional = "auth.invitation_code_optional"
+    case authInvitationCodeHint = "auth.invitation_code_hint"
     case authAgreeToTerms = "auth.agree_to_terms"
     case authTermsOfService = "auth.terms_of_service"
     case authPrivacyPolicy = "auth.privacy_policy"

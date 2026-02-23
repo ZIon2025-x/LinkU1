@@ -118,6 +118,8 @@
   "authEnterUsername": "請輸入用戶名",
   "authPasswordHint": "至少8個字符，包含字母和數字",
   "authPhoneOptional": "手機號（可選）",
+  "authInvitationCodeOptional": "邀請碼/邀請人ID（選填）",
+  "authInvitationCodeHint": "請輸入邀請碼或8位用戶ID",
   "authAgreeToTerms": "我已閱讀並同意",
   "authTermsOfService": "《用戶協議》",
   "authPrivacyPolicy": "《隱私政策》",

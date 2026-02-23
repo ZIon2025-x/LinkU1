@@ -157,7 +157,8 @@ def delete_task_images(task_id: int, include_private: bool = True):
     """删除任务相关的所有图片和文件（公开和私密）"""
     try:
         deleted_count = 0
-        
+        RAILWAY_ENVIRONMENT = os.getenv("RAILWAY_ENVIRONMENT")
+
         # 1. 删除公开图片（任务图片）
         # 如果使用云存储，使用 storage backend
         if _is_cloud_storage():
@@ -183,7 +184,6 @@ def delete_task_images(task_id: int, include_private: bool = True):
         
         # 本地存储：使用文件系统
         if not _is_cloud_storage() or deleted_count == 0:
-            RAILWAY_ENVIRONMENT = os.getenv("RAILWAY_ENVIRONMENT")
             if RAILWAY_ENVIRONMENT:
                 public_task_dir = Path("/data/uploads/public/images/public") / str(task_id)
             else:

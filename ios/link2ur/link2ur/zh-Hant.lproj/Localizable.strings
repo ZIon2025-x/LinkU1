@@ -75,6 +75,8 @@
 "auth.enter_username" = "請輸入用戶名";
 "auth.password_hint" = "至少8個字符，包含字母和數字";
 "auth.phone_optional" = "手機號（可選）";
+"auth.invitation_code_optional" = "邀請碼/邀請人ID（選填）";
+"auth.invitation_code_hint" = "請輸入邀請碼或8位用戶ID";
 "auth.agree_to_terms" = "我已閱讀並同意";
 "auth.terms_of_service" = "《用戶協議》";
 "auth.privacy_policy" = "《隱私政策》";

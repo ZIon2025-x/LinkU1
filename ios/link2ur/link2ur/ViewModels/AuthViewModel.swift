@@ -51,6 +51,7 @@ class AuthViewModel: ObservableObject {
     @Published var registerEmail = ""
     @Published var registerPassword = ""
     @Published var registerPhone = ""
+    @Published var registerInvitationCode = ""
     @Published var registerVerificationCode = ""
     
     // 使用依赖注入获取服务（通过协议类型，但实际使用具体类型以支持扩展方法）
@@ -674,6 +675,10 @@ class AuthViewModel: ObservableObject {
         
         if !registerPhone.isEmpty {
             body["phone"] = registerPhone
+        }
+        
+        if !registerInvitationCode.isEmpty {
+            body["invitation_code"] = registerInvitationCode.trimmingCharacters(in: .whitespacesAndNewlines)
         }
         
         apiService.request(RegisterResponse.self, "/api/users/register", method: "POST", body: body)
