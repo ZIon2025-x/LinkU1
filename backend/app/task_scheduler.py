@@ -1078,5 +1078,18 @@ def init_scheduler():
         description="数据匿名化（每周日凌晨3点）"
     )
     
+
+    # ========== 官方活动开奖任务 ==========
+
+    # 官方活动自动开奖（每 60 秒检查一次）
+    from app.official_draw_task import run_auto_draws
+    scheduler.register_task(
+        name='official_activity_auto_draw',
+        func=with_db(run_auto_draws),
+        interval_seconds=60,
+        description='官方抽奖活动自动开奖',
+        priority='normal',
+    )
+
     logger.info(f"已注册 {len(scheduler.tasks)} 个定时任务")
     return scheduler
