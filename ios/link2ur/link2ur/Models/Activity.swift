@@ -31,6 +31,18 @@ struct Activity: Codable, Identifiable {
     let userTaskStatus: String? // 任务状态
     let userTaskIsPaid: Bool? // 任务是否已支付
     let userTaskHasNegotiation: Bool? // 是否有议价
+    let activityType: String? // 活动类型：lottery / first_come
+    let prizeType: String? // 奖品类型
+    let prizeDescription: String? // 奖品描述
+    let prizeDescriptionEn: String? // 奖品描述（英文）
+    let prizeCount: Int? // 奖品数量
+    let drawMode: String? // 抽奖模式
+    let drawAt: String? // 计划抽奖时间
+    let drawnAt: String? // 实际抽奖时间
+    let winners: [ActivityWinner]? // 中奖者列表
+    let isDrawn: Bool? // 是否已抽奖
+    let isOfficial: Bool? // 是否为官方活动
+    let currentApplicants: Int? // 当前申请人数（抽奖活动专用）
     
     enum CodingKeys: String, CodingKey {
         case id, title, description
@@ -58,6 +70,18 @@ struct Activity: Codable, Identifiable {
         case userTaskStatus = "user_task_status"
         case userTaskIsPaid = "user_task_is_paid"
         case userTaskHasNegotiation = "user_task_has_negotiation"
+        case activityType = "activity_type"
+        case prizeType = "prize_type"
+        case prizeDescription = "prize_description"
+        case prizeDescriptionEn = "prize_description_en"
+        case prizeCount = "prize_count"
+        case drawMode = "draw_mode"
+        case drawAt = "draw_at"
+        case drawnAt = "drawn_at"
+        case winners
+        case isDrawn = "is_drawn"
+        case isOfficial = "is_official"
+        case currentApplicants = "current_applicants"
     }
     
     /// 活动是否已结束（状态为 ended/cancelled/completed 或已过截止日期/结束日期）
@@ -103,6 +127,15 @@ struct Activity: Codable, Identifiable {
         !isEnded && !isFull
     }
     
+    // Is lottery activity
+    var isLottery: Bool { activityType == "lottery" }
+    
+    // Is first-come-first-served activity
+    var isFirstCome: Bool { activityType == "first_come" }
+    
+    // Is official activity (lottery or first-come)
+    var isOfficialActivity: Bool { activityType == "lottery" || activityType == "first_come" }
+    
     /// 辅助方法：解析日期字符串
     private func parseDate(_ dateStr: String) -> Date? {
         let formats = [
@@ -123,6 +156,40 @@ struct Activity: Codable, Identifiable {
             }
         }
         return nil
+    }
+}
+
+// MARK: - Activity Winner & Official Result
+
+struct ActivityWinner: Codable, Identifiable {
+    let userId: String
+    let name: String
+    let avatarUrl: String?
+    let prizeIndex: Int?
+    
+    var id: String { userId }
+    
+    enum CodingKeys: String, CodingKey {
+        case userId = "user_id"
+        case name
+        case avatarUrl = "avatar_url"
+        case prizeIndex = "prize_index"
+    }
+}
+
+struct OfficialActivityResult: Codable {
+    let isDrawn: Bool
+    let drawnAt: String?
+    let winners: [ActivityWinner]
+    let myStatus: String?
+    let myVoucherCode: String?
+    
+    enum CodingKeys: String, CodingKey {
+        case isDrawn = "is_drawn"
+        case drawnAt = "drawn_at"
+        case winners
+        case myStatus = "my_status"
+        case myVoucherCode = "my_voucher_code"
     }
 }
 

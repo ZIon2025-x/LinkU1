@@ -20,6 +20,8 @@ struct TaskExpert: Codable, Identifiable {
     let achievements: [String]? // 后端返回的字段
     let achievementsEn: [String]? // 英文成就徽章
     let isVerified: Bool? // 后端返回的字段
+    let isOfficial: Bool? // 是否为官方账号
+    let officialBadge: String? // 官方徽章类型
     let responseTime: String? // 后端返回的字段
     let responseTimeEn: String? // 英文响应时间
     let successRate: Double? // 后端返回的字段
@@ -47,6 +49,8 @@ struct TaskExpert: Codable, Identifiable {
         case achievements
         case achievementsEn = "achievements_en"
         case isVerified = "is_verified"
+        case isOfficial = "is_official"
+        case officialBadge = "official_badge"
         case responseTime = "response_time"
         case responseTimeEn = "response_time_en"
         case successRate = "success_rate"
@@ -109,6 +113,8 @@ struct TaskExpert: Codable, Identifiable {
         achievements = try container.decodeIfPresent([String].self, forKey: .achievements)
         achievementsEn = try container.decodeIfPresent([String].self, forKey: .achievementsEn)
         isVerified = try container.decodeIfPresent(Bool.self, forKey: .isVerified)
+        isOfficial = try container.decodeIfPresent(Bool.self, forKey: .isOfficial)
+        officialBadge = try container.decodeIfPresent(String.self, forKey: .officialBadge)
         responseTime = try container.decodeIfPresent(String.self, forKey: .responseTime)
         responseTimeEn = try container.decodeIfPresent(String.self, forKey: .responseTimeEn)
         successRate = try container.decodeIfPresent(Double.self, forKey: .successRate)
@@ -139,6 +145,8 @@ struct TaskExpert: Codable, Identifiable {
         try container.encodeIfPresent(achievements, forKey: .achievements)
         try container.encodeIfPresent(achievementsEn, forKey: .achievementsEn)
         try container.encodeIfPresent(isVerified, forKey: .isVerified)
+        try container.encodeIfPresent(isOfficial, forKey: .isOfficial)
+        try container.encodeIfPresent(officialBadge, forKey: .officialBadge)
         try container.encodeIfPresent(responseTime, forKey: .responseTime)
         try container.encodeIfPresent(responseTimeEn, forKey: .responseTimeEn)
         try container.encodeIfPresent(successRate, forKey: .successRate)
