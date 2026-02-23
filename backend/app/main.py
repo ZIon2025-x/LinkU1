@@ -449,6 +449,10 @@ app.include_router(upload_v2_router, tags=["图片上传V2"])
 from app.ai_agent_routes import router as ai_agent_router
 app.include_router(ai_agent_router, tags=["AI Agent"])
 
+# 官方账号 & 官方活动管理路由
+from app.admin_official_routes import admin_official_router
+app.include_router(admin_official_router, tags=["管理员-官方账号与活动"])
+
 # 创建上传目录
 import os
 RAILWAY_ENVIRONMENT = os.getenv("RAILWAY_ENVIRONMENT")
