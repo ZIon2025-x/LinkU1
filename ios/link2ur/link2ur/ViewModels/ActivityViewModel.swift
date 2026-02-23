@@ -1,6 +1,11 @@
 import Foundation
 import Combine
 
+
+enum OfficialApplyStatus {
+    case idle, applying, applied, full, error(String)
+}
+
 @MainActor
 class ActivityViewModel: ObservableObject {
     private let performanceMonitor = PerformanceMonitor.shared
@@ -18,6 +23,8 @@ class ActivityViewModel: ObservableObject {
     @Published var isFavorited = false // 是否已收藏（用于详情页）
     @Published var isTogglingFavorite = false // 是否正在切换收藏状态
     @Published var favoritedActivityIds: Set<Int> = [] // 收藏的活动ID集合（用于列表页）
+    @Published var officialApplyStatus: OfficialApplyStatus = .idle
+    @Published var myActivityResult: OfficialActivityResult?
     
     private var cancellables = Set<AnyCancellable>()
     private var isLoadingFavorites = false // 防止重复加载收藏列表
@@ -433,5 +440,48 @@ class ActivityViewModel: ObservableObject {
         .mapError { $0 as Error }
         .eraseToAnyPublisher()
     }
-}
+    // MARK: - Official Activity Actions
 
+    func applyToOfficialActivity(activityId: Int) {
+        officialApplyStatus = .applying
+        apiService.applyToOfficialActivity(activityId: activityId)
+            .receive(on: DispatchQueue.main)
+            .sink(
+                receiveCompletion: { [weak self] completion in
+                    if case .failure(let error) = completion {
+                        if case .serverError(_, let msg, _) = error, msg.contains("已满") {
+                            self?.officialApplyStatus = .full
+                        } else {
+                            self?.officialApplyStatus = .error(error.localizedDescription)
+                        }
+                    }
+                },
+                receiveValue: { [weak self] _ in
+                    self?.officialApplyStatus = .applied
+                }
+            )
+            .store(in: &cancellables)
+    }
+
+    func loadOfficialActivityResult(activityId: Int) {
+        apiService.getOfficialActivityResult(activityId: activityId)
+            .receive(on: DispatchQueue.main)
+            .sink(
+                receiveCompletion: { _ in },
+                receiveValue: { [weak self] result in
+                    self?.myActivityResult = result
+                }
+            )
+            .store(in: &cancellables)
+    }
+
+    func cancelOfficialApplication(activityId: Int) {
+        apiService.cancelOfficialActivityApplication(activityId: activityId)
+            .receive(on: DispatchQueue.main)
+            .sink(
+                receiveCompletion: { _ in },
+                receiveValue: { _ in }
+            )
+            .store(in: &cancellables)
+    }
+}

@@ -62,34 +62,63 @@ struct ActivityDetailView: View {
                 }
                 
                 // 7. Bottom Action Bar
-                ActivityBottomBar(
-                    activity: activity,
-                    isFavorited: viewModel.isFavorited,
-                    isTogglingFavorite: viewModel.isTogglingFavorite,
-                    onFavorite: {
-                        if appState.isAuthenticated {
-                            viewModel.toggleFavorite(activityId: activityId) { success in
-                                if success {
-                                    HapticFeedback.success()
+                if activity.isOfficialActivity {
+                    OfficialActivityBottomBar(
+                        activity: activity,
+                        isFavorited: viewModel.isFavorited,
+                        isTogglingFavorite: viewModel.isTogglingFavorite,
+                        officialApplyStatus: viewModel.officialApplyStatus,
+                        myActivityResult: viewModel.myActivityResult,
+                        onFavorite: {
+                            if appState.isAuthenticated {
+                                viewModel.toggleFavorite(activityId: activityId) { success in
+                                    if success {
+                                        HapticFeedback.success()
+                                    }
                                 }
+                            } else {
+                                showLogin = true
                             }
-                        } else {
-                            showLogin = true
+                        },
+                        onApplyOfficial: {
+                            if appState.isAuthenticated {
+                                viewModel.applyToOfficialActivity(activityId: activityId)
+                                HapticFeedback.selection()
+                            } else {
+                                showLogin = true
+                            }
                         }
-                    },
-                    onApply: {
-                        if appState.isAuthenticated {
-                            showingApplySheet = true
-                            HapticFeedback.selection()
-                        } else {
-                            showLogin = true
+                    )
+                } else {
+                    ActivityBottomBar(
+                        activity: activity,
+                        isFavorited: viewModel.isFavorited,
+                        isTogglingFavorite: viewModel.isTogglingFavorite,
+                        onFavorite: {
+                            if appState.isAuthenticated {
+                                viewModel.toggleFavorite(activityId: activityId) { success in
+                                    if success {
+                                        HapticFeedback.success()
+                                    }
+                                }
+                            } else {
+                                showLogin = true
+                            }
+                        },
+                        onApply: {
+                            if appState.isAuthenticated {
+                                showingApplySheet = true
+                                HapticFeedback.selection()
+                            } else {
+                                showLogin = true
+                            }
+                        },
+                        onPayment: { taskId in
+                            paymentTaskId = taskId
+                            showPaymentView = true
                         }
-                    },
-                    onPayment: { taskId in
-                        paymentTaskId = taskId
-                        showPaymentView = true
-                    }
-                )
+                    )
+                }
             } else if viewModel.isLoading {
                 LoadingView()
             } else {
@@ -148,6 +177,11 @@ struct ActivityDetailView: View {
         .toolbar(.hidden, for: .tabBar)
         .onAppear {
             viewModel.loadActivityDetail(activityId: activityId)
+        }
+        .onChange(of: viewModel.selectedActivity) { activity in
+            if let activity = activity, activity.isOfficialActivity {
+                viewModel.loadOfficialActivityResult(activityId: activity.id)
+            }
         }
         .sheet(isPresented: $showingApplySheet) {
             ActivityApplyView(activityId: activityId, viewModel: viewModel)
@@ -697,6 +731,144 @@ struct ActivityBottomBar: View {
                 .background(AppColors.cardBackground)
             }
         }
+    }
+}
+
+
+// MARK: - Official Activity Bottom Bar
+
+struct OfficialActivityBottomBar: View {
+    let activity: Activity
+    let isFavorited: Bool
+    let isTogglingFavorite: Bool
+    let officialApplyStatus: OfficialApplyStatus
+    let myActivityResult: OfficialActivityResult?
+    let onFavorite: () -> Void
+    let onApplyOfficial: () -> Void
+
+    var body: some View {
+        VStack {
+            Spacer()
+            VStack(spacing: 0) {
+                Divider()
+                VStack(spacing: AppSpacing.sm) {
+                    // Prize section
+                    if let prizeType = activity.prizeType {
+                        let prizeLabel: String = {
+                            switch prizeType {
+                            case "points": return "🎯 积分奖励"
+                            case "physical": return "🎁 实物奖品"
+                            case "voucher_code": return "🎫 优惠券码"
+                            case "in_person": return "🍽️ 线下到场"
+                            default: return "🎁 奖品"
+                            }
+                        }()
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(prizeLabel).fontWeight(.bold)
+                            if let desc = activity.prizeDescription {
+                                Text(desc).font(.caption).foregroundColor(.secondary)
+                            }
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(12)
+                        .background(Color(red: 1.0, green: 0.976, blue: 0.898))
+                        .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color(red: 1.0, green: 0.84, blue: 0.0), lineWidth: 1))
+                        .cornerRadius(8)
+                    }
+
+                    HStack(spacing: AppSpacing.md) {
+                        // Favorite Button
+                        Button(action: onFavorite) {
+                            VStack(spacing: 4) {
+                                ZStack {
+                                    if isTogglingFavorite {
+                                        ProgressView().scaleEffect(0.7)
+                                    } else {
+                                        Image(systemName: isFavorited ? "heart.fill" : "heart")
+                                            .font(.system(size: 20))
+                                            .foregroundColor(isFavorited ? .red : AppColors.textSecondary)
+                                            .scaleEffect(isFavorited ? 1.1 : 1.0)
+                                            .animation(.spring(response: 0.3, dampingFraction: 0.6), value: isFavorited)
+                                    }
+                                }
+                                .frame(height: 24)
+                                Text(LocalizationKey.activityFavorite.localized)
+                                    .font(.system(size: 10))
+                                    .foregroundColor(isFavorited ? .red : AppColors.textTertiary)
+                            }
+                            .frame(width: 50)
+                        }
+                        .disabled(isTogglingFavorite)
+
+                        if activity.isLottery && activity.isDrawn == true {
+                            VStack(spacing: 4) {
+                                Text("🏆 已开奖").font(.headline)
+                                if let winners = myActivityResult?.winners ?? activity.winners, !winners.isEmpty {
+                                    ForEach(winners) { winner in
+                                        Text(winner.name).font(.caption).foregroundColor(.secondary)
+                                    }
+                                }
+                            }
+                            .frame(maxWidth: .infinity)
+                        } else if activity.isFirstCome {
+                            let remaining = (activity.prizeCount ?? 0) - (activity.currentApplicants ?? 0)
+                            VStack(spacing: 4) {
+                                Text("剩余名额：\(remaining)").font(.caption).foregroundColor(.secondary)
+                                officialApplyButtonView(title: remaining > 0 ? "立即报名" : "已抢完", disabled: remaining <= 0)
+                            }
+                            .frame(maxWidth: .infinity)
+                        } else if activity.isLottery {
+                            VStack(spacing: 4) {
+                                if let drawAt = activity.drawAt {
+                                    Text("报名截止：\(drawAt)").font(.caption).foregroundColor(.secondary)
+                                }
+                                if let count = activity.currentApplicants {
+                                    Text("当前报名：\(count) 人").font(.caption).foregroundColor(.secondary)
+                                }
+                                officialApplyButtonView(title: "参与抽奖")
+                            }
+                            .frame(maxWidth: .infinity)
+                        } else {
+                            officialApplyButtonView(title: "立即报名")
+                        }
+                    }
+                }
+                .padding(.horizontal, AppSpacing.md)
+                .padding(.vertical, AppSpacing.sm)
+                .background(AppColors.cardBackground)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func officialApplyButtonView(title: String, disabled: Bool = false) -> some View {
+        let isApplying: Bool = {
+            if case .applying = officialApplyStatus { return true }
+            return false
+        }()
+        let isApplied: Bool = {
+            if case .applied = officialApplyStatus { return true }
+            return false
+        }()
+        let isFull: Bool = {
+            if case .full = officialApplyStatus { return true }
+            return false
+        }()
+
+        Button(action: onApplyOfficial) {
+            Group {
+                if isApplying {
+                    ProgressView().frame(maxWidth: .infinity)
+                } else {
+                    Text(isApplied ? "已报名" : (isFull ? "已抢完" : title))
+                        .font(AppTypography.bodyBold)
+                        .frame(maxWidth: .infinity)
+                }
+            }
+            .frame(height: 50)
+        }
+        .buttonStyle(PrimaryButtonStyle())
+        .disabled(disabled || isApplying || isApplied || isFull)
     }
 }
 

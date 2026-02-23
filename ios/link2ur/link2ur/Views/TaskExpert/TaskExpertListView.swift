@@ -287,6 +287,11 @@ struct ExpertCard: View {
                     // 认证徽章
                     IconStyle.icon("checkmark.seal.fill", size: 14)
                         .foregroundColor(AppColors.primary)
+                
+                    // 官方徽章
+                    if expert.isOfficial == true {
+                        OfficialBadgeView(badge: "官方")
+                    }
                 }
                 
                 if let bio = expert.localizedBio, !bio.isEmpty {
