@@ -41,7 +41,31 @@ interface ExpertEditForm {
   is_active: boolean;
   is_featured: boolean;
   is_verified: boolean;
+  expertise_areas: string;
+  expertise_areas_en: string;
+  featured_skills: string;
+  featured_skills_en: string;
+  achievements: string;
+  achievements_en: string;
+  response_time: string;
+  response_time_en: string;
+  avatar: string;
+  user_level: string;
 }
+
+const CATEGORY_OPTIONS = [
+  { value: '', label: '未分类' },
+  { value: 'programming', label: '编程开发 Programming' },
+  { value: 'translation', label: '翻译 Translation' },
+  { value: 'tutoring', label: '辅导 Tutoring' },
+  { value: 'food', label: '美食 Food' },
+  { value: 'beverage', label: '饮品 Beverage' },
+  { value: 'cake', label: '烘焙 Cake' },
+  { value: 'errand_transport', label: '跑腿代送 Errand & Transport' },
+  { value: 'social_entertainment', label: '社交娱乐 Social & Entertainment' },
+  { value: 'beauty_skincare', label: '美容护肤 Beauty & Skincare' },
+  { value: 'handicraft', label: '手工 Handicraft' },
+];
 
 const initialEditForm: ExpertEditForm = {
   id: '',
@@ -54,6 +78,16 @@ const initialEditForm: ExpertEditForm = {
   is_active: true,
   is_featured: true,
   is_verified: false,
+  expertise_areas: '',
+  expertise_areas_en: '',
+  featured_skills: '',
+  featured_skills_en: '',
+  achievements: '',
+  achievements_en: '',
+  response_time: '',
+  response_time_en: '',
+  avatar: '',
+  user_level: 'normal',
 };
 
 const ExpertManagement: React.FC = () => {
@@ -142,6 +176,7 @@ const ExpertManagement: React.FC = () => {
   const editModal = useModalForm<ExpertEditForm>({
     initialValues: initialEditForm,
     onSubmit: async (values) => {
+      const parseList = (s: string) => s.split(/[,，\n]/).map(v => v.trim()).filter(Boolean);
       await updateTaskExpert(values.id, {
         name: values.name,
         bio: values.bio || undefined,
@@ -152,6 +187,16 @@ const ExpertManagement: React.FC = () => {
         is_active: values.is_active ? 1 : 0,
         is_featured: values.is_featured ? 1 : 0,
         is_verified: values.is_verified ? 1 : 0,
+        expertise_areas: parseList(values.expertise_areas),
+        expertise_areas_en: parseList(values.expertise_areas_en),
+        featured_skills: parseList(values.featured_skills),
+        featured_skills_en: parseList(values.featured_skills_en),
+        achievements: parseList(values.achievements),
+        achievements_en: parseList(values.achievements_en),
+        response_time: values.response_time || undefined,
+        response_time_en: values.response_time_en || undefined,
+        avatar: values.avatar || undefined,
+        user_level: values.user_level || 'normal',
       });
       message.success('达人信息已更新');
       expertsTable.refresh();
@@ -160,6 +205,7 @@ const ExpertManagement: React.FC = () => {
   });
 
   const handleEdit = (expert: any) => {
+    const joinList = (arr: any) => Array.isArray(arr) ? arr.join(', ') : (arr || '');
     editModal.open({
       id: expert.id,
       name: expert.name || '',
@@ -171,6 +217,16 @@ const ExpertManagement: React.FC = () => {
       is_active: !!expert.is_active,
       is_featured: !!expert.is_featured,
       is_verified: !!expert.is_verified,
+      expertise_areas: joinList(expert.expertise_areas),
+      expertise_areas_en: joinList(expert.expertise_areas_en),
+      featured_skills: joinList(expert.featured_skills),
+      featured_skills_en: joinList(expert.featured_skills_en),
+      achievements: joinList(expert.achievements),
+      achievements_en: joinList(expert.achievements_en),
+      response_time: expert.response_time || '',
+      response_time_en: expert.response_time_en || '',
+      avatar: expert.avatar || '',
+      user_level: expert.user_level || 'normal',
     });
   };
 
@@ -555,67 +611,192 @@ const ExpertManagement: React.FC = () => {
         confirmLoading={editModal.loading}
         okText="保存"
         cancelText="取消"
-        width={600}
+        width={720}
       >
-        <div style={{ padding: '20px 0', display: 'flex', flexDirection: 'column', gap: '15px' }}>
-          <div>
-            <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>达人名称</label>
-            <input
-              type="text"
-              value={editModal.formData.name}
-              onChange={(e) => editModal.updateField('name', e.target.value)}
-              style={{ width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '4px', boxSizing: 'border-box' }}
-            />
-          </div>
-          <div>
-            <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>简介（中文）</label>
-            <textarea
-              value={editModal.formData.bio}
-              onChange={(e) => editModal.updateField('bio', e.target.value)}
-              rows={3}
-              style={{ width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '4px', resize: 'vertical', boxSizing: 'border-box' }}
-            />
-          </div>
-          <div>
-            <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>简介（英文）</label>
-            <textarea
-              value={editModal.formData.bio_en}
-              onChange={(e) => editModal.updateField('bio_en', e.target.value)}
-              rows={3}
-              style={{ width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '4px', resize: 'vertical', boxSizing: 'border-box' }}
-            />
-          </div>
+        <div style={{ padding: '12px 0', display: 'flex', flexDirection: 'column', gap: '14px', maxHeight: '65vh', overflowY: 'auto' }}>
+          {/* 基本信息 */}
+          <div style={{ fontWeight: 'bold', fontSize: '14px', color: '#333', borderBottom: '1px solid #eee', paddingBottom: '6px' }}>基本信息</div>
           <div style={{ display: 'flex', gap: '15px' }}>
             <div style={{ flex: 1 }}>
-              <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>分类</label>
+              <label style={{ display: 'block', marginBottom: '4px', fontWeight: '600', fontSize: '13px' }}>达人名称</label>
               <input
                 type="text"
-                value={editModal.formData.category}
-                onChange={(e) => editModal.updateField('category', e.target.value)}
-                placeholder="如：学术辅导"
+                value={editModal.formData.name}
+                onChange={(e) => editModal.updateField('name', e.target.value)}
                 style={{ width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '4px', boxSizing: 'border-box' }}
               />
             </div>
             <div style={{ flex: 1 }}>
-              <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>城市</label>
+              <label style={{ display: 'block', marginBottom: '4px', fontWeight: '600', fontSize: '13px' }}>头像 URL</label>
+              <input
+                type="text"
+                value={editModal.formData.avatar}
+                onChange={(e) => editModal.updateField('avatar', e.target.value)}
+                placeholder="https://..."
+                style={{ width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '4px', boxSizing: 'border-box' }}
+              />
+            </div>
+          </div>
+          <div style={{ display: 'flex', gap: '15px' }}>
+            <div style={{ flex: 1 }}>
+              <label style={{ display: 'block', marginBottom: '4px', fontWeight: '600', fontSize: '13px' }}>分类</label>
+              <select
+                value={editModal.formData.category}
+                onChange={(e) => editModal.updateField('category', e.target.value)}
+                style={{ width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '4px', boxSizing: 'border-box', background: 'white' }}
+              >
+                {CATEGORY_OPTIONS.map(opt => (
+                  <option key={opt.value} value={opt.value}>{opt.label}</option>
+                ))}
+              </select>
+            </div>
+            <div style={{ flex: 1 }}>
+              <label style={{ display: 'block', marginBottom: '4px', fontWeight: '600', fontSize: '13px' }}>城市</label>
               <input
                 type="text"
                 value={editModal.formData.location}
                 onChange={(e) => editModal.updateField('location', e.target.value)}
+                placeholder="如：London, Online"
                 style={{ width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '4px', boxSizing: 'border-box' }}
               />
             </div>
           </div>
+          <div style={{ display: 'flex', gap: '15px' }}>
+            <div style={{ flex: 1 }}>
+              <label style={{ display: 'block', marginBottom: '4px', fontWeight: '600', fontSize: '13px' }}>用户等级</label>
+              <select
+                value={editModal.formData.user_level}
+                onChange={(e) => editModal.updateField('user_level', e.target.value)}
+                style={{ width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '4px', boxSizing: 'border-box', background: 'white' }}
+              >
+                <option value="normal">Normal</option>
+                <option value="vip">VIP</option>
+                <option value="super">Super</option>
+              </select>
+            </div>
+            <div style={{ flex: 1 }}>
+              <label style={{ display: 'block', marginBottom: '4px', fontWeight: '600', fontSize: '13px' }}>排序（数字越小越靠前）</label>
+              <input
+                type="number"
+                value={editModal.formData.display_order}
+                onChange={(e) => editModal.updateField('display_order', parseInt(e.target.value) || 0)}
+                style={{ width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '4px', boxSizing: 'border-box' }}
+              />
+            </div>
+          </div>
+
+          {/* 简介 */}
+          <div style={{ fontWeight: 'bold', fontSize: '14px', color: '#333', borderBottom: '1px solid #eee', paddingBottom: '6px', marginTop: '4px' }}>简介</div>
           <div>
-            <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>排序（数字越小越靠前）</label>
-            <input
-              type="number"
-              value={editModal.formData.display_order}
-              onChange={(e) => editModal.updateField('display_order', parseInt(e.target.value) || 0)}
-              style={{ width: '120px', padding: '8px', border: '1px solid #ddd', borderRadius: '4px', boxSizing: 'border-box' }}
+            <label style={{ display: 'block', marginBottom: '4px', fontWeight: '600', fontSize: '13px' }}>中文简介</label>
+            <textarea
+              value={editModal.formData.bio}
+              onChange={(e) => editModal.updateField('bio', e.target.value)}
+              rows={2}
+              style={{ width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '4px', resize: 'vertical', boxSizing: 'border-box' }}
             />
           </div>
-          <div style={{ display: 'flex', gap: '20px' }}>
+          <div>
+            <label style={{ display: 'block', marginBottom: '4px', fontWeight: '600', fontSize: '13px' }}>英文简介</label>
+            <textarea
+              value={editModal.formData.bio_en}
+              onChange={(e) => editModal.updateField('bio_en', e.target.value)}
+              rows={2}
+              style={{ width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '4px', resize: 'vertical', boxSizing: 'border-box' }}
+            />
+          </div>
+
+          {/* 专业领域与技能 */}
+          <div style={{ fontWeight: 'bold', fontSize: '14px', color: '#333', borderBottom: '1px solid #eee', paddingBottom: '6px', marginTop: '4px' }}>专业领域与技能</div>
+          <div>
+            <label style={{ display: 'block', marginBottom: '4px', fontWeight: '600', fontSize: '13px' }}>擅长领域（中文，逗号分隔）</label>
+            <input
+              type="text"
+              value={editModal.formData.expertise_areas}
+              onChange={(e) => editModal.updateField('expertise_areas', e.target.value)}
+              placeholder="如：学术辅导, 论文指导, 数学"
+              style={{ width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '4px', boxSizing: 'border-box' }}
+            />
+          </div>
+          <div>
+            <label style={{ display: 'block', marginBottom: '4px', fontWeight: '600', fontSize: '13px' }}>擅长领域（英文，逗号分隔）</label>
+            <input
+              type="text"
+              value={editModal.formData.expertise_areas_en}
+              onChange={(e) => editModal.updateField('expertise_areas_en', e.target.value)}
+              placeholder="e.g. Academic Tutoring, Essay Guidance, Math"
+              style={{ width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '4px', boxSizing: 'border-box' }}
+            />
+          </div>
+          <div>
+            <label style={{ display: 'block', marginBottom: '4px', fontWeight: '600', fontSize: '13px' }}>特色技能（中文，逗号分隔）</label>
+            <input
+              type="text"
+              value={editModal.formData.featured_skills}
+              onChange={(e) => editModal.updateField('featured_skills', e.target.value)}
+              placeholder="如：快速响应, 耐心讲解"
+              style={{ width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '4px', boxSizing: 'border-box' }}
+            />
+          </div>
+          <div>
+            <label style={{ display: 'block', marginBottom: '4px', fontWeight: '600', fontSize: '13px' }}>特色技能（英文，逗号分隔）</label>
+            <input
+              type="text"
+              value={editModal.formData.featured_skills_en}
+              onChange={(e) => editModal.updateField('featured_skills_en', e.target.value)}
+              placeholder="e.g. Fast Response, Patient Explanation"
+              style={{ width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '4px', boxSizing: 'border-box' }}
+            />
+          </div>
+
+          {/* 成就与响应时间 */}
+          <div style={{ fontWeight: 'bold', fontSize: '14px', color: '#333', borderBottom: '1px solid #eee', paddingBottom: '6px', marginTop: '4px' }}>成就与响应时间</div>
+          <div>
+            <label style={{ display: 'block', marginBottom: '4px', fontWeight: '600', fontSize: '13px' }}>成就徽章（中文，逗号分隔）</label>
+            <input
+              type="text"
+              value={editModal.formData.achievements}
+              onChange={(e) => editModal.updateField('achievements', e.target.value)}
+              placeholder="如：五星好评, 百单达人"
+              style={{ width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '4px', boxSizing: 'border-box' }}
+            />
+          </div>
+          <div>
+            <label style={{ display: 'block', marginBottom: '4px', fontWeight: '600', fontSize: '13px' }}>成就徽章（英文，逗号分隔）</label>
+            <input
+              type="text"
+              value={editModal.formData.achievements_en}
+              onChange={(e) => editModal.updateField('achievements_en', e.target.value)}
+              placeholder="e.g. 5-Star Rating, 100+ Orders"
+              style={{ width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '4px', boxSizing: 'border-box' }}
+            />
+          </div>
+          <div style={{ display: 'flex', gap: '15px' }}>
+            <div style={{ flex: 1 }}>
+              <label style={{ display: 'block', marginBottom: '4px', fontWeight: '600', fontSize: '13px' }}>响应时间（中文）</label>
+              <input
+                type="text"
+                value={editModal.formData.response_time}
+                onChange={(e) => editModal.updateField('response_time', e.target.value)}
+                placeholder="如：通常 10 分钟内回复"
+                style={{ width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '4px', boxSizing: 'border-box' }}
+              />
+            </div>
+            <div style={{ flex: 1 }}>
+              <label style={{ display: 'block', marginBottom: '4px', fontWeight: '600', fontSize: '13px' }}>响应时间（英文）</label>
+              <input
+                type="text"
+                value={editModal.formData.response_time_en}
+                onChange={(e) => editModal.updateField('response_time_en', e.target.value)}
+                placeholder="e.g. Usually within 10 min"
+                style={{ width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '4px', boxSizing: 'border-box' }}
+              />
+            </div>
+          </div>
+
+          {/* 状态开关 */}
+          <div style={{ fontWeight: 'bold', fontSize: '14px', color: '#333', borderBottom: '1px solid #eee', paddingBottom: '6px', marginTop: '4px' }}>状态</div>
+          <div style={{ display: 'flex', gap: '24px' }}>
             <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}>
               <input type="checkbox" checked={editModal.formData.is_active} onChange={(e) => editModal.updateField('is_active', e.target.checked)} />
               <span>启用</span>
