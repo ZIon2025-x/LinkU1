@@ -1984,7 +1984,7 @@ class Activity(Base):
     description_zh = Column(Text, nullable=True)  # 中文描述，首次翻译后写入
     description_en = Column(Text, nullable=True)  # 英文描述，首次翻译后写入
     expert_id = Column(String(8), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
-    expert_service_id = Column(Integer, ForeignKey("task_expert_services.id", ondelete="RESTRICT"), nullable=False)
+    expert_service_id = Column(Integer, ForeignKey("task_expert_services.id", ondelete="RESTRICT"), nullable=True)
     location = Column(String(100), nullable=False)
     task_type = Column(String(50), nullable=False)
     # 价格相关
@@ -2024,6 +2024,19 @@ class Activity(Base):
     # 创建时间
     created_at = Column(DateTime(timezone=True), default=get_utc_time, server_default=func.now())
     updated_at = Column(DateTime(timezone=True), default=get_utc_time, onupdate=get_utc_time, server_default=func.now())
+    # 官方活动字段
+    activity_type = Column(String(20), nullable=False, default="standard")  # standard/lottery/first_come
+    prize_type = Column(String(20), nullable=True)   # points/physical/voucher_code/in_person
+    prize_description = Column(Text, nullable=True)
+    prize_description_en = Column(Text, nullable=True)
+    prize_count = Column(Integer, nullable=True)      # 中奖名额数 / 抢位数
+    voucher_codes = Column(JSONB, nullable=True)      # ["CODE1","CODE2",...]
+    # 抽奖字段
+    draw_mode = Column(String(10), nullable=True)     # auto/manual
+    draw_at = Column(DateTime, nullable=True)         # 自动开奖时间
+    drawn_at = Column(DateTime, nullable=True)        # 实际开奖时间
+    winners = Column(JSONB, nullable=True)            # [{user_id, name, prize_index}]
+    is_drawn = Column(Boolean, default=False, nullable=False)
     
     # 关系
     expert = relationship("User", foreign_keys=[expert_id])
