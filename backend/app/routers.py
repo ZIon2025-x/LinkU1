@@ -80,6 +80,7 @@ from app.email_utils import (
     send_confirmation_email,
     send_reset_email,
     send_task_update_email,
+    send_email_with_attachment,
 )
 from app.models import CustomerService, User
 from app.config import Config
@@ -10741,6 +10742,103 @@ def get_public_job_positions(
     except Exception as e:
         logger.error(f"获取公开岗位列表失败: {e}")
         raise HTTPException(status_code=500, detail="获取岗位列表失败")
+
+
+ALLOWED_RESUME_EXTENSIONS = {".pdf", ".doc", ".docx"}
+ALLOWED_RESUME_CONTENT_TYPES = {
+    "application/pdf",
+    "application/msword",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+}
+MAX_RESUME_SIZE = 10 * 1024 * 1024  # 10 MB
+
+
+@router.post("/job-applications")
+@rate_limit("general")
+def submit_job_application(
+    background_tasks: BackgroundTasks,
+    name: str = Form(..., min_length=1, max_length=100),
+    email: str = Form(..., max_length=200),
+    phone: str = Form(default="", max_length=30),
+    position: str = Form(..., min_length=1, max_length=200),
+    experience: str = Form(..., min_length=1, max_length=100),
+    introduction: str = Form(..., min_length=1, max_length=5000),
+    resume: UploadFile = File(...),
+):
+    """公开接口 — 提交岗位申请，简历作为附件发送到招聘邮箱"""
+    hiring_email = Config.HIRING_EMAIL
+    if not hiring_email:
+        raise HTTPException(status_code=503, detail="招聘邮箱尚未配置，暂时无法投递")
+
+    import re
+    if not re.match(r'^[^@\s]+@[^@\s]+\.[^@\s]+$', email):
+        raise HTTPException(status_code=400, detail="邮箱格式无效")
+
+    ext = os.path.splitext(resume.filename or "")[1].lower()
+    if ext not in ALLOWED_RESUME_EXTENSIONS:
+        raise HTTPException(status_code=400, detail="仅支持 PDF、DOC、DOCX 格式的简历")
+
+    content_type = resume.content_type or "application/octet-stream"
+    if content_type not in ALLOWED_RESUME_CONTENT_TYPES and ext not in ALLOWED_RESUME_EXTENSIONS:
+        raise HTTPException(status_code=400, detail="文件类型不合法")
+
+    file_data = resume.file.read()
+    if len(file_data) > MAX_RESUME_SIZE:
+        raise HTTPException(status_code=400, detail="简历文件不能超过 10 MB")
+
+    experience_labels = {
+        "freshGraduate": "应届毕业生",
+        "lessThan1Year": "1年以下",
+        "oneToThreeYears": "1-3年",
+        "threeToFiveYears": "3-5年",
+        "moreThanFiveYears": "5年以上",
+    }
+    experience_display = experience_labels.get(experience, experience)
+
+    subject = f"[Link2Ur 岗位投递] {position} - {name}"
+    body = f"""
+    <div style="font-family: 'Segoe UI', Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <h2 style="color: #3b82f6; border-bottom: 2px solid #3b82f6; padding-bottom: 10px;">
+            新简历投递通知
+        </h2>
+        <table style="width: 100%; border-collapse: collapse; margin: 16px 0;">
+            <tr><td style="padding: 8px 12px; font-weight: bold; width: 100px; color: #555;">姓名</td>
+                <td style="padding: 8px 12px;">{name}</td></tr>
+            <tr style="background: #f9fafb;">
+                <td style="padding: 8px 12px; font-weight: bold; color: #555;">邮箱</td>
+                <td style="padding: 8px 12px;"><a href="mailto:{email}">{email}</a></td></tr>
+            <tr><td style="padding: 8px 12px; font-weight: bold; color: #555;">手机</td>
+                <td style="padding: 8px 12px;">{phone or '未提供'}</td></tr>
+            <tr style="background: #f9fafb;">
+                <td style="padding: 8px 12px; font-weight: bold; color: #555;">申请岗位</td>
+                <td style="padding: 8px 12px;">{position}</td></tr>
+            <tr><td style="padding: 8px 12px; font-weight: bold; color: #555;">工作经验</td>
+                <td style="padding: 8px 12px;">{experience_display}</td></tr>
+        </table>
+        <div style="margin-top: 16px;">
+            <h3 style="color: #555;">自我介绍</h3>
+            <p style="white-space: pre-wrap; background: #f9fafb; padding: 12px; border-radius: 8px;">{introduction}</p>
+        </div>
+        <p style="color: #999; font-size: 12px; margin-top: 24px;">
+            简历文件已附在邮件附件中，请查收。
+        </p>
+    </div>
+    """
+
+    safe_filename = f"{name}_{position}{ext}"
+
+    background_tasks.add_task(
+        send_email_with_attachment,
+        to_email=hiring_email,
+        subject=subject,
+        body=body,
+        attachment_data=file_data,
+        attachment_filename=safe_filename,
+        attachment_content_type=content_type,
+    )
+
+    logger.info(f"岗位投递已提交: {name} -> {position}, email={email}")
+    return {"message": "投递成功，我们会尽快与您联系！"}
 
 
 # ==================== 任务达人管理 API ====================

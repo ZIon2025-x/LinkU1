@@ -29,7 +29,7 @@ import {
   HeartOutlined,
   TrophyOutlined
 } from '@ant-design/icons';
-import { fetchCurrentUser, getNotificationsWithRecentRead, getUnreadNotificationCount, markNotificationRead, markAllNotificationsRead, getPublicJobPositions } from '../api';
+import { fetchCurrentUser, getNotificationsWithRecentRead, getUnreadNotificationCount, markNotificationRead, markAllNotificationsRead, getPublicJobPositions, submitJobApplication } from '../api';
 import HamburgerMenu from '../components/HamburgerMenu';
 import NotificationButton from '../components/NotificationButton';
 import NotificationPanel from '../components/NotificationPanel';
@@ -202,16 +202,37 @@ const JoinUs: React.FC = () => {
     }
   ];
 
-  const handleSubmit = async (_values: any) => {
-    void _values;
+  const handleSubmit = async (values: any) => {
     setLoading(true);
     try {
-      // 模拟提交
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      message.success('简历投递成功！我们会在3个工作日内与您联系。');
+      const resumeFile = values.resume?.fileList?.[0]?.originFileObj
+        || values.resume?.file?.originFileObj
+        || values.resume?.originFileObj;
+
+      if (!resumeFile) {
+        message.error(language === 'en' ? 'Please upload your resume' : '请上传简历文件');
+        return;
+      }
+
+      await submitJobApplication({
+        name: values.name,
+        email: values.email,
+        phone: values.phone || '',
+        position: values.position,
+        experience: values.experience,
+        introduction: values.introduction,
+        resume: resumeFile,
+      });
+
+      message.success(
+        language === 'en'
+          ? 'Application submitted! We will contact you within 3 business days.'
+          : '简历投递成功！我们会在3个工作日内与您联系。'
+      );
       form.resetFields();
-    } catch (error) {
-      message.error('投递失败，请稍后重试');
+    } catch (error: any) {
+      const detail = error?.response?.data?.detail;
+      message.error(detail || (language === 'en' ? 'Submission failed, please try again.' : '投递失败，请稍后重试'));
     } finally {
       setLoading(false);
     }

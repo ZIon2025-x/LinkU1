@@ -1368,6 +1368,30 @@ export const getPublicJobPositions = async (params?: {
   return res.data;
 };
 
+export const submitJobApplication = async (data: {
+  name: string;
+  email: string;
+  phone?: string;
+  position: string;
+  experience: string;
+  introduction: string;
+  resume: File;
+}) => {
+  const formData = new FormData();
+  formData.append('name', data.name);
+  formData.append('email', data.email);
+  formData.append('phone', data.phone || '');
+  formData.append('position', data.position);
+  formData.append('experience', data.experience);
+  formData.append('introduction', data.introduction);
+  formData.append('resume', data.resume, data.resume.name);
+
+  const res = await api.post('/api/job-applications', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
+  return res.data;
+};
+
 // ==================== 任务达人功能 API ====================
 
 // 公开 API - 获取任务达人列表（用于前端展示）

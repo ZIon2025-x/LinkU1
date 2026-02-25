@@ -1,6 +1,10 @@
 import os
 import smtplib
 from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
+from email.mime.base import MIMEBase
+from email import encoders
+import base64
 
 from dotenv import load_dotenv
 from fastapi import BackgroundTasks
@@ -277,3 +281,144 @@ def send_admin_verification_code_email(
     
     background_tasks.add_task(send_email, to_email, subject, body)
     logger.info(f"管理员验证码邮件已发送到: {to_email}")
+
+
+def send_email_with_attachment(
+    to_email: str,
+    subject: str,
+    body: str,
+    attachment_data: bytes,
+    attachment_filename: str,
+    attachment_content_type: str = "application/octet-stream",
+) -> bool:
+    """
+    发送带附件的邮件 — 优先 Resend，再 SendGrid，最后 SMTP。
+    attachment_data: 文件的二进制内容
+    """
+    if Config.USE_RESEND and Config.RESEND_API_KEY and RESEND_AVAILABLE:
+        return _send_attachment_resend(
+            to_email, subject, body,
+            attachment_data, attachment_filename, attachment_content_type,
+        )
+
+    if Config.USE_SENDGRID and Config.SENDGRID_API_KEY and SENDGRID_AVAILABLE:
+        return _send_attachment_sendgrid(
+            to_email, subject, body,
+            attachment_data, attachment_filename, attachment_content_type,
+        )
+
+    return _send_attachment_smtp(
+        to_email, subject, body,
+        attachment_data, attachment_filename, attachment_content_type,
+    )
+
+
+def _send_attachment_resend(
+    to_email, subject, body,
+    attachment_data, attachment_filename, attachment_content_type,
+) -> bool:
+    try:
+        resend.api_key = Config.RESEND_API_KEY
+        params = {
+            "from": Config.EMAIL_FROM,
+            "to": [to_email],
+            "subject": subject,
+            "html": body,
+            "attachments": [
+                {
+                    "filename": attachment_filename,
+                    "content": list(attachment_data),
+                    "content_type": attachment_content_type,
+                }
+            ],
+        }
+        result = resend.Emails.send(params)
+        logger.info(f"Resend附件邮件发送成功: {result}")
+        return True
+    except Exception as e:
+        logger.error(f"Resend附件邮件发送失败: {e}, 回退到SMTP")
+        return _send_attachment_smtp(
+            to_email, subject, body,
+            attachment_data, attachment_filename, attachment_content_type,
+        )
+
+
+def _send_attachment_sendgrid(
+    to_email, subject, body,
+    attachment_data, attachment_filename, attachment_content_type,
+) -> bool:
+    try:
+        sg = sendgrid.SendGridAPIClient(api_key=Config.SENDGRID_API_KEY)
+        from sendgrid.helpers.mail import (
+            Mail, Email, To, Content, Attachment, FileContent,
+            FileName, FileType, Disposition,
+        )
+
+        mail = Mail(
+            from_email=Email(Config.EMAIL_FROM),
+            to_emails=To(to_email),
+            subject=subject,
+            html_content=Content("text/html", body),
+        )
+
+        encoded_file = base64.b64encode(attachment_data).decode()
+        att = Attachment(
+            FileContent(encoded_file),
+            FileName(attachment_filename),
+            FileType(attachment_content_type),
+            Disposition("attachment"),
+        )
+        mail.attachment = att
+
+        response = sg.send(mail)
+        logger.info(f"SendGrid附件邮件发送成功: {response.status_code}")
+        return True
+    except Exception as e:
+        logger.error(f"SendGrid附件邮件发送失败: {e}, 回退到SMTP")
+        return _send_attachment_smtp(
+            to_email, subject, body,
+            attachment_data, attachment_filename, attachment_content_type,
+        )
+
+
+def _send_attachment_smtp(
+    to_email, subject, body,
+    attachment_data, attachment_filename, attachment_content_type,
+) -> bool:
+    if not SMTP_USER or not SMTP_PASS:
+        logger.warning("SMTP配置不完整，跳过附件邮件发送")
+        return False
+
+    try:
+        msg = MIMEMultipart()
+        msg["Subject"] = subject
+        msg["From"] = EMAIL_FROM
+        msg["To"] = to_email
+
+        msg.attach(MIMEText(body, "html"))
+
+        part = MIMEBase(*attachment_content_type.split("/", 1))
+        part.set_payload(attachment_data)
+        encoders.encode_base64(part)
+        part.add_header(
+            "Content-Disposition",
+            f'attachment; filename="{attachment_filename}"',
+        )
+        msg.attach(part)
+
+        if SMTP_USE_SSL:
+            with smtplib.SMTP_SSL(SMTP_SERVER, SMTP_PORT) as server:
+                server.login(SMTP_USER, SMTP_PASS)
+                server.sendmail(EMAIL_FROM, [to_email], msg.as_string())
+        else:
+            with smtplib.SMTP(SMTP_SERVER, SMTP_PORT) as server:
+                if SMTP_USE_TLS:
+                    server.starttls()
+                server.login(SMTP_USER, SMTP_PASS)
+                server.sendmail(EMAIL_FROM, [to_email], msg.as_string())
+
+        logger.info("SMTP附件邮件发送成功")
+        return True
+    except Exception as e:
+        logger.error(f"SMTP附件邮件发送失败: {e}")
+        return False

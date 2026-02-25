@@ -210,7 +210,10 @@ class Config:
     ADMIN_EMAIL = os.getenv("ADMIN_EMAIL", "")  # 管理员邮箱地址
     ADMIN_VERIFICATION_CODE_EXPIRE_MINUTES = int(os.getenv("ADMIN_VERIFICATION_CODE_EXPIRE_MINUTES", "5"))  # 验证码过期时间（分钟）
     ENABLE_ADMIN_EMAIL_VERIFICATION = os.getenv("ENABLE_ADMIN_EMAIL_VERIFICATION", "true").lower() == "true"  # 是否启用管理员邮箱验证
-    
+
+    # 招聘邮箱配置
+    HIRING_EMAIL = os.getenv("HIRING_EMAIL", "")  # 接收简历投递的邮箱地址
+
     # 基础URL配置
     BASE_URL = os.getenv("BASE_URL", "https://api.link2ur.com")
     FRONTEND_URL = os.getenv("FRONTEND_URL", "https://www.link2ur.com")
