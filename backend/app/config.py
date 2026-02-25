@@ -121,8 +121,8 @@ class Config:
     MOBILE_COOKIE_SAMESITE = "lax"   # 移动端使用lax提高兼容性
     MOBILE_COOKIE_SECURE = True      # 移动端使用secure（HTTPS环境）
     
-    # 开发环境配置
-    DEBUG = os.getenv("DEBUG", "true").lower() == "true"
+    # 调试模式：生产环境默认关闭，非生产环境默认开启
+    DEBUG = os.getenv("DEBUG", "false" if IS_PRODUCTION else "true").lower() == "true"
     
     # 只读模式 — 设为 true 时拒绝所有写操作（POST/PUT/PATCH/DELETE），
     # 仅允许 GET/HEAD/OPTIONS，用于数据库维护期间保证最小可用性。

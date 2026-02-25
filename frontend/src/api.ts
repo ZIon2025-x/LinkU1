@@ -27,9 +27,13 @@ const pendingRequests = new Map<string, Promise<any>>();
 
 // 重试计数器，防止无限重试
 const retryCounters = new Map<string, number>();
-const MAX_RETRY_ATTEMPTS = 2; // 减少最大重试次数
-const GLOBAL_RETRY_COUNTER = new Map<string, number>(); // 全局重试计数器
-const MAX_GLOBAL_RETRIES = 5; // 全局最大重试次数
+const MAX_RETRY_ATTEMPTS = 2;
+const GLOBAL_RETRY_COUNTER = new Map<string, number>();
+const MAX_GLOBAL_RETRIES = 5;
+
+// refresh token 彻底失败标志：两个端点都失败后设为 true，
+// 阻止后续轮询请求再次触发 refresh，直到用户重新登录。
+let authPermanentlyFailed = false;
 
 // 防抖计时器
 const debounceTimers = new Map<string, NodeJS.Timeout>();
@@ -186,10 +190,11 @@ api.interceptors.request.use(async config => {
   return config;
 });
 
-// 清理重试计数器的函数
+// 清理重试计数器的函数（登录成功后调用）
 function clearRetryCounters() {
   retryCounters.clear();
   GLOBAL_RETRY_COUNTER.clear();
+  authPermanentlyFailed = false;
 }
 
 // 响应拦截器 - 处理认证失败、token刷新和CSRF错误
@@ -306,14 +311,19 @@ api.interceptors.response.use(
       if (skipRefreshApis.some(api => error.config?.url?.includes(api))) {
         return Promise.reject(error);
       }
+
+      // refresh token 已彻底失败，不再尝试刷新，直接拒绝
+      if (authPermanentlyFailed) {
+        return Promise.reject(error);
+      }
       
       // 全局重试控制 - 防止无限循环
       const globalKey = 'global_401_retry';
       const globalRetryCount = GLOBAL_RETRY_COUNTER.get(globalKey) || 0;
       
       if (globalRetryCount >= MAX_GLOBAL_RETRIES) {
-                GLOBAL_RETRY_COUNTER.delete(globalKey);
-        // 清理所有重试计数器
+        authPermanentlyFailed = true;
+        GLOBAL_RETRY_COUNTER.delete(globalKey);
         retryCounters.clear();
         return Promise.reject(error);
       }
@@ -403,19 +413,16 @@ api.interceptors.response.use(
               }
               return api.request(error.config);
             } catch (refreshTokenError) {
-              // 增加全局重试计数
               GLOBAL_RETRY_COUNTER.set(globalKey, globalRetryCount + 1);
-              // HttpOnly Cookie会自动处理，无需手动清理
-              // 让各个组件自己处理认证失败的情况
+              // 两个 refresh 端点都失败，标记认证彻底失败
+              authPermanentlyFailed = true;
               return Promise.reject(refreshTokenError);
             } finally {
               refreshPromise = null;
             }
           } else {
-            // 增加全局重试计数
             GLOBAL_RETRY_COUNTER.set(globalKey, globalRetryCount + 1);
-            // HttpOnly Cookie会自动处理，无需手动清理
-            // 让各个组件自己处理认证失败的情况
+            authPermanentlyFailed = true;
             return Promise.reject(refreshError);
           }
         } finally {
