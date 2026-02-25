@@ -109,7 +109,9 @@ const BannerManagement: React.FC = () => {
 
     setUploading(true);
     try {
-      const result = await uploadBannerImage(file);
+      const { compressImage } = await import('../../../utils/imageCompression');
+      const compressed = await compressImage(file, { maxSizeMB: 4, maxWidthOrHeight: 1920 });
+      const result = await uploadBannerImage(compressed);
       modal.updateField('image_url', result.url);
       message.success('图片上传成功');
     } catch (error: any) {

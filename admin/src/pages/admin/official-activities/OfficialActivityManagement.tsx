@@ -954,8 +954,10 @@ const OfficialActivityManagement: React.FC = () => {
                 const file = e.target.files?.[0];
                 if (!file) return;
                 try {
+                  const { compressImage } = await import('../../../utils/imageCompression');
+                  const compressed = await compressImage(file, { maxSizeMB: 8, maxWidthOrHeight: 1920 });
                   const formData = new FormData();
-                  formData.append('image', file);
+                  formData.append('image', compressed);
                   const res = await api.post('/api/v2/upload/image?category=activity', formData, {
                     headers: { 'Content-Type': 'multipart/form-data' },
                   });

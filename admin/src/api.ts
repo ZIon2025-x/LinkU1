@@ -1283,8 +1283,10 @@ export async function sendAdminCustomerServiceChatMessage(content: string) {
 // ==================== 文件上传 API ====================
 
 export const uploadImage = async (file: File) => {
+  const { compressImage } = await import('./utils/imageCompression');
+  const compressed = await compressImage(file, { maxSizeMB: 4, maxWidthOrHeight: 1920 });
   const formData = new FormData();
-  formData.append('image', file);
+  formData.append('image', compressed);
   const res = await api.post('/api/v2/upload/image', formData, {
     headers: { 'Content-Type': 'multipart/form-data' }
   });

@@ -92,9 +92,18 @@ const initialEditForm: ExpertEditForm = {
   services: [],
 };
 
+const CATEGORY_COMPRESS_OPTIONS: Record<string, { maxSizeMB: number; maxWidthOrHeight: number }> = {
+  expert_avatar: { maxSizeMB: 1.8, maxWidthOrHeight: 512 },
+  service_image: { maxSizeMB: 4, maxWidthOrHeight: 1920 },
+  activity: { maxSizeMB: 8, maxWidthOrHeight: 1920 },
+};
+
 const uploadImageWithCategory = async (file: File, category: string): Promise<string> => {
+  const { compressImage } = await import('../../../utils/imageCompression');
+  const opts = CATEGORY_COMPRESS_OPTIONS[category] || { maxSizeMB: 4, maxWidthOrHeight: 1920 };
+  const compressed = await compressImage(file, opts);
   const formData = new FormData();
-  formData.append('image', file);
+  formData.append('image', compressed);
   const res = await api.post(`/api/v2/upload/image?category=${category}`, formData, {
     headers: { 'Content-Type': 'multipart/form-data' },
   });
