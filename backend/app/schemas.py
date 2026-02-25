@@ -2800,7 +2800,8 @@ class ActivityOut(BaseModel):
         user_task_id: Optional[int] = None,
         user_task_status: Optional[str] = None,
         user_task_is_paid: Optional[bool] = None,
-        user_task_has_negotiation: Optional[bool] = None
+        user_task_has_negotiation: Optional[bool] = None,
+        current_applicants: Optional[int] = None,
     ):
         """从ORM对象创建，包含参与者数量"""
         # 获取关联服务的图片
@@ -2808,6 +2809,8 @@ class ActivityOut(BaseModel):
         if hasattr(obj, 'service') and obj.service and obj.service.images:
             service_images = obj.service.images
         
+        is_official = getattr(obj, 'activity_type', 'standard') in ('lottery', 'first_come')
+
         data = {
             "id": obj.id,
             "title": obj.title,
@@ -2851,6 +2854,18 @@ class ActivityOut(BaseModel):
             "user_task_has_negotiation": user_task_has_negotiation,
             "created_at": obj.created_at,
             "updated_at": obj.updated_at,
+            "activity_type": getattr(obj, "activity_type", "standard"),
+            "prize_type": getattr(obj, "prize_type", None),
+            "prize_description": getattr(obj, "prize_description", None),
+            "prize_description_en": getattr(obj, "prize_description_en", None),
+            "prize_count": getattr(obj, "prize_count", None),
+            "draw_mode": getattr(obj, "draw_mode", None),
+            "draw_at": getattr(obj, "draw_at", None),
+            "drawn_at": getattr(obj, "drawn_at", None),
+            "winners": getattr(obj, "winners", None),
+            "is_drawn": getattr(obj, "is_drawn", False),
+            "is_official": is_official,
+            "current_applicants": current_applicants,
         }
         return cls(**data)
 

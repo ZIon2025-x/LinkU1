@@ -1376,32 +1376,38 @@ def get_activities(
             # 注意：这里不更新数据库状态，由定时任务统一处理
             continue
         
-        # 统计该活动关联的任务中，状态为 accepted, in_progress, completed 的参与者数量
-        # 1. 多人任务的参与者（通过TaskParticipant表）
-        # 只统计任务状态不是cancelled的任务中的参与者
-        multi_participant_count = db.query(func.count(TaskParticipant.id)).join(
-            Task, TaskParticipant.task_id == Task.id
-        ).filter(
-            Task.parent_activity_id == activity.id,
-            Task.is_multi_participant == True,
-            Task.status != "cancelled",  # 排除已取消的任务
-            TaskParticipant.status.in_(["accepted", "in_progress", "completed"])
-        ).scalar() or 0
+        current_count = 0
+        current_applicants = None
+        is_official = activity.activity_type in ("lottery", "first_come")
+
+        if is_official:
+            from app.models import OfficialActivityApplication
+            current_applicants = db.query(func.count(OfficialActivityApplication.id)).filter(
+                OfficialActivityApplication.activity_id == activity.id,
+            ).scalar() or 0
+            current_count = current_applicants
+        else:
+            multi_participant_count = db.query(func.count(TaskParticipant.id)).join(
+                Task, TaskParticipant.task_id == Task.id
+            ).filter(
+                Task.parent_activity_id == activity.id,
+                Task.is_multi_participant == True,
+                Task.status != "cancelled",
+                TaskParticipant.status.in_(["accepted", "in_progress", "completed"])
+            ).scalar() or 0
+            
+            single_task_count = db.query(func.count(Task.id)).filter(
+                Task.parent_activity_id == activity.id,
+                Task.is_multi_participant == False,
+                Task.status.in_(["open", "taken", "in_progress"])
+            ).scalar() or 0
+            
+            current_count = multi_participant_count + single_task_count
         
-        # 2. 单个任务（非多人任务，直接计数为1）
-        # 只统计状态为open、taken、in_progress的任务（已排除cancelled）
-        single_task_count = db.query(func.count(Task.id)).filter(
-            Task.parent_activity_id == activity.id,
-            Task.is_multi_participant == False,
-            Task.status.in_(["open", "taken", "in_progress"])
-        ).scalar() or 0
-        
-        # 总参与者数量 = 多人任务的参与者 + 单个任务数量
-        current_count = multi_participant_count + single_task_count
-        
-        # 使用 from_orm_with_participants 方法创建输出对象
         from app import schemas
-        activity_out = schemas.ActivityOut.from_orm_with_participants(activity, current_count)
+        activity_out = schemas.ActivityOut.from_orm_with_participants(
+            activity, current_count, current_applicants=current_applicants
+        )
         result.append(activity_out)
     
     return result
@@ -1426,27 +1432,35 @@ def get_activity_detail(
         raise HTTPException(status_code=404, detail="Activity not found")
     
     # 计算当前参与者数量
-    # 1. 多人任务的参与者（通过TaskParticipant表）
-    # 只统计任务状态不是cancelled的任务中的参与者
-    multi_participant_count = db.query(func.count(TaskParticipant.id)).join(
-        Task, TaskParticipant.task_id == Task.id
-    ).filter(
-        Task.parent_activity_id == activity.id,
-        Task.is_multi_participant == True,
-        Task.status != "cancelled",  # 排除已取消的任务
-        TaskParticipant.status.in_(["accepted", "in_progress", "completed"])
-    ).scalar() or 0
-    
-    # 2. 单个任务（非多人任务，直接计数为1）
-    # 只统计状态为open、taken、in_progress的任务（已排除cancelled）
-    single_task_count = db.query(func.count(Task.id)).filter(
-        Task.parent_activity_id == activity.id,
-        Task.is_multi_participant == False,
-        Task.status.in_(["open", "taken", "in_progress"])
-    ).scalar() or 0
-    
-    # 总参与者数量 = 多人任务的参与者 + 单个任务数量
-    current_count = multi_participant_count + single_task_count
+    current_count = 0
+    current_applicants = None
+    is_official = activity.activity_type in ("lottery", "first_come")
+
+    if is_official:
+        from app.models import OfficialActivityApplication
+        current_applicants = db.query(func.count(OfficialActivityApplication.id)).filter(
+            OfficialActivityApplication.activity_id == activity.id,
+        ).scalar() or 0
+        current_count = current_applicants
+    else:
+        # 1. 多人任务的参与者（通过TaskParticipant表）
+        multi_participant_count = db.query(func.count(TaskParticipant.id)).join(
+            Task, TaskParticipant.task_id == Task.id
+        ).filter(
+            Task.parent_activity_id == activity.id,
+            Task.is_multi_participant == True,
+            Task.status != "cancelled",
+            TaskParticipant.status.in_(["accepted", "in_progress", "completed"])
+        ).scalar() or 0
+        
+        # 2. 单个任务（非多人任务，直接计数为1）
+        single_task_count = db.query(func.count(Task.id)).filter(
+            Task.parent_activity_id == activity.id,
+            Task.is_multi_participant == False,
+            Task.status.in_(["open", "taken", "in_progress"])
+        ).scalar() or 0
+        
+        current_count = multi_participant_count + single_task_count
     
     # 检查当前用户是否已申请（如果用户已登录）
     has_applied = None
@@ -1456,47 +1470,54 @@ def get_activity_detail(
     user_task_has_negotiation = None
     
     if current_user:
-        # 检查用户是否在多人任务中申请过
-        multi_participant_task = db.query(Task).join(
-            TaskParticipant, Task.id == TaskParticipant.task_id
-        ).filter(
-            Task.parent_activity_id == activity.id,
-            Task.is_multi_participant == True,
-            TaskParticipant.user_id == current_user.id,
-            TaskParticipant.status.in_(["pending", "accepted", "in_progress", "completed"])
-        ).first()
-        
-        # 检查用户是否在单个任务中申请过
-        single_task = db.query(Task).filter(
-            Task.parent_activity_id == activity.id,
-            Task.is_multi_participant == False,
-            Task.originating_user_id == current_user.id,
-            Task.status.in_(["open", "taken", "in_progress", "pending_payment", "completed"])
-        ).first()
-        
-        # 优先使用单个任务（因为活动申请通常创建单个任务）
-        user_task = single_task if single_task else multi_participant_task
-        has_applied = user_task is not None
-        
-        if user_task:
-            user_task_id = user_task.id
-            user_task_status = user_task.status
-            user_task_is_paid = bool(user_task.is_paid)
-            # 检查是否有议价：agreed_reward 存在且与 base_reward 不同
-            if user_task.agreed_reward is not None and user_task.base_reward is not None:
-                user_task_has_negotiation = float(user_task.agreed_reward) != float(user_task.base_reward)
-            else:
-                user_task_has_negotiation = False
+        if is_official:
+            from app.models import OfficialActivityApplication
+            existing_app = db.query(OfficialActivityApplication).filter(
+                OfficialActivityApplication.activity_id == activity.id,
+                OfficialActivityApplication.user_id == current_user.id,
+            ).first()
+            has_applied = existing_app is not None
+        else:
+            # 检查用户是否在多人任务中申请过
+            multi_participant_task = db.query(Task).join(
+                TaskParticipant, Task.id == TaskParticipant.task_id
+            ).filter(
+                Task.parent_activity_id == activity.id,
+                Task.is_multi_participant == True,
+                TaskParticipant.user_id == current_user.id,
+                TaskParticipant.status.in_(["pending", "accepted", "in_progress", "completed"])
+            ).first()
+            
+            # 检查用户是否在单个任务中申请过
+            single_task = db.query(Task).filter(
+                Task.parent_activity_id == activity.id,
+                Task.is_multi_participant == False,
+                Task.originating_user_id == current_user.id,
+                Task.status.in_(["open", "taken", "in_progress", "pending_payment", "completed"])
+            ).first()
+            
+            user_task = single_task if single_task else multi_participant_task
+            has_applied = user_task is not None
+            
+            if user_task:
+                user_task_id = user_task.id
+                user_task_status = user_task.status
+                user_task_is_paid = bool(user_task.is_paid)
+                if user_task.agreed_reward is not None and user_task.base_reward is not None:
+                    user_task_has_negotiation = float(user_task.agreed_reward) != float(user_task.base_reward)
+                else:
+                    user_task_has_negotiation = False
     
     # 使用 from_orm_with_participants 方法创建输出对象
     from app import schemas
     activity_out = schemas.ActivityOut.from_orm_with_participants(
-        activity, current_count, 
+        activity, current_count,
         has_applied=has_applied,
         user_task_id=user_task_id,
         user_task_status=user_task_status,
         user_task_is_paid=user_task_is_paid,
-        user_task_has_negotiation=user_task_has_negotiation
+        user_task_has_negotiation=user_task_has_negotiation,
+        current_applicants=current_applicants,
     )
     return activity_out
 
@@ -2935,49 +2956,78 @@ def get_my_activities(
         total = 0
         
         if type == "applied" or type == "all":
-            # 获取申请过的活动（通过TaskParticipant表）
+            from app.models import OfficialActivityApplication
+            from app import schemas as _schemas
+            from fastapi.encoders import jsonable_encoder
+
+            # 1) 通过 TaskParticipant 查到的普通活动
             applied_query = db.query(distinct(TaskParticipant.activity_id)).filter(
                 and_(
                     TaskParticipant.user_id == current_user.id,
                     TaskParticipant.activity_id.isnot(None)
                 )
             )
-            applied_activity_ids = [row[0] for row in applied_query.all()]
+            applied_activity_ids = set(row[0] for row in applied_query.all())
+
+            # 2) 通过 OfficialActivityApplication 查到的官方活动
+            official_query = db.query(OfficialActivityApplication.activity_id).filter(
+                OfficialActivityApplication.user_id == current_user.id,
+            )
+            official_activity_ids = set(row[0] for row in official_query.all())
+
+            all_applied_ids = list(applied_activity_ids | official_activity_ids)
             
-            if applied_activity_ids:
+            if all_applied_ids:
                 applied_activities = db.query(Activity).options(
                     joinedload(Activity.service)
-                ).filter(Activity.id.in_(applied_activity_ids)).all()
+                ).filter(Activity.id.in_(all_applied_ids)).all()
                 
                 for activity in applied_activities:
-                    # 计算当前参与者数量
-                    current_count = db.query(TaskParticipant).filter(
-                        and_(
-                            TaskParticipant.activity_id == activity.id,
-                            TaskParticipant.status.in_(["accepted", "in_progress"])
-                        )
-                    ).count()
+                    is_official = activity.activity_type in ("lottery", "first_come")
+                    current_applicants = None
+                    participant_status = None
+
+                    if is_official:
+                        current_count = db.query(func.count(OfficialActivityApplication.id)).filter(
+                            OfficialActivityApplication.activity_id == activity.id,
+                        ).scalar() or 0
+                        current_applicants = current_count
+                        user_app = db.query(OfficialActivityApplication).filter(
+                            OfficialActivityApplication.activity_id == activity.id,
+                            OfficialActivityApplication.user_id == current_user.id,
+                        ).first()
+                        participant_status = user_app.status if user_app else None
+                    else:
+                        current_count = db.query(TaskParticipant).filter(
+                            and_(
+                                TaskParticipant.activity_id == activity.id,
+                                TaskParticipant.status.in_(["accepted", "in_progress"])
+                            )
+                        ).count()
+                        user_participant = db.query(TaskParticipant).filter(
+                            and_(
+                                TaskParticipant.activity_id == activity.id,
+                                TaskParticipant.user_id == current_user.id
+                            )
+                        ).first()
+                        participant_status = user_participant.status if user_participant else None
                     
-                    # 获取用户在该活动中的参与状态
-                    user_participant = db.query(TaskParticipant).filter(
-                        and_(
-                            TaskParticipant.activity_id == activity.id,
-                            TaskParticipant.user_id == current_user.id
-                        )
-                    ).first()
+                    activity_out = ActivityOut.from_orm_with_participants(
+                        activity, current_count,
+                        has_applied=True,
+                        current_applicants=current_applicants,
+                    )
                     
-                    # 使用from_orm_with_participants方法
-                    activity_out = ActivityOut.from_orm_with_participants(activity, current_count)
-                    
-                    # 转换为字典并处理日期序列化
-                    from fastapi.encoders import jsonable_encoder
                     activity_dict = jsonable_encoder(activity_out)
                     activity_dict["type"] = "applied"
-                    activity_dict["participant_status"] = user_participant.status if user_participant else None
+                    activity_dict["participant_status"] = participant_status
                     activities_list.append(activity_dict)
         
         if type == "favorited" or type == "all":
-            # 获取收藏的活动
+            from app.models import OfficialActivityApplication as _OAA
+            from app import schemas as _schemas2
+            from fastapi.encoders import jsonable_encoder as _je
+
             favorited_query = db.query(ActivityFavorite.activity_id).filter(
                 ActivityFavorite.user_id == current_user.id
             )
@@ -2989,29 +3039,34 @@ def get_my_activities(
                 ).filter(Activity.id.in_(favorited_activity_ids)).all()
                 
                 for activity in favorited_activities:
-                    # 如果已经在applied列表中，跳过（避免重复）
                     if any(a["id"] == activity.id for a in activities_list):
-                        # 更新类型为both
                         for a in activities_list:
                             if a["id"] == activity.id:
                                 a["type"] = "both"
                                 break
                         continue
                     
-                    # 计算当前参与者数量
-                    current_count = db.query(TaskParticipant).filter(
-                        and_(
-                            TaskParticipant.activity_id == activity.id,
-                            TaskParticipant.status.in_(["accepted", "in_progress"])
-                        )
-                    ).count()
+                    is_official = activity.activity_type in ("lottery", "first_come")
+                    current_applicants = None
+
+                    if is_official:
+                        current_count = db.query(func.count(_OAA.id)).filter(
+                            _OAA.activity_id == activity.id,
+                        ).scalar() or 0
+                        current_applicants = current_count
+                    else:
+                        current_count = db.query(TaskParticipant).filter(
+                            and_(
+                                TaskParticipant.activity_id == activity.id,
+                                TaskParticipant.status.in_(["accepted", "in_progress"])
+                            )
+                        ).count()
                     
-                    # 使用from_orm_with_participants方法
-                    activity_out = ActivityOut.from_orm_with_participants(activity, current_count)
+                    activity_out = ActivityOut.from_orm_with_participants(
+                        activity, current_count, current_applicants=current_applicants
+                    )
                     
-                    # 转换为字典并处理日期序列化
-                    from fastapi.encoders import jsonable_encoder
-                    activity_dict = jsonable_encoder(activity_out)
+                    activity_dict = _je(activity_out)
                     activity_dict["type"] = "favorited"
                     activities_list.append(activity_dict)
         
