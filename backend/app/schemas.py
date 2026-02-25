@@ -2738,14 +2738,14 @@ class ActivityOut(BaseModel):
     location: str
     task_type: str
     reward_type: str
-    original_price_per_participant: Optional[float] = None
+    original_price_per_participant: float = 0.0
     discount_percentage: Optional[float] = None
     discounted_price_per_participant: Optional[float] = None
     currency: str
     points_reward: Optional[int] = None
     max_participants: int
     min_participants: int
-    current_participants: Optional[int] = 0  # 当前参与者数量（从关联任务计算）
+    current_participants: int = 0
     completion_rule: str
     reward_distribution: str
     status: str
@@ -2785,7 +2785,15 @@ class ActivityOut(BaseModel):
     
     class Config:
         from_attributes = True
-    
+
+    @validator("original_price_per_participant", pre=True, always=True)
+    def default_price(cls, v):
+        return float(v) if v is not None else 0.0
+
+    @validator("current_participants", pre=True, always=True)
+    def default_participants(cls, v):
+        return int(v) if v is not None else 0
+
     @classmethod
     def from_orm_with_participants(
         cls, obj, current_participants: int = 0, has_applied: Optional[bool] = None,
@@ -2813,14 +2821,14 @@ class ActivityOut(BaseModel):
             "location": obj.location,
             "task_type": obj.task_type,
             "reward_type": obj.reward_type,
-            "original_price_per_participant": float(obj.original_price_per_participant) if obj.original_price_per_participant else None,
+            "original_price_per_participant": float(obj.original_price_per_participant) if obj.original_price_per_participant else 0.0,
             "discount_percentage": float(obj.discount_percentage) if obj.discount_percentage else None,
             "discounted_price_per_participant": float(obj.discounted_price_per_participant) if obj.discounted_price_per_participant else None,
             "currency": obj.currency,
             "points_reward": obj.points_reward,
             "max_participants": obj.max_participants,
             "min_participants": obj.min_participants,
-            "current_participants": current_participants,
+            "current_participants": current_participants or 0,
             "completion_rule": obj.completion_rule,
             "reward_distribution": obj.reward_distribution,
             "status": obj.status,
