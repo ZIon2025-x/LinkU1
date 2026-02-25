@@ -516,6 +516,8 @@ class ActivityBloc extends Bloc<ActivityEvent, ActivityState> {
     try {
       final isFav = await _activityRepository.getFavoriteStatus(event.activityId);
       emit(state.copyWith(isFavorited: isFav));
-    } catch (_) {}
+    } catch (e) {
+      AppLogger.warning('Failed to load favorite status for ${event.activityId}', e);
+    }
   }
 }

@@ -388,49 +388,6 @@ class FleaMarketRepository {
     return FleaMarketListResponse.fromJson(response.data!);
   }
 
-  /// 获取我的购买请求
-  Future<List<Map<String, dynamic>>> getMyPurchaseRequests({
-    int page = 1,
-    int pageSize = 20,
-  }) async {
-    final cacheKey = CacheManager.buildKey(
-      '${CacheManager.prefixMyFleaMarket}requests_',
-      {'p': page, 'ps': pageSize},
-    );
-
-    final cached = _cache.get<Map<String, dynamic>>(cacheKey);
-    if (cached != null) {
-      final items = cached['items'] as List<dynamic>? ?? [];
-      return items.map((e) => e as Map<String, dynamic>).toList();
-    }
-
-    try {
-      final response = await _apiService.get<Map<String, dynamic>>(
-        ApiEndpoints.fleaMarketMyPurchaseRequests,
-        queryParameters: {
-          'page': page,
-          'page_size': pageSize,
-        },
-      );
-
-      if (!response.isSuccess || response.data == null) {
-        throw FleaMarketException(response.message ?? '获取购买请求失败');
-      }
-
-      await _cache.set(cacheKey, response.data!, ttl: CacheManager.personalTTL);
-
-      final items = response.data!['items'] as List<dynamic>? ?? [];
-      return items.map((e) => e as Map<String, dynamic>).toList();
-    } catch (e) {
-      final stale = _cache.getStale<Map<String, dynamic>>(cacheKey);
-      if (stale != null) {
-        final items = stale['items'] as List<dynamic>? ?? [];
-        return items.map((e) => e as Map<String, dynamic>).toList();
-      }
-      rethrow;
-    }
-  }
-
   /// 获取我的已售商品（对齐iOS loadSoldItems）
   /// 使用 GET /api/flea-market/items?seller_id={userId}&status=sold
   Future<FleaMarketListResponse> getMySales({
