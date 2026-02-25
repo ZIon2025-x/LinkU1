@@ -1,6 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../router/app_router.dart';
 
 import '../design/app_colors.dart';
@@ -9,7 +9,12 @@ import 'async_image_view.dart';
 
 /// 横幅轮播组件
 /// 参考iOS BannerCarouselView.swift
-/// 支持自动轮播、指示器、内部链接跳转
+/// 支持自动轮播、指示器、内部/外部链接跳转
+///
+/// 字段约定（与后端 & iOS 一致）：
+/// - `link_type`: "internal"（应用内路由）或 "external"（外部URL）
+/// - `link_url`:  internal 时为路由路径（如 /flea-market、/tasks/123）；
+///               external 时为完整 URL（如 https://example.com）
 class BannerCarousel extends StatefulWidget {
   const BannerCarousel({
     super.key,
@@ -22,7 +27,7 @@ class BannerCarousel extends StatefulWidget {
   });
 
   /// 横幅数据列表
-  /// 每个 Map 应包含 'image_url', 'link_type', 'link_value' 等字段
+  /// 每个 Map 应包含 'image_url', 'link_type', 'link_url' 等字段
   final List<Map<String, dynamic>> banners;
 
   /// 轮播高度
@@ -84,37 +89,23 @@ class _BannerCarouselState extends State<BannerCarousel> {
       return;
     }
 
-    // 默认处理内部链接
     final linkType = banner['link_type'] as String?;
-    final linkValue = banner['link_value'] as String?;
+    final linkUrl = banner['link_url'] as String?;
 
-    if (linkType == null || linkValue == null) return;
+    if (linkUrl == null || linkUrl.isEmpty) return;
 
-    switch (linkType) {
-      case 'task':
-        context.safePush('/tasks/$linkValue');
-        break;
-      case 'forum_post':
-        context.safePush('/forum/posts/$linkValue');
-        break;
-      case 'flea_market':
-        context.safePush('/flea-market/$linkValue');
-        break;
-      case 'activity':
-        context.push('/activities/$linkValue');
-        break;
-      case 'leaderboard':
-        context.push('/leaderboard/$linkValue');
-        break;
-      case 'task_expert':
-        context.safePush('/task-experts/$linkValue');
-        break;
-      case 'url':
-        // 外部URL - 可使用 url_launcher
-        break;
-      case 'route':
-        context.push(linkValue);
-        break;
+    if (linkType == 'external') {
+      _openExternalUrl(linkUrl);
+    } else {
+      // internal — linkUrl 是应用内路由路径，对齐 iOS InternalLinkView
+      context.safePush(linkUrl);
+    }
+  }
+
+  Future<void> _openExternalUrl(String url) async {
+    final uri = Uri.tryParse(url);
+    if (uri != null && await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
     }
   }
 

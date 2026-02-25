@@ -313,8 +313,8 @@ const BannerManagement: React.FC = () => {
               onChange={(e) => modal.updateField('link_type', e.target.value as 'internal' | 'external')}
               style={{ width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '4px' }}
             >
-              <option value="internal">内部链接</option>
-              <option value="external">外部链接</option>
+              <option value="internal">内部链接（跳转到 App 内页面）</option>
+              <option value="external">外部链接（打开浏览器）</option>
             </select>
           </div>
           <div style={{ marginBottom: '15px' }}>
@@ -323,9 +323,29 @@ const BannerManagement: React.FC = () => {
               type="text"
               value={modal.formData.link_url}
               onChange={(e) => modal.updateField('link_url', e.target.value)}
-              placeholder={modal.formData.link_type === 'external' ? 'https://...' : '/page/...'}
+              placeholder={modal.formData.link_type === 'external' ? 'https://example.com' : '/flea-market'}
               style={{ width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '4px' }}
             />
+            <div style={{ marginTop: '6px', fontSize: '12px', color: '#888', lineHeight: '1.6' }}>
+              {modal.formData.link_type === 'internal' ? (
+                <>
+                  填写 App 内路由路径，留空则点击无跳转。常用路径：
+                  <br />
+                  <code>/flea-market</code> 跳蚤市场 &nbsp;|&nbsp;
+                  <code>/tasks/{'<id>'}</code> 任务详情 &nbsp;|&nbsp;
+                  <code>/forum/posts/{'<id>'}</code> 论坛帖子
+                  <br />
+                  <code>/activities/{'<id>'}</code> 活动详情 &nbsp;|&nbsp;
+                  <code>/leaderboard/{'<id>'}</code> 排行榜 &nbsp;|&nbsp;
+                  <code>/student-verification</code> 学生认证
+                  <br />
+                  <code>/task-experts/intro</code> 成为专家 &nbsp;|&nbsp;
+                  <code>/flea-market/{'<id>'}</code> 跳蚤市场商品详情
+                </>
+              ) : (
+                <>填写完整 URL（以 https:// 开头），用户点击后将在浏览器中打开。</>
+              )}
+            </div>
           </div>
           <div style={{ marginBottom: '15px' }}>
             <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>排序（数字越小越靠前）</label>
