@@ -2456,9 +2456,8 @@ const TaskDetail: React.FC = () => {
               {user && task.taker_id && user.id === task.taker_id && (() => {
                 // 计算任务金额（最终成交价或原始标价）
                 const taskAmount = task.agreed_reward ?? task.base_reward ?? task.reward ?? 0;
-                // 计算平台服务费
-                // 规则：小于10镑固定收取1镑，大于等于10镑按10%计算
-                const applicationFee = taskAmount < 10 ? 1.0 : taskAmount * 0.10;
+                // 计算平台服务费（金额为0时不收费，且服务费不超过任务金额）
+                const applicationFee = taskAmount <= 0 ? 0 : Math.min(taskAmount, taskAmount < 10 ? 1.0 : taskAmount * 0.10);
                 // 实际到手金额（escrow_amount 或计算得出）
                 const actualAmount = task.escrow_amount ?? (taskAmount - applicationFee);
                 
