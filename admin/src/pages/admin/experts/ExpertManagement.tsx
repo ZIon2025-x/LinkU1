@@ -2,7 +2,7 @@ import React, { useState, useCallback } from 'react';
 import { message, Modal, Tag } from 'antd';
 import { useAdminTable, useModalForm } from '../../../hooks';
 import { AdminTable, AdminPagination, StatusBadge, Column } from '../../../components/admin';
-import {
+import api, {
   getTaskExperts,
   updateTaskExpert,
   deleteTaskExpert,
@@ -51,6 +51,7 @@ interface ExpertEditForm {
   response_time_en: string;
   avatar: string;
   user_level: string;
+  services: any[];
 }
 
 const CATEGORY_OPTIONS = [
@@ -88,11 +89,23 @@ const initialEditForm: ExpertEditForm = {
   response_time_en: '',
   avatar: '',
   user_level: 'normal',
+  services: [],
+};
+
+const uploadImageWithCategory = async (file: File, category: string): Promise<string> => {
+  const formData = new FormData();
+  formData.append('image', file);
+  const res = await api.post(`/api/upload/image?category=${category}`, formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
+  return res.data.url || res.data.image_url;
 };
 
 const ExpertManagement: React.FC = () => {
   const [subTab, setSubTab] = useState<SubTab>('list');
   const [detailExpert, setDetailExpert] = useState<any>(null);
+  const [avatarUploading, setAvatarUploading] = useState(false);
+  const [serviceImageUploading, setServiceImageUploading] = useState<number | null>(null);
 
   // ==================== 达人列表 ====================
   const fetchExperts = useCallback(async ({ page, pageSize }: { page: number; pageSize: number }) => {
@@ -204,8 +217,15 @@ const ExpertManagement: React.FC = () => {
     onError: (error) => message.error(getErrorMessage(error)),
   });
 
-  const handleEdit = (expert: any) => {
+  const handleEdit = async (expert: any) => {
     const joinList = (arr: any) => Array.isArray(arr) ? arr.join(', ') : (arr || '');
+    let services: any[] = [];
+    try {
+      const res = await api.get(`/api/admin/task-expert/${expert.id}/services`);
+      services = res.data.services || [];
+    } catch {
+      // ignore
+    }
     editModal.open({
       id: expert.id,
       name: expert.name || '',
@@ -227,6 +247,7 @@ const ExpertManagement: React.FC = () => {
       response_time_en: expert.response_time_en || '',
       avatar: expert.avatar || '',
       user_level: expert.user_level || 'normal',
+      services,
     });
   };
 
@@ -275,14 +296,21 @@ const ExpertManagement: React.FC = () => {
     {
       key: 'name',
       title: '达人名称',
-      width: 140,
+      width: 170,
       render: (_, record) => (
-        <button
-          onClick={() => setDetailExpert(record)}
-          style={{ background: 'none', border: 'none', color: '#007bff', cursor: 'pointer', fontWeight: 500, fontSize: '13px', padding: 0 }}
-        >
-          {record.name || '-'}
-        </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          {record.avatar ? (
+            <img src={record.avatar} alt="" style={{ width: 28, height: 28, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
+          ) : (
+            <div style={{ width: 28, height: 28, borderRadius: '50%', background: '#e0e0e0', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', color: '#999' }}>?</div>
+          )}
+          <button
+            onClick={() => setDetailExpert(record)}
+            style={{ background: 'none', border: 'none', color: '#007bff', cursor: 'pointer', fontWeight: 500, fontSize: '13px', padding: 0, textAlign: 'left' }}
+          >
+            {record.name || '-'}
+          </button>
+        </div>
       ),
     },
     {
@@ -627,14 +655,48 @@ const ExpertManagement: React.FC = () => {
               />
             </div>
             <div style={{ flex: 1 }}>
-              <label style={{ display: 'block', marginBottom: '4px', fontWeight: '600', fontSize: '13px' }}>头像 URL</label>
-              <input
-                type="text"
-                value={editModal.formData.avatar}
-                onChange={(e) => editModal.updateField('avatar', e.target.value)}
-                placeholder="https://..."
-                style={{ width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '4px', boxSizing: 'border-box' }}
-              />
+              <label style={{ display: 'block', marginBottom: '4px', fontWeight: '600', fontSize: '13px' }}>达人头像</label>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                {editModal.formData.avatar && (
+                  <img
+                    src={editModal.formData.avatar}
+                    alt="头像"
+                    style={{ width: 48, height: 48, borderRadius: '50%', objectFit: 'cover', border: '1px solid #ddd' }}
+                  />
+                )}
+                <div style={{ flex: 1 }}>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    disabled={avatarUploading}
+                    onChange={async (e) => {
+                      const file = e.target.files?.[0];
+                      if (!file) return;
+                      setAvatarUploading(true);
+                      try {
+                        const url = await uploadImageWithCategory(file, 'expert_avatar');
+                        editModal.updateField('avatar', url);
+                        message.success('头像上传成功');
+                      } catch (err: any) {
+                        message.error(getErrorMessage(err));
+                      } finally {
+                        setAvatarUploading(false);
+                        e.target.value = '';
+                      }
+                    }}
+                    style={{ fontSize: '12px', width: '100%' }}
+                  />
+                  {avatarUploading && <span style={{ fontSize: '12px', color: '#999' }}>上传中...</span>}
+                </div>
+              </div>
+              {editModal.formData.avatar && (
+                <input
+                  type="text"
+                  value={editModal.formData.avatar}
+                  readOnly
+                  style={{ width: '100%', padding: '4px 8px', border: '1px solid #eee', borderRadius: '4px', boxSizing: 'border-box', fontSize: '11px', color: '#999', marginTop: '4px' }}
+                />
+              )}
             </div>
           </div>
           <div style={{ display: 'flex', gap: '15px' }}>
@@ -794,6 +856,82 @@ const ExpertManagement: React.FC = () => {
             </div>
           </div>
 
+          {/* 服务图片管理 */}
+          {editModal.formData.services.length > 0 && (
+            <>
+              <div style={{ fontWeight: 'bold', fontSize: '14px', color: '#333', borderBottom: '1px solid #eee', paddingBottom: '6px', marginTop: '4px' }}>服务图片</div>
+              {editModal.formData.services.map((svc: any, svcIdx: number) => (
+                <div key={svc.id} style={{ padding: '10px', background: '#fafafa', borderRadius: '6px', border: '1px solid #eee' }}>
+                  <div style={{ fontWeight: '600', fontSize: '13px', marginBottom: '8px' }}>
+                    {svc.service_name || `服务 #${svc.id}`}
+                    <span style={{ fontWeight: 'normal', color: '#999', marginLeft: '8px', fontSize: '12px' }}>ID: {svc.id}</span>
+                  </div>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '8px' }}>
+                    {(svc.images || []).map((imgUrl: string, imgIdx: number) => (
+                      <div key={imgIdx} style={{ position: 'relative' }}>
+                        <img
+                          src={imgUrl}
+                          alt={`服务图片 ${imgIdx + 1}`}
+                          style={{ width: 80, height: 80, objectFit: 'cover', borderRadius: '4px', border: '1px solid #ddd' }}
+                        />
+                        <button
+                          onClick={async () => {
+                            const newImages = [...(svc.images || [])];
+                            newImages.splice(imgIdx, 1);
+                            try {
+                              await api.put(`/api/admin/task-expert/${editModal.formData.id}/services/${svc.id}`, { images: newImages });
+                              const updatedServices = [...editModal.formData.services];
+                              updatedServices[svcIdx] = { ...svc, images: newImages };
+                              editModal.updateField('services', updatedServices);
+                              message.success('图片已删除');
+                            } catch (err: any) {
+                              message.error(getErrorMessage(err));
+                            }
+                          }}
+                          style={{
+                            position: 'absolute', top: -6, right: -6,
+                            width: 20, height: 20, borderRadius: '50%',
+                            background: '#dc3545', color: 'white', border: 'none',
+                            cursor: 'pointer', fontSize: '12px', lineHeight: '18px',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          }}
+                        >
+                          ×
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    disabled={serviceImageUploading === svc.id}
+                    onChange={async (e) => {
+                      const file = e.target.files?.[0];
+                      if (!file) return;
+                      setServiceImageUploading(svc.id);
+                      try {
+                        const url = await uploadImageWithCategory(file, 'service_image');
+                        const newImages = [...(svc.images || []), url];
+                        await api.put(`/api/admin/task-expert/${editModal.formData.id}/services/${svc.id}`, { images: newImages });
+                        const updatedServices = [...editModal.formData.services];
+                        updatedServices[svcIdx] = { ...svc, images: newImages };
+                        editModal.updateField('services', updatedServices);
+                        message.success('图片上传成功');
+                      } catch (err: any) {
+                        message.error(getErrorMessage(err));
+                      } finally {
+                        setServiceImageUploading(null);
+                        e.target.value = '';
+                      }
+                    }}
+                    style={{ fontSize: '12px' }}
+                  />
+                  {serviceImageUploading === svc.id && <span style={{ fontSize: '12px', color: '#999', marginLeft: '8px' }}>上传中...</span>}
+                </div>
+              ))}
+            </>
+          )}
+
           {/* 状态开关 */}
           <div style={{ fontWeight: 'bold', fontSize: '14px', color: '#333', borderBottom: '1px solid #eee', paddingBottom: '6px', marginTop: '4px' }}>状态</div>
           <div style={{ display: 'flex', gap: '24px' }}>
@@ -823,9 +961,18 @@ const ExpertManagement: React.FC = () => {
       >
         {detailExpert && (
           <div style={{ padding: '10px 0' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
+              {detailExpert.avatar ? (
+                <img src={detailExpert.avatar} alt="头像" style={{ width: 56, height: 56, borderRadius: '50%', objectFit: 'cover', border: '1px solid #ddd' }} />
+              ) : (
+                <div style={{ width: 56, height: 56, borderRadius: '50%', background: '#e0e0e0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px', color: '#999' }}>?</div>
+              )}
+              <div>
+                <div style={{ fontWeight: 'bold', fontSize: '16px' }}>{detailExpert.name || '-'}</div>
+                <div style={{ fontSize: '12px', color: '#999', fontFamily: 'monospace' }}>{detailExpert.id}</div>
+              </div>
+            </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px 24px' }}>
-              <div><strong>ID：</strong><span style={{ fontFamily: 'monospace', fontSize: '12px' }}>{detailExpert.id}</span></div>
-              <div><strong>名称：</strong>{detailExpert.name || '-'}</div>
               <div><strong>评分：</strong>{detailExpert.avg_rating ? Number(detailExpert.avg_rating).toFixed(1) : '-'}</div>
               <div><strong>完成任务：</strong>{detailExpert.completed_tasks ?? 0}</div>
               <div><strong>总任务：</strong>{detailExpert.total_tasks ?? 0}</div>

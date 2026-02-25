@@ -254,6 +254,40 @@ def apply_to_activity(
     if db_activity.status != "open":
         raise HTTPException(status_code=400, detail="Activity is not accepting applications")
     
+    # 官方活动（抽奖/抢位）走独立报名逻辑，不创建 Task
+    if db_activity.activity_type in ("lottery", "first_come"):
+        from app.models import OfficialActivityApplication
+        existing = db.query(OfficialActivityApplication).filter(
+            OfficialActivityApplication.activity_id == activity_id,
+            OfficialActivityApplication.user_id == current_user.id,
+        ).first()
+        if existing:
+            raise HTTPException(status_code=400, detail="您已报名此活动")
+
+        if db_activity.activity_type == "first_come":
+            current_count = db.query(func.count(OfficialActivityApplication.id)).filter(
+                OfficialActivityApplication.activity_id == activity_id,
+                OfficialActivityApplication.status == "attending",
+            ).scalar() or 0
+            if current_count >= (db_activity.prize_count or 0):
+                raise HTTPException(status_code=400, detail="名额已满")
+            app_status = "attending"
+        else:
+            app_status = "pending"
+
+        application = OfficialActivityApplication(
+            activity_id=activity_id,
+            user_id=current_user.id,
+            status=app_status,
+        )
+        db.add(application)
+        db.commit()
+        return {
+            "success": True,
+            "status": app_status,
+            "message": "报名成功，等待开奖" if app_status == "pending" else "报名成功！",
+        }
+
     # 根据活动的 max_participants 自动判断是否为多人任务
     # 如果活动的 max_participants > 1，则自动创建多人任务
     is_multi_participant = db_activity.max_participants > 1
@@ -262,7 +296,7 @@ def apply_to_activity(
     else:
         logger.info(f"活动 {activity_id} 的 max_participants={db_activity.max_participants}，自动判断为单人任务")
     
-    # 查询服务
+    # 查询服务（达人普通活动必须关联服务）
     service = db.query(TaskExpertService).filter(
         TaskExpertService.id == db_activity.expert_service_id
     ).first()
