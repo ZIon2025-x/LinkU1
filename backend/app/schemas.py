@@ -3997,14 +3997,23 @@ class OfficialActivityCreate(BaseModel):
 class OfficialActivityUpdate(BaseModel):
     title: Optional[str] = None
     title_en: Optional[str] = None
+    title_zh: Optional[str] = None
     description: Optional[str] = None
     description_en: Optional[str] = None
+    description_zh: Optional[str] = None
+    location: Optional[str] = None
+    activity_type: Optional[str] = None
+    prize_type: Optional[str] = None
     prize_description: Optional[str] = None
+    prize_description_en: Optional[str] = None
     prize_count: Optional[int] = None
+    max_participants: Optional[int] = None
     voucher_codes: Optional[List[str]] = None
+    draw_mode: Optional[str] = None
     draw_at: Optional[datetime.datetime] = None
     deadline: Optional[datetime.datetime] = None
     images: Optional[List[str]] = None
+    is_public: Optional[bool] = None
     status: Optional[str] = None
 
 class OfficialActivityApplicationOut(BaseModel):
