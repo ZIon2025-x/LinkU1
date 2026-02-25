@@ -956,7 +956,7 @@ const OfficialActivityManagement: React.FC = () => {
                 try {
                   const formData = new FormData();
                   formData.append('image', file);
-                  const res = await api.post('/api/upload/image?category=activity', formData, {
+                  const res = await api.post('/api/v2/upload/image?category=activity', formData, {
                     headers: { 'Content-Type': 'multipart/form-data' },
                   });
                   const result = res.data;

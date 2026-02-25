@@ -1285,7 +1285,7 @@ export async function sendAdminCustomerServiceChatMessage(content: string) {
 export const uploadImage = async (file: File) => {
   const formData = new FormData();
   formData.append('image', file);
-  const res = await api.post('/api/upload/image', formData, {
+  const res = await api.post('/api/v2/upload/image', formData, {
     headers: { 'Content-Type': 'multipart/form-data' }
   });
   return res.data;

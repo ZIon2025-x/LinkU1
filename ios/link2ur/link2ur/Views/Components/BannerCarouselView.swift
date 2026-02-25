@@ -83,17 +83,38 @@ struct BannerCarouselView: View {
 
 struct BannerCard: View {
     let banner: Banner
+    @State private var navigateToInternal = false
+    @State private var navigateToExternal = false
     
     var body: some View {
         Group {
             if let linkUrl = banner.linkUrl, !linkUrl.isEmpty {
-                // 有链接时，使用 NavigationLink
-                NavigationLink(destination: bannerDestination(linkUrl: linkUrl)) {
-                    bannerImage
-                }
-                .buttonStyle(PlainButtonStyle())
+                bannerImage
+                    .onTapGesture {
+                        if banner.linkType == "external" {
+                            navigateToExternal = true
+                        } else {
+                            navigateToInternal = true
+                        }
+                    }
+                    .background(
+                        Group {
+                            NavigationLink(
+                                destination: InternalLinkView(linkUrl: linkUrl),
+                                isActive: $navigateToInternal
+                            ) { EmptyView() }
+                            .hidden()
+                            
+                            NavigationLink(
+                                destination: WebView(urlString: linkUrl)
+                                    .navigationTitle("Link2Ur")
+                                    .navigationBarTitleDisplayMode(.inline),
+                                isActive: $navigateToExternal
+                            ) { EmptyView() }
+                            .hidden()
+                        }
+                    )
             } else {
-                // 无链接时，直接显示图片（不可点击）
                 bannerImage
             }
         }
@@ -166,17 +187,6 @@ struct BannerCard: View {
         .shadow(color: Color.black.opacity(0.12), radius: 10, x: 0, y: 5)
     }
     
-    // 根据链接类型决定跳转目标
-    @ViewBuilder
-    private func bannerDestination(linkUrl: String) -> some View {
-        if banner.linkType == "external" {
-            // 外部链接 - 可以打开Safari或WebView
-            WebView(urlString: linkUrl)
-        } else {
-            // 内部链接 - 根据路径跳转
-            InternalLinkView(linkUrl: linkUrl)
-        }
-    }
 }
 
 // MARK: - 内部链接视图（根据URL路径跳转到不同页面）
@@ -249,12 +259,13 @@ struct WebView: UIViewRepresentable {
     
     func makeUIView(context: Context) -> WKWebView {
         let webView = WKWebView()
+        if let url = URL(string: urlString) {
+            webView.load(URLRequest(url: url))
+        }
         return webView
     }
     
     func updateUIView(_ webView: WKWebView, context: Context) {
-        if let url = URL(string: urlString) {
-            webView.load(URLRequest(url: url))
-        }
+        // Only load if the webview has no content yet (avoid reload on every SwiftUI update)
     }
 }

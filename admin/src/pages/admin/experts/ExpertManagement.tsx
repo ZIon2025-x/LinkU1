@@ -95,7 +95,7 @@ const initialEditForm: ExpertEditForm = {
 const uploadImageWithCategory = async (file: File, category: string): Promise<string> => {
   const formData = new FormData();
   formData.append('image', file);
-  const res = await api.post(`/api/upload/image?category=${category}`, formData, {
+  const res = await api.post(`/api/v2/upload/image?category=${category}`, formData, {
     headers: { 'Content-Type': 'multipart/form-data' },
   });
   return res.data.url || res.data.image_url;
