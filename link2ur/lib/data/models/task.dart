@@ -48,6 +48,14 @@ class Task extends Equatable {
     this.createdAt,
     this.updatedAt,
     this.distance,
+    this.isFlexible = false,
+    this.acceptedAt,
+    this.completedAt,
+    this.confirmedAt,
+    this.autoConfirmed = false,
+    this.confirmationRemainingSeconds,
+    this.pointsReward,
+    this.minParticipants,
   });
 
   final int id;
@@ -77,7 +85,7 @@ class Task extends Equatable {
   final String? taskLevel; // normal, vip, super
   final bool hasApplied;
   final String? userApplicationStatus;
-  final String? completionEvidence;
+  final List<Map<String, dynamic>>? completionEvidence;
   final String? paymentExpiresAt;
   final String? confirmationDeadline;
   final double? agreedReward;
@@ -90,6 +98,15 @@ class Task extends Equatable {
 
   /// 与用户的距离（米），由前端计算
   final double? distance;
+
+  final bool isFlexible;
+  final DateTime? acceptedAt;
+  final DateTime? completedAt;
+  final DateTime? confirmedAt;
+  final bool autoConfirmed;
+  final int? confirmationRemainingSeconds;
+  final int? pointsReward;
+  final int? minParticipants;
 
   /// 模糊距离（500m 为一个区间）
   /// 返回区间上限值（用于排序），如 500, 1000, 1500, ...
@@ -294,6 +311,17 @@ class Task extends Equatable {
   /// 第一张图片
   String? get firstImage => images.isNotEmpty ? images.first : null;
 
+  static List<Map<String, dynamic>>? _parseCompletionEvidence(dynamic raw) {
+    if (raw == null) return null;
+    if (raw is List) {
+      return raw.map((e) => e is Map<String, dynamic> ? e : <String, dynamic>{}).toList();
+    }
+    if (raw is String && raw.isNotEmpty) {
+      return [{'type': 'text', 'content': raw}];
+    }
+    return null;
+  }
+
   factory Task.fromJson(Map<String, dynamic> json) {
     return Task(
       id: json['id'] as int,
@@ -332,7 +360,7 @@ class Task extends Equatable {
       taskLevel: json['task_level'] as String?,
       hasApplied: json['has_applied'] as bool? ?? false,
       userApplicationStatus: json['user_application_status'] as String?,
-      completionEvidence: json['completion_evidence'] as String?,
+      completionEvidence: _parseCompletionEvidence(json['completion_evidence']),
       paymentExpiresAt: json['payment_expires_at'] as String?,
       confirmationDeadline: json['confirmation_deadline'] as String?,
       agreedReward: (json['agreed_reward'] as num?)?.toDouble(),
@@ -347,6 +375,14 @@ class Task extends Equatable {
           ? DateTime.tryParse(json['updated_at'])
           : null,
       distance: (json['distance'] as num?)?.toDouble(),
+      isFlexible: (json['is_flexible'] as int? ?? 0) == 1,
+      acceptedAt: json['accepted_at'] != null ? DateTime.tryParse(json['accepted_at'].toString()) : null,
+      completedAt: json['completed_at'] != null ? DateTime.tryParse(json['completed_at'].toString()) : null,
+      confirmedAt: json['confirmed_at'] != null ? DateTime.tryParse(json['confirmed_at'].toString()) : null,
+      autoConfirmed: json['auto_confirmed'] as bool? ?? false,
+      confirmationRemainingSeconds: json['confirmation_remaining_seconds'] as int?,
+      pointsReward: json['points_reward'] as int?,
+      minParticipants: json['min_participants'] as int?,
     );
   }
 
@@ -387,6 +423,14 @@ class Task extends Equatable {
       'has_reviewed': hasReviewed,
       'created_at': createdAt?.toIso8601String(),
       'updated_at': updatedAt?.toIso8601String(),
+      'is_flexible': isFlexible ? 1 : 0,
+      'accepted_at': acceptedAt?.toIso8601String(),
+      'completed_at': completedAt?.toIso8601String(),
+      'confirmed_at': confirmedAt?.toIso8601String(),
+      'auto_confirmed': autoConfirmed,
+      'confirmation_remaining_seconds': confirmationRemainingSeconds,
+      'points_reward': pointsReward,
+      'min_participants': minParticipants,
     };
   }
 
@@ -418,7 +462,7 @@ class Task extends Equatable {
     String? taskLevel,
     bool? hasApplied,
     String? userApplicationStatus,
-    String? completionEvidence,
+    List<Map<String, dynamic>>? completionEvidence,
     String? paymentExpiresAt,
     String? confirmationDeadline,
     double? agreedReward,
@@ -429,6 +473,14 @@ class Task extends Equatable {
     DateTime? createdAt,
     DateTime? updatedAt,
     double? distance,
+    bool? isFlexible,
+    DateTime? acceptedAt,
+    DateTime? completedAt,
+    DateTime? confirmedAt,
+    bool? autoConfirmed,
+    int? confirmationRemainingSeconds,
+    int? pointsReward,
+    int? minParticipants,
   }) {
     return Task(
       id: id ?? this.id,
@@ -469,6 +521,14 @@ class Task extends Equatable {
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       distance: distance ?? this.distance,
+      isFlexible: isFlexible ?? this.isFlexible,
+      acceptedAt: acceptedAt ?? this.acceptedAt,
+      completedAt: completedAt ?? this.completedAt,
+      confirmedAt: confirmedAt ?? this.confirmedAt,
+      autoConfirmed: autoConfirmed ?? this.autoConfirmed,
+      confirmationRemainingSeconds: confirmationRemainingSeconds ?? this.confirmationRemainingSeconds,
+      pointsReward: pointsReward ?? this.pointsReward,
+      minParticipants: minParticipants ?? this.minParticipants,
     );
   }
 

@@ -73,7 +73,7 @@ class _ChatContentState extends State<_ChatContent> {
   }
 
   void _onScroll() {
-    if (!_scrollController.hasClients) return;
+    if (!mounted || !_scrollController.hasClients) return;
     if (_scrollController.position.pixels <=
         _scrollController.position.minScrollExtent + 50) {
       context.read<ChatBloc>().add(const ChatLoadMore());

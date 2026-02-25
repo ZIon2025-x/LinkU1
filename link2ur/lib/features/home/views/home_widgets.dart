@@ -72,35 +72,82 @@ class _GreetingSection extends StatelessWidget {
 }
 
 /// 对标iOS: BannerCarouselSection - 横幅轮播
+/// 对齐 iOS 行为：前置 2 个硬编码 banner（跳蚤市场 + 学生认证），后接后端 banner
 class _BannerCarousel extends StatefulWidget {
-  const _BannerCarousel();
+  const _BannerCarousel({required this.serverBanners});
+
+  final List<app_banner.Banner> serverBanners;
 
   @override
   State<_BannerCarousel> createState() => _BannerCarouselState();
 }
 
 class _BannerCarouselState extends State<_BannerCarousel> {
-  static const _bannerCount = 3;
   static const _autoPlayInterval = Duration(seconds: 4);
 
-  final PageController _controller = PageController(viewportFraction: 0.88);
+  late PageController _controller;
   final ValueNotifier<int> _currentPage = ValueNotifier<int>(0);
   Timer? _autoPlayTimer;
+
+  List<_BannerData> _allBanners = [];
 
   @override
   void initState() {
     super.initState();
-    // 延迟启动自动轮播，避免在首帧渲染期间创建周期性 timer
+    _controller = PageController(viewportFraction: 0.88);
+    _buildBannerList();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) _startAutoPlay();
+      if (mounted && _allBanners.length > 1) _startAutoPlay();
     });
+  }
+
+  @override
+  void didUpdateWidget(covariant _BannerCarousel oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.serverBanners != widget.serverBanners) {
+      _buildBannerList();
+    }
+  }
+
+  void _buildBannerList() {
+    _allBanners = [
+      _BannerData(
+        title: null,
+        subtitle: null,
+        localImage: AppAssets.fleaMarketBanner,
+        imageAlignment: const Alignment(0.0, 0.4),
+        gradient: AppColors.gradientGreen,
+        icon: Icons.storefront,
+        linkType: 'internal',
+        linkUrl: '/flea-market',
+      ),
+      _BannerData(
+        title: null,
+        subtitle: null,
+        localImage: AppAssets.studentVerificationBanner,
+        gradient: AppColors.gradientIndigo,
+        icon: Icons.school,
+        linkType: 'internal',
+        linkUrl: '/student-verification',
+      ),
+      for (final b in widget.serverBanners)
+        _BannerData(
+          title: b.title,
+          subtitle: b.subtitle,
+          networkImage: b.imageUrl,
+          gradient: AppColors.gradientPrimary,
+          icon: Icons.campaign,
+          linkType: b.linkType,
+          linkUrl: b.linkUrl,
+        ),
+    ];
   }
 
   void _startAutoPlay() {
     _autoPlayTimer?.cancel();
     _autoPlayTimer = Timer.periodic(_autoPlayInterval, (_) {
-      if (!_controller.hasClients) return;
-      final next = (_currentPage.value + 1) % _bannerCount;
+      if (!_controller.hasClients || _allBanners.isEmpty) return;
+      final next = (_currentPage.value + 1) % _allBanners.length;
       _controller.animateToPage(
         next,
         duration: const Duration(milliseconds: 400),
@@ -122,65 +169,67 @@ class _BannerCarouselState extends State<_BannerCarousel> {
     super.dispose();
   }
 
+  void _handleTap(_BannerData banner) {
+    final linkUrl = banner.linkUrl;
+    if (linkUrl == null || linkUrl.isEmpty) return;
+
+    if (banner.linkType == 'external') {
+      ExternalWebView.openInApp(context, url: linkUrl);
+    } else {
+      context.safePush(linkUrl);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    if (_allBanners.isEmpty) return const SizedBox.shrink();
+
+    final bannerCount = _allBanners.length;
+    final l10n = context.l10n;
+
     return Column(
       children: [
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
           child: SizedBox(
             height: 162,
-            // 将动画监听移到 itemBuilder 内部：
-            // PageView 本身不随 scroll 重建，仅每个 banner item 内部通过
-            // AnimatedBuilder 监听 _controller 做视差/缩放变换。
-            // 这样 banner 的子 widget tree（文字/图标/图片）作为 child 参数
-            // 不会在每帧 scroll 时重建，只有 Transform 矩阵更新。
             child: GestureDetector(
-              // 手指按下时暂停自动轮播，抬起后恢复
               onPanDown: (_) => _stopAutoPlay(),
               onPanEnd: (_) => _startAutoPlay(),
               onPanCancel: () => _startAutoPlay(),
               child: PageView.builder(
                 clipBehavior: Clip.none,
                 controller: _controller,
-                itemCount: _bannerCount,
+                itemCount: bannerCount,
                 onPageChanged: (index) {
                   _currentPage.value = index;
                 },
                 itemBuilder: (context, index) {
-                  // 预构建 banner 内容（不参与动画重建）
-                  final bannerContents = [
-                    _BannerItem(
-                      title: context.l10n.homeSecondHandMarket,
-                      subtitle: context.l10n.homeSecondHandSubtitle,
-                      gradient: AppColors.gradientGreen,
-                      icon: Icons.storefront,
-                      imagePath: AppAssets.fleaMarketBanner,
-                      imageAlignment: const Alignment(0.0, 0.4),
-                      parallaxOffset: 0,
-                      onTap: () => context.push('/flea-market'),
-                    ),
-                    _BannerItem(
-                      title: context.l10n.homeStudentVerification,
-                      subtitle: context.l10n.homeStudentVerificationSubtitle,
-                      gradient: AppColors.gradientIndigo,
-                      icon: Icons.school,
-                      imagePath: AppAssets.studentVerificationBanner,
-                      parallaxOffset: 0,
-                      onTap: () => context.push('/student-verification'),
-                    ),
-                    _BannerItem(
-                      title: context.l10n.homeBecomeExpert,
-                      subtitle: context.l10n.homeBecomeExpertSubtitle,
-                      gradient: AppColors.gradientOrange,
-                      icon: Icons.star,
-                      parallaxOffset: 0,
-                      onTap: () => context.push('/task-experts/intro'),
-                    ),
-                  ];
+                  final banner = _allBanners[index];
+                  final displayTitle = banner.title ??
+                      (banner.linkUrl == '/flea-market'
+                          ? l10n.homeSecondHandMarket
+                          : banner.linkUrl == '/student-verification'
+                              ? l10n.homeStudentVerification
+                              : '');
+                  final displaySubtitle = banner.subtitle ??
+                      (banner.linkUrl == '/flea-market'
+                          ? l10n.homeSecondHandSubtitle
+                          : banner.linkUrl == '/student-verification'
+                              ? l10n.homeStudentVerificationSubtitle
+                              : '');
 
-                  // AnimatedBuilder 监听 PageController 做视差 + 缩放
-                  // child 参数（banner 内容）不参与每帧重建
+                  final child = _BannerItem(
+                    title: displayTitle,
+                    subtitle: displaySubtitle,
+                    gradient: banner.gradient,
+                    icon: banner.icon,
+                    localImage: banner.localImage,
+                    networkImage: banner.networkImage,
+                    imageAlignment: banner.imageAlignment,
+                    onTap: () => _handleTap(banner),
+                  );
+
                   return AnimatedBuilder(
                     animation: _controller,
                     builder: (context, child) {
@@ -189,26 +238,22 @@ class _BannerCarouselState extends State<_BannerCarousel> {
                           : 0.0;
                       final offset = (page - index).abs();
                       final scale = (1.0 - (offset * 0.05)).clamp(0.92, 1.0);
-                      return Transform.scale(
-                        scale: scale,
-                        child: child,
-                      );
+                      return Transform.scale(scale: scale, child: child);
                     },
-                    child: bannerContents[index],
+                    child: child,
                   );
                 },
               ),
             ),
           ),
         ),
-        // 页面指示器 — 仅在 _currentPage 变化时重建
         const SizedBox(height: 8),
         ValueListenableBuilder<int>(
           valueListenable: _currentPage,
           builder: (context, currentPage, _) {
             return Row(
               mainAxisAlignment: MainAxisAlignment.center,
-              children: List.generate(_bannerCount, (index) {
+              children: List.generate(bannerCount, (index) {
                 final isActive = currentPage == index;
                 return AnimatedContainer(
                   duration: const Duration(milliseconds: 300),
@@ -217,9 +262,7 @@ class _BannerCarouselState extends State<_BannerCarousel> {
                   width: isActive ? 18 : 6,
                   decoration: BoxDecoration(
                     gradient: isActive
-                        ? const LinearGradient(
-                            colors: AppColors.gradientPrimary,
-                          )
+                        ? const LinearGradient(colors: AppColors.gradientPrimary)
                         : null,
                     color: isActive ? null : AppColors.primary.withValues(alpha: 0.2),
                     borderRadius: AppRadius.allPill,
@@ -234,6 +277,33 @@ class _BannerCarouselState extends State<_BannerCarousel> {
   }
 }
 
+/// 统一的 banner 数据（硬编码 + 后端共用）
+class _BannerData {
+  const _BannerData({
+    this.title,
+    this.subtitle,
+    this.localImage,
+    this.networkImage,
+    this.imageAlignment = Alignment.center,
+    required this.gradient,
+    required this.icon,
+    this.linkType = 'internal',
+    this.linkUrl,
+  });
+
+  final String? title;
+  final String? subtitle;
+  final String? localImage;
+  final String? networkImage;
+  final Alignment imageAlignment;
+  final List<Color> gradient;
+  final IconData icon;
+  final String linkType;
+  final String? linkUrl;
+
+  bool get hasImage => localImage != null || (networkImage != null && networkImage!.isNotEmpty);
+}
+
 class _BannerItem extends StatelessWidget {
   const _BannerItem({
     required this.title,
@@ -241,8 +311,8 @@ class _BannerItem extends StatelessWidget {
     required this.gradient,
     required this.icon,
     required this.onTap,
-    this.imagePath,
-    required this.parallaxOffset,
+    this.localImage,
+    this.networkImage,
     this.imageAlignment = Alignment.center,
   });
 
@@ -251,9 +321,11 @@ class _BannerItem extends StatelessWidget {
   final List<Color> gradient;
   final IconData icon;
   final VoidCallback onTap;
-  final String? imagePath;
-  final double parallaxOffset;
+  final String? localImage;
+  final String? networkImage;
   final Alignment imageAlignment;
+
+  bool get _hasImage => localImage != null || (networkImage != null && networkImage!.isNotEmpty);
 
   @override
   Widget build(BuildContext context) {
@@ -263,7 +335,7 @@ class _BannerItem extends StatelessWidget {
         margin: const EdgeInsets.fromLTRB(4, 4, 4, 10),
         clipBehavior: Clip.hardEdge,
         decoration: BoxDecoration(
-          gradient: imagePath == null
+          gradient: !_hasImage
               ? LinearGradient(
                   colors: gradient,
                   begin: Alignment.topLeft,
@@ -285,34 +357,61 @@ class _BannerItem extends StatelessWidget {
           ],
         ),
         child: Stack(
-          fit: StackFit.expand,
           children: [
-            // 真实图片背景 — 带视差效果
-            if (imagePath != null)
-              Transform.translate(
-                offset: Offset(parallaxOffset, 0),
-                child: Image.asset(
-                  imagePath!,
-                  fit: BoxFit.cover,
-                  alignment: imageAlignment,
-                  // 限制解码尺寸，避免全分辨率占用 GPU 纹理内存
-                  // banner 容器高 162px × 最大 3x dpr ≈ 486px
-                  cacheWidth: 800,
-                  errorBuilder: (context, error, stackTrace) {
-                    return Container(
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: gradient,
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
+            Positioned.fill(
+              child: localImage != null
+                  ? Image.asset(
+                      localImage!,
+                      fit: BoxFit.cover,
+                      alignment: imageAlignment,
+                      cacheWidth: 800,
+                      errorBuilder: (context, error, stackTrace) {
+                        return Container(
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              colors: gradient,
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                            ),
+                          ),
+                        );
+                      },
+                    )
+                  : (networkImage != null && networkImage!.isNotEmpty)
+                      ? AsyncImageView(
+                          imageUrl: networkImage!,
+                          fit: BoxFit.cover,
+                          memCacheWidth: 800,
+                          placeholder: Container(
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                colors: gradient,
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                              ),
+                            ),
+                          ),
+                          errorWidget: Container(
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                colors: gradient,
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                              ),
+                            ),
+                          ),
+                        )
+                      : Container(
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              colors: gradient,
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                            ),
+                          ),
                         ),
-                      ),
-                    );
-                  },
-                ),
-              ),
-            // 底部渐变遮罩，仅覆盖下方保证文字可读（与 iOS 原生一致）
-            if (imagePath != null)
+            ),
+            if (_hasImage)
               Positioned(
                 left: 0,
                 right: 0,
@@ -332,8 +431,7 @@ class _BannerItem extends StatelessWidget {
                   ),
                 ),
               ),
-            // 装饰图标（无图片时显示）— 右上角，避免与底部文字重叠
-            if (imagePath == null)
+            if (!_hasImage)
               Positioned(
                 right: 16,
                 top: 12,
@@ -343,46 +441,49 @@ class _BannerItem extends StatelessWidget {
                   color: Colors.white.withValues(alpha: 0.25),
                 ),
               ),
-            // 文字内容 — 底部对齐，配合渐变遮罩保证可读性
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  Text(
-                    title,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      shadows: [
-                        Shadow(
-                          color: Colors.black38,
-                          blurRadius: 6,
-                          offset: Offset(0, 1),
+            if (title.isNotEmpty || subtitle.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    if (title.isNotEmpty)
+                      Text(
+                        title,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          shadows: [
+                            Shadow(
+                              color: Colors.black38,
+                              blurRadius: 6,
+                              offset: Offset(0, 1),
+                            ),
+                          ],
                         ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    subtitle,
-                    style: TextStyle(
-                      color: Colors.white.withValues(alpha: 0.9),
-                      fontSize: 13,
-                      shadows: const [
-                        Shadow(
-                          color: Colors.black38,
-                          blurRadius: 6,
-                          offset: Offset(0, 1),
+                      ),
+                    if (subtitle.isNotEmpty) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        subtitle,
+                        style: TextStyle(
+                          color: Colors.white.withValues(alpha: 0.9),
+                          fontSize: 13,
+                          shadows: const [
+                            Shadow(
+                              color: Colors.black38,
+                              blurRadius: 6,
+                              offset: Offset(0, 1),
+                            ),
+                          ],
                         ),
-                      ],
-                    ),
-                  ),
-                ],
+                      ),
+                    ],
+                  ],
+                ),
               ),
-            ),
           ],
         ),
       ),

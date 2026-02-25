@@ -526,36 +526,39 @@ class _HeroSection extends StatelessWidget {
     return SizedBox(
       height: 240,
       child: Stack(
-        fit: StackFit.expand,
         children: [
-          if (leaderboard.coverImage != null)
-            AsyncImageView(
-              imageUrl: leaderboard.coverImage!,
-              width: double.infinity,
-              height: 240,
-            )
-          else
-            Container(
+          Positioned.fill(
+            child: leaderboard.coverImage != null
+                ? AsyncImageView(
+                    imageUrl: leaderboard.coverImage!,
+                    width: 400,
+                    height: 240,
+                    fit: BoxFit.cover,
+                  )
+                : Container(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [
+                          AppColors.primary.withValues(alpha: 0.8),
+                          AppColors.primary,
+                        ],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                    ),
+                  ),
+          ),
+          Positioned.fill(
+            child: Container(
               decoration: BoxDecoration(
                 gradient: LinearGradient(
+                  begin: Alignment.bottomCenter,
+                  end: Alignment.center,
                   colors: [
-                    AppColors.primary.withValues(alpha: 0.8),
-                    AppColors.primary,
+                    Colors.black.withValues(alpha: 0.6),
+                    Colors.transparent,
                   ],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
                 ),
-              ),
-            ),
-          Container(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.bottomCenter,
-                end: Alignment.center,
-                colors: [
-                  Colors.black.withValues(alpha: 0.6),
-                  Colors.transparent,
-                ],
               ),
             ),
           ),

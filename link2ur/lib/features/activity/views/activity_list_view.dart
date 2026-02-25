@@ -508,7 +508,7 @@ class ActivityCardView extends StatelessWidget {
   Widget _buildPriceDisplay(Activity activity) {
     final price = activity.discountedPricePerParticipant ??
         activity.originalPricePerParticipant;
-    final symbol = activity.currency == 'GBP' ? '£' : '¥';
+    const symbol = '£';
 
     if (price == null || price == 0) {
       return const Text(

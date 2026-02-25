@@ -302,6 +302,7 @@ class _AboutViewState extends State<AboutView> {
                   AppAssets.appIcon,
                   width: 100,
                   height: 100,
+                  fit: BoxFit.cover,
                 ),
               ),
               AppSpacing.vLg,

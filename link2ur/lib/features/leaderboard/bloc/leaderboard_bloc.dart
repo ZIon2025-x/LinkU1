@@ -114,16 +114,22 @@ class LeaderboardSubmitItem extends LeaderboardEvent {
     required this.leaderboardId,
     required this.name,
     this.description,
-    this.score,
+    this.address,
+    this.phone,
+    this.website,
+    this.imagePaths,
   });
 
   final int leaderboardId;
   final String name;
   final String? description;
-  final double? score;
+  final String? address;
+  final String? phone;
+  final String? website;
+  final List<String>? imagePaths;
 
   @override
-  List<Object?> get props => [leaderboardId, name, description, score];
+  List<Object?> get props => [leaderboardId, name, description, address, phone, website, imagePaths];
 }
 
 class LeaderboardLoadItemDetail extends LeaderboardEvent {
@@ -147,24 +153,26 @@ class LeaderboardToggleFavorite extends LeaderboardEvent {
 
 /// 举报排行榜
 class LeaderboardReport extends LeaderboardEvent {
-  const LeaderboardReport(this.leaderboardId, {required this.reason});
+  const LeaderboardReport(this.leaderboardId, {required this.reason, this.description});
 
   final int leaderboardId;
   final String reason;
+  final String? description;
 
   @override
-  List<Object?> get props => [leaderboardId, reason];
+  List<Object?> get props => [leaderboardId, reason, description];
 }
 
 /// 举报排行榜条目
 class LeaderboardReportItem extends LeaderboardEvent {
-  const LeaderboardReportItem(this.itemId, {required this.reason});
+  const LeaderboardReportItem(this.itemId, {required this.reason, this.description});
 
   final int itemId;
   final String reason;
+  final String? description;
 
   @override
-  List<Object?> get props => [itemId, reason];
+  List<Object?> get props => [itemId, reason, description];
 }
 
 // ==================== State ====================
@@ -417,15 +425,25 @@ class LeaderboardBloc extends Bloc<LeaderboardEvent, LeaderboardState> {
     }
   }
 
-  /// 投票 — 支持 upvote / downvote + comment
+  /// 投票 — 支持 upvote / downvote / remove + comment
   Future<void> _onVoteItem(
     LeaderboardVoteItem event,
     Emitter<LeaderboardState> emit,
   ) async {
     try {
+      // 判断是否需要取消投票：再次点击同类型 → 发送 remove
+      final currentItem = state.items.cast<LeaderboardItem?>().firstWhere(
+            (i) => i?.id == event.itemId,
+            orElse: () => state.itemDetail?.id == event.itemId
+                ? state.itemDetail
+                : null,
+          );
+      final actualVoteType =
+          (currentItem?.userVote == event.voteType) ? 'remove' : event.voteType;
+
       await _leaderboardRepository.voteItem(
         event.itemId,
-        voteType: event.voteType,
+        voteType: actualVoteType,
         comment: event.comment,
         isAnonymous: event.isAnonymous,
       );
@@ -459,7 +477,7 @@ class LeaderboardBloc extends Bloc<LeaderboardEvent, LeaderboardState> {
     final previousVote = item.userVote;
 
     if (previousVote == voteType) {
-      // 取消投票（再次点同类型 = toggle off）
+      // 取消投票（再次点同类型 = toggle off）— userVote 置 null
       return LeaderboardItem(
         id: item.id,
         leaderboardId: item.leaderboardId,
@@ -470,6 +488,9 @@ class LeaderboardBloc extends Bloc<LeaderboardEvent, LeaderboardState> {
         website: item.website,
         images: item.images,
         submittedBy: item.submittedBy,
+        submitterName: item.submitterName,
+        submitterAvatar: item.submitterAvatar,
+        submitterId: item.submitterId,
         status: item.status,
         upvotes: voteType == 'upvote' ? item.upvotes - 1 : item.upvotes,
         downvotes:
@@ -478,6 +499,10 @@ class LeaderboardBloc extends Bloc<LeaderboardEvent, LeaderboardState> {
             ? item.netVotes - 1
             : item.netVotes + 1,
         voteScore: item.voteScore,
+        displayComment: item.displayComment,
+        displayCommentType: item.displayCommentType,
+        displayCommentInfo: item.displayCommentInfo,
+        rank: item.rank,
         createdAt: item.createdAt,
         updatedAt: item.updatedAt,
       );
@@ -493,6 +518,9 @@ class LeaderboardBloc extends Bloc<LeaderboardEvent, LeaderboardState> {
         website: item.website,
         images: item.images,
         submittedBy: item.submittedBy,
+        submitterName: item.submitterName,
+        submitterAvatar: item.submitterAvatar,
+        submitterId: item.submitterId,
         status: item.status,
         upvotes: voteType == 'upvote' ? item.upvotes + 1 : item.upvotes - 1,
         downvotes:
@@ -502,6 +530,10 @@ class LeaderboardBloc extends Bloc<LeaderboardEvent, LeaderboardState> {
             : item.netVotes - 2,
         voteScore: item.voteScore,
         userVote: voteType,
+        displayComment: item.displayComment,
+        displayCommentType: item.displayCommentType,
+        displayCommentInfo: item.displayCommentInfo,
+        rank: item.rank,
         createdAt: item.createdAt,
         updatedAt: item.updatedAt,
       );
@@ -603,10 +635,24 @@ class LeaderboardBloc extends Bloc<LeaderboardEvent, LeaderboardState> {
     emit(state.copyWith(isSubmitting: true));
 
     try {
+      List<String>? imageUrls;
+      if (event.imagePaths != null && event.imagePaths!.isNotEmpty) {
+        imageUrls = [];
+        for (final path in event.imagePaths!) {
+          final url = await _leaderboardRepository.uploadImage(
+              path, category: 'leaderboard_item');
+          imageUrls.add(url);
+        }
+      }
+
       await _leaderboardRepository.submitItem(
         leaderboardId: event.leaderboardId,
         name: event.name,
         description: event.description,
+        address: event.address,
+        phone: event.phone,
+        website: event.website,
+        images: imageUrls,
       );
 
       emit(state.copyWith(
@@ -681,6 +727,7 @@ class LeaderboardBloc extends Bloc<LeaderboardEvent, LeaderboardState> {
       await _leaderboardRepository.reportLeaderboard(
         event.leaderboardId,
         reason: event.reason,
+        description: event.description,
       );
       emit(state.copyWith(reportSuccess: true));
       emit(state.copyWith(reportSuccess: false));
@@ -701,6 +748,7 @@ class LeaderboardBloc extends Bloc<LeaderboardEvent, LeaderboardState> {
       await _leaderboardRepository.reportItem(
         event.itemId,
         reason: event.reason,
+        description: event.description,
       );
       emit(state.copyWith(reportSuccess: true));
       emit(state.copyWith(reportSuccess: false));

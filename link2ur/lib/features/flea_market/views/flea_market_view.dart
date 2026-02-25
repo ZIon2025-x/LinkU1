@@ -419,30 +419,32 @@ class _FleaMarketItemCard extends StatelessWidget {
                   height: imageHeight,
                   width: cardWidth,
                   child: Stack(
-                    fit: StackFit.expand,
                     children: [
                       // 商品图片
-                      item.firstImage != null
-                          ? Hero(
-                              tag: 'flea_market_image_${item.id}',
-                              child: AsyncImageView(
-                                imageUrl: item.firstImage!,
-                                width: double.infinity,
-                                height: double.infinity,
-                              ),
-                            )
-                          : Container(
-                              color: isDark
-                                  ? Colors.white.withValues(alpha: 0.05)
-                                  : AppColors.skeletonBase,
-                              child: Icon(
-                                Icons.image_outlined,
+                      Positioned.fill(
+                        child: item.firstImage != null
+                            ? Hero(
+                                tag: 'flea_market_image_${item.id}',
+                                child: AsyncImageView(
+                                  imageUrl: item.firstImage!,
+                                  width: cardWidth,
+                                  height: imageHeight,
+                                  fit: BoxFit.cover,
+                                ),
+                              )
+                            : Container(
                                 color: isDark
-                                    ? Colors.white.withValues(alpha: 0.2)
-                                    : AppColors.textTertiaryLight.withValues(alpha: 0.3),
-                                size: 40,
+                                    ? Colors.white.withValues(alpha: 0.05)
+                                    : AppColors.skeletonBase,
+                                child: Icon(
+                                  Icons.image_outlined,
+                                  color: isDark
+                                      ? Colors.white.withValues(alpha: 0.2)
+                                      : AppColors.textTertiaryLight.withValues(alpha: 0.3),
+                                  size: 40,
+                                ),
                               ),
-                            ),
+                      ),
                       // 左上: 分类标签
                       if (item.category != null)
                         Positioned(

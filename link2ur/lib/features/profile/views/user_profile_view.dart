@@ -417,7 +417,11 @@ class _UserProfileViewState extends State<UserProfileView> {
     final titleController = TextEditingController();
     final descriptionController = TextEditingController();
     final priceController = TextEditingController();
+    final locationController = TextEditingController(
+      text: user.residenceCity ?? 'Online',
+    );
     String selectedTaskType = AppConstants.taskTypes.first;
+    DateTime? selectedDeadline;
     bool isSubmitting = false;
 
     SheetAdaptation.showAdaptiveModalBottomSheet(
@@ -429,6 +433,7 @@ class _UserProfileViewState extends State<UserProfileView> {
       builder: (sheetContext) {
         return StatefulBuilder(
           builder: (ctx, setSheetState) {
+            final isDark = Theme.of(ctx).brightness == Brightness.dark;
             return Padding(
               padding: EdgeInsets.only(
                 left: AppSpacing.lg,
@@ -441,7 +446,18 @@ class _UserProfileViewState extends State<UserProfileView> {
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Title
+                    // 拖拽手柄
+                    Center(
+                      child: Container(
+                        width: 40,
+                        height: 4,
+                        margin: const EdgeInsets.only(bottom: 16),
+                        decoration: BoxDecoration(
+                          color: isDark ? Colors.white24 : Colors.grey.shade300,
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                      ),
+                    ),
                     Center(
                       child: Text(
                         l10n.profileDirectRequestTitle,
@@ -453,50 +469,85 @@ class _UserProfileViewState extends State<UserProfileView> {
                     ),
                     const SizedBox(height: AppSpacing.lg),
 
-                    // Task title
+                    // 任务标题
                     TextField(
                       controller: titleController,
+                      maxLength: 100,
                       decoration: InputDecoration(
                         labelText: l10n.profileDirectRequestHintTitle,
-                        border: const OutlineInputBorder(),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(AppRadius.medium),
+                        ),
                       ),
                     ),
                     const SizedBox(height: AppSpacing.md),
 
-                    // Description
+                    // 描述
                     TextField(
                       controller: descriptionController,
                       maxLines: 3,
+                      maxLength: 500,
                       decoration: InputDecoration(
                         labelText: l10n.profileDirectRequestHintDescription,
-                        border: const OutlineInputBorder(),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(AppRadius.medium),
+                        ),
                       ),
                     ),
                     const SizedBox(height: AppSpacing.md),
 
-                    // Price
-                    TextField(
-                      controller: priceController,
-                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                      decoration: InputDecoration(
-                        labelText: l10n.profileDirectRequestHintPrice,
-                        prefixText: '£ ',
-                        border: const OutlineInputBorder(),
-                      ),
+                    // 价格 + 地点（一行两列）
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            controller: priceController,
+                            keyboardType:
+                                const TextInputType.numberWithOptions(
+                                    decimal: true),
+                            decoration: InputDecoration(
+                              labelText: l10n.profileDirectRequestHintPrice,
+                              prefixText: '£ ',
+                              border: OutlineInputBorder(
+                                borderRadius:
+                                    BorderRadius.circular(AppRadius.medium),
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: AppSpacing.md),
+                        Expanded(
+                          child: TextField(
+                            controller: locationController,
+                            decoration: InputDecoration(
+                              labelText:
+                                  l10n.profileDirectRequestHintLocation,
+                              prefixIcon:
+                                  const Icon(Icons.location_on_outlined, size: 20),
+                              border: OutlineInputBorder(
+                                borderRadius:
+                                    BorderRadius.circular(AppRadius.medium),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                     const SizedBox(height: AppSpacing.md),
 
-                    // Task type dropdown
+                    // 任务类型
                     DropdownButtonFormField<String>(
-                      initialValue: selectedTaskType,
+                      value: selectedTaskType,
                       decoration: InputDecoration(
                         labelText: l10n.profileDirectRequestHintTaskType,
-                        border: const OutlineInputBorder(),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(AppRadius.medium),
+                        ),
                       ),
-                      items: AppConstants.taskTypes
-                          .map((type) => DropdownMenuItem(
-                                value: type,
-                                child: Text(type),
+                      items: _getLocalizedTaskTypes(ctx)
+                          .map((entry) => DropdownMenuItem(
+                                value: entry['key'],
+                                child: Text(entry['label']!),
                               ))
                           .toList(),
                       onChanged: (value) {
@@ -505,9 +556,57 @@ class _UserProfileViewState extends State<UserProfileView> {
                         }
                       },
                     ),
+                    const SizedBox(height: AppSpacing.md),
+
+                    // 截止日期
+                    GestureDetector(
+                      onTap: () async {
+                        final now = DateTime.now();
+                        final picked = await showDatePicker(
+                          context: ctx,
+                          initialDate: selectedDeadline ??
+                              now.add(const Duration(days: 7)),
+                          firstDate: now,
+                          lastDate: now.add(const Duration(days: 365)),
+                        );
+                        if (picked != null) {
+                          setSheetState(() => selectedDeadline = picked);
+                        }
+                      },
+                      child: InputDecorator(
+                        decoration: InputDecoration(
+                          labelText: l10n.profileDirectRequestHintDeadline,
+                          prefixIcon:
+                              const Icon(Icons.event_outlined, size: 20),
+                          suffixIcon: selectedDeadline != null
+                              ? GestureDetector(
+                                  onTap: () => setSheetState(
+                                      () => selectedDeadline = null),
+                                  child: const Icon(Icons.close, size: 18),
+                                )
+                              : null,
+                          border: OutlineInputBorder(
+                            borderRadius:
+                                BorderRadius.circular(AppRadius.medium),
+                          ),
+                        ),
+                        child: Text(
+                          selectedDeadline != null
+                              ? '${selectedDeadline!.year}-${selectedDeadline!.month.toString().padLeft(2, '0')}-${selectedDeadline!.day.toString().padLeft(2, '0')}'
+                              : '',
+                          style: TextStyle(
+                            color: selectedDeadline != null
+                                ? null
+                                : (isDark
+                                    ? AppColors.textTertiaryDark
+                                    : AppColors.textTertiaryLight),
+                          ),
+                        ),
+                      ),
+                    ),
                     const SizedBox(height: AppSpacing.lg),
 
-                    // Submit button
+                    // 提交按钮
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton(
@@ -515,27 +614,40 @@ class _UserProfileViewState extends State<UserProfileView> {
                             ? null
                             : () async {
                                 final title = titleController.text.trim();
-                                final price = double.tryParse(priceController.text.trim());
-                                if (title.isEmpty || price == null || price < 1) {
+                                final price = double.tryParse(
+                                    priceController.text.trim());
+                                if (title.isEmpty ||
+                                    price == null ||
+                                    price < 1) {
                                   ScaffoldMessenger.of(ctx).showSnackBar(
-                                    SnackBar(content: Text(l10n.profileDirectRequestHintTitle)),
+                                    SnackBar(
+                                        content: Text(l10n
+                                            .profileDirectRequestValidation)),
                                   );
                                   return;
                                 }
 
-                                // 在 await 之前捕获 repository
-                                final taskRepo = context.read<TaskRepository>();
+                                final taskRepo =
+                                    context.read<TaskRepository>();
                                 setSheetState(() => isSubmitting = true);
                                 try {
+                                  final loc =
+                                      locationController.text.trim();
                                   await taskRepo.createTask(
                                     CreateTaskRequest(
                                       title: title,
-                                      description: descriptionController.text.trim().isNotEmpty
-                                          ? descriptionController.text.trim()
+                                      description: descriptionController
+                                              .text
+                                              .trim()
+                                              .isNotEmpty
+                                          ? descriptionController.text
+                                              .trim()
                                           : null,
                                       taskType: selectedTaskType,
-                                      location: user.residenceCity ?? 'Online',
+                                      location:
+                                          loc.isNotEmpty ? loc : 'Online',
                                       reward: price,
+                                      deadline: selectedDeadline,
                                       isPublic: 0,
                                       taskSource: 'user_profile',
                                       designatedTakerId: user.id,
@@ -544,14 +656,18 @@ class _UserProfileViewState extends State<UserProfileView> {
                                   if (ctx.mounted) {
                                     Navigator.pop(ctx);
                                     ScaffoldMessenger.of(ctx).showSnackBar(
-                                      SnackBar(content: Text(l10n.profileDirectRequestSuccess)),
+                                      SnackBar(
+                                          content: Text(l10n
+                                              .profileDirectRequestSuccess)),
                                     );
                                   }
                                 } catch (e) {
-                                  setSheetState(() => isSubmitting = false);
+                                  setSheetState(
+                                      () => isSubmitting = false);
                                   if (ctx.mounted) {
                                     ScaffoldMessenger.of(ctx).showSnackBar(
-                                      SnackBar(content: Text(e.toString())),
+                                      SnackBar(
+                                          content: Text(e.toString())),
                                     );
                                   }
                                 }
@@ -559,9 +675,11 @@ class _UserProfileViewState extends State<UserProfileView> {
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AppColors.primary,
                           foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          padding:
+                              const EdgeInsets.symmetric(vertical: 14),
                           shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(AppRadius.medium),
+                            borderRadius:
+                                BorderRadius.circular(AppRadius.medium),
                           ),
                         ),
                         child: isSubmitting
@@ -587,7 +705,26 @@ class _UserProfileViewState extends State<UserProfileView> {
       titleController.dispose();
       descriptionController.dispose();
       priceController.dispose();
+      locationController.dispose();
     });
+  }
+
+  List<Map<String, String>> _getLocalizedTaskTypes(BuildContext context) {
+    final l10n = context.l10n;
+    return [
+      {'key': 'delivery', 'label': l10n.createTaskCategoryDelivery},
+      {'key': 'shopping', 'label': l10n.createTaskCategoryShopping},
+      {'key': 'tutoring', 'label': l10n.createTaskCategoryTutoring},
+      {'key': 'translation', 'label': l10n.createTaskCategoryTranslation},
+      {'key': 'design', 'label': l10n.createTaskCategoryDesign},
+      {'key': 'programming', 'label': l10n.createTaskCategoryProgramming},
+      {'key': 'writing', 'label': l10n.createTaskCategoryWriting},
+      {'key': 'photography', 'label': l10n.createTaskCategoryPhotography},
+      {'key': 'moving', 'label': l10n.createTaskCategoryMoving},
+      {'key': 'cleaning', 'label': l10n.createTaskCategoryCleaning},
+      {'key': 'repair', 'label': l10n.createTaskCategoryRepair},
+      {'key': 'other', 'label': l10n.createTaskCategoryOther},
+    ];
   }
 
   /// 近期论坛帖子

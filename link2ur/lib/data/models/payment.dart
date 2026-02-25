@@ -249,19 +249,7 @@ class StripeConnectBalance extends Equatable {
   double get total => available + pending;
 
   String formatAmount(double amount) {
-    final code = currency.toUpperCase();
-    switch (code) {
-      case 'GBP':
-        return '£${amount.toStringAsFixed(2)}';
-      case 'USD':
-        return '\$${amount.toStringAsFixed(2)}';
-      case 'EUR':
-        return '€${amount.toStringAsFixed(2)}';
-      case 'CNY':
-        return '¥${amount.toStringAsFixed(2)}';
-      default:
-        return '$code ${amount.toStringAsFixed(2)}';
-    }
+    return '£${amount.toStringAsFixed(2)}';
   }
 
   factory StripeConnectBalance.fromJson(Map<String, dynamic> json) {

@@ -20,14 +20,15 @@ class LeaderboardRepository {
     int pageSize = 20,
     String? keyword,
     String? location,
+    String? sort,
   }) async {
-    // 后端使用 limit/offset 分页（custom_leaderboard_routes.py）
     final offset = (page - 1) * pageSize;
     final params = {
       'limit': pageSize,
       'offset': offset,
       if (keyword != null) 'keyword': keyword,
       if (location != null) 'location': location,
+      if (sort != null) 'sort': sort,
     };
 
     // 无搜索时使用缓存
@@ -179,9 +180,9 @@ class LeaderboardRepository {
   }
 
   /// 上传排行榜封面图（公开图片，使用 V2 接口；创建时由后端迁移到正式目录）
-  Future<String> uploadImage(String filePath) async {
+  Future<String> uploadImage(String filePath, {String category = 'leaderboard_cover'}) async {
     final response = await _apiService.uploadFile<Map<String, dynamic>>(
-      '${ApiEndpoints.uploadImageV2}?category=leaderboard_cover',
+      '${ApiEndpoints.uploadImageV2}?category=$category',
       filePath: filePath,
       fieldName: 'image',
     );
@@ -190,7 +191,6 @@ class LeaderboardRepository {
       throw LeaderboardException(response.message ?? '图片上传失败');
     }
 
-    // 后端返回 { url: "..." } 或 { image_url: "..." }
     final url = response.data!['url'] as String? ??
         response.data!['image_url'] as String? ??
         '';
@@ -334,10 +334,14 @@ class LeaderboardRepository {
 
   /// 举报排行榜
   Future<void> reportLeaderboard(int leaderboardId,
-      {required String reason}) async {
+      {required String reason, String? description}) async {
     final response = await _apiService.post(
       ApiEndpoints.leaderboardReport(leaderboardId),
-      data: {'reason': reason},
+      data: {
+        'reason': reason,
+        if (description != null && description.isNotEmpty)
+          'description': description,
+      },
     );
 
     if (!response.isSuccess) {
@@ -346,10 +350,15 @@ class LeaderboardRepository {
   }
 
   /// 举报排行榜条目
-  Future<void> reportItem(int itemId, {required String reason}) async {
+  Future<void> reportItem(int itemId,
+      {required String reason, String? description}) async {
     final response = await _apiService.post(
       ApiEndpoints.leaderboardItemReport(itemId),
-      data: {'reason': reason},
+      data: {
+        'reason': reason,
+        if (description != null && description.isNotEmpty)
+          'description': description,
+      },
     );
 
     if (!response.isSuccess) {

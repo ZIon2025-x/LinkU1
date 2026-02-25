@@ -6,6 +6,8 @@ import '../../../core/utils/haptic_feedback.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/widgets/external_web_view.dart';
+import '../../../data/models/banner.dart' as app_banner;
 import '../../../data/models/discovery_feed.dart';
 
 import '../../../core/constants/app_assets.dart';
@@ -31,6 +33,7 @@ import 'package:geolocator/geolocator.dart';
 
 import '../../../core/widgets/content_constraint.dart';
 import '../../../core/router/app_router.dart';
+import '../../../data/models/activity.dart';
 import '../../../data/models/task.dart';
 import '../../../data/models/task_expert.dart';
 import '../../../data/repositories/task_expert_repository.dart';

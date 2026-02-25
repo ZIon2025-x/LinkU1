@@ -99,6 +99,7 @@ class _TasksViewContentState extends State<_TasksViewContent> {
   }
 
   void _onScroll() {
+    if (!mounted) return;
     if (_scrollController.position.pixels >=
         _scrollController.position.maxScrollExtent - 200) {
       context.read<TaskListBloc>().add(const TaskListLoadMore());
@@ -749,35 +750,38 @@ class _TaskGridCard extends StatelessWidget {
         final dpr = MediaQuery.devicePixelRatioOf(context);
         return ClipRect(
           child: Stack(
-            fit: StackFit.expand,
             children: [
               // 任务图片或占位背景（显式宽高 + cover 保证等比例裁剪、不变形）
-              if (task.firstImage != null)
-                Hero(
-                  tag: 'task_image_${task.id}',
-                  child: AsyncImageView(
-                    imageUrl: task.firstImage!,
-                    width: w,
-                    height: h,
-                    memCacheWidth: (w * dpr).round(),
-                    memCacheHeight: (h * dpr).round(),
-                  ),
-                )
-              else
-                _buildPlaceholderBackground(),
+              Positioned.fill(
+                child: task.firstImage != null
+                    ? Hero(
+                        tag: 'task_image_${task.id}',
+                        child: AsyncImageView(
+                          imageUrl: task.firstImage!,
+                          width: w,
+                          height: h,
+                          fit: BoxFit.cover,
+                          memCacheWidth: (w * dpr).round(),
+                          memCacheHeight: (h * dpr).round(),
+                        ),
+                      )
+                    : _buildPlaceholderBackground(),
+              ),
 
         // 渐变遮罩层 (对齐iOS LinearGradient overlay)
-        DecoratedBox(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [
-                Colors.black.withValues(alpha: 0.2),
-                Colors.black.withValues(alpha: 0.0),
-                Colors.black.withValues(alpha: 0.4),
-              ],
-              stops: const [0.0, 0.4, 1.0],
+        Positioned.fill(
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  Colors.black.withValues(alpha: 0.2),
+                  Colors.black.withValues(alpha: 0.0),
+                  Colors.black.withValues(alpha: 0.4),
+                ],
+                stops: const [0.0, 0.4, 1.0],
+              ),
             ),
           ),
         ),
@@ -954,7 +958,6 @@ class _TaskGridCard extends StatelessWidget {
   Widget _buildPriceBadge() {
     if (task.reward <= 0) return const SizedBox.shrink();
 
-    final currencySymbol = task.currency == 'GBP' ? '£' : '\$';
     final priceText = task.reward.truncateToDouble() == task.reward
         ? task.reward.toStringAsFixed(0)
         : task.reward.toStringAsFixed(2);
@@ -974,7 +977,7 @@ class _TaskGridCard extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           Text(
-            currencySymbol,
+            '£',
             style: AppTypography.caption2.copyWith(
               color: Colors.white,
               fontWeight: FontWeight.bold,

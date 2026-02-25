@@ -71,20 +71,12 @@ class _CreatePostViewState extends State<CreatePostView> {
   Future<void> _showLinkSearchDialog() async {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final discoveryRepo = context.read<DiscoveryRepository>();
-    List<Map<String, dynamic>> userRelated = [];
-    try {
-      userRelated = await discoveryRepo.getLinkableContentForUser();
-    } catch (e) {
-      AppLogger.warning('Failed to load linkable content: $e');
-    }
-    if (!mounted) return;
 
     final result = await showDialog<Map<String, String>>(
       context: context,
       builder: (ctx) => _LinkSearchDialog(
         discoveryRepo: discoveryRepo,
         isDark: isDark,
-        userRelated: userRelated,
       ),
     );
     if (result != null && mounted) {
@@ -403,12 +395,10 @@ class _LinkSearchDialog extends StatefulWidget {
   const _LinkSearchDialog({
     required this.discoveryRepo,
     required this.isDark,
-    required this.userRelated,
   });
 
   final DiscoveryRepository discoveryRepo;
   final bool isDark;
-  final List<Map<String, dynamic>> userRelated;
 
   @override
   State<_LinkSearchDialog> createState() => _LinkSearchDialogState();
@@ -416,13 +406,31 @@ class _LinkSearchDialog extends StatefulWidget {
 
 class _LinkSearchDialogState extends State<_LinkSearchDialog> {
   late final TextEditingController _queryCtrl;
+  List<Map<String, dynamic>> _userRelated = [];
   List<Map<String, dynamic>> _results = [];
+  bool _loadingRelated = true;
   bool _loading = false;
 
   @override
   void initState() {
     super.initState();
     _queryCtrl = TextEditingController();
+    _loadUserRelated();
+  }
+
+  Future<void> _loadUserRelated() async {
+    try {
+      final list = await widget.discoveryRepo.getLinkableContentForUser();
+      if (mounted) {
+        setState(() {
+          _userRelated = list;
+          _loadingRelated = false;
+        });
+      }
+    } catch (e) {
+      AppLogger.warning('Failed to load linkable content: $e');
+      if (mounted) setState(() => _loadingRelated = false);
+    }
   }
 
   @override
@@ -508,7 +516,12 @@ class _LinkSearchDialogState extends State<_LinkSearchDialog> {
                 ],
               ),
               const SizedBox(height: 12),
-              if (widget.userRelated.isNotEmpty) ...[
+              if (_loadingRelated)
+                const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 24),
+                  child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+                )
+              else if (_userRelated.isNotEmpty) ...[
                 Align(
                   alignment: Alignment.centerLeft,
                   child: Text(
@@ -523,7 +536,7 @@ class _LinkSearchDialogState extends State<_LinkSearchDialog> {
                   ),
                 ),
                 const SizedBox(height: 4),
-                _buildList(widget.userRelated, 200),
+                _buildList(_userRelated, 200),
                 const SizedBox(height: 12),
               ],
               if (_loading) const Center(child: CircularProgressIndicator()),

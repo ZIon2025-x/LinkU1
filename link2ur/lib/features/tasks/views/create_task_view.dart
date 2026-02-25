@@ -1,6 +1,9 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 
 import '../../../core/design/app_colors.dart';
@@ -88,22 +91,13 @@ class _CreateTaskContentState extends State<_CreateTaskContent> {
   String? _location;
   double? _latitude;
   double? _longitude;
-  String _selectedCategory = 'delivery';
+  String _selectedCategory = 'Errand Running';
   String _selectedCurrency = 'GBP';
   DateTime? _deadline;
-
-  static const _taskTypeToCategoryKey = {
-    'Housekeeping': 'other',
-    'Campus Life': 'other',
-    'Second-hand & Rental': 'shopping',
-    'Errand Running': 'delivery',
-    'Skill Service': 'tutoring',
-    'Social Help': 'other',
-    'Transportation': 'delivery',
-    'Pet Care': 'other',
-    'Life Convenience': 'other',
-    'Other': 'other',
-  };
+  bool _isPublic = true;
+  final List<XFile> _selectedImages = [];
+  bool _isUploadingImages = false;
+  final _imagePicker = ImagePicker();
 
   @override
   void initState() {
@@ -117,21 +111,30 @@ class _CreateTaskContentState extends State<_CreateTaskContent> {
       if (d.location != null) _location = d.location;
       if (d.deadline != null) _deadline = d.deadline;
       if (d.taskType != null) {
-        _selectedCategory = _taskTypeToCategoryKey[d.taskType] ?? 'other';
+        const validKeys = [
+          'Housekeeping', 'Campus Life', 'Second-hand & Rental',
+          'Errand Running', 'Skill Service', 'Social Help',
+          'Transportation', 'Pet Care', 'Life Convenience', 'Other',
+        ];
+        if (validKeys.contains(d.taskType)) {
+          _selectedCategory = d.taskType!;
+        }
       }
     }
   }
 
   List<Map<String, String>> _getCategories(BuildContext context) {
     return [
-      {'key': 'delivery', 'label': context.l10n.createTaskCategoryDelivery},
-      {'key': 'shopping', 'label': context.l10n.createTaskCategoryShopping},
-      {'key': 'tutoring', 'label': context.l10n.createTaskCategoryTutoring},
-      {'key': 'translation', 'label': context.l10n.createTaskCategoryTranslation},
-      {'key': 'design', 'label': context.l10n.createTaskCategoryDesign},
-      {'key': 'programming', 'label': context.l10n.createTaskCategoryProgramming},
-      {'key': 'writing', 'label': context.l10n.createTaskCategoryWriting},
-      {'key': 'other', 'label': context.l10n.createTaskCategoryOther},
+      {'key': 'Housekeeping', 'label': context.l10n.taskTypeHousekeeping},
+      {'key': 'Campus Life', 'label': context.l10n.taskTypeCampusLife},
+      {'key': 'Second-hand & Rental', 'label': context.l10n.taskTypeSecondHandRental},
+      {'key': 'Errand Running', 'label': context.l10n.taskTypeErrandRunning},
+      {'key': 'Skill Service', 'label': context.l10n.taskTypeSkillService},
+      {'key': 'Social Help', 'label': context.l10n.taskTypeSocialHelp},
+      {'key': 'Transportation', 'label': context.l10n.taskTypeTransportation},
+      {'key': 'Pet Care', 'label': context.l10n.taskTypePetCare},
+      {'key': 'Life Convenience', 'label': context.l10n.taskTypeLifeConvenience},
+      {'key': 'Other', 'label': context.l10n.taskTypeOther},
     ];
   }
 
@@ -169,7 +172,7 @@ class _CreateTaskContentState extends State<_CreateTaskContent> {
     }
   }
 
-  void _submitTask() {
+  Future<void> _submitTask() async {
     if (!_formKey.currentState!.validate()) return;
 
     if (_deadline != null && _deadline!.isBefore(DateTime.now())) {
@@ -184,6 +187,29 @@ class _CreateTaskContentState extends State<_CreateTaskContent> {
 
     final reward = double.tryParse(_rewardController.text) ?? 0;
 
+    List<String> imageUrls = [];
+    if (_selectedImages.isNotEmpty) {
+      setState(() => _isUploadingImages = true);
+      try {
+        final repo = context.read<TaskRepository>();
+        for (final img in _selectedImages) {
+          final url = await repo.uploadTaskImage(img.path);
+          imageUrls.add(url);
+        }
+      } catch (e) {
+        if (mounted) {
+          setState(() => _isUploadingImages = false);
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('图片上传失败: $e'), backgroundColor: Colors.red),
+          );
+        }
+        return;
+      }
+      if (mounted) setState(() => _isUploadingImages = false);
+    }
+
+    if (!mounted) return;
+
     final request = CreateTaskRequest(
       title: _titleController.text.trim(),
       description: _descriptionController.text.trim().isNotEmpty
@@ -191,14 +217,30 @@ class _CreateTaskContentState extends State<_CreateTaskContent> {
           : null,
       taskType: _selectedCategory,
       reward: reward,
-      currency: _selectedCurrency,
+      currency: 'GBP',
       location: _location,
       latitude: _latitude,
       longitude: _longitude,
       deadline: _deadline,
+      images: imageUrls,
+      isPublic: _isPublic ? 1 : 0,
     );
 
     context.read<CreateTaskBloc>().add(CreateTaskSubmitted(request));
+  }
+
+  Future<void> _pickImages() async {
+    final remaining = 9 - _selectedImages.length;
+    if (remaining <= 0) return;
+    final picked = await _imagePicker.pickMultiImage(
+      imageQuality: 80,
+      maxWidth: 1920,
+    );
+    if (picked.isNotEmpty && mounted) {
+      setState(() {
+        _selectedImages.addAll(picked.take(remaining));
+      });
+    }
   }
 
   @override
@@ -260,18 +302,15 @@ class _CreateTaskContentState extends State<_CreateTaskContent> {
                       ),
                     ),
                     AppSpacing.hMd,
-                    DropdownButton<String>(
-                      value: _selectedCurrency,
-                      items: const [
-                        DropdownMenuItem(value: 'GBP', child: Text('GBP')),
-                        DropdownMenuItem(value: 'USD', child: Text('USD')),
-                        DropdownMenuItem(value: 'CNY', child: Text('CNY')),
-                      ],
-                      onChanged: (value) {
-                        if (value != null) {
-                          setState(() => _selectedCurrency = value);
-                        }
-                      },
+                    const Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 8),
+                      child: Text(
+                        'GBP',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
                     ),
                   ],
                 ),
@@ -328,12 +367,24 @@ class _CreateTaskContentState extends State<_CreateTaskContent> {
 
                 _buildSectionTitle(context.l10n.createTaskAddImages),
                 _buildImagePicker(),
+                AppSpacing.vLg,
+
+                SwitchListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: const Text('公开任务', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
+                  subtitle: Text(
+                    _isPublic ? '所有人可见' : '仅自己可见',
+                    style: TextStyle(fontSize: 13, color: AppColors.textSecondaryLight),
+                  ),
+                  value: _isPublic,
+                  onChanged: (v) => setState(() => _isPublic = v),
+                ),
                 AppSpacing.vXxl,
 
                 PrimaryButton(
                   text: context.l10n.createTaskTitle,
-                  onPressed: state.isSubmitting ? null : _submitTask,
-                  isLoading: state.isSubmitting,
+                  onPressed: (state.isSubmitting || _isUploadingImages) ? null : _submitTask,
+                  isLoading: state.isSubmitting || _isUploadingImages,
                 ),
                 AppSpacing.vXxl,
               ],
@@ -395,32 +446,65 @@ class _CreateTaskContentState extends State<_CreateTaskContent> {
       spacing: 8,
       runSpacing: 8,
       children: [
-        GestureDetector(
-          onTap: () {},
-          child: Container(
-            width: 80,
-            height: 80,
-            decoration: BoxDecoration(
-              border: Border.all(color: AppColors.dividerLight),
-              borderRadius: AppRadius.allMedium,
-            ),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Icon(Icons.add_photo_alternate_outlined,
-                    color: AppColors.textSecondaryLight),
-                const SizedBox(height: 4),
-                Text(
-                  context.l10n.commonImageCount(0, 9),
-                  style: const TextStyle(
-                    fontSize: 12,
-                    color: AppColors.textSecondaryLight,
+        ..._selectedImages.asMap().entries.map((entry) {
+          final idx = entry.key;
+          final img = entry.value;
+          return Stack(
+            children: [
+              ClipRRect(
+                borderRadius: AppRadius.allMedium,
+                child: Image.file(
+                  File(img.path),
+                  width: 80,
+                  height: 80,
+                  fit: BoxFit.cover,
+                ),
+              ),
+              Positioned(
+                top: 2,
+                right: 2,
+                child: GestureDetector(
+                  onTap: () => setState(() => _selectedImages.removeAt(idx)),
+                  child: Container(
+                    decoration: const BoxDecoration(
+                      color: Colors.black54,
+                      shape: BoxShape.circle,
+                    ),
+                    padding: const EdgeInsets.all(2),
+                    child: const Icon(Icons.close, size: 16, color: Colors.white),
                   ),
                 ),
-              ],
+              ),
+            ],
+          );
+        }),
+        if (_selectedImages.length < 9)
+          GestureDetector(
+            onTap: _pickImages,
+            child: Container(
+              width: 80,
+              height: 80,
+              decoration: BoxDecoration(
+                border: Border.all(color: AppColors.dividerLight),
+                borderRadius: AppRadius.allMedium,
+              ),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.add_photo_alternate_outlined,
+                      color: AppColors.textSecondaryLight),
+                  const SizedBox(height: 4),
+                  Text(
+                    context.l10n.commonImageCount(_selectedImages.length, 9),
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: AppColors.textSecondaryLight,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
-        ),
       ],
     );
   }

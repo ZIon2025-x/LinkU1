@@ -1,11 +1,11 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:url_launcher/url_launcher.dart';
 import '../router/app_router.dart';
 
 import '../design/app_colors.dart';
 import '../utils/helpers.dart';
 import 'async_image_view.dart';
+import 'external_web_view.dart';
 
 /// 横幅轮播组件
 /// 参考iOS BannerCarouselView.swift
@@ -95,17 +95,9 @@ class _BannerCarouselState extends State<BannerCarousel> {
     if (linkUrl == null || linkUrl.isEmpty) return;
 
     if (linkType == 'external') {
-      _openExternalUrl(linkUrl);
+      ExternalWebView.openInApp(context, url: linkUrl);
     } else {
-      // internal — linkUrl 是应用内路由路径，对齐 iOS InternalLinkView
       context.safePush(linkUrl);
-    }
-  }
-
-  Future<void> _openExternalUrl(String url) async {
-    final uri = Uri.tryParse(url);
-    if (uri != null && await canLaunchUrl(uri)) {
-      await launchUrl(uri, mode: LaunchMode.externalApplication);
     }
   }
 

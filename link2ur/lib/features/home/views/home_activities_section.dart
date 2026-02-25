@@ -1,13 +1,10 @@
 part of 'home_view.dart';
 
-/// 货币符号：GBP 转为 £，否则默认 £
-String _currencySymbol(String? currency) {
-  if (currency == null || currency.isEmpty) return '£';
-  if (currency.toUpperCase() == 'GBP') return '£';
-  return '$currency ';
-}
+/// 货币符号（统一英镑）
+String _currencySymbol(String? currency) => '£';
 
 /// 热门活动加载骨架（无活动时隐藏区域，加载中显示此骨架）
+/// 对标 iOS ActivityCardSkeleton，宽 280，图片区 160 + 内容区
 class _HomeActivitiesSkeleton extends StatelessWidget {
   const _HomeActivitiesSkeleton();
 
@@ -17,8 +14,11 @@ class _HomeActivitiesSkeleton extends StatelessWidget {
     final bg = isDark
         ? AppColors.cardBackgroundDark
         : AppColors.cardBackgroundLight;
+    final place = isDark
+        ? Colors.white.withValues(alpha: 0.06)
+        : Colors.black.withValues(alpha: 0.06);
     return SizedBox(
-      height: 164,
+      height: 280,
       child: ListView(
         scrollDirection: Axis.horizontal,
         clipBehavior: Clip.none,
@@ -31,12 +31,39 @@ class _HomeActivitiesSkeleton extends StatelessWidget {
         children: List.generate(
           3,
           (_) => Padding(
-            padding: const EdgeInsets.only(right: 12),
+            padding: const EdgeInsets.only(right: AppSpacing.md),
             child: Container(
-              width: 180,
+              width: 280,
               decoration: BoxDecoration(
                 color: bg,
                 borderRadius: AppRadius.allLarge,
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    height: 160,
+                    decoration: BoxDecoration(
+                      color: place,
+                      borderRadius: const BorderRadius.vertical(
+                        top: Radius.circular(16),
+                      ),
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.all(AppSpacing.md),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Container(height: 14, width: 160, decoration: BoxDecoration(color: place, borderRadius: BorderRadius.circular(4))),
+                        const SizedBox(height: 10),
+                        Container(height: 12, width: 80, decoration: BoxDecoration(color: place, borderRadius: BorderRadius.circular(4))),
+                        const SizedBox(height: 8),
+                        Container(height: 12, width: 120, decoration: BoxDecoration(color: place, borderRadius: BorderRadius.circular(4))),
+                      ],
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
@@ -46,15 +73,20 @@ class _HomeActivitiesSkeleton extends StatelessWidget {
   }
 }
 
-/// 对标iOS: PopularActivitiesSection - 热门活动区域
+/// 对标iOS: PopularActivitiesSection - 热门活动区域（使用真实数据）
+/// iOS 卡片宽 280，图片高 160，下方内容区约 100
 class _PopularActivitiesSection extends StatelessWidget {
-  const _PopularActivitiesSection();
+  const _PopularActivitiesSection({required this.activities});
+
+  final List<Activity> activities;
 
   @override
   Widget build(BuildContext context) {
+    if (activities.isEmpty) return const SizedBox.shrink();
+    final locale = Localizations.localeOf(context);
     return SizedBox(
-      height: 164,
-      child: ListView(
+      height: 280,
+      child: ListView.separated(
         scrollDirection: Axis.horizontal,
         clipBehavior: Clip.none,
         padding: const EdgeInsets.only(
@@ -63,136 +95,231 @@ class _PopularActivitiesSection extends StatelessWidget {
           top: 4,
           bottom: 10,
         ),
-        children: [
-          _ActivityCard(
-            title: context.l10n.homeNewUserReward,
-            subtitle: context.l10n.homeNewUserRewardSubtitle,
-            gradient: AppColors.gradientCoral,
-            icon: Icons.card_giftcard,
-            onTap: () => context.push('/activities'),
-          ),
-          const SizedBox(width: 12),
-          _ActivityCard(
-            title: context.l10n.homeInviteFriends,
-            subtitle: context.l10n.homeInviteFriendsSubtitle,
-            gradient: AppColors.gradientPurple,
-            icon: Icons.people,
-            onTap: () => context.push('/activities'),
-          ),
-          const SizedBox(width: 12),
-          _ActivityCard(
-            title: context.l10n.homeDailyCheckIn,
-            subtitle: context.l10n.homeDailyCheckInSubtitle,
-            gradient: AppColors.gradientEmerald,
-            icon: Icons.calendar_today,
-            onTap: () => context.push('/activities'),
-          ),
-        ],
+        itemCount: activities.length > 10 ? 10 : activities.length,
+        separatorBuilder: (_, __) => const SizedBox(width: AppSpacing.md),
+        itemBuilder: (context, index) {
+          final activity = activities[index];
+          return _RealActivityCard(activity: activity, locale: locale);
+        },
       ),
     );
   }
 }
 
-class _ActivityCard extends StatelessWidget {
-  const _ActivityCard({
-    required this.title,
-    required this.subtitle,
-    required this.gradient,
-    required this.icon,
-    required this.onTap,
-  });
+/// 对标 iOS ActivityCardView — 上下分区：图片区 + 内容区
+/// 宽 280，图片高 160，内容区自适应
+class _RealActivityCard extends StatelessWidget {
+  const _RealActivityCard({required this.activity, required this.locale});
 
-  final String title;
-  final String subtitle;
-  final List<Color> gradient;
-  final IconData icon;
-  final VoidCallback onTap;
+  final Activity activity;
+  final Locale locale;
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final l10n = context.l10n;
+    final title = activity.displayTitle(locale);
+    final image = activity.firstImage;
+    final price = activity.discountedPricePerParticipant ??
+        activity.originalPricePerParticipant;
+
     return GestureDetector(
-      onTap: onTap,
+      onTap: () => context.push('/activities/${activity.id}'),
       child: Container(
-        width: 180,
-        padding: const EdgeInsets.all(16),
+        width: 280,
+        clipBehavior: Clip.antiAlias,
         decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: gradient,
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
+          color: isDark ? AppColors.cardBackgroundDark : Colors.white,
           borderRadius: AppRadius.allLarge,
-          // 单层阴影：减少 GPU 合成开销
-          boxShadow: [
-            BoxShadow(
-              color: gradient.first.withValues(alpha: 0.25),
-              blurRadius: 6,
-              offset: const Offset(0, 3),
-            ),
-          ],
+          border: Border.all(
+            color: isDark
+                ? Colors.white.withValues(alpha: 0.06)
+                : Colors.black.withValues(alpha: 0.06),
+            width: 0.5,
+          ),
         ),
-        child: Stack(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Positioned(
-              right: -20,
-              bottom: -20,
-              child: Container(
-                width: 80,
-                height: 80,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: Colors.white.withValues(alpha: 0.1),
-                ),
+            // 图片区域 — 固定 160 高度（对标 iOS）
+            ClipRRect(
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(16),
               ),
-            ),
-            Positioned(
-              right: 20,
-              top: -10,
-              child: Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: Colors.white.withValues(alpha: 0.08),
-                ),
-              ),
-            ),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Container(
-                  width: 38,
-                  height: 38,
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.22),
-                    borderRadius: BorderRadius.circular(11),
-                    border: Border.all(
-                      color: Colors.white.withValues(alpha: 0.3),
-                      width: 0.5,
+              child: SizedBox(
+                height: 160,
+                width: double.infinity,
+                child: Stack(
+                  children: [
+                    Positioned.fill(
+                      child: image != null && image.isNotEmpty
+                          ? AsyncImageView(
+                              imageUrl: image,
+                              width: 280,
+                              height: 160,
+                              fit: BoxFit.cover,
+                              memCacheWidth: 560,
+                              memCacheHeight: 320,
+                            )
+                          : Container(
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  colors: [
+                                    AppColors.primary.withValues(alpha: 0.1),
+                                    AppColors.primary.withValues(alpha: 0.05),
+                                  ],
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                ),
+                              ),
+                              child: Icon(
+                                Icons.calendar_month,
+                                size: 40,
+                                color: AppColors.primary.withValues(alpha: 0.3),
+                              ),
+                            ),
                     ),
-                  ),
-                  child: Icon(icon, color: Colors.white, size: 20),
+
+                    // 状态标签（右上角）
+                    if (activity.isFull)
+                      Positioned(
+                        top: 8,
+                        right: 8,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: AppColors.error,
+                            borderRadius: BorderRadius.circular(999),
+                          ),
+                          child: Text(
+                            l10n.activityFullCapacity,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ),
+                  ],
                 ),
-                const Spacer(),
-                Text(
-                  title,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: -0.3,
-                  ),
+              ),
+            ),
+
+            // 内容区域（对标 iOS VStack padding: md）
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.all(AppSpacing.md),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // 标题
+                    Text(
+                      title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.bold,
+                        color: isDark
+                            ? AppColors.textPrimaryDark
+                            : AppColors.textPrimaryLight,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+
+                    // 价格 + 参与人数
+                    Row(
+                      children: [
+                        if (price != null && price > 0) ...[
+                          Text(
+                            '£',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.primary,
+                            ),
+                          ),
+                          Text(
+                            price.toStringAsFixed(0),
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.primary,
+                            ),
+                          ),
+                        ],
+                        const Spacer(),
+                        Icon(
+                          Icons.people,
+                          size: 12,
+                          color: isDark
+                              ? AppColors.textSecondaryDark
+                              : AppColors.textSecondaryLight,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          '${activity.currentParticipants ?? 0}/${activity.maxParticipants}',
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w500,
+                            color: isDark
+                                ? AppColors.textSecondaryDark
+                                : AppColors.textSecondaryLight,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const Spacer(),
+
+                    // 地点 + 预约制标签
+                    Row(
+                      children: [
+                        if (activity.location.isNotEmpty) ...[
+                          Icon(
+                            Icons.location_on,
+                            size: 12,
+                            color: isDark
+                                ? AppColors.textTertiaryDark
+                                : AppColors.textTertiaryLight,
+                          ),
+                          const SizedBox(width: 2),
+                          Expanded(
+                            child: Text(
+                              activity.location,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: isDark
+                                    ? AppColors.textTertiaryDark
+                                    : AppColors.textTertiaryLight,
+                              ),
+                            ),
+                          ),
+                        ] else
+                          const Spacer(),
+                        if (activity.hasTimeSlots)
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: AppColors.warning.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: Text(
+                              l10n.activityByAppointment,
+                              style: TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.warning,
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 3),
-                Text(
-                  subtitle,
-                  style: TextStyle(
-                    color: Colors.white.withValues(alpha: 0.85),
-                    fontSize: 12,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ],
+              ),
             ),
           ],
         ),

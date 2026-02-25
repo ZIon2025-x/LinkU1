@@ -8,32 +8,15 @@ class Helpers {
   Helpers._();
 
   // ==================== 货币格式化 ====================
-  /// 格式化价格
-  static String formatPrice(double price, {String currency = 'USD'}) {
-    final symbol = _getCurrencySymbol(currency);
-    if (price == price.roundToDouble()) {
-      return '$symbol${price.toInt()}';
-    }
-    return '$symbol${price.toStringAsFixed(2)}';
-  }
+  /// 货币符号（统一英镑）
+  static const String currencySymbol = '£';
 
-  /// 获取货币符号
-  static String _getCurrencySymbol(String currency) {
-    switch (currency.toUpperCase()) {
-      case 'USD':
-        return '\$';
-      case 'CNY':
-      case 'RMB':
-        return '¥';
-      case 'EUR':
-        return '€';
-      case 'GBP':
-        return '£';
-      case 'JPY':
-        return '¥';
-      default:
-        return '\$';
+  /// 格式化价格（统一英镑）
+  static String formatPrice(double price, {String currency = 'GBP'}) {
+    if (price == price.roundToDouble()) {
+      return '$currencySymbol${price.toInt()}';
     }
+    return '$currencySymbol${price.toStringAsFixed(2)}';
   }
 
   // ==================== 数字格式化 ====================

@@ -2,11 +2,13 @@ import 'dart:math' as math;
 
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../../../data/models/banner.dart' as app;
 import '../../../data/models/task.dart';
 import '../../../data/models/activity.dart';
 import '../../../data/models/user.dart';
 import '../../../data/repositories/task_repository.dart';
 import '../../../data/repositories/activity_repository.dart';
+import '../../../data/repositories/common_repository.dart';
 import '../../../data/repositories/discovery_repository.dart';
 import '../../../core/utils/cache_manager.dart';
 import '../../../core/utils/logger.dart';
@@ -18,9 +20,11 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
   HomeBloc({
     required TaskRepository taskRepository,
     required ActivityRepository activityRepository,
+    CommonRepository? commonRepository,
     DiscoveryRepository? discoveryRepository,
   })  : _taskRepository = taskRepository,
         _activityRepository = activityRepository,
+        _commonRepository = commonRepository,
         _discoveryRepository = discoveryRepository,
         super(const HomeState()) {
     on<HomeLoadRequested>(_onLoadRequested);
@@ -35,6 +39,7 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
 
   final TaskRepository _taskRepository;
   final ActivityRepository _activityRepository;
+  final CommonRepository? _commonRepository;
   final DiscoveryRepository? _discoveryRepository;
 
   /// 当前用户（由外部设置，用于权限过滤）
@@ -99,6 +104,16 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
         AppLogger.info('Open activities load failed, home hot section will be hidden');
       }
 
+      // 加载 Banner（后端数据）
+      List<app.Banner> bannerList = [];
+      try {
+        if (_commonRepository != null) {
+          bannerList = await _commonRepository.getBanners();
+        }
+      } catch (_) {
+        AppLogger.info('Banner load failed, will show hardcoded banners only');
+      }
+
       emit(state.copyWith(
         status: HomeStatus.loaded,
         recommendedTasks: result.tasks,
@@ -106,6 +121,7 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
         recommendedPage: 1,
         openActivities: openList,
         isLoadingOpenActivities: false,
+        banners: bannerList,
       ));
     } catch (e) {
       AppLogger.error('Failed to load home data', e);
@@ -167,6 +183,16 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
         AppLogger.warning('Failed to load activities for home', e);
       }
 
+      // 刷新 Banner
+      List<app.Banner> bannerList = state.banners;
+      try {
+        if (_commonRepository != null) {
+          bannerList = await _commonRepository.getBanners();
+        }
+      } catch (e) {
+        AppLogger.warning('Failed to refresh banners', e);
+      }
+
       emit(state.copyWith(
         status: HomeStatus.loaded,
         recommendedTasks: result.tasks,
@@ -175,6 +201,7 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
         isRefreshing: false,
         openActivities: openList,
         isLoadingOpenActivities: false,
+        banners: bannerList,
       ));
     } catch (e) {
       AppLogger.error('Failed to refresh home data', e);

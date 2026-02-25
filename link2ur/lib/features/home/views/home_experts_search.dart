@@ -715,46 +715,49 @@ class _TaskCard extends StatelessWidget {
               height: 140,
               width: double.infinity,
               child: Stack(
-                fit: StackFit.expand,
                 children: [
                   // 图片或占位背景
-                  if (task.firstImage != null)
-                    AsyncImageView(
-                      imageUrl: task.firstImage!,
-                      width: double.infinity,
-                      height: 140,
-                    )
-                  else
-                    Container(
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                          colors: [
-                            AppColors.primary.withValues(alpha: 0.12),
-                            AppColors.primary.withValues(alpha: 0.04),
-                          ],
-                        ),
-                      ),
-                      child: Icon(
-                        _taskTypeIcon(task.taskType),
-                        color: AppColors.primary.withValues(alpha: 0.25),
-                        size: 48,
-                      ),
-                    ),
+                  Positioned.fill(
+                    child: task.firstImage != null
+                        ? AsyncImageView(
+                            imageUrl: task.firstImage!,
+                            width: 280,
+                            height: 140,
+                            fit: BoxFit.cover,
+                          )
+                        : Container(
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                                colors: [
+                                  AppColors.primary.withValues(alpha: 0.12),
+                                  AppColors.primary.withValues(alpha: 0.04),
+                                ],
+                              ),
+                            ),
+                            child: Icon(
+                              _taskTypeIcon(task.taskType),
+                              color: AppColors.primary.withValues(alpha: 0.25),
+                              size: 48,
+                            ),
+                          ),
+                  ),
 
                   // 3段渐变遮罩
-                  DecoratedBox(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                        colors: [
-                          Colors.black.withValues(alpha: 0.15),
-                          Colors.black.withValues(alpha: 0.0),
-                          Colors.black.withValues(alpha: 0.35),
-                        ],
-                        stops: const [0.0, 0.4, 1.0],
+                  Positioned.fill(
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [
+                            Colors.black.withValues(alpha: 0.15),
+                            Colors.black.withValues(alpha: 0.0),
+                            Colors.black.withValues(alpha: 0.35),
+                          ],
+                          stops: const [0.0, 0.4, 1.0],
+                        ),
                       ),
                     ),
                   ),
@@ -988,7 +991,7 @@ class _TaskCard extends StatelessWidget {
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               Text(
-                                task.currency == 'GBP' ? '£' : '\$',
+                                '£',
                                 style: const TextStyle(
                                   fontSize: 10,
                                   fontWeight: FontWeight.bold,

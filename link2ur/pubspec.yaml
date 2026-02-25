@@ -1,7 +1,7 @@
 name: link2ur
 description: "Link2Ur - 技能互助平台"
 publish_to: 'none'
-version: 1.0.3+2
+version: 1.0.4+1
 
 environment:
   sdk: ^3.5.0

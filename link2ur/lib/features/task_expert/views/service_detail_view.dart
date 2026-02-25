@@ -1,3 +1,4 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -52,125 +53,128 @@ class _ServiceDetailContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Scaffold(
       extendBodyBehindAppBar: true,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
+        scrolledUnderElevation: 0,
         foregroundColor: Colors.white,
       ),
       body: Center(
         child: ConstrainedBox(
-          constraints: BoxConstraints(maxWidth: ResponsiveUtils.detailMaxWidth(context)),
+          constraints: BoxConstraints(
+              maxWidth: ResponsiveUtils.detailMaxWidth(context)),
           child: BlocConsumer<TaskExpertBloc, TaskExpertState>(
-        listenWhen: (prev, curr) => prev.actionMessage != curr.actionMessage,
-        listener: (context, state) {
-          if (state.actionMessage != null) {
-            final isError = state.actionMessage!.contains('failed');
-            final message = switch (state.actionMessage) {
-              'application_submitted' => context.l10n.actionApplicationSubmitted,
-              'application_failed' => state.errorMessage != null
-                  ? '${context.l10n.actionApplicationFailed}: ${state.errorMessage}'
-                  : context.l10n.actionApplicationFailed,
-              _ => state.actionMessage!,
-            };
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(message),
-                backgroundColor: isError ? AppColors.error : AppColors.success,
-              ),
-            );
-          }
-        },
-        builder: (context, state) {
-          if (state.isLoading && state.selectedService == null) {
-            return const LoadingView();
-          }
+            listenWhen: (prev, curr) =>
+                prev.actionMessage != curr.actionMessage,
+            listener: (context, state) {
+              if (state.actionMessage != null) {
+                final isError = state.actionMessage!.contains('failed');
+                final message = switch (state.actionMessage) {
+                  'application_submitted' =>
+                    context.l10n.actionApplicationSubmitted,
+                  'application_failed' => state.errorMessage != null
+                      ? '${context.l10n.actionApplicationFailed}: ${state.errorMessage}'
+                      : context.l10n.actionApplicationFailed,
+                  _ => state.actionMessage!,
+                };
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(message),
+                    backgroundColor:
+                        isError ? AppColors.error : AppColors.success,
+                  ),
+                );
+              }
+            },
+            builder: (context, state) {
+              if (state.isLoading && state.selectedService == null) {
+                return const LoadingView();
+              }
 
-          if (state.status == TaskExpertStatus.error &&
-              state.selectedService == null) {
-            return ErrorStateView.loadFailed(
-              message:
-                  state.errorMessage ?? context.l10n.serviceLoadFailed,
-              onRetry: () => context
-                  .read<TaskExpertBloc>()
-                  .add(TaskExpertLoadServiceDetail(serviceId)),
-            );
-          }
+              if (state.status == TaskExpertStatus.error &&
+                  state.selectedService == null) {
+                return ErrorStateView.loadFailed(
+                  message:
+                      state.errorMessage ?? context.l10n.serviceLoadFailed,
+                  onRetry: () => context
+                      .read<TaskExpertBloc>()
+                      .add(TaskExpertLoadServiceDetail(serviceId)),
+                );
+              }
 
-          final service = state.selectedService;
-          if (service == null) return const SizedBox.shrink();
+              final service = state.selectedService;
+              if (service == null) return const SizedBox.shrink();
 
-          return Stack(
-            children: [
-              // 可滚动内容
-              SingleChildScrollView(
-                child: Column(
-                  children: [
-                    // 1. 图片画廊
-                    _ImageGallery(images: service.images),
+              return Stack(
+                children: [
+                  SingleChildScrollView(
+                    child: Column(
+                      children: [
+                        _ImageGallery(images: service.images),
 
-                    // 2. 内容区域
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 20),
-                      child: Column(
-                        children: [
-                          // 价格与标题卡片（浮动效果）
-                          Transform.translate(
-                            offset: const Offset(0, -40),
-                            child: _PriceAndTitleCard(service: service),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 20),
+                          child: Column(
+                            children: [
+                              Transform.translate(
+                                offset: const Offset(0, -40),
+                                child: _PriceAndTitleCard(
+                                    service: service, isDark: isDark),
+                              ),
+
+                              _DescriptionCard(
+                                  service: service, isDark: isDark),
+                              const SizedBox(height: 20),
+
+                              _ReviewsCard(
+                                reviews: state.reviews,
+                                isLoading: state.isLoadingReviews,
+                                isDark: isDark,
+                              ),
+                              const SizedBox(height: 20),
+
+                              if (service.hasTimeSlots)
+                                _TimeSlotsCard(
+                                  timeSlots: state.timeSlots,
+                                  isLoading: state.isLoadingTimeSlots,
+                                  isDark: isDark,
+                                ),
+
+                              if (!(state.expertActivities.isEmpty &&
+                                  !state.isLoadingExpertActivities)) ...[
+                                _RelatedActivitiesSection(
+                                  activities: state.expertActivities,
+                                  isLoading: state.isLoadingExpertActivities,
+                                  isDark: isDark,
+                                ),
+                                const SizedBox(height: 20),
+                              ],
+
+                              const SizedBox(height: 120),
+                            ],
                           ),
-
-                          // 描述卡片
-                          _DescriptionCard(service: service),
-                          const SizedBox(height: 24),
-
-                          // 评价卡片
-                          _ReviewsCard(
-                            reviews: state.reviews,
-                            isLoading: state.isLoadingReviews,
-                          ),
-                          const SizedBox(height: 24),
-
-                          // 时间段卡片
-                          if (service.hasTimeSlots)
-                            _TimeSlotsCard(
-                              timeSlots: state.timeSlots,
-                              isLoading: state.isLoadingTimeSlots,
-                            ),
-
-                          // 方案C：达人的相关活动（仅开放中，无则隐藏）
-                          if (!(state.expertActivities.isEmpty &&
-                              !state.isLoadingExpertActivities)) ...[
-                            _RelatedActivitiesSection(
-                              activities: state.expertActivities,
-                              isLoading: state.isLoadingExpertActivities,
-                            ),
-                            const SizedBox(height: 24),
-                          ],
-
-                          // 底部留白给底部栏
-                          const SizedBox(height: 120),
-                        ],
-                      ),
+                        ),
+                      ],
                     ),
-                  ],
-                ),
-              ),
+                  ),
 
-              // 3. 固定底部申请栏
-              Positioned(
-                left: 0,
-                right: 0,
-                bottom: 0,
-                child: _BottomApplyBar(
-                  service: service,
-                  serviceId: serviceId,
-                ),
-              ),
-            ],
-          );
-        },
+                  Positioned(
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    child: _BottomApplyBar(
+                      service: service,
+                      serviceId: serviceId,
+                      isDark: isDark,
+                    ),
+                  ),
+                ],
+              );
+            },
           ),
         ),
       ),
@@ -218,29 +222,37 @@ class _ImageGalleryState extends State<_ImageGallery> {
             if (images.length > 1)
               Positioned(
                 bottom: 50,
-                child: Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: Colors.black.withValues(alpha: 0.3),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: List.generate(images.length, (i) {
-                      final isActive = i == _currentIndex;
-                      return Container(
-                        width: isActive ? 8 : 6,
-                        height: isActive ? 8 : 6,
-                        margin: const EdgeInsets.symmetric(horizontal: 3),
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: isActive
-                              ? Colors.white
-                              : Colors.white.withValues(alpha: 0.4),
-                        ),
-                      );
-                    }),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(20),
+                  child: BackdropFilter(
+                    filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: Colors.black.withValues(alpha: 0.25),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: List.generate(images.length, (i) {
+                          final isActive = i == _currentIndex;
+                          return AnimatedContainer(
+                            duration: const Duration(milliseconds: 200),
+                            width: isActive ? 18 : 6,
+                            height: 6,
+                            margin:
+                                const EdgeInsets.symmetric(horizontal: 3),
+                            decoration: BoxDecoration(
+                              color: isActive
+                                  ? Colors.white
+                                  : Colors.white.withValues(alpha: 0.4),
+                              borderRadius: BorderRadius.circular(3),
+                            ),
+                          );
+                        }),
+                      ),
+                    ),
                   ),
                 ),
               ),
@@ -249,9 +261,8 @@ class _ImageGalleryState extends State<_ImageGallery> {
       );
     }
 
-    // 无图片占位
     return Container(
-      height: 240,
+      height: 260,
       width: double.infinity,
       decoration: BoxDecoration(
         gradient: LinearGradient(
@@ -268,14 +279,14 @@ class _ImageGalleryState extends State<_ImageGallery> {
         children: [
           Icon(
             Icons.photo_library_outlined,
-            size: 40,
+            size: 44,
             color: AppColors.primary.withValues(alpha: 0.3),
           ),
           const SizedBox(height: 12),
           Text(
             context.l10n.serviceNoImages,
             style: TextStyle(
-              fontSize: 12,
+              fontSize: 13,
               color: AppColors.primary.withValues(alpha: 0.4),
             ),
           ),
@@ -290,20 +301,21 @@ class _ImageGalleryState extends State<_ImageGallery> {
 // =============================================================
 
 class _PriceAndTitleCard extends StatelessWidget {
-  const _PriceAndTitleCard({required this.service});
+  const _PriceAndTitleCard({required this.service, required this.isDark});
 
   final TaskExpertService service;
+  final bool isDark;
 
   @override
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
+        color: isDark ? AppColors.cardBackgroundDark : Colors.white,
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.1),
+            color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.1),
             blurRadius: 20,
             offset: const Offset(0, 8),
           ),
@@ -312,7 +324,6 @@ class _PriceAndTitleCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // 价格行
           Row(
             crossAxisAlignment: CrossAxisAlignment.baseline,
             textBaseline: TextBaseline.alphabetic,
@@ -322,7 +333,7 @@ class _PriceAndTitleCard extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
-                  color: Colors.red.shade700,
+                  color: const Color(0xFFE84D3D),
                 ),
               ),
               const SizedBox(width: 2),
@@ -331,26 +342,22 @@ class _PriceAndTitleCard extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 32,
                   fontWeight: FontWeight.bold,
-                  color: Colors.red.shade700,
+                  color: const Color(0xFFE84D3D),
                 ),
               ),
               const Spacer(),
-              Text(
-                service.currency,
-                style: AppTypography.caption.copyWith(
-                  color: AppColors.textTertiaryLight,
-                ),
-              ),
             ],
           ),
           const SizedBox(height: 16),
-          // 服务名称
           Text(
             service.serviceName,
-            style: const TextStyle(
-              fontSize: 24,
+            style: TextStyle(
+              fontSize: 22,
               fontWeight: FontWeight.bold,
               height: 1.3,
+              color: isDark
+                  ? AppColors.textPrimaryDark
+                  : AppColors.textPrimaryLight,
             ),
           ),
         ],
@@ -364,9 +371,10 @@ class _PriceAndTitleCard extends StatelessWidget {
 // =============================================================
 
 class _DescriptionCard extends StatelessWidget {
-  const _DescriptionCard({required this.service});
+  const _DescriptionCard({required this.service, required this.isDark});
 
   final TaskExpertService service;
+  final bool isDark;
 
   @override
   Widget build(BuildContext context) {
@@ -374,11 +382,11 @@ class _DescriptionCard extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
+        color: isDark ? AppColors.cardBackgroundDark : Colors.white,
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
+            color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.04),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -387,29 +395,8 @@ class _DescriptionCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // 标题 + 装饰条
-          Row(
-            children: [
-              Container(
-                width: 4,
-                height: 16,
-                decoration: BoxDecoration(
-                  color: AppColors.primary,
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-              const SizedBox(width: 8),
-              Text(
-                context.l10n.serviceDetail,
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ],
-          ),
+          _SectionHeader(title: context.l10n.serviceDetail),
           const SizedBox(height: 16),
-          // 描述内容
           Text(
             service.description.isNotEmpty
                 ? service.description
@@ -417,8 +404,12 @@ class _DescriptionCard extends StatelessWidget {
             style: TextStyle(
               fontSize: 15,
               color: service.description.isNotEmpty
-                  ? AppColors.textSecondaryLight
-                  : AppColors.textTertiaryLight,
+                  ? (isDark
+                      ? AppColors.textSecondaryDark
+                      : AppColors.textSecondaryLight)
+                  : (isDark
+                      ? AppColors.textTertiaryDark
+                      : AppColors.textTertiaryLight),
               height: 1.6,
               fontStyle: service.description.isNotEmpty
                   ? FontStyle.normal
@@ -439,10 +430,12 @@ class _ReviewsCard extends StatelessWidget {
   const _ReviewsCard({
     required this.reviews,
     required this.isLoading,
+    required this.isDark,
   });
 
   final List<Map<String, dynamic>> reviews;
   final bool isLoading;
+  final bool isDark;
 
   @override
   Widget build(BuildContext context) {
@@ -450,11 +443,11 @@ class _ReviewsCard extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
+        color: isDark ? AppColors.cardBackgroundDark : Colors.white,
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
+            color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.05),
             blurRadius: 10,
             offset: const Offset(0, 2),
           ),
@@ -463,7 +456,6 @@ class _ReviewsCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // 标题行
           Row(
             children: [
               Container(
@@ -477,23 +469,28 @@ class _ReviewsCard extends StatelessWidget {
               const SizedBox(width: 8),
               Text(
                 context.l10n.taskExpertReviews,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
+                  color: isDark
+                      ? AppColors.textPrimaryDark
+                      : AppColors.textPrimaryLight,
                 ),
               ),
               const Spacer(),
               if (reviews.isNotEmpty)
                 Text(
                   context.l10n.taskExpertReviewsCount(reviews.length),
-                  style: AppTypography.caption.copyWith(
-                    color: AppColors.textTertiaryLight,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: isDark
+                        ? AppColors.textTertiaryDark
+                        : AppColors.textTertiaryLight,
                   ),
                 ),
             ],
           ),
           const SizedBox(height: 16),
-          // 内容
           if (isLoading && reviews.isEmpty)
             const Center(
               child: Padding(
@@ -505,16 +502,32 @@ class _ReviewsCard extends StatelessWidget {
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 20),
               child: Center(
-                child: Text(
-                  context.l10n.taskExpertNoReviews,
-                  style: AppTypography.caption.copyWith(
-                    color: AppColors.textTertiaryLight,
-                  ),
+                child: Column(
+                  children: [
+                    Icon(
+                      Icons.rate_review_outlined,
+                      size: 32,
+                      color: isDark
+                          ? AppColors.textTertiaryDark
+                          : AppColors.textTertiaryLight,
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      context.l10n.taskExpertNoReviews,
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: isDark
+                            ? AppColors.textTertiaryDark
+                            : AppColors.textTertiaryLight,
+                      ),
+                    ),
+                  ],
                 ),
               ),
             )
           else
-            ...reviews.map((review) => _ReviewRow(review: review)),
+            ...reviews
+                .map((review) => _ReviewRow(review: review, isDark: isDark)),
         ],
       ),
     );
@@ -522,9 +535,10 @@ class _ReviewsCard extends StatelessWidget {
 }
 
 class _ReviewRow extends StatelessWidget {
-  const _ReviewRow({required this.review});
+  const _ReviewRow({required this.review, required this.isDark});
 
   final Map<String, dynamic> review;
+  final bool isDark;
 
   @override
   Widget build(BuildContext context) {
@@ -536,7 +550,9 @@ class _ReviewRow extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surfaceContainerHighest,
+        color: isDark
+            ? Colors.white.withValues(alpha: 0.05)
+            : const Color(0xFFF8F8FA),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Column(
@@ -544,7 +560,6 @@ class _ReviewRow extends StatelessWidget {
         children: [
           Row(
             children: [
-              // 星级评分
               ...List.generate(5, (i) {
                 final star = i + 1;
                 final fullStars = rating.floor();
@@ -559,7 +574,9 @@ class _ReviewRow extends StatelessWidget {
                   color = AppColors.gold;
                 } else {
                   icon = Icons.star_border;
-                  color = AppColors.textTertiaryLight;
+                  color = isDark
+                      ? AppColors.textTertiaryDark
+                      : AppColors.textTertiaryLight;
                 }
                 return Icon(icon, size: 14, color: color);
               }),
@@ -567,9 +584,11 @@ class _ReviewRow extends StatelessWidget {
               if (createdAt != null)
                 Text(
                   _formatTime(createdAt),
-                  style: AppTypography.caption.copyWith(
-                    color: AppColors.textTertiaryLight,
+                  style: TextStyle(
                     fontSize: 12,
+                    color: isDark
+                        ? AppColors.textTertiaryDark
+                        : AppColors.textTertiaryLight,
                   ),
                 ),
             ],
@@ -578,7 +597,13 @@ class _ReviewRow extends StatelessWidget {
             const SizedBox(height: 8),
             Text(
               comment,
-              style: const TextStyle(fontSize: 14, height: 1.5),
+              style: TextStyle(
+                fontSize: 14,
+                height: 1.5,
+                color: isDark
+                    ? AppColors.textPrimaryDark
+                    : AppColors.textPrimaryLight,
+              ),
             ),
           ],
         ],
@@ -604,23 +629,25 @@ class _TimeSlotsCard extends StatelessWidget {
   const _TimeSlotsCard({
     required this.timeSlots,
     required this.isLoading,
+    required this.isDark,
   });
 
   final List<ServiceTimeSlot> timeSlots;
   final bool isLoading;
+  final bool isDark;
 
   @override
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(20),
-      margin: const EdgeInsets.only(bottom: 24),
+      margin: const EdgeInsets.only(bottom: 20),
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
+        color: isDark ? AppColors.cardBackgroundDark : Colors.white,
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
+            color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.04),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -629,27 +656,7 @@ class _TimeSlotsCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // 标题
-          Row(
-            children: [
-              Container(
-                width: 4,
-                height: 16,
-                decoration: BoxDecoration(
-                  color: AppColors.primary,
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-              const SizedBox(width: 8),
-              Text(
-                context.l10n.taskExpertOptionalTimeSlots,
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ],
-          ),
+          _SectionHeader(title: context.l10n.taskExpertOptionalTimeSlots),
           const SizedBox(height: 16),
           if (isLoading)
             const Center(
@@ -666,20 +673,26 @@ class _TimeSlotsCard extends StatelessWidget {
                   Icon(
                     Icons.calendar_today_outlined,
                     size: 16,
-                    color: AppColors.textTertiaryLight.withValues(alpha: 0.6),
+                    color: isDark
+                        ? AppColors.textTertiaryDark
+                        : AppColors.textTertiaryLight,
                   ),
                   const SizedBox(width: 8),
                   Text(
                     context.l10n.taskExpertNoAvailableSlots,
-                    style: AppTypography.caption.copyWith(
-                      color: AppColors.textTertiaryLight,
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: isDark
+                          ? AppColors.textTertiaryDark
+                          : AppColors.textTertiaryLight,
                     ),
                   ),
                 ],
               ),
             )
           else
-            ...timeSlots.map((slot) => _TimeSlotCard(slot: slot)),
+            ...timeSlots
+                .map((slot) => _TimeSlotCard(slot: slot, isDark: isDark)),
         ],
       ),
     );
@@ -687,13 +700,13 @@ class _TimeSlotsCard extends StatelessWidget {
 }
 
 class _TimeSlotCard extends StatelessWidget {
-  const _TimeSlotCard({required this.slot});
+  const _TimeSlotCard({required this.slot, required this.isDark});
 
   final ServiceTimeSlot slot;
+  final bool isDark;
 
   @override
   Widget build(BuildContext context) {
-    // 判断状态：用户已申请 > 已满 > 已过期 > 可选
     final isDisabled = !slot.canSelect;
 
     return AnimatedOpacity(
@@ -704,8 +717,10 @@ class _TimeSlotCard extends StatelessWidget {
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
           color: slot.userHasApplied
-              ? AppColors.textTertiaryLight.withValues(alpha: 0.08)
-              : AppColors.primary.withValues(alpha: 0.05),
+              ? (isDark
+                  ? Colors.white.withValues(alpha: 0.04)
+                  : AppColors.textTertiaryLight.withValues(alpha: 0.08))
+              : AppColors.primary.withValues(alpha: isDark ? 0.1 : 0.05),
           borderRadius: BorderRadius.circular(12),
         ),
         child: Row(
@@ -720,8 +735,12 @@ class _TimeSlotCard extends StatelessWidget {
                       fontSize: 14,
                       fontWeight: FontWeight.w600,
                       color: isDisabled
-                          ? AppColors.textTertiaryLight
-                          : null,
+                          ? (isDark
+                              ? AppColors.textTertiaryDark
+                              : AppColors.textTertiaryLight)
+                          : (isDark
+                              ? AppColors.textPrimaryDark
+                              : AppColors.textPrimaryLight),
                     ),
                   ),
                   const SizedBox(height: 4),
@@ -729,17 +748,17 @@ class _TimeSlotCard extends StatelessWidget {
                     children: [
                       Icon(Icons.people_outline,
                           size: 12,
-                          color: isDisabled
-                              ? AppColors.textTertiaryLight
+                          color: isDark
+                              ? AppColors.textSecondaryDark
                               : AppColors.textSecondaryLight),
                       const SizedBox(width: 4),
                       Text(
                         '${slot.currentParticipants}/${slot.maxParticipants} ${context.l10n.activityPersonsBooked}',
-                        style: AppTypography.caption.copyWith(
-                          color: isDisabled
-                              ? AppColors.textTertiaryLight
-                              : AppColors.textSecondaryLight,
+                        style: TextStyle(
                           fontSize: 11,
+                          color: isDark
+                              ? AppColors.textSecondaryDark
+                              : AppColors.textSecondaryLight,
                         ),
                       ),
                     ],
@@ -770,20 +789,17 @@ class _TimeSlotCard extends StatelessWidget {
   }
 
   Color _getBadgeColor() {
-    if (slot.userHasApplied) {
-      return AppColors.textTertiaryLight.withValues(alpha: 0.2);
-    }
-    if (!slot.isAvailable ||
+    if (slot.userHasApplied || !slot.isAvailable ||
         slot.currentParticipants >= slot.maxParticipants) {
-      return AppColors.textTertiaryLight.withValues(alpha: 0.2);
+      return isDark
+          ? Colors.white.withValues(alpha: 0.1)
+          : AppColors.textTertiaryLight.withValues(alpha: 0.2);
     }
     return AppColors.success;
   }
 
   String _getBadgeText(BuildContext context) {
-    if (slot.userHasApplied) {
-      return context.l10n.serviceApplied;
-    }
+    if (slot.userHasApplied) return context.l10n.serviceApplied;
     if (!slot.isAvailable ||
         slot.currentParticipants >= slot.maxParticipants) {
       return context.l10n.taskExpertFull;
@@ -794,7 +810,7 @@ class _TimeSlotCard extends StatelessWidget {
   Color _getBadgeTextColor() {
     if (slot.userHasApplied || !slot.isAvailable ||
         slot.currentParticipants >= slot.maxParticipants) {
-      return AppColors.textTertiaryLight;
+      return isDark ? AppColors.textTertiaryDark : AppColors.textTertiaryLight;
     }
     return Colors.white;
   }
@@ -817,10 +833,12 @@ class _RelatedActivitiesSection extends StatelessWidget {
   const _RelatedActivitiesSection({
     required this.activities,
     required this.isLoading,
+    required this.isDark,
   });
 
   final List<Activity> activities;
   final bool isLoading;
+  final bool isDark;
 
   @override
   Widget build(BuildContext context) {
@@ -828,13 +846,13 @@ class _RelatedActivitiesSection extends StatelessWidget {
       return Container(
         width: double.infinity,
         padding: const EdgeInsets.all(20),
-        margin: const EdgeInsets.only(bottom: 24),
+        margin: const EdgeInsets.only(bottom: 20),
         decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.surface,
+          color: isDark ? AppColors.cardBackgroundDark : Colors.white,
           borderRadius: BorderRadius.circular(20),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.04),
+              color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.04),
               blurRadius: 10,
               offset: const Offset(0, 4),
             ),
@@ -858,13 +876,13 @@ class _RelatedActivitiesSection extends StatelessWidget {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(20),
-      margin: const EdgeInsets.only(bottom: 24),
+      margin: const EdgeInsets.only(bottom: 20),
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
+        color: isDark ? AppColors.cardBackgroundDark : Colors.white,
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
+            color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.04),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -873,29 +891,12 @@ class _RelatedActivitiesSection extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Container(
-                width: 4,
-                height: 16,
-                decoration: BoxDecoration(
-                  color: AppColors.primary,
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-              const SizedBox(width: 8),
-              Text(
-                context.l10n.taskExpertRelatedActivitiesSection,
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ],
-          ),
+          _SectionHeader(
+              title: context.l10n.taskExpertRelatedActivitiesSection),
           const SizedBox(height: 16),
           ...activities.map(
-            (activity) => _RelatedActivityMiniCard(activity: activity),
+            (activity) =>
+                _RelatedActivityMiniCard(activity: activity, isDark: isDark),
           ),
         ],
       ),
@@ -904,9 +905,11 @@ class _RelatedActivitiesSection extends StatelessWidget {
 }
 
 class _RelatedActivityMiniCard extends StatelessWidget {
-  const _RelatedActivityMiniCard({required this.activity});
+  const _RelatedActivityMiniCard(
+      {required this.activity, required this.isDark});
 
   final Activity activity;
+  final bool isDark;
 
   @override
   Widget build(BuildContext context) {
@@ -920,7 +923,7 @@ class _RelatedActivityMiniCard extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
-            color: AppColors.primary.withValues(alpha: 0.05),
+            color: AppColors.primary.withValues(alpha: isDark ? 0.08 : 0.05),
             borderRadius: BorderRadius.circular(12),
           ),
           child: Row(
@@ -953,10 +956,14 @@ class _RelatedActivityMiniCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      activity.displayTitle(Localizations.localeOf(context)),
-                      style: const TextStyle(
+                      activity
+                          .displayTitle(Localizations.localeOf(context)),
+                      style: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w600,
+                        color: isDark
+                            ? AppColors.textPrimaryDark
+                            : AppColors.textPrimaryLight,
                       ),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
@@ -969,9 +976,11 @@ class _RelatedActivityMiniCard extends StatelessWidget {
                               ? DateFormat('MM/dd HH:mm')
                                   .format(activity.deadline!.toLocal())
                               : ''),
-                      style: AppTypography.caption.copyWith(
-                        color: AppColors.textSecondaryLight,
+                      style: TextStyle(
                         fontSize: 12,
+                        color: isDark
+                            ? AppColors.textSecondaryDark
+                            : AppColors.textSecondaryLight,
                       ),
                     ),
                     const SizedBox(height: 2),
@@ -979,31 +988,33 @@ class _RelatedActivityMiniCard extends StatelessWidget {
                       children: [
                         Text(
                           '${activity.currentParticipants ?? 0}/${activity.maxParticipants}',
-                          style: AppTypography.caption.copyWith(
-                            color: AppColors.textTertiaryLight,
+                          style: TextStyle(
                             fontSize: 11,
+                            color: isDark
+                                ? AppColors.textTertiaryDark
+                                : AppColors.textTertiaryLight,
                           ),
                         ),
                         Text(
                           ' · ',
-                          style: AppTypography.caption.copyWith(
-                            color: AppColors.textTertiaryLight,
+                          style: TextStyle(
                             fontSize: 11,
+                            color: isDark
+                                ? AppColors.textTertiaryDark
+                                : AppColors.textTertiaryLight,
                           ),
                         ),
-                        ActivityPriceWidget(activity: activity, fontSize: 11),
+                        ActivityPriceWidget(
+                            activity: activity, fontSize: 11),
                       ],
                     ),
                   ],
                 ),
               ),
-              Text(
-                context.l10n.homeView,
-                style: const TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.primary,
-                ),
+              Icon(
+                Icons.chevron_right,
+                size: 20,
+                color: AppColors.primary,
               ),
             ],
           ),
@@ -1014,46 +1025,53 @@ class _RelatedActivityMiniCard extends StatelessWidget {
 }
 
 // =============================================================
-// 底部申请栏（对标iOS bottomApplyBar 5分支逻辑）
+// 底部申请栏（对标iOS bottomApplyBar — 毛玻璃效果）
 // =============================================================
 
 class _BottomApplyBar extends StatelessWidget {
   const _BottomApplyBar({
     required this.service,
     required this.serviceId,
+    required this.isDark,
   });
 
   final TaskExpertService service;
   final int serviceId;
+  final bool isDark;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.fromLTRB(24, 12, 24, 24),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.95),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 10,
-            offset: const Offset(0, -5),
+    return ClipRect(
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+        child: Container(
+          padding: const EdgeInsets.fromLTRB(24, 12, 24, 0),
+          decoration: BoxDecoration(
+            color: (isDark ? Colors.black : Colors.white)
+                .withValues(alpha: 0.85),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.05),
+                blurRadius: 10,
+                offset: const Offset(0, -5),
+              ),
+            ],
           ),
-        ],
-      ),
-      child: SafeArea(
-        top: false,
-        child: _buildButton(context),
+          child: SafeArea(
+            top: false,
+            child: Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: _buildButton(context),
+            ),
+          ),
+        ),
       ),
     );
   }
 
   Widget _buildButton(BuildContext context) {
     if (service.userApplicationId != null) {
-      // === 已申请 ===
-
-      // 时间段服务特殊处理：已申请过某个时间段，但仍可申请其他时间段
       if (service.hasTimeSlots) {
-        // 有议价 + 最新申请还在pending → 等待达人回应
         if (service.userApplicationHasNegotiation == true &&
             service.userApplicationStatus == 'pending') {
           return _buildDisabledButton(
@@ -1062,7 +1080,6 @@ class _BottomApplyBar extends StatelessWidget {
           );
         }
 
-        // 待支付 + 未支付 + 有taskId → 继续支付
         if (service.userTaskStatus == AppConstants.taskStatusPendingPayment &&
             service.userTaskIsPaid == false &&
             service.userTaskId != null) {
@@ -1073,7 +1090,6 @@ class _BottomApplyBar extends StatelessWidget {
           );
         }
 
-        // 其他情况：允许申请其他时间段
         return _buildPrimaryButton(
           context,
           context.l10n.serviceApplyOtherSlot,
@@ -1081,9 +1097,6 @@ class _BottomApplyBar extends StatelessWidget {
         );
       }
 
-      // === 非时间段服务的已申请处理（原始逻辑） ===
-
-      // 分支1: 有议价 + 任务状态为待支付 → 等待达人回应
       if (service.userApplicationHasNegotiation == true &&
           service.userTaskStatus == AppConstants.taskStatusPendingPayment) {
         return _buildDisabledButton(
@@ -1092,7 +1105,6 @@ class _BottomApplyBar extends StatelessWidget {
         );
       }
 
-      // 分支2: 待支付 + 未支付 + 有taskId → 继续支付
       if (service.userTaskStatus == AppConstants.taskStatusPendingPayment &&
           service.userTaskIsPaid == false &&
           service.userTaskId != null) {
@@ -1103,7 +1115,6 @@ class _BottomApplyBar extends StatelessWidget {
         );
       }
 
-      // 分支3: 有议价 + 申请状态pending → 等待达人回应
       if (service.userApplicationHasNegotiation == true &&
           service.userApplicationStatus == 'pending') {
         return _buildDisabledButton(
@@ -1112,14 +1123,12 @@ class _BottomApplyBar extends StatelessWidget {
         );
       }
 
-      // 分支4: 其他已申请状态 → 已申请
       return _buildDisabledButton(
         context,
         context.l10n.serviceApplied,
       );
     }
 
-    // === 未申请 → 申请服务 ===
     return _buildPrimaryButton(
       context,
       context.l10n.taskExpertApplyService,
@@ -1134,19 +1143,22 @@ class _BottomApplyBar extends StatelessWidget {
       child: ElevatedButton(
         onPressed: null,
         style: ElevatedButton.styleFrom(
-          backgroundColor: AppColors.textTertiaryLight.withValues(alpha: 0.3),
-          disabledBackgroundColor:
-              AppColors.textTertiaryLight.withValues(alpha: 0.3),
+          backgroundColor: isDark
+              ? Colors.white.withValues(alpha: 0.15)
+              : AppColors.textTertiaryLight.withValues(alpha: 0.3),
+          disabledBackgroundColor: isDark
+              ? Colors.white.withValues(alpha: 0.15)
+              : AppColors.textTertiaryLight.withValues(alpha: 0.3),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(27),
           ),
         ),
         child: Text(
           text,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.bold,
-            color: Colors.white,
+            color: isDark ? Colors.white60 : Colors.white,
           ),
         ),
       ),
@@ -1164,7 +1176,7 @@ class _BottomApplyBar extends StatelessWidget {
           boxShadow: [
             BoxShadow(
               color: AppColors.primary.withValues(alpha: 0.3),
-              blurRadius: 8,
+              blurRadius: 12,
               offset: const Offset(0, 4),
             ),
           ],
@@ -1188,6 +1200,43 @@ class _BottomApplyBar extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+// =============================================================
+// 共用组件：区块标题（竖线 + 文字）
+// =============================================================
+
+class _SectionHeader extends StatelessWidget {
+  const _SectionHeader({required this.title});
+  final String title;
+
+  @override
+  Widget build(BuildContext context) {
+    if (title.isEmpty) return const SizedBox.shrink();
+    return Row(
+      children: [
+        Container(
+          width: 4,
+          height: 16,
+          decoration: BoxDecoration(
+            color: AppColors.primary,
+            borderRadius: BorderRadius.circular(2),
+          ),
+        ),
+        const SizedBox(width: 8),
+        Text(
+          title,
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w600,
+            color: Theme.of(context).brightness == Brightness.dark
+                ? AppColors.textPrimaryDark
+                : AppColors.textPrimaryLight,
+          ),
+        ),
+      ],
     );
   }
 }
@@ -1239,6 +1288,8 @@ class _ApplyServiceSheetState extends State<_ApplyServiceSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return DraggableScrollableSheet(
       initialChildSize: 0.7,
       maxChildSize: 0.9,
@@ -1246,23 +1297,21 @@ class _ApplyServiceSheetState extends State<_ApplyServiceSheet> {
       builder: (context, scrollController) {
         return Container(
           decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.surface,
+            color: isDark ? AppColors.cardBackgroundDark : Colors.white,
             borderRadius:
                 const BorderRadius.vertical(top: Radius.circular(24)),
           ),
           child: Column(
             children: [
-              // 拖拽手柄
               Container(
                 margin: const EdgeInsets.only(top: 12, bottom: 8),
                 width: 40,
                 height: 4,
                 decoration: BoxDecoration(
-                  color: Colors.grey.shade300,
+                  color: isDark ? Colors.white24 : Colors.grey.shade300,
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
-              // 标题
               Padding(
                 padding: const EdgeInsets.symmetric(
                     horizontal: 20, vertical: 12),
@@ -1270,9 +1319,12 @@ class _ApplyServiceSheetState extends State<_ApplyServiceSheet> {
                   children: [
                     Text(
                       context.l10n.serviceApplyTitle,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.bold,
+                        color: isDark
+                            ? AppColors.textPrimaryDark
+                            : AppColors.textPrimaryLight,
                       ),
                     ),
                     const Spacer(),
@@ -1283,16 +1335,17 @@ class _ApplyServiceSheetState extends State<_ApplyServiceSheet> {
                   ],
                 ),
               ),
-              const Divider(height: 1),
-              // 内容
+              Divider(
+                  height: 1,
+                  color: isDark
+                      ? Colors.white.withValues(alpha: 0.1)
+                      : null),
               Expanded(
                 child: ListView(
                   controller: scrollController,
                   padding: const EdgeInsets.all(20),
                   children: [
-                    // 留言
-                    _buildSectionHeader(
-                        context.l10n.serviceApplyMessage),
+                    _buildSectionHeader(context.l10n.serviceApplyMessage),
                     const SizedBox(height: 8),
                     TextField(
                       controller: _messageController,
@@ -1308,7 +1361,6 @@ class _ApplyServiceSheetState extends State<_ApplyServiceSheet> {
                     ),
                     const SizedBox(height: 24),
 
-                    // 议价开关
                     _buildSectionHeader(context.l10n.serviceNegotiatePrice),
                     const SizedBox(height: 8),
                     Row(
@@ -1316,8 +1368,11 @@ class _ApplyServiceSheetState extends State<_ApplyServiceSheet> {
                         Expanded(
                           child: Text(
                             context.l10n.serviceNegotiatePriceHint,
-                            style: AppTypography.caption.copyWith(
-                              color: AppColors.textSecondaryLight,
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: isDark
+                                  ? AppColors.textSecondaryDark
+                                  : AppColors.textSecondaryLight,
                             ),
                           ),
                         ),
@@ -1348,7 +1403,6 @@ class _ApplyServiceSheetState extends State<_ApplyServiceSheet> {
                       ),
                     ],
 
-                    // 时间段选择（有时间段时显示）
                     if (widget.service.hasTimeSlots) ...[
                       const SizedBox(height: 24),
                       _buildSectionHeader(
@@ -1359,7 +1413,8 @@ class _ApplyServiceSheetState extends State<_ApplyServiceSheet> {
                           if (state.isLoadingTimeSlots) {
                             return const Center(
                               child: Padding(
-                                padding: EdgeInsets.symmetric(vertical: 20),
+                                padding:
+                                    EdgeInsets.symmetric(vertical: 20),
                                 child: CircularProgressIndicator(),
                               ),
                             );
@@ -1371,8 +1426,11 @@ class _ApplyServiceSheetState extends State<_ApplyServiceSheet> {
                                   const EdgeInsets.symmetric(vertical: 12),
                               child: Text(
                                 context.l10n.taskExpertNoAvailableSlots,
-                                style: AppTypography.caption.copyWith(
-                                  color: AppColors.textTertiaryLight,
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  color: isDark
+                                      ? AppColors.textTertiaryDark
+                                      : AppColors.textTertiaryLight,
                                 ),
                               ),
                             );
@@ -1386,8 +1444,8 @@ class _ApplyServiceSheetState extends State<_ApplyServiceSheet> {
                               final canSelect = slot.canSelect;
                               return GestureDetector(
                                 onTap: canSelect
-                                    ? () => setState(
-                                        () => _selectedTimeSlotId = slot.id)
+                                    ? () => setState(() =>
+                                        _selectedTimeSlotId = slot.id)
                                     : null,
                                 child: AnimatedOpacity(
                                   opacity: canSelect ? 1.0 : 0.4,
@@ -1401,16 +1459,27 @@ class _ApplyServiceSheetState extends State<_ApplyServiceSheet> {
                                           ? AppColors.primary
                                               .withValues(alpha: 0.1)
                                           : slot.userHasApplied
-                                              ? AppColors.textTertiaryLight
-                                                  .withValues(alpha: 0.08)
+                                              ? (isDark
+                                                  ? Colors.white
+                                                      .withValues(
+                                                          alpha: 0.04)
+                                                  : AppColors
+                                                      .textTertiaryLight
+                                                      .withValues(
+                                                          alpha: 0.08))
                                               : null,
                                       borderRadius:
                                           BorderRadius.circular(12),
                                       border: Border.all(
                                         color: isSelected
                                             ? AppColors.primary
-                                            : AppColors.textTertiaryLight
-                                                .withValues(alpha: 0.3),
+                                            : (isDark
+                                                ? Colors.white.withValues(
+                                                    alpha: 0.15)
+                                                : AppColors
+                                                    .textTertiaryLight
+                                                    .withValues(
+                                                        alpha: 0.3)),
                                         width: isSelected ? 2 : 1,
                                       ),
                                     ),
@@ -1420,15 +1489,19 @@ class _ApplyServiceSheetState extends State<_ApplyServiceSheet> {
                                       children: [
                                         if (slot.userHasApplied)
                                           Padding(
-                                            padding: const EdgeInsets.only(
-                                                bottom: 4),
+                                            padding:
+                                                const EdgeInsets.only(
+                                                    bottom: 4),
                                             child: Text(
                                               context.l10n.serviceApplied,
-                                              style: const TextStyle(
+                                              style: TextStyle(
                                                 fontSize: 9,
                                                 fontWeight: FontWeight.bold,
-                                                color: AppColors
-                                                    .textTertiaryLight,
+                                                color: isDark
+                                                    ? AppColors
+                                                        .textTertiaryDark
+                                                    : AppColors
+                                                        .textTertiaryLight,
                                               ),
                                             ),
                                           ),
@@ -1441,19 +1514,24 @@ class _ApplyServiceSheetState extends State<_ApplyServiceSheet> {
                                             color: isSelected
                                                 ? AppColors.primary
                                                 : slot.userHasApplied
-                                                    ? AppColors
-                                                        .textTertiaryLight
+                                                    ? (isDark
+                                                        ? AppColors
+                                                            .textTertiaryDark
+                                                        : AppColors
+                                                            .textTertiaryLight)
                                                     : null,
                                           ),
                                         ),
                                         const SizedBox(height: 2),
                                         Text(
                                           '${slot.currentParticipants}/${slot.maxParticipants}',
-                                          style: AppTypography.caption
-                                              .copyWith(
+                                          style: TextStyle(
                                             fontSize: 11,
-                                            color: AppColors
-                                                .textSecondaryLight,
+                                            color: isDark
+                                                ? AppColors
+                                                    .textSecondaryDark
+                                                : AppColors
+                                                    .textSecondaryLight,
                                           ),
                                         ),
                                       ],
@@ -1467,7 +1545,6 @@ class _ApplyServiceSheetState extends State<_ApplyServiceSheet> {
                       ),
                     ],
 
-                    // 时间选择（仅无时间段时显示）
                     if (!widget.service.hasTimeSlots) ...[
                       const SizedBox(height: 24),
                       _buildSectionHeader(
@@ -1497,8 +1574,11 @@ class _ApplyServiceSheetState extends State<_ApplyServiceSheet> {
                             padding: const EdgeInsets.all(16),
                             decoration: BoxDecoration(
                               border: Border.all(
-                                  color: AppColors.textTertiaryLight
-                                      .withValues(alpha: 0.3)),
+                                  color: isDark
+                                      ? Colors.white
+                                          .withValues(alpha: 0.15)
+                                      : AppColors.textTertiaryLight
+                                          .withValues(alpha: 0.3)),
                               borderRadius: BorderRadius.circular(
                                   AppRadius.medium),
                             ),
@@ -1515,7 +1595,10 @@ class _ApplyServiceSheetState extends State<_ApplyServiceSheet> {
                                   style: TextStyle(
                                     color: _selectedDeadline != null
                                         ? null
-                                        : AppColors.textTertiaryLight,
+                                        : (isDark
+                                            ? AppColors.textTertiaryDark
+                                            : AppColors
+                                                .textTertiaryLight),
                                   ),
                                 ),
                               ],
@@ -1527,10 +1610,8 @@ class _ApplyServiceSheetState extends State<_ApplyServiceSheet> {
                   ],
                 ),
               ),
-              // 提交按钮
               Padding(
-                padding:
-                    const EdgeInsets.fromLTRB(20, 12, 20, 24),
+                padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
                 child: SafeArea(
                   top: false,
                   child: BlocBuilder<TaskExpertBloc, TaskExpertState>(
@@ -1546,9 +1627,10 @@ class _ApplyServiceSheetState extends State<_ApplyServiceSheet> {
                           style: ElevatedButton.styleFrom(
                             backgroundColor: AppColors.primary,
                             foregroundColor: Colors.white,
+                            disabledBackgroundColor:
+                                AppColors.primary.withValues(alpha: 0.4),
                             shape: RoundedRectangleBorder(
-                              borderRadius:
-                                  BorderRadius.circular(27),
+                              borderRadius: BorderRadius.circular(27),
                             ),
                           ),
                           child: state.isSubmitting
@@ -1561,8 +1643,7 @@ class _ApplyServiceSheetState extends State<_ApplyServiceSheet> {
                                   ),
                                 )
                               : Text(
-                                  context
-                                      .l10n.taskExpertApplyService,
+                                  context.l10n.taskExpertApplyService,
                                   style: const TextStyle(
                                     fontSize: 16,
                                     fontWeight: FontWeight.bold,
@@ -1582,6 +1663,7 @@ class _ApplyServiceSheetState extends State<_ApplyServiceSheet> {
   }
 
   Widget _buildSectionHeader(String title) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Row(
       children: [
         Container(
@@ -1595,9 +1677,12 @@ class _ApplyServiceSheetState extends State<_ApplyServiceSheet> {
         const SizedBox(width: 8),
         Text(
           title,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.w600,
+            color: isDark
+                ? AppColors.textPrimaryDark
+                : AppColors.textPrimaryLight,
           ),
         ),
       ],

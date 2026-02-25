@@ -1,5 +1,6 @@
 import 'package:equatable/equatable.dart';
 
+import '../../../data/models/banner.dart' as app;
 import '../../../data/models/task.dart';
 import '../../../data/models/activity.dart';
 import '../../../data/models/discovery_feed.dart';
@@ -26,6 +27,7 @@ class HomeState extends Equatable {
     this.discoveryPage = 1,
     this.openActivities = const [],
     this.isLoadingOpenActivities = false,
+    this.banners = const [],
     this.recommendedFilterCategory,
     this.recommendedSortBy = 'latest',
   });
@@ -52,6 +54,9 @@ class HomeState extends Equatable {
   /// 开放中的活动（首页「热门活动」用；空则隐藏区域）
   final List<Activity> openActivities;
   final bool isLoadingOpenActivities;
+
+  /// 轮播 Banner（后端 + 硬编码合并）
+  final List<app.Banner> banners;
 
   /// 推荐任务客户端筛选：类别（null = 全部）
   final String? recommendedFilterCategory;
@@ -81,6 +86,7 @@ class HomeState extends Equatable {
     int? discoveryPage,
     List<Activity>? openActivities,
     bool? isLoadingOpenActivities,
+    List<app.Banner>? banners,
     String? recommendedFilterCategory,
     bool clearRecommendedFilterCategory = false,
     String? recommendedSortBy,
@@ -103,6 +109,7 @@ class HomeState extends Equatable {
       discoveryPage: discoveryPage ?? this.discoveryPage,
       openActivities: openActivities ?? this.openActivities,
       isLoadingOpenActivities: isLoadingOpenActivities ?? this.isLoadingOpenActivities,
+      banners: banners ?? this.banners,
       recommendedFilterCategory: clearRecommendedFilterCategory
           ? null
           : (recommendedFilterCategory ?? this.recommendedFilterCategory),
@@ -129,6 +136,7 @@ class HomeState extends Equatable {
         discoveryPage,
         openActivities,
         isLoadingOpenActivities,
+        banners,
         recommendedFilterCategory,
         recommendedSortBy,
       ];

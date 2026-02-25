@@ -217,6 +217,8 @@ class LeaderboardItem extends Equatable {
   bool get hasVoted => userVote != null;
 
   factory LeaderboardItem.fromJson(Map<String, dynamic> json) {
+    // 后端返回 submitter_info 对象，兼容旧的独立字段
+    final submitterInfo = json['submitter_info'] as Map<String, dynamic>?;
     return LeaderboardItem(
       id: json['id'] as int,
       leaderboardId: json['leaderboard_id'] as int,
@@ -229,9 +231,12 @@ class LeaderboardItem extends Equatable {
           ?.map((e) => e as String)
           .toList(),
       submittedBy: json['submitted_by']?.toString() ?? '',
-      submitterName: json['submitter_name'] as String?,
-      submitterAvatar: json['submitter_avatar'] as String?,
-      submitterId: json['submitter_id']?.toString(),
+      submitterName: submitterInfo?['name'] as String? ??
+          json['submitter_name'] as String?,
+      submitterAvatar: submitterInfo?['avatar'] as String? ??
+          json['submitter_avatar'] as String?,
+      submitterId: submitterInfo?['id']?.toString() ??
+          json['submitter_id']?.toString(),
       status: json['status'] as String? ?? 'approved',
       upvotes: json['upvotes'] as int? ?? 0,
       downvotes: json['downvotes'] as int? ?? 0,

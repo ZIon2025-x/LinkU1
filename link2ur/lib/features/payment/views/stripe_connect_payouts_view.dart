@@ -680,8 +680,7 @@ class _PayoutSheetState extends State<_PayoutSheet> {
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
             autofocus: true,
             decoration: InputDecoration(
-              prefixText:
-                  '${widget.balance.currency.toUpperCase()} ',
+              prefixText: '£ ',
               hintText: '0.00',
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(AppRadius.medium),

@@ -10,6 +10,7 @@ import '../../core/widgets/badge_view.dart';
 import '../../core/widgets/buttons.dart';
 import '../../core/widgets/desktop_sidebar.dart';
 import '../../data/repositories/activity_repository.dart';
+import '../../data/repositories/common_repository.dart';
 import '../../data/repositories/discovery_repository.dart';
 import '../../data/repositories/forum_repository.dart';
 import '../../data/repositories/leaderboard_repository.dart';
@@ -113,6 +114,7 @@ class _MainTabViewState extends State<MainTabView>
       _homeBloc = HomeBloc(
         taskRepository: context.read<TaskRepository>(),
         activityRepository: context.read<ActivityRepository>(),
+        commonRepository: context.read<CommonRepository>(),
         discoveryRepository: context.read<DiscoveryRepository>(),
       )
         ..currentUser = authState.isAuthenticated ? authState.user : null
@@ -605,6 +607,7 @@ class _DesktopTopBar extends StatelessWidget {
                   'assets/images/logo.png',
                   width: 28,
                   height: 28,
+                  fit: BoxFit.contain,
                   errorBuilder: (_, __, ___) => Container(
                     width: 28,
                     height: 28,

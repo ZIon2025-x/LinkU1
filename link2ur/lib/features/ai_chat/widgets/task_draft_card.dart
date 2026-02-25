@@ -76,7 +76,7 @@ class TaskDraftCard extends StatelessWidget {
               _buildField(
                 context,
                 l10n.createTaskReward,
-                '$currency ${(reward is num ? reward.toStringAsFixed(2) : reward)}',
+                '£${(reward is num ? reward.toStringAsFixed(2) : reward)}',
               ),
             if (location.isNotEmpty)
               _buildField(context, l10n.createTaskLocation, location),

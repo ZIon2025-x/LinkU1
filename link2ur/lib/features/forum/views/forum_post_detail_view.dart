@@ -315,14 +315,11 @@ class _ForumPostDetailViewState extends State<ForumPostDetailView> {
                       _PostHeader(post: post, isDark: isDark),
                       const Divider(height: 1),
                       _PostContent(post: post, isDark: isDark),
-                      if (post.images.isNotEmpty && post.images.length < 3)
-                        _PostImages(images: post.images),
+                      if (post.images.isNotEmpty)
+                        _PostImageRow(images: post.images),
                     ],
                   ),
                 ),
-
-                // 3+ 张图片网格 — SliverGrid 实现视口懒加载
-                if (post.images.length >= 3) _PostImageGridSliver(images: post.images),
 
                 // 统计 + 分隔线
                 SliverToBoxAdapter(
@@ -1221,10 +1218,10 @@ class _ReplyCard extends StatelessWidget {
 }
 
 // ==================== 帖子图片区域 ====================
+// 对标iOS：水平滚动缩略图列表，点击全屏查看
 
-/// 3+ 张图片网格 — 使用 SliverGrid 实现视口懒加载，避免 shrinkWrap
-class _PostImageGridSliver extends StatelessWidget {
-  const _PostImageGridSliver({required this.images});
+class _PostImageRow extends StatelessWidget {
+  const _PostImageRow({required this.images});
   final List<String> images;
 
   void _openFullScreen(BuildContext context, int index) {
@@ -1238,143 +1235,30 @@ class _PostImageGridSliver extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SliverPadding(
-      padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
-      sliver: SliverGrid(
-        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 3,
-          mainAxisSpacing: 4,
-          crossAxisSpacing: 4,
-        ),
-        delegate: SliverChildBuilderDelegate(
-          (context, index) {
-            return GestureDetector(
-              onTap: () => _openFullScreen(context, index),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(8),
-                child: AspectRatio(
-                  aspectRatio: 1,
-                  child: AsyncImageView(
-                    imageUrl: images[index],
-                  ),
-                ),
-              ),
-            );
-          },
-          childCount: images.length,
-        ),
-      ),
-    );
-  }
-}
+    final size = images.length == 1 ? 200.0 : 120.0;
 
-class _PostImages extends StatelessWidget {
-  const _PostImages({required this.images});
-  final List<String> images;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
-      child: _buildImageLayout(context),
-    );
-  }
-
-  Widget _buildImageLayout(BuildContext context) {
-    if (images.length == 1) {
-      // 单张全宽，等比例裁剪不拉伸变形
-      return LayoutBuilder(
-        builder: (context, constraints) {
-          final w = constraints.maxWidth;
+    return SizedBox(
+      height: size,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
+        itemCount: images.length,
+        separatorBuilder: (_, __) => const SizedBox(width: 12),
+        itemBuilder: (context, index) {
           return GestureDetector(
-            onTap: () => _openFullScreen(context, 0),
+            onTap: () => _openFullScreen(context, index),
             child: ClipRRect(
               borderRadius: BorderRadius.circular(12),
-              child: SizedBox(
-                width: w,
-                height: 220,
-                child: AsyncImageView(
-                  imageUrl: images[0],
-                  width: w,
-                  height: 220,
-                ),
+              child: AsyncImageView(
+                imageUrl: images[index],
+                width: size,
+                height: size,
+                fit: BoxFit.cover,
               ),
             ),
           );
         },
-      );
-    }
-
-    if (images.length == 2) {
-      // 2张并排，等比例裁剪不拉伸变形
-      return Row(
-        children: [
-          Expanded(
-            child: LayoutBuilder(
-              builder: (context, constraints) {
-                final w = constraints.maxWidth;
-                return GestureDetector(
-                  onTap: () => _openFullScreen(context, 0),
-                  child: ClipRRect(
-                    borderRadius: const BorderRadius.only(
-                      topLeft: Radius.circular(12),
-                      bottomLeft: Radius.circular(12),
-                    ),
-                    child: SizedBox(
-                      width: w,
-                      height: 180,
-                      child: AsyncImageView(
-                        imageUrl: images[0],
-                        width: w,
-                        height: 180,
-                      ),
-                    ),
-                  ),
-                );
-              },
-            ),
-          ),
-          const SizedBox(width: 4),
-          Expanded(
-            child: LayoutBuilder(
-              builder: (context, constraints) {
-                final w = constraints.maxWidth;
-                return GestureDetector(
-                  onTap: () => _openFullScreen(context, 1),
-                  child: ClipRRect(
-                    borderRadius: const BorderRadius.only(
-                      topRight: Radius.circular(12),
-                      bottomRight: Radius.circular(12),
-                    ),
-                    child: SizedBox(
-                      width: w,
-                      height: 180,
-                      child: AsyncImageView(
-                        imageUrl: images[1],
-                        width: w,
-                        height: 180,
-                      ),
-                    ),
-                  ),
-                );
-              },
-            ),
-          ),
-        ],
-      );
-    }
-
-    // 3+ 张由 _PostImageGridSliver 渲染，不会走到这里
-    assert(false, '_PostImages should not be called with ${images.length} images (>=3)');
-    return const SizedBox.shrink();
-  }
-
-  void _openFullScreen(BuildContext context, int index) {
-    Navigator.of(context).push(MaterialPageRoute(
-      builder: (_) => FullScreenImageView(
-        images: images,
-        initialIndex: index,
       ),
-    ));
+    );
   }
 }

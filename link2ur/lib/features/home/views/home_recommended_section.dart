@@ -16,6 +16,7 @@ class _RecommendedTab extends StatelessWidget {
           prev.isRefreshing != curr.isRefreshing ||
           prev.openActivities != curr.openActivities ||
           prev.isLoadingOpenActivities != curr.isLoadingOpenActivities ||
+          prev.banners != curr.banners ||
           prev.recommendedFilterCategory != curr.recommendedFilterCategory ||
           prev.recommendedSortBy != curr.recommendedSortBy,
       builder: (context, state) {
@@ -45,16 +46,12 @@ class _RecommendedTab extends StatelessWidget {
                     ? ContentConstraint(
                         child: Padding(
                           padding: const EdgeInsets.only(top: AppSpacing.sm),
-                          child: isDesktop
-                              ? const _DesktopBannerRow()
-                              : const _BannerCarousel(),
+                          child: _DesktopBannerRow(serverBanners: state.banners),
                         ),
                       )
                     : Padding(
                         padding: const EdgeInsets.only(top: AppSpacing.sm),
-                        child: isDesktop
-                            ? const _DesktopBannerRow()
-                            : const _BannerCarousel(),
+                        child: _BannerCarousel(serverBanners: state.banners),
                       ),
               ),
 
@@ -275,8 +272,11 @@ class _RecommendedTab extends StatelessWidget {
                   ),
                   SliverToBoxAdapter(
                     child: isDesktop
-                        ? const ContentConstraint(child: _DesktopActivitiesRow())
-                        : const _PopularActivitiesSection(),
+                        ? ContentConstraint(
+                            child: _DesktopActivitiesRow(
+                                activities: state.openActivities))
+                        : _PopularActivitiesSection(
+                            activities: state.openActivities),
                   ),
                 ],
 
@@ -756,52 +756,94 @@ class _ViewAllButtonState extends State<_ViewAllButton> {
   }
 }
 
-/// 桌面端 Banner 并排行
+/// 桌面端 Banner 并排行（硬编码 + 后端 banner 合并，最多展示 4 个）
 class _DesktopBannerRow extends StatelessWidget {
-  const _DesktopBannerRow();
+  const _DesktopBannerRow({required this.serverBanners});
+
+  final List<app_banner.Banner> serverBanners;
+
+  void _handleTap(BuildContext context, _BannerData banner) {
+    final linkUrl = banner.linkUrl;
+    if (linkUrl == null || linkUrl.isEmpty) return;
+
+    if (banner.linkType == 'external') {
+      ExternalWebView.openInApp(context, url: linkUrl);
+    } else {
+      context.safePush(linkUrl);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final allBanners = <_BannerData>[
+      _BannerData(
+        title: null,
+        subtitle: null,
+        localImage: AppAssets.fleaMarketBanner,
+        gradient: AppColors.gradientGreen,
+        icon: Icons.storefront,
+        linkType: 'internal',
+        linkUrl: '/flea-market',
+      ),
+      _BannerData(
+        title: null,
+        subtitle: null,
+        localImage: AppAssets.studentVerificationBanner,
+        gradient: AppColors.gradientIndigo,
+        icon: Icons.school,
+        linkType: 'internal',
+        linkUrl: '/student-verification',
+      ),
+      for (final b in serverBanners)
+        _BannerData(
+          title: b.title,
+          subtitle: b.subtitle,
+          networkImage: b.imageUrl,
+          gradient: AppColors.gradientPrimary,
+          icon: Icons.campaign,
+          linkType: b.linkType,
+          linkUrl: b.linkUrl,
+        ),
+    ];
+
+    final display = allBanners.take(4).toList();
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 24),
       child: SizedBox(
         height: 180,
         child: Row(
           children: [
-            Expanded(
-              child: _BannerItem(
-                title: context.l10n.homeSecondHandMarket,
-                subtitle: context.l10n.homeSecondHandSubtitle,
-                gradient: AppColors.gradientGreen,
-                icon: Icons.storefront,
-                imagePath: AppAssets.fleaMarketBanner,
-                parallaxOffset: 0,
-                onTap: () => context.push('/flea-market'),
+            for (int i = 0; i < display.length; i++) ...[
+              if (i > 0) const SizedBox(width: 12),
+              Expanded(
+                child: Builder(builder: (context) {
+                  final banner = display[i];
+                  final displayTitle = banner.title ??
+                      (banner.linkUrl == '/flea-market'
+                          ? l10n.homeSecondHandMarket
+                          : banner.linkUrl == '/student-verification'
+                              ? l10n.homeStudentVerification
+                              : '');
+                  final displaySubtitle = banner.subtitle ??
+                      (banner.linkUrl == '/flea-market'
+                          ? l10n.homeSecondHandSubtitle
+                          : banner.linkUrl == '/student-verification'
+                              ? l10n.homeStudentVerificationSubtitle
+                              : '');
+                  return _BannerItem(
+                    title: displayTitle,
+                    subtitle: displaySubtitle,
+                    gradient: banner.gradient,
+                    icon: banner.icon,
+                    localImage: banner.localImage,
+                    networkImage: banner.networkImage,
+                    onTap: () => _handleTap(context, banner),
+                  );
+                }),
               ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: _BannerItem(
-                title: context.l10n.homeStudentVerification,
-                subtitle: context.l10n.homeStudentVerificationSubtitle,
-                gradient: AppColors.gradientIndigo,
-                icon: Icons.school,
-                imagePath: AppAssets.studentVerificationBanner,
-                parallaxOffset: 0,
-                onTap: () => context.push('/student-verification'),
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: _BannerItem(
-                title: context.l10n.homeBecomeExpert,
-                subtitle: context.l10n.homeBecomeExpertSubtitle,
-                gradient: AppColors.gradientOrange,
-                icon: Icons.star,
-                parallaxOffset: 0,
-                onTap: () => context.push('/task-experts/intro'),
-              ),
-            ),
+            ],
           ],
         ),
       ),
@@ -809,47 +851,32 @@ class _DesktopBannerRow extends StatelessWidget {
   }
 }
 
-/// 桌面端活动 3 列行
+/// 桌面端活动行（使用真实数据，最多展示 3 个）
 class _DesktopActivitiesRow extends StatelessWidget {
-  const _DesktopActivitiesRow();
+  const _DesktopActivitiesRow({required this.activities});
+
+  final List<Activity> activities;
 
   @override
   Widget build(BuildContext context) {
+    if (activities.isEmpty) return const SizedBox.shrink();
+    final locale = Localizations.localeOf(context);
+    final display = activities.take(3).toList();
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 24),
       child: SizedBox(
-        height: 160,
+        height: 280,
         child: Row(
           children: [
-            Expanded(
-              child: _ActivityCard(
-                title: context.l10n.homeNewUserReward,
-                subtitle: context.l10n.homeNewUserRewardSubtitle,
-                gradient: AppColors.gradientCoral,
-                icon: Icons.card_giftcard,
-                onTap: () => context.push('/activities'),
+            for (int i = 0; i < display.length; i++) ...[
+              if (i > 0) const SizedBox(width: 12),
+              Expanded(
+                child: _RealActivityCard(
+                  activity: display[i],
+                  locale: locale,
+                ),
               ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: _ActivityCard(
-                title: context.l10n.homeInviteFriends,
-                subtitle: context.l10n.homeInviteFriendsSubtitle,
-                gradient: AppColors.gradientPurple,
-                icon: Icons.people,
-                onTap: () => context.push('/activities'),
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: _ActivityCard(
-                title: context.l10n.homeDailyCheckIn,
-                subtitle: context.l10n.homeDailyCheckInSubtitle,
-                gradient: AppColors.gradientEmerald,
-                icon: Icons.calendar_today,
-                onTap: () => context.push('/activities'),
-              ),
-            ),
+            ],
           ],
         ),
       ),
@@ -917,34 +944,35 @@ class _DesktopTaskCardState extends State<_DesktopTaskCard> {
               Expanded(
                 flex: 3,
                 child: Stack(
-                  fit: StackFit.expand,
                   children: [
-                    if (task.firstImage != null)
-                      AsyncImageView(
-                        imageUrl: task.firstImage!,
-                        width: double.infinity,
-                        height: double.infinity,
-                        memCacheWidth: 360,
-                        memCacheHeight: 270,
-                      )
-                    else
-                      Container(
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: [
-                              AppColors.primary.withValues(alpha: 0.08),
-                              AppColors.primary.withValues(alpha: 0.03),
-                            ],
-                          ),
-                        ),
-                        child: Center(
-                          child: Icon(
-                            _taskTypeIcon(task.taskType),
-                            color: AppColors.primary.withValues(alpha: 0.2),
-                            size: 36,
-                          ),
-                        ),
-                      ),
+                    Positioned.fill(
+                      child: task.firstImage != null
+                          ? AsyncImageView(
+                              imageUrl: task.firstImage!,
+                              width: 280,
+                              height: 210,
+                              fit: BoxFit.cover,
+                              memCacheWidth: 360,
+                              memCacheHeight: 270,
+                            )
+                          : Container(
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  colors: [
+                                    AppColors.primary.withValues(alpha: 0.08),
+                                    AppColors.primary.withValues(alpha: 0.03),
+                                  ],
+                                ),
+                              ),
+                              child: Center(
+                                child: Icon(
+                                  _taskTypeIcon(task.taskType),
+                                  color: AppColors.primary.withValues(alpha: 0.2),
+                                  size: 36,
+                                ),
+                              ),
+                            ),
+                    ),
                     // 位置标签
                     if (task.location != null)
                       Positioned(
@@ -1096,7 +1124,7 @@ class _DesktopTaskCardState extends State<_DesktopTaskCard> {
                                 borderRadius: BorderRadius.circular(999),
                               ),
                               child: Text(
-                                '${task.currency == 'GBP' ? '£' : '\$'}${task.reward.toStringAsFixed(0)}',
+                                '£${task.reward.toStringAsFixed(0)}',
                                 style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Colors.white),
                               ),
                             ),

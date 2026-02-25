@@ -1293,6 +1293,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get activityApplied => 'Applied';
 
   @override
+  String get activityParticipated => 'Participated';
+
+  @override
   String get activityApplyToJoin => 'Apply to Join Activity';
 
   @override
@@ -7381,7 +7384,29 @@ class AppLocalizationsEn extends AppLocalizations {
   String get createTaskCategoryWriting => 'Writing';
 
   @override
+  String get createTaskCategoryPhotography => 'Photography';
+
+  @override
+  String get createTaskCategoryMoving => 'Moving';
+
+  @override
+  String get createTaskCategoryCleaning => 'Cleaning';
+
+  @override
+  String get createTaskCategoryRepair => 'Repair';
+
+  @override
   String get createTaskCategoryOther => 'Other';
+
+  @override
+  String get profileDirectRequestValidation =>
+      'Please fill in the title and a valid price (≥£1)';
+
+  @override
+  String get profileDirectRequestHintLocation => 'Location';
+
+  @override
+  String get profileDirectRequestHintDeadline => 'Deadline (optional)';
 
   @override
   String get taskTypeHousekeeping => 'Housekeeping';
@@ -7713,6 +7738,28 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get activityPrize => 'Prize';
+
+  @override
+  String activityPrizeCount(Object count) {
+    return 'Prize Slots: $count';
+  }
+
+  @override
+  String get activityYouWon => 'Congratulations! You Won!';
+
+  @override
+  String activityYouWonVoucher(Object code) {
+    return 'Your voucher code: $code';
+  }
+
+  @override
+  String get activityNotWon => 'Stay Tuned for Next Event';
+
+  @override
+  String get activityDrawCompleted => 'Draw Completed';
+
+  @override
+  String get activityLotteryPending => 'Awaiting Draw';
 
   @override
   String activityPersonCount(int current, int max) {

@@ -274,6 +274,24 @@ class _ActivityDetailViewContent extends StatelessWidget {
                     activity.descriptionZh?.isNotEmpty == true)
                   const SizedBox(height: AppSpacing.md),
 
+                // 官方活动奖品信息卡片（在 body 中展示）
+                if (activity.isOfficialActivity)
+                  BlocBuilder<ActivityBloc, ActivityState>(
+                    buildWhen: (prev, curr) =>
+                        prev.officialResult != curr.officialResult ||
+                        prev.activityDetail != curr.activityDetail,
+                    builder: (context, latestState) {
+                      final latestActivity = latestState.activityDetail ?? activity;
+                      return _OfficialPrizeInfoCard(
+                        activity: latestActivity,
+                        isDark: isDark,
+                        state: latestState,
+                      );
+                    },
+                  ),
+                if (activity.isOfficialActivity)
+                  const SizedBox(height: AppSpacing.md),
+
                 // 信息网格卡片 - 对标iOS ActivityInfoGrid
                 _ActivityInfoGrid(activity: activity, isDark: isDark),
                 const SizedBox(height: AppSpacing.md),
@@ -384,13 +402,23 @@ class _ActivityDetailViewContent extends StatelessWidget {
 
     // 2. 已申请且有任务ID - 对标iOS hasApplied == true, let taskId = activity.userTaskId
     if (activity.hasApplied == true && activity.userTaskId != null) {
-      // 2a. 有议价 + 待支付 → 等待达人回应 (灰色不可点击)
+      // 2a. 任务已完成/进行中/已接单 → 已参与 (灰色不可点击)
+      const participatedStatuses = {
+        AppConstants.taskStatusCompleted,
+        AppConstants.taskStatusInProgress,
+        AppConstants.taskStatusTaken,
+      };
+      if (participatedStatuses.contains(activity.userTaskStatus)) {
+        return _buildDisabledButton(context.l10n.activityParticipated);
+      }
+
+      // 2b. 有议价 + 待支付 → 等待达人回应 (灰色不可点击)
       if (activity.userTaskHasNegotiation == true &&
           activity.userTaskStatus == AppConstants.taskStatusPendingPayment) {
         return _buildDisabledButton(context.l10n.activityWaitingExpertResponse);
       }
 
-      // 2b. 待支付 + 未支付 → 继续支付 (可点击)
+      // 2c. 待支付 + 未支付 → 继续支付 (可点击)
       if (activity.userTaskStatus == AppConstants.taskStatusPendingPayment &&
           activity.userTaskIsPaid != true) {
         return _buildPrimaryButton(
@@ -449,12 +477,12 @@ class _ActivityDetailViewContent extends StatelessWidget {
         );
       }
 
-      // 2c. 有议价但非待支付 → 等待达人回应
+      // 2d. 有议价但非待支付 → 等待达人回应
       if (activity.userTaskHasNegotiation == true) {
         return _buildDisabledButton(context.l10n.activityWaitingExpertResponse);
       }
 
-      // 2d. 其他已申请状态 → 已申请 (灰色)
+      // 2e. 其他已申请状态 → 已申请 (灰色)
       return _buildDisabledButton(context.l10n.activityApplied);
     }
 
@@ -552,6 +580,7 @@ class _ActivityDetailViewContent extends StatelessWidget {
 
   // ── Official activity helpers ──
 
+  /// 官方活动底部操作栏 — 根据开奖状态 + 用户中奖状态条件渲染
   Widget _buildOfficialActionBar(
       Activity activity, BuildContext context, ActivityState state) {
     return BlocBuilder<ActivityBloc, ActivityState>(
@@ -560,86 +589,79 @@ class _ActivityDetailViewContent extends StatelessWidget {
           prev.officialResult != curr.officialResult ||
           prev.activityDetail != curr.activityDetail,
       builder: (context, state) {
-        final latestActivity = state.activityDetail ?? activity;
-        final remaining =
-            (latestActivity.prizeCount ?? 0) - (latestActivity.currentApplicants ?? 0);
-        return Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            _buildPrizeSection(latestActivity),
-            if (latestActivity.isLottery) ...[
-              if (latestActivity.isDrawn ||
-                  state.officialResult?.isDrawn == true) ...[
-                _buildWinnersSection(latestActivity, state, context),
-              ] else ...[
-                if (latestActivity.drawAt != null)
-                  Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 4),
-                    child: Text(
-                      '${context.l10n.activityRegistrationDeadline}${_formatDeadline(latestActivity.drawAt!)}',
-                      style: Theme.of(context).textTheme.bodySmall,
-                    ),
-                  ),
-                if (latestActivity.currentApplicants != null)
-                  Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 4),
-                    child: Text('${context.l10n.activityCurrentApplicants}${latestActivity.currentApplicants}'),
-                  ),
-                _buildOfficialApplyButton(
-                    context.l10n.activityJoinLottery, latestActivity.id, context, state),
-              ],
-            ] else if (latestActivity.isFirstCome) ...[
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 4),
-                child: Text('${context.l10n.activityRemainingSlots}$remaining'),
-              ),
-              _buildOfficialApplyButton(
-                remaining > 0 ? context.l10n.activityRegisterNow : context.l10n.activityFullSlots,
-                latestActivity.id,
-                context,
-                state,
-                disabled: remaining <= 0,
-              ),
-            ],
-          ],
-        );
+        final act = state.activityDetail ?? activity;
+        final result = state.officialResult;
+        final isDrawn = act.isDrawn || (result?.isDrawn == true);
+        final myStatus = result?.myStatus;
+
+        // ── 抽奖活动 ──
+        if (act.isLottery) {
+          if (isDrawn) {
+            return _buildPostDrawButton(context, myStatus, result);
+          }
+          // 未开奖
+          if (act.hasApplied == true ||
+              state.officialApplyStatus == OfficialApplyStatus.applied) {
+            return _buildDisabledButton(context.l10n.activityLotteryPending);
+          }
+          return _buildOfficialApplyButton(
+              context.l10n.activityJoinLottery, act.id, context, state);
+        }
+
+        // ── 先到先得 ──
+        if (act.isFirstCome) {
+          final remaining =
+              (act.prizeCount ?? 0) - (act.currentApplicants ?? 0);
+          if (act.hasApplied == true ||
+              state.officialApplyStatus == OfficialApplyStatus.applied) {
+            return _buildDisabledButton(context.l10n.activityAlreadyRegistered);
+          }
+          return _buildOfficialApplyButton(
+            remaining > 0
+                ? context.l10n.activityRegisterNow
+                : context.l10n.activityFullSlots,
+            act.id,
+            context,
+            state,
+            disabled: remaining <= 0,
+          );
+        }
+
+        return const SizedBox.shrink();
       },
     );
   }
 
-  Widget _buildPrizeSection(Activity activity) {
-    if (activity.prizeType == null) return const SizedBox.shrink();
-    return Builder(builder: (context) {
-    final prizeLabels = {
-      'points': '🎯 ${context.l10n.activityPrizePoints}',
-      'physical': '🎁 ${context.l10n.activityPrizePhysical}',
-      'voucher_code': '🎫 ${context.l10n.activityPrizeVoucher}',
-      'in_person': '🍽️ ${context.l10n.activityPrizeInPerson}',
-    };
-    return Container(
-      padding: const EdgeInsets.all(12),
-      margin: const EdgeInsets.symmetric(vertical: 8),
-      decoration: BoxDecoration(
-        color: const Color(0xFFFFF9E6),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: const Color(0xFFFFD700)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            prizeLabels[activity.prizeType] ?? '🎁 ${context.l10n.activityPrize}',
-            style: const TextStyle(fontWeight: FontWeight.bold),
+  /// 开奖后按钮：中奖 / 未中奖 / 未参与
+  Widget _buildPostDrawButton(
+      BuildContext context, String? myStatus, OfficialActivityResult? result) {
+    if (myStatus == 'won') {
+      final voucher = result?.myVoucherCode;
+      final text = voucher != null && voucher.isNotEmpty
+          ? context.l10n.activityYouWonVoucher(voucher)
+          : context.l10n.activityYouWon;
+      return Container(
+        height: 50,
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            colors: [Color(0xFFFFD700), Color(0xFFFFA500)],
           ),
-          if (activity.prizeDescription != null)
-            Padding(
-              padding: const EdgeInsets.only(top: 4),
-              child: Text(activity.prizeDescription!),
-            ),
-        ],
-      ),
-    );
-    });
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Center(
+          child: Text(
+            text,
+            style: AppTypography.bodyBold.copyWith(color: Colors.white),
+            textAlign: TextAlign.center,
+          ),
+        ),
+      );
+    }
+    if (myStatus == 'lost') {
+      return _buildDisabledButton(context.l10n.activityNotWon);
+    }
+    // 未参与此次活动
+    return _buildDisabledButton(context.l10n.activityDrawCompleted);
   }
 
   Widget _buildOfficialApplyButton(
@@ -685,26 +707,6 @@ class _ActivityDetailViewContent extends StatelessWidget {
     );
   }
 
-  Widget _buildWinnersSection(Activity activity, ActivityState state, BuildContext context) {
-    final winners =
-        state.officialResult?.winners ?? activity.winners ?? [];
-    if (winners.isEmpty) return Text(context.l10n.activityNoWinners);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(vertical: 8),
-          child: Text('🏆 ${context.l10n.activityWinnerList}',
-              style: const TextStyle(fontWeight: FontWeight.bold)),
-        ),
-        ...winners.map((w) => Padding(
-              padding: const EdgeInsets.symmetric(vertical: 2),
-              child: Text(w.name),
-            )),
-      ],
-    );
-  }
-
   String _formatDeadline(DateTime dt) {
     return '${dt.year}-${dt.month.toString().padLeft(2, '0')}-'
         '${dt.day.toString().padLeft(2, '0')} '
@@ -712,6 +714,309 @@ class _ActivityDetailViewContent extends StatelessWidget {
         '${dt.minute.toString().padLeft(2, '0')}';
   }
 
+}
+
+// ==================== 官方活动奖品信息 + 中奖名单卡片 ====================
+
+class _OfficialPrizeInfoCard extends StatelessWidget {
+  const _OfficialPrizeInfoCard({
+    required this.activity,
+    required this.isDark,
+    required this.state,
+  });
+
+  final Activity activity;
+  final bool isDark;
+  final ActivityState state;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final result = state.officialResult;
+    final isDrawn = activity.isDrawn || (result?.isDrawn == true);
+    final winners = result?.winners ?? activity.winners ?? [];
+
+    final prizeLabels = {
+      'points': '🎯 ${l10n.activityPrizePoints}',
+      'physical': '🎁 ${l10n.activityPrizePhysical}',
+      'voucher_code': '🎫 ${l10n.activityPrizeVoucher}',
+      'in_person': '🍽️ ${l10n.activityPrizeInPerson}',
+    };
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+      child: Container(
+        decoration: BoxDecoration(
+          color: isDark ? AppColors.cardBackgroundDark : Colors.white,
+          borderRadius: BorderRadius.circular(AppRadius.large),
+          boxShadow: isDark
+              ? null
+              : [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.05),
+                    blurRadius: 10,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // 奖品信息头部
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [Color(0xFFFFF8E1), Color(0xFFFFECB3)],
+                ),
+                borderRadius: BorderRadius.vertical(
+                  top: Radius.circular(AppRadius.large),
+                  bottom: isDrawn && winners.isNotEmpty
+                      ? Radius.zero
+                      : Radius.circular(AppRadius.large),
+                ),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // 奖品类型
+                  if (activity.prizeType != null)
+                    Text(
+                      prizeLabels[activity.prizeType] ??
+                          '🎁 ${l10n.activityPrize}',
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF8B6914),
+                      ),
+                    ),
+                  const SizedBox(height: 8),
+
+                  // 奖品描述
+                  if (activity.prizeDescription != null &&
+                      activity.prizeDescription!.isNotEmpty)
+                    Text(
+                      activity.prizeDescription!,
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.brown.shade700,
+                      ),
+                    ),
+
+                  const SizedBox(height: 8),
+
+                  // 奖品名额 + 状态行
+                  Row(
+                    children: [
+                      if (activity.prizeCount != null) ...[
+                        const Icon(Icons.emoji_events,
+                            size: 16, color: Color(0xFFD4A017)),
+                        const SizedBox(width: 4),
+                        Text(
+                          l10n.activityPrizeCount(activity.prizeCount!),
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.brown.shade600,
+                          ),
+                        ),
+                      ],
+                      const Spacer(),
+                      // 活动状态标签
+                      if (activity.isLottery) ...[
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 3),
+                          decoration: BoxDecoration(
+                            color: isDrawn
+                                ? AppColors.success
+                                : const Color(0xFFFF9800),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Text(
+                            isDrawn
+                                ? l10n.activityDrawCompleted
+                                : l10n.activityLotteryPending,
+                            style: const TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
+                      ],
+                      if (activity.isFirstCome) ...[
+                        () {
+                          final remaining = (activity.prizeCount ?? 0) -
+                              (activity.currentApplicants ?? 0);
+                          return Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 3),
+                            decoration: BoxDecoration(
+                              color: remaining > 0
+                                  ? AppColors.success
+                                  : AppColors.textTertiaryLight,
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Text(
+                              '${l10n.activityRemainingSlots}$remaining',
+                              style: const TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.white,
+                              ),
+                            ),
+                          );
+                        }(),
+                      ],
+                    ],
+                  ),
+
+                  // 抽奖截止时间
+                  if (activity.isLottery &&
+                      !isDrawn &&
+                      activity.drawAt != null) ...[
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        const Icon(Icons.schedule,
+                            size: 14, color: Color(0xFF8B6914)),
+                        const SizedBox(width: 4),
+                        Text(
+                          '${l10n.activityRegistrationDeadline}${_formatDt(activity.drawAt!)}',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.brown.shade600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+
+                  // 当前报名人数
+                  if (activity.currentApplicants != null &&
+                      !isDrawn) ...[
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        const Icon(Icons.people,
+                            size: 14, color: Color(0xFF8B6914)),
+                        const SizedBox(width: 4),
+                        Text(
+                          '${l10n.activityCurrentApplicants}${activity.currentApplicants}',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.brown.shade600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ],
+              ),
+            ),
+
+            // 中奖名单（开奖后显示）
+            if (isDrawn && winners.isNotEmpty)
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: isDark ? AppColors.cardBackgroundDark : Colors.white,
+                  borderRadius: BorderRadius.vertical(
+                    bottom: Radius.circular(AppRadius.large),
+                  ),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        const Text('🏆', style: TextStyle(fontSize: 18)),
+                        const SizedBox(width: 6),
+                        Text(
+                          l10n.activityWinnerList,
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    ...winners.map((w) => Padding(
+                          padding: const EdgeInsets.only(bottom: 8),
+                          child: Row(
+                            children: [
+                              CircleAvatar(
+                                radius: 16,
+                                backgroundColor: AppColors.primary
+                                    .withValues(alpha: 0.1),
+                                backgroundImage: w.avatarUrl != null &&
+                                        w.avatarUrl!.isNotEmpty
+                                    ? NetworkImage(w.avatarUrl!)
+                                    : null,
+                                child: w.avatarUrl == null ||
+                                        w.avatarUrl!.isEmpty
+                                    ? Text(
+                                        w.name.isNotEmpty
+                                            ? w.name[0].toUpperCase()
+                                            : '?',
+                                        style: const TextStyle(
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.bold,
+                                          color: AppColors.primary,
+                                        ),
+                                      )
+                                    : null,
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Text(
+                                  w.name,
+                                  style: const TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ),
+                              const Icon(Icons.star,
+                                  size: 16, color: Color(0xFFFFD700)),
+                            ],
+                          ),
+                        )),
+                  ],
+                ),
+              ),
+
+            // 开奖后但无中奖者
+            if (isDrawn && winners.isEmpty)
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: Center(
+                  child: Text(
+                    l10n.activityNoWinners,
+                    style: TextStyle(
+                      color: isDark
+                          ? AppColors.textTertiaryDark
+                          : AppColors.textTertiaryLight,
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  static String _formatDt(DateTime dt) {
+    return '${dt.year}-${dt.month.toString().padLeft(2, '0')}-'
+        '${dt.day.toString().padLeft(2, '0')} '
+        '${dt.hour.toString().padLeft(2, '0')}:'
+        '${dt.minute.toString().padLeft(2, '0')}';
+  }
 }
 
 // ==================== 图片轮播 ====================

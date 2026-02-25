@@ -72,11 +72,9 @@ class AppConstants {
     'other',         // 其他
   ];
 
-  /// 货币
-  static const String currencyUSD = 'USD';
-  static const String currencyCNY = 'CNY';
-  static const String currencyGBP = 'GBP';
-  static const String currencyEUR = 'EUR';
+  /// 货币（统一英镑）
+  static const String defaultCurrency = 'GBP';
+  static const String currencySymbol = '£';
 
   /// 分页
   static const int defaultPageSize = 20;

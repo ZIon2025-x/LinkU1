@@ -60,52 +60,54 @@ class _HorizontalTaskCard extends StatelessWidget {
               width: double.infinity,
               child: ClipRect(
                 child: Stack(
-                  fit: StackFit.expand,
                   children: [
-                    // 图片或占位背景（等比例裁剪不拉伸变形）
-                    if (task.firstImage != null)
-                      Hero(
-                        tag: 'task_image_${task.id}',
-                        child: AsyncImageView(
-                          imageUrl: task.firstImage!,
-                          width: 220,
-                          height: 170,
-                        ),
-                      )
-                  else
-                    Container(
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                          colors: [
-                            AppColors.primary.withValues(alpha: 0.12),
-                            AppColors.primary.withValues(alpha: 0.04),
-                          ],
-                        ),
-                      ),
-                      child: Icon(
-                        _taskTypeIcon(task.taskType),
-                        color: AppColors.primary.withValues(alpha: 0.25),
-                        size: 44,
-                      ),
+                    Positioned.fill(
+                      child: task.firstImage != null
+                          ? Hero(
+                              tag: 'task_image_${task.id}',
+                              child: AsyncImageView(
+                                imageUrl: task.firstImage!,
+                                width: 220,
+                                height: 170,
+                                fit: BoxFit.cover,
+                              ),
+                            )
+                          : Container(
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                  colors: [
+                                    AppColors.primary.withValues(alpha: 0.12),
+                                    AppColors.primary.withValues(alpha: 0.04),
+                                  ],
+                                ),
+                              ),
+                              child: Icon(
+                                _taskTypeIcon(task.taskType),
+                                color: AppColors.primary.withValues(alpha: 0.25),
+                                size: 44,
+                              ),
+                            ),
                     ),
 
                     // 对标iOS: 3段渐变遮罩（0.2→0.0→0.4）
-                    DecoratedBox(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                        colors: [
-                          Colors.black.withValues(alpha: 0.20),
-                          Colors.black.withValues(alpha: 0.0),
-                          Colors.black.withValues(alpha: 0.40),
-                        ],
-                        stops: const [0.0, 0.4, 1.0],
+                    Positioned.fill(
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                            colors: [
+                              Colors.black.withValues(alpha: 0.20),
+                              Colors.black.withValues(alpha: 0.0),
+                              Colors.black.withValues(alpha: 0.40),
+                            ],
+                            stops: const [0.0, 0.4, 1.0],
+                          ),
+                        ),
                       ),
                     ),
-                  ),
 
                   // 左上: 位置标签 (半透明容器，避免 BackdropFilter 在列表中的性能开销)
                   if (task.location != null)
@@ -304,7 +306,7 @@ class _HorizontalTaskCard extends StatelessWidget {
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 Text(
-                                  task.currency == 'GBP' ? '£' : '\$',
+                                  '£',
                                   style: const TextStyle(
                                     fontSize: 10,
                                     fontWeight: FontWeight.bold,

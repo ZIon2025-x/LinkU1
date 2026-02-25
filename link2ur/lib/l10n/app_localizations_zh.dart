@@ -1249,6 +1249,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get activityApplied => '已申请';
 
   @override
+  String get activityParticipated => '已参与';
+
+  @override
   String get activityApplyToJoin => '申请参加活动';
 
   @override
@@ -7094,7 +7097,28 @@ class AppLocalizationsZh extends AppLocalizations {
   String get createTaskCategoryWriting => '写作';
 
   @override
+  String get createTaskCategoryPhotography => '摄影';
+
+  @override
+  String get createTaskCategoryMoving => '搬家';
+
+  @override
+  String get createTaskCategoryCleaning => '清洁';
+
+  @override
+  String get createTaskCategoryRepair => '维修';
+
+  @override
   String get createTaskCategoryOther => '其他';
+
+  @override
+  String get profileDirectRequestValidation => '请填写标题和有效价格（≥£1）';
+
+  @override
+  String get profileDirectRequestHintLocation => '地点';
+
+  @override
+  String get profileDirectRequestHintDeadline => '截止日期（选填）';
 
   @override
   String get taskTypeHousekeeping => '家政服务';
@@ -7421,6 +7445,28 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get activityPrize => '奖品';
+
+  @override
+  String activityPrizeCount(Object count) {
+    return '奖品名额：$count';
+  }
+
+  @override
+  String get activityYouWon => '恭喜你中奖了！';
+
+  @override
+  String activityYouWonVoucher(Object code) {
+    return '你的优惠码：$code';
+  }
+
+  @override
+  String get activityNotWon => '期待下次活动';
+
+  @override
+  String get activityDrawCompleted => '已开奖';
+
+  @override
+  String get activityLotteryPending => '等待开奖';
 
   @override
   String activityPersonCount(int current, int max) {
@@ -9863,6 +9909,9 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get activityApplied => '已申請';
+
+  @override
+  String get activityParticipated => '已參與';
 
   @override
   String get activityApplyToJoin => '申請參加活動';
@@ -15710,7 +15759,28 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get createTaskCategoryWriting => '寫作';
 
   @override
+  String get createTaskCategoryPhotography => '攝影';
+
+  @override
+  String get createTaskCategoryMoving => '搬家';
+
+  @override
+  String get createTaskCategoryCleaning => '清潔';
+
+  @override
+  String get createTaskCategoryRepair => '維修';
+
+  @override
   String get createTaskCategoryOther => '其他';
+
+  @override
+  String get profileDirectRequestValidation => '請填寫標題和有效價格（≥£1）';
+
+  @override
+  String get profileDirectRequestHintLocation => '地點';
+
+  @override
+  String get profileDirectRequestHintDeadline => '截止日期（選填）';
 
   @override
   String get taskTypeHousekeeping => '家政服務';
@@ -16037,6 +16107,28 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get activityPrize => '獎品';
+
+  @override
+  String activityPrizeCount(Object count) {
+    return '獎品名額：$count';
+  }
+
+  @override
+  String get activityYouWon => '恭喜你中獎了！';
+
+  @override
+  String activityYouWonVoucher(Object code) {
+    return '你的優惠碼：$code';
+  }
+
+  @override
+  String get activityNotWon => '期待下次活動';
+
+  @override
+  String get activityDrawCompleted => '已開獎';
+
+  @override
+  String get activityLotteryPending => '等待開獎';
 
   @override
   String activityPersonCount(int current, int max) {

@@ -67,12 +67,10 @@ class _PostLinkSearchDialogContent extends StatefulWidget {
   const _PostLinkSearchDialogContent({
     required this.discoveryRepo,
     required this.isDark,
-    required this.userRelated,
   });
 
   final DiscoveryRepository discoveryRepo;
   final bool isDark;
-  final List<Map<String, dynamic>> userRelated;
 
   @override
   State<_PostLinkSearchDialogContent> createState() => _PostLinkSearchDialogContentState();
@@ -80,13 +78,31 @@ class _PostLinkSearchDialogContent extends StatefulWidget {
 
 class _PostLinkSearchDialogContentState extends State<_PostLinkSearchDialogContent> {
   late final TextEditingController _queryCtrl;
+  List<Map<String, dynamic>> _userRelated = [];
   List<Map<String, dynamic>> _results = [];
+  bool _loadingRelated = true;
   bool _loading = false;
 
   @override
   void initState() {
     super.initState();
     _queryCtrl = TextEditingController();
+    _loadUserRelated();
+  }
+
+  Future<void> _loadUserRelated() async {
+    try {
+      final list = await widget.discoveryRepo.getLinkableContentForUser();
+      if (mounted) {
+        setState(() {
+          _userRelated = list;
+          _loadingRelated = false;
+        });
+      }
+    } catch (e) {
+      AppLogger.warning('Failed to load linkable content for post: $e');
+      if (mounted) setState(() => _loadingRelated = false);
+    }
   }
 
   @override
@@ -169,10 +185,15 @@ class _PostLinkSearchDialogContentState extends State<_PostLinkSearchDialogConte
                 ],
               ),
               const SizedBox(height: 12),
-              if (widget.userRelated.isNotEmpty) ...[
+              if (_loadingRelated)
+                const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 24),
+                  child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+                )
+              else if (_userRelated.isNotEmpty) ...[
                 Align(
                   alignment: Alignment.centerLeft,
-                    child: Text(
+                  child: Text(
                     context.l10n.publishRelatedToMe,
                     style: TextStyle(
                       fontSize: 13,
@@ -182,14 +203,14 @@ class _PostLinkSearchDialogContentState extends State<_PostLinkSearchDialogConte
                   ),
                 ),
                 const SizedBox(height: 4),
-                _buildLinkableList(widget.userRelated, 200),
+                _buildLinkableList(_userRelated, 200),
                 const SizedBox(height: 12),
               ],
               if (_loading) const Center(child: CircularProgressIndicator()),
               if (!_loading && _results.isNotEmpty) ...[
                 Align(
                   alignment: Alignment.centerLeft,
-                    child: Text(
+                  child: Text(
                     context.l10n.publishSearchResults,
                     style: TextStyle(
                       fontSize: 13,
@@ -1263,30 +1284,19 @@ class _PublishContentState extends State<_PublishContent>
               ),
               const SizedBox(width: AppSpacing.sm),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                 decoration: BoxDecoration(
                   color: isDark
                       ? Colors.white.withValues(alpha: 0.06)
                       : AppColors.primary.withValues(alpha: 0.06),
                   borderRadius: AppRadius.allMedium,
                 ),
-                child: DropdownButtonHideUnderline(
-                  child: DropdownButton<String>(
-                    value: _taskCurrency,
-                    isDense: true,
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: isDark ? AppColors.textPrimaryDark : AppColors.primary,
-                    ),
-                    items: const [
-                      DropdownMenuItem(value: 'GBP', child: Text('GBP')),
-                      DropdownMenuItem(value: 'USD', child: Text('USD')),
-                      DropdownMenuItem(value: 'CNY', child: Text('CNY')),
-                    ],
-                    onChanged: (v) {
-                      if (v != null) setState(() => _taskCurrency = v);
-                    },
+                child: Text(
+                  'GBP',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: isDark ? AppColors.textPrimaryDark : AppColors.primary,
                   ),
                 ),
               ),
@@ -1931,20 +1941,12 @@ class _PublishContentState extends State<_PublishContent>
 
   Future<void> _showPostLinkSearchDialog(bool isDark) async {
     final discoveryRepo = context.read<DiscoveryRepository>();
-    List<Map<String, dynamic>> userRelated = [];
-    try {
-      userRelated = await discoveryRepo.getLinkableContentForUser();
-    } catch (e) {
-      AppLogger.warning('Failed to load linkable content for post: $e');
-    }
-    if (!mounted) return;
 
     final result = await showDialog<Map<String, String>>(
       context: context,
       builder: (ctx) => _PostLinkSearchDialogContent(
         discoveryRepo: discoveryRepo,
         isDark: isDark,
-        userRelated: userRelated,
       ),
     );
     if (result != null && mounted) {

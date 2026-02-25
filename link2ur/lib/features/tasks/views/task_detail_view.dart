@@ -1,5 +1,8 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:image_picker/image_picker.dart';
 import '../../../core/utils/haptic_feedback.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
@@ -511,7 +514,7 @@ class _TaskDetailContent extends StatelessWidget {
                   AnimatedListItem(
                     index: 3,
                     child: CompletionEvidenceCard(
-                      evidence: task.completionEvidence!,
+                      evidenceList: task.completionEvidence!,
                       isDark: isDark,
                     ),
                   ),
@@ -749,7 +752,7 @@ class _TaskDetailContent extends StatelessWidget {
 
   void _showCompleteTaskSheet(BuildContext context) {
     final bloc = context.read<TaskDetailBloc>();
-    final textController = TextEditingController();
+    final taskRepo = context.read<TaskRepository>();
 
     showModalBottomSheet<void>(
       context: context,
@@ -757,67 +760,11 @@ class _TaskDetailContent extends StatelessWidget {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder: (sheetContext) => Padding(
-        padding: EdgeInsets.only(
-          bottom: MediaQuery.of(sheetContext).viewInsets.bottom,
-          left: 24,
-          right: 24,
-          top: 24,
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(context.l10n.taskEvidenceTitle,
-                style: AppTypography.title3),
-            const SizedBox(height: 8),
-            Text(context.l10n.taskEvidenceHint,
-                style: AppTypography.footnote.copyWith(
-                    color: AppColors.textSecondaryLight)),
-            const SizedBox(height: 16),
-            Text(context.l10n.taskEvidenceTextLabel,
-                style: AppTypography.subheadlineBold),
-            const SizedBox(height: 8),
-            TextField(
-              controller: textController,
-              maxLines: 4,
-              maxLength: 500,
-              decoration: InputDecoration(
-                hintText: context.l10n.taskEvidenceTextHint,
-                border: const OutlineInputBorder(),
-              ),
-            ),
-            const SizedBox(height: 16),
-            Text(context.l10n.taskEvidenceImagesLabel,
-                style: AppTypography.subheadlineBold),
-            const SizedBox(height: 4),
-            Text(context.l10n.taskEvidenceImageLimit,
-                style: AppTypography.caption.copyWith(
-                    color: AppColors.textSecondaryLight)),
-            const SizedBox(height: 16),
-            SizedBox(
-              width: double.infinity,
-              child: FilledButton.icon(
-                onPressed: () {
-                  final text = textController.text.trim();
-                  bloc.add(TaskDetailCompleteRequested(
-                    evidenceText: text.isEmpty ? null : text,
-                  ));
-                  Navigator.pop(sheetContext);
-                },
-                icon: const Icon(Icons.check_circle),
-                label: Text(context.l10n.taskEvidenceSubmit),
-                style: FilledButton.styleFrom(
-                  backgroundColor: AppColors.success,
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                ),
-              ),
-            ),
-            const SizedBox(height: 24),
-          ],
-        ),
+      builder: (sheetContext) => _CompleteTaskSheetContent(
+        bloc: bloc,
+        taskRepo: taskRepo,
       ),
-    ).then((_) => textController.dispose());
+    );
   }
 
   /// 待支付任务：拉取支付数据并打开支付页
@@ -1238,7 +1185,6 @@ class _TaskHeaderCard extends StatelessWidget {
     final amount = task.displayReward;
     if (amount <= 0) return const SizedBox.shrink();
 
-    final currencySymbol = task.currency == 'GBP' ? '£' : '\$';
     final priceText = amount.truncateToDouble() == amount
         ? amount.toStringAsFixed(0)
         : amount.toStringAsFixed(2);
@@ -1250,7 +1196,7 @@ class _TaskHeaderCard extends StatelessWidget {
       textBaseline: TextBaseline.alphabetic,
       children: [
         Text(
-          currencySymbol,
+          '£',
           style: AppTypography.title3.copyWith(
             color: goldColor,
             fontWeight: FontWeight.bold,
@@ -2255,6 +2201,182 @@ class _TimelineItemTile extends StatelessWidget {
               ),
             ),
           ),
+        ],
+      ),
+    );
+  }
+}
+
+/// 完成任务证据收集 Sheet（支持图片+文字）
+class _CompleteTaskSheetContent extends StatefulWidget {
+  const _CompleteTaskSheetContent({
+    required this.bloc,
+    required this.taskRepo,
+  });
+
+  final TaskDetailBloc bloc;
+  final TaskRepository taskRepo;
+
+  @override
+  State<_CompleteTaskSheetContent> createState() => _CompleteTaskSheetContentState();
+}
+
+class _CompleteTaskSheetContentState extends State<_CompleteTaskSheetContent> {
+  final _textController = TextEditingController();
+  final _imagePicker = ImagePicker();
+  final List<XFile> _selectedImages = [];
+  bool _isSubmitting = false;
+
+  @override
+  void dispose() {
+    _textController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _pickImages() async {
+    final remaining = 5 - _selectedImages.length;
+    if (remaining <= 0) return;
+    final picked = await _imagePicker.pickMultiImage(
+      imageQuality: 80,
+      maxWidth: 1920,
+    );
+    if (picked.isNotEmpty && mounted) {
+      setState(() {
+        _selectedImages.addAll(picked.take(remaining));
+      });
+    }
+  }
+
+  Future<void> _submit() async {
+    if (_isSubmitting) return;
+    setState(() => _isSubmitting = true);
+
+    try {
+      List<String>? imageUrls;
+      if (_selectedImages.isNotEmpty) {
+        imageUrls = [];
+        for (final img in _selectedImages) {
+          final url = await widget.taskRepo.uploadTaskImage(img.path);
+          imageUrls.add(url);
+        }
+      }
+
+      final text = _textController.text.trim();
+      widget.bloc.add(TaskDetailCompleteRequested(
+        evidenceImages: imageUrls,
+        evidenceText: text.isEmpty ? null : text,
+      ));
+
+      if (mounted) Navigator.pop(context);
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isSubmitting = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('$e'), backgroundColor: Colors.red),
+        );
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    return Padding(
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.of(context).viewInsets.bottom,
+        left: 24, right: 24, top: 24,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(l10n.taskEvidenceTitle, style: AppTypography.title3),
+          const SizedBox(height: 8),
+          Text(l10n.taskEvidenceHint,
+              style: AppTypography.footnote.copyWith(color: AppColors.textSecondaryLight)),
+          const SizedBox(height: 16),
+          Text(l10n.taskEvidenceTextLabel, style: AppTypography.subheadlineBold),
+          const SizedBox(height: 8),
+          TextField(
+            controller: _textController,
+            maxLines: 4,
+            maxLength: 500,
+            decoration: InputDecoration(
+              hintText: l10n.taskEvidenceTextHint,
+              border: const OutlineInputBorder(),
+            ),
+          ),
+          const SizedBox(height: 16),
+          Text(l10n.taskEvidenceImagesLabel, style: AppTypography.subheadlineBold),
+          const SizedBox(height: 4),
+          Text(l10n.taskEvidenceImageLimit,
+              style: AppTypography.caption.copyWith(color: AppColors.textSecondaryLight)),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              ..._selectedImages.asMap().entries.map((entry) {
+                return Stack(
+                  children: [
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: Image.file(
+                        File(entry.value.path),
+                        width: 72, height: 72, fit: BoxFit.cover,
+                      ),
+                    ),
+                    Positioned(
+                      top: 2, right: 2,
+                      child: GestureDetector(
+                        onTap: () => setState(() => _selectedImages.removeAt(entry.key)),
+                        child: Container(
+                          decoration: const BoxDecoration(color: Colors.black54, shape: BoxShape.circle),
+                          padding: const EdgeInsets.all(2),
+                          child: const Icon(Icons.close, size: 14, color: Colors.white),
+                        ),
+                      ),
+                    ),
+                  ],
+                );
+              }),
+              if (_selectedImages.length < 5)
+                GestureDetector(
+                  onTap: _pickImages,
+                  child: Container(
+                    width: 72, height: 72,
+                    decoration: BoxDecoration(
+                      border: Border.all(color: AppColors.dividerLight),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(Icons.add_photo_alternate_outlined, color: AppColors.textSecondaryLight),
+                        Text('${_selectedImages.length}/5',
+                            style: const TextStyle(fontSize: 11, color: AppColors.textSecondaryLight)),
+                      ],
+                    ),
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton.icon(
+              onPressed: _isSubmitting ? null : _submit,
+              icon: _isSubmitting
+                  ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                  : const Icon(Icons.check_circle),
+              label: Text(l10n.taskEvidenceSubmit),
+              style: FilledButton.styleFrom(
+                backgroundColor: AppColors.success,
+                padding: const EdgeInsets.symmetric(vertical: 14),
+              ),
+            ),
+          ),
+          const SizedBox(height: 24),
         ],
       ),
     );

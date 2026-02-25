@@ -1,4 +1,8 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
+import 'package:image_picker/image_picker.dart';
 import '../../../core/utils/haptic_feedback.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -21,6 +25,7 @@ import '../../../data/models/task.dart';
 import '../../../data/models/task_application.dart';
 import '../../../data/models/review.dart';
 import '../../../data/models/refund_request.dart';
+import '../../../data/repositories/task_repository.dart';
 import '../bloc/task_detail_bloc.dart';
 import 'task_detail_helpers.dart';
 
@@ -313,15 +318,32 @@ class WaitingConfirmationCard extends StatelessWidget {
 class CompletionEvidenceCard extends StatelessWidget {
   const CompletionEvidenceCard({
     super.key,
-    required this.evidence,
+    required this.evidenceList,
     required this.isDark,
   });
 
-  final String evidence;
+  final List<Map<String, dynamic>> evidenceList;
   final bool isDark;
 
   @override
   Widget build(BuildContext context) {
+    final texts = <String>[];
+    final images = <String>[];
+
+    for (final item in evidenceList) {
+      final type = item['type'] as String? ?? '';
+      final content = item['content'] as String? ?? '';
+      if (type == 'image' && content.isNotEmpty) {
+        images.add(content);
+      } else if (content.isNotEmpty) {
+        texts.add(content);
+      }
+      final url = item['url'] as String?;
+      if (url != null && url.isNotEmpty) {
+        images.add(url);
+      }
+    }
+
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
       padding: const EdgeInsets.all(AppSpacing.md),
@@ -355,16 +377,37 @@ class CompletionEvidenceCard extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: AppSpacing.md),
-          Text(
-            evidence,
-            style: AppTypography.body.copyWith(
-              color: isDark
-                  ? AppColors.textSecondaryDark
-                  : AppColors.textSecondaryLight,
-              height: 1.6,
+          if (texts.isNotEmpty) ...[
+            const SizedBox(height: AppSpacing.md),
+            ...texts.map((t) => Padding(
+              padding: const EdgeInsets.only(bottom: 4),
+              child: Text(
+                t,
+                style: AppTypography.body.copyWith(
+                  color: isDark
+                      ? AppColors.textSecondaryDark
+                      : AppColors.textSecondaryLight,
+                  height: 1.6,
+                ),
+              ),
+            )),
+          ],
+          if (images.isNotEmpty) ...[
+            const SizedBox(height: AppSpacing.sm),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: images.map((url) => ClipRRect(
+                borderRadius: AppRadius.allSmall,
+                child: AsyncImageView(
+                  imageUrl: url,
+                  width: 100,
+                  height: 100,
+                  fit: BoxFit.cover,
+                ),
+              )).toList(),
             ),
-          ),
+          ],
         ],
       ),
     );
@@ -612,6 +655,34 @@ class _ApplicationItem extends StatelessWidget {
   final TaskApplication application;
   final bool isDark;
 
+  void _confirmReject(BuildContext context) {
+    showDialog<bool>(
+      context: context,
+      builder: (d) => AlertDialog(
+        title: Text(context.l10n.taskDetailRejectApplication),
+        content: Text(context.l10n.taskDetailRejectApplicationConfirm),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(d, false),
+            child: Text(context.l10n.commonCancel),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: AppColors.error),
+            onPressed: () => Navigator.pop(d, true),
+            child: Text(context.l10n.commonConfirm),
+          ),
+        ],
+      ),
+    ).then((confirmed) {
+      if (confirmed == true && context.mounted) {
+        AppHaptics.medium();
+        context.read<TaskDetailBloc>().add(
+              TaskDetailRejectApplicant(application.id),
+            );
+      }
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final statusColor = application.isPending
@@ -635,34 +706,48 @@ class _ApplicationItem extends StatelessWidget {
           children: [
             Row(
               children: [
-                AvatarView(
-                  imageUrl: application.applicantAvatar,
-                  name: application.applicantName,
+                GestureDetector(
+                  onTap: () {
+                    if (application.applicantId != null) {
+                      context.push('/user/${application.applicantId}');
+                    }
+                  },
+                  child: AvatarView(
+                    imageUrl: application.applicantAvatar,
+                    name: application.applicantName,
+                  ),
                 ),
                 const SizedBox(width: AppSpacing.sm),
                 Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        application.applicantName ??
-                            context.l10n.taskDetailUnknownUser,
-                        style: AppTypography.bodyBold.copyWith(
-                          color: isDark
-                              ? AppColors.textPrimaryDark
-                              : AppColors.textPrimaryLight,
-                        ),
-                      ),
-                      if (application.createdAt != null)
+                  child: GestureDetector(
+                    onTap: () {
+                      if (application.applicantId != null) {
+                        context.push('/user/${application.applicantId}');
+                      }
+                    },
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
                         Text(
-                          application.createdAt!,
-                          style: AppTypography.caption.copyWith(
+                          application.applicantName ??
+                              context.l10n.taskDetailUnknownUser,
+                          style: AppTypography.bodyBold.copyWith(
                             color: isDark
-                                ? AppColors.textTertiaryDark
-                                : AppColors.textTertiaryLight,
+                                ? AppColors.textPrimaryDark
+                                : AppColors.textPrimaryLight,
                           ),
                         ),
-                    ],
+                        if (application.createdAt != null)
+                          Text(
+                            application.createdAt!,
+                            style: AppTypography.caption.copyWith(
+                              color: isDark
+                                  ? AppColors.textTertiaryDark
+                                  : AppColors.textTertiaryLight,
+                            ),
+                          ),
+                      ],
+                    ),
                   ),
                 ),
                 Container(
@@ -706,6 +791,34 @@ class _ApplicationItem extends StatelessWidget {
                 ),
               ),
             ],
+            // 议价金额
+            if (application.proposedPrice != null &&
+                application.proposedPrice! > 0) ...[
+              const SizedBox(height: 8),
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withValues(alpha: 0.1),
+                  borderRadius: AppRadius.allSmall,
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.price_change_outlined,
+                        size: 16, color: AppColors.primary),
+                    const SizedBox(width: 4),
+                    Text(
+                      '${context.l10n.taskApplicationExpectedAmount}: £${application.proposedPrice!.toStringAsFixed(2)}',
+                      style: AppTypography.caption.copyWith(
+                        color: AppColors.primary,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
             // 操作按钮 (仅 pending 时显示)
             if (application.isPending) ...[
               const SizedBox(height: AppSpacing.md),
@@ -725,12 +838,7 @@ class _ApplicationItem extends StatelessWidget {
                   _ActionCircleButton(
                     icon: Icons.cancel,
                     color: AppColors.error,
-                    onTap: () {
-                      AppHaptics.medium();
-                      context.read<TaskDetailBloc>().add(
-                            TaskDetailRejectApplicant(application.id),
-                          );
-                    },
+                    onTap: () => _confirmReject(context),
                   ),
                   const Spacer(),
                   _ApplicationMessageButton(
@@ -1371,8 +1479,8 @@ class TaskActionButtonsView extends StatelessWidget {
         onPressed: state.isSubmitting
             ? null
             : () {
-                final textController = TextEditingController();
                 final bloc = context.read<TaskDetailBloc>();
+                final taskRepo = context.read<TaskRepository>();
                 showModalBottomSheet<void>(
                   context: context,
                   isScrollControlled: true,
@@ -1380,57 +1488,11 @@ class TaskActionButtonsView extends StatelessWidget {
                     borderRadius:
                         BorderRadius.vertical(top: Radius.circular(20)),
                   ),
-                  builder: (sc) => Padding(
-                    padding: EdgeInsets.only(
-                      bottom: MediaQuery.of(sc).viewInsets.bottom,
-                      left: 24, right: 24, top: 24,
-                    ),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(context.l10n.taskEvidenceTitle,
-                            style: AppTypography.title3),
-                        const SizedBox(height: 8),
-                        Text(context.l10n.taskEvidenceHint,
-                            style: AppTypography.footnote),
-                        const SizedBox(height: 16),
-                        TextField(
-                          controller: textController,
-                          maxLines: 4,
-                          maxLength: 500,
-                          decoration: InputDecoration(
-                            hintText: context.l10n.taskEvidenceTextHint,
-                            border: const OutlineInputBorder(),
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        SizedBox(
-                          width: double.infinity,
-                          child: FilledButton.icon(
-                            onPressed: () {
-                              final text = textController.text.trim();
-                              bloc.add(TaskDetailCompleteRequested(
-                                evidenceText:
-                                    text.isEmpty ? null : text,
-                              ));
-                              Navigator.pop(sc);
-                            },
-                            icon: const Icon(Icons.check_circle),
-                            label:
-                                Text(context.l10n.taskEvidenceSubmit),
-                            style: FilledButton.styleFrom(
-                              backgroundColor: AppColors.success,
-                              padding: const EdgeInsets.symmetric(
-                                  vertical: 14),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 24),
-                      ],
-                    ),
+                  builder: (sc) => _EvidenceCollectionSheet(
+                    bloc: bloc,
+                    taskRepo: taskRepo,
                   ),
-                ).then((_) => textController.dispose());
+                );
               },
         gradient: LinearGradient(
           colors: [AppColors.success, AppColors.success.withValues(alpha: 0.8)],
@@ -1860,9 +1922,15 @@ class _ApplyTaskSheetState extends State<ApplyTaskSheet> {
 
     return BlocListener<TaskDetailBloc, TaskDetailState>(
       listenWhen: (prev, cur) =>
-          cur.actionMessage == 'application_failed' && cur.isSubmitting == false,
-      listener: (_, __) {
-        if (mounted) setState(() => _isSubmitting = false);
+          cur.isSubmitting != prev.isSubmitting ||
+          (cur.actionMessage != null &&
+              cur.actionMessage != prev.actionMessage),
+      listener: (_, state) {
+        if (!mounted) return;
+        if (state.actionMessage == 'application_failed' ||
+            state.actionMessage == 'stripe_setup_required') {
+          setState(() => _isSubmitting = false);
+        }
       },
       child: DraggableScrollableSheet(
       initialChildSize: 0.6,
@@ -1979,7 +2047,7 @@ class _ApplyTaskSheetState extends State<ApplyTaskSheet> {
                             decoration: InputDecoration(
                               labelText: l10n.taskApplicationExpectedAmount,
                               prefixText:
-                                  '${widget.task.currency == 'GBP' ? '£' : widget.task.currency} ',
+                                  '£ ',
                               border: OutlineInputBorder(
                                 borderRadius:
                                     BorderRadius.circular(AppRadius.medium),
@@ -2906,6 +2974,161 @@ class _RefundRebuttalSheetState extends State<RefundRebuttalSheet> {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// 证据收集 Sheet（支持图片+文字），用于 TaskActionButtonsView
+class _EvidenceCollectionSheet extends StatefulWidget {
+  const _EvidenceCollectionSheet({
+    required this.bloc,
+    required this.taskRepo,
+  });
+
+  final TaskDetailBloc bloc;
+  final TaskRepository taskRepo;
+
+  @override
+  State<_EvidenceCollectionSheet> createState() => _EvidenceCollectionSheetState();
+}
+
+class _EvidenceCollectionSheetState extends State<_EvidenceCollectionSheet> {
+  final _textController = TextEditingController();
+  final _imagePicker = ImagePicker();
+  final List<XFile> _images = [];
+  bool _isSubmitting = false;
+
+  @override
+  void dispose() {
+    _textController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _pickImages() async {
+    final remaining = 5 - _images.length;
+    if (remaining <= 0) return;
+    final picked = await _imagePicker.pickMultiImage(imageQuality: 80, maxWidth: 1920);
+    if (picked.isNotEmpty && mounted) {
+      setState(() => _images.addAll(picked.take(remaining)));
+    }
+  }
+
+  Future<void> _submit() async {
+    if (_isSubmitting) return;
+    setState(() => _isSubmitting = true);
+    try {
+      List<String>? imageUrls;
+      if (_images.isNotEmpty) {
+        imageUrls = [];
+        for (final img in _images) {
+          final url = await widget.taskRepo.uploadTaskImage(img.path);
+          imageUrls.add(url);
+        }
+      }
+      final text = _textController.text.trim();
+      widget.bloc.add(TaskDetailCompleteRequested(
+        evidenceImages: imageUrls,
+        evidenceText: text.isEmpty ? null : text,
+      ));
+      if (mounted) Navigator.pop(context);
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isSubmitting = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('$e'), backgroundColor: Colors.red),
+        );
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    return Padding(
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.of(context).viewInsets.bottom,
+        left: 24, right: 24, top: 24,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(l10n.taskEvidenceTitle, style: AppTypography.title3),
+          const SizedBox(height: 8),
+          Text(l10n.taskEvidenceHint, style: AppTypography.footnote),
+          const SizedBox(height: 16),
+          TextField(
+            controller: _textController,
+            maxLines: 4,
+            maxLength: 500,
+            decoration: InputDecoration(
+              hintText: l10n.taskEvidenceTextHint,
+              border: const OutlineInputBorder(),
+            ),
+          ),
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              ..._images.asMap().entries.map((entry) => Stack(
+                children: [
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: Image.file(File(entry.value.path), width: 72, height: 72, fit: BoxFit.cover),
+                  ),
+                  Positioned(
+                    top: 2, right: 2,
+                    child: GestureDetector(
+                      onTap: () => setState(() => _images.removeAt(entry.key)),
+                      child: Container(
+                        decoration: const BoxDecoration(color: Colors.black54, shape: BoxShape.circle),
+                        padding: const EdgeInsets.all(2),
+                        child: const Icon(Icons.close, size: 14, color: Colors.white),
+                      ),
+                    ),
+                  ),
+                ],
+              )),
+              if (_images.length < 5)
+                GestureDetector(
+                  onTap: _pickImages,
+                  child: Container(
+                    width: 72, height: 72,
+                    decoration: BoxDecoration(
+                      border: Border.all(color: AppColors.dividerLight),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(Icons.add_photo_alternate_outlined, color: AppColors.textSecondaryLight),
+                        Text('${_images.length}/5',
+                            style: const TextStyle(fontSize: 11, color: AppColors.textSecondaryLight)),
+                      ],
+                    ),
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton.icon(
+              onPressed: _isSubmitting ? null : _submit,
+              icon: _isSubmitting
+                  ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                  : const Icon(Icons.check_circle),
+              label: Text(l10n.taskEvidenceSubmit),
+              style: FilledButton.styleFrom(
+                backgroundColor: AppColors.success,
+                padding: const EdgeInsets.symmetric(vertical: 14),
+              ),
+            ),
+          ),
+          const SizedBox(height: 24),
+        ],
       ),
     );
   }

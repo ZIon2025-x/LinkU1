@@ -100,9 +100,8 @@ class _TaskChatContentState extends State<_TaskChatContent> {
   /// reverse 模式下，往上滚动（远离 0）= 查看历史消息
   /// maxScrollExtent 方向是旧消息，接近 0 是最新消息
   void _onScroll() {
-    if (!_scrollController.hasClients) return;
+    if (!mounted || !_scrollController.hasClients) return;
 
-    // 滚动到历史消息方向 → 加载更多
     if (_scrollController.position.pixels >=
         _scrollController.position.maxScrollExtent - 50) {
       context.read<ChatBloc>().add(const ChatLoadMore());

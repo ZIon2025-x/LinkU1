@@ -2517,6 +2517,12 @@ abstract class AppLocalizations {
   /// **'Applied'**
   String get activityApplied;
 
+  /// No description provided for @activityParticipated.
+  ///
+  /// In en, this message translates to:
+  /// **'Participated'**
+  String get activityParticipated;
+
   /// No description provided for @activityApplyToJoin.
   ///
   /// In en, this message translates to:
@@ -13562,11 +13568,53 @@ abstract class AppLocalizations {
   /// **'Writing'**
   String get createTaskCategoryWriting;
 
+  /// No description provided for @createTaskCategoryPhotography.
+  ///
+  /// In en, this message translates to:
+  /// **'Photography'**
+  String get createTaskCategoryPhotography;
+
+  /// No description provided for @createTaskCategoryMoving.
+  ///
+  /// In en, this message translates to:
+  /// **'Moving'**
+  String get createTaskCategoryMoving;
+
+  /// No description provided for @createTaskCategoryCleaning.
+  ///
+  /// In en, this message translates to:
+  /// **'Cleaning'**
+  String get createTaskCategoryCleaning;
+
+  /// No description provided for @createTaskCategoryRepair.
+  ///
+  /// In en, this message translates to:
+  /// **'Repair'**
+  String get createTaskCategoryRepair;
+
   /// No description provided for @createTaskCategoryOther.
   ///
   /// In en, this message translates to:
   /// **'Other'**
   String get createTaskCategoryOther;
+
+  /// No description provided for @profileDirectRequestValidation.
+  ///
+  /// In en, this message translates to:
+  /// **'Please fill in the title and a valid price (≥£1)'**
+  String get profileDirectRequestValidation;
+
+  /// No description provided for @profileDirectRequestHintLocation.
+  ///
+  /// In en, this message translates to:
+  /// **'Location'**
+  String get profileDirectRequestHintLocation;
+
+  /// No description provided for @profileDirectRequestHintDeadline.
+  ///
+  /// In en, this message translates to:
+  /// **'Deadline (optional)'**
+  String get profileDirectRequestHintDeadline;
 
   /// No description provided for @taskTypeHousekeeping.
   ///
@@ -14215,6 +14263,42 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Prize'**
   String get activityPrize;
+
+  /// No description provided for @activityPrizeCount.
+  ///
+  /// In en, this message translates to:
+  /// **'Prize Slots: {count}'**
+  String activityPrizeCount(Object count);
+
+  /// No description provided for @activityYouWon.
+  ///
+  /// In en, this message translates to:
+  /// **'Congratulations! You Won!'**
+  String get activityYouWon;
+
+  /// No description provided for @activityYouWonVoucher.
+  ///
+  /// In en, this message translates to:
+  /// **'Your voucher code: {code}'**
+  String activityYouWonVoucher(Object code);
+
+  /// No description provided for @activityNotWon.
+  ///
+  /// In en, this message translates to:
+  /// **'Stay Tuned for Next Event'**
+  String get activityNotWon;
+
+  /// No description provided for @activityDrawCompleted.
+  ///
+  /// In en, this message translates to:
+  /// **'Draw Completed'**
+  String get activityDrawCompleted;
+
+  /// No description provided for @activityLotteryPending.
+  ///
+  /// In en, this message translates to:
+  /// **'Awaiting Draw'**
+  String get activityLotteryPending;
 
   /// No description provided for @activityPersonCount.
   ///

@@ -21,7 +21,7 @@ class ActivityPriceWidget extends StatelessWidget {
     final tertiaryColor = isDark
         ? AppColors.textTertiaryDark
         : AppColors.textTertiaryLight;
-    final symbol = activity.currency == 'GBP' ? '£' : '¥';
+    const symbol = '£';
 
     if (activity.hasDiscount &&
         activity.originalPricePerParticipant != null &&
