@@ -435,7 +435,6 @@ class _MainTabViewState extends State<MainTabView>
 
     Widget iconWidget;
     if (index == 3) {
-      // 通知 Tab — 独立 RepaintBoundary 隔离徽章重建
       iconWidget = RepaintBoundary(
         child: _NotificationTabIcon(
           tab: tab,
@@ -450,7 +449,6 @@ class _MainTabViewState extends State<MainTabView>
         size: 24,
         color: isSelected ? Colors.white : unselectedColor,
       );
-      // 选中态：渐变图标
       iconWidget = isSelected
           ? ShaderMask(
               shaderCallback: (bounds) => const LinearGradient(
@@ -471,39 +469,53 @@ class _MainTabViewState extends State<MainTabView>
         child: GestureDetector(
           onTap: () => _onMobileTabTapped(index),
           behavior: HitTestBehavior.opaque,
-          child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            iconWidget,
-            const SizedBox(height: 4),
-            // 选中态：小圆点指示器代替文字颜色变化
-            AnimatedContainer(
-              duration: const Duration(milliseconds: 200),
-              curve: Curves.easeOutCubic,
-              width: isSelected ? 4 : 0,
-              height: isSelected ? 4 : 0,
-              decoration: BoxDecoration(
-                gradient: isSelected
-                    ? const LinearGradient(colors: AppColors.gradientPrimary)
-                    : null,
-                shape: BoxShape.circle,
-              ),
-            ),
-            if (!isSelected) ...[
-              Text(
-                _getTabLabel(context, tab.label),
-                style: TextStyle(
-                  fontSize: 10,
-                  fontWeight: FontWeight.normal,
-                  color: unselectedColor,
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            curve: Curves.easeOutCubic,
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                AnimatedScale(
+                  scale: isSelected ? 1.1 : 1.0,
+                  duration: const Duration(milliseconds: 200),
+                  curve: Curves.easeOutCubic,
+                  child: iconWidget,
                 ),
-              ),
-            ],
-          ],
+                const SizedBox(height: 4),
+                AnimatedContainer(
+                  duration: const Duration(milliseconds: 250),
+                  curve: Curves.easeOutCubic,
+                  width: isSelected ? 4 : 0,
+                  height: isSelected ? 4 : 0,
+                  decoration: BoxDecoration(
+                    gradient: isSelected
+                        ? const LinearGradient(colors: AppColors.gradientPrimary)
+                        : null,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+                AnimatedOpacity(
+                  opacity: isSelected ? 0.0 : 1.0,
+                  duration: const Duration(milliseconds: 150),
+                  child: AnimatedSlide(
+                    offset: isSelected ? const Offset(0, -0.3) : Offset.zero,
+                    duration: const Duration(milliseconds: 150),
+                    child: Text(
+                      _getTabLabel(context, tab.label),
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.normal,
+                        color: unselectedColor,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
         ),
       ),
-    ),
-  );
+    );
   }
 
   Widget _buildCenterButton() {

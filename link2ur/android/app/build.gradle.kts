@@ -57,13 +57,14 @@ android {
         }
     }
 
-    // ABI 分包：为每种架构生成独立 APK，减少单个 APK 体积 30-50%
+    // AAB（bundleRelease）由 Google Play 按 ABI 自动拆分，不应在本地再启用 ABI splits。
+    // 否则会触发 buildReleasePreBundle 的 multiple shrunk-resources 冲突。
     splits {
         abi {
-            isEnable = true
+            isEnable = false
             reset()
             include("armeabi-v7a", "arm64-v8a")
-            isUniversalApk = true // 同时生成包含所有架构的通用 APK
+            isUniversalApk = false
         }
     }
 
@@ -97,6 +98,9 @@ configurations.all {
 
 dependencies {
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
+    // Flutter embedding 在 release + R8 下会引用 splitinstall/splitcompat 类
+    // 使用 feature-delivery（新拆分依赖）避免与 review/core-common 重复类冲突
+    implementation("com.google.android.play:feature-delivery:2.1.0")
     // Firebase BOM + FCM
     implementation(platform("com.google.firebase:firebase-bom:33.7.0"))
     implementation("com.google.firebase:firebase-messaging-ktx")

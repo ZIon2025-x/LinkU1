@@ -74,3 +74,9 @@
 -dontwarn org.conscrypt.**
 -dontwarn org.openjsse.**
 -dontwarn javax.annotation.**
+
+# ==================== Flutter deferred components (optional path) ====================
+# App 未使用 deferred components；R8 在扫描 Flutter embedding 可选代码路径时会要求这些旧 Play Core task 类
+-dontwarn com.google.android.play.core.tasks.OnFailureListener
+-dontwarn com.google.android.play.core.tasks.OnSuccessListener
+-dontwarn com.google.android.play.core.tasks.Task

@@ -4,6 +4,7 @@ import '../design/app_colors.dart';
 import '../design/app_radius.dart';
 import '../design/app_shadows.dart';
 import '../design/app_spacing.dart';
+import '../design/app_typography.dart';
 import '../utils/haptic_feedback.dart';
 
 /// 基础卡片 — 带按压缩放反馈 + 增强阴影
@@ -222,8 +223,7 @@ class ListItemCard extends StatelessWidget {
               children: [
                 Text(
                   title,
-                  style: TextStyle(
-                    fontSize: 16,
+                  style: AppTypography.callout.copyWith(
                     fontWeight: FontWeight.w500,
                     color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
                   ),
@@ -232,8 +232,7 @@ class ListItemCard extends StatelessWidget {
                   const SizedBox(height: 4),
                   Text(
                     subtitle!,
-                    style: TextStyle(
-                      fontSize: 14,
+                    style: AppTypography.footnote.copyWith(
                       color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
                     ),
                   ),
@@ -244,8 +243,9 @@ class ListItemCard extends StatelessWidget {
           if (trailing != null) trailing!,
           if (showArrow && trailing == null)
             Icon(
-              Icons.chevron_right,
+              Icons.chevron_right_rounded,
               color: isDark ? AppColors.textTertiaryDark : AppColors.textTertiaryLight,
+              size: 20,
             ),
         ],
       ),
@@ -339,28 +339,34 @@ class StatCard extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           if (icon != null) ...[
-            Icon(
-              icon,
-              size: 32,
-              color: iconColor ?? AppColors.primary,
+            Container(
+              width: 48,
+              height: 48,
+              decoration: BoxDecoration(
+                color: (iconColor ?? AppColors.primary).withValues(alpha: 0.1),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                icon,
+                size: 24,
+                color: iconColor ?? AppColors.primary,
+              ),
             ),
             AppSpacing.vSm,
           ],
           Text(
             value,
-            style: TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
+            style: AppTypography.price.copyWith(
               color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
             ),
           ),
           const SizedBox(height: 4),
           Text(
             label,
-            style: TextStyle(
-              fontSize: 12,
+            style: AppTypography.caption.copyWith(
               color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
             ),
+            textAlign: TextAlign.center,
           ),
         ],
       ),

@@ -205,18 +205,25 @@ class _EmptyStateViewState extends State<EmptyStateView>
             ],
             if (widget.actionText != null && widget.onAction != null) ...[
               AppSpacing.vLg,
-              // 操作按钮
               ElevatedButton(
                 onPressed: widget.onAction,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.primary,
                   foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
+                  padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 14),
                   shape: RoundedRectangleBorder(
-                    borderRadius: AppRadius.button,
+                    borderRadius: AppRadius.allPill,
                   ),
+                  elevation: 0,
                 ),
-                child: Text(widget.actionText!),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(widget.actionText!),
+                    const SizedBox(width: 6),
+                    const Icon(Icons.arrow_forward_rounded, size: 16),
+                  ],
+                ),
               ),
             ],
           ],

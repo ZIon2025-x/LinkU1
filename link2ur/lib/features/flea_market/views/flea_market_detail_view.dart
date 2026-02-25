@@ -895,13 +895,18 @@ class _FleaMarketDetailContent extends StatelessWidget {
       child: Container(
         height: 50,
         decoration: BoxDecoration(
-          gradient: const LinearGradient(
-            colors: AppColors.gradientRed,
+          gradient: LinearGradient(
+            colors: item.isFree && !hasPendingPayment
+                ? [Colors.green, Colors.green.withValues(alpha: 0.8)]
+                : AppColors.gradientRed,
           ),
           borderRadius: BorderRadius.circular(25),
           boxShadow: [
             BoxShadow(
-              color: AppColors.priceRed.withValues(alpha: 0.4),
+              color: (item.isFree && !hasPendingPayment
+                      ? Colors.green
+                      : AppColors.priceRed)
+                  .withValues(alpha: 0.4),
               blurRadius: 8,
               offset: const Offset(0, 4),
             ),
@@ -1048,21 +1053,30 @@ class _FleaMarketPurchaseSheetState extends State<_FleaMarketPurchaseSheet> {
           c.actionMessage == 'purchase_success' ||
           c.actionMessage == 'negotiate_request_sent' ||
           c.actionMessage == 'open_payment' ||
-          c.actionMessage == 'purchase_failed',
+          c.actionMessage == 'purchase_failed' ||
+          c.actionMessage == 'negotiate_request_failed',
       listener: (c, state) {
-        if (state.actionMessage == 'purchase_failed') {
-          if (mounted) setState(() => _isSubmitting = false);
+        if (state.actionMessage == 'purchase_failed' ||
+            state.actionMessage == 'negotiate_request_failed') {
+          if (mounted) {
+            setState(() {
+              _isSubmitting = false;
+              _errorMessage = state.errorMessage;
+            });
+          }
         } else {
           Navigator.of(c).pop();
         }
       },
       child: DraggableScrollableSheet(
-      initialChildSize: 0.55,
+      initialChildSize: 0.65,
       minChildSize: 0.4,
-      maxChildSize: 0.85,
+      maxChildSize: 0.9,
       expand: false,
       builder: (context, scrollController) {
-        return Container(
+        return Stack(
+          children: [
+          Container(
           decoration: BoxDecoration(
             color: Theme.of(context).scaffoldBackgroundColor,
             borderRadius:
@@ -1092,7 +1106,9 @@ class _FleaMarketPurchaseSheetState extends State<_FleaMarketPurchaseSheet> {
                           fontSize: 18, fontWeight: FontWeight.w600),
                     ),
                     IconButton(
-                      onPressed: () => Navigator.of(context).pop(),
+                      onPressed: _isSubmitting
+                          ? null
+                          : () => Navigator.of(context).pop(),
                       icon: const Icon(Icons.close),
                     ),
                   ],
@@ -1106,10 +1122,72 @@ class _FleaMarketPurchaseSheetState extends State<_FleaMarketPurchaseSheet> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
+                      // 商品预览卡片 - 对标 iOS PurchaseDetailView 顶部商品卡片
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: isDark
+                              ? AppColors.skeletonBase
+                              : AppColors.skeletonHighlight,
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        child: Row(
+                          children: [
+                            if (widget.item.firstImage != null)
+                              ClipRRect(
+                                borderRadius: BorderRadius.circular(12),
+                                child: AsyncImageView(
+                                  imageUrl: widget.item.firstImage!,
+                                  width: 90,
+                                  height: 90,
+                                ),
+                              ),
+                            if (widget.item.firstImage != null)
+                              const SizedBox(width: 16),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    widget.item.title,
+                                    style: const TextStyle(
+                                        fontSize: 15,
+                                        fontWeight: FontWeight.w500),
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  const SizedBox(height: 8),
+                                  if (widget.item.isFree)
+                                    Text(
+                                      l10n.commonFree,
+                                      style: const TextStyle(
+                                        fontSize: 22,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.green,
+                                      ),
+                                    )
+                                  else
+                                    Text(
+                                      '£${widget.item.price.toStringAsFixed(2)}',
+                                      style: const TextStyle(
+                                        fontSize: 22,
+                                        fontWeight: FontWeight.bold,
+                                        color: AppColors.priceRed,
+                                      ),
+                                    ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+                      // 留言输入 - 对标 iOS fleaMarketMessageToSeller
                       Text(
-                        l10n.taskApplicationApplyInfo,
+                        l10n.fleaMarketMessageToSeller,
                         style: const TextStyle(
-                            fontSize: 16, fontWeight: FontWeight.w600),
+                            fontSize: 14, fontWeight: FontWeight.w500,
+                            color: AppColors.textSecondary),
                       ),
                       const SizedBox(height: 8),
                       TextField(
@@ -1117,7 +1195,7 @@ class _FleaMarketPurchaseSheetState extends State<_FleaMarketPurchaseSheet> {
                         maxLines: 3,
                         maxLength: 500,
                         decoration: InputDecoration(
-                          hintText: l10n.taskApplicationAdvantagePlaceholder,
+                          hintText: l10n.fleaMarketMessagePlaceholder,
                           border: OutlineInputBorder(
                             borderRadius:
                                 BorderRadius.circular(AppRadius.medium),
@@ -1128,120 +1206,136 @@ class _FleaMarketPurchaseSheetState extends State<_FleaMarketPurchaseSheet> {
                               : AppColors.skeletonHighlight,
                         ),
                       ),
-                      const SizedBox(height: 20),
-                      Text(
-                        l10n.taskDetailPriceNegotiation,
-                        style: const TextStyle(
-                            fontSize: 16, fontWeight: FontWeight.w600),
-                      ),
-                      const SizedBox(height: 8),
-                      // 对标 iOS：有待处理议价时只显示等待卖家确认+议价金额，不显示议价开关
-                      if (_hasPendingRequest) ...[
+                      // 对标 iOS：免费商品不显示议价区块（标题+开关+输入框全部隐藏）
+                      if (!widget.item.isFree) ...[
+                        const SizedBox(height: 20),
+                        Text(
+                          l10n.taskDetailPriceNegotiation,
+                          style: const TextStyle(
+                              fontSize: 16, fontWeight: FontWeight.w600),
+                        ),
+                        const SizedBox(height: 8),
+                        // 有待处理议价时只显示等待卖家确认+议价金额，不显示议价开关
+                        if (_hasPendingRequest) ...[
+                          Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: AppColors.primary.withValues(alpha: 0.1),
+                              borderRadius:
+                                  BorderRadius.circular(AppRadius.medium),
+                            ),
+                            child: Row(
+                              children: [
+                                const Icon(Icons.schedule,
+                                    size: 20, color: AppColors.primary),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Text(
+                                        l10n.fleaMarketWaitingSellerConfirm,
+                                        style: const TextStyle(
+                                            fontSize: 15,
+                                            fontWeight: FontWeight.w500),
+                                      ),
+                                      if (widget.item
+                                              .userPurchaseRequestProposedPrice !=
+                                          null)
+                                        Text(
+                                          l10n.fleaMarketNegotiateAmountFormat(
+                                              widget.item
+                                                  .userPurchaseRequestProposedPrice!),
+                                          style: const TextStyle(
+                                              fontSize: 13,
+                                              color: AppColors.textSecondary),
+                                        ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                        ] else ...[
+                          SwitchListTile(
+                            value: _showNegotiate,
+                            onChanged: (value) {
+                              setState(() {
+                                _showNegotiate = value;
+                                if (value &&
+                                    _amountController.text.trim().isEmpty &&
+                                    widget.item.price > 0) {
+                                  _amountController.text = widget.item.price ==
+                                          widget.item.price.truncateToDouble()
+                                      ? widget.item.price.toInt().toString()
+                                      : widget.item.price.toStringAsFixed(2);
+                                }
+                              });
+                            },
+                            title: Text(
+                              l10n.taskApplicationIWantToNegotiatePrice,
+                              style: const TextStyle(fontSize: 15),
+                            ),
+                            activeThumbColor: AppColors.primary,
+                          ),
+                          if (_showNegotiate) ...[
+                            const SizedBox(height: 8),
+                            TextField(
+                              controller: _amountController,
+                              keyboardType: const TextInputType
+                                  .numberWithOptions(decimal: true),
+                              decoration: InputDecoration(
+                                labelText: l10n.taskApplicationExpectedAmount,
+                                prefixText: '£ ',
+                                border: OutlineInputBorder(
+                                  borderRadius:
+                                      BorderRadius.circular(AppRadius.medium),
+                                ),
+                                filled: true,
+                                fillColor: isDark
+                                    ? AppColors.skeletonBase
+                                    : AppColors.skeletonHighlight,
+                              ),
+                              onChanged: (_) =>
+                                  setState(() => _errorMessage = null),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              l10n.taskApplicationNegotiatePriceHint,
+                              style: const TextStyle(
+                                  fontSize: 12,
+                                  color: AppColors.textTertiary),
+                            ),
+                            const SizedBox(height: 16),
+                          ],
+                        ],
+                      ],
+                      if (_errorMessage != null) ...[
+                        const SizedBox(height: 12),
                         Container(
                           padding: const EdgeInsets.all(12),
                           decoration: BoxDecoration(
-                            color: AppColors.primary.withValues(alpha: 0.1),
-                            borderRadius:
-                                BorderRadius.circular(AppRadius.medium),
+                            color: AppColors.error.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(12),
                           ),
                           child: Row(
                             children: [
-                              const Icon(Icons.schedule,
-                                  size: 20, color: AppColors.primary),
+                              const Icon(Icons.warning_amber_rounded,
+                                  size: 18, color: AppColors.error),
                               const SizedBox(width: 8),
                               Expanded(
-                                child: Column(
-                                  crossAxisAlignment:
-                                      CrossAxisAlignment.start,
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Text(
-                                      l10n.fleaMarketWaitingSellerConfirm,
-                                      style: const TextStyle(
-                                          fontSize: 15,
-                                          fontWeight: FontWeight.w500),
-                                    ),
-                                    if (widget.item
-                                            .userPurchaseRequestProposedPrice !=
-                                        null)
-                                      Text(
-                                        l10n.fleaMarketNegotiateAmountFormat(
-                                            widget.item
-                                                .userPurchaseRequestProposedPrice!),
-                                        style: const TextStyle(
-                                            fontSize: 13,
-                                            color: AppColors.textSecondary),
-                                      ),
-                                  ],
+                                child: Text(
+                                  _errorMessage!,
+                                  style: const TextStyle(
+                                      color: AppColors.error, fontSize: 14),
                                 ),
                               ),
                             ],
                           ),
                         ),
-                        const SizedBox(height: 16),
-                      ] else ...[
-                        if (!widget.item.isFree) ...[
-                        SwitchListTile(
-                          value: _showNegotiate,
-                          onChanged: (value) {
-                            setState(() {
-                              _showNegotiate = value;
-                              if (value &&
-                                  _amountController.text.trim().isEmpty &&
-                                  widget.item.price > 0) {
-                                _amountController.text = widget.item.price ==
-                                        widget.item.price.truncateToDouble()
-                                    ? widget.item.price.toInt().toString()
-                                    : widget.item.price.toStringAsFixed(2);
-                              }
-                            });
-                          },
-                          title: Text(
-                            l10n.taskApplicationIWantToNegotiatePrice,
-                            style: const TextStyle(fontSize: 15),
-                          ),
-                          activeThumbColor: AppColors.primary,
-                        ),
-                        if (_showNegotiate) ...[
-                          const SizedBox(height: 8),
-                          TextField(
-                            controller: _amountController,
-                            keyboardType: const TextInputType
-                                .numberWithOptions(decimal: true),
-                            decoration: InputDecoration(
-                              labelText: l10n.taskApplicationExpectedAmount,
-                              prefixText: '£ ',
-                              border: OutlineInputBorder(
-                                borderRadius:
-                                    BorderRadius.circular(AppRadius.medium),
-                              ),
-                              filled: true,
-                              fillColor: isDark
-                                  ? AppColors.skeletonBase
-                                  : AppColors.skeletonHighlight,
-                            ),
-                            onChanged: (_) =>
-                                setState(() => _errorMessage = null),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            l10n.taskApplicationNegotiatePriceHint,
-                            style: const TextStyle(
-                                fontSize: 12,
-                                color: AppColors.textTertiary),
-                          ),
-                          const SizedBox(height: 16),
-                        ],
-                        ],
-                      ],
-                      if (_errorMessage != null) ...[
-                        const SizedBox(height: 8),
-                        Text(
-                          _errorMessage!,
-                          style: const TextStyle(
-                              color: AppColors.error, fontSize: 13),
-                        ),
-                        const SizedBox(height: 8),
                       ],
                       const SizedBox(height: 24),
                       SizedBox(
@@ -1257,16 +1351,29 @@ class _FleaMarketPurchaseSheetState extends State<_FleaMarketPurchaseSheet> {
                                   child: CircularProgressIndicator(
                                       strokeWidth: 2),
                                 )
-                              : const Icon(Icons.shopping_cart, size: 20),
+                              : Icon(
+                                  _showNegotiate
+                                      ? Icons.handshake
+                                      : widget.item.isFree
+                                          ? Icons.card_giftcard
+                                          : Icons.shopping_cart,
+                                  size: 20,
+                                ),
                           label: Text(
                             _showNegotiate
                                 ? l10n.fleaMarketNegotiate
-                                : l10n.fleaMarketConfirmPurchase,
+                                : widget.item.isFree
+                                    ? l10n.commonFree
+                                    : l10n.fleaMarketConfirm,
                             style: const TextStyle(
                                 fontSize: 16, fontWeight: FontWeight.w600),
                           ),
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: AppColors.primary,
+                            backgroundColor: _showNegotiate
+                                ? AppColors.primary
+                                : widget.item.isFree
+                                    ? Colors.green
+                                    : AppColors.primary,
                             foregroundColor: Colors.white,
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(25),
@@ -1280,6 +1387,44 @@ class _FleaMarketPurchaseSheetState extends State<_FleaMarketPurchaseSheet> {
               ),
             ],
           ),
+        ),
+          if (_isSubmitting)
+            Positioned.fill(
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Colors.black.withValues(alpha: 0.3),
+                  borderRadius:
+                      const BorderRadius.vertical(top: Radius.circular(20)),
+                ),
+                child: Center(
+                  child: Container(
+                    padding: const EdgeInsets.all(24),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withValues(alpha: 0.7),
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const CircularProgressIndicator(color: Colors.white),
+                        const SizedBox(height: 16),
+                        Text(
+                          _showNegotiate
+                              ? l10n.fleaMarketSendingNegotiateRequest
+                              : l10n.fleaMarketProcessingPurchase,
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w500,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
         );
       },
     ),
@@ -1305,35 +1450,37 @@ class _ImageGalleryState extends State<_ImageGallery> {
     final images = widget.item.images;
 
     if (images.isEmpty) {
-      return Container(
-        height: 300,
-        width: double.infinity,
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: [
-              AppColors.skeletonBase,
-              AppColors.skeletonBase.withValues(alpha: 0.5),
-            ],
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
+      return AspectRatio(
+        aspectRatio: 10 / 9,
+        child: Container(
+          width: double.infinity,
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [
+                AppColors.skeletonBase,
+                AppColors.skeletonBase.withValues(alpha: 0.5),
+              ],
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+            ),
           ),
-        ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(Icons.photo_library,
-                size: 48, color: AppColors.textTertiaryLight),
-            const SizedBox(height: AppSpacing.md),
-            Text(context.l10n.fleaMarketNoImage,
-                style: AppTypography.caption
-                    .copyWith(color: AppColors.textTertiaryLight)),
-          ],
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.photo_library,
+                  size: 48, color: AppColors.textTertiaryLight),
+              const SizedBox(height: AppSpacing.md),
+              Text(context.l10n.fleaMarketNoImage,
+                  style: AppTypography.caption
+                      .copyWith(color: AppColors.textTertiaryLight)),
+            ],
+          ),
         ),
       );
     }
 
-    return SizedBox(
-      height: 340,
+    return AspectRatio(
+      aspectRatio: 10 / 9,
       child: Stack(
         children: [
           // 图片
@@ -1357,13 +1504,13 @@ class _ImageGalleryState extends State<_ImageGallery> {
                         child: AsyncImageView(
                           imageUrl: images[index],
                           width: double.infinity,
-                          height: 340,
+                          height: double.infinity,
                         ),
                       )
                     : AsyncImageView(
                         imageUrl: images[index],
                         width: double.infinity,
-                        height: 340,
+                        height: double.infinity,
                       ),
               );
             },
@@ -1498,9 +1645,7 @@ class _PriceTitleCard extends StatelessWidget {
                   ),
                 ],
                 const Spacer(),
-                // 状态
-                if (!item.isActive)
-                  _StatusBadge(item: item),
+                _StatusBadge(item: item),
               ],
             ),
             const SizedBox(height: 12),
@@ -1586,7 +1731,11 @@ class _StatusBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = item.isSold ? AppColors.textSecondaryLight : AppColors.error;
+    final (color, label) = switch (item.status) {
+      'active' => (AppColors.success, context.l10n.fleaMarketStatusActive),
+      'sold' => (Colors.blue, context.l10n.fleaMarketSold),
+      _ => (Colors.grey, context.l10n.fleaMarketDelisted),
+    };
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
@@ -1603,7 +1752,7 @@ class _StatusBadge extends StatelessWidget {
           ),
           const SizedBox(width: 4),
           Text(
-            item.isSold ? context.l10n.fleaMarketSold : context.l10n.fleaMarketDelisted,
+            label,
             style: TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.w600,
@@ -1705,9 +1854,15 @@ class _DetailsCard extends StatelessWidget {
                 height: 1.6,
               ),
             ),
-            // 位置
             if (item.location != null && item.location!.isNotEmpty) ...[
-              const SizedBox(height: 12),
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                child: Divider(
+                  color: isDark
+                      ? Colors.white.withValues(alpha: 0.1)
+                      : Colors.black.withValues(alpha: 0.08),
+                ),
+              ),
               Row(
                 children: [
                   const Icon(Icons.location_on, size: 18, color: AppColors.primary),
@@ -1746,80 +1901,87 @@ class _SellerCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
-      child: Container(
-        padding: const EdgeInsets.all(AppSpacing.md),
-        decoration: BoxDecoration(
-          color: isDark
-              ? AppColors.cardBackgroundDark
-              : AppColors.cardBackgroundLight,
-          borderRadius: BorderRadius.circular(20),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.04),
-              blurRadius: 10,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
-        child: Row(
-          children: [
-            // 头像 - 对标iOS 56pt with white stroke and shadow
-            Container(
-              width: 56,
-              height: 56,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: AppColors.primary,
-                border: Border.all(color: Colors.white, width: 3),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.1),
-                    blurRadius: 4,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
+      child: GestureDetector(
+        onTap: () => context.push('/user/${item.sellerId}'),
+        child: Container(
+          padding: const EdgeInsets.all(AppSpacing.md),
+          decoration: BoxDecoration(
+            color: isDark
+                ? AppColors.cardBackgroundDark
+                : AppColors.cardBackgroundLight,
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.04),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
               ),
-              child: const Icon(Icons.person, color: Colors.white, size: 24),
-            ),
-            const SizedBox(width: AppSpacing.md),
-            // 文字
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Text(
-                        context.l10n.fleaMarketSeller,
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                          color: isDark
-                              ? AppColors.textPrimaryDark
-                              : AppColors.textPrimaryLight,
+            ],
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 56,
+                height: 56,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: AppColors.primary,
+                  border: Border.all(color: Colors.white, width: 3),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.1),
+                      blurRadius: 4,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: const Icon(Icons.person, color: Colors.white, size: 24),
+              ),
+              const SizedBox(width: AppSpacing.md),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Text(
+                          context.l10n.fleaMarketSeller,
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                            color: isDark
+                                ? AppColors.textPrimaryDark
+                                : AppColors.textPrimaryLight,
+                          ),
                         ),
-                      ),
-                      const SizedBox(width: 6),
-                      const Icon(
-                        Icons.verified,
-                        size: 14,
-                        color: AppColors.success,
-                      ),
-                      const SizedBox(width: 3),
-                      Text(
-                        context.l10n.fleaMarketActiveSeller,
-                        style: const TextStyle(
-                          fontSize: 12,
+                        const SizedBox(width: 6),
+                        const Icon(
+                          Icons.verified,
+                          size: 14,
                           color: AppColors.success,
                         ),
-                      ),
-                    ],
-                  ),
-                ],
+                        const SizedBox(width: 3),
+                        Text(
+                          context.l10n.fleaMarketActiveSeller,
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: AppColors.success,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
-            ),
-            // 联系按钮已移至 bottomNavigationBar，避免重复
-          ],
+              Icon(
+                Icons.chevron_right,
+                size: 20,
+                color: isDark
+                    ? AppColors.textTertiaryDark
+                    : AppColors.textTertiaryLight,
+              ),
+            ],
+          ),
         ),
       ),
     );

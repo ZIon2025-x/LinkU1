@@ -100,68 +100,83 @@ class ErrorStateView extends StatelessWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final l10n = AppLocalizations.of(context);
 
-    // 运行时解析默认文本（l10n 优先，兼容无 context 场景）
     final resolvedRetryText = retryText ?? l10n?.commonRetry ?? 'Retry';
     final resolvedMessage = message.isNotEmpty ? message : (l10n?.errorUnknown ?? '');
 
     return Center(
       child: Padding(
         padding: AppSpacing.allXl,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // 图标
-            Container(
-              width: iconSize + 40,
-              height: iconSize + 40,
-              decoration: BoxDecoration(
-                color: (iconColor ?? AppColors.error).withValues(alpha: 0.1),
-                shape: BoxShape.circle,
-              ),
-              child: Icon(
-                icon,
-                size: iconSize,
-                color: iconColor ?? AppColors.error,
-              ),
+        child: TweenAnimationBuilder<double>(
+          tween: Tween(begin: 0.0, end: 1.0),
+          duration: const Duration(milliseconds: 500),
+          curve: Curves.easeOutCubic,
+          builder: (context, value, child) => Opacity(
+            opacity: value,
+            child: Transform.translate(
+              offset: Offset(0, 20 * (1 - value)),
+              child: child,
             ),
-            AppSpacing.vLg,
-            // 标题
-            if (title != null)
-              Text(
-                title!,
-                style: AppTypography.title3.copyWith(
-                  color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: iconSize + 40,
+                height: iconSize + 40,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      (iconColor ?? AppColors.error).withValues(alpha: 0.12),
+                      (iconColor ?? AppColors.error).withValues(alpha: 0.06),
+                    ],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  shape: BoxShape.circle,
                 ),
-                textAlign: TextAlign.center,
-              ),
-            if (title != null) AppSpacing.vSm,
-            // 错误信息
-            if (resolvedMessage.isNotEmpty)
-              Text(
-                resolvedMessage,
-                style: AppTypography.subheadline.copyWith(
-                  color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                child: Icon(
+                  icon,
+                  size: iconSize,
+                  color: iconColor ?? AppColors.error,
                 ),
-                textAlign: TextAlign.center,
               ),
-            if (onRetry != null) ...[
               AppSpacing.vLg,
-              // 重试按钮
-              ElevatedButton.icon(
-                onPressed: onRetry,
-                icon: const Icon(Icons.refresh, size: 20),
-                label: Text(resolvedRetryText),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: AppRadius.button,
+              if (title != null)
+                Text(
+                  title!,
+                  style: AppTypography.title3.copyWith(
+                    color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              if (title != null) AppSpacing.vSm,
+              if (resolvedMessage.isNotEmpty)
+                Text(
+                  resolvedMessage,
+                  style: AppTypography.subheadline.copyWith(
+                    color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              if (onRetry != null) ...[
+                AppSpacing.vLg,
+                ElevatedButton.icon(
+                  onPressed: onRetry,
+                  icon: const Icon(Icons.refresh, size: 20),
+                  label: Text(resolvedRetryText),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: AppRadius.allPill,
+                    ),
+                    elevation: 0,
                   ),
                 ),
-              ),
+              ],
             ],
-          ],
+          ),
         ),
       ),
     );

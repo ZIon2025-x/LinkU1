@@ -152,19 +152,25 @@ class _EnhancedTextFieldState extends State<EnhancedTextField>
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: [
-        // 标签
         if (widget.label != null) ...[
-          Text(
-            widget.label!,
+          AnimatedDefaultTextStyle(
+            duration: const Duration(milliseconds: 200),
+            curve: Curves.easeOutCubic,
             style: TextStyle(
+              fontFamily: 'Inter',
               fontSize: 14,
-              fontWeight: FontWeight.w500,
-              color: isDark
-                  ? AppColors.textPrimaryDark
-                  : AppColors.textPrimaryLight,
+              fontWeight: _isFocused ? FontWeight.w600 : FontWeight.w500,
+              color: _status == EnhancedTextFieldStatus.error
+                  ? AppColors.error
+                  : _isFocused
+                      ? AppColors.primary
+                      : (isDark
+                          ? AppColors.textPrimaryDark
+                          : AppColors.textPrimaryLight),
             ),
+            child: Text(widget.label!),
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: 8),
         ],
 
         // 输入框
