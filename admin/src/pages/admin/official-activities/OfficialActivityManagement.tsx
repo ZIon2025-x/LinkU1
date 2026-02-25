@@ -5,7 +5,6 @@ import { AdminTable, AdminPagination, AdminModal, Column } from '../../../compon
 import { getErrorMessage } from '../../../utils/errorHandler';
 import { resolveImageUrl } from '../../../utils/urlUtils';
 import api from '../../../api';
-import { uploadImage } from '../../../api';
 
 // ==================== Interfaces ====================
 
@@ -955,7 +954,12 @@ const OfficialActivityManagement: React.FC = () => {
                 const file = e.target.files?.[0];
                 if (!file) return;
                 try {
-                  const result = await uploadImage(file);
+                  const formData = new FormData();
+                  formData.append('image', file);
+                  const res = await api.post('/api/upload/image?category=activity', formData, {
+                    headers: { 'Content-Type': 'multipart/form-data' },
+                  });
+                  const result = res.data;
                   const url = result.url || result.image_url;
                   if (url) {
                     activityModal.updateField('images', [...activityModal.formData.images, url]);

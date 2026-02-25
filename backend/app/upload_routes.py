@@ -46,6 +46,7 @@ CATEGORY_MAP = {
     "public": ImageCategory.TASK,
     "task": ImageCategory.TASK,
     "banner": ImageCategory.BANNER,
+    "activity": ImageCategory.ACTIVITY,
     "expert_avatar": ImageCategory.EXPERT_AVATAR,
     "service_image": ImageCategory.SERVICE_IMAGE,
     "leaderboard_item": ImageCategory.LEADERBOARD_ITEM,

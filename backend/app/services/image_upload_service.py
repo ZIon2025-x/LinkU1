@@ -27,6 +27,7 @@ class ImageCategory(Enum):
     # 公开图片
     TASK = "public/images/public"  # 任务图片
     BANNER = "public/images/banner"  # Banner 图片
+    ACTIVITY = "public/images/activities"  # 官方活动图片
     LEADERBOARD_COVER = "public/images/leaderboard_covers"  # 榜单封面
     LEADERBOARD_ITEM = "public/images/leaderboard_items"  # 竞品图片
     EXPERT_AVATAR = "public/images/expert_avatars"  # 任务达人头像
@@ -74,6 +75,12 @@ CATEGORY_CONFIGS: Dict[ImageCategory, UploadConfig] = {
         max_size=5 * 1024 * 1024,
         compress=True,
         compress_quality=90,
+        max_dimension=1920
+    ),
+    ImageCategory.ACTIVITY: UploadConfig(
+        max_size=10 * 1024 * 1024,
+        compress=True,
+        compress_quality=85,
         max_dimension=1920
     ),
     ImageCategory.LEADERBOARD_COVER: UploadConfig(
