@@ -187,7 +187,17 @@ const OfficialActivityManagement: React.FC = () => {
     setAccountLoading(true);
     try {
       const data = await getOfficialAccount();
-      setAccount(data);
+      const acct = data?.official_account;
+      if (acct) {
+        setAccount({
+          user_id: acct.user_id,
+          username: acct.name,
+          official_badge: acct.badge,
+          is_active: acct.status === 'active',
+        });
+      } else {
+        setAccount(null);
+      }
     } catch {
       setAccount(null);
     } finally {
