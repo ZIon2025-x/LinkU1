@@ -69,7 +69,7 @@ jobs:
         python -m py_compile app/routers.py
         python -m py_compile app/models.py
         python -m py_compile app/schemas.py
-        python -m py_compile app/crud.py
+        python -m py_compile app/crud/__init__.py
         echo "✅ Basic syntax check passed"
 
   # 前端测试和构建
