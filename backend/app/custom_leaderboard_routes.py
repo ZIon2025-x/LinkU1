@@ -122,11 +122,25 @@ def calculate_vote_score(item: models.LeaderboardItem):
     numerator = p + (z * z / (2 * n)) - z * math.sqrt((p * (1 - p) + z * z / (4 * n)) / n)
     wilson_score = numerator / denominator
     
-    # 考虑时间衰减
-    days_since_created = max(0, (get_utc_time() - item.created_at).days)
-    time_factor = 1.0 / (1.0 + days_since_created * 0.01)  # 每天衰减1%
-    
-    item.vote_score = wilson_score * 100 * time_factor
+    item.vote_score = wilson_score * 100
+
+
+# ==================== 管理员：重新计算所有竞品得分 ====================
+
+@router.post("/admin/recalculate-scores")
+async def recalculate_all_vote_scores(
+    admin: models.AdminUser = Depends(get_current_admin_async),
+    db: AsyncSession = Depends(get_async_db_dependency),
+):
+    """重新计算所有竞品的 vote_score（去掉时间衰减后需要刷新一次）"""
+    result = await db.execute(select(models.LeaderboardItem))
+    items = result.scalars().all()
+    count = 0
+    for item in items:
+        calculate_vote_score(item)
+        count += 1
+    await db.commit()
+    return {"success": True, "recalculated": count}
 
 
 # ==================== 管理员专用接口（查看所有状态的榜单） ====================
