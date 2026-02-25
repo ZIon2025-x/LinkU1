@@ -198,20 +198,28 @@ class _EditProfileContentState extends State<_EditProfileContent> {
       }
     }
 
-    // Validate: if email changed & non-empty, must have code
-    if (email != _originalEmail &&
-        email.isNotEmpty &&
-        state.showEmailCodeField &&
-        _emailCodeController.text.trim().isEmpty) {
-      AppFeedback.showError(context, context.l10n.profileEmailCodeRequired);
-      return;
+    // Validate: if email changed & non-empty, must send code first
+    if (email != _originalEmail && email.isNotEmpty) {
+      if (!state.showEmailCodeField) {
+        AppFeedback.showError(context, context.l10n.profileEmailCodeRequired);
+        _sendEmailCode();
+        return;
+      }
+      if (_emailCodeController.text.trim().isEmpty) {
+        AppFeedback.showError(context, context.l10n.profileEmailCodeRequired);
+        return;
+      }
     }
-    if (normalizedPhone != _originalPhone &&
-        normalizedPhone.isNotEmpty &&
-        state.showPhoneCodeField &&
-        _phoneCodeController.text.trim().isEmpty) {
-      AppFeedback.showError(context, context.l10n.profilePhoneCodeRequired);
-      return;
+    if (normalizedPhone != _originalPhone && normalizedPhone.isNotEmpty) {
+      if (!state.showPhoneCodeField) {
+        AppFeedback.showError(context, context.l10n.profilePhoneCodeRequired);
+        _sendPhoneCode();
+        return;
+      }
+      if (_phoneCodeController.text.trim().isEmpty) {
+        AppFeedback.showError(context, context.l10n.profilePhoneCodeRequired);
+        return;
+      }
     }
 
     context.read<ProfileBloc>().add(ProfileUpdateRequested(data));

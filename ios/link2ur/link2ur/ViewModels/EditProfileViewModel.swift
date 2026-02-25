@@ -135,11 +135,49 @@ class EditProfileViewModel: ObservableObject {
         isLoading = true
         errorMessage = nil
         
+        let currentEmail = currentUser?.email ?? ""
+        let currentPhone = currentUser?.phone ?? ""
+        
+        // Validate: email changed but no verification code yet
+        if email != currentEmail && !email.isEmpty {
+            if !showEmailCodeField {
+                isLoading = false
+                errorMessage = NSLocalizedString("error_code.email_update_need_code", comment: "")
+                showEmailCodeField = true
+                sendEmailUpdateCode()
+                completion(nil)
+                return
+            }
+            if emailVerificationCode.isEmpty {
+                isLoading = false
+                errorMessage = NSLocalizedString("error_code.email_update_need_code", comment: "")
+                completion(nil)
+                return
+            }
+        }
+        
+        // Validate: phone changed but no verification code yet
+        if phone != currentPhone && !phone.isEmpty {
+            if !showPhoneCodeField {
+                isLoading = false
+                errorMessage = NSLocalizedString("error_code.phone_update_need_code", comment: "")
+                showPhoneCodeField = true
+                sendPhoneUpdateCode()
+                completion(nil)
+                return
+            }
+            if phoneVerificationCode.isEmpty {
+                isLoading = false
+                errorMessage = NSLocalizedString("error_code.phone_update_need_code", comment: "")
+                completion(nil)
+                return
+            }
+        }
+        
         var body: [String: Any] = [:]
         if name != (currentUser?.name ?? "") {
             body["name"] = name
         }
-        let currentEmail = currentUser?.email ?? ""
         if email != currentEmail {
             if !email.isEmpty {
                 body["email"] = email
@@ -147,11 +185,9 @@ class EditProfileViewModel: ObservableObject {
                     body["email_verification_code"] = emailVerificationCode
                 }
             } else if !currentEmail.isEmpty {
-                // 清空邮箱（解绑）
                 body["email"] = ""
             }
         }
-        let currentPhone = currentUser?.phone ?? ""
         if phone != currentPhone {
             if !phone.isEmpty {
                 body["phone"] = ValidationHelper.normalizeUKPhoneNumber(phone)
@@ -159,7 +195,6 @@ class EditProfileViewModel: ObservableObject {
                     body["phone_verification_code"] = phoneVerificationCode
                 }
             } else if !currentPhone.isEmpty {
-                // 清空手机号（解绑）
                 body["phone"] = ""
             }
         }

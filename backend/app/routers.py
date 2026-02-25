@@ -584,21 +584,22 @@ def verify_email(
     # 尝试从Redis获取邀请码ID（如果注册时存储了）
     # 🔒 使用原子操作 GETDEL 防止并发注册重复使用同一邀请码
     try:
-        from app.redis_cache import redis_client
-        if redis_client:
+        from app.redis_cache import get_redis_client
+        _redis = get_redis_client()
+        if _redis:
             invitation_code_key = f"registration_invitation_code:{user.email}"
             # 原子操作：获取并删除，防止竞态条件导致双重使用
             try:
-                invitation_code_id_str = redis_client.getdel(invitation_code_key)
+                invitation_code_id_str = _redis.getdel(invitation_code_key)
             except AttributeError:
                 # redis-py 版本过低，无 getdel 方法，回退到 Lua 脚本
                 lua_script = "local v = redis.call('GET', KEYS[1]); if v then redis.call('DEL', KEYS[1]); end; return v"
-                invitation_code_id_str = redis_client.eval(lua_script, 1, invitation_code_key)
+                invitation_code_id_str = _redis.eval(lua_script, 1, invitation_code_key)
             except Exception as _redis_err:
                 # Redis Server < 6.2 不支持 GETDEL 等情况，回退到 Lua 脚本
                 if "unknown command" in str(_redis_err).lower() or "ERR" in str(_redis_err):
                     lua_script = "local v = redis.call('GET', KEYS[1]); if v then redis.call('DEL', KEYS[1]); end; return v"
-                    invitation_code_id_str = redis_client.eval(lua_script, 1, invitation_code_key)
+                    invitation_code_id_str = _redis.eval(lua_script, 1, invitation_code_key)
                 else:
                     raise  # 非命令不支持的错误（如连接断开），向上抛出
             if invitation_code_id_str:

@@ -1460,12 +1460,13 @@ def login_with_phone_verification_code(
         
         # 🔒 暴力破解保护：限制验证码尝试次数
         try:
-            from app.redis_cache import redis_client
-            if redis_client:
+            from app.redis_cache import get_redis_client
+            _redis = get_redis_client()
+            if _redis:
                 attempt_key = f"verify_attempt:phone:{phone_digits}"
-                attempts = redis_client.incr(attempt_key)
+                attempts = _redis.incr(attempt_key)
                 if attempts == 1:
-                    redis_client.expire(attempt_key, 900)  # 15分钟窗口
+                    _redis.expire(attempt_key, 900)  # 15分钟窗口
                 if attempts > 5:
                     logger.warning(f"手机验证码尝试次数超限: phone={phone_digits}, attempts={attempts}")
                     raise HTTPException(
@@ -1730,12 +1731,13 @@ def login_with_verification_code(
         
         # 🔒 暴力破解保护：限制验证码尝试次数
         try:
-            from app.redis_cache import redis_client
-            if redis_client:
+            from app.redis_cache import get_redis_client
+            _redis = get_redis_client()
+            if _redis:
                 attempt_key = f"verify_attempt:email:{email}"
-                attempts = redis_client.incr(attempt_key)
+                attempts = _redis.incr(attempt_key)
                 if attempts == 1:
-                    redis_client.expire(attempt_key, 900)  # 15分钟窗口
+                    _redis.expire(attempt_key, 900)  # 15分钟窗口
                 if attempts > 5:
                     logger.warning(f"邮箱验证码尝试次数超限: email={email}, attempts={attempts}")
                     raise HTTPException(
