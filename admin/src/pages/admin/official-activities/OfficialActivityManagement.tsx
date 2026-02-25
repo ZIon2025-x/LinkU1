@@ -3,7 +3,9 @@ import { message, Modal } from 'antd';
 import { useAdminTable, useModalForm } from '../../../hooks';
 import { AdminTable, AdminPagination, AdminModal, Column } from '../../../components/admin';
 import { getErrorMessage } from '../../../utils/errorHandler';
+import { resolveImageUrl } from '../../../utils/urlUtils';
 import api from '../../../api';
+import { uploadImage } from '../../../api';
 
 // ==================== Interfaces ====================
 
@@ -68,6 +70,7 @@ interface ActivityFormData {
   prize_description: string;
   prize_description_en: string;
   prize_count: number;
+  max_participants: number;
   voucher_codes_text: string;
   draw_mode: DrawMode;
   draw_at: string;
@@ -90,6 +93,7 @@ const initialFormData: ActivityFormData = {
   prize_description: '',
   prize_description_en: '',
   prize_count: 1,
+  max_participants: 0,
   voucher_codes_text: '',
   draw_mode: 'auto',
   draw_at: '',
@@ -293,6 +297,7 @@ const OfficialActivityManagement: React.FC = () => {
         is_public: values.is_public,
       };
 
+      if (values.max_participants > 0) payload.max_participants = values.max_participants;
       if (values.title_en.trim()) payload.title_en = values.title_en.trim();
       if (values.title_zh.trim()) payload.title_zh = values.title_zh.trim();
       if (values.description_en.trim()) payload.description_en = values.description_en.trim();
@@ -348,6 +353,7 @@ const OfficialActivityManagement: React.FC = () => {
       prize_description: activity.prize_description || '',
       prize_description_en: activity.prize_description_en || '',
       prize_count: activity.prize_count,
+      max_participants: 0,
       voucher_codes_text: (activity.voucher_codes || []).join('\n'),
       draw_mode: activity.draw_mode || 'auto',
       draw_at: activity.draw_at ? activity.draw_at.slice(0, 16) : '',
@@ -898,6 +904,21 @@ const OfficialActivityManagement: React.FC = () => {
             </FormField>
           </div>
 
+          {/* Max participants */}
+          <FormField label="最大参与人数">
+            <input
+              type="number"
+              min={0}
+              value={activityModal.formData.max_participants}
+              onChange={(e) => activityModal.updateField('max_participants', parseInt(e.target.value) || 0)}
+              placeholder="0 = 自动（奖品数量 × 10）"
+              style={inputStyle}
+            />
+            <div style={{ fontSize: '12px', color: '#888', marginTop: '4px' }}>
+              留 0 或空则自动设为奖品数量 × 10。抽奖活动建议不设上限以吸引更多参与。
+            </div>
+          </FormField>
+
           {/* Prize description EN */}
           <FormField label="英文奖品描述">
             <input
@@ -924,6 +945,57 @@ const OfficialActivityManagement: React.FC = () => {
               </div>
             </FormField>
           )}
+
+          {/* Images upload */}
+          <FormField label="活动图片">
+            <input
+              type="file"
+              accept="image/*"
+              onChange={async (e) => {
+                const file = e.target.files?.[0];
+                if (!file) return;
+                try {
+                  const result = await uploadImage(file);
+                  const url = result.url || result.image_url;
+                  if (url) {
+                    activityModal.updateField('images', [...activityModal.formData.images, url]);
+                    message.success('图片上传成功');
+                  }
+                } catch (err: any) {
+                  message.error(getErrorMessage(err));
+                }
+                e.target.value = '';
+              }}
+            />
+            {activityModal.formData.images.length > 0 && (
+              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: '10px' }}>
+                {activityModal.formData.images.map((url, i) => (
+                  <div key={i} style={{ position: 'relative' }}>
+                    <img
+                      src={resolveImageUrl(url)}
+                      alt={`活动图片 ${i + 1}`}
+                      style={{ width: '80px', height: '80px', objectFit: 'cover', borderRadius: '4px' }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        activityModal.updateField('images', activityModal.formData.images.filter((_, idx) => idx !== i));
+                      }}
+                      style={{
+                        position: 'absolute', top: '-6px', right: '-6px',
+                        width: '20px', height: '20px', borderRadius: '50%',
+                        border: 'none', background: '#dc3545', color: 'white',
+                        cursor: 'pointer', fontSize: '12px', lineHeight: '20px',
+                        textAlign: 'center', padding: 0,
+                      }}
+                    >
+                      ×
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </FormField>
 
           {/* Deadline */}
           <FormField label="截止时间">

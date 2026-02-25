@@ -3971,6 +3971,7 @@ class OfficialActivityCreate(BaseModel):
     prize_description: Optional[str] = None
     prize_description_en: Optional[str] = None
     prize_count: int
+    max_participants: Optional[int] = None  # 不传则默认 prize_count * 10
     voucher_codes: Optional[List[str]] = None
     draw_mode: Optional[str] = None   # "auto" / "manual" (lottery only)
     draw_at: Optional[datetime.datetime] = None

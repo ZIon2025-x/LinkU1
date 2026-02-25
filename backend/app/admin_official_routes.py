@@ -300,7 +300,7 @@ async def create_official_activity(
         is_drawn=False,
         status="open",
         is_public=data.is_public,
-        max_participants=data.prize_count * 10,
+        max_participants=data.max_participants or data.prize_count * 10,
         min_participants=1,
         completion_rule="min",
         reward_distribution="equal",
