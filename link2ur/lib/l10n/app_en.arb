@@ -4024,6 +4024,16 @@
   "aiChatWelcomeSubtitle": "How can I help you?",
   "aiChatWelcomeIntro": "I'm Link2Ur's AI assistant. I can help you check task status, search tasks, answer platform rules, view points and coupons, and more. Type your question below or tap a quick question to get started.",
   "aiChatQuickStart": "Quick start",
+  "aiChatStartNewConversation": "Start new conversation",
+  "aiChatNoConversations": "No conversations yet",
+  "locationFetchFailed": "Failed to get location: {error}",
+  "@locationFetchFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
 
   "toolCallQueryMyTasks": "Query my tasks",
   "toolCallGetTaskDetail": "Get task details",

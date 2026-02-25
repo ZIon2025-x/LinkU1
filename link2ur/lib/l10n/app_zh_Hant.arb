@@ -3881,6 +3881,16 @@
   "aiChatWelcomeSubtitle": "有什麼可以幫助你的？",
   "aiChatWelcomeIntro": "我是 Link2Ur 的智能助手，可以幫你查詢任務狀態、搜尋任務、解答平台規則、查看積分與優惠券等。直接輸入問題，或點擊下方快捷問題開始吧。",
   "aiChatQuickStart": "快捷操作",
+  "aiChatStartNewConversation": "開始新對話",
+  "aiChatNoConversations": "還沒有對話",
+  "locationFetchFailed": "取得位置失敗: {error}",
+  "@locationFetchFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
 
   "toolCallQueryMyTasks": "查詢我的任務",
   "toolCallGetTaskDetail": "取得任務詳情",

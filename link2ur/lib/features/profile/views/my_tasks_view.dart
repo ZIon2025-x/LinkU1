@@ -67,11 +67,7 @@ class _MyTasksViewState extends State<MyTasksView>
   void initState() {
     super.initState();
     _tabController = TabController(length: _tabs.length, vsync: this);
-    _tabController.addListener(() {
-      if (!_tabController.indexIsChanging) {
-        AppHaptics.tabSwitch();
-      }
-    });
+    _tabController.addListener(_onTabChanged);
 
     for (final tab in _tabs) {
       _scrollControllers[tab] = ScrollController();
@@ -88,11 +84,18 @@ class _MyTasksViewState extends State<MyTasksView>
   @override
   void dispose() {
     _delayedLoadTimer?.cancel();
+    _tabController.removeListener(_onTabChanged);
     _tabController.dispose();
     for (final sc in _scrollControllers.values) {
       sc.dispose();
     }
     super.dispose();
+  }
+
+  void _onTabChanged() {
+    if (!_tabController.indexIsChanging) {
+      AppHaptics.tabSwitch();
+    }
   }
 
   /// 根据当前 Tab 从「全部我的任务」中筛选：我发布的 / 我接取的 / 进行中 / 已完成 / 已取消 / 全部

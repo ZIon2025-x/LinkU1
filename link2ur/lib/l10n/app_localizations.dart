@@ -15818,6 +15818,24 @@ abstract class AppLocalizations {
   /// **'Quick start'**
   String get aiChatQuickStart;
 
+  /// No description provided for @aiChatStartNewConversation.
+  ///
+  /// In en, this message translates to:
+  /// **'Start new conversation'**
+  String get aiChatStartNewConversation;
+
+  /// No description provided for @aiChatNoConversations.
+  ///
+  /// In en, this message translates to:
+  /// **'No conversations yet'**
+  String get aiChatNoConversations;
+
+  /// No description provided for @locationFetchFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to get location: {error}'**
+  String locationFetchFailed(String error);
+
   /// No description provided for @toolCallQueryMyTasks.
   ///
   /// In en, this message translates to:

@@ -38,7 +38,6 @@ dependencies:
   # UI组件
   cached_network_image: ^3.3.1
   shimmer: ^3.0.0
-  flutter_svg: ^2.0.10+1
   google_fonts: ^6.2.1
   flutter_staggered_grid_view: ^0.7.0
   image_picker: ^1.1.2
@@ -73,7 +72,6 @@ dependencies:
   device_info_plus: ^10.1.0
   package_info_plus: ^8.0.2
   uuid: ^4.4.2
-  collection: ^1.18.0
   web: ^1.1.1
 
   # IAP 内购
@@ -81,7 +79,6 @@ dependencies:
 
   # 社交分享 SDK
   fluwx: ^4.6.1
-  tencent_kit: ^6.0.3
 
   # QR 码生成
   qr_flutter: ^4.1.0
@@ -157,12 +154,6 @@ flutter_native_splash:
   # iOS 配置
   ios: true
   web: false
-
-# QQ SDK 配置（tencent_kit 要求）
-# TODO: 替换为真实的腾讯开放平台 App ID
-tencent_kit:
-  app_id: "222222"
-  universal_link: "https://link2ur.com/universal_link/qq_conn/222222/"
 
 flutter:
   uses-material-design: true

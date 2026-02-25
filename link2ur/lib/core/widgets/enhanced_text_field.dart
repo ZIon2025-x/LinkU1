@@ -98,6 +98,7 @@ class _EnhancedTextFieldState extends State<EnhancedTextField>
 
   @override
   void dispose() {
+    _focusNode.removeListener(_handleFocusChange);
     if (widget.controller == null) _controller.dispose();
     if (widget.focusNode == null) _focusNode.dispose();
     _animController.dispose();

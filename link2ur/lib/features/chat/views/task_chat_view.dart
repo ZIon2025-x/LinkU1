@@ -90,6 +90,8 @@ class _TaskChatContentState extends State<_TaskChatContent> {
 
   @override
   void dispose() {
+    _scrollController.removeListener(_onScroll);
+    _messageController.removeListener(_onTextChanged);
     _messageController.dispose();
     _scrollController.dispose();
     super.dispose();

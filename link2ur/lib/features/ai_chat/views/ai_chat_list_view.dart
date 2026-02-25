@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/constants/app_assets.dart';
+import '../../../core/utils/l10n_extension.dart';
 import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_radius.dart';
@@ -176,7 +177,7 @@ class _EmptyState extends StatelessWidget {
           ),
           const SizedBox(height: AppSpacing.md),
           Text(
-            '还没有对话',
+            context.l10n.aiChatNoConversations,
             style: TextStyle(
               fontSize: 16,
               color: isDark ? Colors.white54 : Colors.black45,
@@ -186,7 +187,7 @@ class _EmptyState extends StatelessWidget {
           ElevatedButton.icon(
             onPressed: onNewChat,
             icon: const Icon(Icons.add),
-            label: const Text('开始新对话'),
+            label: Text(context.l10n.aiChatStartNewConversation),
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.primary,
               foregroundColor: Colors.white,

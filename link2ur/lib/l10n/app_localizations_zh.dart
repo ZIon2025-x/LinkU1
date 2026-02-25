@@ -8267,6 +8267,17 @@ class AppLocalizationsZh extends AppLocalizations {
   String get aiChatQuickStart => '快捷操作';
 
   @override
+  String get aiChatStartNewConversation => '开始新对话';
+
+  @override
+  String get aiChatNoConversations => '还没有对话';
+
+  @override
+  String locationFetchFailed(String error) {
+    return '获取位置失败: $error';
+  }
+
+  @override
   String get toolCallQueryMyTasks => '查询我的任务';
 
   @override
@@ -16870,6 +16881,17 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get aiChatQuickStart => '快捷操作';
+
+  @override
+  String get aiChatStartNewConversation => '開始新對話';
+
+  @override
+  String get aiChatNoConversations => '還沒有對話';
+
+  @override
+  String locationFetchFailed(String error) {
+    return '取得位置失敗: $error';
+  }
 
   @override
   String get toolCallQueryMyTasks => '查詢我的任務';

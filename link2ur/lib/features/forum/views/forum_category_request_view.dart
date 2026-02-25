@@ -61,6 +61,9 @@ class _ForumCategoryRequestViewState extends State<ForumCategoryRequestView> {
 
   @override
   void dispose() {
+    _nameController.removeListener(_onTextChanged);
+    _descriptionController.removeListener(_onTextChanged);
+    _iconController.removeListener(_onTextChanged);
     _nameController.dispose();
     _descriptionController.dispose();
     _iconController.dispose();

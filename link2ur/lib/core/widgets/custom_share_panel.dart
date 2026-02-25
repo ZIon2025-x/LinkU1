@@ -11,15 +11,12 @@ import '../constants/app_assets.dart';
 import '../utils/l10n_extension.dart';
 import '../utils/sheet_adaptation.dart';
 import '../utils/wechat_share_manager.dart';
-import '../utils/qq_share_manager.dart';
 import '../../l10n/app_localizations.dart';
 
 /// 分享平台枚举
 enum SharePlatform {
   wechat,
   wechatMoments,
-  qq,
-  qzone,
   weibo,
   facebook,
   instagram,
@@ -39,10 +36,6 @@ extension SharePlatformExtension on SharePlatform {
         return l10n.shareWechat;
       case SharePlatform.wechatMoments:
         return l10n.shareWechatMoments;
-      case SharePlatform.qq:
-        return 'QQ';
-      case SharePlatform.qzone:
-        return l10n.shareQzone;
       case SharePlatform.weibo:
         return l10n.shareWeibo;
       case SharePlatform.facebook:
@@ -67,9 +60,6 @@ extension SharePlatformExtension on SharePlatform {
       case SharePlatform.wechat:
       case SharePlatform.wechatMoments:
         return AppColors.wechatGreen;
-      case SharePlatform.qq:
-      case SharePlatform.qzone:
-        return AppColors.qqBlue;
       case SharePlatform.weibo:
         return AppColors.weiboRed;
       case SharePlatform.facebook:
@@ -94,9 +84,6 @@ extension SharePlatformExtension on SharePlatform {
       case SharePlatform.wechat:
       case SharePlatform.wechatMoments:
         return Icons.chat_bubble;
-      case SharePlatform.qq:
-      case SharePlatform.qzone:
-        return Icons.chat;
       case SharePlatform.weibo:
         return Icons.public;
       case SharePlatform.facebook:
@@ -122,10 +109,6 @@ extension SharePlatformExtension on SharePlatform {
         return AppAssets.wechat;
       case SharePlatform.wechatMoments:
         return AppAssets.wechatMoments;
-      case SharePlatform.qq:
-        return AppAssets.qq;
-      case SharePlatform.qzone:
-        return AppAssets.qzone;
       case SharePlatform.weibo:
         return AppAssets.weibo;
       case SharePlatform.facebook:
@@ -180,7 +163,6 @@ class CustomSharePanel extends StatelessWidget {
   static const List<SharePlatform> _allPlatforms = [
     SharePlatform.wechat,
     SharePlatform.wechatMoments,
-    SharePlatform.qq,
     SharePlatform.weibo,
     SharePlatform.facebook,
     SharePlatform.instagram,
@@ -323,16 +305,6 @@ class CustomSharePanel extends StatelessWidget {
         await _shareToWeChat(context, toMoments: true);
         break;
 
-      case SharePlatform.qq:
-        onDismiss?.call();
-        await _shareToQQ(context, toQZone: false);
-        break;
-
-      case SharePlatform.qzone:
-        onDismiss?.call();
-        await _shareToQQ(context, toQZone: true);
-        break;
-
       case SharePlatform.more:
         onDismiss?.call();
         // 延迟显示系统分享面板，确保底部Sheet完全关闭
@@ -391,43 +363,6 @@ class CustomSharePanel extends StatelessWidget {
     }
   }
 
-  /// 分享到 QQ
-  Future<void> _shareToQQ(BuildContext context, {required bool toQZone}) async {
-    try {
-      final qqManager = QQShareManager.instance;
-      final installed = await qqManager.isQQInstalled();
-
-      if (!installed) {
-        // QQ 未安装，使用系统分享
-        await Future.delayed(const Duration(milliseconds: 300));
-        await SharePlus.instance.share(ShareParams(text: '$title\n$description\n${url ?? ''}'));
-        return;
-      }
-
-      bool success;
-      if (toQZone) {
-        success = await qqManager.shareToQZone(
-          title: title,
-          description: description,
-          url: url ?? '',
-        );
-      } else {
-        success = await qqManager.shareToFriend(
-          title: title,
-          description: description,
-          url: url ?? '',
-        );
-      }
-
-      if (!success && context.mounted) {
-        await Future.delayed(const Duration(milliseconds: 300));
-        await SharePlus.instance.share(ShareParams(text: '$title\n$description\n${url ?? ''}'));
-      }
-    } catch (_) {
-      await Future.delayed(const Duration(milliseconds: 300));
-      await SharePlus.instance.share(ShareParams(text: '$title\n$description\n${url ?? ''}'));
-    }
-  }
 }
 
 /// 分享平台按钮

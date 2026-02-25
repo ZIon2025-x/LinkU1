@@ -161,7 +161,7 @@ class _LocationInputFieldState extends State<LocationInputField> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('获取位置失败: $e')),
+          SnackBar(content: Text(context.l10n.locationFetchFailed(e.toString()))),
         );
       }
     } finally {

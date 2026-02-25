@@ -91,6 +91,7 @@ class _TasksViewContentState extends State<_TasksViewContent> {
 
   @override
   void dispose() {
+    _scrollController.removeListener(_onScroll);
     _searchController.dispose();
     _scrollController.dispose();
     _debouncer.dispose();

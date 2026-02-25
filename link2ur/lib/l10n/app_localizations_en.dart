@@ -8593,6 +8593,17 @@ class AppLocalizationsEn extends AppLocalizations {
   String get aiChatQuickStart => 'Quick start';
 
   @override
+  String get aiChatStartNewConversation => 'Start new conversation';
+
+  @override
+  String get aiChatNoConversations => 'No conversations yet';
+
+  @override
+  String locationFetchFailed(String error) {
+    return 'Failed to get location: $error';
+  }
+
+  @override
   String get toolCallQueryMyTasks => 'Query my tasks';
 
   @override

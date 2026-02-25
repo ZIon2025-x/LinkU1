@@ -79,7 +79,6 @@ class AppRoutes {
 
   // 主页
   static const String main = '/';
-  static const String home = '/home';
 
   // 发布（统一入口）
   static const String publish = '/publish';
@@ -136,7 +135,6 @@ class AppRoutes {
   static const String myTasks = '/profile/my-tasks';
   static const String myPosts = '/profile/my-posts';
   static const String userProfile = '/user/:id';
-  static const String avatarPicker = '/profile/avatar';
   static const String taskPreferences = '/profile/task-preferences';
 
   // 钱包
