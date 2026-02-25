@@ -11,14 +11,14 @@ struct Activity: Codable, Identifiable, Equatable {
     let location: String
     let taskType: String
     let rewardType: String
-    let originalPricePerParticipant: Double
+    let originalPricePerParticipant: Double?
     let discountPercentage: Double?
     let discountedPricePerParticipant: Double?
     let currency: String
     let pointsReward: Int?
     let maxParticipants: Int
     let minParticipants: Int
-    let currentParticipants: Int // 动态计算字段
+    let currentParticipants: Int?
     let status: String
     let isPublic: Bool
     let deadline: String?
@@ -119,7 +119,8 @@ struct Activity: Codable, Identifiable, Equatable {
     
     /// 是否满员
     var isFull: Bool {
-        currentParticipants >= maxParticipants
+        guard let current = currentParticipants else { return false }
+        return current >= maxParticipants
     }
     
     /// 是否可以申请

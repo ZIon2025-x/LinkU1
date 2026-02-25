@@ -29,7 +29,7 @@ def clear_banner_cache():
 
 
 def validate_url(url: str, field_name: str = "URL") -> bool:
-    """验证 URL 格式"""
+    """验证完整 URL 格式（http/https）"""
     if not url:
         return False
     url_pattern = re.compile(
@@ -40,6 +40,13 @@ def validate_url(url: str, field_name: str = "URL") -> bool:
         r'(?::\d+)?'  # optional port
         r'(?:/?|[/?]\S+)$', re.IGNORECASE)
     return bool(url_pattern.match(url))
+
+
+def validate_internal_path(path: str) -> bool:
+    """验证内部路由路径（以 / 开头，仅含合法路径字符）"""
+    if not path:
+        return False
+    return bool(re.match(r'^/[\w\-/]*$', path))
 
 
 def validate_image_url(url: str) -> bool:
@@ -80,12 +87,18 @@ def create_banner(
             detail="image_url 格式无效，必须是有效的图片 URL"
         )
     
-    # 验证跳转链接 URL（如果提供）
-    if banner_data.link_url and not validate_url(banner_data.link_url):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="link_url 格式无效，必须是有效的 URL"
-        )
+    # 验证跳转链接（根据 link_type 区分）
+    if banner_data.link_url:
+        if banner_data.link_type == "external" and not validate_url(banner_data.link_url):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="外部链接必须是完整 URL（以 http:// 或 https:// 开头）"
+            )
+        if banner_data.link_type == "internal" and not validate_internal_path(banner_data.link_url):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="内部链接必须是有效路径（以 / 开头，如 /activities/1）"
+            )
     
     # 创建 Banner
     banner = models.Banner(
@@ -170,12 +183,19 @@ def update_banner(
             detail="image_url 格式无效，必须是有效的图片 URL"
         )
     
-    # 验证跳转链接 URL（如果提供）
-    if "link_url" in update_data and update_data["link_url"] and not validate_url(update_data["link_url"]):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="link_url 格式无效，必须是有效的 URL"
-        )
+    # 验证跳转链接（根据 link_type 区分）
+    if "link_url" in update_data and update_data["link_url"]:
+        effective_link_type = update_data.get("link_type", banner.link_type)
+        if effective_link_type == "external" and not validate_url(update_data["link_url"]):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="外部链接必须是完整 URL（以 http:// 或 https:// 开头）"
+            )
+        if effective_link_type == "internal" and not validate_internal_path(update_data["link_url"]):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="内部链接必须是有效路径（以 / 开头，如 /activities/1）"
+            )
     
     # 如果更换了图片，删除旧图片（使用图片上传服务）
     old_image_url = banner.image_url
