@@ -3,6 +3,8 @@ import { useLanguage } from '../contexts/LanguageContext';
 import LocalizedLink from './LocalizedLink';
 import LazyImage from './LazyImage';
 
+const APP_STORE_URL = 'https://apps.apple.com/gh/app/link-ur/id6758051985';
+
 const Footer: React.FC = () => {
   const { t } = useLanguage();
   const [showWechatModal, setShowWechatModal] = useState(false);
@@ -295,12 +297,41 @@ const Footer: React.FC = () => {
             {t('footer.copyrightText')}
           </div>
           
-          {/* 右侧 - 社交媒体 */}
+          {/* 右侧 - 社交媒体与下载 */}
           <div className="footer-social" style={{
             display: 'flex',
             gap: '16px',
-            alignItems: 'center'
+            alignItems: 'center',
+            flexWrap: 'wrap'
           }}>
+            <a
+              href={APP_STORE_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              title="Download on the App Store"
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                height: '32px',
+                paddingLeft: '10px',
+                paddingRight: '12px',
+                background: '#000',
+                color: '#fff',
+                borderRadius: '6px',
+                textDecoration: 'none',
+                fontSize: '11px',
+                fontWeight: '600',
+                transition: 'opacity 0.2s ease'
+              }}
+              onMouseEnter={(e) => { e.currentTarget.style.opacity = '0.85'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.opacity = '1'; }}
+            >
+              <svg width="14" height="17" viewBox="0 0 14 17" fill="currentColor" aria-hidden="true">
+                <path d="M11.7 8.9c-.02-1.7 1.4-2.5 1.45-2.53-.8-1.16-2.04-1.32-2.48-1.34-1.06-.1-2.07.62-2.6.62-.54 0-1.09-.36-1.67-.35-1.72.03-3.3 1-4.2 2.54-1.8 3.1-.46 7.7 1.28 10.22.85 1.24 1.84 2.63 3.16 2.58 1.3-.05 1.79-.84 3.36-.84 1.57 0 2 .84 3.37.81 1.39-.02 2.28-1.24 3.1-2.5.96-1.4 1.36-2.75 1.38-2.82-.03-.01-2.66-1.02-2.69-4.05zM9.27 2.45c.7-.85 1.18-2.03 1.05-3.2-1.02.04-2.26.68-3 1.55-.65.74-1.21 1.93-1.06 3.07 1.14.09 2.3-.59 3.01-1.42z"/>
+              </svg>
+              <span>App Store</span>
+            </a>
             <a href="#" style={{
               width: '32px',
               height: '32px',
@@ -353,6 +384,44 @@ const Footer: React.FC = () => {
               in
             </a>
             
+            <a
+              href="https://www.xiaohongshu.com/user/profile/690a230f00000000370306d7?xsec_token=ABpgVC88A4xuTkFHwvsm1d_jNhZ1BwbHjwKgJNxVs32l8%3D&xsec_source=pc_search"
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                width: '32px',
+                height: '32px',
+                background: 'rgba(255,255,255,0.1)',
+                borderRadius: '50%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: '#fff',
+                textDecoration: 'none',
+                overflow: 'hidden',
+                transition: 'all 0.2s ease'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = 'rgba(255,255,255,0.2)';
+                e.currentTarget.style.transform = 'scale(1.1)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = 'rgba(255,255,255,0.1)';
+                e.currentTarget.style.transform = 'scale(1)';
+              }}
+              title="小红书"
+            >
+              <LazyImage
+                src="/static/xiaohongshu-seeklogo.png"
+                alt="小红书"
+                style={{
+                  width: '20px',
+                  height: '20px',
+                  objectFit: 'contain'
+                }}
+              />
+            </a>
+
             <button 
               onClick={() => setShowWechatModal(true)}
               style={{

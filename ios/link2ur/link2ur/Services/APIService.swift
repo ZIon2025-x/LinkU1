@@ -575,6 +575,7 @@ public class APIService {
         // 发送当前的 session_id（后端会验证并刷新）
         if let sessionId = KeychainHelper.shared.read(service: Constants.Keychain.service, account: Constants.Keychain.accessTokenKey) {
             refreshRequest.setValue(sessionId, forHTTPHeaderField: "X-Session-ID")
+            AppSignature.signRequest(&refreshRequest, sessionId: sessionId)
         }
         
         // 如果存在 refresh_token，也发送它（作为备用，当 session 无效时使用）
@@ -1516,9 +1517,12 @@ public final class RequestQueueManager: ObservableObject {
                 }
             }
             
-            // 添加 Authorization token
+            // 添加认证 + 应用签名
+            urlRequest.setValue("iOS", forHTTPHeaderField: "X-Platform")
+            urlRequest.setValue("Link2Ur-iOS/1.0", forHTTPHeaderField: "User-Agent")
             if let token = KeychainHelper.shared.read(service: Constants.Keychain.service, account: Constants.Keychain.accessTokenKey) {
-                urlRequest.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+                urlRequest.setValue(token, forHTTPHeaderField: "X-Session-ID")
+                AppSignature.signRequest(&urlRequest, sessionId: token)
             }
             
             // 添加 body

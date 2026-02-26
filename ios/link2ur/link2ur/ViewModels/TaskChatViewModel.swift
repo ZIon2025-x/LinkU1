@@ -170,10 +170,13 @@ class TaskChatViewModel: ObservableObject {
         var request = URLRequest(url: url)
         request.httpMethod = "GET"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue("iOS", forHTTPHeaderField: "X-Platform")
+        request.setValue("Link2Ur-iOS/1.0", forHTTPHeaderField: "User-Agent")
         
-        // 添加 Session ID
+        // 添加 Session ID + 应用签名
         if let sessionId = KeychainHelper.shared.read(service: Constants.Keychain.service, account: Constants.Keychain.accessTokenKey), !sessionId.isEmpty {
             request.setValue(sessionId, forHTTPHeaderField: "X-Session-ID")
+            AppSignature.signRequest(&request, sessionId: sessionId)
         }
         
         (Foundation.URLSession.shared as URLSession).dataTaskPublisher(for: request)

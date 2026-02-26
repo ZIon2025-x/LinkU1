@@ -8663,6 +8663,18 @@ class AppLocalizationsEn extends AppLocalizations {
   String get aiChatSearchTasks => 'Search available tasks';
 
   @override
+  String get aiChatPostTask => 'Help me post a task';
+
+  @override
+  String get aiChatMyPoints => 'My points & coupons';
+
+  @override
+  String get aiChatActivities => 'What activities are on';
+
+  @override
+  String get aiChatContactSupport => 'Talk to a human agent';
+
+  @override
   String get aiChatWelcomeTitle => 'Hi, I\'m Linker';
 
   @override

@@ -15950,6 +15950,30 @@ abstract class AppLocalizations {
   /// **'Search available tasks'**
   String get aiChatSearchTasks;
 
+  /// No description provided for @aiChatPostTask.
+  ///
+  /// In en, this message translates to:
+  /// **'Help me post a task'**
+  String get aiChatPostTask;
+
+  /// No description provided for @aiChatMyPoints.
+  ///
+  /// In en, this message translates to:
+  /// **'My points & coupons'**
+  String get aiChatMyPoints;
+
+  /// No description provided for @aiChatActivities.
+  ///
+  /// In en, this message translates to:
+  /// **'What activities are on'**
+  String get aiChatActivities;
+
+  /// No description provided for @aiChatContactSupport.
+  ///
+  /// In en, this message translates to:
+  /// **'Talk to a human agent'**
+  String get aiChatContactSupport;
+
   /// No description provided for @aiChatWelcomeTitle.
   ///
   /// In en, this message translates to:

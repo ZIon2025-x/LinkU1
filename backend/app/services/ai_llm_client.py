@@ -17,7 +17,7 @@ LLM 客户端封装 — 支持 Anthropic + OpenAI-Compatible (GLM/DeepSeek/Qwen/
 import json
 import logging
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, AsyncIterator
 
 import anthropic
 
@@ -104,6 +104,49 @@ class AnthropicProvider:
             ),
             stop_reason=resp.stop_reason,
         )
+
+    async def chat_stream(
+        self, model: str, messages: list[dict], system: str,
+        tools: list[dict] | None, max_tokens: int,
+    ) -> AsyncIterator[tuple[str, Any]]:
+        """流式调用：yield ('text_delta', text) 边收边推，最后 yield ('done', LLMResponse)。"""
+        kwargs: dict[str, Any] = {
+            "model": model,
+            "max_tokens": max_tokens,
+            "system": system,
+            "messages": messages,
+        }
+        if tools:
+            kwargs["tools"] = tools
+
+        async with self._client.messages.stream(**kwargs) as stream:
+            async for event in stream:
+                if getattr(event, "type", None) == "content_block_delta":
+                    delta = getattr(event, "delta", None)
+                    if delta and getattr(delta, "type", None) == "text_delta":
+                        text = getattr(delta, "text", "") or ""
+                        if text:
+                            yield ("text_delta", text)
+                elif getattr(event, "type", None) == "text":
+                    text = getattr(event, "text", "") or ""
+                    if text:
+                        yield ("text_delta", text)
+            final = await stream.get_final_message()
+            content = []
+            for block in final.content:
+                if block.type == "text":
+                    content.append(LLMTextBlock(text=block.text))
+                elif block.type == "tool_use":
+                    content.append(LLMToolUse(id=block.id, name=block.name, input=block.input))
+            yield ("done", LLMResponse(
+                content=content,
+                model=final.model,
+                usage=LLMUsage(
+                    input_tokens=final.usage.input_tokens,
+                    output_tokens=final.usage.output_tokens,
+                ),
+                stop_reason=final.stop_reason,
+            ))
 
 
 class OpenAICompatibleProvider:
@@ -305,3 +348,38 @@ class LLMClient:
             tools=tools,
             max_tokens=max_tokens or Config.AI_MAX_OUTPUT_TOKENS,
         )
+
+    async def chat_stream(
+        self,
+        messages: list[dict],
+        system: str,
+        tools: list[dict] | None = None,
+        model_tier: str = "small",
+        max_tokens: int | None = None,
+    ) -> AsyncIterator[tuple[str, Any]]:
+        """流式调用：yield ('text_delta', text) 或 ('done', LLMResponse)。"""
+        if model_tier == "large":
+            provider = self._large
+            model = Config.AI_MODEL_LARGE
+        else:
+            provider = self._small
+            model = Config.AI_MODEL_SMALL
+        max_tok = max_tokens or Config.AI_MAX_OUTPUT_TOKENS
+        if hasattr(provider, "chat_stream"):
+            async for item in provider.chat_stream(
+                model=model, messages=messages, system=system,
+                tools=tools, max_tokens=max_tok,
+            ):
+                yield item
+        else:
+            resp = await provider.chat(
+                model=model, messages=messages, system=system,
+                tools=tools, max_tokens=max_tok,
+            )
+            full_text = "".join(
+                b.text for b in resp.content
+                if getattr(b, "type", None) == "text"
+            )
+            if full_text:
+                yield ("text_delta", full_text)
+            yield ("done", resp)

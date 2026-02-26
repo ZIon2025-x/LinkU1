@@ -8336,6 +8336,18 @@ class AppLocalizationsZh extends AppLocalizations {
   String get aiChatSearchTasks => '搜索可接的任务';
 
   @override
+  String get aiChatPostTask => '帮我发布任务';
+
+  @override
+  String get aiChatMyPoints => '查我的积分与优惠券';
+
+  @override
+  String get aiChatActivities => '有什么活动';
+
+  @override
+  String get aiChatContactSupport => '转人工客服';
+
+  @override
   String get aiChatWelcomeTitle => '你好，我是 Linker';
 
   @override
@@ -17032,6 +17044,18 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get aiChatSearchTasks => '搜尋可接的任務';
+
+  @override
+  String get aiChatPostTask => '幫我發布任務';
+
+  @override
+  String get aiChatMyPoints => '查我的積分與優惠券';
+
+  @override
+  String get aiChatActivities => '有什麼活動';
+
+  @override
+  String get aiChatContactSupport => '轉人工客服';
 
   @override
   String get aiChatWelcomeTitle => '你好，我是 Linker';
