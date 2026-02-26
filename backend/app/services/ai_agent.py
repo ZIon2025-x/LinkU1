@@ -242,6 +242,8 @@ class IntentType:
     OFF_TOPIC = "off_topic"
     UNKNOWN = "unknown"
     TRANSFER_TO_CS = "transfer_to_cs"
+    ACTIVITY_QUERY = "activity_query"
+    POINTS_QUERY = "points_query"
 
 
 _OFF_TOPIC_PATTERNS = [
@@ -300,6 +302,16 @@ _TRANSFER_CS_KEYWORDS = [
     "transfer to human", "real agent",
 ]
 
+# 快捷路径：仅调工具 + 固定话术，不经过 LLM
+_ACTIVITY_QUERY_KEYWORDS = [
+    "有什么活动", "最近活动", "哪些活动", "进行中的活动", "正在进行的活动",
+    "current activities", "活动列表", "list activities", "最近有什么活动",
+]
+_POINTS_QUERY_KEYWORDS = [
+    "我的积分", "积分余额", "几张券", "我的优惠券", "可用优惠券", "有没有券",
+    "my points", "points balance", "how many coupons", "积分多少", "有多少积分",
+]
+
 _PERSONAL_DATA_KEYWORDS = [
     # 积分 & 优惠券
     "我的积分", "my points", "积分余额", "points balance", "几张券",
@@ -338,15 +350,31 @@ _PERSONAL_DATA_KEYWORDS = [
     "我收藏的帖子", "my favorite posts", "我的回复", "my replies",
 ]
 
+_CONFIRMATION_WORDS = {
+    # Chinese confirmations
+    "满意", "好", "嗯", "是", "对", "可以", "确认", "同意",
+    "不", "算了", "取消", "不对", "修改", "再改改", "不满意", "有问题",
+    "好的", "好啊", "没问题", "行", "行的", "知道了", "收到",
+    # English confirmations
+    "ok", "yes", "no", "sure", "fine", "good", "great", "thanks",
+    "cancel", "stop", "change", "edit", "update", "confirm",
+}
+
 
 def classify_intent(message: str) -> str:
     msg_lower = message.lower().strip()
-    if _OFF_TOPIC_RE.search(msg_lower):
+    if not msg_lower:
         return IntentType.OFF_TOPIC
-    if len(msg_lower) < 3:
+    if msg_lower in _CONFIRMATION_WORDS:
+        return IntentType.UNKNOWN
+    if _OFF_TOPIC_RE.search(msg_lower):
         return IntentType.OFF_TOPIC
     if any(kw in msg_lower for kw in _TRANSFER_CS_KEYWORDS):
         return IntentType.TRANSFER_TO_CS
+    if any(kw in msg_lower for kw in _ACTIVITY_QUERY_KEYWORDS):
+        return IntentType.ACTIVITY_QUERY
+    if any(kw in msg_lower for kw in _POINTS_QUERY_KEYWORDS):
+        return IntentType.POINTS_QUERY
     if any(kw in msg_lower for kw in _PERSONAL_DATA_KEYWORDS):
         return IntentType.UNKNOWN
     for faq_key, keywords in _FAQ_KEYWORDS.items():
@@ -641,6 +669,68 @@ async def _step_faq(ctx: _PipelineContext) -> AsyncIterator[ServerSentEvent]:
     ctx.terminated = True
 
 
+async def _step_activity(ctx: _PipelineContext) -> AsyncIterator[ServerSentEvent]:
+    """活动查询快捷路径：直接调 list_activities，无 LLM"""
+    if ctx.intent != IntentType.ACTIVITY_QUERY:
+        return
+
+    executor = ToolExecutor(ctx.db, ctx.user)
+    result = await executor.execute("list_activities", {}, request_lang=ctx.reply_lang)
+    activities = result.get("activities") or []
+    count = result.get("count", 0)
+
+    if count == 0:
+        if ctx.lang == "zh":
+            reply = "平台目前没有进行中的公开活动。你可以：查看我的活动、排行榜、论坛获取更多信息。需要我帮你查看哪一项？"
+        else:
+            reply = "There are no ongoing public activities at the moment. You can check My Activities, Leaderboard, or Forum for more. Need help with any of these?"
+    else:
+        lines = [a.get("title") or str(a.get("id", "")) for a in activities[:5]]
+        if ctx.lang == "zh":
+            reply = f"当前有 {count} 个进行中的活动：\n" + "\n".join(f"- {t}" for t in lines)
+            if count > 5:
+                reply += f"\n（共 {count} 个，仅展示前 5 个。可在「活动」页查看全部。）"
+        else:
+            reply = f"There are {count} ongoing activities:\n" + "\n".join(f"- {t}" for t in lines)
+            if count > 5:
+                reply += f"\n(Showing first 5 of {count}. See Activities for full list.)"
+
+    _state.record_usage(ctx.user.id, 0)
+    await _save_assistant_message(ctx, reply, "local_activity", 0, 0)
+    await ctx.db.commit()
+    yield _make_text_sse(reply)
+    yield _make_done_sse()
+    ctx.terminated = True
+
+
+async def _step_points(ctx: _PipelineContext) -> AsyncIterator[ServerSentEvent]:
+    """积分/优惠券查询快捷路径：直接调 get_my_points_and_coupons，无 LLM"""
+    if ctx.intent != IntentType.POINTS_QUERY:
+        return
+
+    executor = ToolExecutor(ctx.db, ctx.user)
+    result = await executor.execute("get_my_points_and_coupons", {}, request_lang=ctx.reply_lang)
+    points = result.get("points", 0)
+    coupons = result.get("coupons") or []
+    coupon_count = len(coupons)
+
+    if ctx.lang == "zh":
+        reply = f"当前积分：{points}，可用优惠券：{coupon_count} 张。"
+        if coupon_count > 0:
+            reply += " 在支付时可选择使用优惠券抵扣。"
+    else:
+        reply = f"Your points: {points}. Available coupons: {coupon_count}."
+        if coupon_count > 0:
+            reply += " You can apply coupons at checkout."
+
+    _state.record_usage(ctx.user.id, 0)
+    await _save_assistant_message(ctx, reply, "local_points", 0, 0)
+    await ctx.db.commit()
+    yield _make_text_sse(reply)
+    yield _make_done_sse()
+    ctx.terminated = True
+
+
 async def _step_llm(ctx: _PipelineContext) -> AsyncIterator[ServerSentEvent]:
     """核心 LLM 调用 + 工具循环（带 token 上限保护）"""
     model_tier = "large" if ctx.intent == IntentType.COMPLEX else "small"
@@ -681,10 +771,20 @@ async def _step_llm(ctx: _PipelineContext) -> AsyncIterator[ServerSentEvent]:
                     yield _make_text_sse(fallback)
                 break
 
-            response: LLMResponse = await llm.chat(
+            response: LLMResponse | None = None
+            async for kind, data in llm.chat_stream(
                 messages=messages, system=system_prompt,
                 tools=tools, model_tier=model_tier,
-            )
+            ):
+                if kind == "text_delta":
+                    ctx.full_response += data
+                    yield _make_text_sse(data)
+                elif kind == "done":
+                    response = data
+                    break
+
+            if response is None:
+                break
             ctx.model_used = response.model
             ctx.total_input_tokens += response.usage.input_tokens
             ctx.total_output_tokens += response.usage.output_tokens
@@ -692,16 +792,7 @@ async def _step_llm(ctx: _PipelineContext) -> AsyncIterator[ServerSentEvent]:
             tool_use_blocks = [b for b in response.content if b.type == "tool_use"]
 
             if not tool_use_blocks:
-                for block in response.content:
-                    if block.type == "text":
-                        ctx.full_response += block.text
-                        yield _make_text_sse(block.text)
                 break
-
-            for block in response.content:
-                if block.type == "text" and block.text:
-                    ctx.full_response += block.text
-                    yield _make_text_sse(block.text)
 
             assistant_content = []
             for block in response.content:
@@ -800,6 +891,8 @@ _PIPELINE = [
     _step_off_topic,
     _step_transfer_cs,
     _step_faq,
+    _step_activity,
+    _step_points,
     _step_llm,
 ]
 
