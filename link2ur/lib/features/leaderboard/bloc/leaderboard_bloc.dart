@@ -341,12 +341,37 @@ class LeaderboardBloc extends Bloc<LeaderboardEvent, LeaderboardState> {
         page: 1,
         hasMore: response.hasMore,
       ));
+
+      if (response.leaderboards.isNotEmpty) {
+        await _loadLeaderboardFavoritesBatch(response.leaderboards, emit);
+      }
     } catch (e) {
       AppLogger.error('Failed to load leaderboards', e);
       emit(state.copyWith(
         status: LeaderboardStatus.error,
         errorMessage: e.toString(),
       ));
+    }
+  }
+
+  /// 批量获取排行榜收藏状态并合并到列表（与论坛板块收藏一致，刷新后仍显示正确收藏状态）
+  Future<void> _loadLeaderboardFavoritesBatch(
+    List<Leaderboard> leaderboards,
+    Emitter<LeaderboardState> emit,
+  ) async {
+    try {
+      final ids = leaderboards.map((e) => e.id).toList();
+      final favMap = await _leaderboardRepository.getFavoritesBatch(ids);
+      if (emit.isDone || favMap.isEmpty) return;
+
+      final updated = state.leaderboards.map((lb) {
+        final fav = favMap[lb.id];
+        return fav != null ? lb.copyWith(isFavorited: fav) : lb;
+      }).toList();
+
+      emit(state.copyWith(leaderboards: updated));
+    } catch (e) {
+      AppLogger.error('Failed to load leaderboard favorites batch', e);
     }
   }
 
@@ -373,6 +398,10 @@ class LeaderboardBloc extends Bloc<LeaderboardEvent, LeaderboardState> {
         hasMore: response.hasMore,
         searchKeyword: event.keyword,
       ));
+
+      if (response.leaderboards.isNotEmpty) {
+        await _loadLeaderboardFavoritesBatch(response.leaderboards, emit);
+      }
     } catch (e) {
       AppLogger.error('Failed to search leaderboards', e);
       emit(state.copyWith(
@@ -425,6 +454,10 @@ class LeaderboardBloc extends Bloc<LeaderboardEvent, LeaderboardState> {
         page: 1,
         hasMore: response.hasMore,
       ));
+
+      if (response.leaderboards.isNotEmpty) {
+        await _loadLeaderboardFavoritesBatch(response.leaderboards, emit);
+      }
     } catch (e) {
       AppLogger.error('Failed to refresh leaderboards', e);
     }
@@ -444,11 +477,17 @@ class LeaderboardBloc extends Bloc<LeaderboardEvent, LeaderboardState> {
         sortBy: event.sortBy ?? state.sortBy,
       );
 
+      // 详情接口不返回 is_favorited，需单独拉取收藏状态
+      bool isFavorited = false;
+      try {
+        isFavorited = await _leaderboardRepository.getFavoriteStatus(event.leaderboardId);
+      } catch (_) {}
+
       emit(state.copyWith(
         status: LeaderboardStatus.loaded,
-        selectedLeaderboard: leaderboard,
+        selectedLeaderboard: leaderboard.copyWith(isFavorited: isFavorited),
         items: items,
-        isFavorited: leaderboard.isFavorited,
+        isFavorited: isFavorited,
       ));
     } catch (e) {
       AppLogger.error('Failed to load leaderboard detail', e);
@@ -746,16 +785,31 @@ class LeaderboardBloc extends Bloc<LeaderboardEvent, LeaderboardState> {
     }
   }
 
-  /// 收藏/取消收藏 — 乐观更新 isFavorited
+  /// 收藏/取消收藏 — 乐观更新 isFavorited（详情页 + 列表页卡片）
   Future<void> _onToggleFavorite(
     LeaderboardToggleFavorite event,
     Emitter<LeaderboardState> emit,
   ) async {
-    final previous = state.isFavorited;
+    final listItem = state.leaderboards.isEmpty
+        ? null
+        : state.leaderboards.cast<Leaderboard?>().firstWhere(
+              (e) => e?.id == event.leaderboardId,
+              orElse: () => null,
+            );
+    final previous = listItem?.isFavorited ?? state.isFavorited;
+
     emit(state.copyWith(
       isFavorited: !previous,
       selectedLeaderboard:
           state.selectedLeaderboard?.copyWith(isFavorited: !previous),
+      leaderboards: state.leaderboards.isEmpty
+          ? state.leaderboards
+          : state.leaderboards
+              .map((lb) =>
+                  lb.id == event.leaderboardId
+                      ? lb.copyWith(isFavorited: !previous)
+                      : lb)
+              .toList(),
     ));
 
     try {
@@ -766,6 +820,14 @@ class LeaderboardBloc extends Bloc<LeaderboardEvent, LeaderboardState> {
         isFavorited: previous,
         selectedLeaderboard:
             state.selectedLeaderboard?.copyWith(isFavorited: previous),
+        leaderboards: state.leaderboards.isEmpty
+            ? state.leaderboards
+            : state.leaderboards
+                .map((lb) =>
+                    lb.id == event.leaderboardId
+                        ? lb.copyWith(isFavorited: previous)
+                        : lb)
+                .toList(),
       ));
     }
   }

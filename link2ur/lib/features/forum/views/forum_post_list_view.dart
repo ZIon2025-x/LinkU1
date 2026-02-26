@@ -6,6 +6,7 @@ import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_radius.dart';
 import '../../../core/utils/debouncer.dart';
+import '../../../core/utils/haptic_feedback.dart';
 import '../../../core/utils/helpers.dart';
 import '../../../core/utils/l10n_extension.dart';
 import '../../../core/widgets/loading_view.dart';
@@ -14,6 +15,7 @@ import '../../../core/widgets/empty_state_view.dart';
 import '../../../core/widgets/error_state_view.dart';
 import '../../../core/widgets/async_image_view.dart';
 import '../../../core/router/app_router.dart';
+import '../../../core/utils/app_exception.dart';
 import '../../../data/models/forum.dart';
 import '../../../data/repositories/forum_repository.dart';
 import '../bloc/forum_bloc.dart';
@@ -51,12 +53,37 @@ class _ForumPostListViewContentState
     extends State<_ForumPostListViewContent> {
   final TextEditingController _searchController = TextEditingController();
   final Debouncer _debouncer = Debouncer();
+  /// 板块详情页内收藏状态（与板块列表一致，仅当前页用）
+  late bool _isCategoryFavorited;
+
+  @override
+  void initState() {
+    super.initState();
+    _isCategoryFavorited = widget.category?.isFavorited ?? false;
+  }
 
   @override
   void dispose() {
     _searchController.dispose();
     _debouncer.dispose();
     super.dispose();
+  }
+
+  Future<void> _onToggleCategoryFavorite() async {
+    final category = widget.category;
+    if (category == null) return;
+    AppHaptics.selection();
+    final previous = _isCategoryFavorited;
+    setState(() => _isCategoryFavorited = !previous);
+    try {
+      await context.read<ForumRepository>().toggleCategoryFavorite(category.id);
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _isCategoryFavorited = previous);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e is AppException ? e.message : e.toString())),
+      );
+    }
   }
 
   @override
@@ -70,6 +97,15 @@ class _ForumPostListViewContentState
         title: Text(
             widget.category?.displayName(locale) ?? l10n.forumAllPosts),
         actions: [
+          if (widget.category != null)
+            IconButton(
+              icon: Icon(
+                _isCategoryFavorited ? Icons.favorite : Icons.favorite_border,
+                color: _isCategoryFavorited ? AppColors.error : null,
+              ),
+              onPressed: _onToggleCategoryFavorite,
+              tooltip: l10n.forumFavorite,
+            ),
           IconButton(
             icon: const Icon(Icons.post_add, color: AppColors.primary),
             onPressed: () async {

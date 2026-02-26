@@ -91,6 +91,12 @@ class DesktopDrawer extends StatelessWidget {
                     isDark: isDark,
                   ),
                   _MenuItem(
+                    emoji: '💭',
+                    label: l10n.menuForum,
+                    onTap: () => _navigate(context, '/forum'),
+                    isDark: isDark,
+                  ),
+                  _MenuItem(
                     emoji: '🏪',
                     label: l10n.menuFleaMarket,
                     onTap: () => _navigate(context, '/flea-market'),

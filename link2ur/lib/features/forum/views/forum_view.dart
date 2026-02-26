@@ -503,7 +503,17 @@ class _ForumTabState extends State<_ForumTab> {
           prev.isAuthenticated != curr.isAuthenticated ||
           prev.user?.id != curr.user?.id,
       builder: (context, authState) {
-        return BlocBuilder<ForumBloc, ForumState>(
+        return BlocListener<ForumBloc, ForumState>(
+          listenWhen: (prev, curr) =>
+              curr.errorMessage != null &&
+              curr.categories.isNotEmpty &&
+              prev.errorMessage != curr.errorMessage,
+          listener: (context, state) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text(state.errorMessage!)),
+            );
+          },
+          child: BlocBuilder<ForumBloc, ForumState>(
           buildWhen: (prev, curr) =>
               prev.categories != curr.categories ||
               prev.status != curr.status,
@@ -618,6 +628,7 @@ class _ForumTabState extends State<_ForumTab> {
             );
             return isDesktop ? ContentConstraint(child: listBody) : listBody;
           },
+        ),
         );
       },
     );
@@ -1123,7 +1134,10 @@ class _LeaderboardCard extends StatelessWidget {
         AppHaptics.selection();
         context.push('/leaderboard/${leaderboard.id}');
       },
-      child: Container(
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          Container(
         padding: const EdgeInsets.all(AppSpacing.md),
         decoration: BoxDecoration(
           color: isDark
@@ -1269,6 +1283,33 @@ class _LeaderboardCard extends StatelessWidget {
             ),
           ],
         ),
+          ),
+          Positioned(
+            top: 8,
+            right: 8,
+            child: Material(
+              color: Colors.transparent,
+              child: IconButton(
+                icon: Icon(
+                  leaderboard.isFavorited ? Icons.favorite : Icons.favorite_border,
+                  size: 22,
+                  color: leaderboard.isFavorited
+                      ? AppColors.error
+                      : (isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight),
+                ),
+                onPressed: () {
+                  AppHaptics.selection();
+                  context.read<LeaderboardBloc>().add(
+                    LeaderboardToggleFavorite(leaderboard.id),
+                  );
+                },
+                padding: const EdgeInsets.all(4),
+                constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+                tooltip: context.l10n.forumFavorite,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

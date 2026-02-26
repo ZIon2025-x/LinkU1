@@ -597,10 +597,11 @@ class ForumRepository {
 
   // ==================== 分类收藏 ====================
 
-  /// 收藏/取消收藏分类
+  /// 收藏/取消收藏分类（POST 带空 body 确保请求被正确发送并落库）
   Future<void> toggleCategoryFavorite(int categoryId) async {
-    final response = await _apiService.post(
+    final response = await _apiService.post<Map<String, dynamic>>(
       ApiEndpoints.forumCategoryFavorite(categoryId),
+      data: <String, dynamic>{},
     );
 
     if (!response.isSuccess) {
@@ -618,14 +619,16 @@ class ForumRepository {
       return false;
     }
 
-    return response.data!['is_favorite'] as bool? ?? false;
+    // 后端返回 favorited（ForumCategoryFavoriteResponse）
+    return response.data!['favorited'] as bool? ?? false;
   }
 
   /// 批量获取分类收藏状态
+  /// 后端 Body 为 JSON 数组 [category_id, ...]（FastAPI List[int] = Body(...)）
   Future<Map<int, bool>> getCategoryFavoritesBatch(List<int> categoryIds) async {
     final response = await _apiService.post<Map<String, dynamic>>(
       ApiEndpoints.forumCategoryFavoritesBatch,
-      data: {'category_ids': categoryIds},
+      data: categoryIds,
     );
 
     if (!response.isSuccess || response.data == null) {
@@ -638,6 +641,29 @@ class ForumRepository {
       result[int.tryParse(key) ?? 0] = value as bool? ?? false;
     });
     return result;
+  }
+
+  /// 获取我收藏的板块列表（与后端 GET /api/forum/my/category-favorites 对齐）
+  Future<List<ForumCategory>> getMyCategoryFavorites({
+    int page = 1,
+    int pageSize = 20,
+  }) async {
+    final response = await _apiService.get<Map<String, dynamic>>(
+      ApiEndpoints.myForumCategoryFavorites,
+      queryParameters: {'page': page, 'page_size': pageSize},
+    );
+
+    if (!response.isSuccess || response.data == null) {
+      throw ForumException(response.message ?? '获取收藏板块失败');
+    }
+
+    final list = _extractCategoryList(response.data!);
+    return list
+        .map((e) {
+          final cat = ForumCategory.fromJson(e as Map<String, dynamic>);
+          return cat.copyWith(isFavorited: true);
+        })
+        .toList();
   }
 
   /// 获取用户论坛统计

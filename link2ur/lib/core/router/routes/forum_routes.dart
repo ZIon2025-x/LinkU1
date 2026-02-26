@@ -18,9 +18,13 @@ List<RouteBase> get forumRoutes => [
         path: AppRoutes.forum,
         name: 'forum',
         builder: (context, state) => BlocProvider<ForumBloc>(
-          create: (context) => ForumBloc(
-            forumRepository: context.read<ForumRepository>(),
-          ),
+          create: (context) {
+            final bloc = ForumBloc(
+              forumRepository: context.read<ForumRepository>(),
+            );
+            bloc.add(const ForumLoadCategories());
+            return bloc;
+          },
           child: const ForumView(showLeaderboardTab: false),
         ),
       ),

@@ -514,6 +514,11 @@ class ForumBloc extends Bloc<ForumEvent, ForumState> {
           isRefreshing: false,
         ));
       }
+
+      // 刷新后同样拉取板块收藏状态，否则会显示为未收藏
+      if (categories.isNotEmpty) {
+        await _loadCategoryFavoritesBatch(categories, emit);
+      }
     } catch (e) {
       AppLogger.error('Failed to refresh forum', e);
       emit(state.copyWith(

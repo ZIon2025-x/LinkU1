@@ -1061,8 +1061,8 @@ class _MenuView extends StatelessWidget {
                   icon: Icons.person,
                   title: context.l10n.menuMy,
                   onTap: () {
+                    context.push(AppRoutes.profile);
                     Navigator.pop(context);
-                    context.push('/profile');
                   },
                 ),
                 _MenuListItem(
@@ -1085,8 +1085,8 @@ class _MenuView extends StatelessWidget {
                   icon: Icons.forum,
                   title: context.l10n.menuForum,
                   onTap: () {
+                    context.push(AppRoutes.forum);
                     Navigator.pop(context);
-                    context.push('/forum');
                   },
                 ),
                 _MenuListItem(
@@ -1395,7 +1395,7 @@ class _SearchViewState extends State<_SearchView> {
             color: AppColors.teal,
             onTap: () {
               Navigator.pop(context);
-              context.push('/forum');
+              context.push(AppRoutes.forum);
             },
           ),
         ],

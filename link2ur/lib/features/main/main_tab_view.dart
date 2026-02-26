@@ -157,12 +157,14 @@ class _MainTabViewState extends State<MainTabView>
   void dispose() {
     if (_blocsInitialized) {
       WidgetsBinding.instance.removeObserver(this);
-    }
-    if (_blocsInitialized) {
-      _homeBloc.close();
-      _forumBloc.close();
-      _leaderboardBloc.close();
-      _messageBloc.close();
+      // 延迟关闭 Bloc，等当前帧内子树先卸载、依赖先解除后再 close，
+      // 避免 InheritedWidget 卸载时 _dependents 仍非空导致断言失败（_dependents.isEmpty）
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _homeBloc.close();
+        _forumBloc.close();
+        _leaderboardBloc.close();
+        _messageBloc.close();
+      });
     }
     super.dispose();
   }

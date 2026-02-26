@@ -6,6 +6,7 @@ import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_radius.dart';
 import '../../../core/design/app_typography.dart';
+import '../../../core/utils/haptic_feedback.dart';
 import '../../../core/utils/l10n_extension.dart';
 import '../../../core/widgets/loading_view.dart';
 import '../../../core/widgets/skeleton_view.dart';
@@ -126,7 +127,10 @@ class _LeaderboardCard extends StatelessWidget {
       onTap: () {
         context.push('/leaderboard/${leaderboard.id}');
       },
-      child: Container(
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          Container(
         padding: AppSpacing.allMd,
         decoration: BoxDecoration(
           color: isDark
@@ -269,6 +273,31 @@ class _LeaderboardCard extends StatelessWidget {
             ),
           ],
         ),
+          ),
+          Positioned(
+            top: 8,
+            right: 8,
+            child: Material(
+              color: Colors.transparent,
+              child: IconButton(
+                icon: Icon(
+                  leaderboard.isFavorited ? Icons.favorite : Icons.favorite_border,
+                  size: 22,
+                  color: leaderboard.isFavorited ? AppColors.error : (isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight),
+                ),
+                onPressed: () {
+                  AppHaptics.selection();
+                  context.read<LeaderboardBloc>().add(
+                    LeaderboardToggleFavorite(leaderboard.id),
+                  );
+                },
+                padding: const EdgeInsets.all(4),
+                constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+                tooltip: context.l10n.forumFavorite,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

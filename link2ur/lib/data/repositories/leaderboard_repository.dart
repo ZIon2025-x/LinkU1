@@ -291,10 +291,11 @@ class LeaderboardRepository {
 
   // ==================== 收藏/举报 ====================
 
-  /// 收藏/取消收藏排行榜
+  /// 收藏/取消收藏排行榜（POST 带空 body 确保请求正确发送）
   Future<void> toggleFavorite(int leaderboardId) async {
-    final response = await _apiService.post(
+    final response = await _apiService.post<Map<String, dynamic>>(
       ApiEndpoints.leaderboardFavorite(leaderboardId),
+      data: <String, dynamic>{},
     );
 
     if (!response.isSuccess) {
@@ -313,6 +314,26 @@ class LeaderboardRepository {
     }
 
     return response.data!['favorited'] as bool? ?? false;
+  }
+
+  /// 批量获取排行榜收藏状态（后端 Body 为 JSON 数组 [leaderboard_id, ...]）
+  Future<Map<int, bool>> getFavoritesBatch(List<int> leaderboardIds) async {
+    if (leaderboardIds.isEmpty) return {};
+    final response = await _apiService.post<Map<String, dynamic>>(
+      ApiEndpoints.leaderboardFavoritesBatch,
+      data: leaderboardIds,
+    );
+
+    if (!response.isSuccess || response.data == null) {
+      return {};
+    }
+
+    final result = <int, bool>{};
+    final favorites = response.data!['favorites'] as Map<String, dynamic>? ?? {};
+    favorites.forEach((key, value) {
+      result[int.tryParse(key) ?? 0] = value as bool? ?? false;
+    });
+    return result;
   }
 
   /// 获取我收藏的排行榜

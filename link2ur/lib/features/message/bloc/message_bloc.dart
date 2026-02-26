@@ -448,7 +448,7 @@ class MessageBloc extends Bloc<MessageEvent, MessageState> {
     emit(state.copyWith(hiddenTaskChats: updated));
   }
 
-  /// 本地将指定任务聊天的未读计数清零
+  /// 本地乐观更新未读计数，再异步请求后端同步已读状态
   void _onMarkTaskChatRead(
     MessageMarkTaskChatRead event,
     Emitter<MessageState> emit,
@@ -460,9 +460,23 @@ class MessageBloc extends Bloc<MessageEvent, MessageState> {
       return chat;
     }).toList();
 
-    // 只在确实有变化时 emit
     if (updatedChats != state.taskChats) {
       emit(state.copyWith(taskChats: updatedChats));
+
+      // 异步请求后端标记已读，不阻塞 UI；后端需要 uptoMessageId 或 messageIds
+      TaskChat? chat;
+      for (final c in state.taskChats) {
+        if (c.taskId == event.taskId) {
+          chat = c;
+          break;
+        }
+      }
+      final uptoId = chat?.lastMessageObj?.id;
+      if (uptoId != null) {
+        _messageRepository
+            .markTaskChatRead(event.taskId, uptoMessageId: uptoId)
+            .catchError((e) => AppLogger.warning('Failed to mark task chat read', e));
+      }
     }
   }
 }

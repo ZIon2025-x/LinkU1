@@ -84,15 +84,19 @@ class _UnifiedChatContentState extends State<_UnifiedChatContent> {
     _focusNode.unfocus();
     final aiChatService = context.read<AIChatService>();
     final blocContext = context;
+    final screenHeight = MediaQuery.of(context).size.height;
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
       builder: (sheetContext) {
-        return DraggableScrollableSheet(
-          minChildSize: 0.3,
-          maxChildSize: 0.9,
-          builder: (_, scrollController) {
+        return SizedBox(
+          height: screenHeight * 0.5,
+          child: DraggableScrollableSheet(
+            initialChildSize: 1,
+            minChildSize: 0.5,
+            maxChildSize: 1,
+            builder: (_, scrollController) {
             return FutureBuilder<List<AIConversation>>(
               future: aiChatService.getConversations(),
               builder: (ctx, snapshot) {
@@ -177,7 +181,8 @@ class _UnifiedChatContentState extends State<_UnifiedChatContent> {
               },
             );
           },
-        );
+        ),
+      );
       },
     );
   }

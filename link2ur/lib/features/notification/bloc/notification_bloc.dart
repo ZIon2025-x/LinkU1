@@ -323,45 +323,59 @@ class NotificationBloc extends Bloc<NotificationEvent, NotificationState> {
     NotificationMarkAsRead event,
     Emitter<NotificationState> emit,
   ) async {
-    try {
-      await _notificationRepository.markAsRead(event.notificationId);
+    // 1. 乐观更新：立即更新列表与未读数，不等待后端
+    final prev = state.unreadCount;
+    final updatedList = state.notifications.map((n) {
+      if (n.id == event.notificationId) {
+        return n.copyWith(isRead: true);
+      }
+      return n;
+    }).toList();
 
-      final updatedList = state.notifications.map((n) {
-        if (n.id == event.notificationId) {
-          return n.copyWith(isRead: true);
-        }
-        return n;
-      }).toList();
-
-      emit(state.copyWith(notifications: updatedList));
-
-      // 更新未读数
-      add(const NotificationLoadUnreadNotificationCount());
-    } catch (e) {
-      AppLogger.error('Failed to mark notification as read', e);
-      emit(state.copyWith(errorMessage: e.toString()));
+    AppNotification? target;
+    for (final n in state.notifications) {
+      if (n.id == event.notificationId) {
+        target = n;
+        break;
+      }
     }
+    final isInteraction = target != null && _isInteractionType(target.type);
+    final newUnread = isInteraction
+        ? UnreadNotificationCount(
+            count: prev.count,
+            forumCount: prev.forumCount > 0 ? prev.forumCount - 1 : 0,
+          )
+        : UnreadNotificationCount(
+            count: prev.count > 0 ? prev.count - 1 : 0,
+            forumCount: prev.forumCount,
+          );
+
+    emit(state.copyWith(notifications: updatedList, unreadCount: newUnread));
+
+    // 2. 异步请求后端，不阻塞 UI；失败仅打日志，下次轮询会拉回正确未读数
+    _notificationRepository.markAsRead(event.notificationId).catchError((e) {
+      AppLogger.error('Failed to mark notification as read', e);
+    });
   }
 
   Future<void> _onMarkAllAsRead(
     NotificationMarkAllAsRead event,
     Emitter<NotificationState> emit,
   ) async {
-    try {
-      await _notificationRepository.markAllAsRead();
+    // 1. 乐观更新：立即全部已读、未读数清零，不等待后端
+    final updatedList = state.notifications
+        .map((n) => n.copyWith(isRead: true))
+        .toList();
 
-      final updatedList = state.notifications
-          .map((n) => n.copyWith(isRead: true))
-          .toList();
+    emit(state.copyWith(
+      notifications: updatedList,
+      unreadCount: const UnreadNotificationCount(count: 0),
+    ));
 
-      emit(state.copyWith(
-        notifications: updatedList,
-        unreadCount: const UnreadNotificationCount(count: 0),
-      ));
-    } catch (e) {
+    // 2. 异步请求后端，不阻塞 UI；失败仅打日志，下次轮询会拉回正确未读数
+    _notificationRepository.markAllAsRead().catchError((e) {
       AppLogger.error('Failed to mark all as read', e);
-      emit(state.copyWith(errorMessage: e.toString()));
-    }
+    });
   }
 
   Future<void> _onLoadUnreadNotificationCount(

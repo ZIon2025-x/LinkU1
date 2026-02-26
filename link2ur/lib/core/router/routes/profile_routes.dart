@@ -2,6 +2,7 @@ import 'package:go_router/go_router.dart';
 
 import '../app_routes.dart';
 import '../page_transitions.dart';
+import '../../../features/profile/views/profile_view.dart';
 import '../../../features/profile/views/edit_profile_view.dart';
 import '../../../features/profile/views/my_tasks_view.dart';
 import '../../../features/profile/views/my_posts_view.dart';
@@ -10,6 +11,11 @@ import '../../../features/profile/views/task_preferences_view.dart';
 
 /// 个人与资料相关路由
 List<RouteBase> get profileRoutes => [
+      GoRoute(
+        path: AppRoutes.profile,
+        name: 'profile',
+        builder: (context, state) => const ProfileView(),
+      ),
       GoRoute(
         path: AppRoutes.editProfile,
         name: 'editProfile',
