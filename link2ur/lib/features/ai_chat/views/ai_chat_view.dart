@@ -292,6 +292,22 @@ class _WelcomeView extends StatelessWidget {
                           label: context.l10n.aiChatSearchTasks,
                           onTap: () => _sendQuickMessage(context, context.l10n.aiChatSearchTasks),
                         ),
+                        _QuickAction(
+                          label: context.l10n.aiChatPostTask,
+                          onTap: () => _sendQuickMessage(context, context.l10n.aiChatPostTask),
+                        ),
+                        _QuickAction(
+                          label: context.l10n.aiChatMyPoints,
+                          onTap: () => _sendQuickMessage(context, context.l10n.aiChatMyPoints),
+                        ),
+                        _QuickAction(
+                          label: context.l10n.aiChatActivities,
+                          onTap: () => _sendQuickMessage(context, context.l10n.aiChatActivities),
+                        ),
+                        _QuickAction(
+                          label: context.l10n.aiChatContactSupport,
+                          onTap: () => _sendQuickMessage(context, context.l10n.aiChatContactSupport),
+                        ),
                       ],
                     ),
                   ],
