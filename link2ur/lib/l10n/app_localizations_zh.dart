@@ -5353,6 +5353,15 @@ class AppLocalizationsZh extends AppLocalizations {
   String get serviceContinuePayment => '继续支付';
 
   @override
+  String get serviceUnderReview => '审核中';
+
+  @override
+  String get serviceApplyAgain => '再次申请';
+
+  @override
+  String get serviceInProgress => '服务进行中';
+
+  @override
   String get taskDetailConfirmDeadline => '确认截止时间';
 
   @override
@@ -14040,6 +14049,15 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get serviceContinuePayment => '繼續支付';
+
+  @override
+  String get serviceUnderReview => '審核中';
+
+  @override
+  String get serviceApplyAgain => '再次申請';
+
+  @override
+  String get serviceInProgress => '服務進行中';
 
   @override
   String get taskDetailConfirmDeadline => '確認截止時間';

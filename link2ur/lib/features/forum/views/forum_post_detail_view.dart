@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_typography.dart';
@@ -118,57 +119,13 @@ class _ForumPostDetailViewState extends State<ForumPostDetailView> {
             onPressed: () {
               bloc.add(ForumDeletePost(widget.postId));
               Navigator.pop(dialogContext);
-              Navigator.of(context).pop();
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text(context.l10n.forumPostDeleted)),
-              );
+              // 删除成功后再 pop 详情页、显示 SnackBar，由 BlocListener 监听 selectedPost 置空
             },
             child: Text(context.l10n.commonDelete),
           ),
         ],
       ),
     );
-  }
-
-  void _showEditPostDialog(BuildContext context) {
-    final post = context.read<ForumBloc>().state.selectedPost;
-    if (post == null) return;
-    final contentController = TextEditingController(text: post.content);
-    final bloc = context.read<ForumBloc>();
-
-    showDialog<void>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: Text(context.l10n.commonEdit),
-        content: TextField(
-          controller: contentController,
-          maxLines: 8,
-          minLines: 3,
-          decoration: InputDecoration(
-            border: const OutlineInputBorder(),
-            hintText: context.l10n.forumCreatePostContentPlaceholder,
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext),
-            child: Text(context.l10n.commonCancel),
-          ),
-          FilledButton(
-            onPressed: () {
-              final content = contentController.text.trim();
-              if (content.isEmpty) return;
-              bloc.add(ForumEditPost(widget.postId, content: content));
-              Navigator.pop(dialogContext);
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text(context.l10n.forumPostUpdated)),
-              );
-            },
-            child: Text(context.l10n.commonConfirm),
-          ),
-        ],
-      ),
-    ).then((_) => contentController.dispose());
   }
 
   @override
@@ -185,12 +142,21 @@ class _ForumPostDetailViewState extends State<ForumPostDetailView> {
           return BlocListener<ForumBloc, ForumState>(
             listenWhen: (prev, curr) =>
                 !prev.reportSuccess && curr.reportSuccess ||
-                prev.errorMessage != curr.errorMessage && curr.errorMessage != null,
+                prev.errorMessage != curr.errorMessage && curr.errorMessage != null ||
+                (prev.selectedPost?.id == widget.postId && curr.selectedPost == null),
             listener: (context, state) {
               if (state.reportSuccess) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(content: Text(context.l10n.commonReportSubmitted)),
                 );
+              } else if (state.selectedPost == null && state.errorMessage == null) {
+                // 当前帖子已删除成功（listenWhen 已保证是本页帖子被删），返回上一页并提示
+                if (context.mounted) Navigator.of(context).pop();
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text(context.l10n.forumPostDeleted)),
+                  );
+                }
               } else if (state.errorMessage != null) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(content: Text(state.errorMessage!)),
@@ -234,7 +200,13 @@ class _ForumPostDetailViewState extends State<ForumPostDetailView> {
                 if (value == 'report') {
                   _showReportDialog(context);
                 } else if (value == 'edit') {
-                  _showEditPostDialog(context);
+                  final post = context.read<ForumBloc>().state.selectedPost;
+                  if (post != null) {
+                    context.push('/forum/posts/${post.id}/edit', extra: {
+                      'post': post,
+                      'bloc': context.read<ForumBloc>(),
+                    });
+                  }
                 } else if (value == 'delete') {
                   _showDeletePostDialog(context);
                 }

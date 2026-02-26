@@ -38,6 +38,7 @@ class AppRoutes {
   // 论坛
   static const String forum = '/forum';
   static const String forumPostDetail = '/forum/posts/:id';
+  static const String forumPostEdit = '/forum/posts/:id/edit';
   static const String createPost = '/forum/posts/create';
   static const String forumCategoryRequest = '/forum/category-request';
   static const String forumPostList = '/forum/category/:categoryId';

@@ -10268,6 +10268,24 @@ abstract class AppLocalizations {
   /// **'Continue Payment'**
   String get serviceContinuePayment;
 
+  /// No description provided for @serviceUnderReview.
+  ///
+  /// In en, this message translates to:
+  /// **'Under Review'**
+  String get serviceUnderReview;
+
+  /// No description provided for @serviceApplyAgain.
+  ///
+  /// In en, this message translates to:
+  /// **'Apply Again'**
+  String get serviceApplyAgain;
+
+  /// No description provided for @serviceInProgress.
+  ///
+  /// In en, this message translates to:
+  /// **'Service in Progress'**
+  String get serviceInProgress;
+
   /// No description provided for @taskDetailConfirmDeadline.
   ///
   /// In en, this message translates to:

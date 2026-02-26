@@ -1070,42 +1070,16 @@ class _BottomApplyBar extends StatelessWidget {
     );
   }
 
+  /// 申请状态为「达人审核/议价中」：pending / negotiating / price_agreed
+  static bool _isApplicationUnderReview(String? status) {
+    return status == 'pending' ||
+        status == 'negotiating' ||
+        status == 'price_agreed';
+  }
+
   Widget _buildButton(BuildContext context) {
     if (service.userApplicationId != null) {
-      if (service.hasTimeSlots) {
-        if (service.userApplicationHasNegotiation == true &&
-            service.userApplicationStatus == 'pending') {
-          return _buildDisabledButton(
-            context,
-            context.l10n.serviceWaitingExpertResponse,
-          );
-        }
-
-        if (service.userTaskStatus == AppConstants.taskStatusPendingPayment &&
-            service.userTaskIsPaid == false &&
-            service.userTaskId != null) {
-          return _buildPrimaryButton(
-            context,
-            context.l10n.serviceContinuePayment,
-            () => context.goToTaskDetail(service.userTaskId!),
-          );
-        }
-
-        return _buildPrimaryButton(
-          context,
-          context.l10n.serviceApplyOtherSlot,
-          () => _ApplyServiceSheet.show(context, service, serviceId),
-        );
-      }
-
-      if (service.userApplicationHasNegotiation == true &&
-          service.userTaskStatus == AppConstants.taskStatusPendingPayment) {
-        return _buildDisabledButton(
-          context,
-          context.l10n.serviceWaitingExpertResponse,
-        );
-      }
-
+      // 1. 待支付且未支付 -> 继续支付
       if (service.userTaskStatus == AppConstants.taskStatusPendingPayment &&
           service.userTaskIsPaid == false &&
           service.userTaskId != null) {
@@ -1116,18 +1090,47 @@ class _BottomApplyBar extends StatelessWidget {
         );
       }
 
-      if (service.userApplicationHasNegotiation == true &&
-          service.userApplicationStatus == 'pending') {
+      // 2. 达人正在审核或议价中 -> 灰色「审核中」不可点击
+      if (_isApplicationUnderReview(service.userApplicationStatus)) {
         return _buildDisabledButton(
           context,
-          context.l10n.serviceWaitingExpertResponse,
+          context.l10n.serviceUnderReview,
         );
       }
 
-      // 服务支持多次申请，不再显示灰色「已申请」不可点击，始终可再次申请
+      // 3. 服务已完成 -> 允许再次申请同一服务
+      if (service.userTaskStatus == AppConstants.taskStatusCompleted) {
+        return _buildPrimaryButton(
+          context,
+          context.l10n.serviceApplyAgain,
+          () => _ApplyServiceSheet.show(context, service, serviceId),
+        );
+      }
+
+      // 4. 已通过且任务进行中（未完成、非待支付）-> 灰色「服务进行中」不可点击
+      if (service.userApplicationStatus == 'approved' &&
+          service.userTaskStatus != null &&
+          service.userTaskStatus != AppConstants.taskStatusCompleted &&
+          service.userTaskStatus != AppConstants.taskStatusPendingPayment) {
+        return _buildDisabledButton(
+          context,
+          context.l10n.serviceInProgress,
+        );
+      }
+
+      // 5. 有时间段且当前申请已结束（已通过/拒绝等）-> 申请其他时段
+      if (service.hasTimeSlots) {
+        return _buildPrimaryButton(
+          context,
+          context.l10n.serviceApplyOtherSlot,
+          () => _ApplyServiceSheet.show(context, service, serviceId),
+        );
+      }
+
+      // 6. 其他（如已拒绝、已取消等）-> 可再次申请
       return _buildPrimaryButton(
         context,
-        context.l10n.taskExpertApplyService,
+        context.l10n.serviceApplyAgain,
         () => _ApplyServiceSheet.show(context, service, serviceId),
       );
     }

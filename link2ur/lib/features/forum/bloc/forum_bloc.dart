@@ -168,14 +168,16 @@ class ForumDeletePost extends ForumEvent {
 }
 
 class ForumEditPost extends ForumEvent {
-  const ForumEditPost(this.postId, {required this.content, this.images});
+  /// 仅传有改动的字段，减少后端翻译等重复调用
+  const ForumEditPost(this.postId, {this.title, this.content, this.images});
 
   final int postId;
-  final String content;
+  final String? title;
+  final String? content;
   final List<String>? images;
 
   @override
-  List<Object?> get props => [postId, content, images];
+  List<Object?> get props => [postId, title, content, images];
 }
 
 class ForumDeleteReply extends ForumEvent {
@@ -858,8 +860,11 @@ class ForumBloc extends Bloc<ForumEvent, ForumState> {
     Emitter<ForumState> emit,
   ) async {
     try {
-      final data = <String, dynamic>{'content': event.content};
+      final data = <String, dynamic>{};
+      if (event.title != null) data['title'] = event.title;
+      if (event.content != null) data['content'] = event.content;
       if (event.images != null) data['images'] = event.images;
+      if (data.isEmpty) return;
       final updated = await _forumRepository.updatePost(event.postId, data);
       final updatedPosts = state.posts
           .map((p) => p.id == event.postId ? updated : p)

@@ -3087,30 +3087,30 @@ async def update_post(
     old_category_id = db_post.category_id
     old_is_visible = db_post.is_visible
     
-    # 如果更新了 title 或 content，自动填充双语字段
-    if 'title' in update_data or 'content' in update_data:
+    # 仅当 title 或 content 实际发生变化时才调用翻译，避免浪费翻译次数
+    updated_title = update_data.get("title", db_post.title) if "title" in update_data else db_post.title
+    updated_content_raw = update_data.get("content", db_post.content) or db_post.content
+    normalized_updated_content = (updated_content_raw.strip() if updated_content_raw else None)
+    existing_content_normalized = (db_post.content or "").strip() if db_post.content else ""
+    title_changed = "title" in update_data and (updated_title or "").strip() != (db_post.title or "").strip()
+    content_changed = "content" in update_data and normalized_updated_content != existing_content_normalized
+
+    if title_changed or content_changed:
         from app.utils.bilingual_helper import auto_fill_bilingual_fields
-        
-        updated_title = update_data.get('title', db_post.title)
-        updated_content = update_data.get('content', db_post.content)
-        
-        # 内容已经是编码格式（\n 和 \c 标记），只移除首尾空白，保留编码标记
-        normalized_updated_content = updated_content.strip() if updated_content else None
-        
+
+        # 未改动的字段传入已有翻译，避免重复翻译
         _, title_en, title_zh, content_en, content_zh = await auto_fill_bilingual_fields(
             name=updated_title,
-            description=normalized_updated_content,  # 保留编码标记（\n 和 \c）
-            name_en=update_data.get('title_en') or db_post.title_en,
-            name_zh=update_data.get('title_zh') or db_post.title_zh,
-            description_en=update_data.get('content_en') or db_post.content_en,
-            description_zh=update_data.get('content_zh') or db_post.content_zh,
+            description=normalized_updated_content,
+            name_en=update_data.get("title_en") or (db_post.title_en if not title_changed else None),
+            name_zh=update_data.get("title_zh") or (db_post.title_zh if not title_changed else None),
+            description_en=update_data.get("content_en") or (db_post.content_en if not content_changed else None),
+            description_zh=update_data.get("content_zh") or (db_post.content_zh if not content_changed else None),
         )
-        
-        # 更新双语字段
-        update_data['title_en'] = title_en
-        update_data['title_zh'] = title_zh
-        update_data['content_en'] = content_en
-        update_data['content_zh'] = content_zh
+        update_data["title_en"] = title_en
+        update_data["title_zh"] = title_zh
+        update_data["content_en"] = content_en
+        update_data["content_zh"] = content_zh
     
     # 如果更新了板块，需要检查新板块的权限（学校板块需要权限）
     if "category_id" in update_data and update_data["category_id"] != old_category_id:

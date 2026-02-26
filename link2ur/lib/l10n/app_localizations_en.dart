@@ -5585,6 +5585,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get serviceContinuePayment => 'Continue Payment';
 
   @override
+  String get serviceUnderReview => 'Under Review';
+
+  @override
+  String get serviceApplyAgain => 'Apply Again';
+
+  @override
+  String get serviceInProgress => 'Service in Progress';
+
+  @override
   String get taskDetailConfirmDeadline => 'Confirm deadline';
 
   @override

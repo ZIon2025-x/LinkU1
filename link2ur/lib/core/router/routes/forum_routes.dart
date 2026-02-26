@@ -7,8 +7,10 @@ import '../page_transitions.dart';
 import '../../../data/repositories/forum_repository.dart';
 import '../../../features/forum/bloc/forum_bloc.dart';
 import '../../../features/forum/views/forum_view.dart';
+import '../../../data/models/forum.dart';
 import '../../../features/forum/views/forum_post_detail_view.dart';
 import '../../../features/forum/views/create_post_view.dart';
+import '../../../features/forum/views/edit_post_view.dart';
 import '../../../features/forum/views/forum_category_request_view.dart';
 import '../../../features/profile/views/my_forum_posts_view.dart';
 
@@ -66,6 +68,31 @@ List<RouteBase> get forumRoutes => [
             context,
             key: state.pageKey,
             child: ForumPostDetailView(postId: id),
+          );
+        },
+      ),
+      GoRoute(
+        path: AppRoutes.forumPostEdit,
+        name: 'forumPostEdit',
+        pageBuilder: (context, state) {
+          final id = int.tryParse(state.pathParameters['id'] ?? '');
+          final extra = state.extra as Map<String, dynamic>?;
+          final post = extra?['post'] as ForumPost?;
+          final bloc = extra?['bloc'] as ForumBloc?;
+          if (id == null || id <= 0 || post == null || bloc == null) {
+            return SlideUpTransitionPage(
+              key: state.pageKey,
+              child: const Scaffold(
+                body: Center(child: Text('Invalid post or missing data')),
+              ),
+            );
+          }
+          return SlideUpTransitionPage(
+            key: state.pageKey,
+            child: BlocProvider<ForumBloc>.value(
+              value: bloc,
+              child: EditPostView(postId: id, post: post),
+            ),
           );
         },
       ),
