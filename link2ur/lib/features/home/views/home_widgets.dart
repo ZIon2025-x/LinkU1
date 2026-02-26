@@ -85,7 +85,7 @@ class _GreetingSectionWithCloudState extends State<_GreetingSectionWithCloud> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      context.l10n.homeWhatToDo,
+                      LinkerQuotes.randomQuote(Localizations.localeOf(context)),
                       style: TextStyle(
                         fontSize: 15,
                         fontWeight: FontWeight.w500,
@@ -93,6 +93,8 @@ class _GreetingSectionWithCloudState extends State<_GreetingSectionWithCloud> {
                             ? AppColors.textSecondaryDark
                             : AppColors.textSecondaryLight,
                       ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
                     ),
                     const SizedBox(height: 2),
                     Text(
@@ -169,7 +171,7 @@ class _GreetingSection extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  context.l10n.homeWhatToDo,
+                  LinkerQuotes.randomQuote(Localizations.localeOf(context)),
                   style: TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.w500,
@@ -177,6 +179,8 @@ class _GreetingSection extends StatelessWidget {
                         ? AppColors.textSecondaryDark
                         : AppColors.textSecondaryLight,
                   ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
                 ),
                 const SizedBox(height: 2),
                 Text(
