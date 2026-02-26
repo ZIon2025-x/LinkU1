@@ -12,6 +12,7 @@ class _GreetingSectionWithCloud extends StatefulWidget {
 
 class _GreetingSectionWithCloudState extends State<_GreetingSectionWithCloud> {
   bool _showCloud = false;
+  String? _cachedQuote;
   Timer? _showTimer;
   Timer? _hideTimer;
   bool _hasShownOnce = false;
@@ -21,6 +22,12 @@ class _GreetingSectionWithCloudState extends State<_GreetingSectionWithCloud> {
   static const _firstShowMax = 8;
   static const _minInterval = Duration(seconds: 22);
   static const _maxInterval = Duration(seconds: 38);
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _cachedQuote ??= LinkerQuotes.randomQuote(Localizations.localeOf(context));
+  }
 
   @override
   void initState() {
@@ -69,7 +76,8 @@ class _GreetingSectionWithCloudState extends State<_GreetingSectionWithCloud> {
     final horizontalPadding = isDesktop ? 24.0 : AppSpacing.md;
 
     // 云朵与 Linker 按钮重叠：Stack 内先画问候行，再在按钮上方叠云朵；顶部不做额外间距，被裁切可接受
-    const cloudHeight = 91.0;
+    const cloudWidth = 100.0;
+    const cloudHeight = 65.0;
 
     return Padding(
       padding: EdgeInsets.fromLTRB(horizontalPadding, AppSpacing.sm, horizontalPadding, 0),
@@ -85,7 +93,7 @@ class _GreetingSectionWithCloudState extends State<_GreetingSectionWithCloud> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      LinkerQuotes.randomQuote(Localizations.localeOf(context)),
+                      _cachedQuote ?? '',
                       style: TextStyle(
                         fontSize: 15,
                         fontWeight: FontWeight.w500,
@@ -125,7 +133,7 @@ class _GreetingSectionWithCloudState extends State<_GreetingSectionWithCloud> {
           ),
           Positioned(
             top: -cloudHeight + 42,
-            right: 0,
+            right: 16,
             child: IgnorePointer(
               child: AnimatedOpacity(
                 opacity: _showCloud ? 1.0 : 0.0,
@@ -133,7 +141,7 @@ class _GreetingSectionWithCloudState extends State<_GreetingSectionWithCloud> {
                 curve: Curves.easeInOut,
                 child: Image.asset(
                   AppAssets.cloud,
-                  width: 140,
+                  width: cloudWidth,
                   height: cloudHeight,
                   fit: BoxFit.contain,
                 ),
@@ -147,8 +155,21 @@ class _GreetingSectionWithCloudState extends State<_GreetingSectionWithCloud> {
 }
 
 /// 对标iOS: headerSection — 两行问候 + 右侧 Linker 入口（无云朵，用于非推荐 Tab 或桌面）
-class _GreetingSection extends StatelessWidget {
+class _GreetingSection extends StatefulWidget {
   const _GreetingSection();
+
+  @override
+  State<_GreetingSection> createState() => _GreetingSectionState();
+}
+
+class _GreetingSectionState extends State<_GreetingSection> {
+  String? _cachedQuote;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _cachedQuote ??= LinkerQuotes.randomQuote(Localizations.localeOf(context));
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -171,7 +192,7 @@ class _GreetingSection extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  LinkerQuotes.randomQuote(Localizations.localeOf(context)),
+                  _cachedQuote ?? '',
                   style: TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.w500,
