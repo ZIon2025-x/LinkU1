@@ -1,12 +1,15 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:dio/dio.dart';
 
+import '../../core/config/app_config.dart';
 import '../../core/constants/api_endpoints.dart';
 import '../../core/utils/logger.dart';
 import '../models/ai_chat.dart';
 import 'api_service.dart';
+import 'storage_service.dart';
 
 /// AI 聊天服务 — 处理 SSE 流式响应
 class AIChatService {
@@ -86,31 +89,54 @@ class AIChatService {
     String content,
     StreamController<AIChatEvent> controller,
   ) async {
+    final token = await StorageService.instance.getToken();
+    final baseUrl = AppConfig.instance.baseUrl;
+    final uri = Uri.parse('$baseUrl${ApiEndpoints.aiSendMessage(conversationId)}');
+
+    final httpClient = HttpClient();
+    httpClient.connectionTimeout = const Duration(seconds: 10);
+
     try {
-      // 使用 Dio 直接发起流式请求
-      final dio = _apiService.dio;
-      final response = await dio.post(
-        ApiEndpoints.aiSendMessage(conversationId),
-        data: {'content': content},
-        options: Options(
-          responseType: ResponseType.stream,
-          headers: {'Accept': 'text/event-stream'},
-        ),
-      );
+      final request = await httpClient.postUrl(uri);
+      request.headers.set(HttpHeaders.contentTypeHeader, 'application/json');
+      request.headers.set(HttpHeaders.acceptHeader, 'text/event-stream');
+      if (token != null) {
+        request.headers.set(HttpHeaders.authorizationHeader, 'Bearer $token');
+      }
+      request.write(jsonEncode({'content': content}));
 
-      final stream = response.data.stream as Stream<List<int>>;
+      final response = await request.close();
+
+      if (response.statusCode == 429) {
+        controller.add(AIChatEvent(
+          type: AIChatEventType.error,
+          error: '请求过于频繁，请稍后再试',
+        ));
+        return;
+      }
+      if (response.statusCode == 503) {
+        controller.add(AIChatEvent(
+          type: AIChatEventType.error,
+          error: 'AI 服务暂不可用',
+        ));
+        return;
+      }
+      if (response.statusCode != 200) {
+        controller.add(AIChatEvent(
+          type: AIChatEventType.error,
+          error: '网络错误，请重试',
+        ));
+        return;
+      }
+
       String buffer = '';
-
-      await for (final chunk in stream) {
-        buffer += utf8.decode(chunk);
-        // 统一为 \n，便于按 \n\n 分割（后端可能发 CRLF \r\n）
+      await for (final chunk in response.transform(utf8.decoder)) {
+        buffer += chunk;
         buffer = buffer.replaceAll('\r\n', '\n');
-        // 按双换行分割 SSE 事件
         while (buffer.contains('\n\n')) {
           final idx = buffer.indexOf('\n\n');
           final eventBlock = buffer.substring(0, idx).trim();
           buffer = buffer.substring(idx + 2);
-
           if (eventBlock.isEmpty) continue;
           final event = _parseSSEEvent(eventBlock);
           if (event != null && !controller.isClosed) {
@@ -118,26 +144,22 @@ class AIChatService {
           }
         }
       }
-      // 处理流结束后的剩余内容（最后一个事件可能无尾部 \n\n）
       if (buffer.trim().isNotEmpty) {
         final event = _parseSSEEvent(buffer.trim());
         if (event != null && !controller.isClosed) {
           controller.add(event);
         }
       }
-    } on DioException catch (e) {
+    } catch (e) {
       AppLogger.error('AI chat SSE error', e);
       if (!controller.isClosed) {
-        final message = e.response?.statusCode == 429
-            ? '请求过于频繁，请稍后再试'
-            : e.response?.statusCode == 503
-                ? 'AI 服务暂不可用'
-                : '网络错误，请重试';
         controller.add(AIChatEvent(
           type: AIChatEventType.error,
-          error: message,
+          error: '网络错误，请重试',
         ));
       }
+    } finally {
+      httpClient.close();
     }
   }
 
