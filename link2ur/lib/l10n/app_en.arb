@@ -3061,6 +3061,8 @@
       }
     }
   },
+  "searchRecentSearches": "Recent searches",
+  "searchClearHistory": "Clear search history",
 
   "networkOffline": "Network disconnected",
   "networkOnline": "Network restored",
@@ -3323,6 +3325,8 @@
   "searchExpertsTitle": "Experts",
   "searchActivitiesTitle": "Activities",
   "searchLeaderboardsTitle": "Leaderboards",
+  "searchLeaderboardItemsTitle": "Leaderboard Items",
+  "searchForumCategoriesTitle": "Forum Categories",
   "leaderboardNoItems": "No Leaderboards",
   "leaderboardSubmitItem": "Submit Entry",
   "leaderboardItemCount": "Entries",

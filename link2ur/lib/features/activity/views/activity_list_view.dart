@@ -159,6 +159,7 @@ class _ActivityListContentState extends State<_ActivityListContent> {
                     },
                     child: ListView.separated(
                       clipBehavior: Clip.none,
+                      cacheExtent: 500,
                       addAutomaticKeepAlives: false,
                       padding: const EdgeInsets.symmetric(
                         horizontal: AppSpacing.md,

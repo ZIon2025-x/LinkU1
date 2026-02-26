@@ -189,6 +189,7 @@ class _TaskExpertListViewContentState extends State<_TaskExpertListViewContent> 
                 );
               },
               child: ListView.separated(
+                cacheExtent: 500,
                 padding: AppSpacing.allMd,
                 itemCount: state.experts.length + (state.hasMore ? 1 : 0),
                 separatorBuilder: (context, index) => AppSpacing.vMd,
@@ -207,7 +208,9 @@ class _TaskExpertListViewContentState extends State<_TaskExpertListViewContent> 
                   }
 
                   final expert = state.experts[index];
-                  return _ExpertCard(key: ValueKey(expert.id), expert: expert);
+                  return RepaintBoundary(
+                    child: _ExpertCard(key: ValueKey(expert.id), expert: expert),
+                  );
                 },
               ),
             );

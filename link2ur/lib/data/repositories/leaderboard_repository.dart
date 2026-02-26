@@ -82,26 +82,28 @@ class LeaderboardRepository {
     return Leaderboard.fromJson(response.data!);
   }
 
-  /// 获取排行榜项目列表
+  /// 获取排行榜项目列表（支持 keyword 搜索竞品名称/描述）
   Future<List<LeaderboardItem>> getLeaderboardItems(
     int leaderboardId, {
     int page = 1,
     int pageSize = 50,
     String? sortBy,
+    String? keyword,
   }) async {
-    // 后端使用 limit/offset 分页 + sort 参数
+    // 后端使用 limit/offset 分页 + sort 参数 + 可选 keyword
     final offset = (page - 1) * pageSize;
     final params = {
       'lb_id': leaderboardId,
       'limit': pageSize,
       'offset': offset,
       if (sortBy != null) 'sort': sortBy,
+      if (keyword != null && keyword.isNotEmpty) 'keyword': keyword,
     };
     final cacheKey =
         CacheManager.buildKey('${CacheManager.prefixLeaderboard}items_', params);
 
     final cached = _cache.get<Map<String, dynamic>>(cacheKey);
-    if (cached != null) {
+    if (cached != null && (keyword == null || keyword.isEmpty)) {
       final items = cached['items'] as List<dynamic>? ?? [];
       return items
           .map((e) => LeaderboardItem.fromJson(e as Map<String, dynamic>))
@@ -114,6 +116,7 @@ class LeaderboardRepository {
         'limit': pageSize,
         'offset': offset,
         if (sortBy != null) 'sort': sortBy,
+        if (keyword != null && keyword.isNotEmpty) 'keyword': keyword,
       },
     );
 

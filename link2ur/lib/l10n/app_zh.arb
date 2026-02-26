@@ -3051,6 +3051,8 @@
       }
     }
   },
+  "searchRecentSearches": "最近搜索",
+  "searchClearHistory": "清除搜索记录",
 
   "networkOffline": "网络已断开",
   "networkOnline": "网络已恢复",
@@ -3313,6 +3315,8 @@
   "searchExpertsTitle": "达人",
   "searchActivitiesTitle": "活动",
   "searchLeaderboardsTitle": "排行榜",
+  "searchLeaderboardItemsTitle": "排行榜竞品",
+  "searchForumCategoriesTitle": "论坛板块",
   "leaderboardNoItems": "暂无排行榜",
   "leaderboardSubmitItem": "提交竞品",
   "leaderboardItemCount": "竞品数",

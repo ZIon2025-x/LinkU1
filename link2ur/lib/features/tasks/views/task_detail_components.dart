@@ -1446,6 +1446,7 @@ class TaskActionButtonsView extends StatelessWidget {
                     context: context,
                     isScrollControlled: true,
                     backgroundColor: Colors.transparent,
+                    showDragHandle: false,
                     builder: (ctx) => BlocProvider.value(
                       value: bloc,
                       child: BlocListener<TaskDetailBloc, TaskDetailState>(
@@ -1752,6 +1753,7 @@ class TaskActionButtonsView extends StatelessWidget {
             context: context,
             isScrollControlled: true,
             backgroundColor: Colors.transparent,
+            showDragHandle: false,
             builder: (sheetContext) => ReviewBottomSheet(
               onSubmit: (rating, comment, isAnonymous) async {
                 final bloc = context.read<TaskDetailBloc>();

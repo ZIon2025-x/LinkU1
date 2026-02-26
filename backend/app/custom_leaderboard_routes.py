@@ -11,7 +11,7 @@ import logging
 from pathlib import Path
 from fastapi import APIRouter, Depends, Query, HTTPException, Request, status, Body
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, and_, or_, func, update, delete
+from sqlalchemy import case, select, and_, or_, func, update, delete
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import selectinload
 from typing import Optional, List
@@ -686,30 +686,50 @@ async def get_leaderboards(
             base_query = base_query.where(
                 or_(
                     models.CustomLeaderboard.name.ilike(keyword_pattern),
-                    models.CustomLeaderboard.description.ilike(keyword_pattern)
+                    models.CustomLeaderboard.description.ilike(keyword_pattern),
+                    models.CustomLeaderboard.name_zh.ilike(keyword_pattern),
+                    models.CustomLeaderboard.name_en.ilike(keyword_pattern),
+                    models.CustomLeaderboard.description_zh.ilike(keyword_pattern),
+                    models.CustomLeaderboard.description_en.ilike(keyword_pattern),
                 )
             )
+    
+    # 有关键词时先按相关性排序
+    if keyword and keyword.strip():
+        kp = f"%{keyword.strip()}%"
+        relevance = case(
+            (models.CustomLeaderboard.name.ilike(kp), 3),
+            (models.CustomLeaderboard.name_zh.ilike(kp), 2),
+            (models.CustomLeaderboard.name_en.ilike(kp), 2),
+            (models.CustomLeaderboard.description.ilike(kp), 1),
+            (models.CustomLeaderboard.description_zh.ilike(kp), 1),
+            (models.CustomLeaderboard.description_en.ilike(kp), 1),
+            else_=0,
+        )
+        base_query = base_query.order_by(relevance.desc(), models.CustomLeaderboard.created_at.desc())
     
     # 计算总数
     count_query = select(func.count()).select_from(base_query.subquery())
     total_result = await db.execute(count_query)
     total = total_result.scalar() or 0
     
-    # 排序
-    if sort == "latest":
-        base_query = base_query.order_by(models.CustomLeaderboard.created_at.desc())
-    elif sort == "hot":
-        # 热门排序：综合投票数、竞品数、浏览量
-        base_query = base_query.order_by(
-            (models.CustomLeaderboard.vote_count * 2 + 
-             models.CustomLeaderboard.item_count + 
-             models.CustomLeaderboard.view_count * 0.1).desc(),
-            models.CustomLeaderboard.created_at.desc()
-        )
-    elif sort == "votes":
-        base_query = base_query.order_by(models.CustomLeaderboard.vote_count.desc())
-    elif sort == "items":
-        base_query = base_query.order_by(models.CustomLeaderboard.item_count.desc())
+    # 排序（有关键词时已在上面按相关性排序）
+    if not (keyword and keyword.strip()):
+        if sort == "latest":
+            base_query = base_query.order_by(models.CustomLeaderboard.created_at.desc())
+        elif sort == "hot":
+            # 热门排序：综合投票数、竞品数、浏览量
+            base_query = base_query.order_by(
+                (models.CustomLeaderboard.vote_count * 2 +
+                 models.CustomLeaderboard.item_count +
+                 models.CustomLeaderboard.view_count * 0.1).desc(),
+                models.CustomLeaderboard.created_at.desc()
+            )
+        elif sort == "votes":
+            base_query = base_query.order_by(models.CustomLeaderboard.vote_count.desc())
+        elif sort == "items":
+            base_query = base_query.order_by(models.CustomLeaderboard.item_count.desc())
+    # 有关键词时上面已按相关性排序，此处不再覆盖
     
     # 加载申请者关系
     query = base_query.options(selectinload(models.CustomLeaderboard.applicant))
@@ -1262,10 +1282,11 @@ async def get_leaderboard_items(
     sort: str = Query("vote_score", pattern="^(vote_score|net_votes|upvotes|created_at)$"),
     limit: int = Query(50, ge=1, le=200),
     offset: int = Query(0, ge=0),
+    keyword: Optional[str] = Query(None, description="关键词搜索（竞品名称、描述）"),
     db: AsyncSession = Depends(get_async_db_dependency),
     current_user: Optional[models.User] = Depends(get_current_user_optional),
 ):
-    """获取榜单中的竞品列表（按投票排序）"""
+    """获取榜单中的竞品列表（按投票排序），支持 keyword 搜索竞品名称/描述"""
     leaderboard = await db.get(models.CustomLeaderboard, leaderboard_id)
     
     if not leaderboard or leaderboard.status != "active":
@@ -1280,21 +1301,42 @@ async def get_leaderboard_items(
             models.LeaderboardItem.status == "approved"
         )
     )
+    if keyword:
+        keyword = keyword.strip()
+        if len(keyword) > 0:
+            keyword_pattern = f"%{keyword}%"
+            base_query = base_query.where(
+                or_(
+                    models.LeaderboardItem.name.ilike(keyword_pattern),
+                    models.LeaderboardItem.description.ilike(keyword_pattern)
+                )
+            )
+            # 按相关性排序：名称匹配优先，其次描述
+            relevance = case(
+                (models.LeaderboardItem.name.ilike(keyword_pattern), 2),
+                (models.LeaderboardItem.description.ilike(keyword_pattern), 1),
+                else_=0,
+            )
+            base_query = base_query.order_by(
+                relevance.desc(),
+                models.LeaderboardItem.vote_score.desc(),
+            )
     
     # 计算总数
     count_query = select(func.count()).select_from(base_query.subquery())
     total_result = await db.execute(count_query)
     total = total_result.scalar() or 0
     
-    # 排序
-    if sort == "vote_score":
-        base_query = base_query.order_by(models.LeaderboardItem.vote_score.desc())
-    elif sort == "net_votes":
-        base_query = base_query.order_by(models.LeaderboardItem.net_votes.desc())
-    elif sort == "upvotes":
-        base_query = base_query.order_by(models.LeaderboardItem.upvotes.desc())
-    elif sort == "created_at":
-        base_query = base_query.order_by(models.LeaderboardItem.created_at.desc())
+    # 排序（有关键词时已在上面按相关性排序）
+    if not (keyword and keyword.strip()):
+        if sort == "vote_score":
+            base_query = base_query.order_by(models.LeaderboardItem.vote_score.desc())
+        elif sort == "net_votes":
+            base_query = base_query.order_by(models.LeaderboardItem.net_votes.desc())
+        elif sort == "upvotes":
+            base_query = base_query.order_by(models.LeaderboardItem.upvotes.desc())
+        elif sort == "created_at":
+            base_query = base_query.order_by(models.LeaderboardItem.created_at.desc())
     
     # 分页
     query = base_query.offset(offset).limit(limit)

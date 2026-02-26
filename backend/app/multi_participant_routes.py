@@ -5,7 +5,7 @@
 
 from fastapi import APIRouter, Depends, HTTPException, Body, BackgroundTasks, Request, Query
 from sqlalchemy.orm import Session
-from sqlalchemy import func, and_, or_
+from sqlalchemy import case, func, and_, or_
 from typing import List, Optional
 from datetime import datetime, time, timedelta
 import json
@@ -1358,11 +1358,29 @@ def get_activities(
             or_(
                 Activity.title.ilike(kw),
                 Activity.description.ilike(kw),
+                Activity.title_zh.ilike(kw),
+                Activity.title_en.ilike(kw),
+                Activity.description_zh.ilike(kw),
+                Activity.description_en.ilike(kw),
                 Activity.location.ilike(kw),
             )
         )
+        # 按相关性排序：标题匹配优先，其次描述
+        relevance = case(
+            (Activity.title.ilike(kw), 3),
+            (Activity.title_zh.ilike(kw), 2),
+            (Activity.title_en.ilike(kw), 2),
+            (Activity.description.ilike(kw), 1),
+            (Activity.description_zh.ilike(kw), 1),
+            (Activity.description_en.ilike(kw), 1),
+            else_=0,
+        )
+        query = query.order_by(relevance.desc(), Activity.created_at.desc())
     
-    activities = query.order_by(Activity.created_at.desc()).offset(offset).limit(limit).all()
+    if not (keyword and keyword.strip()):
+        query = query.order_by(Activity.created_at.desc())
+    
+    activities = query.offset(offset).limit(limit).all()
     
     # 计算每个活动的当前参与者数量，并过滤已过期的活动
     result = []

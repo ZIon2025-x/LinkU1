@@ -574,3 +574,19 @@ Release/Profile 模式下 `kDebugMode` 为 false，日志相关代码不执行�
 | — | context.watch → context.select | `publish_view.dart` (5处), `task_experts_intro_view.dart` | 精确订阅特定字段，避免无关状态变化触发重建 |
 | — | 清理未使用 import | `api_service.dart`, `edit_profile_view.dart`, `settings_bloc.dart` | 移除 3 个 unused import warnings |
 | — | 补充 const 构造 | `home_recommended_section.dart` (3处), `home_task_cards.dart` (2处), `forum_view.dart` (2处) | const 静态子组件避免重建 |
+
+---
+
+## Round 5 — 列表滚动与重绘隔离 (2026-02-25)
+
+### 已实施
+
+| # | 优化项 | 文件 | 说明 |
+|---|--------|------|------|
+| 24 | **cacheExtent** 预加载 | `task_expert_list_view.dart`, `activity_list_view.dart`, `leaderboard_view.dart`, `chat_view.dart`, `unified_chat_view.dart` | ListView/GridView 增加 cacheExtent（300–500px），提前构建视口外 item，减少快速滑动时的白屏与卡顿。已有 cacheExtent 的（tasks_view, flea_market_view, forum_post_list_view）保持不变 |
+| 25 | **RepaintBoundary** 列表项 | `task_expert_list_view.dart`（达人卡片）, `leaderboard_view.dart`（排行榜卡片）, `tasks_view.dart`（任务网格卡）, `flea_market_view.dart`（跳蚤市场卡片） | 在 itemBuilder 内用 RepaintBoundary 包裹每个卡片，将单卡重绘（如图片解码、动画）限制在卡片内，避免整列表重绘。论坛帖子列表（forum_post_list_view）已有 RepaintBoundary |
+
+### 原理简述
+
+- **cacheExtent**：ListView/GridView 默认只构建可见区域 + 少量缓冲。设置 `cacheExtent: 500` 会在滚动方向多保留约 500 逻辑像素的 item，减少“滑到时才 build”的抖动。
+- **RepaintBoundary**：列表项内若有图片、渐变、阴影等，重绘会向上冒泡。用 RepaintBoundary 包裹后，该子树重绘不会触发兄弟或父节点重绘，有利于保持 60fps。

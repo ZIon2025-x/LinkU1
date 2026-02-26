@@ -53,9 +53,9 @@ class _SearchContentState extends State<_SearchContent> {
   @override
   void initState() {
     super.initState();
-    // 自动聚焦搜索框
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _focusNode.requestFocus();
+      context.read<SearchBloc>().add(const LoadRecentSearches());
     });
   }
 
@@ -91,15 +91,18 @@ class _SearchContentState extends State<_SearchContent> {
       body: BlocBuilder<SearchBloc, SearchState>(
         buildWhen: (previous, current) =>
             previous.status != current.status ||
+            previous.recentSearches != current.recentSearches ||
             previous.taskResults != current.taskResults ||
             previous.forumResults != current.forumResults ||
             previous.fleaMarketResults != current.fleaMarketResults ||
             previous.expertResults != current.expertResults ||
             previous.activityResults != current.activityResults ||
-            previous.leaderboardResults != current.leaderboardResults,
+            previous.leaderboardResults != current.leaderboardResults ||
+            previous.leaderboardItemResults != current.leaderboardItemResults ||
+            previous.forumCategoryResults != current.forumCategoryResults,
         builder: (context, state) {
           if (state.status == SearchStatus.initial) {
-            return _buildInitialState(isDark);
+            return _buildInitialState(context, state, isDark);
           }
 
           if (state.isLoading) {
@@ -177,27 +180,94 @@ class _SearchContentState extends State<_SearchContent> {
     );
   }
 
-  Widget _buildInitialState(bool isDark) {
-    return Center(
+  Widget _buildInitialState(
+      BuildContext context, SearchState state, bool isDark) {
+    final recent = state.recentSearches;
+    final hasRecent = recent.isNotEmpty;
+    return SingleChildScrollView(
+      padding: AppSpacing.allMd,
       child: Column(
-        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Icon(
-            Icons.search,
-            size: 64,
-            color: isDark
-                ? AppColors.textTertiaryDark
-                : AppColors.textTertiaryLight,
-          ),
-          AppSpacing.vMd,
-          Text(
-            context.l10n.searchHint,
-            style: AppTypography.subheadline.copyWith(
-              color: isDark
-                  ? AppColors.textSecondaryDark
-                  : AppColors.textSecondaryLight,
+          if (hasRecent) ...[
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  context.l10n.searchRecentSearches,
+                  style: AppTypography.subheadline.copyWith(
+                    fontWeight: FontWeight.w600,
+                    color: isDark
+                        ? AppColors.textPrimaryDark
+                        : AppColors.textPrimaryLight,
+                  ),
+                ),
+                TextButton(
+                  onPressed: () {
+                    context.read<SearchBloc>().add(const SearchHistoryCleared());
+                  },
+                  child: Text(context.l10n.searchClearHistory),
+                ),
+              ],
             ),
-          ),
+            AppSpacing.vSm,
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: recent.map((keyword) {
+                return ActionChip(
+                  label: Text(keyword),
+                  onPressed: () {
+                    _searchController.text = keyword;
+                    _searchController.selection = TextSelection.collapsed(
+                      offset: keyword.length,
+                    );
+                    context.read<SearchBloc>().add(
+                          SearchSubmitted(
+                            keyword,
+                            Localizations.localeOf(context),
+                          ),
+                        );
+                  },
+                  backgroundColor: isDark
+                      ? AppColors.secondaryBackgroundDark
+                      : AppColors.backgroundLight,
+                  side: BorderSide(
+                    color: isDark
+                        ? AppColors.borderDark
+                        : AppColors.borderLight,
+                  ),
+                );
+              }).toList(),
+            ),
+            AppSpacing.vLg,
+          ],
+          if (!hasRecent) ...[
+            AppSpacing.vXl,
+            Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.search,
+                    size: 64,
+                    color: isDark
+                        ? AppColors.textTertiaryDark
+                        : AppColors.textTertiaryLight,
+                  ),
+                  AppSpacing.vMd,
+                  Text(
+                    context.l10n.searchHint,
+                    style: AppTypography.subheadline.copyWith(
+                      color: isDark
+                          ? AppColors.textSecondaryDark
+                          : AppColors.textSecondaryLight,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ],
       ),
     );
@@ -310,6 +380,44 @@ class _SearchContentState extends State<_SearchContent> {
                   onTap: () {
                     final id = result['id'];
                     if (id != null) context.safePush('/leaderboard/$id');
+                  },
+                )),
+            AppSpacing.vLg,
+          ],
+
+          // 排行榜竞品结果
+          if (state.leaderboardItemResults.isNotEmpty) ...[
+            _SectionHeader(
+              title: context.l10n.searchLeaderboardItemsTitle,
+              count: state.leaderboardItemResults.length,
+              icon: Icons.emoji_events,
+              color: AppColors.success,
+            ),
+            AppSpacing.vSm,
+            ...state.leaderboardItemResults.map((result) => _SearchResultCard(
+                  result: result,
+                  onTap: () {
+                    final id = result['id'];
+                    if (id != null) context.safePush('/leaderboard/item/$id');
+                  },
+                )),
+            AppSpacing.vLg,
+          ],
+
+          // 论坛板块结果
+          if (state.forumCategoryResults.isNotEmpty) ...[
+            _SectionHeader(
+              title: context.l10n.searchForumCategoriesTitle,
+              count: state.forumCategoryResults.length,
+              icon: Icons.category,
+              color: AppColors.accent,
+            ),
+            AppSpacing.vSm,
+            ...state.forumCategoryResults.map((result) => _SearchResultCard(
+                  result: result,
+                  onTap: () {
+                    final id = result['id'];
+                    if (id != null) context.safePush('/forum/category/$id');
                   },
                 )),
             AppSpacing.vLg,

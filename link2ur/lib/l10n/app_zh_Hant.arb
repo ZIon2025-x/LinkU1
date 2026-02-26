@@ -2990,6 +2990,8 @@
       }
     }
   },
+  "searchRecentSearches": "最近搜尋",
+  "searchClearHistory": "清除搜尋記錄",
 
   "networkOffline": "網路已斷開",
   "networkOnline": "網路已恢復",
@@ -3252,6 +3254,8 @@
   "searchExpertsTitle": "達人",
   "searchActivitiesTitle": "活動",
   "searchLeaderboardsTitle": "排行榜",
+  "searchLeaderboardItemsTitle": "排行榜競品",
+  "searchForumCategoriesTitle": "論壇板塊",
   "leaderboardNoItems": "暫無排行榜",
   "leaderboardSubmitItem": "提交競品",
   "leaderboardItemCount": "競品數",

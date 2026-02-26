@@ -152,6 +152,7 @@ class CustomSharePanel extends StatelessWidget {
       context: context,
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
+      showDragHandle: false,
       builder: (context) => CustomSharePanel(
         title: title,
         description: description,

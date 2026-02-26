@@ -40,6 +40,7 @@ class SheetAdaptation {
   ///
   /// 平板及以上：内容区限制最大宽度并居中
   /// 其他参数与 [showModalBottomSheet] 一致
+  /// [showDragHandle] 为 false 时不显示顶部灰色拖拽条（弹窗仍可下拉关闭）
   static Future<T?> showAdaptiveModalBottomSheet<T>({
     required BuildContext context,
     required WidgetBuilder builder,
@@ -53,6 +54,7 @@ class SheetAdaptation {
     Color? barrierColor,
     bool isDismissible = true,
     bool enableDrag = true,
+    bool? showDragHandle,
     double? maxWidth,
   }) {
     return showModalBottomSheet<T>(
@@ -67,6 +69,7 @@ class SheetAdaptation {
       barrierColor: barrierColor,
       isDismissible: isDismissible,
       enableDrag: enableDrag,
+      showDragHandle: showDragHandle,
       builder: (context) => wrapWithTabletConstraints(
         context,
         maxWidth: maxWidth,

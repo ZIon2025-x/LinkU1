@@ -9,6 +9,8 @@ import '../../../data/repositories/flea_market_repository.dart';
 import '../../../data/repositories/task_expert_repository.dart';
 import '../../../data/repositories/activity_repository.dart';
 import '../../../data/repositories/leaderboard_repository.dart';
+import '../../../data/models/forum.dart';
+import '../../../data/services/storage_service.dart';
 import '../../../core/utils/logger.dart';
 
 // ==================== Events ====================
@@ -37,6 +39,16 @@ class SearchCleared extends SearchEvent {
   const SearchCleared();
 }
 
+/// 加载最近搜索记录
+class LoadRecentSearches extends SearchEvent {
+  const LoadRecentSearches();
+}
+
+/// 清除搜索记录（历史）
+class SearchHistoryCleared extends SearchEvent {
+  const SearchHistoryCleared();
+}
+
 // ==================== State ====================
 
 enum SearchStatus { initial, loading, loaded, error }
@@ -51,6 +63,9 @@ class SearchState extends Equatable {
     this.expertResults = const [],
     this.activityResults = const [],
     this.leaderboardResults = const [],
+    this.leaderboardItemResults = const [],
+    this.forumCategoryResults = const [],
+    this.recentSearches = const [],
     this.errorMessage,
   });
 
@@ -62,6 +77,10 @@ class SearchState extends Equatable {
   final List<Map<String, dynamic>> expertResults;
   final List<Map<String, dynamic>> activityResults;
   final List<Map<String, dynamic>> leaderboardResults;
+  final List<Map<String, dynamic>> leaderboardItemResults;
+  final List<Map<String, dynamic>> forumCategoryResults;
+  /// 最近搜索关键词列表（从 StorageService 加载）
+  final List<String> recentSearches;
   final String? errorMessage;
 
   bool get isLoading => status == SearchStatus.loading;
@@ -71,14 +90,18 @@ class SearchState extends Equatable {
       fleaMarketResults.isNotEmpty ||
       expertResults.isNotEmpty ||
       activityResults.isNotEmpty ||
-      leaderboardResults.isNotEmpty;
+      leaderboardResults.isNotEmpty ||
+      leaderboardItemResults.isNotEmpty ||
+      forumCategoryResults.isNotEmpty;
   int get totalResults =>
       taskResults.length +
       forumResults.length +
       fleaMarketResults.length +
       expertResults.length +
       activityResults.length +
-      leaderboardResults.length;
+      leaderboardResults.length +
+      leaderboardItemResults.length +
+      forumCategoryResults.length;
 
   SearchState copyWith({
     SearchStatus? status,
@@ -89,6 +112,9 @@ class SearchState extends Equatable {
     List<Map<String, dynamic>>? expertResults,
     List<Map<String, dynamic>>? activityResults,
     List<Map<String, dynamic>>? leaderboardResults,
+    List<Map<String, dynamic>>? leaderboardItemResults,
+    List<Map<String, dynamic>>? forumCategoryResults,
+    List<String>? recentSearches,
     String? errorMessage,
   }) {
     return SearchState(
@@ -100,6 +126,9 @@ class SearchState extends Equatable {
       expertResults: expertResults ?? this.expertResults,
       activityResults: activityResults ?? this.activityResults,
       leaderboardResults: leaderboardResults ?? this.leaderboardResults,
+      leaderboardItemResults: leaderboardItemResults ?? this.leaderboardItemResults,
+      forumCategoryResults: forumCategoryResults ?? this.forumCategoryResults,
+      recentSearches: recentSearches ?? this.recentSearches,
       errorMessage: errorMessage,
     );
   }
@@ -114,6 +143,9 @@ class SearchState extends Equatable {
         expertResults,
         activityResults,
         leaderboardResults,
+        leaderboardItemResults,
+        forumCategoryResults,
+        recentSearches,
         errorMessage,
       ];
 }
@@ -137,6 +169,8 @@ class SearchBloc extends Bloc<SearchEvent, SearchState> {
         super(const SearchState()) {
     on<SearchSubmitted>(_onSubmitted);
     on<SearchCleared>(_onCleared);
+    on<LoadRecentSearches>(_onLoadRecentSearches);
+    on<SearchHistoryCleared>(_onSearchHistoryCleared);
   }
 
   final TaskRepository _taskRepository;
@@ -159,15 +193,17 @@ class SearchBloc extends Bloc<SearchEvent, SearchState> {
     ));
 
     try {
-      // 并行搜索六个模块（传入 locale 用于任务/活动双语标题）
+      // 并行搜索八个模块（含排行榜竞品、论坛板块）
       final locale = event.locale;
       final results = await Future.wait([
         _searchTasks(query, locale),
-        _searchForum(query),
+        _searchForum(query, locale),
         _searchFleaMarket(query),
         _searchExperts(query),
         _searchActivities(query, locale),
-        _searchLeaderboards(query),
+        _searchLeaderboards(query, locale),
+        _searchLeaderboardItems(query, locale),
+        _searchForumCategories(query, locale),
       ]);
 
       emit(state.copyWith(
@@ -178,6 +214,13 @@ class SearchBloc extends Bloc<SearchEvent, SearchState> {
         expertResults: results[3],
         activityResults: results[4],
         leaderboardResults: results[5],
+        leaderboardItemResults: results[6],
+        forumCategoryResults: results[7],
+      ));
+      // 写入最近搜索记录
+      await StorageService.instance.addSearchHistory(query);
+      emit(state.copyWith(
+        recentSearches: StorageService.instance.getSearchHistory(),
       ));
     } catch (e) {
       AppLogger.error('Search failed', e);
@@ -192,7 +235,35 @@ class SearchBloc extends Bloc<SearchEvent, SearchState> {
     SearchCleared event,
     Emitter<SearchState> emit,
   ) async {
-    emit(const SearchState());
+    emit(state.copyWith(
+      status: SearchStatus.initial,
+      query: '',
+      taskResults: [],
+      forumResults: [],
+      fleaMarketResults: [],
+      expertResults: [],
+      activityResults: [],
+      leaderboardResults: [],
+      leaderboardItemResults: [],
+      forumCategoryResults: [],
+      errorMessage: null,
+    ));
+  }
+
+  Future<void> _onLoadRecentSearches(
+    LoadRecentSearches event,
+    Emitter<SearchState> emit,
+  ) async {
+    final recent = StorageService.instance.getSearchHistory();
+    emit(state.copyWith(recentSearches: recent));
+  }
+
+  Future<void> _onSearchHistoryCleared(
+    SearchHistoryCleared event,
+    Emitter<SearchState> emit,
+  ) async {
+    await StorageService.instance.clearSearchHistory();
+    emit(state.copyWith(recentSearches: const []));
   }
 
   Future<List<Map<String, dynamic>>> _searchTasks(String query, Locale? locale) async {
@@ -219,7 +290,8 @@ class SearchBloc extends Bloc<SearchEvent, SearchState> {
     }
   }
 
-  Future<List<Map<String, dynamic>>> _searchForum(String query) async {
+  Future<List<Map<String, dynamic>>> _searchForum(
+      String query, Locale? locale) async {
     try {
       final response = await _forumRepository.searchPosts(
         keyword: query,
@@ -228,9 +300,13 @@ class SearchBloc extends Bloc<SearchEvent, SearchState> {
       return response.posts
           .map((p) => {
                 'id': p.id,
-                'title': p.title,
+                'title': locale != null
+                    ? p.displayTitle(locale)
+                    : p.title,
                 'type': 'forum',
-                'description': p.content ?? '',
+                'description': locale != null
+                    ? (p.displayContent(locale) ?? '')
+                    : (p.content ?? ''),
               })
           .toList();
     } catch (_) {
@@ -300,7 +376,8 @@ class SearchBloc extends Bloc<SearchEvent, SearchState> {
     }
   }
 
-  Future<List<Map<String, dynamic>>> _searchLeaderboards(String query) async {
+  Future<List<Map<String, dynamic>>> _searchLeaderboards(
+      String query, Locale? locale) async {
     try {
       final response = await _leaderboardRepository.getLeaderboards(
         keyword: query,
@@ -309,9 +386,82 @@ class SearchBloc extends Bloc<SearchEvent, SearchState> {
       return response.leaderboards
           .map((lb) => {
                 'id': lb.id,
-                'title': lb.name,
+                'title': locale != null
+                    ? lb.displayName(locale)
+                    : lb.name,
                 'type': 'leaderboard',
-                'description': lb.description ?? lb.location,
+                'description': locale != null
+                    ? (lb.displayDescription(locale) ?? lb.location)
+                    : (lb.description ?? lb.location),
+              })
+          .toList();
+    } catch (_) {
+      return [];
+    }
+  }
+
+  /// 搜索排行榜竞品（在各榜单内按名称/描述搜，聚合后最多 10 条）
+  Future<List<Map<String, dynamic>>> _searchLeaderboardItems(
+      String query, Locale? locale) async {
+    try {
+      final response = await _leaderboardRepository.getLeaderboards(
+        pageSize: 10,
+      );
+      final List<Map<String, dynamic>> out = [];
+      for (final lb in response.leaderboards) {
+        if (out.length >= 10) break;
+        final items = await _leaderboardRepository.getLeaderboardItems(
+          lb.id,
+          keyword: query,
+          pageSize: 3,
+        );
+        for (final item in items) {
+          if (out.length >= 10) break;
+          out.add({
+            'id': item.id,
+            'title': item.name,
+            'type': 'leaderboard_item',
+            'description': item.description ?? '',
+            'leaderboard_id': lb.id,
+            'leaderboard_name': locale != null
+                ? lb.displayName(locale)
+                : lb.name,
+          });
+        }
+      }
+      return out;
+    } catch (_) {
+      return [];
+    }
+  }
+
+  /// 搜索论坛板块（拉取可见板块后按名称/描述客户端过滤）
+  Future<List<Map<String, dynamic>>> _searchForumCategories(
+      String query, Locale? locale) async {
+    try {
+      final categories = await _forumRepository.getVisibleCategories();
+      final lower = query.toLowerCase();
+      return categories
+          .where((c) {
+            final name = (c.nameZh ?? c.name ?? '').toLowerCase();
+            final nameEn = (c.nameEn ?? '').toLowerCase();
+            final desc = (c.descriptionZh ?? c.description ?? c.descriptionEn ?? '')
+                .toLowerCase();
+            return name.contains(lower) ||
+                nameEn.contains(lower) ||
+                desc.contains(lower);
+          })
+          .take(10)
+          .map((c) => {
+                'id': c.id,
+                'title': locale != null
+                    ? c.displayName(locale)
+                    : (c.nameZh ?? c.nameEn ?? c.name),
+                'type': 'forum_category',
+                'description':
+                    locale != null
+                        ? (c.displayDescription(locale) ?? '')
+                        : (c.description ?? c.descriptionZh ?? c.descriptionEn ?? ''),
               })
           .toList();
     } catch (_) {

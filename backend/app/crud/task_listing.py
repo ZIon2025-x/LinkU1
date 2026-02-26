@@ -67,10 +67,18 @@ def list_tasks(
             or_(
                 func.similarity(Task.title, keyword_clean) > 0.2,
                 func.similarity(Task.description, keyword_clean) > 0.2,
+                func.similarity(Task.title_zh, keyword_clean) > 0.2,
+                func.similarity(Task.title_en, keyword_clean) > 0.2,
+                func.similarity(Task.description_zh, keyword_clean) > 0.2,
+                func.similarity(Task.description_en, keyword_clean) > 0.2,
                 func.similarity(Task.task_type, keyword_clean) > 0.2,
                 func.similarity(Task.location, keyword_clean) > 0.2,
                 Task.title.ilike(f"%{keyword_escaped}%"),
                 Task.description.ilike(f"%{keyword_escaped}%"),
+                Task.title_zh.ilike(f"%{keyword_escaped}%"),
+                Task.title_en.ilike(f"%{keyword_escaped}%"),
+                Task.description_zh.ilike(f"%{keyword_escaped}%"),
+                Task.description_en.ilike(f"%{keyword_escaped}%"),
             )
         )
 
@@ -200,8 +208,16 @@ def count_tasks(
             or_(
                 func.similarity(Task.title, keyword_clean) > 0.2,
                 func.similarity(Task.description, keyword_clean) > 0.2,
+                func.similarity(Task.title_zh, keyword_clean) > 0.2,
+                func.similarity(Task.title_en, keyword_clean) > 0.2,
+                func.similarity(Task.description_zh, keyword_clean) > 0.2,
+                func.similarity(Task.description_en, keyword_clean) > 0.2,
                 Task.title.ilike(f"%{keyword_escaped}%"),
                 Task.description.ilike(f"%{keyword_escaped}%"),
+                Task.title_zh.ilike(f"%{keyword_escaped}%"),
+                Task.title_en.ilike(f"%{keyword_escaped}%"),
+                Task.description_zh.ilike(f"%{keyword_escaped}%"),
+                Task.description_en.ilike(f"%{keyword_escaped}%"),
             )
         )
 

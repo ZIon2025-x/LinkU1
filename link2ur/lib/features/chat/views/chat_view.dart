@@ -217,6 +217,7 @@ class _ChatContentState extends State<_ChatContent> {
 
     return ListView.builder(
       controller: _scrollController,
+      cacheExtent: 400,
       padding: const EdgeInsets.symmetric(vertical: 12),
       addAutomaticKeepAlives: false,
       itemCount: groups.length,

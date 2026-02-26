@@ -1123,9 +1123,11 @@ class _BottomApplyBar extends StatelessWidget {
         );
       }
 
-      return _buildDisabledButton(
+      // 服务支持多次申请，不再显示灰色「已申请」不可点击，始终可再次申请
+      return _buildPrimaryButton(
         context,
-        context.l10n.serviceApplied,
+        context.l10n.taskExpertApplyService,
+        () => _ApplyServiceSheet.show(context, service, serviceId),
       );
     }
 
@@ -1260,6 +1262,7 @@ class _ApplyServiceSheet extends StatefulWidget {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
+      showDragHandle: false,
       builder: (_) => BlocProvider.value(
         value: context.read<TaskExpertBloc>(),
         child: _ApplyServiceSheet(service: service, serviceId: serviceId),

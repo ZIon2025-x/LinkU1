@@ -6114,6 +6114,12 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
+  String get searchRecentSearches => '最近搜索';
+
+  @override
+  String get searchClearHistory => '清除搜索记录';
+
+  @override
   String get networkOnline => '网络已恢复';
 
   @override
@@ -6687,6 +6693,12 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get searchLeaderboardsTitle => '排行榜';
+
+  @override
+  String get searchLeaderboardItemsTitle => '排行榜竞品';
+
+  @override
+  String get searchForumCategoriesTitle => '论坛板块';
 
   @override
   String get leaderboardRankLabel => '排名';
@@ -14782,6 +14794,12 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   }
 
   @override
+  String get searchRecentSearches => '最近搜尋';
+
+  @override
+  String get searchClearHistory => '清除搜尋記錄';
+
+  @override
   String get networkOnline => '網路已恢復';
 
   @override
@@ -15355,6 +15373,12 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get searchLeaderboardsTitle => '排行榜';
+
+  @override
+  String get searchLeaderboardItemsTitle => '排行榜競品';
+
+  @override
+  String get searchForumCategoriesTitle => '論壇板塊';
 
   @override
   String get leaderboardRankLabel => '排名';

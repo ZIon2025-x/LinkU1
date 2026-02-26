@@ -553,17 +553,21 @@ class AsyncTaskCRUD:
                     if city_expr is not None:
                         base_query = base_query.where(city_expr)
             
-            # 关键词筛选（和 /tasks 的实现保持一致）
+            # 关键词筛选（和 /tasks 的实现保持一致，支持双语字段）
             if keyword:
                 keyword = keyword.strip()
                 from app.config import Config
                 
                 if Config.USE_PG_TRGM:
-                    # pg_trgm 相似度搜索
+                    # pg_trgm 相似度搜索（含双语）
                     base_query = base_query.where(
                         or_(
                             func.similarity(models.Task.title, keyword) > 0.2,
                             func.similarity(models.Task.description, keyword) > 0.2,
+                            func.similarity(models.Task.title_zh, keyword) > 0.2,
+                            func.similarity(models.Task.title_en, keyword) > 0.2,
+                            func.similarity(models.Task.description_zh, keyword) > 0.2,
+                            func.similarity(models.Task.description_en, keyword) > 0.2,
                         )
                     )
                 else:
@@ -653,11 +657,32 @@ class AsyncTaskCRUD:
                 selectinload(models.Task.poster)
             )
             
-            # 排序：注意和 get_tasks_cursor 的约束保持一致
-            # 如果提供了用户位置，先获取更多任务（用于距离计算），然后在Python中排序
-            # 性能优化：限制查询范围，只处理有坐标的任务，并使用粗略的距离过滤
+            # 排序：有关键词时按相关性（契合度），否则按 sort_by
             use_distance_sorting = False
-            if user_latitude is not None and user_longitude is not None and sort_by in ("distance", "nearby"):
+            if keyword and keyword.strip():
+                from app.config import Config
+                if Config.USE_PG_TRGM:
+                    # 按多字段相似度最大值排序（相关性）
+                    kw = keyword.strip()
+                    relevance = func.greatest(
+                        func.coalesce(func.similarity(models.Task.title, kw), 0),
+                        func.coalesce(func.similarity(models.Task.description, kw), 0),
+                        func.coalesce(func.similarity(models.Task.title_zh, kw), 0),
+                        func.coalesce(func.similarity(models.Task.title_en, kw), 0),
+                        func.coalesce(func.similarity(models.Task.description_zh, kw), 0),
+                        func.coalesce(func.similarity(models.Task.description_en, kw), 0),
+                    )
+                    list_query = list_query.order_by(
+                        relevance.desc(),
+                        models.Task.created_at.desc(),
+                        models.Task.id.desc(),
+                    )
+                else:
+                    # 无 pg_trgm 时按最新
+                    list_query = list_query.order_by(
+                        models.Task.created_at.desc(), models.Task.id.desc()
+                    )
+            elif user_latitude is not None and user_longitude is not None and sort_by in ("distance", "nearby"):
                 use_distance_sorting = True
                 
                 # 粗略的距离过滤：使用简单的经纬度范围过滤（扩大范围以确保有结果）

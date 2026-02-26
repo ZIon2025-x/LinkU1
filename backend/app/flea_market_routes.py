@@ -28,7 +28,7 @@ from fastapi import (
 )
 from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, update, and_, or_, func, text
+from sqlalchemy import case, select, update, and_, or_, func, text
 from sqlalchemy.exc import IntegrityError
 
 from app import models, schemas
@@ -357,12 +357,25 @@ async def get_flea_market_items(
                     models.FleaMarketItem.category.ilike(keyword_pattern),
                 )
             )
-        
-        # 排序：按refreshed_at DESC, id DESC
-        query = query.order_by(
-            models.FleaMarketItem.refreshed_at.desc(),
-            models.FleaMarketItem.id.desc()
-        )
+            # 按相关性排序：标题匹配优先，其次描述、地点、分类
+            relevance = case(
+                (models.FleaMarketItem.title.ilike(keyword_pattern), 3),
+                (models.FleaMarketItem.description.ilike(keyword_pattern), 2),
+                (models.FleaMarketItem.location.ilike(keyword_pattern), 1),
+                (models.FleaMarketItem.category.ilike(keyword_pattern), 1),
+                else_=0,
+            )
+            query = query.order_by(
+                relevance.desc(),
+                models.FleaMarketItem.refreshed_at.desc(),
+                models.FleaMarketItem.id.desc(),
+            )
+        else:
+            # 排序：按refreshed_at DESC, id DESC
+            query = query.order_by(
+                models.FleaMarketItem.refreshed_at.desc(),
+                models.FleaMarketItem.id.desc()
+            )
         
         # 计算总数
         count_query = select(func.count()).select_from(query.subquery())

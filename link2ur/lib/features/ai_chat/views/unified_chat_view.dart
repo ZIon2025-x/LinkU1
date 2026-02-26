@@ -362,6 +362,7 @@ class _UnifiedChatContentState extends State<_UnifiedChatContent> {
           onTap: () => _focusNode.unfocus(),
           child: ListView.builder(
             controller: _scrollController,
+            cacheExtent: 400,
             padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
             itemCount: items.length,
             itemBuilder: (context, index) {

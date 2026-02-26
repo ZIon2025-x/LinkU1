@@ -352,10 +352,12 @@ class _FleaMarketViewContentState extends State<_FleaMarketViewContent> {
             );
           }
           final item = state.items[index];
-          return AnimatedListItem(
-            key: ValueKey(item.id),
-            index: index,
-            child: _FleaMarketItemCard(item: item),
+          return RepaintBoundary(
+            child: AnimatedListItem(
+              key: ValueKey(item.id),
+              index: index,
+              child: _FleaMarketItemCard(item: item),
+            ),
           );
         },
       ),

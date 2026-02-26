@@ -205,12 +205,18 @@ class _ForumPostDetailViewState extends State<ForumPostDetailView> {
               onPressed: () async {
                 AppHaptics.selection();
                 final post = context.read<ForumBloc>().state.selectedPost;
-                final rawDesc = post?.content?.replaceAll(RegExp(r'<[^>]*>'), '').trim() ?? '';
+                final locale = Localizations.localeOf(context);
+                final contentForDesc = post != null
+                    ? (post.displayContent(locale) ?? post.content)
+                    : null;
+                final rawDesc = contentForDesc?.replaceAll(RegExp(r'<[^>]*>'), '').trim() ?? '';
                 final description = rawDesc.length > 200 ? '${rawDesc.substring(0, 200)}...' : rawDesc;
                 final imageUrl = post?.images.isNotEmpty == true ? post!.images.first : null;
                 final shareFiles = await NativeShare.fileFromFirstImageUrl(imageUrl);
                 await NativeShare.share(
-                  title: post?.title ?? context.l10n.forumPostDetail,
+                  title: post != null
+                      ? post.displayTitle(locale)
+                      : context.l10n.forumPostDetail,
                   description: description,
                   url: 'https://link2ur.com/forum/posts/${widget.postId}',
                   files: shareFiles,

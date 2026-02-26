@@ -11672,6 +11672,18 @@ abstract class AppLocalizations {
   /// **'Found {count} results'**
   String searchResultCount(int count);
 
+  /// No description provided for @searchRecentSearches.
+  ///
+  /// In en, this message translates to:
+  /// **'Recent searches'**
+  String get searchRecentSearches;
+
+  /// No description provided for @searchClearHistory.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear search history'**
+  String get searchClearHistory;
+
   /// No description provided for @networkOnline.
   ///
   /// In en, this message translates to:
@@ -12787,6 +12799,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Leaderboards'**
   String get searchLeaderboardsTitle;
+
+  /// No description provided for @searchLeaderboardItemsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Leaderboard Items'**
+  String get searchLeaderboardItemsTitle;
+
+  /// No description provided for @searchForumCategoriesTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Forum Categories'**
+  String get searchForumCategoriesTitle;
 
   /// No description provided for @leaderboardRankLabel.
   ///

@@ -66,6 +66,7 @@ class LeaderboardView extends StatelessWidget {
               },
               child: ListView.separated(
                 clipBehavior: Clip.none,
+                cacheExtent: 500,
                 padding: AppSpacing.allMd,
                 itemCount: state.leaderboards.length + (state.hasMore ? 1 : 0),
                 separatorBuilder: (context, index) => AppSpacing.vMd,
@@ -81,9 +82,11 @@ class LeaderboardView extends StatelessWidget {
                       ),
                     );
                   }
-                  return _LeaderboardCard(
-                    key: ValueKey(state.leaderboards[index].id),
-                    leaderboard: state.leaderboards[index],
+                  return RepaintBoundary(
+                    child: _LeaderboardCard(
+                      key: ValueKey(state.leaderboards[index].id),
+                      leaderboard: state.leaderboards[index],
+                    ),
                   );
                 },
               ),

@@ -429,10 +429,12 @@ class _TasksViewContentState extends State<_TasksViewContent> {
                 );
               }
               final task = state.tasks[index];
-              return AnimatedListItem(
-                key: ValueKey(task.id),
-                index: index,
-                child: _TaskGridCard(task: task),
+              return RepaintBoundary(
+                child: AnimatedListItem(
+                  key: ValueKey(task.id),
+                  index: index,
+                  child: _TaskGridCard(task: task),
+                ),
               );
             },
           ),

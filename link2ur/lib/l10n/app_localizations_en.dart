@@ -6384,6 +6384,12 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get searchRecentSearches => 'Recent searches';
+
+  @override
+  String get searchClearHistory => 'Clear search history';
+
+  @override
   String get networkOnline => 'Network restored';
 
   @override
@@ -6969,6 +6975,12 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get searchLeaderboardsTitle => 'Leaderboards';
+
+  @override
+  String get searchLeaderboardItemsTitle => 'Leaderboard Items';
+
+  @override
+  String get searchForumCategoriesTitle => 'Forum Categories';
 
   @override
   String get leaderboardRankLabel => 'Rank';
