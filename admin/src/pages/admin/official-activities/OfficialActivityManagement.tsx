@@ -12,7 +12,7 @@ type TabKey = 'account' | 'activities';
 type ActivityType = 'lottery' | 'first_come';
 type PrizeType = 'points' | 'physical' | 'voucher_code' | 'in_person';
 type DrawMode = 'auto' | 'manual';
-type ActivityStatus = 'active' | 'completed' | 'cancelled' | 'drawn';
+type ActivityStatus = 'active' | 'open' | 'completed' | 'cancelled' | 'drawn';
 
 interface OfficialAccount {
   user_id: string;
