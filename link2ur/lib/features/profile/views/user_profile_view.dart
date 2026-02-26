@@ -14,6 +14,7 @@ import '../../../core/widgets/animated_circular_progress.dart';
 import '../../../core/widgets/animated_star_rating.dart';
 import '../../../core/utils/date_formatter.dart';
 import '../../../core/widgets/skill_radar_chart.dart';
+import '../../../core/widgets/user_identity_badges.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../data/models/user.dart' show User, UserProfileDetail, UserProfileReview, UserProfileForumPost, UserProfileFleaItem;
 import '../../../data/models/task.dart' show CreateTaskRequest;
@@ -65,43 +66,45 @@ class _UserProfileViewState extends State<UserProfileView> {
                       )
                     : state.publicUser == null
                         ? const SizedBox.shrink()
-                        : RefreshIndicator(
-                            onRefresh: () async {
-                              context.read<ProfileBloc>().add(
-                                    ProfileLoadPublicProfile(widget.userId),
-                                  );
-                            },
-                            child: SingleChildScrollView(
-                              physics: const AlwaysScrollableScrollPhysics(),
-                              child: Column(
-                                children: [
-                                  // 用户信息卡片
-                                  _buildUserInfoCard(context, state.publicUser!),
-                                  const SizedBox(height: AppSpacing.lg),
-                                  // 指定任务请求按钮
-                                  _buildDirectRequestButton(context, state.publicUser!),
-                                  const SizedBox(height: AppSpacing.xl),
-                                  // 统计数据
-                                  _buildStatsRow(context, state.publicUser!),
-                                  const SizedBox(height: AppSpacing.xl),
-                                  // 技能雷达图
-                                  _buildSkillRadar(context, state.publicUser!),
-                                  const SizedBox(height: AppSpacing.section),
-                                  // 近期任务
-                                  _buildRecentTasksSection(context, state.publicProfileDetail),
-                                  // 近期论坛帖子
-                                  if (state.publicProfileDetail?.recentForumPosts.isNotEmpty == true)
-                                    _buildRecentForumPostsSection(context, state.publicProfileDetail!.recentForumPosts),
-                                  // 已售闲置物品
-                                  if (state.publicProfileDetail?.soldFleaItems.isNotEmpty == true)
-                                    _buildSoldFleaItemsSection(context, state.publicProfileDetail!.soldFleaItems),
-                                  // 收到的评价
-                                  if (state.publicProfileDetail?.reviews.isNotEmpty == true)
-                                    _buildReviewsSection(context, state.publicProfileDetail!.reviews),
-                                  const SizedBox(height: AppSpacing.xxl),
-                                ],
+                        : Column(
+                            children: [
+                              Expanded(
+                                child: RefreshIndicator(
+                                  onRefresh: () async {
+                                    context.read<ProfileBloc>().add(
+                                          ProfileLoadPublicProfile(widget.userId),
+                                        );
+                                  },
+                                  child: SingleChildScrollView(
+                                    physics: const AlwaysScrollableScrollPhysics(),
+                                    child: Column(
+                                      children: [
+                                        // 用户信息卡片（头像、名字、徽章、简介、城市 + 三项统计）
+                                        _buildUserInfoCard(context, state.publicUser!),
+                                        const SizedBox(height: AppSpacing.xl),
+                                        // 技能雷达图
+                                        _buildSkillRadar(context, state.publicUser!),
+                                        const SizedBox(height: AppSpacing.section),
+                                        // 近期任务（后端 recent_tasks，该用户近期发布或参与的任务，最多 5 条）
+                                        _buildRecentTasksSection(context, state.publicProfileDetail),
+                                        // 近期论坛帖子
+                                        if (state.publicProfileDetail?.recentForumPosts.isNotEmpty == true)
+                                          _buildRecentForumPostsSection(context, state.publicProfileDetail!.recentForumPosts),
+                                        // 已售闲置物品
+                                        if (state.publicProfileDetail?.soldFleaItems.isNotEmpty == true)
+                                          _buildSoldFleaItemsSection(context, state.publicProfileDetail!.soldFleaItems),
+                                        // 收到的评价
+                                        if (state.publicProfileDetail?.reviews.isNotEmpty == true)
+                                          _buildReviewsSection(context, state.publicProfileDetail!.reviews),
+                                        const SizedBox(height: AppSpacing.xxl),
+                                      ],
+                                    ),
+                                  ),
+                                ),
                               ),
-                            ),
+                              // 底部：发布任务请求
+                              _buildBottomRequestButton(context, state.publicUser!),
+                            ],
                           ),
           );
         },
@@ -126,30 +129,61 @@ class _UserProfileViewState extends State<UserProfileView> {
       ),
       child: Column(
         children: [
-          // 头像
-          AvatarView(
-            imageUrl: user.avatar,
-            name: user.displayNameWith(context.l10n),
-            size: 88,
+          // 头像 + 会员/超级会员角标（右下角皇冠/徽章）
+          Stack(
+            clipBehavior: Clip.none,
+            alignment: Alignment.bottomRight,
+            children: [
+              AvatarView(
+                imageUrl: user.avatar,
+                name: user.displayNameWith(context.l10n),
+                size: 88,
+              ),
+              Positioned(
+                right: -2,
+                bottom: -2,
+                child: MemberBadgeAvatarOverlay(
+                  userLevel: user.userLevel,
+                  size: 32,
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: AppSpacing.lg),
 
-          // 名称 + 徽章
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
+          // 名称 + 徽章（达人蓝标、学生、会员、超级会员）
+          Wrap(
+            alignment: WrapAlignment.center,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            spacing: 6,
+            runSpacing: 4,
             children: [
               Text(
                 user.displayNameWith(context.l10n),
                 style: const TextStyle(
                     fontSize: 20, fontWeight: FontWeight.bold),
               ),
-              if (user.isVerified) ...[
-                const SizedBox(width: 6),
+              if (user.isExpert) ...[
                 const Icon(Icons.verified, color: AppColors.primary, size: 20),
               ],
               if (user.isStudentVerified) ...[
-                const SizedBox(width: 6),
                 const Icon(Icons.school, color: Colors.blue, size: 20),
+              ],
+              if (user.userLevel == 'vip') ...[
+                IdentityBadge(
+                  text: context.l10n.badgeVip,
+                  icon: Icons.workspace_premium,
+                  gradientColors: AppColors.gradientGold,
+                  compact: true,
+                ),
+              ],
+              if (user.userLevel == 'super') ...[
+                IdentityBadge(
+                  text: context.l10n.badgeSuper,
+                  icon: Icons.local_fire_department,
+                  gradientColors: AppColors.gradientPinkPurple,
+                  compact: true,
+                ),
               ],
             ],
           ),
@@ -184,23 +218,10 @@ class _UserProfileViewState extends State<UserProfileView> {
                 ),
               ],
             ),
-            const SizedBox(height: AppSpacing.sm),
           ],
-
-          // 评分
-          if (user.avgRating != null)
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Icon(Icons.star, size: 16, color: Colors.amber),
-                const SizedBox(width: 4),
-                Text(
-                  user.ratingDisplay,
-                  style: const TextStyle(
-                      fontSize: 14, fontWeight: FontWeight.w600),
-                ),
-              ],
-            ),
+          const SizedBox(height: AppSpacing.lg),
+          // 三项统计数据（完成数、总任务、评分）
+          _buildStatsRow(context, user),
         ],
       ),
     );
@@ -210,7 +231,7 @@ class _UserProfileViewState extends State<UserProfileView> {
     final l10n = context.l10n;
 
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.sm),
+      padding: const EdgeInsets.only(top: AppSpacing.sm),
       child: Row(
         children: [
           // 任务完成率 — 环形进度条
@@ -232,7 +253,7 @@ class _UserProfileViewState extends State<UserProfileView> {
             ),
           ),
           const SizedBox(width: AppSpacing.md),
-          // 总任务数 — 保持 StatItem
+          // 总任务数
           Expanded(
             child: StatItem(
               label: l10n.profileTaskCount,
@@ -395,23 +416,26 @@ class _UserProfileViewState extends State<UserProfileView> {
     );
   }
 
-  /// 指定任务请求按钮
-  Widget _buildDirectRequestButton(BuildContext context, User user) {
+  /// 底部固定：发布任务请求按钮
+  Widget _buildBottomRequestButton(BuildContext context, User user) {
     final l10n = context.l10n;
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.xs),
-      child: SizedBox(
-        width: double.infinity,
-        child: ElevatedButton.icon(
-          onPressed: () => _showDirectRequestSheet(context, user),
-          icon: const Icon(Icons.send, size: 18),
-          label: Text(l10n.profileDirectRequest),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: AppColors.primary,
-            foregroundColor: Colors.white,
-            padding: const EdgeInsets.symmetric(vertical: 12),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(AppRadius.medium),
+    return SafeArea(
+      top: false,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(AppSpacing.md, AppSpacing.sm, AppSpacing.md, AppSpacing.md),
+        child: SizedBox(
+          width: double.infinity,
+          child: ElevatedButton.icon(
+            onPressed: () => _showDirectRequestSheet(context, user),
+            icon: const Icon(Icons.send, size: 20),
+            label: Text(l10n.profileDirectRequest),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primary,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(AppRadius.medium),
+              ),
             ),
           ),
         ),

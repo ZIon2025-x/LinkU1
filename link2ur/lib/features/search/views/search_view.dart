@@ -234,8 +234,8 @@ class _SearchContentState extends State<_SearchContent> {
                       : AppColors.backgroundLight,
                   side: BorderSide(
                     color: isDark
-                        ? AppColors.borderDark
-                        : AppColors.borderLight,
+                        ? AppColors.separatorDark
+                        : AppColors.separatorLight,
                   ),
                 );
               }).toList(),
