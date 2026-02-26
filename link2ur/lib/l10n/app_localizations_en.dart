@@ -8633,6 +8633,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get supportChatDivider => 'Connected to human support';
 
   @override
+  String get supportChatHistory => 'History';
+
+  @override
   String get aiChatTitle => 'AI Assistant';
 
   @override

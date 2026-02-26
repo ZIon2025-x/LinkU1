@@ -3954,6 +3954,7 @@
   "supportChatEnded": "对话已结束",
   "supportChatReturnToAI": "返回 AI",
   "supportChatDivider": "已连接人工客服",
+  "supportChatHistory": "历史记录",
   "aiChatTitle": "AI 助手",
   "aiChatNewConversation": "新对话",
   "aiChatReplying": "AI 正在回复...",

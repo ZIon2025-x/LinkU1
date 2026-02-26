@@ -95,6 +95,9 @@ dependencies:
   crypto: ^3.0.3
   encrypt: ^5.0.3
 
+  # 键盘高度（iOS 真机 MediaQuery.viewInsets 可能为 0，用原生 insets 顶起输入区）
+  keyboard_insets: ^0.1.2
+
   # 原生启动画面
   flutter_native_splash: ^2.4.4
   stream_transform: ^2.1.1

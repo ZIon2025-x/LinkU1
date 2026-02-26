@@ -12,6 +12,8 @@ import '../../../data/models/ai_chat.dart';
 import '../../../data/models/customer_service.dart';
 import '../../../data/repositories/common_repository.dart';
 import '../../../data/services/ai_chat_service.dart';
+import '../../../data/models/ai_chat.dart';
+import '../../../data/services/ai_chat_service.dart';
 import '../bloc/unified_chat_bloc.dart';
 import '../widgets/ai_message_bubble.dart';
 import '../widgets/tool_call_card.dart';
@@ -78,6 +80,120 @@ class _UnifiedChatContentState extends State<_UnifiedChatContent> {
     _messageController.clear();
     _focusNode.unfocus();
     _scrollToBottom();
+  }
+
+  void _showHistorySheet(BuildContext context) {
+    _focusNode.unfocus();
+    final aiChatService = context.read<AIChatService>();
+    final blocContext = context;
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      builder: (sheetContext) {
+        return DraggableScrollableSheet(
+          initialChildSize: 0.5,
+          minChildSize: 0.3,
+          maxChildSize: 0.9,
+          expand: false,
+          builder: (_, scrollController) {
+            return FutureBuilder<List<AIConversation>>(
+              future: aiChatService.getConversations(),
+              builder: (ctx, snapshot) {
+                final sheetDark =
+                    Theme.of(sheetContext).brightness == Brightness.dark;
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+                final list = snapshot.data ?? [];
+                if (list.isEmpty) {
+                  return Padding(
+                    padding: const EdgeInsets.all(AppSpacing.lg),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.chat_bubble_outline,
+                          size: 48,
+                          color: sheetDark
+                              ? AppColors.textTertiaryDark
+                              : AppColors.textTertiaryLight,
+                        ),
+                        const SizedBox(height: AppSpacing.md),
+                        Text(
+                          context.l10n.customerServiceNoChatHistory,
+                          style: AppTypography.body.copyWith(
+                            color: sheetDark
+                                ? AppColors.textSecondaryDark
+                                : AppColors.textSecondaryLight,
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                }
+                return ListView.builder(
+                  controller: scrollController,
+                  padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
+                  itemCount: list.length,
+                  itemBuilder: (_, index) {
+                    final conv = list[index];
+                    final title = conv.title.isEmpty
+                        ? context.l10n.aiChatNewConversation
+                        : conv.title;
+                    final timeStr = conv.updatedAt != null
+                        ? _formatConvTime(conv.updatedAt!)
+                        : '';
+                    return ListTile(
+                      leading: ClipRRect(
+                        borderRadius:
+                            BorderRadius.circular(AppRadius.medium),
+                        child: Image.asset(
+                          AppAssets.any,
+                          width: 40,
+                          height: 40,
+                          fit: BoxFit.cover,
+                        ),
+                      ),
+                      title: Text(
+                        title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      subtitle: Text(
+                        timeStr,
+                        style: AppTypography.caption.copyWith(
+                          color: sheetDark
+                              ? AppColors.textTertiaryDark
+                              : AppColors.textTertiaryLight,
+                        ),
+                      ),
+                      trailing: const Icon(Icons.chevron_right, size: 20),
+                      onTap: () {
+                        blocContext.read<UnifiedChatBloc>().add(
+                              UnifiedChatLoadHistory(conv.id),
+                            );
+                        if (sheetContext.mounted) Navigator.pop(sheetContext);
+                      },
+                    );
+                  },
+                );
+              },
+            );
+          },
+        );
+      },
+    );
+  }
+
+  static String _formatConvTime(DateTime time) {
+    final now = DateTime.now();
+    final diff = now.difference(time);
+    if (diff.inMinutes < 1) return '刚刚';
+    if (diff.inHours < 1) return '${diff.inMinutes}分钟前';
+    if (diff.inDays < 1) return '${diff.inHours}小时前';
+    if (diff.inDays < 7) return '${diff.inDays}天前';
+    return '${time.month}/${time.day}';
   }
 
   void _showRatingDialog() {
@@ -169,12 +285,13 @@ class _UnifiedChatContentState extends State<_UnifiedChatContent> {
         _scrollToBottom();
       },
       child: Scaffold(
+        resizeToAvoidBottomInset: true,
         appBar: _buildAppBar(isDark),
         body: Column(
           children: [
             // CS 连接横幅
             _buildCSBanner(isDark),
-            // 消息列表
+            // 消息列表（键盘弹起时被顶起，不遮挡）
             Expanded(child: _buildMessageList(isDark)),
             // 输入区域
             _buildInputArea(isDark),
@@ -358,12 +475,16 @@ class _UnifiedChatContentState extends State<_UnifiedChatContent> {
           items.add(_ChatListItem.cs(state.csMessages[i], i));
         }
 
+        final bottomPadding = MediaQuery.of(context).padding.bottom;
         return GestureDetector(
           onTap: () => _focusNode.unfocus(),
           child: ListView.builder(
             controller: _scrollController,
             cacheExtent: 400,
-            padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
+            padding: EdgeInsets.only(
+              top: AppSpacing.sm,
+              bottom: AppSpacing.sm + bottomPadding,
+            ),
             itemCount: items.length,
             itemBuilder: (context, index) {
               final item = items[index];
@@ -742,28 +863,34 @@ class _UnifiedChatContentState extends State<_UnifiedChatContent> {
           hintText = context.l10n.customerServiceEnterMessage;
         }
 
-        return Container(
-          padding: const EdgeInsets.symmetric(
-            horizontal: AppSpacing.md,
-            vertical: AppSpacing.sm,
-          ),
-          decoration: BoxDecoration(
-            color: isDark
-                ? AppColors.cardBackgroundDark
-                : AppColors.cardBackgroundLight,
-            border: Border(
-              top: BorderSide(
-                color:
-                    isDark ? AppColors.dividerDark : AppColors.dividerLight,
+        // 与任务聊天框一致：快捷操作单独一行（无容器背景），输入区在下方
+        return Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            if (state.mode == ChatMode.ai) _buildQuickActionsRow(context),
+            Container(
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.md,
+                vertical: AppSpacing.sm,
               ),
-            ),
-          ),
-          child: SafeArea(
-            top: false,
-            child: Row(
-              children: [
-                Expanded(
-                  child: TextField(
+              decoration: BoxDecoration(
+                color: isDark
+                    ? AppColors.cardBackgroundDark
+                    : AppColors.cardBackgroundLight,
+                border: Border(
+                  top: BorderSide(
+                    color:
+                        isDark ? AppColors.dividerDark : AppColors.dividerLight,
+                  ),
+                ),
+              ),
+              child: SafeArea(
+                top: false,
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
                     controller: _messageController,
                     focusNode: _focusNode,
                     enabled: !isDisabled,
@@ -810,8 +937,29 @@ class _UnifiedChatContentState extends State<_UnifiedChatContent> {
               ],
             ),
           ),
+        ),
+          ],
         );
       },
+    );
+  }
+
+  /// 快捷操作行（与任务聊天框一致：仅 padding，无容器背景，浮在页面背景上）
+  Widget _buildQuickActionsRow(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Row(
+          children: [
+            _UnifiedQuickActionChip(
+              label: context.l10n.supportChatHistory,
+              icon: Icons.history,
+              onTap: () => _showHistorySheet(context),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
@@ -854,6 +1002,46 @@ class _ChatListItem {
 
   factory _ChatListItem.cs(CustomerServiceMessage msg, int index) =>
       _ChatListItem._(type: _ChatItemType.cs, csMessage: msg, index: index);
+}
+
+/// 输入框上快捷操作 Chip（与任务聊天 _QuickActionChip 样式一致）
+class _UnifiedQuickActionChip extends StatelessWidget {
+  const _UnifiedQuickActionChip({
+    required this.label,
+    required this.onTap,
+    this.icon,
+  });
+
+  final String label;
+  final VoidCallback onTap;
+  final IconData? icon;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          border: Border.all(color: AppColors.primary.withValues(alpha: 0.5)),
+          borderRadius: AppRadius.allPill,
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (icon != null) ...[
+              Icon(icon, size: 14, color: AppColors.primary),
+              const SizedBox(width: 4),
+            ],
+            Text(
+              label,
+              style: const TextStyle(fontSize: 12, color: AppColors.primary),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
 /// 合并聊天页内的快捷问题按钮

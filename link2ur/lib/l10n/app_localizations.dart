@@ -15890,6 +15890,12 @@ abstract class AppLocalizations {
   /// **'Connected to human support'**
   String get supportChatDivider;
 
+  /// No description provided for @supportChatHistory.
+  ///
+  /// In en, this message translates to:
+  /// **'History'**
+  String get supportChatHistory;
+
   /// No description provided for @aiChatTitle.
   ///
   /// In en, this message translates to:

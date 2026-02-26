@@ -3893,6 +3893,7 @@
   "supportChatEnded": "對話已結束",
   "supportChatReturnToAI": "返回 AI",
   "supportChatDivider": "已連接人工客服",
+  "supportChatHistory": "歷史記錄",
   "aiChatTitle": "AI 助手",
   "aiChatNewConversation": "新對話",
   "aiChatReplying": "AI 正在回覆...",

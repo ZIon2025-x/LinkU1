@@ -8306,6 +8306,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get supportChatDivider => '已连接人工客服';
 
   @override
+  String get supportChatHistory => '历史记录';
+
+  @override
   String get aiChatTitle => 'AI 助手';
 
   @override
@@ -16990,6 +16993,9 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get supportChatDivider => '已連接人工客服';
+
+  @override
+  String get supportChatHistory => '歷史記錄';
 
   @override
   String get aiChatTitle => 'AI 助手';

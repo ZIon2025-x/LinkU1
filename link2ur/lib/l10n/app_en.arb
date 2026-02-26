@@ -4036,6 +4036,7 @@
   "supportChatEnded": "Conversation ended",
   "supportChatReturnToAI": "Back to AI",
   "supportChatDivider": "Connected to human support",
+  "supportChatHistory": "History",
   "aiChatTitle": "AI Assistant",
   "aiChatNewConversation": "New conversation",
   "aiChatReplying": "AI is replying...",

@@ -64,6 +64,16 @@ class UnifiedChatReturnToAI extends UnifiedChatEvent {
   const UnifiedChatReturnToAI();
 }
 
+/// 加载指定对话历史（从历史记录入口进入）
+class UnifiedChatLoadHistory extends UnifiedChatEvent {
+  const UnifiedChatLoadHistory(this.conversationId);
+
+  final String conversationId;
+
+  @override
+  List<Object?> get props => [conversationId];
+}
+
 /// 内部：AI 子 BLoC 状态变化
 class _AIStateChanged extends UnifiedChatEvent {
   const _AIStateChanged(this.state);
@@ -182,6 +192,7 @@ class UnifiedChatBloc extends Bloc<UnifiedChatEvent, UnifiedChatState> {
     on<UnifiedChatCSEndChat>(_onCSEndChat);
     on<UnifiedChatCSRateChat>(_onCSRateChat);
     on<UnifiedChatReturnToAI>(_onReturnToAI);
+    on<UnifiedChatLoadHistory>(_onLoadHistory);
     on<_AIStateChanged>(_onAIStateChanged);
     on<_CSStateChanged>(_onCSStateChanged);
 
@@ -266,6 +277,15 @@ class UnifiedChatBloc extends Bloc<UnifiedChatEvent, UnifiedChatState> {
     emit(state.copyWith(
       mode: ChatMode.ai,
     ));
+  }
+
+  /// 加载指定对话历史
+  Future<void> _onLoadHistory(
+    UnifiedChatLoadHistory event,
+    Emitter<UnifiedChatState> emit,
+  ) async {
+    if (state.mode != ChatMode.ai) return;
+    _aiBloc.add(AIChatLoadHistory(event.conversationId));
   }
 
   /// AI 子 BLoC 状态投射
