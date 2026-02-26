@@ -13,45 +13,34 @@ import '../../../core/router/app_router.dart';
 import '../../../core/router/page_transitions.dart';
 import '../../../core/utils/l10n_extension.dart';
 import '../../../core/utils/logger.dart';
+import '../../../data/models/faq.dart';
 import '../../../data/repositories/common_repository.dart';
 
 // ==================== FAQ ====================
 
-/// FAQ 视图：使用数据库/API 的 FAQ 库（CommonRepository.getFAQ）
+/// FAQ 视图：使用数据库/API 的 FAQ 库（与 backend GET /api/faq、data/models/faq.dart 一致）
 class FAQView extends StatelessWidget {
   const FAQView({super.key});
 
-  static List<_FAQSection> _parseSections(
-    List<Map<String, dynamic>> list,
+  /// 使用 data/models/faq.dart 的 FaqSection/FaqItem 解析后端 sections 列表
+  static List<_FAQSection> _parseSectionsFromApi(
+    List<Map<String, dynamic>> sectionMaps,
     String fallbackTitle,
   ) {
     final sections = <_FAQSection>[];
-    if (list.isEmpty) return sections;
-    final first = list.first;
-    if (first.containsKey('question') && first.containsKey('answer')) {
-      final items = list
-          .map((e) => _FAQItem(
-                question: e['question']?.toString() ?? '',
-                answer: e['answer']?.toString() ?? '',
-              ))
-          .toList();
-      sections.add(_FAQSection(title: fallbackTitle, items: items));
-    } else {
-      for (final map in list) {
-        final title = map['title']?.toString() ?? '';
-        final rawItems = map['items'] as List<dynamic>? ?? [];
-        final items = rawItems
-            .map((e) {
-              final m = e is Map<String, dynamic> ? e : <String, dynamic>{};
-              return _FAQItem(
-                question: m['question']?.toString() ?? '',
-                answer: m['answer']?.toString() ?? '',
-              );
-            })
-            .toList();
-        if (title.isNotEmpty || items.isNotEmpty) {
-          sections.add(_FAQSection(title: title, items: items));
-        }
+    for (final map in sectionMaps) {
+      try {
+        final sec = FaqSection.fromJson(map);
+        if (sec.title.isEmpty && sec.items.isEmpty) continue;
+        sections.add(_FAQSection(
+          title: sec.title.isEmpty ? fallbackTitle : sec.title,
+          items: sec.items
+              .map((e) => _FAQItem(question: e.question, answer: e.answer))
+              .toList(),
+        ));
+      } catch (_) {
+        // 单条解析失败时跳过该 section
+        continue;
       }
     }
     return sections;
@@ -93,7 +82,7 @@ class FAQView extends StatelessWidget {
             );
           }
           final list = snapshot.data ?? [];
-          final sections = _parseSections(list, l10n.infoFAQTitle);
+          final sections = _parseSectionsFromApi(list, l10n.infoFAQTitle);
           if (sections.isEmpty) {
             return Center(
               child: Text(

@@ -44,7 +44,8 @@ class CommonRepository {
         .toList();
   }
 
-  /// 获取FAQ列表
+  /// 获取 FAQ 列表（与后端 GET /api/faq 一致：返回 { "sections": [...] }）
+  /// 使用数据库 FAQ 库，与 data/models/faq.dart 的 FaqListResponse 结构一致
   Future<List<Map<String, dynamic>>> getFAQ({String lang = 'zh'}) async {
     final cacheKey = '${CacheManager.prefixCommon}faq_$lang';
 
@@ -53,7 +54,7 @@ class CommonRepository {
       return cached.map((e) => e as Map<String, dynamic>).toList();
     }
 
-    final response = await _apiService.get<List<dynamic>>(
+    final response = await _apiService.get<Map<String, dynamic>>(
       ApiEndpoints.faq(lang: lang),
     );
 
@@ -61,10 +62,13 @@ class CommonRepository {
       throw CommonException(response.message ?? '获取FAQ失败');
     }
 
-    // FAQ 内容稳定，使用静态TTL
-    await _cache.set(cacheKey, response.data!, ttl: CacheManager.staticTTL);
+    final raw = response.data!;
+    final sections = raw['sections'] as List<dynamic>? ?? [];
+    final list = sections.map((e) => e as Map<String, dynamic>).toList();
 
-    return response.data!.map((e) => e as Map<String, dynamic>).toList();
+    await _cache.set(cacheKey, sections, ttl: CacheManager.staticTTL);
+
+    return list;
   }
 
   /// 获取法律文档
