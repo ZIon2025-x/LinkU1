@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
@@ -197,7 +198,6 @@ class _HomeViewContentState extends State<_HomeViewContent> {
           Container(
             color: AppColors.backgroundFor(brightness),
           ),
-          // 装饰性背景 - 与iOS HomeView对齐：模糊彩色圆形
           const RepaintBoundary(child: _DecorativeBackground()),
           SafeArea(
             child: Column(
@@ -214,9 +214,8 @@ class _HomeViewContentState extends State<_HomeViewContent> {
                       context.read<HomeBloc>().add(HomeTabChanged(index));
                     },
                     children: [
-                      // 懒加载：PageView 会预构建相邻页，用占位符减少首帧开销
                       _visitedTabs.contains(0) ? const _ExpertsTab() : const SizedBox.shrink(),
-                      const _RecommendedTab(), // 默认 Tab，始终构建
+                      const _RecommendedTab(),
                       _visitedTabs.contains(2) ? const _NearbyTab() : const SizedBox.shrink(),
                     ],
                   ),
@@ -224,6 +223,8 @@ class _HomeViewContentState extends State<_HomeViewContent> {
               ],
             ),
           ),
+          // 思考云朵：最上层 overlay，不占布局、不改高度，仅推荐 Tab 显示
+          _LinkerCloudOverlay(currentTabIndex: _selectedTab),
         ],
       ),
     );

@@ -22,6 +22,9 @@ class AppAssets {
   /// 通用图片
   static const String any = 'assets/images/any.png';
 
+  /// 首页 Linker 思考云朵（卡通云+小圆气泡）
+  static const String cloud = 'assets/images/cloud.png';
+
   /// 服务图片
   static const String service = 'assets/images/service.webp';
 

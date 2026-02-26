@@ -1,6 +1,114 @@
 part of 'home_view.dart';
 
-/// 对标iOS: headerSection — 两行问候 + 右侧通知按钮
+// ==================== 思考云朵 overlay（最上层，仅推荐 Tab） ====================
+
+/// 使用 assets/images/cloud.png，最上层显示，不改高度；仅当 [currentTabIndex] == 1（推荐）时显示
+class _LinkerCloudOverlay extends StatefulWidget {
+  const _LinkerCloudOverlay({required this.currentTabIndex});
+
+  final int currentTabIndex;
+
+  @override
+  State<_LinkerCloudOverlay> createState() => _LinkerCloudOverlayState();
+}
+
+class _LinkerCloudOverlayState extends State<_LinkerCloudOverlay> {
+  bool _showCloud = false;
+  Timer? _showTimer;
+  Timer? _hideTimer;
+  bool _hasShownOnce = false;
+
+  static const _showDuration = Duration(seconds: 4);
+  static const _firstShowMin = 4;
+  static const _firstShowMax = 8;
+  static const _minInterval = Duration(seconds: 22);
+  static const _maxInterval = Duration(seconds: 38);
+
+  @override
+  void initState() {
+    super.initState();
+    _scheduleNextShow();
+  }
+
+  @override
+  void didUpdateWidget(covariant _LinkerCloudOverlay oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.currentTabIndex != 1 && _showCloud) {
+      setState(() => _showCloud = false);
+      _hideTimer?.cancel();
+    }
+    if (widget.currentTabIndex == 1 && oldWidget.currentTabIndex != 1) {
+      _scheduleNextShow();
+    }
+  }
+
+  void _scheduleNextShow() {
+    if (widget.currentTabIndex != 1) return;
+    _showTimer?.cancel();
+    final int delaySeconds;
+    if (!_hasShownOnce) {
+      delaySeconds = _firstShowMin + Random().nextInt(_firstShowMax - _firstShowMin + 1);
+    } else {
+      final span = _maxInterval.inSeconds - _minInterval.inSeconds + 1;
+      delaySeconds = _minInterval.inSeconds + Random().nextInt(span);
+    }
+    _showTimer = Timer(Duration(seconds: delaySeconds), () {
+      if (!mounted || widget.currentTabIndex != 1) return;
+      _hasShownOnce = true;
+      setState(() => _showCloud = true);
+      _hideTimer?.cancel();
+      _hideTimer = Timer(_showDuration, () {
+        if (!mounted) return;
+        setState(() => _showCloud = false);
+        _scheduleNextShow();
+      });
+    });
+  }
+
+  @override
+  void dispose() {
+    _showTimer?.cancel();
+    _hideTimer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (widget.currentTabIndex != 1) {
+      return const SizedBox.shrink();
+    }
+
+    return Positioned(
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      child: IgnorePointer(
+        child: SafeArea(
+          child: Align(
+            alignment: Alignment.topRight,
+            child: Padding(
+              padding: const EdgeInsets.only(top: 20, right: 24),
+              child: AnimatedOpacity(
+                opacity: _showCloud ? 1.0 : 0.0,
+                duration: const Duration(milliseconds: 700),
+                curve: Curves.easeInOut,
+                child: Image.asset(
+                  AppAssets.cloud,
+                  width: 140,
+                  height: 91,
+                  fit: BoxFit.contain,
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// 对标iOS: headerSection — 两行问候 + 右侧 Linker 入口
 class _GreetingSection extends StatelessWidget {
   const _GreetingSection();
 
