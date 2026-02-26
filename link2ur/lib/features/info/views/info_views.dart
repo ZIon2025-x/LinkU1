@@ -8,6 +8,7 @@ import '../../../core/design/app_radius.dart';
 import '../../../core/widgets/buttons.dart';
 import '../../../core/constants/app_assets.dart';
 import '../../../core/router/app_router.dart';
+import '../../../core/router/page_transitions.dart';
 import '../../../core/utils/l10n_extension.dart';
 import '../../../core/utils/logger.dart';
 
@@ -340,34 +341,22 @@ class _AboutViewState extends State<AboutView> {
               _AboutListItem(
                 title: context.l10n.infoTermsTitle,
                 icon: Icons.description,
-                onTap: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const TermsView()),
-                ),
+                onTap: () => pushWithSwipeBack(context, const TermsView()),
               ),
               _AboutListItem(
                 title: context.l10n.infoPrivacyTitle,
                 icon: Icons.privacy_tip,
-                onTap: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const PrivacyView()),
-                ),
+                onTap: () => pushWithSwipeBack(context, const PrivacyView()),
               ),
               _AboutListItem(
                 title: context.l10n.infoCookieTitle,
                 icon: Icons.cookie,
-                onTap: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const CookiePolicyView()),
-                ),
+                onTap: () => pushWithSwipeBack(context, const CookiePolicyView()),
               ),
               _AboutListItem(
                 title: context.l10n.infoFAQTitle,
                 icon: Icons.help_outline,
-                onTap: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const FAQView()),
-                ),
+                onTap: () => pushWithSwipeBack(context, const FAQView()),
               ),
 
               const Spacer(),

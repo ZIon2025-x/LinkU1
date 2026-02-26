@@ -4,6 +4,7 @@ import 'package:webview_flutter/webview_flutter.dart';
 
 import '../design/app_colors.dart';
 import '../design/app_typography.dart';
+import '../router/page_transitions.dart';
 import '../utils/l10n_extension.dart';
 import '../utils/sheet_adaptation.dart';
 
@@ -28,16 +29,16 @@ class ExternalWebView extends StatefulWidget {
     }
   }
 
-  /// 便捷方法 - 在应用内打开（push 一个全屏 WebView 页面）
+  /// 便捷方法 - 在应用内打开（push 到根 Navigator，全屏覆盖避免被底部 Tab 遮挡）
   static Future<void> openInApp(
     BuildContext context, {
     required String url,
     String? title,
   }) async {
-    await Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => _ExternalWebViewPage(url: url, title: title),
-      ),
+    await pushWithSwipeBack(
+      context,
+      _ExternalWebViewPage(url: url, title: title),
+      useRootNavigator: true,
     );
   }
 

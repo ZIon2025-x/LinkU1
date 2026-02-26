@@ -1,10 +1,21 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:go_router/go_router.dart';
 
 // ============================================================
 // 自定义转场 Page — 供 GoRouter pageBuilder 使用
 // ============================================================
+
+/// 详情类页面：iOS 使用 CupertinoPage 以支持右滑返回，其它平台使用弹簧滑入
+/// 供 GoRouter pageBuilder 使用，确保每个详情页在 iOS 上可边缘左滑返回
+Page<T> platformDetailPage<T>(BuildContext context, {required Key? key, required Widget child}) {
+  final localKey = key as LocalKey?;
+  if (Theme.of(context).platform == TargetPlatform.iOS) {
+    return CupertinoPage<T>(key: localKey, child: child);
+  }
+  return SpringSlideTransitionPage<T>(key: localKey, child: child);
+}
 
 /// iOS 弹簧转场（参考 SwiftUI .spring(response: 0.35, dampingFraction: 0.86)）
 ///
@@ -272,4 +283,25 @@ class ContainerTransformPage<T> extends CustomTransitionPage<T> {
             );
           },
         );
+}
+
+// ============================================================
+// Navigator.push 辅助 — iOS 使用 CupertinoPageRoute 支持右滑返回
+// ============================================================
+
+/// 推入新页面：iOS 使用 CupertinoPageRoute（支持右滑返回），其它平台使用 MaterialPageRoute
+Future<T?> pushWithSwipeBack<T>(BuildContext context, Widget page, {
+  bool useRootNavigator = false,
+  bool fullscreenDialog = false,
+}) {
+  final navigator = useRootNavigator
+      ? Navigator.of(context, rootNavigator: true)
+      : Navigator.of(context);
+  if (Theme.of(context).platform == TargetPlatform.iOS) {
+    return navigator.push<T>(CupertinoPageRoute(builder: (_) => page));
+  }
+  return navigator.push<T>(MaterialPageRoute(
+    builder: (_) => page,
+    fullscreenDialog: fullscreenDialog,
+  ));
 }

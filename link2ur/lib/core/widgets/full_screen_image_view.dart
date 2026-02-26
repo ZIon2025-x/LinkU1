@@ -4,6 +4,7 @@ import 'package:photo_view/photo_view.dart';
 import 'package:photo_view/photo_view_gallery.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../design/app_spacing.dart';
+import '../router/page_transitions.dart';
 import '../utils/helpers.dart';
 
 /// 全屏图片查看器 - 类似小红书风格
@@ -31,22 +32,11 @@ class FullScreenImageView extends StatefulWidget {
     required List<String> images,
     int initialIndex = 0,
   }) {
-    Navigator.of(context).push(
-      PageRouteBuilder(
-        opaque: false,
-        barrierColor: Colors.black87,
-        pageBuilder: (context, animation, secondaryAnimation) {
-          return FullScreenImageView(
-            images: images,
-            initialIndex: initialIndex,
-          );
-        },
-        transitionsBuilder: (context, animation, secondaryAnimation, child) {
-          return FadeTransition(
-            opacity: animation,
-            child: child,
-          );
-        },
+    pushWithSwipeBack(
+      context,
+      FullScreenImageView(
+        images: images,
+        initialIndex: initialIndex,
       ),
     );
   }

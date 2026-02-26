@@ -728,6 +728,8 @@
   "tabsProfile": "我的",
   "communityForum": "论坛",
   "communityLeaderboard": "排行榜",
+  "communitySearchForumHint": "搜索板块",
+  "communitySearchLeaderboardHint": "搜索排行榜",
   "postPinned": "置顶",
   "postFeatured": "精华",
   "postOfficial": "官方",

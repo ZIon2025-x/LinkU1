@@ -5,6 +5,13 @@ import 'package:equatable/equatable.dart';
 import '../../core/utils/localized_string.dart';
 import 'user.dart';
 
+/// 从 API JSON 安全解析 int（兼容 null 或字符串形式的数字，避免 "null is not a subtype of int"）
+int _parseInt(dynamic v, {int fallback = 0}) {
+  if (v == null) return fallback;
+  if (v is int) return v;
+  return int.tryParse(v.toString()) ?? fallback;
+}
+
 /// 论坛分类（对标iOS ForumCategory）
 class ForumCategory extends Equatable {
   const ForumCategory({
@@ -95,7 +102,7 @@ class ForumCategory extends Equatable {
 
   factory ForumCategory.fromJson(Map<String, dynamic> json) {
     return ForumCategory(
-      id: json['id'] as int,
+      id: _parseInt(json['id']),
       name: json['name'] as String? ?? '',
       nameEn: json['name_en'] as String?,
       nameZh: json['name_zh'] as String?,
@@ -185,7 +192,7 @@ class LatestPostInfo {
 
   factory LatestPostInfo.fromJson(Map<String, dynamic> json) {
     return LatestPostInfo(
-      id: json['id'] as int,
+      id: _parseInt(json['id']),
       title: json['title'] as String? ?? '',
       titleEn: json['title_en'] as String?,
       titleZh: json['title_zh'] as String?,
@@ -290,7 +297,7 @@ class ForumPost extends Equatable {
         (json['content_preview'] as String?);
 
     return ForumPost(
-      id: json['id'] as int,
+      id: _parseInt(json['id']),
       title: json['title_zh'] as String? ??
           json['title_en'] as String? ??
           json['title'] as String? ??
@@ -309,9 +316,7 @@ class ForumPost extends Equatable {
           [],
       linkedItemType: json['linked_item_type'] as String?,
       linkedItemId: json['linked_item_id']?.toString(),
-      categoryId: json['category_id'] as int? ??
-          (json['category'] as Map<String, dynamic>?)?['id'] as int? ??
-          0,
+      categoryId: _parseInt(json['category_id'], fallback: json['category'] != null ? _parseInt((json['category'] as Map<String, dynamic>)['id']) : 0),
       category: json['category'] != null
           ? ForumCategory.fromJson(json['category'] as Map<String, dynamic>)
           : null,
@@ -435,14 +440,14 @@ class ForumReply extends Equatable {
 
   factory ForumReply.fromJson(Map<String, dynamic> json) {
     return ForumReply(
-      id: json['id'] as int,
-      postId: json['post_id'] as int,
+      id: _parseInt(json['id']),
+      postId: _parseInt(json['post_id']),
       content: json['content'] as String? ?? '',
       authorId: (json['author_id'] ?? '').toString(),
       author: json['author'] != null
           ? UserBrief.fromJson(json['author'] as Map<String, dynamic>)
           : null,
-      parentReplyId: json['parent_reply_id'] as int?,
+      parentReplyId: json['parent_reply_id'] != null ? _parseInt(json['parent_reply_id']) : null,
       parentReplyAuthor: json['parent_reply_author'] != null
           ? UserBrief.fromJson(
               json['parent_reply_author'] as Map<String, dynamic>)

@@ -20,6 +20,7 @@ import '../../../core/widgets/full_screen_image_view.dart';
 import '../../../core/widgets/custom_share_panel.dart';
 import '../../../core/widgets/scroll_safe_tap.dart';
 import '../../../core/router/app_router.dart';
+import '../../../core/router/page_transitions.dart';
 import '../../../data/models/activity.dart';
 import '../../../data/models/task_expert.dart';
 import '../../../data/repositories/activity_repository.dart';
@@ -450,12 +451,10 @@ class _ActivityDetailViewContent extends StatelessWidget {
                 ephemeralKeySecret: resp.ephemeralKeySecret ?? '',
                 amountDisplay: resp.finalAmountDisplay,
               );
-              final result = await Navigator.of(context).push<bool>(
-                MaterialPageRoute(
-                  builder: (_) =>
-                      ApprovalPaymentPage(paymentData: data),
-                  fullscreenDialog: true,
-                ),
+              final result = await pushWithSwipeBack<bool>(
+                context,
+                ApprovalPaymentPage(paymentData: data),
+                fullscreenDialog: true,
               );
               if (!context.mounted) return;
               if (result == true) {
@@ -1062,12 +1061,13 @@ class _ActivityImageCarouselState extends State<_ActivityImageCarousel> {
             itemBuilder: (context, index) {
               return ScrollSafeTap(
                 onTap: () {
-                  Navigator.of(context).push(MaterialPageRoute(
-                    builder: (_) => FullScreenImageView(
+                  pushWithSwipeBack(
+                    context,
+                    FullScreenImageView(
                       images: images,
                       initialIndex: index,
                     ),
-                  ));
+                  );
                 },
                 child: AsyncImageView(
                   imageUrl: images[index],

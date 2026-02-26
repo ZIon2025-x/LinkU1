@@ -6,6 +6,7 @@ import '../../../core/design/app_typography.dart';
 import '../../../core/utils/helpers.dart';
 import '../../../core/utils/haptic_feedback.dart';
 import '../../../core/router/app_router.dart';
+import '../../../core/router/page_transitions.dart';
 import '../../../core/utils/l10n_extension.dart';
 import '../../../core/utils/responsive.dart';
 import '../../../core/widgets/skeleton_view.dart';
@@ -194,6 +195,7 @@ class _ForumPostDetailViewState extends State<ForumPostDetailView> {
           }
         },
         child: Scaffold(
+        resizeToAvoidBottomInset: true,
         backgroundColor: AppColors.backgroundFor(Theme.of(context).brightness),
         appBar: AppBar(
           title: Text(context.l10n.forumPostDetail),
@@ -302,10 +304,12 @@ class _ForumPostDetailViewState extends State<ForumPostDetailView> {
 
             final post = state.selectedPost!;
             final isDark = Theme.of(context).brightness == Brightness.dark;
+            final keyboardInset = MediaQuery.of(context).viewInsets.bottom;
 
             // 使用 CustomScrollView + Sliver 替代 SingleChildScrollView + Column
-            // 评论区使用 SliverList 实现懒加载，避免一次性构建所有评论 widget
+            // 评论区使用 SliverList 懒加载，避免一次性构建所有评论 widget
             return CustomScrollView(
+              keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
               slivers: [
                 // 帖子头部 + 内容 + 图片（1-2张）
                 SliverToBoxAdapter(
@@ -407,9 +411,9 @@ class _ForumPostDetailViewState extends State<ForumPostDetailView> {
                     ),
                   ),
 
-                // 底部间距
-                const SliverToBoxAdapter(
-                  child: SizedBox(height: 88),
+                // 底部间距：预留回复栏高度 + 键盘弹起时额外留白，避免输入框被遮挡、列表可滚动
+                SliverToBoxAdapter(
+                  child: SizedBox(height: 88 + keyboardInset),
                 ),
               ],
             );
@@ -432,9 +436,13 @@ class _ForumPostDetailViewState extends State<ForumPostDetailView> {
       builder: (context, state) {
         final isDark = Theme.of(context).brightness == Brightness.dark;
         final post = state.selectedPost;
+        final bottomInset = MediaQuery.of(context).viewInsets.bottom;
 
         // 使用半透明容器替代 BackdropFilter，减少输入区域重绘开销
-        return Container(
+        // 键盘弹起时用 viewInsets.bottom 顶起整条回复栏，避免输入框被遮挡
+        return Padding(
+          padding: EdgeInsets.only(bottom: bottomInset),
+          child: Container(
           decoration: BoxDecoration(
                 color: (isDark
                         ? AppColors.cardBackgroundDark
@@ -586,7 +594,8 @@ class _ForumPostDetailViewState extends State<ForumPostDetailView> {
                   ),
                 ),
               ),
-        );
+            ),
+          );
       },
     );
   }
@@ -658,7 +667,11 @@ class _PostHeader extends StatelessWidget {
             children: [
               // 头像 — 点击跳转个人主页
               GestureDetector(
-                onTap: () => context.goToUserProfile(post.authorId.toString()),
+                onTap: () {
+                  final userId = post.author?.id ?? post.authorId;
+                  if (userId.isEmpty) return;
+                  context.goToUserProfile(userId);
+                },
                 child: Container(
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
@@ -686,9 +699,13 @@ class _PostHeader extends StatelessWidget {
                     Row(
                       children: [
                         GestureDetector(
-                          onTap: () => context.goToUserProfile(post.authorId.toString()),
+                          onTap: () {
+                            final userId = post.author?.id ?? post.authorId;
+                            if (userId.isEmpty) return;
+                            context.goToUserProfile(userId);
+                          },
                           child: Text(
-                            post.author?.name ?? context.l10n.forumUserFallback(post.authorId.toString()),
+                            post.author?.name ?? context.l10n.forumUserFallback(post.authorId),
                             style: AppTypography.subheadlineBold.copyWith(
                               color: isDark
                                   ? AppColors.textPrimaryDark
@@ -974,9 +991,13 @@ class _ReplyCard extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // 头像 — 点击跳转个人主页
+          // 头像 — 点击跳转个人主页（优先使用 author.id 与后端一致，避免 authorId 与 author 不一致时跳错人）
           GestureDetector(
-            onTap: () => context.goToUserProfile(reply.authorId.toString()),
+            onTap: () {
+              final userId = reply.author?.id ?? reply.authorId;
+              if (userId.isEmpty) return;
+              context.goToUserProfile(userId);
+            },
             child: Container(
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
@@ -1005,9 +1026,13 @@ class _ReplyCard extends StatelessWidget {
                 Row(
                   children: [
                     GestureDetector(
-                      onTap: () => context.goToUserProfile(reply.authorId.toString()),
+                      onTap: () {
+                        final userId = reply.author?.id ?? reply.authorId;
+                        if (userId.isEmpty) return;
+                        context.goToUserProfile(userId);
+                      },
                       child: Text(
-                        reply.author?.name ?? context.l10n.forumUserFallback(reply.authorId.toString()),
+                        reply.author?.name ?? context.l10n.forumUserFallback(reply.authorId),
                         style: TextStyle(
                           fontSize: isSubReply ? 13 : 14,
                           fontWeight: FontWeight.w600,
@@ -1225,12 +1250,13 @@ class _PostImageRow extends StatelessWidget {
   final List<String> images;
 
   void _openFullScreen(BuildContext context, int index) {
-    Navigator.of(context).push(MaterialPageRoute(
-      builder: (_) => FullScreenImageView(
+    pushWithSwipeBack(
+      context,
+      FullScreenImageView(
         images: images,
         initialIndex: index,
       ),
-    ));
+    );
   }
 
   @override

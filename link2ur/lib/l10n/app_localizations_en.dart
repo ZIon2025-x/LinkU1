@@ -1914,6 +1914,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get communityLeaderboard => 'Leaderboard';
 
   @override
+  String get communitySearchForumHint => 'Search forums';
+
+  @override
+  String get communitySearchLeaderboardHint => 'Search leaderboards';
+
+  @override
   String get postPinned => 'Pinned';
 
   @override

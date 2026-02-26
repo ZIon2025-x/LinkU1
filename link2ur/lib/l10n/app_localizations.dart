@@ -3525,6 +3525,18 @@ abstract class AppLocalizations {
   /// **'Leaderboard'**
   String get communityLeaderboard;
 
+  /// No description provided for @communitySearchForumHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Search forums'**
+  String get communitySearchForumHint;
+
+  /// No description provided for @communitySearchLeaderboardHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Search leaderboards'**
+  String get communitySearchLeaderboardHint;
+
   /// No description provided for @postPinned.
   ///
   /// In en, this message translates to:

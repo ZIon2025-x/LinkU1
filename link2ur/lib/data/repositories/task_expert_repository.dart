@@ -26,13 +26,14 @@ class TaskExpertRepository {
     bool forceRefresh = false,
     CancelToken? cancelToken,
   }) async {
-    // 后端使用 limit/offset 分页（task_expert_routes.py）
+    // 后端使用 limit/offset 分页（task_expert_routes.py），支持 keyword 搜索
     final offset = (page - 1) * pageSize;
     final params = {
       'limit': pageSize,
       'offset': offset,
       if (category != null) 'category': category,
       if (location != null) 'location': location,
+      if (keyword != null && keyword.trim().isNotEmpty) 'keyword': keyword!.trim(),
     };
 
     final cacheKey =

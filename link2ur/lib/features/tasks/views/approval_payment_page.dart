@@ -18,6 +18,7 @@ import '../../../data/models/payment.dart' show TaskPaymentResponse;
 import '../../../data/repositories/payment_repository.dart';
 import '../../../data/services/payment_service.dart';
 import '../../../core/constants/app_assets.dart';
+import '../../../core/router/page_transitions.dart';
 import '../bloc/task_detail_bloc.dart';
 import '../../payment/views/wechat_pay_webview.dart' show WeChatPayWebView;
 
@@ -369,15 +370,14 @@ class _ApprovalPaymentPageState extends State<ApprovalPaymentPage> {
         );
         if (!mounted) return;
         if (url.isEmpty) throw Exception('No checkout URL');
-        final nav = Navigator.of(context);
-        final result = await nav.push<bool>(
-          MaterialPageRoute(
-            builder: (routeContext) => WeChatPayWebView(
-              checkoutUrl: url,
-              onPaymentSuccess: () => Navigator.of(routeContext).pop(true),
-              onPaymentCancel: () => Navigator.of(routeContext).pop(false),
-            ),
+        final result = await pushWithSwipeBack<bool>(
+          context,
+          WeChatPayWebView(
+            checkoutUrl: url,
+            onPaymentSuccess: () => Navigator.of(context, rootNavigator: true).pop(true),
+            onPaymentCancel: () => Navigator.of(context, rootNavigator: true).pop(false),
           ),
+          useRootNavigator: true,
         );
         if (!mounted) return;
         if (result == true) {

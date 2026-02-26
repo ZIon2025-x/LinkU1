@@ -31,6 +31,16 @@ class LeaderboardRefreshRequested extends LeaderboardEvent {
   const LeaderboardRefreshRequested();
 }
 
+/// 排行榜列表关键词搜索（仅搜排行榜名称/描述）
+class LeaderboardSearchChanged extends LeaderboardEvent {
+  const LeaderboardSearchChanged(this.keyword);
+
+  final String keyword;
+
+  @override
+  List<Object?> get props => [keyword];
+}
+
 class LeaderboardLoadDetail extends LeaderboardEvent {
   const LeaderboardLoadDetail(this.leaderboardId, {this.sortBy});
 
@@ -189,6 +199,7 @@ class LeaderboardState extends Equatable {
     this.page = 1,
     this.hasMore = true,
     this.selectedCategory,
+    this.searchKeyword = '',
     this.sortBy,
     this.errorMessage,
     this.itemDetail,
@@ -207,6 +218,7 @@ class LeaderboardState extends Equatable {
   final int page;
   final bool hasMore;
   final String? selectedCategory;
+  final String searchKeyword;
   final String? sortBy;
   final String? errorMessage;
   final LeaderboardItem? itemDetail;
@@ -227,6 +239,7 @@ class LeaderboardState extends Equatable {
     int? page,
     bool? hasMore,
     String? selectedCategory,
+    String? searchKeyword,
     String? sortBy,
     String? errorMessage,
     LeaderboardItem? itemDetail,
@@ -247,6 +260,7 @@ class LeaderboardState extends Equatable {
       page: page ?? this.page,
       hasMore: hasMore ?? this.hasMore,
       selectedCategory: selectedCategory ?? this.selectedCategory,
+      searchKeyword: searchKeyword ?? this.searchKeyword,
       sortBy: sortBy ?? this.sortBy,
       errorMessage: errorMessage,
       itemDetail: clearItemDetail ? null : (itemDetail ?? this.itemDetail),
@@ -268,6 +282,7 @@ class LeaderboardState extends Equatable {
         page,
         hasMore,
         selectedCategory,
+        searchKeyword,
         sortBy,
         errorMessage,
         itemDetail,
@@ -286,6 +301,7 @@ class LeaderboardBloc extends Bloc<LeaderboardEvent, LeaderboardState> {
       : _leaderboardRepository = leaderboardRepository,
         super(const LeaderboardState()) {
     on<LeaderboardLoadRequested>(_onLoadRequested);
+    on<LeaderboardSearchChanged>(_onSearchChanged);
     on<LeaderboardLoadMore>(_onLoadMore);
     on<LeaderboardRefreshRequested>(_onRefresh);
     on<LeaderboardLoadDetail>(_onLoadDetail);
@@ -312,9 +328,10 @@ class LeaderboardBloc extends Bloc<LeaderboardEvent, LeaderboardState> {
       selectedCategory: event.category,
     ));
 
+    final kw = state.searchKeyword.trim().isEmpty ? null : state.searchKeyword.trim();
     try {
       final response = await _leaderboardRepository.getLeaderboards(
-        keyword: event.category,
+        keyword: kw,
       );
 
       emit(state.copyWith(
@@ -333,6 +350,39 @@ class LeaderboardBloc extends Bloc<LeaderboardEvent, LeaderboardState> {
     }
   }
 
+  Future<void> _onSearchChanged(
+    LeaderboardSearchChanged event,
+    Emitter<LeaderboardState> emit,
+  ) async {
+    final keyword = event.keyword.trim();
+    emit(state.copyWith(
+      searchKeyword: event.keyword,
+      status: LeaderboardStatus.loading,
+    ));
+
+    try {
+      final response = await _leaderboardRepository.getLeaderboards(
+        keyword: keyword.isEmpty ? null : keyword,
+      );
+
+      emit(state.copyWith(
+        status: LeaderboardStatus.loaded,
+        leaderboards: response.leaderboards,
+        total: response.total,
+        page: 1,
+        hasMore: response.hasMore,
+        searchKeyword: event.keyword,
+      ));
+    } catch (e) {
+      AppLogger.error('Failed to search leaderboards', e);
+      emit(state.copyWith(
+        status: LeaderboardStatus.error,
+        errorMessage: e.toString(),
+        searchKeyword: event.keyword,
+      ));
+    }
+  }
+
   Future<void> _onLoadMore(
     LeaderboardLoadMore event,
     Emitter<LeaderboardState> emit,
@@ -341,9 +391,10 @@ class LeaderboardBloc extends Bloc<LeaderboardEvent, LeaderboardState> {
 
     try {
       final nextPage = state.page + 1;
+      final kw = state.searchKeyword.trim().isEmpty ? null : state.searchKeyword.trim();
       final response = await _leaderboardRepository.getLeaderboards(
         page: nextPage,
-        keyword: state.selectedCategory,
+        keyword: kw,
       );
 
       emit(state.copyWith(
@@ -362,8 +413,9 @@ class LeaderboardBloc extends Bloc<LeaderboardEvent, LeaderboardState> {
     Emitter<LeaderboardState> emit,
   ) async {
     try {
+      final kw = state.searchKeyword.trim().isEmpty ? null : state.searchKeyword.trim();
       final response = await _leaderboardRepository.getLeaderboards(
-        keyword: state.selectedCategory,
+        keyword: kw,
       );
 
       emit(state.copyWith(

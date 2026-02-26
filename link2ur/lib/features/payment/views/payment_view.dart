@@ -13,6 +13,7 @@ import '../../../core/utils/l10n_extension.dart';
 import '../../../core/utils/sheet_adaptation.dart';
 import '../../../core/widgets/buttons.dart';
 
+import '../../../core/router/page_transitions.dart';
 import '../../../core/widgets/loading_view.dart';
 import '../../../data/repositories/coupon_points_repository.dart';
 import '../../../data/repositories/payment_repository.dart';
@@ -349,15 +350,14 @@ class _PaymentContentState extends State<_PaymentContent> {
   /// 对齐 iOS WeChatPayWebView.swift
   /// 通过 URL 检测 payment-success / payment-cancel 判断支付结果
   Future<void> _openWeChatWebView(String checkoutUrl) async {
-    final nav = Navigator.of(context);
-    final result = await nav.push<bool>(
-      MaterialPageRoute(
-        builder: (routeContext) => WeChatPayWebView(
-          checkoutUrl: checkoutUrl,
-          onPaymentSuccess: () => Navigator.of(routeContext).pop(true),
-          onPaymentCancel: () => Navigator.of(routeContext).pop(false),
-        ),
+    final result = await pushWithSwipeBack<bool>(
+      context,
+      WeChatPayWebView(
+        checkoutUrl: checkoutUrl,
+        onPaymentSuccess: () => Navigator.of(context, rootNavigator: true).pop(true),
+        onPaymentCancel: () => Navigator.of(context, rootNavigator: true).pop(false),
       ),
+      useRootNavigator: true,
     );
     if (!mounted) return;
     if (result == true) {

@@ -39,16 +39,14 @@ Widget _buildUserInfoSection(
         // 头像 + 角标（点击可更换头像）
         GestureDetector(
           onTap: () {
-            Navigator.push(
+            pushWithSwipeBack(
               context,
-              MaterialPageRoute(
-                builder: (_) => AvatarPickerView(
-                  currentAvatar: user.avatar,
-                  onSelected: (newAvatar) {
-                    // 头像更新后刷新 Profile
-                    context.read<ProfileBloc>().add(const ProfileLoadRequested());
-                  },
-                ),
+              AvatarPickerView(
+                currentAvatar: user.avatar,
+                onSelected: (newAvatar) {
+                  // 头像更新后刷新 Profile
+                  context.read<ProfileBloc>().add(const ProfileLoadRequested());
+                },
               ),
             );
           },

@@ -16,6 +16,7 @@ import '../../../core/widgets/full_screen_image_view.dart';
 import '../../../core/widgets/custom_share_panel.dart';
 import '../../../core/utils/l10n_extension.dart';
 import '../../../core/utils/responsive.dart';
+import '../../../core/router/page_transitions.dart';
 import '../../../core/utils/sheet_adaptation.dart';
 import '../../../data/repositories/flea_market_repository.dart';
 import '../../../data/models/flea_market.dart';
@@ -73,15 +74,13 @@ class _FleaMarketDetailContent extends StatelessWidget {
           context.read<FleaMarketBloc>().add(const FleaMarketClearAcceptPaymentData());
           WidgetsBinding.instance.addPostFrameCallback((_) {
             if (!context.mounted) return;
-            Navigator.of(context)
-                .push<bool>(
-                  MaterialPageRoute<bool>(
-                    builder: (_) => ApprovalPaymentPage(
-                      paymentData: paymentData,
-                    ),
-                  ),
-                )
-                .then((paid) {
+            pushWithSwipeBack<bool>(
+                context,
+                ApprovalPaymentPage(
+                  paymentData: paymentData,
+                ),
+              )
+              .then((paid) {
               if (!context.mounted) return;
               // ✅ 支付成功时先乐观更新为已售出，避免 webhook 未提交时详情仍显示预留
               if (paid == true) {
@@ -865,12 +864,9 @@ class _FleaMarketDetailContent extends StatelessWidget {
                   taskSource: AppConstants.taskSourceFleaMarket,
                   fleaMarketItemId: itemId,
                 );
-                Navigator.of(context)
-                    .push<bool>(
-                      MaterialPageRoute<bool>(
-                        builder: (_) =>
-                            ApprovalPaymentPage(paymentData: paymentData),
-                      ),
+                pushWithSwipeBack<bool>(
+                      context,
+                      ApprovalPaymentPage(paymentData: paymentData),
                     )
                     .then((paid) {
                   if (!context.mounted) return;
@@ -1491,12 +1487,13 @@ class _ImageGalleryState extends State<_ImageGallery> {
             itemBuilder: (context, index) {
               return GestureDetector(
                 onTap: () {
-                  Navigator.of(context).push(MaterialPageRoute(
-                    builder: (_) => FullScreenImageView(
+                  pushWithSwipeBack(
+                    context,
+                    FullScreenImageView(
                       images: images,
                       initialIndex: index,
                     ),
-                  ));
+                  );
                 },
                 child: index == 0
                     ? Hero(

@@ -939,6 +939,8 @@
   "tabsProfile": "Profile",
   "communityForum": "Forum",
   "communityLeaderboard": "Leaderboard",
+  "communitySearchForumHint": "Search forums",
+  "communitySearchLeaderboardHint": "Search leaderboards",
   "postPinned": "Pinned",
   "postFeatured": "Featured",
   "postOfficial": "Official",

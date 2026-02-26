@@ -1828,6 +1828,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get communityLeaderboard => '排行榜';
 
   @override
+  String get communitySearchForumHint => '搜索板块';
+
+  @override
+  String get communitySearchLeaderboardHint => '搜索排行榜';
+
+  @override
   String get postPinned => '置顶';
 
   @override
@@ -10488,6 +10494,12 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get communityLeaderboard => '排行榜';
+
+  @override
+  String get communitySearchForumHint => '搜尋板塊';
+
+  @override
+  String get communitySearchLeaderboardHint => '搜尋排行榜';
 
   @override
   String get postPinned => '置頂';

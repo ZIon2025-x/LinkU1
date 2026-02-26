@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -406,11 +408,84 @@ class _CommunityTabButton extends StatelessWidget {
   }
 }
 
-/// 论坛Tab - 显示板块(分类)列表，对标iOS ForumView
-/// BLoC 在 MainTabView 中创建
-/// 客户端兜底过滤：后端已根据用户 token 过滤，此处做二次防护
-class _ForumTab extends StatelessWidget {
+/// 板块/排行榜顶部搜索框（仅搜当前板块）
+class _SectionSearchBar extends StatelessWidget {
+  const _SectionSearchBar({
+    required this.controller,
+    required this.hint,
+    required this.onChanged,
+  });
+
+  final TextEditingController controller;
+  final String hint;
+  final ValueChanged<String> onChanged;
+
+  static const double barHeight = 56;
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Container(
+      height: barHeight,
+      alignment: Alignment.center,
+      color: Theme.of(context).scaffoldBackgroundColor,
+      padding: const EdgeInsets.fromLTRB(AppSpacing.md, AppSpacing.xs, AppSpacing.md, AppSpacing.xs),
+      child: TextField(
+        controller: controller,
+        onChanged: onChanged,
+        decoration: InputDecoration(
+          hintText: hint,
+          prefixIcon: Icon(Icons.search, size: 20, color: isDark ? AppColors.textTertiaryDark : AppColors.textTertiaryLight),
+          filled: true,
+          fillColor: isDark ? AppColors.cardBackgroundDark : AppColors.secondaryBackgroundLight,
+          border: OutlineInputBorder(
+            borderRadius: AppRadius.allMedium,
+            borderSide: BorderSide.none,
+          ),
+          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        ),
+      ),
+    );
+  }
+}
+
+/// 固定高度的 Sliver 委托，用于置顶搜索框
+class _PinnedSearchBarDelegate extends SliverPersistentHeaderDelegate {
+  _PinnedSearchBarDelegate({required this.child});
+
+  final Widget child;
+
+  @override
+  double get minExtent => _SectionSearchBar.barHeight;
+
+  @override
+  double get maxExtent => _SectionSearchBar.barHeight;
+
+  @override
+  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
+    return child;
+  }
+
+  @override
+  bool shouldRebuild(covariant _PinnedSearchBarDelegate oldDelegate) => false;
+}
+
+/// 论坛Tab - 显示板块(分类)列表，顶部搜索框仅过滤板块
+class _ForumTab extends StatefulWidget {
   const _ForumTab();
+
+  @override
+  State<_ForumTab> createState() => _ForumTabState();
+}
+
+class _ForumTabState extends State<_ForumTab> {
+  final TextEditingController _searchController = TextEditingController();
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -445,8 +520,6 @@ class _ForumTab extends StatelessWidget {
               return isDesktop ? ContentConstraint(child: body) : body;
             }
 
-            // 客户端兜底过滤：根据用户身份过滤板块可见性
-            // 对标 iOS ForumView.visibleCategories
             final user = authState.isAuthenticated ? authState.user : null;
             final visible = ForumPermissionHelper.filterVisibleCategories(
               state.categories,
@@ -462,7 +535,6 @@ class _ForumTab extends StatelessWidget {
               return isDesktop ? ContentConstraint(child: body) : body;
             }
 
-            // 收藏板块优先，对标iOS
             final sorted = List<ForumCategory>.from(visible);
             sorted.sort((a, b) {
               if (a.isFavorited && !b.isFavorited) return -1;
@@ -470,33 +542,73 @@ class _ForumTab extends StatelessWidget {
               return a.sortOrder.compareTo(b.sortOrder);
             });
 
-            final refresh = RefreshIndicator(
-              onRefresh: () async {
-                context
-                    .read<ForumBloc>()
-                    .add(const ForumRefreshRequested());
-              },
-              child: ListView.separated(
-                clipBehavior: Clip.none,
-                // extendBody: true 时，手动指定 padding 会覆盖 ListView 自动的
-                // MediaQuery padding，需要自己加上底部导航栏+安全区高度
-                padding: EdgeInsets.only(
-                  left: AppSpacing.md,
-                  right: AppSpacing.md,
-                  top: AppSpacing.md,
-                  bottom: MediaQuery.of(context).padding.bottom + AppSpacing.md,
+            final query = _searchController.text.trim().toLowerCase();
+            final filtered = query.isEmpty
+                ? sorted
+                : sorted.where((c) {
+                    final locale = Localizations.localeOf(context);
+                    final name = (c.displayName(locale)).toLowerCase();
+                    final desc = (c.displayDescription(locale) ?? '').toLowerCase();
+                    return name.contains(query) || desc.contains(query);
+                  }).toList();
+
+            final scrollView = CustomScrollView(
+              clipBehavior: Clip.none,
+              slivers: [
+                SliverPersistentHeader(
+                  pinned: true,
+                  delegate: _PinnedSearchBarDelegate(
+                    child: _SectionSearchBar(
+                      controller: _searchController,
+                      hint: context.l10n.communitySearchForumHint,
+                      onChanged: (_) => setState(() {}),
+                    ),
+                  ),
                 ),
-                itemCount: sorted.length,
-                separatorBuilder: (context, index) => AppSpacing.vMd,
-                itemBuilder: (context, index) {
-                  return AnimatedListItem(
-                    index: index,
-                    child: _CategoryCard(category: sorted[index]),
-                  );
-                },
-              ),
+                SliverPadding(
+                  padding: EdgeInsets.only(
+                    left: AppSpacing.md,
+                    right: AppSpacing.md,
+                    bottom: MediaQuery.of(context).padding.bottom + AppSpacing.md,
+                  ),
+                  sliver: filtered.isEmpty
+                      ? SliverToBoxAdapter(
+                          child: Padding(
+                            padding: const EdgeInsets.only(top: AppSpacing.md),
+                            child: EmptyStateView.noData(
+                              context,
+                              title: context.l10n.commonNoResults,
+                              description: context.l10n.forumNoPostsHint,
+                            ),
+                          ),
+                        )
+                      : SliverList(
+                          delegate: SliverChildBuilderDelegate(
+                            (context, index) {
+                              return Padding(
+                                padding: EdgeInsets.only(
+                                  top: index == 0 ? AppSpacing.md : 0,
+                                  bottom: AppSpacing.md,
+                                ),
+                                child: AnimatedListItem(
+                                  index: index,
+                                  child: _CategoryCard(category: filtered[index]),
+                                ),
+                              );
+                            },
+                            childCount: filtered.length,
+                          ),
+                        ),
+                ),
+              ],
             );
-            return isDesktop ? ContentConstraint(child: refresh) : refresh;
+            final listBody = RefreshIndicator(
+              onRefresh: () async {
+                context.read<ForumBloc>().add(const ForumRefreshRequested());
+              },
+              child: scrollView,
+            );
+            return isDesktop ? ContentConstraint(child: listBody) : listBody;
           },
         );
       },
@@ -504,88 +616,177 @@ class _ForumTab extends StatelessWidget {
   }
 }
 
-/// 排行榜Tab
-class _LeaderboardTab extends StatelessWidget {
+/// 排行榜 Tab 顶部搜索框（防抖，仅搜排行榜）
+class _LeaderboardSearchBar extends StatefulWidget {
+  const _LeaderboardSearchBar({
+    required this.hint,
+    required this.onSearchChanged,
+  });
+
+  final String hint;
+  final ValueChanged<String> onSearchChanged;
+
+  @override
+  State<_LeaderboardSearchBar> createState() => _LeaderboardSearchBarState();
+}
+
+class _LeaderboardSearchBarState extends State<_LeaderboardSearchBar> {
+  final TextEditingController _controller = TextEditingController();
+  Timer? _debounce;
+
+  static const _debounceDuration = Duration(milliseconds: 400);
+
+  @override
+  void dispose() {
+    _debounce?.cancel();
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _onChanged(String value) {
+    _debounce?.cancel();
+    _debounce = Timer(_debounceDuration, () {
+      if (mounted) widget.onSearchChanged(value.trim());
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return _SectionSearchBar(
+      controller: _controller,
+      hint: widget.hint,
+      onChanged: _onChanged,
+    );
+  }
+}
+
+/// 排行榜Tab - 顶部搜索框仅搜排行榜（API 关键词），搜索框固定且输入不因列表刷新被清空
+class _LeaderboardTab extends StatefulWidget {
   const _LeaderboardTab();
+
+  @override
+  State<_LeaderboardTab> createState() => _LeaderboardTabState();
+}
+
+class _LeaderboardTabState extends State<_LeaderboardTab> {
+  /// 缓存搜索框实例，避免 BlocBuilder 重建时重建 delegate 导致输入被清空
+  Widget? _cachedSearchBar;
+  late Widget _searchBar;
+
+  Widget _buildSearchBar(BuildContext context) {
+    if (_cachedSearchBar != null) return _cachedSearchBar!;
+    _cachedSearchBar = _LeaderboardSearchBar(
+      hint: context.l10n.communitySearchLeaderboardHint,
+      onSearchChanged: (q) {
+        if (context.mounted) {
+          context.read<LeaderboardBloc>().add(LeaderboardSearchChanged(q));
+        }
+      },
+    );
+    return _cachedSearchBar!;
+  }
 
   @override
   Widget build(BuildContext context) {
     final isDesktop = ResponsiveUtils.isDesktop(context);
+    _searchBar = _buildSearchBar(context);
+
     return BlocBuilder<LeaderboardBloc, LeaderboardState>(
       buildWhen: (prev, curr) =>
           prev.leaderboards != curr.leaderboards ||
           prev.status != curr.status ||
-          prev.hasMore != curr.hasMore,
+          prev.hasMore != curr.hasMore ||
+          prev.searchKeyword != curr.searchKeyword,
       builder: (context, state) {
-        if (state.status == LeaderboardStatus.loading &&
-            state.leaderboards.isEmpty) {
-          const body = SkeletonList(imageSize: 90);
-          return isDesktop ? const ContentConstraint(child: body) : body;
-        }
-
-        if (state.status == LeaderboardStatus.error &&
-            state.leaderboards.isEmpty) {
-          final body = ErrorStateView.loadFailed(
-            message: state.errorMessage ?? context.l10n.tasksLoadFailed,
-            onRetry: () {
-              context.read<LeaderboardBloc>().add(
-                    const LeaderboardLoadRequested(),
-                  );
-            },
-          );
-          return isDesktop ? ContentConstraint(child: body) : body;
-        }
-
-        if (state.leaderboards.isEmpty) {
-          final body = EmptyStateView.noData(
-            context,
-            title: context.l10n.forumNoLeaderboard,
-            description: context.l10n.forumNoLeaderboardMessage,
-          );
-          return isDesktop ? ContentConstraint(child: body) : body;
-        }
-
+        final sliverBody = _buildSliverBody(context, state);
+        final scrollView = CustomScrollView(
+          clipBehavior: Clip.none,
+          slivers: [
+            SliverPersistentHeader(
+              pinned: true,
+              delegate: _PinnedSearchBarDelegate(child: _searchBar),
+            ),
+            sliverBody,
+          ],
+        );
         final refresh = RefreshIndicator(
           onRefresh: () async {
             context.read<LeaderboardBloc>().add(
                   const LeaderboardRefreshRequested(),
                 );
           },
-          child: ListView.separated(
-            clipBehavior: Clip.none,
-            padding: EdgeInsets.only(
-              left: AppSpacing.md,
-              right: AppSpacing.md,
-              top: AppSpacing.md,
-              bottom: MediaQuery.of(context).padding.bottom + AppSpacing.md,
-            ),
-            itemCount: state.leaderboards.length +
-                (state.hasMore ? 1 : 0),
-            separatorBuilder: (context, index) => AppSpacing.vMd,
-            itemBuilder: (context, index) {
-              if (index == state.leaderboards.length) {
-                context.read<LeaderboardBloc>().add(
-                      const LeaderboardLoadMore(),
-                    );
-                  return const Center(
-                    child: Padding(
-                      padding: EdgeInsets.all(16.0),
-                      child: LoadingIndicator(),
-                    ),
-                  );
-                }
-                return AnimatedListItem(
-                  index: index,
-                  child: _LeaderboardCard(
-                    leaderboard: state.leaderboards[index],
-                  ),
-                );
-              },
-            ),
-          );
+          child: scrollView,
+        );
         return isDesktop ? ContentConstraint(child: refresh) : refresh;
-        },
+      },
+    );
+  }
+
+  Widget _buildSliverBody(BuildContext context, LeaderboardState state) {
+    if (state.status == LeaderboardStatus.loading &&
+        state.leaderboards.isEmpty) {
+      return SliverFillRemaining(
+        child: const SkeletonList(imageSize: 90),
       );
+    }
+
+    if (state.status == LeaderboardStatus.error &&
+        state.leaderboards.isEmpty) {
+      return SliverFillRemaining(
+        child: ErrorStateView.loadFailed(
+          message: state.errorMessage ?? context.l10n.tasksLoadFailed,
+          onRetry: () {
+            context.read<LeaderboardBloc>().add(
+                  const LeaderboardLoadRequested(),
+                );
+          },
+        ),
+      );
+    }
+
+    if (state.leaderboards.isEmpty) {
+      return SliverFillRemaining(
+        child: EmptyStateView.noData(
+          context,
+          title: context.l10n.forumNoLeaderboard,
+          description: context.l10n.forumNoLeaderboardMessage,
+        ),
+      );
+    }
+
+    return SliverPadding(
+      padding: EdgeInsets.only(
+        left: AppSpacing.md,
+        right: AppSpacing.md,
+        bottom: MediaQuery.of(context).padding.bottom + AppSpacing.md,
+      ),
+      sliver: SliverList(
+        delegate: SliverChildBuilderDelegate(
+          (context, index) {
+            if (index == state.leaderboards.length) {
+              context.read<LeaderboardBloc>().add(const LeaderboardLoadMore());
+              return const Padding(
+                padding: EdgeInsets.symmetric(vertical: 16),
+                child: Center(child: LoadingIndicator()),
+              );
+            }
+            return Padding(
+              padding: EdgeInsets.only(
+                top: index == 0 ? AppSpacing.md : 0,
+                bottom: AppSpacing.md,
+              ),
+              child: AnimatedListItem(
+                index: index,
+                child: _LeaderboardCard(
+                  leaderboard: state.leaderboards[index],
+                ),
+              ),
+            );
+          },
+          childCount: state.leaderboards.length + (state.hasMore ? 1 : 0),
+        ),
+      ),
+    );
   }
 }
 

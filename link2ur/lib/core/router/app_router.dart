@@ -386,12 +386,12 @@ class AppRouter {
         pageBuilder: (context, state) {
           final id = int.tryParse(state.pathParameters['id'] ?? '');
           if (id == null || id <= 0) {
-            return SpringSlideTransitionPage(
+            return platformDetailPage(context,
               key: state.pageKey,
               child: const Scaffold(body: Center(child: Text('Invalid task ID'))),
             );
           }
-          return SpringSlideTransitionPage(
+          return platformDetailPage(context,
             key: state.pageKey,
             child: TaskDetailView(taskId: id),
           );
@@ -450,7 +450,7 @@ class AppRouter {
         },
         pageBuilder: (context, state) {
           final id = state.pathParameters['id'] ?? '';
-          return SpringSlideTransitionPage(
+          return platformDetailPage(context,
             key: state.pageKey,
             child: FleaMarketDetailView(itemId: id),
           );
@@ -478,7 +478,7 @@ class AppRouter {
         name: 'taskExpertDetail',
         pageBuilder: (context, state) {
           final id = state.pathParameters['id'] ?? '';
-          return SpringSlideTransitionPage(
+          return platformDetailPage(context,
             key: state.pageKey,
             child: TaskExpertDetailView(expertId: id),
           );
@@ -518,12 +518,12 @@ class AppRouter {
         pageBuilder: (context, state) {
           final id = int.tryParse(state.pathParameters['id'] ?? '');
           if (id == null || id <= 0) {
-            return SpringSlideTransitionPage(
+            return platformDetailPage(context,
               key: state.pageKey,
               child: const Scaffold(body: Center(child: Text('Invalid post ID'))),
             );
           }
-          return SpringSlideTransitionPage(
+          return platformDetailPage(context,
             key: state.pageKey,
             child: ForumPostDetailView(postId: id),
           );
@@ -578,12 +578,12 @@ class AppRouter {
         pageBuilder: (context, state) {
           final id = int.tryParse(state.pathParameters['id'] ?? '');
           if (id == null || id <= 0) {
-            return SpringSlideTransitionPage(
+            return platformDetailPage(context,
               key: state.pageKey,
               child: const Scaffold(body: Center(child: Text('Invalid leaderboard ID'))),
             );
           }
-          return SpringSlideTransitionPage(
+          return platformDetailPage(context,
             key: state.pageKey,
             child: LeaderboardDetailView(leaderboardId: id),
           );
@@ -674,12 +674,12 @@ class AppRouter {
         pageBuilder: (context, state) {
           final id = int.tryParse(state.pathParameters['id'] ?? '');
           if (id == null || id <= 0) {
-            return SpringSlideTransitionPage(
+            return platformDetailPage(context,
               key: state.pageKey,
               child: const Scaffold(body: Center(child: Text('Invalid activity ID'))),
             );
           }
-          return SpringSlideTransitionPage(
+          return platformDetailPage(context,
             key: state.pageKey,
             child: ActivityDetailView(activityId: id),
           );

@@ -11,12 +11,14 @@ import '../../../core/utils/haptic_feedback.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_typography.dart';
 import '../../../core/router/app_router.dart';
+import '../../../core/router/page_transitions.dart';
 import '../../../core/utils/l10n_extension.dart';
 import '../../../core/utils/responsive.dart';
 import '../../../core/utils/sheet_adaptation.dart';
 import '../../../core/widgets/skeleton_view.dart';
 import '../../../core/widgets/error_state_view.dart';
 import '../../../core/widgets/async_image_view.dart';
+import '../../../core/widgets/external_web_view.dart';
 import '../../../core/widgets/full_screen_image_view.dart';
 import '../../../core/widgets/custom_share_panel.dart';
 import '../../../data/models/leaderboard.dart';
@@ -823,7 +825,7 @@ class _ContactCard extends StatelessWidget {
               _ContactRow(
                 icon: Icons.language_outlined,
                 text: item.website!,
-                onTap: () => _openUrl(item.website!),
+                onTap: () => _openUrl(context, item.website!),
                 onLongPress: () => _copy(context, item.website!),
               ),
           ],
@@ -841,9 +843,9 @@ class _ContactCard extends StatelessWidget {
     launchUrl(Uri.parse('tel:$phone'));
   }
 
-  void _openUrl(String url) {
+  void _openUrl(BuildContext context, String url) {
     final uri = url.startsWith('http') ? url : 'https://$url';
-    launchUrl(Uri.parse(uri), mode: LaunchMode.externalApplication);
+    ExternalWebView.openInApp(context, url: uri);
   }
 
   void _copy(BuildContext context, String text) {
@@ -1212,12 +1214,13 @@ class _ImageSectionState extends State<_ImageSection> {
             itemBuilder: (context, index) {
               return GestureDetector(
                 onTap: () {
-                  Navigator.of(context).push(MaterialPageRoute(
-                    builder: (_) => FullScreenImageView(
+                  pushWithSwipeBack(
+                    context,
+                    FullScreenImageView(
                       images: widget.images,
                       initialIndex: index,
                     ),
-                  ));
+                  );
                 },
                 child: AsyncImageView(
                   imageUrl: widget.images[index],

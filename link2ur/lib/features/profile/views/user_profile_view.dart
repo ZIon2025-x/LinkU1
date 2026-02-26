@@ -77,13 +77,16 @@ class _UserProfileViewState extends State<UserProfileView> {
                                 children: [
                                   // 用户信息卡片
                                   _buildUserInfoCard(context, state.publicUser!),
+                                  const SizedBox(height: AppSpacing.lg),
                                   // 指定任务请求按钮
                                   _buildDirectRequestButton(context, state.publicUser!),
+                                  const SizedBox(height: AppSpacing.xl),
                                   // 统计数据
                                   _buildStatsRow(context, state.publicUser!),
-                                  const SizedBox(height: AppSpacing.md),
+                                  const SizedBox(height: AppSpacing.xl),
                                   // 技能雷达图
                                   _buildSkillRadar(context, state.publicUser!),
+                                  const SizedBox(height: AppSpacing.section),
                                   // 近期任务
                                   _buildRecentTasksSection(context, state.publicProfileDetail),
                                   // 近期论坛帖子
@@ -95,7 +98,7 @@ class _UserProfileViewState extends State<UserProfileView> {
                                   // 收到的评价
                                   if (state.publicProfileDetail?.reviews.isNotEmpty == true)
                                     _buildReviewsSection(context, state.publicProfileDetail!.reviews),
-                                  const SizedBox(height: AppSpacing.xl),
+                                  const SizedBox(height: AppSpacing.xxl),
                                 ],
                               ),
                             ),
@@ -108,8 +111,8 @@ class _UserProfileViewState extends State<UserProfileView> {
 
   Widget _buildUserInfoCard(BuildContext context, User user) {
     return Container(
-      margin: const EdgeInsets.all(AppSpacing.md),
-      padding: const EdgeInsets.all(AppSpacing.lg),
+      margin: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.sm),
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.xl),
       decoration: BoxDecoration(
         color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(AppRadius.large),
@@ -123,13 +126,13 @@ class _UserProfileViewState extends State<UserProfileView> {
       ),
       child: Column(
         children: [
-          // 头像（使用 AvatarView 正确处理相对路径）
+          // 头像
           AvatarView(
             imageUrl: user.avatar,
             name: user.displayNameWith(context.l10n),
             size: 88,
           ),
-          const SizedBox(height: AppSpacing.md),
+          const SizedBox(height: AppSpacing.lg),
 
           // 名称 + 徽章
           Row(
@@ -150,10 +153,10 @@ class _UserProfileViewState extends State<UserProfileView> {
               ],
             ],
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: AppSpacing.sm),
 
           // 简介
-          if (user.bio != null && user.bio!.isNotEmpty)
+          if (user.bio != null && user.bio!.isNotEmpty) ...[
             Text(
               user.bio!,
               style: const TextStyle(
@@ -162,11 +165,12 @@ class _UserProfileViewState extends State<UserProfileView> {
               maxLines: 3,
               overflow: TextOverflow.ellipsis,
             ),
+            const SizedBox(height: AppSpacing.md),
+          ],
 
           // 居住城市
           if (user.residenceCity != null &&
               user.residenceCity!.isNotEmpty) ...[
-            const SizedBox(height: 8),
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
@@ -180,11 +184,11 @@ class _UserProfileViewState extends State<UserProfileView> {
                 ),
               ],
             ),
+            const SizedBox(height: AppSpacing.sm),
           ],
 
           // 评分
-          if (user.avgRating != null) ...[
-            const SizedBox(height: 8),
+          if (user.avgRating != null)
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
@@ -197,7 +201,6 @@ class _UserProfileViewState extends State<UserProfileView> {
                 ),
               ],
             ),
-          ],
         ],
       ),
     );
@@ -207,7 +210,7 @@ class _UserProfileViewState extends State<UserProfileView> {
     final l10n = context.l10n;
 
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.sm),
       child: Row(
         children: [
           // 任务完成率 — 环形进度条
@@ -291,7 +294,7 @@ class _UserProfileViewState extends State<UserProfileView> {
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
-      padding: const EdgeInsets.all(AppSpacing.md),
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.lg),
       decoration: BoxDecoration(
         color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(AppRadius.large),
@@ -308,7 +311,7 @@ class _UserProfileViewState extends State<UserProfileView> {
           Text(l10n.profileRating,
               style: const TextStyle(
                   fontSize: 14, fontWeight: FontWeight.w600)),
-          const SizedBox(height: 8),
+          const SizedBox(height: AppSpacing.md),
           Center(
             child: SkillRadarChart(
               data: {
@@ -334,23 +337,23 @@ class _UserProfileViewState extends State<UserProfileView> {
     final tasks = profileDetail?.recentTasks ?? [];
 
     return Padding(
-      padding: const EdgeInsets.all(AppSpacing.md),
+      padding: const EdgeInsets.fromLTRB(AppSpacing.md, AppSpacing.lg, AppSpacing.md, AppSpacing.md),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              const Icon(Icons.list, color: AppColors.primary, size: 18),
+              const Icon(Icons.list, color: AppColors.primary, size: 20),
               const SizedBox(width: 8),
               Text(l10n.profileRecentTasks,
                   style: const TextStyle(
-                      fontSize: 16, fontWeight: FontWeight.w600)),
+                      fontSize: 17, fontWeight: FontWeight.w600)),
             ],
           ),
-          const SizedBox(height: AppSpacing.md),
+          const SizedBox(height: AppSpacing.lg),
           if (tasks.isEmpty)
             Container(
-              padding: const EdgeInsets.all(AppSpacing.lg),
+              padding: const EdgeInsets.symmetric(vertical: AppSpacing.xl, horizontal: AppSpacing.lg),
               decoration: BoxDecoration(
                 color: Theme.of(context).cardColor,
                 borderRadius: BorderRadius.circular(AppRadius.medium),
@@ -365,15 +368,19 @@ class _UserProfileViewState extends State<UserProfileView> {
           else
             ...tasks.take(5).map((t) => Padding(
                   key: ValueKey('task_${t.id}'),
-                  padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+                  padding: const EdgeInsets.only(bottom: AppSpacing.md),
                   child: ListTile(
+                    contentPadding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.xs),
                     title: Text(t.displayTitle(Localizations.localeOf(context)),
                         maxLines: 2, overflow: TextOverflow.ellipsis),
-                    subtitle: Text(
-                      '${t.status} · £${t.reward.toStringAsFixed(2)}',
-                      style: const TextStyle(
-                        fontSize: 12,
-                        color: AppColors.textSecondary,
+                    subtitle: Padding(
+                      padding: const EdgeInsets.only(top: 4),
+                      child: Text(
+                        '${t.status} · £${t.reward.toStringAsFixed(2)}',
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: AppColors.textSecondary,
+                        ),
                       ),
                     ),
                     trailing: const Icon(Icons.chevron_right),
@@ -392,7 +399,7 @@ class _UserProfileViewState extends State<UserProfileView> {
   Widget _buildDirectRequestButton(BuildContext context, User user) {
     final l10n = context.l10n;
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.xs),
       child: SizedBox(
         width: double.infinity,
         child: ElevatedButton.icon(
@@ -735,24 +742,25 @@ class _UserProfileViewState extends State<UserProfileView> {
     final l10n = context.l10n;
 
     return Padding(
-      padding: const EdgeInsets.all(AppSpacing.md),
+      padding: const EdgeInsets.fromLTRB(AppSpacing.md, AppSpacing.lg, AppSpacing.md, AppSpacing.md),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              const Icon(Icons.forum, color: AppColors.primary, size: 18),
+              const Icon(Icons.forum, color: AppColors.primary, size: 20),
               const SizedBox(width: 8),
               Text(l10n.profileRecentPosts,
                   style: const TextStyle(
-                      fontSize: 16, fontWeight: FontWeight.w600)),
+                      fontSize: 17, fontWeight: FontWeight.w600)),
             ],
           ),
-          const SizedBox(height: AppSpacing.md),
+          const SizedBox(height: AppSpacing.lg),
           ...posts.take(5).map((p) => Padding(
                 key: ValueKey('post_${p.id}'),
-                padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+                padding: const EdgeInsets.only(bottom: AppSpacing.md),
                 child: ListTile(
+                  contentPadding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.xs),
                   title: Text(p.displayTitle(Localizations.localeOf(context)),
                       maxLines: 1, overflow: TextOverflow.ellipsis),
                   subtitle: Column(
@@ -802,20 +810,20 @@ class _UserProfileViewState extends State<UserProfileView> {
     final l10n = context.l10n;
 
     return Padding(
-      padding: const EdgeInsets.all(AppSpacing.md),
+      padding: const EdgeInsets.fromLTRB(AppSpacing.md, AppSpacing.lg, AppSpacing.md, AppSpacing.md),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              const Icon(Icons.storefront, color: AppColors.primary, size: 18),
+              const Icon(Icons.storefront, color: AppColors.primary, size: 20),
               const SizedBox(width: 8),
               Text(l10n.profileSoldItems,
                   style: const TextStyle(
-                      fontSize: 16, fontWeight: FontWeight.w600)),
+                      fontSize: 17, fontWeight: FontWeight.w600)),
             ],
           ),
-          const SizedBox(height: AppSpacing.md),
+          const SizedBox(height: AppSpacing.lg),
           SizedBox(
             height: 140,
             child: ListView.separated(
@@ -902,21 +910,25 @@ class _UserProfileViewState extends State<UserProfileView> {
     final l10n = context.l10n;
 
     return Padding(
-      padding: const EdgeInsets.all(AppSpacing.md),
+      padding: const EdgeInsets.fromLTRB(AppSpacing.md, AppSpacing.lg, AppSpacing.md, AppSpacing.md),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              const Icon(Icons.star, color: AppColors.primary, size: 18),
+              const Icon(Icons.star, color: AppColors.primary, size: 20),
               const SizedBox(width: 8),
               Text(l10n.profileUserReviews,
                   style: const TextStyle(
-                      fontSize: 16, fontWeight: FontWeight.w600)),
+                      fontSize: 17, fontWeight: FontWeight.w600)),
             ],
           ),
-          const SizedBox(height: AppSpacing.md),
-          ...reviews.take(5).map((r) => _ReviewItem(review: r)),
+          const SizedBox(height: AppSpacing.lg),
+          ...reviews.take(5).map((r) => Padding(
+                key: ValueKey('review_${r.createdAt}_${r.rating}'),
+                padding: const EdgeInsets.only(bottom: AppSpacing.md),
+                child: _ReviewItem(review: r),
+              )),
         ],
       ),
     );
@@ -932,8 +944,7 @@ class _ReviewItem extends StatelessWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Container(
-      margin: const EdgeInsets.only(bottom: AppSpacing.sm),
-      padding: const EdgeInsets.all(AppSpacing.md),
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.md),
       decoration: BoxDecoration(
         color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(AppRadius.medium),
@@ -970,7 +981,7 @@ class _ReviewItem extends StatelessWidget {
             ],
           ),
           if (review.comment != null && review.comment!.isNotEmpty) ...[
-            const SizedBox(height: 6),
+            const SizedBox(height: AppSpacing.sm),
             Text(
               review.comment!,
               style: const TextStyle(fontSize: 14),

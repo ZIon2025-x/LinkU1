@@ -23,6 +23,7 @@ import '../../../core/widgets/custom_share_panel.dart';
 import '../../../core/widgets/user_identity_badges.dart';
 import '../../../core/widgets/animated_list_item.dart';
 import '../../../core/router/app_router.dart';
+import '../../../core/router/page_transitions.dart';
 import '../../../core/utils/responsive.dart';
 import '../../../core/utils/sheet_adaptation.dart';
 import '../../../core/utils/l10n_extension.dart';
@@ -87,12 +88,10 @@ class _TaskDetailContent extends StatelessWidget {
           final taskId = state.task?.id;
           final bloc = context.read<TaskDetailBloc>();
           bloc.add(const TaskDetailClearAcceptPaymentData());
-          Navigator.of(context)
-              .push<bool>(
-                MaterialPageRoute(
-                  builder: (_) => ApprovalPaymentPage(paymentData: data),
-                  fullscreenDialog: true,
-                ),
+          pushWithSwipeBack<bool>(
+                context,
+                ApprovalPaymentPage(paymentData: data),
+                fullscreenDialog: true,
               )
               .then((result) {
             if (!context.mounted) return;
@@ -793,11 +792,10 @@ class _TaskDetailContent extends StatelessWidget {
         ephemeralKeySecret: resp.ephemeralKeySecret ?? '',
         amountDisplay: resp.finalAmountDisplay,
       );
-      final result = await Navigator.of(context).push<bool>(
-        MaterialPageRoute(
-          builder: (_) => ApprovalPaymentPage(paymentData: data),
-          fullscreenDialog: true,
-        ),
+      final result = await pushWithSwipeBack<bool>(
+        context,
+        ApprovalPaymentPage(paymentData: data),
+        fullscreenDialog: true,
       );
       if (!context.mounted) return;
       if (result == true) {

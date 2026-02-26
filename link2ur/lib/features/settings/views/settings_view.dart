@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:package_info_plus/package_info_plus.dart';
-import 'package:url_launcher/url_launcher.dart';
 
+import '../../../core/widgets/external_web_view.dart';
 import '../bloc/settings_bloc.dart';
 import '../../../core/utils/haptic_feedback.dart';
 import '../../../core/design/app_colors.dart';
@@ -48,11 +48,9 @@ class _SettingsViewState extends State<SettingsView> {
     }
   }
 
-  Future<void> _launchUrl(String url) async {
-    final uri = Uri.parse(url);
-    if (await canLaunchUrl(uri)) {
-      await launchUrl(uri, mode: LaunchMode.externalApplication);
-    }
+  /// 在应用内 WebView 打开链接（条款/隐私等）
+  void _openInAppWebView(String url, String title) {
+    ExternalWebView.openInApp(context, url: url, title: title);
   }
 
   void _showDeleteAccountDialog(BuildContext context) {
@@ -319,22 +317,28 @@ class _SettingsViewState extends State<SettingsView> {
                         _SettingsNavRow(
                           icon: Icons.description_outlined,
                           title: context.l10n.appTermsOfService,
-                          onTap: () =>
-                              _launchUrl('https://link2ur.com/terms'),
+                          onTap: () => _openInAppWebView(
+                            'https://link2ur.com/terms',
+                            context.l10n.appTermsOfService,
+                          ),
                         ),
                         _settingsDivider(isDark),
                         _SettingsNavRow(
                           icon: Icons.privacy_tip_outlined,
                           title: context.l10n.appPrivacyPolicy,
-                          onTap: () =>
-                              _launchUrl('https://link2ur.com/privacy'),
+                          onTap: () => _openInAppWebView(
+                            'https://link2ur.com/privacy',
+                            context.l10n.appPrivacyPolicy,
+                          ),
                         ),
                         _settingsDivider(isDark),
                         _SettingsNavRow(
                           icon: Icons.cookie_outlined,
                           title: context.l10n.settingsCookiePolicy,
-                          onTap: () =>
-                              _launchUrl('https://link2ur.com/cookies'),
+                          onTap: () => _openInAppWebView(
+                            'https://link2ur.com/cookies',
+                            context.l10n.settingsCookiePolicy,
+                          ),
                         ),
                       ],
                     ),
