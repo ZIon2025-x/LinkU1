@@ -151,6 +151,7 @@ class AIChatState extends Equatable {
     this.csAvailableSignal,
     this.csContactEmail,
     this.taskDraft,
+    this.lastToolName,
   });
 
   final AIChatStatus status;
@@ -164,6 +165,7 @@ class AIChatState extends Equatable {
   final bool? csAvailableSignal;
   final String? csContactEmail;
   final Map<String, dynamic>? taskDraft;
+  final String? lastToolName;
 
   AIChatState copyWith({
     AIChatStatus? status,
@@ -177,6 +179,7 @@ class AIChatState extends Equatable {
     bool? csAvailableSignal,
     String? csContactEmail,
     Map<String, dynamic>? taskDraft,
+    String? lastToolName,
   }) {
     return AIChatState(
       status: status ?? this.status,
@@ -191,6 +194,7 @@ class AIChatState extends Equatable {
       csAvailableSignal: csAvailableSignal,
       csContactEmail: csContactEmail,
       taskDraft: taskDraft,
+      lastToolName: lastToolName,
     );
   }
 
@@ -205,6 +209,7 @@ class AIChatState extends Equatable {
         activeToolCall,
         errorMessage,
         taskDraft,
+        lastToolName,
       ];
 }
 
@@ -319,6 +324,7 @@ class AIChatBloc extends Bloc<AIChatEvent, AIChatState> {
       messages: [...state.messages, userMessage],
       isReplying: true,
       streamingContent: '',
+      lastToolName: null,
     ));
 
     // 取消之前的 SSE 订阅
@@ -373,8 +379,8 @@ class AIChatBloc extends Bloc<AIChatEvent, AIChatState> {
     _AIChatToolResult event,
     Emitter<AIChatState> emit,
   ) {
-    // 工具结果到达，清除 activeToolCall（LLM 会继续生成）
-    emit(state.copyWith());
+    // 工具结果到达，清除 activeToolCall（LLM 会继续生成），记录 lastToolName
+    emit(state.copyWith(lastToolName: event.toolName));
   }
 
   void _onMessageCompleted(
@@ -388,14 +394,16 @@ class AIChatBloc extends Bloc<AIChatEvent, AIChatState> {
         role: 'assistant',
         content: state.streamingContent,
         createdAt: DateTime.now(),
+        toolName: state.lastToolName,
       );
       emit(state.copyWith(
         messages: [...state.messages, assistantMessage],
         isReplying: false,
         streamingContent: '',
+        lastToolName: null,
       ));
     } else {
-      emit(state.copyWith(isReplying: false));
+      emit(state.copyWith(isReplying: false, lastToolName: null));
     }
   }
 
