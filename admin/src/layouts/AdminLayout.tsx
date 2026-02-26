@@ -39,6 +39,12 @@ const defaultMenuItems: MenuItem[] = [
     path: '/admin/tasks',
   },
   {
+    key: 'cancel-requests',
+    label: '取消申请',
+    icon: '📝',
+    path: '/admin/cancel-requests',
+  },
+  {
     key: 'customer-service',
     label: '客服管理',
     icon: '🎧',
@@ -122,6 +128,36 @@ const defaultMenuItems: MenuItem[] = [
     icon: '🚨',
     path: '/admin/reports',
   },
+  {
+    key: 'payments',
+    label: '支付管理',
+    icon: '💳',
+    path: '/admin/payments',
+  },
+  {
+    key: 'vip',
+    label: 'VIP订阅',
+    icon: '👑',
+    path: '/admin/vip',
+  },
+  {
+    key: 'recommendation',
+    label: '推荐系统',
+    icon: '📈',
+    path: '/admin/recommendation',
+  },
+  {
+    key: 'student-verification',
+    label: '学生认证',
+    icon: '🎓',
+    path: '/admin/student-verification',
+  },
+  {
+    key: 'oauth-clients',
+    label: 'OAuth客户端',
+    icon: '🔐',
+    path: '/admin/oauth-clients',
+  },
 ];
 
 const PATH_LABELS: Record<string, string> = {
@@ -129,6 +165,7 @@ const PATH_LABELS: Record<string, string> = {
   '/admin/users': '用户管理',
   '/admin/experts': '专家管理',
   '/admin/tasks': '任务管理',
+  '/admin/cancel-requests': '取消申请',
   '/admin/job-positions': '岗位管理',
   '/admin/customer-service': '客服管理',
   '/admin/coupons': '优惠券管理',
@@ -139,8 +176,14 @@ const PATH_LABELS: Record<string, string> = {
   '/admin/forum': '论坛管理',
   '/admin/flea-market': '跳蚤市场',
   '/admin/leaderboard': '排行榜',
+  '/admin/official-activities': '官方活动',
   '/admin/banners': 'Banner管理',
   '/admin/reports': '举报管理',
+  '/admin/payments': '支付管理',
+  '/admin/vip': 'VIP订阅',
+  '/admin/recommendation': '推荐系统',
+  '/admin/student-verification': '学生认证',
+  '/admin/oauth-clients': 'OAuth客户端',
   '/admin/settings': '设置',
   '/admin/2fa': '双因素认证',
 };

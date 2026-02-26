@@ -145,7 +145,7 @@ async def recalculate_all_vote_scores(
 
 # ==================== 管理员专用接口（查看所有状态的榜单） ====================
 
-@router.get("/admin/all", response_model=List[schemas.CustomLeaderboardOut])
+@router.get("/admin/all", response_model=schemas.CustomLeaderboardListResponse)
 async def get_all_leaderboards_admin(
     location: Optional[str] = Query(None, description="地区筛选"),
     status: Optional[str] = Query("all", description="状态筛选：active, pending, rejected, all"),
@@ -154,28 +154,31 @@ async def get_all_leaderboards_admin(
     current_admin: models.AdminUser = Depends(get_current_admin_async),
     db: AsyncSession = Depends(get_async_db_dependency),
 ):
-    """管理员专用：获取所有状态的榜单列表"""
-    query = select(models.CustomLeaderboard)
+    """管理员专用：获取所有状态的榜单列表（分页，返回 items + total）"""
+    base_query = select(models.CustomLeaderboard)
     
     if status == "active":
-        query = query.where(models.CustomLeaderboard.status == "active")
+        base_query = base_query.where(models.CustomLeaderboard.status == "active")
     elif status == "pending":
-        query = query.where(models.CustomLeaderboard.status == "pending")
+        base_query = base_query.where(models.CustomLeaderboard.status == "pending")
     elif status == "rejected":
-        query = query.where(models.CustomLeaderboard.status == "rejected")
-    # status == "all" 时显示所有
+        base_query = base_query.where(models.CustomLeaderboard.status == "rejected")
     
     if location:
-        query = query.where(models.CustomLeaderboard.location == location)
+        base_query = base_query.where(models.CustomLeaderboard.location == location)
     
-    query = query.order_by(models.CustomLeaderboard.created_at.desc())
+    # 总数
+    count_query = select(func.count()).select_from(base_query.subquery())
+    total_result = await db.execute(count_query)
+    total = total_result.scalar() or 0
+    
+    query = base_query.order_by(models.CustomLeaderboard.created_at.desc())
     query = query.options(selectinload(models.CustomLeaderboard.applicant))
     query = query.offset(offset).limit(limit)
     
     result = await db.execute(query)
     leaderboards = result.scalars().all()
     
-    # 构建申请者信息并手动构建响应对象
     from app.forum_routes import build_user_info
     
     leaderboard_items = []
@@ -205,7 +208,13 @@ async def get_all_leaderboards_admin(
         )
         leaderboard_items.append(leaderboard_dict)
     
-    return leaderboard_items
+    return schemas.CustomLeaderboardListResponse(
+        items=leaderboard_items,
+        total=total,
+        limit=limit,
+        offset=offset,
+        has_more=offset + limit < total,
+    )
 
 
 # ==================== 管理员查看投票记录 ====================
@@ -440,16 +449,23 @@ async def create_item_admin(
             detail="榜单不存在"
         )
     
-    # 创建竞品
+    # submitted_by 必填：管理员创建时无对应用户，取任意有效用户 ID（通常用首个用户，或配置 LEADERBOARD_SYSTEM_USER_ID）
+    first_user_row = await db.execute(select(models.User.id).limit(1))
+    first_user_id = first_user_row.scalar()
+    if first_user_id is None:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="系统中暂无用户，无法创建竞品")
+    submitted_by = str(first_user_id)
     new_item = models.LeaderboardItem(
         leaderboard_id=item_data.leaderboard_id,
         name=item_data.name.strip(),
         description=item_data.description.strip() if item_data.description else None,
-        image_url=item_data.image_url,
+        images=json.dumps([item_data.image_url]) if item_data.image_url else None,
         status="approved",  # 管理员创建直接通过
-        created_by=None,  # 管理员创建，不关联用户
-        upvote_count=0,
-        downvote_count=0,
+        submitted_by=submitted_by,
+        upvotes=0,
+        downvotes=0,
+        net_votes=0,
+        vote_score=0.0,
         created_at=get_utc_time(),
         updated_at=get_utc_time()
     )
@@ -465,7 +481,38 @@ async def create_item_admin(
     
     logger.info(f"管理员 {current_admin.username} 创建竞品: {new_item.id} - {new_item.name}")
     
-    return new_item
+    # 构建与 get_items_admin 一致的返回（images 解析为 list）
+    images_list = None
+    if new_item.images:
+        try:
+            images_list = json.loads(new_item.images)
+        except Exception:
+            pass
+    out_dict = {
+        "id": new_item.id,
+        "leaderboard_id": new_item.leaderboard_id,
+        "name": new_item.name or "",
+        "description": new_item.description,
+        "address": new_item.address,
+        "phone": new_item.phone,
+        "website": new_item.website,
+        "images": images_list,
+        "submitted_by": str(new_item.submitted_by or ""),
+        "status": new_item.status or "approved",
+        "upvotes": int(new_item.upvotes or 0),
+        "downvotes": int(new_item.downvotes or 0),
+        "net_votes": int(new_item.net_votes or 0),
+        "vote_score": float(new_item.vote_score or 0),
+        "user_vote": None,
+        "user_vote_comment": None,
+        "user_vote_is_anonymous": None,
+        "display_comment": None,
+        "display_comment_type": None,
+        "display_comment_info": None,
+        "created_at": new_item.created_at or get_utc_time(),
+        "updated_at": new_item.updated_at or get_utc_time(),
+    }
+    return schemas.LeaderboardItemOut(**out_dict)
 
 
 # ==================== 管理员更新竞品 ====================
@@ -485,13 +532,13 @@ async def update_item_admin(
             detail="竞品不存在"
         )
     
-    # 更新字段
+    # 更新字段（模型用 images JSON，无 image_url）
     if item_data.name is not None:
         item.name = item_data.name.strip()
     if item_data.description is not None:
         item.description = item_data.description.strip() if item_data.description else None
     if item_data.image_url is not None:
-        item.image_url = item_data.image_url
+        item.images = json.dumps([item_data.image_url]) if item_data.image_url else item.images
     if item_data.status is not None:
         item.status = item_data.status
     
@@ -502,7 +549,37 @@ async def update_item_admin(
     
     logger.info(f"管理员 {current_admin.username} 更新竞品: {item_id}")
     
-    return item
+    images_list = None
+    if item.images:
+        try:
+            images_list = json.loads(item.images)
+        except Exception:
+            pass
+    out_dict = {
+        "id": item.id,
+        "leaderboard_id": item.leaderboard_id,
+        "name": item.name or "",
+        "description": item.description,
+        "address": item.address,
+        "phone": item.phone,
+        "website": item.website,
+        "images": images_list,
+        "submitted_by": str(item.submitted_by or ""),
+        "status": item.status or "approved",
+        "upvotes": int(item.upvotes or 0),
+        "downvotes": int(item.downvotes or 0),
+        "net_votes": int(item.net_votes or 0),
+        "vote_score": float(item.vote_score or 0),
+        "user_vote": None,
+        "user_vote_comment": None,
+        "user_vote_is_anonymous": None,
+        "display_comment": None,
+        "display_comment_type": None,
+        "display_comment_info": None,
+        "created_at": item.created_at or get_utc_time(),
+        "updated_at": item.updated_at or get_utc_time(),
+    }
+    return schemas.LeaderboardItemOut(**out_dict)
 
 
 # ==================== 榜单申请 ====================

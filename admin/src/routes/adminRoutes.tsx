@@ -23,6 +23,12 @@ const TaskManagementPage = lazy(() => import('../pages/admin/tasks/TaskManagemen
 const JobPositionManagement = lazy(() => import('../pages/admin/job-positions').then(m => ({ default: m.JobPositionManagement })));
 const CustomerServicePage = lazy(() => import('../pages/admin/customer-service/CustomerServicePage'));
 const OfficialActivityManagement = lazy(() => import('../pages/admin/official-activities/OfficialActivityManagement'));
+const PaymentManagement = lazy(() => import('../pages/admin/payments/PaymentManagement'));
+const VipManagement = lazy(() => import('../pages/admin/vip/VipManagement'));
+const RecommendationManagement = lazy(() => import('../pages/admin/recommendation/RecommendationManagement'));
+const StudentVerificationManagement = lazy(() => import('../pages/admin/student-verification/StudentVerificationManagement'));
+const OAuthClientsManagement = lazy(() => import('../pages/admin/oauth-clients/OAuthClientsManagement'));
+const CancelRequestsManagement = lazy(() => import('../pages/admin/cancel-requests/CancelRequestsManagement'));
 
 // Loading component
 const LoadingFallback = () => (
@@ -58,6 +64,9 @@ export const AdminRoutes: React.FC = () => {
 
           {/* Task Management */}
           <Route path="tasks" element={<TaskManagementPage />} />
+
+          {/* Cancel Requests (任务取消申请) */}
+          <Route path="cancel-requests" element={<CancelRequestsManagement />} />
 
           {/* Job Position Management */}
           <Route path="job-positions" element={<JobPositionManagement />} />
@@ -97,6 +106,21 @@ export const AdminRoutes: React.FC = () => {
 
           {/* Report Management */}
           <Route path="reports" element={<ReportManagement />} />
+
+          {/* Payment Management */}
+          <Route path="payments" element={<PaymentManagement />} />
+
+          {/* VIP Subscription Management */}
+          <Route path="vip" element={<VipManagement />} />
+
+          {/* Recommendation System */}
+          <Route path="recommendation" element={<RecommendationManagement />} />
+
+          {/* Student Verification Management */}
+          <Route path="student-verification" element={<StudentVerificationManagement />} />
+
+          {/* OAuth Clients Management */}
+          <Route path="oauth-clients" element={<OAuthClientsManagement />} />
 
           {/* Settings */}
           <Route path="settings" element={<Settings />} />

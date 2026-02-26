@@ -18,7 +18,7 @@ type SubTab = 'votes' | 'items' | 'reviews';
 interface Vote {
   id: number;
   item_id: number;
-  user_id: number;
+  user_id: string;
   vote_type: 'upvote' | 'downvote';
   comment?: string;
   is_anonymous: boolean;
@@ -30,8 +30,12 @@ interface LeaderboardItem {
   name: string;
   description?: string;
   image_url?: string;
+  images?: string[];
   leaderboard_id: number;
-  vote_count: number;
+  vote_count?: number;
+  net_votes?: number;
+  upvotes?: number;
+  downvotes?: number;
   status: string;
   created_at: string;
 }
@@ -70,8 +74,10 @@ const LeaderboardManagement: React.FC = () => {
       limit: pageSize,
       ...votesFilter,
     });
-    const items = response.items || [];
-    return { data: items, total: items.length < pageSize ? (page - 1) * pageSize + items.length : page * pageSize + 1 };
+    // 后端返回数组，无 .items
+    const items = Array.isArray(response) ? response : (response.items || []);
+    const total = typeof (response as any)?.total === 'number' ? (response as any).total : (items.length < pageSize ? (page - 1) * pageSize + items.length : page * pageSize + 1);
+    return { data: items, total };
   }, [votesFilter]);
 
   const votesTable = useAdminTable<Vote>({
@@ -101,17 +107,22 @@ const LeaderboardManagement: React.FC = () => {
         message.warning('请填写竞品名称');
         throw new Error('validation');
       }
+      const leaderboardId = values.leaderboard_id !== '' ? Number(values.leaderboard_id) : undefined;
+      if (leaderboardId === undefined || (typeof leaderboardId === 'number' && isNaN(leaderboardId))) {
+        message.warning('请选择或填写榜单ID');
+        throw new Error('validation');
+      }
       const payload = {
         name: values.name,
         description: values.description || undefined,
         image_url: values.image_url || undefined,
-        leaderboard_id: values.leaderboard_id !== '' ? Number(values.leaderboard_id) : undefined,
+        leaderboard_id: leaderboardId,
       };
       if (isEdit && values.id) {
         await updateLeaderboardItemAdmin(values.id, payload);
         message.success('竞品更新成功');
       } else {
-        await createLeaderboardItemAdmin(payload as any);
+        await createLeaderboardItemAdmin({ ...payload, leaderboard_id: leaderboardId as number });
         message.success('竞品创建成功');
       }
       itemsTable.refresh();
@@ -126,7 +137,10 @@ const LeaderboardManagement: React.FC = () => {
   // ---------- 审核队列 ----------
   const fetchReviews = useCallback(async ({ page, pageSize }: { page: number; pageSize: number }) => {
     const response = await getCustomLeaderboardsAdmin({ status: 'pending', offset: (page - 1) * pageSize, limit: pageSize });
-    return { data: response.items || [], total: response.total || (response.items || []).length };
+    // 后端返回 { items, total, limit, offset, has_more }
+    const list = response.items ?? (Array.isArray(response) ? response : []);
+    const total = typeof response.total === 'number' ? response.total : list.length;
+    return { data: list, total };
   }, []);
 
   const reviewsTable = useAdminTable<any>({
@@ -235,7 +249,7 @@ const LeaderboardManagement: React.FC = () => {
       ),
     },
     { key: 'leaderboard_id', title: '榜单ID', dataIndex: 'leaderboard_id', width: 80 },
-    { key: 'vote_count', title: '票数', dataIndex: 'vote_count', width: 80 },
+    { key: 'votes', title: '票数', width: 80, render: (_, r) => r.net_votes ?? r.vote_count ?? (r.upvotes != null && r.downvotes != null ? r.upvotes - r.downvotes : '-') },
     {
       key: 'status',
       title: '状态',
@@ -265,7 +279,7 @@ const LeaderboardManagement: React.FC = () => {
               id: record.id,
               name: record.name,
               description: record.description || '',
-              image_url: record.image_url || '',
+              image_url: record.image_url || (record.images && record.images[0]) || '',
               leaderboard_id: record.leaderboard_id,
             })}
             style={{ padding: '4px 8px', border: '1px solid #007bff', background: 'white', color: '#007bff', borderRadius: '4px', cursor: 'pointer', fontSize: '12px' }}
@@ -480,7 +494,7 @@ const LeaderboardManagement: React.FC = () => {
             loading={reviewsTable.loading}
             refreshing={reviewsTable.fetching}
             rowKey="id"
-            emptyText="暂无待审核竞品"
+            emptyText="暂无待审核榜单"
           />
           <AdminPagination
             currentPage={reviewsTable.currentPage}

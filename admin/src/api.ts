@@ -1342,6 +1342,145 @@ export async function regenerate2FABackupCodes(): Promise<any> {
   return response.data;
 }
 
+// ==================== 支付管理 API ====================
+
+export async function getAdminPayments(params?: { page?: number; size?: number; status?: string; payment_type?: string; user_id?: string }) {
+  const res = await api.get('/api/admin/payments', { params });
+  return res.data;
+}
+
+export async function getAdminPaymentStats() {
+  const res = await api.get('/api/admin/payments/stats');
+  return res.data;
+}
+
+export async function getAdminPaymentDetail(paymentId: string) {
+  const res = await api.get(`/api/admin/payments/${paymentId}`);
+  return res.data;
+}
+
+export async function getAdminDashboardRevenue() {
+  const res = await api.get('/api/admin/dashboard/revenue');
+  return res.data;
+}
+
+export async function getAdminDashboardPaymentMethods() {
+  const res = await api.get('/api/admin/dashboard/payment-methods');
+  return res.data;
+}
+
+// ==================== VIP 订阅管理 API ====================
+
+export async function getAdminVipSubscriptions(params?: { skip?: number; limit?: number; user_id?: string; status?: string }) {
+  const res = await api.get('/api/admin/vip-subscriptions', { params });
+  return res.data;
+}
+
+export async function getAdminVipSubscriptionStats() {
+  const res = await api.get('/api/admin/vip-subscriptions/stats');
+  return res.data;
+}
+
+export async function updateAdminVipSubscription(subscriptionId: number, data: { status: string }) {
+  const res = await api.patch(`/api/admin/vip-subscriptions/${subscriptionId}`, data);
+  return res.data;
+}
+
+// ==================== 推荐系统 API ====================
+
+export async function getAdminRecommendationMetrics(params?: { days?: number }) {
+  const res = await api.get('/api/admin/recommendation-metrics', { params });
+  return res.data;
+}
+
+export async function getAdminRecommendationAnalytics(params?: { days?: number; algorithm?: string }) {
+  const res = await api.get('/api/admin/recommendation-analytics', { params });
+  return res.data;
+}
+
+export async function getAdminTopRecommendedTasks(params?: { days?: number; limit?: number }) {
+  const res = await api.get('/api/admin/top-recommended-tasks', { params });
+  return res.data;
+}
+
+export async function getAdminRecommendationHealth() {
+  const res = await api.get('/api/admin/recommendation-health');
+  return res.data;
+}
+
+export async function getAdminRecommendationOptimization() {
+  const res = await api.get('/api/admin/recommendation-optimization');
+  return res.data;
+}
+
+// ==================== 学生认证管理 API ====================
+
+export async function revokeStudentVerification(verificationId: number, data: { reason_type: string; reason_detail: string }) {
+  const res = await api.post(`/api/admin/student-verification/${verificationId}/revoke`, data);
+  return res.data;
+}
+
+export async function extendStudentVerification(verificationId: number, data: { new_expires_at: string }) {
+  const res = await api.post(`/api/admin/student-verification/${verificationId}/extend`, data);
+  return res.data;
+}
+
+// ==================== OAuth 客户端管理 API ====================
+
+export async function getAdminOAuthClients(params?: { is_active?: boolean }) {
+  const res = await api.get('/api/admin/oauth/clients', { params });
+  return res.data;
+}
+
+export async function getAdminOAuthClient(clientId: string) {
+  const res = await api.get(`/api/admin/oauth/clients/${clientId}`);
+  return res.data;
+}
+
+export async function createAdminOAuthClient(data: {
+  client_name: string;
+  client_uri?: string;
+  logo_uri?: string;
+  redirect_uris?: string[];
+  scope_default?: string;
+  allowed_grant_types?: string[];
+  is_confidential?: boolean;
+}) {
+  const res = await api.post('/api/admin/oauth/clients', data);
+  return res.data;
+}
+
+export async function updateAdminOAuthClient(clientId: string, data: {
+  client_name?: string;
+  client_uri?: string;
+  logo_uri?: string;
+  redirect_uris?: string[];
+  is_active?: boolean;
+}) {
+  const res = await api.patch(`/api/admin/oauth/clients/${clientId}`, data);
+  return res.data;
+}
+
+export async function rotateAdminOAuthClientSecret(clientId: string) {
+  const res = await api.post(`/api/admin/oauth/clients/${clientId}/rotate-secret`);
+  return res.data;
+}
+
+// ==================== 任务取消申请 API ====================
+
+export async function getAdminCancelRequests() {
+  const res = await api.get('/api/admin/cancel-requests');
+  return res.data;
+}
+
+export async function reviewAdminCancelRequest(
+  requestId: number,
+  data: { decision: 'approve' | 'reject'; admin_comment?: string }
+) {
+  const res = await api.post(`/api/admin/cancel-requests/${requestId}/review`, data);
+  return res.data;
+}
+
 export default api;
 
 // ===== Dashboard Stats Trends =====
