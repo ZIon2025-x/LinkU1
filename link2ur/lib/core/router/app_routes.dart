@@ -97,9 +97,8 @@ class AppRoutes {
   // 搜索
   static const String search = '/search';
 
-  // AI 助手
+  // 统一聊天（Linker，唯一 AI 入口；对话列表为历史入口）
   static const String aiChatList = '/ai-chat-list';
-  static const String aiChat = '/ai-chat';
   static const String supportChat = '/support-chat';
 
   // 信息

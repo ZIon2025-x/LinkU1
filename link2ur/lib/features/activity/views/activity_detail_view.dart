@@ -144,11 +144,13 @@ class _ActivityDetailViewContent extends StatelessWidget {
               final activity = state.activityDetail!;
               final locale = Localizations.localeOf(context);
               final shareFiles = await NativeShare.fileFromFirstImageUrl(activity.firstImage);
+              if (!context.mounted) return;
               await NativeShare.share(
                 title: activity.displayTitle(locale),
                 description: activity.displayDescription(locale),
                 url: 'https://link2ur.com/activities/${activity.id}',
                 files: shareFiles,
+                context: context,
               );
             },
           ),

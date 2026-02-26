@@ -21,6 +21,7 @@ import '../../../core/widgets/async_image_view.dart';
 import '../../../core/widgets/external_web_view.dart';
 import '../../../core/widgets/full_screen_image_view.dart';
 import '../../../core/utils/native_share.dart';
+import '../../../core/utils/share_util.dart';
 import '../../../data/models/leaderboard.dart';
 import '../../../data/repositories/leaderboard_repository.dart';
 import '../bloc/leaderboard_bloc.dart';
@@ -77,13 +78,14 @@ class _ItemDetailContent extends StatelessWidget {
       BuildContext context, LeaderboardItem? item, bool hasImages) {
     void onShare() async {
       if (item == null) return;
-      final imageUrl = item.firstImage;
-      final shareFiles = await NativeShare.fileFromFirstImageUrl(imageUrl);
+      final shareFiles = await NativeShare.fileFromFirstImageUrl(item.firstImage);
+      if (!context.mounted) return;
       await NativeShare.share(
         title: item.name,
         description: item.description ?? '',
-        url: 'https://link2ur.com/leaderboard/item/${item.id}',
+        url: ShareUtil.leaderboardItemUrl(item.id),
         files: shareFiles,
+        context: context,
       );
     }
 

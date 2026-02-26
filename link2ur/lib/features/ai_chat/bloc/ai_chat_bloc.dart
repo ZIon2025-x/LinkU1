@@ -311,8 +311,26 @@ class AIChatBloc extends Bloc<AIChatEvent, AIChatState> {
     AIChatSendMessage event,
     Emitter<AIChatState> emit,
   ) async {
-    final conversationId = state.currentConversationId;
-    if (conversationId == null) return;
+    var conversationId = state.currentConversationId;
+    // 若尚未创建会话（用户抢先点发送或创建未完成），先创建再发，避免后端收不到请求
+    if (conversationId == null) {
+      try {
+        final conv = await _aiChatService.createConversation();
+        if (conv == null) {
+          emit(state.copyWith(errorMessage: '创建对话失败，请重试'));
+          return;
+        }
+        conversationId = conv.id;
+        emit(state.copyWith(
+          currentConversationId: conv.id,
+          conversations: [conv, ...state.conversations],
+        ));
+      } catch (e) {
+        AppLogger.error('Create conversation before send failed', e);
+        emit(state.copyWith(errorMessage: '创建对话失败，请重试'));
+        return;
+      }
+    }
 
     // 添加用户消息到列表
     final userMessage = AIMessage(
@@ -324,7 +342,6 @@ class AIChatBloc extends Bloc<AIChatEvent, AIChatState> {
       messages: [...state.messages, userMessage],
       isReplying: true,
       streamingContent: '',
-      lastToolName: null,
     ));
 
     // 取消之前的 SSE 订阅
@@ -400,10 +417,9 @@ class AIChatBloc extends Bloc<AIChatEvent, AIChatState> {
         messages: [...state.messages, assistantMessage],
         isReplying: false,
         streamingContent: '',
-        lastToolName: null,
       ));
     } else {
-      emit(state.copyWith(isReplying: false, lastToolName: null));
+      emit(state.copyWith(isReplying: false));
     }
   }
 

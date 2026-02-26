@@ -129,10 +129,10 @@ extension GoRouterExtension on BuildContext {
     push('/task-experts/search');
   }
 
-  /// 跳转到 AI 助手
+  /// 跳转到统一聊天页（Linker，原 AI 助手入口）
   void goToAIChat() {
     if (!_NavigationThrottle.acquire()) return;
-    push(AppRoutes.aiChat);
+    push(AppRoutes.supportChat);
   }
 
   /// 跳转到 AI 对话列表

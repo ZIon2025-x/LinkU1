@@ -202,11 +202,13 @@ class _FleaMarketDetailContent extends StatelessWidget {
               final item = state.selectedItem!;
               final imageUrl = item.images.isNotEmpty ? item.images.first : null;
               final shareFiles = await NativeShare.fileFromFirstImageUrl(imageUrl);
+              if (!context.mounted) return;
               await NativeShare.share(
                 title: item.title,
                 description: item.description ?? '',
                 url: 'https://link2ur.com/flea-market/${item.id}',
                 files: shareFiles,
+                context: context,
               );
             },
           ),

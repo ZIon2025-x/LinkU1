@@ -161,7 +161,7 @@ class AppRouter {
 
       ...activityRoutes,
 
-      ...aiChatRoutes,
+      ...aiChatRoutes(_navigatorKey),
 
       ...infoRoutes,
 

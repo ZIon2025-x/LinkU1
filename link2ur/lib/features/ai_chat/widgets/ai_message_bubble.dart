@@ -100,7 +100,7 @@ class AIMessageBubble extends StatelessWidget {
                       if (action == null) return const SizedBox.shrink();
                       return _ActionButton(
                         label: action.$1,
-                        onTap: () => context.go(action.$2),
+                        onTap: () => context.push(action.$2),
                       );
                     },
                   ),

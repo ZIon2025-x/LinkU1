@@ -1,24 +1,31 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_radius.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_typography.dart';
 import '../../../core/constants/app_assets.dart';
+import '../../../core/router/app_routes.dart';
 import '../../../core/utils/l10n_extension.dart';
 import '../../../core/widgets/loading_view.dart';
 import '../../../data/models/ai_chat.dart';
 import '../../../data/models/customer_service.dart';
 import '../../../data/repositories/common_repository.dart';
 import '../../../data/services/ai_chat_service.dart';
+import '../../tasks/views/create_task_view.dart' show TaskDraftData;
 import '../bloc/unified_chat_bloc.dart';
 import '../widgets/ai_message_bubble.dart';
+import '../widgets/task_draft_card.dart';
 import '../widgets/tool_call_card.dart';
 
-/// 统一 AI + 人工客服聊天页面
+/// 统一 AI + 人工客服聊天页面（唯一 AI 聊天入口，替代原 AI 页）
 class UnifiedChatView extends StatelessWidget {
-  const UnifiedChatView({super.key});
+  const UnifiedChatView({super.key, this.conversationId});
+
+  /// 若传入则加载该对话历史，否则创建新对话
+  final String? conversationId;
 
   @override
   Widget build(BuildContext context) {
@@ -28,7 +35,11 @@ class UnifiedChatView extends StatelessWidget {
           aiChatService: context.read<AIChatService>(),
           commonRepository: context.read<CommonRepository>(),
         );
-        bloc.add(const UnifiedChatInit());
+        if (conversationId != null && conversationId!.isNotEmpty) {
+          bloc.add(UnifiedChatLoadHistory(conversationId!));
+        } else {
+          bloc.add(const UnifiedChatInit());
+        }
         return bloc;
       },
       child: const _UnifiedChatContent(),
@@ -80,109 +91,213 @@ class _UnifiedChatContentState extends State<_UnifiedChatContent> {
     _scrollToBottom();
   }
 
+  /// 历史记录：包含 AI 对话 + 客服记录，底部 sheet 展示
   void _showHistorySheet(BuildContext context) {
     _focusNode.unfocus();
     final aiChatService = context.read<AIChatService>();
+    final commonRepo = context.read<CommonRepository>();
     final blocContext = context;
     final screenHeight = MediaQuery.of(context).size.height;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
       builder: (sheetContext) {
         return SizedBox(
-          height: screenHeight * 0.5,
+          height: screenHeight * 0.55,
           child: DraggableScrollableSheet(
             initialChildSize: 1,
             minChildSize: 0.5,
-            maxChildSize: 1,
             builder: (_, scrollController) {
-            return FutureBuilder<List<AIConversation>>(
-              future: aiChatService.getConversations(),
-              builder: (ctx, snapshot) {
-                final sheetDark =
-                    Theme.of(sheetContext).brightness == Brightness.dark;
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(child: CircularProgressIndicator());
-                }
-                final list = snapshot.data ?? [];
-                if (list.isEmpty) {
-                  return Padding(
-                    padding: const EdgeInsets.all(AppSpacing.lg),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          Icons.chat_bubble_outline,
-                          size: 48,
-                          color: sheetDark
-                              ? AppColors.textTertiaryDark
-                              : AppColors.textTertiaryLight,
-                        ),
-                        const SizedBox(height: AppSpacing.md),
-                        Text(
-                          context.l10n.customerServiceNoChatHistory,
-                          style: AppTypography.body.copyWith(
-                            color: sheetDark
-                                ? AppColors.textSecondaryDark
-                                : AppColors.textSecondaryLight,
+              return FutureBuilder<
+                  ({List<AIConversation> aiList, List<Map<String, dynamic>> csList})>(
+                future: Future.wait([
+                  aiChatService.getConversations(),
+                  commonRepo.getCustomerServiceChats().catchError((_) => <Map<String, dynamic>>[]),
+                ]).then((results) => (
+                  aiList: results[0] as List<AIConversation>,
+                  csList: results[1] as List<Map<String, dynamic>>,
+                )),
+                builder: (ctx, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
+                  final aiList = snapshot.data?.aiList ?? [];
+                  final csList = snapshot.data?.csList ?? [];
+                  final hasAny = aiList.isNotEmpty || csList.isNotEmpty;
+
+                  if (!hasAny) {
+                    return Padding(
+                      padding: const EdgeInsets.all(AppSpacing.lg),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.chat_bubble_outline,
+                            size: 48,
+                            color: isDark
+                                ? AppColors.textTertiaryDark
+                                : AppColors.textTertiaryLight,
+                          ),
+                          const SizedBox(height: AppSpacing.md),
+                          Text(
+                            context.l10n.customerServiceNoChatHistory,
+                            style: AppTypography.body.copyWith(
+                              color: isDark
+                                  ? AppColors.textSecondaryDark
+                                  : AppColors.textSecondaryLight,
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  }
+
+                  return ListView(
+                    controller: scrollController,
+                    padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
+                    children: [
+                      // AI 对话
+                      if (aiList.isNotEmpty) ...[
+                        Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: AppSpacing.md,
+                            vertical: AppSpacing.xs,
+                          ),
+                          child: Text(
+                            context.l10n.aiChatTitle,
+                            style: AppTypography.caption.copyWith(
+                              color: isDark
+                                  ? AppColors.textTertiaryDark
+                                  : AppColors.textTertiaryLight,
+                              fontWeight: FontWeight.w600,
+                            ),
                           ),
                         ),
+                        ...aiList.map((conv) {
+                          final title = conv.title.isEmpty
+                              ? context.l10n.aiChatNewConversation
+                              : conv.title;
+                          final timeStr = conv.updatedAt != null
+                              ? _formatConvTime(conv.updatedAt!)
+                              : '';
+                          return ListTile(
+                            leading: ClipRRect(
+                              borderRadius:
+                                  BorderRadius.circular(AppRadius.medium),
+                              child: Image.asset(
+                                AppAssets.any,
+                                width: 40,
+                                height: 40,
+                                fit: BoxFit.cover,
+                              ),
+                            ),
+                            title: Text(
+                              title,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            subtitle: Text(
+                              timeStr,
+                              style: AppTypography.caption.copyWith(
+                                color: isDark
+                                    ? AppColors.textTertiaryDark
+                                    : AppColors.textTertiaryLight,
+                              ),
+                            ),
+                            trailing: const Icon(Icons.chevron_right, size: 20),
+                            onTap: () {
+                              blocContext.read<UnifiedChatBloc>().add(
+                                    UnifiedChatLoadHistory(conv.id),
+                                  );
+                              if (sheetContext.mounted) Navigator.pop(sheetContext);
+                            },
+                          );
+                        }),
+                        const Divider(height: 24),
                       ],
-                    ),
+                      // 客服记录
+                      if (csList.isNotEmpty) ...[
+                        Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: AppSpacing.md,
+                            vertical: AppSpacing.xs,
+                          ),
+                          child: Text(
+                            context.l10n.customerServiceChatHistory,
+                            style: AppTypography.caption.copyWith(
+                              color: isDark
+                                  ? AppColors.textTertiaryDark
+                                  : AppColors.textTertiaryLight,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                        ...csList.map((chat) {
+                          final chatId = chat['id']?.toString() ?? '';
+                          final updatedAt = chat['updated_at']?.toString();
+                          DateTime? dt;
+                          if (updatedAt != null) dt = DateTime.tryParse(updatedAt);
+                          final timeStr = dt != null ? _formatConvTime(dt) : '';
+                          final titleStr = chat['title']?.toString();
+                          final title = titleStr != null && titleStr.isNotEmpty
+                              ? titleStr
+                              : context.l10n.customerServiceCustomerService;
+                          return ListTile(
+                            leading: Icon(
+                              Icons.support_agent,
+                              size: 40,
+                              color: AppColors.primary.withValues(alpha: 0.8),
+                            ),
+                            title: Text(
+                              title,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            subtitle: Text(
+                              timeStr,
+                              style: AppTypography.caption.copyWith(
+                                color: isDark
+                                    ? AppColors.textTertiaryDark
+                                    : AppColors.textTertiaryLight,
+                              ),
+                            ),
+                            trailing: const Icon(Icons.chevron_right, size: 20),
+                            onTap: () async {
+                              if (chatId.isEmpty) return;
+                              try {
+                                final messages = await commonRepo
+                                    .getCustomerServiceMessages(chatId);
+                                if (!sheetContext.mounted) return;
+                                Navigator.pop(sheetContext);
+                                _showCSChatMessagesSheet(
+                                  context,
+                                  messages: messages,
+                                  isDark: isDark,
+                                );
+                              } catch (_) {
+                                if (sheetContext.mounted) {
+                                  ScaffoldMessenger.of(sheetContext).showSnackBar(
+                                    SnackBar(
+                                        content: Text(
+                                            context.l10n.customerServiceNoChatHistory),
+                                    ),
+                                  );
+                                }
+                              }
+                            },
+                          );
+                        }),
+                      ],
+                    ],
                   );
-                }
-                return ListView.builder(
-                  controller: scrollController,
-                  padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
-                  itemCount: list.length,
-                  itemBuilder: (_, index) {
-                    final conv = list[index];
-                    final title = conv.title.isEmpty
-                        ? context.l10n.aiChatNewConversation
-                        : conv.title;
-                    final timeStr = conv.updatedAt != null
-                        ? _formatConvTime(conv.updatedAt!)
-                        : '';
-                    return ListTile(
-                      leading: ClipRRect(
-                        borderRadius:
-                            BorderRadius.circular(AppRadius.medium),
-                        child: Image.asset(
-                          AppAssets.any,
-                          width: 40,
-                          height: 40,
-                          fit: BoxFit.cover,
-                        ),
-                      ),
-                      title: Text(
-                        title,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      subtitle: Text(
-                        timeStr,
-                        style: AppTypography.caption.copyWith(
-                          color: sheetDark
-                              ? AppColors.textTertiaryDark
-                              : AppColors.textTertiaryLight,
-                        ),
-                      ),
-                      trailing: const Icon(Icons.chevron_right, size: 20),
-                      onTap: () {
-                        blocContext.read<UnifiedChatBloc>().add(
-                              UnifiedChatLoadHistory(conv.id),
-                            );
-                        if (sheetContext.mounted) Navigator.pop(sheetContext);
-                      },
-                    );
-                  },
-                );
-              },
-            );
-          },
-        ),
-      );
+                },
+              );
+            },
+          ),
+        );
       },
     );
   }
@@ -195,6 +310,80 @@ class _UnifiedChatContentState extends State<_UnifiedChatContent> {
     if (diff.inDays < 1) return '${diff.inHours}小时前';
     if (diff.inDays < 7) return '${diff.inDays}天前';
     return '${time.month}/${time.day}';
+  }
+
+  /// 仅展示某次客服对话的消息列表（只读）
+  void _showCSChatMessagesSheet(
+    BuildContext context, {
+    required List<Map<String, dynamic>> messages,
+    required bool isDark,
+  }) {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      builder: (ctx) {
+        return DraggableScrollableSheet(
+          minChildSize: 0.3,
+          maxChildSize: 0.9,
+          builder: (_, scrollController) {
+            if (messages.isEmpty) {
+              return Padding(
+                padding: const EdgeInsets.all(AppSpacing.lg),
+                child: Text(
+                  context.l10n.customerServiceNoChatHistory,
+                  style: AppTypography.body.copyWith(
+                    color: isDark
+                        ? AppColors.textSecondaryDark
+                        : AppColors.textSecondaryLight,
+                  ),
+                ),
+              );
+            }
+            return ListView.builder(
+              controller: scrollController,
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.md,
+                vertical: AppSpacing.sm,
+              ),
+              itemCount: messages.length,
+              itemBuilder: (_, index) {
+                final msg = messages[index];
+                final content = msg['content']?.toString() ?? '';
+                final senderType = msg['sender_type']?.toString() ?? 'user';
+                final isUser = senderType == 'user';
+                final createdAt = msg['created_at']?.toString();
+                return ListTile(
+                  dense: true,
+                  leading: Icon(
+                    isUser ? Icons.person : Icons.support_agent,
+                    color: isUser ? AppColors.primary : AppColors.accent,
+                    size: 20,
+                  ),
+                  title: Text(
+                    content,
+                    style: const TextStyle(fontSize: 14),
+                    maxLines: 3,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  subtitle: createdAt != null && createdAt.isNotEmpty
+                      ? Text(
+                          createdAt,
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: isDark
+                                ? AppColors.textTertiaryDark
+                                : AppColors.textTertiaryLight,
+                          ),
+                        )
+                      : null,
+                );
+              },
+            );
+          },
+        );
+      },
+    );
   }
 
   void _showRatingDialog() {
@@ -294,6 +483,30 @@ class _UnifiedChatContentState extends State<_UnifiedChatContent> {
             _buildCSBanner(isDark),
             // 消息列表（键盘弹起时被顶起，不遮挡）
             Expanded(child: _buildMessageList(isDark)),
+            // 错误提示（与 AI 页一致）
+            BlocBuilder<UnifiedChatBloc, UnifiedChatState>(
+              buildWhen: (prev, curr) => prev.errorMessage != curr.errorMessage,
+              builder: (context, state) {
+                if (state.errorMessage == null) {
+                  return const SizedBox.shrink();
+                }
+                return Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.md,
+                    vertical: AppSpacing.sm,
+                  ),
+                  color: Colors.red.withAlpha(25),
+                  child: Text(
+                    state.errorMessage!,
+                    style: const TextStyle(
+                      color: Colors.red,
+                      fontSize: 13,
+                    ),
+                  ),
+                );
+              },
+            ),
             // 输入区域
             _buildInputArea(isDark),
           ],
@@ -386,17 +599,16 @@ class _UnifiedChatContentState extends State<_UnifiedChatContent> {
     );
   }
 
-  /// CS 在线横幅
+  /// 顶部仅展示人工客服在线状态（连接按钮已移至下方快捷操作行）
   Widget _buildCSBanner(bool isDark) {
     return BlocBuilder<UnifiedChatBloc, UnifiedChatState>(
       buildWhen: (prev, curr) =>
           prev.csOnlineStatus != curr.csOnlineStatus ||
           prev.mode != curr.mode,
       builder: (context, state) {
-        if (state.csOnlineStatus != true || state.mode != ChatMode.ai) {
+        if (state.mode != ChatMode.ai || state.csOnlineStatus != true) {
           return const SizedBox.shrink();
         }
-
         return Container(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
           color: AppColors.primary.withValues(alpha: 0.08),
@@ -411,12 +623,6 @@ class _UnifiedChatContentState extends State<_UnifiedChatContent> {
                     color: AppColors.primary,
                   ),
                 ),
-              ),
-              TextButton(
-                onPressed: () => context
-                    .read<UnifiedChatBloc>()
-                    .add(const UnifiedChatRequestHumanCS()),
-                child: Text(context.l10n.supportChatConnectButton),
               ),
             ],
           ),
@@ -433,6 +639,7 @@ class _UnifiedChatContentState extends State<_UnifiedChatContent> {
           prev.streamingContent != curr.streamingContent ||
           prev.isTyping != curr.isTyping ||
           prev.activeToolCall != curr.activeToolCall ||
+          prev.taskDraft != curr.taskDraft ||
           prev.mode != curr.mode,
       builder: (context, state) {
         // 构建虚拟列表项
@@ -461,6 +668,11 @@ class _UnifiedChatContentState extends State<_UnifiedChatContent> {
         // 流式回复（含等待中：isTyping 时显示三点动画，有内容时显示文字+光标）
         if (state.isTyping || state.streamingContent.isNotEmpty) {
           items.add(_ChatListItem.streaming(state.streamingContent));
+        }
+
+        // 任务草稿卡片（与 AI 页一致）
+        if (state.taskDraft != null) {
+          items.add(_ChatListItem.draft(state.taskDraft!));
         }
 
         // 分割线
@@ -506,6 +718,16 @@ class _UnifiedChatContentState extends State<_UnifiedChatContent> {
                   return StreamingBubble(
                     key: const ValueKey('ai_streaming'),
                     content: item.streamingContent!,
+                  );
+                case _ChatItemType.taskDraft:
+                  return TaskDraftCard(
+                    key: const ValueKey('task_draft'),
+                    draft: item.taskDraft!,
+                    onConfirm: () {
+                      final draftData = TaskDraftData.fromJson(state.taskDraft!);
+                      context.read<UnifiedChatBloc>().add(const UnifiedChatClearTaskDraft());
+                      context.push(AppRoutes.createTask, extra: draftData);
+                    },
                   );
                 case _ChatItemType.dividerItem:
                   return _buildDivider(isDark);
@@ -981,7 +1203,7 @@ class _UnifiedChatContentState extends State<_UnifiedChatContent> {
     );
   }
 
-  /// 快捷操作行（与任务聊天框一致：仅 padding，无容器背景，浮在页面背景上）
+  /// 快捷操作行：历史记录、连接人工（与任务聊天框一致：仅 padding，无容器背景）
   Widget _buildQuickActionsRow(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -994,6 +1216,14 @@ class _UnifiedChatContentState extends State<_UnifiedChatContent> {
               icon: Icons.history,
               onTap: () => _showHistorySheet(context),
             ),
+            const SizedBox(width: 8),
+            _UnifiedQuickActionChip(
+              label: context.l10n.supportChatConnectButton,
+              icon: Icons.support_agent,
+              onTap: () => context
+                  .read<UnifiedChatBloc>()
+                  .add(const UnifiedChatRequestHumanCS()),
+            ),
           ],
         ),
       ),
@@ -1003,7 +1233,7 @@ class _UnifiedChatContentState extends State<_UnifiedChatContent> {
 
 // ==================== ListView.builder helper ====================
 
-enum _ChatItemType { welcome, ai, tool, streaming, dividerItem, cs }
+enum _ChatItemType { welcome, ai, tool, streaming, taskDraft, dividerItem, cs }
 
 class _ChatListItem {
   const _ChatListItem._({
@@ -1012,6 +1242,7 @@ class _ChatListItem {
     this.csMessage,
     this.toolName,
     this.streamingContent,
+    this.taskDraft,
     this.index = 0,
   });
 
@@ -1020,6 +1251,7 @@ class _ChatListItem {
   final CustomerServiceMessage? csMessage;
   final String? toolName;
   final String? streamingContent;
+  final Map<String, dynamic>? taskDraft;
   final int index;
 
   factory _ChatListItem.welcome() =>
@@ -1033,6 +1265,9 @@ class _ChatListItem {
 
   factory _ChatListItem.streaming(String content) =>
       _ChatListItem._(type: _ChatItemType.streaming, streamingContent: content);
+
+  factory _ChatListItem.draft(Map<String, dynamic> draft) =>
+      _ChatListItem._(type: _ChatItemType.taskDraft, taskDraft: draft);
 
   factory _ChatListItem.divider() =>
       const _ChatListItem._(type: _ChatItemType.dividerItem);

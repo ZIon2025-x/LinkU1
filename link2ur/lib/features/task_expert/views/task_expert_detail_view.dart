@@ -70,6 +70,7 @@ class TaskExpertDetailView extends StatelessWidget {
                         description: shareDesc,
                         url: 'https://link2ur.com/task-experts/${expert.id}',
                         files: shareFiles,
+                        context: context,
                       );
                     }
                   },

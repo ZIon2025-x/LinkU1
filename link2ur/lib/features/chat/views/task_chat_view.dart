@@ -398,45 +398,18 @@ class _TaskChatContentState extends State<_TaskChatContent> {
     );
   }
 
+  /// 快捷操作仅保留「遇到问题」，点击跳转 FAQ 页
   Widget _buildQuickActions() {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        child: Row(
-          children: [
-            _QuickActionChip(
-              label: context.l10n.chatTaskCompleted,
-              icon: Icons.check_circle_outline,
-              onTap: () {
-                _messageController.text =
-                    context.l10n.chatTaskCompletedConfirm;
-              },
-            ),
-            AppSpacing.hSm,
-            _QuickActionChip(
-              label: context.l10n.chatHasIssue,
-              icon: Icons.error_outline,
-              onTap: () {
-                _messageController.text = context.l10n.chatHasIssueMessage;
-              },
-            ),
-            AppSpacing.hSm,
-            _QuickActionChip(
-              label: context.l10n.chatRequestRefund,
-              icon: Icons.money_off,
-              onTap: () {
-                _messageController.text = context.l10n.chatRequestRefund;
-              },
-            ),
-            AppSpacing.hSm,
-            _QuickActionChip(
-              label: context.l10n.chatUploadProof,
-              icon: Icons.upload_file,
-              onTap: _pickImage,
-            ),
-          ],
-        ),
+      child: Row(
+        children: [
+          _QuickActionChip(
+            label: context.l10n.chatHasIssue,
+            icon: Icons.help_outline,
+            onTap: () => context.push(AppRoutes.faq),
+          ),
+        ],
       ),
     );
   }

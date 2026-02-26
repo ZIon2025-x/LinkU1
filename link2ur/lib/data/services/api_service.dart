@@ -148,7 +148,7 @@ class ApiService {
 
     // 请求 ID：与后端 RequestLoggingMiddleware 对齐，便于端到端排查与日志关联
     options.headers['X-Request-ID'] =
-        options.headers['X-Request-ID'] ?? Uuid().v4().replaceAll('-', '').substring(0, 12);
+        options.headers['X-Request-ID'] ?? const Uuid().v4().replaceAll('-', '').substring(0, 12);
 
     // 网络日志由 NetworkMonitorInterceptor 统一记录，此处不再重复打印
     handler.next(options);

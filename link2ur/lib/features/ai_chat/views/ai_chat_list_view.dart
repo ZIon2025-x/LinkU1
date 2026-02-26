@@ -3,8 +3,9 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/constants/app_assets.dart';
-import '../../../core/utils/l10n_extension.dart';
 import '../../../core/design/app_colors.dart';
+import '../../../core/router/app_routes.dart';
+import '../../../core/utils/l10n_extension.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_radius.dart';
 import '../../../data/models/ai_chat.dart';
@@ -39,7 +40,7 @@ class _AIChatListContent extends StatelessWidget {
         actions: [
           IconButton(
             icon: const Icon(Icons.add),
-            onPressed: () => context.push('/ai-chat'),
+            onPressed: () => context.push(AppRoutes.supportChat),
             tooltip: '新对话',
           ),
         ],
@@ -52,7 +53,7 @@ class _AIChatListContent extends StatelessWidget {
 
           if (state.conversations.isEmpty) {
             return _EmptyState(
-              onNewChat: () => context.push('/ai-chat'),
+              onNewChat: () => context.push(AppRoutes.supportChat),
             );
           }
 
@@ -68,7 +69,7 @@ class _AIChatListContent extends StatelessWidget {
               return _ConversationTile(
                 key: ValueKey(conv.id),
                 conversation: conv,
-                onTap: () => context.push('/ai-chat/${conv.id}'),
+                onTap: () => context.push('${AppRoutes.supportChat}/${conv.id}'),
                 onDelete: () {
                   context.read<AIChatBloc>().add(
                         AIChatArchiveConversation(conv.id),

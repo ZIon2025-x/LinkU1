@@ -191,6 +191,7 @@ class _ForumPostDetailViewState extends State<ForumPostDetailView> {
                   description: description,
                   url: 'https://link2ur.com/forum/posts/${widget.postId}',
                   files: shareFiles,
+                  context: context,
                 );
               },
             ),

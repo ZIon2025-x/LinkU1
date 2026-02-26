@@ -1,16 +1,12 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:io';
 
-import 'package:crypto/crypto.dart';
+import 'package:dio/dio.dart';
 
-import '../../core/config/app_config.dart';
-import '../../core/config/api_config.dart';
 import '../../core/constants/api_endpoints.dart';
 import '../../core/utils/logger.dart';
 import '../models/ai_chat.dart';
 import 'api_service.dart';
-import 'storage_service.dart';
 
 /// AI 聊天服务 — 处理 SSE 流式响应
 class AIChatService {
@@ -90,72 +86,53 @@ class AIChatService {
     String content,
     StreamController<AIChatEvent> controller,
   ) async {
-    // 与 ApiService 一致：使用 getAccessToken，并附带 X-Session-ID + 移动端签名，避免 401
-    final token = await StorageService.instance.getAccessToken();
-    final baseUrl = AppConfig.instance.baseUrl;
-    final uri = Uri.parse('$baseUrl${ApiEndpoints.aiSendMessage(conversationId)}');
-
-    final httpClient = HttpClient();
-    httpClient.connectionTimeout = const Duration(seconds: 10);
-
     try {
-      final request = await httpClient.postUrl(uri);
-      request.headers.set(HttpHeaders.contentTypeHeader, 'application/json');
-      request.headers.set(HttpHeaders.acceptHeader, 'text/event-stream');
-      final defaultHeaders = ApiConfig.defaultHeaders;
-      request.headers.set('User-Agent', defaultHeaders['User-Agent'] ?? 'Link2Ur-Flutter/1.0.0');
-      request.headers.set('X-Platform', defaultHeaders['X-Platform'] ?? 'unknown');
-      if (token != null && token.isNotEmpty) {
-        request.headers.set(HttpHeaders.authorizationHeader, 'Bearer $token');
-        request.headers.set('X-Session-ID', token);
-        final secret = AppConfig.mobileAppSecret;
-        if (secret.isNotEmpty) {
-          final timestamp = (DateTime.now().toUtc().millisecondsSinceEpoch ~/ 1000).toString();
-          final message = utf8.encode('$token$timestamp');
-          final key = utf8.encode(secret);
-          final hmacSha256 = Hmac(sha256, key);
-          final digest = hmacSha256.convert(message);
-          final signature = digest.bytes.map((b) => b.toRadixString(16).padLeft(2, '0')).join();
-          request.headers.set('X-App-Timestamp', timestamp);
-          request.headers.set('X-App-Signature', signature);
-        }
-      }
-      request.write(jsonEncode({'content': content}));
-
-      final response = await request.close();
+      // 使用 Dio 与 createConversation 同 baseUrl、同拦截器（token/签名），后端才能收到请求
+      final response = await _apiService.dio.post<ResponseBody>(
+        ApiEndpoints.aiSendMessage(conversationId),
+        data: {'content': content},
+        options: Options(
+          responseType: ResponseType.stream,
+          headers: {'Accept': 'text/event-stream'},
+          receiveTimeout: const Duration(seconds: 120),
+        ),
+      );
 
       if (response.statusCode == 401) {
-        controller.add(AIChatEvent(
+        controller.add(const AIChatEvent(
           type: AIChatEventType.error,
           error: '登录已过期，请重新登录',
         ));
         return;
       }
       if (response.statusCode == 429) {
-        controller.add(AIChatEvent(
+        controller.add(const AIChatEvent(
           type: AIChatEventType.error,
           error: '请求过于频繁，请稍后再试',
         ));
         return;
       }
       if (response.statusCode == 503) {
-        controller.add(AIChatEvent(
+        controller.add(const AIChatEvent(
           type: AIChatEventType.error,
           error: 'AI 服务暂不可用',
         ));
         return;
       }
-      if (response.statusCode != 200) {
-        controller.add(AIChatEvent(
+      if (response.statusCode != 200 || response.data == null) {
+        controller.add(const AIChatEvent(
           type: AIChatEventType.error,
           error: '网络错误，请重试',
         ));
         return;
       }
 
+      final stream = response.data!.stream;
       String buffer = '';
-      await for (final chunk in response.transform(utf8.decoder)) {
-        buffer += chunk;
+      await for (final chunk in stream) {
+        if (controller.isClosed) return;
+        final String s = chunk is String ? chunk as String : utf8.decode(chunk as List<int>);
+        buffer += s;
         buffer = buffer.replaceAll('\r\n', '\n');
         while (buffer.contains('\n\n')) {
           final idx = buffer.indexOf('\n\n');
@@ -168,22 +145,28 @@ class AIChatService {
           }
         }
       }
-      if (buffer.trim().isNotEmpty) {
+      if (buffer.trim().isNotEmpty && !controller.isClosed) {
         final event = _parseSSEEvent(buffer.trim());
-        if (event != null && !controller.isClosed) {
-          controller.add(event);
-        }
+        if (event != null) controller.add(event);
+      }
+    } on DioException catch (e) {
+      AppLogger.error('AI chat SSE DioException', e);
+      if (!controller.isClosed) {
+        final message = e.response?.statusCode == 401
+            ? '登录已过期，请重新登录'
+            : (e.message ?? '网络错误，请重试');
+        controller.add(AIChatEvent(type: AIChatEventType.error, error: message));
+        controller.close();
       }
     } catch (e) {
       AppLogger.error('AI chat SSE error', e);
       if (!controller.isClosed) {
-        controller.add(AIChatEvent(
+        controller.add(const AIChatEvent(
           type: AIChatEventType.error,
           error: '网络错误，请重试',
         ));
+        controller.close();
       }
-    } finally {
-      httpClient.close();
     }
   }
 

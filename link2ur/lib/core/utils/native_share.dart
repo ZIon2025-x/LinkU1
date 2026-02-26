@@ -1,11 +1,14 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import 'package:share_plus/share_plus.dart';
 
+import 'logger.dart';
+import 'l10n_extension.dart';
+
 /// 原生分享（对标 iOS UIActivityViewController）
 ///
-/// 暂时禁用自定义分享栏，点击分享直接调起系统分享面板。
 /// 支持：标题、描述、链接、可选图片（files）。
-/// 参考 iOS ActivityShareItem：title + description + url + image
+/// 注意：share_plus 不允许 uri 与 text 同时传，链接写在正文中。
 class NativeShare {
   NativeShare._();
 
@@ -16,23 +19,18 @@ class NativeShare {
     try {
       final file = await DefaultCacheManager().getSingleFile(imageUrl.trim());
       return [XFile(file.path)];
-    } catch (_) {
+    } catch (e) {
+      AppLogger.warning('NativeShare: 获取分享图失败', e);
       return null;
     }
   }
 
-  /// 调起系统分享
-  ///
-  /// [title] 分享标题（对应 iOS subject / LPLinkMetadata.title）
-  /// [description] 描述文案
-  /// [url] 链接：会拼进正文，且单独传 [ShareParams.uri] 以便微信等识别为链接并抓取网页 meta 展示卡片
-  /// [files] 可选图片/文件列表（对应 iOS 的 image，系统分享会带图）
-  static Future<void> share({
+  /// 构建与 iOS 一致的分享正文（标题 + 描述 + 链接）
+  static String buildShareText({
     required String title,
     String description = '',
     String? url,
-    List<XFile>? files,
-  }) async {
+  }) {
     final parts = <String>[title];
     if (description.trim().isNotEmpty) {
       parts.add(description.trim());
@@ -40,18 +38,54 @@ class NativeShare {
     if (url != null && url.trim().isNotEmpty) {
       parts.add('👉 ${url.trim()}');
     }
-    final text = parts.join('\n\n');
-    final uri = (url != null && url.trim().isNotEmpty)
-        ? Uri.tryParse(url.trim())
-        : null;
+    return parts.join('\n\n');
+  }
 
-    await SharePlus.instance.share(
-      ShareParams(
-        text: text,
-        subject: title,
-        uri: uri,
-        files: files,
-      ),
-    );
+  /// 调起系统分享
+  ///
+  /// [title] 分享标题
+  /// [description] 描述文案
+  /// [url] 链接：会拼进正文（share_plus 不允许与 text 同时传 uri）
+  /// [files] 可选图片/文件列表
+  /// [context] 可选；分享失败时用于显示 SnackBar 提示
+  static Future<void> share({
+    required String title,
+    String description = '',
+    String? url,
+    List<XFile>? files,
+    BuildContext? context,
+  }) async {
+    final text = buildShareText(title: title, description: description, url: url);
+    final hasText = text.trim().isNotEmpty;
+    final hasFiles = files != null && files.isNotEmpty;
+    if (!hasText && !hasFiles) {
+      if (context != null && context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(context.l10n.actionOperationFailed)),
+        );
+      }
+      return;
+    }
+
+    try {
+      await SharePlus.instance.share(
+        ShareParams(
+          text: hasText ? text : null,
+          subject: hasText ? title : null,
+          files: hasFiles ? files : null,
+        ),
+      );
+    } catch (e, st) {
+      AppLogger.warning('NativeShare: 分享失败', e);
+      AppLogger.debug('NativeShare share stack', e, st);
+      if (context != null && context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(context.l10n.actionOperationFailed),
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
+    }
   }
 }

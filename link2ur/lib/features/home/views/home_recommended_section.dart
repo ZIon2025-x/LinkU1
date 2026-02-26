@@ -314,53 +314,8 @@ class _RecommendedTab extends StatelessWidget {
                             ),
                           ],
                         ),
-                        Container(
-                          decoration: BoxDecoration(
-                            color: isDark
-                                ? AppColors.cardBackgroundDark
-                                : Colors.white,
-                            borderRadius: BorderRadius.circular(999),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withValues(alpha: 0.06),
-                                blurRadius: 3,
-                                offset: const Offset(0, 1),
-                              ),
-                            ],
-                          ),
-                          child: InkWell(
-                            onTap: () => _showFilterSheet(context, state),
-                            borderRadius: BorderRadius.circular(999),
-                            child: Padding(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 12,
-                                vertical: 6,
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Icon(
-                                    Icons.tune,
-                                    size: 16,
-                                    color: isDark
-                                        ? AppColors.textSecondaryDark
-                                        : AppColors.textSecondaryLight,
-                                  ),
-                                  const SizedBox(width: 4),
-                                  Text(
-                                    context.l10n.commonFilter,
-                                    style: TextStyle(
-                                      fontSize: 13,
-                                      color: isDark
-                                          ? AppColors.textSecondaryDark
-                                          : AppColors.textSecondaryLight,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ),
+                        // 发现流筛选按钮暂时禁用隐藏
+                        const SizedBox.shrink(),
                       ],
                     ),
                   ),
@@ -395,53 +350,8 @@ class _RecommendedTab extends StatelessWidget {
                                   ),
                                 ],
                               ),
-                              Container(
-                                decoration: BoxDecoration(
-                                  color: isDark
-                                      ? AppColors.cardBackgroundDark
-                                      : Colors.white,
-                                  borderRadius: BorderRadius.circular(999),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: Colors.black.withValues(alpha: 0.06),
-                                      blurRadius: 3,
-                                      offset: const Offset(0, 1),
-                                    ),
-                                  ],
-                                ),
-                                child: InkWell(
-                                  onTap: () => _showFilterSheet(context, state),
-                                  borderRadius: BorderRadius.circular(999),
-                                  child: Padding(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 12,
-                                      vertical: 6,
-                                    ),
-                                    child: Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        Icon(
-                                          Icons.tune,
-                                          size: 16,
-                                          color: isDark
-                                              ? AppColors.textSecondaryDark
-                                              : AppColors.textSecondaryLight,
-                                        ),
-                                        const SizedBox(width: 4),
-                                        Text(
-                                          context.l10n.commonFilter,
-                                          style: TextStyle(
-                                            fontSize: 13,
-                                            color: isDark
-                                                ? AppColors.textSecondaryDark
-                                                : AppColors.textSecondaryLight,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                              ),
+                              // 发现流筛选按钮暂时禁用隐藏
+                              const SizedBox.shrink(),
                             ],
                           ),
                         ),
@@ -509,7 +419,8 @@ class _RecommendedTab extends StatelessWidget {
     return tasks;
   }
 
-  /// 打开筛选/排序底部弹窗
+  /// 打开筛选/排序底部弹窗（发现流筛选暂时隐藏，保留方法便于后续恢复）
+  // ignore: unused_element
   void _showFilterSheet(BuildContext context, HomeState state) {
     final bloc = context.read<HomeBloc>();
     final l10n = context.l10n;

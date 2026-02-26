@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:package_info_plus/package_info_plus.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+
 import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_typography.dart';
@@ -11,77 +13,121 @@ import '../../../core/router/app_router.dart';
 import '../../../core/router/page_transitions.dart';
 import '../../../core/utils/l10n_extension.dart';
 import '../../../core/utils/logger.dart';
+import '../../../data/repositories/common_repository.dart';
 
 // ==================== FAQ ====================
 
-/// FAQ 视图
-/// 参考iOS FAQView.swift
+/// FAQ 视图：使用数据库/API 的 FAQ 库（CommonRepository.getFAQ）
 class FAQView extends StatelessWidget {
   const FAQView({super.key});
 
-  List<_FAQSection> _sections(BuildContext context) {
-    final l10n = context.l10n;
-    return [
-      _FAQSection(
-        title: l10n.infoFAQAccountTitle,
-        items: [
-          _FAQItem(question: l10n.infoFAQAccountQ1, answer: l10n.infoFAQAccountA1),
-          _FAQItem(question: l10n.infoFAQAccountQ2, answer: l10n.infoFAQAccountA2),
-          _FAQItem(question: l10n.infoFAQAccountQ3, answer: l10n.infoFAQAccountA3),
-          _FAQItem(question: l10n.infoFAQAccountQ4, answer: l10n.infoFAQAccountA4),
-        ],
-      ),
-      _FAQSection(
-        title: l10n.infoFAQTaskTitle,
-        items: [
-          _FAQItem(question: l10n.infoFAQTaskQ1, answer: l10n.infoFAQTaskA1),
-          _FAQItem(question: l10n.infoFAQTaskQ2, answer: l10n.infoFAQTaskA2),
-          _FAQItem(question: l10n.infoFAQTaskQ3, answer: l10n.infoFAQTaskA3),
-          _FAQItem(question: l10n.infoFAQTaskQ4, answer: l10n.infoFAQTaskA4),
-        ],
-      ),
-      _FAQSection(
-        title: l10n.infoFAQPaymentTitle,
-        items: [
-          _FAQItem(question: l10n.infoFAQPaymentQ1, answer: l10n.infoFAQPaymentA1),
-          _FAQItem(question: l10n.infoFAQPaymentQ2, answer: l10n.infoFAQPaymentA2),
-          _FAQItem(question: l10n.infoFAQPaymentQ3, answer: l10n.infoFAQPaymentA3),
-          _FAQItem(question: l10n.infoFAQPaymentQ4, answer: l10n.infoFAQPaymentA4),
-        ],
-      ),
-    ];
+  static List<_FAQSection> _parseSections(
+    List<Map<String, dynamic>> list,
+    String fallbackTitle,
+  ) {
+    final sections = <_FAQSection>[];
+    if (list.isEmpty) return sections;
+    final first = list.first;
+    if (first.containsKey('question') && first.containsKey('answer')) {
+      final items = list
+          .map((e) => _FAQItem(
+                question: e['question']?.toString() ?? '',
+                answer: e['answer']?.toString() ?? '',
+              ))
+          .toList();
+      sections.add(_FAQSection(title: fallbackTitle, items: items));
+    } else {
+      for (final map in list) {
+        final title = map['title']?.toString() ?? '';
+        final rawItems = map['items'] as List<dynamic>? ?? [];
+        final items = rawItems
+            .map((e) {
+              final m = e is Map<String, dynamic> ? e : <String, dynamic>{};
+              return _FAQItem(
+                question: m['question']?.toString() ?? '',
+                answer: m['answer']?.toString() ?? '',
+              );
+            })
+            .toList();
+        if (title.isNotEmpty || items.isNotEmpty) {
+          sections.add(_FAQSection(title: title, items: items));
+        }
+      }
+    }
+    return sections;
   }
 
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final sections = _sections(context);
+    final l10n = context.l10n;
+    final lang = Localizations.localeOf(context).languageCode;
+    final faqLang = lang.startsWith('zh') ? 'zh' : 'en';
+    final future = context.read<CommonRepository>().getFAQ(lang: faqLang);
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(context.l10n.infoFAQTitle),
+        title: Text(l10n.infoFAQTitle),
         centerTitle: true,
       ),
-      body: ListView.builder(
-        padding: AppSpacing.allMd,
-        itemCount: sections.length,
-        itemBuilder: (context, index) {
-          final section = sections[index];
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              if (index > 0) AppSpacing.vLg,
-              Text(
-                section.title,
-                style: AppTypography.title3.copyWith(
-                  color: isDark
-                      ? AppColors.textPrimaryDark
-                      : AppColors.textPrimaryLight,
+      body: FutureBuilder<List<Map<String, dynamic>>>(
+        future: future,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          if (snapshot.hasError) {
+            return Center(
+              child: Padding(
+                padding: AppSpacing.allMd,
+                child: Text(
+                  l10n.errorLoadFailedMessage,
+                  style: AppTypography.body.copyWith(
+                    color: isDark
+                        ? AppColors.textSecondaryDark
+                        : AppColors.textSecondaryLight,
+                  ),
+                  textAlign: TextAlign.center,
                 ),
               ),
-              AppSpacing.vSm,
-              ...section.items.map((item) => _FAQItemWidget(item: item)),
-            ],
+            );
+          }
+          final list = snapshot.data ?? [];
+          final sections = _parseSections(list, l10n.infoFAQTitle);
+          if (sections.isEmpty) {
+            return Center(
+              child: Text(
+                context.l10n.customerServiceNoChatHistory,
+                style: AppTypography.body.copyWith(
+                  color: isDark
+                      ? AppColors.textSecondaryDark
+                      : AppColors.textSecondaryLight,
+                ),
+              ),
+            );
+          }
+          return ListView.builder(
+            padding: AppSpacing.allMd,
+            itemCount: sections.length,
+            itemBuilder: (context, index) {
+              final section = sections[index];
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (index > 0) AppSpacing.vLg,
+                  Text(
+                    section.title,
+                    style: AppTypography.title3.copyWith(
+                      color: isDark
+                          ? AppColors.textPrimaryDark
+                          : AppColors.textPrimaryLight,
+                    ),
+                  ),
+                  AppSpacing.vSm,
+                  ...section.items.map((item) => _FAQItemWidget(item: item)),
+                ],
+              );
+            },
           );
         },
       ),

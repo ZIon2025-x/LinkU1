@@ -74,6 +74,11 @@ class UnifiedChatLoadHistory extends UnifiedChatEvent {
   List<Object?> get props => [conversationId];
 }
 
+/// 清除任务草稿（用户确认后跳发布页）
+class UnifiedChatClearTaskDraft extends UnifiedChatEvent {
+  const UnifiedChatClearTaskDraft();
+}
+
 /// 内部：AI 子 BLoC 状态变化
 class _AIStateChanged extends UnifiedChatEvent {
   const _AIStateChanged(this.state);
@@ -104,6 +109,7 @@ class UnifiedChatState extends Equatable {
     this.isTyping = false,
     this.streamingContent = '',
     this.activeToolCall,
+    this.taskDraft,
     this.csOnlineStatus,
     this.csContactEmail,
     this.csServiceName,
@@ -119,6 +125,7 @@ class UnifiedChatState extends Equatable {
   final bool isTyping;
   final String streamingContent;
   final String? activeToolCall;
+  final Map<String, dynamic>? taskDraft; // AI 生成的任务草稿，与 AI 页 TaskDraftCard 一致
   final bool? csOnlineStatus; // null=未检查, true/false=结果
   final String? csContactEmail;
   final String? csServiceName;
@@ -134,6 +141,7 @@ class UnifiedChatState extends Equatable {
     bool? isTyping,
     String? streamingContent,
     String? activeToolCall,
+    Map<String, dynamic>? taskDraft,
     bool? csOnlineStatus,
     String? csContactEmail,
     String? csServiceName,
@@ -149,6 +157,7 @@ class UnifiedChatState extends Equatable {
       isTyping: isTyping ?? this.isTyping,
       streamingContent: streamingContent ?? this.streamingContent,
       activeToolCall: activeToolCall,
+      taskDraft: taskDraft,
       csOnlineStatus: csOnlineStatus ?? this.csOnlineStatus,
       csContactEmail: csContactEmail ?? this.csContactEmail,
       csServiceName: csServiceName ?? this.csServiceName,
@@ -167,6 +176,7 @@ class UnifiedChatState extends Equatable {
         isTyping,
         streamingContent,
         activeToolCall,
+        taskDraft,
         csOnlineStatus,
         csServiceName,
         csChatId,
@@ -193,6 +203,7 @@ class UnifiedChatBloc extends Bloc<UnifiedChatEvent, UnifiedChatState> {
     on<UnifiedChatCSRateChat>(_onCSRateChat);
     on<UnifiedChatReturnToAI>(_onReturnToAI);
     on<UnifiedChatLoadHistory>(_onLoadHistory);
+    on<UnifiedChatClearTaskDraft>(_onClearTaskDraft);
     on<_AIStateChanged>(_onAIStateChanged);
     on<_CSStateChanged>(_onCSStateChanged);
 
@@ -288,6 +299,15 @@ class UnifiedChatBloc extends Bloc<UnifiedChatEvent, UnifiedChatState> {
     _aiBloc.add(AIChatLoadHistory(event.conversationId));
   }
 
+  /// 清除任务草稿并转发给 AI Bloc
+  void _onClearTaskDraft(
+    UnifiedChatClearTaskDraft event,
+    Emitter<UnifiedChatState> emit,
+  ) {
+    _aiBloc.add(const AIChatClearTaskDraft());
+    emit(state.copyWith(taskDraft: null)); // ignore: avoid_redundant_argument_values
+  }
+
   /// AI 子 BLoC 状态投射
   void _onAIStateChanged(
     _AIStateChanged event,
@@ -303,6 +323,7 @@ class UnifiedChatBloc extends Bloc<UnifiedChatEvent, UnifiedChatState> {
       isTyping: aiState.isReplying,
       streamingContent: aiState.streamingContent,
       activeToolCall: aiState.activeToolCall,
+      taskDraft: aiState.taskDraft,
       errorMessage: aiState.errorMessage,
       // 检测 csAvailableSignal
       csOnlineStatus: aiState.csAvailableSignal ?? state.csOnlineStatus,

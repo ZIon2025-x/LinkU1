@@ -256,7 +256,6 @@ class _EditPostViewState extends State<EditPostView> {
                   imageUrl: entry.value,
                   width: 80,
                   height: 80,
-                  fit: BoxFit.cover,
                 ),
               ),
               Positioned(

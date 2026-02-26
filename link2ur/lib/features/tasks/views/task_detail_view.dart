@@ -339,11 +339,13 @@ class _TaskDetailContent extends StatelessWidget {
                   final locale = Localizations.localeOf(context);
                   final imageUrl = task.images.isNotEmpty ? task.images.first : null;
                   final shareFiles = await NativeShare.fileFromFirstImageUrl(imageUrl);
+                  if (!context.mounted) return;
                   await NativeShare.share(
                     title: task.displayTitle(locale),
                     description: task.displayDescription(locale) ?? '',
                     url: 'https://link2ur.com/tasks/${task.id}',
                     files: shareFiles,
+                    context: context,
                   );
                 },
               ),
