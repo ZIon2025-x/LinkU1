@@ -2,9 +2,10 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:dio/dio.dart';
+import 'package:crypto/crypto.dart';
 
 import '../../core/config/app_config.dart';
+import '../../core/config/api_config.dart';
 import '../../core/constants/api_endpoints.dart';
 import '../../core/utils/logger.dart';
 import '../models/ai_chat.dart';
@@ -89,7 +90,8 @@ class AIChatService {
     String content,
     StreamController<AIChatEvent> controller,
   ) async {
-    final token = await StorageService.instance.getToken();
+    // 与 ApiService 一致：使用 getAccessToken，并附带 X-Session-ID + 移动端签名，避免 401
+    final token = await StorageService.instance.getAccessToken();
     final baseUrl = AppConfig.instance.baseUrl;
     final uri = Uri.parse('$baseUrl${ApiEndpoints.aiSendMessage(conversationId)}');
 
@@ -100,13 +102,35 @@ class AIChatService {
       final request = await httpClient.postUrl(uri);
       request.headers.set(HttpHeaders.contentTypeHeader, 'application/json');
       request.headers.set(HttpHeaders.acceptHeader, 'text/event-stream');
-      if (token != null) {
+      final defaultHeaders = ApiConfig.defaultHeaders;
+      request.headers.set('User-Agent', defaultHeaders['User-Agent'] ?? 'Link2Ur-Flutter/1.0.0');
+      request.headers.set('X-Platform', defaultHeaders['X-Platform'] ?? 'unknown');
+      if (token != null && token.isNotEmpty) {
         request.headers.set(HttpHeaders.authorizationHeader, 'Bearer $token');
+        request.headers.set('X-Session-ID', token);
+        final secret = AppConfig.mobileAppSecret;
+        if (secret.isNotEmpty) {
+          final timestamp = (DateTime.now().toUtc().millisecondsSinceEpoch ~/ 1000).toString();
+          final message = utf8.encode('$token$timestamp');
+          final key = utf8.encode(secret);
+          final hmacSha256 = Hmac(sha256, key);
+          final digest = hmacSha256.convert(message);
+          final signature = digest.bytes.map((b) => b.toRadixString(16).padLeft(2, '0')).join();
+          request.headers.set('X-App-Timestamp', timestamp);
+          request.headers.set('X-App-Signature', signature);
+        }
       }
       request.write(jsonEncode({'content': content}));
 
       final response = await request.close();
 
+      if (response.statusCode == 401) {
+        controller.add(AIChatEvent(
+          type: AIChatEventType.error,
+          error: '登录已过期，请重新登录',
+        ));
+        return;
+      }
       if (response.statusCode == 429) {
         controller.add(AIChatEvent(
           type: AIChatEventType.error,

@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:collection';
 import 'package:crypto/crypto.dart';
 import 'package:dio/dio.dart';
+import 'package:uuid/uuid.dart';
 
 import '../../core/config/app_config.dart';
 import '../../core/config/api_config.dart';
@@ -144,6 +145,10 @@ class ApiService {
     // 添加语言
     final language = StorageService.instance.getLanguage();
     options.headers['Accept-Language'] = language ?? 'zh-CN';
+
+    // 请求 ID：与后端 RequestLoggingMiddleware 对齐，便于端到端排查与日志关联
+    options.headers['X-Request-ID'] =
+        options.headers['X-Request-ID'] ?? Uuid().v4().replaceAll('-', '').substring(0, 12);
 
     // 网络日志由 NetworkMonitorInterceptor 统一记录，此处不再重复打印
     handler.next(options);
@@ -584,10 +589,20 @@ class ApiService {
   }
 
   /// 处理错误
-  /// 使用错误码标识，由 UI 层通过 l10n 转为本地化文本
+  /// 使用错误码标识，由 UI 层通过 l10n（errorCodeXxx）转为本地化文本
   ApiResponse<T> _handleError<T>(DioException error) {
     String message;
     final statusCode = error.response?.statusCode;
+    String? errorCode;
+    String? requestId;
+
+    if (error.response?.data is Map) {
+      final data = error.response!.data as Map;
+      errorCode = data['error_code'] as String?;
+      requestId = data['request_id'] as String? ?? error.response?.headers.value('x-request-id');
+    } else {
+      requestId = error.response?.headers.value('x-request-id');
+    }
 
     switch (error.type) {
       case DioExceptionType.connectionTimeout:
@@ -611,11 +626,13 @@ class ApiService {
     return ApiResponse.error(
       message: message,
       statusCode: statusCode,
+      errorCode: errorCode,
+      requestId: requestId,
       error: error,
     );
   }
 
-  /// 解析错误信息
+  /// 解析错误信息（后端统一结构：message / detail / error）
   String? _parseErrorMessage(dynamic data) {
     if (data == null) return null;
     if (data is String) return data;
@@ -645,6 +662,8 @@ class ApiResponse<T> {
     this.data,
     this.message,
     this.statusCode,
+    this.errorCode,
+    this.requestId,
     this.error,
   });
 
@@ -652,6 +671,10 @@ class ApiResponse<T> {
   final T? data;
   final String? message;
   final int? statusCode;
+  /// 后端返回的稳定错误码，用于 l10n（errorCodeXxx）展示
+  final String? errorCode;
+  /// 请求 ID，便于与后端日志关联排查
+  final String? requestId;
   final dynamic error;
 
   factory ApiResponse.success({
@@ -668,12 +691,16 @@ class ApiResponse<T> {
   factory ApiResponse.error({
     String? message,
     int? statusCode,
+    String? errorCode,
+    String? requestId,
     dynamic error,
   }) {
     return ApiResponse(
       isSuccess: false,
       message: message,
       statusCode: statusCode,
+      errorCode: errorCode,
+      requestId: requestId,
       error: error,
     );
   }

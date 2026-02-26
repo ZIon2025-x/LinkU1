@@ -610,6 +610,42 @@ class _UnifiedChatContentState extends State<_UnifiedChatContent> {
                               );
                         },
                       ),
+                      _UnifiedQuickAction(
+                        label: context.l10n.aiChatPostTask,
+                        onTap: () {
+                          context.read<UnifiedChatBloc>().add(
+                                UnifiedChatSendMessage(
+                                    context.l10n.aiChatPostTask),
+                              );
+                        },
+                      ),
+                      _UnifiedQuickAction(
+                        label: context.l10n.aiChatMyPoints,
+                        onTap: () {
+                          context.read<UnifiedChatBloc>().add(
+                                UnifiedChatSendMessage(
+                                    context.l10n.aiChatMyPoints),
+                              );
+                        },
+                      ),
+                      _UnifiedQuickAction(
+                        label: context.l10n.aiChatActivities,
+                        onTap: () {
+                          context.read<UnifiedChatBloc>().add(
+                                UnifiedChatSendMessage(
+                                    context.l10n.aiChatActivities),
+                              );
+                        },
+                      ),
+                      _UnifiedQuickAction(
+                        label: context.l10n.aiChatContactSupport,
+                        onTap: () {
+                          context.read<UnifiedChatBloc>().add(
+                                UnifiedChatSendMessage(
+                                    context.l10n.aiChatContactSupport),
+                              );
+                        },
+                      ),
                     ],
                   ),
                 ],

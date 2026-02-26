@@ -73,20 +73,26 @@ def create_error_response(
     message: str,
     status_code: int = 400,
     error_code: str = "GENERAL_ERROR",
-    details: Optional[Dict[str, Any]] = None
+    details: Optional[Dict[str, Any]] = None,
+    request_id: Optional[str] = None,
 ) -> Dict[str, Any]:
-    """创建标准错误响应"""
+    """创建标准错误响应（含 request_id 便于排查与日志关联）"""
     response = {
         "error": True,
         "message": message,
         "error_code": error_code,
-        "status_code": status_code
+        "status_code": status_code,
     }
-    
+    if request_id:
+        response["request_id"] = request_id
     if details:
         response["details"] = details
-    
     return response
+
+
+def _get_request_id(request: Request) -> Optional[str]:
+    """从 request.state 安全获取 request_id（由 RequestLoggingMiddleware 注入）"""
+    return getattr(request.state, "request_id", None) if request else None
 
 
 # 安全错误信息映射（避免泄露敏感信息）
@@ -293,7 +299,8 @@ async def http_exception_handler(request: Request, exc: HTTPException) -> JSONRe
         content=create_error_response(
             message=safe_message,
             status_code=exc.status_code,
-            error_code=error_code
+            error_code=error_code,
+            request_id=_get_request_id(request),
         )
     )
     # 确保设置CORS头
@@ -325,7 +332,8 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
             message="输入数据验证失败",
             status_code=422,
             error_code="VALIDATION_ERROR",
-            details={"errors": errors}
+            details={"errors": errors},
+            request_id=_get_request_id(request),
         )
     )
     # 确保设置CORS头
@@ -347,10 +355,10 @@ async def security_exception_handler(request: Request, exc: SecurityError) -> JS
         content=create_error_response(
             message=safe_message,
             status_code=403,
-            error_code=exc.error_code
+            error_code=exc.error_code,
+            request_id=_get_request_id(request),
         )
     )
-    
     # 设置CORS头
     set_cors_headers(response, request)
     return response
@@ -367,10 +375,10 @@ async def business_exception_handler(request: Request, exc: BusinessError) -> JS
         content=create_error_response(
             message=safe_message,
             status_code=400,
-            error_code=exc.error_code
+            error_code=exc.error_code,
+            request_id=_get_request_id(request),
         )
     )
-    
     # 设置CORS头
     set_cors_headers(response, request)
     return response
@@ -383,7 +391,8 @@ async def read_only_mode_handler(request: Request, exc: ReadOnlyModeError) -> JS
         content=create_error_response(
             message=exc.message,
             status_code=503,
-            error_code="MAINTENANCE"
+            error_code="MAINTENANCE",
+            request_id=_get_request_id(request),
         ),
         headers={"Retry-After": "60"}
     )
@@ -435,24 +444,26 @@ async def general_exception_handler(request: Request, exc: Exception) -> JSONRes
             content=create_error_response(
                 message="服务暂时不可用，请稍后重试",
                 status_code=503,
-                error_code="SERVICE_UNAVAILABLE"
+                error_code="SERVICE_UNAVAILABLE",
+                request_id=_get_request_id(request),
             ),
             headers={"Retry-After": "30"}
         )
         set_cors_headers(response, request)
         return response
-    
+
     # 其他未处理异常 → 500
     logger.error(f"未处理的异常: {type(exc).__name__} - {str(exc)}", exc_info=True)
-    
+
     safe_message = get_safe_error_message("SERVER_ERROR")
-    
+
     response = JSONResponse(
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
         content=create_error_response(
             message=safe_message,
             status_code=500,
-            error_code="SERVER_ERROR"
+            error_code="SERVER_ERROR",
+            request_id=_get_request_id(request),
         )
     )
     
