@@ -157,7 +157,6 @@ class _RealActivityCard extends StatelessWidget {
                               imageUrl: image,
                               width: 280,
                               height: 160,
-                              fit: BoxFit.cover,
                               memCacheWidth: 560,
                               memCacheHeight: 320,
                             )
@@ -186,7 +185,8 @@ class _RealActivityCard extends StatelessWidget {
                         top: 8,
                         right: 8,
                         child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 4),
                           decoration: BoxDecoration(
                             color: AppColors.error,
                             borderRadius: BorderRadius.circular(999),
@@ -232,7 +232,7 @@ class _RealActivityCard extends StatelessWidget {
                     Row(
                       children: [
                         if (price != null && price > 0) ...[
-                          Text(
+                          const Text(
                             '£',
                             style: TextStyle(
                               fontSize: 12,
@@ -242,7 +242,7 @@ class _RealActivityCard extends StatelessWidget {
                           ),
                           Text(
                             price.toStringAsFixed(0),
-                            style: TextStyle(
+                            style: const TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.bold,
                               color: AppColors.primary,
@@ -308,7 +308,7 @@ class _RealActivityCard extends StatelessWidget {
                             ),
                             child: Text(
                               l10n.activityByAppointment,
-                              style: TextStyle(
+                              style: const TextStyle(
                                 fontSize: 10,
                                 fontWeight: FontWeight.bold,
                                 color: AppColors.warning,
@@ -853,7 +853,7 @@ class _ProductCard extends StatelessWidget {
                     children: [
                       if (item.price != null)
                         Text(
-                          '${_currencySymbol(item.currency)}${item.price!.toStringAsFixed(2)}',
+                          '${_currencySymbol(item.currency)}${Helpers.formatAmountNumber(item.price!)}',
                           style: const TextStyle(
                             fontSize: 15,
                             fontWeight: FontWeight.w700,
@@ -1673,7 +1673,9 @@ class _ActivityPriceRow extends StatelessWidget {
       children: [
         // 折后价
         Text(
-          '${_currencySymbol(activityInfo.currency)}${activityInfo.discountedPrice?.toStringAsFixed(2) ?? ""}',
+          activityInfo.discountedPrice != null
+            ? '${_currencySymbol(activityInfo.currency)}${Helpers.formatAmountNumber(activityInfo.discountedPrice!)}'
+            : '',
           style: const TextStyle(
             fontSize: 15,
             fontWeight: FontWeight.bold,
@@ -1683,7 +1685,9 @@ class _ActivityPriceRow extends StatelessWidget {
         const SizedBox(width: 6),
         // 原价（划线）
         Text(
-          '${_currencySymbol(activityInfo.currency)}${activityInfo.originalPrice?.toStringAsFixed(2) ?? ""}',
+          activityInfo.originalPrice != null
+            ? '${_currencySymbol(activityInfo.currency)}${Helpers.formatAmountNumber(activityInfo.originalPrice!)}'
+            : '',
           style: const TextStyle(
             fontSize: 12,
             color: Colors.grey,

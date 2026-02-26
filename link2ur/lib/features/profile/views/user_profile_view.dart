@@ -4,6 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_radius.dart';
+import '../../../core/utils/helpers.dart';
 import '../../../core/utils/l10n_extension.dart';
 import '../../../core/utils/sheet_adaptation.dart';
 import '../../../core/widgets/loading_view.dart';
@@ -397,7 +398,7 @@ class _UserProfileViewState extends State<UserProfileView> {
                     subtitle: Padding(
                       padding: const EdgeInsets.only(top: 4),
                       child: Text(
-                        '${t.status} · £${t.reward.toStringAsFixed(2)}',
+                        '${t.status} · ${Helpers.formatPrice(t.reward)}',
                         style: const TextStyle(
                           fontSize: 12,
                           color: AppColors.textSecondary,
@@ -894,7 +895,7 @@ class _UserProfileViewState extends State<UserProfileView> {
                               ),
                               const SizedBox(height: 2),
                               Text(
-                                '£${item.price.toStringAsFixed(2)}',
+                                Helpers.formatPrice(item.price),
                                 style: const TextStyle(
                                   fontSize: 12,
                                   fontWeight: FontWeight.bold,

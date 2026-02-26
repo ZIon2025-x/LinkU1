@@ -14,6 +14,7 @@ class VoteComparisonBar extends StatefulWidget {
     required this.downvotes,
     this.height = 6,
     this.showLabels = true,
+    this.showNetVotes = true,
     this.animationDuration = const Duration(milliseconds: 600),
     this.upColor,
     this.downColor,
@@ -28,8 +29,11 @@ class VoteComparisonBar extends StatefulWidget {
   /// 条形高度
   final double height;
 
-  /// 是否显示标签
+  /// 是否显示标签（赞/踩数）
   final bool showLabels;
+
+  /// 是否显示中间净票数（如 +5 / -2）
+  final bool showNetVotes;
 
   /// 动画时长
   final Duration animationDuration;
@@ -128,16 +132,17 @@ class _VoteComparisonBarState extends State<VoteComparisonBar>
                   ),
                 ],
               ),
-              Text(
-                netVotes >= 0 ? '+$netVotes' : '$netVotes',
-                style: AppTypography.caption.copyWith(
-                  color: isDark
-                      ? AppColors.textSecondaryDark
-                      : AppColors.textSecondaryLight,
-                  fontWeight: FontWeight.w600,
-                  fontFeatures: const [FontFeature.tabularFigures()],
+              if (widget.showNetVotes)
+                Text(
+                  netVotes >= 0 ? '+$netVotes' : '$netVotes',
+                  style: AppTypography.caption.copyWith(
+                    color: isDark
+                        ? AppColors.textSecondaryDark
+                        : AppColors.textSecondaryLight,
+                    fontWeight: FontWeight.w600,
+                    fontFeatures: const [FontFeature.tabularFigures()],
+                  ),
                 ),
-              ),
               Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [

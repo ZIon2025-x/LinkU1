@@ -14,7 +14,7 @@ void main() {
   late MockTaskRepository mockTaskRepository;
   late TaskDetailBloc taskDetailBloc;
 
-  final testTask = Task(
+  const testTask = Task(
     id: 42,
     title: 'Test Task',
     taskType: 'errand',
@@ -23,7 +23,7 @@ void main() {
     posterId: 'poster1',
   );
 
-  final inProgressTask = Task(
+  const inProgressTask = Task(
     id: 42,
     title: 'Test Task',
     taskType: 'errand',
@@ -33,7 +33,7 @@ void main() {
     takerId: 'taker1',
   );
 
-  final completedTask = Task(
+  const completedTask = Task(
     id: 42,
     title: 'Test Task',
     taskType: 'errand',
@@ -76,7 +76,7 @@ void main() {
         act: (bloc) => bloc.add(const TaskDetailLoadRequested(42)),
         expect: () => [
           const TaskDetailState(status: TaskDetailStatus.loading),
-          TaskDetailState(
+          const TaskDetailState(
             status: TaskDetailStatus.loaded,
             task: testTask,
           ),
@@ -116,7 +116,7 @@ void main() {
               .thenAnswer((_) async => testTask);
           return taskDetailBloc;
         },
-        seed: () => TaskDetailState(
+        seed: () => const TaskDetailState(
           status: TaskDetailStatus.loaded,
           task: testTask,
         ),
@@ -142,7 +142,7 @@ void main() {
               )).thenThrow(Exception('Already applied'));
           return taskDetailBloc;
         },
-        seed: () => TaskDetailState(
+        seed: () => const TaskDetailState(
           status: TaskDetailStatus.loaded,
           task: testTask,
         ),
@@ -160,7 +160,7 @@ void main() {
       blocTest<TaskDetailBloc, TaskDetailState>(
         'does nothing when already submitting',
         build: () => taskDetailBloc,
-        seed: () => TaskDetailState(
+        seed: () => const TaskDetailState(
           status: TaskDetailStatus.loaded,
           task: testTask,
           isSubmitting: true,
@@ -185,7 +185,7 @@ void main() {
                   });
           return taskDetailBloc;
         },
-        seed: () => TaskDetailState(
+        seed: () => const TaskDetailState(
           status: TaskDetailStatus.loaded,
           task: testTask,
         ),
@@ -209,7 +209,7 @@ void main() {
               .thenAnswer((_) async => inProgressTask);
           return taskDetailBloc;
         },
-        seed: () => TaskDetailState(
+        seed: () => const TaskDetailState(
           status: TaskDetailStatus.loaded,
           task: testTask,
         ),
@@ -239,7 +239,7 @@ void main() {
               .thenAnswer((_) async => completedTask);
           return taskDetailBloc;
         },
-        seed: () => TaskDetailState(
+        seed: () => const TaskDetailState(
           status: TaskDetailStatus.loaded,
           task: inProgressTask,
         ),
@@ -265,7 +265,7 @@ void main() {
               )).thenThrow(Exception('Server error'));
           return taskDetailBloc;
         },
-        seed: () => TaskDetailState(
+        seed: () => const TaskDetailState(
           status: TaskDetailStatus.loaded,
           task: inProgressTask,
         ),
@@ -294,7 +294,7 @@ void main() {
               .thenAnswer((_) async => completedTask);
           return taskDetailBloc;
         },
-        seed: () => TaskDetailState(
+        seed: () => const TaskDetailState(
           status: TaskDetailStatus.loaded,
           task: completedTask,
         ),
@@ -314,7 +314,7 @@ void main() {
       blocTest<TaskDetailBloc, TaskDetailState>(
         'emits task_cancelled on success',
         build: () {
-          final cancelledTask = Task(
+          const cancelledTask = Task(
             id: 42,
             title: 'Test Task',
             taskType: 'errand',
@@ -330,7 +330,7 @@ void main() {
               .thenAnswer((_) async => cancelledTask);
           return taskDetailBloc;
         },
-        seed: () => TaskDetailState(
+        seed: () => const TaskDetailState(
           status: TaskDetailStatus.loaded,
           task: testTask,
         ),
@@ -355,7 +355,7 @@ void main() {
               )).thenThrow(Exception('Cannot cancel'));
           return taskDetailBloc;
         },
-        seed: () => TaskDetailState(
+        seed: () => const TaskDetailState(
           status: TaskDetailStatus.loaded,
           task: testTask,
         ),
@@ -375,10 +375,10 @@ void main() {
       blocTest<TaskDetailBloc, TaskDetailState>(
         'clears acceptPaymentData',
         build: () => taskDetailBloc,
-        seed: () => TaskDetailState(
+        seed: () => const TaskDetailState(
           status: TaskDetailStatus.loaded,
           task: testTask,
-          acceptPaymentData: const AcceptPaymentData(
+          acceptPaymentData: AcceptPaymentData(
             taskId: 42,
             clientSecret: 'secret',
             customerId: 'cus',
@@ -407,7 +407,7 @@ void main() {
       });
 
       test('copyWith preserves values when no overrides', () {
-        final state = TaskDetailState(
+        const state = TaskDetailState(
           status: TaskDetailStatus.loaded,
           task: testTask,
           isSubmitting: true,

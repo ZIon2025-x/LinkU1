@@ -733,8 +733,8 @@ class _LeaderboardTabState extends State<_LeaderboardTab> {
   Widget _buildSliverBody(BuildContext context, LeaderboardState state) {
     if (state.status == LeaderboardStatus.loading &&
         state.leaderboards.isEmpty) {
-      return SliverFillRemaining(
-        child: const SkeletonList(imageSize: 90),
+      return const SliverFillRemaining(
+        child: SkeletonList(imageSize: 90),
       );
     }
 
@@ -901,6 +901,21 @@ class _CategoryCard extends StatelessWidget {
                   ],
                 ],
               ),
+            ),
+
+            // 收藏按钮（对标 iOS 板块收藏）
+            IconButton(
+              icon: Icon(
+                category.isFavorited ? Icons.favorite : Icons.favorite_border,
+                size: 22,
+                color: category.isFavorited ? AppColors.error : null,
+              ),
+              onPressed: () {
+                AppHaptics.selection();
+                context.read<ForumBloc>().add(
+                    ForumToggleCategoryFavorite(category.id));
+              },
+              tooltip: context.l10n.forumFavorite,
             ),
 
             // Chevron

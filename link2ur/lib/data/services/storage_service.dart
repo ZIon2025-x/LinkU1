@@ -63,7 +63,7 @@ class StorageService {
     _cachedLanguage = _prefs.getString(StorageKeys.languageCode);
     _cachedThemeMode = _prefs.getString(StorageKeys.themeMode);
     _cachedNotificationEnabled = _prefs.getBool(StorageKeys.notificationEnabled) ?? true;
-    _cachedSoundEnabled = _prefs.getBool('sound_enabled') ?? true;
+    _cachedSoundEnabled = _prefs.getBool(StorageKeys.soundEnabled) ?? true;
 
     // 用户信息从 SecureStorage 读取，兼容旧版 SharedPreferences 数据
     try {
@@ -261,7 +261,7 @@ class StorageService {
   /// 保存音效设置
   Future<void> saveSoundEnabled(bool enabled) async {
     _cachedSoundEnabled = enabled;
-    await _prefs.setBool('sound_enabled', enabled);
+    await _prefs.setBool(StorageKeys.soundEnabled, enabled);
   }
 
   /// 获取音效设置

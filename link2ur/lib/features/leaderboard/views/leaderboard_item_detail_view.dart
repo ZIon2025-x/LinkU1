@@ -77,12 +77,12 @@ class _ItemDetailContent extends StatelessWidget {
       BuildContext context, LeaderboardItem? item, bool hasImages) {
     void onShare() async {
       if (item == null) return;
-      final imageUrl = item!.firstImage;
+      final imageUrl = item.firstImage;
       final shareFiles = await NativeShare.fileFromFirstImageUrl(imageUrl);
       await NativeShare.share(
-        title: item!.name,
-        description: item!.description ?? '',
-        url: 'https://link2ur.com/leaderboard/item/${item!.id}',
+        title: item.name,
+        description: item.description ?? '',
+        url: 'https://link2ur.com/leaderboard/item/${item.id}',
         files: shareFiles,
       );
     }

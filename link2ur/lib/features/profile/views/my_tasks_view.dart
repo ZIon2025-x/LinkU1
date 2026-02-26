@@ -5,6 +5,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../core/constants/app_constants.dart';
 import '../../../core/utils/task_type_helper.dart';
+import '../../../core/utils/helpers.dart';
 import '../../../core/utils/task_status_helper.dart';
 import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_spacing.dart';
@@ -442,7 +443,7 @@ class _TaskCard extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                '£${task.reward.toStringAsFixed(0)}',
+                Helpers.formatPrice(task.reward),
                 style: const TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.bold,

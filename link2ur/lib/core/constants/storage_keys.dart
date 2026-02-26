@@ -34,6 +34,9 @@ class StorageKeys {
   /// 通知设置
   static const String notificationEnabled = 'notification_enabled';
 
+  /// 音效开关
+  static const String soundEnabled = 'sound_enabled';
+
   /// 推送Token
   static const String pushToken = 'push_token';
 

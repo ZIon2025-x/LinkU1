@@ -111,23 +111,17 @@ class _BannerCarouselState extends State<_BannerCarousel> {
 
   void _buildBannerList() {
     _allBanners = [
-      _BannerData(
-        title: null,
-        subtitle: null,
+      const _BannerData(
         localImage: AppAssets.fleaMarketBanner,
-        imageAlignment: const Alignment(0.0, 0.4),
+        imageAlignment: Alignment(0.0, 0.4),
         gradient: AppColors.gradientGreen,
         icon: Icons.storefront,
-        linkType: 'internal',
         linkUrl: '/flea-market',
       ),
-      _BannerData(
-        title: null,
-        subtitle: null,
+      const _BannerData(
         localImage: AppAssets.studentVerificationBanner,
         gradient: AppColors.gradientIndigo,
         icon: Icons.school,
-        linkType: 'internal',
         linkUrl: '/student-verification',
       ),
       for (final b in widget.serverBanners)
@@ -380,7 +374,6 @@ class _BannerItem extends StatelessWidget {
                   : (networkImage != null && networkImage!.isNotEmpty)
                       ? AsyncImageView(
                           imageUrl: networkImage!,
-                          fit: BoxFit.cover,
                           memCacheWidth: 800,
                           placeholder: Container(
                             decoration: BoxDecoration(

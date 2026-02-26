@@ -9,6 +9,7 @@ import '../../../core/design/app_colors.dart';
 import '../../../core/utils/haptic_feedback.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_radius.dart';
+import '../../../core/utils/helpers.dart';
 import '../../../core/utils/l10n_extension.dart';
 import '../../../core/utils/sheet_adaptation.dart';
 import '../../../core/widgets/buttons.dart';
@@ -743,14 +744,14 @@ class _PaymentContentState extends State<_PaymentContent> {
               label: context.l10n.paymentOriginalPrice,
               value: response.originalAmountDisplay.isNotEmpty
                   ? response.originalAmountDisplay
-                  : '£${(response.originalAmount / 100).toStringAsFixed(2)}',
+                  : Helpers.formatPrice(response.originalAmount / 100),
             ),
             if (response.hasDiscount) ...[
               AppSpacing.vSm,
               _InfoRow(
                 label: context.l10n.paymentDiscount(response.couponName ?? ''),
                 value:
-                    '-${response.couponDiscountDisplay ?? "£${(response.couponDiscount! / 100).toStringAsFixed(2)}"}',
+                    '-${response.couponDiscountDisplay ?? Helpers.formatPrice(response.couponDiscount! / 100)}',
                 valueStyle: const TextStyle(
                   color: AppColors.success,
                   fontWeight: FontWeight.w500,
@@ -765,7 +766,7 @@ class _PaymentContentState extends State<_PaymentContent> {
               label: context.l10n.paymentFinalAmount,
               value: response.finalAmountDisplay.isNotEmpty
                   ? response.finalAmountDisplay
-                  : '£${(response.finalAmount / 100).toStringAsFixed(2)}',
+                  : Helpers.formatPrice(response.finalAmount / 100),
               valueStyle: const TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.bold,
@@ -939,9 +940,9 @@ class _PaymentContentState extends State<_PaymentContent> {
     final amount = response != null
         ? response.finalAmountDisplay.isNotEmpty
             ? response.finalAmountDisplay
-            : '£${(response.finalAmount / 100).toStringAsFixed(2)}'
+            : Helpers.formatPrice(response.finalAmount / 100)
         : widget.amount != null
-            ? '£${widget.amount!.toStringAsFixed(2)}'
+            ? Helpers.formatPrice(widget.amount!)
             : '£0.00';
 
     final isFree = response?.isFree ?? false;

@@ -265,7 +265,7 @@ class _PublishContentState extends State<_PublishContent>
   double? _taskLatitude;
   double? _taskLongitude;
   final ValueNotifier<String?> _taskCategoryNotifier = ValueNotifier(null);
-  String _taskCurrency = 'GBP';
+  final String _taskCurrency = 'GBP';
   DateTime? _taskDeadline;
   final List<XFile> _taskImages = [];
   static const int _kTaskMaxImages = 5;

@@ -13,7 +13,7 @@ void main() {
   late MockTaskRepository mockTaskRepository;
   late TaskListBloc taskListBloc;
 
-  final testTask = Task(
+  const testTask = Task(
     id: 1,
     title: 'Test Task',
     taskType: 'errand',
@@ -22,7 +22,7 @@ void main() {
     posterId: 'user1',
   );
 
-  final testResponse = TaskListResponse(
+  const testResponse = TaskListResponse(
     tasks: [testTask],
     total: 1,
     page: 1,
@@ -69,11 +69,10 @@ void main() {
         act: (bloc) => bloc.add(const TaskListLoadRequested()),
         expect: () => [
           const TaskListState(status: TaskListStatus.loading),
-          TaskListState(
+          const TaskListState(
             status: TaskListStatus.loaded,
             tasks: [testTask],
             total: 1,
-            page: 1,
             hasMore: false,
           ),
         ],
@@ -107,7 +106,7 @@ void main() {
       blocTest<TaskListBloc, TaskListState>(
         'loads next page and appends tasks',
         build: () {
-          final page2Task = Task(
+          const page2Task = Task(
             id: 2,
             title: 'Task Page 2',
             taskType: 'errand',
@@ -121,7 +120,7 @@ void main() {
                 keyword: any(named: 'keyword'),
                 sortBy: any(named: 'sortBy'),
                 location: any(named: 'location'),
-              )).thenAnswer((_) async => TaskListResponse(
+              )).thenAnswer((_) async => const TaskListResponse(
                 tasks: [page2Task],
                 total: 30,
                 page: 2,
@@ -129,12 +128,10 @@ void main() {
               ));
           return taskListBloc;
         },
-        seed: () => TaskListState(
+        seed: () => const TaskListState(
           status: TaskListStatus.loaded,
           tasks: [testTask],
           total: 30,
-          page: 1,
-          hasMore: true,
         ),
         act: (bloc) => bloc.add(const TaskListLoadMore()),
         expect: () => [
@@ -149,7 +146,7 @@ void main() {
       blocTest<TaskListBloc, TaskListState>(
         'does nothing when hasMore is false',
         build: () => taskListBloc,
-        seed: () => TaskListState(
+        seed: () => const TaskListState(
           status: TaskListStatus.loaded,
           tasks: [testTask],
           hasMore: false,
@@ -161,10 +158,9 @@ void main() {
       blocTest<TaskListBloc, TaskListState>(
         'does nothing when already loading more',
         build: () => taskListBloc,
-        seed: () => TaskListState(
+        seed: () => const TaskListState(
           status: TaskListStatus.loaded,
           tasks: [testTask],
-          hasMore: true,
           isLoadingMore: true,
         ),
         act: (bloc) => bloc.add(const TaskListLoadMore()),
@@ -183,12 +179,10 @@ void main() {
               )).thenThrow(Exception('Network error'));
           return taskListBloc;
         },
-        seed: () => TaskListState(
+        seed: () => const TaskListState(
           status: TaskListStatus.loaded,
           tasks: [testTask],
           total: 30,
-          page: 1,
-          hasMore: true,
         ),
         act: (bloc) => bloc.add(const TaskListLoadMore()),
         expect: () => [
@@ -283,15 +277,12 @@ void main() {
 
     group('TaskListState helpers', () {
       test('isEmpty returns true when loaded with no tasks', () {
-        const state = TaskListState(
-          status: TaskListStatus.loaded,
-          tasks: [],
-        );
+        const state = TaskListState(status: TaskListStatus.loaded);
         expect(state.isEmpty, isTrue);
       });
 
       test('isEmpty returns false when loaded with tasks', () {
-        final state = TaskListState(
+        const state = TaskListState(
           status: TaskListStatus.loaded,
           tasks: [testTask],
         );

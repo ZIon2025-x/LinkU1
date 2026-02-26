@@ -713,7 +713,6 @@ class _TaskCard extends StatelessWidget {
                             imageUrl: task.firstImage!,
                             width: 280,
                             height: 140,
-                            fit: BoxFit.cover,
                           )
                         : Container(
                             decoration: BoxDecoration(
@@ -980,9 +979,9 @@ class _TaskCard extends StatelessWidget {
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              Text(
+                              const Text(
                                 '£',
-                                style: const TextStyle(
+                                style: TextStyle(
                                   fontSize: 10,
                                   fontWeight: FontWeight.bold,
                                   color: Colors.white,

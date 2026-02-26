@@ -28,6 +28,7 @@ import '../../../core/utils/responsive.dart';
 import '../../../core/utils/sheet_adaptation.dart';
 import '../../../core/utils/l10n_extension.dart';
 import '../../../core/utils/date_formatter.dart';
+import '../../../core/utils/helpers.dart';
 import '../../../core/utils/task_type_helper.dart';
 import '../../../core/utils/error_localizer.dart';
 import '../../../core/utils/task_status_helper.dart';
@@ -1180,9 +1181,7 @@ class _TaskHeaderCard extends StatelessWidget {
     final amount = task.displayReward;
     if (amount <= 0) return const SizedBox.shrink();
 
-    final priceText = amount.truncateToDouble() == amount
-        ? amount.toStringAsFixed(0)
-        : amount.toStringAsFixed(2);
+    final priceText = Helpers.formatAmountNumber(amount);
 
     const goldColor = Color(0xFFD4A017); // 金色
 
@@ -1217,9 +1216,7 @@ class _TaskHeaderCard extends StatelessWidget {
     final rate = task.platformFeeRate!;
     final amount = task.platformFeeAmount!;
     final ratePercent = (rate * 100).round();
-    final amountStr = amount.truncateToDouble() == amount
-        ? amount.toStringAsFixed(0)
-        : amount.toStringAsFixed(2);
+    final amountStr = Helpers.formatAmountNumber(amount);
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final secondaryColor = isDark
         ? AppColors.textSecondaryDark

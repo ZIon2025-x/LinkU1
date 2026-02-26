@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../data/models/activity.dart';
 import '../../../core/design/app_colors.dart';
+import '../../../core/utils/helpers.dart';
 import '../../../core/utils/l10n_extension.dart';
 
 /// 活动价格显示：有折扣时展示原价（删除线）+ 折后价，与 HTML mockup 一致
@@ -32,7 +33,7 @@ class ActivityPriceWidget extends StatelessWidget {
         textBaseline: TextBaseline.alphabetic,
         children: [
           Text(
-            '$symbol${activity.originalPricePerParticipant!.toStringAsFixed(2)}',
+            '$symbol${Helpers.formatAmountNumber(activity.originalPricePerParticipant!)}',
             style: TextStyle(
               fontSize: fontSize * 0.65,
               color: tertiaryColor,
@@ -41,7 +42,7 @@ class ActivityPriceWidget extends StatelessWidget {
           ),
           SizedBox(width: fontSize * 0.35),
           Text(
-            '$symbol${activity.discountedPricePerParticipant!.toStringAsFixed(2)}',
+            '$symbol${Helpers.formatAmountNumber(activity.discountedPricePerParticipant!)}',
             style: TextStyle(
               fontSize: fontSize,
               fontWeight: FontWeight.bold,

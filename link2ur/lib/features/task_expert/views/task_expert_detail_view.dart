@@ -60,11 +60,14 @@ class TaskExpertDetailView extends StatelessWidget {
                     final expert = state.selectedExpert;
                     if (expert != null) {
                       final name = expert.displayNameWith(context.l10n);
+                      final shareTitle = context.l10n.taskExpertShareTitle(name);
+                      final shareDesc = context.l10n.taskExpertShareText(name);
                       final imageUrl = expert.avatar;
                       final shareFiles = await NativeShare.fileFromFirstImageUrl(imageUrl);
+                      if (!context.mounted) return;
                       await NativeShare.share(
-                        title: context.l10n.taskExpertShareTitle(name),
-                        description: context.l10n.taskExpertShareText(name),
+                        title: shareTitle,
+                        description: shareDesc,
                         url: 'https://link2ur.com/task-experts/${expert.id}',
                         files: shareFiles,
                       );

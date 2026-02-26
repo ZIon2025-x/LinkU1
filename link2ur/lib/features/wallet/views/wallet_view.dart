@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_radius.dart';
+import '../../../core/utils/helpers.dart';
 import '../../../core/utils/l10n_extension.dart';
 import '../../../core/widgets/loading_view.dart';
 import '../../../core/widgets/error_state_view.dart';
@@ -177,7 +178,7 @@ class _PointsCardState extends State<_PointsCard> {
             AppSpacing.vSm,
             // 未提现收入 — Connect available 余额（£）
             Text(
-              '£${(widget.connectBalance?.available ?? 0).toStringAsFixed(2)}',
+              Helpers.formatPrice(widget.connectBalance?.available ?? 0),
               style: const TextStyle(
                 fontSize: 48,
                 fontWeight: FontWeight.bold,
@@ -193,7 +194,7 @@ class _PointsCardState extends State<_PointsCard> {
               children: [
                 _BalanceStatItem(
                   label: context.l10n.walletTotalEarned,
-                  value: '£${(widget.account.totalEarned / 100).toStringAsFixed(2)}',
+                  value: Helpers.formatPrice(widget.account.totalEarned / 100),
                 ),
                 Container(
                   width: 1,
@@ -202,7 +203,7 @@ class _PointsCardState extends State<_PointsCard> {
                 ),
                 _BalanceStatItem(
                   label: context.l10n.walletTotalSpent,
-                  value: '£${(widget.account.totalSpent / 100).toStringAsFixed(2)}',
+                  value: Helpers.formatPrice(widget.account.totalSpent / 100),
                 ),
               ],
             ),

@@ -10,6 +10,7 @@ import '../../../core/utils/haptic_feedback.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_typography.dart';
 import '../../../core/design/app_radius.dart';
+import '../../../core/utils/helpers.dart';
 import '../../../core/utils/l10n_extension.dart';
 import '../../../core/utils/responsive.dart';
 import '../../../core/utils/sheet_adaptation.dart';
@@ -762,12 +763,14 @@ class _OfficialPrizeInfoCard extends StatelessWidget {
                 gradient: const LinearGradient(
                   colors: [Color(0xFFFFF8E1), Color(0xFFFFECB3)],
                 ),
-                borderRadius: BorderRadius.vertical(
-                  top: Radius.circular(AppRadius.large),
-                  bottom: isDrawn && winners.isNotEmpty
-                      ? Radius.zero
-                      : Radius.circular(AppRadius.large),
-                ),
+                borderRadius: isDrawn && winners.isNotEmpty
+                    ? const BorderRadius.vertical(
+                        top: AppRadius.circularLarge,
+                      )
+                    : const BorderRadius.vertical(
+                        top: AppRadius.circularLarge,
+                        bottom: AppRadius.circularLarge,
+                      ),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -916,8 +919,8 @@ class _OfficialPrizeInfoCard extends StatelessWidget {
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
                   color: isDark ? AppColors.cardBackgroundDark : Colors.white,
-                  borderRadius: BorderRadius.vertical(
-                    bottom: Radius.circular(AppRadius.large),
+                  borderRadius: const BorderRadius.vertical(
+                    bottom: AppRadius.circularLarge,
                   ),
                 ),
                 child: Column(
@@ -1313,7 +1316,7 @@ class _PriceView extends StatelessWidget {
               ),
             ),
             Text(
-              price.toStringAsFixed(2),
+              Helpers.formatAmountNumber(price),
               style: const TextStyle(
                 fontSize: 28,
                 fontWeight: FontWeight.bold,
@@ -1326,7 +1329,7 @@ class _PriceView extends StatelessWidget {
         if (activity.hasDiscount &&
             activity.originalPricePerParticipant != null)
           Text(
-            '£${activity.originalPricePerParticipant!.toStringAsFixed(2)}',
+            Helpers.formatPrice(activity.originalPricePerParticipant!),
             style: const TextStyle(
               fontSize: 14,
               decoration: TextDecoration.lineThrough,
@@ -2592,7 +2595,7 @@ class _ActivityTimeSlotCard extends StatelessWidget {
             if (slot.displayPrice != null) ...[
               const SizedBox(height: 4),
               Text(
-                '£${slot.displayPrice!.toStringAsFixed(0)}',
+                Helpers.formatPrice(slot.displayPrice!),
                 style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.bold,

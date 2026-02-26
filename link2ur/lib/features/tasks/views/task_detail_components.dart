@@ -21,6 +21,7 @@ import '../../../core/widgets/review_bottom_sheet.dart';
 import '../../../core/utils/l10n_extension.dart';
 import '../../../core/utils/sheet_adaptation.dart';
 import '../../../core/utils/date_formatter.dart';
+import '../../../core/utils/helpers.dart';
 import '../../../data/models/task.dart';
 import '../../../data/models/task_application.dart';
 import '../../../data/models/review.dart';
@@ -403,7 +404,6 @@ class CompletionEvidenceCard extends StatelessWidget {
                   imageUrl: url,
                   width: 100,
                   height: 100,
-                  fit: BoxFit.cover,
                 ),
               )).toList(),
             ),
@@ -805,11 +805,11 @@ class _ApplicationItem extends StatelessWidget {
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(Icons.price_change_outlined,
+                    const Icon(Icons.price_change_outlined,
                         size: 16, color: AppColors.primary),
                     const SizedBox(width: 4),
                     Text(
-                      '${context.l10n.taskApplicationExpectedAmount}: £${application.proposedPrice!.toStringAsFixed(2)}',
+                      '${context.l10n.taskApplicationExpectedAmount}: ${Helpers.formatPrice(application.proposedPrice!)}',
                       style: AppTypography.caption.copyWith(
                         color: AppColors.primary,
                         fontWeight: FontWeight.w600,
@@ -1268,7 +1268,7 @@ class RefundStatusCard extends StatelessWidget {
               const Spacer(),
               if (refundRequest.refundAmount != null)
                 Text(
-                  '£${refundRequest.refundAmount!.toStringAsFixed(2)}',
+                  Helpers.formatPrice(refundRequest.refundAmount!),
                   style: AppTypography.title3.copyWith(color: color),
                 ),
             ],
@@ -1867,7 +1867,7 @@ class _ApplyTaskSheetState extends State<ApplyTaskSheet> {
   void initState() {
     super.initState();
     final base = widget.task.baseReward ?? widget.task.reward;
-    if (base > 0) _amountController.text = base == base.truncateToDouble() ? base.toInt().toString() : base.toStringAsFixed(2);
+    if (base > 0) _amountController.text = Helpers.formatAmountNumber(base);
   }
 
   @override
@@ -2026,10 +2026,8 @@ class _ApplyTaskSheetState extends State<ApplyTaskSheet> {
                                 final base = widget.task.baseReward ??
                                     widget.task.reward;
                                 if (base > 0) {
-                                  _amountController.text = base ==
-                                          base.truncateToDouble()
-                                      ? base.toInt().toString()
-                                      : base.toStringAsFixed(2);
+                                  _amountController.text =
+                                      Helpers.formatAmountNumber(base);
                                 }
                               }
                             });
@@ -2157,7 +2155,7 @@ class _RefundRequestSheetState extends State<RefundRequestSheet> {
     if (widget.taskAmount <= 0) return;
     final pct = double.tryParse(value);
     if (pct != null && pct > 0) {
-      final amount = (widget.taskAmount * pct / 100).toStringAsFixed(2);
+      final amount = Helpers.formatAmountNumber(widget.taskAmount * pct / 100);
       _amountController.text = amount;
     }
   }
@@ -2679,7 +2677,7 @@ class _RefundHistoryItem extends StatelessWidget {
               const Spacer(),
               if (refund.refundAmount != null)
                 Text(
-                  '£${refund.refundAmount!.toStringAsFixed(2)}',
+                  Helpers.formatPrice(refund.refundAmount!),
                   style: AppTypography.bodyBold.copyWith(color: color),
                 ),
             ],

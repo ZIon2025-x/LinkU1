@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 
 import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_spacing.dart';
+import '../../../core/utils/helpers.dart';
 import '../../../core/design/app_radius.dart';
 import '../../../core/utils/l10n_extension.dart';
 import '../../../core/widgets/loading_view.dart';
@@ -387,7 +388,7 @@ class _TaskPaymentCard extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               Text(
-                '-£${payment.amount.abs().toStringAsFixed(2)}',
+                '-${Helpers.formatPrice(payment.amount.abs())}',
                 style: const TextStyle(
                   fontSize: 15,
                   fontWeight: FontWeight.w600,

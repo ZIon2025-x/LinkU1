@@ -4,6 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_radius.dart';
+import '../../../core/utils/helpers.dart';
 import '../../../core/utils/l10n_extension.dart';
 import '../../../core/utils/haptic_feedback.dart';
 import '../../../core/widgets/skeleton_view.dart';
@@ -398,7 +399,7 @@ class _ApplicationCard extends StatelessWidget {
   String _formatPrice(dynamic price) {
     if (price == null) return '0';
     final num p = price is num ? price : num.tryParse(price.toString()) ?? 0;
-    return p == p.toInt() ? p.toInt().toString() : p.toStringAsFixed(2);
+    return Helpers.formatAmountNumber(p);
   }
 
   void _showApproveConfirmation(BuildContext context) {

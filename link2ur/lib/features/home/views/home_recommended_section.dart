@@ -777,22 +777,16 @@ class _DesktopBannerRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final allBanners = <_BannerData>[
-      _BannerData(
-        title: null,
-        subtitle: null,
+      const _BannerData(
         localImage: AppAssets.fleaMarketBanner,
         gradient: AppColors.gradientGreen,
         icon: Icons.storefront,
-        linkType: 'internal',
         linkUrl: '/flea-market',
       ),
-      _BannerData(
-        title: null,
-        subtitle: null,
+      const _BannerData(
         localImage: AppAssets.studentVerificationBanner,
         gradient: AppColors.gradientIndigo,
         icon: Icons.school,
-        linkType: 'internal',
         linkUrl: '/student-verification',
       ),
       for (final b in serverBanners)
@@ -951,9 +945,7 @@ class _DesktopTaskCardState extends State<_DesktopTaskCard> {
                               imageUrl: task.firstImage!,
                               width: 280,
                               height: 210,
-                              fit: BoxFit.cover,
                               memCacheWidth: 360,
-                              memCacheHeight: 270,
                             )
                           : Container(
                               decoration: BoxDecoration(
@@ -1124,7 +1116,7 @@ class _DesktopTaskCardState extends State<_DesktopTaskCard> {
                                 borderRadius: BorderRadius.circular(999),
                               ),
                               child: Text(
-                                '£${task.reward.toStringAsFixed(0)}',
+                                Helpers.formatPrice(task.reward),
                                 style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Colors.white),
                               ),
                             ),

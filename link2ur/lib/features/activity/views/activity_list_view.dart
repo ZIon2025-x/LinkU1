@@ -6,6 +6,7 @@ import '../../../core/constants/app_constants.dart';
 import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_radius.dart';
+import '../../../core/utils/helpers.dart';
 import '../../../core/utils/l10n_extension.dart';
 import '../../../core/utils/haptic_feedback.dart';
 import '../../../core/widgets/animated_list_item.dart';
@@ -519,7 +520,6 @@ class ActivityCardView extends StatelessWidget {
   Widget _buildPriceDisplay(Activity activity) {
     final price = activity.discountedPricePerParticipant ??
         activity.originalPricePerParticipant;
-    const symbol = '£';
 
     if (price == null || price == 0) {
       return const Text(
@@ -536,9 +536,9 @@ class ActivityCardView extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.baseline,
       textBaseline: TextBaseline.alphabetic,
       children: [
-        Text(
-          symbol,
-          style: const TextStyle(
+        const Text(
+          '£',
+          style: TextStyle(
             fontSize: 12,
             fontWeight: FontWeight.bold,
             color: AppColors.primary,
@@ -546,7 +546,7 @@ class ActivityCardView extends StatelessWidget {
         ),
         const SizedBox(width: 2),
         Text(
-          price.toStringAsFixed(0),
+          Helpers.formatAmountNumber(price),
           style: const TextStyle(
             fontSize: 18,
             fontWeight: FontWeight.bold,

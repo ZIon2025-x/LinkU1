@@ -9,7 +9,6 @@ import '../../../data/repositories/flea_market_repository.dart';
 import '../../../data/repositories/task_expert_repository.dart';
 import '../../../data/repositories/activity_repository.dart';
 import '../../../data/repositories/leaderboard_repository.dart';
-import '../../../data/models/forum.dart';
 import '../../../data/services/storage_service.dart';
 import '../../../core/utils/logger.dart';
 
@@ -246,7 +245,6 @@ class SearchBloc extends Bloc<SearchEvent, SearchState> {
       leaderboardResults: [],
       leaderboardItemResults: [],
       forumCategoryResults: [],
-      errorMessage: null,
     ));
   }
 
@@ -443,26 +441,28 @@ class SearchBloc extends Bloc<SearchEvent, SearchState> {
       final lower = query.toLowerCase();
       return categories
           .where((c) {
-            final name = (c.nameZh ?? c.name ?? '').toLowerCase();
+            final name = (c.nameZh ?? c.name).toLowerCase();
             final nameEn = (c.nameEn ?? '').toLowerCase();
-            final desc = (c.descriptionZh ?? c.description ?? c.descriptionEn ?? '')
-                .toLowerCase();
+            final descRaw = c.descriptionZh ?? c.description ?? c.descriptionEn;
+            final desc = (descRaw ?? '').toLowerCase();
             return name.contains(lower) ||
                 nameEn.contains(lower) ||
                 desc.contains(lower);
           })
           .take(10)
-          .map((c) => {
-                'id': c.id,
-                'title': locale != null
-                    ? c.displayName(locale)
-                    : (c.nameZh ?? c.nameEn ?? c.name),
-                'type': 'forum_category',
-                'description':
-                    locale != null
-                        ? (c.displayDescription(locale) ?? '')
-                        : (c.description ?? c.descriptionZh ?? c.descriptionEn ?? ''),
-              })
+          .map((c) {
+            final descRaw = c.description ?? c.descriptionZh ?? c.descriptionEn;
+            return {
+              'id': c.id,
+              'title': locale != null
+                  ? c.displayName(locale)
+                  : (c.nameZh ?? c.nameEn ?? c.name),
+              'type': 'forum_category',
+              'description': locale != null
+                  ? (c.displayDescription(locale) ?? '')
+                  : (descRaw ?? ''),
+            };
+          })
           .toList();
     } catch (_) {
       return [];

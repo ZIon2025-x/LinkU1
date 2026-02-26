@@ -9,6 +9,7 @@ import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_radius.dart';
 import '../../../core/design/app_typography.dart';
 import '../../../core/router/app_router.dart';
+import '../../../core/utils/helpers.dart';
 import '../../../core/utils/l10n_extension.dart';
 import '../../../core/utils/haptic_feedback.dart';
 import '../../../core/utils/responsive.dart';
@@ -328,21 +329,21 @@ class _PriceAndTitleCard extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.baseline,
             textBaseline: TextBaseline.alphabetic,
             children: [
-              Text(
+              const Text(
                 '£',
                 style: TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
-                  color: const Color(0xFFE84D3D),
+                  color: Color(0xFFE84D3D),
                 ),
               ),
               const SizedBox(width: 2),
               Text(
-                service.basePrice.toStringAsFixed(2),
-                style: TextStyle(
+                Helpers.formatAmountNumber(service.basePrice),
+                style: const TextStyle(
                   fontSize: 32,
                   fontWeight: FontWeight.bold,
-                  color: const Color(0xFFE84D3D),
+                  color: Color(0xFFE84D3D),
                 ),
               ),
               const Spacer(),
@@ -1011,7 +1012,7 @@ class _RelatedActivityMiniCard extends StatelessWidget {
                   ],
                 ),
               ),
-              Icon(
+              const Icon(
                 Icons.chevron_right,
                 size: 20,
                 color: AppColors.primary,
@@ -1387,8 +1388,8 @@ class _ApplyServiceSheetState extends State<_ApplyServiceSheet> {
                             decimal: true),
                         decoration: InputDecoration(
                           prefixText: '£ ',
-                          hintText: widget.service.basePrice
-                              .toStringAsFixed(2),
+                          hintText: Helpers.formatAmountNumber(
+                              widget.service.basePrice),
                           border: OutlineInputBorder(
                             borderRadius:
                                 BorderRadius.circular(AppRadius.medium),

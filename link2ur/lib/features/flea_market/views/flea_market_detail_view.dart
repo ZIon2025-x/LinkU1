@@ -17,6 +17,7 @@ import '../../../core/utils/native_share.dart';
 import '../../../core/utils/l10n_extension.dart';
 import '../../../core/utils/responsive.dart';
 import '../../../core/router/page_transitions.dart';
+import '../../../core/utils/helpers.dart';
 import '../../../core/utils/sheet_adaptation.dart';
 import '../../../data/repositories/flea_market_repository.dart';
 import '../../../data/models/flea_market.dart';
@@ -629,8 +630,8 @@ class _FleaMarketDetailContent extends StatelessWidget {
       BuildContext context, FleaMarketState state, FleaMarketItem item) {
     final counterPrice = item.userPurchaseRequestProposedPrice;
     final priceText = counterPrice != null
-        ? '£${counterPrice.toStringAsFixed(2)}'
-        : '£${item.price.toStringAsFixed(2)}';
+        ? Helpers.formatPrice(counterPrice)
+        : Helpers.formatPrice(item.price);
     final l10n = context.l10n;
 
     return Column(
@@ -976,10 +977,7 @@ class _FleaMarketPurchaseSheetState extends State<_FleaMarketPurchaseSheet> {
   void initState() {
     super.initState();
     if (widget.item.price > 0) {
-      _amountController.text = widget.item.price ==
-              widget.item.price.truncateToDouble()
-          ? widget.item.price.toInt().toString()
-          : widget.item.price.toStringAsFixed(2);
+      _amountController.text = Helpers.formatAmountNumber(widget.item.price);
     }
   }
 
@@ -1159,7 +1157,7 @@ class _FleaMarketPurchaseSheetState extends State<_FleaMarketPurchaseSheet> {
                                     )
                                   else
                                     Text(
-                                      '£${widget.item.price.toStringAsFixed(2)}',
+                                      Helpers.formatPrice(widget.item.price),
                                       style: const TextStyle(
                                         fontSize: 22,
                                         fontWeight: FontWeight.bold,
@@ -1259,10 +1257,9 @@ class _FleaMarketPurchaseSheetState extends State<_FleaMarketPurchaseSheet> {
                                 if (value &&
                                     _amountController.text.trim().isEmpty &&
                                     widget.item.price > 0) {
-                                  _amountController.text = widget.item.price ==
-                                          widget.item.price.truncateToDouble()
-                                      ? widget.item.price.toInt().toString()
-                                      : widget.item.price.toStringAsFixed(2);
+                                  _amountController.text =
+                                      Helpers.formatAmountNumber(
+                                          widget.item.price);
                                 }
                               });
                             },
@@ -1698,7 +1695,7 @@ class _PriceTitleCard extends StatelessWidget {
   }
 
   String get _priceNumber {
-    return item.price.toStringAsFixed(2);
+    return Helpers.formatAmountNumber(item.price);
   }
 
   String _formatDate(BuildContext context, DateTime date) {
@@ -2189,7 +2186,7 @@ class _PurchaseRequestItem extends StatelessWidget {
                     ),
                     if (request.proposedPrice != null)
                       Text(
-                        '£${request.proposedPrice!.toStringAsFixed(2)}',
+                        Helpers.formatPrice(request.proposedPrice!),
                         style: const TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.w600,
@@ -2218,7 +2215,7 @@ class _PurchaseRequestItem extends StatelessWidget {
                       size: 14, color: Colors.orange),
                   const SizedBox(width: 4),
                   Text(
-                    '${context.l10n.fleaMarketSellerNegotiateLabel} £${request.sellerCounterPrice!.toStringAsFixed(2)}',
+                    '${context.l10n.fleaMarketSellerNegotiateLabel} ${Helpers.formatPrice(request.sellerCounterPrice!)}',
                     style: const TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w500,
@@ -2316,7 +2313,9 @@ class _PurchaseRequestItem extends StatelessWidget {
 
   void _showCounterOfferDialog(BuildContext context) {
     final controller = TextEditingController(
-      text: request.proposedPrice?.toStringAsFixed(2) ?? '',
+      text: request.proposedPrice != null
+        ? Helpers.formatAmountNumber(request.proposedPrice!)
+        : '',
     );
     showDialog(
       context: context,

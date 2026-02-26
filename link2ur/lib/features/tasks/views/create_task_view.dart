@@ -9,6 +9,7 @@ import 'package:intl/intl.dart';
 import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_radius.dart';
+import '../../../core/utils/helpers.dart';
 import '../../../core/utils/l10n_extension.dart';
 import '../../../core/widgets/app_feedback.dart';
 import '../../../core/widgets/buttons.dart';
@@ -106,7 +107,7 @@ class _CreateTaskContentState extends State<_CreateTaskContent> {
     if (d != null) {
       if (d.title != null) _titleController.text = d.title!;
       if (d.description != null) _descriptionController.text = d.description!;
-      if (d.reward != null) _rewardController.text = d.reward!.toStringAsFixed(2);
+      if (d.reward != null) _rewardController.text = Helpers.formatAmountNumber(d.reward!);
       if (d.currency != null) _selectedCurrency = d.currency!;
       if (d.location != null) _location = d.location;
       if (d.deadline != null) _deadline = d.deadline;
@@ -187,7 +188,7 @@ class _CreateTaskContentState extends State<_CreateTaskContent> {
 
     final reward = double.tryParse(_rewardController.text) ?? 0;
 
-    List<String> imageUrls = [];
+    final List<String> imageUrls = [];
     if (_selectedImages.isNotEmpty) {
       setState(() => _isUploadingImages = true);
       try {
@@ -374,7 +375,7 @@ class _CreateTaskContentState extends State<_CreateTaskContent> {
                   title: const Text('公开任务', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
                   subtitle: Text(
                     _isPublic ? '所有人可见' : '仅自己可见',
-                    style: TextStyle(fontSize: 13, color: AppColors.textSecondaryLight),
+                    style: const TextStyle(fontSize: 13, color: AppColors.textSecondaryLight),
                   ),
                   value: _isPublic,
                   onChanged: (v) => setState(() => _isPublic = v),

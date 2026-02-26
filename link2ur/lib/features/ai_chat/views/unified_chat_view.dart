@@ -12,8 +12,6 @@ import '../../../data/models/ai_chat.dart';
 import '../../../data/models/customer_service.dart';
 import '../../../data/repositories/common_repository.dart';
 import '../../../data/services/ai_chat_service.dart';
-import '../../../data/models/ai_chat.dart';
-import '../../../data/services/ai_chat_service.dart';
 import '../bloc/unified_chat_bloc.dart';
 import '../widgets/ai_message_bubble.dart';
 import '../widgets/tool_call_card.dart';
@@ -92,10 +90,8 @@ class _UnifiedChatContentState extends State<_UnifiedChatContent> {
       useSafeArea: true,
       builder: (sheetContext) {
         return DraggableScrollableSheet(
-          initialChildSize: 0.5,
           minChildSize: 0.3,
           maxChildSize: 0.9,
-          expand: false,
           builder: (_, scrollController) {
             return FutureBuilder<List<AIConversation>>(
               future: aiChatService.getConversations(),

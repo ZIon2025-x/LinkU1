@@ -533,7 +533,6 @@ class _HeroSection extends StatelessWidget {
                     imageUrl: leaderboard.coverImage!,
                     width: 400,
                     height: 240,
-                    fit: BoxFit.cover,
                   )
                 : Container(
                     decoration: BoxDecoration(
@@ -812,6 +811,7 @@ class _RankItemCard extends StatelessWidget {
                   upvotes: item.upvotes,
                   downvotes: item.downvotes,
                   height: 5,
+                  showNetVotes: false,
                 ),
               ],
             ),

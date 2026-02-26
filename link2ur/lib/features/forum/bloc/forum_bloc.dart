@@ -78,6 +78,16 @@ class ForumFavoritePost extends ForumEvent {
   List<Object?> get props => [postId];
 }
 
+/// 收藏/取消收藏板块（分类）
+class ForumToggleCategoryFavorite extends ForumEvent {
+  const ForumToggleCategoryFavorite(this.categoryId);
+
+  final int categoryId;
+
+  @override
+  List<Object?> get props => [categoryId];
+}
+
 class ForumLoadPostDetail extends ForumEvent {
   const ForumLoadPostDetail(this.postId);
 
@@ -336,6 +346,7 @@ class ForumBloc extends Bloc<ForumEvent, ForumState> {
     on<ForumCategoryChanged>(_onCategoryChanged);
     on<ForumLikePost>(_onLikePost);
     on<ForumFavoritePost>(_onFavoritePost);
+    on<ForumToggleCategoryFavorite>(_onToggleCategoryFavorite);
     on<ForumLoadPostDetail>(_onLoadPostDetail);
     on<ForumLoadReplies>(_onLoadReplies);
     on<ForumCreatePost>(_onCreatePost);
@@ -641,6 +652,30 @@ class ForumBloc extends Bloc<ForumEvent, ForumState> {
       emit(state.copyWith(
         posts: originalPosts,
         selectedPost: originalSelectedPost,
+        errorMessage: e is AppException ? e.message : e.toString(),
+      ));
+    }
+  }
+
+  /// 收藏/取消收藏板块 — 乐观更新
+  Future<void> _onToggleCategoryFavorite(
+    ForumToggleCategoryFavorite event,
+    Emitter<ForumState> emit,
+  ) async {
+    final original = state.categories;
+    final updated = state.categories.map((c) {
+      if (c.id == event.categoryId) {
+        return c.copyWith(isFavorited: !c.isFavorited);
+      }
+      return c;
+    }).toList();
+    emit(state.copyWith(categories: updated));
+    try {
+      await _forumRepository.toggleCategoryFavorite(event.categoryId);
+    } catch (e) {
+      AppLogger.error('Failed to toggle category favorite', e);
+      emit(state.copyWith(
+        categories: original,
         errorMessage: e is AppException ? e.message : e.toString(),
       ));
     }

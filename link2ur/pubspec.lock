@@ -885,6 +885,38 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "4.9.0"
+  keyboard_insets:
+    dependency: "direct main"
+    description:
+      name: keyboard_insets
+      sha256: bae35291d08174bc3d0a65fdb474fdec03ad73ac1cf0d43153c0997f87d5a8f0
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.1.2"
+  keyboard_insets_mobile:
+    dependency: transitive
+    description:
+      name: keyboard_insets_mobile
+      sha256: "598e66e5db31844a5722e526476e3173444af2ce92ca852920482e0cd799677d"
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.1.2"
+  keyboard_insets_platform_interface:
+    dependency: transitive
+    description:
+      name: keyboard_insets_platform_interface
+      sha256: "8b4d6c4afe0ff5d15480505d44ecc8a24d166d08f08c20994c7a59b12872e3d6"
+      url: "https://pub.dev"
+    source: hosted
+    version: "1.0.0"
+  keyboard_insets_web:
+    dependency: transitive
+    description:
+      name: keyboard_insets_web
+      sha256: ec5647cea258ff468ffc44086ef9d3a378c781fb9a8b74fc29b3b88ed3e05692
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.1.1"
   leak_tracker:
     dependency: transitive
     description:

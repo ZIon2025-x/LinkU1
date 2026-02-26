@@ -251,13 +251,12 @@ class _SubmitLeaderboardItemContentState
                                     border: Border.all(
                                       color: AppColors.primary
                                           .withValues(alpha: 0.3),
-                                      style: BorderStyle.solid,
                                     ),
                                   ),
                                   child: Column(
                                     mainAxisAlignment: MainAxisAlignment.center,
                                     children: [
-                                      Icon(Icons.add_photo_alternate_outlined,
+                                      const Icon(Icons.add_photo_alternate_outlined,
                                           size: 28, color: AppColors.primary),
                                       const SizedBox(height: 4),
                                       Text(
@@ -296,7 +295,7 @@ class _SubmitLeaderboardItemContentState
                                       child: GestureDetector(
                                         onTap: () => _removeImage(idx),
                                         child: Container(
-                                          decoration: BoxDecoration(
+                                          decoration: const BoxDecoration(
                                             color: Colors.black54,
                                             shape: BoxShape.circle,
                                           ),

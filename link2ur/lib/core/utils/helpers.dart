@@ -11,12 +11,17 @@ class Helpers {
   /// 货币符号（统一英镑）
   static const String currencySymbol = '£';
 
-  /// 格式化价格（统一英镑）
+  /// 格式化价格（统一英镑）：整数不显示小数，否则保留两位
   static String formatPrice(double price, {String currency = 'GBP'}) {
-    if (price == price.roundToDouble()) {
-      return '$currencySymbol${price.toInt()}';
-    }
-    return '$currencySymbol${price.toStringAsFixed(2)}';
+    return '$currencySymbol${formatAmountNumber(price)}';
+  }
+
+  /// 仅格式化金额数字部分：整数返回无小数（如 "12"），否则两位小数（如 "12.34"）
+  /// 用于 UI 中单独显示货币符号 + 数字，或输入框预填
+  static String formatAmountNumber(num amount) {
+    final d = amount.toDouble();
+    if (d == d.truncateToDouble()) return d.toInt().toString();
+    return d.toStringAsFixed(2);
   }
 
   // ==================== 数字格式化 ====================

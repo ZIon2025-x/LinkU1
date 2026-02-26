@@ -10,6 +10,7 @@ import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_radius.dart';
 import '../../../core/design/app_typography.dart';
 import '../../../core/utils/debouncer.dart';
+import '../../../core/utils/helpers.dart';
 import '../../../core/utils/l10n_extension.dart';
 import '../../../core/utils/responsive.dart';
 import '../../../core/utils/sheet_adaptation.dart';
@@ -759,7 +760,6 @@ class _TaskGridCard extends StatelessWidget {
                           imageUrl: task.firstImage!,
                           width: w,
                           height: h,
-                          fit: BoxFit.cover,
                           memCacheWidth: (w * dpr).round(),
                           memCacheHeight: (h * dpr).round(),
                         ),
@@ -957,9 +957,7 @@ class _TaskGridCard extends StatelessWidget {
   Widget _buildPriceBadge() {
     if (task.reward <= 0) return const SizedBox.shrink();
 
-    final priceText = task.reward.truncateToDouble() == task.reward
-        ? task.reward.toStringAsFixed(0)
-        : task.reward.toStringAsFixed(2);
+    final priceText = Helpers.formatAmountNumber(task.reward);
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),

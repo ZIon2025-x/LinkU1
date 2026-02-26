@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_radius.dart';
+import '../../../core/utils/helpers.dart';
 import '../../../core/utils/l10n_extension.dart';
 import '../../../core/utils/error_localizer.dart';
 import '../../../core/utils/logger.dart';
@@ -1109,7 +1110,7 @@ class _TransactionDetailSheet extends StatelessWidget {
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      '£${transaction.amount.abs().toStringAsFixed(2)}',
+                      Helpers.formatPrice(transaction.amount.abs()),
                       style: TextStyle(
                         fontSize: 36,
                         fontWeight: FontWeight.w700,

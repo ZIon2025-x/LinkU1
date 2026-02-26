@@ -431,7 +431,6 @@ class _FleaMarketItemCard extends StatelessWidget {
                                   imageUrl: item.firstImage!,
                                   width: cardWidth,
                                   height: imageHeight,
-                                  fit: BoxFit.cover,
                                 ),
                               )
                             : Container(

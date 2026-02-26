@@ -1,4 +1,3 @@
-import 'package:cross_file/cross_file.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import 'package:share_plus/share_plus.dart';
 
@@ -43,7 +42,7 @@ class NativeShare {
     }
     final text = parts.join('\n\n');
     final uri = (url != null && url.trim().isNotEmpty)
-        ? Uri.tryParse(url!.trim())
+        ? Uri.tryParse(url.trim())
         : null;
 
     await SharePlus.instance.share(

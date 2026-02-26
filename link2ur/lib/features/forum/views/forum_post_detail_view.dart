@@ -179,22 +179,25 @@ class _ForumPostDetailViewState extends State<ForumPostDetailView> {
       )
         ..add(ForumLoadPostDetail(widget.postId))
         ..add(ForumLoadReplies(widget.postId)),
-      child: BlocListener<ForumBloc, ForumState>(
-        listenWhen: (prev, curr) =>
-            !prev.reportSuccess && curr.reportSuccess ||
-            prev.errorMessage != curr.errorMessage && curr.errorMessage != null,
-        listener: (context, state) {
-          if (state.reportSuccess) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(context.l10n.commonReportSubmitted)),
-            );
-          } else if (state.errorMessage != null) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(state.errorMessage!)),
-            );
-          }
-        },
-        child: Scaffold(
+      child: Builder(
+        builder: (context) {
+          // context 此处才能拿到本页的 ForumBloc，AppBar 的分享/编辑/删除等依赖 selectedPost
+          return BlocListener<ForumBloc, ForumState>(
+            listenWhen: (prev, curr) =>
+                !prev.reportSuccess && curr.reportSuccess ||
+                prev.errorMessage != curr.errorMessage && curr.errorMessage != null,
+            listener: (context, state) {
+              if (state.reportSuccess) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text(context.l10n.commonReportSubmitted)),
+                );
+              } else if (state.errorMessage != null) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text(state.errorMessage!)),
+                );
+              }
+            },
+            child: Scaffold(
         resizeToAvoidBottomInset: true,
         backgroundColor: AppColors.backgroundFor(Theme.of(context).brightness),
         appBar: AppBar(
@@ -206,6 +209,9 @@ class _ForumPostDetailViewState extends State<ForumPostDetailView> {
                 AppHaptics.selection();
                 final post = context.read<ForumBloc>().state.selectedPost;
                 final locale = Localizations.localeOf(context);
+                final shareTitle = post != null
+                    ? post.displayTitle(locale)
+                    : context.l10n.forumPostDetail;
                 final contentForDesc = post != null
                     ? (post.displayContent(locale) ?? post.content)
                     : null;
@@ -213,10 +219,9 @@ class _ForumPostDetailViewState extends State<ForumPostDetailView> {
                 final description = rawDesc.length > 200 ? '${rawDesc.substring(0, 200)}...' : rawDesc;
                 final imageUrl = post?.images.isNotEmpty == true ? post!.images.first : null;
                 final shareFiles = await NativeShare.fileFromFirstImageUrl(imageUrl);
+                if (!context.mounted) return;
                 await NativeShare.share(
-                  title: post != null
-                      ? post.displayTitle(locale)
-                      : context.l10n.forumPostDetail,
+                  title: shareTitle,
                   description: description,
                   url: 'https://link2ur.com/forum/posts/${widget.postId}',
                   files: shareFiles,
@@ -430,14 +435,16 @@ class _ForumPostDetailViewState extends State<ForumPostDetailView> {
               ],
             );
           },
-            ),
-          ),
+        ),
+        ),
         ),
         // 底部回复栏 - 对标iOS bottomReplyBar with ultraThinMaterial
         bottomNavigationBar: _buildBottomReplyBar(context),
-      ),
-      ),
-    );
+          ),
+        );
+      },
+    ),
+  );
   }
 
   Widget _buildBottomReplyBar(BuildContext context) {
@@ -1291,7 +1298,6 @@ class _PostImageRow extends StatelessWidget {
                 imageUrl: images[index],
                 width: size,
                 height: size,
-                fit: BoxFit.cover,
               ),
             ),
           );
