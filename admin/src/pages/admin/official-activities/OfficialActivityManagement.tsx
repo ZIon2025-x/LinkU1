@@ -42,14 +42,15 @@ interface OfficialActivity {
   images?: string[];
   is_public: boolean;
   status: ActivityStatus;
+  is_drawn?: boolean;
   applicant_count?: number;
   created_at: string;
   updated_at?: string;
 }
 
 interface Applicant {
-  id: number;
   user_id: string;
+  name?: string;
   user_name?: string;
   status: string;
   applied_at: string;
@@ -138,6 +139,11 @@ async function drawActivity(id: number) {
   return res.data;
 }
 
+async function removeActivityApplicant(activityId: number, userId: string) {
+  const res = await api.delete(`/api/admin/official/activities/${activityId}/applicants/${userId}`);
+  return res.data;
+}
+
 // ==================== Label maps ====================
 
 const activityTypeLabels: Record<ActivityType, string> = {
@@ -154,6 +160,7 @@ const prizeTypeLabels: Record<PrizeType, string> = {
 
 const statusColors: Record<string, { bg: string; color: string }> = {
   active: { bg: '#d4edda', color: '#155724' },
+  open: { bg: '#d4edda', color: '#155724' },   // 后端进行中状态
   completed: { bg: '#cce5ff', color: '#004085' },
   cancelled: { bg: '#f8d7da', color: '#721c24' },
   drawn: { bg: '#fff3cd', color: '#856404' },
@@ -161,6 +168,7 @@ const statusColors: Record<string, { bg: string; color: string }> = {
 
 const statusLabels: Record<string, string> = {
   active: '进行中',
+  open: '进行中',   // 后端返回的进行中状态
   completed: '已完成',
   cancelled: '已取消',
   drawn: '已开奖',
@@ -183,6 +191,7 @@ const OfficialActivityManagement: React.FC = () => {
   const [applicants, setApplicants] = useState<Applicant[]>([]);
   const [applicantsLoading, setApplicantsLoading] = useState(false);
   const [applicantsActivityTitle, setApplicantsActivityTitle] = useState('');
+  const [applicantsActivity, setApplicantsActivity] = useState<OfficialActivity | null>(null);
 
   // ==================== Official Account ====================
 
@@ -384,6 +393,7 @@ const OfficialActivityManagement: React.FC = () => {
 
   const handleViewApplicants = useCallback(async (activity: OfficialActivity) => {
     setApplicantsActivityTitle(activity.title);
+    setApplicantsActivity(activity);
     setApplicantsVisible(true);
     setApplicantsLoading(true);
     try {
@@ -396,6 +406,28 @@ const OfficialActivityManagement: React.FC = () => {
       setApplicantsLoading(false);
     }
   }, []);
+
+  const handleRemoveApplicant = useCallback(async (userId: string) => {
+    if (!applicantsActivity) return;
+    Modal.confirm({
+      title: '移除参与者',
+      content: '确定要将该用户从本活动中移除吗？移除后其不再参与抽奖/抢位。',
+      okText: '移除',
+      okButtonProps: { danger: true },
+      cancelText: '取消',
+      onOk: async () => {
+        try {
+          await removeActivityApplicant(applicantsActivity.id, userId);
+          message.success('已移除');
+          const data = await getActivityApplicants(applicantsActivity.id);
+          setApplicants(data.applicants || data.items || data || []);
+          activitiesTable.refresh();
+        } catch (error: any) {
+          message.error(getErrorMessage(error));
+        }
+      },
+    });
+  }, [applicantsActivity, activitiesTable]);
 
   const handleDraw = useCallback((activity: OfficialActivity) => {
     Modal.confirm({
@@ -506,7 +538,7 @@ const OfficialActivityManagement: React.FC = () => {
             报名者
           </button>
           {record.activity_type === 'lottery' &&
-            record.status === 'active' &&
+            (record.status === 'active' || record.status === 'open') &&
             record.draw_mode === 'manual' && (
               <button
                 onClick={() => handleDraw(record)}
@@ -515,7 +547,7 @@ const OfficialActivityManagement: React.FC = () => {
                 开奖
               </button>
             )}
-          {record.status === 'active' && (
+          {(record.status === 'active' || record.status === 'open') && (
             <button
               onClick={() => handleCancel(record)}
               style={actionBtnStyle('#dc3545', 'white')}
@@ -528,19 +560,21 @@ const OfficialActivityManagement: React.FC = () => {
     },
   ];
 
+  const statusLabelMap: Record<string, { bg: string; color: string; label: string }> = {
+    pending: { bg: '#cce5ff', color: '#004085', label: '待开奖' },
+    attending: { bg: '#cce5ff', color: '#004085', label: '已占位' },
+    won: { bg: '#d4edda', color: '#155724', label: '中奖' },
+    lost: { bg: '#f8d7da', color: '#721c24', label: '未中奖' },
+  };
+
   const applicantColumns: Column<Applicant>[] = [
-    { key: 'user_name', title: '用户', width: 150, render: (_, r) => r.user_name || r.user_id },
+    { key: 'user', title: '用户', width: 150, render: (_, r) => r.name || r.user_name || r.user_id },
     {
       key: 'status',
       title: '状态',
       width: 100,
       render: (_, r) => {
-        const map: Record<string, { bg: string; color: string; label: string }> = {
-          applied: { bg: '#cce5ff', color: '#004085', label: '已报名' },
-          won: { bg: '#d4edda', color: '#155724', label: '中奖' },
-          not_won: { bg: '#f8d7da', color: '#721c24', label: '未中奖' },
-        };
-        const s = map[r.status] || { bg: '#f0f0f0', color: '#333', label: r.status };
+        const s = statusLabelMap[r.status] || { bg: '#f0f0f0', color: '#333', label: r.status };
         return (
           <span style={{ padding: '2px 8px', borderRadius: '4px', background: s.bg, color: s.color, fontSize: '12px' }}>
             {s.label}
@@ -554,6 +588,23 @@ const OfficialActivityManagement: React.FC = () => {
       width: 160,
       render: (_, r) => new Date(r.applied_at).toLocaleString('zh-CN'),
     },
+    ...(applicantsActivity && applicantsActivity.is_drawn !== true
+      ? [{
+          key: 'actions',
+          title: '操作',
+          width: 80,
+          render: (_: unknown, r: Applicant) =>
+            (r.status === 'pending' || r.status === 'attending') ? (
+              <button
+                type="button"
+                onClick={() => handleRemoveApplicant(r.user_id)}
+                style={actionBtnStyle('#dc3545', 'white')}
+              >
+                移除
+              </button>
+            ) : null,
+        } as Column<Applicant>]
+      : []),
   ];
 
   // ==================== Modal footer ====================
@@ -1030,9 +1081,9 @@ const OfficialActivityManagement: React.FC = () => {
       {/* ==================== Applicants Modal ==================== */}
       <AdminModal
         isOpen={applicantsVisible}
-        onClose={() => setApplicantsVisible(false)}
+        onClose={() => { setApplicantsVisible(false); setApplicantsActivity(null); }}
         title={`报名者 — ${applicantsActivityTitle}`}
-        width="600px"
+        width="640px"
       >
         <div style={{ padding: '10px 0' }}>
           {applicantsLoading ? (
@@ -1043,7 +1094,7 @@ const OfficialActivityManagement: React.FC = () => {
             <AdminTable
               columns={applicantColumns}
               data={applicants}
-              rowKey="id"
+              rowKey="user_id"
               emptyText="暂无报名者"
             />
           )}

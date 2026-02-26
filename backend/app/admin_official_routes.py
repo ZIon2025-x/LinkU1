@@ -387,6 +387,41 @@ async def get_activity_applicants(
     }
 
 
+@admin_official_router.delete("/activities/{activity_id}/applicants/{user_id}", response_model=dict)
+async def remove_activity_applicant(
+    activity_id: int,
+    user_id: str,
+    db: AsyncSession = Depends(get_async_db_dependency),
+    admin: models.AdminUser = Depends(get_current_admin_async),
+):
+    """移除参与官方活动的用户（仅未开奖时可用；移除后该用户不再参与抽奖/抢位）"""
+    activity_result = await db.execute(
+        select(models.Activity).where(
+            models.Activity.id == activity_id,
+            models.Activity.activity_type.in_(["lottery", "first_come"]),
+        )
+    )
+    activity = activity_result.scalar_one_or_none()
+    if not activity:
+        raise HTTPException(status_code=404, detail="官方活动不存在")
+    if activity.is_drawn:
+        raise HTTPException(status_code=400, detail="已开奖的活动不能移除参与者")
+
+    app_result = await db.execute(
+        select(models.OfficialActivityApplication).where(
+            models.OfficialActivityApplication.activity_id == activity_id,
+            models.OfficialActivityApplication.user_id == user_id,
+        )
+    )
+    app = app_result.scalar_one_or_none()
+    if not app:
+        raise HTTPException(status_code=404, detail="该用户未报名此活动")
+
+    await db.delete(app)
+    await db.commit()
+    return {"success": True, "message": "已移除该参与者"}
+
+
 @admin_official_router.post("/activities/{activity_id}/draw", response_model=dict)
 async def manual_draw(
     activity_id: int,
