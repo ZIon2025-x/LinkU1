@@ -1,6 +1,5 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
+import 'package:flutter_markdown/flutter_markdown.dart';
 
 import '../../../core/constants/app_assets.dart';
 import '../../../core/design/app_colors.dart';
@@ -62,17 +61,30 @@ class AIMessageBubble extends StatelessWidget {
                       : const Radius.circular(AppRadius.large),
                 ),
               ),
-              child: SelectableText(
-                message.content,
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  color: isUser
-                      ? Colors.white
-                      : isDark
-                          ? Colors.white
-                          : Colors.black87,
-                  height: 1.4,
-                ),
-              ),
+              child: isUser
+                  ? SelectableText(
+                      message.content,
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: Colors.white,
+                        height: 1.4,
+                      ),
+                    )
+                  : MarkdownBody(
+                      data: message.content,
+                      styleSheet: MarkdownStyleSheet.fromTheme(theme).copyWith(
+                        p: theme.textTheme.bodyMedium?.copyWith(
+                          color: isDark ? Colors.white : Colors.black87,
+                          height: 1.4,
+                        ),
+                        code: theme.textTheme.bodySmall?.copyWith(
+                          fontFamily: 'monospace',
+                          backgroundColor: isDark
+                              ? const Color(0xFF1C1C1E)
+                              : const Color(0xFFE8E8E8),
+                        ),
+                      ),
+                      selectable: true,
+                    ),
             ),
           ),
           if (isUser) const SizedBox(width: AppSpacing.sm),
@@ -145,91 +157,28 @@ class StreamingBubble extends StatelessWidget {
               ),
               child: content.isEmpty
                   ? _ThinkingIndicator(isDark: isDark)
-                  : _TypewriterText(
-                      content: content,
-                      isDark: isDark,
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                        color: isDark ? Colors.white : Colors.black87,
-                        height: 1.4,
-                      ),
+                  : Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        MarkdownBody(
+                          data: content,
+                          styleSheet: MarkdownStyleSheet.fromTheme(
+                            Theme.of(context),
+                          ).copyWith(
+                            p: theme.textTheme.bodyMedium?.copyWith(
+                              color: isDark ? Colors.white : Colors.black87,
+                              height: 1.4,
+                            ),
+                          ),
+                        ),
+                        const Text(
+                          ' ▍',
+                          style: TextStyle(color: AppColors.primary),
+                        ),
+                      ],
                     ),
             ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-/// 打字机效果：将已有内容逐字显示（每 40ms 多显示 1 个字符）
-class _TypewriterText extends StatefulWidget {
-  const _TypewriterText({
-    required this.content,
-    required this.isDark,
-    this.style,
-  });
-
-  final String content;
-  final bool isDark;
-  final TextStyle? style;
-
-  @override
-  State<_TypewriterText> createState() => _TypewriterTextState();
-}
-
-class _TypewriterTextState extends State<_TypewriterText> {
-  int _visibleLength = 0;
-  Timer? _timer;
-
-  static const _interval = Duration(milliseconds: 40);
-
-  @override
-  void initState() {
-    super.initState();
-    _startTimer();
-  }
-
-  @override
-  void didUpdateWidget(_TypewriterText oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.content != widget.content) {
-      if (widget.content.length < _visibleLength) {
-        _visibleLength = widget.content.length;
-      }
-      _startTimer();
-    }
-  }
-
-  void _startTimer() {
-    _timer?.cancel();
-    if (widget.content.isEmpty) return;
-    if (_visibleLength >= widget.content.length) return;
-    _timer = Timer.periodic(_interval, (_) {
-      if (!mounted) return;
-      if (_visibleLength < widget.content.length) {
-        setState(() => _visibleLength += 1);
-      } else {
-        _timer?.cancel();
-      }
-    });
-  }
-
-  @override
-  void dispose() {
-    _timer?.cancel();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final visible = widget.content.substring(0, _visibleLength.clamp(0, widget.content.length));
-    return SelectableText.rich(
-      TextSpan(
-        children: [
-          TextSpan(text: visible, style: widget.style),
-          const TextSpan(
-            text: ' ▍',
-            style: TextStyle(color: AppColors.primary),
           ),
         ],
       ),
