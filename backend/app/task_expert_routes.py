@@ -2993,7 +2993,9 @@ async def approve_service_application(
 
     task_amount_pence = int(price * 100)
     from app.utils.fee_calculator import calculate_application_fee_pence
-    application_fee_pence = calculate_application_fee_pence(task_amount_pence)
+    application_fee_pence = calculate_application_fee_pence(
+        task_amount_pence, task_source="expert_service", task_type=None
+    )
     
     try:
         from app.secure_auth import get_wechat_pay_payment_method_options

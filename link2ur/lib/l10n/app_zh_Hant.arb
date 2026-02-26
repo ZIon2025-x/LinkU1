@@ -2572,6 +2572,8 @@
   "serviceContinuePayment": "繼續支付",
   "taskDetailConfirmDeadline": "確認截止時間",
   "taskDetailPlatformServiceFee": "支付平臺服務費",
+  "taskDetailServiceFeeRate": "服務費比例",
+  "taskDetailServiceFeeAmount": "服務費金額",
   "taskDetailCountdownRemainingDays": "剩餘 {param1}天 {param2}小時 {param3}分鐘",
   "@taskDetailCountdownRemainingDays": {
     "placeholders": {

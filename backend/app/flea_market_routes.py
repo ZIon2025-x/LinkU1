@@ -1714,7 +1714,9 @@ async def direct_purchase_item(
 
             task_amount_pence = int(float(item.price) * 100)
             from app.utils.fee_calculator import calculate_application_fee_pence
-            application_fee_pence = calculate_application_fee_pence(task_amount_pence)
+            application_fee_pence = calculate_application_fee_pence(
+                task_amount_pence, task_source="flea_market", task_type=None
+            )
             
             import asyncio
             import concurrent.futures
@@ -2113,7 +2115,9 @@ async def approve_purchase_request(
 
             task_amount_pence = int(float(final_price) * 100)
             from app.utils.fee_calculator import calculate_application_fee_pence
-            application_fee_pence = calculate_application_fee_pence(task_amount_pence)
+            application_fee_pence = calculate_application_fee_pence(
+                task_amount_pence, task_source="flea_market", task_type=None
+            )
             
             try:
                 from app.secure_auth import get_wechat_pay_payment_method_options
@@ -2416,7 +2420,9 @@ async def accept_purchase_request(
 
             task_amount_pence = int(float(final_price) * 100)
             from app.utils.fee_calculator import calculate_application_fee_pence
-            application_fee_pence = calculate_application_fee_pence(task_amount_pence)
+            application_fee_pence = calculate_application_fee_pence(
+                task_amount_pence, task_source="flea_market", task_type=None
+            )
             
             try:
                 from app.secure_auth import get_wechat_pay_payment_method_options

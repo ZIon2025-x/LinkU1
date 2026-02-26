@@ -5359,6 +5359,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get taskDetailPlatformServiceFee => '支付平台服务费';
 
   @override
+  String get taskDetailServiceFeeRate => '服务费比例';
+
+  @override
+  String get taskDetailServiceFeeAmount => '服务费金额';
+
+  @override
   String taskDetailCountdownRemainingDays(int param1, int param2, int param3) {
     return '剩余 $param1天 $param2小时 $param3分钟';
   }
@@ -14037,6 +14043,12 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get taskDetailPlatformServiceFee => '支付平臺服務費';
+
+  @override
+  String get taskDetailServiceFeeRate => '服務費比例';
+
+  @override
+  String get taskDetailServiceFeeAmount => '服務費金額';
 
   @override
   String taskDetailCountdownRemainingDays(int param1, int param2, int param3) {

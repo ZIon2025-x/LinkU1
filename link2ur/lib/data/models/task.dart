@@ -56,6 +56,8 @@ class Task extends Equatable {
     this.confirmationRemainingSeconds,
     this.pointsReward,
     this.minParticipants,
+    this.platformFeeRate,
+    this.platformFeeAmount,
   });
 
   final int id;
@@ -107,6 +109,10 @@ class Task extends Equatable {
   final int? confirmationRemainingSeconds;
   final int? pointsReward;
   final int? minParticipants;
+  /// 平台服务费比例（如 0.08 表示 8%），由详情接口返回
+  final double? platformFeeRate;
+  /// 平台服务费金额（英镑），由详情接口返回
+  final double? platformFeeAmount;
 
   /// 模糊距离（500m 为一个区间）
   /// 返回区间上限值（用于排序），如 500, 1000, 1500, ...
@@ -383,6 +389,8 @@ class Task extends Equatable {
       confirmationRemainingSeconds: json['confirmation_remaining_seconds'] as int?,
       pointsReward: json['points_reward'] as int?,
       minParticipants: json['min_participants'] as int?,
+      platformFeeRate: (json['platform_fee_rate'] as num?)?.toDouble(),
+      platformFeeAmount: (json['platform_fee_amount'] as num?)?.toDouble(),
     );
   }
 

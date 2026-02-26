@@ -1606,10 +1606,11 @@ async def accept_application(
         
         task_amount_pence = int(task_amount * 100)
         
-        # 计算平台服务费
-        # 规则：小于10镑固定收取1镑，大于等于10镑按10%计算
+        # 计算平台服务费（按任务来源/类型取费率）
         from app.utils.fee_calculator import calculate_application_fee_pence
-        application_fee_pence = calculate_application_fee_pence(task_amount_pence)
+        task_source = getattr(locked_task, "task_source", None)
+        task_type = getattr(locked_task, "task_type", None)
+        application_fee_pence = calculate_application_fee_pence(task_amount_pence, task_source, task_type)
         
         # 创建 Stripe Payment Intent
         import stripe
@@ -2498,9 +2499,11 @@ async def respond_negotiation(
             
             task_amount_pence = int(task_amount * 100)
             
-            # 计算平台服务费
+            # 计算平台服务费（按任务来源/类型取费率）
             from app.utils.fee_calculator import calculate_application_fee_pence
-            application_fee_pence = calculate_application_fee_pence(task_amount_pence)
+            task_source = getattr(locked_task, "task_source", None)
+            task_type = getattr(locked_task, "task_type", None)
+            application_fee_pence = calculate_application_fee_pence(task_amount_pence, task_source, task_type)
             
             # 获取申请者信息（用于创建 PaymentIntent）
             applicant = await db.get(models.User, application.applicant_id)

@@ -10280,6 +10280,18 @@ abstract class AppLocalizations {
   /// **'Platform service fee'**
   String get taskDetailPlatformServiceFee;
 
+  /// No description provided for @taskDetailServiceFeeRate.
+  ///
+  /// In en, this message translates to:
+  /// **'Service fee rate'**
+  String get taskDetailServiceFeeRate;
+
+  /// No description provided for @taskDetailServiceFeeAmount.
+  ///
+  /// In en, this message translates to:
+  /// **'Service fee'**
+  String get taskDetailServiceFeeAmount;
+
   /// No description provided for @taskDetailCountdownRemainingDays.
   ///
   /// In en, this message translates to:

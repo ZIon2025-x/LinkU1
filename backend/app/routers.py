@@ -4248,10 +4248,12 @@ def confirm_task_completion(
                 
                 # 确保 escrow_amount 正确（任务金额 - 平台服务费）
                 if remaining_escrow <= 0:
-                    # 重新计算 escrow_amount
+                    # 重新计算 escrow_amount（按任务来源/类型取费率）
                     task_amount = float(task.agreed_reward) if task.agreed_reward is not None else float(task.base_reward) if task.base_reward is not None else 0.0
                     from app.utils.fee_calculator import calculate_application_fee
-                    application_fee = calculate_application_fee(task_amount)
+                    task_source = getattr(task, "task_source", None)
+                    task_type = getattr(task, "task_type", None)
+                    application_fee = calculate_application_fee(task_amount, task_source, task_type)
                     remaining_escrow = Decimal(str(max(0.0, task_amount - application_fee)))
                     task.escrow_amount = float(remaining_escrow)
                     logger.info(f"重新计算 escrow_amount: 任务金额={task_amount}, 服务费={application_fee}, escrow={remaining_escrow}")
@@ -6244,10 +6246,12 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
                 task_amount = float(task.agreed_reward) if task.agreed_reward is not None else float(task.base_reward) if task.base_reward is not None else 0.0
                 
                 # 🔒 安全修复：始终使用后端计算的服务费，不信任metadata中的金额
-                # metadata仅作为交叉校验参考
+                # metadata仅作为交叉校验参考；按任务来源/类型取费率
                 from app.utils.fee_calculator import calculate_application_fee_pence
                 task_amount_pence = round(task_amount * 100)
-                application_fee_pence = calculate_application_fee_pence(task_amount_pence)
+                task_source = getattr(task, "task_source", None)
+                task_type = getattr(task, "task_type", None)
+                application_fee_pence = calculate_application_fee_pence(task_amount_pence, task_source, task_type)
 
                 # 交叉校验metadata中的费用（仅记录差异，不使用metadata值）
                 metadata = payment_intent.get("metadata", {})
@@ -6868,20 +6872,18 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
                     ).scalar() or Decimal('0')
                     total_transferred = Decimal(str(total_transferred)) if total_transferred else Decimal('0')
                     
-                    # ✅ 基于剩余金额重新计算平台服务费
-                    # 例如：原任务£100，退款£50，剩余£50
-                    # 服务费基于£50重新计算：£50 >= £10，所以是10% = £5
-                    # 接单人应得：£50 - £5 = £45
+                    # ✅ 基于剩余金额重新计算平台服务费（按任务来源/类型取费率）
                     from app.utils.fee_calculator import calculate_application_fee
-                    application_fee = calculate_application_fee(float(remaining_amount))
+                    _ts = getattr(task, "task_source", None)
+                    _tt = getattr(task, "task_type", None)
+                    application_fee = calculate_application_fee(float(remaining_amount), _ts, _tt)
                     new_escrow_amount = remaining_amount - Decimal(str(application_fee))
                     
                     # ✅ 如果已经进行了部分转账，需要从剩余金额中扣除已转账部分
                     if total_transferred > 0:
                         remaining_after_transfer = remaining_amount - total_transferred
                         if remaining_after_transfer > 0:
-                            # 重新计算服务费（基于剩余金额）
-                            remaining_application_fee = calculate_application_fee(float(remaining_amount))
+                            remaining_application_fee = calculate_application_fee(float(remaining_amount), _ts, _tt)
                             new_escrow_amount = remaining_amount - Decimal(str(remaining_application_fee)) - total_transferred
                         else:
                             # 如果剩余金额已经全部转账，escrow为0
@@ -7121,12 +7123,13 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
                 # 获取任务金额（使用最终成交价或原始标价）
                 task_amount = float(task.agreed_reward) if task.agreed_reward is not None else float(task.base_reward) if task.base_reward is not None else 0.0
 
-                # 🔒 安全修复：始终使用后端计算的服务费，不信任metadata中的金额
+                # 🔒 安全修复：始终使用后端计算的服务费，不信任metadata中的金额；按任务来源/类型取费率
                 from app.utils.fee_calculator import calculate_application_fee_pence
                 task_amount_pence = round(task_amount * 100)
-                application_fee_pence = calculate_application_fee_pence(task_amount_pence)
+                task_source = getattr(task, "task_source", None)
+                task_type = getattr(task, "task_type", None)
+                application_fee_pence = calculate_application_fee_pence(task_amount_pence, task_source, task_type)
                 
-                # 交叉校验metadata中的费用（仅记录差异，不使用metadata值）
                 metadata_fee = int(metadata.get("application_fee", 0))
                 if metadata_fee > 0 and metadata_fee != application_fee_pence:
                     logger.warning(f"⚠️ Checkout session 服务费不一致: metadata={metadata_fee}, calculated={application_fee_pence}, task_id={task_id}")
@@ -7457,12 +7460,13 @@ def confirm_task_complete(
     # 执行 Stripe Transfer 转账
     # 交易市场模式：资金在平台账户，现在转账给任务接受人
     try:
-        # 确保 escrow_amount 正确（任务金额 - 平台服务费）
+        # 确保 escrow_amount 正确（任务金额 - 平台服务费，按任务来源/类型取费率）
         if task.escrow_amount <= 0:
-            # 重新计算 escrow_amount
             task_amount = float(task.agreed_reward) if task.agreed_reward is not None else float(task.base_reward) if task.base_reward is not None else 0.0
             from app.utils.fee_calculator import calculate_application_fee
-            application_fee = calculate_application_fee(task_amount)
+            task_source = getattr(task, "task_source", None)
+            task_type = getattr(task, "task_type", None)
+            application_fee = calculate_application_fee(task_amount, task_source, task_type)
             task.escrow_amount = max(0.0, task_amount - application_fee)
             logger.info(f"重新计算 escrow_amount: 任务金额={task_amount}, 服务费={application_fee}, escrow={task.escrow_amount}")
         

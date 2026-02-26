@@ -207,20 +207,22 @@ def process_refund(
             # ✅ 计算退款后的剩余金额（最终成交金额）
             remaining_amount = task_amount - refund_amount_decimal
             
-            # ✅ 基于剩余金额重新计算平台服务费（使用Decimal精确计算，避免浮点精度损失）
-            # 例如：原任务£100，退款£50，剩余£50
-            # 服务费基于£50重新计算：£50 >= £10，所以是10% = £5
-            # 接单人应得：£50 - £5 = £45
+            # ✅ 基于剩余金额重新计算平台服务费（按任务来源/类型取费率）
             from app.utils.fee_calculator import calculate_application_fee_decimal
-            application_fee = calculate_application_fee_decimal(remaining_amount)
+            task_source = getattr(task, "task_source", None)
+            task_type = getattr(task, "task_type", None)
+            application_fee = calculate_application_fee_decimal(
+                remaining_amount, task_source, task_type
+            )
             new_escrow_amount = remaining_amount - application_fee
             
             # ✅ 如果已经进行了部分转账，需要从剩余金额中扣除已转账部分
             if total_transferred > 0:
                 remaining_after_transfer = remaining_amount - total_transferred
                 if remaining_after_transfer > 0:
-                    # 重新计算服务费（基于剩余金额，使用Decimal精确计算）
-                    remaining_application_fee = calculate_application_fee_decimal(remaining_amount)
+                    remaining_application_fee = calculate_application_fee_decimal(
+                        remaining_amount, task_source, task_type
+                    )
                     new_escrow_amount = remaining_amount - remaining_application_fee - total_transferred
                 else:
                     # 如果剩余金额已经全部转账，escrow为0

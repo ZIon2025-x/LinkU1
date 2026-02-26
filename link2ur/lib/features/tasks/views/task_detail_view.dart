@@ -1101,6 +1101,10 @@ class _TaskHeaderCard extends StatelessWidget {
 
           // 价格
           _buildAmountView(),
+          if (task.platformFeeRate != null && task.platformFeeAmount != null) ...[
+            const SizedBox(height: AppSpacing.sm),
+            _buildServiceFeeRow(context),
+          ],
           const SizedBox(height: AppSpacing.md),
 
           // 分类和位置标签
@@ -1202,6 +1206,34 @@ class _TaskHeaderCard extends StatelessWidget {
             height: 1.1,
             color: goldColor,
           ),
+        ),
+      ],
+    );
+  }
+
+  /// 服务费比例 + 服务费金额（任务详情展示）
+  Widget _buildServiceFeeRow(BuildContext context) {
+    final l10n = context.l10n;
+    final rate = task.platformFeeRate!;
+    final amount = task.platformFeeAmount!;
+    final ratePercent = (rate * 100).round();
+    final amountStr = amount.truncateToDouble() == amount
+        ? amount.toStringAsFixed(0)
+        : amount.toStringAsFixed(2);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final secondaryColor = isDark
+        ? AppColors.textSecondaryDark
+        : AppColors.textSecondaryLight;
+    return Row(
+      children: [
+        Text(
+          '${l10n.taskDetailServiceFeeRate} $ratePercent%',
+          style: AppTypography.caption.copyWith(color: secondaryColor),
+        ),
+        const SizedBox(width: AppSpacing.lg),
+        Text(
+          '${l10n.taskDetailServiceFeeAmount} £$amountStr',
+          style: AppTypography.caption.copyWith(color: secondaryColor),
         ),
       ],
     );

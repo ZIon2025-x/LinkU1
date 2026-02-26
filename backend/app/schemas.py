@@ -421,6 +421,9 @@ class TaskOut(TaskBase):
     # 任务来源
     task_source: Optional[str] = "normal"  # normal（普通任务）、expert_service（达人服务）、expert_activity（达人活动）、flea_market（跳蚤市场）
     payment_expires_at: Optional[datetime.datetime] = None  # 支付过期时间，待支付任务有效（FastAPI会自动序列化为ISO格式字符串）
+    # 平台服务费展示（按任务来源/类型计算，供详情页显示）
+    platform_fee_rate: Optional[float] = None  # 服务费比例，如 0.08 表示 8%
+    platform_fee_amount: Optional[float] = None  # 服务费金额（英镑）
     # 当前用户是否已申请（与活动详情一致，在详情接口中根据 current_user 填充，便于客户端直接显示「已申请」状态）
     has_applied: Optional[bool] = None
     user_application_status: Optional[str] = None  # pending / approved / rejected
@@ -636,7 +639,17 @@ class TaskOut(TaskBase):
             "user_application_status": getattr(obj, 'user_application_status', None),
             "completion_evidence": getattr(obj, 'completion_evidence', None),  # 任务完成证据（由详情接口在 setattr 后填充）
         }
-        
+        # 平台服务费展示（比例 + 金额，按任务来源/类型计算）
+        from app.utils.fee_calculator import get_platform_fee_display
+        task_amount = float(obj.reward) if obj.reward else 0.0
+        fee_rate, fee_amount = get_platform_fee_display(
+            task_amount,
+            getattr(obj, 'task_source', None),
+            getattr(obj, 'task_type', None),
+        )
+        data["platform_fee_rate"] = fee_rate
+        data["platform_fee_amount"] = fee_amount
+
         # 如果任务有关联的时间段，获取时间段信息
         # 优先检查任务直接关联的时间段（TaskTimeSlotRelation）
         # task_time_slot_relations 表现在直接存储时间段信息（slot_start_datetime, slot_end_datetime）

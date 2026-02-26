@@ -537,10 +537,11 @@ def create_task_payment(
         # 返回已支付的信息，避免重复扣款
         task_amount = float(task.agreed_reward) if task.agreed_reward is not None else float(task.base_reward) if task.base_reward is not None else 0.0
         task_amount_pence = int(task_amount * 100)
-        # 计算平台服务费
-        # 规则：小于10镑固定收取1镑，大于等于10镑按10%计算
+        # 计算平台服务费（按任务来源/类型：费率 + 最低服务费，不超过任务金额）
         from app.utils.fee_calculator import calculate_application_fee_pence
-        application_fee_pence = calculate_application_fee_pence(task_amount_pence)
+        task_source = getattr(task, "task_source", None)
+        task_type = getattr(task, "task_type", None)
+        application_fee_pence = calculate_application_fee_pence(task_amount_pence, task_source, task_type)
         
         # 获取支付历史记录以获取优惠券信息
         payment_history = db.query(models.PaymentHistory).filter(
@@ -655,7 +656,9 @@ def create_task_payment(
                     task_amount = float(task.agreed_reward) if task.agreed_reward is not None else float(task.base_reward) if task.base_reward is not None else 0.0
                     task_amount_pence = int(task_amount * 100)
                     from app.utils.fee_calculator import calculate_application_fee_pence
-                    application_fee_pence = calculate_application_fee_pence(task_amount_pence)
+                    _ts = getattr(task, "task_source", None)
+                    _tt = getattr(task, "task_type", None)
+                    application_fee_pence = calculate_application_fee_pence(task_amount_pence, _ts, _tt)
                     
                     # 获取支付历史记录以获取优惠券信息
                     payment_history = db.query(models.PaymentHistory).filter(
@@ -730,7 +733,9 @@ def create_task_payment(
                     task_amount = float(task.agreed_reward) if task.agreed_reward is not None else float(task.base_reward) if task.base_reward is not None else 0.0
                     task_amount_pence = int(task_amount * 100)
                     from app.utils.fee_calculator import calculate_application_fee_pence
-                    application_fee_pence = calculate_application_fee_pence(task_amount_pence)
+                    _ts = getattr(task, "task_source", None)
+                    _tt = getattr(task, "task_type", None)
+                    application_fee_pence = calculate_application_fee_pence(task_amount_pence, _ts, _tt)
                     
                     # 从 PaymentIntent metadata 获取优惠券信息
                     metadata = payment_intent.get("metadata", {})
@@ -846,10 +851,11 @@ def create_task_payment(
     
     task_amount_pence = round(task_amount * 100)  # 转换为最小货币单位
     
-    # 计算平台服务费（从接受人端扣除）
-    # 规则：小于10镑固定收取1镑，大于等于10镑按10%计算
+    # 计算平台服务费（按任务来源/类型取费率）
     from app.utils.fee_calculator import calculate_application_fee_pence
-    application_fee_pence = calculate_application_fee_pence(task_amount_pence)
+    task_source = getattr(task, "task_source", None)
+    task_type = getattr(task, "task_type", None)
+    application_fee_pence = calculate_application_fee_pence(task_amount_pence, task_source, task_type)
     
     # 验证平台服务费必须大于0
     if application_fee_pence <= 0:
@@ -1516,10 +1522,11 @@ async def create_wechat_checkout_session(
         task_amount = 0.0
     task_amount_pence = int(task_amount * 100)  # 转换为便士
     
-    # 计算平台服务费（8%，最低 0.08 镑 = 8 便士）
-    fee_rate = 0.08
-    min_fee_pence = 8
-    application_fee_pence = max(min_fee_pence, int(task_amount_pence * fee_rate))
+    # 计算平台服务费（按任务来源/类型取费率）
+    from app.utils.fee_calculator import calculate_application_fee_pence
+    task_source = getattr(task, "task_source", None)
+    task_type = getattr(task, "task_type", None)
+    application_fee_pence = calculate_application_fee_pence(task_amount_pence, task_source, task_type)
     
     total_amount = task_amount_pence
     coupon_discount = 0

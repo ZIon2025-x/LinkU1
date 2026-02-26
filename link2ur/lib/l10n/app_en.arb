@@ -2572,6 +2572,8 @@
   "serviceContinuePayment": "Continue Payment",
   "taskDetailConfirmDeadline": "Confirm deadline",
   "taskDetailPlatformServiceFee": "Platform service fee",
+  "taskDetailServiceFeeRate": "Service fee rate",
+  "taskDetailServiceFeeAmount": "Service fee",
   "taskDetailCountdownRemainingDays": "{param1} days {param2} hrs {param3} min remaining",
   "@taskDetailCountdownRemainingDays": {
     "placeholders": {

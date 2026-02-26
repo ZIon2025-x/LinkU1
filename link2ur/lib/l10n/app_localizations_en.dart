@@ -5591,6 +5591,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get taskDetailPlatformServiceFee => 'Platform service fee';
 
   @override
+  String get taskDetailServiceFeeRate => 'Service fee rate';
+
+  @override
+  String get taskDetailServiceFeeAmount => 'Service fee';
+
+  @override
   String taskDetailCountdownRemainingDays(int param1, int param2, int param3) {
     return '$param1 days $param2 hrs $param3 min remaining';
   }
