@@ -114,6 +114,7 @@ class _ExpertApplicationsManagementViewState
                 return AnimatedListItem(
                   key: ValueKey(app['id']),
                   index: index,
+                  maxAnimatedIndex: 11,
                   child: _ApplicationCard(
                     application: app,
                     isSubmitting: state.isSubmitting,

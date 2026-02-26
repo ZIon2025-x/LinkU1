@@ -185,6 +185,7 @@ class _ActivityListContentState extends State<_ActivityListContent> {
                         return AnimatedListItem(
                           key: ValueKey(filtered[index].id),
                           index: index,
+                          maxAnimatedIndex: 11,
                           child: ActivityCardView(
                             activity: filtered[index],
                             onTap: () => context.push(

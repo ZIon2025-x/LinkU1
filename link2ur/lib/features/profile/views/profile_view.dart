@@ -15,7 +15,7 @@ import '../../../core/widgets/user_identity_badges.dart';
 import '../../../core/widgets/async_image_view.dart';
 import '../../../core/router/page_transitions.dart';
 import '../../../core/widgets/content_constraint.dart';
-import '../../../core/widgets/page_background.dart';
+import '../../../core/widgets/decorative_background.dart';
 import '../../../core/widgets/credit_score_gauge.dart';
 import '../../../core/widgets/animated_counter.dart';
 import '../../../data/models/user.dart';
@@ -164,84 +164,120 @@ class _ProfileContent extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final isDesktop = ResponsiveUtils.isDesktop(context);
+    final isDesktopShell = ResponsiveUtils.isDesktopShell(context);
 
     return Scaffold(
-      backgroundColor: AppColors.backgroundFor(
-          Theme.of(context).brightness),
-      appBar: isDesktop
-          ? null
-          : AppBar(
-              title: Text(context.l10n.tabsProfile),
-              actions: [
-                IconButton(
-                  icon: const Icon(Icons.edit),
-                  onPressed: () async {
-                    await context.push('/profile/edit');
-                    if (context.mounted) {
-                      context.read<ProfileBloc>().add(const ProfileLoadRequested());
-                    }
-                  },
-                ),
-              ],
-            ),
-      body: BlocListener<ProfileBloc, ProfileState>(
-        listenWhen: (prev, curr) => prev.actionMessage != curr.actionMessage && curr.actionMessage != null,
-        listener: (context, state) {
-          final actionType = state.actionMessage;
-          if (actionType == null) return;
-          final l10n = context.l10n;
-          final message = switch (actionType) {
-            'profile_updated' => l10n.profileUpdated,
-            'update_failed' => l10n.profileUpdateFailed,
-            'avatar_updated' => l10n.profileAvatarUpdated,
-            'upload_failed' => l10n.profileUploadFailed,
-            'preferences_updated' => l10n.profilePreferencesUpdated,
-            _ => actionType,
-          };
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(message)),
-          );
-        },
-        child: BlocBuilder<ProfileBloc, ProfileState>(
-        buildWhen: (prev, curr) =>
-            prev.status != curr.status ||
-            prev.user != curr.user ||
-            prev.myTasks != curr.myTasks ||
-            prev.postedTasks != curr.postedTasks ||
-            prev.myForumPosts != curr.myForumPosts ||
-            prev.favoritedPosts != curr.favoritedPosts ||
-            prev.likedPosts != curr.likedPosts ||
-            prev.preferences != curr.preferences ||
-            prev.errorMessage != curr.errorMessage ||
-            prev.isUpdating != curr.isUpdating,
-        builder: (context, profileState) {
-          final user = authState.user!;
-
-          return RefreshIndicator(
-            onRefresh: () async {
-              final bloc = context.read<ProfileBloc>();
-              bloc
-                ..add(const ProfileLoadRequested())
-                ..add(const ProfileLoadMyTasks())
-                ..add(const ProfileLoadMyTasks(isPosted: true));
-              // 等待 BLoC 状态变为非 loading（使用 where + first 避免 orElse 缺陷）
-              await bloc.stream
-                  .where((s) => s.status != ProfileStatus.loading)
-                  .first
-                  .timeout(
-                    const Duration(seconds: 10),
-                    onTimeout: () => bloc.state,
-                  );
+      backgroundColor: Colors.transparent,
+      appBar: null,
+      body: Stack(
+        children: [
+          const RepaintBoundary(child: DecorativeBackground()),
+          BlocListener<ProfileBloc, ProfileState>(
+            listenWhen: (prev, curr) => prev.actionMessage != curr.actionMessage && curr.actionMessage != null,
+            listener: (context, state) {
+              final actionType = state.actionMessage;
+              if (actionType == null) return;
+              final l10n = context.l10n;
+              final message = switch (actionType) {
+                'profile_updated' => l10n.profileUpdated,
+                'update_failed' => l10n.profileUpdateFailed,
+                'avatar_updated' => l10n.profileAvatarUpdated,
+                'upload_failed' => l10n.profileUploadFailed,
+                'preferences_updated' => l10n.profilePreferencesUpdated,
+                _ => actionType,
+              };
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text(message)),
+              );
             },
-            child: isDesktop
-                ? ContentConstraint(
-                    child: _buildDesktopProfile(context, profileState, user, isDark),
-                  )
-                : _buildMobileProfile(context, profileState, user, isDark),
-          );
-        },
+            child: BlocBuilder<ProfileBloc, ProfileState>(
+              buildWhen: (prev, curr) =>
+                  prev.status != curr.status ||
+                  prev.user != curr.user ||
+                  prev.myTasks != curr.myTasks ||
+                  prev.postedTasks != curr.postedTasks ||
+                  prev.myForumPosts != curr.myForumPosts ||
+                  prev.favoritedPosts != curr.favoritedPosts ||
+                  prev.likedPosts != curr.likedPosts ||
+                  prev.preferences != curr.preferences ||
+                  prev.errorMessage != curr.errorMessage ||
+                  prev.isUpdating != curr.isUpdating,
+              builder: (context, profileState) {
+                final user = authState.user!;
+                return RefreshIndicator(
+                  onRefresh: () async {
+                    final bloc = context.read<ProfileBloc>();
+                    bloc
+                      ..add(const ProfileLoadRequested())
+                      ..add(const ProfileLoadMyTasks())
+                      ..add(const ProfileLoadMyTasks(isPosted: true));
+                    await bloc.stream
+                        .where((s) => s.status != ProfileStatus.loading)
+                        .first
+                        .timeout(
+                          const Duration(seconds: 10),
+                          onTimeout: () => bloc.state,
+                        );
+                  },
+                  child: isDesktopShell
+                      ? ContentConstraint(
+                          child: _buildDesktopProfile(context, profileState, user, isDark),
+                        )
+                      : SafeArea(
+                          bottom: false,
+                          child: Column(
+                            children: [
+                              _buildProfileMobileAppBar(context, isDark),
+                              Expanded(
+                                child: _buildMobileProfile(context, profileState, user, isDark),
+                              ),
+                            ],
+                          ),
+                        ),
+                );
+              },
+            ),
+          ),
+        ],
       ),
+    );
+  }
+
+  /// 移动端顶部栏：与首页、社区一致，SafeArea 内自定义透明栏（无 AppBar）
+  Widget _buildProfileMobileAppBar(BuildContext context, bool isDark) {
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.md,
+        vertical: AppSpacing.sm,
+      ),
+      decoration: const BoxDecoration(color: Colors.transparent),
+      child: Row(
+        children: [
+          const SizedBox(width: 44, height: 44),
+          const Spacer(),
+          Text(
+            context.l10n.tabsProfile,
+            style: AppTypography.title3.copyWith(
+              color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const Spacer(),
+          GestureDetector(
+            onTap: () async {
+              AppHaptics.selection();
+              await context.push('/profile/edit');
+              if (context.mounted) {
+                context.read<ProfileBloc>().add(const ProfileLoadRequested());
+              }
+            },
+            child: const SizedBox(
+              width: 44,
+              height: 44,
+              child: Center(child: Icon(Icons.edit_outlined, size: 22)),
+            ),
+          ),
+        ],
       ),
     );
   }

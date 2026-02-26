@@ -40,6 +40,7 @@ class AnimatedListItem extends StatefulWidget {
     this.curve = Curves.easeOutCubic,
     this.direction = AnimatedListDirection.bottom,
     this.useSpringEffect = false,
+    this.maxAnimatedIndex,
   });
 
   /// 列表索引，用于计算延迟
@@ -47,6 +48,9 @@ class AnimatedListItem extends StatefulWidget {
 
   /// 子组件
   final Widget child;
+
+  /// 超过此索引的项不做入场动画（直接显示），默认 5。网格等多列布局可传更大值（如 columnCount*3）避免最后一行动画缺失
+  final int? maxAnimatedIndex;
 
   /// 每个 item 之间的延迟（瀑布效果）
   final Duration staggerDelay;
@@ -76,9 +80,9 @@ class _AnimatedListItemState extends State<AnimatedListItem>
   Animation<double>? _fadeAnimation;
   Animation<Offset>? _slideAnimation;
 
-  /// index > 5 的列表项跳过动画，直接显示（避免大量无用 Future 和 AnimationController）
-  /// 降低阈值：同时存在 6+ 个 AnimationController 在 debug 模式下会产生明显卡顿
-  bool get _shouldAnimate => widget.index <= 5;
+  /// 超过 maxAnimatedIndex 的项跳过动画，直接显示（控制 AnimationController 数量）
+  bool get _shouldAnimate =>
+      widget.index <= (widget.maxAnimatedIndex ?? 5);
 
   @override
   void initState() {

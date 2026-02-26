@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:math';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 import '../../../core/utils/haptic_feedback.dart';
@@ -25,6 +24,7 @@ import '../../../core/utils/task_status_helper.dart';
 import '../../../core/utils/city_display_helper.dart';
 import '../../../core/widgets/async_image_view.dart';
 import '../../../core/widgets/animated_list_item.dart';
+import '../../../core/widgets/glass_container.dart';
 import '../../../core/widgets/skeleton_view.dart';
 import '../../../core/widgets/error_state_view.dart';
 import '../../../core/widgets/empty_state_view.dart';
@@ -33,6 +33,7 @@ import 'package:geocoding/geocoding.dart';
 import 'package:geolocator/geolocator.dart';
 
 import '../../../core/widgets/content_constraint.dart';
+import '../../../core/widgets/decorative_background.dart';
 import '../../../core/router/app_router.dart';
 import '../../../data/models/activity.dart';
 import '../../../data/models/task.dart';
@@ -107,9 +108,8 @@ class _HomeViewContentState extends State<_HomeViewContent> {
 
   @override
   Widget build(BuildContext context) {
-    final isDesktop = ResponsiveUtils.isDesktop(context);
-
-    if (isDesktop) {
+    // 仅超宽屏用桌面式内嵌 Tab；iPad 与手机一致用顶部 AppBar + 下方 Tab
+    if (ResponsiveUtils.isDesktopShell(context)) {
       return _buildDesktopHome(context);
     }
     return _buildMobileHome(context);
@@ -195,10 +195,7 @@ class _HomeViewContentState extends State<_HomeViewContent> {
     return Scaffold(
       body: Stack(
         children: [
-          Container(
-            color: AppColors.backgroundFor(brightness),
-          ),
-          const RepaintBoundary(child: _DecorativeBackground()),
+          const RepaintBoundary(child: DecorativeBackground()),
           SafeArea(
             child: Column(
               children: [
@@ -223,8 +220,6 @@ class _HomeViewContentState extends State<_HomeViewContent> {
               ],
             ),
           ),
-          // 思考云朵：最上层 overlay，不占布局、不改高度，仅推荐 Tab 显示
-          _LinkerCloudOverlay(currentTabIndex: _selectedTab),
         ],
       ),
     );
@@ -235,8 +230,9 @@ class _HomeViewContentState extends State<_HomeViewContent> {
       padding: const EdgeInsets.symmetric(
         horizontal: AppSpacing.md, vertical: AppSpacing.sm,
       ),
-      color: (isDark ? AppColors.backgroundDark : AppColors.backgroundLight)
-          .withValues(alpha: 0.95),
+      decoration: const BoxDecoration(
+        color: Colors.transparent,
+      ),
       child: Row(
         children: [
           GestureDetector(
@@ -434,79 +430,3 @@ class _TabButton extends StatelessWidget {
   }
 }
 
-/// 装饰性背景 - 与iOS HomeView对齐
-/// 使用 RadialGradient 代替 ImageFiltered (blur) 实现柔和氛围感
-/// ImageFiltered 在每帧都触发 GPU 模糊运算，RadialGradient 零 GPU 开销
-class _DecorativeBackground extends StatelessWidget {
-  const _DecorativeBackground();
-
-  @override
-  Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final bgColor = isDark ? AppColors.backgroundDark : AppColors.backgroundLight;
-    // 深色模式下降低装饰透明度
-    final primaryAlpha = isDark ? 0.06 : 0.15;
-    final pinkAlpha = isDark ? 0.04 : 0.10;
-
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: bgColor,
-      ),
-      child: CustomPaint(
-        painter: _DecorativeBgPainter(
-          primaryColor: AppColors.primary.withValues(alpha: primaryAlpha),
-          pinkColor: AppColors.accentPink.withValues(alpha: pinkAlpha),
-          overlayColor: bgColor.withValues(alpha: 0.85),
-        ),
-        child: const SizedBox.expand(),
-      ),
-    );
-  }
-}
-
-/// 使用 CustomPainter 绘制两个径向渐变圆（模拟模糊效果）
-/// shouldRepaint → false：静态装饰，绘制一次后缓存
-class _DecorativeBgPainter extends CustomPainter {
-  _DecorativeBgPainter({
-    required this.primaryColor,
-    required this.pinkColor,
-    required this.overlayColor,
-  });
-
-  final Color primaryColor;
-  final Color pinkColor;
-  final Color overlayColor;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    // 主色径向渐变圆（右上角）— 模拟 blur=60 的模糊圆
-    final primaryCenter = Offset(size.width + 60, -100);
-    final primaryPaint = Paint()
-      ..shader = RadialGradient(
-        colors: [primaryColor, primaryColor.withValues(alpha: 0)],
-        stops: const [0.0, 1.0],
-      ).createShader(Rect.fromCircle(center: primaryCenter, radius: 200));
-    canvas.drawCircle(primaryCenter, 200, primaryPaint);
-
-    // 粉色径向渐变圆（左下方）— 模拟 blur=50 的模糊圆
-    const pinkCenter = Offset(-75, 200);
-    final pinkPaint = Paint()
-      ..shader = RadialGradient(
-        colors: [pinkColor, pinkColor.withValues(alpha: 0)],
-        stops: const [0.0, 1.0],
-      ).createShader(Rect.fromCircle(center: pinkCenter, radius: 175));
-    canvas.drawCircle(pinkCenter, 175, pinkPaint);
-
-    // 半透明覆盖层
-    canvas.drawRect(
-      Offset.zero & size,
-      Paint()..color = overlayColor,
-    );
-  }
-
-  @override
-  bool shouldRepaint(_DecorativeBgPainter oldDelegate) =>
-      primaryColor != oldDelegate.primaryColor ||
-      pinkColor != oldDelegate.pinkColor ||
-      overlayColor != oldDelegate.overlayColor;
-}

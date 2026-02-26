@@ -14,7 +14,9 @@ import '../../../core/utils/date_formatter.dart';
 import '../../notification/bloc/notification_bloc.dart';
 import '../../../core/utils/l10n_extension.dart';
 import '../../../core/utils/task_type_helper.dart';
+import '../../../core/widgets/animated_list_item.dart';
 import '../../../core/widgets/content_constraint.dart';
+import '../../../core/widgets/decorative_background.dart';
 import '../../../core/widgets/swipe_action_cell.dart';
 import '../../../data/models/message.dart';
 import '../../auth/bloc/auth_bloc.dart';
@@ -27,31 +29,35 @@ class MessageView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDesktop = ResponsiveUtils.isDesktop(context);
     final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    if (isDesktop) {
+    // 仅超宽屏用桌面式标题栏；iPad 与手机一致用 AppBar
+    if (ResponsiveUtils.isDesktopShell(context)) {
       return Scaffold(
-        backgroundColor: AppColors.backgroundFor(Theme.of(context).brightness),
-        body: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        backgroundColor: Colors.transparent,
+        body: Stack(
           children: [
-            // 桌面端标题栏
-            Padding(
-              padding: const EdgeInsets.fromLTRB(24, 20, 24, 12),
-              child: Text(
-                context.l10n.messagesMessages,
-                style: TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.w700,
-                  color: isDark
-                      ? AppColors.textPrimaryDark
-                      : AppColors.desktopTextLight,
+            const RepaintBoundary(child: DecorativeBackground()),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // 桌面端标题栏
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(24, 20, 24, 12),
+                  child: Text(
+                    context.l10n.messagesMessages,
+                    style: TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.w700,
+                      color: isDark
+                          ? AppColors.textPrimaryDark
+                          : AppColors.desktopTextLight,
+                    ),
+                  ),
                 ),
-              ),
-            ),
-            const Expanded(
-              child: _MessageContent(),
+                const Expanded(
+                  child: _MessageContent(),
+                ),
+              ],
             ),
           ],
         ),
@@ -59,11 +65,25 @@ class MessageView extends StatelessWidget {
     }
 
     return Scaffold(
-      backgroundColor: AppColors.backgroundFor(Theme.of(context).brightness),
+      backgroundColor: Colors.transparent,
+      extendBodyBehindAppBar: true,
       appBar: AppBar(
         title: Text(context.l10n.messagesMessages),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        scrolledUnderElevation: 0,
       ),
-      body: const _MessageContent(),
+      body: Stack(
+        children: [
+          const RepaintBoundary(child: DecorativeBackground()),
+          Column(
+            children: [
+              SizedBox(height: MediaQuery.of(context).padding.top + kToolbarHeight),
+              const Expanded(child: _MessageContent()),
+            ],
+          ),
+        ],
+      ),
     );
   }
 }
@@ -105,10 +125,14 @@ class _MessageContent extends StatelessWidget {
               if (displayChats.isNotEmpty) {
                 final taskChat = displayChats[index - 2];
                 final isPinned = pinnedIds.contains(taskChat.taskId);
+                final chatIndex = index - 2;
 
                 return RepaintBoundary(
-                  child: SwipeActionCell(
-                    key: ValueKey('swipe_${taskChat.taskId}'),
+                  child: AnimatedListItem(
+                    index: chatIndex,
+                    maxAnimatedIndex: 11,
+                    child: SwipeActionCell(
+                      key: ValueKey('swipe_${taskChat.taskId}'),
                     actionMargin: const EdgeInsets.only(bottom: AppSpacing.sm),
                     actions: [
                       // 置顶/取消置顶
@@ -162,6 +186,7 @@ class _MessageContent extends StatelessWidget {
                       isPinned: isPinned,
                     ),
                   ),
+                ),
                 );
               }
 

@@ -252,6 +252,7 @@ class _ExpertsTabContentState extends State<_ExpertsTabContent> {
                     }
                     return AnimatedListItem(
                       index: index,
+                      maxAnimatedIndex: 11,
                       child: _ExpertCard(expert: state.experts[index]),
                     );
                   },
@@ -479,19 +480,10 @@ class _ExpertCard extends StatelessWidget {
           context.safePush('/task-experts/${expert.id}');
         }
       },
-      child: Container(
+      child: GlassContainer(
+        borderRadius: AppRadius.allLarge,
         padding: AppSpacing.allMd,
-        decoration: BoxDecoration(
-          color: isDark
-              ? AppColors.cardBackgroundDark
-              : AppColors.cardBackgroundLight,
-          borderRadius: AppRadius.allLarge,
-          border: Border.all(
-            color: (isDark ? AppColors.separatorDark : AppColors.separatorLight)
-                .withValues(alpha: 0.3),
-            width: 0.5,
-          ),
-        ),
+        blurSigma: 14,
         child: Row(
           children: [
             // 头像 + 光晕 (对标iOS: 74背景圆 + 68头像 + shadow)

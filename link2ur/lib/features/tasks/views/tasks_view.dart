@@ -408,34 +408,40 @@ class _TasksViewContentState extends State<_TasksViewContent> {
                 );
           },
           key: const ValueKey('content'),
-          child: GridView.builder(
-            controller: _scrollController,
-            cacheExtent: 500,
-            clipBehavior: Clip.none,
-            padding: AppSpacing.allMd,
-            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: ResponsiveUtils.gridColumnCount(context, type: GridItemType.task),
-              mainAxisSpacing: 12,
-              crossAxisSpacing: 12,
-              childAspectRatio: 0.68,
-            ),
-            itemCount: state.tasks.length + (state.hasMore ? 1 : 0),
-            itemBuilder: (context, index) {
-              if (index >= state.tasks.length) {
-                return const Center(
-                  child: Padding(
-                    padding: EdgeInsets.all(16),
-                    child: LoadingIndicator(),
-                  ),
-                );
-              }
-              final task = state.tasks[index];
-              return RepaintBoundary(
-                child: AnimatedListItem(
-                  key: ValueKey(task.id),
-                  index: index,
-                  child: _TaskGridCard(task: task),
+          child: Builder(
+            builder: (context) {
+              final columnCount = ResponsiveUtils.gridColumnCount(context, type: GridItemType.task);
+              return GridView.builder(
+                controller: _scrollController,
+                cacheExtent: 500,
+                clipBehavior: Clip.none,
+                padding: AppSpacing.allMd,
+                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: columnCount,
+                  mainAxisSpacing: 12,
+                  crossAxisSpacing: 12,
+                  childAspectRatio: 0.68,
                 ),
+                itemCount: state.tasks.length + (state.hasMore ? 1 : 0),
+                itemBuilder: (context, index) {
+                  if (index >= state.tasks.length) {
+                    return const Center(
+                      child: Padding(
+                        padding: EdgeInsets.all(16),
+                        child: LoadingIndicator(),
+                      ),
+                    );
+                  }
+                  final task = state.tasks[index];
+                  return RepaintBoundary(
+                    child: AnimatedListItem(
+                      key: ValueKey(task.id),
+                      index: index,
+                      maxAnimatedIndex: columnCount * 3 - 1,
+                      child: _TaskGridCard(task: task),
+                    ),
+                  );
+                },
               );
             },
           ),

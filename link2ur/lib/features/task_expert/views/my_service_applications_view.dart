@@ -227,6 +227,7 @@ class _MyServiceApplicationsViewState extends State<MyServiceApplicationsView>
           return AnimatedListItem(
             key: ValueKey(activity.id),
             index: index,
+            maxAnimatedIndex: 11,
             child: ActivityCardView(
               activity: activity,
               activityType: activity.type,

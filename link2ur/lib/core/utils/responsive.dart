@@ -42,6 +42,9 @@ class Breakpoints {
 
   /// 抽屉宽度（对齐 frontend HamburgerMenu 350-400px）
   static const double drawerWidth = 360;
+
+  /// 桌面外壳最小宽度：≥此值才用 TopBar+侧边栏/内嵌 Tab 等桌面式布局；设为 1400 确保所有 iPad（最大约 1366pt）均用手机式布局
+  static const double desktopShellMinWidth = 1400;
 }
 
 /// 响应式工具方法
@@ -54,9 +57,13 @@ class ResponsiveUtils {
   static bool isMobile(BuildContext context) =>
       MediaQuery.sizeOf(context).width < Breakpoints.mobile;
 
-  /// 当前是否为桌面布局（>= 768px，平板与桌面合并）
+  /// 当前是否为桌面布局（>= 768px，平板与桌面合并，用于内容区列数/间距等适配）
   static bool isDesktop(BuildContext context) =>
       MediaQuery.sizeOf(context).width >= Breakpoints.mobile;
+
+  /// 是否为「桌面外壳」：仅≥desktopShellMinWidth 时用桌面式整页布局；iPad 一律用与手机一致的顶部/导航
+  static bool isDesktopShell(BuildContext context) =>
+      MediaQuery.sizeOf(context).width >= Breakpoints.desktopShellMinWidth;
 
   /// 当前是否为宽桌面（>= 1024px，用于更宽的布局）
   static bool isWideDesktop(BuildContext context) =>
@@ -75,12 +82,12 @@ class ResponsiveUtils {
 
   /// 根据屏幕宽度和内容类型计算网格列数
   ///
-  /// 对齐 iOS `AdaptiveLayout.gridColumnCount`:
+  /// iPad 等大屏增加列数，避免单卡过大；手机保持 1–2 列。
   /// | 宽度范围           | task | fleaMarket | forum | standard |
   /// |-------------------|------|------------|-------|----------|
   /// | < 600  (手机)      |  2   |     2      |   1   |    2     |
-  /// | 600-900 (平板竖)    |  2   |     3      |   2   |    2     |
-  /// | 900-1200(平板横)    |  3   |     4      |   2   |    3     |
+  /// | 600-900 (平板竖)    |  3   |     3      |   2   |    3     |
+  /// | 900-1200(平板横)    |  4   |     4      |   3   |    4     |
   /// | > 1200  (桌面)      |  4   |     5      |   3   |    4     |
   static int gridColumnCount(
     BuildContext context, {
@@ -101,28 +108,28 @@ class ResponsiveUtils {
           return 4;
       }
     } else if (w >= Breakpoints.medium) {
-      // 平板横屏
+      // 平板横屏（如 iPad 横屏）
       switch (type) {
         case GridItemType.task:
-          return 3;
+          return 4;
         case GridItemType.fleaMarket:
           return 4;
         case GridItemType.forum:
-          return 2;
-        case GridItemType.standard:
           return 3;
+        case GridItemType.standard:
+          return 4;
       }
     } else if (w >= Breakpoints.compact) {
-      // 平板竖屏
+      // 平板竖屏（如 iPad 竖屏 768pt）
       switch (type) {
         case GridItemType.task:
-          return 2;
+          return 3;
         case GridItemType.fleaMarket:
           return 3;
         case GridItemType.forum:
           return 2;
         case GridItemType.standard:
-          return 2;
+          return 3;
       }
     } else {
       // 手机

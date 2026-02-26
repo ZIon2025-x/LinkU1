@@ -1,12 +1,9 @@
 part of 'profile_view.dart';
 
-/// Mobile profile layout — gradient background + scrollable content
-/// 对齐 iOS ProfileView: AppColors.background + 顶部 primary 渐变
+/// Mobile profile layout — 与首页同款装饰背景，由 ProfileView 层 Stack 提供
 Widget _buildMobileProfile(
     BuildContext context, ProfileState profileState, User user, bool isDark) {
-  return PageBackground(
-    hasTopGradient: true,
-    child: SingleChildScrollView(
+  return SingleChildScrollView(
         physics: const AlwaysScrollableScrollPhysics(),
         padding: EdgeInsets.only(
           // MediaQuery.padding.bottom 已包含底部导航栏+系统安全区高度（extendBody: true）
@@ -25,7 +22,6 @@ Widget _buildMobileProfile(
             _buildLogoutButton(context, isDark),
           ],
         ),
-      ),
   );
 }
 
@@ -33,7 +29,7 @@ Widget _buildMobileProfile(
 Widget _buildUserInfoSection(
     BuildContext context, User user, bool isDark) {
   return Padding(
-    padding: const EdgeInsets.fromLTRB(AppSpacing.md, 40, AppSpacing.md, 0),
+    padding: const EdgeInsets.fromLTRB(AppSpacing.md, 8, AppSpacing.md, 0),
     child: Column(
       children: [
         // 头像 + 角标（点击可更换头像）

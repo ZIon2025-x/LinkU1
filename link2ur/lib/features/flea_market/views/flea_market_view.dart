@@ -356,6 +356,7 @@ class _FleaMarketViewContentState extends State<_FleaMarketViewContent> {
             child: AnimatedListItem(
               key: ValueKey(item.id),
               index: index,
+              maxAnimatedIndex: columnCount * 3 - 1,
               child: _FleaMarketItemCard(item: item),
             ),
           );

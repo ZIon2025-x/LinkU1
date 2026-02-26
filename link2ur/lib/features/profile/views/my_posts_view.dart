@@ -271,6 +271,7 @@ class _MyPostsViewState extends State<MyPostsView>
           return AnimatedListItem(
             key: ValueKey(item.id),
             index: index,
+            maxAnimatedIndex: 11,
             child: _FleaMarketItemCard(
               item: item,
               category: category,

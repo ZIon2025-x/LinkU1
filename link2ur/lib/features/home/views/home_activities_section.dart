@@ -347,8 +347,8 @@ class _DiscoveryFeedSkeleton extends StatelessWidget {
         ? Colors.white.withValues(alpha: 0.06)
         : Colors.black.withValues(alpha: 0.06);
     const spacing = 10.0;
-    const crossCount = 2;
-    const itemCount = 6;
+    final crossCount = ResponsiveUtils.gridColumnCount(context, type: GridItemType.standard);
+    final itemCount = (crossCount * 2).clamp(4, 8);
 
     return Padding(
       padding: EdgeInsets.symmetric(
@@ -356,7 +356,7 @@ class _DiscoveryFeedSkeleton extends StatelessWidget {
       ),
       child: LayoutBuilder(
         builder: (context, constraints) {
-          final width = (constraints.maxWidth - spacing) / crossCount;
+          final width = (constraints.maxWidth - spacing * (crossCount - 1)) / crossCount;
           final imageHeight = width * (3 / 4);
           return Column(
             mainAxisSize: MainAxisSize.min,
@@ -485,7 +485,7 @@ class _SliverDiscoveryFeed extends StatelessWidget {
             SliverPadding(
               padding: EdgeInsets.symmetric(horizontal: horizontalPadding == 0 ? 10 : horizontalPadding),
               sliver: SliverMasonryGrid.count(
-                crossAxisCount: 2,
+                crossAxisCount: ResponsiveUtils.gridColumnCount(context, type: GridItemType.standard),
                 mainAxisSpacing: 10,
                 crossAxisSpacing: 10,
                 childCount: state.discoveryItems.length,

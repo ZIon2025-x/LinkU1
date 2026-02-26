@@ -19,6 +19,8 @@ import '../../../core/widgets/error_state_view.dart';
 import '../../../core/widgets/empty_state_view.dart';
 import '../../../core/widgets/async_image_view.dart';
 import '../../../core/widgets/content_constraint.dart';
+import '../../../core/widgets/glass_container.dart';
+import '../../../core/widgets/decorative_background.dart';
 import '../../../data/models/forum.dart';
 import '../../../data/models/leaderboard.dart';
 import '../bloc/forum_bloc.dart';
@@ -69,9 +71,8 @@ class _ForumViewState extends State<ForumView> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final isDesktop = ResponsiveUtils.isDesktop(context);
-
-    if (isDesktop) {
+    // 仅超宽屏用桌面式内嵌 Header；iPad 与手机一致用 AppBar + 下方 Tab
+    if (ResponsiveUtils.isDesktopShell(context)) {
       return _buildDesktopLayout(isDark);
     }
     return _buildMobileLayout(isDark);
@@ -79,20 +80,24 @@ class _ForumViewState extends State<ForumView> {
 
   Widget _buildDesktopLayout(bool isDark) {
     return Scaffold(
-      backgroundColor: AppColors.backgroundFor(isDark ? Brightness.dark : Brightness.light),
-      body: Column(
+      body: Stack(
         children: [
-          _buildDesktopHeader(isDark),
-          Expanded(
-            child: widget.showLeaderboardTab
-                ? IndexedStack(
-                    index: _selectedTab,
-                    children: const [
-                      _ForumTab(),
-                      _LeaderboardTab(),
-                    ],
-                  )
-                : const _ForumTab(),
+          const RepaintBoundary(child: DecorativeBackground()),
+          Column(
+            children: [
+              _buildDesktopHeader(isDark),
+              Expanded(
+                child: widget.showLeaderboardTab
+                    ? IndexedStack(
+                        index: _selectedTab,
+                        children: const [
+                          _ForumTab(),
+                          _LeaderboardTab(),
+                        ],
+                      )
+                    : const _ForumTab(),
+              ),
+            ],
           ),
         ],
       ),
@@ -162,28 +167,32 @@ class _ForumViewState extends State<ForumView> {
 
   Widget _buildMobileLayout(bool isDark) {
     return Scaffold(
-      backgroundColor: AppColors.backgroundFor(isDark ? Brightness.dark : Brightness.light),
-      body: SafeArea(
-        bottom: false,
-        child: Column(
-          children: [
-            _buildMobileAppBar(isDark),
-            Expanded(
-              child: widget.showLeaderboardTab
-                  ? PageView(
-                      controller: _pageController,
-                      onPageChanged: (index) {
-                        setState(() => _selectedTab = index);
-                      },
-                      children: const [
-                        _ForumTab(),
-                        _LeaderboardTab(),
-                      ],
-                    )
-                  : const _ForumTab(),
+      body: Stack(
+        children: [
+          const RepaintBoundary(child: DecorativeBackground()),
+          SafeArea(
+            bottom: false,
+            child: Column(
+              children: [
+                _buildMobileAppBar(isDark),
+                Expanded(
+                  child: widget.showLeaderboardTab
+                      ? PageView(
+                          controller: _pageController,
+                          onPageChanged: (index) {
+                            setState(() => _selectedTab = index);
+                          },
+                          children: const [
+                            _ForumTab(),
+                            _LeaderboardTab(),
+                          ],
+                        )
+                      : const _ForumTab(),
+                ),
+              ],
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -193,7 +202,7 @@ class _ForumViewState extends State<ForumView> {
       padding: const EdgeInsets.symmetric(
         horizontal: AppSpacing.sm, vertical: AppSpacing.xs,
       ),
-      color: isDark ? AppColors.backgroundDark : AppColors.backgroundLight,
+      decoration: const BoxDecoration(color: Colors.transparent),
       child: Row(
         children: [
           const SizedBox(width: 44),
@@ -436,7 +445,7 @@ class _SectionSearchBar extends StatelessWidget {
     return Container(
       height: barHeight,
       alignment: Alignment.center,
-      color: Theme.of(context).scaffoldBackgroundColor,
+      decoration: const BoxDecoration(color: Colors.transparent),
       padding: const EdgeInsets.fromLTRB(AppSpacing.md, AppSpacing.xs, AppSpacing.md, AppSpacing.xs),
       child: TextField(
         controller: controller,
@@ -610,6 +619,7 @@ class _ForumTabState extends State<_ForumTab> {
                                 ),
                                 child: AnimatedListItem(
                                   index: index,
+                                  maxAnimatedIndex: 11,
                                   child: _CategoryCard(category: filtered[index]),
                                 ),
                               );
@@ -796,6 +806,7 @@ class _LeaderboardTabState extends State<_LeaderboardTab> {
               ),
               child: AnimatedListItem(
                 index: index,
+                maxAnimatedIndex: 11,
                 child: _LeaderboardCard(
                   leaderboard: state.leaderboards[index],
                 ),
@@ -832,31 +843,10 @@ class _CategoryCard extends StatelessWidget {
         context.push('/forum/category/${category.id}',
             extra: category);
       },
-      child: Container(
+      child: GlassContainer(
+        borderRadius: AppRadius.allLarge,
         padding: AppSpacing.allMd,
-        decoration: BoxDecoration(
-          color: isDark
-              ? AppColors.cardBackgroundDark
-              : AppColors.cardBackgroundLight,
-          borderRadius: AppRadius.allLarge,
-          border: Border.all(
-            color: (isDark ? AppColors.separatorDark : AppColors.separatorLight)
-                .withValues(alpha: 0.3),
-            width: 0.5,
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: colors.first.withValues(alpha: 0.06),
-              blurRadius: 12,
-              offset: const Offset(0, 4),
-            ),
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.02),
-              blurRadius: 2,
-              offset: const Offset(0, 1),
-            ),
-          ],
-        ),
+        blurSigma: 14,
         child: Row(
           children: [
             // 图标容器 - 对标iOS 64x64 渐变背景
@@ -1137,31 +1127,10 @@ class _LeaderboardCard extends StatelessWidget {
       child: Stack(
         clipBehavior: Clip.none,
         children: [
-          Container(
+          GlassContainer(
+        borderRadius: AppRadius.allLarge,
         padding: const EdgeInsets.all(AppSpacing.md),
-        decoration: BoxDecoration(
-          color: isDark
-              ? AppColors.cardBackgroundDark
-              : AppColors.cardBackgroundLight,
-          borderRadius: AppRadius.allLarge,
-          border: Border.all(
-            color: (isDark ? AppColors.separatorDark : AppColors.separatorLight)
-                .withValues(alpha: 0.3),
-            width: 0.5,
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: colors.first.withValues(alpha: 0.08),
-              blurRadius: 12,
-              offset: const Offset(0, 4),
-            ),
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.02),
-              blurRadius: 2,
-              offset: const Offset(0, 1),
-            ),
-          ],
-        ),
+        blurSigma: 14,
         child: Column(
           children: [
             // 对标iOS: 封面 + 标题/描述/位置

@@ -1938,6 +1938,7 @@ class _DisputeTimelineSheetState extends State<_DisputeTimelineSheet> {
                                 // 交错入场动画
                                 return AnimatedListItem(
                                   index: index,
+                                  maxAnimatedIndex: 11,
                                   direction: AnimatedListDirection.left,
                                   staggerDelay: const Duration(milliseconds: 80),
                                   child: _TimelineItemTile(

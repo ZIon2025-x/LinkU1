@@ -255,6 +255,7 @@ class _MyTasksViewState extends State<MyTasksView>
           return AnimatedListItem(
             key: ValueKey(tasks[index].id),
             index: index,
+            maxAnimatedIndex: 11,
             child: _TaskCard(task: tasks[index]),
           );
         },
@@ -296,6 +297,7 @@ class _MyTasksViewState extends State<MyTasksView>
           return AnimatedListItem(
             key: ValueKey(_pendingApplications[index].id),
             index: index,
+            maxAnimatedIndex: 11,
             child: _ApplicationCard(application: _pendingApplications[index]),
           );
         },

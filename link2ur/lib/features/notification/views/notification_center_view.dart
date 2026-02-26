@@ -145,6 +145,7 @@ class _SystemNotificationListState extends State<_SystemNotificationList> {
               return AnimatedListItem(
                 key: ValueKey(state.notifications[index].id),
                 index: index,
+                maxAnimatedIndex: 11,
                 child: _NotificationItem(
                   notification: state.notifications[index],
                   isSystem: true,
@@ -240,6 +241,7 @@ class _InteractionNotificationListState
               return AnimatedListItem(
                 key: ValueKey(state.notifications[index].id),
                 index: index,
+                maxAnimatedIndex: 11,
                 child: _NotificationItem(
                   notification: state.notifications[index],
                   isSystem: false,

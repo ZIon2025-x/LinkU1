@@ -298,7 +298,8 @@ class _MainTabViewState extends State<MainTabView>
         },
         child: LayoutBuilder(
           builder: (context, constraints) {
-            if (constraints.maxWidth >= Breakpoints.mobile) {
+            // 仅超宽屏（≥desktopShellMinWidth）用 TopBar+侧边栏；iPad 一律与手机一致用底部导航
+            if (constraints.maxWidth >= Breakpoints.desktopShellMinWidth) {
               return _buildDesktopLayout(context);
             }
             return _buildMobileLayout(context);
@@ -389,41 +390,41 @@ class _MainTabViewState extends State<MainTabView>
       body: widget.navigationShell,
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
+          color: isDark
+              ? AppColors.cardBackgroundDark
+              : AppColors.cardBackgroundLight,
+          border: Border(
+            top: BorderSide(
               color: isDark
-                  ? AppColors.cardBackgroundDark
-                  : AppColors.cardBackgroundLight,
-              border: Border(
-                top: BorderSide(
-                  color: isDark
-                      ? Colors.white.withValues(alpha: 0.06)
-                      : Colors.black.withValues(alpha: 0.04),
-                  width: 0.5,
-                ),
-              ),
+                  ? Colors.white.withValues(alpha: 0.06)
+                  : Colors.black.withValues(alpha: 0.04),
+              width: 0.5,
             ),
-            child: SafeArea(
-              child: SizedBox(
-                height: 60,
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceAround,
-                  children: List.generate(_mobileTabs.length, (index) {
-                    final tab = _mobileTabs[index];
-                    final isSelected = index == _currentIndex;
+          ),
+        ),
+        child: SafeArea(
+          child: SizedBox(
+            height: 60,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: List.generate(_mobileTabs.length, (index) {
+                final tab = _mobileTabs[index];
+                final isSelected = index == _currentIndex;
 
-                    if (tab.isCenter) {
-                      return _buildCenterButton();
-                    }
+                if (tab.isCenter) {
+                  return _buildCenterButton();
+                }
 
-                    return _buildMobileTabItem(
-                      tab: tab,
-                      isSelected: isSelected,
-                      index: index,
-                    );
-                  }),
-                ),
-              ),
+                return _buildMobileTabItem(
+                  tab: tab,
+                  isSelected: isSelected,
+                  index: index,
+                );
+              }),
             ),
-    ),
+          ),
+        ),
+      ),
     );
   }
 

@@ -524,6 +524,7 @@ class _NearbyTabState extends State<_NearbyTab> {
             itemBuilder: (context, index) {
               return AnimatedListItem(
                 index: index,
+                maxAnimatedIndex: 11,
                 child: _TaskCard(task: state.nearbyTasks[index]),
               );
             },

@@ -33,11 +33,11 @@ class _RecommendedTab extends StatelessWidget {
           },
           child: CustomScrollView(
             slivers: [
-              // 欢迎区域（桌面端全宽滚动，内容 1200 居中）
+              // 欢迎区域 + Linker 思考云朵（云朵与按钮绑定，下滑后一起移出视口）
               SliverToBoxAdapter(
                 child: isDesktop
-                    ? const ContentConstraint(child: _GreetingSection())
-                    : const _GreetingSection(),
+                    ? const ContentConstraint(child: _GreetingSectionWithCloud())
+                    : const _GreetingSectionWithCloud(),
               ),
 
               // Banner 区域 — 紧跟问候语，无分隔线（对标iOS VStack spacing）
@@ -565,10 +565,12 @@ class _RecommendedTab extends StatelessWidget {
 
     return SliverLayoutBuilder(
       builder: (context, constraints) {
-        final pad = ((constraints.crossAxisExtent - Breakpoints.maxContentWidth) / 2)
+        final centerPad = ((constraints.crossAxisExtent - Breakpoints.maxContentWidth) / 2)
             .clamp(0.0, double.infinity);
+        final minPad = ResponsiveUtils.horizontalPadding(context);
+        final horizontalPad = centerPad > 0 ? centerPad : minPad;
         return SliverPadding(
-          padding: EdgeInsets.symmetric(horizontal: pad),
+          padding: EdgeInsets.symmetric(horizontal: horizontalPad),
           sliver: SliverGrid(
             gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
               crossAxisCount: crossAxisCount,
@@ -613,6 +615,7 @@ class _RecommendedTab extends StatelessWidget {
               child: AnimatedListItem(
                 key: ValueKey(task.id),
                 index: index,
+                maxAnimatedIndex: 9,
                 child: _HorizontalTaskCard(task: task),
               ),
             );
@@ -1059,10 +1062,10 @@ class _SkeletonHorizontalCards extends StatelessWidget {
         ? Colors.white.withValues(alpha: 0.06)
         : Colors.black.withValues(alpha: 0.06);
 
-    // 桌面端用 Grid 骨架，移动端用横向滚动骨架
+    // 桌面/平板端用 Grid 骨架（列数与实际任务网格一致），移动端用横向滚动骨架
     if (isDesktop) {
-      return const SkeletonGrid(
-        crossAxisCount: 3,
+      return SkeletonGrid(
+        crossAxisCount: ResponsiveUtils.gridColumnCount(context, type: GridItemType.task),
         aspectRatio: 0.82,
       );
     }

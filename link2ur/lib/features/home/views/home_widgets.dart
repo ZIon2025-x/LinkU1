@@ -1,18 +1,16 @@
 part of 'home_view.dart';
 
-// ==================== 思考云朵 overlay（最上层，仅推荐 Tab） ====================
+// ==================== 思考云朵（与 Linker 按钮绑定，随推荐页滚动） ====================
 
-/// 使用 assets/images/cloud.png，最上层显示，不改高度；仅当 [currentTabIndex] == 1（推荐）时显示
-class _LinkerCloudOverlay extends StatefulWidget {
-  const _LinkerCloudOverlay({required this.currentTabIndex});
-
-  final int currentTabIndex;
+/// Linker 思考云朵 + 问候区：云朵在 Linker 按钮上方，同属推荐 Tab 首屏，下滑后一起移出视口
+class _GreetingSectionWithCloud extends StatefulWidget {
+  const _GreetingSectionWithCloud();
 
   @override
-  State<_LinkerCloudOverlay> createState() => _LinkerCloudOverlayState();
+  State<_GreetingSectionWithCloud> createState() => _GreetingSectionWithCloudState();
 }
 
-class _LinkerCloudOverlayState extends State<_LinkerCloudOverlay> {
+class _GreetingSectionWithCloudState extends State<_GreetingSectionWithCloud> {
   bool _showCloud = false;
   Timer? _showTimer;
   Timer? _hideTimer;
@@ -30,20 +28,7 @@ class _LinkerCloudOverlayState extends State<_LinkerCloudOverlay> {
     _scheduleNextShow();
   }
 
-  @override
-  void didUpdateWidget(covariant _LinkerCloudOverlay oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (widget.currentTabIndex != 1 && _showCloud) {
-      setState(() => _showCloud = false);
-      _hideTimer?.cancel();
-    }
-    if (widget.currentTabIndex == 1 && oldWidget.currentTabIndex != 1) {
-      _scheduleNextShow();
-    }
-  }
-
   void _scheduleNextShow() {
-    if (widget.currentTabIndex != 1) return;
     _showTimer?.cancel();
     final int delaySeconds;
     if (!_hasShownOnce) {
@@ -53,7 +38,7 @@ class _LinkerCloudOverlayState extends State<_LinkerCloudOverlay> {
       delaySeconds = _minInterval.inSeconds + Random().nextInt(span);
     }
     _showTimer = Timer(Duration(seconds: delaySeconds), () {
-      if (!mounted || widget.currentTabIndex != 1) return;
+      if (!mounted) return;
       _hasShownOnce = true;
       setState(() => _showCloud = true);
       _hideTimer?.cancel();
@@ -74,21 +59,72 @@ class _LinkerCloudOverlayState extends State<_LinkerCloudOverlay> {
 
   @override
   Widget build(BuildContext context) {
-    if (widget.currentTabIndex != 1) {
-      return const SizedBox.shrink();
-    }
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final isDesktop = ResponsiveUtils.isDesktop(context);
+    final isAuthenticated = context.select<AuthBloc, bool>((bloc) => bloc.state.isAuthenticated);
+    final userNameFromState = context.select<AuthBloc, String?>((bloc) => bloc.state.user?.name);
+    final userName = isAuthenticated
+        ? (userNameFromState ?? context.l10n.homeDefaultUser)
+        : context.l10n.homeClassmate;
+    final horizontalPadding = isDesktop ? 24.0 : AppSpacing.md;
 
-    return Positioned(
-      top: 0,
-      left: 0,
-      right: 0,
-      bottom: 0,
-      child: IgnorePointer(
-        child: SafeArea(
-          child: Align(
-            alignment: Alignment.topRight,
-            child: Padding(
-              padding: const EdgeInsets.only(top: 20, right: 24),
+    // 云朵与 Linker 按钮重叠：Stack 内先画问候行，再在按钮上方叠云朵；顶部不做额外间距，被裁切可接受
+    const cloudHeight = 91.0;
+
+    return Padding(
+      padding: EdgeInsets.fromLTRB(horizontalPadding, AppSpacing.sm, horizontalPadding, 0),
+      child: Stack(
+        clipBehavior: Clip.none,
+        alignment: Alignment.centerRight,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      context.l10n.homeWhatToDo,
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w500,
+                        color: isDark
+                            ? AppColors.textSecondaryDark
+                            : AppColors.textSecondaryLight,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      context.l10n.homeGreeting(userName),
+                      style: TextStyle(
+                        fontSize: 26,
+                        fontWeight: FontWeight.w900,
+                        color: isDark
+                            ? AppColors.textPrimaryDark
+                            : AppColors.textPrimaryLight,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              GestureDetector(
+                onTap: () => context.push('/support-chat'),
+                child: ClipOval(
+                  child: Image.asset(
+                    AppAssets.any,
+                    width: 44,
+                    height: 44,
+                    fit: BoxFit.cover,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          Positioned(
+            top: -cloudHeight + 42,
+            right: 0,
+            child: IgnorePointer(
               child: AnimatedOpacity(
                 opacity: _showCloud ? 1.0 : 0.0,
                 duration: const Duration(milliseconds: 700),
@@ -96,19 +132,19 @@ class _LinkerCloudOverlayState extends State<_LinkerCloudOverlay> {
                 child: Image.asset(
                   AppAssets.cloud,
                   width: 140,
-                  height: 91,
+                  height: cloudHeight,
                   fit: BoxFit.contain,
                 ),
               ),
             ),
           ),
-        ),
+        ],
       ),
     );
   }
 }
 
-/// 对标iOS: headerSection — 两行问候 + 右侧 Linker 入口
+/// 对标iOS: headerSection — 两行问候 + 右侧 Linker 入口（无云朵，用于非推荐 Tab 或桌面）
 class _GreetingSection extends StatelessWidget {
   const _GreetingSection();
 
@@ -116,13 +152,11 @@ class _GreetingSection extends StatelessWidget {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final isDesktop = ResponsiveUtils.isDesktop(context);
-    // 使用 select 只监听用户名变化，避免 AuthBloc 任何状态变更都触发重建
     final isAuthenticated = context.select<AuthBloc, bool>((bloc) => bloc.state.isAuthenticated);
     final userNameFromState = context.select<AuthBloc, String?>((bloc) => bloc.state.user?.name);
     final userName = isAuthenticated
         ? (userNameFromState ?? context.l10n.homeDefaultUser)
         : context.l10n.homeClassmate;
-
     final horizontalPadding = isDesktop ? 24.0 : AppSpacing.md;
 
     return Padding(
@@ -130,12 +164,10 @@ class _GreetingSection extends StatelessWidget {
           horizontalPadding, AppSpacing.sm, horizontalPadding, 0),
       child: Row(
         children: [
-          // 左侧：两行问候文字（对标iOS headerSection）
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // 小字副标题
                 Text(
                   context.l10n.homeWhatToDo,
                   style: TextStyle(
@@ -147,7 +179,6 @@ class _GreetingSection extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 2),
-                // 大字用户名
                 Text(
                   context.l10n.homeGreeting(userName),
                   style: TextStyle(
@@ -161,7 +192,6 @@ class _GreetingSection extends StatelessWidget {
               ],
             ),
           ),
-          // 右侧：Linker（统一聊天）入口，使用 any 图标
           GestureDetector(
             onTap: () => context.push('/support-chat'),
             child: ClipOval(
