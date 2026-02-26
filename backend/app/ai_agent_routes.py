@@ -130,6 +130,10 @@ async def send_message(
     return EventSourceResponse(
         agent.process_message_stream(conversation_id, request_body.content),
         media_type="text/event-stream",
+        headers={
+            "X-Accel-Buffering": "no",
+            "Cache-Control": "no-cache",
+        },
     )
 
 
