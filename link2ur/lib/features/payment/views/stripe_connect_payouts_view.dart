@@ -59,9 +59,15 @@ class _StripeConnectPayoutsViewState extends State<StripeConnectPayoutsView> {
 
       if (!mounted) return;
 
+      final allTransactions = results[1] as List<StripeConnectTransaction>;
+      // 对标 iOS：提现记录页只显示支出（expense）
+      final expenseOnly = allTransactions
+          .where((t) => t.type.toLowerCase() == 'expense')
+          .toList();
+
       setState(() {
         _balance = results[0] as StripeConnectBalance;
-        _transactions = results[1] as List<StripeConnectTransaction>;
+        _transactions = expenseOnly;
         _isLoading = false;
       });
     } catch (e) {
@@ -759,16 +765,7 @@ class _AccountDetailsSheet extends StatelessWidget {
 
     return Column(
       children: [
-        // 拖拽手柄
-        Container(
-          margin: const EdgeInsets.symmetric(vertical: 12),
-          width: 40,
-          height: 4,
-          decoration: BoxDecoration(
-            color: AppColors.textTertiary.withValues(alpha: 0.3),
-            borderRadius: BorderRadius.circular(2),
-          ),
-        ),
+        // 不画自定义拖拽条：主题 showDragHandle: true 已提供
         // 标题
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
@@ -1065,16 +1062,7 @@ class _TransactionDetailSheet extends StatelessWidget {
 
     return Column(
       children: [
-        // 拖拽手柄
-        Container(
-          margin: const EdgeInsets.symmetric(vertical: 12),
-          width: 40,
-          height: 4,
-          decoration: BoxDecoration(
-            color: AppColors.textTertiary.withValues(alpha: 0.3),
-            borderRadius: BorderRadius.circular(2),
-          ),
-        ),
+        // 不画自定义拖拽条：主题 showDragHandle: true 已提供
         // 标题
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),

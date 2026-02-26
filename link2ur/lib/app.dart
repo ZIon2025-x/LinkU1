@@ -172,57 +172,53 @@ class _Link2UrAppState extends State<Link2UrApp> {
         ],
         child: _DeferredBlocLoader(
           child: _WebSplashTimeout(
-          child: BlocListener<AuthBloc, AuthState>(
-          listenWhen: (prev, curr) {
-            // 当认证检查完成时触发（从 initial/checking 变为其他状态）
-            final wasChecking = prev.status == AuthStatus.initial ||
-                prev.status == AuthStatus.checking;
-            final isChecking = curr.status == AuthStatus.initial ||
-                curr.status == AuthStatus.checking;
-            return wasChecking && !isChecking;
-          },
-          listener: (context, state) {
-            // 认证检查完成，移除原生启动画面，直接展示主界面
-            FlutterNativeSplash.remove();
-          },
-          child: BlocBuilder<SettingsBloc, SettingsState>(
-            // 仅在主题或语言变化时重建 MaterialApp，避免其他设置变更触发全局重建
-            buildWhen: (prev, curr) =>
-                prev.themeMode != curr.themeMode ||
-                prev.locale != curr.locale,
-            builder: (context, settingsState) {
-              // 全局键盘收起：点击空白区域自动收起键盘
-              return GestureDetector(
-                onTap: () {
-                  FocusManager.instance.primaryFocus?.unfocus();
+            child: BlocListener<AuthBloc, AuthState>(
+              listenWhen: (prev, curr) {
+                final wasChecking = prev.status == AuthStatus.initial ||
+                    prev.status == AuthStatus.checking;
+                final isChecking = curr.status == AuthStatus.initial ||
+                    curr.status == AuthStatus.checking;
+                return wasChecking && !isChecking;
+              },
+              listener: (context, state) {
+                FlutterNativeSplash.remove();
+              },
+              child: BlocBuilder<SettingsBloc, SettingsState>(
+                buildWhen: (prev, curr) =>
+                    prev.themeMode != curr.themeMode ||
+                    prev.locale != curr.locale,
+                builder: (context, settingsState) {
+                  return GestureDetector(
+                    onTap: () {
+                      FocusManager.instance.primaryFocus?.unfocus();
+                    },
+                    child: MaterialApp.router(
+                      title: 'Link²Ur',
+                      debugShowCheckedModeBanner: false,
+                      scrollBehavior: const AppScrollBehavior(),
+                      theme: AppTheme.lightTheme,
+                      darkTheme: AppTheme.darkTheme,
+                      themeMode: settingsState.themeMode,
+                      routerConfig: _appRouter.router,
+                      localizationsDelegates: const [
+                        AppLocalizations.delegate,
+                        GlobalMaterialLocalizations.delegate,
+                        GlobalWidgetsLocalizations.delegate,
+                        GlobalCupertinoLocalizations.delegate,
+                      ],
+                      supportedLocales: const [
+                        Locale('zh', 'CN'),
+                        Locale('zh', 'TW'),
+                        Locale('en', 'US'),
+                      ],
+                      locale: _localeFromString(settingsState.locale),
+                    ),
+                  );
                 },
-                child: MaterialApp.router(
-                title: 'Link²Ur',
-                debugShowCheckedModeBanner: false,
-                scrollBehavior: const AppScrollBehavior(),
-                theme: AppTheme.lightTheme,
-                darkTheme: AppTheme.darkTheme,
-                themeMode: settingsState.themeMode,
-                routerConfig: _appRouter.router,
-                localizationsDelegates: const [
-                  AppLocalizations.delegate,
-                  GlobalMaterialLocalizations.delegate,
-                  GlobalWidgetsLocalizations.delegate,
-                  GlobalCupertinoLocalizations.delegate,
-                ],
-                supportedLocales: const [
-                  Locale('zh', 'CN'),
-                  Locale('zh', 'TW'),
-                  Locale('en', 'US'),
-                ],
-                locale: _localeFromString(settingsState.locale),
               ),
-              );
-            },
+            ),
           ),
         ),
-        ),
-          ),
       ),
     );
   }

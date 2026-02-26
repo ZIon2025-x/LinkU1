@@ -453,18 +453,7 @@ class _UserProfileViewState extends State<UserProfileView> {
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // 拖拽手柄
-                    Center(
-                      child: Container(
-                        width: 40,
-                        height: 4,
-                        margin: const EdgeInsets.only(bottom: 16),
-                        decoration: BoxDecoration(
-                          color: isDark ? Colors.white24 : Colors.grey.shade300,
-                          borderRadius: BorderRadius.circular(2),
-                        ),
-                      ),
-                    ),
+                    // 不画自定义拖拽条：主题 showDragHandle: true 已提供
                     Center(
                       child: Text(
                         l10n.profileDirectRequestTitle,
@@ -544,7 +533,7 @@ class _UserProfileViewState extends State<UserProfileView> {
 
                     // 任务类型
                     DropdownButtonFormField<String>(
-                      value: selectedTaskType,
+                      initialValue: selectedTaskType,
                       decoration: InputDecoration(
                         labelText: l10n.profileDirectRequestHintTaskType,
                         border: OutlineInputBorder(

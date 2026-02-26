@@ -146,10 +146,13 @@ class _EmptyStateViewState extends State<EmptyStateView>
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    return Center(
-      child: Padding(
-        padding: AppSpacing.allXl,
-        child: Column(
+    return Semantics(
+      label: widget.title,
+      child: RepaintBoundary(
+        child: Center(
+          child: Padding(
+            padding: AppSpacing.allXl,
+            child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             // 图标 — 轻微浮动动画（上下 6px）
@@ -227,6 +230,8 @@ class _EmptyStateViewState extends State<EmptyStateView>
               ),
             ],
           ],
+            ),
+          ),
         ),
       ),
     );

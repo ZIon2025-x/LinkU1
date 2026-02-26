@@ -124,7 +124,9 @@ extension SharePlatformExtension on SharePlatform {
 }
 
 /// 自定义分享面板组件（类似小红书）
-/// 参考iOS CustomSharePanel.swift
+/// 参考 iOS CustomSharePanel.swift
+/// 当前已暂时禁用：点击分享直接调起原生分享，见 [NativeShare]。
+/// 保留本类便于日后恢复自定义分享栏。
 class CustomSharePanel extends StatelessWidget {
   const CustomSharePanel({
     super.key,
@@ -186,17 +188,7 @@ class CustomSharePanel extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // 拖拽指示器
-            Container(
-              margin: const EdgeInsets.only(top: 12),
-              width: 36,
-              height: 4,
-              decoration: BoxDecoration(
-                color: isDark ? AppColors.dividerDark : AppColors.dividerLight,
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-
+            // 不画自定义拖拽条：主题 showDragHandle: true 已提供
             // 标题栏
             Padding(
               padding: const EdgeInsets.symmetric(

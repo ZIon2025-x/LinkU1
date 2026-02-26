@@ -33,7 +33,7 @@ class TaskExpertRepository {
       'offset': offset,
       if (category != null) 'category': category,
       if (location != null) 'location': location,
-      if (keyword != null && keyword.trim().isNotEmpty) 'keyword': keyword!.trim(),
+      if (keyword != null && keyword.trim().isNotEmpty) 'keyword': keyword.trim(),
     };
 
     final cacheKey =

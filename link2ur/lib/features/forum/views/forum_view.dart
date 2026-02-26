@@ -26,8 +26,11 @@ import '../../auth/bloc/auth_bloc.dart';
 import '../../leaderboard/bloc/leaderboard_bloc.dart';
 
 /// 社区页 (论坛 + 排行榜)
+/// [showLeaderboardTab] 为 false 时仅显示论坛（用于独立路由 /forum，不显示排行榜按钮）
 class ForumView extends StatefulWidget {
-  const ForumView({super.key});
+  const ForumView({super.key, this.showLeaderboardTab = true});
+
+  final bool showLeaderboardTab;
 
   @override
   State<ForumView> createState() => _ForumViewState();
@@ -79,18 +82,17 @@ class _ForumViewState extends State<ForumView> {
       backgroundColor: AppColors.backgroundFor(isDark ? Brightness.dark : Brightness.light),
       body: Column(
         children: [
-          // Notion 风格 tab + 发帖按钮
           _buildDesktopHeader(isDark),
-
-          // 直接渲染 tab 内容（桌面端全宽，各 tab 内部 ContentConstraint 约束 1200）
           Expanded(
-            child: IndexedStack(
-              index: _selectedTab,
-              children: const [
-                _ForumTab(),
-                _LeaderboardTab(),
-              ],
-            ),
+            child: widget.showLeaderboardTab
+                ? IndexedStack(
+                    index: _selectedTab,
+                    children: const [
+                      _ForumTab(),
+                      _LeaderboardTab(),
+                    ],
+                  )
+                : const _ForumTab(),
           ),
         ],
       ),
@@ -103,48 +105,55 @@ class _ForumViewState extends State<ForumView> {
         padding: const EdgeInsets.fromLTRB(24, 20, 24, 12),
         child: Row(
         children: [
-          // 分段控件
-          Container(
-            padding: const EdgeInsets.all(3),
-            decoration: BoxDecoration(
-              color: isDark
-                  ? Colors.white.withValues(alpha: 0.06)
-                  : AppColors.backgroundLight,
-              borderRadius: BorderRadius.circular(9),
+          if (widget.showLeaderboardTab) ...[
+            Container(
+              padding: const EdgeInsets.all(3),
+              decoration: BoxDecoration(
+                color: isDark
+                    ? Colors.white.withValues(alpha: 0.06)
+                    : AppColors.backgroundLight,
+                borderRadius: BorderRadius.circular(9),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _DesktopSegment(
+                    label: context.l10n.communityForum,
+                    isSelected: _selectedTab == 0,
+                    onTap: () => _onTabChanged(0),
+                    isDark: isDark,
+                  ),
+                  _DesktopSegment(
+                    label: context.l10n.communityLeaderboard,
+                    isSelected: _selectedTab == 1,
+                    onTap: () => _onTabChanged(1),
+                    isDark: isDark,
+                  ),
+                ],
+              ),
             ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                _DesktopSegment(
-                  label: context.l10n.communityForum,
-                  isSelected: _selectedTab == 0,
-                  onTap: () => _onTabChanged(0),
-                  isDark: isDark,
-                ),
-                _DesktopSegment(
-                  label: context.l10n.communityLeaderboard,
-                  isSelected: _selectedTab == 1,
-                  onTap: () => _onTabChanged(1),
-                  isDark: isDark,
-                ),
-              ],
+            const Spacer(),
+            _DesktopCreateButton(
+              label: _selectedTab == 0
+                  ? context.l10n.forumRequestNewCategory
+                  : context.l10n.leaderboardApplyNew,
+              icon: Icons.edit_rounded,
+              onTap: () {
+                if (_selectedTab == 0) {
+                  context.push('/forum/category-request');
+                } else {
+                  context.push('/leaderboard/apply');
+                }
+              },
             ),
-          ),
-          const Spacer(),
-          // 申请按钮（根据选中tab切换功能）
-          _DesktopCreateButton(
-            label: _selectedTab == 0
-                ? context.l10n.forumRequestNewCategory
-                : context.l10n.leaderboardApplyNew,
-            icon: Icons.edit_rounded,
-            onTap: () {
-              if (_selectedTab == 0) {
-                context.push('/forum/category-request');
-              } else {
-                context.push('/leaderboard/apply');
-              }
-            },
-          ),
+          ] else ...[
+            const Spacer(),
+            _DesktopCreateButton(
+              label: context.l10n.forumRequestNewCategory,
+              icon: Icons.edit_rounded,
+              onTap: () => context.push('/forum/category-request'),
+            ),
+          ],
         ],
         ),
       ),
@@ -155,24 +164,23 @@ class _ForumViewState extends State<ForumView> {
     return Scaffold(
       backgroundColor: AppColors.backgroundFor(isDark ? Brightness.dark : Brightness.light),
       body: SafeArea(
-        // bottom: false 让列表内容可以自然延伸到底部导航栏后面
-        // 配合半透明底部导航栏，滚动时内容透过可见，体验更好
-        // 各 Tab 内的 ListView 通过 padding.bottom 自行处理底部间距
         bottom: false,
         child: Column(
           children: [
             _buildMobileAppBar(isDark),
             Expanded(
-              child: PageView(
-                controller: _pageController,
-                onPageChanged: (index) {
-                  setState(() => _selectedTab = index);
-                },
-                children: const [
-                  _ForumTab(),
-                  _LeaderboardTab(),
-                ],
-              ),
+              child: widget.showLeaderboardTab
+                  ? PageView(
+                      controller: _pageController,
+                      onPageChanged: (index) {
+                        setState(() => _selectedTab = index);
+                      },
+                      children: const [
+                        _ForumTab(),
+                        _LeaderboardTab(),
+                      ],
+                    )
+                  : const _ForumTab(),
             ),
           ],
         ),
@@ -190,31 +198,31 @@ class _ForumViewState extends State<ForumView> {
         children: [
           const SizedBox(width: 44),
           const Spacer(),
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              _CommunityTabButton(
-                title: context.l10n.communityForum,
-                isSelected: _selectedTab == 0,
-                onTap: () => _onTabChanged(0),
-              ),
-              _CommunityTabButton(
-                title: context.l10n.communityLeaderboard,
-                isSelected: _selectedTab == 1,
-                onTap: () => _onTabChanged(1),
-              ),
-            ],
-          ),
+          if (widget.showLeaderboardTab)
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                _CommunityTabButton(
+                  title: context.l10n.communityForum,
+                  isSelected: _selectedTab == 0,
+                  onTap: () => _onTabChanged(0),
+                ),
+                _CommunityTabButton(
+                  title: context.l10n.communityLeaderboard,
+                  isSelected: _selectedTab == 1,
+                  onTap: () => _onTabChanged(1),
+                ),
+              ],
+            ),
           const Spacer(),
-          // 编辑按钮：论坛 → 申请新版块，排行榜 → 申请新排行榜
           Material(
             color: Colors.transparent,
             child: InkWell(
               onTap: () {
-                if (_selectedTab == 0) {
-                  context.push('/forum/category-request');
-                } else {
+                if (widget.showLeaderboardTab && _selectedTab == 1) {
                   context.push('/leaderboard/apply');
+                } else {
+                  context.push('/forum/category-request');
                 }
               },
               borderRadius: BorderRadius.circular(20),

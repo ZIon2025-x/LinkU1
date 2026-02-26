@@ -17,7 +17,7 @@ import '../../../core/widgets/loading_view.dart';
 import '../../../core/widgets/error_state_view.dart';
 import '../../../core/widgets/async_image_view.dart';
 import '../../../core/widgets/full_screen_image_view.dart';
-import '../../../core/widgets/custom_share_panel.dart';
+import '../../../core/utils/native_share.dart';
 import '../../../core/widgets/scroll_safe_tap.dart';
 import '../../../core/router/app_router.dart';
 import '../../../core/router/page_transitions.dart';
@@ -138,15 +138,16 @@ class _ActivityDetailViewContent extends StatelessWidget {
         if (state.activityDetail != null) ...[
           _buildAppBarButton(
             icon: Icons.share_outlined,
-            onPressed: () {
+            onPressed: () async {
               AppHaptics.selection();
               final activity = state.activityDetail!;
               final locale = Localizations.localeOf(context);
-              CustomSharePanel.show(
-                context,
+              final shareFiles = await NativeShare.fileFromFirstImageUrl(activity.firstImage);
+              await NativeShare.share(
                 title: activity.displayTitle(locale),
                 description: activity.displayDescription(locale),
                 url: 'https://link2ur.com/activities/${activity.id}',
+                files: shareFiles,
               );
             },
           ),
@@ -705,14 +706,6 @@ class _ActivityDetailViewContent extends StatelessWidget {
       ),
     );
   }
-
-  String _formatDeadline(DateTime dt) {
-    return '${dt.year}-${dt.month.toString().padLeft(2, '0')}-'
-        '${dt.day.toString().padLeft(2, '0')} '
-        '${dt.hour.toString().padLeft(2, '0')}:'
-        '${dt.minute.toString().padLeft(2, '0')}';
-  }
-
 }
 
 // ==================== 官方活动奖品信息 + 中奖名单卡片 ====================

@@ -13,7 +13,7 @@ import '../../../core/widgets/error_state_view.dart';
 import '../../../core/widgets/loading_view.dart';
 import '../../../core/widgets/async_image_view.dart';
 import '../../../core/widgets/full_screen_image_view.dart';
-import '../../../core/widgets/custom_share_panel.dart';
+import '../../../core/utils/native_share.dart';
 import '../../../core/utils/l10n_extension.dart';
 import '../../../core/utils/responsive.dart';
 import '../../../core/router/page_transitions.dart';
@@ -196,14 +196,16 @@ class _FleaMarketDetailContent extends StatelessWidget {
           _buildCircleButton(
             context,
             icon: Icons.share_outlined,
-            onTap: () {
+            onTap: () async {
               AppHaptics.selection();
               final item = state.selectedItem!;
-              CustomSharePanel.show(
-                context,
+              final imageUrl = item.images.isNotEmpty ? item.images.first : null;
+              final shareFiles = await NativeShare.fileFromFirstImageUrl(imageUrl);
+              await NativeShare.share(
                 title: item.title,
                 description: item.description ?? '',
                 url: 'https://link2ur.com/flea-market/${item.id}',
+                files: shareFiles,
               );
             },
           ),
@@ -1082,14 +1084,7 @@ class _FleaMarketPurchaseSheetState extends State<_FleaMarketPurchaseSheet> {
             mainAxisSize: MainAxisSize.min,
             children: [
               const SizedBox(height: 12),
-              Container(
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: AppColors.textTertiary.withValues(alpha: 0.3),
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
+              // 不画自定义拖拽条：主题 showDragHandle: true 已提供
               Padding(
                 padding: const EdgeInsets.symmetric(
                     horizontal: AppSpacing.lg, vertical: 12),

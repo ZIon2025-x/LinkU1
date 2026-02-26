@@ -468,13 +468,10 @@ class _MainTabViewState extends State<MainTabView>
       child: Semantics(
         label: _getTabLabel(context, tab.label),
         button: true,
-        child: GestureDetector(
+          child: GestureDetector(
           onTap: () => _onMobileTabTapped(index),
           behavior: HitTestBehavior.opaque,
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 200),
-            curve: Curves.easeOutCubic,
-            child: Column(
+          child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 AnimatedScale(
@@ -516,7 +513,6 @@ class _MainTabViewState extends State<MainTabView>
             ),
           ),
         ),
-      ),
     );
   }
 

@@ -152,7 +152,7 @@ class CouponPointsRepository {
         .toList();
   }
 
-  /// 领取优惠券
+  /// 领取优惠券（按优惠券 ID）
   Future<Map<String, dynamic>> claimCoupon(int couponId) async {
     final response = await _apiService.post<Map<String, dynamic>>(
       ApiEndpoints.claimCoupon,
@@ -161,6 +161,24 @@ class CouponPointsRepository {
 
     if (!response.isSuccess || response.data == null) {
       throw CouponPointsException(response.message ?? '领取优惠券失败');
+    }
+
+    return response.data!;
+  }
+
+  /// 凭兑换码领取优惠券（对标 iOS claimCoupon(couponId: nil, promotionCode: code)）
+  Future<Map<String, dynamic>> claimCouponByCode(String promotionCode) async {
+    final code = promotionCode.trim();
+    if (code.isEmpty) {
+      throw const CouponPointsException('请输入兑换码');
+    }
+    final response = await _apiService.post<Map<String, dynamic>>(
+      ApiEndpoints.claimCoupon,
+      data: {'promotion_code': code},
+    );
+
+    if (!response.isSuccess || response.data == null) {
+      throw CouponPointsException(response.message ?? '兑换码无效或已失效');
     }
 
     return response.data!;

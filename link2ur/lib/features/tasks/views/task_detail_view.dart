@@ -19,7 +19,7 @@ import '../../../core/widgets/error_state_view.dart';
 import '../../../core/widgets/loading_view.dart';
 import '../../../core/widgets/async_image_view.dart';
 import '../../../core/widgets/full_screen_image_view.dart';
-import '../../../core/widgets/custom_share_panel.dart';
+import '../../../core/utils/native_share.dart';
 import '../../../core/widgets/user_identity_badges.dart';
 import '../../../core/widgets/animated_list_item.dart';
 import '../../../core/router/app_router.dart';
@@ -305,16 +305,7 @@ class _TaskDetailContent extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              // 拖拽指示器
-              Container(
-                width: 36,
-                height: 4,
-                margin: const EdgeInsets.only(bottom: 16),
-                decoration: BoxDecoration(
-                  color: AppColors.textTertiaryLight,
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
+              // 不画自定义拖拽条：主题 showDragHandle: true 已提供
               // 争议详情（条件显示） - 对标iOS disputeDetail
               if (hasDisputeOrRefund)
                 ListTile(
@@ -338,18 +329,20 @@ class _TaskDetailContent extends StatelessWidget {
                     _showCancelTaskConfirm(context, task.id);
                   },
                 ),
-              // 分享 - 对标iOS share
+              // 分享 - 对标 iOS 直接调起系统分享（标题+描述+链接）
               ListTile(
                 leading: const Icon(Icons.share_outlined),
                 title: Text(l10n.taskDetailShare),
-                onTap: () {
+                onTap: () async {
                   Navigator.pop(context);
                   final locale = Localizations.localeOf(context);
-                  CustomSharePanel.show(
-                    context,
+                  final imageUrl = task.images.isNotEmpty ? task.images.first : null;
+                  final shareFiles = await NativeShare.fileFromFirstImageUrl(imageUrl);
+                  await NativeShare.share(
                     title: task.displayTitle(locale),
                     description: task.displayDescription(locale) ?? '',
                     url: 'https://link2ur.com/tasks/${task.id}',
+                    files: shareFiles,
                   );
                 },
               ),

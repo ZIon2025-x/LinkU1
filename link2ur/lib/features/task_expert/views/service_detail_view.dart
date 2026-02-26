@@ -1303,15 +1303,7 @@ class _ApplyServiceSheetState extends State<_ApplyServiceSheet> {
           ),
           child: Column(
             children: [
-              Container(
-                margin: const EdgeInsets.only(top: 12, bottom: 8),
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: isDark ? Colors.white24 : Colors.grey.shade300,
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
+              // 不在此处再画拖拽条：主题已设置 showDragHandle: true，ModalBottomSheet 会自带一条
               Padding(
                 padding: const EdgeInsets.symmetric(
                     horizontal: 20, vertical: 12),

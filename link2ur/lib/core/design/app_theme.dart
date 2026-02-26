@@ -142,7 +142,7 @@ class AppTheme {
         margin: EdgeInsets.zero,
       ),
 
-      // 按钮主题
+      // 按钮主题（关闭水波纹/焦点高亮，避免 Web 及移动端点击时闪烁）
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
           elevation: 0,
@@ -155,6 +155,8 @@ class AppTheme {
           ),
           textStyle: AppTypography.button,
           animationDuration: AppAnimations.fast,
+          splashFactory: NoSplash.splashFactory,
+          overlayColor: Colors.transparent,
         ),
       ),
 
@@ -169,6 +171,8 @@ class AppTheme {
           side: const BorderSide(color: AppColors.primary, width: 1.5),
           textStyle: AppTypography.button,
           animationDuration: AppAnimations.fast,
+          splashFactory: NoSplash.splashFactory,
+          overlayColor: Colors.transparent,
         ),
       ),
 
@@ -179,6 +183,8 @@ class AppTheme {
           shape: RoundedRectangleBorder(
             borderRadius: AppRadius.allMedium,
           ),
+          splashFactory: NoSplash.splashFactory,
+          overlayColor: Colors.transparent,
         ),
       ),
 
@@ -345,6 +351,14 @@ class AppTheme {
         size: 24,
       ),
 
+      // 图标按钮（关闭水波纹，避免 Web 闪烁）
+      iconButtonTheme: IconButtonThemeData(
+        style: IconButton.styleFrom(
+          splashFactory: NoSplash.splashFactory,
+          overlayColor: Colors.transparent,
+        ),
+      ),
+
       // 进度指示器主题
       progressIndicatorTheme: ProgressIndicatorThemeData(
         color: AppColors.primary,
@@ -370,7 +384,7 @@ class AppTheme {
         ),
       ),
 
-      // SegmentedButton 主题
+      // SegmentedButton 主题（关闭水波纹，避免 Web 闪烁）
       segmentedButtonTheme: SegmentedButtonThemeData(
         style: ButtonStyle(
           backgroundColor: WidgetStateProperty.resolveWith((states) {
@@ -388,6 +402,8 @@ class AppTheme {
           shape: WidgetStateProperty.all(
             RoundedRectangleBorder(borderRadius: AppRadius.allMedium),
           ),
+          splashFactory: NoSplash.splashFactory,
+          overlayColor: WidgetStateProperty.all(Colors.transparent),
         ),
       ),
     );
@@ -526,7 +542,7 @@ class AppTheme {
         margin: EdgeInsets.zero,
       ),
 
-      // 按钮主题
+      // 按钮主题（关闭水波纹/焦点高亮，避免 Web 及移动端点击时闪烁）
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
           elevation: 0,
@@ -539,6 +555,8 @@ class AppTheme {
           ),
           textStyle: AppTypography.button,
           animationDuration: AppAnimations.fast,
+          splashFactory: NoSplash.splashFactory,
+          overlayColor: Colors.transparent,
         ),
       ),
 
@@ -553,6 +571,8 @@ class AppTheme {
           side: const BorderSide(color: AppColors.primary, width: 1.5),
           textStyle: AppTypography.button,
           animationDuration: AppAnimations.fast,
+          splashFactory: NoSplash.splashFactory,
+          overlayColor: Colors.transparent,
         ),
       ),
 
@@ -563,6 +583,8 @@ class AppTheme {
           shape: RoundedRectangleBorder(
             borderRadius: AppRadius.allMedium,
           ),
+          splashFactory: NoSplash.splashFactory,
+          overlayColor: Colors.transparent,
         ),
       ),
 
@@ -730,6 +752,14 @@ class AppTheme {
         size: 24,
       ),
 
+      // 图标按钮（关闭水波纹，避免 Web 闪烁）
+      iconButtonTheme: IconButtonThemeData(
+        style: IconButton.styleFrom(
+          splashFactory: NoSplash.splashFactory,
+          overlayColor: Colors.transparent,
+        ),
+      ),
+
       // 进度指示器主题
       progressIndicatorTheme: ProgressIndicatorThemeData(
         color: AppColors.primary,
@@ -755,7 +785,7 @@ class AppTheme {
         ),
       ),
 
-      // SegmentedButton 主题
+      // SegmentedButton 主题（关闭水波纹，避免 Web 闪烁）
       segmentedButtonTheme: SegmentedButtonThemeData(
         style: ButtonStyle(
           backgroundColor: WidgetStateProperty.resolveWith((states) {
@@ -773,6 +803,8 @@ class AppTheme {
           shape: WidgetStateProperty.all(
             RoundedRectangleBorder(borderRadius: AppRadius.allMedium),
           ),
+          splashFactory: NoSplash.splashFactory,
+          overlayColor: WidgetStateProperty.all(Colors.transparent),
         ),
       ),
     );

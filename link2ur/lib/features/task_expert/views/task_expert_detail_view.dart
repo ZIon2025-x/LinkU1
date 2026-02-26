@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
-import 'package:share_plus/share_plus.dart';
+import '../../../core/utils/native_share.dart';
 
 import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_spacing.dart';
@@ -56,16 +56,17 @@ class TaskExpertDetailView extends StatelessWidget {
               builder: (context, state) {
                 return IconButton(
                   icon: const Icon(Icons.share_outlined),
-                  onPressed: () {
+                  onPressed: () async {
                     final expert = state.selectedExpert;
                     if (expert != null) {
-                      SharePlus.instance.share(
-                        ShareParams(
-                          text:
-                              '${context.l10n.taskExpertShareText(expert.displayNameWith(context.l10n))}\nhttps://link2ur.com/task-experts/${expert.id}',
-                          subject: context.l10n
-                              .taskExpertShareTitle(expert.displayNameWith(context.l10n)),
-                        ),
+                      final name = expert.displayNameWith(context.l10n);
+                      final imageUrl = expert.avatar;
+                      final shareFiles = await NativeShare.fileFromFirstImageUrl(imageUrl);
+                      await NativeShare.share(
+                        title: context.l10n.taskExpertShareTitle(name),
+                        description: context.l10n.taskExpertShareText(name),
+                        url: 'https://link2ur.com/task-experts/${expert.id}',
+                        files: shareFiles,
                       );
                     }
                   },

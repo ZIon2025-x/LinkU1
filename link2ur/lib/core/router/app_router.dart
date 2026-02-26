@@ -19,6 +19,7 @@ import '../../features/flea_market/views/flea_market_detail_view.dart';
 import '../../features/flea_market/views/create_flea_market_item_view.dart';
 import '../../features/task_expert/views/task_expert_list_view.dart';
 import '../../features/task_expert/views/task_expert_detail_view.dart';
+import '../../features/forum/bloc/forum_bloc.dart';
 import '../../features/forum/views/forum_view.dart';
 import '../../features/forum/views/forum_post_detail_view.dart';
 import '../../features/forum/views/create_post_view.dart';
@@ -43,6 +44,7 @@ import '../../features/coupon_points/views/coupon_points_view.dart';
 import '../../features/info/views/info_views.dart';
 import '../../features/info/views/vip_purchase_view.dart';
 import '../../data/models/flea_market.dart';
+import '../../data/repositories/forum_repository.dart';
 import '../../features/flea_market/views/edit_flea_market_item_view.dart';
 import '../../features/forum/views/forum_post_list_view.dart';
 import '../../features/forum/views/forum_category_request_view.dart';
@@ -485,11 +487,16 @@ class AppRouter {
         },
       ),
 
-      // 论坛（具体路径在参数化路径之前）
+      // 论坛（独立路由 /forum 仅论坛，不显示排行榜按钮；Tab 内 /community 由 MainTabView 提供论坛+排行榜）
       GoRoute(
         path: AppRoutes.forum,
         name: 'forum',
-        builder: (context, state) => const ForumView(),
+        builder: (context, state) => BlocProvider<ForumBloc>(
+          create: (context) => ForumBloc(
+            forumRepository: context.read<ForumRepository>(),
+          ),
+          child: const ForumView(showLeaderboardTab: false),
+        ),
       ),
       GoRoute(
         path: AppRoutes.createPost,

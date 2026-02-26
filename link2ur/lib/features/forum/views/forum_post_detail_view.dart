@@ -13,7 +13,7 @@ import '../../../core/widgets/skeleton_view.dart';
 import '../../../core/widgets/error_state_view.dart';
 import '../../../core/widgets/async_image_view.dart';
 import '../../../core/widgets/full_screen_image_view.dart';
-import '../../../core/widgets/custom_share_panel.dart';
+import '../../../core/utils/native_share.dart';
 import '../../../core/widgets/animated_like_button.dart';
 import '../../../data/repositories/forum_repository.dart';
 import '../../../data/models/forum.dart';
@@ -202,12 +202,18 @@ class _ForumPostDetailViewState extends State<ForumPostDetailView> {
           actions: [
             IconButton(
               icon: const Icon(Icons.share_outlined),
-              onPressed: () {
+              onPressed: () async {
                 AppHaptics.selection();
-                CustomSharePanel.show(
-                  context,
-                  title: context.l10n.forumPostDetail,
+                final post = context.read<ForumBloc>().state.selectedPost;
+                final rawDesc = post?.content?.replaceAll(RegExp(r'<[^>]*>'), '').trim() ?? '';
+                final description = rawDesc.length > 200 ? '${rawDesc.substring(0, 200)}...' : rawDesc;
+                final imageUrl = post?.images.isNotEmpty == true ? post!.images.first : null;
+                final shareFiles = await NativeShare.fileFromFirstImageUrl(imageUrl);
+                await NativeShare.share(
+                  title: post?.title ?? context.l10n.forumPostDetail,
+                  description: description,
                   url: 'https://link2ur.com/forum/posts/${widget.postId}',
+                  files: shareFiles,
                 );
               },
             ),

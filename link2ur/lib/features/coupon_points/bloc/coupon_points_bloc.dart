@@ -419,7 +419,7 @@ class CouponPointsBloc extends Bloc<CouponPointsEvent, CouponPointsState> {
     }
   }
 
-  /// 使用邀请码
+  /// 使用兑换码领取优惠券（对标 iOS redeemWithCode → claimCoupon(promotionCode:)）
   Future<void> _onUseInvitationCode(
     CouponPointsUseInvitationCode event,
     Emitter<CouponPointsState> emit,
@@ -427,18 +427,17 @@ class CouponPointsBloc extends Bloc<CouponPointsEvent, CouponPointsState> {
     emit(state.copyWith(isSubmitting: true));
 
     try {
-      await _repository.useInvitationCode(event.code);
+      await _repository.claimCouponByCode(event.code);
       emit(state.copyWith(
         isSubmitting: false,
-        actionMessage: 'invite_code_used',
+        actionMessage: 'coupon_claimed',
       ));
-      // 刷新积分
       add(const CouponPointsLoadRequested());
     } catch (e) {
       final errMsg = e.toString().replaceAll('CouponPointsException: ', '');
       emit(state.copyWith(
         isSubmitting: false,
-        actionMessage: 'invite_code_failed',
+        actionMessage: 'claim_failed',
         errorMessage: errMsg,
       ));
     }

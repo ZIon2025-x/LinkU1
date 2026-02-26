@@ -217,7 +217,7 @@ class _CreateTaskContentState extends State<_CreateTaskContent> {
           : null,
       taskType: _selectedCategory,
       reward: reward,
-      currency: 'GBP',
+      currency: _selectedCurrency,
       location: _location,
       latitude: _latitude,
       longitude: _longitude,

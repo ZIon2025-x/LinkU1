@@ -225,25 +225,36 @@ class _SegmentedFilter extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = context.l10n;
 
-    return Container(
-      decoration: BoxDecoration(
-        color: isDark ? Colors.grey[800] : Colors.grey[200],
-        borderRadius: BorderRadius.circular(8),
-      ),
-      padding: const EdgeInsets.all(3),
-      child: Row(
-        children: [
-          _buildSegment(
-            label: l10n.activitySingle,
-            isSelected: selected == _FilterOption.single,
-            onTap: () => onChanged(_FilterOption.single),
+    // 整条分段栏包一层 Material + InkWell(NoSplash)，吸收点击墨水效果，避免父级或主题导致两个按钮同时深色闪
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () {},
+        splashFactory: NoSplash.splashFactory,
+        highlightColor: Colors.transparent,
+        focusColor: Colors.transparent,
+        hoverColor: Colors.transparent,
+        child: Container(
+          decoration: BoxDecoration(
+            color: isDark ? Colors.grey[800] : Colors.grey[200],
+            borderRadius: BorderRadius.circular(8),
           ),
-          _buildSegment(
-            label: l10n.activityMulti,
-            isSelected: selected == _FilterOption.multi,
-            onTap: () => onChanged(_FilterOption.multi),
+          padding: const EdgeInsets.all(3),
+          child: Row(
+            children: [
+              _buildSegment(
+                label: l10n.activitySingle,
+                isSelected: selected == _FilterOption.single,
+                onTap: () => onChanged(_FilterOption.single),
+              ),
+              _buildSegment(
+                label: l10n.activityMulti,
+                isSelected: selected == _FilterOption.multi,
+                onTap: () => onChanged(_FilterOption.multi),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
@@ -255,10 +266,9 @@ class _SegmentedFilter extends StatelessWidget {
   }) {
     return Expanded(
       child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
         onTap: onTap,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
-          curve: Curves.easeInOut,
+        child: Container(
           padding: const EdgeInsets.symmetric(vertical: 8),
           decoration: BoxDecoration(
             color: isSelected

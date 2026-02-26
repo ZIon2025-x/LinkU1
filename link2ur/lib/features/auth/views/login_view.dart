@@ -602,9 +602,7 @@ class _LoginViewState extends State<LoginView>
           return Expanded(
             child: GestureDetector(
               onTap: () => _onMethodChanged(method),
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 200),
-                curve: Curves.easeInOut,
+              child: Container(
                 padding: const EdgeInsets.symmetric(vertical: 10),
                 decoration: BoxDecoration(
                   color: isSelected

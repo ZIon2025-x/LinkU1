@@ -27,6 +27,7 @@ class TaskDraftCard extends StatelessWidget {
     final reward = draft['reward'];
     final currency = draft['currency'] as String? ?? 'GBP';
     final location = draft['location'] as String? ?? '';
+    final currencySymbol = currency == 'GBP' ? '£' : currency;
 
     return Padding(
       padding: const EdgeInsets.symmetric(
@@ -76,7 +77,7 @@ class TaskDraftCard extends StatelessWidget {
               _buildField(
                 context,
                 l10n.createTaskReward,
-                '£${(reward is num ? reward.toStringAsFixed(2) : reward)}',
+                '$currencySymbol${(reward is num ? reward.toStringAsFixed(2) : reward)}',
               ),
             if (location.isNotEmpty)
               _buildField(context, l10n.createTaskLocation, location),

@@ -20,7 +20,7 @@ import '../../../core/widgets/error_state_view.dart';
 import '../../../core/widgets/async_image_view.dart';
 import '../../../core/widgets/external_web_view.dart';
 import '../../../core/widgets/full_screen_image_view.dart';
-import '../../../core/widgets/custom_share_panel.dart';
+import '../../../core/utils/native_share.dart';
 import '../../../data/models/leaderboard.dart';
 import '../../../data/repositories/leaderboard_repository.dart';
 import '../bloc/leaderboard_bloc.dart';
@@ -75,13 +75,15 @@ class _ItemDetailContent extends StatelessWidget {
 
   PreferredSizeWidget _buildAppBar(
       BuildContext context, LeaderboardItem? item, bool hasImages) {
-    void onShare() {
+    void onShare() async {
       if (item == null) return;
-      CustomSharePanel.show(
-        context,
-        title: item.name,
-        description: item.description ?? '',
-        url: 'https://link2ur.com/leaderboard/item/${item.id}',
+      final imageUrl = item!.firstImage;
+      final shareFiles = await NativeShare.fileFromFirstImageUrl(imageUrl);
+      await NativeShare.share(
+        title: item!.name,
+        description: item!.description ?? '',
+        url: 'https://link2ur.com/leaderboard/item/${item!.id}',
+        files: shareFiles,
       );
     }
 
@@ -393,17 +395,7 @@ class _VoteCommentSheetState extends State<_VoteCommentSheet> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // 拖动指示器
-            Center(
-              child: Container(
-                width: 36,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: AppColors.textTertiaryLight,
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-            ),
+            // 不画自定义拖拽条：主题 showDragHandle: true 已提供
             const SizedBox(height: 16),
 
             // 标题

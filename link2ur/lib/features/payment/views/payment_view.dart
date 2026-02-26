@@ -104,14 +104,19 @@ class _PaymentContentState extends State<_PaymentContent> {
   bool _alreadyPaid = false;
   Timer? _countdownTimer;
   Duration? _remainingTime;
+  /// Card/Alipay 支付成功后轮询支付状态（对齐 iOS）
+  Timer? _paymentStatusPollTimer;
+  int _paymentPollCount = 0;
+  static const int _kMaxPaymentPolls = 90;
+  /// 成功弹窗延迟 2s，等待 webhook 处理（对齐 iOS）
+  Timer? _successDelayTimer;
 
   @override
   void initState() {
     super.initState();
     _startCountdownIfNeeded();
-    // 自动检查支付状态 —— 对齐 iOS viewDidAppear 中的 checkPaymentStatus()
-    // 处理用户返回支付页时已通过其他渠道完成支付的场景
     _checkPaymentStatusOnInit();
+    _setDefaultPaymentMethodIfApplePaySupported();
   }
 
   /// 初始化时检查支付状态（延迟执行，等待 PaymentIntent 创建完成后再检查）
@@ -125,7 +130,45 @@ class _PaymentContentState extends State<_PaymentContent> {
   @override
   void dispose() {
     _countdownTimer?.cancel();
+    _paymentStatusPollTimer?.cancel();
+    _successDelayTimer?.cancel();
     super.dispose();
+  }
+
+  /// 对齐 iOS：Apple Pay 可用时默认选中
+  Future<void> _setDefaultPaymentMethodIfApplePaySupported() async {
+    if (kIsWeb) return;
+    await Future.delayed(const Duration(milliseconds: 400));
+    if (!mounted) return;
+    final supported = await PaymentService.instance.isApplePaySupported();
+    if (mounted && supported && _selectedPaymentMethod == PaymentMethod.card) {
+      setState(() => _selectedPaymentMethod = PaymentMethod.applePay);
+    }
+  }
+
+  /// Card/Alipay 支付成功后轮询后端状态（对齐 iOS payment status polling）
+  void _startPaymentStatusPolling() {
+    _paymentStatusPollTimer?.cancel();
+    _paymentPollCount = 0;
+    _paymentStatusPollTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (!mounted) {
+        _paymentStatusPollTimer?.cancel();
+        return;
+      }
+      _paymentPollCount++;
+      if (_paymentPollCount > _kMaxPaymentPolls) {
+        _paymentStatusPollTimer?.cancel();
+        context.read<PaymentBloc>().add(const PaymentMarkSuccess());
+        return;
+      }
+      context.read<PaymentBloc>().add(PaymentCheckStatus(widget.taskId));
+    });
+  }
+
+  void _cancelPaymentStatusPolling() {
+    _paymentStatusPollTimer?.cancel();
+    _paymentStatusPollTimer = null;
+    _paymentPollCount = 0;
   }
 
   // ==================== 支付方式切换（对齐 iOS methodSwitched）====================
@@ -262,9 +305,8 @@ class _PaymentContentState extends State<_PaymentContent> {
 
       if (!mounted) return;
       if (success) {
-        bloc.add(const PaymentMarkSuccess());
+        _startPaymentStatusPolling();
       } else {
-        // 用户取消 —— 恢复到 ready 状态
         bloc.add(const PaymentClearError());
       }
     } catch (e) {
@@ -493,12 +535,15 @@ class _PaymentContentState extends State<_PaymentContent> {
           prev.status != curr.status ||
           (prev.weChatCheckoutUrl == null && curr.weChatCheckoutUrl != null),
       listener: (context, state) {
-        // 支付成功 → 弹出成功对话框
         if (state.status == PaymentStatus.success) {
           _alreadyPaid = true;
-          _showPaymentSuccess();
+          _cancelPaymentStatusPolling();
+          _successDelayTimer?.cancel();
+          _successDelayTimer = Timer(const Duration(seconds: 2), () {
+            if (!mounted) return;
+            _showPaymentSuccess();
+          });
         }
-        // 微信支付 Checkout URL 就绪 → 打开 WebView
         if (state.weChatCheckoutUrl != null &&
             state.status == PaymentStatus.ready) {
           _openWeChatWebView(state.weChatCheckoutUrl!);
@@ -975,8 +1020,7 @@ class _PaymentMethodTile extends StatelessWidget {
         AppHaptics.selection();
         onTap();
       },
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
+      child: Container(
         padding: AppSpacing.allMd,
         decoration: BoxDecoration(
           color: Theme.of(context).cardColor,

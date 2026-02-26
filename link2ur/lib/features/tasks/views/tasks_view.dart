@@ -262,9 +262,7 @@ class _TasksViewContentState extends State<_TasksViewContent> {
                             category['key'] as String),
                       );
                 },
-                child: AnimatedContainer(
-                  duration: AppConstants.animationDuration,
-                  curve: Curves.easeOutCubic,
+                child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                   decoration: BoxDecoration(
                     gradient: isSelected
@@ -636,8 +634,7 @@ class _TasksViewContentState extends State<_TasksViewContent> {
         AppHaptics.selection();
         onTap();
       },
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
+      child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         decoration: BoxDecoration(
           gradient: isSelected

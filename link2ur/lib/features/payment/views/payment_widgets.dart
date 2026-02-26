@@ -23,7 +23,7 @@ class _CouponSelectorSheetState extends State<_CouponSelectorSheet> {
   Future<void> _loadCoupons() async {
     try {
       final repo = context.read<CouponPointsRepository>();
-      final result = await repo.getMyCoupons();
+      final result = await repo.getMyCoupons(status: 'unused');
       if (mounted) {
         setState(() {
           _coupons = result
@@ -53,14 +53,7 @@ class _CouponSelectorSheetState extends State<_CouponSelectorSheet> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Container(
-            width: 40,
-            height: 4,
-            decoration: BoxDecoration(
-              color: AppColors.dividerLight,
-              borderRadius: BorderRadius.circular(2),
-            ),
-          ),
+          // 不画自定义拖拽条：主题 showDragHandle: true 已提供
           const SizedBox(height: 16),
           Text(
             context.l10n.paymentSelectCoupon,

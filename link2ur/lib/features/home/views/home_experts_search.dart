@@ -326,16 +326,7 @@ class _ExpertsTabContentState extends State<_ExpertsTabContent> {
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // 拖拽条
-                    Center(
-                      child: Container(
-                        width: 36, height: 4,
-                        decoration: BoxDecoration(
-                          color: isDark ? AppColors.dividerDark : AppColors.dividerLight,
-                          borderRadius: BorderRadius.circular(2),
-                        ),
-                      ),
-                    ),
+                    // 不画自定义拖拽条：主题 showDragHandle: true 已提供
                     const SizedBox(height: 16),
 
                     // 标题 + 重置
@@ -445,8 +436,7 @@ class _ExpertsTabContentState extends State<_ExpertsTabContent> {
   }) {
     return GestureDetector(
       onTap: () { AppHaptics.selection(); onTap(); },
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
+      child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         decoration: BoxDecoration(
           gradient: isSelected
@@ -1038,16 +1028,7 @@ class _MenuView extends StatelessWidget {
       ),
       child: Column(
         children: [
-          // 拖拽指示器
-          Container(
-            margin: const EdgeInsets.only(top: 12),
-            width: 36,
-            height: 4,
-            decoration: BoxDecoration(
-              color: isDark ? AppColors.dividerDark : AppColors.dividerLight,
-              borderRadius: BorderRadius.circular(2),
-            ),
-          ),
+          // 不画自定义拖拽条：主题 showDragHandle: true 已提供
           // 标题栏
           Padding(
             padding: const EdgeInsets.symmetric(
@@ -1262,16 +1243,7 @@ class _SearchViewState extends State<_SearchView> {
       ),
       child: Column(
         children: [
-          // 拖拽指示器
-          Container(
-            margin: const EdgeInsets.only(top: 12),
-            width: 36,
-            height: 4,
-            decoration: BoxDecoration(
-              color: isDark ? AppColors.dividerDark : AppColors.dividerLight,
-              borderRadius: BorderRadius.circular(2),
-            ),
-          ),
+          // 不画自定义拖拽条：主题 showDragHandle: true 已提供
           AppSpacing.vSm,
 
           // 搜索栏

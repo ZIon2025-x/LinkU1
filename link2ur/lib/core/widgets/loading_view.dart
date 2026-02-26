@@ -19,20 +19,24 @@ class LoadingView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          SizedBox(
-            width: size,
-            height: size,
-            child: CircularProgressIndicator(
-              strokeWidth: 3,
-              valueColor: AlwaysStoppedAnimation<Color>(
-                color ?? AppColors.primary,
+    return Semantics(
+      label: message ?? 'Loading',
+      liveRegion: true,
+      child: RepaintBoundary(
+        child: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              SizedBox(
+                width: size,
+                height: size,
+                child: CircularProgressIndicator(
+                  strokeWidth: 3,
+                  valueColor: AlwaysStoppedAnimation<Color>(
+                    color ?? AppColors.primary,
+                  ),
+                ),
               ),
-            ),
-          ),
           if (message != null) ...[
             AppSpacing.vMd,
             Text(
@@ -42,7 +46,9 @@ class LoadingView extends StatelessWidget {
               ),
             ),
           ],
-        ],
+            ],
+          ),
+        ),
       ),
     );
   }
