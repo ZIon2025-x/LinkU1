@@ -382,6 +382,7 @@ class AIChatBloc extends Bloc<AIChatEvent, AIChatState> {
   ) {
     emit(state.copyWith(
       streamingContent: state.streamingContent + event.content,
+      lastToolName: state.lastToolName, // preserve: copyWith direct-assigns null if omitted
     ));
   }
 
@@ -440,6 +441,7 @@ class AIChatBloc extends Bloc<AIChatEvent, AIChatState> {
     emit(state.copyWith(
       csAvailableSignal: event.available,
       csContactEmail: event.contactEmail,
+      lastToolName: state.lastToolName, // preserve across mid-stream events
     ));
   }
 
@@ -447,7 +449,10 @@ class AIChatBloc extends Bloc<AIChatEvent, AIChatState> {
     _AIChatTaskDraft event,
     Emitter<AIChatState> emit,
   ) {
-    emit(state.copyWith(taskDraft: event.draft));
+    emit(state.copyWith(
+      taskDraft: event.draft,
+      lastToolName: state.lastToolName, // preserve: task_draft fires before done
+    ));
   }
 
   void _onClearTaskDraft(
