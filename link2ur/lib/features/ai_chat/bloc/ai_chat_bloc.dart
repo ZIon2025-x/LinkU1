@@ -472,7 +472,14 @@ class AIChatBloc extends Bloc<AIChatEvent, AIChatState> {
     AIChatClearTaskDraft event,
     Emitter<AIChatState> emit,
   ) {
-    emit(state.copyWith());
+    // Only clear taskDraft — other nullable fields (csAvailableSignal, csContactEmail,
+    // lastToolName) must be preserved. copyWith direct-assigns null for omitted fields.
+    emit(state.copyWith(
+      csAvailableSignal: state.csAvailableSignal,
+      csContactEmail: state.csContactEmail,
+      lastToolName: state.lastToolName,
+    ));
+    // taskDraft omitted → set to null (intentional clear)
   }
 
   void _onError(
