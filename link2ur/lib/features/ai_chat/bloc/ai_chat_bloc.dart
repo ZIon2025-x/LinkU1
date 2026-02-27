@@ -338,10 +338,12 @@ class AIChatBloc extends Bloc<AIChatEvent, AIChatState> {
       content: event.content,
       createdAt: DateTime.now(),
     );
+    // taskDraft persists until user explicitly confirms (AIChatClearTaskDraft)
     emit(state.copyWith(
       messages: [...state.messages, userMessage],
       isReplying: true,
       streamingContent: '',
+      taskDraft: state.taskDraft,
     ));
 
     // 取消之前的 SSE 订阅
@@ -380,9 +382,11 @@ class AIChatBloc extends Bloc<AIChatEvent, AIChatState> {
     _AIChatTokenReceived event,
     Emitter<AIChatState> emit,
   ) {
+    // taskDraft and lastToolName must be preserved — copyWith direct-assigns null if omitted
     emit(state.copyWith(
       streamingContent: state.streamingContent + event.content,
-      lastToolName: state.lastToolName, // preserve: copyWith direct-assigns null if omitted
+      lastToolName: state.lastToolName,
+      taskDraft: state.taskDraft,
     ));
   }
 
@@ -390,7 +394,10 @@ class AIChatBloc extends Bloc<AIChatEvent, AIChatState> {
     _AIChatToolCall event,
     Emitter<AIChatState> emit,
   ) {
-    emit(state.copyWith(activeToolCall: event.toolName));
+    emit(state.copyWith(
+      activeToolCall: event.toolName,
+      taskDraft: state.taskDraft, // preserve draft across tool calls
+    ));
   }
 
   void _onToolResult(
@@ -424,13 +431,18 @@ class AIChatBloc extends Bloc<AIChatEvent, AIChatState> {
         createdAt: DateTime.now(),
         toolName: state.lastToolName,
       );
+      // taskDraft must be preserved — only AIChatClearTaskDraft should clear it
       emit(state.copyWith(
         messages: [...state.messages, assistantMessage],
         isReplying: false,
         streamingContent: '',
+        taskDraft: state.taskDraft,
       ));
     } else {
-      emit(state.copyWith(isReplying: false));
+      emit(state.copyWith(
+        isReplying: false,
+        taskDraft: state.taskDraft,
+      ));
     }
   }
 
@@ -441,7 +453,8 @@ class AIChatBloc extends Bloc<AIChatEvent, AIChatState> {
     emit(state.copyWith(
       csAvailableSignal: event.available,
       csContactEmail: event.contactEmail,
-      lastToolName: state.lastToolName, // preserve across mid-stream events
+      lastToolName: state.lastToolName,
+      taskDraft: state.taskDraft,
     ));
   }
 
@@ -478,11 +491,13 @@ class AIChatBloc extends Bloc<AIChatEvent, AIChatState> {
         isReplying: false,
         streamingContent: '',
         errorMessage: event.error,
+        taskDraft: state.taskDraft,
       ));
     } else {
       emit(state.copyWith(
         isReplying: false,
         errorMessage: event.error,
+        taskDraft: state.taskDraft,
       ));
     }
   }
