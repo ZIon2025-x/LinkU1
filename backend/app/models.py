@@ -2033,8 +2033,8 @@ class Activity(Base):
     voucher_codes = Column(JSONB, nullable=True)      # ["CODE1","CODE2",...]
     # 抽奖字段
     draw_mode = Column(String(10), nullable=True)     # auto/manual
-    draw_at = Column(DateTime, nullable=True)         # 自动开奖时间
-    drawn_at = Column(DateTime, nullable=True)        # 实际开奖时间
+    draw_at = Column(DateTime(timezone=True), nullable=True)   # 自动开奖时间
+    drawn_at = Column(DateTime(timezone=True), nullable=True)  # 实际开奖时间
     winners = Column(JSONB, nullable=True)            # [{user_id, name, prize_index}]
     is_drawn = Column(Boolean, default=False, nullable=False)
     
