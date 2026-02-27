@@ -41,7 +41,7 @@ from app.utils.translation_metrics import TranslationTimer
 
 logger = logging.getLogger(__name__)
 import os
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta, time, timezone
 from app.utils.time_utils import get_utc_time, format_iso_utc
 
 import stripe
@@ -5225,10 +5225,9 @@ def update_profile(
                             detail=f"用户名一个月内只能修改一次，请在 {days_left} 天后再试"
                         )
                 
-                # 更新名字和修改时间（只保存日期部分，兼容 date 类型）
+                # 更新名字和修改时间（只保存日期部分，存为当日 00:00 UTC 以匹配 DateTime(timezone=True)）
                 update_data["name"] = new_name
-                # 使用当前日期（不包含时间），兼容 date 类型数据库字段
-                update_data["name_updated_at"] = get_utc_time().date()
+                update_data["name_updated_at"] = datetime.combine(get_utc_time().date(), time.min, tzinfo=timezone.utc)
         
         if data.residence_city is not None:
             # 验证城市选项（可选：可以在后端验证城市是否在允许列表中）

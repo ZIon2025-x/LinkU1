@@ -30,19 +30,26 @@ def admin_send_notification(
     request: Request = None,
     db: Session = Depends(get_db),
 ):
-    """管理员发送通知"""
-    from app.services.notification_service import send_system_notification
-    
+    """管理员发送通知（写库 + 推送）"""
+    from app.push_notification_service import send_push_notification
+
     if user_ids:
         # 发送给指定用户
         for user_id in user_ids:
             user = crud.get_user_by_id(db, user_id)
             if user:
-                send_system_notification(
+                crud.create_notification(
+                    db=db,
+                    user_id=user_id,
+                    type=notification_type,
+                    title=title,
+                    content=content,
+                )
+                send_push_notification(
                     db=db,
                     user_id=user_id,
                     title=title,
-                    content=content,
+                    body=content,
                     notification_type=notification_type,
                 )
         sent_count = len(user_ids)
@@ -50,11 +57,18 @@ def admin_send_notification(
         # 发送给所有用户
         users = db.query(models.User).filter(models.User.is_active == True).all()
         for user in users:
-            send_system_notification(
+            crud.create_notification(
+                db=db,
+                user_id=user.id,
+                type=notification_type,
+                title=title,
+                content=content,
+            )
+            send_push_notification(
                 db=db,
                 user_id=user.id,
                 title=title,
-                content=content,
+                body=content,
                 notification_type=notification_type,
             )
         sent_count = len(users)
@@ -95,21 +109,28 @@ def admin_send_staff_notification(
     request: Request = None,
     db: Session = Depends(get_db),
 ):
-    """管理员发送员工通知"""
-    from app.services.notification_service import send_system_notification
-    
+    """管理员发送员工通知（写库 + 推送）"""
+    from app.push_notification_service import send_push_notification
+
     # 获取所有客服和管理员用户
     staff_users = db.query(models.User).filter(
         (models.User.is_customer_service == True) | 
         (models.User.is_admin == True)
     ).filter(models.User.is_active == True).all()
-    
+
     for user in staff_users:
-        send_system_notification(
+        crud.create_notification(
+            db=db,
+            user_id=user.id,
+            type=notification_type,
+            title=title,
+            content=content,
+        )
+        send_push_notification(
             db=db,
             user_id=user.id,
             title=title,
-            content=content,
+            body=content,
             notification_type=notification_type,
         )
     
