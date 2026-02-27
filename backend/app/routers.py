@@ -9404,6 +9404,13 @@ def activate_vip(
             status="active"
         )
         
+        # 8.1 若为同一条订阅线升级（如月订→年订），将旧订阅标记为 replaced，与 Apple 状态一致
+        otid = transaction_info.get("original_transaction_id")
+        if otid:
+            crud.mark_replaced_by_upgrade(
+                db, current_user.id, otid, request.transaction_id
+            )
+        
         # 9. 更新用户VIP状态
         # 根据产品ID确定VIP类型
         user_level = "vip"

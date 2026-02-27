@@ -209,6 +209,48 @@ def update_vip_subscription_status(
     return None
 
 
+def mark_replaced_by_upgrade(
+    db: Session,
+    user_id: str,
+    original_transaction_id: str,
+    keep_transaction_id: str,
+) -> int:
+    """
+    将同一订阅线（相同 original_transaction_id）下、除当前交易外的其他
+    active 订阅标记为 replaced（因升级/换购被替换）。
+    用于：用户先月订再年订时，月订记录不再保持 active，与 Apple 状态一致。
+    Returns: 被标记为 replaced 的记录数。
+    """
+    if not original_transaction_id or not keep_transaction_id:
+        return 0
+    q = (
+        db.query(models.VIPSubscription)
+        .filter(
+            models.VIPSubscription.user_id == user_id,
+            models.VIPSubscription.status == "active",
+            models.VIPSubscription.original_transaction_id == original_transaction_id,
+            models.VIPSubscription.transaction_id != keep_transaction_id,
+        )
+    )
+    count = q.update(
+        {
+            models.VIPSubscription.status: "replaced",
+            models.VIPSubscription.cancellation_reason: "upgraded",
+            models.VIPSubscription.updated_at: get_utc_time(),
+        },
+        synchronize_session="fetch",
+    )
+    if count:
+        db.commit()
+        logger.info(
+            "VIP 升级替换: user_id=%s original_transaction_id=%s 已标记 %d 条旧订阅为 replaced",
+            user_id,
+            original_transaction_id,
+            count,
+        )
+    return count
+
+
 def update_user_vip_status(db: Session, user_id: str, user_level: str):
     """更新用户VIP状态"""
     user = db.query(models.User).filter(models.User.id == user_id).first()
