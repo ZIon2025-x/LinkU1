@@ -7,6 +7,7 @@ import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_radius.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/router/app_router.dart';
+import '../../../core/utils/l10n_extension.dart';
 import '../../../data/models/ai_chat.dart';
 
 /// AI 消息气泡
@@ -15,10 +16,13 @@ class AIMessageBubble extends StatelessWidget {
     super.key,
     required this.message,
     this.isStreaming = false,
+    this.onConfirmPublish,
   });
 
   final AIMessage message;
   final bool isStreaming;
+  /// 当本条为「准备任务草稿」消息且当前有草稿时，点击「确认并去发布」时回调（与 TaskDraftCard 行为一致）
+  final VoidCallback? onConfirmPublish;
 
   @override
   Widget build(BuildContext context) {
@@ -93,7 +97,27 @@ class AIMessageBubble extends StatelessWidget {
                           selectable: true,
                         ),
                 ),
-                if (!isUser)
+                if (!isUser && onConfirmPublish != null)
+                  Padding(
+                    padding: const EdgeInsets.only(top: AppSpacing.sm),
+                    child: SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton.icon(
+                        onPressed: onConfirmPublish,
+                        icon: const Icon(Icons.check_circle_outline, size: 18),
+                        label: Text(context.l10n.aiTaskDraftConfirmButton),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.primary,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(AppRadius.medium),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                if (!isUser && onConfirmPublish == null)
                   Builder(
                     builder: (context) {
                       final action = _resolveAction(message.toolName);

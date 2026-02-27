@@ -291,8 +291,9 @@ class _ChatContentState extends State<_ChatContent> {
 
   Widget _buildInputArea(ChatState state) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    // 使用半透明容器替代 BackdropFilter，减少滚动时的重绘开销
-    return Container(
+    // 使用半透明容器替代 BackdropFilter，减少滚动时的重绘开销；RepaintBoundary 减轻点击输入框卡顿
+    return RepaintBoundary(
+      child: Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: isDark
@@ -387,6 +388,7 @@ class _ChatContentState extends State<_ChatContent> {
           ],
         ),
       ),
+    ),
     );
   }
 }

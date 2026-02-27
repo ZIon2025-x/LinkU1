@@ -153,12 +153,15 @@ class _RealActivityCard extends StatelessWidget {
                   children: [
                     Positioned.fill(
                       child: image != null && image.isNotEmpty
-                          ? AsyncImageView(
-                              imageUrl: image,
-                              width: 280,
-                              height: 160,
-                              memCacheWidth: 560,
-                              memCacheHeight: 320,
+                          ? Center(
+                              child: AsyncImageView(
+                                imageUrl: image,
+                                width: 280,
+                                height: 160,
+                                memCacheWidth: 560,
+                                memCacheHeight: 320,
+                                fit: BoxFit.contain,
+                              ),
                             )
                           : Container(
                               decoration: BoxDecoration(
@@ -660,10 +663,13 @@ class _PostCard extends StatelessWidget {
             if (item.hasImages)
               AspectRatio(
                 aspectRatio: 4 / 3,
-                child: AsyncImageView(
-                  imageUrl: item.firstImage!,
-                  memCacheWidth: 360,
-                  memCacheHeight: 270,
+                child: Center(
+                  child: AsyncImageView(
+                    imageUrl: item.firstImage!,
+                    memCacheWidth: 360,
+                    memCacheHeight: 270,
+                    fit: BoxFit.contain,
+                  ),
                 ),
               ),
             // 文字内容
@@ -808,10 +814,13 @@ class _ProductCard extends StatelessWidget {
             if (item.hasImages)
               AspectRatio(
                 aspectRatio: 1,
-                child: AsyncImageView(
-                  imageUrl: item.firstImage!,
-                  memCacheWidth: 300,
-                  memCacheHeight: 300,
+                child: Center(
+                  child: AsyncImageView(
+                    imageUrl: item.firstImage!,
+                    memCacheWidth: 300,
+                    memCacheHeight: 300,
+                    fit: BoxFit.contain,
+                  ),
                 ),
               ),
             Padding(
@@ -1207,10 +1216,13 @@ class _RankingCard extends StatelessWidget {
               ClipRect(
                 child: AspectRatio(
                   aspectRatio: 16 / 9,
+                  child: Center(
                     child: AsyncImageView(
-                    imageUrl: item.firstImage!,
-                    memCacheWidth: 360,
-                    memCacheHeight: 202,
+                      imageUrl: item.firstImage!,
+                      memCacheWidth: 360,
+                      memCacheHeight: 202,
+                      fit: BoxFit.contain,
+                    ),
                   ),
                 ),
               ),
@@ -1349,10 +1361,13 @@ class _ServiceCard extends StatelessWidget {
             if (item.hasImages)
               AspectRatio(
                 aspectRatio: 4 / 3,
-                child: AsyncImageView(
-                  imageUrl: item.firstImage!,
-                  memCacheWidth: 360,
-                  memCacheHeight: 270,
+                child: Center(
+                  child: AsyncImageView(
+                    imageUrl: item.firstImage!,
+                    memCacheWidth: 360,
+                    memCacheHeight: 270,
+                    fit: BoxFit.contain,
+                  ),
                 ),
               ),
             Padding(

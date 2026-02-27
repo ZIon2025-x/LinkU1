@@ -397,7 +397,17 @@ class AIChatBloc extends Bloc<AIChatEvent, AIChatState> {
     Emitter<AIChatState> emit,
   ) {
     // 工具结果到达，清除 activeToolCall（LLM 会继续生成），记录 lastToolName
-    emit(state.copyWith(lastToolName: event.toolName));
+    // 若后端未单独发 task_draft 事件，从 tool_result 中解析草稿作为后备
+    final Map<String, dynamic>? draftFromResult =
+        event.toolName == 'prepare_task_draft' &&
+                event.toolResult != null &&
+                event.toolResult!['draft'] != null
+            ? event.toolResult!['draft'] as Map<String, dynamic>
+            : null;
+    emit(state.copyWith(
+      lastToolName: event.toolName,
+      taskDraft: draftFromResult ?? state.taskDraft,
+    ));
   }
 
   void _onMessageCompleted(

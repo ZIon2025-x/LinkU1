@@ -65,10 +65,13 @@ class _HorizontalTaskCard extends StatelessWidget {
                       child: task.firstImage != null
                           ? Hero(
                               tag: 'task_image_${task.id}',
-                              child: AsyncImageView(
-                                imageUrl: task.firstImage!,
-                                width: 220,
-                                height: 170,
+                              child: Center(
+                                child: AsyncImageView(
+                                  imageUrl: task.firstImage!,
+                                  width: 220,
+                                  height: 170,
+                                  fit: BoxFit.contain,
+                                ),
                               ),
                             )
                           : Container(

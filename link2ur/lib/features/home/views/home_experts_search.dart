@@ -701,10 +701,13 @@ class _TaskCard extends StatelessWidget {
                   // 图片或占位背景
                   Positioned.fill(
                     child: task.firstImage != null
-                        ? AsyncImageView(
-                            imageUrl: task.firstImage!,
-                            width: 280,
-                            height: 140,
+                        ? Center(
+                            child: AsyncImageView(
+                              imageUrl: task.firstImage!,
+                              width: 280,
+                              height: 140,
+                              fit: BoxFit.contain,
+                            ),
                           )
                         : Container(
                             decoration: BoxDecoration(

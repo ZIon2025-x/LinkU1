@@ -442,12 +442,13 @@ class _SectionSearchBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    return Container(
-      height: barHeight,
-      alignment: Alignment.center,
-      decoration: const BoxDecoration(color: Colors.transparent),
-      padding: const EdgeInsets.fromLTRB(AppSpacing.md, AppSpacing.xs, AppSpacing.md, AppSpacing.xs),
-      child: TextField(
+    return RepaintBoundary(
+      child: Container(
+        height: barHeight,
+        alignment: Alignment.center,
+        decoration: const BoxDecoration(color: Colors.transparent),
+        padding: const EdgeInsets.fromLTRB(AppSpacing.md, AppSpacing.xs, AppSpacing.md, AppSpacing.xs),
+        child: TextField(
         controller: controller,
         onChanged: onChanged,
         decoration: InputDecoration(
@@ -462,6 +463,7 @@ class _SectionSearchBar extends StatelessWidget {
           contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
         ),
       ),
+    ),
     );
   }
 }
