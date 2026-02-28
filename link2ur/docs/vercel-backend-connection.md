@@ -44,11 +44,22 @@ ALLOWED_ORIGINS=https://www.link2ur.com,https://link2ur.com,https://app.link2ur.
   `--dart-define=ENV=development`  
   此时会请求 `https://linktest.up.railway.app`，需确保该后端的 `ALLOWED_ORIGINS` 也包含你的 Vercel 域名。
 
-## 若报错「x-app-platform is not allowed by Access-Control-Allow-Headers」
+## 若报错「Request header field xxx is not allowed by Access-Control-Allow-Headers」
 
-Flutter 请求会带自定义头 `X-App-Platform`（以及可选的 `X-App-Signature`、`X-App-Timestamp`）。若后端 CORS 的 **允许请求头** 里没有这些，预检会失败。
+Flutter 请求会带多种自定义头，后端 CORS 的 **Access-Control-Allow-Headers** 必须全部允许，否则浏览器预检会拒绝。
 
-**处理**：后端已在 `backend/app/config.py` 的 `ALLOWED_HEADERS` 中加入 `X-App-Platform`、`X-App-Signature`、`X-App-Timestamp`。确保部署的是包含该修改的版本即可；无需改环境变量。
+**后端已与 Flutter 对齐**（`backend/app/config.py` → `ALLOWED_HEADERS`）包含：
+
+| 头名 | 来源 |
+|------|------|
+| Content-Type, Accept, Accept-Language, Origin | 通用 / ApiConfig |
+| Authorization, X-Session-ID, X-Refresh-Token | 认证与刷新 |
+| X-App-Platform, X-Platform, X-App-Version | api_config.dart defaultHeaders |
+| X-App-Signature, X-App-Timestamp | api_service 签名（MOBILE_APP_SECRET） |
+| X-Request-ID | api_service _onRequest 拦截器 |
+| X-CSRF-Token, X-Requested-With, X-User-ID, Cache-Control, Pragma, Expires | 其它 |
+
+**若 Flutter 新增自定义请求头**：须同步在 `backend/app/config.py` 的 `ALLOWED_HEADERS` 中加入该头名，否则 Web 端 CORS 预检会报错。
 
 ## 小结
 

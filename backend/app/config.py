@@ -158,21 +158,27 @@ class Config:
     # 允许的HTTP方法
     ALLOWED_METHODS = ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"]
     
-    # 允许的请求头（含 Flutter Web/App 自定义头，否则 CORS 预检会拒绝）
+    # 允许的请求头（与 Flutter link2ur 一致，避免 CORS 预检拒绝）
+    # 来源：ApiConfig.defaultHeaders + api_service _onRequest/refresh
+    # - Content-Type, Accept, Origin 等为通用头
+    # - X-* 为 Flutter 自定义：api_config.dart + api_service.dart 拦截器
     ALLOWED_HEADERS = [
         "Content-Type",
         "Authorization",
+        "Accept",
+        "Accept-Language",
+        "Origin",
         "X-CSRF-Token",
         "X-Requested-With",
-        "Accept",
-        "Origin",
-        "X-Session-ID",   # 移动端会话ID
-        "X-User-ID",      # 移动端用户ID
-        "X-App-Platform", # Flutter 客户端标识（web/ios/android）
-        "X-Platform",     # 运行时平台（ios/android/web），后端会话用
-        "X-App-Version",  # 客户端版本号
-        "X-App-Signature", # 移动端请求签名
-        "X-App-Timestamp", # 移动端签名时间戳
+        "X-Session-ID",
+        "X-User-ID",
+        "X-App-Platform",
+        "X-Platform",
+        "X-App-Version",
+        "X-App-Signature",
+        "X-App-Timestamp",
+        "X-Request-ID",
+        "X-Refresh-Token",
         "Cache-Control",
         "Pragma",
         "Expires",
