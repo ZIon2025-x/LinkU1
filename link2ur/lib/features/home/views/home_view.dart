@@ -146,42 +146,47 @@ class _HomeViewContentState extends State<_HomeViewContent> {
   Widget _buildDesktopTabBar(bool isDark) {
     return ContentConstraint(
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(24, 20, 24, 12),
+        padding: const EdgeInsets.fromLTRB(24, 24, 24, 16),
         child: Row(
           children: [
-            // 分段控件
             Container(
-            padding: const EdgeInsets.all(3),
-            decoration: BoxDecoration(
-              color: isDark
-                  ? Colors.white.withValues(alpha: 0.06)
-                  : AppColors.backgroundLight,
-              borderRadius: BorderRadius.circular(9),
+              padding: const EdgeInsets.all(4),
+              decoration: BoxDecoration(
+                color: isDark
+                    ? Colors.white.withValues(alpha: 0.06)
+                    : AppColors.desktopHoverLight,
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(
+                  color: isDark
+                      ? Colors.white.withValues(alpha: 0.06)
+                      : AppColors.desktopBorderLight,
+                  width: 0.5,
+                ),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _DesktopSegmentButton(
+                    label: context.l10n.homeExperts,
+                    isSelected: _selectedTab == 0,
+                    onTap: () => _onTabChanged(0),
+                    isDark: isDark,
+                  ),
+                  _DesktopSegmentButton(
+                    label: context.l10n.homeRecommended,
+                    isSelected: _selectedTab == 1,
+                    onTap: () => _onTabChanged(1),
+                    isDark: isDark,
+                  ),
+                  _DesktopSegmentButton(
+                    label: context.l10n.homeNearby,
+                    isSelected: _selectedTab == 2,
+                    onTap: () => _onTabChanged(2),
+                    isDark: isDark,
+                  ),
+                ],
+              ),
             ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                _DesktopSegmentButton(
-                  label: context.l10n.homeExperts,
-                  isSelected: _selectedTab == 0,
-                  onTap: () => _onTabChanged(0),
-                  isDark: isDark,
-                ),
-                _DesktopSegmentButton(
-                  label: context.l10n.homeRecommended,
-                  isSelected: _selectedTab == 1,
-                  onTap: () => _onTabChanged(1),
-                  isDark: isDark,
-                ),
-                _DesktopSegmentButton(
-                  label: context.l10n.homeNearby,
-                  isSelected: _selectedTab == 2,
-                  onTap: () => _onTabChanged(2),
-                  isDark: isDark,
-                ),
-              ],
-            ),
-          ),
           ],
         ),
       ),
@@ -350,7 +355,7 @@ class _DesktopSegmentButtonState extends State<_DesktopSegmentButton> {
                         ? Colors.white.withValues(alpha: 0.04)
                         : Colors.black.withValues(alpha: 0.03))
                     : Colors.transparent),
-            borderRadius: BorderRadius.circular(7),
+            borderRadius: AppRadius.allSmall,
             boxShadow: widget.isSelected
                 ? [
                     BoxShadow(

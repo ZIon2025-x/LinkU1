@@ -127,19 +127,27 @@ class _RecommendedTab extends StatelessWidget {
                 )
               else if (state.hasError && state.recommendedTasks.isEmpty)
                 SliverFillRemaining(
-                  child: ErrorStateView(
-                    message: state.errorMessage ?? context.l10n.homeLoadFailed,
-                    onRetry: () {
-                      context.read<HomeBloc>().add(const HomeLoadRequested());
-                    },
+                  hasScrollBody: false,
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.symmetric(vertical: 24),
+                    child: ErrorStateView(
+                      message: state.errorMessage ?? context.l10n.homeLoadFailed,
+                      onRetry: () {
+                        context.read<HomeBloc>().add(const HomeLoadRequested());
+                      },
+                    ),
                   ),
                 )
               else if (state.recommendedTasks.isEmpty)
                 SliverFillRemaining(
-                  child: EmptyStateView.noTasks(
-                    context,
-                    actionText: context.l10n.homePublishTask,
-                    onAction: () => context.push('/tasks/create'),
+                  hasScrollBody: false,
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.symmetric(vertical: 24),
+                    child: EmptyStateView.noTasks(
+                      context,
+                      actionText: context.l10n.homePublishTask,
+                      onAction: () => context.push('/tasks/create'),
+                    ),
                   ),
                 )
               else ...[

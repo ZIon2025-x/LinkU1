@@ -31,6 +31,10 @@ All Flutter commands run from `link2ur/` subdirectory:
 # Run the app
 flutter run
 
+# Run on web without auto-launching Chrome (if "Failed to launch browser" occurs)
+# Then open the printed URL (e.g. http://localhost:xxxxx) in Chrome/Edge manually.
+flutter run -d web-server
+
 # Build
 flutter build apk
 flutter build ios

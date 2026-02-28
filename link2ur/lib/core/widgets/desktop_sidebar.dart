@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 import '../design/app_colors.dart';
+import '../design/app_radius.dart';
 import '../utils/l10n_extension.dart';
 import '../utils/logger.dart';
 import '../utils/responsive.dart';
@@ -41,7 +42,16 @@ class DesktopDrawer extends StatelessWidget {
 
     return Container(
       width: Breakpoints.drawerWidth,
-      color: isDark ? const Color(0xFF1C1C1E) : Colors.white,
+      decoration: BoxDecoration(
+        color: isDark ? AppColors.cardBackgroundDark : AppColors.cardBackgroundLight,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.08),
+            offset: const Offset(-2, 0),
+            blurRadius: 16,
+          ),
+        ],
+      ),
       child: SafeArea(
         child: Column(
           children: [
@@ -56,20 +66,20 @@ class DesktopDrawer extends StatelessWidget {
                 children: [
                   const SizedBox(height: 20),
 
-                  // 主导航（对齐 frontend .menu-nav）
-                  _MenuItem(
+                  // 主导航（RepaintBoundary 隔离每项 hover 重绘，避免整列闪烁）
+                  RepaintBoundary(child: _MenuItem(
                     emoji: '🏠',
                     label: l10n.tabsHome,
                     onTap: () => _navigate(context, '/'),
                     isDark: isDark,
-                  ),
-                  _MenuItem(
+                  )),
+                  RepaintBoundary(child: _MenuItem(
                     emoji: '✨',
                     label: l10n.menuTaskHall,
                     onTap: () => _navigate(context, '/tasks'),
                     isDark: isDark,
-                  ),
-                  _MenuItem(
+                  )),
+                  RepaintBoundary(child: _MenuItem(
                     emoji: '🚀',
                     label: l10n.publishTitle,
                     onTap: () {
@@ -77,89 +87,87 @@ class DesktopDrawer extends StatelessWidget {
                       _showCreateOptions(context);
                     },
                     isDark: isDark,
-                  ),
-                  _MenuItem(
+                  )),
+                  RepaintBoundary(child: _MenuItem(
                     emoji: '👑',
                     label: l10n.menuTaskExperts,
                     onTap: () => _navigate(context, '/task-experts'),
                     isDark: isDark,
-                  ),
-                  _MenuItem(
+                  )),
+                  RepaintBoundary(child: _MenuItem(
                     emoji: '💬',
                     label: l10n.tabsCommunity,
                     onTap: () => _navigate(context, '/community'),
                     isDark: isDark,
-                  ),
-                  _MenuItem(
+                  )),
+                  RepaintBoundary(child: _MenuItem(
                     emoji: '💭',
                     label: l10n.menuForum,
                     onTap: () => _navigate(context, '/forum'),
                     isDark: isDark,
-                  ),
-                  _MenuItem(
+                  )),
+                  RepaintBoundary(child: _MenuItem(
                     emoji: '🏪',
                     label: l10n.menuFleaMarket,
                     onTap: () => _navigate(context, '/flea-market'),
                     isDark: isDark,
-                  ),
-                  _MenuItem(
+                  )),
+                  RepaintBoundary(child: _MenuItem(
                     emoji: '🏆',
                     label: l10n.menuLeaderboard,
                     onTap: () => _navigate(context, '/leaderboard'),
                     isDark: isDark,
-                  ),
+                  )),
 
                   // 分割线
                   Padding(
                     padding: const EdgeInsets.symmetric(
-                        horizontal: 32, vertical: 8),
+                        horizontal: 24, vertical: 12),
                     child: Divider(
                       height: 1,
                       color: isDark
                           ? Colors.white.withValues(alpha: 0.06)
-                          : const Color(0xFFE2E8F0),
+                          : AppColors.desktopBorderLight,
                     ),
                   ),
 
                   // 用户相关（已登录才显示）
                   if (authState.isAuthenticated) ...[
-                    // 用户信息
                     _buildUserInfo(context, authState, isDark),
 
-                    _MenuItem(
+                    RepaintBoundary(child: _MenuItem(
                       emoji: '📋',
                       label: l10n.tabsMessages,
                       onTap: () => _navigate(context, '/messages-tab'),
                       isDark: isDark,
                       trailing: _buildUnreadBadge(context),
-                    ),
-                    _MenuItem(
+                    )),
+                    RepaintBoundary(child: _MenuItem(
                       emoji: '👤',
                       label: l10n.tabsProfile,
                       onTap: () => _navigate(context, '/profile-tab'),
                       isDark: isDark,
-                    ),
-                    _MenuItem(
+                    )),
+                    RepaintBoundary(child: _MenuItem(
                       emoji: '⚙️',
                       label: l10n.menuSettings,
                       onTap: () => _navigate(context, '/settings'),
                       isDark: isDark,
-                    ),
-                    _MenuItem(
+                    )),
+                    RepaintBoundary(child: _MenuItem(
                       emoji: '🎓',
                       label: l10n.menuStudentVerification,
                       onTap: () => _navigate(context, '/student-verification'),
                       isDark: isDark,
-                    ),
-                    _MenuItem(
+                    )),
+                    RepaintBoundary(child: _MenuItem(
                       emoji: '💰',
                       label: l10n.sidebarWallet,
                       onTap: () => _navigate(context, '/wallet'),
                       isDark: isDark,
-                    ),
+                    )),
 
-                    // 登出
-                    _MenuItem(
+                    RepaintBoundary(child: _MenuItem(
                       emoji: '🚪',
                       label: l10n.authLogout,
                       onTap: () {
@@ -168,7 +176,7 @@ class DesktopDrawer extends StatelessWidget {
                       },
                       isDark: isDark,
                       isDestructive: true,
-                    ),
+                    )),
                   ],
                 ],
               ),
@@ -184,39 +192,39 @@ class DesktopDrawer extends StatelessWidget {
     );
   }
 
-  /// 顶部 Header（对齐 frontend .menu-header 60px）
+  /// 顶部 Header：品牌渐变 Logo + 关闭按钮
   Widget _buildHeader(BuildContext context, bool isDark) {
     return Container(
-      height: 60,
-      padding: const EdgeInsets.symmetric(horizontal: 16),
+      height: 64,
+      padding: const EdgeInsets.symmetric(horizontal: 20),
       decoration: BoxDecoration(
         border: Border(
           bottom: BorderSide(
             color: isDark
                 ? Colors.white.withValues(alpha: 0.06)
-                : const Color(0xFFE2E8F0),
+                : AppColors.desktopBorderLight,
+            width: 0.5,
           ),
         ),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          // Logo（对齐 frontend .menu-logo 渐变文字）
           ShaderMask(
             shaderCallback: (bounds) => const LinearGradient(
-              colors: [Color(0xFF3B82F6), Color(0xFF8B5CF6)],
+              colors: AppColors.gradientPrimary,
             ).createShader(bounds),
             blendMode: BlendMode.srcIn,
             child: const Text(
               'Link²Ur',
               style: TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
+                fontSize: 22,
+                fontWeight: FontWeight.w700,
                 color: Colors.white,
+                letterSpacing: -0.3,
               ),
             ),
           ),
-          // 关闭按钮
           _HoverIconButton(
             icon: Icons.close_rounded,
             size: 24,
@@ -234,23 +242,29 @@ class DesktopDrawer extends StatelessWidget {
     final userName = authState.user?.name ?? context.l10n.commonUser;
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          // 头像（对齐 frontend .user-avatar 紫色边框）
           Container(
-            width: 40,
-            height: 40,
+            width: 44,
+            height: 44,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               gradient: const LinearGradient(
-                colors: [Color(0xFFFF6B6B), Color(0xFFFF4757)],
+                colors: AppColors.gradientPrimary,
               ),
               border: Border.all(
-                color: const Color(0xFF8B5CF6),
+                color: AppColors.primary.withValues(alpha: 0.5),
                 width: 2,
               ),
+              boxShadow: [
+                BoxShadow(
+                  color: AppColors.primary.withValues(alpha: 0.2),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
+              ],
             ),
             child: Center(
               child: Text(
@@ -323,10 +337,10 @@ class DesktopDrawer extends StatelessWidget {
     );
   }
 
-  /// 登录按钮（对齐 frontend .login-button 蓝色渐变）
+  /// 登录按钮：品牌主色渐变
   Widget _buildLoginButton(BuildContext context, bool isDark) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
+      padding: const EdgeInsets.fromLTRB(24, 12, 24, 28),
       child: Material(
         color: Colors.transparent,
         child: InkWell(
@@ -334,16 +348,16 @@ class DesktopDrawer extends StatelessWidget {
             onClose();
             context.push('/login');
           },
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: AppRadius.allMedium,
           child: Ink(
             decoration: BoxDecoration(
               gradient: const LinearGradient(
-                colors: [Color(0xFF3B82F6), Color(0xFF1D4ED8)],
+                colors: AppColors.gradientPrimary,
               ),
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: AppRadius.allMedium,
               boxShadow: [
                 BoxShadow(
-                  color: const Color(0xFF3B82F6).withValues(alpha: 0.4),
+                  color: AppColors.primary.withValues(alpha: 0.35),
                   blurRadius: 12,
                   offset: const Offset(0, 4),
                 ),
@@ -360,8 +374,8 @@ class DesktopDrawer extends StatelessWidget {
                     '${context.l10n.authLogin} / ${context.l10n.authRegister}',
                     style: const TextStyle(
                       color: Colors.white,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w700,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
                     ),
                   ),
                 ],
@@ -433,10 +447,13 @@ class _MenuItemState extends State<_MenuItem> {
       cursor: SystemMouseCursors.click,
       child: GestureDetector(
         onTap: widget.onTap,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 150),
-          padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
-          color: _isHovered ? hoverBg : Colors.transparent,
+        child: Container(
+          margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 0),
+          padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 20),
+          decoration: BoxDecoration(
+            color: _isHovered ? hoverBg : Colors.transparent,
+            borderRadius: AppRadius.allMedium,
+          ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
@@ -444,13 +461,16 @@ class _MenuItemState extends State<_MenuItem> {
                 widget.emoji,
                 style: const TextStyle(fontSize: 20),
               ),
-              const SizedBox(width: 16),
-              Text(
-                widget.label,
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                  color: textColor,
+              const SizedBox(width: 14),
+              Flexible(
+                child: Text(
+                  widget.label,
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                    color: textColor,
+                  ),
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
               if (widget.trailing != null) ...[
@@ -502,16 +522,16 @@ class _HoverIconButtonState extends State<_HoverIconButton> {
             color: _isHovered
                 ? (widget.isDark
                     ? Colors.white.withValues(alpha: 0.08)
-                    : const Color(0xFFF5F5F5))
+                    : AppColors.desktopHoverLight)
                 : Colors.transparent,
-            borderRadius: BorderRadius.circular(4),
+            borderRadius: AppRadius.allSmall,
           ),
           child: Icon(
             widget.icon,
             size: widget.size,
             color: widget.isDark
                 ? AppColors.textSecondaryDark
-                : const Color(0xFF666666),
+                : AppColors.desktopTextLight,
           ),
         ),
       ),

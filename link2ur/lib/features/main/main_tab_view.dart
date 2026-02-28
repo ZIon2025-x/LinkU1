@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/design/app_colors.dart';
+import '../../core/design/app_radius.dart';
 import '../../core/utils/haptic_feedback.dart';
 import '../../core/utils/l10n_extension.dart';
 import '../../core/utils/responsive.dart';
@@ -317,6 +318,9 @@ class _MainTabViewState extends State<MainTabView>
 
     return Scaffold(
       key: _desktopScaffoldKey,
+      backgroundColor: isDark
+          ? AppColors.backgroundDark
+          : AppColors.backgroundLight,
       body: Stack(
         children: [
           Column(
@@ -325,7 +329,14 @@ class _MainTabViewState extends State<MainTabView>
                 isDark: isDark,
                 onMenuTap: () => setState(() => _showDesktopMenu = true),
               ),
-              Expanded(child: widget.navigationShell),
+              Expanded(
+                child: Container(
+                  color: isDark
+                      ? AppColors.backgroundDark
+                      : AppColors.backgroundLight,
+                  child: widget.navigationShell,
+                ),
+              ),
             ],
           ),
           if (_showDesktopMenu) _desktopMenuOverlay(
@@ -338,7 +349,7 @@ class _MainTabViewState extends State<MainTabView>
     );
   }
 
-  // ==================== 桌面菜单浮层（对齐 frontend 遮罩 + 静态 box-shadow 面板） ====================
+  // ==================== 桌面菜单浮层（遮罩 + 左侧圆角面板 + 柔和阴影） ====================
   static Widget _desktopMenuOverlay({
     required String currentRoute,
     required ValueChanged<String> onNavigate,
@@ -351,9 +362,7 @@ class _MainTabViewState extends State<MainTabView>
           GestureDetector(
             onTap: onClose,
             behavior: HitTestBehavior.opaque,
-            child: Container(
-              color: Colors.black54,
-            ),
+            child: Container(color: Colors.black.withValues(alpha: 0.4)),
           ),
           Material(
             color: Colors.transparent,
@@ -361,18 +370,30 @@ class _MainTabViewState extends State<MainTabView>
               width: Breakpoints.drawerWidth,
               decoration: BoxDecoration(
                 color: Colors.transparent,
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(16),
+                  bottomLeft: Radius.circular(16),
+                ),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.15),
-                    offset: const Offset(-4, 0),
-                    blurRadius: 32,
+                    color: Colors.black.withValues(alpha: 0.12),
+                    offset: const Offset(-6, 0),
+                    blurRadius: 24,
+                    spreadRadius: -2,
                   ),
                 ],
               ),
-              child: DesktopDrawer(
-                currentRoute: currentRoute,
-                onNavigate: onNavigate,
-                onClose: onClose,
+              clipBehavior: Clip.antiAlias,
+              child: ClipRRect(
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(16),
+                  bottomLeft: Radius.circular(16),
+                ),
+                child: DesktopDrawer(
+                  currentRoute: currentRoute,
+                  onNavigate: onNavigate,
+                  onClose: onClose,
+                ),
               ),
             ),
           ),
@@ -566,27 +587,34 @@ class _DesktopTopBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 60,
+      height: 64,
       decoration: BoxDecoration(
         color: isDark
             ? AppColors.cardBackgroundDark
             : AppColors.cardBackgroundLight,
         boxShadow: isDark
-            ? null
+            ? [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.2),
+                  blurRadius: 4,
+                  offset: const Offset(0, 1),
+                ),
+              ]
             : [
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.06),
-                  blurRadius: 8,
+                  color: Colors.black.withValues(alpha: 0.04),
+                  blurRadius: 12,
                   offset: const Offset(0, 2),
                 ),
               ],
-        border: isDark
-            ? Border(
-                bottom: BorderSide(
-                  color: Colors.white.withValues(alpha: 0.06),
-                ),
-              )
-            : null,
+        border: Border(
+          bottom: BorderSide(
+            color: isDark
+                ? Colors.white.withValues(alpha: 0.06)
+                : Colors.black.withValues(alpha: 0.04),
+            width: 0.5,
+          ),
+        ),
       ),
       // 内容居中约束在 maxContentWidth 内，对齐 frontend Header
       child: Center(
@@ -595,132 +623,135 @@ class _DesktopTopBar extends StatelessWidget {
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 24),
             child: Row(
-        children: [
-          // Logo
-          GestureDetector(
-            onTap: () => context.go('/'),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
               children: [
-                Image.asset(
-                  'assets/images/logo.png',
-                  width: 28,
-                  height: 28,
-                  fit: BoxFit.contain,
-                  errorBuilder: (_, __, ___) => Container(
-                    width: 28,
-                    height: 28,
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(7),
-                      gradient: const LinearGradient(
-                        colors: AppColors.gradientPrimary,
+                // Logo
+                GestureDetector(
+                  onTap: () => context.go('/'),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      ClipRRect(
+                        borderRadius: AppRadius.allSmall,
+                        child: Image.asset(
+                          'assets/images/logo.png',
+                          width: 32,
+                          height: 32,
+                          fit: BoxFit.contain,
+                          errorBuilder: (_, __, ___) => Container(
+                            width: 32,
+                            height: 32,
+                            decoration: BoxDecoration(
+                              borderRadius: AppRadius.allSmall,
+                              gradient: const LinearGradient(
+                                colors: AppColors.gradientPrimary,
+                              ),
+                            ),
+                            child: const Center(
+                              child: Text('L',
+                                  style: TextStyle(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.w900,
+                                      fontSize: 16)),
+                            ),
+                          ),
+                        ),
                       ),
-                    ),
-                    child: const Center(
-                      child: Text('L',
-                          style: TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.w900,
-                              fontSize: 14)),
+                      const SizedBox(width: 12),
+                      Text(
+                        'Link²Ur',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w700,
+                          color: isDark
+                              ? AppColors.textPrimaryDark
+                              : AppColors.desktopTextLight,
+                          letterSpacing: -0.4,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                const SizedBox(width: 40),
+
+                // 搜索框
+                Expanded(
+                  child: Center(
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 480),
+                      child: GestureDetector(
+                        onTap: () => context.push('/search'),
+                        child: MouseRegion(
+                          cursor: SystemMouseCursors.click,
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 180),
+                            height: 40,
+                            padding: const EdgeInsets.symmetric(horizontal: 16),
+                            decoration: BoxDecoration(
+                              color: isDark
+                                  ? Colors.white.withValues(alpha: 0.06)
+                                  : AppColors.desktopHoverLight,
+                              borderRadius: AppRadius.allMedium,
+                              border: Border.all(
+                                color: isDark
+                                    ? Colors.white.withValues(alpha: 0.08)
+                                    : AppColors.desktopBorderLight,
+                              ),
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(
+                                  Icons.search_rounded,
+                                  size: 20,
+                                  color: isDark
+                                      ? AppColors.textTertiaryDark
+                                      : AppColors.desktopPlaceholderLight,
+                                ),
+                                const SizedBox(width: 10),
+                                Text(
+                                  context.l10n.searchPlaceholder,
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    color: isDark
+                                        ? AppColors.textTertiaryDark
+                                        : AppColors.desktopPlaceholderLight,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
                     ),
                   ),
                 ),
-                const SizedBox(width: 10),
-                Text(
-                  'Link²Ur',
-                  style: TextStyle(
-                    fontSize: 17,
-                    fontWeight: FontWeight.w700,
-                    color: isDark
-                        ? AppColors.textPrimaryDark
-                        : AppColors.desktopTextLight,
-                    letterSpacing: -0.3,
-                  ),
+
+                const SizedBox(width: 20),
+
+                // 通知铃铛
+                BlocBuilder<NotificationBloc, NotificationState>(
+                  buildWhen: (prev, curr) =>
+                      prev.unreadCount.totalCount != curr.unreadCount.totalCount,
+                  builder: (context, state) {
+                    final count = state.unreadCount.totalCount;
+                    return _TopBarIconButton(
+                      icon: Icons.notifications_outlined,
+                      isDark: isDark,
+                      badge: count > 0 ? count : null,
+                      onTap: () => context.push('/notifications'),
+                    );
+                  },
+                ),
+
+                const SizedBox(width: 8),
+
+                // 汉堡菜单（对齐 frontend 渐变三线风格）
+                _GradientHamburgerButton(
+                  isDark: isDark,
+                  onTap: onMenuTap,
                 ),
               ],
             ),
-          ),
-
-          const SizedBox(width: 32),
-
-          // 搜索框
-          Expanded(
-            child: Center(
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 480),
-                child: GestureDetector(
-                  onTap: () => context.push('/search'),
-                  child: MouseRegion(
-                    cursor: SystemMouseCursors.click,
-                    child: Container(
-                      height: 36,
-                      padding: const EdgeInsets.symmetric(horizontal: 14),
-                      decoration: BoxDecoration(
-                        color: isDark
-                            ? Colors.white.withValues(alpha: 0.06)
-                            : AppColors.desktopHoverLight,
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(
-                          color: isDark
-                              ? Colors.white.withValues(alpha: 0.08)
-                              : AppColors.desktopBorderLight,
-                        ),
-                      ),
-                      child: Row(
-                        children: [
-                          Icon(
-                            Icons.search_rounded,
-                            size: 18,
-                            color: isDark
-                                ? AppColors.textTertiaryDark
-                                : AppColors.desktopPlaceholderLight,
-                          ),
-                          const SizedBox(width: 8),
-                          Text(
-                            context.l10n.searchPlaceholder,
-                            style: TextStyle(
-                              fontSize: 13,
-                              color: isDark
-                                  ? AppColors.textTertiaryDark
-                                  : AppColors.desktopPlaceholderLight,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ),
-
-          const SizedBox(width: 16),
-
-          // 通知铃铛
-          BlocBuilder<NotificationBloc, NotificationState>(
-            // 仅在未读总数变化时重建铃铛按钮
-            buildWhen: (prev, curr) =>
-                prev.unreadCount.totalCount != curr.unreadCount.totalCount,
-            builder: (context, state) {
-              final count = state.unreadCount.totalCount;
-              return _TopBarIconButton(
-                icon: Icons.notifications_outlined,
-                isDark: isDark,
-                badge: count > 0 ? count : null,
-                onTap: () => context.push('/notifications'),
-              );
-            },
-          ),
-
-          const SizedBox(width: 4),
-
-          // 汉堡菜单（对齐 frontend 渐变三线风格）
-          _GradientHamburgerButton(
-            isDark: isDark,
-            onTap: onMenuTap,
-          ),
-        ],
-      ),
           ),
         ),
       ),
@@ -759,15 +790,15 @@ class _TopBarIconButtonState extends State<_TopBarIconButton> {
         onTap: widget.onTap,
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 120),
-          width: 36,
-          height: 36,
+          width: 40,
+          height: 40,
           decoration: BoxDecoration(
             color: _isHovered
                 ? (widget.isDark
                     ? Colors.white.withValues(alpha: 0.08)
                     : AppColors.desktopHoverLight)
                 : Colors.transparent,
-            borderRadius: BorderRadius.circular(8),
+            borderRadius: AppRadius.allSmall,
           ),
           child: Stack(
             alignment: Alignment.center,
@@ -895,17 +926,17 @@ class _GradientHamburgerButtonState extends State<_GradientHamburgerButton>
       cursor: SystemMouseCursors.click,
       child: GestureDetector(
         onTap: widget.onTap,
-        child: AnimatedContainer(
+          child: AnimatedContainer(
           duration: const Duration(milliseconds: 120),
-          width: 36,
-          height: 36,
+          width: 40,
+          height: 40,
           decoration: BoxDecoration(
             color: _isHovered
                 ? (widget.isDark
                     ? Colors.white.withValues(alpha: 0.08)
                     : AppColors.desktopHoverLight)
                 : Colors.transparent,
-            borderRadius: BorderRadius.circular(8),
+            borderRadius: AppRadius.allSmall,
           ),
           child: Center(
             child: SizedBox(
