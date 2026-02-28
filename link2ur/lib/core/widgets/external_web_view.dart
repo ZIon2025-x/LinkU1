@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:webview_flutter/webview_flutter.dart';
@@ -30,11 +31,19 @@ class ExternalWebView extends StatefulWidget {
   }
 
   /// 便捷方法 - 在应用内打开（push 到根 Navigator，全屏覆盖避免被底部 Tab 遮挡）
+  /// Web 平台：直接用浏览器打开，避免 iframe 被目标站禁止嵌入导致灰屏
   static Future<void> openInApp(
     BuildContext context, {
     required String url,
     String? title,
   }) async {
+    if (kIsWeb) {
+      final uri = Uri.tryParse(url);
+      if (uri != null && await canLaunchUrl(uri)) {
+        await launchUrl(uri, mode: LaunchMode.platformDefault);
+      }
+      return;
+    }
     await pushWithSwipeBack(
       context,
       _ExternalWebViewPage(url: url, title: title),
