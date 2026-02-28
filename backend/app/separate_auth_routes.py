@@ -448,8 +448,8 @@ def get_admin_profile(
         response.headers["Access-Control-Allow-Origin"] = origin
         response.headers["Access-Control-Allow-Credentials"] = "true"
         response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, PATCH, DELETE, OPTIONS"
-        response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization, X-Requested-With, Accept, Origin, Cache-Control, Pragma, X-CSRF-Token, X-Session-ID"
-    
+        response.headers["Access-Control-Allow-Headers"] = ", ".join(Config.ALLOWED_HEADERS)
+
     return {
         "id": str(current_admin.id),
         "name": str(current_admin.name),
@@ -564,8 +564,8 @@ def service_login(
         response.headers["Access-Control-Allow-Origin"] = origin
         response.headers["Access-Control-Allow-Credentials"] = "true"
         response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, PATCH, DELETE, OPTIONS"
-        response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization, X-Requested-With, Accept, Origin, Cache-Control, Pragma, X-CSRF-Token, X-Session-ID"
-    
+        response.headers["Access-Control-Allow-Headers"] = ", ".join(Config.ALLOWED_HEADERS)
+
     logger.info(f"[SERVICE_AUTH] 客服登录尝试: {login_data.cs_id}")
     
     # 支持ID或邮箱登录

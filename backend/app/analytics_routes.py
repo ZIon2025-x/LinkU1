@@ -7,6 +7,7 @@ import logging
 from typing import Dict, Any
 from fastapi import APIRouter, Request, Response
 from pydantic import BaseModel
+from app.config import Config
 from app.utils.time_utils import get_utc_time, format_iso_utc
 
 logger = logging.getLogger(__name__)
@@ -46,7 +47,7 @@ async def receive_web_vitals(
         response.headers["Access-Control-Allow-Origin"] = origin
         response.headers["Access-Control-Allow-Credentials"] = "true"
         response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, PATCH, DELETE, OPTIONS"
-        response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization, X-Requested-With, Accept, Origin, Cache-Control, Pragma, X-CSRF-Token, X-Session-ID"
+        response.headers["Access-Control-Allow-Headers"] = ", ".join(Config.ALLOWED_HEADERS)
     
     try:
         # 获取用户信息（可选）

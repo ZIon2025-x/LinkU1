@@ -240,12 +240,12 @@ async def custom_cors_middleware(request: Request, call_next):
         return False
     
     def set_cors_headers(response: Response):
-        """设置CORS响应头"""
+        """设置CORS响应头（使用 Config.ALLOWED_HEADERS，含 X-App-Platform 等）"""
         if origin and is_allowed_origin(origin):
             response.headers["Access-Control-Allow-Origin"] = origin
             response.headers["Access-Control-Allow-Credentials"] = "true"
             response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, PATCH, DELETE, OPTIONS"
-            response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization, X-Requested-With, Accept, Origin, Cache-Control, Pragma, Expires, X-CSRF-Token, X-Session-ID"
+            response.headers["Access-Control-Allow-Headers"] = ", ".join(Config.ALLOWED_HEADERS)
             response.headers["Access-Control-Max-Age"] = "86400"  # 24小时
     
     # 处理OPTIONS预检请求

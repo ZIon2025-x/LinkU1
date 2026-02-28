@@ -158,19 +158,22 @@ class Config:
     # 允许的HTTP方法
     ALLOWED_METHODS = ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"]
     
-    # 允许的请求头
+    # 允许的请求头（含 Flutter Web/App 自定义头，否则 CORS 预检会拒绝）
     ALLOWED_HEADERS = [
-        "Content-Type", 
-        "Authorization", 
+        "Content-Type",
+        "Authorization",
         "X-CSRF-Token",
         "X-Requested-With",
         "Accept",
         "Origin",
-        "X-Session-ID",  # 移动端会话ID
-        "X-User-ID",     # 移动端用户ID
-        "Cache-Control", # 缓存控制
-        "Pragma",        # 缓存控制
-        "Expires"        # 过期时间（缓存控制）
+        "X-Session-ID",   # 移动端会话ID
+        "X-User-ID",      # 移动端用户ID
+        "X-App-Platform", # Flutter 客户端标识（web/ios/android）
+        "X-App-Signature", # 移动端请求签名
+        "X-App-Timestamp", # 移动端签名时间戳
+        "Cache-Control",
+        "Pragma",
+        "Expires",
     ]
     
     # 暴露的响应头（前端可以访问）
