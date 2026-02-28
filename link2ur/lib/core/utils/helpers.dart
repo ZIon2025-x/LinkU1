@@ -140,13 +140,24 @@ class Helpers {
   }
 
   // ==================== URL处理 ====================
-  /// 获取图片完整URL
+  /// 获取图片完整 URL。
+  /// 需在 CDN（如 Cloudflare）上为 app.link2ur.com 配置 CORS，否则 Web 端跨域加载会失败。见 link2ur/docs/cdn-cors-setup.md。
   static String getImageUrl(String? path, {String? baseUrl}) {
     if (path == null || path.isEmpty) return '';
     if (path.startsWith('http://') || path.startsWith('https://')) {
       return path;
     }
-    // 使用 AppConfig 的 baseUrl，不再硬编码，确保测试/生产环境都能正确加载图片
+    final base = baseUrl ?? AppConfig.instance.baseUrl;
+    return '$base$path';
+  }
+
+  /// 获取文件/资源完整 URL（下载、PDF 等）。
+  /// 同样依赖 CDN 对 app.link2ur.com 的 CORS 配置。
+  static String getResourceUrl(String? path, {String? baseUrl}) {
+    if (path == null || path.isEmpty) return '';
+    if (path.startsWith('http://') || path.startsWith('https://')) {
+      return path;
+    }
     final base = baseUrl ?? AppConfig.instance.baseUrl;
     return '$base$path';
   }

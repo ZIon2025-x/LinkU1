@@ -17,7 +17,8 @@ class ApiConfig {
   }
 
   /// 请求头
-  /// 注意：X-Platform / User-Agent 依赖运行时平台检测，后端用其校验移动端请求
+  /// 注意：X-Platform / User-Agent 依赖运行时平台检测，后端用其校验移动端请求。
+  /// Web 上不设置 Accept-Encoding / User-Agent，避免浏览器 "Refused to set unsafe header" 警告（浏览器会自行发送）。
   static Map<String, String> get defaultHeaders {
     final platform = platformId;
     final ua = platform == 'ios'
@@ -25,15 +26,18 @@ class ApiConfig {
         : platform == 'android'
             ? 'Link2Ur-Android'
             : 'Link2Ur-Flutter';
-    return {
+    final headers = <String, String>{
       'Content-Type': 'application/json',
       'Accept': 'application/json',
-      'Accept-Encoding': 'gzip, deflate',
-      'User-Agent': '$ua/1.0.0 ($apiVersion)',
       'X-App-Platform': 'flutter',
       'X-Platform': platform,
       'X-App-Version': '1.0.0',
     };
+    if (!kIsWeb) {
+      headers['Accept-Encoding'] = 'gzip, deflate';
+      headers['User-Agent'] = '$ua/1.0.0 ($apiVersion)';
+    }
+    return headers;
   }
 
   /// 重试次数

@@ -455,6 +455,10 @@ app.include_router(admin_official_router, tags=["管理员-官方账号与活动
 from app.official_activity_routes import official_activity_router
 app.include_router(official_activity_router)
 
+# 图片代理（Flutter Web 跨域加载 Cloudflare/CDN 图片）
+from app.image_proxy_routes import router as image_proxy_router
+app.include_router(image_proxy_router, prefix="/api", tags=["图片代理"])
+
 # 创建上传目录
 import os
 RAILWAY_ENVIRONMENT = os.getenv("RAILWAY_ENVIRONMENT")
