@@ -169,6 +169,8 @@ class Config:
         "X-Session-ID",   # 移动端会话ID
         "X-User-ID",      # 移动端用户ID
         "X-App-Platform", # Flutter 客户端标识（web/ios/android）
+        "X-Platform",     # 运行时平台（ios/android/web），后端会话用
+        "X-App-Version",  # 客户端版本号
         "X-App-Signature", # 移动端请求签名
         "X-App-Timestamp", # 移动端签名时间戳
         "Cache-Control",
