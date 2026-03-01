@@ -314,15 +314,15 @@ class _ForumPostDetailViewState extends State<ForumPostDetailView> {
                       _PostContent(post: post, isDark: isDark),
                       if (post.images.isNotEmpty)
                         _PostImageRow(images: post.images),
-                      if (post.attachments.isNotEmpty)
-                        _PostAttachmentList(attachments: post.attachments),
-                      if (post.linkedItemType != null &&
-                          post.linkedItemType!.isNotEmpty &&
-                          post.linkedItemId != null &&
-                          post.linkedItemId!.isNotEmpty)
-                        _LinkedItemCard(
-                          type: post.linkedItemType!,
-                          id: post.linkedItemId!,
+                      if (post.attachments.isNotEmpty ||
+                          (post.linkedItemType != null &&
+                              post.linkedItemType!.isNotEmpty &&
+                              post.linkedItemId != null &&
+                              post.linkedItemId!.isNotEmpty))
+                        _PostExtrasRow(
+                          attachments: post.attachments,
+                          linkedItemType: post.linkedItemType,
+                          linkedItemId: post.linkedItemId,
                           isDark: isDark,
                         ),
                     ],
@@ -1248,7 +1248,7 @@ class _ReplyCard extends StatelessWidget {
 }
 
 // ==================== 帖子图片区域 ====================
-// 对标iOS：水平滚动缩略图列表，点击全屏查看
+// 小红书风格：图片宽度撑满，高度按原始比例自适应，不裁剪不变形
 
 class _PostImageRow extends StatelessWidget {
   const _PostImageRow({required this.images});
@@ -1266,75 +1266,101 @@ class _PostImageRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (images.length == 1) {
-      return Padding(
-        padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
-        child: GestureDetector(
-          onTap: () => _openFullScreen(context, 0),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(12),
-            child: AspectRatio(
-              aspectRatio: 4 / 3,
-              child: AsyncImageView(
-                imageUrl: images[0],
-                width: double.infinity,
-              ),
-            ),
-          ),
-        ),
-      );
-    }
-
-    return SizedBox(
-      height: 120,
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
-        itemCount: images.length,
-        separatorBuilder: (_, __) => const SizedBox(width: 12),
-        itemBuilder: (context, index) {
-          return GestureDetector(
-            onTap: () => _openFullScreen(context, index),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(12),
-              child: AsyncImageView(
-                imageUrl: images[index],
-                width: 120,
-                height: 120,
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
+      child: Column(
+        children: List.generate(images.length, (index) {
+          return Padding(
+            padding: EdgeInsets.only(bottom: index < images.length - 1 ? 8 : 0),
+            child: GestureDetector(
+              onTap: () => _openFullScreen(context, index),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: Image.network(
+                  images[index],
+                  width: double.infinity,
+                  fit: BoxFit.fitWidth,
+                  loadingBuilder: (context, child, progress) {
+                    if (progress == null) return child;
+                    return AspectRatio(
+                      aspectRatio: 4 / 3,
+                      child: Container(
+                        color: AppColors.skeletonBase,
+                        child: const Center(
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        ),
+                      ),
+                    );
+                  },
+                  errorBuilder: (context, error, stackTrace) {
+                    return AspectRatio(
+                      aspectRatio: 4 / 3,
+                      child: Container(
+                        color: AppColors.skeletonBase,
+                        child: const Center(
+                          child: Icon(
+                            Icons.broken_image_outlined,
+                            color: AppColors.textTertiaryLight,
+                            size: 32,
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                ),
               ),
             ),
           );
-        },
+        }),
       ),
     );
   }
 }
 
-class _PostAttachmentList extends StatelessWidget {
-  const _PostAttachmentList({required this.attachments});
+/// 附件 + 关联内容，紧凑一行展示
+class _PostExtrasRow extends StatelessWidget {
+  const _PostExtrasRow({
+    required this.attachments,
+    this.linkedItemType,
+    this.linkedItemId,
+    required this.isDark,
+  });
+
   final List<ForumPostAttachment> attachments;
+  final String? linkedItemType;
+  final String? linkedItemId;
+  final bool isDark;
 
-  IconData _icon(ForumPostAttachment att) {
-    if (att.isPdf) return Icons.picture_as_pdf;
-    final ext = att.filename.split('.').last.toLowerCase();
-    switch (ext) {
-      case 'doc':
-      case 'docx':
-        return Icons.description;
-      case 'xls':
-      case 'xlsx':
-        return Icons.table_chart;
-      case 'ppt':
-      case 'pptx':
-        return Icons.slideshow;
-      default:
-        return Icons.insert_drive_file;
-    }
+  bool get _hasLink =>
+      linkedItemType != null &&
+      linkedItemType!.isNotEmpty &&
+      linkedItemId != null &&
+      linkedItemId!.isNotEmpty;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
+      child: Wrap(
+        spacing: 8,
+        runSpacing: 8,
+        children: [
+          ...attachments.map((att) => _AttachmentChip(att: att, isDark: isDark)),
+          if (_hasLink)
+            _LinkedChip(type: linkedItemType!, id: linkedItemId!, isDark: isDark),
+        ],
+      ),
+    );
   }
+}
 
-  void _open(BuildContext context, ForumPostAttachment att) {
+class _AttachmentChip extends StatelessWidget {
+  const _AttachmentChip({required this.att, required this.isDark});
+  final ForumPostAttachment att;
+  final bool isDark;
+
+  void _open(BuildContext context) {
     if (att.url.isEmpty) return;
-    // PDF 使用 App 内预览
     if (att.isPdf) {
       context.push(
         AppRoutes.forumPdfPreview,
@@ -1342,7 +1368,6 @@ class _PostAttachmentList extends StatelessWidget {
       );
       return;
     }
-    // 非 PDF（历史数据）用系统打开
     launchUrl(Uri.parse(att.url), mode: LaunchMode.externalApplication)
         .catchError((e) {
       if (context.mounted) {
@@ -1356,73 +1381,46 @@ class _PostAttachmentList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: attachments.map((att) {
-          return GestureDetector(
-            onTap: () => _open(context, att),
-            child: Container(
-              margin: const EdgeInsets.only(bottom: AppSpacing.sm),
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-              decoration: BoxDecoration(
-                color: isDark
-                    ? Colors.white.withValues(alpha: 0.06)
-                    : Colors.grey.shade50,
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(
-                  color: isDark
-                      ? Colors.white.withValues(alpha: 0.12)
-                      : Colors.grey.shade200,
-                ),
-              ),
-              child: Row(
-                children: [
-                  Icon(_icon(att), size: 28, color: Theme.of(context).colorScheme.primary),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          att.filename,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(fontSize: 14),
-                        ),
-                        Text(
-                          att.formattedSize,
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: isDark
-                                ? Colors.white54
-                                : Colors.grey.shade600,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Icon(
-                    Icons.open_in_new,
-                    size: 18,
-                    color: isDark ? Colors.white38 : Colors.grey.shade500,
-                  ),
-                ],
+    final icon = att.isPdf ? Icons.picture_as_pdf : Icons.insert_drive_file;
+    final color = att.isPdf ? const Color(0xFFE53935) : AppColors.primary;
+    return GestureDetector(
+      onTap: () => _open(context),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        decoration: BoxDecoration(
+          color: isDark
+              ? Colors.white.withValues(alpha: 0.06)
+              : color.withValues(alpha: 0.06),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+            color: isDark
+                ? Colors.white.withValues(alpha: 0.10)
+                : color.withValues(alpha: 0.15),
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 16, color: color),
+            const SizedBox(width: 6),
+            ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 140),
+              child: Text(
+                att.filename,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(fontSize: 13, color: color, fontWeight: FontWeight.w500),
               ),
             ),
-          );
-        }).toList(),
+          ],
+        ),
       ),
     );
   }
 }
 
-class _LinkedItemCard extends StatelessWidget {
-  const _LinkedItemCard({
+class _LinkedChip extends StatelessWidget {
+  const _LinkedChip({
     required this.type,
     required this.id,
     required this.isDark,
@@ -1436,70 +1434,33 @@ class _LinkedItemCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final l10n = context.l10n;
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
-      child: GestureDetector(
-        onTap: () => _navigate(context),
-        child: Container(
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
+    return GestureDetector(
+      onTap: () => _navigate(context),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        decoration: BoxDecoration(
+          color: isDark
+              ? Colors.white.withValues(alpha: 0.06)
+              : _accent.withValues(alpha: 0.06),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
             color: isDark
-                ? Colors.white.withValues(alpha: 0.06)
-                : _accent.withValues(alpha: 0.04),
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-              color: isDark
-                  ? Colors.white.withValues(alpha: 0.08)
-                  : _accent.withValues(alpha: 0.12),
+                ? Colors.white.withValues(alpha: 0.10)
+                : _accent.withValues(alpha: 0.15),
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(_iconData, size: 16, color: _accent),
+            const SizedBox(width: 6),
+            Text(
+              _typeLabel(context),
+              style: const TextStyle(fontSize: 13, color: _accent, fontWeight: FontWeight.w500),
             ),
-          ),
-          child: Row(
-            children: [
-              Container(
-                width: 36,
-                height: 36,
-                decoration: BoxDecoration(
-                  color: _iconBgColor,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Icon(_iconData, size: 18, color: _accent),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      l10n.publishRelatedContent,
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: isDark
-                            ? AppColors.textTertiaryDark
-                            : AppColors.textTertiaryLight,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      _typeLabel(l10n),
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: isDark ? AppColors.primaryLight : _accent,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Icon(
-                Icons.chevron_right,
-                size: 20,
-                color: isDark
-                    ? AppColors.textTertiaryDark
-                    : AppColors.textTertiaryLight,
-              ),
-            ],
-          ),
+            const SizedBox(width: 2),
+            Icon(Icons.chevron_right, size: 14, color: _accent.withValues(alpha: 0.6)),
+          ],
         ),
       ),
     );
@@ -1525,16 +1486,16 @@ class _LinkedItemCard extends StatelessWidget {
     }
   }
 
-  String _typeLabel(dynamic l10n) {
+  String _typeLabel(BuildContext context) {
+    final l10n = context.l10n;
     switch (type) {
       case 'product':
         return l10n.discoveryFeedTypeProduct;
       case 'service':
-        return l10n.discoveryFeedTypeService;
       case 'expert':
         return l10n.discoveryFeedTypeService;
       case 'activity':
-        return l10n.homeOpenActivities;
+        return l10n.homeHotEvents;
       case 'ranking':
         return l10n.discoveryFeedTypeRanking;
       case 'forum_post':
@@ -1559,24 +1520,6 @@ class _LinkedItemCard extends StatelessWidget {
         return Icons.forum_outlined;
       default:
         return Icons.link;
-    }
-  }
-
-  Color get _iconBgColor {
-    switch (type) {
-      case 'product':
-        return const Color(0xFFFEF3C7);
-      case 'service':
-      case 'expert':
-        return const Color(0xFFDBEAFE);
-      case 'activity':
-        return const Color(0xFFD1FAE5);
-      case 'ranking':
-        return const Color(0xFFDBEAFE);
-      case 'forum_post':
-        return const Color(0xFFEDE9FE);
-      default:
-        return const Color(0xFFEDE9FE);
     }
   }
 }

@@ -3,6 +3,7 @@ import 'dart:typed_data';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:pdfx/pdfx.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_spacing.dart';
@@ -28,6 +29,8 @@ class _PdfPreviewViewState extends State<PdfPreviewView> {
   bool _loading = true;
   bool _isEmpty = false;
   String? _rawError;
+  int _totalPages = 0;
+  int _currentPage = 1;
 
   @override
   void initState() {
@@ -38,7 +41,7 @@ class _PdfPreviewViewState extends State<PdfPreviewView> {
   Future<void> _loadPdf() async {
     try {
       final dio = Dio();
-      final response = await dio.get<Uint8List>(
+      final response = await dio.get<List<int>>(
         widget.url,
         options: Options(responseType: ResponseType.bytes),
       );
@@ -52,9 +55,10 @@ class _PdfPreviewViewState extends State<PdfPreviewView> {
         }
         return;
       }
-      final document = await PdfDocument.openData(bytes);
+      final document = await PdfDocument.openData(Uint8List.fromList(bytes));
       if (!mounted) return;
       setState(() {
+        _totalPages = document.pagesCount;
         _controller = PdfControllerPinch(
           document: Future.value(document),
         );
@@ -89,6 +93,16 @@ class _PdfPreviewViewState extends State<PdfPreviewView> {
           widget.title ?? context.l10n.forumPdfPreviewTitle,
           overflow: TextOverflow.ellipsis,
         ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.open_in_browser),
+            tooltip: context.l10n.commonOpenInBrowser,
+            onPressed: () => launchUrl(
+              Uri.parse(widget.url),
+              mode: LaunchMode.externalApplication,
+            ),
+          ),
+        ],
       ),
       body: _buildBody(context, isDark),
     );
@@ -125,6 +139,15 @@ class _PdfPreviewViewState extends State<PdfPreviewView> {
                       : AppColors.textSecondaryLight,
                 ),
               ),
+              AppSpacing.vMd,
+              TextButton.icon(
+                onPressed: () => launchUrl(
+                  Uri.parse(widget.url),
+                  mode: LaunchMode.externalApplication,
+                ),
+                icon: const Icon(Icons.open_in_browser, size: 18),
+                label: Text(context.l10n.commonOpenInBrowser),
+              ),
             ],
           ),
         ),
@@ -134,8 +157,52 @@ class _PdfPreviewViewState extends State<PdfPreviewView> {
     if (controller == null) {
       return const SizedBox.shrink();
     }
-    return PdfViewPinch(
-      controller: controller,
+    return Stack(
+      children: [
+        PdfViewPinch(
+          controller: controller,
+          onPageChanged: (page) {
+            setState(() => _currentPage = page);
+          },
+          builders: PdfViewPinchBuilders<DefaultBuilderOptions>(
+            options: const DefaultBuilderOptions(),
+            documentLoaderBuilder: (_) =>
+                const Center(child: CircularProgressIndicator()),
+            pageLoaderBuilder: (_) =>
+                const Center(child: CircularProgressIndicator(strokeWidth: 2)),
+            errorBuilder: (_, error) => Center(
+              child: Text(
+                error.toString(),
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: isDark
+                      ? AppColors.textSecondaryDark
+                      : AppColors.textSecondaryLight,
+                ),
+              ),
+            ),
+          ),
+        ),
+        if (_totalPages > 1)
+          Positioned(
+            bottom: MediaQuery.of(context).padding.bottom + 16,
+            left: 0,
+            right: 0,
+            child: Center(
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: Colors.black54,
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Text(
+                  '$_currentPage / $_totalPages',
+                  style: const TextStyle(color: Colors.white, fontSize: 13),
+                ),
+              ),
+            ),
+          ),
+      ],
     );
   }
 }
