@@ -399,8 +399,8 @@ class ActivityCardView extends StatelessWidget {
                     child: _buildTypeBadges(l10n),
                   ),
 
-                // 状态标签：已满 / 已结束（对齐iOS）
-                if (activity.isFull || showEndedBadge)
+                // 状态标签：待审核 / 已拒绝 / 已满 / 已结束
+                if (activity.isPendingReview || activity.isRejected || activity.isFull || showEndedBadge)
                   Positioned(
                     top: 8,
                     left: (isFavorited || activityType != null) ? 8 : null,
@@ -600,8 +600,44 @@ class ActivityCardView extends StatelessWidget {
     );
   }
 
-  /// 状态标签（对齐iOS: ended / fullCapacity）
+  /// 状态标签（对齐iOS: ended / fullCapacity + 待审核 / 已拒绝）
   Widget _buildStatusBadge(dynamic l10n) {
+    if (activity.isPendingReview) {
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        decoration: BoxDecoration(
+          color: Colors.orange,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Text(
+          l10n.activityPendingReview,
+          style: const TextStyle(
+            fontSize: 10,
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+          ),
+        ),
+      );
+    }
+
+    if (activity.isRejected) {
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        decoration: BoxDecoration(
+          color: AppColors.error,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Text(
+          l10n.activityRejected,
+          style: const TextStyle(
+            fontSize: 10,
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+          ),
+        ),
+      );
+    }
+
     if (activity.isFull) {
       return Container(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),

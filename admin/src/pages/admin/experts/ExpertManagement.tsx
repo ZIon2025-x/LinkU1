@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react';
-import { message, Modal, Tag } from 'antd';
+import { message, Modal, Select, Tag } from 'antd';
 import { useAdminTable, useModalForm } from '../../../hooks';
 import { AdminTable, AdminPagination, StatusBadge, Column } from '../../../components/admin';
 import api, {
@@ -17,6 +17,8 @@ import api, {
   deleteExpertServiceAdmin,
   updateExpertActivityAdmin,
   deleteExpertActivityAdmin,
+  reviewExpertServiceAdmin,
+  reviewExpertActivityAdmin,
 } from '../../../api';
 import { getErrorMessage } from '../../../utils/errorHandler';
 
@@ -116,11 +118,26 @@ const uploadImageWithCategory = async (file: File, category: string): Promise<st
   return res.data.url || res.data.image_url;
 };
 
+const SERVICE_STATUS_OPTIONS = [
+  { value: '', label: '全部' },
+  { value: 'pending', label: '待审核' },
+  { value: 'active', label: '已上架' },
+  { value: 'rejected', label: '已拒绝' },
+];
+const ACTIVITY_STATUS_OPTIONS = [
+  { value: '', label: '全部' },
+  { value: 'pending_review', label: '待审核' },
+  { value: 'open', label: '进行中' },
+  { value: 'rejected', label: '已拒绝' },
+];
+
 const ExpertManagement: React.FC = () => {
   const [subTab, setSubTab] = useState<SubTab>('list');
   const [detailExpert, setDetailExpert] = useState<any>(null);
   const [avatarUploading, setAvatarUploading] = useState(false);
   const [serviceImageUploading, setServiceImageUploading] = useState<number | null>(null);
+  const [serviceStatusFilter, setServiceStatusFilter] = useState<string>('');
+  const [activityStatusFilter, setActivityStatusFilter] = useState<string>('');
 
   // ==================== 达人列表 ====================
   const fetchExperts = useCallback(async ({ page, pageSize }: { page: number; pageSize: number }) => {
@@ -172,9 +189,13 @@ const ExpertManagement: React.FC = () => {
 
   // ==================== 服务管理 ====================
   const fetchServices = useCallback(async ({ page, pageSize }: { page: number; pageSize: number }) => {
-    const res = await getAllExpertServicesAdmin({ page, limit: pageSize });
+    const res = await getAllExpertServicesAdmin({
+      page,
+      limit: pageSize,
+      ...(serviceStatusFilter ? { status_filter: serviceStatusFilter } : {}),
+    });
     return { data: res.items || [], total: res.total || 0 };
-  }, []);
+  }, [serviceStatusFilter]);
   const servicesTable = useAdminTable<any>({
     fetchData: fetchServices,
     initialPageSize: 20,
@@ -184,9 +205,13 @@ const ExpertManagement: React.FC = () => {
 
   // ==================== 活动管理 ====================
   const fetchActivities = useCallback(async ({ page, pageSize }: { page: number; pageSize: number }) => {
-    const res = await getAllExpertActivitiesAdmin({ page, limit: pageSize });
+    const res = await getAllExpertActivitiesAdmin({
+      page,
+      limit: pageSize,
+      ...(activityStatusFilter ? { status_filter: activityStatusFilter } : {}),
+    });
     return { data: res.items || [], total: res.total || 0 };
-  }, []);
+  }, [activityStatusFilter]);
   const activitiesTable = useAdminTable<any>({
     fetchData: fetchActivities,
     initialPageSize: 20,
@@ -637,19 +662,78 @@ const ExpertManagement: React.FC = () => {
     },
   ];
 
+  const handleReviewService = async (serviceId: number, action: 'approve' | 'reject') => {
+    try {
+      await reviewExpertServiceAdmin(serviceId, { action });
+      message.success(action === 'approve' ? '服务已批准' : '服务已拒绝');
+      servicesTable.refresh();
+    } catch (error: any) {
+      message.error(getErrorMessage(error));
+    }
+  };
+
+  const handleReviewActivity = async (activityId: number, action: 'approve' | 'reject') => {
+    try {
+      await reviewExpertActivityAdmin(activityId, { action });
+      message.success(action === 'approve' ? '活动已批准' : '活动已拒绝');
+      activitiesTable.refresh();
+    } catch (error: any) {
+      message.error(getErrorMessage(error));
+    }
+  };
+
+  const statusColor = (s: string) => {
+    switch (s) {
+      case 'active': case 'open': return '#28a745';
+      case 'pending': case 'pending_review': return '#f0ad4e';
+      case 'rejected': return '#dc3545';
+      case 'inactive': case 'closed': return '#999';
+      default: return '#666';
+    }
+  };
+
+  const statusLabel = (s: string) => {
+    switch (s) {
+      case 'active': return '已上架';
+      case 'pending': return '待审核';
+      case 'pending_review': return '待审核';
+      case 'rejected': return '已拒绝';
+      case 'inactive': return '已下架';
+      case 'open': return '进行中';
+      case 'closed': return '已关闭';
+      default: return s;
+    }
+  };
+
   const serviceColumns: Column<any>[] = [
     { key: 'id', title: 'ID', dataIndex: 'id', width: 70 },
     { key: 'expert_name', title: '达人', dataIndex: 'expert_name', width: 100 },
     { key: 'service_name', title: '服务名称', dataIndex: 'service_name', width: 160 },
     { key: 'base_price', title: '价格', width: 90, render: (_, r) => `${r.currency || 'GBP'} ${r.base_price ?? 0}` },
-    { key: 'status', title: '状态', dataIndex: 'status', width: 72 },
+    { key: 'status', title: '状态', width: 80, render: (_, r) => <Tag color={statusColor(r.status)}>{statusLabel(r.status)}</Tag> },
     { key: 'display_order', title: '排序', dataIndex: 'display_order', width: 60 },
     {
       key: 'actions',
       title: '操作',
-      width: 140,
+      width: 220,
       render: (_, record) => (
-        <div style={{ display: 'flex', gap: '6px' }}>
+        <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+          {record.status === 'pending' && (
+            <>
+              <button
+                onClick={() => handleReviewService(record.id, 'approve')}
+                style={{ padding: '4px 8px', border: 'none', background: '#28a745', color: 'white', borderRadius: '4px', cursor: 'pointer', fontSize: '12px' }}
+              >
+                批准
+              </button>
+              <button
+                onClick={() => handleReviewService(record.id, 'reject')}
+                style={{ padding: '4px 8px', border: 'none', background: '#dc3545', color: 'white', borderRadius: '4px', cursor: 'pointer', fontSize: '12px' }}
+              >
+                拒绝
+              </button>
+            </>
+          )}
           <button
             onClick={() => serviceEditModal.open({
               id: record.id,
@@ -681,14 +765,30 @@ const ExpertManagement: React.FC = () => {
     { key: 'id', title: 'ID', dataIndex: 'id', width: 70 },
     { key: 'expert_name', title: '达人', dataIndex: 'expert_name', width: 100 },
     { key: 'title', title: '活动标题', dataIndex: 'title', width: 180 },
-    { key: 'status', title: '状态', dataIndex: 'status', width: 72 },
+    { key: 'status', title: '状态', width: 80, render: (_, r) => <Tag color={statusColor(r.status)}>{statusLabel(r.status)}</Tag> },
     { key: 'max_participants', title: '人数', dataIndex: 'max_participants', width: 60 },
     {
       key: 'actions',
       title: '操作',
-      width: 140,
+      width: 220,
       render: (_, record) => (
-        <div style={{ display: 'flex', gap: '6px' }}>
+        <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+          {record.status === 'pending_review' && (
+            <>
+              <button
+                onClick={() => handleReviewActivity(record.id, 'approve')}
+                style={{ padding: '4px 8px', border: 'none', background: '#28a745', color: 'white', borderRadius: '4px', cursor: 'pointer', fontSize: '12px' }}
+              >
+                批准
+              </button>
+              <button
+                onClick={() => handleReviewActivity(record.id, 'reject')}
+                style={{ padding: '4px 8px', border: 'none', background: '#dc3545', color: 'white', borderRadius: '4px', cursor: 'pointer', fontSize: '12px' }}
+              >
+                拒绝
+              </button>
+            </>
+          )}
           <button
             onClick={() => activityEditModal.open({
               id: record.id,
@@ -790,6 +890,20 @@ const ExpertManagement: React.FC = () => {
       {/* 服务管理 */}
       {subTab === 'services' && (
         <>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
+            <span>状态筛选：</span>
+            <Select
+              value={serviceStatusFilter || undefined}
+              onChange={(v) => {
+                setServiceStatusFilter(v ?? '');
+                servicesTable.refresh();
+              }}
+              options={SERVICE_STATUS_OPTIONS}
+              style={{ width: 120 }}
+              placeholder="全部"
+              allowClear
+            />
+          </div>
           <AdminTable
             columns={serviceColumns}
             data={servicesTable.data}
@@ -812,6 +926,20 @@ const ExpertManagement: React.FC = () => {
       {/* 活动管理 */}
       {subTab === 'activities' && (
         <>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
+            <span>状态筛选：</span>
+            <Select
+              value={activityStatusFilter || undefined}
+              onChange={(v) => {
+                setActivityStatusFilter(v ?? '');
+                activitiesTable.refresh();
+              }}
+              options={ACTIVITY_STATUS_OPTIONS}
+              style={{ width: 120 }}
+              placeholder="全部"
+              allowClear
+            />
+          </div>
           <AdminTable
             columns={activityColumns}
             data={activitiesTable.data}

@@ -473,7 +473,7 @@ export const getExpertServicesAdmin = async (expertId: string) => {
 };
 
 /** 获取全部达人服务列表（分页），用于专家管理-服务管理 */
-export const getAllExpertServicesAdmin = async (params?: { page?: number; limit?: number; expert_id?: string }) => {
+export const getAllExpertServicesAdmin = async (params?: { page?: number; limit?: number; expert_id?: string; status_filter?: string }) => {
   const res = await api.get('/api/admin/task-expert-services', { params });
   return res.data;
 };
@@ -506,6 +506,16 @@ export const updateExpertActivityAdmin = async (expertId: string, activityId: nu
 
 export const deleteExpertActivityAdmin = async (expertId: string, activityId: number) => {
   const res = await api.delete(`/api/admin/task-expert/${expertId}/activities/${activityId}`);
+  return res.data;
+};
+
+export const reviewExpertServiceAdmin = async (serviceId: number, data: { action: 'approve' | 'reject' }) => {
+  const res = await api.post(`/api/admin/task-expert-services/${serviceId}/review`, data);
+  return res.data;
+};
+
+export const reviewExpertActivityAdmin = async (activityId: number, data: { action: 'approve' | 'reject' }) => {
+  const res = await api.post(`/api/admin/task-expert-activities/${activityId}/review`, data);
   return res.data;
 };
 

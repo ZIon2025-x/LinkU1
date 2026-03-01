@@ -400,6 +400,14 @@ class _ActivityDetailViewContent extends StatelessWidget {
   /// 状态优先级：已结束 > 已申请(含议价/支付子状态) > 已满 > 可申请
   Widget _buildCTAButton(
       BuildContext context, ActivityState state, Activity activity) {
+    // 0. 活动待审核/已拒绝
+    if (activity.isPendingReview) {
+      return _buildDisabledButton(context.l10n.activityPendingReview);
+    }
+    if (activity.isRejected) {
+      return _buildDisabledButton(context.l10n.activityRejected);
+    }
+
     // 1. 活动已结束/取消 - 对标iOS activity.isEnded
     if (activity.isEnded) {
       return _buildDisabledButton(_getStatusText(activity.status, context));
@@ -1491,6 +1499,10 @@ class _ActivityStatsBar extends StatelessWidget {
     switch (status) {
       case 'open':
         return activity.isFull ? AppColors.error : Colors.orange;
+      case 'pending_review':
+        return Colors.orange;
+      case 'rejected':
+        return AppColors.error;
       case 'completed':
       case 'ended':
       case 'closed':
@@ -1507,6 +1519,10 @@ class _ActivityStatsBar extends StatelessWidget {
     switch (status) {
       case 'open':
         return context.l10n.activityInProgress;
+      case 'pending_review':
+        return context.l10n.activityPendingReview;
+      case 'rejected':
+        return context.l10n.activityRejected;
       case 'completed':
       case 'ended':
       case 'closed':

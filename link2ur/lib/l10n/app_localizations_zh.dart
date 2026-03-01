@@ -7435,6 +7435,18 @@ class AppLocalizationsZh extends AppLocalizations {
   String get activityInProgress => '进行中';
 
   @override
+  String get activityPendingReview => '待审核';
+
+  @override
+  String get activityRejected => '已拒绝';
+
+  @override
+  String get servicePendingReview => '待审核';
+
+  @override
+  String get serviceRejected => '已拒绝';
+
+  @override
   String get activityFree => '免费';
 
   @override
@@ -16158,6 +16170,18 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get activityInProgress => '進行中';
+
+  @override
+  String get activityPendingReview => '待審核';
+
+  @override
+  String get activityRejected => '已拒絕';
+
+  @override
+  String get servicePendingReview => '待審核';
+
+  @override
+  String get serviceRejected => '已拒絕';
 
   @override
   String get activityFree => '免費';

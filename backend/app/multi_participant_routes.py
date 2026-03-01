@@ -1350,6 +1350,8 @@ def get_activities(
     
     if status:
         query = query.filter(Activity.status == status)
+    elif not expert_id:
+        query = query.filter(Activity.status.notin_(["pending_review", "rejected"]))
     
     if has_time_slots is not None:
         query = query.filter(Activity.has_time_slots == has_time_slots)
@@ -1839,7 +1841,7 @@ def create_expert_activity(
             discount_percentage = 0.0
             discounted_price = original_price
     
-    # 创建活动记录
+    # 创建活动记录（需管理员审核后才变为 open）
     db_activity = Activity(
         title=activity.title,
         description=activity.description,
@@ -1857,7 +1859,7 @@ def create_expert_activity(
         min_participants=activity.min_participants,
         completion_rule=activity.completion_rule,
         reward_distribution=activity.reward_distribution,
-        status="open",
+        status="pending_review",
         is_public=activity.is_public,
         visibility="public" if activity.is_public else "private",
         deadline=activity.deadline,

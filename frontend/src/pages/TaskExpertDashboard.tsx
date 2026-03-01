@@ -1322,6 +1322,8 @@ const TaskExpertDashboard: React.FC = () => {
                   const statusTagClass = activity.status === 'open' ? styles.activityTagOpen :
                                         activity.status === 'in_progress' ? styles.activityTagInProgress :
                                         activity.status === 'completed' ? styles.activityTagCompleted :
+                                        activity.status === 'pending_review' ? styles.activityTagPendingReview :
+                                        activity.status === 'rejected' ? styles.activityTagRejected :
                                         styles.activityTagCancelled;
                   
                   const isCollapsed = collapsedActivities.has(activity.id);
@@ -1377,6 +1379,8 @@ const TaskExpertDashboard: React.FC = () => {
                               {activity.status === 'open' ? '开放中' :
                                activity.status === 'in_progress' ? '进行中' :
                                activity.status === 'completed' ? '已完成' :
+                               activity.status === 'pending_review' ? '待审核' :
+                               activity.status === 'rejected' ? '已拒绝' :
                                '已取消'}
                             </span>
                             <span style={{ fontSize: '14px', color: '#4a5568' }}>

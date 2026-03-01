@@ -525,7 +525,15 @@ const ActivityDetail: React.FC = () => {
 
           {/* 操作按钮 */}
           <div className={styles.actions}>
-            {activity.has_applied && activity.user_task_id ? (
+            {activity.status === 'pending_review' ? (
+              <button disabled className={`${styles.applyButton} ${styles.applyButtonDisabled}`}>
+                待审核
+              </button>
+            ) : activity.status === 'rejected' ? (
+              <button disabled className={`${styles.applyButton} ${styles.applyButtonDisabled}`}>
+                已拒绝
+              </button>
+            ) : activity.has_applied && activity.user_task_id ? (
               // 已申请，显示支付按钮或等待按钮
               activity.user_task_has_negotiation && activity.user_task_status === 'pending_payment' ? (
                 // 有议价且待支付，显示等待达人回应按钮（灰色不可点击）
@@ -563,7 +571,7 @@ const ActivityDetail: React.FC = () => {
                 </button>
               )
             ) : (
-              // 未申请，显示申请按钮
+              // 未申请，显示申请按钮（仅 status 为 open 时）
               <button
                 onClick={handleApply}
                 disabled={applying || (activity.has_time_slots && !selectedTimeSlotId)}

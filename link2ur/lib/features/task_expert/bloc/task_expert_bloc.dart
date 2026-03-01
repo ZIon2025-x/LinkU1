@@ -530,11 +530,8 @@ class TaskExpertBloc extends Bloc<TaskExpertEvent, TaskExpertState> {
     try {
       final expert =
           await _taskExpertRepository.getExpertById(event.expertId);
-      final allServices =
+      final services =
           await _taskExpertRepository.getExpertServices(event.expertId);
-      final services = allServices
-          .where((s) => s.status == 'active')
-          .toList();
 
       List<Activity> activities = const [];
       final activityRepo = _activityRepository;

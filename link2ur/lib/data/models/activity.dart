@@ -160,6 +160,12 @@ class Activity extends Equatable {
     return false;
   }
 
+  /// 是否待审核
+  bool get isPendingReview => status == 'pending_review';
+
+  /// 是否已拒绝
+  bool get isRejected => status == 'rejected';
+
   /// 是否已满员
   bool get isFull =>
       currentParticipants != null &&

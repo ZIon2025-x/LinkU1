@@ -363,6 +363,15 @@ class TaskExpertService extends Equatable {
   String? get firstImage =>
       images != null && images!.isNotEmpty ? images!.first : null;
 
+  /// 是否待审核
+  bool get isPending => status == 'pending';
+
+  /// 是否已拒绝
+  bool get isRejected => status == 'rejected';
+
+  /// 是否已上架
+  bool get isActive => status == 'active';
+
   /// 是否已申请
   bool get hasApplied => userApplicationId != null;
 

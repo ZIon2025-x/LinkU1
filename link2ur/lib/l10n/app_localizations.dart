@@ -14240,6 +14240,30 @@ abstract class AppLocalizations {
   /// **'In Progress'**
   String get activityInProgress;
 
+  /// No description provided for @activityPendingReview.
+  ///
+  /// In en, this message translates to:
+  /// **'Pending Review'**
+  String get activityPendingReview;
+
+  /// No description provided for @activityRejected.
+  ///
+  /// In en, this message translates to:
+  /// **'Rejected'**
+  String get activityRejected;
+
+  /// No description provided for @servicePendingReview.
+  ///
+  /// In en, this message translates to:
+  /// **'Pending Review'**
+  String get servicePendingReview;
+
+  /// No description provided for @serviceRejected.
+  ///
+  /// In en, this message translates to:
+  /// **'Rejected'**
+  String get serviceRejected;
+
   /// No description provided for @activityFree.
   ///
   /// In en, this message translates to:

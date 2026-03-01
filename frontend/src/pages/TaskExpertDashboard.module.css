@@ -528,6 +528,16 @@
   color: #991b1b;
 }
 
+.activityTagPendingReview {
+  background: #ffedd5;
+  color: #c2410c;
+}
+
+.activityTagRejected {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
 .activityTagTimeSlot {
   background: #e0f2fe;
   color: #0369a1;

@@ -674,7 +674,7 @@ async def create_service(
         base_price=service_data.base_price,
         currency=service_data.currency,
         display_order=service_data.display_order,
-        status="active",
+        status="pending",
         has_time_slots=service_data.has_time_slots,
         # 时间段时长由管理员设置，任务达人不能设置
         time_slot_duration_minutes=service_data.time_slot_duration_minutes if service_data.time_slot_duration_minutes else None,
@@ -889,9 +889,14 @@ async def update_service(
     if service_data.currency is not None:
         service.currency = service_data.currency
     if service_data.status is not None:
+        if service_data.status == "active" and service.status in ("pending", "rejected"):
+            raise HTTPException(status_code=403, detail="服务需要管理员审核后才能上架")
         service.status = service_data.status
     if service_data.display_order is not None:
         service.display_order = service_data.display_order
+    
+    if service.status == "rejected":
+        service.status = "pending"
     
     service.updated_at = get_utc_time()
     

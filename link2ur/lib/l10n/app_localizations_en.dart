@@ -7729,6 +7729,18 @@ class AppLocalizationsEn extends AppLocalizations {
   String get activityInProgress => 'In Progress';
 
   @override
+  String get activityPendingReview => 'Pending Review';
+
+  @override
+  String get activityRejected => 'Rejected';
+
+  @override
+  String get servicePendingReview => 'Pending Review';
+
+  @override
+  String get serviceRejected => 'Rejected';
+
+  @override
   String get activityFree => 'Free';
 
   @override

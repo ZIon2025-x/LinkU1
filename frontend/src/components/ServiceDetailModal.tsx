@@ -328,7 +328,35 @@ const ServiceDetailModal: React.FC<ServiceDetailModalProps> = ({
               >
                 取消
               </button>
-              {service.user_application_id ? (
+              {service.status === 'pending' ? (
+                <button
+                  disabled
+                  style={{
+                    padding: '10px 20px',
+                    border: 'none',
+                    borderRadius: '6px',
+                    background: '#ccc',
+                    color: '#fff',
+                    cursor: 'not-allowed',
+                  }}
+                >
+                  待审核
+                </button>
+              ) : service.status === 'rejected' ? (
+                <button
+                  disabled
+                  style={{
+                    padding: '10px 20px',
+                    border: 'none',
+                    borderRadius: '6px',
+                    background: '#ccc',
+                    color: '#fff',
+                    cursor: 'not-allowed',
+                  }}
+                >
+                  已拒绝
+                </button>
+              ) : service.user_application_id ? (
                 // 已申请，显示支付按钮或等待按钮
                 service.user_application_has_negotiation && service.user_task_status === 'pending_payment' ? (
                   // 有议价且待支付，显示等待达人回应按钮（灰色不可点击）

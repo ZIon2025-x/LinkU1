@@ -67,14 +67,17 @@ async def get_all_expert_services_admin(
     page: int = Query(1, ge=1),
     limit: int = Query(20, ge=1, le=100),
     expert_id: Optional[str] = Query(None, description="按达人ID筛选"),
+    status_filter: Optional[str] = Query(None, description="按状态筛选: pending, active, rejected"),
     current_admin: models.AdminUser = Depends(get_current_admin_async),
     db: AsyncSession = Depends(get_async_db_dependency),
 ):
-    """获取全部达人服务列表（管理员），支持分页与按达人筛选"""
+    """获取全部达人服务列表（管理员），支持分页、按达人与状态筛选"""
     try:
         q = select(models.TaskExpertService)
         if expert_id:
             q = q.where(models.TaskExpertService.expert_id == expert_id)
+        if status_filter:
+            q = q.where(models.TaskExpertService.status == status_filter)
         count_q = select(func.count()).select_from(q.subquery())
         total_result = await db.execute(count_q)
         total = total_result.scalar() or 0
@@ -728,4 +731,64 @@ async def review_profile_update_request(
         except Exception as rollback_error:
             logger.warning(f"Rollback 失败: {rollback_error}")
         raise HTTPException(status_code=500, detail="审核失败，请稍后重试")
+
+
+# ==================== 服务审核 ====================
+
+@admin_task_expert_router.post("/task-expert-services/{service_id}/review")
+async def review_expert_service(
+    service_id: int,
+    review_data: dict,
+    current_admin: models.AdminUser = Depends(get_current_admin_async),
+    db: AsyncSession = Depends(get_async_db_dependency),
+):
+    """管理员审核达人服务（approve → active, reject → rejected）"""
+    action = review_data.get("action")
+    if action not in ("approve", "reject"):
+        raise HTTPException(status_code=400, detail="action 必须是 approve 或 reject")
+
+    result = await db.execute(
+        select(models.TaskExpertService).where(models.TaskExpertService.id == service_id)
+    )
+    service = result.scalar_one_or_none()
+    if not service:
+        raise HTTPException(status_code=404, detail="服务不存在")
+
+    if action == "approve":
+        service.status = "active"
+    else:
+        service.status = "rejected"
+
+    await db.commit()
+    return {"message": f"服务已{'批准' if action == 'approve' else '拒绝'}", "status": service.status}
+
+
+# ==================== 活动审核 ====================
+
+@admin_task_expert_router.post("/task-expert-activities/{activity_id}/review")
+async def review_expert_activity(
+    activity_id: int,
+    review_data: dict,
+    current_admin: models.AdminUser = Depends(get_current_admin_async),
+    db: AsyncSession = Depends(get_async_db_dependency),
+):
+    """管理员审核达人活动（approve → open, reject → rejected）"""
+    action = review_data.get("action")
+    if action not in ("approve", "reject"):
+        raise HTTPException(status_code=400, detail="action 必须是 approve 或 reject")
+
+    result = await db.execute(
+        select(models.Activity).where(models.Activity.id == activity_id)
+    )
+    activity = result.scalar_one_or_none()
+    if not activity:
+        raise HTTPException(status_code=404, detail="活动不存在")
+
+    if action == "approve":
+        activity.status = "open"
+    else:
+        activity.status = "rejected"
+
+    await db.commit()
+    return {"message": f"活动已{'批准' if action == 'approve' else '拒绝'}", "status": activity.status}
 

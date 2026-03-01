@@ -325,6 +325,39 @@ class _PriceAndTitleCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          if (service.isPending || service.isRejected)
+            Container(
+              width: double.infinity,
+              margin: const EdgeInsets.only(bottom: 12),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                color: service.isPending
+                    ? Colors.orange.withValues(alpha: 0.12)
+                    : AppColors.error.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    service.isPending ? Icons.hourglass_top : Icons.block,
+                    size: 16,
+                    color: service.isPending ? Colors.orange : AppColors.error,
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    service.isPending
+                        ? context.l10n.servicePendingReview
+                        : context.l10n.serviceRejected,
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color:
+                          service.isPending ? Colors.orange : AppColors.error,
+                    ),
+                  ),
+                ],
+              ),
+            ),
           Row(
             crossAxisAlignment: CrossAxisAlignment.baseline,
             textBaseline: TextBaseline.alphabetic,
@@ -1078,6 +1111,13 @@ class _BottomApplyBar extends StatelessWidget {
   }
 
   Widget _buildButton(BuildContext context) {
+    if (service.isPending) {
+      return _buildDisabledButton(context, context.l10n.servicePendingReview);
+    }
+    if (service.isRejected) {
+      return _buildDisabledButton(context, context.l10n.serviceRejected);
+    }
+
     if (service.userApplicationId != null) {
       // 1. 待支付且未支付 -> 继续支付
       if (service.userTaskStatus == AppConstants.taskStatusPendingPayment &&
