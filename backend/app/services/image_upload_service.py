@@ -35,6 +35,7 @@ class ImageCategory(Enum):
     
     # 论坛帖子
     FORUM_POST = "public/images/forum_posts"  # 帖子图片
+    FORUM_POST_FILE = "public/files/forum_posts"  # 帖子文件附件
     
     # 跳蚤市场
     FLEA_MARKET = "flea_market"  # 商品图片

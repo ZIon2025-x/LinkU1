@@ -169,15 +169,16 @@ class ForumDeletePost extends ForumEvent {
 
 class ForumEditPost extends ForumEvent {
   /// 仅传有改动的字段，减少后端翻译等重复调用
-  const ForumEditPost(this.postId, {this.title, this.content, this.images});
+  const ForumEditPost(this.postId, {this.title, this.content, this.images, this.attachments});
 
   final int postId;
   final String? title;
   final String? content;
   final List<String>? images;
+  final List<ForumPostAttachment>? attachments;
 
   @override
-  List<Object?> get props => [postId, title, content, images];
+  List<Object?> get props => [postId, title, content, images, attachments];
 }
 
 class ForumDeleteReply extends ForumEvent {
@@ -864,6 +865,9 @@ class ForumBloc extends Bloc<ForumEvent, ForumState> {
       if (event.title != null) data['title'] = event.title;
       if (event.content != null) data['content'] = event.content;
       if (event.images != null) data['images'] = event.images;
+      if (event.attachments != null) {
+        data['attachments'] = event.attachments!.map((a) => a.toJson()).toList();
+      }
       if (data.isEmpty) return;
       final updated = await _forumRepository.updatePost(event.postId, data);
       final updatedPosts = state.posts

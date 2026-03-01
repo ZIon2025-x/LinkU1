@@ -215,6 +215,32 @@ class ForumRepository {
     return url;
   }
 
+  /// 上传帖子文件附件（PDF/文档等，临时目录，发帖时由后端关联到帖子）
+  /// 返回 ForumPostAttachment（含 url/filename/size/content_type）
+  Future<ForumPostAttachment> uploadPostFile(String filePath) async {
+    final response = await _apiService.uploadFile<Map<String, dynamic>>(
+      ApiEndpoints.uploadForumFile,
+      filePath: filePath,
+      fieldName: 'file',
+    );
+
+    if (!response.isSuccess || response.data == null) {
+      throw ForumException(response.message ?? '上传文件失败');
+    }
+
+    final data = response.data!;
+    final url = data['url'] as String?;
+    if (url == null || url.isEmpty) {
+      throw const ForumException('上传成功但未返回文件地址');
+    }
+    return ForumPostAttachment(
+      url: url,
+      filename: data['filename'] as String? ?? '',
+      size: (data['size'] as num?)?.toInt() ?? 0,
+      contentType: data['content_type'] as String?,
+    );
+  }
+
   /// 创建帖子
   Future<ForumPost> createPost(CreatePostRequest request) async {
     final response = await _apiService.post<Map<String, dynamic>>(

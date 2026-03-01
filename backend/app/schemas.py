@@ -3193,8 +3193,17 @@ class ForumPostBase(BaseModel):
     category_id: int = Field(..., description="板块ID")
 
 
+class ForumPostAttachment(BaseModel):
+    """帖子文件附件"""
+    url: str = Field(..., description="文件URL")
+    filename: str = Field(..., description="原始文件名")
+    size: int = Field(..., description="文件大小(字节)")
+    content_type: Optional[str] = Field(None, description="MIME类型，如 application/pdf")
+
+
 class ForumPostCreate(ForumPostBase):
     images: Optional[List[str]] = Field(None, max_length=5, description="帖子图片URL列表，最多5张")
+    attachments: Optional[List[ForumPostAttachment]] = Field(None, max_length=1, description="文件附件列表，最多1个，可与图片同时存在")
     linked_item_type: Optional[str] = Field(None, description="关联内容类型: service/expert/activity/product/ranking/forum_post")
     linked_item_id: Optional[str] = Field(None, description="关联内容ID")
 
@@ -3222,6 +3231,7 @@ class ForumPostUpdate(BaseModel):
     content_zh: Optional[str] = Field(None, max_length=50000, description="帖子内容（中文）")
     category_id: Optional[int] = None
     images: Optional[List[str]] = Field(None, max_length=5, description="帖子图片URL列表，最多5张")
+    attachments: Optional[List[ForumPostAttachment]] = Field(None, max_length=1, description="文件附件列表，最多1个，可与图片同时存在")
     linked_item_type: Optional[str] = Field(None, description="关联内容类型")
     linked_item_id: Optional[str] = Field(None, description="关联内容ID")
 
@@ -3286,6 +3296,7 @@ class ForumPostOut(BaseModel):
     is_liked: Optional[bool] = False
     is_favorited: Optional[bool] = False
     images: Optional[List[str]] = None
+    attachments: Optional[List[ForumPostAttachment]] = None
     linked_item_type: Optional[str] = None
     linked_item_id: Optional[str] = None
     created_at: datetime.datetime
@@ -3316,6 +3327,7 @@ class ForumPostListItem(BaseModel):
     is_visible: bool
     is_deleted: bool
     images: Optional[List[str]] = None
+    attachments: Optional[List[ForumPostAttachment]] = None
     linked_item_type: Optional[str] = None
     linked_item_id: Optional[str] = None
     created_at: datetime.datetime

@@ -454,6 +454,7 @@ class ApiEndpoints {
   static const String uploadImageV2 = '/api/v2/upload/image';
   static const String uploadPublicImage = '/api/v2/upload/image'; // 公开图片统一使用V2
   static const String uploadFile = '/api/upload/file';
+  static const String uploadForumFile = '/api/v2/upload/forum-file';
   static const String refreshImageUrl = '/api/refresh-image-url';
   static String privateImage(String imageId) => // [RESERVED]
       '/api/private-image/$imageId';

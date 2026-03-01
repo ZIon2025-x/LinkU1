@@ -11,6 +11,7 @@ import '../../../data/models/forum.dart';
 import '../../../features/forum/views/forum_post_detail_view.dart';
 import '../../../features/forum/views/create_post_view.dart';
 import '../../../features/forum/views/edit_post_view.dart';
+import '../../../features/forum/views/pdf_preview_view.dart';
 import '../../../features/forum/views/forum_category_request_view.dart';
 import '../../../features/profile/views/my_forum_posts_view.dart';
 
@@ -50,6 +51,29 @@ List<RouteBase> get forumRoutes => [
         path: AppRoutes.myForumPosts,
         name: 'myForumPosts',
         builder: (context, state) => const MyForumPostsView(),
+      ),
+      GoRoute(
+        path: AppRoutes.forumPdfPreview,
+        name: 'forumPdfPreview',
+        pageBuilder: (context, state) {
+          final extra = state.extra as Map<String, dynamic>?;
+          final url = extra?['url'] as String?;
+          final title = extra?['title'] as String?;
+          if (url == null || url.isEmpty) {
+            return platformDetailPage(
+              context,
+              key: state.pageKey,
+              child: const Scaffold(
+                body: Center(child: Text('缺少 PDF 地址')),
+              ),
+            );
+          }
+          return platformDetailPage(
+            context,
+            key: state.pageKey,
+            child: PdfPreviewView(url: url, title: title),
+          );
+        },
       ),
       GoRoute(
         path: AppRoutes.forumPostDetail,

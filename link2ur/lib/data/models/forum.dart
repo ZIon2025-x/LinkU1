@@ -211,6 +211,52 @@ class LatestPostInfo {
   }
 }
 
+/// 帖子文件附件
+class ForumPostAttachment extends Equatable {
+  const ForumPostAttachment({
+    required this.url,
+    required this.filename,
+    required this.size,
+    this.contentType,
+  });
+
+  final String url;
+  final String filename;
+  final int size;
+  final String? contentType;
+
+  factory ForumPostAttachment.fromJson(Map<String, dynamic> json) {
+    return ForumPostAttachment(
+      url: json['url'] as String? ?? '',
+      filename: json['filename'] as String? ?? '',
+      size: _parseInt(json['size']),
+      contentType: json['content_type'] as String?,
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+        'url': url,
+        'filename': filename,
+        'size': size,
+        if (contentType != null) 'content_type': contentType,
+      };
+
+  /// 是否为 PDF
+  bool get isPdf =>
+      contentType == 'application/pdf' ||
+      filename.toLowerCase().endsWith('.pdf');
+
+  /// 格式化文件大小
+  String get formattedSize {
+    if (size < 1024) return '$size B';
+    if (size < 1024 * 1024) return '${(size / 1024).toStringAsFixed(1)} KB';
+    return '${(size / (1024 * 1024)).toStringAsFixed(1)} MB';
+  }
+
+  @override
+  List<Object?> get props => [url, filename, size];
+}
+
 /// 论坛帖子（对标iOS ForumPost）
 class ForumPost extends Equatable {
   const ForumPost({
@@ -225,6 +271,7 @@ class ForumPost extends Equatable {
     this.contentPreviewEn,
     this.contentPreviewZh,
     this.images = const [],
+    this.attachments = const [],
     this.linkedItemType,
     this.linkedItemId,
     required this.categoryId,
@@ -255,6 +302,7 @@ class ForumPost extends Equatable {
   final String? contentPreviewEn;
   final String? contentPreviewZh;
   final List<String> images;
+  final List<ForumPostAttachment> attachments;
   final String? linkedItemType; // service/expert/activity/product/ranking/forum_post
   final String? linkedItemId;
   final int categoryId;
@@ -289,6 +337,9 @@ class ForumPost extends Equatable {
   /// 是否有图片
   bool get hasImages => images.isNotEmpty;
 
+  /// 是否有文件附件
+  bool get hasAttachments => attachments.isNotEmpty;
+
   factory ForumPost.fromJson(Map<String, dynamic> json) {
     // 后端列表接口返回 content_preview/content_preview_en/content_preview_zh
     // 详情接口返回 content/content_en/content_zh
@@ -312,6 +363,11 @@ class ForumPost extends Equatable {
       contentPreviewZh: json['content_preview_zh'] as String?,
       images: (json['images'] as List<dynamic>?)
               ?.map((e) => e as String)
+              .toList() ??
+          [],
+      attachments: (json['attachments'] as List<dynamic>?)
+              ?.map((e) =>
+                  ForumPostAttachment.fromJson(e as Map<String, dynamic>))
               .toList() ??
           [],
       linkedItemType: json['linked_item_type'] as String?,
@@ -353,6 +409,8 @@ class ForumPost extends Equatable {
       'title': title,
       'content': content,
       'images': images,
+      if (attachments.isNotEmpty)
+        'attachments': attachments.map((a) => a.toJson()).toList(),
       if (linkedItemType != null) 'linked_item_type': linkedItemType,
       if (linkedItemId != null) 'linked_item_id': linkedItemId,
       'category_id': categoryId,
@@ -387,6 +445,7 @@ class ForumPost extends Equatable {
       contentPreviewEn: contentPreviewEn,
       contentPreviewZh: contentPreviewZh,
       images: images,
+      attachments: attachments,
       categoryId: categoryId,
       category: category,
       authorId: authorId,
@@ -503,6 +562,7 @@ class CreatePostRequest {
     required this.content,
     required this.categoryId,
     this.images = const [],
+    this.attachments = const [],
     this.linkedItemType,
     this.linkedItemId,
   });
@@ -511,6 +571,7 @@ class CreatePostRequest {
   final String content;
   final int categoryId;
   final List<String> images;
+  final List<ForumPostAttachment> attachments;
   final String? linkedItemType;
   final String? linkedItemId;
 
@@ -520,6 +581,8 @@ class CreatePostRequest {
       'content': content,
       'category_id': categoryId,
       if (images.isNotEmpty) 'images': images,
+      if (attachments.isNotEmpty)
+        'attachments': attachments.map((a) => a.toJson()).toList(),
       if (linkedItemType != null &&
           linkedItemType!.isNotEmpty &&
           linkedItemId != null &&

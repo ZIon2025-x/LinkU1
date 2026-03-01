@@ -1,3 +1,4 @@
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -16,7 +17,7 @@ import '../bloc/forum_bloc.dart';
 import '../../../data/models/forum.dart';
 
 /// 创建帖子页
-/// 参考 iOS CreatePostView.swift，支持图片上传与关联内容
+/// 支持同时上传图片和文件附件
 class CreatePostView extends StatefulWidget {
   const CreatePostView({super.key});
 
@@ -29,10 +30,16 @@ class _CreatePostViewState extends State<CreatePostView> {
   final _contentController = TextEditingController();
   int? _selectedCategoryId;
 
+  // 图片
   static const int _kMaxImages = 5;
   final List<XFile> _selectedImages = [];
   final _imagePicker = ImagePicker();
-  bool _isUploadingImages = false;
+
+  // 文件
+  static const int _kMaxFiles = 1;
+  final List<PlatformFile> _selectedFiles = [];
+
+  bool _isUploading = false;
 
   String? _linkedItemType;
   String? _linkedItemId;
@@ -45,6 +52,7 @@ class _CreatePostViewState extends State<CreatePostView> {
     super.dispose();
   }
 
+  // ── 图片选择 ──
   Future<void> _pickImages() async {
     try {
       final files = await _imagePicker.pickMultiImage(
@@ -66,6 +74,34 @@ class _CreatePostViewState extends State<CreatePostView> {
 
   void _removeImage(int index) {
     setState(() => _selectedImages.removeAt(index));
+  }
+
+  // ── 文件选择 ──
+  Future<void> _pickFiles() async {
+    try {
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['pdf'],
+        allowMultiple: false,
+      );
+      if (result != null && result.files.isNotEmpty && mounted) {
+        setState(() {
+          for (final f in result.files) {
+            if (_selectedFiles.length < _kMaxFiles &&
+                f.path != null &&
+                f.path!.isNotEmpty) {
+              _selectedFiles.add(f);
+            }
+          }
+        });
+      }
+    } catch (e) {
+      if (mounted) AppFeedback.showError(context, e.toString());
+    }
+  }
+
+  void _removeFile(int index) {
+    setState(() => _selectedFiles.removeAt(index));
   }
 
   Future<void> _showLinkSearchDialog() async {
@@ -108,27 +144,38 @@ class _CreatePostViewState extends State<CreatePostView> {
       return;
     }
 
+    final repo = context.read<ForumRepository>();
     final List<String> imageUrls = [];
-    if (_selectedImages.isNotEmpty) {
-      setState(() => _isUploadingImages = true);
-      try {
-        final repo = context.read<ForumRepository>();
+    final List<ForumPostAttachment> uploadedAttachments = [];
+
+    setState(() => _isUploading = true);
+
+    try {
+      if (_selectedImages.isNotEmpty) {
         for (final file in _selectedImages) {
           final path = file.path;
           if (path.isEmpty) continue;
           final url = await repo.uploadPostImage(path);
           imageUrls.add(url);
         }
-      } catch (e) {
-        if (!context.mounted) return;
-        setState(() => _isUploadingImages = false);
-        AppFeedback.showError(context, e.toString());
-        return;
       }
-      if (mounted) setState(() => _isUploadingImages = false);
+      if (_selectedFiles.isNotEmpty) {
+        for (final file in _selectedFiles) {
+          if (file.path == null || file.path!.isEmpty) continue;
+          final att = await repo.uploadPostFile(file.path!);
+          uploadedAttachments.add(att);
+        }
+      }
+    } catch (e) {
+      if (!context.mounted) return;
+      setState(() => _isUploading = false);
+      AppFeedback.showError(context, e.toString());
+      return;
     }
 
+    if (mounted) setState(() => _isUploading = false);
     if (!context.mounted) return;
+
     final bloc = context.read<ForumBloc>();
     bloc.add(
       ForumCreatePost(
@@ -137,6 +184,7 @@ class _CreatePostViewState extends State<CreatePostView> {
           content: _contentController.text.trim(),
           categoryId: _selectedCategoryId!,
           images: imageUrls,
+          attachments: uploadedAttachments,
           linkedItemType: _linkedItemType,
           linkedItemId: _linkedItemId,
         ),
@@ -165,7 +213,7 @@ class _CreatePostViewState extends State<CreatePostView> {
         builder: (context, state) {
           final isDark = Theme.of(context).brightness == Brightness.dark;
           final isBusy =
-              state.isCreatingPost == true || _isUploadingImages == true;
+              state.isCreatingPost == true || _isUploading == true;
 
           return Scaffold(
             backgroundColor:
@@ -246,6 +294,20 @@ class _CreatePostViewState extends State<CreatePostView> {
                 AppSpacing.vSm,
                 _buildImagePicker(isDark),
                 AppSpacing.vMd,
+                // 文件附件（选填，最多 5 个）
+                Text(
+                  '文件附件（${_selectedFiles.length}/$_kMaxFiles）',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: isDark
+                        ? AppColors.textSecondaryDark
+                        : AppColors.textSecondaryLight,
+                  ),
+                ),
+                AppSpacing.vSm,
+                _buildFilePicker(isDark),
+                AppSpacing.vMd,
                 // 关联内容（选填）
                 Text(
                   context.l10n.publishRelatedContent,
@@ -259,7 +321,7 @@ class _CreatePostViewState extends State<CreatePostView> {
                 ),
                 AppSpacing.vSm,
                 _buildLinkedChip(isDark),
-                if (_isUploadingImages) ...[
+                if (_isUploading) ...[
                   AppSpacing.vMd,
                   const Center(child: CircularProgressIndicator()),
                 ],
@@ -353,6 +415,134 @@ class _CreatePostViewState extends State<CreatePostView> {
           ),
       ],
     );
+  }
+
+  Widget _buildFilePicker(bool isDark) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        ..._selectedFiles.asMap().entries.map((entry) {
+          final file = entry.value;
+          final sizeKb = (file.size / 1024).toStringAsFixed(1);
+          return Container(
+            margin: const EdgeInsets.only(bottom: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            decoration: BoxDecoration(
+              color: isDark
+                  ? Colors.white.withValues(alpha: 0.06)
+                  : AppColors.backgroundLight,
+              borderRadius: AppRadius.allSmall,
+              border: Border.all(
+                color: isDark
+                    ? Colors.white.withValues(alpha: 0.12)
+                    : AppColors.textTertiaryLight.withValues(alpha: 0.3),
+              ),
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  _fileIcon(file.extension ?? ''),
+                  size: 28,
+                  color: isDark
+                      ? AppColors.textSecondaryDark
+                      : AppColors.textSecondaryLight,
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        file.name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: isDark
+                              ? AppColors.textPrimaryDark
+                              : AppColors.textPrimaryLight,
+                        ),
+                      ),
+                      Text(
+                        '$sizeKb KB',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: isDark
+                              ? AppColors.textTertiaryDark
+                              : AppColors.textTertiaryLight,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                GestureDetector(
+                  onTap: () => _removeFile(entry.key),
+                  child: const Icon(Icons.close, size: 20, color: AppColors.error),
+                ),
+              ],
+            ),
+          );
+        }),
+        if (_selectedFiles.length < _kMaxFiles)
+          GestureDetector(
+            onTap: _pickFiles,
+            child: Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              decoration: BoxDecoration(
+                color: isDark
+                    ? Colors.white.withValues(alpha: 0.06)
+                    : AppColors.backgroundLight,
+                borderRadius: AppRadius.allSmall,
+                border: Border.all(
+                  color: isDark
+                      ? Colors.white.withValues(alpha: 0.12)
+                      : AppColors.textTertiaryLight.withValues(alpha: 0.4),
+                ),
+              ),
+              child: Column(
+                children: [
+                  Icon(
+                    Icons.upload_file,
+                    size: 28,
+                    color: isDark
+                        ? AppColors.textTertiaryDark
+                        : AppColors.textTertiaryLight,
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    '添加文件（PDF/文档）',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: isDark
+                          ? AppColors.textTertiaryDark
+                          : AppColors.textTertiaryLight,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+
+  IconData _fileIcon(String ext) {
+    switch (ext.toLowerCase()) {
+      case 'pdf':
+        return Icons.picture_as_pdf;
+      case 'doc':
+      case 'docx':
+        return Icons.description;
+      case 'xls':
+      case 'xlsx':
+        return Icons.table_chart;
+      case 'ppt':
+      case 'pptx':
+        return Icons.slideshow;
+      default:
+        return Icons.insert_drive_file;
+    }
   }
 
   Widget _buildLinkedChip(bool isDark) {
@@ -577,3 +767,4 @@ class _LinkSearchDialogState extends State<_LinkSearchDialog> {
     );
   }
 }
+

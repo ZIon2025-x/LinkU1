@@ -940,6 +940,16 @@ def strip_markdown(text: str, max_length: int = 200) -> str:
     return text
 
 
+def _parse_attachments(raw):
+    """将 DB 中的 attachments JSON 转为 schema 对象列表（兼容 None / 空）"""
+    if not raw:
+        return None
+    try:
+        return [schemas.ForumPostAttachment(**a) for a in raw]
+    except Exception:
+        return None
+
+
 async def get_post_with_permissions(
     post_id: int,
     current_user: Optional[models.User],
@@ -2627,6 +2637,7 @@ async def get_posts(
             is_visible=post.is_visible,
             is_deleted=post.is_deleted,
             images=post.images,
+            attachments=_parse_attachments(post.attachments),
             linked_item_type=post.linked_item_type,
             linked_item_id=post.linked_item_id,
             created_at=post.created_at,
@@ -2749,6 +2760,7 @@ async def get_post(
         is_liked=is_liked,
         is_favorited=is_favorited,
         images=post.images,
+        attachments=_parse_attachments(post.attachments),
         linked_item_type=post.linked_item_type,
         linked_item_id=post.linked_item_id,
         created_at=post.created_at,
@@ -2902,8 +2914,9 @@ async def create_post(
     # 注意：内容已经是编码格式（\n 和 \c 标记），翻译服务会保留这些标记
     # 不需要尝试恢复换行符，因为内容已经是编码格式了
     
-    # 创建帖子（包含图片和关联内容）
+    # 创建帖子（包含图片/附件和关联内容）
     post_images = post.images if hasattr(post, 'images') else None
+    post_attachments = [a.model_dump() for a in post.attachments] if hasattr(post, 'attachments') and post.attachments else None
     post_linked_type = post.linked_item_type if hasattr(post, 'linked_item_type') else None
     post_linked_id = post.linked_item_id if hasattr(post, 'linked_item_id') else None
     
@@ -2920,6 +2933,7 @@ async def create_post(
             admin_author_id=admin_user.id,
             author_id=None,
             images=post_images,
+            attachments=post_attachments,
             linked_item_type=post_linked_type,
             linked_item_id=post_linked_id,
         )
@@ -2936,6 +2950,7 @@ async def create_post(
             author_id=current_user.id,
             admin_author_id=None,
             images=post_images,
+            attachments=post_attachments,
             linked_item_type=post_linked_type,
             linked_item_id=post_linked_id,
         )
@@ -3002,6 +3017,7 @@ async def create_post(
         is_liked=False,
         is_favorited=False,
         images=db_post.images,
+        attachments=_parse_attachments(db_post.attachments),
         linked_item_type=db_post.linked_item_type,
         linked_item_id=db_post.linked_item_id,
         created_at=db_post.created_at,
@@ -3151,6 +3167,17 @@ async def update_post(
                     headers={"X-Error-Code": "ADMIN_ONLY_CATEGORY"}
                 )
     
+    # 序列化 attachments（Pydantic 对象列表 → dict 列表；空列表视为清空）
+    if "attachments" in update_data:
+        att_list = update_data["attachments"]
+        if att_list:
+            update_data["attachments"] = [
+                a.model_dump() if hasattr(a, 'model_dump') else a
+                for a in att_list
+            ]
+        else:
+            update_data["attachments"] = None
+
     for field, value in update_data.items():
         setattr(db_post, field, value)
     
@@ -3230,6 +3257,7 @@ async def update_post(
         is_liked=is_liked,
         is_favorited=is_favorited,
         images=db_post.images,
+        attachments=_parse_attachments(db_post.attachments),
         linked_item_type=db_post.linked_item_type,
         linked_item_id=db_post.linked_item_id,
         created_at=db_post.created_at,
@@ -4935,6 +4963,7 @@ async def search_posts(
             is_visible=post.is_visible,
             is_deleted=post.is_deleted,
             images=post.images,
+            attachments=_parse_attachments(post.attachments),
             linked_item_type=post.linked_item_type,
             linked_item_id=post.linked_item_id,
             created_at=post.created_at,
@@ -5569,6 +5598,7 @@ async def get_my_posts(
             is_visible=post.is_visible,
             is_deleted=post.is_deleted,
             images=post.images,
+            attachments=_parse_attachments(post.attachments),
             linked_item_type=post.linked_item_type,
             linked_item_id=post.linked_item_id,
             created_at=post.created_at,
@@ -5753,6 +5783,7 @@ async def get_my_favorites(
                     is_visible=post.is_visible,
                     is_deleted=post.is_deleted,
                     images=post.images,
+                    attachments=_parse_attachments(post.attachments),
                     linked_item_type=post.linked_item_type,
                     linked_item_id=post.linked_item_id,
                     created_at=post.created_at,
@@ -6381,6 +6412,7 @@ async def get_hot_posts(
             is_visible=post.is_visible,
             is_deleted=post.is_deleted,
             images=post.images,
+            attachments=_parse_attachments(post.attachments),
             linked_item_type=post.linked_item_type,
             linked_item_id=post.linked_item_id,
             created_at=post.created_at,
@@ -6586,6 +6618,7 @@ async def get_user_hot_posts(
             is_visible=post.is_visible,
             is_deleted=post.is_deleted,
             images=post.images,
+            attachments=_parse_attachments(post.attachments),
             linked_item_type=post.linked_item_type,
             linked_item_id=post.linked_item_id,
             created_at=post.created_at,

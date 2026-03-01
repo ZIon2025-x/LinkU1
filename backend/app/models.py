@@ -2290,6 +2290,7 @@ class ForumPost(Base):
     
     # 图片和关联内容（Discovery Feed 功能）
     images = Column(JSON, nullable=True)  # JSON数组，最多5张图片URL
+    attachments = Column(JSON, nullable=True)  # JSON数组，文件附件 [{url, filename, size, content_type}]，可与 images 同时存在
     linked_item_type = Column(String(30), nullable=True)  # service/expert/activity/product/ranking/forum_post
     linked_item_id = Column(String(50), nullable=True)  # 关联目标的ID
     

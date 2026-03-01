@@ -255,6 +255,83 @@ async def upload_images_batch(
         raise HTTPException(status_code=500, detail=f"上传失败: {str(e)}")
 
 
+ALLOWED_FORUM_FILE_EXTENSIONS = {".pdf"}
+MAX_FORUM_FILE_SIZE = 10 * 1024 * 1024  # 10MB
+
+
+@router.post("/upload/forum-file")
+@rate_limit("upload_file")
+async def upload_forum_post_file(
+    request: Request,
+    file: UploadFile = File(...),
+    resource_id: Optional[str] = Query(None, description="帖子ID（编辑时提供）"),
+    db: Session = Depends(get_db),
+):
+    """
+    上传论坛帖子文件附件（PDF/文档等）
+
+    可与帖子图片同时使用——一个帖子可同时上传图片和 1 个 PDF。
+    文件存储在公开目录，仅支持 PDF，单个最大 10MB。
+    """
+    import uuid
+    from pathlib import Path
+    from app.file_utils import detect_file_extension
+
+    try:
+        user_id = get_current_user_id(request)
+
+        content = await file.read()
+        if len(content) > MAX_FORUM_FILE_SIZE:
+            raise HTTPException(
+                status_code=400,
+                detail=f"文件过大，最大允许 {MAX_FORUM_FILE_SIZE // (1024 * 1024)}MB"
+            )
+
+        ext = detect_file_extension(
+            filename=file.filename,
+            content_type=file.content_type,
+            content=content,
+        )
+        if ext.lower() not in ALLOWED_FORUM_FILE_EXTENSIONS:
+            raise HTTPException(
+                status_code=400,
+                detail=f"不支持的文件类型。允许: {', '.join(ALLOWED_FORUM_FILE_EXTENSIONS)}"
+            )
+
+        file_id = str(uuid.uuid4())
+        new_filename = f"{file_id}{ext}"
+
+        is_temp = not resource_id or resource_id.startswith("temp_")
+        if is_temp:
+            sub_dir = f"temp_{user_id}"
+        else:
+            sub_dir = resource_id
+
+        storage_path = f"{ImageCategory.FORUM_POST_FILE.value}/{sub_dir}/{new_filename}"
+
+        service = get_image_upload_service()
+        url = service.storage.upload(content, storage_path)
+
+        logger.info(
+            f"用户 {user_id} 上传论坛帖子文件: filename={file.filename}, "
+            f"size={len(content)}, path={storage_path}"
+        )
+
+        return JSONResponse(content={
+            "success": True,
+            "url": url,
+            "filename": file.filename or new_filename,
+            "size": len(content),
+            "content_type": file.content_type or "application/octet-stream",
+        })
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"论坛帖子文件上传失败: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"上传失败: {str(e)}")
+
+
 @router.delete("/upload/image")
 async def delete_image(
     request: Request,

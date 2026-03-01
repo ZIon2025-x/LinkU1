@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_typography.dart';
@@ -311,6 +312,8 @@ class _ForumPostDetailViewState extends State<ForumPostDetailView> {
                       _PostContent(post: post, isDark: isDark),
                       if (post.images.isNotEmpty)
                         _PostImageRow(images: post.images),
+                      if (post.attachments.isNotEmpty)
+                        _PostAttachmentList(attachments: post.attachments),
                     ],
                   ),
                 ),
@@ -1275,6 +1278,117 @@ class _PostImageRow extends StatelessWidget {
             ),
           );
         },
+      ),
+    );
+  }
+}
+
+class _PostAttachmentList extends StatelessWidget {
+  const _PostAttachmentList({required this.attachments});
+  final List<ForumPostAttachment> attachments;
+
+  IconData _icon(ForumPostAttachment att) {
+    if (att.isPdf) return Icons.picture_as_pdf;
+    final ext = att.filename.split('.').last.toLowerCase();
+    switch (ext) {
+      case 'doc':
+      case 'docx':
+        return Icons.description;
+      case 'xls':
+      case 'xlsx':
+        return Icons.table_chart;
+      case 'ppt':
+      case 'pptx':
+        return Icons.slideshow;
+      default:
+        return Icons.insert_drive_file;
+    }
+  }
+
+  void _open(BuildContext context, ForumPostAttachment att) {
+    if (att.url.isEmpty) return;
+    // PDF 使用 App 内预览
+    if (att.isPdf) {
+      context.push(
+        AppRoutes.forumPdfPreview,
+        extra: {'url': att.url, 'title': att.filename},
+      );
+      return;
+    }
+    // 非 PDF（历史数据）用系统打开
+    launchUrl(Uri.parse(att.url), mode: LaunchMode.externalApplication)
+        .catchError((e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('无法打开文件: $e')),
+        );
+      }
+      return false;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: attachments.map((att) {
+          return GestureDetector(
+            onTap: () => _open(context, att),
+            child: Container(
+              margin: const EdgeInsets.only(bottom: 8),
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              decoration: BoxDecoration(
+                color: isDark
+                    ? Colors.white.withValues(alpha: 0.06)
+                    : Colors.grey.shade50,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                  color: isDark
+                      ? Colors.white.withValues(alpha: 0.12)
+                      : Colors.grey.shade200,
+                ),
+              ),
+              child: Row(
+                children: [
+                  Icon(_icon(att), size: 28, color: Theme.of(context).colorScheme.primary),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          att.filename,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(fontSize: 14),
+                        ),
+                        Text(
+                          att.formattedSize,
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: isDark
+                                ? Colors.white54
+                                : Colors.grey.shade600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Icon(
+                    Icons.open_in_new,
+                    size: 18,
+                    color: isDark ? Colors.white38 : Colors.grey.shade500,
+                  ),
+                ],
+              ),
+            ),
+          );
+        }).toList(),
       ),
     );
   }
