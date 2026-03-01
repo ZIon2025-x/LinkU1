@@ -9,7 +9,7 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from 'recharts';
-import api, { getDashboardStats, getUserGrowthStats, getTaskGrowthStats, TrendDataPoint } from '../../../api';
+import api, { getDashboardStats, getUserGrowthStats, getTaskGrowthStats, getDailyActiveStats, TrendDataPoint } from '../../../api';
 import { getErrorMessage } from '../../../utils/errorHandler';
 import { DashboardStats, StatCardProps, StatPeriod } from './types';
 import styles from './Dashboard.module.css';
@@ -44,6 +44,7 @@ const Dashboard: React.FC = () => {
   const [period, setPeriod] = useState<StatPeriod>('30d');
   const [userTrend, setUserTrend] = useState<TrendDataPoint[]>([]);
   const [taskTrend, setTaskTrend] = useState<TrendDataPoint[]>([]);
+  const [dailyActiveTrend, setDailyActiveTrend] = useState<TrendDataPoint[]>([]);
   const [chartLoading, setChartLoading] = useState(false);
 
   // 加载统计数据
@@ -64,16 +65,19 @@ const Dashboard: React.FC = () => {
   const fetchTrends = useCallback(async () => {
     setChartLoading(true);
     try {
-      const [users, tasks] = await Promise.all([
+      const [users, tasks, dailyActive] = await Promise.all([
         getUserGrowthStats(period),
         getTaskGrowthStats(period),
+        getDailyActiveStats(period),
       ]);
       setUserTrend(users);
       setTaskTrend(tasks);
+      setDailyActiveTrend(dailyActive);
     } catch (err: any) {
       message.warning('趋势数据加载失败: ' + getErrorMessage(err));
       setUserTrend([]);
       setTaskTrend([]);
+      setDailyActiveTrend([]);
     } finally {
       setChartLoading(false);
     }
@@ -210,6 +214,22 @@ const Dashboard: React.FC = () => {
                 <YAxis tick={{ fontSize: 11 }} />
                 <Tooltip />
                 <Line type="monotone" dataKey="count" stroke="#52c41a" dot={false} strokeWidth={2} name="新增任务" />
+              </LineChart>
+            </ResponsiveContainer>
+          )}
+        </div>
+        <div className={styles.chartCard}>
+          <h3 className={styles.chartTitle}>👤 日活（当日有行为用户数）</h3>
+          {chartLoading ? (
+            <div className={styles.chartLoading}>加载中...</div>
+          ) : (
+            <ResponsiveContainer width="100%" height={240}>
+              <LineChart data={dailyActiveTrend} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="date" tick={{ fontSize: 11 }} />
+                <YAxis tick={{ fontSize: 11 }} />
+                <Tooltip />
+                <Line type="monotone" dataKey="count" stroke="#722ed1" dot={false} strokeWidth={2} name="日活" />
               </LineChart>
             </ResponsiveContainer>
           )}

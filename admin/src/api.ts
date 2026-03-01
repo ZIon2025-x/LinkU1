@@ -1510,3 +1510,10 @@ export async function getTaskGrowthStats(period: '7d' | '30d' | '90d'): Promise<
   const { dates, counts } = response.data;
   return dates.map((date, i) => ({ date, count: counts[i] ?? 0 }));
 }
+
+/** 日活趋势（当日有发任务/申请任务/发消息的去重用户数） */
+export async function getDailyActiveStats(period: '7d' | '30d' | '90d'): Promise<TrendDataPoint[]> {
+  const response = await api.get<TrendResponse>(`/api/admin/stats/daily-active?period=${period}`);
+  const { dates, counts } = response.data;
+  return dates.map((date, i) => ({ date, count: counts[i] ?? 0 }));
+}

@@ -108,6 +108,54 @@ def get_task_growth_stats(
     return {"dates": date_list, "counts": counts}
 
 
+@router.get("/admin/stats/daily-active")
+@measure_api_performance("get_daily_active_stats")
+def get_daily_active_stats(
+    period: str = Query("30d", regex="^(7d|30d|90d)$"),
+    current_admin=Depends(get_current_admin),
+    db: Session = Depends(get_db),
+):
+    """获取日活趋势（按日统计当日有行为的去重用户数：发任务、申请任务、发消息）。"""
+    start, end, date_list = _get_stats_date_range(period)
+    # 每日活跃用户 = 当日发过任务 / 申请过任务 / 发过消息的去重用户
+    from collections import defaultdict
+    daily_users = defaultdict(set)
+    # 1) 发任务
+    task_rows = (
+        db.query(func.date(models.Task.created_at).label("d"), models.Task.poster_id)
+        .filter(models.Task.created_at >= start, models.Task.created_at <= end, models.Task.poster_id.isnot(None))
+        .all()
+    )
+    for r in task_rows:
+        daily_users[str(r.d)].add(r.poster_id)
+    # 2) 申请任务
+    app_rows = (
+        db.query(func.date(models.TaskApplication.created_at).label("d"), models.TaskApplication.applicant_id)
+        .filter(
+            models.TaskApplication.created_at >= start,
+            models.TaskApplication.created_at <= end,
+            models.TaskApplication.applicant_id.isnot(None),
+        )
+        .all()
+    )
+    for r in app_rows:
+        daily_users[str(r.d)].add(r.applicant_id)
+    # 3) 发消息
+    msg_rows = (
+        db.query(func.date(models.Message.created_at).label("d"), models.Message.sender_id)
+        .filter(
+            models.Message.created_at >= start,
+            models.Message.created_at <= end,
+            models.Message.sender_id.isnot(None),
+        )
+        .all()
+    )
+    for r in msg_rows:
+        daily_users[str(r.d)].add(r.sender_id)
+    counts = [len(daily_users.get(d, set())) for d in date_list]
+    return {"dates": date_list, "counts": counts}
+
+
 @router.get("/admin/users")
 @rate_limit("admin_read", limit=100, window=60)
 def get_users_for_admin(
