@@ -980,9 +980,9 @@ class TaskCancelRequestCreate(TaskCancelRequestBase):
 class TaskCancelRequestOut(TaskCancelRequestBase):
     id: int
     task_id: int
-    requester_id: int
+    requester_id: str  # 用户ID，String(8)
     status: str
-    admin_id: Optional[int] = None
+    admin_id: Optional[str] = None  # 管理员ID，String(5)
     admin_comment: Optional[str] = None
     created_at: datetime.datetime
     reviewed_at: Optional[datetime.datetime] = None

@@ -395,7 +395,7 @@ def admin_get_cancel_requests(
     db: Session = Depends(get_db),
 ):
     """管理员获取取消请求列表"""
-    return crud.get_all_cancel_requests(db)
+    return crud.get_task_cancel_requests(db)
 
 
 @router.post("/admin/cancel-requests/{request_id}/review")
@@ -431,7 +431,7 @@ def admin_review_cancel_request(
     else:
         cancel_request.status = "rejected"
     
-    cancel_request.reviewed_by = current_user.id
+    cancel_request.admin_id = current_user.id
     cancel_request.reviewed_at = get_utc_time()
     cancel_request.admin_comment = admin_comment
     
