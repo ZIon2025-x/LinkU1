@@ -316,6 +316,15 @@ class _ForumPostDetailViewState extends State<ForumPostDetailView> {
                         _PostImageRow(images: post.images),
                       if (post.attachments.isNotEmpty)
                         _PostAttachmentList(attachments: post.attachments),
+                      if (post.linkedItemType != null &&
+                          post.linkedItemType!.isNotEmpty &&
+                          post.linkedItemId != null &&
+                          post.linkedItemId!.isNotEmpty)
+                        _LinkedItemCard(
+                          type: post.linkedItemType!,
+                          id: post.linkedItemId!,
+                          isDark: isDark,
+                        ),
                     ],
                   ),
                 ),
@@ -1257,10 +1266,27 @@ class _PostImageRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final size = images.length == 1 ? 200.0 : 120.0;
+    if (images.length == 1) {
+      return Padding(
+        padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
+        child: GestureDetector(
+          onTap: () => _openFullScreen(context, 0),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(12),
+            child: AspectRatio(
+              aspectRatio: 4 / 3,
+              child: AsyncImageView(
+                imageUrl: images[0],
+                width: double.infinity,
+              ),
+            ),
+          ),
+        ),
+      );
+    }
 
     return SizedBox(
-      height: size,
+      height: 120,
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
@@ -1273,9 +1299,8 @@ class _PostImageRow extends StatelessWidget {
               borderRadius: BorderRadius.circular(12),
               child: AsyncImageView(
                 imageUrl: images[index],
-                width: size,
-                height: size,
-                fit: BoxFit.contain,
+                width: 120,
+                height: 120,
               ),
             ),
           );
@@ -1393,5 +1418,165 @@ class _PostAttachmentList extends StatelessWidget {
         }).toList(),
       ),
     );
+  }
+}
+
+class _LinkedItemCard extends StatelessWidget {
+  const _LinkedItemCard({
+    required this.type,
+    required this.id,
+    required this.isDark,
+  });
+
+  final String type;
+  final String id;
+  final bool isDark;
+
+  static const Color _accent = Color(0xFF6C5CE7);
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
+      child: GestureDetector(
+        onTap: () => _navigate(context),
+        child: Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: isDark
+                ? Colors.white.withValues(alpha: 0.06)
+                : _accent.withValues(alpha: 0.04),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: isDark
+                  ? Colors.white.withValues(alpha: 0.08)
+                  : _accent.withValues(alpha: 0.12),
+            ),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: _iconBgColor,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(_iconData, size: 18, color: _accent),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      l10n.publishRelatedContent,
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: isDark
+                            ? AppColors.textTertiaryDark
+                            : AppColors.textTertiaryLight,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      _typeLabel(l10n),
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: isDark ? AppColors.primaryLight : _accent,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Icon(
+                Icons.chevron_right,
+                size: 20,
+                color: isDark
+                    ? AppColors.textTertiaryDark
+                    : AppColors.textTertiaryLight,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _navigate(BuildContext context) {
+    switch (type) {
+      case 'product':
+        context.push('/flea-market/$id');
+      case 'service':
+        final intId = int.tryParse(id);
+        if (intId != null) context.push('/service/$intId');
+      case 'expert':
+        context.push('/task-experts/$id');
+      case 'activity':
+        context.push('/activities/$id');
+      case 'ranking':
+        final intId = int.tryParse(id);
+        if (intId != null) context.push('/leaderboard/item/$intId');
+      case 'forum_post':
+        final intId = int.tryParse(id);
+        if (intId != null) context.push('/forum/posts/$intId');
+    }
+  }
+
+  String _typeLabel(dynamic l10n) {
+    switch (type) {
+      case 'product':
+        return l10n.discoveryFeedTypeProduct;
+      case 'service':
+        return l10n.discoveryFeedTypeService;
+      case 'expert':
+        return l10n.discoveryFeedTypeService;
+      case 'activity':
+        return l10n.homeOpenActivities;
+      case 'ranking':
+        return l10n.discoveryFeedTypeRanking;
+      case 'forum_post':
+        return l10n.discoveryFeedTypePost;
+      default:
+        return type;
+    }
+  }
+
+  IconData get _iconData {
+    switch (type) {
+      case 'product':
+        return Icons.shopping_bag_outlined;
+      case 'service':
+      case 'expert':
+        return Icons.school_outlined;
+      case 'activity':
+        return Icons.event_outlined;
+      case 'ranking':
+        return Icons.emoji_events_outlined;
+      case 'forum_post':
+        return Icons.forum_outlined;
+      default:
+        return Icons.link;
+    }
+  }
+
+  Color get _iconBgColor {
+    switch (type) {
+      case 'product':
+        return const Color(0xFFFEF3C7);
+      case 'service':
+      case 'expert':
+        return const Color(0xFFDBEAFE);
+      case 'activity':
+        return const Color(0xFFD1FAE5);
+      case 'ranking':
+        return const Color(0xFFDBEAFE);
+      case 'forum_post':
+        return const Color(0xFFEDE9FE);
+      default:
+        return const Color(0xFFEDE9FE);
+    }
   }
 }

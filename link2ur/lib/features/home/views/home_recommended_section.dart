@@ -863,15 +863,12 @@ class _DesktopTaskCardState extends State<_DesktopTaskCard> {
                   children: [
                     Positioned.fill(
                       child: task.firstImage != null
-                          ? Center(
-                              child: AsyncImageView(
+                          ? AsyncImageView(
                                 imageUrl: task.firstImage!,
                                 width: 280,
                                 height: 210,
                                 memCacheWidth: 360,
-                                fit: BoxFit.contain,
-                              ),
-                            )
+                              )
                           : Container(
                               decoration: BoxDecoration(
                                 gradient: LinearGradient(
