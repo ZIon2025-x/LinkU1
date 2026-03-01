@@ -1,3 +1,4 @@
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -288,10 +289,11 @@ class _PublishContentState extends State<_PublishContent>
   final _postContentCtrl = TextEditingController();
   int? _postCategoryId;
   final List<XFile> _postImages = [];
+  PlatformFile? _postPdfFile;
   String? _postLinkedType;
   String? _postLinkedId;
   String? _postLinkedName;
-  bool _postUploadingImages = false;
+  bool _postUploading = false;
 
   // ── 关闭动画 ──
   late final AnimationController _closeAnimCtrl;
@@ -422,7 +424,7 @@ class _PublishContentState extends State<_PublishContent>
     }
     final List<String> imageUrls = [];
     if (_taskImages.isNotEmpty) {
-      setState(() => _postUploadingImages = true);
+      setState(() => _postUploading = true);
       try {
         final repo = context.read<TaskRepository>();
         for (final file in _taskImages) {
@@ -431,12 +433,12 @@ class _PublishContentState extends State<_PublishContent>
         }
       } catch (e) {
         if (mounted) {
-          setState(() => _postUploadingImages = false);
+          setState(() => _postUploading = false);
           AppFeedback.showError(context, context.l10n.createTaskImageUploadFailed);
         }
         return;
       }
-      if (mounted) setState(() => _postUploadingImages = false);
+      if (mounted) setState(() => _postUploading = false);
     }
     if (!mounted) return;
     final reward = double.tryParse(_taskRewardCtrl.text) ?? 0;
@@ -496,23 +498,31 @@ class _PublishContentState extends State<_PublishContent>
       AppFeedback.showWarning(context, context.l10n.feedbackSelectCategory);
       return;
     }
+    final repo = context.read<ForumRepository>();
     final List<String> imageUrls = [];
-    if (_postImages.isNotEmpty) {
-      setState(() => _postUploadingImages = true);
+    final List<ForumPostAttachment> attachments = [];
+
+    if (_postImages.isNotEmpty || _postPdfFile != null) {
+      setState(() => _postUploading = true);
       try {
-        final repo = context.read<ForumRepository>();
         for (final file in _postImages) {
           final url = await repo.uploadPostImage(file.path);
           imageUrls.add(url);
         }
+        if (_postPdfFile != null &&
+            _postPdfFile!.path != null &&
+            _postPdfFile!.path!.isNotEmpty) {
+          final att = await repo.uploadPostFile(_postPdfFile!.path!);
+          attachments.add(att);
+        }
       } catch (e) {
         if (mounted) {
-          setState(() => _postUploadingImages = false);
+          setState(() => _postUploading = false);
           AppFeedback.showError(context, e.toString());
         }
         return;
       }
-      if (mounted) setState(() => _postUploadingImages = false);
+      if (mounted) setState(() => _postUploading = false);
     }
     if (!mounted) return;
     context.read<ForumBloc>().add(
@@ -522,6 +532,7 @@ class _PublishContentState extends State<_PublishContent>
               content: content,
               categoryId: _postCategoryId!,
               images: imageUrls,
+              attachments: attachments,
               linkedItemType: _postLinkedType,
               linkedItemId: _postLinkedId,
             ),
@@ -617,6 +628,26 @@ class _PublishContentState extends State<_PublishContent>
 
   void _removePostImage(int index) => setState(() => _postImages.removeAt(index));
 
+  Future<void> _pickPostPdf() async {
+    try {
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['pdf'],
+        allowMultiple: false,
+      );
+      if (result != null && result.files.isNotEmpty && mounted) {
+        final f = result.files.first;
+        if (f.path != null && f.path!.isNotEmpty) {
+          setState(() => _postPdfFile = f);
+        }
+      }
+    } catch (e) {
+      if (mounted) AppFeedback.showError(context, e.toString());
+    }
+  }
+
+  void _removePostPdf() => setState(() => _postPdfFile = null);
+
   Future<void> _pickTaskImages() async {
     try {
       final files = await _imagePicker.pickMultiImage(
@@ -666,7 +697,7 @@ class _PublishContentState extends State<_PublishContent>
     final isTaskSubmitting = context.select<CreateTaskBloc, bool>((b) => b.state.isSubmitting);
     final isFleaSubmitting = context.select<FleaMarketBloc, bool>((b) => b.state.isSubmitting);
     final isPostSubmitting = context.select<ForumBloc, bool>((b) => b.state.isCreatingPost);
-    final isSubmitting = isTaskSubmitting || isFleaSubmitting || isPostSubmitting || _postUploadingImages;
+    final isSubmitting = isTaskSubmitting || isFleaSubmitting || isPostSubmitting || _postUploading;
     final postCategories = context.select<ForumBloc, List<ForumCategory>>((b) => b.state.categories);
     final postCurrentUser = context.select<AuthBloc, User?>((b) => b.state.user);
 
@@ -1529,9 +1560,12 @@ class _PublishContentState extends State<_PublishContent>
           _sectionTitle('图片（选填，最多 $_kPostMaxImages 张）'),
           _buildPostImagePicker(isDark),
           AppSpacing.vMd,
+          _sectionTitle('PDF 附件（选填，最多 1 个）'),
+          _buildPostPdfSection(isDark),
+          AppSpacing.vMd,
           _sectionTitle('关联内容（选填，可关联服务/活动/商品/排行榜等）'),
           _buildPostLinkedChip(isDark),
-          if (_postUploadingImages) ...[
+          if (_postUploading) ...[
             AppSpacing.vMd,
             const Center(child: CircularProgressIndicator()),
           ],
@@ -1911,6 +1945,88 @@ class _PublishContentState extends State<_PublishContent>
             ),
           ),
       ],
+    );
+  }
+
+  // ==================== 帖子 PDF 附件（最多 1 个） ====================
+  Widget _buildPostPdfSection(bool isDark) {
+    final primary = Theme.of(context).colorScheme.primary;
+
+    if (_postPdfFile != null) {
+      final f = _postPdfFile!;
+      final sizeStr = f.size < 1024 * 1024
+          ? '${(f.size / 1024).toStringAsFixed(1)} KB'
+          : '${(f.size / (1024 * 1024)).toStringAsFixed(1)} MB';
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        decoration: BoxDecoration(
+          color: isDark ? Colors.white.withValues(alpha: 0.06) : Colors.grey.shade50,
+          borderRadius: AppRadius.allSmall,
+          border: Border.all(
+            color: isDark ? Colors.white.withValues(alpha: 0.12) : Colors.grey.shade200,
+          ),
+        ),
+        child: Row(
+          children: [
+            Icon(Icons.picture_as_pdf, size: 28, color: primary),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    f.name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+                    ),
+                  ),
+                  Text(
+                    sizeStr,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: isDark ? AppColors.textTertiaryDark : AppColors.textTertiaryLight,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            IconButton(
+              icon: const Icon(Icons.close, size: 20, color: AppColors.error),
+              tooltip: '删除',
+              onPressed: _removePostPdf,
+              visualDensity: VisualDensity.compact,
+            ),
+          ],
+        ),
+      );
+    }
+
+    return GestureDetector(
+      onTap: _pickPostPdf,
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 14),
+        decoration: BoxDecoration(
+          color: isDark ? Colors.white.withValues(alpha: 0.06) : Colors.grey.shade50,
+          borderRadius: AppRadius.allSmall,
+          border: Border.all(
+            color: isDark
+                ? Colors.white.withValues(alpha: 0.12)
+                : AppColors.textTertiaryLight.withValues(alpha: 0.4),
+            style: BorderStyle.solid,
+          ),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.attach_file, size: 20, color: primary),
+            const SizedBox(width: 6),
+            Text('添加 PDF', style: TextStyle(fontSize: 14, color: primary)),
+          ],
+        ),
+      ),
     );
   }
 
