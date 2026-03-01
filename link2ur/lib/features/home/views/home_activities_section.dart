@@ -157,6 +157,7 @@ class _RealActivityCard extends StatelessWidget {
                                 imageUrl: image,
                                 width: 280,
                                 height: 160,
+                                fit: BoxFit.cover,
                                 memCacheWidth: 560,
                                 memCacheHeight: 320,
                               )
@@ -656,16 +657,13 @@ class _PostCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // 图片
-            // 图片：3:4，宽度铺满，多出的裁剪；cover 等比例填满不拉伸变形
+            // 图片：3:4，宽度铺满，多出的裁剪；不传 width/height 让父级约束生效，fit: cover 等比例填满不拉伸
             if (item.hasImages)
               AspectRatio(
                 aspectRatio: 3 / 4,
-                child: SizedBox.expand(
+                child: ClipRect(
                   child: AsyncImageView(
                     imageUrl: item.firstImage!,
-                    width: double.infinity,
-                    height: double.infinity,
                     fit: BoxFit.cover,
                     memCacheWidth: 360,
                     memCacheHeight: 480,
@@ -819,6 +817,7 @@ class _ProductCard extends StatelessWidget {
                     imageUrl: item.firstImage!,
                     width: double.infinity,
                     height: double.infinity,
+                    fit: BoxFit.cover,
                     memCacheWidth: 300,
                     memCacheHeight: 300,
                   ),
@@ -1222,6 +1221,7 @@ class _RankingCard extends StatelessWidget {
                       imageUrl: item.firstImage!,
                       width: double.infinity,
                       height: double.infinity,
+                      fit: BoxFit.cover,
                       memCacheWidth: 360,
                       memCacheHeight: 202,
                     ),
@@ -1368,6 +1368,7 @@ class _ServiceCard extends StatelessWidget {
                     imageUrl: item.firstImage!,
                     width: double.infinity,
                     height: double.infinity,
+                    fit: BoxFit.cover,
                     memCacheWidth: 360,
                     memCacheHeight: 270,
                   ),
