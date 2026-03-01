@@ -18,7 +18,6 @@ import '../../../core/utils/responsive.dart';
 import '../../../core/utils/validators.dart';
 import '../../../core/widgets/app_feedback.dart';
 import '../../../core/widgets/content_constraint.dart';
-import '../../../core/widgets/buttons.dart';
 import '../../../core/widgets/location_picker.dart';
 import '../../../data/models/flea_market.dart';
 import '../../../data/models/forum.dart';
@@ -760,6 +759,7 @@ class _PublishContentState extends State<_PublishContent>
               : _buildFormView(isDark, bottomPadding, isSubmitting, postCategories, postCurrentUser);
           return Scaffold(
             backgroundColor: isDark ? AppColors.backgroundDark : AppColors.backgroundLight,
+            resizeToAvoidBottomInset: false,
             body: SafeArea(
               bottom: false,
               child: isDesktop ? ContentConstraint(child: bodyContent) : bodyContent,
@@ -1070,7 +1070,7 @@ class _PublishContentState extends State<_PublishContent>
     final type = _selectedType!;
     return Column(
       children: [
-        _buildFormHeader(isDark, type),
+        _buildFormHeader(isDark, type, isSubmitting),
         Expanded(
           child: AnimatedSwitcher(
             duration: const Duration(milliseconds: 250),
@@ -1088,7 +1088,7 @@ class _PublishContentState extends State<_PublishContent>
     );
   }
 
-  Widget _buildFormHeader(bool isDark, _PublishType type) {
+  Widget _buildFormHeader(bool isDark, _PublishType type, bool isSubmitting) {
     String title;
     switch (type) {
       case _PublishType.task:
@@ -1106,7 +1106,7 @@ class _PublishContentState extends State<_PublishContent>
         top: AppSpacing.sm,
         bottom: AppSpacing.sm,
         left: AppSpacing.sm,
-        right: AppSpacing.lg,
+        right: AppSpacing.sm,
       ),
       child: Row(
         children: [
@@ -1138,7 +1138,37 @@ class _PublishContentState extends State<_PublishContent>
               ),
             ),
           ),
-          const SizedBox(width: 44),
+          isSubmitting
+              ? SizedBox(
+                  width: 44,
+                  height: 44,
+                  child: Center(
+                    child: SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: isDark ? AppColors.textTertiaryDark : AppColors.textTertiaryLight,
+                      ),
+                    ),
+                  ),
+                )
+              : TextButton(
+                  onPressed: _submit,
+                  style: TextButton.styleFrom(
+                    foregroundColor: AppColors.primary,
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    minimumSize: const Size(44, 44),
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  ),
+                  child: Text(
+                    _submitButtonText,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
         ],
       ),
     );
@@ -1186,13 +1216,13 @@ class _PublishContentState extends State<_PublishContent>
     );
   }
 
-  // ==================== 底部操作栏 ====================
+  // ==================== 底部操作栏（仅关闭按钮，固定底部不随键盘动）====================
   Widget _buildBottomBar(bool isDark, double bottomPadding, bool isSubmitting) {
     return Container(
       padding: EdgeInsets.only(
         left: AppSpacing.lg,
         right: AppSpacing.lg,
-        top: AppSpacing.md,
+        top: AppSpacing.sm,
         bottom: bottomPadding + AppSpacing.md,
       ),
       decoration: BoxDecoration(
@@ -1205,38 +1235,26 @@ class _PublishContentState extends State<_PublishContent>
           ),
         ],
       ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          SizedBox(
-            width: double.infinity,
-            child: PrimaryButton(
-              text: _submitButtonText,
-              onPressed: isSubmitting ? null : _submit,
-              isLoading: isSubmitting,
+      child: Center(
+        child: GestureDetector(
+          onTap: _dismiss,
+          behavior: HitTestBehavior.opaque,
+          child: Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: isDark
+                  ? Colors.white.withValues(alpha: 0.08)
+                  : Colors.black.withValues(alpha: 0.05),
+            ),
+            child: Icon(
+              Icons.close_rounded,
+              size: 22,
+              color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
             ),
           ),
-          const SizedBox(height: AppSpacing.md),
-          GestureDetector(
-            onTap: _dismiss,
-            behavior: HitTestBehavior.opaque,
-            child: Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: isDark
-                    ? Colors.white.withValues(alpha: 0.08)
-                    : Colors.black.withValues(alpha: 0.05),
-              ),
-              child: Icon(
-                Icons.close_rounded,
-                size: 22,
-                color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
-              ),
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }
@@ -1255,11 +1273,16 @@ class _PublishContentState extends State<_PublishContent>
       }
     }
 
+    final viewInsets = MediaQuery.of(context).viewInsets;
     return Form(
       key: _taskFormKey,
       child: ListView(
         key: const ValueKey('task_form'),
-        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+        padding: EdgeInsets.only(
+          left: AppSpacing.lg,
+          right: AppSpacing.lg,
+          bottom: 120 + viewInsets.bottom,
+        ),
         children: [
           // ── 任务类型（下拉框，半宽） ──
           _sectionTitle(context.l10n.createTaskType),
@@ -1389,7 +1412,6 @@ class _PublishContentState extends State<_PublishContent>
               ),
             ),
           ),
-          const SizedBox(height: 120),
         ],
       ),
     );
@@ -1397,11 +1419,16 @@ class _PublishContentState extends State<_PublishContent>
 
   // ==================== 闲置发布表单 ====================
   Widget _buildFleaMarketForm(bool isDark) {
+    final viewInsets = MediaQuery.of(context).viewInsets;
     return Form(
       key: _fleaFormKey,
       child: ListView(
         key: const ValueKey('flea_form'),
-        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+        padding: EdgeInsets.only(
+          left: AppSpacing.lg,
+          right: AppSpacing.lg,
+          bottom: 120 + viewInsets.bottom,
+        ),
         children: [
           _sectionTitle(context.l10n.fleaMarketProductImages),
           _buildFleaImagePicker(isDark),
@@ -1483,7 +1510,6 @@ class _PublishContentState extends State<_PublishContent>
               _fleaLongitude = lng;
             },
           ),
-          const SizedBox(height: 120),
         ],
       ),
     );
@@ -1510,11 +1536,16 @@ class _PublishContentState extends State<_PublishContent>
       });
     }
 
+    final viewInsets = MediaQuery.of(context).viewInsets;
     return Form(
       key: _postFormKey,
       child: ListView(
         key: const ValueKey('post_form'),
-        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+        padding: EdgeInsets.only(
+          left: AppSpacing.lg,
+          right: AppSpacing.lg,
+          bottom: 120 + viewInsets.bottom,
+        ),
         children: [
           // ── 帖子分类（窄下拉框，仅可发布的板块） ──
           if (postableCategories.isNotEmpty) ...[
@@ -1569,7 +1600,6 @@ class _PublishContentState extends State<_PublishContent>
             AppSpacing.vMd,
             const Center(child: CircularProgressIndicator()),
           ],
-          const SizedBox(height: 120),
         ],
       ),
     );

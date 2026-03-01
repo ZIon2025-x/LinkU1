@@ -1275,6 +1275,7 @@ class _PostImageRow extends StatelessWidget {
                 imageUrl: images[index],
                 width: size,
                 height: size,
+                fit: BoxFit.contain,
               ),
             ),
           );
