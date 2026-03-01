@@ -87,6 +87,8 @@
 		<string>This app will use the camera to take photos of your ID documents for setting up your payment account.</string>
 		<key>NSLocationWhenInUseUsageDescription</key>
 		<string>We need to access your location information to select task/item locations on the map, or use your current location. You can also choose to manually enter locations.</string>
+		<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+		<string>We need to access your location to show task/item locations on the map and use your current location. You can choose "When In Use" only; "Always" is optional for features that may use location in the background. You can also enter locations manually.</string>
 		<key>NSFaceIDUsageDescription</key>
 		<string>We use Face ID to securely authenticate and log you into your account.</string>
 		<key>NSPhotoLibraryUsageDescription</key>
