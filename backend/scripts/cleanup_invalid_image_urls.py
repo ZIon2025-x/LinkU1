@@ -72,15 +72,21 @@ class ImageURLCleaner:
         except:
             self.frontend_url = "https://www.link2ur.com"
     
+    # R2/CDN 域名：这些 URL 指向云存储，本地不存在文件，不应检查
+    CDN_HOSTS = {"cdn.link2ur.com", "pub-link2ur.r2.dev"}
+
     def is_local_image_url(self, url: str) -> bool:
-        """检查是否是本地图片URL"""
+        """检查是否是需要通过本地文件系统验证的图片URL。
+        CDN/R2 上的图片跳过本地检查，视为有效。"""
         if not url or not isinstance(url, str):
             return False
         
-        # 检查是否是完整URL
         parsed = urlparse(url)
         if parsed.netloc:
-            # 完整URL，检查是否是我们的域名
+            # CDN / R2 URL → 不做本地文件检查
+            if parsed.netloc in self.CDN_HOSTS:
+                return False
+            # 其他我们自己的域名（可能指向 /uploads/ 的旧 URL）
             return self.frontend_url in url or "link2ur.com" in url or "api.link2ur.com" in url
         
         # 相对路径
