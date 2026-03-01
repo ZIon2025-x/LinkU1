@@ -323,7 +323,7 @@ const ForumManagement: React.FC = () => {
         message.success('操作成功');
         postsTable.refresh();
       },
-    }).catch(() => {});
+    });
   };
 
   const handleDeletePost = (record: ForumPostListItem) => {
@@ -338,7 +338,7 @@ const ForumManagement: React.FC = () => {
         message.success('已删除');
         postsTable.refresh();
       },
-    }).catch(() => {});
+    });
   };
 
   const handleReviewRequest = (requestId: number, action: 'approve' | 'reject') => {
