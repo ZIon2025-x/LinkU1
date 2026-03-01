@@ -657,10 +657,10 @@ class _PostCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // 图片
-            // 图片：9:16，宽度铺满，多出的裁剪；cover 等比例填满不拉伸变形
+            // 图片：3:4，宽度铺满，多出的裁剪；cover 等比例填满不拉伸变形
             if (item.hasImages)
               AspectRatio(
-                aspectRatio: 9 / 16,
+                aspectRatio: 3 / 4,
                 child: SizedBox.expand(
                   child: AsyncImageView(
                     imageUrl: item.firstImage!,
@@ -668,7 +668,7 @@ class _PostCard extends StatelessWidget {
                     height: double.infinity,
                     fit: BoxFit.cover,
                     memCacheWidth: 360,
-                    memCacheHeight: 640,
+                    memCacheHeight: 480,
                   ),
                 ),
               ),
