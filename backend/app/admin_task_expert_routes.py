@@ -20,7 +20,6 @@ from fastapi import (
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import IntegrityError
-
 from app import models, schemas
 from app.deps import get_async_db_dependency
 # 管理员认证依赖（异步版本）
@@ -61,6 +60,118 @@ logger = logging.getLogger(__name__)
 
 # 创建管理员任务达人路由器
 admin_task_expert_router = APIRouter(prefix="/api/admin", tags=["admin-task-experts"])
+
+
+@admin_task_expert_router.get("/task-expert-services")
+async def get_all_expert_services_admin(
+    page: int = Query(1, ge=1),
+    limit: int = Query(20, ge=1, le=100),
+    expert_id: Optional[str] = Query(None, description="按达人ID筛选"),
+    current_admin: models.AdminUser = Depends(get_current_admin_async),
+    db: AsyncSession = Depends(get_async_db_dependency),
+):
+    """获取全部达人服务列表（管理员），支持分页与按达人筛选"""
+    try:
+        q = select(models.TaskExpertService)
+        if expert_id:
+            q = q.where(models.TaskExpertService.expert_id == expert_id)
+        count_q = select(func.count()).select_from(q.subquery())
+        total_result = await db.execute(count_q)
+        total = total_result.scalar() or 0
+        offset = (page - 1) * limit
+        q = q.order_by(
+            models.TaskExpertService.display_order,
+            models.TaskExpertService.created_at.desc(),
+        ).offset(offset).limit(limit)
+        result = await db.execute(q)
+        services = result.scalars().all()
+        items = []
+        for s in services:
+            expert_result = await db.execute(
+                select(models.TaskExpert).where(models.TaskExpert.id == s.expert_id)
+            )
+            expert = expert_result.scalar_one_or_none()
+            expert_name = (expert.name if expert else None) or s.expert_id or ""
+            desc = s.description
+            if desc is None:
+                desc = ""
+            desc_str = str(desc)[:200] if desc else ""
+            items.append({
+                "id": s.id,
+                "expert_id": s.expert_id,
+                "expert_name": expert_name,
+                "service_name": s.service_name or "",
+                "description": desc_str,
+                "images": s.images,
+                "base_price": float(s.base_price) if s.base_price is not None else 0,
+                "currency": s.currency or "GBP",
+                "status": s.status or "active",
+                "display_order": s.display_order or 0,
+                "view_count": s.view_count or 0,
+                "application_count": s.application_count or 0,
+                "has_time_slots": getattr(s, "has_time_slots", False) or False,
+                "created_at": s.created_at.isoformat() if s.created_at else None,
+            })
+        return {"items": items, "total": total, "page": page, "limit": limit}
+    except Exception as e:
+        logger.exception("获取全部达人服务列表失败")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@admin_task_expert_router.get("/task-expert-activities")
+async def get_all_expert_activities_admin(
+    page: int = Query(1, ge=1),
+    limit: int = Query(20, ge=1, le=100),
+    expert_id: Optional[str] = Query(None, description="按达人ID筛选"),
+    status_filter: Optional[str] = Query(None, description="按状态筛选"),
+    current_admin: models.AdminUser = Depends(get_current_admin_async),
+    db: AsyncSession = Depends(get_async_db_dependency),
+):
+    """获取全部达人活动列表（管理员），支持分页与筛选"""
+    try:
+        q = select(models.Activity).where(
+            models.Activity.activity_type == "standard"
+        )
+        if expert_id:
+            q = q.where(models.Activity.expert_id == expert_id)
+        if status_filter:
+            q = q.where(models.Activity.status == status_filter)
+        count_q = select(func.count()).select_from(q.subquery())
+        total_result = await db.execute(count_q)
+        total = total_result.scalar() or 0
+        offset = (page - 1) * limit
+        q = q.order_by(models.Activity.created_at.desc()).offset(offset).limit(limit)
+        result = await db.execute(q)
+        activities = result.scalars().all()
+        items = []
+        for a in activities:
+            expert_result = await db.execute(
+                select(models.TaskExpert).where(models.TaskExpert.id == a.expert_id)
+            )
+            expert = expert_result.scalar_one_or_none()
+            expert_name = (expert.name if expert else None) or a.expert_id or ""
+            desc = a.description
+            desc_str = (str(desc)[:200] if desc else "")
+            items.append({
+                "id": a.id,
+                "expert_id": a.expert_id,
+                "expert_name": expert_name,
+                "title": a.title or "",
+                "description": desc_str,
+                "expert_service_id": a.expert_service_id,
+                "location": a.location or "",
+                "task_type": a.task_type or "",
+                "status": a.status or "open",
+                "max_participants": a.max_participants or 1,
+                "currency": a.currency or "GBP",
+                "discounted_price_per_participant": float(a.discounted_price_per_participant) if a.discounted_price_per_participant is not None else None,
+                "deadline": a.deadline.isoformat() if a.deadline else None,
+                "created_at": a.created_at.isoformat() if a.created_at else None,
+            })
+        return {"items": items, "total": total, "page": page, "limit": limit}
+    except Exception as e:
+        logger.exception("获取全部达人活动列表失败")
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @admin_task_expert_router.get("/task-expert-applications", response_model=schemas.PaginatedResponse)
