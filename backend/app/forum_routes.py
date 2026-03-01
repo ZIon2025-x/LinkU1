@@ -950,6 +950,57 @@ def _parse_attachments(raw):
         return None
 
 
+async def _resolve_linked_item_name(db: AsyncSession, item_type: Optional[str], item_id: Optional[str]) -> Optional[str]:
+    """根据 linked_item_type/id 查询关联内容的名称"""
+    if not item_type or not item_id:
+        return None
+    try:
+        if item_type == "service":
+            sid = int(item_id)
+            row = await db.execute(
+                select(models.TaskExpertService.service_name)
+                .where(models.TaskExpertService.id == sid)
+            )
+            return row.scalar_one_or_none()
+        elif item_type == "product":
+            pid = int(item_id)
+            row = await db.execute(
+                select(models.FleaMarketItem.title)
+                .where(models.FleaMarketItem.id == pid)
+            )
+            return row.scalar_one_or_none()
+        elif item_type == "expert":
+            row = await db.execute(
+                select(models.User.name)
+                .where(models.User.id == item_id)
+            )
+            return row.scalar_one_or_none()
+        elif item_type == "activity":
+            aid = int(item_id)
+            row = await db.execute(
+                select(models.Activity.title)
+                .where(models.Activity.id == aid)
+            )
+            return row.scalar_one_or_none()
+        elif item_type == "ranking":
+            rid = int(item_id)
+            row = await db.execute(
+                select(models.CustomLeaderboard.name)
+                .where(models.CustomLeaderboard.id == rid)
+            )
+            return row.scalar_one_or_none()
+        elif item_type == "forum_post":
+            fid = int(item_id)
+            row = await db.execute(
+                select(models.ForumPost.title)
+                .where(models.ForumPost.id == fid)
+            )
+            return row.scalar_one_or_none()
+    except (ValueError, Exception):
+        return None
+    return None
+
+
 async def get_post_with_permissions(
     post_id: int,
     current_user: Optional[models.User],
@@ -2741,6 +2792,8 @@ async def get_post(
         )
         is_favorited = favorite_result.scalar_one_or_none() is not None
     
+    linked_name = await _resolve_linked_item_name(db, post.linked_item_type, post.linked_item_id)
+
     return schemas.ForumPostOut(
         id=post.id,
         title=post.title,
@@ -2764,6 +2817,7 @@ async def get_post(
         attachments=_parse_attachments(post.attachments),
         linked_item_type=post.linked_item_type,
         linked_item_id=post.linked_item_id,
+        linked_item_name=linked_name,
         created_at=post.created_at,
         updated_at=post.updated_at,
         last_reply_at=post.last_reply_at
@@ -3021,6 +3075,7 @@ async def create_post(
         attachments=_parse_attachments(db_post.attachments),
         linked_item_type=db_post.linked_item_type,
         linked_item_id=db_post.linked_item_id,
+        linked_item_name=await _resolve_linked_item_name(db, db_post.linked_item_type, db_post.linked_item_id),
         created_at=db_post.created_at,
         updated_at=db_post.updated_at,
         last_reply_at=db_post.last_reply_at
@@ -3261,6 +3316,7 @@ async def update_post(
         attachments=_parse_attachments(db_post.attachments),
         linked_item_type=db_post.linked_item_type,
         linked_item_id=db_post.linked_item_id,
+        linked_item_name=await _resolve_linked_item_name(db, db_post.linked_item_type, db_post.linked_item_id),
         created_at=db_post.created_at,
         updated_at=db_post.updated_at,
         last_reply_at=db_post.last_reply_at

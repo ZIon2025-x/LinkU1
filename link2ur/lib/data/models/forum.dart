@@ -274,6 +274,7 @@ class ForumPost extends Equatable {
     this.attachments = const [],
     this.linkedItemType,
     this.linkedItemId,
+    this.linkedItemName,
     required this.categoryId,
     this.category,
     required this.authorId,
@@ -305,6 +306,7 @@ class ForumPost extends Equatable {
   final List<ForumPostAttachment> attachments;
   final String? linkedItemType; // service/expert/activity/product/ranking/forum_post
   final String? linkedItemId;
+  final String? linkedItemName;
   final int categoryId;
   final ForumCategory? category;
   final String authorId;
@@ -372,6 +374,7 @@ class ForumPost extends Equatable {
           [],
       linkedItemType: json['linked_item_type'] as String?,
       linkedItemId: json['linked_item_id']?.toString(),
+      linkedItemName: json['linked_item_name'] as String?,
       categoryId: _parseInt(json['category_id'], fallback: json['category'] != null ? _parseInt((json['category'] as Map<String, dynamic>)['id']) : 0),
       category: json['category'] != null
           ? ForumCategory.fromJson(json['category'] as Map<String, dynamic>)
@@ -413,6 +416,7 @@ class ForumPost extends Equatable {
         'attachments': attachments.map((a) => a.toJson()).toList(),
       if (linkedItemType != null) 'linked_item_type': linkedItemType,
       if (linkedItemId != null) 'linked_item_id': linkedItemId,
+      if (linkedItemName != null) 'linked_item_name': linkedItemName,
       'category_id': categoryId,
       'author_id': authorId,
       'like_count': likeCount,
@@ -446,6 +450,9 @@ class ForumPost extends Equatable {
       contentPreviewZh: contentPreviewZh,
       images: images,
       attachments: attachments,
+      linkedItemType: linkedItemType,
+      linkedItemId: linkedItemId,
+      linkedItemName: linkedItemName,
       categoryId: categoryId,
       category: category,
       authorId: authorId,

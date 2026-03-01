@@ -374,6 +374,7 @@ class _ForumPostDetailViewState extends State<ForumPostDetailView> {
                           attachments: post.attachments,
                           linkedItemType: post.linkedItemType,
                           linkedItemId: post.linkedItemId,
+                          linkedItemName: post.linkedItemName,
                           isDark: isDark,
                         ),
                     ],
@@ -1262,30 +1263,32 @@ class _PostImageCarouselState extends State<_PostImageCarousel> {
   @override
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.sizeOf(context).width;
-    final imageHeight = screenWidth * 0.75;
+    final imageHeight = screenWidth * 0.85;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    return Stack(
-      children: [
-        SizedBox(
-          height: imageHeight,
-          child: PageView.builder(
-            controller: _pageController,
-            itemCount: widget.images.length,
-            onPageChanged: (page) => setState(() => _currentPage = page),
-            itemBuilder: (context, index) {
-              return GestureDetector(
-                onTap: () => _openFullScreen(context, index),
-                child: SizedBox.expand(
+    return Container(
+      color: isDark ? Colors.black : const Color(0xFFF5F5F5),
+      child: Stack(
+        children: [
+          SizedBox(
+            height: imageHeight,
+            child: PageView.builder(
+              controller: _pageController,
+              itemCount: widget.images.length,
+              onPageChanged: (page) => setState(() => _currentPage = page),
+              itemBuilder: (context, index) {
+                return GestureDetector(
+                  onTap: () => _openFullScreen(context, index),
                   child: AsyncImageView(
                     imageUrl: widget.images[index],
                     width: double.infinity,
                     height: double.infinity,
+                    fit: BoxFit.contain,
                   ),
-                ),
-              );
-            },
+                );
+              },
+            ),
           ),
-        ),
         if (widget.images.length > 1)
           Positioned(
             bottom: 12,
@@ -1310,7 +1313,8 @@ class _PostImageCarouselState extends State<_PostImageCarousel> {
               }),
             ),
           ),
-      ],
+        ],
+      ),
     );
   }
 }
@@ -1321,12 +1325,14 @@ class _PostExtrasRow extends StatelessWidget {
     required this.attachments,
     this.linkedItemType,
     this.linkedItemId,
+    this.linkedItemName,
     required this.isDark,
   });
 
   final List<ForumPostAttachment> attachments;
   final String? linkedItemType;
   final String? linkedItemId;
+  final String? linkedItemName;
   final bool isDark;
 
   bool get _hasLink =>
@@ -1345,7 +1351,7 @@ class _PostExtrasRow extends StatelessWidget {
         children: [
           ...attachments.map((att) => _AttachmentChip(att: att, isDark: isDark)),
           if (_hasLink)
-            _LinkedChip(type: linkedItemType!, id: linkedItemId!, isDark: isDark),
+            _LinkedChip(type: linkedItemType!, id: linkedItemId!, name: linkedItemName, isDark: isDark),
         ],
       ),
     );
@@ -1421,11 +1427,13 @@ class _LinkedChip extends StatelessWidget {
   const _LinkedChip({
     required this.type,
     required this.id,
+    this.name,
     required this.isDark,
   });
 
   final String type;
   final String id;
+  final String? name;
   final bool isDark;
 
   static const Color _accent = Color(0xFF6C5CE7);
@@ -1452,9 +1460,13 @@ class _LinkedChip extends StatelessWidget {
           children: [
             Icon(_iconData, size: 16, color: _accent),
             const SizedBox(width: 6),
-            Text(
-              _typeLabel(context),
-              style: const TextStyle(fontSize: 13, color: _accent, fontWeight: FontWeight.w500),
+            Flexible(
+              child: Text(
+                name ?? _typeLabel(context),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(fontSize: 13, color: _accent, fontWeight: FontWeight.w500),
+              ),
             ),
             const SizedBox(width: 2),
             Icon(Icons.chevron_right, size: 14, color: _accent.withValues(alpha: 0.6)),
@@ -1477,7 +1489,7 @@ class _LinkedChip extends StatelessWidget {
         context.push('/activities/$id');
       case 'ranking':
         final intId = int.tryParse(id);
-        if (intId != null) context.push('/leaderboard/item/$intId');
+        if (intId != null) context.push('/leaderboard/$intId');
       case 'forum_post':
         final intId = int.tryParse(id);
         if (intId != null) context.push('/forum/posts/$intId');

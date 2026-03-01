@@ -3303,6 +3303,7 @@ class ForumPostOut(BaseModel):
     attachments: Optional[List[ForumPostAttachment]] = None
     linked_item_type: Optional[str] = None
     linked_item_id: Optional[str] = None
+    linked_item_name: Optional[str] = None
     created_at: datetime.datetime
     updated_at: datetime.datetime
     last_reply_at: Optional[datetime.datetime] = None
@@ -3334,6 +3335,7 @@ class ForumPostListItem(BaseModel):
     attachments: Optional[List[ForumPostAttachment]] = None
     linked_item_type: Optional[str] = None
     linked_item_id: Optional[str] = None
+    linked_item_name: Optional[str] = None
     created_at: datetime.datetime
     last_reply_at: Optional[datetime.datetime] = None
     
