@@ -1263,7 +1263,7 @@ class _PostImageCarouselState extends State<_PostImageCarousel> {
   @override
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.sizeOf(context).width;
-    final imageHeight = screenWidth * 0.85;
+    final imageHeight = screenWidth * 1.05;
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Container(
@@ -1289,30 +1289,30 @@ class _PostImageCarouselState extends State<_PostImageCarousel> {
               },
             ),
           ),
-        if (widget.images.length > 1)
-          Positioned(
-            bottom: 12,
-            left: 0,
-            right: 0,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: List.generate(widget.images.length, (i) {
-                final isActive = i == _currentPage;
-                return AnimatedContainer(
-                  duration: const Duration(milliseconds: 200),
-                  width: isActive ? 18 : 6,
-                  height: 6,
-                  margin: const EdgeInsets.symmetric(horizontal: 3),
-                  decoration: BoxDecoration(
-                    color: isActive
-                        ? Colors.white
-                        : Colors.white.withValues(alpha: 0.4),
-                    borderRadius: BorderRadius.circular(3),
-                  ),
-                );
-              }),
+          if (widget.images.length > 1)
+            Positioned(
+              bottom: 12,
+              left: 0,
+              right: 0,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: List.generate(widget.images.length, (i) {
+                  final isActive = i == _currentPage;
+                  return AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    width: isActive ? 18 : 6,
+                    height: 6,
+                    margin: const EdgeInsets.symmetric(horizontal: 3),
+                    decoration: BoxDecoration(
+                      color: isActive
+                          ? Colors.white
+                          : Colors.white.withValues(alpha: 0.4),
+                      borderRadius: BorderRadius.circular(3),
+                    ),
+                  );
+                }),
+              ),
             ),
-          ),
         ],
       ),
     );
