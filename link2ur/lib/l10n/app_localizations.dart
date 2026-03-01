@@ -3981,6 +3981,30 @@ abstract class AppLocalizations {
   /// **'Price Negotiation'**
   String get taskDetailPriceNegotiation;
 
+  /// No description provided for @taskRewardToBeQuoted.
+  ///
+  /// In en, this message translates to:
+  /// **'To be quoted'**
+  String get taskRewardToBeQuoted;
+
+  /// No description provided for @taskApplyQuoteAmountLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Quote amount (required)'**
+  String get taskApplyQuoteAmountLabel;
+
+  /// No description provided for @taskApplyQuoteAmountHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Must be greater than £1'**
+  String get taskApplyQuoteAmountHint;
+
+  /// No description provided for @taskApplyQuoteAmountMin.
+  ///
+  /// In en, this message translates to:
+  /// **'Quote amount must be greater than £1'**
+  String get taskApplyQuoteAmountMin;
+
   /// No description provided for @taskDetailApplyReasonHint.
   ///
   /// In en, this message translates to:
@@ -13567,6 +13591,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Describe task requirements in detail...'**
   String get createTaskDescHint;
+
+  /// No description provided for @createTaskRewardToBeQuoted.
+  ///
+  /// In en, this message translates to:
+  /// **'To be quoted (leave blank for applicants to quote)'**
+  String get createTaskRewardToBeQuoted;
 
   /// No description provided for @createTaskLocation.
   ///

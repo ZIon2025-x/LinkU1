@@ -1866,8 +1866,12 @@ class _ApplyTaskSheetState extends State<ApplyTaskSheet> {
   @override
   void initState() {
     super.initState();
-    final base = widget.task.baseReward ?? widget.task.reward;
-    if (base > 0) _amountController.text = Helpers.formatAmountNumber(base);
+    if (widget.task.rewardToBeQuoted) {
+      _showNegotiatePrice = true; // 待报价任务必须填写报价金额
+    } else {
+      final base = widget.task.baseReward ?? widget.task.reward;
+      if (base > 0) _amountController.text = Helpers.formatAmountNumber(base);
+    }
   }
 
   @override
@@ -1882,6 +1886,10 @@ class _ApplyTaskSheetState extends State<ApplyTaskSheet> {
       final amount = double.tryParse(_amountController.text.trim());
       if (amount == null || amount <= 0) {
         return context.l10n.fleaMarketNegotiatePriceTooLow;
+      }
+      // 待报价任务：报价金额必须大于 £1
+      if (widget.task.rewardToBeQuoted && amount <= 1.0) {
+        return context.l10n.taskApplyQuoteAmountMin;
       }
     }
     return null;
@@ -1903,10 +1911,15 @@ class _ApplyTaskSheetState extends State<ApplyTaskSheet> {
     });
 
     final message = _messageController.text.trim();
-    final negotiatedPrice = _showNegotiatePrice
+    // 待报价任务必须传报价金额；普通任务可选议价
+    final negotiatedPrice = widget.task.rewardToBeQuoted
         ? double.tryParse(_amountController.text.trim())
+        : (_showNegotiatePrice
+            ? double.tryParse(_amountController.text.trim())
+            : null);
+    final currency = (widget.task.rewardToBeQuoted || _showNegotiatePrice)
+        ? widget.task.currency
         : null;
-    final currency = _showNegotiatePrice ? widget.task.currency : null;
 
     if (!mounted) return;
     context.read<TaskDetailBloc>().add(TaskDetailApplyRequested(
@@ -2008,36 +2021,39 @@ class _ApplyTaskSheetState extends State<ApplyTaskSheet> {
                       ),
                       const SizedBox(height: 20),
 
-                      // 价格协商（非多参与者任务时显示）
+                      // 价格协商（非多参与者任务时显示）；待报价任务必须填写报价金额
                       if (showPriceSection) ...[
                         Text(
-                          l10n.taskDetailPriceNegotiation,
+                          widget.task.rewardToBeQuoted
+                              ? l10n.taskApplyQuoteAmountLabel
+                              : l10n.taskDetailPriceNegotiation,
                           style: const TextStyle(
                               fontSize: 16, fontWeight: FontWeight.w600),
                         ),
                         const SizedBox(height: 8),
-                        SwitchListTile(
-                          value: _showNegotiatePrice,
-                          onChanged: (value) {
-                            setState(() {
-                              _showNegotiatePrice = value;
-                              if (value &&
-                                  _amountController.text.trim().isEmpty) {
-                                final base = widget.task.baseReward ??
-                                    widget.task.reward;
-                                if (base > 0) {
-                                  _amountController.text =
-                                      Helpers.formatAmountNumber(base);
+                        if (!widget.task.rewardToBeQuoted)
+                          SwitchListTile(
+                            value: _showNegotiatePrice,
+                            onChanged: (value) {
+                              setState(() {
+                                _showNegotiatePrice = value;
+                                if (value &&
+                                    _amountController.text.trim().isEmpty) {
+                                  final base = widget.task.baseReward ??
+                                      widget.task.reward;
+                                  if (base > 0) {
+                                    _amountController.text =
+                                        Helpers.formatAmountNumber(base);
+                                  }
                                 }
-                              }
-                            });
-                          },
-                          title: Text(
-                            l10n.taskApplicationIWantToNegotiatePrice,
-                            style: const TextStyle(fontSize: 15),
+                              });
+                            },
+                            title: Text(
+                              l10n.taskApplicationIWantToNegotiatePrice,
+                              style: const TextStyle(fontSize: 15),
+                            ),
+                            activeTrackColor: AppColors.primary,
                           ),
-                          activeTrackColor: AppColors.primary,
-                        ),
                         if (_showNegotiatePrice) ...[
                           const SizedBox(height: 8),
                           TextField(
@@ -2046,6 +2062,9 @@ class _ApplyTaskSheetState extends State<ApplyTaskSheet> {
                                 decimal: true),
                             decoration: InputDecoration(
                               labelText: l10n.taskApplicationExpectedAmount,
+                              hintText: widget.task.rewardToBeQuoted
+                                  ? l10n.taskApplyQuoteAmountHint
+                                  : null,
                               prefixText:
                                   '£ ',
                               border: OutlineInputBorder(
@@ -2062,7 +2081,9 @@ class _ApplyTaskSheetState extends State<ApplyTaskSheet> {
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            l10n.taskApplicationNegotiatePriceHint,
+                            widget.task.rewardToBeQuoted
+                                ? l10n.taskApplyQuoteAmountMin
+                                : l10n.taskApplicationNegotiatePriceHint,
                             style: const TextStyle(
                               fontSize: 12,
                               color: AppColors.textTertiary,

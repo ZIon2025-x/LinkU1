@@ -951,7 +951,7 @@ class _TaskGridCard extends StatelessWidget {
               if (task.deadline == null) const Spacer(),
 
               // 价格标签 (对齐iOS priceBadge - 绿色胶囊)
-              _buildPriceBadge(),
+              _buildPriceBadge(context),
             ],
           ),
         ],
@@ -959,8 +959,24 @@ class _TaskGridCard extends StatelessWidget {
     );
   }
 
-  /// 价格标签 (对齐iOS priceBadge - success渐变胶囊)
-  Widget _buildPriceBadge() {
+  /// 价格标签 (对齐iOS priceBadge - success渐变胶囊)；待报价且未议定金额时显示「待报价」
+  Widget _buildPriceBadge(BuildContext context) {
+    if (task.isPriceToBeQuoted) {
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        decoration: BoxDecoration(
+          color: AppColors.textSecondary.withValues(alpha: 0.2),
+          borderRadius: AppRadius.allPill,
+        ),
+        child: Text(
+          context.l10n.taskRewardToBeQuoted,
+          style: AppTypography.caption.copyWith(
+            color: AppColors.textSecondary,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      );
+    }
     if (task.reward <= 0) return const SizedBox.shrink();
 
     final priceText = Helpers.formatAmountNumber(task.reward);

@@ -247,9 +247,11 @@ class AsyncTaskCRUD:
             vip_price_threshold = float(settings.get("vip_price_threshold", 10.0))
             super_vip_price_threshold = float(settings.get("super_vip_price_threshold", 50.0))
             
-            # 处理价格字段：base_reward 是发布时的价格（先处理价格，用于后续判断）
+            # 处理价格字段：base_reward 是发布时的价格（先处理价格，用于后续判断）；reward 为 None 表示待报价
             from decimal import Decimal
+            reward_to_be_quoted = task.reward is None
             base_reward_value = Decimal(str(task.reward)) if task.reward is not None else Decimal('0')
+            reward_value = float(task.reward) if task.reward is not None else 0.0
             
             # 任务等级分配逻辑（使用base_reward判断）
             user_level = str(user.user_level) if user.user_level is not None else "normal"
@@ -306,9 +308,10 @@ class AsyncTaskCRUD:
                 location=task.location,
                 latitude=getattr(task, "latitude", None),  # 纬度（可选）
                 longitude=getattr(task, "longitude", None),  # 经度（可选）
-                reward=task.reward,  # 与base_reward同步
+                reward=reward_value,  # 与base_reward同步；待报价时为 0
                 base_reward=base_reward_value,  # 原始标价（发布时的价格）
                 agreed_reward=None,  # 初始为空，如果有议价才会设置
+                reward_to_be_quoted=reward_to_be_quoted,
                 currency=getattr(task, "currency", "GBP") or "GBP",  # 货币类型
                 deadline=deadline,
                 is_flexible=is_flexible,  # 设置灵活时间标识

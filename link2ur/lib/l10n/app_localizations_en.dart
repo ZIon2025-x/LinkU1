@@ -2150,6 +2150,18 @@ class AppLocalizationsEn extends AppLocalizations {
   String get taskDetailPriceNegotiation => 'Price Negotiation';
 
   @override
+  String get taskRewardToBeQuoted => 'To be quoted';
+
+  @override
+  String get taskApplyQuoteAmountLabel => 'Quote amount (required)';
+
+  @override
+  String get taskApplyQuoteAmountHint => 'Must be greater than £1';
+
+  @override
+  String get taskApplyQuoteAmountMin => 'Quote amount must be greater than £1';
+
+  @override
   String get taskDetailApplyReasonHint =>
       'Explain your application reason to the publisher to improve success rate';
 
@@ -7382,6 +7394,10 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get createTaskDescHint => 'Describe task requirements in detail...';
+
+  @override
+  String get createTaskRewardToBeQuoted =>
+      'To be quoted (leave blank for applicants to quote)';
 
   @override
   String get createTaskLocation => 'Location';

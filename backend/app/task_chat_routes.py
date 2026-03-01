@@ -324,6 +324,10 @@ async def get_task_chat_list(
                 "completed_at": format_iso_utc(task.completed_at) if task.completed_at else None,
                 "unread_count": unread_count,
                 "last_message": last_message_data,
+                "reward": float(task.agreed_reward) if task.agreed_reward is not None else float(task.base_reward) if task.base_reward is not None else 0.0,
+                "base_reward": float(task.base_reward) if task.base_reward else None,
+                "agreed_reward": float(task.agreed_reward) if task.agreed_reward else None,
+                "reward_to_be_quoted": getattr(task, "reward_to_be_quoted", False),
                 # 多人任务相关字段
                 "is_multi_participant": bool(task.is_multi_participant) if hasattr(task, 'is_multi_participant') else False,
                 "expert_creator_id": task.expert_creator_id if hasattr(task, 'expert_creator_id') else None,
@@ -707,8 +711,10 @@ async def get_task_messages(
             "taker_id": task.taker_id,
             "status": task.status,
             "completed_at": format_iso_utc(task.completed_at) if task.completed_at else None,
+            "reward": float(task.agreed_reward) if task.agreed_reward is not None else float(task.base_reward) if task.base_reward is not None else 0.0,
             "base_reward": float(task.base_reward) if task.base_reward else None,
             "agreed_reward": float(task.agreed_reward) if task.agreed_reward else None,
+            "reward_to_be_quoted": getattr(task, "reward_to_be_quoted", False),
             "currency": task.currency or "GBP",
             # 多人任务相关字段
             "is_multi_participant": bool(task.is_multi_participant) if hasattr(task, 'is_multi_participant') else False,

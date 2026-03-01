@@ -1103,7 +1103,7 @@ class _TaskHeaderCard extends StatelessWidget {
           const SizedBox(height: AppSpacing.sm),
 
           // 价格
-          _buildAmountView(),
+          _buildAmountView(context),
           if (task.platformFeeRate != null && task.platformFeeAmount != null) ...[
             const SizedBox(height: AppSpacing.sm),
             _buildServiceFeeRow(context),
@@ -1179,7 +1179,16 @@ class _TaskHeaderCard extends StatelessWidget {
     );
   }
 
-  Widget _buildAmountView() {
+  Widget _buildAmountView(BuildContext context) {
+    if (task.isPriceToBeQuoted) {
+      return Text(
+        context.l10n.taskRewardToBeQuoted,
+        style: AppTypography.title3.copyWith(
+          color: AppColors.textSecondary,
+          fontWeight: FontWeight.bold,
+        ),
+      );
+    }
     final amount = task.displayReward;
     if (amount <= 0) return const SizedBox.shrink();
 

@@ -440,12 +440,14 @@ class _TaskCard extends StatelessWidget {
           ],
           AppSpacing.vMd,
 
-          // 底部：价格和位置
+          // 底部：价格和位置（待报价任务显示「待报价」）
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                Helpers.formatPrice(task.reward),
+                task.isPriceToBeQuoted
+                    ? context.l10n.taskRewardToBeQuoted
+                    : Helpers.formatPrice(task.displayReward),
                 style: const TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.bold,

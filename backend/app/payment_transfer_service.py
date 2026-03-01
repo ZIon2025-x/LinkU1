@@ -31,6 +31,19 @@ RETRY_DELAYS = [
     86400,   # 24小时后重试（最后一次）
 ]
 
+# 接受人 Stripe Connect 未完成时的重试间隔（秒），避免每 5 分钟打一次日志
+TAKER_CONNECT_INCOMPLETE_RETRY_SECONDS = 86400  # 24 小时
+
+CONNECT_NOT_COMPLETE_MSG = "任务接受人的 Stripe Connect 账户尚未完成设置"
+CONNECT_NOT_ENABLED_MSG = "任务接受人的 Stripe Connect 账户尚未启用收款"
+
+
+def _is_connect_not_ready_error(msg) -> bool:
+    if msg is None:
+        return False
+    s = str(msg)
+    return CONNECT_NOT_COMPLETE_MSG in s or CONNECT_NOT_ENABLED_MSG in s
+
 
 def create_transfer_record(
     db: Session,
@@ -146,11 +159,11 @@ def execute_transfer(
         try:
             account = stripe_client.Account.retrieve(taker_stripe_account_id)
             if not account.details_submitted:
-                error_msg = "任务接受人的 Stripe Connect 账户尚未完成设置"
+                error_msg = CONNECT_NOT_COMPLETE_MSG
                 logger.warning(f"{error_msg}: taker_id={transfer_record.taker_id}")
                 return False, None, error_msg
             if not account.charges_enabled:
-                error_msg = "任务接受人的 Stripe Connect 账户尚未启用收款"
+                error_msg = CONNECT_NOT_ENABLED_MSG
                 logger.warning(f"{error_msg}: taker_id={transfer_record.taker_id}")
                 return False, None, error_msg
         except stripe.error.StripeError as e:
@@ -554,12 +567,26 @@ def process_pending_transfers(db: Session) -> Dict[str, Any]:
                     except Exception as task_err:
                         logger.error(f"转账成功但更新任务状态失败: task_id={transfer_record.task_id}, error={task_err}", exc_info=True)
                 else:
-                    if transfer_record.status == "retrying":
-                        stats["retrying"] += 1
+                    if _is_connect_not_ready_error(error_msg):
+                        transfer_record.status = "retrying"
+                        transfer_record.last_error = str(error_msg)
+                        transfer_record.next_retry_at = now + timedelta(seconds=TAKER_CONNECT_INCOMPLETE_RETRY_SECONDS)
+                        from app.transaction_utils import safe_commit
+                        if safe_commit(db, f"延期重试（接受人Connect未完成） transfer_record_id={transfer_record.id}"):
+                            stats["retrying"] += 1
+                            logger.info(
+                                f"接受人 Stripe Connect 未就绪，已延至 24 小时后重试: "
+                                f"transfer_record_id={transfer_record.id}, taker_id={transfer_record.taker_id}"
+                            )
+                        else:
+                            stats["failed"] += 1
+                            logger.error(f"延期重试提交失败: transfer_record_id={transfer_record.id}")
                     else:
-                        stats["failed"] += 1
-                    
-                    logger.warning(f"转账处理失败: transfer_record_id={transfer_record.id}, error={error_msg}")
+                        if transfer_record.status == "retrying":
+                            stats["retrying"] += 1
+                        else:
+                            stats["failed"] += 1
+                        logger.warning(f"转账处理失败: transfer_record_id={transfer_record.id}, error={error_msg}")
             
             except Exception as e:
                 logger.error(f"处理转账记录失败: transfer_record_id={transfer_record.id}, error={e}", exc_info=True)

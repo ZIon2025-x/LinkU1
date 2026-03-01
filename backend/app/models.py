@@ -188,6 +188,7 @@ class Task(Base):
     reward = Column(DECIMAL(12, 2), nullable=False)  # 价格字段（与base_reward同步，使用DECIMAL保持精度一致）
     base_reward = Column(DECIMAL(12, 2), nullable=False)  # 原始标价（发布时的价格）
     agreed_reward = Column(DECIMAL(12, 2), nullable=True)  # 最终成交价（如果有议价）
+    reward_to_be_quoted = Column(Boolean, default=False, nullable=False)  # 是否待报价（发布时未填金额，由接单者报价）
     currency = Column(String(3), default="GBP")  # 货币类型
     location = Column(String(100), nullable=False)  # 位置文本（用于显示）
     latitude = Column(DECIMAL(10, 8), nullable=True)  # 纬度（用于地图选点和距离计算）

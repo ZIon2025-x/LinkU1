@@ -188,11 +188,12 @@ async def get_tasks(
                 "description": task.description,
                 "deadline": format_iso_utc(task.deadline) if task.deadline else None,
                 "is_flexible": task.is_flexible or 0,
-                "reward": float(task.agreed_reward) if task.agreed_reward is not None else float(task.base_reward) if task.base_reward is not None else 0.0,
-                "base_reward": float(task.base_reward) if task.base_reward else None,
-                "agreed_reward": float(task.agreed_reward) if task.agreed_reward else None,
-                "currency": task.currency or "GBP",
-                "location": obfuscated_location,  # 使用模糊化的位置
+            "reward": float(task.agreed_reward) if task.agreed_reward is not None else float(task.base_reward) if task.base_reward is not None else 0.0,
+            "base_reward": float(task.base_reward) if task.base_reward else None,
+            "agreed_reward": float(task.agreed_reward) if task.agreed_reward else None,
+            "reward_to_be_quoted": getattr(task, "reward_to_be_quoted", False),
+            "currency": task.currency or "GBP",
+            "location": obfuscated_location,  # 使用模糊化的位置
                 "latitude": float(task.latitude) if task.latitude is not None else None,
                 "longitude": float(task.longitude) if task.longitude is not None else None,
                 "task_type": task.task_type,
@@ -298,6 +299,7 @@ async def get_tasks(
             "reward": float(task.agreed_reward) if task.agreed_reward is not None else float(task.base_reward) if task.base_reward is not None else 0.0,
             "base_reward": float(task.base_reward) if task.base_reward else None,
             "agreed_reward": float(task.agreed_reward) if task.agreed_reward else None,
+            "reward_to_be_quoted": getattr(task, "reward_to_be_quoted", False),
             "currency": task.currency or "GBP",
             "location": task.location,
             "latitude": float(task.latitude) if task.latitude is not None else None,
@@ -610,6 +612,7 @@ async def create_task_async(
             "reward": float(db_task.agreed_reward) if db_task.agreed_reward is not None else float(db_task.base_reward) if db_task.base_reward is not None else 0.0,
             "base_reward": float(db_task.base_reward) if db_task.base_reward else None,
             "agreed_reward": float(db_task.agreed_reward) if db_task.agreed_reward else None,
+            "reward_to_be_quoted": getattr(db_task, "reward_to_be_quoted", False),
             "currency": db_task.currency or "GBP",
             "location": db_task.location,
             "task_type": db_task.task_type,
@@ -741,6 +744,26 @@ async def apply_for_task(
                 raise HTTPException(
                     status_code=400,
                     detail=f"货币不一致：任务使用 {task.currency}，申请使用 {currency}"
+                )
+        
+        # 待报价任务必须议价，且议价金额必须大于 1 镑
+        if getattr(task, "reward_to_be_quoted", False):
+            if negotiated_price is None:
+                raise HTTPException(
+                    status_code=400,
+                    detail="该任务为待报价任务，申请时必须填写报价金额（议价金额需大于 £1）"
+                )
+            try:
+                price_val = float(negotiated_price)
+            except (TypeError, ValueError):
+                raise HTTPException(
+                    status_code=400,
+                    detail="报价金额格式无效，请填写大于 £1 的金额"
+                )
+            if price_val <= 1.0:
+                raise HTTPException(
+                    status_code=400,
+                    detail="待报价任务的报价金额必须大于 £1"
                 )
         
         # 所有用户均可申请任意等级任务（任务等级仅按赏金划分，用于展示与推荐，不限制接单权限）

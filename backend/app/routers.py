@@ -1562,6 +1562,7 @@ def get_recommendations(
                     images_list = []
             
             result.append({
+                "id": task.id,
                 "task_id": task.id,
                 "title": task.title,
                 "title_en": title_en,
@@ -1569,7 +1570,10 @@ def get_recommendations(
                 "description": task.description,
                 "task_type": task.task_type,
                 "location": task.location,
-                "reward": float(task.reward) if task.reward else 0.0,
+                "reward": float(task.agreed_reward) if task.agreed_reward is not None else float(task.base_reward) if task.base_reward is not None else (float(task.reward) if task.reward else 0.0),
+                "base_reward": float(task.base_reward) if task.base_reward else None,
+                "agreed_reward": float(task.agreed_reward) if task.agreed_reward else None,
+                "reward_to_be_quoted": getattr(task, "reward_to_be_quoted", False),
                 "deadline": task.deadline.isoformat() if task.deadline else None,
                 "task_level": task.task_level,
                 "match_score": round(item["score"], 3),

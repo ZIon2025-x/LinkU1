@@ -2058,6 +2058,18 @@ class AppLocalizationsZh extends AppLocalizations {
   String get taskDetailPriceNegotiation => '价格协商';
 
   @override
+  String get taskRewardToBeQuoted => '待报价';
+
+  @override
+  String get taskApplyQuoteAmountLabel => '报价金额（必填）';
+
+  @override
+  String get taskApplyQuoteAmountHint => '需大于 £1';
+
+  @override
+  String get taskApplyQuoteAmountMin => '报价金额必须大于 £1';
+
+  @override
   String get taskDetailApplyReasonHint => '向发布者说明你的申请理由，有助于提高申请成功率';
 
   @override
@@ -7097,6 +7109,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get createTaskDescHint => '请详细描述任务要求...';
 
   @override
+  String get createTaskRewardToBeQuoted => '待报价（不填金额，由接单者报价）';
+
+  @override
   String get createTaskLocation => '任务地点';
 
   @override
@@ -10766,6 +10781,18 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get taskDetailPriceNegotiation => '價格協商';
+
+  @override
+  String get taskRewardToBeQuoted => '待報價';
+
+  @override
+  String get taskApplyQuoteAmountLabel => '報價金額（必填）';
+
+  @override
+  String get taskApplyQuoteAmountHint => '需大於 £1';
+
+  @override
+  String get taskApplyQuoteAmountMin => '報價金額必須大於 £1';
 
   @override
   String get taskDetailApplyReasonHint => '向發布者說明你的申請理由，有助於提高申請成功率';
@@ -15805,6 +15832,9 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get createTaskDescHint => '請詳細描述任務要求...';
+
+  @override
+  String get createTaskRewardToBeQuoted => '待報價（不填金額，由接單者報價）';
 
   @override
   String get createTaskLocation => '任務地點';

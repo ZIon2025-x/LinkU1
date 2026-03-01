@@ -150,9 +150,11 @@ def create_task(db: Session, user_id: str, task: schemas.TaskCreate):
     vip_price_threshold = float(settings.get("vip_price_threshold", 10.0))
     super_vip_price_threshold = float(settings.get("super_vip_price_threshold", 50.0))
 
+    reward_to_be_quoted = task.reward is None
     base_reward_value = (
         Decimal(str(task.reward)) if task.reward is not None else Decimal("0")
     )
+    reward_value = task.reward if task.reward is not None else 0
     if user.user_level == "super":
         task_level = "vip"
     elif float(base_reward_value) >= super_vip_price_threshold:
@@ -182,9 +184,10 @@ def create_task(db: Session, user_id: str, task: schemas.TaskCreate):
         description=task.description,
         deadline=deadline,
         is_flexible=is_flexible,
-        reward=task.reward,
+        reward=reward_value,
         base_reward=base_reward_value,
         agreed_reward=None,
+        reward_to_be_quoted=reward_to_be_quoted,
         currency=getattr(task, "currency", "GBP") or "GBP",
         location=task.location,
         latitude=getattr(task, "latitude", None),
@@ -216,7 +219,7 @@ def create_task(db: Session, user_id: str, task: schemas.TaskCreate):
                 applicant_id=designated_taker_id,
                 status="pending",
                 message="来自用户资料页的任务请求",
-                negotiated_price=task.reward,
+                negotiated_price=Decimal(str(task.reward)) if task.reward is not None else None,
                 currency=getattr(task, "currency", "GBP") or "GBP",
             )
             db.add(auto_application)
@@ -227,8 +230,8 @@ def create_task(db: Session, user_id: str, task: schemas.TaskCreate):
                 type="task_direct_request",
                 title="有用户向你发送了任务请求",
                 title_en="You received a task request",
-                content=f"「{task.title}」- £{task.reward}",
-                content_en=f'"{task.title}" - £{task.reward}',
+                content=f"「{task.title}」- {'待报价' if reward_to_be_quoted else f'£{task.reward}'}",
+                content_en=f'"{task.title}" - {"Price to be quoted" if reward_to_be_quoted else f"£{task.reward}"}',
                 related_id=str(db_task.id),
                 related_type="task_id",
             )
@@ -405,6 +408,9 @@ def update_task_reward(db: Session, task_id: int, poster_id: int, new_reward: fl
         return None
     task.reward = new_reward
     task.base_reward = Decimal(str(new_reward))
+    # 发布者后续填写金额后，不再视为待报价
+    if getattr(task, "reward_to_be_quoted", False) and new_reward > 0:
+        task.reward_to_be_quoted = False
     try:
         db.commit()
     except Exception as e:

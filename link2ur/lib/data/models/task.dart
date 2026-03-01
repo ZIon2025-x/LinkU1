@@ -58,6 +58,7 @@ class Task extends Equatable {
     this.minParticipants,
     this.platformFeeRate,
     this.platformFeeAmount,
+    this.rewardToBeQuoted = false,
   });
 
   final int id;
@@ -113,6 +114,8 @@ class Task extends Equatable {
   final double? platformFeeRate;
   /// 平台服务费金额（英镑），由详情接口返回
   final double? platformFeeAmount;
+  /// 是否待报价（发布时未填金额，由接单者报价）
+  final bool rewardToBeQuoted;
 
   /// 模糊距离（500m 为一个区间）
   /// 返回区间上限值（用于排序），如 500, 1000, 1500, ...
@@ -234,8 +237,12 @@ class Task extends Equatable {
 
   // ==================== 实际金额 ====================
 
-  /// 实际显示金额 (协商价 > 基础价 > 奖励)
+  /// 实际显示金额 (协商价 > 基础价 > 奖励)；待报价且未议定价格时为 0
   double get displayReward => agreedReward ?? baseReward ?? reward;
+
+  /// 是否仍处于「待报价」状态（发布时为待报价且尚未有议定金额时为 true；批准后已有 agreedReward 则为 false）
+  bool get isPriceToBeQuoted =>
+      rewardToBeQuoted && (agreedReward == null || agreedReward! <= 0);
 
   // ==================== 支付到期 ====================
 
@@ -391,6 +398,7 @@ class Task extends Equatable {
       minParticipants: json['min_participants'] as int?,
       platformFeeRate: (json['platform_fee_rate'] as num?)?.toDouble(),
       platformFeeAmount: (json['platform_fee_amount'] as num?)?.toDouble(),
+      rewardToBeQuoted: json['reward_to_be_quoted'] as bool? ?? false,
     );
   }
 
@@ -439,6 +447,7 @@ class Task extends Equatable {
       'confirmation_remaining_seconds': confirmationRemainingSeconds,
       'points_reward': pointsReward,
       'min_participants': minParticipants,
+      'reward_to_be_quoted': rewardToBeQuoted,
     };
   }
 
@@ -489,6 +498,9 @@ class Task extends Equatable {
     int? confirmationRemainingSeconds,
     int? pointsReward,
     int? minParticipants,
+    double? platformFeeRate,
+    double? platformFeeAmount,
+    bool? rewardToBeQuoted,
   }) {
     return Task(
       id: id ?? this.id,
@@ -537,6 +549,9 @@ class Task extends Equatable {
       confirmationRemainingSeconds: confirmationRemainingSeconds ?? this.confirmationRemainingSeconds,
       pointsReward: pointsReward ?? this.pointsReward,
       minParticipants: minParticipants ?? this.minParticipants,
+      platformFeeRate: platformFeeRate ?? this.platformFeeRate,
+      platformFeeAmount: platformFeeAmount ?? this.platformFeeAmount,
+      rewardToBeQuoted: rewardToBeQuoted ?? this.rewardToBeQuoted,
     );
   }
 
@@ -592,7 +607,7 @@ class CreateTaskRequest {
     this.location,
     this.latitude,
     this.longitude,
-    required this.reward,
+    this.reward,
     this.currency = 'GBP',
     this.images = const [],
     this.deadline,
@@ -609,7 +624,8 @@ class CreateTaskRequest {
   final String? location;
   final double? latitude;
   final double? longitude;
-  final double reward;
+  /// 任务金额；null 表示待报价（由接单者报价/议价）
+  final double? reward;
   final String currency;
   final List<String> images;
   final DateTime? deadline;
@@ -627,7 +643,7 @@ class CreateTaskRequest {
       if (location != null) 'location': location,
       if (latitude != null) 'latitude': latitude,
       if (longitude != null) 'longitude': longitude,
-      'reward': reward,
+      if (reward != null) 'reward': reward,
       'currency': currency,
       'images': images,
       if (deadline != null) 'deadline': deadline!.toIso8601String(),

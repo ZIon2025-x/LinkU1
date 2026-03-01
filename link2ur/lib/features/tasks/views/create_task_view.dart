@@ -96,6 +96,7 @@ class _CreateTaskContentState extends State<_CreateTaskContent> {
   String _selectedCurrency = 'GBP';
   DateTime? _deadline;
   bool _isPublic = true;
+  bool _rewardToBeQuoted = false;
   final List<XFile> _selectedImages = [];
   bool _isUploadingImages = false;
   final _imagePicker = ImagePicker();
@@ -186,7 +187,18 @@ class _CreateTaskContentState extends State<_CreateTaskContent> {
       return;
     }
 
-    final reward = double.tryParse(_rewardController.text) ?? 0;
+    final reward = _rewardToBeQuoted
+        ? null
+        : (double.tryParse(_rewardController.text) ?? 0.0);
+    if (!_rewardToBeQuoted && (reward == null || reward < 1.0)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(context.l10n.validatorAmountMin(1.0)),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
 
     final List<String> imageUrls = [];
     if (_selectedImages.isNotEmpty) {
@@ -288,33 +300,48 @@ class _CreateTaskContentState extends State<_CreateTaskContent> {
                 AppSpacing.vMd,
 
                 _buildSectionTitle(context.l10n.createTaskReward),
-                Row(
-                  children: [
-                    Expanded(
-                      child: TextFormField(
-                        controller: _rewardController,
-                        decoration: InputDecoration(
-                          hintText: '0.00',
-                          prefixText: context.l10n.commonCurrencySymbol,
-                        ),
-                        keyboardType: const TextInputType.numberWithOptions(
-                            decimal: true),
-                        validator: (v) => Validators.validateAmount(v, l10n: context.l10n),
-                      ),
-                    ),
-                    AppSpacing.hMd,
-                    const Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 8),
-                      child: Text(
-                        'GBP',
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-                  ],
+                CheckboxListTile(
+                  value: _rewardToBeQuoted,
+                  onChanged: (v) => setState(() => _rewardToBeQuoted = v ?? false),
+                  title: Text(
+                    context.l10n.createTaskRewardToBeQuoted,
+                    style: Theme.of(context).textTheme.bodyMedium,
+                  ),
+                  controlAffinity: ListTileControlAffinity.leading,
+                  contentPadding: EdgeInsets.zero,
                 ),
+                if (!_rewardToBeQuoted)
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextFormField(
+                          controller: _rewardController,
+                          decoration: InputDecoration(
+                            hintText: '0.00',
+                            prefixText: context.l10n.commonCurrencySymbol,
+                          ),
+                          keyboardType: const TextInputType.numberWithOptions(
+                              decimal: true),
+                          validator: (v) => Validators.validateAmount(
+                            v,
+                            l10n: context.l10n,
+                            min: 1.0,
+                          ),
+                        ),
+                      ),
+                      AppSpacing.hMd,
+                      const Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 8),
+                        child: Text(
+                          'GBP',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 AppSpacing.vLg,
 
                 _buildSectionTitle(context.l10n.createTaskLocation),

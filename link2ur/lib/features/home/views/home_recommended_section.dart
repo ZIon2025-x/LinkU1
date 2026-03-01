@@ -1033,7 +1033,19 @@ class _DesktopTaskCardState extends State<_DesktopTaskCard> {
                             ),
                           ] else
                             const Spacer(),
-                          if (task.reward > 0)
+                          if (task.isPriceToBeQuoted)
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                              decoration: BoxDecoration(
+                                color: AppColors.textSecondary.withValues(alpha: 0.2),
+                                borderRadius: BorderRadius.circular(999),
+                              ),
+                              child: Text(
+                                context.l10n.taskRewardToBeQuoted,
+                                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary),
+                              ),
+                            )
+                          else if (task.reward > 0)
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                               decoration: BoxDecoration(

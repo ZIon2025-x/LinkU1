@@ -962,8 +962,25 @@ class _TaskCard extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(width: 8),
-                      // 价格标签（对标iOS绿色Capsule）
-                      if (task.reward > 0)
+                      // 价格标签（对标iOS绿色Capsule）；待报价显示「待报价」
+                      if (task.isPriceToBeQuoted)
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: AppColors.textSecondary.withValues(alpha: 0.2),
+                            borderRadius: AppRadius.allPill,
+                          ),
+                          child: Text(
+                            context.l10n.taskRewardToBeQuoted,
+                            style: const TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.textSecondary,
+                            ),
+                          ),
+                        )
+                      else if (task.reward > 0)
                         Container(
                           padding: const EdgeInsets.symmetric(
                               horizontal: 8, vertical: 4),

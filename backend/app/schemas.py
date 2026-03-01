@@ -352,6 +352,7 @@ class TaskBase(BaseModel):
 
 
 class TaskCreate(TaskBase):
+    reward: Optional[float] = Field(None, ge=0.0, le=50000.0, description="任务金额；不传或为 null 表示待报价")  # 覆盖 TaskBase：允许不填，表示待报价
     is_public: Optional[int] = 1  # 1=public, 0=private (仅自己可见)
     images: Optional[List[str]] = None  # 图片URL列表
     task_source: Optional[str] = "normal"  # normal / user_profile
@@ -359,8 +360,8 @@ class TaskCreate(TaskBase):
     
     @validator('reward')
     def validate_reward_minimum(cls, v):
-        """创建新任务时，reward必须>=1.0"""
-        if v < 1.0:
+        """创建新任务时：不填表示待报价；若填写则必须>=1.0"""
+        if v is not None and v < 1.0:
             raise ValueError('任务金额必须至少为1镑')
         return v
     
@@ -429,6 +430,8 @@ class TaskOut(TaskBase):
     user_application_status: Optional[str] = None  # pending / approved / rejected
     # 任务完成证据（接单者标记完成时上传的图片/文件与文字说明，仅当任务已标记完成时由详情接口填充）
     completion_evidence: Optional[List[Dict[str, Any]]] = None
+    # 是否待报价（发布时未填金额，由接单者报价/议价）
+    reward_to_be_quoted: Optional[bool] = False
 
     @validator('images', pre=True)
     def parse_images(cls, v):
@@ -638,6 +641,7 @@ class TaskOut(TaskBase):
             "has_applied": getattr(obj, 'has_applied', None),
             "user_application_status": getattr(obj, 'user_application_status', None),
             "completion_evidence": getattr(obj, 'completion_evidence', None),  # 任务完成证据（由详情接口在 setattr 后填充）
+            "reward_to_be_quoted": getattr(obj, 'reward_to_be_quoted', False),
         }
         # 平台服务费展示（比例 + 金额，按任务来源/类型计算）
         from app.utils.fee_calculator import get_platform_fee_display
