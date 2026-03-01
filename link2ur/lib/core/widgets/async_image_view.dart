@@ -102,8 +102,8 @@ class AsyncImageView extends StatelessWidget {
 
   Widget _buildPlaceholder(BuildContext context) {
     return Container(
-      width: width,
-      height: height,
+      width: width ?? double.infinity,
+      height: height ?? double.infinity,
       decoration: BoxDecoration(
         color: AppColors.skeletonBase,
         borderRadius: borderRadius,
@@ -120,8 +120,8 @@ class AsyncImageView extends StatelessWidget {
 
   Widget _buildError(BuildContext context) {
     return Container(
-      width: width,
-      height: height,
+      width: width ?? double.infinity,
+      height: height ?? double.infinity,
       decoration: BoxDecoration(
         color: AppColors.skeletonBase,
         borderRadius: borderRadius,

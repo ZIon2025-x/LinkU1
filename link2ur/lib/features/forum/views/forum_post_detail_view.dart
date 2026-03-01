@@ -170,7 +170,54 @@ class _ForumPostDetailViewState extends State<ForumPostDetailView> {
         resizeToAvoidBottomInset: true,
         backgroundColor: AppColors.backgroundFor(Theme.of(context).brightness),
         appBar: AppBar(
-          title: Text(context.l10n.forumPostDetail),
+          titleSpacing: 0,
+          title: BlocBuilder<ForumBloc, ForumState>(
+            buildWhen: (prev, curr) => prev.selectedPost != curr.selectedPost,
+            builder: (context, state) {
+              final post = state.selectedPost;
+              if (post == null) return Text(context.l10n.forumPostDetail);
+              return GestureDetector(
+                onTap: () {
+                  final userId = post.author?.id ?? post.authorId;
+                  if (userId.isNotEmpty) context.goToUserProfile(userId);
+                },
+                child: Row(
+                  children: [
+                    AvatarView(
+                      imageUrl: post.author?.avatar,
+                      name: post.author?.name,
+                      size: 32,
+                      isAnonymous: post.author == null,
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            post.author?.name ?? context.l10n.forumUserFallback(post.authorId),
+                            style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          Text(
+                            _PostHeader.formatTime(context, post.createdAt),
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: Theme.of(context).brightness == Brightness.dark
+                                  ? AppColors.textTertiaryDark
+                                  : AppColors.textTertiaryLight,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
           actions: [
             IconButton(
               icon: const Icon(Icons.share_outlined),
@@ -304,7 +351,13 @@ class _ForumPostDetailViewState extends State<ForumPostDetailView> {
             return CustomScrollView(
               keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
               slivers: [
-                // 帖子头部 + 内容 + 图片（1-2张）
+                // 图片轮播（顶部）
+                if (post.images.isNotEmpty)
+                  SliverToBoxAdapter(
+                    child: _PostImageCarousel(images: post.images),
+                  ),
+
+                // 帖子头部 + 内容
                 SliverToBoxAdapter(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -312,8 +365,6 @@ class _ForumPostDetailViewState extends State<ForumPostDetailView> {
                       _PostHeader(post: post, isDark: isDark),
                       const Divider(height: 1),
                       _PostContent(post: post, isDark: isDark),
-                      if (post.images.isNotEmpty)
-                        _PostImageRow(images: post.images),
                       if (post.attachments.isNotEmpty ||
                           (post.linkedItemType != null &&
                               post.linkedItemType!.isNotEmpty &&
@@ -613,15 +664,25 @@ class _PostHeader extends StatelessWidget {
   final ForumPost post;
   final bool isDark;
 
+  static String formatTime(BuildContext context, DateTime? time) {
+    if (time == null) return '';
+    final now = DateTime.now();
+    final difference = now.difference(time);
+    if (difference.inDays > 0) return context.l10n.timeDaysAgo(difference.inDays);
+    if (difference.inHours > 0) return context.l10n.timeHoursAgo(difference.inHours);
+    if (difference.inMinutes > 0) return context.l10n.timeMinutesAgo(difference.inMinutes);
+    return context.l10n.timeJustNow;
+  }
+
   @override
   Widget build(BuildContext context) {
     final locale = Localizations.localeOf(context);
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
+      padding: const EdgeInsets.fromLTRB(20, 12, 20, 12),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // 标签行 - 对标iOS tags (pinned, category)
+          // 标签行 (pinned, category)
           if (post.isPinned || post.category != null)
             Padding(
               padding: const EdgeInsets.only(bottom: 10),
@@ -635,7 +696,7 @@ class _PostHeader extends StatelessWidget {
                       color: AppColors.error,
                       icon: Icons.push_pin,
                     ),
-                    if (post.category != null)
+                  if (post.category != null)
                     Container(
                       padding: const EdgeInsets.symmetric(
                           horizontal: AppSpacing.sm, vertical: AppSpacing.xs),
@@ -656,7 +717,7 @@ class _PostHeader extends StatelessWidget {
               ),
             ),
 
-          // 标题 - 对标iOS 22pt bold（双语），可框选复制
+          // 标题
           SelectableText(
             post.displayTitle(locale),
             style: AppTypography.title2.copyWith(
@@ -665,89 +726,9 @@ class _PostHeader extends StatelessWidget {
                   : AppColors.textPrimaryLight,
             ),
           ),
-          const SizedBox(height: 12),
-
-          // 作者行 - 对标iOS author row (avatar + name + time)
-          Row(
-            children: [
-              // 头像 — 点击跳转个人主页
-              GestureDetector(
-                onTap: () {
-                  final userId = post.author?.id ?? post.authorId;
-                  if (userId.isEmpty) return;
-                  context.goToUserProfile(userId);
-                },
-                child: Container(
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.05),
-                        blurRadius: 2,
-                        offset: const Offset(0, 1),
-                      ),
-                    ],
-                  ),
-                  child: AvatarView(
-                    imageUrl: post.author?.avatar,
-                    name: post.author?.name,
-                    size: 44,
-                    isAnonymous: post.author == null,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        GestureDetector(
-                          onTap: () {
-                            final userId = post.author?.id ?? post.authorId;
-                            if (userId.isEmpty) return;
-                            context.goToUserProfile(userId);
-                          },
-                          child: Text(
-                            post.author?.name ?? context.l10n.forumUserFallback(post.authorId),
-                            style: AppTypography.subheadlineBold.copyWith(
-                              color: isDark
-                                  ? AppColors.textPrimaryDark
-                                  : AppColors.textPrimaryLight,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      _formatTime(context, post.createdAt),
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: isDark
-                            ? AppColors.textTertiaryDark
-                            : AppColors.textTertiaryLight,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
         ],
       ),
     );
-  }
-
-  String _formatTime(BuildContext context, DateTime? time) {
-    if (time == null) return '';
-    final now = DateTime.now();
-    final difference = now.difference(time);
-    if (difference.inDays > 0) return context.l10n.timeDaysAgo(difference.inDays);
-    if (difference.inHours > 0) return context.l10n.timeHoursAgo(difference.inHours);
-    if (difference.inMinutes > 0) return context.l10n.timeMinutesAgo(difference.inMinutes);
-    return context.l10n.timeJustNow;
   }
 }
 
@@ -1247,18 +1228,32 @@ class _ReplyCard extends StatelessWidget {
   }
 }
 
-// ==================== 帖子图片区域 ====================
-// 小红书风格：图片宽度撑满，高度按原始比例自适应，不裁剪不变形
+// ==================== 帖子图片轮播 ====================
+// 顶部全宽图片容器，左右滑动切换，带页码指示器，点击全屏查看
 
-class _PostImageRow extends StatelessWidget {
-  const _PostImageRow({required this.images});
+class _PostImageCarousel extends StatefulWidget {
+  const _PostImageCarousel({required this.images});
   final List<String> images;
+
+  @override
+  State<_PostImageCarousel> createState() => _PostImageCarouselState();
+}
+
+class _PostImageCarouselState extends State<_PostImageCarousel> {
+  final PageController _pageController = PageController();
+  int _currentPage = 0;
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
 
   void _openFullScreen(BuildContext context, int index) {
     pushWithSwipeBack(
       context,
       FullScreenImageView(
-        images: images,
+        images: widget.images,
         initialIndex: index,
       ),
     );
@@ -1266,53 +1261,56 @@ class _PostImageRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
-      child: Column(
-        children: List.generate(images.length, (index) {
-          return Padding(
-            padding: EdgeInsets.only(bottom: index < images.length - 1 ? 8 : 0),
-            child: GestureDetector(
-              onTap: () => _openFullScreen(context, index),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(12),
-                child: Image.network(
-                  images[index],
-                  width: double.infinity,
-                  fit: BoxFit.fitWidth,
-                  loadingBuilder: (context, child, progress) {
-                    if (progress == null) return child;
-                    return AspectRatio(
-                      aspectRatio: 4 / 3,
-                      child: Container(
-                        color: AppColors.skeletonBase,
-                        child: const Center(
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        ),
-                      ),
-                    );
-                  },
-                  errorBuilder: (context, error, stackTrace) {
-                    return AspectRatio(
-                      aspectRatio: 4 / 3,
-                      child: Container(
-                        color: AppColors.skeletonBase,
-                        child: const Center(
-                          child: Icon(
-                            Icons.broken_image_outlined,
-                            color: AppColors.textTertiaryLight,
-                            size: 32,
-                          ),
-                        ),
-                      ),
-                    );
-                  },
+    final screenWidth = MediaQuery.sizeOf(context).width;
+    final imageHeight = screenWidth * 0.75;
+
+    return Stack(
+      children: [
+        SizedBox(
+          height: imageHeight,
+          child: PageView.builder(
+            controller: _pageController,
+            itemCount: widget.images.length,
+            onPageChanged: (page) => setState(() => _currentPage = page),
+            itemBuilder: (context, index) {
+              return GestureDetector(
+                onTap: () => _openFullScreen(context, index),
+                child: SizedBox.expand(
+                  child: AsyncImageView(
+                    imageUrl: widget.images[index],
+                    width: double.infinity,
+                    height: double.infinity,
+                  ),
                 ),
-              ),
+              );
+            },
+          ),
+        ),
+        if (widget.images.length > 1)
+          Positioned(
+            bottom: 12,
+            left: 0,
+            right: 0,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: List.generate(widget.images.length, (i) {
+                final isActive = i == _currentPage;
+                return AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
+                  width: isActive ? 18 : 6,
+                  height: 6,
+                  margin: const EdgeInsets.symmetric(horizontal: 3),
+                  decoration: BoxDecoration(
+                    color: isActive
+                        ? Colors.white
+                        : Colors.white.withValues(alpha: 0.4),
+                    borderRadius: BorderRadius.circular(3),
+                  ),
+                );
+              }),
             ),
-          );
-        }),
-      ),
+          ),
+      ],
     );
   }
 }
