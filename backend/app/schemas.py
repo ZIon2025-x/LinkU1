@@ -3143,6 +3143,12 @@ class ForumCategoryRequestOut(BaseModel):
         from_attributes = True
 
 
+class ForumCategoryRequestListOut(BaseModel):
+    """板块申请列表（分页，管理员用）"""
+    items: List["ForumCategoryRequestOut"]
+    total: int
+
+
 class ForumCategoryRequestResponse(BaseModel):
     """申请新建板块响应"""
     message: str
@@ -3726,6 +3732,15 @@ class LeaderboardItemListResponse(BaseModel):
 class LeaderboardVoteListResponse(BaseModel):
     """投票记录列表分页响应"""
     items: List[LeaderboardVoteOut]
+    total: int
+    limit: int
+    offset: int
+    has_more: bool
+
+
+class LeaderboardVoteAdminListResponse(BaseModel):
+    """管理员投票记录列表分页响应"""
+    items: List[LeaderboardVoteAdminOut]
     total: int
     limit: int
     offset: int

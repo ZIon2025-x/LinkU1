@@ -1756,7 +1756,7 @@ async def request_new_category(
         )
 
 
-@router.get("/categories/requests", response_model=List[schemas.ForumCategoryRequestOut])
+@router.get("/categories/requests", response_model=schemas.ForumCategoryRequestListOut)
 async def get_category_requests(
     status: Optional[str] = Query(None, pattern="^(pending|approved|rejected)$"),
     page: int = Query(1, ge=1),
@@ -1768,16 +1768,27 @@ async def get_category_requests(
     db: AsyncSession = Depends(get_async_db_dependency),
 ):
     """获取板块申请列表（管理员）"""
+    # 总数（与列表相同筛选条件）
+    count_query = select(func.count()).select_from(models.ForumCategoryRequest)
+    if status:
+        count_query = count_query.where(models.ForumCategoryRequest.status == status)
+    if search:
+        search_term = f"%{search.strip()}%"
+        count_query = count_query.where(
+            or_(
+                models.ForumCategoryRequest.name.ilike(search_term),
+                models.ForumCategoryRequest.requester_id.ilike(search_term)
+            )
+        )
+    count_result = await db.execute(count_query)
+    total = count_result.scalar() or 0
+    # 列表查询（带 options、排序、分页）
     query = select(models.ForumCategoryRequest).options(
         selectinload(models.ForumCategoryRequest.requester),
         selectinload(models.ForumCategoryRequest.admin)
     )
-    
-    # 状态筛选
     if status:
         query = query.where(models.ForumCategoryRequest.status == status)
-    
-    # 搜索功能
     if search:
         search_term = f"%{search.strip()}%"
         query = query.where(
@@ -1786,29 +1797,21 @@ async def get_category_requests(
                 models.ForumCategoryRequest.requester_id.ilike(search_term)
             )
         )
-    
-    # 排序
     if sort_by == "reviewed_at":
         order_col = models.ForumCategoryRequest.reviewed_at
     elif sort_by == "status":
         order_col = models.ForumCategoryRequest.status
     else:
         order_col = models.ForumCategoryRequest.created_at
-    
     if sort_order == "asc":
         query = query.order_by(asc(order_col))
     else:
         query = query.order_by(desc(order_col))
-    
-    # 分页
     offset = (page - 1) * page_size
     query = query.offset(offset).limit(page_size)
-    
     result = await db.execute(query)
     requests = result.scalars().all()
-    
-    # 构建响应，包含申请人和管理员信息
-    response = []
+    items = []
     for req in requests:
         request_dict = {
             "id": req.id,
@@ -1829,9 +1832,8 @@ async def get_category_requests(
             "created_at": req.created_at,
             "updated_at": req.updated_at
         }
-        response.append(schemas.ForumCategoryRequestOut(**request_dict))
-    
-    return response
+        items.append(schemas.ForumCategoryRequestOut(**request_dict))
+    return schemas.ForumCategoryRequestListOut(items=items, total=total)
 
 
 @router.get("/categories/requests/my", response_model=List[schemas.ForumCategoryRequestOut])

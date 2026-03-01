@@ -74,9 +74,8 @@ const LeaderboardManagement: React.FC = () => {
       limit: pageSize,
       ...votesFilter,
     });
-    // 后端返回数组，无 .items
-    const items = Array.isArray(response) ? response : (response.items || []);
-    const total = typeof (response as any)?.total === 'number' ? (response as any).total : (items.length < pageSize ? (page - 1) * pageSize + items.length : page * pageSize + 1);
+    const items = response.items ?? [];
+    const total = typeof response.total === 'number' ? response.total : 0;
     return { data: items, total };
   }, [votesFilter]);
 

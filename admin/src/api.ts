@@ -806,6 +806,10 @@ export const getForumPosts = async (params: {
   page_size?: number;
   sort?: 'latest' | 'last_reply' | 'hot' | 'replies' | 'likes';
   q?: string;
+  /** 管理员筛选：是否已删除 */
+  is_deleted?: boolean;
+  /** 管理员筛选：是否可见 */
+  is_visible?: boolean;
 }) => {
   const res = await api.get('/api/forum/posts', { params });
   return res.data;

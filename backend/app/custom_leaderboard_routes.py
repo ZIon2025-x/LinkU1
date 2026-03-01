@@ -219,7 +219,35 @@ async def get_all_leaderboards_admin(
 
 # ==================== 管理员查看投票记录 ====================
 
-@router.get("/admin/votes", response_model=List[schemas.LeaderboardVoteAdminOut])
+def _votes_admin_base_query(
+    item_id: Optional[int],
+    leaderboard_id: Optional[int],
+    is_anonymous: Optional[bool],
+    keyword: Optional[str],
+):
+    """构建投票记录筛选查询（与 get_votes_admin 条件一致）"""
+    query = select(models.LeaderboardVote)
+    if item_id is not None:
+        query = query.where(models.LeaderboardVote.item_id == item_id)
+    if leaderboard_id is not None:
+        query = query.join(
+            models.LeaderboardItem,
+            models.LeaderboardItem.id == models.LeaderboardVote.item_id
+        ).where(models.LeaderboardItem.leaderboard_id == leaderboard_id)
+    if is_anonymous is not None:
+        query = query.where(models.LeaderboardVote.is_anonymous == is_anonymous)
+    if keyword:
+        keyword_pattern = f"%{keyword.strip()}%"
+        query = query.where(
+            or_(
+                models.LeaderboardVote.comment.ilike(keyword_pattern),
+                models.LeaderboardVote.user_id.ilike(keyword_pattern)
+            )
+        )
+    return query
+
+
+@router.get("/admin/votes", response_model=schemas.LeaderboardVoteAdminListResponse)
 async def get_votes_admin(
     item_id: Optional[int] = Query(None, description="竞品ID筛选"),
     leaderboard_id: Optional[int] = Query(None, description="榜单ID筛选"),
@@ -231,61 +259,40 @@ async def get_votes_admin(
     db: AsyncSession = Depends(get_async_db_dependency),
 ):
     """管理员专用：查看投票记录列表（包含匿名标识，用于审计）"""
-    query = select(models.LeaderboardVote)
-    
-    if item_id:
-        query = query.where(models.LeaderboardVote.item_id == item_id)
-    
-    if leaderboard_id:
-        query = query.join(
-            models.LeaderboardItem,
-            models.LeaderboardItem.id == models.LeaderboardVote.item_id
-        ).where(models.LeaderboardItem.leaderboard_id == leaderboard_id)
-    
-    if is_anonymous is not None:
-        query = query.where(models.LeaderboardVote.is_anonymous == is_anonymous)
-    
-    if keyword:
-        # 清理和验证搜索关键词
+    if keyword is not None:
         keyword = keyword.strip()
-        if len(keyword) < 1:
-            keyword = None
-        elif len(keyword) > 100:
+        if len(keyword) > 100:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="搜索关键词不能超过100个字符"
             )
-        
-        if keyword:
-            keyword_pattern = f"%{keyword}%"
-            query = query.where(
-                or_(
-                    models.LeaderboardVote.comment.ilike(keyword_pattern),
-                    models.LeaderboardVote.user_id.ilike(keyword_pattern)
-                )
-            )
-    
-    query = query.order_by(models.LeaderboardVote.created_at.desc())
-    query = query.offset(offset).limit(limit)
-    
+        if len(keyword) < 1:
+            keyword = None
+    base = _votes_admin_base_query(item_id, leaderboard_id, is_anonymous, keyword)
+    count_result = await db.execute(select(func.count()).select_from(base.subquery()))
+    total = count_result.scalar() or 0
+    query = base.order_by(models.LeaderboardVote.created_at.desc()).offset(offset).limit(limit)
     result = await db.execute(query)
     votes = result.scalars().all()
-    
     votes_out = []
     for vote in votes:
-        vote_dict = {
-            "id": vote.id,
-            "item_id": vote.item_id,
-            "user_id": vote.user_id,
-            "vote_type": vote.vote_type,
-            "comment": vote.comment,
-            "is_anonymous": vote.is_anonymous,
-            "created_at": vote.created_at,
-            "updated_at": vote.updated_at
-        }
-        votes_out.append(vote_dict)
-    
-    return votes_out
+        votes_out.append(schemas.LeaderboardVoteAdminOut(
+            id=vote.id,
+            item_id=vote.item_id,
+            user_id=vote.user_id,
+            vote_type=vote.vote_type,
+            comment=vote.comment,
+            is_anonymous=vote.is_anonymous,
+            created_at=vote.created_at,
+            updated_at=vote.updated_at
+        ))
+    return schemas.LeaderboardVoteAdminListResponse(
+        items=votes_out,
+        total=total,
+        limit=limit,
+        offset=offset,
+        has_more=offset + limit < total
+    )
 
 
 # ==================== 管理员获取竞品列表 ====================
