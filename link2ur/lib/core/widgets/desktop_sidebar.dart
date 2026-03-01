@@ -403,7 +403,8 @@ class DesktopDrawer extends StatelessWidget {
 }
 
 /// 菜单项（对齐 frontend .menu-item 居中大号风格）
-class _MenuItem extends StatefulWidget {
+/// 使用 InkWell 替代 MouseRegion+setState，减少 Web 端 hover 时闪烁
+class _MenuItem extends StatelessWidget {
   const _MenuItem({
     required this.emoji,
     required this.label,
@@ -421,63 +422,54 @@ class _MenuItem extends StatefulWidget {
   final bool isDestructive;
 
   @override
-  State<_MenuItem> createState() => _MenuItemState();
-}
-
-class _MenuItemState extends State<_MenuItem> {
-  bool _isHovered = false;
-
-  @override
   Widget build(BuildContext context) {
-    final textColor = widget.isDestructive
+    final textColor = isDestructive
         ? const Color(0xFFE53E3E)
-        : (widget.isDark
+        : (isDark
             ? DesktopDrawer._menuItemColorDark
             : DesktopDrawer._menuItemColor);
 
-    final hoverBg = widget.isDestructive
+    final hoverColor = isDestructive
         ? const Color(0xFFFED7D7)
-        : (widget.isDark
+        : (isDark
             ? Colors.white.withValues(alpha: 0.04)
             : const Color(0xFFF8F9FA));
 
-    return MouseRegion(
-      onEnter: (_) => setState(() => _isHovered = true),
-      onExit: (_) => setState(() => _isHovered = false),
-      cursor: SystemMouseCursors.click,
-      child: GestureDetector(
-        onTap: widget.onTap,
-        child: Container(
-          margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 0),
-          padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 20),
-          decoration: BoxDecoration(
-            color: _isHovered ? hoverBg : Colors.transparent,
-            borderRadius: AppRadius.allMedium,
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Text(
-                widget.emoji,
-                style: const TextStyle(fontSize: 20),
-              ),
-              const SizedBox(width: 14),
-              Flexible(
-                child: Text(
-                  widget.label,
-                  style: TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w600,
-                    color: textColor,
-                  ),
-                  overflow: TextOverflow.ellipsis,
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 0),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          hoverColor: hoverColor,
+          borderRadius: AppRadius.allMedium,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 20),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  emoji,
+                  style: const TextStyle(fontSize: 20),
                 ),
-              ),
-              if (widget.trailing != null) ...[
-                const SizedBox(width: 8),
-                widget.trailing!,
+                const SizedBox(width: 14),
+                Flexible(
+                  child: Text(
+                    label,
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                      color: textColor,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                if (trailing != null) ...[
+                  const SizedBox(width: 8),
+                  trailing!,
+                ],
               ],
-            ],
+            ),
           ),
         ),
       ),
@@ -485,8 +477,8 @@ class _MenuItemState extends State<_MenuItem> {
   }
 }
 
-/// Hover 图标按钮
-class _HoverIconButton extends StatefulWidget {
+/// Hover 图标按钮（InkWell 稳定 hover，减少 Web 闪烁）
+class _HoverIconButton extends StatelessWidget {
   const _HoverIconButton({
     required this.icon,
     required this.size,
@@ -500,39 +492,23 @@ class _HoverIconButton extends StatefulWidget {
   final VoidCallback onTap;
 
   @override
-  State<_HoverIconButton> createState() => _HoverIconButtonState();
-}
-
-class _HoverIconButtonState extends State<_HoverIconButton> {
-  bool _isHovered = false;
-
-  @override
   Widget build(BuildContext context) {
-    return MouseRegion(
-      onEnter: (_) => setState(() => _isHovered = true),
-      onExit: (_) => setState(() => _isHovered = false),
-      cursor: SystemMouseCursors.click,
-      child: GestureDetector(
-        onTap: widget.onTap,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 120),
+    final hoverColor = isDark
+        ? Colors.white.withValues(alpha: 0.08)
+        : AppColors.desktopHoverLight;
+    final iconColor = isDark
+        ? AppColors.textSecondaryDark
+        : AppColors.desktopTextLight;
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        hoverColor: hoverColor,
+        borderRadius: AppRadius.allSmall,
+        child: SizedBox(
           width: 44,
           height: 44,
-          decoration: BoxDecoration(
-            color: _isHovered
-                ? (widget.isDark
-                    ? Colors.white.withValues(alpha: 0.08)
-                    : AppColors.desktopHoverLight)
-                : Colors.transparent,
-            borderRadius: AppRadius.allSmall,
-          ),
-          child: Icon(
-            widget.icon,
-            size: widget.size,
-            color: widget.isDark
-                ? AppColors.textSecondaryDark
-                : AppColors.desktopTextLight,
-          ),
+          child: Icon(icon, size: size, color: iconColor),
         ),
       ),
     );

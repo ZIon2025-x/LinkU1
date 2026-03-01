@@ -52,11 +52,19 @@ class ExternalWebView extends StatefulWidget {
   }
 
   /// 便捷方法 - 显示为底部 Sheet（iPad/平板适配）
-  static void showAsSheet(
+  /// Web 平台：直接用浏览器打开，避免 iframe 灰屏
+  static Future<void> showAsSheet(
     BuildContext context, {
     required String url,
     String? title,
-  }) {
+  }) async {
+    if (kIsWeb) {
+      final uri = Uri.tryParse(url);
+      if (uri != null && await canLaunchUrl(uri)) {
+        await launchUrl(uri, mode: LaunchMode.platformDefault);
+      }
+      return;
+    }
     SheetAdaptation.showAdaptiveModalBottomSheet(
       context: context,
       isScrollControlled: true,
