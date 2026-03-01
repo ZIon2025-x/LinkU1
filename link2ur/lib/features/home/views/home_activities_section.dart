@@ -157,7 +157,6 @@ class _RealActivityCard extends StatelessWidget {
                                 imageUrl: image,
                                 width: 280,
                                 height: 160,
-                                fit: BoxFit.cover,
                                 memCacheWidth: 560,
                                 memCacheHeight: 320,
                               )
@@ -657,22 +656,19 @@ class _PostCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // 图片：3:4，宽度铺满，高度按比例写死，避免瀑布流无界高度导致被拉满；cover 裁剪不变形
+            // 图片：3:4，用 LayoutBuilder 算出精确宽高传给 CachedNetworkImage，避免瀑布流无界高度被拉满
             if (item.hasImages)
               LayoutBuilder(
                 builder: (context, constraints) {
                   final w = constraints.maxWidth;
                   final h = w * 4 / 3;
-                  return SizedBox(
-                    width: w,
-                    height: h,
-                    child: ClipRect(
-                      child: AsyncImageView(
-                        imageUrl: item.firstImage!,
-                        fit: BoxFit.cover,
-                        memCacheWidth: 360,
-                        memCacheHeight: 480,
-                      ),
+                  return ClipRect(
+                    child: AsyncImageView(
+                      imageUrl: item.firstImage!,
+                      width: w,
+                      height: h,
+                      memCacheWidth: (w * MediaQuery.devicePixelRatioOf(context)).round(),
+                      memCacheHeight: (h * MediaQuery.devicePixelRatioOf(context)).round(),
                     ),
                   );
                 },
@@ -817,18 +813,19 @@ class _ProductCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             if (item.hasImages)
-              AspectRatio(
-                aspectRatio: 1,
-                child: SizedBox.expand(
-                  child: AsyncImageView(
-                    imageUrl: item.firstImage!,
-                    width: double.infinity,
-                    height: double.infinity,
-                    fit: BoxFit.cover,
-                    memCacheWidth: 300,
-                    memCacheHeight: 300,
-                  ),
-                ),
+              LayoutBuilder(
+                builder: (context, constraints) {
+                  final w = constraints.maxWidth;
+                  return ClipRect(
+                    child: AsyncImageView(
+                      imageUrl: item.firstImage!,
+                      width: w,
+                      height: w,
+                      memCacheWidth: (w * MediaQuery.devicePixelRatioOf(context)).round(),
+                      memCacheHeight: (w * MediaQuery.devicePixelRatioOf(context)).round(),
+                    ),
+                  );
+                },
               ),
             Padding(
               padding: const EdgeInsets.all(10),
@@ -1220,20 +1217,20 @@ class _RankingCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             if (item.hasImages)
-              ClipRect(
-                child: AspectRatio(
-                  aspectRatio: 16 / 9,
-                  child: SizedBox.expand(
+              LayoutBuilder(
+                builder: (context, constraints) {
+                  final w = constraints.maxWidth;
+                  final h = w * 9 / 16;
+                  return ClipRect(
                     child: AsyncImageView(
                       imageUrl: item.firstImage!,
-                      width: double.infinity,
-                      height: double.infinity,
-                      fit: BoxFit.cover,
-                      memCacheWidth: 360,
-                      memCacheHeight: 202,
+                      width: w,
+                      height: h,
+                      memCacheWidth: (w * MediaQuery.devicePixelRatioOf(context)).round(),
+                      memCacheHeight: (h * MediaQuery.devicePixelRatioOf(context)).round(),
                     ),
-                  ),
-                ),
+                  );
+                },
               ),
             Padding(
               padding: const EdgeInsets.all(10),
@@ -1368,18 +1365,20 @@ class _ServiceCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             if (item.hasImages)
-              AspectRatio(
-                aspectRatio: 4 / 3,
-                child: SizedBox.expand(
-                  child: AsyncImageView(
-                    imageUrl: item.firstImage!,
-                    width: double.infinity,
-                    height: double.infinity,
-                    fit: BoxFit.cover,
-                    memCacheWidth: 360,
-                    memCacheHeight: 270,
-                  ),
-                ),
+              LayoutBuilder(
+                builder: (context, constraints) {
+                  final w = constraints.maxWidth;
+                  final h = w * 3 / 4;
+                  return ClipRect(
+                    child: AsyncImageView(
+                      imageUrl: item.firstImage!,
+                      width: w,
+                      height: h,
+                      memCacheWidth: (w * MediaQuery.devicePixelRatioOf(context)).round(),
+                      memCacheHeight: (h * MediaQuery.devicePixelRatioOf(context)).round(),
+                    ),
+                  );
+                },
               ),
             Padding(
               padding: const EdgeInsets.all(10),
