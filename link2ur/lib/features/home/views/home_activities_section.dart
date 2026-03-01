@@ -657,18 +657,25 @@ class _PostCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // 图片：3:4，宽度铺满，多出的裁剪；不传 width/height 让父级约束生效，fit: cover 等比例填满不拉伸
+            // 图片：3:4，宽度铺满，高度按比例写死，避免瀑布流无界高度导致被拉满；cover 裁剪不变形
             if (item.hasImages)
-              AspectRatio(
-                aspectRatio: 3 / 4,
-                child: ClipRect(
-                  child: AsyncImageView(
-                    imageUrl: item.firstImage!,
-                    fit: BoxFit.cover,
-                    memCacheWidth: 360,
-                    memCacheHeight: 480,
-                  ),
-                ),
+              LayoutBuilder(
+                builder: (context, constraints) {
+                  final w = constraints.maxWidth;
+                  final h = w * 4 / 3;
+                  return SizedBox(
+                    width: w,
+                    height: h,
+                    child: ClipRect(
+                      child: AsyncImageView(
+                        imageUrl: item.firstImage!,
+                        fit: BoxFit.cover,
+                        memCacheWidth: 360,
+                        memCacheHeight: 480,
+                      ),
+                    ),
+                  );
+                },
               ),
             // 文字内容
             Padding(
