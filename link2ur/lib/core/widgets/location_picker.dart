@@ -20,7 +20,7 @@ class LocationInputField extends StatefulWidget {
     this.initialLongitude,
     this.onChanged,
     this.onLocationPicked,
-    this.hintText = '输入地址或选择当前位置',
+    this.hintText,
     this.showOnlineOption = true,
   });
 
@@ -32,7 +32,7 @@ class LocationInputField extends StatefulWidget {
   /// 地图选点回调，返回完整的位置信息（地址、纬度、经度）
   final void Function(String address, double? latitude, double? longitude)?
       onLocationPicked;
-  final String hintText;
+  final String? hintText;
   final bool showOnlineOption;
 
   @override
@@ -83,8 +83,11 @@ class _LocationInputFieldState extends State<LocationInputField> {
   }
 
   /// 逆地理失败时的后备文案（仍显示坐标，但标注为“已获取坐标”）
-  static String _fallbackCoordinateText(double lat, double lng) {
-    return '已获取坐标 (${lat.toStringAsFixed(4)}, ${lng.toStringAsFixed(4)})';
+  String _fallbackCoordinateText(double lat, double lng) {
+    return context.l10n.locationFallbackCoordinates(
+      lat.toStringAsFixed(4),
+      lng.toStringAsFixed(4),
+    );
   }
 
   Future<void> _getCurrentLocation() async {
@@ -109,7 +112,7 @@ class _LocationInputFieldState extends State<LocationInputField> {
         if (mounted) {
           PermissionManager.showPermissionDeniedDialog(
             context,
-            permissionName: '位置',
+            permissionName: context.l10n.locationPermissionName,
             isPermanentlyDenied: permission == LocationPermission.deniedForever,
           );
         }
@@ -170,11 +173,12 @@ class _LocationInputFieldState extends State<LocationInputField> {
   }
 
   void _selectOnline() {
-    _controller.text = 'Online';
+    final onlineText = context.l10n.locationOnline;
+    _controller.text = onlineText;
     _latitude = null;
     _longitude = null;
-    widget.onChanged?.call('Online');
-    widget.onLocationPicked?.call('Online', null, null);
+    widget.onChanged?.call(onlineText);
+    widget.onLocationPicked?.call(onlineText, null, null);
   }
 
   /// 打开原生地图选点页面
@@ -214,7 +218,7 @@ class _LocationInputFieldState extends State<LocationInputField> {
         TextField(
           controller: _controller,
           decoration: InputDecoration(
-            hintText: widget.hintText,
+            hintText: widget.hintText ?? context.l10n.locationInputHint,
             prefixIcon:
                 const Icon(Icons.location_on_outlined, color: AppColors.primary),
             suffixIcon: _isLoadingLocation
@@ -230,7 +234,7 @@ class _LocationInputFieldState extends State<LocationInputField> {
                     icon: const Icon(Icons.my_location),
                     onPressed: _getCurrentLocation,
                     color: AppColors.primary,
-                    tooltip: '获取当前位置',
+                    tooltip: context.l10n.locationGetCurrentPosition,
                   ),
             border: OutlineInputBorder(
               borderRadius: AppRadius.allMedium,
@@ -260,21 +264,21 @@ class _LocationInputFieldState extends State<LocationInputField> {
             // 地图选点按钮
             _LocationChip(
               icon: Icons.map_outlined,
-              label: '地图选点',
+              label: context.l10n.locationMapPicker,
               onTap: _openMapPicker,
             ),
             AppSpacing.hSm,
             if (widget.showOnlineOption) ...[
               _LocationChip(
                 icon: Icons.wifi,
-                label: '线上',
+                label: context.l10n.locationOnline,
                 onTap: _selectOnline,
               ),
               AppSpacing.hSm,
             ],
             _LocationChip(
               icon: Icons.my_location,
-              label: '当前位置',
+              label: context.l10n.locationCurrentPosition,
               onTap: _getCurrentLocation,
             ),
           ],
@@ -364,7 +368,7 @@ class TaskLocationDetailView extends StatelessWidget {
                     Icon(Icons.map, size: 48, color: AppColors.primary.withValues(alpha: 0.6)),
                     AppSpacing.vSm,
                     Text(
-                      '点击在地图中查看',
+                      context.l10n.locationTapToViewInMap,
                       style: TextStyle(
                         fontSize: 14,
                         color: AppColors.primary.withValues(alpha: 0.8),
@@ -423,7 +427,7 @@ class TaskLocationDetailView extends StatelessWidget {
                   if (latitude != null && longitude != null) ...[
                     AppSpacing.vSm,
                     Text(
-                      '坐标: ${latitude!.toStringAsFixed(6)}, ${longitude!.toStringAsFixed(6)}',
+                      context.l10n.locationCoordinates(latitude!.toStringAsFixed(6), longitude!.toStringAsFixed(6)),
                       style: const TextStyle(
                         fontSize: 12,
                         color: AppColors.textTertiaryLight,
@@ -442,7 +446,7 @@ class TaskLocationDetailView extends StatelessWidget {
                   child: OutlinedButton.icon(
                     onPressed: () => _openMaps(context, 'google'),
                     icon: const Icon(Icons.map_outlined),
-                    label: const Text('Google Maps'),
+                    label: Text(context.l10n.locationGoogleMaps),
                   ),
                 ),
                 AppSpacing.hMd,
@@ -450,7 +454,7 @@ class TaskLocationDetailView extends StatelessWidget {
                   child: OutlinedButton.icon(
                     onPressed: () => _openMaps(context, 'apple'),
                     icon: const Icon(Icons.navigation_outlined),
-                    label: const Text('Apple Maps'),
+                    label: Text(context.l10n.taskLocationAppleMaps),
                   ),
                 ),
               ],
@@ -500,7 +504,7 @@ class TaskLocationDetailView extends StatelessWidget {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
                 content: Text(
-                    '无法打开${provider == 'google' ? 'Google' : 'Apple'} Maps')),
+                    context.l10n.locationOpenMapsFailed(provider == 'google' ? 'Google' : 'Apple'))),
           );
         }
       }

@@ -221,7 +221,6 @@ class ForumRepository {
     final response = await _apiService.uploadFile<Map<String, dynamic>>(
       ApiEndpoints.uploadForumFile,
       filePath: filePath,
-      fieldName: 'file',
     );
 
     if (!response.isSuccess || response.data == null) {

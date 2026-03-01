@@ -8,6 +8,7 @@ import 'package:image_picker/image_picker.dart';
 import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_radius.dart';
+import '../../../core/utils/error_localizer.dart';
 import '../../../core/utils/l10n_extension.dart';
 import '../../../core/widgets/app_feedback.dart';
 import '../../../core/widgets/async_image_view.dart';
@@ -104,7 +105,6 @@ class _EditPostViewState extends State<EditPostView> {
       final result = await FilePicker.platform.pickFiles(
         type: FileType.custom,
         allowedExtensions: ['pdf'],
-        allowMultiple: false,
       );
       if (result != null && result.files.isNotEmpty && mounted) {
         final f = result.files.first;
@@ -216,7 +216,7 @@ class _EditPostViewState extends State<EditPostView> {
           (curr.errorMessage != null && prev.errorMessage != curr.errorMessage),
       listener: (context, state) {
         if (state.errorMessage != null) {
-          AppFeedback.showError(context, state.errorMessage!);
+          AppFeedback.showError(context, context.localizeError(state.errorMessage));
           return;
         }
         if (state.selectedPost?.id == widget.postId) {
@@ -298,7 +298,7 @@ class _EditPostViewState extends State<EditPostView> {
           _buildImageSection(isDark),
           AppSpacing.vMd,
           Text(
-            'PDF 附件（${_hasPdf ? '1' : '0'}/1）',
+            context.l10n.forumPdfAttachmentCount(_hasPdf ? '1' : '0', '1'),
             style: TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.w600,
@@ -448,27 +448,30 @@ class _EditPostViewState extends State<EditPostView> {
     }
 
     // 无附件时显示添加按钮
-    return GestureDetector(
-      onTap: _pickPdf,
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 14),
-        decoration: BoxDecoration(
-          color: isDark ? Colors.white.withValues(alpha: 0.06) : Colors.grey.shade50,
-          borderRadius: AppRadius.allSmall,
-          border: Border.all(
-            color: isDark
-                ? Colors.white.withValues(alpha: 0.12)
-                : AppColors.textTertiaryLight.withValues(alpha: 0.4),
-            style: BorderStyle.solid,
+    return Semantics(
+      button: true,
+      label: context.l10n.forumPdfAddPdf,
+      child: GestureDetector(
+        onTap: _pickPdf,
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 14),
+          decoration: BoxDecoration(
+            color: isDark ? Colors.white.withValues(alpha: 0.06) : Colors.grey.shade50,
+            borderRadius: AppRadius.allSmall,
+            border: Border.all(
+              color: isDark
+                  ? Colors.white.withValues(alpha: 0.12)
+                  : AppColors.textTertiaryLight.withValues(alpha: 0.4),
+            ),
           ),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.attach_file, size: 20, color: primary),
-            const SizedBox(width: 6),
-            Text('添加 PDF', style: TextStyle(fontSize: 14, color: primary)),
-          ],
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.attach_file, size: 20, color: primary),
+              const SizedBox(width: 6),
+              Text(context.l10n.forumPdfAddPdf, style: TextStyle(fontSize: 14, color: primary)),
+            ],
+          ),
         ),
       ),
     );
@@ -519,13 +522,13 @@ class _EditPostViewState extends State<EditPostView> {
           ),
           IconButton(
             icon: const Icon(Icons.swap_horiz, size: 20),
-            tooltip: '更换',
+            tooltip: context.l10n.forumPdfReplace,
             onPressed: onReplace,
             visualDensity: VisualDensity.compact,
           ),
           IconButton(
             icon: const Icon(Icons.close, size: 20, color: AppColors.error),
-            tooltip: '删除',
+            tooltip: context.l10n.commonDelete,
             onPressed: onRemove,
             visualDensity: VisualDensity.compact,
           ),

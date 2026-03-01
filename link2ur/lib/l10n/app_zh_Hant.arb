@@ -4061,5 +4061,80 @@
   "profilePhoneUnchanged": "請輸入不同的手機號碼",
   "profileEmailCodeRequired": "請輸入信箱驗證碼",
   "profilePhoneCodeRequired": "請輸入手機驗證碼",
-  "profileNormalizePhoneHint": "英國格式: 07XXX 或 +44XXX"
+  "profileNormalizePhoneHint": "英國格式: 07XXX 或 +44XXX",
+
+  "forumPdfPreviewTitle": "PDF 預覽",
+  "forumPdfContentEmpty": "PDF 內容為空",
+  "forumPdfLoadFailed": "載入 PDF 失敗: {error}",
+  "@forumPdfLoadFailed": {
+    "placeholders": {
+      "error": { "type": "String" }
+    }
+  },
+  "forumPdfUrlMissing": "缺少 PDF 地址",
+  "forumPdfAttachmentCount": "PDF 附件（{current}/{max}）",
+  "@forumPdfAttachmentCount": {
+    "placeholders": {
+      "current": { "type": "String" },
+      "max": { "type": "String" }
+    }
+  },
+  "forumPdfAddPdf": "新增 PDF",
+  "forumPdfReplace": "更換",
+  "forumAttachmentOpenFailed": "無法開啟檔案: {error}",
+  "@forumAttachmentOpenFailed": {
+    "placeholders": {
+      "error": { "type": "String" }
+    }
+  },
+  "forumFileAttachmentCount": "檔案附件（{current}/{max}）",
+  "@forumFileAttachmentCount": {
+    "placeholders": {
+      "current": { "type": "String" },
+      "max": { "type": "String" }
+    }
+  },
+  "forumFileAddFile": "新增檔案（PDF）",
+  "forumInvalidPostId": "無效的文章 ID",
+  "forumInvalidPostOrData": "文章無效或缺少資料",
+  "forumPdfAttachmentOptional": "PDF 附件（選填，最多 1 個）",
+  "publishImagesOptional": "圖片（選填，最多 {max} 張）",
+  "@publishImagesOptional": {
+    "placeholders": {
+      "max": { "type": "String" }
+    }
+  },
+  "publishRelatedContentOptional": "關聯內容（選填，可關聯服務/活動/商品/排行榜等）",
+  "aiChatLoadConversationsFailed": "載入對話清單失敗",
+  "aiChatCreateConversationFailed": "建立對話失敗",
+  "aiChatLoadHistoryFailed": "載入訊息紀錄失敗",
+  "aiChatCreateConversationRetry": "建立對話失敗，請重試",
+  "commonUnknownError": "未知錯誤",
+  "locationInputHint": "輸入地址或選擇目前位置",
+  "locationPermissionName": "位置",
+  "locationFallbackCoordinates": "已取得座標 ({lat}, {lng})",
+  "@locationFallbackCoordinates": {
+    "placeholders": {
+      "lat": { "type": "String" },
+      "lng": { "type": "String" }
+    }
+  },
+  "locationOnline": "線上",
+  "locationGetCurrentPosition": "取得目前位置",
+  "locationMapPicker": "地圖選點",
+  "locationCurrentPosition": "目前位置",
+  "locationTapToViewInMap": "點擊在地圖中查看",
+  "locationCoordinates": "座標: {lat}, {lng}",
+  "@locationCoordinates": {
+    "placeholders": {
+      "lat": { "type": "String" },
+      "lng": { "type": "String" }
+    }
+  },
+  "locationOpenMapsFailed": "無法開啟{provider} Maps",
+  "@locationOpenMapsFailed": {
+    "placeholders": {
+      "provider": { "type": "String" }
+    }
+  }
 }

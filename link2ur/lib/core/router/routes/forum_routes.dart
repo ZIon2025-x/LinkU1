@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../l10n/app_localizations.dart';
+
 import '../app_routes.dart';
 import '../page_transitions.dart';
 import '../../../data/repositories/forum_repository.dart';
@@ -63,8 +65,8 @@ List<RouteBase> get forumRoutes => [
             return platformDetailPage(
               context,
               key: state.pageKey,
-              child: const Scaffold(
-                body: Center(child: Text('缺少 PDF 地址')),
+              child: Scaffold(
+                body: Center(child: Text(AppLocalizations.of(context)?.forumPdfUrlMissing ?? 'Missing PDF URL')),
               ),
             );
           }
@@ -84,8 +86,8 @@ List<RouteBase> get forumRoutes => [
             return platformDetailPage(
               context,
               key: state.pageKey,
-              child: const Scaffold(
-                  body: Center(child: Text('Invalid post ID'))),
+              child: Scaffold(
+                  body: Center(child: Text(AppLocalizations.of(context)?.forumInvalidPostId ?? 'Invalid post ID'))),
             );
           }
           return platformDetailPage(
@@ -106,8 +108,8 @@ List<RouteBase> get forumRoutes => [
           if (id == null || id <= 0 || post == null || bloc == null) {
             return SlideUpTransitionPage(
               key: state.pageKey,
-              child: const Scaffold(
-                body: Center(child: Text('Invalid post or missing data')),
+              child: Scaffold(
+                body: Center(child: Text(AppLocalizations.of(context)?.forumInvalidPostOrData ?? 'Invalid post or missing data')),
               ),
             );
           }

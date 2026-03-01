@@ -9087,4 +9087,112 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get profileNormalizePhoneHint => 'UK format: 07XXX or +44XXX';
+
+  @override
+  String get forumPdfPreviewTitle => 'PDF Preview';
+
+  @override
+  String get forumPdfContentEmpty => 'PDF content is empty';
+
+  @override
+  String forumPdfLoadFailed(String error) {
+    return 'Failed to load PDF: $error';
+  }
+
+  @override
+  String get forumPdfUrlMissing => 'Missing PDF URL';
+
+  @override
+  String forumPdfAttachmentCount(String current, String max) {
+    return 'PDF Attachment ($current/$max)';
+  }
+
+  @override
+  String get forumPdfAddPdf => 'Add PDF';
+
+  @override
+  String get forumPdfReplace => 'Replace';
+
+  @override
+  String forumAttachmentOpenFailed(String error) {
+    return 'Cannot open file: $error';
+  }
+
+  @override
+  String forumFileAttachmentCount(String current, String max) {
+    return 'File Attachment ($current/$max)';
+  }
+
+  @override
+  String get forumFileAddFile => 'Add File (PDF)';
+
+  @override
+  String get forumInvalidPostId => 'Invalid post ID';
+
+  @override
+  String get forumInvalidPostOrData => 'Invalid post or missing data';
+
+  @override
+  String get forumPdfAttachmentOptional => 'PDF Attachment (optional, max 1)';
+
+  @override
+  String publishImagesOptional(String max) {
+    return 'Images (optional, max $max)';
+  }
+
+  @override
+  String get publishRelatedContentOptional =>
+      'Related Content (optional, e.g. services, activities, products, etc.)';
+
+  @override
+  String get aiChatLoadConversationsFailed => 'Failed to load conversations';
+
+  @override
+  String get aiChatCreateConversationFailed => 'Failed to create conversation';
+
+  @override
+  String get aiChatLoadHistoryFailed => 'Failed to load message history';
+
+  @override
+  String get aiChatCreateConversationRetry =>
+      'Failed to create conversation, please retry';
+
+  @override
+  String get commonUnknownError => 'Unknown error';
+
+  @override
+  String get locationInputHint => 'Enter address or pick current location';
+
+  @override
+  String get locationPermissionName => 'Location';
+
+  @override
+  String locationFallbackCoordinates(String lat, String lng) {
+    return 'Coordinates obtained ($lat, $lng)';
+  }
+
+  @override
+  String get locationOnline => 'Online';
+
+  @override
+  String get locationGetCurrentPosition => 'Get current location';
+
+  @override
+  String get locationMapPicker => 'Pick on Map';
+
+  @override
+  String get locationCurrentPosition => 'Current Location';
+
+  @override
+  String get locationTapToViewInMap => 'Tap to view in map';
+
+  @override
+  String locationCoordinates(String lat, String lng) {
+    return 'Coordinates: $lat, $lng';
+  }
+
+  @override
+  String locationOpenMapsFailed(String provider) {
+    return 'Cannot open $provider Maps';
+  }
 }

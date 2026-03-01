@@ -40,6 +40,31 @@ void main() {
       );
     });
 
+    testWidgets('returns localized message for AI chat error codes',
+        (tester) async {
+      await tester.pumpWidget(
+        buildContext(
+          Builder(
+            builder: (context) {
+              for (final code in [
+                'ai_chat_load_conversations_failed',
+                'ai_chat_create_conversation_failed',
+                'ai_chat_load_history_failed',
+                'ai_chat_create_conversation_retry',
+                'unknown_error',
+              ]) {
+                final result = ErrorLocalizer.localize(context, code);
+                expect(result, isNotEmpty, reason: 'code=$code should resolve');
+                expect(result, isNot(equals(code)),
+                    reason: 'code=$code should NOT be returned as-is');
+              }
+              return const SizedBox();
+            },
+          ),
+        ),
+      );
+    });
+
     testWidgets('returns message as-is for unknown codes', (tester) async {
       await tester.pumpWidget(
         buildContext(
@@ -50,6 +75,37 @@ void main() {
                 ErrorLocalizer.localize(context, customMsg),
                 customMsg,
               );
+              return const SizedBox();
+            },
+          ),
+        ),
+      );
+    });
+  });
+
+  group('ErrorLocalizerExtension', () {
+    testWidgets('context.localizeError works as shorthand', (tester) async {
+      await tester.pumpWidget(
+        buildContext(
+          Builder(
+            builder: (context) {
+              final direct = ErrorLocalizer.localize(context, 'error_unknown');
+              final ext = context.localizeError('error_unknown');
+              expect(ext, equals(direct));
+              return const SizedBox();
+            },
+          ),
+        ),
+      );
+    });
+
+    testWidgets('context.localizeError handles null', (tester) async {
+      await tester.pumpWidget(
+        buildContext(
+          Builder(
+            builder: (context) {
+              final result = context.localizeError(null);
+              expect(result, isNotEmpty);
               return const SizedBox();
             },
           ),

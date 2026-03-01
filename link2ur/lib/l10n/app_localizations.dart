@@ -16741,6 +16741,186 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'UK format: 07XXX or +44XXX'**
   String get profileNormalizePhoneHint;
+
+  /// No description provided for @forumPdfPreviewTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'PDF Preview'**
+  String get forumPdfPreviewTitle;
+
+  /// No description provided for @forumPdfContentEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'PDF content is empty'**
+  String get forumPdfContentEmpty;
+
+  /// No description provided for @forumPdfLoadFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to load PDF: {error}'**
+  String forumPdfLoadFailed(String error);
+
+  /// No description provided for @forumPdfUrlMissing.
+  ///
+  /// In en, this message translates to:
+  /// **'Missing PDF URL'**
+  String get forumPdfUrlMissing;
+
+  /// No description provided for @forumPdfAttachmentCount.
+  ///
+  /// In en, this message translates to:
+  /// **'PDF Attachment ({current}/{max})'**
+  String forumPdfAttachmentCount(String current, String max);
+
+  /// No description provided for @forumPdfAddPdf.
+  ///
+  /// In en, this message translates to:
+  /// **'Add PDF'**
+  String get forumPdfAddPdf;
+
+  /// No description provided for @forumPdfReplace.
+  ///
+  /// In en, this message translates to:
+  /// **'Replace'**
+  String get forumPdfReplace;
+
+  /// No description provided for @forumAttachmentOpenFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Cannot open file: {error}'**
+  String forumAttachmentOpenFailed(String error);
+
+  /// No description provided for @forumFileAttachmentCount.
+  ///
+  /// In en, this message translates to:
+  /// **'File Attachment ({current}/{max})'**
+  String forumFileAttachmentCount(String current, String max);
+
+  /// No description provided for @forumFileAddFile.
+  ///
+  /// In en, this message translates to:
+  /// **'Add File (PDF)'**
+  String get forumFileAddFile;
+
+  /// No description provided for @forumInvalidPostId.
+  ///
+  /// In en, this message translates to:
+  /// **'Invalid post ID'**
+  String get forumInvalidPostId;
+
+  /// No description provided for @forumInvalidPostOrData.
+  ///
+  /// In en, this message translates to:
+  /// **'Invalid post or missing data'**
+  String get forumInvalidPostOrData;
+
+  /// No description provided for @forumPdfAttachmentOptional.
+  ///
+  /// In en, this message translates to:
+  /// **'PDF Attachment (optional, max 1)'**
+  String get forumPdfAttachmentOptional;
+
+  /// No description provided for @publishImagesOptional.
+  ///
+  /// In en, this message translates to:
+  /// **'Images (optional, max {max})'**
+  String publishImagesOptional(String max);
+
+  /// No description provided for @publishRelatedContentOptional.
+  ///
+  /// In en, this message translates to:
+  /// **'Related Content (optional, e.g. services, activities, products, etc.)'**
+  String get publishRelatedContentOptional;
+
+  /// No description provided for @aiChatLoadConversationsFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to load conversations'**
+  String get aiChatLoadConversationsFailed;
+
+  /// No description provided for @aiChatCreateConversationFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to create conversation'**
+  String get aiChatCreateConversationFailed;
+
+  /// No description provided for @aiChatLoadHistoryFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to load message history'**
+  String get aiChatLoadHistoryFailed;
+
+  /// No description provided for @aiChatCreateConversationRetry.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to create conversation, please retry'**
+  String get aiChatCreateConversationRetry;
+
+  /// No description provided for @commonUnknownError.
+  ///
+  /// In en, this message translates to:
+  /// **'Unknown error'**
+  String get commonUnknownError;
+
+  /// No description provided for @locationInputHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter address or pick current location'**
+  String get locationInputHint;
+
+  /// No description provided for @locationPermissionName.
+  ///
+  /// In en, this message translates to:
+  /// **'Location'**
+  String get locationPermissionName;
+
+  /// No description provided for @locationFallbackCoordinates.
+  ///
+  /// In en, this message translates to:
+  /// **'Coordinates obtained ({lat}, {lng})'**
+  String locationFallbackCoordinates(String lat, String lng);
+
+  /// No description provided for @locationOnline.
+  ///
+  /// In en, this message translates to:
+  /// **'Online'**
+  String get locationOnline;
+
+  /// No description provided for @locationGetCurrentPosition.
+  ///
+  /// In en, this message translates to:
+  /// **'Get current location'**
+  String get locationGetCurrentPosition;
+
+  /// No description provided for @locationMapPicker.
+  ///
+  /// In en, this message translates to:
+  /// **'Pick on Map'**
+  String get locationMapPicker;
+
+  /// No description provided for @locationCurrentPosition.
+  ///
+  /// In en, this message translates to:
+  /// **'Current Location'**
+  String get locationCurrentPosition;
+
+  /// No description provided for @locationTapToViewInMap.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap to view in map'**
+  String get locationTapToViewInMap;
+
+  /// No description provided for @locationCoordinates.
+  ///
+  /// In en, this message translates to:
+  /// **'Coordinates: {lat}, {lng}'**
+  String locationCoordinates(String lat, String lng);
+
+  /// No description provided for @locationOpenMapsFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Cannot open {provider} Maps'**
+  String locationOpenMapsFailed(String provider);
 }
 
 class _AppLocalizationsDelegate

@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_spacing.dart';
+import '../../../core/utils/error_localizer.dart';
 import '../../../core/utils/l10n_extension.dart';
 import '../../../core/widgets/animated_list_item.dart';
 import '../../../core/widgets/skeleton_view.dart';
@@ -107,7 +108,7 @@ class _SystemNotificationListState extends State<_SystemNotificationList> {
         if (state.status == NotificationStatus.error &&
             state.notifications.isEmpty) {
           return ErrorStateView.loadFailed(
-            message: state.errorMessage ?? context.l10n.activityLoadFailed,
+            message: context.localizeError(state.errorMessage),
             onRetry: () {
               context.read<NotificationBloc>().add(
                     const NotificationLoadRequested(type: 'system'),
@@ -203,7 +204,7 @@ class _InteractionNotificationListState
         if (state.status == NotificationStatus.error &&
             state.notifications.isEmpty) {
           return ErrorStateView.loadFailed(
-            message: state.errorMessage ?? context.l10n.activityLoadFailed,
+            message: context.localizeError(state.errorMessage),
             onRetry: () {
               context.read<NotificationBloc>().add(
                     const NotificationLoadRequested(type: 'interaction'),

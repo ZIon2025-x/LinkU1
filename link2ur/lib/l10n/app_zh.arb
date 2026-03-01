@@ -4122,5 +4122,80 @@
   "profilePhoneUnchanged": "请输入不同的手机号",
   "profileEmailCodeRequired": "请输入邮箱验证码",
   "profilePhoneCodeRequired": "请输入手机验证码",
-  "profileNormalizePhoneHint": "英国格式: 07XXX 或 +44XXX"
+  "profileNormalizePhoneHint": "英国格式: 07XXX 或 +44XXX",
+
+  "forumPdfPreviewTitle": "PDF 预览",
+  "forumPdfContentEmpty": "PDF 内容为空",
+  "forumPdfLoadFailed": "加载 PDF 失败: {error}",
+  "@forumPdfLoadFailed": {
+    "placeholders": {
+      "error": { "type": "String" }
+    }
+  },
+  "forumPdfUrlMissing": "缺少 PDF 地址",
+  "forumPdfAttachmentCount": "PDF 附件（{current}/{max}）",
+  "@forumPdfAttachmentCount": {
+    "placeholders": {
+      "current": { "type": "String" },
+      "max": { "type": "String" }
+    }
+  },
+  "forumPdfAddPdf": "添加 PDF",
+  "forumPdfReplace": "更换",
+  "forumAttachmentOpenFailed": "无法打开文件: {error}",
+  "@forumAttachmentOpenFailed": {
+    "placeholders": {
+      "error": { "type": "String" }
+    }
+  },
+  "forumFileAttachmentCount": "文件附件（{current}/{max}）",
+  "@forumFileAttachmentCount": {
+    "placeholders": {
+      "current": { "type": "String" },
+      "max": { "type": "String" }
+    }
+  },
+  "forumFileAddFile": "添加文件（PDF）",
+  "forumInvalidPostId": "无效的帖子 ID",
+  "forumInvalidPostOrData": "帖子无效或缺少数据",
+  "forumPdfAttachmentOptional": "PDF 附件（选填，最多 1 个）",
+  "publishImagesOptional": "图片（选填，最多 {max} 张）",
+  "@publishImagesOptional": {
+    "placeholders": {
+      "max": { "type": "String" }
+    }
+  },
+  "publishRelatedContentOptional": "关联内容（选填，可关联服务/活动/商品/排行榜等）",
+  "aiChatLoadConversationsFailed": "加载对话列表失败",
+  "aiChatCreateConversationFailed": "创建对话失败",
+  "aiChatLoadHistoryFailed": "加载消息历史失败",
+  "aiChatCreateConversationRetry": "创建对话失败，请重试",
+  "commonUnknownError": "未知错误",
+  "locationInputHint": "输入地址或选择当前位置",
+  "locationPermissionName": "位置",
+  "locationFallbackCoordinates": "已获取坐标 ({lat}, {lng})",
+  "@locationFallbackCoordinates": {
+    "placeholders": {
+      "lat": { "type": "String" },
+      "lng": { "type": "String" }
+    }
+  },
+  "locationOnline": "线上",
+  "locationGetCurrentPosition": "获取当前位置",
+  "locationMapPicker": "地图选点",
+  "locationCurrentPosition": "当前位置",
+  "locationTapToViewInMap": "点击在地图中查看",
+  "locationCoordinates": "坐标: {lat}, {lng}",
+  "@locationCoordinates": {
+    "placeholders": {
+      "lat": { "type": "String" },
+      "lng": { "type": "String" }
+    }
+  },
+  "locationOpenMapsFailed": "无法打开{provider} Maps",
+  "@locationOpenMapsFailed": {
+    "placeholders": {
+      "provider": { "type": "String" }
+    }
+  }
 }

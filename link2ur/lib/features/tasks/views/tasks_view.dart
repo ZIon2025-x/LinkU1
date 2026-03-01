@@ -11,6 +11,7 @@ import '../../../core/design/app_radius.dart';
 import '../../../core/design/app_typography.dart';
 import '../../../core/utils/debouncer.dart';
 import '../../../core/utils/helpers.dart';
+import '../../../core/utils/error_localizer.dart';
 import '../../../core/utils/l10n_extension.dart';
 import '../../../core/utils/responsive.dart';
 import '../../../core/utils/sheet_adaptation.dart';
@@ -371,7 +372,7 @@ class _TasksViewContentState extends State<_TasksViewContent> {
         if (state.hasError && state.tasks.isEmpty) {
           return ErrorStateView(
             key: const ValueKey('error'),
-            message: state.errorMessage ?? context.l10n.tasksLoadFailed,
+            message: context.localizeError(state.errorMessage),
             onRetry: () {
               context
                   .read<TaskListBloc>()

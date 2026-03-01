@@ -6,6 +6,7 @@ import 'package:image_picker/image_picker.dart';
 import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_radius.dart';
+import '../../../core/utils/error_localizer.dart';
 import '../../../core/utils/l10n_extension.dart';
 import '../../../core/widgets/full_screen_image_view.dart';
 import '../../../core/widgets/loading_view.dart';
@@ -188,7 +189,7 @@ class _ChatContentState extends State<_ChatContent> {
 
     if (state.status == ChatStatus.error && state.messages.isEmpty) {
       return ErrorStateView.loadFailed(
-        message: state.errorMessage,
+        message: context.localizeError(state.errorMessage),
         onRetry: () {
           context.read<ChatBloc>().add(ChatLoadMessages(userId: widget.userId));
         },

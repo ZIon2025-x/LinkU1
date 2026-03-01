@@ -4,6 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/constants/app_assets.dart';
+import '../../../core/utils/error_localizer.dart';
 import '../../../core/utils/l10n_extension.dart';
 import '../../../data/repositories/user_repository.dart';
 import '../../../data/repositories/task_repository.dart';
@@ -71,9 +72,8 @@ class _AvatarPickerViewState extends State<AvatarPickerView> {
             Navigator.of(context).pop();
           } else if (state.actionMessage == 'update_failed' ||
               state.errorMessage != null) {
-            final l10n = context.l10n;
             ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(state.errorMessage ?? l10n.profileUpdateFailed)),
+              SnackBar(content: Text(context.localizeError(state.errorMessage))),
             );
           }
         },

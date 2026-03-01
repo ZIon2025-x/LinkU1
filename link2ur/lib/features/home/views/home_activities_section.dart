@@ -350,7 +350,7 @@ class _DiscoveryFeedSkeleton extends StatelessWidget {
         ? Colors.white.withValues(alpha: 0.06)
         : Colors.black.withValues(alpha: 0.06);
     const spacing = 10.0;
-    final crossCount = ResponsiveUtils.gridColumnCount(context, type: GridItemType.standard);
+    final crossCount = ResponsiveUtils.gridColumnCount(context);
     final itemCount = (crossCount * 2).clamp(4, 8);
 
     return Padding(
@@ -488,7 +488,7 @@ class _SliverDiscoveryFeed extends StatelessWidget {
             SliverPadding(
               padding: EdgeInsets.symmetric(horizontal: horizontalPadding == 0 ? 10 : horizontalPadding),
               sliver: SliverMasonryGrid.count(
-                crossAxisCount: ResponsiveUtils.gridColumnCount(context, type: GridItemType.standard),
+                crossAxisCount: ResponsiveUtils.gridColumnCount(context),
                 mainAxisSpacing: 10,
                 crossAxisSpacing: 10,
                 childCount: state.discoveryItems.length,

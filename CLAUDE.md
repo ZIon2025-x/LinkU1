@@ -67,7 +67,8 @@ Clean Architecture with **BLoC** state management, organized as feature-first wi
 ```
 lib/
 ├── main.dart              # Entry point: init logger, Hive, StorageService, AppConfig
-├── app.dart               # Root widget: MultiRepositoryProvider (15 repos) + MultiBlocProvider
+├── app.dart               # Root widget: theme, locale, splash, MaterialApp.router
+├── app_providers.dart     # Dependency wiring: MultiRepositoryProvider + MultiBlocProvider
 ├── core/
 │   ├── config/            # AppConfig (environment/URLs), ApiConfig (headers/retry)
 │   ├── constants/         # api_endpoints.dart, storage_keys.dart, app_constants.dart
@@ -90,7 +91,7 @@ lib/
 ### Key Architectural Patterns
 
 - **State management**: BLoC with Equatable states/events, status enums (`loading`/`loaded`/`error`), `copyWith()` for immutability
-- **Dependency injection**: Manual — repositories instantiated in `app.dart` `initState()`, provided via `MultiRepositoryProvider`
+- **Dependency injection**: Manual — repositories instantiated in `app.dart` `initState()`, wired in `app_providers.dart` via `MultiRepositoryProvider`
 - **Singletons**: `StorageService.instance`, `WebSocketService.instance`, `AppConfig.instance`, `AppLogger` (static)
 - **Networking**: Dio-based `ApiService` with auth token interceptor, 401 auto-refresh, `ApiResponse<T>` wrapper. All endpoints centralized in `api_endpoints.dart`
 - **Routing**: GoRouter with `ShellRoute` for bottom tabs (`/`, `/community`, `/messages-tab`, `/profile-tab`). Type-safe extensions: `context.goToTaskDetail(id)`, `context.goToChat(userId)`
@@ -104,8 +105,29 @@ lib/
 1. Create `lib/features/<name>/bloc/` (events, states, bloc) and `lib/features/<name>/views/`
 2. Create repository in `lib/data/repositories/<name>_repository.dart`
 3. Add API endpoint constants to `lib/core/constants/api_endpoints.dart`
-4. Register repository in `MultiRepositoryProvider` in `app.dart`
+4. Register repository in `MultiRepositoryProvider` in `app_providers.dart`
 5. Add routes in `lib/core/router/app_router.dart`
+
+### Bloc Provider Hierarchy
+
+Blocs are provided at three levels:
+
+| Level | Where | Blocs | Lifetime |
+|-------|-------|-------|----------|
+| **Root** | `app_providers.dart` (`MultiBlocProvider`) | `AuthBloc`, `SettingsBloc`, `NotificationBloc` | App lifetime — survive navigation |
+| **Route** | GoRouter route builders (e.g. `forum_routes.dart`) | `ForumBloc` | Lives as long as the route subtree |
+| **Page** | Individual view `build()` methods | `TaskDetailBloc`, `WalletBloc`, `ChatBloc`, `PaymentBloc`, `FleaMarketBloc`, `AIChatBloc`, etc. | Created when page mounts, closed on dispose |
+
+When adding a new Bloc, choose the **narrowest scope** that satisfies its data sharing needs. Most feature blocs belong at **page level**; promote to route or root only if multiple sibling/descendant pages need the same instance.
+
+### Error Handling Conventions
+
+1. **Bloc layer**: Store an `errorMessage` string on the state. Use **error code strings** (e.g. `'ai_chat_load_conversations_failed'`), never hardcoded user-facing text. Raw `e.toString()` is acceptable as a fallback for unexpected errors.
+2. **UI layer**: Convert error codes to localized text via `context.localizeError(state.errorMessage)` (extension from `core/utils/error_localizer.dart`). This maps known codes to `context.l10n.*` keys and passes unknown strings through as-is.
+3. **Display patterns**:
+   - Full-page errors → `ErrorStateView` with `onRetry` callback
+   - Transient / toast errors → `SnackBar(content: Text(context.localizeError(...)))`
+4. **Adding new error codes**: Add the l10n key in all three ARB files, then add a `case` in `ErrorLocalizer.localize()`.
 
 ### Environment Configuration
 

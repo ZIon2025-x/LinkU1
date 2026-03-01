@@ -6,6 +6,7 @@ import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_radius.dart';
 import '../../../core/utils/helpers.dart';
+import '../../../core/utils/error_localizer.dart';
 import '../../../core/utils/l10n_extension.dart';
 import '../../../core/widgets/loading_view.dart';
 import '../../../core/widgets/error_state_view.dart';
@@ -57,7 +58,7 @@ class _WalletContent extends StatelessWidget {
                 ? const LoadingView()
                 : state.errorMessage != null && state.pointsAccount == null
                     ? ErrorStateView(
-                        message: state.errorMessage!,
+                        message: context.localizeError(state.errorMessage),
                         onRetry: () => context
                             .read<WalletBloc>()
                             .add(const WalletLoadRequested()),

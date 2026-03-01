@@ -1,6 +1,12 @@
 import 'package:flutter/material.dart';
 import '../utils/l10n_extension.dart';
 
+/// BuildContext 便捷扩展，可直接在 Widget 内调用 `context.localizeError(msg)`
+extension ErrorLocalizerExtension on BuildContext {
+  String localizeError(String? errorMessage) =>
+      ErrorLocalizer.localize(this, errorMessage);
+}
+
 /// 错误消息本地化工具
 /// 将 API 返回的错误码转为本地化文字
 class ErrorLocalizer {
@@ -64,6 +70,16 @@ class ErrorLocalizer {
         return context.l10n.errorInvalidInput;
       case 'customer_service_no_available_agent':
         return context.l10n.errorSomethingWentWrong;
+      case 'ai_chat_load_conversations_failed':
+        return context.l10n.aiChatLoadConversationsFailed;
+      case 'ai_chat_create_conversation_failed':
+        return context.l10n.aiChatCreateConversationFailed;
+      case 'ai_chat_load_history_failed':
+        return context.l10n.aiChatLoadHistoryFailed;
+      case 'ai_chat_create_conversation_retry':
+        return context.l10n.aiChatCreateConversationRetry;
+      case 'unknown_error':
+        return context.l10n.commonUnknownError;
       default:
         // 服务端返回的已翻译消息，直接使用
         return errorMessage;

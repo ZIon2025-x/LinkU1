@@ -168,7 +168,6 @@ class _ProfileContent extends StatelessWidget {
 
     return Scaffold(
       backgroundColor: Colors.transparent,
-      appBar: null,
       body: Stack(
         children: [
           const RepaintBoundary(child: DecorativeBackground()),

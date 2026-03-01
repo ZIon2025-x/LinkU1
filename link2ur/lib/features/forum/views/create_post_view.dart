@@ -7,6 +7,7 @@ import 'package:image_picker/image_picker.dart';
 import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_radius.dart';
+import '../../../core/utils/error_localizer.dart';
 import '../../../core/utils/l10n_extension.dart';
 import '../../../core/utils/logger.dart';
 import '../../../core/widgets/app_feedback.dart';
@@ -82,7 +83,6 @@ class _CreatePostViewState extends State<CreatePostView> {
       final result = await FilePicker.platform.pickFiles(
         type: FileType.custom,
         allowedExtensions: ['pdf'],
-        allowMultiple: false,
       );
       if (result != null && result.files.isNotEmpty && mounted) {
         setState(() {
@@ -201,7 +201,7 @@ class _CreatePostViewState extends State<CreatePostView> {
       child: BlocConsumer<ForumBloc, ForumState>(
         listener: (context, state) {
           if (state.isCreatingPost == false && state.errorMessage != null) {
-            AppFeedback.showError(context, state.errorMessage!);
+            AppFeedback.showError(context, context.localizeError(state.errorMessage));
           } else if (state.isCreatingPost == false &&
               state.posts.isNotEmpty &&
               state.posts.first.title == _titleController.text.trim()) {
@@ -296,7 +296,7 @@ class _CreatePostViewState extends State<CreatePostView> {
                 AppSpacing.vMd,
                 // 文件附件（选填，最多 5 个）
                 Text(
-                  '文件附件（${_selectedFiles.length}/$_kMaxFiles）',
+                  context.l10n.forumFileAttachmentCount('${_selectedFiles.length}', '$_kMaxFiles'),
                   style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
@@ -425,7 +425,7 @@ class _CreatePostViewState extends State<CreatePostView> {
           final file = entry.value;
           final sizeKb = (file.size / 1024).toStringAsFixed(1);
           return Container(
-            margin: const EdgeInsets.only(bottom: 8),
+            margin: const EdgeInsets.only(bottom: AppSpacing.sm),
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
             decoration: BoxDecoration(
               color: isDark
@@ -484,42 +484,46 @@ class _CreatePostViewState extends State<CreatePostView> {
           );
         }),
         if (_selectedFiles.length < _kMaxFiles)
-          GestureDetector(
-            onTap: _pickFiles,
-            child: Container(
-              width: double.infinity,
-              padding: const EdgeInsets.symmetric(vertical: 16),
-              decoration: BoxDecoration(
-                color: isDark
-                    ? Colors.white.withValues(alpha: 0.06)
-                    : AppColors.backgroundLight,
-                borderRadius: AppRadius.allSmall,
-                border: Border.all(
+          Semantics(
+            button: true,
+            label: context.l10n.forumFileAddFile,
+            child: GestureDetector(
+              onTap: _pickFiles,
+              child: Container(
+                width: double.infinity,
+                padding: AppSpacing.verticalMd,
+                decoration: BoxDecoration(
                   color: isDark
-                      ? Colors.white.withValues(alpha: 0.12)
-                      : AppColors.textTertiaryLight.withValues(alpha: 0.4),
-                ),
-              ),
-              child: Column(
-                children: [
-                  Icon(
-                    Icons.upload_file,
-                    size: 28,
+                      ? Colors.white.withValues(alpha: 0.06)
+                      : AppColors.backgroundLight,
+                  borderRadius: AppRadius.allSmall,
+                  border: Border.all(
                     color: isDark
-                        ? AppColors.textTertiaryDark
-                        : AppColors.textTertiaryLight,
+                        ? Colors.white.withValues(alpha: 0.12)
+                        : AppColors.textTertiaryLight.withValues(alpha: 0.4),
                   ),
-                  const SizedBox(height: 4),
-                  Text(
-                    '添加文件（PDF/文档）',
-                    style: TextStyle(
-                      fontSize: 12,
+                ),
+                child: Column(
+                  children: [
+                    Icon(
+                      Icons.upload_file,
+                      size: 28,
                       color: isDark
                           ? AppColors.textTertiaryDark
                           : AppColors.textTertiaryLight,
                     ),
-                  ),
-                ],
+                    AppSpacing.vXs,
+                    Text(
+                      context.l10n.forumFileAddFile,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: isDark
+                            ? AppColors.textTertiaryDark
+                            : AppColors.textTertiaryLight,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
@@ -698,7 +702,7 @@ class _LinkSearchDialogState extends State<_LinkSearchDialog> {
                       onSubmitted: _runSearch,
                     ),
                   ),
-                  const SizedBox(width: 8),
+                  AppSpacing.hSm,
                   IconButton(
                     icon: const Icon(Icons.search),
                     onPressed: () => _runSearch(_queryCtrl.text),
@@ -725,7 +729,7 @@ class _LinkSearchDialogState extends State<_LinkSearchDialog> {
                     ),
                   ),
                 ),
-                const SizedBox(height: 4),
+                AppSpacing.vXs,
                 _buildList(_userRelated, 200),
                 const SizedBox(height: 12),
               ],
@@ -744,7 +748,7 @@ class _LinkSearchDialogState extends State<_LinkSearchDialog> {
                     ),
                   ),
                 ),
-                const SizedBox(height: 4),
+                AppSpacing.vXs,
                 _buildList(_results, 220),
               ],
               if (!_loading &&

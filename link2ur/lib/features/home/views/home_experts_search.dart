@@ -211,7 +211,7 @@ class _ExpertsTabContentState extends State<_ExpertsTabContent> {
               if (state.status == TaskExpertStatus.error &&
                   state.experts.isEmpty) {
                 return ErrorStateView.loadFailed(
-                  message: state.errorMessage,
+                  message: context.localizeError(state.errorMessage),
                   onRetry: () {
                     context.read<TaskExpertBloc>().add(
                           const TaskExpertLoadRequested(),

@@ -7,6 +7,7 @@ import 'package:image_picker/image_picker.dart';
 import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_radius.dart';
+import '../../../core/utils/error_localizer.dart';
 import '../../../core/utils/l10n_extension.dart';
 import '../../../core/widgets/async_image_view.dart';
 import '../../../core/widgets/cross_platform_image.dart';
@@ -211,7 +212,7 @@ class _EditFleaMarketItemViewContentState
             _ => state.actionMessage ?? '',
           };
           final displayMessage = state.errorMessage != null
-              ? '$message: ${state.errorMessage}'
+              ? '$message: ${context.localizeError(state.errorMessage)}'
               : message;
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -225,7 +226,7 @@ class _EditFleaMarketItemViewContentState
           // Show error for upload/update failures
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(state.errorMessage!),
+              content: Text(context.localizeError(state.errorMessage)),
               backgroundColor: AppColors.error,
             ),
           );

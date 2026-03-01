@@ -40,7 +40,7 @@ class ExternalWebView extends StatefulWidget {
     if (kIsWeb) {
       final uri = Uri.tryParse(url);
       if (uri != null && await canLaunchUrl(uri)) {
-        await launchUrl(uri, mode: LaunchMode.platformDefault);
+        await launchUrl(uri);
       }
       return;
     }
@@ -61,7 +61,7 @@ class ExternalWebView extends StatefulWidget {
     if (kIsWeb) {
       final uri = Uri.tryParse(url);
       if (uri != null && await canLaunchUrl(uri)) {
-        await launchUrl(uri, mode: LaunchMode.platformDefault);
+        await launchUrl(uri);
       }
       return;
     }

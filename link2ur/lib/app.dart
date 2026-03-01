@@ -6,6 +6,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_native_splash/flutter_native_splash.dart';
 
+import 'app_providers.dart';
 import 'core/design/app_theme.dart';
 import 'core/design/scroll_behavior.dart';
 import 'core/router/app_router.dart';
@@ -18,19 +19,12 @@ import 'features/settings/bloc/settings_bloc.dart';
 import 'data/repositories/auth_repository.dart';
 import 'data/repositories/task_repository.dart';
 import 'data/repositories/user_repository.dart';
-import 'data/repositories/flea_market_repository.dart';
-import 'data/repositories/task_expert_repository.dart';
 import 'data/repositories/forum_repository.dart';
 import 'data/repositories/leaderboard_repository.dart';
 import 'data/repositories/message_repository.dart';
 import 'data/repositories/notification_repository.dart';
 import 'data/repositories/activity_repository.dart';
-import 'data/repositories/coupon_points_repository.dart';
-import 'data/repositories/payment_repository.dart';
-import 'data/repositories/student_verification_repository.dart';
-import 'data/repositories/common_repository.dart';
 import 'data/repositories/discovery_repository.dart';
-import 'data/services/ai_chat_service.dart';
 import 'data/services/api_service.dart';
 import 'data/services/push_notification_service.dart';
 import 'l10n/app_localizations.dart';
@@ -111,111 +105,63 @@ class _Link2UrAppState extends State<Link2UrApp> {
 
   @override
   Widget build(BuildContext context) {
-    return MultiRepositoryProvider(
-      providers: [
-        RepositoryProvider<ApiService>.value(value: _apiService),
-        RepositoryProvider<AuthRepository>.value(value: _authRepository),
-        RepositoryProvider<TaskRepository>.value(value: _taskRepository),
-        RepositoryProvider<UserRepository>.value(value: _userRepository),
-        RepositoryProvider<ForumRepository>.value(value: _forumRepository),
-        RepositoryProvider<LeaderboardRepository>.value(
-            value: _leaderboardRepository),
-        RepositoryProvider<MessageRepository>.value(
-            value: _messageRepository),
-        RepositoryProvider<NotificationRepository>.value(
-            value: _notificationRepository),
-        RepositoryProvider<ActivityRepository>.value(
-            value: _activityRepository),
-        RepositoryProvider<DiscoveryRepository>.value(
-            value: _discoveryRepository),
-        // 懒加载：首次访问时创建
-        RepositoryProvider<FleaMarketRepository>(
-          create: (context) =>
-              FleaMarketRepository(apiService: context.read<ApiService>()),
-        ),
-        RepositoryProvider<TaskExpertRepository>(
-          create: (context) =>
-              TaskExpertRepository(apiService: context.read<ApiService>()),
-        ),
-        RepositoryProvider<CouponPointsRepository>(
-          create: (context) => CouponPointsRepository(
-              apiService: context.read<ApiService>()),
-        ),
-        RepositoryProvider<PaymentRepository>(
-          create: (context) =>
-              PaymentRepository(apiService: context.read<ApiService>()),
-        ),
-        RepositoryProvider<StudentVerificationRepository>(
-          create: (context) => StudentVerificationRepository(
-              apiService: context.read<ApiService>()),
-        ),
-        RepositoryProvider<CommonRepository>(
-          create: (context) =>
-              CommonRepository(apiService: context.read<ApiService>()),
-        ),
-        RepositoryProvider<AIChatService>(
-          create: (context) =>
-              AIChatService(apiService: context.read<ApiService>()),
-        ),
-      ],
-      child: MultiBlocProvider(
-        providers: [
-          BlocProvider<AuthBloc>.value(value: _authBloc),
-          BlocProvider<SettingsBloc>(
-            create: (context) => SettingsBloc(userRepository: _userRepository),
-          ),
-          BlocProvider<NotificationBloc>(
-            create: (context) => NotificationBloc(
-              notificationRepository: _notificationRepository,
-            ),
-          ),
-        ],
-        child: _DeferredBlocLoader(
-          child: _WebSplashTimeout(
-            child: BlocListener<AuthBloc, AuthState>(
-              listenWhen: (prev, curr) {
-                final wasChecking = prev.status == AuthStatus.initial ||
-                    prev.status == AuthStatus.checking;
-                final isChecking = curr.status == AuthStatus.initial ||
-                    curr.status == AuthStatus.checking;
-                return wasChecking && !isChecking;
+    return AppProviders(
+      apiService: _apiService,
+      authRepository: _authRepository,
+      taskRepository: _taskRepository,
+      userRepository: _userRepository,
+      forumRepository: _forumRepository,
+      leaderboardRepository: _leaderboardRepository,
+      messageRepository: _messageRepository,
+      notificationRepository: _notificationRepository,
+      activityRepository: _activityRepository,
+      discoveryRepository: _discoveryRepository,
+      authBloc: _authBloc,
+      child: _DeferredBlocLoader(
+        child: _WebSplashTimeout(
+          child: BlocListener<AuthBloc, AuthState>(
+            listenWhen: (prev, curr) {
+              final wasChecking = prev.status == AuthStatus.initial ||
+                  prev.status == AuthStatus.checking;
+              final isChecking = curr.status == AuthStatus.initial ||
+                  curr.status == AuthStatus.checking;
+              return wasChecking && !isChecking;
+            },
+            listener: (context, state) {
+              FlutterNativeSplash.remove();
+            },
+            child: BlocBuilder<SettingsBloc, SettingsState>(
+              buildWhen: (prev, curr) =>
+                  prev.themeMode != curr.themeMode ||
+                  prev.locale != curr.locale,
+              builder: (context, settingsState) {
+                return GestureDetector(
+                  onTap: () {
+                    FocusManager.instance.primaryFocus?.unfocus();
+                  },
+                  child: MaterialApp.router(
+                    title: 'Link²Ur',
+                    debugShowCheckedModeBanner: false,
+                    scrollBehavior: const AppScrollBehavior(),
+                    theme: AppTheme.lightTheme,
+                    darkTheme: AppTheme.darkTheme,
+                    themeMode: settingsState.themeMode,
+                    routerConfig: _appRouter.router,
+                    localizationsDelegates: const [
+                      AppLocalizations.delegate,
+                      GlobalMaterialLocalizations.delegate,
+                      GlobalWidgetsLocalizations.delegate,
+                      GlobalCupertinoLocalizations.delegate,
+                    ],
+                    supportedLocales: const [
+                      Locale('zh', 'CN'),
+                      Locale('zh', 'TW'),
+                      Locale('en', 'US'),
+                    ],
+                    locale: _localeFromString(settingsState.locale),
+                  ),
+                );
               },
-              listener: (context, state) {
-                FlutterNativeSplash.remove();
-              },
-              child: BlocBuilder<SettingsBloc, SettingsState>(
-                buildWhen: (prev, curr) =>
-                    prev.themeMode != curr.themeMode ||
-                    prev.locale != curr.locale,
-                builder: (context, settingsState) {
-                  return GestureDetector(
-                    onTap: () {
-                      FocusManager.instance.primaryFocus?.unfocus();
-                    },
-                    child: MaterialApp.router(
-                      title: 'Link²Ur',
-                      debugShowCheckedModeBanner: false,
-                      scrollBehavior: const AppScrollBehavior(),
-                      theme: AppTheme.lightTheme,
-                      darkTheme: AppTheme.darkTheme,
-                      themeMode: settingsState.themeMode,
-                      routerConfig: _appRouter.router,
-                      localizationsDelegates: const [
-                        AppLocalizations.delegate,
-                        GlobalMaterialLocalizations.delegate,
-                        GlobalWidgetsLocalizations.delegate,
-                        GlobalCupertinoLocalizations.delegate,
-                      ],
-                      supportedLocales: const [
-                        Locale('zh', 'CN'),
-                        Locale('zh', 'TW'),
-                        Locale('en', 'US'),
-                      ],
-                      locale: _localeFromString(settingsState.locale),
-                    ),
-                  );
-                },
-              ),
             ),
           ),
         ),

@@ -8739,6 +8739,112 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get profileNormalizePhoneHint => '英国格式: 07XXX 或 +44XXX';
+
+  @override
+  String get forumPdfPreviewTitle => 'PDF 预览';
+
+  @override
+  String get forumPdfContentEmpty => 'PDF 内容为空';
+
+  @override
+  String forumPdfLoadFailed(String error) {
+    return '加载 PDF 失败: $error';
+  }
+
+  @override
+  String get forumPdfUrlMissing => '缺少 PDF 地址';
+
+  @override
+  String forumPdfAttachmentCount(String current, String max) {
+    return 'PDF 附件（$current/$max）';
+  }
+
+  @override
+  String get forumPdfAddPdf => '添加 PDF';
+
+  @override
+  String get forumPdfReplace => '更换';
+
+  @override
+  String forumAttachmentOpenFailed(String error) {
+    return '无法打开文件: $error';
+  }
+
+  @override
+  String forumFileAttachmentCount(String current, String max) {
+    return '文件附件（$current/$max）';
+  }
+
+  @override
+  String get forumFileAddFile => '添加文件（PDF）';
+
+  @override
+  String get forumInvalidPostId => '无效的帖子 ID';
+
+  @override
+  String get forumInvalidPostOrData => '帖子无效或缺少数据';
+
+  @override
+  String get forumPdfAttachmentOptional => 'PDF 附件（选填，最多 1 个）';
+
+  @override
+  String publishImagesOptional(String max) {
+    return '图片（选填，最多 $max 张）';
+  }
+
+  @override
+  String get publishRelatedContentOptional => '关联内容（选填，可关联服务/活动/商品/排行榜等）';
+
+  @override
+  String get aiChatLoadConversationsFailed => '加载对话列表失败';
+
+  @override
+  String get aiChatCreateConversationFailed => '创建对话失败';
+
+  @override
+  String get aiChatLoadHistoryFailed => '加载消息历史失败';
+
+  @override
+  String get aiChatCreateConversationRetry => '创建对话失败，请重试';
+
+  @override
+  String get commonUnknownError => '未知错误';
+
+  @override
+  String get locationInputHint => '输入地址或选择当前位置';
+
+  @override
+  String get locationPermissionName => '位置';
+
+  @override
+  String locationFallbackCoordinates(String lat, String lng) {
+    return '已获取坐标 ($lat, $lng)';
+  }
+
+  @override
+  String get locationOnline => '线上';
+
+  @override
+  String get locationGetCurrentPosition => '获取当前位置';
+
+  @override
+  String get locationMapPicker => '地图选点';
+
+  @override
+  String get locationCurrentPosition => '当前位置';
+
+  @override
+  String get locationTapToViewInMap => '点击在地图中查看';
+
+  @override
+  String locationCoordinates(String lat, String lng) {
+    return '坐标: $lat, $lng';
+  }
+
+  @override
+  String locationOpenMapsFailed(String provider) {
+    return '无法打开$provider Maps';
+  }
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -17476,4 +17582,110 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get profileNormalizePhoneHint => '英國格式: 07XXX 或 +44XXX';
+
+  @override
+  String get forumPdfPreviewTitle => 'PDF 預覽';
+
+  @override
+  String get forumPdfContentEmpty => 'PDF 內容為空';
+
+  @override
+  String forumPdfLoadFailed(String error) {
+    return '載入 PDF 失敗: $error';
+  }
+
+  @override
+  String get forumPdfUrlMissing => '缺少 PDF 地址';
+
+  @override
+  String forumPdfAttachmentCount(String current, String max) {
+    return 'PDF 附件（$current/$max）';
+  }
+
+  @override
+  String get forumPdfAddPdf => '新增 PDF';
+
+  @override
+  String get forumPdfReplace => '更換';
+
+  @override
+  String forumAttachmentOpenFailed(String error) {
+    return '無法開啟檔案: $error';
+  }
+
+  @override
+  String forumFileAttachmentCount(String current, String max) {
+    return '檔案附件（$current/$max）';
+  }
+
+  @override
+  String get forumFileAddFile => '新增檔案（PDF）';
+
+  @override
+  String get forumInvalidPostId => '無效的文章 ID';
+
+  @override
+  String get forumInvalidPostOrData => '文章無效或缺少資料';
+
+  @override
+  String get forumPdfAttachmentOptional => 'PDF 附件（選填，最多 1 個）';
+
+  @override
+  String publishImagesOptional(String max) {
+    return '圖片（選填，最多 $max 張）';
+  }
+
+  @override
+  String get publishRelatedContentOptional => '關聯內容（選填，可關聯服務/活動/商品/排行榜等）';
+
+  @override
+  String get aiChatLoadConversationsFailed => '載入對話清單失敗';
+
+  @override
+  String get aiChatCreateConversationFailed => '建立對話失敗';
+
+  @override
+  String get aiChatLoadHistoryFailed => '載入訊息紀錄失敗';
+
+  @override
+  String get aiChatCreateConversationRetry => '建立對話失敗，請重試';
+
+  @override
+  String get commonUnknownError => '未知錯誤';
+
+  @override
+  String get locationInputHint => '輸入地址或選擇目前位置';
+
+  @override
+  String get locationPermissionName => '位置';
+
+  @override
+  String locationFallbackCoordinates(String lat, String lng) {
+    return '已取得座標 ($lat, $lng)';
+  }
+
+  @override
+  String get locationOnline => '線上';
+
+  @override
+  String get locationGetCurrentPosition => '取得目前位置';
+
+  @override
+  String get locationMapPicker => '地圖選點';
+
+  @override
+  String get locationCurrentPosition => '目前位置';
+
+  @override
+  String get locationTapToViewInMap => '點擊在地圖中查看';
+
+  @override
+  String locationCoordinates(String lat, String lng) {
+    return '座標: $lat, $lng';
+  }
+
+  @override
+  String locationOpenMapsFailed(String provider) {
+    return '無法開啟$provider Maps';
+  }
 }

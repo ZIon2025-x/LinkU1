@@ -8,6 +8,7 @@ import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_typography.dart';
 import '../../../core/constants/app_assets.dart';
 import '../../../core/router/app_routes.dart';
+import '../../../core/utils/error_localizer.dart';
 import '../../../core/utils/l10n_extension.dart';
 import '../../../core/widgets/loading_view.dart';
 import '../../../data/models/ai_chat.dart';
@@ -302,13 +303,14 @@ class _UnifiedChatContentState extends State<_UnifiedChatContent> {
     );
   }
 
-  static String _formatConvTime(DateTime time) {
+  String _formatConvTime(DateTime time) {
     final now = DateTime.now();
     final diff = now.difference(time);
-    if (diff.inMinutes < 1) return '刚刚';
-    if (diff.inHours < 1) return '${diff.inMinutes}分钟前';
-    if (diff.inDays < 1) return '${diff.inHours}小时前';
-    if (diff.inDays < 7) return '${diff.inDays}天前';
+    final l10n = context.l10n;
+    if (diff.inMinutes < 1) return l10n.timeJustNow;
+    if (diff.inHours < 1) return l10n.timeMinutesAgo(diff.inMinutes);
+    if (diff.inDays < 1) return l10n.timeHoursAgo(diff.inHours);
+    if (diff.inDays < 7) return l10n.timeDaysAgo(diff.inDays);
     return '${time.month}/${time.day}';
   }
 
@@ -501,7 +503,7 @@ class _UnifiedChatContentState extends State<_UnifiedChatContent> {
                   ),
                   color: Colors.red.withAlpha(25),
                   child: Text(
-                    state.errorMessage!,
+                    context.localizeError(state.errorMessage),
                     style: const TextStyle(
                       color: Colors.red,
                       fontSize: 13,
@@ -1030,7 +1032,9 @@ class _UnifiedChatContentState extends State<_UnifiedChatContent> {
     if (state.mode != ChatMode.ai ||
         state.taskDraft != null ||
         state.aiMessages.isEmpty ||
-        state.isTyping) return null;
+        state.isTyping) {
+      return null;
+    }
     final last = state.aiMessages.last;
     final tool = last.toolName;
     final l10n = context.l10n;

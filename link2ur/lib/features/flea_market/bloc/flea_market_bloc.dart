@@ -854,7 +854,7 @@ class FleaMarketBloc extends Bloc<FleaMarketEvent, FleaMarketState> {
     if (event.itemId.trim().isEmpty) {
       emit(state.copyWith(
         detailStatus: FleaMarketStatus.error,
-        errorMessage: '无效的商品 ID',
+        errorMessage: 'flea_market_error_invalid_item_id',
       ));
       return;
     }

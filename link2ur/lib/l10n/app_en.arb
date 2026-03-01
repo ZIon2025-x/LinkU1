@@ -4215,5 +4215,80 @@
   "profilePhoneUnchanged": "Please enter a different phone number",
   "profileEmailCodeRequired": "Please enter the email verification code",
   "profilePhoneCodeRequired": "Please enter the phone verification code",
-  "profileNormalizePhoneHint": "UK format: 07XXX or +44XXX"
+  "profileNormalizePhoneHint": "UK format: 07XXX or +44XXX",
+
+  "forumPdfPreviewTitle": "PDF Preview",
+  "forumPdfContentEmpty": "PDF content is empty",
+  "forumPdfLoadFailed": "Failed to load PDF: {error}",
+  "@forumPdfLoadFailed": {
+    "placeholders": {
+      "error": { "type": "String" }
+    }
+  },
+  "forumPdfUrlMissing": "Missing PDF URL",
+  "forumPdfAttachmentCount": "PDF Attachment ({current}/{max})",
+  "@forumPdfAttachmentCount": {
+    "placeholders": {
+      "current": { "type": "String" },
+      "max": { "type": "String" }
+    }
+  },
+  "forumPdfAddPdf": "Add PDF",
+  "forumPdfReplace": "Replace",
+  "forumAttachmentOpenFailed": "Cannot open file: {error}",
+  "@forumAttachmentOpenFailed": {
+    "placeholders": {
+      "error": { "type": "String" }
+    }
+  },
+  "forumFileAttachmentCount": "File Attachment ({current}/{max})",
+  "@forumFileAttachmentCount": {
+    "placeholders": {
+      "current": { "type": "String" },
+      "max": { "type": "String" }
+    }
+  },
+  "forumFileAddFile": "Add File (PDF)",
+  "forumInvalidPostId": "Invalid post ID",
+  "forumInvalidPostOrData": "Invalid post or missing data",
+  "forumPdfAttachmentOptional": "PDF Attachment (optional, max 1)",
+  "publishImagesOptional": "Images (optional, max {max})",
+  "@publishImagesOptional": {
+    "placeholders": {
+      "max": { "type": "String" }
+    }
+  },
+  "publishRelatedContentOptional": "Related Content (optional, e.g. services, activities, products, etc.)",
+  "aiChatLoadConversationsFailed": "Failed to load conversations",
+  "aiChatCreateConversationFailed": "Failed to create conversation",
+  "aiChatLoadHistoryFailed": "Failed to load message history",
+  "aiChatCreateConversationRetry": "Failed to create conversation, please retry",
+  "commonUnknownError": "Unknown error",
+  "locationInputHint": "Enter address or pick current location",
+  "locationPermissionName": "Location",
+  "locationFallbackCoordinates": "Coordinates obtained ({lat}, {lng})",
+  "@locationFallbackCoordinates": {
+    "placeholders": {
+      "lat": { "type": "String" },
+      "lng": { "type": "String" }
+    }
+  },
+  "locationOnline": "Online",
+  "locationGetCurrentPosition": "Get current location",
+  "locationMapPicker": "Pick on Map",
+  "locationCurrentPosition": "Current Location",
+  "locationTapToViewInMap": "Tap to view in map",
+  "locationCoordinates": "Coordinates: {lat}, {lng}",
+  "@locationCoordinates": {
+    "placeholders": {
+      "lat": { "type": "String" },
+      "lng": { "type": "String" }
+    }
+  },
+  "locationOpenMapsFailed": "Cannot open {provider} Maps",
+  "@locationOpenMapsFailed": {
+    "placeholders": {
+      "provider": { "type": "String" }
+    }
+  }
 }

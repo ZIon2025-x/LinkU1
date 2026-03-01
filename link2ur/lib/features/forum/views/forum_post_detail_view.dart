@@ -4,7 +4,9 @@ import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/design/app_colors.dart';
+import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_typography.dart';
+import '../../../core/utils/error_localizer.dart';
 import '../../../core/utils/helpers.dart';
 import '../../../core/utils/haptic_feedback.dart';
 import '../../../core/router/app_router.dart';
@@ -160,7 +162,7 @@ class _ForumPostDetailViewState extends State<ForumPostDetailView> {
                 }
               } else if (state.errorMessage != null) {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text(state.errorMessage!)),
+                  SnackBar(content: Text(context.localizeError(state.errorMessage))),
                 );
               }
             },
@@ -228,7 +230,7 @@ class _ForumPostDetailViewState extends State<ForumPostDetailView> {
                       child: Row(
                         children: [
                           const Icon(Icons.edit_outlined, size: 20),
-                          const SizedBox(width: 8),
+                          AppSpacing.hSm,
                           Text(context.l10n.commonEdit),
                         ],
                       ),
@@ -239,7 +241,7 @@ class _ForumPostDetailViewState extends State<ForumPostDetailView> {
                         children: [
                           Icon(Icons.delete_outline, size: 20,
                               color: Theme.of(context).colorScheme.error),
-                          const SizedBox(width: 8),
+                          AppSpacing.hSm,
                           Text(context.l10n.commonDelete,
                               style: TextStyle(
                                   color: Theme.of(context).colorScheme.error)),
@@ -252,7 +254,7 @@ class _ForumPostDetailViewState extends State<ForumPostDetailView> {
                     child: Row(
                       children: [
                         const Icon(Icons.flag_outlined, size: 20),
-                        const SizedBox(width: 8),
+                        AppSpacing.hSm,
                         Text(context.l10n.commonReport),
                       ],
                     ),
@@ -280,7 +282,7 @@ class _ForumPostDetailViewState extends State<ForumPostDetailView> {
             if (state.status == ForumStatus.error &&
                 state.selectedPost == null) {
               return ErrorStateView.loadFailed(
-                message: state.errorMessage ?? context.l10n.forumLoadFailed,
+                message: context.localizeError(state.errorMessage),
                 onRetry: () {
                   context.read<ForumBloc>()
                     ..add(ForumLoadPostDetail(widget.postId))
@@ -337,7 +339,7 @@ class _ForumPostDetailViewState extends State<ForumPostDetailView> {
                                 : AppColors.separatorLight)
                             .withValues(alpha: 0.5),
                       ),
-                      const SizedBox(height: 8),
+                      AppSpacing.vSm,
                     ],
                   ),
                 ),
@@ -365,7 +367,7 @@ class _ForumPostDetailViewState extends State<ForumPostDetailView> {
                                   ? AppColors.textTertiaryDark
                                   : AppColors.textTertiaryLight,
                             ),
-                            const SizedBox(height: 8),
+                            AppSpacing.vSm,
                             Text(
                               context.l10n.forumNoReplies,
                               style: TextStyle(
@@ -455,7 +457,7 @@ class _ForumPostDetailViewState extends State<ForumPostDetailView> {
               child: SafeArea(
                 child: Padding(
                   padding: const EdgeInsets.symmetric(
-                      horizontal: 16, vertical: 12),
+                      horizontal: AppSpacing.md, vertical: 12),
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
@@ -463,7 +465,7 @@ class _ForumPostDetailViewState extends State<ForumPostDetailView> {
                       if (_replyToName != null)
                         Container(
                           padding: const EdgeInsets.symmetric(
-                              horizontal: 16, vertical: 6),
+                              horizontal: AppSpacing.md, vertical: 6),
                           color: AppColors.primary.withValues(alpha: 0.05),
                           child: Row(
                             children: [
@@ -525,8 +527,7 @@ class _ForumPostDetailViewState extends State<ForumPostDetailView> {
                                         hintStyle: const TextStyle(fontSize: 15),
                                         border: InputBorder.none,
                                         contentPadding:
-                                            const EdgeInsets.symmetric(
-                                                horizontal: 16),
+                                            AppSpacing.horizontalMd,
                                       ),
                                     ),
                                   ),
@@ -564,7 +565,7 @@ class _ForumPostDetailViewState extends State<ForumPostDetailView> {
                                             ),
                                             child: state.isReplying
                                                 ? const Padding(
-                                                    padding: EdgeInsets.all(8),
+                                                    padding: AppSpacing.allSm,
                                                     child:
                                                         CircularProgressIndicator(
                                                             strokeWidth: 2),
@@ -628,7 +629,7 @@ class _PostHeader extends StatelessWidget {
                     if (post.category != null)
                     Container(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 8, vertical: 4),
+                          horizontal: AppSpacing.sm, vertical: AppSpacing.xs),
                       decoration: BoxDecoration(
                         color: AppColors.primary.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(4),
@@ -831,7 +832,7 @@ class _PostStats extends StatelessWidget {
             value: '${post.viewCount}',
             label: context.l10n.forumBrowse,
           ),
-          const SizedBox(width: 24),
+          AppSpacing.hLg,
           // 点赞已移至底部回复栏，此处仅显示计数
           _StatLabel(
             icon: post.isLiked ? Icons.thumb_up : Icons.thumb_up_outlined,
@@ -839,7 +840,7 @@ class _PostStats extends StatelessWidget {
             label: context.l10n.forumLike,
             color: post.isLiked ? AppColors.accentPink : null,
           ),
-          const SizedBox(width: 24),
+          AppSpacing.hLg,
           // 收藏 (交互)
           GestureDetector(
             onTap: () {
@@ -887,7 +888,7 @@ class _StatLabel extends StatelessWidget {
           children: [
             Icon(icon, size: 14, color: c),
             if (value.isNotEmpty) ...[
-              const SizedBox(width: 4),
+              AppSpacing.hXs,
               Text(
                 value,
                 style: TextStyle(
@@ -935,7 +936,7 @@ class _ReplySectionHeader extends StatelessWidget {
                   : AppColors.textPrimaryLight,
             ),
           ),
-          const SizedBox(width: 8),
+          AppSpacing.hSm,
           Container(
             padding:
                 const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
@@ -1048,10 +1049,10 @@ class _ReplyCard extends StatelessWidget {
                       ),
                     ),
                     // 点赞
-                    const SizedBox(width: 8),
+                    AppSpacing.hSm,
                     Container(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 8, vertical: 4),
+                          horizontal: AppSpacing.sm, vertical: AppSpacing.xs),
                       decoration: BoxDecoration(
                         color: reply.isLiked
                             ? AppColors.accentPink.withValues(alpha: 0.1)
@@ -1094,7 +1095,7 @@ class _ReplyCard extends StatelessWidget {
                     padding: const EdgeInsets.only(top: 4),
                     child: Container(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 8, vertical: 4),
+                          horizontal: AppSpacing.sm, vertical: AppSpacing.xs),
                       decoration: BoxDecoration(
                         color: isDark
                             ? Colors.white.withValues(alpha: 0.04)
@@ -1168,7 +1169,7 @@ class _ReplyCard extends StatelessWidget {
                           reply.authorId.toString() == currentUserId;
                       if (!isAuthor) return const SizedBox.shrink();
                       return Padding(
-                        padding: const EdgeInsets.only(left: 8),
+                        padding: const EdgeInsets.only(left: AppSpacing.sm),
                         child: GestureDetector(
                           behavior: HitTestBehavior.opaque,
                           onTap: () {
@@ -1320,7 +1321,7 @@ class _PostAttachmentList extends StatelessWidget {
         .catchError((e) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('无法打开文件: $e')),
+          SnackBar(content: Text(context.l10n.forumAttachmentOpenFailed(e.toString()))),
         );
       }
       return false;
@@ -1339,7 +1340,7 @@ class _PostAttachmentList extends StatelessWidget {
           return GestureDetector(
             onTap: () => _open(context, att),
             child: Container(
-              margin: const EdgeInsets.only(bottom: 8),
+              margin: const EdgeInsets.only(bottom: AppSpacing.sm),
               padding:
                   const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
               decoration: BoxDecoration(

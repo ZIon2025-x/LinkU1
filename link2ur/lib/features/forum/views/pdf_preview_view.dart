@@ -5,6 +5,8 @@ import 'package:flutter/material.dart';
 import 'package:pdfx/pdfx.dart';
 
 import '../../../core/design/app_colors.dart';
+import '../../../core/design/app_spacing.dart';
+import '../../../core/utils/l10n_extension.dart';
 
 /// 帖子 PDF 附件 App 内预览
 class PdfPreviewView extends StatefulWidget {
@@ -23,8 +25,9 @@ class PdfPreviewView extends StatefulWidget {
 
 class _PdfPreviewViewState extends State<PdfPreviewView> {
   PdfControllerPinch? _controller;
-  String? _error;
   bool _loading = true;
+  bool _isEmpty = false;
+  String? _rawError;
 
   @override
   void initState() {
@@ -43,7 +46,7 @@ class _PdfPreviewViewState extends State<PdfPreviewView> {
       if (bytes == null || bytes.isEmpty) {
         if (mounted) {
           setState(() {
-            _error = 'PDF 内容为空';
+            _isEmpty = true;
             _loading = false;
           });
         }
@@ -54,14 +57,13 @@ class _PdfPreviewViewState extends State<PdfPreviewView> {
       setState(() {
         _controller = PdfControllerPinch(
           document: Future.value(document),
-          initialPage: 1,
         );
         _loading = false;
       });
     } catch (e) {
       if (mounted) {
         setState(() {
-          _error = e.toString();
+          _rawError = e.toString();
           _loading = false;
         });
       }
@@ -84,22 +86,25 @@ class _PdfPreviewViewState extends State<PdfPreviewView> {
       backgroundColor: backgroundColor,
       appBar: AppBar(
         title: Text(
-          widget.title ?? 'PDF 预览',
+          widget.title ?? context.l10n.forumPdfPreviewTitle,
           overflow: TextOverflow.ellipsis,
         ),
       ),
-      body: _buildBody(isDark),
+      body: _buildBody(context, isDark),
     );
   }
 
-  Widget _buildBody(bool isDark) {
+  Widget _buildBody(BuildContext context, bool isDark) {
     if (_loading) {
       return const Center(child: CircularProgressIndicator());
     }
-    if (_error != null) {
+    if (_isEmpty || _rawError != null) {
+      final errorText = _isEmpty
+          ? context.l10n.forumPdfContentEmpty
+          : context.l10n.forumPdfLoadFailed(_rawError!);
       return Center(
         child: Padding(
-          padding: const EdgeInsets.all(24),
+          padding: AppSpacing.allLg,
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -110,9 +115,9 @@ class _PdfPreviewViewState extends State<PdfPreviewView> {
                     ? AppColors.textSecondaryDark
                     : AppColors.textSecondaryLight,
               ),
-              const SizedBox(height: 16),
+              AppSpacing.vMd,
               Text(
-                _error!,
+                errorText,
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   color: isDark
@@ -131,7 +136,6 @@ class _PdfPreviewViewState extends State<PdfPreviewView> {
     }
     return PdfViewPinch(
       controller: controller,
-      scrollDirection: Axis.vertical,
     );
   }
 }

@@ -258,7 +258,7 @@ class AIChatBloc extends Bloc<AIChatEvent, AIChatState> {
       AppLogger.error('Failed to load AI conversations', e);
       emit(state.copyWith(
         status: AIChatStatus.error,
-        errorMessage: '加载对话列表失败',
+        errorMessage: 'ai_chat_load_conversations_failed',
       ));
     }
   }
@@ -279,7 +279,7 @@ class AIChatBloc extends Bloc<AIChatEvent, AIChatState> {
       }
     } catch (e) {
       AppLogger.error('Failed to create AI conversation', e);
-      emit(state.copyWith(errorMessage: '创建对话失败'));
+      emit(state.copyWith(errorMessage: 'ai_chat_create_conversation_failed'));
     }
   }
 
@@ -302,7 +302,7 @@ class AIChatBloc extends Bloc<AIChatEvent, AIChatState> {
       AppLogger.error('Failed to load AI history', e);
       emit(state.copyWith(
         status: AIChatStatus.error,
-        errorMessage: '加载消息历史失败',
+        errorMessage: 'ai_chat_load_history_failed',
       ));
     }
   }
@@ -317,7 +317,7 @@ class AIChatBloc extends Bloc<AIChatEvent, AIChatState> {
       try {
         final conv = await _aiChatService.createConversation();
         if (conv == null) {
-          emit(state.copyWith(errorMessage: '创建对话失败，请重试'));
+          emit(state.copyWith(errorMessage: 'ai_chat_create_conversation_retry'));
           return;
         }
         conversationId = conv.id;
@@ -327,7 +327,7 @@ class AIChatBloc extends Bloc<AIChatEvent, AIChatState> {
         ));
       } catch (e) {
         AppLogger.error('Create conversation before send failed', e);
-        emit(state.copyWith(errorMessage: '创建对话失败，请重试'));
+        emit(state.copyWith(errorMessage: 'ai_chat_create_conversation_retry'));
         return;
       }
     }
@@ -365,7 +365,7 @@ class AIChatBloc extends Bloc<AIChatEvent, AIChatState> {
         case AIChatEventType.done:
           return _AIChatMessageCompleted(sseEvent.messageId);
         case AIChatEventType.error:
-          return _AIChatError(sseEvent.error ?? '未知错误');
+          return _AIChatError(sseEvent.error ?? 'unknown_error');
         case AIChatEventType.csAvailable:
           return _AIChatCSAvailable(
               sseEvent.csAvailable ?? false, sseEvent.contactEmail);

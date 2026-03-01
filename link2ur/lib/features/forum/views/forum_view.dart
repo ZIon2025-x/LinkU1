@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/utils/error_localizer.dart';
 import '../../../core/utils/haptic_feedback.dart';
 import '../../../core/utils/l10n_extension.dart';
 import '../../../core/utils/responsive.dart';
@@ -521,7 +522,7 @@ class _ForumTabState extends State<_ForumTab> {
               prev.errorMessage != curr.errorMessage,
           listener: (context, state) {
             ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(state.errorMessage!)),
+              SnackBar(content: Text(context.localizeError(state.errorMessage))),
             );
           },
           child: BlocBuilder<ForumBloc, ForumState>(
@@ -539,7 +540,7 @@ class _ForumTabState extends State<_ForumTab> {
                 state.categories.isEmpty) {
               final body = ErrorStateView.loadFailed(
                 message:
-                    state.errorMessage ?? context.l10n.tasksLoadFailed,
+                    context.localizeError(state.errorMessage),
                 onRetry: () {
                   context
                       .read<ForumBloc>()
@@ -765,7 +766,7 @@ class _LeaderboardTabState extends State<_LeaderboardTab> {
         state.leaderboards.isEmpty) {
       return SliverFillRemaining(
         child: ErrorStateView.loadFailed(
-          message: state.errorMessage ?? context.l10n.tasksLoadFailed,
+          message: context.localizeError(state.errorMessage),
           onRetry: () {
             context.read<LeaderboardBloc>().add(
                   const LeaderboardLoadRequested(),

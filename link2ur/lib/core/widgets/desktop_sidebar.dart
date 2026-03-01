@@ -436,7 +436,7 @@ class _MenuItem extends StatelessWidget {
             : const Color(0xFFF8F9FA));
 
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 0),
+      padding: const EdgeInsets.symmetric(horizontal: 12),
       child: Material(
         color: Colors.transparent,
         child: InkWell(

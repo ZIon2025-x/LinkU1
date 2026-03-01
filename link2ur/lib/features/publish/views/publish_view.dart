@@ -12,6 +12,7 @@ import '../../../core/design/app_radius.dart';
 import '../../../core/widgets/cross_platform_image.dart';
 import '../../../core/utils/haptic_feedback.dart';
 import '../../../core/utils/logger.dart';
+import '../../../core/utils/error_localizer.dart';
 import '../../../core/utils/l10n_extension.dart';
 import '../../../core/utils/responsive.dart';
 import '../../../core/utils/validators.dart';
@@ -178,7 +179,7 @@ class _PostLinkSearchDialogContentState extends State<_PostLinkSearchDialogConte
                       onSubmitted: _runSearch,
                     ),
                   ),
-                  const SizedBox(width: 8),
+                  AppSpacing.hSm,
                   IconButton(
                     icon: const Icon(Icons.search),
                     onPressed: () => _runSearch(_queryCtrl.text),
@@ -203,7 +204,7 @@ class _PostLinkSearchDialogContentState extends State<_PostLinkSearchDialogConte
                     ),
                   ),
                 ),
-                const SizedBox(height: 4),
+                AppSpacing.vXs,
                 _buildLinkableList(_userRelated, 200),
                 const SizedBox(height: 12),
               ],
@@ -220,7 +221,7 @@ class _PostLinkSearchDialogContentState extends State<_PostLinkSearchDialogConte
                     ),
                   ),
                 ),
-                const SizedBox(height: 4),
+                AppSpacing.vXs,
                 _buildLinkableList(_results, 220),
               ],
               if (!_loading && _results.isEmpty && _queryCtrl.text.trim().isNotEmpty)
@@ -633,7 +634,6 @@ class _PublishContentState extends State<_PublishContent>
       final result = await FilePicker.platform.pickFiles(
         type: FileType.custom,
         allowedExtensions: ['pdf'],
-        allowMultiple: false,
       );
       if (result != null && result.files.isNotEmpty && mounted) {
         final f = result.files.first;
@@ -710,7 +710,7 @@ class _PublishContentState extends State<_PublishContent>
               AppFeedback.showSuccess(context, context.l10n.feedbackTaskPublishSuccess);
               context.pop();
             } else if (state.status == CreateTaskStatus.error) {
-              AppFeedback.showError(context, state.errorMessage ?? context.l10n.feedbackPublishFailed);
+              AppFeedback.showError(context, context.localizeError(state.errorMessage));
             }
           },
         ),
@@ -726,7 +726,7 @@ class _PublishContentState extends State<_PublishContent>
             } else if (state.actionMessage == 'publish_failed') {
               // 显示后端返回的具体错误信息（如收款账户验证失败等）
               // 清理异常类名前缀（如 "FleaMarketException: "）
-              var message = state.errorMessage ?? context.l10n.feedbackPublishFailed;
+              var message = context.localizeError(state.errorMessage);
               final colonIndex = message.indexOf(': ');
               if (colonIndex > 0 && colonIndex < 30) {
                 message = message.substring(colonIndex + 2);
@@ -742,7 +742,7 @@ class _PublishContentState extends State<_PublishContent>
               prev.errorMessage != curr.errorMessage,
           listener: (context, state) {
             if (!state.isCreatingPost && state.errorMessage != null) {
-              AppFeedback.showError(context, state.errorMessage!);
+              AppFeedback.showError(context, context.localizeError(state.errorMessage));
             } else if (!state.isCreatingPost &&
                 state.posts.isNotEmpty &&
                 state.posts.first.title == _postTitleCtrl.text.trim()) {
@@ -786,7 +786,7 @@ class _PublishContentState extends State<_PublishContent>
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      const SizedBox(height: 8),
+                      AppSpacing.vSm,
                       Row(
                         children: [
                           SizedBox(
@@ -837,7 +837,7 @@ class _PublishContentState extends State<_PublishContent>
                       ),
                       const SizedBox(height: 12),
                       _buildRecentSection(isDark),
-                      const SizedBox(height: 8),
+                      AppSpacing.vSm,
                       _buildTipsSection(isDark),
                       SizedBox(height: bottomPadding + 24),
                     ],
@@ -943,7 +943,7 @@ class _PublishContentState extends State<_PublishContent>
                         size: 18,
                         color: isDark ? AppColors.textTertiaryDark : AppColors.textTertiaryLight,
                       ),
-                      const SizedBox(width: 8),
+                      AppSpacing.hSm,
                       Expanded(
                         child: Text(
                           t,
@@ -1045,7 +1045,7 @@ class _PublishContentState extends State<_PublishContent>
               color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
             ),
           ),
-          const SizedBox(height: 4),
+          AppSpacing.vXs,
           Text(
             context.l10n.publishTypeSubtitle,
             style: TextStyle(
@@ -1557,13 +1557,13 @@ class _PublishContentState extends State<_PublishContent>
             minLines: 5,
           ),
           AppSpacing.vMd,
-          _sectionTitle('图片（选填，最多 $_kPostMaxImages 张）'),
+          _sectionTitle(context.l10n.publishImagesOptional('$_kPostMaxImages')),
           _buildPostImagePicker(isDark),
           AppSpacing.vMd,
-          _sectionTitle('PDF 附件（选填，最多 1 个）'),
+          _sectionTitle(context.l10n.forumPdfAttachmentOptional),
           _buildPostPdfSection(isDark),
           AppSpacing.vMd,
-          _sectionTitle('关联内容（选填，可关联服务/活动/商品/排行榜等）'),
+          _sectionTitle(context.l10n.publishRelatedContentOptional),
           _buildPostLinkedChip(isDark),
           if (_postUploading) ...[
             AppSpacing.vMd,
@@ -1995,7 +1995,7 @@ class _PublishContentState extends State<_PublishContent>
             ),
             IconButton(
               icon: const Icon(Icons.close, size: 20, color: AppColors.error),
-              tooltip: '删除',
+              tooltip: context.l10n.commonDelete,
               onPressed: _removePostPdf,
               visualDensity: VisualDensity.compact,
             ),
@@ -2004,27 +2004,30 @@ class _PublishContentState extends State<_PublishContent>
       );
     }
 
-    return GestureDetector(
-      onTap: _pickPostPdf,
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 14),
-        decoration: BoxDecoration(
-          color: isDark ? Colors.white.withValues(alpha: 0.06) : Colors.grey.shade50,
-          borderRadius: AppRadius.allSmall,
-          border: Border.all(
-            color: isDark
-                ? Colors.white.withValues(alpha: 0.12)
-                : AppColors.textTertiaryLight.withValues(alpha: 0.4),
-            style: BorderStyle.solid,
+    return Semantics(
+      button: true,
+      label: context.l10n.forumPdfAddPdf,
+      child: GestureDetector(
+        onTap: _pickPostPdf,
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 14),
+          decoration: BoxDecoration(
+            color: isDark ? Colors.white.withValues(alpha: 0.06) : Colors.grey.shade50,
+            borderRadius: AppRadius.allSmall,
+            border: Border.all(
+              color: isDark
+                  ? Colors.white.withValues(alpha: 0.12)
+                  : AppColors.textTertiaryLight.withValues(alpha: 0.4),
+            ),
           ),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.attach_file, size: 20, color: primary),
-            const SizedBox(width: 6),
-            Text('添加 PDF', style: TextStyle(fontSize: 14, color: primary)),
-          ],
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.attach_file, size: 20, color: primary),
+              const SizedBox(width: 6),
+              Text(context.l10n.forumPdfAddPdf, style: TextStyle(fontSize: 14, color: primary)),
+            ],
+          ),
         ),
       ),
     );
@@ -2248,7 +2251,7 @@ class _PublishTypeCard extends StatelessWidget {
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Icon(icon, size: 32, color: Colors.white),
-                    const SizedBox(width: 16),
+                    AppSpacing.hMd,
                     Text(
                       label,
                       style: const TextStyle(
@@ -2263,7 +2266,7 @@ class _PublishTypeCard extends StatelessWidget {
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Icon(icon, size: 32, color: Colors.white),
-                    const SizedBox(height: 8),
+                    AppSpacing.vSm,
                     Text(
                       label,
                       textAlign: TextAlign.center,

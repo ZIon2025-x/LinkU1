@@ -131,7 +131,7 @@ class _RecommendedTab extends StatelessWidget {
                   child: SingleChildScrollView(
                     padding: const EdgeInsets.symmetric(vertical: 24),
                     child: ErrorStateView(
-                      message: state.errorMessage ?? context.l10n.homeLoadFailed,
+                      message: context.localizeError(state.errorMessage),
                       onRetry: () {
                         context.read<HomeBloc>().add(const HomeLoadRequested());
                       },
