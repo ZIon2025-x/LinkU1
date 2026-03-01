@@ -472,6 +472,18 @@ export const getExpertServicesAdmin = async (expertId: string) => {
   return res.data;
 };
 
+/** 获取全部达人服务列表（分页），用于专家管理-服务管理 */
+export const getAllExpertServicesAdmin = async (params?: { page?: number; limit?: number; expert_id?: string }) => {
+  const res = await api.get('/api/admin/task-expert-services', { params });
+  return res.data;
+};
+
+/** 获取全部达人活动列表（分页），用于专家管理-活动管理 */
+export const getAllExpertActivitiesAdmin = async (params?: { page?: number; limit?: number; expert_id?: string; status_filter?: string }) => {
+  const res = await api.get('/api/admin/task-expert-activities', { params });
+  return res.data;
+};
+
 export const updateExpertServiceAdmin = async (expertId: string, serviceId: number, serviceData: any) => {
   const res = await api.put(`/api/admin/task-expert/${expertId}/services/${serviceId}`, serviceData);
   return res.data;
@@ -743,7 +755,11 @@ export const getForumCategory = async (categoryId: number) => {
 
 export const createForumCategory = async (category: {
   name: string;
+  name_zh?: string;
+  name_en?: string;
   description?: string;
+  description_zh?: string;
+  description_en?: string;
   icon?: string;
   sort_order?: number;
   is_visible?: boolean;
@@ -758,7 +774,11 @@ export const createForumCategory = async (category: {
 
 export const updateForumCategory = async (categoryId: number, category: {
   name?: string;
+  name_zh?: string;
+  name_en?: string;
   description?: string;
+  description_zh?: string;
+  description_en?: string;
   icon?: string;
   sort_order?: number;
   is_visible?: boolean;
@@ -1003,6 +1023,27 @@ export const reviewCustomLeaderboard = async (
     `/api/custom-leaderboards/${leaderboardId}/review`,
     null,
     { params: { action, comment } }
+  );
+  return res.data;
+};
+
+export const updateLeaderboardAdmin = async (
+  leaderboardId: number,
+  data: {
+    name?: string;
+    name_zh?: string;
+    name_en?: string;
+    description?: string;
+    description_zh?: string;
+    description_en?: string;
+    cover_image?: string;
+    location?: string;
+    status?: 'active' | 'pending' | 'rejected';
+  }
+) => {
+  const res = await api.put(
+    `/api/custom-leaderboards/admin/leaderboards/${leaderboardId}`,
+    data
   );
   return res.data;
 };

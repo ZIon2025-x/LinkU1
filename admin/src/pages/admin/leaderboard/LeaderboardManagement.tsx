@@ -10,10 +10,55 @@ import {
   deleteLeaderboardItemAdmin,
   getCustomLeaderboardsAdmin,
   reviewCustomLeaderboard,
+  updateLeaderboardAdmin,
 } from '../../../api';
 import { getErrorMessage } from '../../../utils/errorHandler';
 
-type SubTab = 'votes' | 'items' | 'reviews';
+type SubTab = 'leaderboards' | 'votes' | 'items' | 'reviews';
+
+interface Leaderboard {
+  id: number;
+  name: string;
+  name_zh?: string;
+  name_en?: string;
+  location: string;
+  description?: string;
+  description_zh?: string;
+  description_en?: string;
+  cover_image?: string;
+  status: string;
+  item_count: number;
+  vote_count: number;
+  view_count?: number;
+  created_at?: string;
+  updated_at?: string;
+}
+
+interface LeaderboardForm {
+  id: number;
+  name: string;
+  name_zh: string;
+  name_en: string;
+  description: string;
+  description_zh: string;
+  description_en: string;
+  cover_image: string;
+  location: string;
+  status: 'active' | 'pending' | 'rejected';
+}
+
+const initialLeaderboardForm: LeaderboardForm = {
+  id: 0,
+  name: '',
+  name_zh: '',
+  name_en: '',
+  description: '',
+  description_zh: '',
+  description_en: '',
+  cover_image: '',
+  location: '',
+  status: 'active',
+};
 
 interface Vote {
   id: number;
@@ -59,7 +104,7 @@ const initialItemForm: ItemForm = {
  * 排行榜管理组件
  */
 const LeaderboardManagement: React.FC = () => {
-  const [subTab, setSubTab] = useState<SubTab>('items');
+  const [subTab, setSubTab] = useState<SubTab>('leaderboards');
   const [votesFilter, setVotesFilter] = useState<{
     item_id?: number;
     leaderboard_id?: number;
@@ -141,6 +186,45 @@ const LeaderboardManagement: React.FC = () => {
     const total = typeof response.total === 'number' ? response.total : list.length;
     return { data: list, total };
   }, []);
+
+  // ---------- 榜单管理 ----------
+  const fetchLeaderboards = useCallback(async ({ page, pageSize }: { page: number; pageSize: number }) => {
+    const response = await getCustomLeaderboardsAdmin({
+      status: 'all',
+      offset: (page - 1) * pageSize,
+      limit: pageSize,
+    });
+    const list = response.items ?? [];
+    const total = typeof response.total === 'number' ? response.total : list.length;
+    return { data: list, total };
+  }, []);
+
+  const leaderboardsTable = useAdminTable<Leaderboard>({
+    fetchData: fetchLeaderboards,
+    initialPageSize: 20,
+    onError: (error) => message.error(getErrorMessage(error)),
+    enabled: subTab === 'leaderboards',
+  });
+
+  const leaderboardModal = useModalForm<LeaderboardForm>({
+    initialValues: initialLeaderboardForm,
+    onSubmit: async (values) => {
+      await updateLeaderboardAdmin(values.id, {
+        name: values.name || undefined,
+        name_zh: values.name_zh || undefined,
+        name_en: values.name_en || undefined,
+        description: values.description || undefined,
+        description_zh: values.description_zh || undefined,
+        description_en: values.description_en || undefined,
+        cover_image: values.cover_image || undefined,
+        location: values.location || undefined,
+        status: values.status,
+      });
+      message.success('榜单更新成功');
+      leaderboardsTable.refresh();
+    },
+    onError: (error: any) => message.error(getErrorMessage(error)),
+  });
 
   const reviewsTable = useAdminTable<any>({
     fetchData: fetchReviews,
@@ -296,6 +380,41 @@ const LeaderboardManagement: React.FC = () => {
     },
   ];
 
+  const leaderboardsColumns: Column<Leaderboard>[] = [
+    { key: 'id', title: 'ID', dataIndex: 'id', width: 60 },
+    { key: 'name', title: '名称', dataIndex: 'name', width: 120 },
+    { key: 'name_zh', title: '中文名', dataIndex: 'name_zh', width: 120, render: (v) => v || '-' },
+    { key: 'name_en', title: '英文名', dataIndex: 'name_en', width: 120, render: (v) => v || '-' },
+    { key: 'location', title: '地区', dataIndex: 'location', width: 80 },
+    { key: 'status', title: '状态', dataIndex: 'status', width: 72, render: (v) => (v === 'active' ? '已激活' : v === 'pending' ? '待审核' : '已拒绝') },
+    { key: 'item_count', title: '竞品数', dataIndex: 'item_count', width: 72 },
+    { key: 'vote_count', title: '投票数', dataIndex: 'vote_count', width: 80 },
+    {
+      key: 'actions',
+      title: '操作',
+      width: 80,
+      render: (_, record) => (
+        <button
+          onClick={() => leaderboardModal.open({
+            id: record.id,
+            name: record.name || '',
+            name_zh: record.name_zh || '',
+            name_en: record.name_en || '',
+            description: record.description || '',
+            description_zh: record.description_zh || '',
+            description_en: record.description_en || '',
+            cover_image: record.cover_image || '',
+            location: record.location || '',
+            status: (record.status as 'active' | 'pending' | 'rejected') || 'active',
+          })}
+          style={{ padding: '4px 8px', border: '1px solid #007bff', background: 'white', color: '#007bff', borderRadius: '4px', cursor: 'pointer', fontSize: '12px' }}
+        >
+          编辑
+        </button>
+      ),
+    },
+  ];
+
   const reviewsColumns: Column<any>[] = [
     { key: 'id', title: 'ID', dataIndex: 'id', width: 60 },
     { key: 'name', title: '名称', dataIndex: 'name', width: 160 },
@@ -366,7 +485,7 @@ const LeaderboardManagement: React.FC = () => {
 
       {/* 子标签页 */}
       <div style={{ display: 'flex', gap: '10px', marginBottom: '20px' }}>
-        {(['items', 'votes', 'reviews'] as SubTab[]).map((tab) => (
+        {(['leaderboards', 'items', 'votes', 'reviews'] as SubTab[]).map((tab) => (
           <button
             key={tab}
             onClick={() => setSubTab(tab)}
@@ -381,10 +500,32 @@ const LeaderboardManagement: React.FC = () => {
               fontWeight: '500',
             }}
           >
-            {tab === 'items' ? '竞品管理' : tab === 'votes' ? '投票记录' : '审核队列'}
+            {tab === 'leaderboards' ? '榜单管理' : tab === 'items' ? '竞品管理' : tab === 'votes' ? '投票记录' : '审核队列'}
           </button>
         ))}
       </div>
+
+      {/* 榜单管理 */}
+      {subTab === 'leaderboards' && (
+        <div>
+          <AdminTable
+            columns={leaderboardsColumns}
+            data={leaderboardsTable.data}
+            loading={leaderboardsTable.loading}
+            refreshing={leaderboardsTable.fetching}
+            rowKey="id"
+            emptyText="暂无榜单"
+          />
+          <AdminPagination
+            currentPage={leaderboardsTable.currentPage}
+            totalPages={leaderboardsTable.totalPages}
+            total={leaderboardsTable.total}
+            pageSize={leaderboardsTable.pageSize}
+            onPageChange={leaderboardsTable.setCurrentPage}
+            onPageSizeChange={leaderboardsTable.setPageSize}
+          />
+        </div>
+      )}
 
       {/* 竞品管理 */}
       {subTab === 'items' && (
@@ -558,6 +699,69 @@ const LeaderboardManagement: React.FC = () => {
               placeholder="请输入榜单ID"
               style={{ width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '4px' }}
             />
+          </div>
+        </div>
+      </AdminModal>
+
+      {/* 榜单编辑弹窗（双语字段） */}
+      <AdminModal
+        isOpen={leaderboardModal.isOpen}
+        onClose={leaderboardModal.close}
+        title="编辑榜单"
+        footer={
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
+            <button onClick={leaderboardModal.close} style={{ padding: '8px 16px', border: '1px solid #d9d9d9', borderRadius: '4px', background: 'white', cursor: 'pointer' }}>取消</button>
+            <button onClick={() => leaderboardModal.handleSubmit()} disabled={leaderboardModal.loading} style={{ padding: '8px 16px', border: 'none', borderRadius: '4px', background: '#007bff', color: 'white', cursor: leaderboardModal.loading ? 'not-allowed' : 'pointer', opacity: leaderboardModal.loading ? 0.7 : 1 }}>{leaderboardModal.loading ? '保存中...' : '保存'}</button>
+          </div>
+        }
+        width="560px"
+      >
+        <div style={{ padding: '20px 0', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+          <div>
+            <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold' }}>名称（兼容）</label>
+            <input type="text" value={leaderboardModal.formData.name} onChange={(e) => leaderboardModal.updateField('name', e.target.value)} placeholder="名称" style={{ width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '4px', boxSizing: 'border-box' }} />
+          </div>
+          <div style={{ display: 'flex', gap: '12px' }}>
+            <div style={{ flex: 1 }}>
+              <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold' }}>中文名称</label>
+              <input type="text" value={leaderboardModal.formData.name_zh} onChange={(e) => leaderboardModal.updateField('name_zh', e.target.value)} placeholder="中文名" style={{ width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '4px', boxSizing: 'border-box' }} />
+            </div>
+            <div style={{ flex: 1 }}>
+              <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold' }}>英文名称</label>
+              <input type="text" value={leaderboardModal.formData.name_en} onChange={(e) => leaderboardModal.updateField('name_en', e.target.value)} placeholder="English name" style={{ width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '4px', boxSizing: 'border-box' }} />
+            </div>
+          </div>
+          <div>
+            <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold' }}>描述（兼容）</label>
+            <textarea value={leaderboardModal.formData.description} onChange={(e) => leaderboardModal.updateField('description', e.target.value)} rows={2} placeholder="描述" style={{ width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '4px', resize: 'vertical', boxSizing: 'border-box' }} />
+          </div>
+          <div style={{ display: 'flex', gap: '12px' }}>
+            <div style={{ flex: 1 }}>
+              <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold' }}>中文描述</label>
+              <textarea value={leaderboardModal.formData.description_zh} onChange={(e) => leaderboardModal.updateField('description_zh', e.target.value)} rows={2} placeholder="中文描述" style={{ width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '4px', resize: 'vertical', boxSizing: 'border-box' }} />
+            </div>
+            <div style={{ flex: 1 }}>
+              <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold' }}>英文描述</label>
+              <textarea value={leaderboardModal.formData.description_en} onChange={(e) => leaderboardModal.updateField('description_en', e.target.value)} rows={2} placeholder="English description" style={{ width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '4px', resize: 'vertical', boxSizing: 'border-box' }} />
+            </div>
+          </div>
+          <div>
+            <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold' }}>封面图 URL</label>
+            <input type="text" value={leaderboardModal.formData.cover_image} onChange={(e) => leaderboardModal.updateField('cover_image', e.target.value)} placeholder="封面图 URL" style={{ width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '4px', boxSizing: 'border-box' }} />
+          </div>
+          <div style={{ display: 'flex', gap: '12px' }}>
+            <div style={{ flex: 1 }}>
+              <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold' }}>地区</label>
+              <input type="text" value={leaderboardModal.formData.location} onChange={(e) => leaderboardModal.updateField('location', e.target.value)} placeholder="如 London" style={{ width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '4px', boxSizing: 'border-box' }} />
+            </div>
+            <div style={{ flex: 1 }}>
+              <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold' }}>状态</label>
+              <select value={leaderboardModal.formData.status} onChange={(e) => leaderboardModal.updateField('status', e.target.value as 'active' | 'pending' | 'rejected')} style={{ width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '4px', boxSizing: 'border-box' }}>
+                <option value="active">已激活</option>
+                <option value="pending">待审核</option>
+                <option value="rejected">已拒绝</option>
+              </select>
+            </div>
           </div>
         </div>
       </AdminModal>

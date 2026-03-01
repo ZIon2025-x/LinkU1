@@ -2347,8 +2347,11 @@ async def update_category(
     # 更新字段
     update_data = category.model_dump(exclude_unset=True)
     
-    # 如果更新了name或description，自动填充双语字段
-    if 'name' in update_data or 'description' in update_data:
+    # 若客户端提交了双语字段则直接使用；否则若更新了 name/description 则用 auto_fill 填充
+    if any(k in update_data for k in ('name_en', 'name_zh', 'description_en', 'description_zh')):
+        # 直接使用管理员填写的双语字段，不覆盖
+        pass
+    elif 'name' in update_data or 'description' in update_data:
         from app.utils.bilingual_helper import auto_fill_bilingual_fields
         
         updated_name = update_data.get('name', db_category.name)
@@ -2357,13 +2360,11 @@ async def update_category(
         _, name_en, name_zh, description_en, description_zh = await auto_fill_bilingual_fields(
             name=updated_name,
             description=updated_description,
-            name_en=update_data.get('name_en') or db_category.name_en,
-            name_zh=update_data.get('name_zh') or db_category.name_zh,
-            description_en=update_data.get('description_en') or db_category.description_en,
-            description_zh=update_data.get('description_zh') or db_category.description_zh,
+            name_en=db_category.name_en,
+            name_zh=db_category.name_zh,
+            description_en=db_category.description_en,
+            description_zh=db_category.description_zh,
         )
-        
-        # 更新双语字段
         update_data['name_en'] = name_en
         update_data['name_zh'] = name_zh
         update_data['description_en'] = description_en

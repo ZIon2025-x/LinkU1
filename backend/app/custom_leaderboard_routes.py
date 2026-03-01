@@ -217,6 +217,59 @@ async def get_all_leaderboards_admin(
     )
 
 
+@router.put("/admin/leaderboards/{leaderboard_id}", response_model=schemas.CustomLeaderboardOut)
+async def update_leaderboard_admin(
+    leaderboard_id: int,
+    body: schemas.CustomLeaderboardAdminUpdate,
+    current_admin: models.AdminUser = Depends(get_current_admin_async),
+    db: AsyncSession = Depends(get_async_db_dependency),
+):
+    """管理员更新排行榜（名称、描述、封面、地区、状态及双语字段）"""
+    result = await db.execute(
+        select(models.CustomLeaderboard)
+        .options(selectinload(models.CustomLeaderboard.applicant))
+        .where(models.CustomLeaderboard.id == leaderboard_id)
+    )
+    leaderboard = result.scalar_one_or_none()
+    if not leaderboard:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="榜单不存在")
+    data = body.model_dump(exclude_unset=True)
+    for key, value in data.items():
+        setattr(leaderboard, key, value)
+    leaderboard.updated_at = get_utc_time()
+    await db.commit()
+    await db.refresh(leaderboard)
+    try:
+        from app.cache import invalidate_cache
+        invalidate_cache("custom_leaderboards*")
+        invalidate_cache(f"leaderboard:{leaderboard_id}*")
+    except Exception as e:
+        logger.warning("invalidate leaderboard cache: %s", e)
+    from app.forum_routes import build_user_info
+    applicant_info = None
+    if leaderboard.applicant:
+        applicant_info = await build_user_info(db, leaderboard.applicant)
+    return schemas.CustomLeaderboardOut(
+        id=leaderboard.id,
+        name=leaderboard.name,
+        name_en=leaderboard.name_en,
+        name_zh=leaderboard.name_zh,
+        location=leaderboard.location,
+        description=leaderboard.description,
+        description_en=leaderboard.description_en,
+        description_zh=leaderboard.description_zh,
+        cover_image=leaderboard.cover_image,
+        applicant_id=leaderboard.applicant_id,
+        applicant=applicant_info,
+        status=leaderboard.status,
+        item_count=leaderboard.item_count,
+        vote_count=leaderboard.vote_count,
+        view_count=leaderboard.view_count,
+        created_at=leaderboard.created_at,
+        updated_at=leaderboard.updated_at,
+    )
+
+
 # ==================== 管理员查看投票记录 ====================
 
 def _votes_admin_base_query(

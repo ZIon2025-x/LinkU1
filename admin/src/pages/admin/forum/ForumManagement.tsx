@@ -31,8 +31,10 @@ type SubTab = 'categories' | 'requests' | 'posts';
 interface Category {
   id: number;
   name: string;
+  name_zh?: string;
   name_en?: string;
   description?: string;
+  description_zh?: string;
   description_en?: string;
   icon?: string;
   sort_order: number;
@@ -49,7 +51,11 @@ interface Category {
 interface CategoryForm {
   id?: number;
   name: string;
+  name_zh: string;
+  name_en: string;
   description: string;
+  description_zh: string;
+  description_en: string;
   icon: string;
   sort_order: number;
   is_visible: boolean;
@@ -59,7 +65,11 @@ interface CategoryForm {
 
 const initialForm: CategoryForm = {
   name: '',
+  name_zh: '',
+  name_en: '',
   description: '',
+  description_zh: '',
+  description_en: '',
   icon: '',
   sort_order: 0,
   is_visible: true,
@@ -125,7 +135,11 @@ const ForumManagement: React.FC = () => {
       }
       const payload: any = {
         name: values.name,
+        name_zh: values.name_zh || undefined,
+        name_en: values.name_en || undefined,
         description: values.description || undefined,
+        description_zh: values.description_zh || undefined,
+        description_en: values.description_en || undefined,
         icon: values.icon || undefined,
         sort_order: values.sort_order,
         is_visible: values.is_visible,
@@ -147,16 +161,21 @@ const ForumManagement: React.FC = () => {
   });
 
   const handleEdit = (category: Category) => {
-    modal.open({
+    const form: CategoryForm = {
       id: category.id,
       name: category.name,
-      description: category.description || '',
-      icon: category.icon || '',
+      name_zh: category.name_zh ?? '',
+      name_en: category.name_en ?? '',
+      description: category.description ?? '',
+      description_zh: category.description_zh ?? '',
+      description_en: category.description_en ?? '',
+      icon: category.icon ?? '',
       sort_order: category.sort_order,
       is_visible: category.is_visible,
-      is_admin_only: category.is_admin_only || false,
+      is_admin_only: category.is_admin_only ?? false,
       type: (category.type as CategoryForm['type']) || 'general',
-    });
+    };
+    modal.open(form);
   };
 
   const handleDelete = (id: number, name: string) => {
@@ -785,7 +804,7 @@ const ForumManagement: React.FC = () => {
         <div style={{ padding: '20px 0', display: 'flex', flexDirection: 'column', gap: '15px' }}>
           <div>
             <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>
-              板块名称 <span style={{ color: 'red' }}>*</span>
+              板块名称（兼容） <span style={{ color: 'red' }}>*</span>
             </label>
             <input
               type="text"
@@ -795,15 +814,59 @@ const ForumManagement: React.FC = () => {
               style={{ width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '4px', boxSizing: 'border-box' }}
             />
           </div>
+          <div style={{ display: 'flex', gap: '12px' }}>
+            <div style={{ flex: 1 }}>
+              <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>中文名称</label>
+              <input
+                type="text"
+                value={modal.formData.name_zh}
+                onChange={(e) => modal.updateField('name_zh', e.target.value)}
+                placeholder="中文名称（可选）"
+                style={{ width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '4px', boxSizing: 'border-box' }}
+              />
+            </div>
+            <div style={{ flex: 1 }}>
+              <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>英文名称</label>
+              <input
+                type="text"
+                value={modal.formData.name_en}
+                onChange={(e) => modal.updateField('name_en', e.target.value)}
+                placeholder="English name (optional)"
+                style={{ width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '4px', boxSizing: 'border-box' }}
+              />
+            </div>
+          </div>
           <div>
-            <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>描述</label>
+            <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>描述（兼容）</label>
             <textarea
               value={modal.formData.description}
               onChange={(e) => modal.updateField('description', e.target.value)}
               placeholder="板块描述（可选）"
-              rows={3}
+              rows={2}
               style={{ width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '4px', resize: 'vertical', boxSizing: 'border-box' }}
             />
+          </div>
+          <div style={{ display: 'flex', gap: '12px' }}>
+            <div style={{ flex: 1 }}>
+              <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>中文描述</label>
+              <textarea
+                value={modal.formData.description_zh}
+                onChange={(e) => modal.updateField('description_zh', e.target.value)}
+                placeholder="中文描述（可选）"
+                rows={2}
+                style={{ width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '4px', resize: 'vertical', boxSizing: 'border-box' }}
+              />
+            </div>
+            <div style={{ flex: 1 }}>
+              <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>英文描述</label>
+              <textarea
+                value={modal.formData.description_en}
+                onChange={(e) => modal.updateField('description_en', e.target.value)}
+                placeholder="English description (optional)"
+                rows={2}
+                style={{ width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '4px', resize: 'vertical', boxSizing: 'border-box' }}
+              />
+            </div>
           </div>
           <div style={{ display: 'flex', gap: '15px' }}>
             <div style={{ flex: 1 }}>

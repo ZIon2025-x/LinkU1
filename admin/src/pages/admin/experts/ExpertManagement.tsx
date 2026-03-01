@@ -10,11 +10,17 @@ import api, {
   reviewTaskExpertApplication,
   createExpertFromApplication,
   getProfileUpdateRequests,
-  reviewProfileUpdateRequest
+  reviewProfileUpdateRequest,
+  getAllExpertServicesAdmin,
+  getAllExpertActivitiesAdmin,
+  updateExpertServiceAdmin,
+  deleteExpertServiceAdmin,
+  updateExpertActivityAdmin,
+  deleteExpertActivityAdmin,
 } from '../../../api';
 import { getErrorMessage } from '../../../utils/errorHandler';
 
-type SubTab = 'list' | 'applications' | 'profile_updates';
+type SubTab = 'list' | 'applications' | 'profile_updates' | 'services' | 'activities';
 
 interface ReviewForm {
   action: 'approve' | 'reject';
@@ -164,6 +170,30 @@ const ExpertManagement: React.FC = () => {
     enabled: subTab === 'profile_updates',
   });
 
+  // ==================== 服务管理 ====================
+  const fetchServices = useCallback(async ({ page, pageSize }: { page: number; pageSize: number }) => {
+    const res = await getAllExpertServicesAdmin({ page, limit: pageSize });
+    return { data: res.items || [], total: res.total || 0 };
+  }, []);
+  const servicesTable = useAdminTable<any>({
+    fetchData: fetchServices,
+    initialPageSize: 20,
+    onError: (error) => message.error(getErrorMessage(error)),
+    enabled: subTab === 'services',
+  });
+
+  // ==================== 活动管理 ====================
+  const fetchActivities = useCallback(async ({ page, pageSize }: { page: number; pageSize: number }) => {
+    const res = await getAllExpertActivitiesAdmin({ page, limit: pageSize });
+    return { data: res.items || [], total: res.total || 0 };
+  }, []);
+  const activitiesTable = useAdminTable<any>({
+    fetchData: fetchActivities,
+    initialPageSize: 20,
+    onError: (error) => message.error(getErrorMessage(error)),
+    enabled: subTab === 'activities',
+  });
+
   // ==================== 审核模态框 ====================
   const reviewModal = useModalForm<ReviewForm>({
     initialValues: initialReviewForm,
@@ -257,6 +287,71 @@ const ExpertManagement: React.FC = () => {
       avatar: expert.avatar || '',
       user_level: expert.user_level || 'normal',
       services,
+    });
+  };
+
+  // 服务编辑
+  const serviceFormInitial = { id: 0, expert_id: '', expert_name: '', service_name: '', description: '', base_price: 0, currency: 'GBP', status: 'active', display_order: 0 };
+  const serviceEditModal = useModalForm<any>({
+    initialValues: serviceFormInitial,
+    onSubmit: async (values) => {
+      await updateExpertServiceAdmin(values.expert_id, values.id, {
+        service_name: values.service_name,
+        description: values.description,
+        base_price: values.base_price,
+        currency: values.currency,
+        status: values.status,
+        display_order: values.display_order,
+      });
+      message.success('服务已更新');
+      servicesTable.refresh();
+    },
+    onError: (e) => message.error(getErrorMessage(e)),
+  });
+  const handleDeleteService = (expertId: string, serviceId: number, name: string) => {
+    Modal.confirm({
+      title: '确认删除',
+      content: `确定要删除服务「${name}」吗？`,
+      okText: '删除',
+      okButtonProps: { danger: true },
+      cancelText: '取消',
+      onOk: async () => {
+        await deleteExpertServiceAdmin(expertId, serviceId);
+        message.success('已删除');
+        servicesTable.refresh();
+      },
+    });
+  };
+
+  // 活动编辑
+  const activityFormInitial = { id: 0, expert_id: '', expert_name: '', title: '', description: '', status: 'open', location: '', max_participants: 1 };
+  const activityEditModal = useModalForm<any>({
+    initialValues: activityFormInitial,
+    onSubmit: async (values) => {
+      await updateExpertActivityAdmin(values.expert_id, values.id, {
+        title: values.title,
+        description: values.description,
+        status: values.status,
+        location: values.location,
+        max_participants: values.max_participants,
+      });
+      message.success('活动已更新');
+      activitiesTable.refresh();
+    },
+    onError: (e) => message.error(getErrorMessage(e)),
+  });
+  const handleDeleteActivity = (expertId: string, activityId: number, title: string) => {
+    Modal.confirm({
+      title: '确认删除',
+      content: `确定要删除活动「${title}」吗？关联任务可能被一并处理。`,
+      okText: '删除',
+      okButtonProps: { danger: true },
+      cancelText: '取消',
+      onOk: async () => {
+        await deleteExpertActivityAdmin(expertId, activityId);
+        message.success('已删除');
+        activitiesTable.refresh();
+      },
     });
   };
 
@@ -542,13 +637,91 @@ const ExpertManagement: React.FC = () => {
     },
   ];
 
+  const serviceColumns: Column<any>[] = [
+    { key: 'id', title: 'ID', dataIndex: 'id', width: 70 },
+    { key: 'expert_name', title: '达人', dataIndex: 'expert_name', width: 100 },
+    { key: 'service_name', title: '服务名称', dataIndex: 'service_name', width: 160 },
+    { key: 'base_price', title: '价格', width: 90, render: (_, r) => `${r.currency || 'GBP'} ${r.base_price ?? 0}` },
+    { key: 'status', title: '状态', dataIndex: 'status', width: 72 },
+    { key: 'display_order', title: '排序', dataIndex: 'display_order', width: 60 },
+    {
+      key: 'actions',
+      title: '操作',
+      width: 140,
+      render: (_, record) => (
+        <div style={{ display: 'flex', gap: '6px' }}>
+          <button
+            onClick={() => serviceEditModal.open({
+              id: record.id,
+              expert_id: record.expert_id,
+              expert_name: record.expert_name,
+              service_name: record.service_name,
+              description: record.description ?? '',
+              base_price: record.base_price,
+              currency: record.currency,
+              status: record.status,
+              display_order: record.display_order ?? 0,
+            })}
+            style={{ padding: '4px 8px', border: '1px solid #007bff', background: 'white', color: '#007bff', borderRadius: '4px', cursor: 'pointer', fontSize: '12px' }}
+          >
+            编辑
+          </button>
+          <button
+            onClick={() => handleDeleteService(record.expert_id, record.id, record.service_name)}
+            style={{ padding: '4px 8px', border: '1px solid #dc3545', background: 'white', color: '#dc3545', borderRadius: '4px', cursor: 'pointer', fontSize: '12px' }}
+          >
+            删除
+          </button>
+        </div>
+      ),
+    },
+  ];
+
+  const activityColumns: Column<any>[] = [
+    { key: 'id', title: 'ID', dataIndex: 'id', width: 70 },
+    { key: 'expert_name', title: '达人', dataIndex: 'expert_name', width: 100 },
+    { key: 'title', title: '活动标题', dataIndex: 'title', width: 180 },
+    { key: 'status', title: '状态', dataIndex: 'status', width: 72 },
+    { key: 'max_participants', title: '人数', dataIndex: 'max_participants', width: 60 },
+    {
+      key: 'actions',
+      title: '操作',
+      width: 140,
+      render: (_, record) => (
+        <div style={{ display: 'flex', gap: '6px' }}>
+          <button
+            onClick={() => activityEditModal.open({
+              id: record.id,
+              expert_id: record.expert_id,
+              expert_name: record.expert_name,
+              title: record.title,
+              description: record.description || '',
+              status: record.status,
+              location: record.location || '',
+              max_participants: record.max_participants ?? 1,
+            })}
+            style={{ padding: '4px 8px', border: '1px solid #007bff', background: 'white', color: '#007bff', borderRadius: '4px', cursor: 'pointer', fontSize: '12px' }}
+          >
+            编辑
+          </button>
+          <button
+            onClick={() => handleDeleteActivity(record.expert_id, record.id, record.title)}
+            style={{ padding: '4px 8px', border: '1px solid #dc3545', background: 'white', color: '#dc3545', borderRadius: '4px', cursor: 'pointer', fontSize: '12px' }}
+          >
+            删除
+          </button>
+        </div>
+      ),
+    },
+  ];
+
   return (
     <div>
       <h2 style={{ marginBottom: '20px' }}>任务达人管理</h2>
 
       {/* 子标签页 */}
       <div style={{ display: 'flex', gap: '10px', marginBottom: '20px' }}>
-        {(['list', 'applications', 'profile_updates'] as SubTab[]).map((tab) => (
+        {(['list', 'applications', 'profile_updates', 'services', 'activities'] as SubTab[]).map((tab) => (
           <button
             key={tab}
             onClick={() => setSubTab(tab)}
@@ -563,7 +736,7 @@ const ExpertManagement: React.FC = () => {
               fontWeight: '500'
             }}
           >
-            {tab === 'list' ? '达人列表' : tab === 'applications' ? '申请审核' : '资料修改审核'}
+            {tab === 'list' ? '达人列表' : tab === 'applications' ? '申请审核' : tab === 'profile_updates' ? '资料修改审核' : tab === 'services' ? '服务管理' : '活动管理'}
           </button>
         ))}
       </div>
@@ -612,6 +785,50 @@ const ExpertManagement: React.FC = () => {
           rowKey="id"
           emptyText="暂无待审核资料修改请求"
         />
+      )}
+
+      {/* 服务管理 */}
+      {subTab === 'services' && (
+        <>
+          <AdminTable
+            columns={serviceColumns}
+            data={servicesTable.data}
+            loading={servicesTable.loading}
+            refreshing={servicesTable.fetching}
+            rowKey="id"
+            emptyText="暂无服务"
+          />
+          <AdminPagination
+            currentPage={servicesTable.currentPage}
+            totalPages={servicesTable.totalPages}
+            total={servicesTable.total}
+            pageSize={servicesTable.pageSize}
+            onPageChange={servicesTable.setCurrentPage}
+            onPageSizeChange={servicesTable.setPageSize}
+          />
+        </>
+      )}
+
+      {/* 活动管理 */}
+      {subTab === 'activities' && (
+        <>
+          <AdminTable
+            columns={activityColumns}
+            data={activitiesTable.data}
+            loading={activitiesTable.loading}
+            refreshing={activitiesTable.fetching}
+            rowKey="id"
+            emptyText="暂无活动"
+          />
+          <AdminPagination
+            currentPage={activitiesTable.currentPage}
+            totalPages={activitiesTable.totalPages}
+            total={activitiesTable.total}
+            pageSize={activitiesTable.pageSize}
+            onPageChange={activitiesTable.setCurrentPage}
+            onPageSizeChange={activitiesTable.setPageSize}
+          />
+        </>
       )}
 
       {/* 审核模态框 */}
@@ -956,6 +1173,151 @@ const ExpertManagement: React.FC = () => {
               <input type="checkbox" checked={editModal.formData.is_verified} onChange={(e) => editModal.updateField('is_verified', e.target.checked)} />
               <span>已认证</span>
             </label>
+          </div>
+        </div>
+      </Modal>
+
+      {/* 服务编辑弹窗 */}
+      <Modal
+        title="编辑服务"
+        open={serviceEditModal.isOpen}
+        onCancel={serviceEditModal.close}
+        onOk={serviceEditModal.handleSubmit}
+        confirmLoading={serviceEditModal.loading}
+        okText="保存"
+        cancelText="取消"
+        width={500}
+      >
+        <div style={{ padding: '16px 0', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          <div><strong>达人：</strong>{serviceEditModal.formData.expert_name || serviceEditModal.formData.expert_id}</div>
+          <div>
+            <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold' }}>服务名称</label>
+            <input
+              value={serviceEditModal.formData.service_name}
+              onChange={(e) => serviceEditModal.updateField('service_name', e.target.value)}
+              style={{ width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '4px', boxSizing: 'border-box' }}
+            />
+          </div>
+          <div>
+            <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold' }}>描述</label>
+            <textarea
+              value={serviceEditModal.formData.description}
+              onChange={(e) => serviceEditModal.updateField('description', e.target.value)}
+              rows={3}
+              style={{ width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '4px', resize: 'vertical', boxSizing: 'border-box' }}
+            />
+          </div>
+          <div style={{ display: 'flex', gap: '12px' }}>
+            <div style={{ flex: 1 }}>
+              <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold' }}>价格</label>
+              <input
+                type="number"
+                step="0.01"
+                value={serviceEditModal.formData.base_price}
+                onChange={(e) => serviceEditModal.updateField('base_price', parseFloat(e.target.value) || 0)}
+                style={{ width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '4px', boxSizing: 'border-box' }}
+              />
+            </div>
+            <div style={{ flex: 1 }}>
+              <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold' }}>币种</label>
+              <select
+                value={serviceEditModal.formData.currency}
+                onChange={(e) => serviceEditModal.updateField('currency', e.target.value)}
+                style={{ width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '4px', boxSizing: 'border-box' }}
+              >
+                <option value="GBP">GBP</option>
+                <option value="CNY">CNY</option>
+                <option value="USD">USD</option>
+              </select>
+            </div>
+          </div>
+          <div style={{ display: 'flex', gap: '12px' }}>
+            <div style={{ flex: 1 }}>
+              <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold' }}>状态</label>
+              <select
+                value={serviceEditModal.formData.status}
+                onChange={(e) => serviceEditModal.updateField('status', e.target.value)}
+                style={{ width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '4px', boxSizing: 'border-box' }}
+              >
+                <option value="active">启用</option>
+                <option value="inactive">停用</option>
+              </select>
+            </div>
+            <div style={{ flex: 1 }}>
+              <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold' }}>排序</label>
+              <input
+                type="number"
+                value={serviceEditModal.formData.display_order}
+                onChange={(e) => serviceEditModal.updateField('display_order', parseInt(e.target.value) || 0)}
+                style={{ width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '4px', boxSizing: 'border-box' }}
+              />
+            </div>
+          </div>
+        </div>
+      </Modal>
+
+      {/* 活动编辑弹窗 */}
+      <Modal
+        title="编辑活动"
+        open={activityEditModal.isOpen}
+        onCancel={activityEditModal.close}
+        onOk={activityEditModal.handleSubmit}
+        confirmLoading={activityEditModal.loading}
+        okText="保存"
+        cancelText="取消"
+        width={500}
+      >
+        <div style={{ padding: '16px 0', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          <div><strong>达人：</strong>{activityEditModal.formData.expert_name || activityEditModal.formData.expert_id}</div>
+          <div>
+            <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold' }}>活动标题</label>
+            <input
+              value={activityEditModal.formData.title}
+              onChange={(e) => activityEditModal.updateField('title', e.target.value)}
+              style={{ width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '4px', boxSizing: 'border-box' }}
+            />
+          </div>
+          <div>
+            <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold' }}>描述</label>
+            <textarea
+              value={activityEditModal.formData.description}
+              onChange={(e) => activityEditModal.updateField('description', e.target.value)}
+              rows={3}
+              style={{ width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '4px', resize: 'vertical', boxSizing: 'border-box' }}
+            />
+          </div>
+          <div>
+            <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold' }}>地点</label>
+            <input
+              value={activityEditModal.formData.location}
+              onChange={(e) => activityEditModal.updateField('location', e.target.value)}
+              style={{ width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '4px', boxSizing: 'border-box' }}
+            />
+          </div>
+          <div style={{ display: 'flex', gap: '12px' }}>
+            <div style={{ flex: 1 }}>
+              <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold' }}>状态</label>
+              <select
+                value={activityEditModal.formData.status}
+                onChange={(e) => activityEditModal.updateField('status', e.target.value)}
+                style={{ width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '4px', boxSizing: 'border-box' }}
+              >
+                <option value="open">开放</option>
+                <option value="closed">已关闭</option>
+                <option value="cancelled">已取消</option>
+                <option value="completed">已完成</option>
+              </select>
+            </div>
+            <div style={{ flex: 1 }}>
+              <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold' }}>最大人数</label>
+              <input
+                type="number"
+                min={1}
+                value={activityEditModal.formData.max_participants}
+                onChange={(e) => activityEditModal.updateField('max_participants', parseInt(e.target.value) || 1)}
+                style={{ width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '4px', boxSizing: 'border-box' }}
+              />
+            </div>
           </div>
         </div>
       </Modal>

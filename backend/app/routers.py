@@ -11239,6 +11239,101 @@ def delete_task_expert(
 
 # ==================== 管理员管理任务达人服务和活动 API ====================
 
+@router.get("/admin/task-expert-services")
+def get_all_expert_services_admin(
+    page: int = Query(1, ge=1),
+    limit: int = Query(20, ge=1, le=100),
+    expert_id: Optional[str] = Query(None, description="按达人ID筛选"),
+    current_admin=Depends(get_current_admin),
+    db: Session = Depends(get_db),
+):
+    """获取全部达人服务列表（管理员），支持分页与按达人筛选"""
+    try:
+        query = db.query(models.TaskExpertService).join(
+            models.TaskExpert,
+            models.TaskExpertService.expert_id == models.TaskExpert.id
+        )
+        if expert_id:
+            query = query.filter(models.TaskExpertService.expert_id == expert_id)
+        total = query.count()
+        offset = (page - 1) * limit
+        services = query.order_by(
+            models.TaskExpertService.display_order,
+            models.TaskExpertService.created_at.desc()
+        ).offset(offset).limit(limit).all()
+        items = []
+        for s in services:
+            expert = db.query(models.TaskExpert).filter(models.TaskExpert.id == s.expert_id).first()
+            expert_name = (expert.name if expert else None) or s.expert_id
+            items.append({
+                "id": s.id,
+                "expert_id": s.expert_id,
+                "expert_name": expert_name,
+                "service_name": s.service_name,
+                "description": (s.description or "")[:200],
+                "images": s.images,
+                "base_price": float(s.base_price) if s.base_price else 0,
+                "currency": s.currency,
+                "status": s.status,
+                "display_order": s.display_order,
+                "view_count": s.view_count,
+                "application_count": s.application_count,
+                "has_time_slots": s.has_time_slots,
+                "created_at": s.created_at.isoformat() if s.created_at else None,
+            })
+        return {"items": items, "total": total, "page": page, "limit": limit}
+    except Exception as e:
+        logger.error(f"获取全部达人服务列表失败: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/admin/task-expert-activities")
+def get_all_expert_activities_admin(
+    page: int = Query(1, ge=1),
+    limit: int = Query(20, ge=1, le=100),
+    expert_id: Optional[str] = Query(None, description="按达人ID筛选"),
+    status_filter: Optional[str] = Query(None, description="按状态筛选"),
+    current_admin=Depends(get_current_admin),
+    db: Session = Depends(get_db),
+):
+    """获取全部达人活动列表（管理员），支持分页与筛选"""
+    try:
+        query = db.query(models.Activity).filter(
+            models.Activity.activity_type == "standard"
+        )
+        if expert_id:
+            query = query.filter(models.Activity.expert_id == expert_id)
+        if status_filter:
+            query = query.filter(models.Activity.status == status_filter)
+        total = query.count()
+        offset = (page - 1) * limit
+        activities = query.order_by(models.Activity.created_at.desc()).offset(offset).limit(limit).all()
+        items = []
+        for a in activities:
+            expert = db.query(models.TaskExpert).filter(models.TaskExpert.id == a.expert_id).first()
+            expert_name = (expert.name if expert else None) or a.expert_id
+            items.append({
+                "id": a.id,
+                "expert_id": a.expert_id,
+                "expert_name": expert_name,
+                "title": a.title,
+                "description": (a.description or "")[:200],
+                "expert_service_id": a.expert_service_id,
+                "location": a.location,
+                "task_type": a.task_type,
+                "status": a.status,
+                "max_participants": a.max_participants,
+                "currency": a.currency,
+                "discounted_price_per_participant": float(a.discounted_price_per_participant) if a.discounted_price_per_participant else None,
+                "deadline": a.deadline.isoformat() if a.deadline else None,
+                "created_at": a.created_at.isoformat() if a.created_at else None,
+            })
+        return {"items": items, "total": total, "page": page, "limit": limit}
+    except Exception as e:
+        logger.error(f"获取全部达人活动列表失败: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @router.get("/admin/task-expert/{expert_id}/services")
 def get_expert_services_admin(
     expert_id: str,

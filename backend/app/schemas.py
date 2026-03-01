@@ -3059,7 +3059,11 @@ class ForumCategoryCreate(ForumCategoryBase):
 
 class ForumCategoryUpdate(BaseModel):
     name: Optional[str] = Field(None, min_length=1, max_length=100)
+    name_zh: Optional[str] = Field(None, max_length=100, description="中文名称")
+    name_en: Optional[str] = Field(None, max_length=100, description="英文名称")
     description: Optional[str] = None
+    description_zh: Optional[str] = Field(None, description="中文描述")
+    description_en: Optional[str] = Field(None, description="英文描述")
     icon: Optional[str] = Field(None, max_length=200)
     sort_order: Optional[int] = Field(None, ge=0)
     is_visible: Optional[bool] = None
@@ -3618,6 +3622,19 @@ class CustomLeaderboardBase(BaseModel):
 
 class CustomLeaderboardCreate(CustomLeaderboardBase):
     pass
+
+
+class CustomLeaderboardAdminUpdate(BaseModel):
+    """管理员更新排行榜（支持双语字段）"""
+    name: Optional[str] = Field(None, max_length=100)
+    name_zh: Optional[str] = Field(None, max_length=100)
+    name_en: Optional[str] = Field(None, max_length=100)
+    description: Optional[str] = None
+    description_zh: Optional[str] = None
+    description_en: Optional[str] = None
+    cover_image: Optional[str] = None
+    location: Optional[str] = Field(None, max_length=100)
+    status: Optional[str] = Field(None, pattern="^(active|pending|rejected)$")
 
 
 class CustomLeaderboardOut(CustomLeaderboardBase):
