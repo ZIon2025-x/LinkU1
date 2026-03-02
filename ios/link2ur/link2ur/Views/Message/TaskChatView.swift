@@ -248,6 +248,13 @@ struct TaskChatView: View {
                 if let uid = getCurrentUserId() {
                     viewModel.loadMessages(currentUserId: uid)
                 }
+            },
+            hasMoreMessages: viewModel.hasMoreMessages,
+            isLoadingMore: viewModel.isLoadingMore,
+            onLoadMore: {
+                if let uid = getCurrentUserId() {
+                    viewModel.loadMoreMessages(currentUserId: uid)
+                }
             }
         )
         .contentShape(Rectangle())

@@ -22,6 +22,13 @@ struct TaskChatMessageListView: View {
     /// 下拉刷新回调（聊天内支持下拉重拉消息）
     let onRefresh: () -> Void
     
+    /// 是否有更多历史消息（往上滑加载更早）
+    let hasMoreMessages: Bool
+    /// 是否正在加载更早消息
+    let isLoadingMore: Bool
+    /// 往上滑时加载更早消息
+    let onLoadMore: () -> Void
+    
     private let bottomAnchorId = TaskChatConstants.bottomAnchorId
     
     var body: some View {
@@ -37,6 +44,10 @@ struct TaskChatMessageListView: View {
                                 if messages.isEmpty {
                                     emptyState
                                 } else {
+                                // 顶部：往上滑加载更早消息（出现时触发 onLoadMore）
+                                if hasMoreMessages {
+                                    loadMoreTriggerView
+                                }
                                 // 使用分组渲染逻辑
                                 ForEach(renderItems, id: \.id) { item in
                                     switch item {
@@ -156,6 +167,30 @@ struct TaskChatMessageListView: View {
         }
         .frame(maxWidth: .infinity)
         .padding(.top, 100)
+    }
+    
+    /// 顶部「加载更早消息」触发条，出现时调用 onLoadMore；并显示提示文案
+    private var loadMoreTriggerView: some View {
+        Group {
+            if isLoadingMore {
+                HStack(spacing: 6) {
+                    ProgressView()
+                        .scaleEffect(0.9)
+                    Text(LocalizationKey.commonLoading.localized)
+                        .font(AppTypography.caption)
+                        .foregroundColor(AppColors.textTertiary)
+                }
+                .frame(maxWidth: .infinity)
+                .frame(height: 44)
+            } else {
+                Text(LocalizationKey.messagesLoadMoreHistory.localized)
+                    .font(AppTypography.caption2)
+                    .foregroundColor(AppColors.textTertiary)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 36)
+            }
+        }
+        .onAppear { onLoadMore() }
     }
     
     private func isFromCurrentUser(_ message: Message) -> Bool {

@@ -382,51 +382,69 @@ class TaskChatDetailViewModel: ObservableObject {
     
     // 注意：taskChat 会在 loadMessages 方法中使用，这里先保存
     
+    /// 将 TaskMessage 数组转换为 Message 数组（用于展示）
+    private func convertTaskMessagesToMessages(_ taskMessages: [TaskMessage]) -> [Message] {
+        let converted = taskMessages.compactMap { taskMsg -> Message? in
+            var messageDict: [String: Any] = [:]
+            messageDict["id"] = taskMsg.id
+            messageDict["content"] = taskMsg.content
+            messageDict["message_type"] = taskMsg.messageType
+            messageDict["is_read"] = taskMsg.isRead
+            messageDict["sender_id"] = taskMsg.senderId ?? NSNull()
+            messageDict["sender_name"] = taskMsg.senderName ?? NSNull()
+            messageDict["sender_avatar"] = taskMsg.senderAvatar ?? NSNull()
+            messageDict["created_at"] = taskMsg.createdAt ?? NSNull()
+            if !taskMsg.attachments.isEmpty {
+                let attachmentsData = try? JSONEncoder().encode(taskMsg.attachments)
+                if let attachmentsData = attachmentsData,
+                   let attachmentsArray = try? JSONSerialization.jsonObject(with: attachmentsData) as? [[String: Any]] {
+                    messageDict["attachments"] = attachmentsArray
+                }
+            } else {
+                messageDict["attachments"] = []
+            }
+            guard let jsonData = try? JSONSerialization.data(withJSONObject: messageDict, options: []),
+                  let message = try? JSONDecoder().decode(Message.self, from: jsonData) else { return nil }
+            return message
+        }
+        return converted.sorted { ($0.createdAt ?? "") < ($1.createdAt ?? "") }
+    }
+    
+    /// 首次加载或下拉刷新：拉取最新一页消息（后端返回 DESC，转为时间正序展示）
     func loadMessages(currentUserId: String?) {
         let startTime = Date()
-        let endpoint = "/api/messages/task/\(taskId)"
         
         isLoading = true
         errorMessage = nil
+        currentCursor = nil
         
-        Logger.debug("开始加载任务聊天消息，任务ID: \(taskId), 当前用户ID: \(currentUserId ?? "nil")", category: .api)
+        Logger.debug("开始加载任务聊天消息，任务ID: \(taskId)", category: .api)
         
-        // 确定对方用户ID
         if let taskChat = taskChat, let currentUserId = currentUserId {
-            Logger.debug("任务聊天信息 - posterId: \(taskChat.posterId ?? "nil"), takerId: \(taskChat.takerId ?? "nil")", category: .api)
             if taskChat.posterId == currentUserId {
                 partnerId = taskChat.takerId
-                Logger.debug("当前用户是发布者，对方用户ID: \(partnerId ?? "nil")", category: .api)
             } else if taskChat.takerId == currentUserId {
                 partnerId = taskChat.posterId
-                Logger.debug("当前用户是接取者，对方用户ID: \(partnerId ?? "nil")", category: .api)
-            } else {
-                Logger.warning("当前用户既不是发布者也不是接取者", category: .api)
             }
         }
         
-        // 直接使用任务聊天专用端点：/api/messages/task/{taskId}（注意是单数 task）
-        // 这个端点返回格式：{ messages: [...], task: {...}, next_cursor?: string, has_more?: bool }
-        Logger.debug("请求任务聊天消息，任务ID: \(taskId)", category: .api)
-        apiService.request(TaskMessagesResponse.self, endpoint, method: "GET")
+        apiService.getTaskMessages(taskId: taskId, limit: pageSize, cursor: nil)
             .receive(on: DispatchQueue.main)
             .sink(receiveCompletion: { [weak self] result in
                 let duration = Date().timeIntervalSince(startTime)
                 self?.isLoading = false
                 if case .failure(let error) = result {
                     self?.errorMessage = error.localizedDescription
-                    // 记录性能指标
                     self?.performanceMonitor.recordNetworkRequest(
-                        endpoint: endpoint,
+                        endpoint: "/api/messages/task/\(self?.taskId ?? 0)",
                         method: "GET",
                         duration: duration,
                         error: error
                     )
                     Logger.error("任务聊天消息加载失败: \(error)", category: .api)
                 } else {
-                    // 记录成功请求的性能指标
                     self?.performanceMonitor.recordNetworkRequest(
-                        endpoint: endpoint,
+                        endpoint: "/api/messages/task/\(self?.taskId ?? 0)",
                         method: "GET",
                         duration: duration,
                         statusCode: 200
@@ -435,84 +453,49 @@ class TaskChatDetailViewModel: ObservableObject {
             }, receiveValue: { [weak self] response in
                 guard let self = self else { return }
                 
-                let allTaskMessages = response.messages
-                
-                Logger.debug("收到 \(allTaskMessages.count) 条任务消息", category: .api)
-                
-                // 将 TaskMessage 转换为 Message 类型（用于 MessageBubble）
-                // 使用 JSON 序列化/反序列化来确保所有字段正确传递
-                let convertedMessages = allTaskMessages.compactMap { taskMsg -> Message? in
-                    // 调试：检查原始 TaskMessage 数据
-                    Logger.debug("原始 TaskMessage ID: \(taskMsg.id), senderId: \(taskMsg.senderId ?? "nil"), senderName: \(taskMsg.senderName ?? "nil"), senderAvatar: \(taskMsg.senderAvatar ?? "nil")", category: .api)
-                    
-                    // 构建完整的消息字典，确保所有字段都包含（包括 nil 值）
-                    var messageDict: [String: Any] = [:]
-                    
-                    // 必需字段
-                    messageDict["id"] = taskMsg.id
-                    messageDict["content"] = taskMsg.content
-                    messageDict["message_type"] = taskMsg.messageType
-                    messageDict["is_read"] = taskMsg.isRead
-                    
-                    // 可选字段（使用 NSNull 表示 nil，确保 JSON 序列化时保留字段）
-                    messageDict["sender_id"] = taskMsg.senderId ?? NSNull()
-                    messageDict["sender_name"] = taskMsg.senderName ?? NSNull()
-                    messageDict["sender_avatar"] = taskMsg.senderAvatar ?? NSNull()
-                    messageDict["created_at"] = taskMsg.createdAt ?? NSNull()
-                    
-                    // 添加附件信息
-                    if !taskMsg.attachments.isEmpty {
-                        let attachmentsData = try? JSONEncoder().encode(taskMsg.attachments)
-                        if let attachmentsData = attachmentsData,
-                           let attachmentsArray = try? JSONSerialization.jsonObject(with: attachmentsData) as? [[String: Any]] {
-                            messageDict["attachments"] = attachmentsArray
-                        }
-                    } else {
-                        messageDict["attachments"] = []
-                    }
-                    
-                    // 使用 JSONEncoder/Decoder 转换
-                    do {
-                        let jsonData = try JSONSerialization.data(withJSONObject: messageDict, options: [])
-                        
-                        // 调试：打印 JSON 字符串
-                        if let jsonString = String(data: jsonData, encoding: .utf8) {
-                            Logger.debug("消息 JSON: \(jsonString)", category: .api)
-                        }
-                        
-                        let message = try JSONDecoder().decode(Message.self, from: jsonData)
-                        
-                        // 调试日志：检查转换后的消息是否包含发送者信息
-                        Logger.debug("✅ 转换成功 - 消息 ID: \(taskMsg.id), senderName: \(message.senderName ?? "nil"), senderAvatar: \(message.senderAvatar ?? "nil")", category: .api)
-                        
-                        return message
-                    } catch {
-                        Logger.error("❌ 无法转换 TaskMessage 到 Message: \(taskMsg.id), 错误: \(error.localizedDescription)", category: .api)
-                        Logger.debug("原始数据: senderName=\(taskMsg.senderName ?? "nil"), senderAvatar=\(taskMsg.senderAvatar ?? "nil")", category: .api)
-                        return nil
-                    }
-                }
-                
-                // 任务聊天消息已经通过任务ID过滤，直接显示所有消息
-                self.messages = convertedMessages.sorted { msg1, msg2 in
-                    let time1 = msg1.createdAt ?? ""
-                    let time2 = msg2.createdAt ?? ""
-                    return time1 < time2
-                }
-                Logger.success("任务聊天消息加载成功，共\(self.messages.count)条", category: .api)
-                
-                // 标记首次加载完成
+                let converted = self.convertTaskMessagesToMessages(response.messages)
+                self.messages = converted
+                self.currentCursor = response.nextCursor
+                self.hasMoreMessages = response.hasMore
                 self.isInitialLoadComplete = true
-                
-                // 保存到缓存
                 self.saveToCache()
                 
-                // 加载成功后，标记最新消息为已读（只在有消息ID时调用）
+                Logger.success("任务聊天消息加载成功，共\(self.messages.count)条，hasMore: \(response.hasMore)", category: .api)
+                
                 if let lastMessage = self.messages.last, let messageId = lastMessage.messageId {
                     self.markAsRead(uptoMessageId: messageId)
-                } else if !self.messages.isEmpty {
-                    Logger.warning("最新消息没有ID，跳过标记已读", category: .api)
                 }
+            })
+            .store(in: &cancellables)
+    }
+    
+    /// 往上滑加载更早的历史消息（使用 cursor 分页）
+    func loadMoreMessages(currentUserId: String?) {
+        guard hasMoreMessages, !isLoadingMore else { return }
+        guard let cursor = currentCursor, !cursor.isEmpty else { return }
+        
+        isLoadingMore = true
+        Logger.debug("加载更早的任务聊天消息，cursor: \(cursor.prefix(30))...", category: .api)
+        
+        apiService.getTaskMessages(taskId: taskId, limit: pageSize, cursor: cursor)
+            .receive(on: DispatchQueue.main)
+            .sink(receiveCompletion: { [weak self] result in
+                self?.isLoadingMore = false
+                if case .failure(let error) = result {
+                    Logger.error("加载更早消息失败: \(error)", category: .api)
+                }
+            }, receiveValue: { [weak self] response in
+                guard let self = self else { return }
+                
+                let olderBatch = self.convertTaskMessagesToMessages(response.messages)
+                if !olderBatch.isEmpty {
+                    self.messages = olderBatch + self.messages
+                    self.saveToCache()
+                }
+                self.currentCursor = response.nextCursor
+                self.hasMoreMessages = response.hasMore
+                self.isLoadingMore = false
+                Logger.debug("加载更早消息成功，本页 \(olderBatch.count) 条，总 \(self.messages.count) 条，hasMore: \(response.hasMore)", category: .api)
             })
             .store(in: &cancellables)
     }
