@@ -168,7 +168,11 @@ class _ApplyLeaderboardViewState extends State<ApplyLeaderboardView> {
                   // ── 提交 ──
                   PrimaryButton(
                     text: l10n.leaderboardSubmitApply,
-                    onPressed: state.isSubmitting ? null : _submit,
+                    onPressed: state.isSubmitting ||
+                            _titleController.text.trim().isEmpty ||
+                            _locationController.text.trim().isEmpty
+                        ? null
+                        : _submit,
                     isLoading: state.isSubmitting,
                   ),
                   const SizedBox(height: AppSpacing.lg),
@@ -328,6 +332,7 @@ class _ApplyLeaderboardViewState extends State<ApplyLeaderboardView> {
         TextField(
           controller: controller,
           maxLines: maxLines,
+          onChanged: (_) => setState(() {}),
           decoration: InputDecoration(
             hintText: hint,
             prefixIcon: icon != null ? Icon(icon, size: 20) : null,

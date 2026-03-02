@@ -435,7 +435,9 @@ class _SubmitLeaderboardItemContentState
           maxLength: maxLength,
           keyboardType: keyboardType,
           onChanged: (_) {
-            if (_localError != null) setState(() => _localError = null);
+            setState(() {
+              if (_localError != null) _localError = null;
+            });
           },
           decoration: InputDecoration(
             hintText: hintText,

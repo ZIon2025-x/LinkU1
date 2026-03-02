@@ -1081,6 +1081,7 @@ class _ApplicationMessageSheetState extends State<_ApplicationMessageSheet> {
               controller: _controller,
               maxLines: 4,
               minLines: 3,
+              onChanged: (_) => setState(() {}),
               decoration: InputDecoration(
                 hintText: l10n.taskApplicationMessageHint,
                 border: OutlineInputBorder(
