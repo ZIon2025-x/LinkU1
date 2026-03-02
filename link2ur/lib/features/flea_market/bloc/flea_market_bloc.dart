@@ -347,6 +347,7 @@ class FleaMarketState extends Equatable {
     AcceptPaymentData? acceptPaymentData,
     bool clearAcceptPaymentData = false,
   }) {
+    final resolvedSelectedItem = selectedItem ?? this.selectedItem;
     return FleaMarketState(
       status: status ?? this.status,
       items: items ?? this.items,
@@ -359,7 +360,7 @@ class FleaMarketState extends Equatable {
       isRefreshing: isRefreshing ?? this.isRefreshing,
       isSubmitting: isSubmitting ?? this.isSubmitting,
       actionMessage: actionMessage,
-      selectedItem: selectedItem ?? this.selectedItem,
+      selectedItem: resolvedSelectedItem,
       detailStatus: detailStatus ?? this.detailStatus,
       isUploadingImage: isUploadingImage ?? this.isUploadingImage,
       uploadedImageUrl: uploadedImageUrl,
@@ -990,13 +991,18 @@ class FleaMarketBloc extends Bloc<FleaMarketEvent, FleaMarketState> {
     }
   }
 
-  /// 收藏/取消收藏 - 对标iOS toggleFavorite
+  /// 收藏/取消收藏 - 对标iOS toggleFavorite（乐观更新）
   Future<void> _onToggleFavorite(
     FleaMarketToggleFavorite event,
     Emitter<FleaMarketState> emit,
   ) async {
     if (state.isTogglingFavorite) return;
-    emit(state.copyWith(isTogglingFavorite: true));
+
+    final previousFavorited = state.isFavorited;
+    emit(state.copyWith(
+      isTogglingFavorite: true,
+      isFavorited: !previousFavorited,
+    ));
 
     try {
       final isFavorited = await _fleaMarketRepository.toggleFavorite(event.itemId);
@@ -1006,7 +1012,10 @@ class FleaMarketBloc extends Bloc<FleaMarketEvent, FleaMarketState> {
       ));
     } catch (e) {
       AppLogger.error('Failed to toggle favorite', e);
-      emit(state.copyWith(isTogglingFavorite: false));
+      emit(state.copyWith(
+        isTogglingFavorite: false,
+        isFavorited: previousFavorited,
+      ));
     }
   }
 

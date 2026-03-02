@@ -123,15 +123,37 @@ class _TaskChatListViewContent extends StatelessWidget {
                 icon: Icons.delete_outline_rounded,
                 label: context.l10n.chatDeleteChat,
                 color: AppColors.error,
-                onTap: () {
-                  context.read<MessageBloc>()
-                      .add(MessageHideTaskChat(chat.taskId));
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
+                onTap: () async {
+                  final confirmed = await showDialog<bool>(
+                    context: context,
+                    builder: (ctx) => AlertDialog(
+                      title: Text(context.l10n.chatDeleteChat),
                       content: Text(context.l10n.chatDeletedHint),
-                      duration: const Duration(seconds: 2),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.of(ctx).pop(false),
+                          child: Text(context.l10n.commonCancel),
+                        ),
+                        TextButton(
+                          onPressed: () => Navigator.of(ctx).pop(true),
+                          child: Text(
+                            context.l10n.commonConfirm,
+                            style: const TextStyle(color: AppColors.error),
+                          ),
+                        ),
+                      ],
                     ),
                   );
+                  if (confirmed == true && context.mounted) {
+                    context.read<MessageBloc>()
+                        .add(MessageHideTaskChat(chat.taskId));
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(context.l10n.chatDeletedHint),
+                        duration: const Duration(seconds: 2),
+                      ),
+                    );
+                  }
                 },
               ),
             ],

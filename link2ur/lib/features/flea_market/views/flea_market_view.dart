@@ -203,10 +203,7 @@ class _FleaMarketViewContentState extends State<_FleaMarketViewContent> {
                         ),
                       ),
                       onChanged: (query) {
-                        _debouncer.call(() {
-                          if (!mounted) return;
-                          context.read<FleaMarketBloc>().add(FleaMarketSearchChanged(query));
-                        });
+                        context.read<FleaMarketBloc>().add(FleaMarketSearchChanged(query));
                       },
                     ),
                   ),

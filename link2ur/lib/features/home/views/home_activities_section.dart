@@ -1,10 +1,10 @@
-part of 'home_view.dart';
+﻿part of 'home_view.dart';
 
-/// 货币符号（统一英镑）
+/// Currency symbol (unified to £)
 String _currencySymbol(String? currency) => '£';
 
-/// 热门活动加载骨架（无活动时隐藏区域，加载中显示此骨架）
-/// 对标 iOS ActivityCardSkeleton，宽 280，图片区 160 + 内容区
+/// Hot activities loading skeleton.
+/// Matches iOS ActivityCardSkeleton: width 280, image 160 + content.
 class _HomeActivitiesSkeleton extends StatelessWidget {
   const _HomeActivitiesSkeleton();
 
@@ -73,8 +73,8 @@ class _HomeActivitiesSkeleton extends StatelessWidget {
   }
 }
 
-/// 对标iOS: PopularActivitiesSection - 热门活动区域（使用真实数据）
-/// iOS 卡片宽 280，图片高 160，下方内容区约 100
+/// 瀵规爣iOS: PopularActivitiesSection - 鐑棬娲诲姩鍖哄煙锛堜娇鐢ㄧ湡瀹炴暟鎹級
+/// iOS 鍗＄墖瀹?280锛屽浘鐗囬珮 160锛屼笅鏂瑰唴瀹瑰尯绾?100
 class _PopularActivitiesSection extends StatelessWidget {
   const _PopularActivitiesSection({required this.activities});
 
@@ -106,8 +106,7 @@ class _PopularActivitiesSection extends StatelessWidget {
   }
 }
 
-/// 对标 iOS ActivityCardView — 上下分区：图片区 + 内容区
-/// 宽 280，图片高 160，内容区自适应
+/// 瀵规爣 iOS ActivityCardView 鈥?涓婁笅鍒嗗尯锛氬浘鐗囧尯 + 鍐呭鍖?/// 瀹?280锛屽浘鐗囬珮 160锛屽唴瀹瑰尯鑷€傚簲
 class _RealActivityCard extends StatelessWidget {
   const _RealActivityCard({required this.activity, required this.locale});
 
@@ -141,7 +140,7 @@ class _RealActivityCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // 图片区域 — 固定 160 高度（对标 iOS）
+            // Image area
             ClipRRect(
               borderRadius: const BorderRadius.vertical(
                 top: Radius.circular(16),
@@ -179,7 +178,7 @@ class _RealActivityCard extends StatelessWidget {
                             ),
                     ),
 
-                    // 状态标签（右上角）
+                    // 鐘舵€佹爣绛撅紙鍙充笂瑙掞級
                     if (activity.isFull)
                       Positioned(
                         top: 8,
@@ -206,14 +205,14 @@ class _RealActivityCard extends StatelessWidget {
               ),
             ),
 
-            // 内容区域（对标 iOS VStack padding: md）
+            // Content area
             Expanded(
               child: Padding(
                 padding: const EdgeInsets.all(AppSpacing.md),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // 标题
+                    // 鏍囬
                     Text(
                       title,
                       maxLines: 1,
@@ -228,12 +227,12 @@ class _RealActivityCard extends StatelessWidget {
                     ),
                     const SizedBox(height: 8),
 
-                    // 价格 + 参与人数
+                    // 浠锋牸 + 鍙備笌浜烘暟
                     Row(
                       children: [
                         if (price != null && price > 0) ...[
                           const Text(
-                            '£',
+                            '拢',
                             style: TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.bold,
@@ -272,7 +271,7 @@ class _RealActivityCard extends StatelessWidget {
                     ),
                     const Spacer(),
 
-                    // 地点 + 预约制标签
+                    // Location + appointment tag
                     Row(
                       children: [
                         if (activity.location.isNotEmpty) ...[
@@ -329,10 +328,10 @@ class _RealActivityCard extends StatelessWidget {
 }
 
 // =============================================================================
-// Discovery Feed 瀑布流 — 替代旧的 _RecentActivitiesSection
+// Discovery Feed 鐎戝竷娴?鈥?鏇夸唬鏃х殑 _RecentActivitiesSection
 // =============================================================================
 
-/// 发现更多加载骨架 — 两列卡片占位（与热门活动骨架风格一致）
+/// 鍙戠幇鏇村鍔犺浇楠ㄦ灦 鈥?涓ゅ垪鍗＄墖鍗犱綅锛堜笌鐑棬娲诲姩楠ㄦ灦椋庢牸涓€鑷达級
 class _DiscoveryFeedSkeleton extends StatelessWidget {
   const _DiscoveryFeedSkeleton({required this.horizontalPadding});
   final double horizontalPadding;
@@ -440,10 +439,9 @@ class _DiscoveryFeedSkeleton extends StatelessWidget {
   }
 }
 
-/// 发现更多 — Sliver 版本瀑布流（避免 shrinkWrap: true 破坏视口优化）
-/// 旧方案：MasonryGridView + shrinkWrap: true + NeverScrollableScrollPhysics
-///   → 所有条目立即全部 layout，无视口裁剪，items 越多越卡
-/// 新方案：SliverMasonryGrid 天然支持视口优化，只构建可见区域
+/// 鍙戠幇鏇村 鈥?Sliver 鐗堟湰鐎戝竷娴侊紙閬垮厤 shrinkWrap: true 鐮村潖瑙嗗彛浼樺寲锛?/// 鏃ф柟妗堬細MasonryGridView + shrinkWrap: true + NeverScrollableScrollPhysics
+///   鈫?鎵€鏈夋潯鐩珛鍗冲叏閮?layout锛屾棤瑙嗗彛瑁佸壀锛宨tems 瓒婂瓒婂崱
+/// 鏂版柟妗堬細SliverMasonryGrid 澶╃劧鏀寔瑙嗗彛浼樺寲锛屽彧鏋勫缓鍙鍖哄煙
 class _SliverDiscoveryFeed extends StatelessWidget {
   const _SliverDiscoveryFeed({required this.horizontalPadding});
   final double horizontalPadding;
@@ -467,7 +465,7 @@ class _SliverDiscoveryFeed extends StatelessWidget {
               padding: const EdgeInsets.symmetric(vertical: 32),
               child: Center(
                 child: Text(
-                  '暂无内容',
+                  context.l10n.emptyNoData,
                   style: TextStyle(
                     color: Theme.of(context).brightness == Brightness.dark
                         ? AppColors.textSecondaryDark
@@ -479,7 +477,7 @@ class _SliverDiscoveryFeed extends StatelessWidget {
           );
         }
 
-        // 计算总 item 数 = feed items + (加载更多按钮占 1 个 Sliver)
+        // 璁＄畻鎬?item 鏁?= feed items + (鍔犺浇鏇村鎸夐挳鍗?1 涓?Sliver)
         return SliverMainAxisGroup(
           slivers: [
             SliverPadding(
@@ -524,7 +522,7 @@ class _SliverDiscoveryFeed extends StatelessWidget {
   }
 }
 
-/// 发现 Feed 卡片路由 — 根据 feedType 选择展示
+/// 鍙戠幇 Feed 鍗＄墖璺敱 鈥?鏍规嵁 feedType 閫夋嫨灞曠ず
 class _DiscoveryFeedCard extends StatelessWidget {
   const _DiscoveryFeedCard({required this.item});
 
@@ -551,10 +549,10 @@ class _DiscoveryFeedCard extends StatelessWidget {
   }
 }
 
-// 与 discovery_feed_prototype.html 一致的发现卡片样式常量
+// 涓?discovery_feed_prototype.html 涓€鑷寸殑鍙戠幇鍗＄墖鏍峰紡甯搁噺
 const double _kDiscoveryCardRadius = 12;
 
-/// 类型徽章（与原型 badge-post / badge-product 等一致）
+/// 绫诲瀷寰界珷锛堜笌鍘熷瀷 badge-post / badge-product 绛変竴鑷达級
 class _FeedTypeBadge extends StatelessWidget {
   const _FeedTypeBadge({required this.feedType});
   final String feedType;
@@ -606,1138 +604,18 @@ class _FeedTypeBadge extends StatelessWidget {
   String _label(BuildContext context, String type) {
     final l10n = context.l10n;
     switch (type) {
-      case 'forum_post': return '💬 ${l10n.discoveryFeedTypePost}';
-      case 'product': return '🏷️ ${l10n.discoveryFeedTypeProduct}';
-      case 'competitor_review': return '⭐ ${l10n.discoveryFeedTypeCompetitorReview}';
-      case 'service_review': return '⭐ ${l10n.discoveryFeedTypeServiceReview}';
-      case 'ranking': return '🏆 ${l10n.discoveryFeedTypeRanking}';
-      case 'service': return '👨‍🏫 ${l10n.discoveryFeedTypeService}';
+      case 'forum_post': return '馃挰 ${l10n.discoveryFeedTypePost}';
+      case 'product': return '馃彿锔?${l10n.discoveryFeedTypeProduct}';
+      case 'competitor_review': return '猸?${l10n.discoveryFeedTypeCompetitorReview}';
+      case 'service_review': return '猸?${l10n.discoveryFeedTypeServiceReview}';
+      case 'ranking': return '馃弳 ${l10n.discoveryFeedTypeRanking}';
+      case 'service': return '馃懆鈥嶐煆?${l10n.discoveryFeedTypeService}';
       default: return l10n.sidebarDiscover;
     }
   }
 }
 
-// =============================================================================
-// 卡片类型 1: 帖子卡片
-// =============================================================================
-
-class _PostCard extends StatelessWidget {
-  const _PostCard({required this.item});
-  final DiscoveryFeedItem item;
-
-  @override
-  Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final locale = Localizations.localeOf(context);
-    final displayTitle = Helpers.normalizeContentNewlines(item.displayTitle(locale));
-    final displayDesc = item.displayDescription(locale) != null
-        ? Helpers.normalizeContentNewlines(item.displayDescription(locale)!)
-        : null;
-    final categoryName = item.displayCategoryName(locale);
-
-    return GestureDetector(
-      onTap: () {
-        final postId = item.id.replaceFirst('post_', '');
-        context.push('/forum/posts/$postId');
-      },
-      child: Container(
-        decoration: BoxDecoration(
-          color: isDark ? AppColors.cardBackgroundDark : Colors.white,
-          borderRadius: BorderRadius.circular(_kDiscoveryCardRadius),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.06),
-              blurRadius: 3,
-              offset: const Offset(0, 1),
-            ),
-          ],
-        ),
-        clipBehavior: Clip.hardEdge,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // 图片：3:4，用 LayoutBuilder 算出精确宽高传给 CachedNetworkImage，避免瀑布流无界高度被拉满
-            if (item.hasImages)
-              LayoutBuilder(
-                builder: (context, constraints) {
-                  final w = constraints.maxWidth;
-                  final h = w * 4 / 3;
-                  return ClipRect(
-                    child: AsyncImageView(
-                      imageUrl: item.firstImage!,
-                      width: w,
-                      height: h,
-                      memCacheWidth: (w * MediaQuery.devicePixelRatioOf(context)).round(),
-                      memCacheHeight: (h * MediaQuery.devicePixelRatioOf(context)).round(),
-                    ),
-                  );
-                },
-              ),
-            // 文字内容
-            Padding(
-              padding: const EdgeInsets.all(10),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      const _FeedTypeBadge(feedType: 'forum_post'),
-                      if (categoryName != null && categoryName.isNotEmpty) ...[
-                        const SizedBox(width: 6),
-                        Flexible(
-                          child: Text(
-                            categoryName,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              fontSize: 10,
-                              color: isDark
-                                  ? AppColors.textTertiaryDark
-                                  : AppColors.textTertiaryLight,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ],
-                  ),
-                  const SizedBox(height: 6),
-                  if (displayTitle.isNotEmpty)
-                    Text(
-                      displayTitle,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: isDark
-                            ? AppColors.textPrimaryDark
-                            : AppColors.textPrimaryLight,
-                      ),
-                    ),
-                  if (displayDesc != null && displayDesc.isNotEmpty) ...[
-                    const SizedBox(height: 4),
-                    Text(
-                      displayDesc,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: isDark
-                            ? AppColors.textSecondaryDark
-                            : AppColors.textSecondaryLight,
-                      ),
-                    ),
-                  ],
-                  // 关联内容标签
-                  if (item.linkedItem != null) ...[
-                    const SizedBox(height: 6),
-                    _LinkedItemTag(linkedItem: item.linkedItem!),
-                  ],
-                  const SizedBox(height: 8),
-                  // 底部：用户/达人（有 expertId 时点击进达人详情页）
-                  _DiscoveryUserRow(
-                    userId: item.userId,
-                    userName: item.userName,
-                    userAvatar: item.userAvatar,
-                    expertId: item.expertId,
-                    isDark: isDark,
-                  ),
-                  // 操作行（与原型 feed-actions 一致）
-                  const SizedBox(height: 8),
-                  Padding(
-                    padding: const EdgeInsets.only(top: 6),
-                    child: Row(
-                      children: [
-                        Icon(Icons.favorite_border, size: 14,
-                            color: isDark ? AppColors.textTertiaryDark : AppColors.textTertiaryLight),
-                        const SizedBox(width: 3),
-                        Text('${item.likeCount ?? 0}',
-                            style: TextStyle(fontSize: 11, color: isDark ? AppColors.textTertiaryDark : AppColors.textTertiaryLight)),
-                        const SizedBox(width: 12),
-                        Icon(Icons.chat_bubble_outline, size: 14,
-                            color: isDark ? AppColors.textTertiaryDark : AppColors.textTertiaryLight),
-                        const SizedBox(width: 3),
-                        Text('${item.commentCount ?? 0}',
-                            style: TextStyle(fontSize: 11, color: isDark ? AppColors.textTertiaryDark : AppColors.textTertiaryLight)),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// =============================================================================
-// 卡片类型 2: 商品卡片（跳蚤市场风格）
-// =============================================================================
-
-class _ProductCard extends StatelessWidget {
-  const _ProductCard({required this.item});
-  final DiscoveryFeedItem item;
-
-  @override
-  Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final locale = Localizations.localeOf(context);
-    final displayTitle = Helpers.normalizeContentNewlines(item.displayTitle(locale));
-    final displayDesc = item.displayDescription(locale) != null
-        ? Helpers.normalizeContentNewlines(item.displayDescription(locale)!)
-        : null;
-
-    return GestureDetector(
-      onTap: () {
-        final id = item.id.replaceFirst('product_', '');
-        if (id.isNotEmpty) {
-          context.push('/flea-market/$id');
-        }
-      },
-      child: Container(
-        decoration: BoxDecoration(
-          color: isDark ? AppColors.cardBackgroundDark : Colors.white,
-          borderRadius: BorderRadius.circular(_kDiscoveryCardRadius),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.06),
-              blurRadius: 3,
-              offset: const Offset(0, 1),
-            ),
-          ],
-        ),
-        clipBehavior: Clip.hardEdge,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            if (item.hasImages)
-              LayoutBuilder(
-                builder: (context, constraints) {
-                  final w = constraints.maxWidth;
-                  return ClipRect(
-                    child: AsyncImageView(
-                      imageUrl: item.firstImage!,
-                      width: w,
-                      height: w,
-                      memCacheWidth: (w * MediaQuery.devicePixelRatioOf(context)).round(),
-                      memCacheHeight: (w * MediaQuery.devicePixelRatioOf(context)).round(),
-                    ),
-                  );
-                },
-              ),
-            Padding(
-              padding: const EdgeInsets.all(10),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const _FeedTypeBadge(feedType: 'product'),
-                  const SizedBox(height: 6),
-                  if (displayTitle.isNotEmpty)
-                    Text(
-                      displayTitle,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: isDark
-                            ? AppColors.textPrimaryDark
-                            : AppColors.textPrimaryLight,
-                      ),
-                    ),
-                  if (displayDesc != null && displayDesc.isNotEmpty) ...[
-                    const SizedBox(height: 2),
-                    Text(
-                      displayDesc,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: isDark
-                            ? AppColors.textSecondaryDark
-                            : AppColors.textSecondaryLight,
-                      ),
-                    ),
-                  ],
-                  const SizedBox(height: 6),
-                  Row(
-                    children: [
-                      if (item.price != null)
-                        Text(
-                          '${_currencySymbol(item.currency)}${Helpers.formatAmountNumber(item.price!)}',
-                          style: const TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.w700,
-                            color: Color(0xFFFF6B9D),
-                          ),
-                        ),
-                      const Spacer(),
-                      if (item.likeCount != null)
-                        Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(Icons.favorite_border,
-                                size: 12,
-                                color: isDark
-                                    ? AppColors.textTertiaryDark
-                                    : AppColors.textTertiaryLight),
-                            const SizedBox(width: 2),
-                            Text(
-                              '${item.likeCount}',
-                              style: TextStyle(
-                                fontSize: 11,
-                                color: isDark
-                                    ? AppColors.textTertiaryDark
-                                    : AppColors.textTertiaryLight,
-                              ),
-                            ),
-                          ],
-                        ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// =============================================================================
-// 卡片类型 3: 竞品评论卡片
-// =============================================================================
-
-class _CompetitorReviewCard extends StatelessWidget {
-  const _CompetitorReviewCard({required this.item});
-  final DiscoveryFeedItem item;
-
-  @override
-  Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final locale = Localizations.localeOf(context);
-    final displayDesc = item.displayDescription(locale) != null
-        ? Helpers.normalizeContentNewlines(item.displayDescription(locale)!)
-        : null;
-    final isUpvote = item.voteType == 'upvote';
-
-    return GestureDetector(
-      onTap: () {
-        if (item.targetItem != null) {
-          context.push('/leaderboard/item/${item.targetItem!.itemId}');
-        }
-      },
-      child: Container(
-        decoration: BoxDecoration(
-          color: isDark ? AppColors.cardBackgroundDark : Colors.white,
-          borderRadius: BorderRadius.circular(_kDiscoveryCardRadius),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.06),
-              blurRadius: 3,
-              offset: const Offset(0, 1),
-            ),
-          ],
-        ),
-        padding: const EdgeInsets.all(12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const _FeedTypeBadge(feedType: 'competitor_review'),
-            const SizedBox(height: 8),
-            // 引用框：赞成=绿色，反对=保持原样（紫/粉）
-            if (displayDesc != null && displayDesc.isNotEmpty)
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: isUpvote
-                        ? (isDark
-                            ? [
-                                AppColors.success.withValues(alpha: 0.15),
-                                AppColors.success.withValues(alpha: 0.06),
-                              ]
-                            : [
-                                AppColors.successLight,
-                                const Color(0xFFC8E6C9),
-                              ])
-                        : (isDark
-                            ? [
-                                Colors.white.withValues(alpha: 0.06),
-                                Colors.white.withValues(alpha: 0.03),
-                              ]
-                            : [
-                                const Color(0xFFF8F7FF),
-                                const Color(0xFFFFF0F5),
-                              ]),
-                  ),
-                  borderRadius: const BorderRadius.only(
-                    topRight: Radius.circular(8),
-                    bottomRight: Radius.circular(8),
-                  ),
-                  border: const Border(
-                    left: BorderSide(
-                      color: AppColors.primary,
-                      width: 3,
-                    ),
-                  ),
-                ),
-                child: Text(
-                  displayDesc,
-                  maxLines: 4,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontSize: 13,
-                    height: 1.5,
-                    color: isDark
-                        ? AppColors.textPrimaryDark
-                        : AppColors.textPrimaryLight,
-                  ),
-                ),
-              ),
-            const SizedBox(height: 8),
-            _DiscoveryUserRow(
-              userId: item.userId,
-              userName: item.userName,
-              userAvatar: item.userAvatar,
-              expertId: item.expertId,
-              isDark: isDark,
-            ),
-            const SizedBox(height: 8),
-            // 评论的目标竞品（与原型 review-target 一致）
-            if (item.targetItem != null) _TargetItemTag(target: item.targetItem!),
-            const SizedBox(height: 8),
-            // 赞/踩（与原型一致：up 绿色，down 红色）
-            Row(
-              children: [
-                const Icon(Icons.thumb_up_outlined, size: 12, color: Color(0xFF10B981)),
-                const SizedBox(width: 3),
-                Text('${item.upvoteCount ?? 0}',
-                    style: const TextStyle(fontSize: 12, color: Color(0xFF10B981))),
-                const SizedBox(width: 12),
-                const Icon(Icons.thumb_down_outlined, size: 12, color: Color(0xFFEF4444)),
-                const SizedBox(width: 3),
-                Text('${item.downvoteCount ?? 0}',
-                    style: const TextStyle(fontSize: 12, color: Color(0xFFEF4444))),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// =============================================================================
-// 卡片类型 4: 达人服务评价卡片（含活动信息）
-// =============================================================================
-
-class _ServiceReviewCard extends StatelessWidget {
-  const _ServiceReviewCard({required this.item});
-  final DiscoveryFeedItem item;
-
-  @override
-  Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final locale = Localizations.localeOf(context);
-    final displayDesc = item.displayDescription(locale) != null
-        ? Helpers.normalizeContentNewlines(item.displayDescription(locale)!)
-        : null;
-    final hasActivity = item.activityInfo != null;
-
-    return GestureDetector(
-      onTap: () {
-        if (item.targetItem != null) {
-          context.push('/service/${item.targetItem!.itemId}');
-        }
-      },
-      child: Container(
-        decoration: BoxDecoration(
-          color: isDark ? AppColors.cardBackgroundDark : Colors.white,
-          borderRadius: BorderRadius.circular(_kDiscoveryCardRadius),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.06),
-              blurRadius: 3,
-              offset: const Offset(0, 1),
-            ),
-          ],
-        ),
-        clipBehavior: Clip.hardEdge,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // 活动标签
-            if (hasActivity)
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [
-                      const Color(0xFFFF6B6B).withValues(alpha: 0.1),
-                      const Color(0xFFFF8E53).withValues(alpha: 0.05),
-                    ],
-                  ),
-                ),
-                child: Row(
-                  children: [
-                    const Icon(Icons.local_fire_department,
-                        size: 14, color: Color(0xFFFF6B6B)),
-                    const SizedBox(width: 4),
-                    Expanded(
-                      child: Text(
-                        '来自 ${item.activityInfo!.displayActivityTitle(locale)}',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          fontSize: 11,
-                          color: Color(0xFFFF6B6B),
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            Padding(
-              padding: const EdgeInsets.all(12),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const _FeedTypeBadge(feedType: 'service_review'),
-                  const SizedBox(height: 8),
-                  // 引用框（与竞品评价一致）
-                  if (displayDesc != null && displayDesc.isNotEmpty)
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                          colors: isDark
-                              ? [Colors.white.withValues(alpha: 0.06), Colors.white.withValues(alpha: 0.03)]
-                              : [const Color(0xFFF8F7FF), const Color(0xFFFFF0F5)],
-                        ),
-                        borderRadius: const BorderRadius.only(
-                          topRight: Radius.circular(8),
-                          bottomRight: Radius.circular(8),
-                        ),
-                        border: const Border(
-                          left: BorderSide(
-                            color: AppColors.primary,
-                            width: 3,
-                          ),
-                        ),
-                      ),
-                      child: Text(
-                        displayDesc,
-                        maxLines: 4,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          fontSize: 13,
-                          height: 1.5,
-                          color: isDark
-                              ? AppColors.textPrimaryDark
-                              : AppColors.textPrimaryLight,
-                        ),
-                      ),
-                    ),
-                  const SizedBox(height: 8),
-                  _DiscoveryUserRow(
-                    userId: item.userId,
-                    userName: item.userName,
-                    userAvatar: item.userAvatar,
-                    expertId: item.expertId,
-                    isDark: isDark,
-                  ),
-                  const SizedBox(height: 8),
-                  if (item.targetItem != null) _TargetItemTag(target: item.targetItem!),
-                  if (hasActivity && item.activityInfo!.hasDiscount) ...[
-                    const SizedBox(height: 6),
-                    _ActivityPriceRow(activityInfo: item.activityInfo!),
-                  ],
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// =============================================================================
-// 卡片类型 5: 排行榜卡片
-// =============================================================================
-
-class _RankingCard extends StatelessWidget {
-  const _RankingCard({required this.item});
-  final DiscoveryFeedItem item;
-
-  @override
-  Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final locale = Localizations.localeOf(context);
-    final top3 = item.top3;
-
-    return GestureDetector(
-      onTap: () {
-        final id = item.id.replaceFirst('ranking_', '');
-        context.push('/leaderboard/$id');
-      },
-      child: Container(
-        decoration: BoxDecoration(
-          gradient: isDark
-              ? null
-              : const LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [Color(0xFFF8F7FF), Color(0xFFFEFCE8)],
-                ),
-          color: isDark ? AppColors.cardBackgroundDark : null,
-          borderRadius: BorderRadius.circular(_kDiscoveryCardRadius),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.06),
-              blurRadius: 3,
-              offset: const Offset(0, 1),
-            ),
-          ],
-        ),
-        clipBehavior: Clip.hardEdge,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            if (item.hasImages)
-              LayoutBuilder(
-                builder: (context, constraints) {
-                  final w = constraints.maxWidth;
-                  final h = w * 9 / 16;
-                  return ClipRect(
-                    child: AsyncImageView(
-                      imageUrl: item.firstImage!,
-                      width: w,
-                      height: h,
-                      memCacheWidth: (w * MediaQuery.devicePixelRatioOf(context)).round(),
-                      memCacheHeight: (h * MediaQuery.devicePixelRatioOf(context)).round(),
-                    ),
-                  );
-                },
-              ),
-            Padding(
-              padding: const EdgeInsets.all(10),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const _FeedTypeBadge(feedType: 'ranking'),
-                  const SizedBox(height: 6),
-                  Row(
-                    children: [
-                      const Icon(Icons.emoji_events,
-                          size: 16, color: Color(0xFFFFB300)),
-                      const SizedBox(width: 4),
-                      Expanded(
-                        child: Text(
-                          Helpers.normalizeContentNewlines(item.displayTitle(locale)),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                            color: isDark
-                                ? AppColors.textPrimaryDark
-                                : AppColors.textPrimaryLight,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  if (top3 != null && top3.isNotEmpty) ...[
-                    const SizedBox(height: 8),
-                    ...top3.take(3).toList().asMap().entries.map((entry) {
-                      final i = entry.key;
-                      final data = entry.value;
-                      final rankLabels = [
-                        context.l10n.leaderboardRankFirst,
-                        context.l10n.leaderboardRankSecond,
-                        context.l10n.leaderboardRankThird,
-                      ];
-                      return Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          if (i > 0) Divider(height: 1, color: isDark ? AppColors.secondaryBackgroundDark : const Color(0xFFE5E7EB)),
-                          Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 6),
-                            child: Row(
-                              children: [
-                                Text(
-                                  rankLabels[i],
-                                  style: const TextStyle(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.bold,
-                                    color: Color(0xFF2563EB),
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
-                                Expanded(
-                                  child: Text(
-                                    data['name']?.toString() ?? '',
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w600,
-                                      color: isDark
-                                          ? AppColors.textPrimaryDark
-                                          : AppColors.textPrimaryLight,
-                                    ),
-                                  ),
-                                ),
-                                Text(
-                                  context.l10n.leaderboardNetVotesCount(
-                                    ((data['rating'] as num?)?.round() ?? 0),
-                                  ),
-                                  style: TextStyle(
-                                    fontSize: 10,
-                                    color: isDark
-                                        ? AppColors.textTertiaryDark
-                                        : AppColors.textTertiaryLight,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      );
-                    }),
-                  ],
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// =============================================================================
-// 卡片类型 6: 达人服务推荐卡片
-// =============================================================================
-
-class _ServiceCard extends StatelessWidget {
-  const _ServiceCard({required this.item});
-  final DiscoveryFeedItem item;
-
-  @override
-  Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final locale = Localizations.localeOf(context);
-    final displayTitle = Helpers.normalizeContentNewlines(item.displayTitle(locale));
-
-    return GestureDetector(
-      onTap: () {
-        final id = item.id.replaceFirst('service_', '');
-        context.push('/service/$id');
-      },
-      child: Container(
-        decoration: BoxDecoration(
-          color: isDark ? AppColors.cardBackgroundDark : Colors.white,
-          borderRadius: BorderRadius.circular(_kDiscoveryCardRadius),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.06),
-              blurRadius: 3,
-              offset: const Offset(0, 1),
-            ),
-          ],
-        ),
-        clipBehavior: Clip.hardEdge,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            if (item.hasImages)
-              LayoutBuilder(
-                builder: (context, constraints) {
-                  final w = constraints.maxWidth;
-                  final h = w * 3 / 4;
-                  return ClipRect(
-                    child: AsyncImageView(
-                      imageUrl: item.firstImage!,
-                      width: w,
-                      height: h,
-                      memCacheWidth: (w * MediaQuery.devicePixelRatioOf(context)).round(),
-                      memCacheHeight: (h * MediaQuery.devicePixelRatioOf(context)).round(),
-                    ),
-                  );
-                },
-              ),
-            Padding(
-              padding: const EdgeInsets.all(10),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const _FeedTypeBadge(feedType: 'service'),
-                  const SizedBox(height: 6),
-                  if (displayTitle.isNotEmpty)
-                    Text(
-                      displayTitle,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: isDark
-                            ? AppColors.textPrimaryDark
-                            : AppColors.textPrimaryLight,
-                      ),
-                    ),
-                  const SizedBox(height: 8),
-                  // 底部一行：左下角达人头像+名字，右下角金额+评分
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _DiscoveryUserRow(
-                          userId: item.userId,
-                          userName: item.userName,
-                          userAvatar: item.userAvatar,
-                          expertId: item.expertId,
-                          isDark: isDark,
-                        ),
-                      ),
-                      Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          if (item.price != null)
-                            Text(
-                              '${_currencySymbol(item.currency)}${item.price!.toStringAsFixed(0)}起',
-                              style: const TextStyle(
-                                fontSize: 15,
-                                fontWeight: FontWeight.w700,
-                                color: Color(0xFFFF6B9D),
-                              ),
-                            ),
-                          if (item.price != null && item.rating != null)
-                            const SizedBox(width: 6),
-                          if (item.rating != null)
-                            Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                const Icon(Icons.star,
-                                    size: 12, color: Color(0xFFFFB300)),
-                                const SizedBox(width: 2),
-                                Text(
-                                  item.rating!.toStringAsFixed(1),
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    color: isDark
-                                        ? AppColors.textSecondaryDark
-                                        : AppColors.textSecondaryLight,
-                                  ),
-                                ),
-                              ],
-                            ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// =============================================================================
-// 共用组件
-// =============================================================================
-
-/// 发现卡片中的用户行：头像 + 昵称，点击跳转个人页或达人详情页
-/// 当 [expertId] 非空时跳达人详情页，否则跳用户个人页
-class _DiscoveryUserRow extends StatelessWidget {
-  const _DiscoveryUserRow({
-    this.userId,
-    this.userName,
-    this.userAvatar,
-    this.expertId,
-    required this.isDark,
-  });
-
-  final String? userId;
-  final String? userName;
-  final String? userAvatar;
-  /// 非空时点击跳达人详情页 (/task-experts/:id)，否则跳用户个人页 (/user/:id)
-  final String? expertId;
-  final bool isDark;
-
-  @override
-  Widget build(BuildContext context) {
-    final isAnonymous = userId == null || userName == '匿名用户';
-    final content = Row(
-      children: [
-        AvatarView(
-          imageUrl: isAnonymous ? null : userAvatar,
-          name: userName,
-          size: 20,
-          isAnonymous: isAnonymous,
-        ),
-        const SizedBox(width: 6),
-        Expanded(
-          child: Text(
-            userName ?? '匿名用户',
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.w500,
-              color: isDark
-                  ? AppColors.textSecondaryDark
-                  : AppColors.textSecondaryLight,
-            ),
-          ),
-        ),
-      ],
-    );
-    final canGoExpert = expertId != null && expertId!.isNotEmpty;
-    final canGoUser =
-        userId != null && userId!.isNotEmpty;
-    if (canGoExpert || canGoUser) {
-      return GestureDetector(
-        onTap: () {
-          if (canGoExpert) {
-            context.push('/task-experts/$expertId');
-          } else {
-            context.push('/user/$userId');
-          }
-        },
-        behavior: HitTestBehavior.opaque,
-        child: content,
-      );
-    }
-    return content;
-  }
-}
-
-/// 帖子关联内容标签（与原型 post-link 一致：图标盒 + 文案 + 箭头）
-class _LinkedItemTag extends StatelessWidget {
-  const _LinkedItemTag({required this.linkedItem});
-  final LinkedItemBrief linkedItem;
-
-  static const Color _primaryPurple = Color(0xFF6C5CE7);
-
-  @override
-  Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    return Container(
-      padding: const EdgeInsets.all(8),
-      decoration: BoxDecoration(
-        color: isDark
-            ? Colors.white.withValues(alpha: 0.06)
-            : _primaryPurple.withValues(alpha: 0.04),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 32,
-            height: 32,
-            decoration: BoxDecoration(
-              color: _iconBgColor(linkedItem.itemType),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Icon(_iconForType(linkedItem.itemType), size: 16, color: _primaryPurple),
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              linkedItem.name ?? '',
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w500,
-                color: isDark ? AppColors.primaryLight : _primaryPurple,
-              ),
-            ),
-          ),
-          Icon(
-            Icons.chevron_right,
-            size: 14,
-            color: isDark ? AppColors.textTertiaryDark : AppColors.textTertiaryLight,
-          ),
-        ],
-      ),
-    );
-  }
-
-  Color _iconBgColor(String type) {
-    switch (type) {
-      case 'product': return const Color(0xFFFEF3C7);
-      case 'service': return const Color(0xFFDBEAFE);
-      case 'activity': return const Color(0xFFD1FAE5);
-      case 'ranking': return const Color(0xFFDBEAFE);
-      default: return const Color(0xFFEDE9FE);
-    }
-  }
-
-  IconData _iconForType(String type) {
-    switch (type) {
-      case 'product': return Icons.shopping_bag_outlined;
-      case 'service': return Icons.school_outlined;
-      case 'activity': return Icons.event_outlined;
-      case 'ranking': return Icons.emoji_events_outlined;
-      case 'forum_post': return Icons.forum_outlined;
-      default: return Icons.link;
-    }
-  }
-}
-
-/// 评论目标标签（与原型 review-target 一致）
-class _TargetItemTag extends StatelessWidget {
-  const _TargetItemTag({required this.target});
-  final TargetItemBrief target;
-
-  @override
-  Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-      decoration: BoxDecoration(
-        color: isDark
-            ? Colors.white.withValues(alpha: 0.06)
-            : const Color(0xFF6C5CE7).withValues(alpha: 0.04),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Row(
-        children: [
-          if (target.thumbnail != null)
-            ClipRRect(
-              borderRadius: BorderRadius.circular(6),
-              child: SizedBox(
-                width: 28,
-                height: 28,
-                child: AsyncImageView(
-                  imageUrl: target.thumbnail!,
-                  memCacheWidth: 84,
-                  memCacheHeight: 84,
-                ),
-              ),
-            )
-          else
-            Container(
-              width: 28,
-              height: 28,
-              decoration: BoxDecoration(
-                color: isDark
-                    ? AppColors.cardBackgroundDark
-                    : const Color(0xFFE5E7EB),
-                borderRadius: BorderRadius.circular(6),
-              ),
-              child: const Icon(Icons.inventory_2, size: 14),
-            ),
-          const SizedBox(width: 6),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  target.name ?? '',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
-                    color: isDark
-                        ? AppColors.textPrimaryDark
-                        : AppColors.textPrimaryLight,
-                  ),
-                ),
-                if (target.subtitle != null)
-                  Text(
-                    target.subtitle!,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontSize: 10,
-                      color: isDark
-                          ? AppColors.textTertiaryDark
-                          : AppColors.textTertiaryLight,
-                    ),
-                  ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-/// 活动价格行（原价划线 + 折后价高亮）
-class _ActivityPriceRow extends StatelessWidget {
-  const _ActivityPriceRow({required this.activityInfo});
-  final ActivityBrief activityInfo;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        // 折后价
-        Text(
-          activityInfo.discountedPrice != null
-            ? '${_currencySymbol(activityInfo.currency)}${Helpers.formatAmountNumber(activityInfo.discountedPrice!)}'
-            : '',
-          style: const TextStyle(
-            fontSize: 15,
-            fontWeight: FontWeight.bold,
-            color: Color(0xFFFF6B9D),
-          ),
-        ),
-        const SizedBox(width: 6),
-        // 原价（划线）
-        Text(
-          activityInfo.originalPrice != null
-            ? '${_currencySymbol(activityInfo.currency)}${Helpers.formatAmountNumber(activityInfo.originalPrice!)}'
-            : '',
-          style: const TextStyle(
-            fontSize: 12,
-            color: Colors.grey,
-            decoration: TextDecoration.lineThrough,
-          ),
-        ),
-        const SizedBox(width: 4),
-        // 折扣标签
-        if (activityInfo.discountLabel != null)
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
-            decoration: BoxDecoration(
-              color: const Color(0xFFFF6B6B).withValues(alpha: 0.15),
-              borderRadius: BorderRadius.circular(4),
-            ),
-            child: Text(
-              activityInfo.discountLabel!,
-              style: const TextStyle(
-                fontSize: 10,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFFFF6B6B),
-              ),
-            ),
-          ),
-      ],
-    );
-  }
-}
+// Discovery card types (_PostCard, _ProductCard, _CompetitorReviewCard,
+// _ServiceReviewCard, _RankingCard, _ServiceCard) and shared widgets
+// (_DiscoveryUserRow, _LinkedItemTag, _TargetItemTag, _ActivityPriceRow)
+// are defined in home_discovery_cards.dart

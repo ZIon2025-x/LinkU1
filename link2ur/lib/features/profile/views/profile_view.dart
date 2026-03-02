@@ -38,6 +38,9 @@ class ProfileView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return BlocBuilder<AuthBloc, AuthState>(
+      buildWhen: (prev, curr) =>
+          prev.isAuthenticated != curr.isAuthenticated ||
+          prev.user != curr.user,
       builder: (context, authState) {
         if (!authState.isAuthenticated) {
           return _buildNotLoggedIn(context);

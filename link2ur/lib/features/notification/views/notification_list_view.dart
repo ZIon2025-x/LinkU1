@@ -42,10 +42,44 @@ class _NotificationListViewState extends State<NotificationListView> {
   }
 }
 
-class _NotificationListViewContent extends StatelessWidget {
+class _NotificationListViewContent extends StatefulWidget {
   const _NotificationListViewContent({this.type});
 
   final String? type;
+
+  @override
+  State<_NotificationListViewContent> createState() =>
+      _NotificationListViewContentState();
+}
+
+class _NotificationListViewContentState
+    extends State<_NotificationListViewContent> {
+  final ScrollController _scrollController = ScrollController();
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollController.addListener(_onScroll);
+  }
+
+  @override
+  void dispose() {
+    _scrollController.removeListener(_onScroll);
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _onScroll() {
+    if (!_scrollController.hasClients) return;
+    final maxScroll = _scrollController.position.maxScrollExtent;
+    final currentScroll = _scrollController.position.pixels;
+    if (currentScroll >= maxScroll - 200) {
+      final state = context.read<NotificationBloc>().state;
+      if (state.hasMore && !state.isLoading) {
+        context.read<NotificationBloc>().add(const NotificationLoadMore());
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -55,6 +89,7 @@ class _NotificationListViewContent extends StatelessWidget {
       buildWhen: (prev, curr) =>
           prev.status != curr.status ||
           prev.notifications != curr.notifications ||
+          prev.hasMore != curr.hasMore ||
           prev.errorMessage != curr.errorMessage,
       builder: (context, state) {
         final notifications = state.notifications;
@@ -72,7 +107,7 @@ class _NotificationListViewContent extends StatelessWidget {
                 ),
             ],
           ),
-          body: state.isLoading
+          body: state.isLoading && notifications.isEmpty
               ? const SkeletonList(imageSize: 44)
               : notifications.isEmpty
                   ? EmptyStateView(
@@ -84,14 +119,21 @@ class _NotificationListViewContent extends StatelessWidget {
                       onRefresh: () async {
                         context
                             .read<NotificationBloc>()
-                            .add(NotificationLoadRequested(type: type));
+                            .add(NotificationLoadRequested(type: widget.type));
                       },
                       child: ListView.separated(
+                        controller: _scrollController,
                         padding: const EdgeInsets.all(AppSpacing.md),
-                        itemCount: notifications.length,
+                        itemCount: notifications.length + (state.hasMore ? 1 : 0),
                         separatorBuilder: (_, __) =>
                             const SizedBox(height: AppSpacing.sm),
                         itemBuilder: (context, index) {
+                          if (index >= notifications.length) {
+                            return const Padding(
+                              padding: EdgeInsets.all(AppSpacing.md),
+                              child: Center(child: CircularProgressIndicator()),
+                            );
+                          }
                           final notification = notifications[index];
                           return _NotificationCard(
                             key: ValueKey(notification.id),
@@ -108,7 +150,7 @@ class _NotificationListViewContent extends StatelessWidget {
   }
 
   String _getTitle(dynamic l10n) {
-    switch (type) {
+    switch (widget.type) {
       case 'system':
         return l10n.notificationSystem;
       case 'task':

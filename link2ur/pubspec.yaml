@@ -16,6 +16,7 @@ dependencies:
 
   # 状态管理
   flutter_bloc: ^8.1.6
+  bloc_concurrency: ^0.2.5
   equatable: ^2.0.5
   
   # Markdown 渲染

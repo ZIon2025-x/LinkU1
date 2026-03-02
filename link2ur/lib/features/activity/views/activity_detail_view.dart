@@ -1,5 +1,6 @@
 import 'dart:ui';
 
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
@@ -960,7 +961,7 @@ class _OfficialPrizeInfoCard extends StatelessWidget {
                                     .withValues(alpha: 0.1),
                                 backgroundImage: w.avatarUrl != null &&
                                         w.avatarUrl!.isNotEmpty
-                                    ? NetworkImage(w.avatarUrl!)
+                                    ? CachedNetworkImageProvider(w.avatarUrl!)
                                     : null,
                                 child: w.avatarUrl == null ||
                                         w.avatarUrl!.isEmpty

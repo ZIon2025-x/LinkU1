@@ -177,12 +177,9 @@ class _TasksViewContentState extends State<_TasksViewContent> {
                   contentPadding: const EdgeInsets.symmetric(vertical: 10),
                 ),
                 onChanged: (value) {
-                  _debouncer.call(() {
-                    if (!mounted) return;
-                    context
-                        .read<TaskListBloc>()
-                        .add(TaskListSearchChanged(value));
-                  });
+                  context
+                      .read<TaskListBloc>()
+                      .add(TaskListSearchChanged(value));
                 },
               ),
             ),

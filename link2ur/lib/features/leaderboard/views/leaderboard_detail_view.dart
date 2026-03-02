@@ -56,6 +56,11 @@ class _LeaderboardDetailContentState
   @override
   Widget build(BuildContext context) {
     return BlocBuilder<LeaderboardBloc, LeaderboardState>(
+      buildWhen: (prev, curr) =>
+          prev.status != curr.status ||
+          prev.selectedLeaderboard != curr.selectedLeaderboard ||
+          prev.items != curr.items ||
+          prev.errorMessage != curr.errorMessage,
       builder: (context, state) {
         final lb = state.selectedLeaderboard;
         final hasHero = lb?.coverImage != null;

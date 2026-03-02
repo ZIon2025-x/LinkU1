@@ -1,5 +1,6 @@
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:bloc_concurrency/bloc_concurrency.dart';
 
 import '../../../data/models/task.dart';
 import '../../../data/models/task_application.dart';
@@ -353,11 +354,11 @@ class TaskDetailBloc extends Bloc<TaskDetailEvent, TaskDetailState> {
   TaskDetailBloc({required TaskRepository taskRepository})
       : _taskRepository = taskRepository,
         super(const TaskDetailState()) {
-    on<TaskDetailLoadRequested>(_onLoadRequested);
-    on<TaskDetailLoadApplications>(_onLoadApplications);
+    on<TaskDetailLoadRequested>(_onLoadRequested, transformer: restartable());
+    on<TaskDetailLoadApplications>(_onLoadApplications, transformer: restartable());
     on<TaskDetailLoadRefundStatus>(_onLoadRefundStatus);
     on<TaskDetailLoadReviews>(_onLoadReviews);
-    on<TaskDetailApplyRequested>(_onApplyRequested);
+    on<TaskDetailApplyRequested>(_onApplyRequested, transformer: droppable());
     on<TaskDetailCancelApplicationRequested>(_onCancelApplication);
     on<TaskDetailAcceptApplicant>(_onAcceptApplicant);
     on<TaskDetailClearAcceptPaymentData>(_onClearAcceptPaymentData);

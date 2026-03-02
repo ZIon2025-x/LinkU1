@@ -52,6 +52,10 @@ class _ItemDetailContent extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return BlocBuilder<LeaderboardBloc, LeaderboardState>(
+      buildWhen: (prev, curr) =>
+          prev.status != curr.status ||
+          prev.itemDetail != curr.itemDetail ||
+          prev.errorMessage != curr.errorMessage,
       builder: (context, state) {
         final item = state.itemDetail;
         final hasImages =

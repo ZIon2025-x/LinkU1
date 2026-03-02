@@ -12,6 +12,8 @@ import 'core/design/scroll_behavior.dart';
 import 'core/router/app_router.dart';
 import 'core/utils/deep_link_handler.dart';
 import 'core/utils/logger.dart';
+import 'core/utils/network_monitor.dart';
+import 'core/widgets/offline_mode_indicator.dart';
 import 'data/services/websocket_service.dart';
 import 'features/auth/bloc/auth_bloc.dart';
 import 'features/notification/bloc/notification_bloc.dart';
@@ -100,6 +102,7 @@ class _Link2UrAppState extends State<Link2UrApp> {
     _apiService.dispose();
     DeepLinkHandler.instance.dispose();
     WebSocketService.instance.dispose();
+    NetworkMonitor.instance.dispose();
     super.dispose();
   }
 
@@ -159,6 +162,9 @@ class _Link2UrAppState extends State<Link2UrApp> {
                       Locale('en', 'US'),
                     ],
                     locale: _localeFromString(settingsState.locale),
+                    builder: (context, child) {
+                      return OfflineModeIndicator(child: child ?? const SizedBox.shrink());
+                    },
                   ),
                 );
               },

@@ -50,6 +50,7 @@ import '../linker_quotes.dart';
 part 'home_recommended_section.dart';
 part 'home_widgets.dart';
 part 'home_activities_section.dart';
+part 'home_discovery_cards.dart';
 part 'home_task_cards.dart';
 part 'home_experts_search.dart';
 

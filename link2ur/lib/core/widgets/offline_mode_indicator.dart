@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../design/app_colors.dart';
+import '../utils/l10n_extension.dart';
 import '../utils/offline_manager.dart';
 import '../utils/network_monitor.dart';
 
@@ -72,8 +73,8 @@ class _OfflineBanner extends StatelessWidget {
             Expanded(
               child: Text(
                 pendingCount > 0
-                    ? '离线模式 · $pendingCount 项待同步'
-                    : '离线模式',
+                    ? '${context.l10n.offlineMode} · ${context.l10n.offlinePendingSync(pendingCount)}'
+                    : context.l10n.offlineMode,
                 style: const TextStyle(
                   color: Colors.white,
                   fontSize: 13,

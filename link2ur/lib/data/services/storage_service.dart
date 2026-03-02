@@ -34,6 +34,8 @@ class StorageService {
   List<String>? _cachedSearchHistory;
   Set<int>? _cachedPinnedTaskChatIds;
   Map<int, DateTime>? _cachedHiddenTaskChats;
+  String? _cachedAccessToken;
+  String? _cachedRefreshToken;
 
   /// 初始化
   /// SharedPreferences、Hive.openBox、CacheManager 互不依赖，并行执行以减少启动时间
@@ -142,11 +144,13 @@ class StorageService {
     required String accessToken,
     String? refreshToken,
   }) async {
+    _cachedAccessToken = accessToken;
     await _secureStorage.write(
       key: StorageKeys.accessToken,
       value: accessToken,
     );
     if (refreshToken != null) {
+      _cachedRefreshToken = refreshToken;
       await _secureStorage.write(
         key: StorageKeys.refreshToken,
         value: refreshToken,
@@ -155,18 +159,24 @@ class StorageService {
     AppLogger.debug('Tokens saved');
   }
 
-  /// 获取Access Token
+  /// 获取Access Token（内存缓存，避免每次请求触发异步 SecureStorage I/O）
   Future<String?> getAccessToken() async {
-    return await _secureStorage.read(key: StorageKeys.accessToken);
+    if (_cachedAccessToken != null) return _cachedAccessToken;
+    _cachedAccessToken = await _secureStorage.read(key: StorageKeys.accessToken);
+    return _cachedAccessToken;
   }
 
-  /// 获取Refresh Token
+  /// 获取Refresh Token（内存缓存）
   Future<String?> getRefreshToken() async {
-    return await _secureStorage.read(key: StorageKeys.refreshToken);
+    if (_cachedRefreshToken != null) return _cachedRefreshToken;
+    _cachedRefreshToken = await _secureStorage.read(key: StorageKeys.refreshToken);
+    return _cachedRefreshToken;
   }
 
   /// 清除Tokens
   Future<void> clearTokens() async {
+    _cachedAccessToken = null;
+    _cachedRefreshToken = null;
     await _secureStorage.delete(key: StorageKeys.accessToken);
     await _secureStorage.delete(key: StorageKeys.refreshToken);
     AppLogger.debug('Tokens cleared');

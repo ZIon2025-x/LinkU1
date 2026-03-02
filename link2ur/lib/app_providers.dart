@@ -77,32 +77,25 @@ class AppProviders extends StatelessWidget {
         RepositoryProvider<DiscoveryRepository>.value(
             value: discoveryRepository),
         RepositoryProvider<FleaMarketRepository>(
-          create: (context) =>
-              FleaMarketRepository(apiService: context.read<ApiService>()),
+          create: (_) => FleaMarketRepository(apiService: apiService),
         ),
         RepositoryProvider<TaskExpertRepository>(
-          create: (context) =>
-              TaskExpertRepository(apiService: context.read<ApiService>()),
+          create: (_) => TaskExpertRepository(apiService: apiService),
         ),
         RepositoryProvider<CouponPointsRepository>(
-          create: (context) => CouponPointsRepository(
-              apiService: context.read<ApiService>()),
+          create: (_) => CouponPointsRepository(apiService: apiService),
         ),
         RepositoryProvider<PaymentRepository>(
-          create: (context) =>
-              PaymentRepository(apiService: context.read<ApiService>()),
+          create: (_) => PaymentRepository(apiService: apiService),
         ),
         RepositoryProvider<StudentVerificationRepository>(
-          create: (context) => StudentVerificationRepository(
-              apiService: context.read<ApiService>()),
+          create: (_) => StudentVerificationRepository(apiService: apiService),
         ),
         RepositoryProvider<CommonRepository>(
-          create: (context) =>
-              CommonRepository(apiService: context.read<ApiService>()),
+          create: (_) => CommonRepository(apiService: apiService),
         ),
         RepositoryProvider<AIChatService>(
-          create: (context) =>
-              AIChatService(apiService: context.read<ApiService>()),
+          create: (_) => AIChatService(apiService: apiService),
         ),
       ],
       child: MultiBlocProvider(

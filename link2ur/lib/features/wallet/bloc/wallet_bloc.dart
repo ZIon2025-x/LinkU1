@@ -1,5 +1,6 @@
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:bloc_concurrency/bloc_concurrency.dart';
 
 import '../../../data/models/coupon_points.dart';
 import '../../../data/models/payment.dart';
@@ -103,8 +104,8 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
   })  : _couponPointsRepo = couponPointsRepository,
         _paymentRepo = paymentRepository,
         super(const WalletState()) {
-    on<WalletLoadRequested>(_onLoadRequested);
-    on<WalletLoadMoreTransactions>(_onLoadMore);
+    on<WalletLoadRequested>(_onLoadRequested, transformer: restartable());
+    on<WalletLoadMoreTransactions>(_onLoadMore, transformer: droppable());
   }
 
   final CouponPointsRepository _couponPointsRepo;
@@ -156,7 +157,9 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
     WalletLoadMoreTransactions event,
     Emitter<WalletState> emit,
   ) async {
-    if (!state.hasMoreTransactions) return;
+    if (!state.hasMoreTransactions || state.isLoading) return;
+
+    emit(state.copyWith(status: WalletStatus.loaded));
 
     try {
       final nextPage = state.transactionPage + 1;
@@ -171,6 +174,9 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
       ));
     } catch (e) {
       AppLogger.error('Failed to load more transactions', e);
+      emit(state.copyWith(
+        errorMessage: e.toString(),
+      ));
     }
   }
 }

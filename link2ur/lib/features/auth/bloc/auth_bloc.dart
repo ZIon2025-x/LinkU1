@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:equatable/equatable.dart';
+import 'package:bloc_concurrency/bloc_concurrency.dart';
 import 'package:stream_transform/stream_transform.dart';
 
 import '../../../data/models/user.dart';
@@ -22,10 +23,10 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   })  : _authRepository = authRepository,
         super(const AuthState()) {
     on<AuthCheckRequested>(_onCheckRequested);
-    on<AuthLoginRequested>(_onLoginRequested);
-    on<AuthLoginWithCodeRequested>(_onLoginWithCodeRequested);
-    on<AuthLoginWithPhoneRequested>(_onLoginWithPhoneRequested);
-    on<AuthRegisterRequested>(_onRegisterRequested);
+    on<AuthLoginRequested>(_onLoginRequested, transformer: droppable());
+    on<AuthLoginWithCodeRequested>(_onLoginWithCodeRequested, transformer: droppable());
+    on<AuthLoginWithPhoneRequested>(_onLoginWithPhoneRequested, transformer: droppable());
+    on<AuthRegisterRequested>(_onRegisterRequested, transformer: droppable());
     on<AuthLogoutRequested>(_onLogoutRequested);
     on<AuthSendEmailCodeRequested>(
       _onSendEmailCodeRequested,
@@ -92,7 +93,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         password: event.password,
       );
 
-      emit(state.copyWith(
+      emit(AuthState(
         status: AuthStatus.authenticated,
         user: user,
       ));
@@ -125,7 +126,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         code: event.code,
       );
 
-      emit(state.copyWith(
+      emit(AuthState(
         status: AuthStatus.authenticated,
         user: user,
       ));
@@ -158,7 +159,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         code: event.code,
       );
 
-      emit(state.copyWith(
+      emit(AuthState(
         status: AuthStatus.authenticated,
         user: user,
       ));
@@ -193,7 +194,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         invitationCode: event.invitationCode,
       );
 
-      emit(state.copyWith(
+      emit(AuthState(
         status: AuthStatus.authenticated,
         user: user,
       ));

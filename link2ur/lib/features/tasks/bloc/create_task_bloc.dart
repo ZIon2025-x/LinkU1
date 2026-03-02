@@ -1,5 +1,6 @@
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:bloc_concurrency/bloc_concurrency.dart';
 
 import '../../../data/models/task.dart';
 import '../../../data/repositories/task_repository.dart';
@@ -67,7 +68,7 @@ class CreateTaskBloc extends Bloc<CreateTaskEvent, CreateTaskState> {
   CreateTaskBloc({required TaskRepository taskRepository})
       : _taskRepository = taskRepository,
         super(const CreateTaskState()) {
-    on<CreateTaskSubmitted>(_onSubmitted);
+    on<CreateTaskSubmitted>(_onSubmitted, transformer: droppable());
     on<CreateTaskReset>(_onReset);
   }
 
@@ -77,6 +78,7 @@ class CreateTaskBloc extends Bloc<CreateTaskEvent, CreateTaskState> {
     CreateTaskSubmitted event,
     Emitter<CreateTaskState> emit,
   ) async {
+    if (state.isSubmitting) return;
     emit(state.copyWith(status: CreateTaskStatus.submitting));
 
     try {

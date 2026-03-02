@@ -11,6 +11,8 @@ import '../../../core/utils/l10n_extension.dart';
 import '../../../core/widgets/full_screen_image_view.dart';
 import '../../../core/widgets/loading_view.dart';
 import '../../../core/widgets/error_state_view.dart';
+import '../../../core/widgets/empty_state_view.dart';
+import '../../../core/widgets/skeleton_view.dart';
 import '../../../data/repositories/message_repository.dart';
 import '../../../data/services/storage_service.dart';
 import '../bloc/chat_bloc.dart';
@@ -184,7 +186,7 @@ class _ChatContentState extends State<_ChatContent> {
 
   Widget _buildGroupedMessageList(ChatState state) {
     if (state.status == ChatStatus.loading && state.messages.isEmpty) {
-      return const LoadingView();
+      return const SkeletonList(imageSize: 40);
     }
 
     if (state.status == ChatStatus.error && state.messages.isEmpty) {
@@ -197,20 +199,7 @@ class _ChatContentState extends State<_ChatContent> {
     }
 
     if (state.messages.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(Icons.chat_bubble_outline,
-                size: 48, color: AppColors.textTertiaryLight),
-            AppSpacing.vMd,
-            Text(
-              context.l10n.chatNoMessages,
-              style: const TextStyle(color: AppColors.textSecondaryLight),
-            ),
-          ],
-        ),
-      );
+      return EmptyStateView.noMessages(context);
     }
 
     // 使用消息分组

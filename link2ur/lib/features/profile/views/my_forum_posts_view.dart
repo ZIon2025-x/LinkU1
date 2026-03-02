@@ -80,6 +80,12 @@ class _MyForumPostsViewState extends State<MyForumPostsView>
       )..add(const ProfileLoadMyForumActivity(type: 'posts')),
       child: BlocBuilder<ProfileBloc, ProfileState>(
         key: _blocProviderKey,
+        buildWhen: (prev, curr) =>
+            prev.status != curr.status ||
+            prev.myForumPosts != curr.myForumPosts ||
+            prev.favoritedPosts != curr.favoritedPosts ||
+            prev.likedPosts != curr.likedPosts ||
+            prev.errorMessage != curr.errorMessage,
         builder: (context, state) {
           return Scaffold(
             appBar: AppBar(
