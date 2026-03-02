@@ -25,6 +25,7 @@ import {
   restoreForumPost,
 } from '../../../api';
 import { getErrorMessage } from '../../../utils/errorHandler';
+import { encodeContent, decodeContent } from '../../../utils/formatContent';
 
 type SubTab = 'categories' | 'requests' | 'posts';
 
@@ -263,7 +264,7 @@ const ForumManagement: React.FC = () => {
       }
       await createForumPost({
         title: values.title.trim(),
-        content: values.content.trim(),
+        content: encodeContent(values.content.trim()),
         category_id: Number(values.category_id),
       });
       message.success('帖子已发布');
@@ -291,7 +292,7 @@ const ForumManagement: React.FC = () => {
       }
       await updateForumPost(values.id, {
         title: values.title.trim(),
-        content: values.content.trim(),
+        content: encodeContent(values.content.trim()),
         category_id: Number(values.category_id),
       });
       message.success('帖子已更新');
@@ -303,11 +304,12 @@ const ForumManagement: React.FC = () => {
 
   const handleEditPost = (record: ForumPostListItem) => {
     getForumPost(record.id).then((post: any) => {
+      const rawContent = post.content || record.content_preview || '';
       postEditModal.open({
         id: record.id,
         category_id: post.category?.id ?? record.category?.id ?? '',
         title: post.title || record.title,
-        content: post.content || record.content_preview || '',
+        content: decodeContent(rawContent),
       });
     }).catch((err) => message.error(getErrorMessage(err)));
   };
