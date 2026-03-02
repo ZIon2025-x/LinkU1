@@ -35,10 +35,16 @@ const Register: React.FC = () => {
   useNavigate();
   useLocation();
   const { t } = useLanguage();
+  const [form] = Form.useForm();
   const [errorMsg, setErrorMsg] = useState('');
   const [password, setPassword] = useState('');
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [showForgotPasswordModal, setShowForgotPasswordModal] = useState(false);
+  const [phoneCodeSending, setPhoneCodeSending] = useState(false);
+  const [phoneCodeSent, setPhoneCodeSent] = useState(false);
+  const [phoneCountdown, setPhoneCountdown] = useState(0);
+  const [phoneForCode, setPhoneForCode] = useState('');
+  const phoneValue = Form.useWatch('phone', form);
   const [passwordValidation, setPasswordValidation] = useState<{
     is_valid: boolean;
     score: number;
@@ -217,14 +223,66 @@ const Register: React.FC = () => {
     return () => clearTimeout(timeoutId);
   }, [password]);
 
+  // 手机验证码倒计时
+  React.useEffect(() => {
+    if (phoneCountdown <= 0) return;
+    const timerId = setInterval(() => {
+      setPhoneCountdown((prev) => (prev <= 1 ? 0 : prev - 1));
+    }, 1000);
+    return () => clearInterval(timerId);
+  }, [phoneCountdown]);
+
+  // 手机号改变后：重置已发送验证码状态（避免用旧验证码提交）
+  React.useEffect(() => {
+    const currentPhone = (phoneValue || '').trim();
+    if (!currentPhone) {
+      if (phoneCodeSent || phoneCountdown > 0 || phoneForCode) {
+        setPhoneCodeSent(false);
+        setPhoneCountdown(0);
+        setPhoneForCode('');
+        form.setFieldsValue({ phone_verification_code: undefined });
+      }
+      return;
+    }
+    if (phoneForCode && currentPhone !== phoneForCode) {
+      setPhoneCodeSent(false);
+      setPhoneCountdown(0);
+      setPhoneForCode('');
+      form.setFieldsValue({ phone_verification_code: undefined });
+    }
+  }, [phoneValue, phoneCodeSent, phoneCountdown, phoneForCode, form]);
+
+  const handleSendPhoneCode = async () => {
+    const phone = ((form.getFieldValue('phone') as string) || '').trim();
+    if (!phone) return;
+    setPhoneCodeSending(true);
+    setErrorMsg('');
+    try {
+      await api.post('/api/secure-auth/send-phone-verification-code', {
+        phone,
+        captcha_token: null,
+      });
+      setPhoneForCode(phone);
+      setPhoneCodeSent(true);
+      setPhoneCountdown(600);
+      message.success(t('auth.codeSent') || '验证码已发送');
+    } catch (err: any) {
+      const msg = getErrorMessage(err);
+      setErrorMsg(msg);
+      message.error(msg);
+    } finally {
+      setPhoneCodeSending(false);
+    }
+  };
+
   const onFinish = async (values: any) => {
     try {
-      // 后端要求：若提供手机号则必须同时提供手机验证码。本页暂无验证码流程，故仅提交邮箱注册，手机号可注册后在设置中绑定
-      const payload = { ...values };
-      if (payload.phone && !payload.phone_verification_code) {
-        delete payload.phone;
+      // 后端要求：若提供手机号，则必须提供手机验证码
+      if (values.phone && !values.phone_verification_code) {
+        setErrorMsg(t('auth.phoneVerificationRequired') || '请先获取并填写手机验证码');
+        return;
       }
-      const res = await api.post('/api/users/register', payload);
+      const res = await api.post('/api/users/register', values);
       setErrorMsg(''); // 注册成功清空错误
       
       if (res.data.verification_required) {
@@ -283,7 +341,7 @@ const Register: React.FC = () => {
             onClose={() => setErrorMsg('')}
           />
         )}
-        <Form layout="vertical" onFinish={onFinish}>
+        <Form form={form} layout="vertical" onFinish={onFinish}>
           <Form.Item 
             label={t('register.username')} 
             name="name" 
@@ -325,11 +383,68 @@ const Register: React.FC = () => {
           <Form.Item 
             label={t('register.phone')} 
             name="phone"
-            rules={[]}
+            rules={[
+              {
+                validator: (_, value) => {
+                  const phone = (value || '').trim();
+                  if (!phone) return Promise.resolve();
+                  if (!phone.startsWith('+')) return Promise.reject(new Error('手机号格式不正确，必须以国家代码开头（如 +44）'));
+                  if (!/^\+\d{10,15}$/.test(phone)) return Promise.reject(new Error('手机号格式不正确，请检查国家代码和手机号'));
+                  return Promise.resolve();
+                }
+              }
+            ]}
             required={false}
-            extra={t('register.phoneOptionalHint') || '选填；绑定手机号可在注册后于设置中完成'}
           > 
-            <Input placeholder={t('register.phone')} />
+            <Input
+              placeholder={t('register.phonePlaceholder') || '+447700123456'}
+              addonAfter={
+                <Button
+                  type="link"
+                  onClick={handleSendPhoneCode}
+                  disabled={!phoneValue || phoneCodeSending || phoneCountdown > 0}
+                  style={{ padding: 0, height: 'auto' }}
+                >
+                  {phoneCountdown > 0
+                    ? `${t('auth.resendCode') || '重新发送'} (${phoneCountdown}s)`
+                    : (t('auth.sendVerificationCode') || '发送验证码')}
+                </Button>
+              }
+            />
+          </Form.Item>
+
+          {/* 手机验证码（仅在填写了手机号时显示） */}
+          <Form.Item
+            noStyle
+            shouldUpdate={(prev, curr) => prev.phone !== curr.phone}
+          >
+            {({ getFieldValue }) => {
+              const phone = (getFieldValue('phone') || '').trim();
+              if (!phone) return null;
+              return (
+                <Form.Item
+                  label={t('auth.verificationCode') || '手机验证码'}
+                  name="phone_verification_code"
+                  rules={[
+                    {
+                      validator: (_, value) => {
+                        const code = (value || '').trim();
+                        if (!code) return Promise.reject(new Error('请输入手机验证码'));
+                        if (!/^\d{6}$/.test(code)) return Promise.reject(new Error('请输入6位验证码'));
+                        return Promise.resolve();
+                      }
+                    }
+                  ]}
+                  extra={
+                    phoneCodeSent
+                      ? (t('auth.codeSentToPhone')?.replace('{phone}', phoneForCode || phone) || `验证码已发送至 ${phoneForCode || phone}`)
+                      : (t('auth.phoneVerificationRequired') || '请先点击右侧“发送验证码”获取验证码')
+                  }
+                >
+                  <Input placeholder="123456" maxLength={6} inputMode="numeric" />
+                </Form.Item>
+              );
+            }}
           </Form.Item>
           
           <Form.Item 
