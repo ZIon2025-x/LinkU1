@@ -855,6 +855,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get leaderboardPleaseEnterItemName => '请输入竞品名称';
 
   @override
+  String get leaderboardVoteSuccess => '评价已提交，感谢你的反馈';
+
+  @override
+  String get leaderboardVoteFailed => '提交失败，请稍后重试';
+
+  @override
   String get activityPerson => '人';
 
   @override
@@ -9696,6 +9702,12 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get leaderboardPleaseEnterItemName => '請輸入競品名稱';
+
+  @override
+  String get leaderboardVoteSuccess => '評價已提交，感謝你的反饋';
+
+  @override
+  String get leaderboardVoteFailed => '提交失敗，請稍後重試';
 
   @override
   String get activityPerson => '人';

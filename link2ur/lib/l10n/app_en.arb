@@ -342,6 +342,8 @@
   "leaderboardPhonePlaceholder": "Please enter phone number",
   "leaderboardWebsitePlaceholder": "Please enter website address",
   "leaderboardPleaseEnterItemName": "Please enter item name",
+  "leaderboardVoteSuccess": "Vote submitted. Thanks for your feedback.",
+  "leaderboardVoteFailed": "Submission failed. Please try again later.",
   "activityPerson": "person",
   "activityPersonsBooked": "persons booked",
   "taskExpertServicesCount": "{param1} services",

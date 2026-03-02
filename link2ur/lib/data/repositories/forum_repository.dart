@@ -258,7 +258,21 @@ class ForumRepository {
     return ForumPost.fromJson(response.data!);
   }
 
-  /// 获取帖子回复
+  /// 将后端返回的嵌套回复树展平为列表（根回复在前，子回复按顺序紧跟），与 iOS 展示顺序一致
+  static List<ForumReply> _flattenReplyTree(List<dynamic> rawList) {
+    final result = <ForumReply>[];
+    for (final e in rawList) {
+      final map = Map<String, dynamic>.from(e as Map<String, dynamic>);
+      result.add(ForumReply.fromJson(map));
+      final children = map['replies'] as List<dynamic>?;
+      if (children != null && children.isNotEmpty) {
+        result.addAll(_flattenReplyTree(children));
+      }
+    }
+    return result;
+  }
+
+  /// 获取帖子回复（后端返回树形结构，展平后返回以便列表展示）
   Future<List<ForumReply>> getPostReplies(
     int postId, {
     int page = 1,
@@ -277,9 +291,7 @@ class ForumRepository {
     }
 
     final items = response.data!['replies'] as List<dynamic>? ?? [];
-    return items
-        .map((e) => ForumReply.fromJson(e as Map<String, dynamic>))
-        .toList();
+    return _flattenReplyTree(items);
   }
 
   /// 回复帖子
@@ -313,6 +325,8 @@ class ForumRepository {
     if (!response.isSuccess) {
       throw ForumException(response.message ?? '点赞失败');
     }
+    // 使帖子详情缓存失效，刷新或再次进入时从服务端拉取最新 is_liked
+    await _cache.remove('${CacheManager.prefixForumPostDetail}$postId');
   }
 
   /// 点赞回复
@@ -337,6 +351,8 @@ class ForumRepository {
     if (!response.isSuccess) {
       throw ForumException(response.message ?? '收藏失败');
     }
+    // 使帖子详情缓存失效，刷新或再次进入时从服务端拉取最新 is_favorited
+    await _cache.remove('${CacheManager.prefixForumPostDetail}$postId');
   }
 
   /// 获取我的帖子

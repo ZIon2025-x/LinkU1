@@ -905,9 +905,29 @@ class ForumBloc extends Bloc<ForumEvent, ForumState> {
   ) async {
     try {
       await _forumRepository.deleteReply(event.replyId);
+      // 展平列表中需移除该回复及其所有子回复（递归 parentReplyId 链）
+      final idsToRemove = <int>{event.replyId};
+      bool changed = true;
+      while (changed) {
+        changed = false;
+        for (final r in state.replies) {
+          if (r.parentReplyId != null &&
+              idsToRemove.contains(r.parentReplyId) &&
+              !idsToRemove.contains(r.id)) {
+            idsToRemove.add(r.id);
+            changed = true;
+          }
+        }
+      }
       final updatedReplies =
-          state.replies.where((r) => r.id != event.replyId).toList();
-      emit(state.copyWith(replies: updatedReplies));
+          state.replies.where((r) => !idsToRemove.contains(r.id)).toList();
+      final newCount = (state.selectedPost?.replyCount ?? 0) - idsToRemove.length;
+      emit(state.copyWith(
+        replies: updatedReplies,
+        selectedPost: state.selectedPost?.copyWith(
+          replyCount: newCount > 0 ? newCount : 0,
+        ),
+      ));
     } catch (e) {
       AppLogger.error('Failed to delete reply', e);
       emit(state.copyWith(
@@ -943,6 +963,9 @@ class ForumBloc extends Bloc<ForumEvent, ForumState> {
       emit(state.copyWith(replies: updatedReplies));
     } catch (e) {
       AppLogger.error('Failed to like reply', e);
+      emit(state.copyWith(
+        errorMessage: e is AppException ? e.message : e.toString(),
+      ));
     }
   }
 }

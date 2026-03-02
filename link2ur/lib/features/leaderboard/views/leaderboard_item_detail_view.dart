@@ -21,6 +21,7 @@ import '../../../core/widgets/async_image_view.dart';
 import '../../../core/widgets/external_web_view.dart';
 import '../../../core/widgets/full_screen_image_view.dart';
 import '../../../core/utils/native_share.dart';
+import '../../../core/widgets/app_feedback.dart';
 import '../../../core/utils/share_util.dart';
 import '../../../data/models/leaderboard.dart';
 import '../../../data/repositories/leaderboard_repository.dart';
@@ -51,18 +52,29 @@ class _ItemDetailContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<LeaderboardBloc, LeaderboardState>(
-      buildWhen: (prev, curr) =>
-          prev.status != curr.status ||
-          prev.itemDetail != curr.itemDetail ||
-          prev.itemVotes != curr.itemVotes ||
-          prev.errorMessage != curr.errorMessage,
-      builder: (context, state) {
-        final item = state.itemDetail;
-        final hasImages =
-            item != null && item.images != null && item.images!.isNotEmpty;
+    return BlocListener<LeaderboardBloc, LeaderboardState>(
+      listenWhen: (prev, curr) =>
+          curr.actionMessage != null && prev.actionMessage != curr.actionMessage,
+      listener: (context, state) {
+        if (state.actionMessage == 'vote_success') {
+          AppFeedback.showSuccess(context, context.l10n.leaderboardVoteSuccess);
+        } else if (state.actionMessage == 'vote_failed') {
+          AppFeedback.showError(context, context.l10n.leaderboardVoteFailed);
+        }
+        context.read<LeaderboardBloc>().add(const LeaderboardClearActionMessage());
+      },
+      child: BlocBuilder<LeaderboardBloc, LeaderboardState>(
+        buildWhen: (prev, curr) =>
+            prev.status != curr.status ||
+            prev.itemDetail != curr.itemDetail ||
+            prev.itemVotes != curr.itemVotes ||
+            prev.errorMessage != curr.errorMessage,
+        builder: (context, state) {
+          final item = state.itemDetail;
+          final hasImages =
+              item != null && item.images != null && item.images!.isNotEmpty;
 
-        return Scaffold(
+          return Scaffold(
           extendBodyBehindAppBar: hasImages,
           appBar: _buildAppBar(context, item, hasImages),
           body: Center(
@@ -75,7 +87,8 @@ class _ItemDetailContent extends StatelessWidget {
           bottomNavigationBar:
               item != null ? _buildVoteBar(context, state) : null,
         );
-      },
+        },
+      ),
     );
   }
 

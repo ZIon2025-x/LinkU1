@@ -1,4 +1,4 @@
-﻿part of 'home_view.dart';
+part of 'home_view.dart';
 
 /// Currency symbol (unified to £)
 String _currencySymbol(String? currency) => '£';
@@ -604,13 +604,20 @@ class _FeedTypeBadge extends StatelessWidget {
   String _label(BuildContext context, String type) {
     final l10n = context.l10n;
     switch (type) {
-      case 'forum_post': return '馃挰 ${l10n.discoveryFeedTypePost}';
-      case 'product': return '馃彿锔?${l10n.discoveryFeedTypeProduct}';
-      case 'competitor_review': return '猸?${l10n.discoveryFeedTypeCompetitorReview}';
-      case 'service_review': return '猸?${l10n.discoveryFeedTypeServiceReview}';
-      case 'ranking': return '馃弳 ${l10n.discoveryFeedTypeRanking}';
-      case 'service': return '馃懆鈥嶐煆?${l10n.discoveryFeedTypeService}';
-      default: return l10n.sidebarDiscover;
+      case 'forum_post':
+        return '📝 ${l10n.discoveryFeedTypePost}';
+      case 'product':
+        return '🛒 ${l10n.discoveryFeedTypeProduct}';
+      case 'competitor_review':
+        return '💬 ${l10n.discoveryFeedTypeCompetitorReview}';
+      case 'service_review':
+        return '💬 ${l10n.discoveryFeedTypeServiceReview}';
+      case 'ranking':
+        return '🏆 ${l10n.discoveryFeedTypeRanking}';
+      case 'service':
+        return '🔧 ${l10n.discoveryFeedTypeService}';
+      default:
+        return l10n.sidebarDiscover;
     }
   }
 }

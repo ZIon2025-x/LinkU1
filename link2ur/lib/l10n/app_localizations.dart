@@ -1755,6 +1755,18 @@ abstract class AppLocalizations {
   /// **'Please enter item name'**
   String get leaderboardPleaseEnterItemName;
 
+  /// No description provided for @leaderboardVoteSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Vote submitted. Thanks for your feedback.'**
+  String get leaderboardVoteSuccess;
+
+  /// No description provided for @leaderboardVoteFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Submission failed. Please try again later.'**
+  String get leaderboardVoteFailed;
+
   /// No description provided for @activityPerson.
   ///
   /// In en, this message translates to:

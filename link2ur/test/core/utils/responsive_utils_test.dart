@@ -40,21 +40,21 @@ void main() {
       );
     });
 
-    testWidgets('task: tablet portrait (600-900) returns 2', (tester) async {
+    testWidgets('task: tablet portrait (600-900) returns 3', (tester) async {
       await tester.pumpWidget(buildContext(width: 700));
       final context = getContext(tester);
       expect(
         ResponsiveUtils.gridColumnCount(context, type: GridItemType.task),
-        2,
+        3,
       );
     });
 
-    testWidgets('task: tablet landscape (900-1200) returns 3', (tester) async {
+    testWidgets('task: tablet landscape (900-1200) returns 4', (tester) async {
       await tester.pumpWidget(buildContext(width: 1000));
       final context = getContext(tester);
       expect(
         ResponsiveUtils.gridColumnCount(context, type: GridItemType.task),
-        3,
+        4,
       );
     });
 

@@ -144,10 +144,17 @@ class _ForumPostDetailViewState extends State<ForumPostDetailView> {
           // context 此处才能拿到本页的 ForumBloc，AppBar 的分享/编辑/删除等依赖 selectedPost
           return BlocListener<ForumBloc, ForumState>(
             listenWhen: (prev, curr) =>
-                !prev.reportSuccess && curr.reportSuccess ||
-                prev.errorMessage != curr.errorMessage && curr.errorMessage != null ||
-                (prev.selectedPost?.id == widget.postId && curr.selectedPost == null),
+                prev.isReplying && !curr.isReplying && curr.replies.length > prev.replies.length,
             listener: (context, state) {
+              _replyController.clear();
+              _clearReplyTo();
+            },
+            child: BlocListener<ForumBloc, ForumState>(
+              listenWhen: (prev, curr) =>
+                  !prev.reportSuccess && curr.reportSuccess ||
+                  prev.errorMessage != curr.errorMessage && curr.errorMessage != null ||
+                  (prev.selectedPost?.id == widget.postId && curr.selectedPost == null),
+              listener: (context, state) {
               if (state.reportSuccess) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(content: Text(context.l10n.commonReportSubmitted)),
@@ -219,47 +226,52 @@ class _ForumPostDetailViewState extends State<ForumPostDetailView> {
             },
           ),
           actions: [
-            // 收藏按钮（对标 iOS 帖子详情 toolbar 星标）
-            if (context.read<ForumBloc>().state.selectedPost != null)
-              IconButton(
-                icon: Icon(
-                  context.read<ForumBloc>().state.selectedPost!.isFavorited
-                      ? Icons.star
-                      : Icons.star_border,
-                ),
-                onPressed: () {
-                  AppHaptics.selection();
-                  context.read<ForumBloc>().add(ForumFavoritePost(widget.postId));
-                },
-                tooltip: context.l10n.forumFavorite,
-              ),
-            IconButton(
-              icon: const Icon(Icons.share_outlined),
-              onPressed: () async {
-                AppHaptics.selection();
-                final post = context.read<ForumBloc>().state.selectedPost;
-                final locale = Localizations.localeOf(context);
-                final shareTitle = post != null
-                    ? post.displayTitle(locale)
-                    : context.l10n.forumPostDetail;
-                final contentForDesc = post != null
-                    ? (post.displayContent(locale) ?? post.content)
-                    : null;
-                final rawDesc = contentForDesc?.replaceAll(RegExp(r'<[^>]*>'), '').trim() ?? '';
-                final description = rawDesc.length > 200 ? '${rawDesc.substring(0, 200)}...' : rawDesc;
-                final imageUrl = post?.images.isNotEmpty == true ? post!.images.first : null;
-                final shareFiles = await NativeShare.fileFromFirstImageUrl(imageUrl);
-                if (!context.mounted) return;
-                await NativeShare.share(
-                  title: shareTitle,
-                  description: description,
-                  url: 'https://link2ur.com/forum/posts/${widget.postId}',
-                  files: shareFiles,
-                  context: context,
-                );
-              },
-            ),
-            PopupMenuButton<String>(
+            // 收藏 + 分享 + 更多：用 BlocBuilder 包裹，帖子加载后/收藏切换时重建，顶部栏才能显示星标
+            BlocBuilder<ForumBloc, ForumState>(
+              buildWhen: (prev, curr) => prev.selectedPost != curr.selectedPost,
+              builder: (context, state) {
+                final post = state.selectedPost;
+                return Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (post != null)
+                      IconButton(
+                        icon: Icon(
+                          post.isFavorited ? Icons.star : Icons.star_border,
+                        ),
+                        onPressed: () {
+                          AppHaptics.selection();
+                          context.read<ForumBloc>().add(ForumFavoritePost(widget.postId));
+                        },
+                        tooltip: context.l10n.forumFavorite,
+                      ),
+                    IconButton(
+                      icon: const Icon(Icons.share_outlined),
+                      onPressed: () async {
+                        AppHaptics.selection();
+                        final p = state.selectedPost;
+                        final locale = Localizations.localeOf(context);
+                        final shareTitle = p != null
+                            ? p.displayTitle(locale)
+                            : context.l10n.forumPostDetail;
+                        final contentForDesc = p != null
+                            ? (p.displayContent(locale) ?? p.content)
+                            : null;
+                        final rawDesc = contentForDesc?.replaceAll(RegExp(r'<[^>]*>'), '').trim() ?? '';
+                        final description = rawDesc.length > 200 ? '${rawDesc.substring(0, 200)}...' : rawDesc;
+                        final imageUrl = p?.images.isNotEmpty == true ? p!.images.first : null;
+                        final shareFiles = await NativeShare.fileFromFirstImageUrl(imageUrl);
+                        if (!context.mounted) return;
+                        await NativeShare.share(
+                          title: shareTitle,
+                          description: description,
+                          url: 'https://link2ur.com/forum/posts/${widget.postId}',
+                          files: shareFiles,
+                          context: context,
+                        );
+                      },
+                    ),
+                    PopupMenuButton<String>(
               icon: const Icon(Icons.more_vert),
               onSelected: (value) {
                 if (value == 'report') {
@@ -321,6 +333,10 @@ class _ForumPostDetailViewState extends State<ForumPostDetailView> {
                     ),
                   ),
                 ];
+              },
+            ),
+                  ],
+                );
               },
             ),
           ],
@@ -493,11 +509,12 @@ class _ForumPostDetailViewState extends State<ForumPostDetailView> {
         ),
         // 底部回复栏 - 对标iOS bottomReplyBar with ultraThinMaterial
         bottomNavigationBar: _buildBottomReplyBar(context),
+            ),
           ),
         );
-      },
-    ),
-  );
+        },
+      ),
+    );
   }
 
   Widget _buildBottomReplyBar(BuildContext context) {
@@ -627,8 +644,7 @@ class _ForumPostDetailViewState extends State<ForumPostDetailView> {
                                                           parentReplyId: _replyToId,
                                                         ),
                                                       );
-                                                  _replyController.clear();
-                                                  _clearReplyTo();
+                                                  // 输入框在回复成功后再清空（由 BlocListener 监听 replies 增加后执行）
                                                 },
                                           child: Container(
                                             width: 36,
@@ -1053,42 +1069,49 @@ class _ReplyCard extends StatelessWidget {
                             : AppColors.textTertiaryLight,
                       ),
                     ),
-                    // 点赞
+                    // 点赞回复（点击调用后端并更新状态）
                     AppSpacing.hSm,
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: AppSpacing.sm, vertical: AppSpacing.xs),
-                      decoration: BoxDecoration(
-                        color: reply.isLiked
-                            ? AppColors.accentPink.withValues(alpha: 0.1)
-                            : Colors.transparent,
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            reply.isLiked
-                                ? Icons.thumb_up
-                                : Icons.thumb_up_outlined,
-                            size: 12,
-                            color: reply.isLiked
-                                ? AppColors.accentPink
-                                : (isDark ? AppColors.textTertiaryDark : AppColors.textTertiaryLight),
-                          ),
-                          if (reply.likeCount > 0) ...[
-                            const SizedBox(width: 3),
-                            Text(
-                              '${reply.likeCount}',
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: reply.isLiked
-                                    ? AppColors.accentPink
-                                    : (isDark ? AppColors.textTertiaryDark : AppColors.textTertiaryLight),
-                              ),
+                    GestureDetector(
+                      onTap: () {
+                        AppHaptics.selection();
+                        context.read<ForumBloc>().add(ForumLikeReply(reply.id));
+                      },
+                      behavior: HitTestBehavior.opaque,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: AppSpacing.sm, vertical: AppSpacing.xs),
+                        decoration: BoxDecoration(
+                          color: reply.isLiked
+                              ? AppColors.accentPink.withValues(alpha: 0.1)
+                              : Colors.transparent,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              reply.isLiked
+                                  ? Icons.thumb_up
+                                  : Icons.thumb_up_outlined,
+                              size: 12,
+                              color: reply.isLiked
+                                  ? AppColors.accentPink
+                                  : (isDark ? AppColors.textTertiaryDark : AppColors.textTertiaryLight),
                             ),
+                            if (reply.likeCount > 0) ...[
+                              const SizedBox(width: 3),
+                              Text(
+                                '${reply.likeCount}',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: reply.isLiked
+                                      ? AppColors.accentPink
+                                      : (isDark ? AppColors.textTertiaryDark : AppColors.textTertiaryLight),
+                                ),
+                              ),
+                            ],
                           ],
-                        ],
+                        ),
                       ),
                     ),
                   ],

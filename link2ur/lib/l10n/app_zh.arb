@@ -401,6 +401,8 @@
   "leaderboardPhonePlaceholder": "请输入联系电话",
   "leaderboardWebsitePlaceholder": "请输入网站地址",
   "leaderboardPleaseEnterItemName": "请输入竞品名称",
+  "leaderboardVoteSuccess": "评价已提交，感谢你的反馈",
+  "leaderboardVoteFailed": "提交失败，请稍后重试",
   "activityPerson": "人",
   "activityPersonsBooked": "人已约",
   "taskExpertServicesCount": "{param1} 个服务",

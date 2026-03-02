@@ -142,6 +142,10 @@ class LeaderboardSubmitItem extends LeaderboardEvent {
   List<Object?> get props => [leaderboardId, name, description, address, phone, website, imagePaths];
 }
 
+class LeaderboardClearActionMessage extends LeaderboardEvent {
+  const LeaderboardClearActionMessage();
+}
+
 class LeaderboardLoadItemDetail extends LeaderboardEvent {
   const LeaderboardLoadItemDetail(this.itemId);
 
@@ -312,9 +316,17 @@ class LeaderboardBloc extends Bloc<LeaderboardEvent, LeaderboardState> {
     on<LeaderboardApplyRequested>(_onApplyRequested);
     on<LeaderboardSubmitItem>(_onSubmitItem);
     on<LeaderboardLoadItemDetail>(_onLoadItemDetail);
+    on<LeaderboardClearActionMessage>(_onClearActionMessage);
     on<LeaderboardToggleFavorite>(_onToggleFavorite);
     on<LeaderboardReport>(_onReport);
     on<LeaderboardReportItem>(_onReportItem);
+  }
+
+  void _onClearActionMessage(
+    LeaderboardClearActionMessage event,
+    Emitter<LeaderboardState> emit,
+  ) {
+    emit(state.copyWith());
   }
 
   final LeaderboardRepository _leaderboardRepository;
@@ -553,13 +565,28 @@ class LeaderboardBloc extends Bloc<LeaderboardEvent, LeaderboardState> {
         updatedDetail = _applyVoteUpdate(state.itemDetail!, event.voteType);
       }
 
+      // 投票/评论成功后重新拉取评论列表，使新评论立即出现在评论区
+      List<Map<String, dynamic>> newVotes = state.itemVotes;
+      if (state.itemDetail?.id == event.itemId) {
+        try {
+          newVotes = await _leaderboardRepository.getItemVotes(event.itemId);
+        } catch (_) {
+          // 忽略拉取失败，保留原列表
+        }
+      }
+
       emit(state.copyWith(
         items: updatedItems,
         itemDetail: updatedDetail ?? state.itemDetail,
+        itemVotes: newVotes,
+        actionMessage: 'vote_success',
       ));
     } catch (e) {
       AppLogger.error('Failed to vote', e);
-      emit(state.copyWith(actionMessage: 'vote_failed'));
+      emit(state.copyWith(
+        actionMessage: 'vote_failed',
+        errorMessage: e is LeaderboardException ? e.message : e.toString(),
+      ));
     }
   }
 

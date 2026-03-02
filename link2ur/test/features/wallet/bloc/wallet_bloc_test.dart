@@ -222,7 +222,7 @@ void main() {
       );
 
       blocTest<WalletBloc, WalletState>(
-        'silently handles load more failure',
+        'emits state with errorMessage on load more failure',
         build: () {
           when(() => mockCouponPointsRepo.getPointsTransactions(
                 page: any(named: 'page'),
@@ -235,7 +235,15 @@ void main() {
           transactions: testTransactions,
         ),
         act: (bloc) => bloc.add(const WalletLoadMoreTransactions()),
-        expect: () => [], // 静默失败，不改变状态
+        expect: () => [
+          WalletState(
+            status: WalletStatus.loaded,
+            transactions: testTransactions,
+            transactionPage: 1,
+            hasMoreTransactions: true,
+            errorMessage: 'Exception: Network error',
+          ),
+        ],
       );
     });
 

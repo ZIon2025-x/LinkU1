@@ -876,6 +876,14 @@ class AppLocalizationsEn extends AppLocalizations {
   String get leaderboardPleaseEnterItemName => 'Please enter item name';
 
   @override
+  String get leaderboardVoteSuccess =>
+      'Vote submitted. Thanks for your feedback.';
+
+  @override
+  String get leaderboardVoteFailed =>
+      'Submission failed. Please try again later.';
+
+  @override
   String get activityPerson => 'person';
 
   @override
