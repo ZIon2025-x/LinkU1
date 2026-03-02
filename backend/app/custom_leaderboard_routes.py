@@ -1465,9 +1465,14 @@ async def get_leaderboard_items(
     total = total_result.scalar() or 0
     
     # 排序（有关键词时已在上面按相关性排序）
+    # 综合 = Wilson 好评率下界；同分时按净投票、再按 id 稳定排序
     if not (keyword and keyword.strip()):
         if sort == "vote_score":
-            base_query = base_query.order_by(models.LeaderboardItem.vote_score.desc())
+            base_query = base_query.order_by(
+                models.LeaderboardItem.vote_score.desc(),
+                models.LeaderboardItem.net_votes.desc(),
+                models.LeaderboardItem.id.desc(),
+            )
         elif sort == "net_votes":
             base_query = base_query.order_by(models.LeaderboardItem.net_votes.desc())
         elif sort == "upvotes":

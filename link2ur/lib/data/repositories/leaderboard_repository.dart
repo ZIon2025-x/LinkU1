@@ -82,11 +82,12 @@ class LeaderboardRepository {
     return Leaderboard.fromJson(response.data!);
   }
 
-  /// 获取排行榜项目列表（支持 keyword 搜索竞品名称/描述）
-  Future<List<LeaderboardItem>> getLeaderboardItems(
+  /// 获取排行榜项目列表（支持分页、keyword 搜索竞品名称/描述）
+  /// 后端返回 items、total、has_more
+  Future<LeaderboardItemsResponse> getLeaderboardItems(
     int leaderboardId, {
     int page = 1,
-    int pageSize = 50,
+    int pageSize = 20,
     String? sortBy,
     String? keyword,
   }) async {
@@ -104,10 +105,7 @@ class LeaderboardRepository {
 
     final cached = _cache.get<Map<String, dynamic>>(cacheKey);
     if (cached != null && (keyword == null || keyword.isEmpty)) {
-      final items = cached['items'] as List<dynamic>? ?? [];
-      return items
-          .map((e) => LeaderboardItem.fromJson(e as Map<String, dynamic>))
-          .toList();
+      return LeaderboardItemsResponse.fromJson(cached);
     }
 
     final response = await _apiService.get<Map<String, dynamic>>(
@@ -126,10 +124,7 @@ class LeaderboardRepository {
 
     await _cache.set(cacheKey, response.data!, ttl: CacheManager.longTTL);
 
-    final items = response.data!['items'] as List<dynamic>? ?? [];
-    return items
-        .map((e) => LeaderboardItem.fromJson(e as Map<String, dynamic>))
-        .toList();
+    return LeaderboardItemsResponse.fromJson(response.data!);
   }
 
   /// 投票
@@ -255,6 +250,9 @@ class LeaderboardRepository {
     if (!response.isSuccess || response.data == null) {
       throw LeaderboardException(response.message ?? '提交条目失败');
     }
+
+    // 提交新竞品后使该榜单的竞品列表缓存失效，返回详情页刷新时能拿到最新列表
+    await _cache.invalidateLeaderboardsCache();
 
     return LeaderboardItem.fromJson(response.data!);
   }

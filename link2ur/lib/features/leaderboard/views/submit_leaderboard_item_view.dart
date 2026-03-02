@@ -8,6 +8,7 @@ import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_radius.dart';
 import '../../../core/design/app_typography.dart';
+import '../../../core/utils/error_localizer.dart';
 import '../../../core/utils/l10n_extension.dart';
 import '../../../data/repositories/leaderboard_repository.dart';
 import '../bloc/leaderboard_bloc.dart';
@@ -133,7 +134,7 @@ class _SubmitLeaderboardItemContentState
             Navigator.of(context).pop(true);
           } else if (state.actionMessage == 'submit_failed') {
             final msg = state.errorMessage != null
-                ? '${l10n.actionSubmitFailed}: ${state.errorMessage}'
+                ? context.localizeError(state.errorMessage)
                 : l10n.actionSubmitFailed;
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(

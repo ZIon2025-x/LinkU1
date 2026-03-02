@@ -327,6 +327,34 @@ class LeaderboardItem extends Equatable {
   List<Object?> get props => [id, leaderboardId, name, netVotes, userVote, updatedAt];
 }
 
+/// 榜单竞品列表响应（分页）
+class LeaderboardItemsResponse {
+  const LeaderboardItemsResponse({
+    required this.items,
+    required this.total,
+    required this.hasMore,
+  });
+
+  final List<LeaderboardItem> items;
+  final int total;
+  final bool hasMore;
+
+  factory LeaderboardItemsResponse.fromJson(Map<String, dynamic> json) {
+    final rawList = json['items'] as List<dynamic>? ?? [];
+    final total = json['total'] as int? ?? 0;
+    final limit = json['limit'] as int? ?? 50;
+    final offset = json['offset'] as int? ?? 0;
+    final hasMore = json['has_more'] as bool? ?? (offset + limit < total);
+    return LeaderboardItemsResponse(
+      items: rawList
+          .map((e) => LeaderboardItem.fromJson(e as Map<String, dynamic>))
+          .toList(),
+      total: total,
+      hasMore: hasMore,
+    );
+  }
+}
+
 /// 排行榜列表响应
 class LeaderboardListResponse {
   const LeaderboardListResponse({

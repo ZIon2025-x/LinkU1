@@ -80,6 +80,10 @@ class ErrorLocalizer {
         return context.l10n.aiChatCreateConversationRetry;
       case 'unknown_error':
         return context.l10n.commonUnknownError;
+      case 'submit_failed':
+        return context.l10n.leaderboardSubmitFailed;
+      case 'vote_failed':
+        return context.l10n.leaderboardVoteFailed;
       default:
         // 服务端返回的已翻译消息，直接使用
         return errorMessage;

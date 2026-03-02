@@ -80,6 +80,16 @@ class LeaderboardSortChanged extends LeaderboardEvent {
   List<Object?> get props => [sortBy, leaderboardId];
 }
 
+/// 加载更多竞品（榜单详情页分页）
+class LeaderboardLoadMoreItems extends LeaderboardEvent {
+  const LeaderboardLoadMoreItems(this.leaderboardId);
+
+  final int leaderboardId;
+
+  @override
+  List<Object?> get props => [leaderboardId];
+}
+
 /// 加载条目投票/评论列表
 class LeaderboardLoadItemVotes extends LeaderboardEvent {
   const LeaderboardLoadItemVotes(this.itemId);
@@ -212,6 +222,10 @@ class LeaderboardState extends Equatable {
     this.actionMessage,
     this.isFavorited = false,
     this.reportSuccess = false,
+    this.isLoadingItems = false,
+    this.itemsPage = 1,
+    this.itemsHasMore = true,
+    this.itemsLoadingMore = false,
   });
 
   final LeaderboardStatus status;
@@ -221,6 +235,12 @@ class LeaderboardState extends Equatable {
   final int total;
   final int page;
   final bool hasMore;
+  /// 榜单详情页竞品列表当前页码
+  final int itemsPage;
+  /// 榜单详情页竞品是否还有更多
+  final bool itemsHasMore;
+  /// 正在加载更多竞品（底部加载）
+  final bool itemsLoadingMore;
   final String? selectedCategory;
   final String searchKeyword;
   final String? sortBy;
@@ -231,6 +251,8 @@ class LeaderboardState extends Equatable {
   final String? actionMessage;
   final bool isFavorited;
   final bool reportSuccess;
+  /// 排序/刷新竞品列表时的加载状态（不覆盖整页 skeleton）
+  final bool isLoadingItems;
 
   bool get isLoading => status == LeaderboardStatus.loading;
 
@@ -252,6 +274,10 @@ class LeaderboardState extends Equatable {
     String? actionMessage,
     bool? isFavorited,
     bool? reportSuccess,
+    bool? isLoadingItems,
+    int? itemsPage,
+    bool? itemsHasMore,
+    bool? itemsLoadingMore,
     bool clearItemDetail = false,
   }) {
     return LeaderboardState(
@@ -273,6 +299,10 @@ class LeaderboardState extends Equatable {
       actionMessage: actionMessage,
       isFavorited: isFavorited ?? this.isFavorited,
       reportSuccess: reportSuccess ?? this.reportSuccess,
+      isLoadingItems: isLoadingItems ?? this.isLoadingItems,
+      itemsPage: itemsPage ?? this.itemsPage,
+      itemsHasMore: itemsHasMore ?? this.itemsHasMore,
+      itemsLoadingMore: itemsLoadingMore ?? this.itemsLoadingMore,
     );
   }
 
@@ -295,6 +325,10 @@ class LeaderboardState extends Equatable {
         actionMessage,
         isFavorited,
         reportSuccess,
+        isLoadingItems,
+        itemsPage,
+        itemsHasMore,
+        itemsLoadingMore,
       ];
 }
 
@@ -311,6 +345,7 @@ class LeaderboardBloc extends Bloc<LeaderboardEvent, LeaderboardState> {
     on<LeaderboardLoadDetail>(_onLoadDetail);
     on<LeaderboardVoteItem>(_onVoteItem);
     on<LeaderboardSortChanged>(_onSortChanged);
+    on<LeaderboardLoadMoreItems>(_onLoadMoreItems);
     on<LeaderboardLoadItemVotes>(_onLoadItemVotes);
     on<LeaderboardLikeVote>(_onLikeVote);
     on<LeaderboardApplyRequested>(_onApplyRequested);
@@ -484,7 +519,7 @@ class LeaderboardBloc extends Bloc<LeaderboardEvent, LeaderboardState> {
     try {
       final leaderboard = await _leaderboardRepository
           .getLeaderboardById(event.leaderboardId);
-      final items = await _leaderboardRepository.getLeaderboardItems(
+      final resp = await _leaderboardRepository.getLeaderboardItems(
         event.leaderboardId,
         sortBy: event.sortBy ?? state.sortBy,
       );
@@ -498,33 +533,80 @@ class LeaderboardBloc extends Bloc<LeaderboardEvent, LeaderboardState> {
       emit(state.copyWith(
         status: LeaderboardStatus.loaded,
         selectedLeaderboard: leaderboard.copyWith(isFavorited: isFavorited),
-        items: items,
+        items: resp.items,
+        itemsPage: 1,
+        itemsHasMore: resp.hasMore,
+        itemsLoadingMore: false,
         isFavorited: isFavorited,
+        isLoadingItems: false,
       ));
     } catch (e) {
       AppLogger.error('Failed to load leaderboard detail', e);
       emit(state.copyWith(
         status: LeaderboardStatus.error,
         errorMessage: e.toString(),
+        isLoadingItems: false,
       ));
     }
   }
 
-  /// 排序变更 — 重新加载 items
+  /// 排序变更 — 立即更新 sortBy 并重新加载 items
   Future<void> _onSortChanged(
     LeaderboardSortChanged event,
     Emitter<LeaderboardState> emit,
   ) async {
-    emit(state.copyWith(sortBy: event.sortBy));
+    emit(state.copyWith(sortBy: event.sortBy, isLoadingItems: true));
 
     try {
-      final items = await _leaderboardRepository.getLeaderboardItems(
+      final resp = await _leaderboardRepository.getLeaderboardItems(
         event.leaderboardId,
         sortBy: event.sortBy,
       );
-      emit(state.copyWith(items: items));
+      if (!emit.isDone) {
+        emit(state.copyWith(
+          items: resp.items,
+          itemsPage: 1,
+          itemsHasMore: resp.hasMore,
+          itemsLoadingMore: false,
+          isLoadingItems: false,
+        ));
+      }
     } catch (e) {
       AppLogger.error('Failed to sort items', e);
+      if (!emit.isDone) {
+        emit(state.copyWith(isLoadingItems: false));
+      }
+    }
+  }
+
+  /// 加载更多竞品
+  Future<void> _onLoadMoreItems(
+    LeaderboardLoadMoreItems event,
+    Emitter<LeaderboardState> emit,
+  ) async {
+    if (!state.itemsHasMore || state.isLoadingItems || state.itemsLoadingMore) return;
+
+    emit(state.copyWith(itemsLoadingMore: true));
+    final nextPage = state.itemsPage + 1;
+    try {
+      final resp = await _leaderboardRepository.getLeaderboardItems(
+        event.leaderboardId,
+        page: nextPage,
+        sortBy: state.sortBy,
+      );
+      if (!emit.isDone) {
+        emit(state.copyWith(
+          items: [...state.items, ...resp.items],
+          itemsPage: nextPage,
+          itemsHasMore: resp.hasMore,
+          itemsLoadingMore: false,
+        ));
+      }
+    } catch (e) {
+      AppLogger.error('Failed to load more items', e);
+      if (!emit.isDone) {
+        emit(state.copyWith(itemsHasMore: false, itemsLoadingMore: false));
+      }
     }
   }
 
@@ -773,10 +855,30 @@ class LeaderboardBloc extends Bloc<LeaderboardEvent, LeaderboardState> {
         images: imageUrls,
       );
 
-      emit(state.copyWith(
-        isSubmitting: false,
-        actionMessage: 'leaderboard_submitted',
-      ));
+      // 提交成功后立即刷新当前榜单竞品列表，使新竞品实时显示
+      final sortBy = state.sortBy;
+      try {
+        final resp = await _leaderboardRepository.getLeaderboardItems(
+          event.leaderboardId,
+          sortBy: sortBy,
+        );
+        if (!emit.isDone) {
+          emit(state.copyWith(
+            isSubmitting: false,
+            actionMessage: 'leaderboard_submitted',
+            items: resp.items,
+            itemsPage: 1,
+            itemsHasMore: resp.hasMore,
+          ));
+        }
+      } catch (_) {
+        if (!emit.isDone) {
+          emit(state.copyWith(
+            isSubmitting: false,
+            actionMessage: 'leaderboard_submitted',
+          ));
+        }
+      }
     } catch (e) {
       AppLogger.error('Failed to submit item', e);
       emit(state.copyWith(

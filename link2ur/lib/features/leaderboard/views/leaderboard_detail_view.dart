@@ -60,6 +60,10 @@ class _LeaderboardDetailContentState
           prev.status != curr.status ||
           prev.selectedLeaderboard != curr.selectedLeaderboard ||
           prev.items != curr.items ||
+          prev.sortBy != curr.sortBy ||
+          prev.isLoadingItems != curr.isLoadingItems ||
+          prev.itemsHasMore != curr.itemsHasMore ||
+          prev.itemsLoadingMore != curr.itemsLoadingMore ||
           prev.errorMessage != curr.errorMessage,
       builder: (context, state) {
         final lb = state.selectedLeaderboard;
@@ -77,8 +81,14 @@ class _LeaderboardDetailContentState
           ),
           floatingActionButton: lb != null
               ? FloatingActionButton.extended(
-                  onPressed: () =>
-                      context.push('/leaderboard/$leaderboardId/submit'),
+                  onPressed: () async {
+                    final result = await context.push<bool>(
+                        '/leaderboard/$leaderboardId/submit');
+                    if (result == true && context.mounted) {
+                      context.read<LeaderboardBloc>().add(
+                          LeaderboardLoadDetail(leaderboardId));
+                    }
+                  },
                   backgroundColor: AppColors.primary,
                   icon: const Icon(Icons.add, color: Colors.white),
                   label: Text(context.l10n.leaderboardSubmitItem,
@@ -408,6 +418,15 @@ class _LeaderboardDetailContentState
             ),
           ),
 
+          // 切换排序时的加载指示
+          if (state.isLoadingItems)
+            const SliverToBoxAdapter(
+              child: Padding(
+                padding: EdgeInsets.symmetric(horizontal: AppSpacing.md),
+                child: LinearProgressIndicator(),
+              ),
+            ),
+
           // 列表或空状态
           if (items.isEmpty)
             SliverFillRemaining(
@@ -424,6 +443,35 @@ class _LeaderboardDetailContentState
               sliver: SliverList(
                 delegate: SliverChildBuilderDelegate(
                   (context, index) {
+                    if (index == items.length) {
+                      if (state.itemsHasMore) {
+                        if (!state.itemsLoadingMore) {
+                          context.read<LeaderboardBloc>().add(
+                              LeaderboardLoadMoreItems(leaderboardId));
+                        }
+                        return Padding(
+                          padding: const EdgeInsets.symmetric(
+                              vertical: AppSpacing.md),
+                          child: Center(
+                            child: state.itemsLoadingMore
+                                ? const SizedBox(
+                                    height: 32,
+                                    width: 32,
+                                    child: CircularProgressIndicator(
+                                        strokeWidth: 2),
+                                  )
+                                : Text(
+                                    context.l10n.commonLoadMore,
+                                    style: AppTypography.caption.copyWith(
+                                        color: isDark
+                                            ? AppColors.textSecondaryDark
+                                            : AppColors.textSecondaryLight),
+                                  ),
+                          ),
+                        );
+                      }
+                      return const SizedBox.shrink();
+                    }
                     final item = items[index];
                     return Padding(
                       padding: const EdgeInsets.only(bottom: AppSpacing.sm),
@@ -438,7 +486,7 @@ class _LeaderboardDetailContentState
                       ),
                     );
                   },
-                  childCount: items.length,
+                  childCount: items.length + (state.itemsHasMore ? 1 : 0),
                 ),
               ),
             ),

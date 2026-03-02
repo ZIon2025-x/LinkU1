@@ -404,6 +404,7 @@
   "leaderboardPleaseEnterItemName": "請輸入競品名稱",
   "leaderboardVoteSuccess": "評價已提交，感謝你的反饋",
   "leaderboardVoteFailed": "提交失敗，請稍後重試",
+  "leaderboardSubmitFailed": "競品提交失敗，請稍後重試",
   "activityPerson": "人",
   "activityPersonsBooked": "人已約",
   "taskExpertServicesCount": "{param1} 個服務",

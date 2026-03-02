@@ -345,6 +345,7 @@
   "leaderboardPleaseEnterItemName": "Please enter item name",
   "leaderboardVoteSuccess": "Vote submitted. Thanks for your feedback.",
   "leaderboardVoteFailed": "Submission failed. Please try again later.",
+  "leaderboardSubmitFailed": "Failed to submit entry. Please try again later.",
   "activityPerson": "person",
   "activityPersonsBooked": "persons booked",
   "taskExpertServicesCount": "{param1} services",

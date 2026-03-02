@@ -1773,6 +1773,12 @@ abstract class AppLocalizations {
   /// **'Submission failed. Please try again later.'**
   String get leaderboardVoteFailed;
 
+  /// No description provided for @leaderboardSubmitFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to submit entry. Please try again later.'**
+  String get leaderboardSubmitFailed;
+
   /// No description provided for @activityPerson.
   ///
   /// In en, this message translates to:

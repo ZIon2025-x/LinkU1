@@ -864,6 +864,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get leaderboardVoteFailed => '提交失败，请稍后重试';
 
   @override
+  String get leaderboardSubmitFailed => '竞品提交失败，请稍后重试';
+
+  @override
   String get activityPerson => '人';
 
   @override
@@ -9714,6 +9717,9 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get leaderboardVoteFailed => '提交失敗，請稍後重試';
+
+  @override
+  String get leaderboardSubmitFailed => '競品提交失敗，請稍後重試';
 
   @override
   String get activityPerson => '人';

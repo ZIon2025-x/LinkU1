@@ -408,12 +408,12 @@ class SearchBloc extends Bloc<SearchEvent, SearchState> {
       final List<Map<String, dynamic>> out = [];
       for (final lb in response.leaderboards) {
         if (out.length >= 10) break;
-        final items = await _leaderboardRepository.getLeaderboardItems(
+        final resp = await _leaderboardRepository.getLeaderboardItems(
           lb.id,
           keyword: query,
           pageSize: 3,
         );
-        for (final item in items) {
+        for (final item in resp.items) {
           if (out.length >= 10) break;
           out.add({
             'id': item.id,

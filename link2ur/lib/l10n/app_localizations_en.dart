@@ -887,6 +887,10 @@ class AppLocalizationsEn extends AppLocalizations {
       'Submission failed. Please try again later.';
 
   @override
+  String get leaderboardSubmitFailed =>
+      'Failed to submit entry. Please try again later.';
+
+  @override
   String get activityPerson => 'person';
 
   @override
