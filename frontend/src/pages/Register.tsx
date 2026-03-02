@@ -219,7 +219,12 @@ const Register: React.FC = () => {
 
   const onFinish = async (values: any) => {
     try {
-      const res = await api.post('/api/users/register', values);
+      // 后端要求：若提供手机号则必须同时提供手机验证码。本页暂无验证码流程，故仅提交邮箱注册，手机号可注册后在设置中绑定
+      const payload = { ...values };
+      if (payload.phone && !payload.phone_verification_code) {
+        delete payload.phone;
+      }
+      const res = await api.post('/api/users/register', payload);
       setErrorMsg(''); // 注册成功清空错误
       
       if (res.data.verification_required) {
@@ -322,6 +327,7 @@ const Register: React.FC = () => {
             name="phone"
             rules={[]}
             required={false}
+            extra={t('register.phoneOptionalHint') || '选填；绑定手机号可在注册后于设置中完成'}
           > 
             <Input placeholder={t('register.phone')} />
           </Form.Item>

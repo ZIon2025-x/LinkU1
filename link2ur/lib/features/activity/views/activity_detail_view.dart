@@ -12,6 +12,7 @@ import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_typography.dart';
 import '../../../core/design/app_radius.dart';
 import '../../../core/utils/helpers.dart';
+import '../../../core/utils/error_localizer.dart';
 import '../../../core/utils/l10n_extension.dart';
 import '../../../core/utils/responsive.dart';
 import '../../../core/utils/sheet_adaptation.dart';
@@ -72,7 +73,7 @@ class _ActivityDetailViewContent extends StatelessWidget {
           );
         } else if (state.actionMessage == 'registration_failed') {
           final message = state.errorMessage != null
-              ? '${context.l10n.actionRegistrationFailed}: ${state.errorMessage}'
+              ? context.localizeError(state.errorMessage)
               : context.l10n.actionRegistrationFailed;
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(

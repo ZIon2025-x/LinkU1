@@ -700,16 +700,29 @@ const LoginModal: React.FC<LoginModalProps> = ({
         
         // 组合完整的手机号（国家代码 + 手机号）
         const fullPhone = formData.phone ? (phoneCountryCode + formData.phone) : null;
-        
-        const res = await api.post('/api/users/register', {
+        // 如果填写了手机号，必须已发送并填写验证码
+        if (fullPhone) {
+          if (!codeSent || verificationCode.trim().length !== 6) {
+            setError(t('auth.phoneVerificationRequired') || '请先获取并填写手机验证码');
+            setLoading(false);
+            return;
+          }
+        }
+
+        const registerPayload: Record<string, unknown> = {
           email: formData.email,
           password: formData.password,
-          name: formData.username,  // 改为 name
-          phone: fullPhone,  // 发送完整的手机号（包含国家代码）
-          invitation_code: formData.invitationCode || null,  // 邀请码
-          agreed_to_terms: agreedToTerms,  // 记录用户同意状态
-          terms_agreed_at: new Date().toISOString()  // 记录同意时间
-        });
+          name: formData.username,
+          phone: fullPhone,
+          invitation_code: formData.invitationCode || null,
+          agreed_to_terms: agreedToTerms,
+          terms_agreed_at: new Date().toISOString(),
+        };
+        if (fullPhone && verificationCode.trim()) {
+          registerPayload.phone_verification_code = verificationCode.trim();
+        }
+
+        const res = await api.post('/api/users/register', registerPayload);
         
         // 处理注册成功后的逻辑
         if (res.data.verification_required) {
@@ -735,7 +748,10 @@ const LoginModal: React.FC<LoginModalProps> = ({
           phone: '',
           invitationCode: ''
         });
-        setPhoneCountryCode('+44'); // 重置国家代码
+        setPhoneCountryCode('+44');
+        setCodeSent(false);
+        setVerificationCode('');
+        setPhoneForCode('');
       }
     } catch (err: any) {
       let msg = isLogin ? t('auth.loginFailed') : t('auth.registerFailed');
@@ -1504,6 +1520,55 @@ const LoginModal: React.FC<LoginModalProps> = ({
                     }}
                   />
                 </div>
+                {/* 注册时填写了手机号：需先获取并填写验证码 */}
+                {formData.phone && (
+                  <div style={{ marginTop: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    {!codeSent ? (
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          const fullPhone = phoneCountryCode + formData.phone;
+                          await handleSendPhoneCode(fullPhone, captchaToken || undefined);
+                          setPhoneForCode(fullPhone);
+                        }}
+                        disabled={loading || formData.phone.length < 10}
+                        style={{
+                          padding: '10px 16px',
+                          border: '1px solid #3b82f6',
+                          borderRadius: '8px',
+                          backgroundColor: '#fff',
+                          color: '#3b82f6',
+                          fontSize: '14px',
+                          cursor: loading || formData.phone.length < 10 ? 'not-allowed' : 'pointer',
+                        }}
+                      >
+                        {countdown > 0 ? `${t('auth.resendCode') || '重新发送'} (${countdown}s)` : (t('auth.sendVerificationCode') || '获取验证码')}
+                      </button>
+                    ) : (
+                      <>
+                        <label style={{ fontSize: '13px', color: '#666' }}>{t('auth.verificationCode')}</label>
+                        <input
+                          type="text"
+                          inputMode="numeric"
+                          maxLength={6}
+                          value={verificationCode}
+                          onChange={(e) => setVerificationCode(e.target.value.replace(/\D/g, ''))}
+                          placeholder="请输入6位验证码"
+                          style={{
+                            padding: '12px 16px',
+                            border: '1px solid #ddd',
+                            borderRadius: '8px',
+                            fontSize: '16px',
+                            boxSizing: 'border-box',
+                          }}
+                        />
+                        <div style={{ fontSize: '12px', color: '#888' }}>
+                          {t('auth.codeSentToPhone')?.replace('{phone}', phoneForCode || phoneCountryCode + formData.phone) || `验证码已发送至 ${phoneForCode || phoneCountryCode + formData.phone}`}
+                        </div>
+                      </>
+                    )}
+                  </div>
+                )}
               </div>
 
               {/* 邀请码输入框 */}
@@ -1769,6 +1834,8 @@ const LoginModal: React.FC<LoginModalProps> = ({
               (!isLogin && !agreedToTerms) || 
               (isLogin && loginMethod === 'code' && codeSent && verificationCode.length !== 6) || 
               (isLogin && loginMethod === 'phone' && codeSent && verificationCode.length !== 6) ||
+              // 注册时填写了手机号则必须已发送并填写6位验证码
+              (!isLogin && formData.phone && (!codeSent || verificationCode.trim().length !== 6)) ||
               // 只有验证码登录模式在发送验证码前需要 CAPTCHA，密码登录不需要
               (isLogin && (loginMethod === 'code' || loginMethod === 'phone') && captchaEnabled && !!captchaSiteKey && !codeSent && !captchaToken)
             )}
@@ -1780,6 +1847,7 @@ const LoginModal: React.FC<LoginModalProps> = ({
                 (!isLogin && !agreedToTerms) || 
                 (isLogin && loginMethod === 'code' && codeSent && verificationCode.length !== 6) || 
                 (isLogin && loginMethod === 'phone' && codeSent && verificationCode.length !== 6) ||
+                (!isLogin && formData.phone && (!codeSent || verificationCode.trim().length !== 6)) ||
                 // 只有验证码登录模式在发送验证码前需要 CAPTCHA，密码登录不需要
                 (isLogin && (loginMethod === 'code' || loginMethod === 'phone') && captchaEnabled && !!captchaSiteKey && !codeSent && !captchaToken)
               ) ? '#ccc' : '#3b82f6',
@@ -1788,12 +1856,12 @@ const LoginModal: React.FC<LoginModalProps> = ({
               borderRadius: '8px',
               fontSize: '16px',
               fontWeight: '600',
-              cursor: (loading || (!isLogin && !agreedToTerms) || (isLogin && loginMethod === 'code' && codeSent && verificationCode.length !== 6) || (isLogin && loginMethod === 'phone' && codeSent && verificationCode.length !== 6)) ? 'not-allowed' : 'pointer',
+              cursor: (loading || (!isLogin && !agreedToTerms) || (!isLogin && formData.phone && (!codeSent || verificationCode.trim().length !== 6)) || (isLogin && loginMethod === 'code' && codeSent && verificationCode.length !== 6) || (isLogin && loginMethod === 'phone' && codeSent && verificationCode.length !== 6)) ? 'not-allowed' : 'pointer',
               marginBottom: '16px',
               transition: 'background-color 0.2s'
             }}
             onMouseEnter={(e) => {
-              if (!loading && !((isLogin && loginMethod === 'code' && codeSent && verificationCode.length !== 6) || (isLogin && loginMethod === 'phone' && codeSent && verificationCode.length !== 6))) {
+              if (!loading && !(!isLogin && formData.phone && (!codeSent || verificationCode.trim().length !== 6)) && !((isLogin && loginMethod === 'code' && codeSent && verificationCode.length !== 6) || (isLogin && loginMethod === 'phone' && codeSent && verificationCode.length !== 6))) {
                 e.currentTarget.style.backgroundColor = '#2563eb';
               }
             }}

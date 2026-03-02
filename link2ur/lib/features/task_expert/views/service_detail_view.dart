@@ -10,6 +10,7 @@ import '../../../core/design/app_radius.dart';
 import '../../../core/design/app_typography.dart';
 import '../../../core/router/app_router.dart';
 import '../../../core/utils/helpers.dart';
+import '../../../core/utils/error_localizer.dart';
 import '../../../core/utils/l10n_extension.dart';
 import '../../../core/utils/haptic_feedback.dart';
 import '../../../core/utils/responsive.dart';
@@ -78,7 +79,7 @@ class _ServiceDetailContent extends StatelessWidget {
                   'application_submitted' =>
                     context.l10n.actionApplicationSubmitted,
                   'application_failed' => state.errorMessage != null
-                      ? '${context.l10n.actionApplicationFailed}: ${state.errorMessage}'
+                      ? context.localizeError(state.errorMessage)
                       : context.l10n.actionApplicationFailed,
                   _ => state.actionMessage!,
                 };
@@ -1656,8 +1657,9 @@ class _ApplyServiceSheetState extends State<_ApplyServiceSheet> {
                   child: BlocBuilder<TaskExpertBloc, TaskExpertState>(
                     builder: (context, state) {
                       final canSubmit = !state.isSubmitting &&
-                          (!widget.service.hasTimeSlots ||
-                              _selectedTimeSlotId != null);
+                          (widget.service.hasTimeSlots
+                              ? _selectedTimeSlotId != null
+                              : (_isFlexibleTime || _selectedDeadline != null));
                       return SizedBox(
                         width: double.infinity,
                         height: 54,
