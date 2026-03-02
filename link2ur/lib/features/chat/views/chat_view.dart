@@ -129,8 +129,15 @@ class _ChatContentState extends State<_ChatContent> {
     return BlocConsumer<ChatBloc, ChatState>(
       listenWhen: (prev, curr) =>
           prev.status != curr.status ||
+          prev.errorMessage != curr.errorMessage ||
           prev.messages.length != curr.messages.length,
       listener: (context, state) {
+        if (state.errorMessage != null && state.messages.isNotEmpty) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(context.localizeError(state.errorMessage))),
+          );
+          context.read<ChatBloc>().add(const ChatClearError());
+        }
         final wasNewLoad = state.status == ChatStatus.loaded &&
             _prevMessageCount == 0 && state.messages.isNotEmpty;
         final hasNewMessage = state.messages.length > _prevMessageCount &&

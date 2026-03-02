@@ -93,6 +93,10 @@ class ChatReadReceiptReceived extends ChatEvent {
   List<Object?> get props => [senderId];
 }
 
+class ChatClearError extends ChatEvent {
+  const ChatClearError();
+}
+
 class _ChatPeerTypingTimeout extends ChatEvent {
   const _ChatPeerTypingTimeout();
 }
@@ -203,6 +207,9 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     on<ChatMarkAsRead>(_onMarkAsRead);
     on<ChatPeerTypingReceived>(_onPeerTyping);
     on<ChatReadReceiptReceived>(_onReadReceipt);
+    on<ChatClearError>((event, emit) {
+      emit(state.copyWith(errorMessage: null));
+    });
     on<_ChatPeerTypingTimeout>((event, emit) {
       emit(state.copyWith(peerIsTyping: false));
     });
@@ -337,6 +344,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
       emit(state.copyWith(
         hasMore: false,
         isLoadingMore: false,
+        errorMessage: 'chat_load_more_failed',
       ));
     }
   }

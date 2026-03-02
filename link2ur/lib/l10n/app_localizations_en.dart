@@ -9173,6 +9173,9 @@ class AppLocalizationsEn extends AppLocalizations {
       'Failed to create conversation, please retry';
 
   @override
+  String get chatLoadMoreFailed => 'Failed to load more messages';
+
+  @override
   String get commonUnknownError => 'Unknown error';
 
   @override

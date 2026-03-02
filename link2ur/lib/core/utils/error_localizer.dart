@@ -78,6 +78,8 @@ class ErrorLocalizer {
         return context.l10n.aiChatLoadHistoryFailed;
       case 'ai_chat_create_conversation_retry':
         return context.l10n.aiChatCreateConversationRetry;
+      case 'chat_load_more_failed':
+        return context.l10n.chatLoadMoreFailed;
       case 'unknown_error':
         return context.l10n.commonUnknownError;
       case 'submit_failed':

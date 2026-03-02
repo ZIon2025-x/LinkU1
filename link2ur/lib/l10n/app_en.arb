@@ -4267,6 +4267,7 @@
   "aiChatCreateConversationFailed": "Failed to create conversation",
   "aiChatLoadHistoryFailed": "Failed to load message history",
   "aiChatCreateConversationRetry": "Failed to create conversation, please retry",
+  "chatLoadMoreFailed": "Failed to load more messages",
   "commonUnknownError": "Unknown error",
   "locationInputHint": "Enter address or pick current location",
   "locationPermissionName": "Location",

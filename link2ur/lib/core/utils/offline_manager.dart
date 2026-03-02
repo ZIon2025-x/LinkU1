@@ -151,7 +151,11 @@ class OfflineManager {
 
   /// 初始化
   Future<void> initialize() async {
-    // 防止重复初始化导致旧订阅泄漏
+    // 防止重复初始化导致旧订阅泄漏；若曾 dispose 再 init，先取消旧订阅
+    if (_networkSubscription != null) {
+      _networkSubscription?.cancel();
+      _networkSubscription = null;
+    }
     if (_initialized) {
       AppLogger.debug('OfflineManager - Already initialized, skipping');
       return;
@@ -370,7 +374,7 @@ class OfflineManager {
     }
   }
 
-  /// 释放资源
+  /// 释放资源（测试或应用退出时调用；正常应用生命周期内可不调用）
   void dispose() {
     _networkSubscription?.cancel();
     _networkSubscription = null;

@@ -8820,6 +8820,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get aiChatCreateConversationRetry => '创建对话失败，请重试';
 
   @override
+  String get chatLoadMoreFailed => '加载更多消息失败';
+
+  @override
   String get commonUnknownError => '未知错误';
 
   @override
@@ -17673,6 +17676,9 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get aiChatCreateConversationRetry => '建立對話失敗，請重試';
+
+  @override
+  String get chatLoadMoreFailed => '載入更多訊息失敗';
 
   @override
   String get commonUnknownError => '未知錯誤';

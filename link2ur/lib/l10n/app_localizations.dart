@@ -16880,6 +16880,12 @@ abstract class AppLocalizations {
   /// **'Failed to create conversation, please retry'**
   String get aiChatCreateConversationRetry;
 
+  /// No description provided for @chatLoadMoreFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to load more messages'**
+  String get chatLoadMoreFailed;
+
   /// No description provided for @commonUnknownError.
   ///
   /// In en, this message translates to:

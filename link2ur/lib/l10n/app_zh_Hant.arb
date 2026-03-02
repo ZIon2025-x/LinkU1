@@ -4113,6 +4113,7 @@
   "aiChatCreateConversationFailed": "建立對話失敗",
   "aiChatLoadHistoryFailed": "載入訊息紀錄失敗",
   "aiChatCreateConversationRetry": "建立對話失敗，請重試",
+  "chatLoadMoreFailed": "載入更多訊息失敗",
   "commonUnknownError": "未知錯誤",
   "locationInputHint": "輸入地址或選擇目前位置",
   "locationPermissionName": "位置",

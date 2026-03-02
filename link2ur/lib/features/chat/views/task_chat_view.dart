@@ -8,6 +8,7 @@ import '../../../core/design/app_colors.dart';
 import '../../../core/utils/task_type_helper.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_radius.dart';
+import '../../../core/utils/error_localizer.dart';
 import '../../../core/utils/l10n_extension.dart';
 import '../../../core/router/app_router.dart';
 import '../../../core/widgets/buttons.dart';
@@ -194,7 +195,13 @@ class _TaskChatContentState extends State<_TaskChatContent> {
           prev.status != curr.status ||
           prev.errorMessage != curr.errorMessage,
       listener: (context, state) {
-        // reverse: true 模式下，最新消息始终在底部（position 0），无需手动滚动
+        // 加载更多失败时（列表非空）用 SnackBar 提示并清除 errorMessage
+        if (state.errorMessage != null && state.messages.isNotEmpty) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(context.localizeError(state.errorMessage))),
+          );
+          context.read<ChatBloc>().add(const ChatClearError());
+        }
       },
       buildWhen: (prev, curr) =>
           prev.status != curr.status ||
@@ -434,7 +441,7 @@ class _TaskChatContentState extends State<_TaskChatContent> {
 
     if (state.status == ChatStatus.error && state.messages.isEmpty) {
       return ErrorStateView.loadFailed(
-        message: state.errorMessage,
+        message: context.localizeError(state.errorMessage ?? ''),
         onRetry: () {
           context.read<ChatBloc>().add(
                 ChatLoadMessages(userId: '', taskId: widget.taskId),
