@@ -557,6 +557,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get forumLike => 'Likes';
 
   @override
+  String get forumLikeReply => 'Like this reply';
+
+  @override
   String get forumFavorite => 'Favorites';
 
   @override

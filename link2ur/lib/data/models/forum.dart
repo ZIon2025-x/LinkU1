@@ -472,7 +472,8 @@ class ForumPost extends Equatable {
   }
 
   @override
-  List<Object?> get props => [id, title, likeCount, replyCount, updatedAt];
+  List<Object?> get props =>
+      [id, title, likeCount, replyCount, updatedAt, isLiked, isFavorited];
 }
 
 /// 论坛回复
@@ -527,7 +528,8 @@ class ForumReply extends Equatable {
   }
 
   @override
-  List<Object?> get props => [id, postId, content, createdAt];
+  List<Object?> get props =>
+      [id, postId, content, createdAt, likeCount, isLiked];
 }
 
 /// 论坛帖子列表响应

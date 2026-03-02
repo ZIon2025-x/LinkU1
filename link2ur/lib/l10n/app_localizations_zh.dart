@@ -544,6 +544,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get forumLike => '点赞';
 
   @override
+  String get forumLikeReply => '点赞这条回复';
+
+  @override
   String get forumFavorite => '收藏';
 
   @override
@@ -9391,6 +9394,9 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get forumLike => '點讚';
+
+  @override
+  String get forumLikeReply => '點讚這條回覆';
 
   @override
   String get forumFavorite => '收藏';

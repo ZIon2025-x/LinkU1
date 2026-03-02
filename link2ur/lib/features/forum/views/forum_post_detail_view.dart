@@ -238,6 +238,7 @@ class _ForumPostDetailViewState extends State<ForumPostDetailView> {
                       IconButton(
                         icon: Icon(
                           post.isFavorited ? Icons.star : Icons.star_border,
+                          color: post.isFavorited ? AppColors.gold : null,
                         ),
                         onPressed: () {
                           AppHaptics.selection();
@@ -874,7 +875,7 @@ class _PostStats extends StatelessWidget {
                   : Icons.bookmark_border,
               value: '',
               label: context.l10n.forumFavorite,
-              color: post.isFavorited ? Colors.orange : null,
+              color: post.isFavorited ? AppColors.gold : null,
             ),
           ),
         ],
@@ -1069,15 +1070,17 @@ class _ReplyCard extends StatelessWidget {
                             : AppColors.textTertiaryLight,
                       ),
                     ),
-                    // 点赞回复（点击调用后端并更新状态）
+                    // 点赞回复（评论有点赞功能，点击调用后端并更新状态）
                     AppSpacing.hSm,
-                    GestureDetector(
-                      onTap: () {
-                        AppHaptics.selection();
-                        context.read<ForumBloc>().add(ForumLikeReply(reply.id));
-                      },
-                      behavior: HitTestBehavior.opaque,
-                      child: Container(
+                    Tooltip(
+                      message: context.l10n.forumLikeReply,
+                      child: GestureDetector(
+                        onTap: () {
+                          AppHaptics.selection();
+                          context.read<ForumBloc>().add(ForumLikeReply(reply.id));
+                        },
+                        behavior: HitTestBehavior.opaque,
+                        child: Container(
                         padding: const EdgeInsets.symmetric(
                             horizontal: AppSpacing.sm, vertical: AppSpacing.xs),
                         decoration: BoxDecoration(
@@ -1113,6 +1116,7 @@ class _ReplyCard extends StatelessWidget {
                           ],
                         ),
                       ),
+                    ),
                     ),
                   ],
                 ),

@@ -3870,16 +3870,17 @@ async def get_replies(
         query = query.where(models.ForumReply.is_visible == True)
     
     query = query.order_by(models.ForumReply.created_at.asc())
-    
+
     # 获取总数
     count_query = select(func.count()).select_from(query.subquery())
     total_result = await db.execute(count_query)
     total = total_result.scalar() or 0
-    
-    # 分页
-    offset = (page - 1) * page_size
-    query = query.offset(offset).limit(page_size)
-    
+
+    # 帖子详情页需要完整回复树，避免「回复别人的回复」因分页被截断不显示。
+    # 一次拉取最多 500 条回复并构建完整树，不再按页 offset。
+    max_replies = min(500, max(page_size, 100))
+    query = query.limit(max_replies)
+
     # 加载关联数据
     query = query.options(
         selectinload(models.ForumReply.author),
@@ -3887,7 +3888,7 @@ async def get_replies(
         selectinload(models.ForumReply.parent_reply),
         selectinload(models.ForumReply.child_replies)
     )
-    
+
     result = await db.execute(query)
     replies = result.scalars().all()
     
@@ -3935,12 +3936,16 @@ async def get_replies(
         """递归转换回复为输出格式"""
         reply = reply_data["reply"]
         is_liked = reply.id in liked_set
-        
+        parent_author = None
+        if reply.parent_reply_id and getattr(reply, "parent_reply", None):
+            parent_author = await get_reply_author_info(db, reply.parent_reply, request)
+
         reply_out = schemas.ForumReplyOut(
             id=reply.id,
             content=reply.content,
             author=await get_reply_author_info(db, reply, request),
             parent_reply_id=reply.parent_reply_id,
+            parent_reply_author=parent_author,
             reply_level=reply.reply_level,
             like_count=reply.like_count,
             is_liked=is_liked,
@@ -3960,12 +3965,12 @@ async def get_replies(
     for item in reply_tree:
         reply = await convert_reply(item, user_liked_replies)
         reply_list.append(reply)
-    
+
     return {
         "replies": reply_list,
         "total": total,
-        "page": page,
-        "page_size": page_size
+        "page": 1,
+        "page_size": len(replies),
     }
 
 
@@ -4119,7 +4124,13 @@ async def create_reply(
     
     await db.commit()
     await db.refresh(db_reply, ["author", "admin_author"])
-    
+
+    try:
+        from app.cache import invalidate_cache
+        invalidate_cache("forum_replies*")
+    except Exception as e:
+        logger.warning("invalidate forum_replies cache: %s", e)
+
     # 发送通知给帖子作者和父回复作者
     notifications_to_create = []
     
@@ -4183,12 +4194,27 @@ async def create_reply(
             except Exception as e:
                 logger.warning(f"发送论坛回复推送通知失败: {e}")
                 # 推送通知失败不影响主流程
-    
+
+    parent_reply_author = None
+    if db_reply.parent_reply_id:
+        parent_result = await db.execute(
+            select(models.ForumReply)
+            .where(models.ForumReply.id == db_reply.parent_reply_id)
+            .options(
+                selectinload(models.ForumReply.author),
+                selectinload(models.ForumReply.admin_author),
+            )
+        )
+        parent_reply = parent_result.scalar_one_or_none()
+        if parent_reply:
+            parent_reply_author = await get_reply_author_info(db, parent_reply, request)
+
     return schemas.ForumReplyOut(
         id=db_reply.id,
         content=db_reply.content,
         author=await get_reply_author_info(db, db_reply, request),
         parent_reply_id=db_reply.parent_reply_id,
+        parent_reply_author=parent_reply_author,
         reply_level=db_reply.reply_level,
         like_count=db_reply.like_count,
         is_liked=False,

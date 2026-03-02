@@ -491,21 +491,27 @@ class ActivityBloc extends Bloc<ActivityEvent, ActivityState> {
     }
   }
 
+  /// 收藏/取消收藏 — 乐观更新：先更新 UI，后端异步；失败则回滚
   Future<void> _onToggleFavorite(
     ActivityToggleFavorite event,
     Emitter<ActivityState> emit,
   ) async {
     if (state.isTogglingFavorite) return;
-    emit(state.copyWith(isTogglingFavorite: true));
+    final previous = state.isFavorited;
+    emit(state.copyWith(
+      isFavorited: !previous,
+      isTogglingFavorite: true,
+    ));
     try {
       await _activityRepository.toggleFavorite(event.activityId);
-      emit(state.copyWith(
-        isFavorited: !state.isFavorited,
-        isTogglingFavorite: false,
-      ));
+      emit(state.copyWith(isTogglingFavorite: false));
     } catch (e) {
       AppLogger.warning('Failed to toggle favorite', e);
-      emit(state.copyWith(isTogglingFavorite: false));
+      emit(state.copyWith(
+        isFavorited: previous,
+        isTogglingFavorite: false,
+        errorMessage: e.toString(),
+      ));
     }
   }
 

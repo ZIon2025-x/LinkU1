@@ -1137,6 +1137,12 @@ abstract class AppLocalizations {
   /// **'Likes'**
   String get forumLike;
 
+  /// No description provided for @forumLikeReply.
+  ///
+  /// In en, this message translates to:
+  /// **'Like this reply'**
+  String get forumLikeReply;
+
   /// No description provided for @forumFavorite.
   ///
   /// In en, this message translates to:

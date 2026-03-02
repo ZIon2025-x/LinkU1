@@ -936,34 +936,38 @@ class ForumBloc extends Bloc<ForumEvent, ForumState> {
     }
   }
 
+  /// 评论点赞 — 乐观更新：先更新 UI，后端异步；失败则回滚
   Future<void> _onLikeReply(
     ForumLikeReply event,
     Emitter<ForumState> emit,
   ) async {
+    final previousReplies = state.replies;
+    final updatedReplies = state.replies.map((r) {
+      if (r.id == event.replyId) {
+        final nowLiked = !r.isLiked;
+        return ForumReply(
+          id: r.id,
+          postId: r.postId,
+          content: r.content,
+          authorId: r.authorId,
+          author: r.author,
+          parentReplyId: r.parentReplyId,
+          parentReplyAuthor: r.parentReplyAuthor,
+          likeCount: r.likeCount + (nowLiked ? 1 : -1),
+          isLiked: nowLiked,
+          createdAt: r.createdAt,
+        );
+      }
+      return r;
+    }).toList();
+    emit(state.copyWith(replies: updatedReplies));
+
     try {
       await _forumRepository.likeReply(event.replyId);
-      final updatedReplies = state.replies.map((r) {
-        if (r.id == event.replyId) {
-          final nowLiked = !r.isLiked;
-          return ForumReply(
-            id: r.id,
-            postId: r.postId,
-            content: r.content,
-            authorId: r.authorId,
-            author: r.author,
-            parentReplyId: r.parentReplyId,
-            parentReplyAuthor: r.parentReplyAuthor,
-            likeCount: r.likeCount + (nowLiked ? 1 : -1),
-            isLiked: nowLiked,
-            createdAt: r.createdAt,
-          );
-        }
-        return r;
-      }).toList();
-      emit(state.copyWith(replies: updatedReplies));
     } catch (e) {
       AppLogger.error('Failed to like reply', e);
       emit(state.copyWith(
+        replies: previousReplies,
         errorMessage: e is AppException ? e.message : e.toString(),
       ));
     }
