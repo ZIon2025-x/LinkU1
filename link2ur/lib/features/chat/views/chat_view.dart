@@ -88,7 +88,7 @@ class _ChatContentState extends State<_ChatContent> {
 
     final content = _messageController.text.trim();
     context.read<ChatBloc>().add(
-          ChatSendMessage(content: content),
+          ChatSendMessage(content: content, senderId: _currentUserId),
         );
     _messageController.clear();
     setState(() => _showAttachMenu = false);
@@ -117,7 +117,9 @@ class _ChatContentState extends State<_ChatContent> {
     final toSend = images.take(_kMaxGalleryImages).where((f) => f.path.isNotEmpty).toList();
     for (final file in toSend) {
       if (!mounted) break;
-      context.read<ChatBloc>().add(ChatSendImage(filePath: file.path));
+      context.read<ChatBloc>().add(
+        ChatSendImage(filePath: file.path, senderId: _currentUserId),
+      );
     }
     if (mounted) setState(() => _showAttachMenu = false);
   }
@@ -268,7 +270,10 @@ class _ChatContentState extends State<_ChatContent> {
               final confirmed = await showImageSendConfirmDialog(context, image);
               if (confirmed == true && mounted) {
                 context.read<ChatBloc>().add(
-                      ChatSendImage(filePath: image.path),
+                      ChatSendImage(
+                        filePath: image.path,
+                        senderId: _currentUserId,
+                      ),
                     );
                 setState(() => _showAttachMenu = false);
               }

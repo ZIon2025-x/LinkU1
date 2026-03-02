@@ -39,23 +39,31 @@ class ChatSendMessage extends ChatEvent {
     required this.content,
     this.messageType = 'text',
     this.imageUrl,
+    /// 当前用户 id，用于乐观更新时显示“我”发出的消息；不传则不做乐观更新
+    this.senderId,
   });
 
   final String content;
   final String messageType;
   final String? imageUrl;
+  final String? senderId;
 
   @override
-  List<Object?> get props => [content, messageType];
+  List<Object?> get props => [content, messageType, imageUrl, senderId];
 }
 
 class ChatSendImage extends ChatEvent {
-  const ChatSendImage({required this.filePath});
+  const ChatSendImage({
+    required this.filePath,
+    /// 当前用户 id，用于乐观更新时显示“我”发出的消息；不传则不做乐观更新
+    this.senderId,
+  });
 
   final String filePath;
+  final String? senderId;
 
   @override
-  List<Object?> get props => [filePath];
+  List<Object?> get props => [filePath, senderId];
 }
 
 class ChatMessageReceived extends ChatEvent {
@@ -333,24 +341,45 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     }
   }
 
+  /// 生成乐观更新用的临时消息 id（负数，避免与后端 id 冲突）
+  static int _nextPendingId() => -DateTime.now().microsecondsSinceEpoch;
+
   Future<void> _onSendMessage(
     ChatSendMessage event,
     Emitter<ChatState> emit,
   ) async {
-    emit(state.copyWith(isSending: true));
+    final senderId = event.senderId?.trim();
+    final canOptimistic = senderId != null && senderId.isNotEmpty;
+
+    Message? pendingMessage;
+    if (canOptimistic) {
+      pendingMessage = Message(
+        id: _nextPendingId(),
+        senderId: senderId,
+        receiverId: state.userId,
+        content: event.content,
+        messageType: event.messageType,
+        imageUrl: event.imageUrl,
+        createdAt: DateTime.now().toUtc(),
+      );
+      final newMessages = state.isTaskChat
+          ? [pendingMessage, ...state.messages]
+          : [...state.messages, pendingMessage];
+      emit(state.copyWith(messages: newMessages, isSending: true));
+    } else {
+      emit(state.copyWith(isSending: true));
+    }
 
     try {
       Message message;
 
       if (state.isTaskChat) {
-        // 任务聊天：使用任务聊天专用API
         message = await _messageRepository.sendTaskChatMessage(
           state.taskId!,
           content: event.content,
           messageType: event.messageType,
         );
       } else {
-        // 私聊：使用私聊API（后端会通过WebSocket转发给对方，无需重复发送）
         message = await _messageRepository.sendMessage(
           SendMessageRequest(
             receiverId: state.userId,
@@ -362,20 +391,33 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
         );
       }
 
-      // 任务聊天 state 为最新在前，新消息插到头部才会显示在列表底部；私聊保持追加到末尾
-      final newMessages = state.isTaskChat
-          ? [message, ...state.messages]
-          : [...state.messages, message];
-      emit(state.copyWith(
-        messages: newMessages,
-        isSending: false,
-      ));
+      if (canOptimistic && pendingMessage != null) {
+        final list = state.messages
+            .map((m) => m.id == pendingMessage!.id ? message : m)
+            .toList();
+        emit(state.copyWith(messages: list, isSending: false));
+      } else {
+        final newMessages = state.isTaskChat
+            ? [message, ...state.messages]
+            : [...state.messages, message];
+        emit(state.copyWith(messages: newMessages, isSending: false));
+      }
     } catch (e) {
       AppLogger.error('Failed to send message', e);
-      emit(state.copyWith(
-        isSending: false,
-        errorMessage: e.toString(),
-      ));
+      if (canOptimistic && pendingMessage != null) {
+        final list =
+            state.messages.where((m) => m.id != pendingMessage!.id).toList();
+        emit(state.copyWith(
+          messages: list,
+          isSending: false,
+          errorMessage: e.toString(),
+        ));
+      } else {
+        emit(state.copyWith(
+          isSending: false,
+          errorMessage: e.toString(),
+        ));
+      }
     }
   }
 
@@ -384,14 +426,33 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     Emitter<ChatState> emit,
   ) async {
     emit(state.copyWith(isSending: true));
+    int? pendingId;
 
     try {
-      // 先上传图片获取URL
       final imageUrl = await _messageRepository.uploadImage(event.filePath);
+
+      final senderId = event.senderId?.trim();
+      final canOptimistic = senderId != null && senderId.isNotEmpty;
+      Message? pendingMessage;
+      if (canOptimistic) {
+        pendingId = _nextPendingId();
+        pendingMessage = Message(
+          id: pendingId,
+          senderId: senderId,
+          receiverId: state.userId,
+          content: '[图片]',
+          messageType: 'image',
+          imageUrl: imageUrl,
+          createdAt: DateTime.now().toUtc(),
+        );
+        final newMessages = state.isTaskChat
+            ? [pendingMessage, ...state.messages]
+            : [...state.messages, pendingMessage];
+        emit(state.copyWith(messages: newMessages));
+      }
 
       Message message;
       if (state.isTaskChat) {
-        // 任务聊天：先上传再发送带附件的消息（对齐 iOS sendMessageWithAttachment）
         final filename = Uri.tryParse(imageUrl)?.pathSegments.last ?? 'image.jpg';
         message = await _messageRepository.sendTaskChatMessage(
           state.taskId!,
@@ -417,20 +478,32 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
         );
       }
 
-      // 任务聊天 state 为最新在前，新消息插到头部；私聊保持追加到末尾
-      final newMessages = state.isTaskChat
-          ? [message, ...state.messages]
-          : [...state.messages, message];
-      emit(state.copyWith(
-        messages: newMessages,
-        isSending: false,
-      ));
+      if (canOptimistic && pendingMessage != null) {
+        final list = state.messages
+            .map((m) => m.id == pendingMessage!.id ? message : m)
+            .toList();
+        emit(state.copyWith(messages: list, isSending: false));
+      } else {
+        final newMessages = state.isTaskChat
+            ? [message, ...state.messages]
+            : [...state.messages, message];
+        emit(state.copyWith(messages: newMessages, isSending: false));
+      }
     } catch (e) {
       AppLogger.error('Failed to send image', e);
-      emit(state.copyWith(
-        isSending: false,
-        errorMessage: e.toString(),
-      ));
+      if (pendingId != null) {
+        final list = state.messages.where((m) => m.id != pendingId).toList();
+        emit(state.copyWith(
+          messages: list,
+          isSending: false,
+          errorMessage: e.toString(),
+        ));
+      } else {
+        emit(state.copyWith(
+          isSending: false,
+          errorMessage: e.toString(),
+        ));
+      }
     }
   }
 

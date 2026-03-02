@@ -125,7 +125,10 @@ class _TaskChatContentState extends State<_TaskChatContent> {
 
     final content = _messageController.text.trim();
     context.read<ChatBloc>().add(
-          ChatSendMessage(content: content),
+          ChatSendMessage(
+            content: content,
+            senderId: _currentUserId ?? StorageService.instance.getUserId(),
+          ),
         );
     _messageController.clear();
     setState(() => _showActionMenu = false);
@@ -146,7 +149,12 @@ class _TaskChatContentState extends State<_TaskChatContent> {
     final toSend = images.take(_kMaxGalleryImages).where((f) => f.path.isNotEmpty).toList();
     for (final file in toSend) {
       if (!mounted) break;
-      context.read<ChatBloc>().add(ChatSendImage(filePath: file.path));
+      context.read<ChatBloc>().add(
+        ChatSendImage(
+          filePath: file.path,
+          senderId: _currentUserId ?? StorageService.instance.getUserId(),
+        ),
+      );
     }
     if (mounted) setState(() => _showActionMenu = false);
   }
@@ -161,7 +169,12 @@ class _TaskChatContentState extends State<_TaskChatContent> {
     if (image == null || !mounted) return;
     final confirmed = await showImageSendConfirmDialog(context, image);
     if (confirmed == true && mounted) {
-      context.read<ChatBloc>().add(ChatSendImage(filePath: image.path));
+      context.read<ChatBloc>().add(
+        ChatSendImage(
+          filePath: image.path,
+          senderId: _currentUserId ?? StorageService.instance.getUserId(),
+        ),
+      );
       setState(() => _showActionMenu = false);
     }
   }

@@ -610,42 +610,47 @@ class LeaderboardBloc extends Bloc<LeaderboardEvent, LeaderboardState> {
     }
   }
 
-  /// 投票 — 支持 upvote / downvote / remove + comment
+  /// 投票 — 支持 upvote / downvote / remove + comment（乐观更新：先更新 UI，再请求后端，失败回滚）
   Future<void> _onVoteItem(
     LeaderboardVoteItem event,
     Emitter<LeaderboardState> emit,
   ) async {
-    try {
-      // 判断是否需要取消投票：再次点击同类型 → 发送 remove
-      final currentItem = state.items.cast<LeaderboardItem?>().firstWhere(
-            (i) => i?.id == event.itemId,
-            orElse: () => state.itemDetail?.id == event.itemId
-                ? state.itemDetail
-                : null,
-          );
-      final actualVoteType =
-          (currentItem?.userVote == event.voteType) ? 'remove' : event.voteType;
+    final originalItems = List<LeaderboardItem>.from(state.items);
+    final originalDetail = state.itemDetail;
 
+    // 判断是否需要取消投票：再次点击同类型 → 发送 remove
+    final currentItem = state.items.cast<LeaderboardItem?>().firstWhere(
+          (i) => i?.id == event.itemId,
+          orElse: () => state.itemDetail?.id == event.itemId
+              ? state.itemDetail
+              : null,
+        );
+    final actualVoteType =
+        (currentItem?.userVote == event.voteType) ? 'remove' : event.voteType;
+
+    // 乐观更新：先更新 items 与 itemDetail，再请求后端
+    final updatedItems = state.items.map((item) {
+      if (item.id == event.itemId) {
+        return _applyVoteUpdate(item, event.voteType);
+      }
+      return item;
+    }).toList();
+    LeaderboardItem? updatedDetail;
+    if (state.itemDetail != null && state.itemDetail!.id == event.itemId) {
+      updatedDetail = _applyVoteUpdate(state.itemDetail!, event.voteType);
+    }
+    emit(state.copyWith(
+      items: updatedItems,
+      itemDetail: updatedDetail ?? state.itemDetail,
+    ));
+
+    try {
       await _leaderboardRepository.voteItem(
         event.itemId,
         voteType: actualVoteType,
         comment: event.comment,
         isAnonymous: event.isAnonymous,
       );
-
-      // 乐观更新 items 列表（排行榜详情页）
-      final updatedItems = state.items.map((item) {
-        if (item.id == event.itemId) {
-          return _applyVoteUpdate(item, event.voteType);
-        }
-        return item;
-      }).toList();
-
-      // 乐观更新 itemDetail（竞品详情页）
-      LeaderboardItem? updatedDetail;
-      if (state.itemDetail != null && state.itemDetail!.id == event.itemId) {
-        updatedDetail = _applyVoteUpdate(state.itemDetail!, event.voteType);
-      }
 
       // 投票/评论成功后重新拉取评论列表，使新评论立即出现在评论区
       List<Map<String, dynamic>> newVotes = state.itemVotes;
@@ -656,16 +661,17 @@ class LeaderboardBloc extends Bloc<LeaderboardEvent, LeaderboardState> {
           // 忽略拉取失败，保留原列表
         }
       }
-
-      emit(state.copyWith(
-        items: updatedItems,
-        itemDetail: updatedDetail ?? state.itemDetail,
-        itemVotes: newVotes,
-        actionMessage: 'vote_success',
-      ));
+      if (!emit.isDone) {
+        emit(state.copyWith(
+          itemVotes: newVotes,
+          actionMessage: 'vote_success',
+        ));
+      }
     } catch (e) {
       AppLogger.error('Failed to vote', e);
       emit(state.copyWith(
+        items: originalItems,
+        itemDetail: originalDetail,
         actionMessage: 'vote_failed',
         errorMessage: e is LeaderboardException ? e.message : e.toString(),
       ));
