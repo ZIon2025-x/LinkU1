@@ -267,6 +267,7 @@ class _PublishContentState extends State<_PublishContent>
   double? _taskLongitude;
   final ValueNotifier<String?> _taskCategoryNotifier = ValueNotifier(null);
   final String _taskCurrency = 'GBP';
+  bool _taskRewardToBeQuoted = false;
   DateTime? _taskDeadline;
   final List<XFile> _taskImages = [];
   static const int _kTaskMaxImages = 5;
@@ -441,7 +442,13 @@ class _PublishContentState extends State<_PublishContent>
       if (mounted) setState(() => _postUploading = false);
     }
     if (!mounted) return;
-    final reward = double.tryParse(_taskRewardCtrl.text) ?? 0;
+    final reward = _taskRewardToBeQuoted
+        ? null
+        : (double.tryParse(_taskRewardCtrl.text) ?? 0.0);
+    if (!_taskRewardToBeQuoted && (reward == null || reward < 1.0)) {
+      AppFeedback.showWarning(context, context.l10n.validatorAmountMin(1.0));
+      return;
+    }
     final request = CreateTaskRequest(
       title: _taskTitleCtrl.text.trim(),
       description: _taskDescCtrl.text.trim().isNotEmpty ? _taskDescCtrl.text.trim() : null,
@@ -1321,41 +1328,56 @@ class _PublishContentState extends State<_PublishContent>
           AppSpacing.vMd,
 
           _sectionTitle(context.l10n.createTaskReward),
-          Row(
-            children: [
-              Expanded(
-                child: TextFormField(
-                  controller: _taskRewardCtrl,
-                  decoration: _inputDecoration(
-                    hint: '0.00',
-                    icon: Icons.payments_outlined,
-                    isDark: isDark,
-                    prefix: '£ ',
-                  ),
-                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                  validator: (v) => Validators.validateAmount(v, l10n: context.l10n),
-                ),
-              ),
-              const SizedBox(width: AppSpacing.sm),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                decoration: BoxDecoration(
-                  color: isDark
-                      ? Colors.white.withValues(alpha: 0.06)
-                      : AppColors.primary.withValues(alpha: 0.06),
-                  borderRadius: AppRadius.allMedium,
-                ),
-                child: Text(
-                  'GBP',
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: isDark ? AppColors.textPrimaryDark : AppColors.primary,
-                  ),
-                ),
-              ),
-            ],
+          CheckboxListTile(
+            value: _taskRewardToBeQuoted,
+            onChanged: (v) => setState(() => _taskRewardToBeQuoted = v ?? false),
+            title: Text(
+              context.l10n.createTaskRewardToBeQuoted,
+              style: Theme.of(context).textTheme.bodyMedium,
+            ),
+            controlAffinity: ListTileControlAffinity.leading,
+            contentPadding: EdgeInsets.zero,
           ),
+          if (!_taskRewardToBeQuoted)
+            Row(
+              children: [
+                Expanded(
+                  child: TextFormField(
+                    controller: _taskRewardCtrl,
+                    decoration: _inputDecoration(
+                      hint: '0.00',
+                      icon: Icons.payments_outlined,
+                      isDark: isDark,
+                      prefix: '£ ',
+                    ),
+                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                    validator: (v) => Validators.validateAmount(
+                      v,
+                      l10n: context.l10n,
+                      min: 1.0,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.sm),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: isDark
+                        ? Colors.white.withValues(alpha: 0.06)
+                        : AppColors.primary.withValues(alpha: 0.06),
+                    borderRadius: AppRadius.allMedium,
+                  ),
+                  child: Text(
+                    'GBP',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: isDark ? AppColors.textPrimaryDark : AppColors.primary,
+                    ),
+                  ),
+                ),
+              ],
+            ),
           AppSpacing.vLg,
 
           _sectionTitle(context.l10n.createTaskLocation),

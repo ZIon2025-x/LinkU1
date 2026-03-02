@@ -682,31 +682,31 @@ class LeaderboardBloc extends Bloc<LeaderboardEvent, LeaderboardState> {
     }
   }
 
-  /// 点赞评论
+  /// 点赞评论 — 乐观更新：先更新 UI，后端异步；失败则回滚
   Future<void> _onLikeVote(
     LeaderboardLikeVote event,
     Emitter<LeaderboardState> emit,
   ) async {
+    final previousVotes = state.itemVotes;
+    final updatedVotes = state.itemVotes.map((vote) {
+      if (vote['id'] == event.voteId) {
+        final wasLiked = vote['is_liked'] == true;
+        final currentLikes = (vote['like_count'] as int?) ?? 0;
+        return {
+          ...vote,
+          'is_liked': !wasLiked,
+          'like_count': wasLiked ? currentLikes - 1 : currentLikes + 1,
+        };
+      }
+      return vote;
+    }).toList();
+    emit(state.copyWith(itemVotes: updatedVotes));
+
     try {
       await _leaderboardRepository.likeVote(event.voteId);
-
-      // 乐观更新评论列表中的点赞数
-      final updatedVotes = state.itemVotes.map((vote) {
-        if (vote['id'] == event.voteId) {
-          final wasLiked = vote['is_liked'] == true;
-          final currentLikes = (vote['like_count'] as int?) ?? 0;
-          return {
-            ...vote,
-            'is_liked': !wasLiked,
-            'like_count': wasLiked ? currentLikes - 1 : currentLikes + 1,
-          };
-        }
-        return vote;
-      }).toList();
-
-      emit(state.copyWith(itemVotes: updatedVotes));
     } catch (e) {
       AppLogger.error('Failed to like vote', e);
+      emit(state.copyWith(itemVotes: previousVotes));
     }
   }
 

@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_radius.dart';
 import '../../../core/utils/helpers.dart';
 import '../../../core/utils/l10n_extension.dart';
-import '../../../core/router/app_router.dart';
 import '../../../core/widgets/skeleton_view.dart';
 import '../../../core/widgets/empty_state_view.dart';
 import '../../../data/models/forum.dart';
@@ -176,7 +176,15 @@ class _MyForumPostsViewState extends State<MyForumPostsView>
             key: ValueKey(post.id),
             child: _MyPostCard(
               post: post,
-              onTap: () => context.safePush('/forum/posts/${post.id}'),
+              onTap: () {
+                context.push('/forum/posts/${post.id}').then((_) {
+                  if (context.mounted) {
+                    context.read<ProfileBloc>().add(
+                      ProfileLoadMyForumActivity(type: type),
+                    );
+                  }
+                });
+              },
             ),
           );
         },
@@ -252,12 +260,19 @@ class _MyPostCard extends StatelessWidget {
                             color: AppColors.textTertiary)),
                     const SizedBox(width: 12),
                     Icon(
+                        post.isFavorited ? Icons.star : Icons.star_border,
+                        size: 14,
+                        color: post.isFavorited
+                            ? AppColors.gold
+                            : AppColors.textTertiary),
+                    const SizedBox(width: 12),
+                    Icon(
                         post.isLiked
                             ? Icons.favorite
                             : Icons.favorite_border,
                         size: 14,
                         color: post.isLiked
-                            ? AppColors.error
+                            ? AppColors.accentPink
                             : AppColors.textTertiary),
                     const SizedBox(width: 4),
                     Text('${post.likeCount}',
