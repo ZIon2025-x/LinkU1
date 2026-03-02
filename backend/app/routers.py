@@ -10205,7 +10205,13 @@ async def upload_public_image(
         
         if not resource_id:
             if category in ("expert_avatar", "service_image"):
-                # 头像和服务图片使用用户ID
+                # 管理员上传时必须传 resource_id（达人 user_id），否则会存到 expert_avatars/{管理员id}/，孤儿清理会误删
+                if admin_session:
+                    raise HTTPException(
+                        status_code=400,
+                        detail="管理员上传达人头像或服务图片时请在 URL 中提供 resource_id（达人 user_id）",
+                    )
+                # 普通用户：头像/服务图使用当前用户 id
                 actual_resource_id = user_id
             else:
                 # 其他类别使用临时目录

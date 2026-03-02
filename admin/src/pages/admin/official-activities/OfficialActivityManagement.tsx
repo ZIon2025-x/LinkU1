@@ -1009,7 +1009,12 @@ const OfficialActivityManagement: React.FC = () => {
                   const compressed = await compressImage(file, { maxSizeMB: 8, maxWidthOrHeight: 1920 });
                   const formData = new FormData();
                   formData.append('image', compressed);
-                  const res = await api.post('/api/v2/upload/image?category=activity', formData, {
+                  // 编辑时传 resource_id=活动 id，存到 activities/{id}/；创建时不传，先存临时目录，提交时后端会移到 activities/{id}/
+                  let uploadUrl = '/api/v2/upload/image?category=activity';
+                  if (activityModal.formData.id != null && activityModal.formData.id !== '') {
+                    uploadUrl += `&resource_id=${encodeURIComponent(String(activityModal.formData.id))}`;
+                  }
+                  const res = await api.post(uploadUrl, formData, {
                     headers: { 'Content-Type': 'multipart/form-data' },
                   });
                   const result = res.data;

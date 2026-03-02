@@ -314,6 +314,21 @@ async def create_official_activity(
     db.add(activity)
     await db.commit()
     await db.refresh(activity)
+
+    # 创建时若带了图片且是临时目录上传的，移到正式目录 activities/{id}/，避免一直留在 temp 下被清理
+    if data.images:
+        from app.services import ImageCategory, get_image_upload_service
+        service = get_image_upload_service()
+        new_images = service.move_from_temp(
+            ImageCategory.ACTIVITY,
+            str(admin.id),
+            str(activity.id),
+            data.images,
+        )
+        if new_images != data.images:
+            activity.images = new_images
+            await db.commit()
+
     return {"success": True, "activity_id": activity.id}
 
 

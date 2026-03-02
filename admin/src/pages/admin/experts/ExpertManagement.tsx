@@ -106,13 +106,17 @@ const CATEGORY_COMPRESS_OPTIONS: Record<string, { maxSizeMB: number; maxWidthOrH
   activity: { maxSizeMB: 8, maxWidthOrHeight: 1920 },
 };
 
-const uploadImageWithCategory = async (file: File, category: string): Promise<string> => {
+const uploadImageWithCategory = async (file: File, category: string, resourceId?: string): Promise<string> => {
   const { compressImage } = await import('../../../utils/imageCompression');
   const opts = CATEGORY_COMPRESS_OPTIONS[category] || { maxSizeMB: 4, maxWidthOrHeight: 1920 };
   const compressed = await compressImage(file, opts);
   const formData = new FormData();
   formData.append('image', compressed);
-  const res = await api.post(`/api/v2/upload/image?category=${category}`, formData, {
+  let url = `/api/v2/upload/image?category=${category}`;
+  if (resourceId != null && resourceId !== '') {
+    url += `&resource_id=${encodeURIComponent(resourceId)}`;
+  }
+  const res = await api.post(url, formData, {
     headers: { 'Content-Type': 'multipart/form-data' },
   });
   return res.data.url || res.data.image_url;
@@ -1026,9 +1030,15 @@ const ExpertManagement: React.FC = () => {
                     onChange={async (e) => {
                       const file = e.target.files?.[0];
                       if (!file) return;
+                      // 必须传 resource_id=达人 user_id，否则后端会用当前登录的管理员 id 存到 expert_avatars/{管理员id}/，孤儿清理会误删（管理员不在 users 表）
+                      const expertId = editModal.formData.id;
+                      if (!expertId) {
+                        message.error('请先保存达人基本信息后再上传头像');
+                        return;
+                      }
                       setAvatarUploading(true);
                       try {
-                        const url = await uploadImageWithCategory(file, 'expert_avatar');
+                        const url = await uploadImageWithCategory(file, 'expert_avatar', expertId);
                         editModal.updateField('avatar', url);
                         message.success('头像上传成功');
                       } catch (err: any) {
@@ -1262,9 +1272,14 @@ const ExpertManagement: React.FC = () => {
                     onChange={async (e) => {
                       const file = e.target.files?.[0];
                       if (!file) return;
+                      const expertId = editModal.formData.id;
+                      if (!expertId) {
+                        message.error('请先保存达人基本信息');
+                        return;
+                      }
                       setServiceImageUploading(svc.id);
                       try {
-                        const url = await uploadImageWithCategory(file, 'service_image');
+                        const url = await uploadImageWithCategory(file, 'service_image', expertId);
                         const newImages = [...(svc.images || []), url];
                         await api.put(`/api/admin/task-expert/${editModal.formData.id}/services/${svc.id}`, { images: newImages });
                         const updatedServices = [...editModal.formData.services];

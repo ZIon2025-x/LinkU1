@@ -110,6 +110,13 @@ async def upload_image_v2(
         
         # 对于头像和服务图片，使用用户ID作为资源ID
         if category in ("expert_avatar", "service_image") and not resource_id:
+            # 管理员上传时必须传 resource_id（达人 user_id），否则会存到 expert_avatars/{管理员id}/，孤儿清理会误删（管理员不在 users 表）
+            from app.admin_auth import validate_admin_session
+            if validate_admin_session(request):
+                raise HTTPException(
+                    status_code=400,
+                    detail="管理员上传达人头像或服务图片时请在 URL 中提供 resource_id（达人 user_id），例如 ?category=expert_avatar&resource_id=xxx",
+                )
             resource_id = user_id
             is_temp = False
         
@@ -197,6 +204,12 @@ async def upload_images_batch(
         
         # 对于头像和服务图片，使用用户ID
         if category in ("expert_avatar", "service_image") and not resource_id:
+            from app.admin_auth import validate_admin_session
+            if validate_admin_session(request):
+                raise HTTPException(
+                    status_code=400,
+                    detail="管理员上传达人头像或服务图片时请在 URL 中提供 resource_id（达人 user_id）",
+                )
             resource_id = user_id
             is_temp = False
         
