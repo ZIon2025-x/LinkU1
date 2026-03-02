@@ -219,6 +219,20 @@ class _ForumPostDetailViewState extends State<ForumPostDetailView> {
             },
           ),
           actions: [
+            // 收藏按钮（对标 iOS 帖子详情 toolbar 星标）
+            if (context.read<ForumBloc>().state.selectedPost != null)
+              IconButton(
+                icon: Icon(
+                  context.read<ForumBloc>().state.selectedPost!.isFavorited
+                      ? Icons.star
+                      : Icons.star_border,
+                ),
+                onPressed: () {
+                  AppHaptics.selection();
+                  context.read<ForumBloc>().add(ForumFavoritePost(widget.postId));
+                },
+                tooltip: context.l10n.forumFavorite,
+              ),
             IconButton(
               icon: const Icon(Icons.share_outlined),
               onPressed: () async {

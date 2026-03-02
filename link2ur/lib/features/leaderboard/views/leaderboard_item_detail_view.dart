@@ -55,6 +55,7 @@ class _ItemDetailContent extends StatelessWidget {
       buildWhen: (prev, curr) =>
           prev.status != curr.status ||
           prev.itemDetail != curr.itemDetail ||
+          prev.itemVotes != curr.itemVotes ||
           prev.errorMessage != curr.errorMessage,
       builder: (context, state) {
         final item = state.itemDetail;

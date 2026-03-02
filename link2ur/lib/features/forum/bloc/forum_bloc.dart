@@ -597,8 +597,9 @@ class ForumBloc extends Bloc<ForumEvent, ForumState> {
     ForumLikePost event,
     Emitter<ForumState> emit,
   ) async {
-    // 乐观更新：先更新 UI，失败时回滚
+    // 乐观更新：先更新 UI，失败时回滚（同时更新 posts 与 selectedPost，详情页读 selectedPost）
     final originalPosts = List<ForumPost>.from(state.posts);
+    final originalSelectedPost = state.selectedPost;
 
     final updatedPosts = state.posts.map((post) {
       if (post.id == event.postId) {
@@ -612,15 +613,27 @@ class ForumBloc extends Bloc<ForumEvent, ForumState> {
       return post;
     }).toList();
 
-    emit(state.copyWith(posts: updatedPosts));
+    final updatedSelectedPost = state.selectedPost?.id == event.postId
+        ? state.selectedPost!.copyWith(
+            isLiked: !state.selectedPost!.isLiked,
+            likeCount: state.selectedPost!.isLiked
+                ? state.selectedPost!.likeCount - 1
+                : state.selectedPost!.likeCount + 1,
+          )
+        : state.selectedPost;
+
+    emit(state.copyWith(
+      posts: updatedPosts,
+      selectedPost: updatedSelectedPost,
+    ));
 
     try {
       await _forumRepository.likePost(event.postId);
     } catch (e) {
       AppLogger.error('Failed to like post', e);
-      // 回滚到原始状态并发出错误信息
       emit(state.copyWith(
         posts: originalPosts,
+        selectedPost: originalSelectedPost,
         errorMessage: e is AppException ? e.message : e.toString(),
       ));
     }
