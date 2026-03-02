@@ -3338,7 +3338,9 @@ class ForumPostListItem(BaseModel):
     linked_item_name: Optional[str] = None
     created_at: datetime.datetime
     last_reply_at: Optional[datetime.datetime] = None
-    
+    is_liked: Optional[bool] = False  # 当前用户是否已点赞（列表接口动态计算）
+    is_favorited: Optional[bool] = False  # 当前用户是否已收藏（列表接口动态计算）
+
     class Config:
         from_attributes = True
 

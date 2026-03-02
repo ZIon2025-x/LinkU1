@@ -430,14 +430,21 @@ class ForumRepository {
     }
 
     final data = response.data!;
-    final rawList = data['favorites'] as List<dynamic>? ??
-        data['posts'] as List<dynamic>? ??
-        [];
+    // 后端返回 { favorites: [ { id, post: ForumPostListItem, created_at }, ... ] }
+    final rawFavorites = data['favorites'] as List<dynamic>? ?? [];
+    final posts = rawFavorites
+        .map((e) {
+          final fav = e as Map<String, dynamic>;
+          final postJson = fav['post'] as Map<String, dynamic>?;
+          if (postJson == null) return null;
+          final post = ForumPost.fromJson(postJson);
+          return post.copyWith(isFavorited: true);
+        })
+        .whereType<ForumPost>()
+        .toList();
     return ForumPostListResponse(
-      posts: rawList
-          .map((e) => ForumPost.fromJson(e as Map<String, dynamic>))
-          .toList(),
-      total: data['total'] as int? ?? 0,
+      posts: posts,
+      total: data['total'] as int? ?? posts.length,
       page: data['page'] as int? ?? page,
       pageSize: data['page_size'] as int? ?? pageSize,
     );
@@ -453,6 +460,7 @@ class ForumRepository {
       queryParameters: {
         'page': page,
         'page_size': pageSize,
+        'target_type': 'post', // 只拉帖子点赞，不包含回复
       },
     );
 
@@ -461,14 +469,22 @@ class ForumRepository {
     }
 
     final data = response.data!;
-    final rawList = data['likes'] as List<dynamic>? ??
-        data['posts'] as List<dynamic>? ??
-        [];
+    // 后端返回 { likes: [ { target_type, post: {...}, created_at }, ... ] }
+    final rawLikes = data['likes'] as List<dynamic>? ?? [];
+    final posts = rawLikes
+        .map((e) {
+          final like = e as Map<String, dynamic>;
+          if (like['target_type'] != 'post') return null;
+          final postJson = like['post'] as Map<String, dynamic>?;
+          if (postJson == null) return null;
+          final post = ForumPost.fromJson(postJson);
+          return post.copyWith(isLiked: true);
+        })
+        .whereType<ForumPost>()
+        .toList();
     return ForumPostListResponse(
-      posts: rawList
-          .map((e) => ForumPost.fromJson(e as Map<String, dynamic>))
-          .toList(),
-      total: data['total'] as int? ?? 0,
+      posts: posts,
+      total: data['total'] as int? ?? posts.length,
       page: data['page'] as int? ?? page,
       pageSize: data['page_size'] as int? ?? pageSize,
     );

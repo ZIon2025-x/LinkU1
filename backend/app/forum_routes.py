@@ -2693,7 +2693,9 @@ async def get_posts(
             linked_item_type=post.linked_item_type,
             linked_item_id=post.linked_item_id,
             created_at=post.created_at,
-            last_reply_at=post.last_reply_at
+            last_reply_at=post.last_reply_at,
+            is_liked=post.id in liked_ids,
+            is_favorited=post.id in favorited_ids,
         ))
 
     return {
