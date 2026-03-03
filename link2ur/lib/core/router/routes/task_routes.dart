@@ -46,10 +46,11 @@ List<RouteBase> get taskRoutes => [
                   body: Center(child: Text('Invalid task ID'))),
             );
           }
+          final notificationId = state.extra is int ? state.extra as int : null;
           return platformDetailPage(
             context,
             key: state.pageKey,
-            child: TaskDetailView(taskId: id),
+            child: TaskDetailView(taskId: id, notificationId: notificationId),
           );
         },
       ),

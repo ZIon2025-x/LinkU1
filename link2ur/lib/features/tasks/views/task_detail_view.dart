@@ -37,6 +37,7 @@ import '../../../data/models/review.dart';
 import '../../../data/models/user.dart';
 import '../../../data/repositories/task_repository.dart';
 import '../../../data/repositories/payment_repository.dart';
+import '../../../data/repositories/notification_repository.dart';
 import '../../../features/auth/bloc/auth_bloc.dart';
 import '../bloc/task_detail_bloc.dart';
 import '../../../core/widgets/glass_button.dart';
@@ -48,24 +49,30 @@ import 'task_detail_components.dart';
 /// 任务详情页
 /// 三维条件显示：任务状态 x 用户身份 x 任务来源
 class TaskDetailView extends StatelessWidget {
-  const TaskDetailView({super.key, required this.taskId});
+  const TaskDetailView({super.key, required this.taskId, this.notificationId});
 
   final int taskId;
+  final int? notificationId;
 
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
       create: (context) => TaskDetailBloc(
         taskRepository: context.read<TaskRepository>(),
+        notificationRepository: context.read<NotificationRepository>(),
       )..add(TaskDetailLoadRequested(taskId)),
-      child: _TaskDetailContent(taskId: taskId),
+      child: _TaskDetailContent(taskId: taskId, notificationId: notificationId),
     );
   }
 }
 
 class _TaskDetailContent extends StatelessWidget {
-  const _TaskDetailContent({required this.taskId});
+  const _TaskDetailContent({required this.taskId, this.notificationId});
   final int taskId;
+
+  /// Passed from notification navigation; consumed by the respond-negotiation
+  /// sheet (Task 5) to supply the one-time token endpoint.
+  final int? notificationId;
 
   @override
   Widget build(BuildContext context) {

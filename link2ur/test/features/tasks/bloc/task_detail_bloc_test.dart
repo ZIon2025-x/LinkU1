@@ -12,6 +12,7 @@ class FakeCreateReviewRequest extends Fake implements CreateReviewRequest {}
 
 void main() {
   late MockTaskRepository mockTaskRepository;
+  late MockNotificationRepository mockNotificationRepository;
   late TaskDetailBloc taskDetailBloc;
 
   const testTask = Task(
@@ -45,7 +46,11 @@ void main() {
 
   setUp(() {
     mockTaskRepository = MockTaskRepository();
-    taskDetailBloc = TaskDetailBloc(taskRepository: mockTaskRepository);
+    mockNotificationRepository = MockNotificationRepository();
+    taskDetailBloc = TaskDetailBloc(
+      taskRepository: mockTaskRepository,
+      notificationRepository: mockNotificationRepository,
+    );
     registerFallbackValues();
     registerFallbackValue(FakeCreateReviewRequest());
   });

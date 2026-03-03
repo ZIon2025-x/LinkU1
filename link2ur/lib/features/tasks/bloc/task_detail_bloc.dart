@@ -7,6 +7,7 @@ import '../../../data/models/task_application.dart';
 import '../../../data/models/review.dart';
 import '../../../data/models/refund_request.dart';
 import '../../../data/repositories/task_repository.dart';
+import '../../../data/repositories/notification_repository.dart';
 import '../../../core/utils/logger.dart';
 
 // ==================== Events ====================
@@ -231,6 +232,26 @@ class TaskDetailSendApplicationMessage extends TaskDetailEvent {
   List<Object?> get props => [applicationId, content, negotiatedPrice];
 }
 
+/// 指定任务接单方提交报价
+class TaskDetailQuoteDesignatedPriceRequested extends TaskDetailEvent {
+  const TaskDetailQuoteDesignatedPriceRequested({required this.price});
+  final double price;
+  @override
+  List<Object?> get props => [price];
+}
+
+/// 接单方回应议价通知（接受/拒绝）
+class TaskDetailRespondNegotiationRequested extends TaskDetailEvent {
+  const TaskDetailRespondNegotiationRequested({
+    required this.action,
+    required this.notificationId,
+  });
+  final String action; // 'accept' or 'reject'
+  final int notificationId;
+  @override
+  List<Object?> get props => [action, notificationId];
+}
+
 // ==================== State ====================
 
 enum TaskDetailStatus { initial, loading, loaded, error }
@@ -351,8 +372,11 @@ class TaskDetailState extends Equatable {
 // ==================== Bloc ====================
 
 class TaskDetailBloc extends Bloc<TaskDetailEvent, TaskDetailState> {
-  TaskDetailBloc({required TaskRepository taskRepository})
-      : _taskRepository = taskRepository,
+  TaskDetailBloc({
+    required TaskRepository taskRepository,
+    required NotificationRepository notificationRepository,
+  })  : _taskRepository = taskRepository,
+        _notificationRepository = notificationRepository,
         super(const TaskDetailState()) {
     on<TaskDetailLoadRequested>(_onLoadRequested, transformer: restartable());
     on<TaskDetailLoadApplications>(_onLoadApplications, transformer: restartable());
@@ -372,9 +396,12 @@ class TaskDetailBloc extends Bloc<TaskDetailEvent, TaskDetailState> {
     on<TaskDetailCancelRefund>(_onCancelRefund);
     on<TaskDetailSubmitRebuttal>(_onSubmitRebuttal);
     on<TaskDetailSendApplicationMessage>(_onSendApplicationMessage);
+    on<TaskDetailQuoteDesignatedPriceRequested>(_onQuoteDesignatedPrice, transformer: droppable());
+    on<TaskDetailRespondNegotiationRequested>(_onRespondNegotiation, transformer: droppable());
   }
 
   final TaskRepository _taskRepository;
+  final NotificationRepository _notificationRepository;
 
   int? get _taskId => state.task?.id;
 
@@ -897,6 +924,78 @@ class TaskDetailBloc extends Bloc<TaskDetailEvent, TaskDetailState> {
       emit(state.copyWith(
         isSubmitting: false,
         actionMessage: 'application_message_failed',
+        errorMessage: e.toString(),
+      ));
+    }
+  }
+
+  Future<void> _onQuoteDesignatedPrice(
+    TaskDetailQuoteDesignatedPriceRequested event,
+    Emitter<TaskDetailState> emit,
+  ) async {
+    if (_taskId == null || state.isSubmitting) return;
+    emit(state.copyWith(isSubmitting: true));
+    try {
+      await _taskRepository.applyTask(
+        _taskId!,
+        negotiatedPrice: event.price,
+      );
+      final task = await _refreshTask();
+      emit(state.copyWith(
+        task: task,
+        isSubmitting: false,
+        actionMessage: 'quote_submitted',
+      ));
+    } catch (e) {
+      AppLogger.error('Failed to submit designated task quote', e);
+      emit(state.copyWith(
+        isSubmitting: false,
+        actionMessage: 'quote_failed',
+        errorMessage: e.toString(),
+      ));
+    }
+  }
+
+  Future<void> _onRespondNegotiation(
+    TaskDetailRespondNegotiationRequested event,
+    Emitter<TaskDetailState> emit,
+  ) async {
+    if (_taskId == null || state.isSubmitting) return;
+    assert(event.action == 'accept' || event.action == 'reject',
+        'action must be "accept" or "reject", got: ${event.action}');
+    final appId = state.userApplication?.id;
+    if (appId == null) {
+      emit(state.copyWith(
+        actionMessage: 'operation_failed',
+      ));
+      return;
+    }
+    emit(state.copyWith(isSubmitting: true));
+    try {
+      final tokenData = await _notificationRepository.getNegotiationTokens(event.notificationId);
+      final token = event.action == 'accept'
+          ? tokenData['accept_token'] as String?
+          : tokenData['reject_token'] as String?;
+      if (token == null || token.isEmpty) {
+        throw const TaskException('negotiation_token_missing');
+      }
+      await _taskRepository.respondNegotiation(
+        _taskId!,
+        appId,
+        action: event.action,
+        token: token,
+      );
+      final task = await _refreshTask();
+      emit(state.copyWith(
+        task: task,
+        isSubmitting: false,
+        actionMessage: event.action == 'accept' ? 'negotiation_accepted' : 'negotiation_rejected',
+      ));
+    } catch (e) {
+      AppLogger.error('Failed to respond to negotiation', e);
+      emit(state.copyWith(
+        isSubmitting: false,
+        actionMessage: 'operation_failed',
         errorMessage: e.toString(),
       ));
     }

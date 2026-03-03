@@ -3,6 +3,7 @@ import 'package:link2ur/data/repositories/auth_repository.dart';
 import 'package:link2ur/data/repositories/forum_repository.dart';
 import 'package:link2ur/data/repositories/flea_market_repository.dart';
 import 'package:link2ur/data/repositories/message_repository.dart';
+import 'package:link2ur/data/repositories/notification_repository.dart';
 import 'package:link2ur/data/repositories/task_repository.dart';
 import 'package:link2ur/data/repositories/payment_repository.dart';
 import 'package:link2ur/data/services/api_service.dart';
@@ -20,6 +21,8 @@ class MockForumRepository extends Mock implements ForumRepository {}
 class MockFleaMarketRepository extends Mock implements FleaMarketRepository {}
 
 class MockMessageRepository extends Mock implements MessageRepository {}
+
+class MockNotificationRepository extends Mock implements NotificationRepository {}
 
 class MockTaskRepository extends Mock implements TaskRepository {}
 
