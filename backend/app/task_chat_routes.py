@@ -2097,16 +2097,16 @@ async def negotiate_application(
                 "expires_at": format_iso_utc(datetime.fromtimestamp(expires_at, tz=timezone.utc))
             }
             
-            # 存储到Redis，5分钟过期
+            # 存储到Redis，24小时过期
             redis_client.setex(
                 f"negotiation_token:{token_accept}",
-                300,  # 5分钟
+                86400,  # 24小时
                 json.dumps(token_data_accept)
             )
-            
+
             redis_client.setex(
                 f"negotiation_token:{token_reject}",
-                300,  # 5分钟
+                86400,  # 24小时
                 json.dumps(token_data_reject)
             )
         else:
@@ -2159,13 +2159,13 @@ async def negotiate_application(
             # 重新存储到Redis（覆盖之前的token）
             redis_client.setex(
                 f"negotiation_token:{token_accept}",
-                300,  # 5分钟
+                86400,  # 24小时
                 json.dumps(token_data_accept)
             )
-            
+
             redis_client.setex(
                 f"negotiation_token:{token_reject}",
-                300,  # 5分钟
+                86400,  # 24小时
                 json.dumps(token_data_reject)
             )
             
@@ -2174,7 +2174,7 @@ async def negotiate_application(
             expires_at_iso = format_iso_utc(datetime.fromtimestamp(expires_at, tz=timezone.utc))
             redis_client.setex(
                 f"negotiation_tokens_by_notification:{notification_id}",
-                300,  # 5分钟
+                86400,  # 24小时
                 json.dumps({
                     "token_accept": token_accept,
                     "token_reject": token_reject,
@@ -2183,7 +2183,7 @@ async def negotiate_application(
                     "expires_at": expires_at_iso  # 优化：保存过期时间
                 })
             )
-        
+
         await db.commit()
         
         # 发送推送通知
