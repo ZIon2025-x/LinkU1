@@ -202,7 +202,7 @@ def create_customer_service_chat(db: Session, user_id: str, service_id: str) -> 
             "user_id": existing_chat.user_id,
             "service_id": existing_chat.service_id,
             "is_ended": existing_chat.is_ended,
-            "created_at": existing_chat.created_at,
+            "created_at": format_iso_utc(existing_chat.created_at) if existing_chat.created_at else None,
             "total_messages": existing_chat.total_messages,
         }
 
@@ -242,7 +242,7 @@ def create_customer_service_chat(db: Session, user_id: str, service_id: str) -> 
         "user_id": new_chat.user_id,
         "service_id": new_chat.service_id,
         "is_ended": new_chat.is_ended,
-        "created_at": new_chat.created_at,
+        "created_at": format_iso_utc(new_chat.created_at) if new_chat.created_at else None,
         "total_messages": new_chat.total_messages,
     }
 

@@ -13,6 +13,7 @@ from app import crud, models, schemas
 from app.deps import get_db
 from app.separate_auth_deps import get_current_admin
 from app.security import get_client_ip
+from app.utils.time_utils import format_iso_utc
 
 logger = logging.getLogger(__name__)
 
@@ -48,8 +49,8 @@ def admin_get_customer_service_users(
                 "email": u.email,
                 "phone": u.phone,
                 "is_active": u.is_active,
-                "created_at": u.created_at,
-                "last_login": u.last_login,
+                "created_at": format_iso_utc(u.created_at) if u.created_at else None,
+                "last_login": format_iso_utc(u.last_login) if u.last_login else None,
             }
             for u in users
         ],

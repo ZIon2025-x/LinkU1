@@ -24,7 +24,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.websockets import WebSocketState
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, FileResponse, Response
 from sqlalchemy import inspect
 from sqlalchemy.orm import Session
 
@@ -270,6 +270,10 @@ async def custom_cors_middleware(request: Request, call_next):
 # DEBUG 中间件已移除 - 性能优化
 
 app.include_router(main_router, prefix="/api/users", tags=["users"])
+
+# 客服端员工通知（/api/users/staff/notifications*），需在 main_router 之后注册以便优先匹配
+from app.staff_notification_routes import router as staff_notification_router
+app.include_router(staff_notification_router, prefix="/api/users", tags=["客服-员工通知"])
 
 # ==================== 管理员子域名路由（优先于 main_router 注册以确保正确匹配） ====================
 # 管理员推荐系统路由
@@ -616,6 +620,43 @@ else:
             media_type=media_type,
             headers={"Cache-Control": "public, max-age=31536000"}
         )
+
+# /static 静态资源（头像、客服图标等），供客服/管理端请求 API 域名下的 /static/xxx.png
+# 若文件存在则返回文件，否则返回 1x1 透明 PNG 占位，避免 404
+_STATIC_DIR = Path(__file__).resolve().parent.parent / "static"
+_PLACEHOLDER_PNG = (
+    b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01"
+    b"\x08\x06\x00\x00\x00\x1f\x15\xc4\x89\x00\x00\x00\nIDATx\x9cc\x00\x01"
+    b"\x00\x00\x05\x00\x01\r\n-\xb4\x00\x00\x00\x00IEND\xaeB`\x82"
+)
+
+@app.get("/static/{file_path:path}")
+async def serve_static(file_path: str):
+    if not file_path or ".." in file_path:
+        raise HTTPException(status_code=403, detail="访问被拒绝")
+    full_path = _STATIC_DIR / file_path
+    try:
+        full_path.resolve().relative_to(_STATIC_DIR.resolve())
+    except (ValueError, OSError):
+        raise HTTPException(status_code=403, detail="访问被拒绝")
+    if full_path.is_file():
+        import mimetypes
+        media_type, _ = mimetypes.guess_type(str(full_path))
+        if not media_type:
+            media_type = "application/octet-stream"
+        return FileResponse(
+            path=str(full_path),
+            media_type=media_type,
+            headers={"Cache-Control": "public, max-age=86400"},
+        )
+    # 图片类请求返回占位图，避免前端 404
+    if file_path.lower().endswith((".png", ".jpg", ".jpeg", ".gif", ".webp", ".ico")):
+        return Response(
+            content=_PLACEHOLDER_PNG,
+            media_type="image/png",
+            headers={"Cache-Control": "public, max-age=3600"},
+        )
+    raise HTTPException(status_code=404, detail="文件不存在")
 
 # 使用 WebSocket 管理器进行连接池管理
 from app.websocket_manager import get_ws_manager

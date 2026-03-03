@@ -16,6 +16,7 @@ from app.cookie_manager import CookieManager
 from app.role_deps import get_current_customer_service_secure_sync
 from app.rate_limiting import rate_limit
 from app.role_management import UserRole
+from app.utils.time_utils import format_iso_utc
 
 logger = logging.getLogger(__name__)
 
@@ -284,8 +285,8 @@ async def get_cs_profile(
         "name": current_cs.name,
         "email": current_cs.email,
         "is_active": current_cs.is_active,
-        "created_at": current_cs.created_at,
-        "last_login": current_cs.last_login,
+        "created_at": format_iso_utc(current_cs.created_at) if current_cs.created_at else None,
+        "last_login": format_iso_utc(current_cs.last_login) if current_cs.last_login else None,
         "role": "customer_service"
     }
 

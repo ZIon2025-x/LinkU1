@@ -7626,8 +7626,8 @@ def admin_get_customer_service_requests(
             "status": request.status,
             "admin_response": request.admin_response,
             "admin_id": request.admin_id,
-            "created_at": request.created_at,
-            "updated_at": request.updated_at,
+            "created_at": format_iso_utc(request.created_at) if request.created_at else None,
+            "updated_at": format_iso_utc(request.updated_at) if request.updated_at else None,
         }
         result.append(request_dict)
 
@@ -7652,7 +7652,19 @@ def admin_get_customer_service_request_detail(
     )
 
     return {
-        "request": request,
+        "request": {
+            "id": request.id,
+            "requester_id": request.requester_id,
+            "type": request.type,
+            "title": request.title,
+            "description": request.description,
+            "priority": request.priority,
+            "status": request.status,
+            "admin_response": request.admin_response,
+            "admin_id": request.admin_id,
+            "created_at": format_iso_utc(request.created_at) if request.created_at else None,
+            "updated_at": format_iso_utc(request.updated_at) if request.updated_at else None,
+        },
         "customer_service": {
             "id": customer_service.id if customer_service else None,
             "name": customer_service.name if customer_service else "未知客服",
@@ -7690,7 +7702,22 @@ def admin_update_customer_service_request(
     db.commit()
     db.refresh(request)
 
-    return {"message": "Request updated successfully", "request": request}
+    return {
+        "message": "Request updated successfully",
+        "request": {
+            "id": request.id,
+            "requester_id": request.requester_id,
+            "type": request.type,
+            "title": request.title,
+            "description": request.description,
+            "priority": request.priority,
+            "status": request.status,
+            "admin_response": request.admin_response,
+            "admin_id": request.admin_id,
+            "created_at": format_iso_utc(request.created_at) if request.created_at else None,
+            "updated_at": format_iso_utc(request.updated_at) if request.updated_at else None,
+        },
+    }
 
 
 @router.get("/admin/customer-service-chat")
@@ -7749,7 +7776,16 @@ def admin_send_customer_service_chat_message(
     db.commit()
     db.refresh(chat_message)
 
-    return {"message": "Message sent successfully", "chat_message": chat_message}
+    return {
+        "message": "Message sent successfully",
+        "chat_message": {
+            "id": chat_message.id,
+            "sender_id": chat_message.sender_id,
+            "sender_type": chat_message.sender_type,
+            "content": chat_message.content,
+            "created_at": format_iso_utc(chat_message.created_at) if chat_message.created_at else None,
+        },
+    }
 
 
 # 已迁移到 admin_payment_routes.py: /admin/payments
@@ -8975,8 +9011,8 @@ def cs_get_cancel_requests(
             "admin_id": req.admin_id,  # 管理员ID（格式：A0001）
             "service_id": req.service_id,  # 客服ID（格式：CS8888）
             "admin_comment": req.admin_comment,
-            "created_at": req.created_at,
-            "reviewed_at": req.reviewed_at,
+            "created_at": format_iso_utc(req.created_at) if req.created_at else None,
+            "reviewed_at": format_iso_utc(req.reviewed_at) if req.reviewed_at else None,
             "task": {
                 "id": task.id if task else None,
                 "title": task.title if task else "任务已删除",
@@ -9117,7 +9153,21 @@ def cs_review_cancel_request(
                 logger.warning(f"发送取消请求拒绝推送通知失败: {e}")
                 # 推送通知失败不影响主流程
 
-    return {"message": f"Cancel request {review.status}", "request": updated_request}
+    return {
+        "message": f"Cancel request {review.status}",
+        "request": {
+            "id": updated_request.id,
+            "task_id": updated_request.task_id,
+            "requester_id": updated_request.requester_id,
+            "reason": updated_request.reason,
+            "status": updated_request.status,
+            "admin_id": updated_request.admin_id,
+            "service_id": updated_request.service_id,
+            "admin_comment": updated_request.admin_comment,
+            "created_at": format_iso_utc(updated_request.created_at) if updated_request.created_at else None,
+            "reviewed_at": format_iso_utc(updated_request.reviewed_at) if updated_request.reviewed_at else None,
+        },
+    }
 
 
 # 管理请求相关API
