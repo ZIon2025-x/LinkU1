@@ -2240,11 +2240,13 @@ async def taker_counter_offer(
 ):
     """
     指定任务的接单方提交反报价。
-    仅适用于 task_source='user_profile'、status='pending_acceptance' 的任务。
+    仅适用于 status='pending_acceptance' 的任务。
     """
     try:
-        # 1. 查询任务
-        result = await db.execute(select(models.Task).where(models.Task.id == task_id))
+        # 1. 查询任务（加行锁防止并发冲突）
+        result = await db.execute(
+            select(models.Task).where(models.Task.id == task_id).with_for_update()
+        )
         task = result.scalar_one_or_none()
 
         # 2. 404 如果任务不存在
@@ -2258,11 +2260,16 @@ async def taker_counter_offer(
                 detail="只有 pending_acceptance 状态的任务才能接受反报价"
             )
 
-        # 4. 403 如果是发布方
+        # 4. 403 如果是发布方，或非指定接单方
         if task.poster_id == current_user.id:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="任务发布方不能提交反报价"
+            )
+        if task.taker_id and task.taker_id != current_user.id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="只有指定接单方才能提交反报价"
             )
 
         # 5. 400 如果已有 pending 反报价
@@ -2278,10 +2285,7 @@ async def taker_counter_offer(
         task.counter_offer_status = "pending"
         task.counter_offer_user_id = current_user.id
 
-        # 7. 提交事务
-        await db.commit()
-
-        # 8. 通知发布方
+        # 7. 构建通知对象并与任务更新一并提交（保证原子性）
         current_time = get_utc_time()
         content = f"接单方对任务「{task.title}」提交了反报价：£{request.price:.2f}"
         content_en = f"The taker submitted a counter offer for task「{task.title}」: £{request.price:.2f}"
