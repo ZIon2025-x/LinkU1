@@ -449,6 +449,44 @@ const About: React.FC = () => {
         </div>
       </div>
 
+      {/* 发展历程入口 */}
+      <div style={{
+        textAlign: 'center',
+        padding: '64px 24px',
+        background: 'linear-gradient(135deg, #f8faff 0%, #f0f4ff 100%)',
+      }}>
+        <Title level={2} style={{ marginBottom: '12px' }}>{t('about.milestonesSection.title')}</Title>
+        <Paragraph style={{ color: 'rgba(0,0,0,0.55)', fontSize: '16px', marginBottom: '32px', maxWidth: 500, margin: '0 auto 32px' }}>
+          {t('about.milestonesSection.subtitle')}
+        </Paragraph>
+        <Button
+          type="primary"
+          size="large"
+          onClick={() => navigate('/milestones')}
+          style={{
+            height: '48px',
+            padding: '0 32px',
+            fontSize: '16px',
+            fontWeight: '600',
+            background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)',
+            border: 'none',
+            borderRadius: '24px',
+            boxShadow: '0 4px 12px rgba(59, 130, 246, 0.4)',
+            transition: 'all 0.3s ease'
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.transform = 'translateY(-2px)';
+            e.currentTarget.style.boxShadow = '0 6px 16px rgba(59, 130, 246, 0.5)';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.transform = 'translateY(0)';
+            e.currentTarget.style.boxShadow = '0 4px 12px rgba(59, 130, 246, 0.4)';
+          }}
+        >
+          {t('about.milestonesSection.button')}
+        </Button>
+      </div>
+
       {/* 页脚 */}
       <Footer />
       

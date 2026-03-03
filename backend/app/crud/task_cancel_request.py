@@ -8,12 +8,16 @@ from app.utils.time_utils import get_utc_time
 
 
 def delete_user_task(db: Session, task_id: int, user_id: str):
-    """用户删除自己的已取消任务。仅发布者可删，且任务须为 cancelled。"""
+    """用户删除自己的已取消任务。仅发布者可删，且任务须为 cancelled。成功返回 dict，失败返回错误原因字符串。"""
     from app.models import Task
 
     task = db.query(Task).filter(Task.id == task_id).first()
-    if not task or task.poster_id != user_id or task.status != "cancelled":
-        return None
+    if not task:
+        return "task_not_found"
+    if task.poster_id != user_id:
+        return "not_task_poster"
+    if task.status != "cancelled":
+        return "task_not_cancelled"
 
     try:
         add_task_history(
@@ -33,7 +37,7 @@ def delete_user_task(db: Session, task_id: int, user_id: str):
         )
         if delete_task_safely(db, task.id):
             return {"message": "Task deleted successfully"}
-        return None
+        return "delete_failed"
     except Exception as e:
         db.rollback()
         raise

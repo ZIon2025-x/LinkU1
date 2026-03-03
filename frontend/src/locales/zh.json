@@ -464,6 +464,11 @@
         }
       }
     },
+    "milestonesSection": {
+      "title": "我们的历程",
+      "subtitle": "从创立到今天，了解塑造 Link²Ur 的关键时刻。",
+      "button": "查看发展历程"
+    },
     "contact": "联系我们",
     "contactText": "有问题或建议？我们很乐意听到您的意见！",
     "email": "邮箱",
@@ -488,6 +493,7 @@
     "loginWithLink2ur": "Link²Ur 登录接入",
     "taskExperts": "任务达人",
     "merchantCooperation": "商户合作",
+    "milestones": "发展历程",
     "contactUs": "联系我们",
     "questionsOrSuggestions": "问题或建议？发送邮件至",
     "businessCooperation": "商务合作，发送邮件至",
@@ -1714,6 +1720,7 @@
     "forum": "论坛",
     "joinUs": "加入我们",
     "about": "关于",
+    "milestones": "发展历程",
     "myApplications": "我的申请",
     "myMessages": "我的消息",
     "myNotifications": "我的通知",

@@ -359,7 +359,7 @@ def get_task(db: Session, task_id: int):
 
 
 def accept_task(db: Session, task_id: int, taker_id: str):
-    """接受任务（带并发控制，SELECT FOR UPDATE）"""
+    """接受任务（带并发控制，SELECT FOR UPDATE）。成功返回 Task 对象，失败返回错误原因字符串。"""
     from datetime import timezone as tz
 
     from app.models import Task, User
@@ -371,24 +371,24 @@ def accept_task(db: Session, task_id: int, taker_id: str):
         task = db.execute(task_query).scalar_one_or_none()
         if not task:
             logger.warning(f"任务 {task_id} 不存在")
-            return None
+            return "task_not_found"
         taker = db.query(User).filter(User.id == taker_id).first()
         if not taker:
             logger.warning(f"用户 {taker_id} 不存在")
-            return None
+            return "user_not_found"
 
         if task.status == "pending_acceptance":
             if task.taker_id != taker_id:
                 logger.warning(
                     f"任务 {task_id} 指定给 {task.taker_id}，但 {taker_id} 尝试接受"
                 )
-                return None
+                return "not_designated_taker"
         elif task.status != "open":
             logger.warning(f"任务 {task_id} 状态为 {task.status}，不是 open")
-            return None
+            return "task_not_open"
         elif task.taker_id is not None:
             logger.warning(f"任务 {task_id} 已被用户 {task.taker_id} 接受")
-            return None
+            return "task_already_taken"
 
         if task.deadline:
             current_time = _get_utc()
@@ -401,7 +401,7 @@ def accept_task(db: Session, task_id: int, taker_id: str):
                 logger.warning(
                     f"任务 {task_id} 已过期: deadline={deadline_utc}, now={current_time}"
                 )
-                return None
+                return "task_deadline_passed"
 
         is_designated_accept = task.status == "pending_acceptance"
         task.taker_id = str(taker_id)
@@ -426,26 +426,27 @@ def accept_task(db: Session, task_id: int, taker_id: str):
                 if getattr(task, "reward_to_be_quoted", False):
                     task.reward_to_be_quoted = False
         if not safe_commit(db, f"接受任务 {task_id}"):
-            return None
+            return "commit_failed"
         db.refresh(task)
         logger.info(f"成功接受任务 {task_id}，接收者: {taker_id}")
         return task
     except Exception as e:
         logger.error(f"接受任务 {task_id} 失败: {e}", exc_info=True)
         db.rollback()
-        return None
+        return "internal_error"
 
 
 def update_task_reward(db: Session, task_id: int, poster_id: int, new_reward: float):
+    """更新任务价格。成功返回 Task 对象，失败返回错误原因字符串。"""
     from app.models import Task
 
-    task = (
-        db.query(Task)
-        .filter(Task.id == task_id, Task.poster_id == poster_id)
-        .first()
-    )
-    if not task or task.status != "open":
-        return None
+    task = db.query(Task).filter(Task.id == task_id).first()
+    if not task:
+        return "task_not_found"
+    if task.poster_id != poster_id:
+        return "not_task_poster"
+    if task.status != "open":
+        return "task_not_open"
     task.reward = new_reward
     task.base_reward = Decimal(str(new_reward))
     # 发布者后续填写金额后，不再视为待报价
@@ -490,7 +491,7 @@ def cancel_task(
     locked_query = select(Task).where(Task.id == task_id).with_for_update()
     task = db.execute(locked_query).scalar_one_or_none()
     if not task:
-        return None
+        return "task_not_found"
 
     if not is_admin_review:
         if task.status == "pending_acceptance" and task.taker_id == user_id:
@@ -501,10 +502,10 @@ def cancel_task(
         ):
             pass
         else:
-            return None
+            return "cancel_not_permitted"
     else:
         if task.poster_id != user_id and task.taker_id != user_id:
-            return None
+            return "not_participant"
 
     task.status = "cancelled"
 

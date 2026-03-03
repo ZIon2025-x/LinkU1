@@ -1215,7 +1215,7 @@ export const getFaq = async (lang: 'zh' | 'en' = 'en'): Promise<FaqListResponse>
 };
 
 /** 法律文档库：按 type+lang 获取隐私政策/用户协议/Cookie 政策（用于 Web / iOS） */
-export type LegalDocumentType = 'privacy' | 'terms' | 'cookie';
+export type LegalDocumentType = 'privacy' | 'terms' | 'cookie' | 'community_guidelines';
 export interface LegalDocumentOut {
   type: LegalDocumentType;
   lang: string;

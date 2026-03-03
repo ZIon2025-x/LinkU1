@@ -73,6 +73,7 @@ const Wallet = lazyWithRetry(() => import('./pages/Wallet'));
 const Coupons = lazyWithRetry(() => import('./pages/Coupons'));
 const Settings = lazyWithRetry(() => import('./pages/Settings'));
 const About = lazyWithRetry(() => import('./pages/About'));
+const Milestones = lazyWithRetry(() => import('./pages/Milestones'));
 const JoinUs = lazyWithRetry(() => import('./pages/JoinUs'));
 const TermsOfService = lazyWithRetry(() => import('./pages/TermsOfService'));
 const FAQ = lazyWithRetry(() => import('./pages/FAQ'));
@@ -206,6 +207,7 @@ const LanguageRoutes: React.FC = () => {
           <Route path={`/${lang}/leaderboard/custom/:leaderboardId`} element={<CustomLeaderboardDetail />} />
           <Route path={`/${lang}/leaderboard/item/:itemId`} element={<LeaderboardItemDetail />} />
           <Route path={`/${lang}/about`} element={<About />} />
+          <Route path={`/${lang}/milestones`} element={<Milestones />} />
               <Route path={`/${lang}/faq`} element={<FAQ />} />
           <Route path={`/${lang}/join-us`} element={<JoinUs />} />
           <Route path={`/${lang}/terms`} element={<TermsOfService />} />
@@ -293,6 +295,7 @@ const LanguageRoutes: React.FC = () => {
       <Route path="/forum/*" element={<ParamRedirect basePath="/forum" />} />
       <Route path="/tasks" element={<Navigate to={`/${DEFAULT_LANGUAGE}/tasks`} replace />} />
       <Route path="/about" element={<Navigate to={`/${DEFAULT_LANGUAGE}/about`} replace />} />
+      <Route path="/milestones" element={<Navigate to={`/${DEFAULT_LANGUAGE}/milestones`} replace />} />
       <Route path="/faq" element={<Navigate to={`/${DEFAULT_LANGUAGE}/faq`} replace />} />
       <Route path="/join-us" element={<Navigate to={`/${DEFAULT_LANGUAGE}/join-us`} replace />} />
       <Route path="/language-test" element={<Navigate to={`/${DEFAULT_LANGUAGE}/language-test`} replace />} />

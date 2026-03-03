@@ -1815,9 +1815,23 @@ def accept_task(
         if deadline_utc < current_time:
             raise HTTPException(status_code=400, detail="Task deadline has passed")
 
-        updated_task = crud.accept_task(db, task_id, current_user.id)
-        if not updated_task:
-            raise HTTPException(status_code=400, detail="Failed to accept task")
+        result = crud.accept_task(db, task_id, current_user.id)
+        if isinstance(result, str):
+            error_messages = {
+                "task_not_found": "Task not found.",
+                "user_not_found": "User not found.",
+                "not_designated_taker": "This task is designated for another user.",
+                "task_not_open": "Task is not available for acceptance.",
+                "task_already_taken": "Task has already been taken by another user.",
+                "task_deadline_passed": "Task deadline has passed.",
+                "commit_failed": "Failed to save, please try again.",
+                "internal_error": "An internal error occurred, please try again.",
+            }
+            raise HTTPException(
+                status_code=400,
+                detail=error_messages.get(result, result),
+            )
+        updated_task = result
 
         # ⚠️ 清除任务缓存，确保前端立即看到更新后的状态
         try:
@@ -2036,13 +2050,18 @@ def update_task_reward(
     db: Session = Depends(get_db),
 ):
     """更新任务价格（仅任务发布者可见）"""
-    task = crud.update_task_reward(db, task_id, current_user.id, task_update.reward)
-    if not task:
+    result = crud.update_task_reward(db, task_id, current_user.id, task_update.reward)
+    if isinstance(result, str):
+        error_messages = {
+            "task_not_found": "Task not found.",
+            "not_task_poster": "You don't have permission to update this task.",
+            "task_not_open": "Task can only be updated while in open status.",
+        }
         raise HTTPException(
             status_code=400,
-            detail="Task not found or you don't have permission to update it",
+            detail=error_messages.get(result, result),
         )
-    return task
+    return result
 
 
 class VisibilityUpdate(BaseModel):
@@ -2086,12 +2105,18 @@ def create_review(
     if False:  # 普通用户不再有客服权限
         raise HTTPException(status_code=403, detail="客服账号不能创建评价")
 
-    db_review = crud.create_review(db, current_user.id, task_id, review)
-    if not db_review:
+    result = crud.create_review(db, current_user.id, task_id, review)
+    if isinstance(result, str):
+        error_messages = {
+            "task_not_completed": "Task is not completed yet.",
+            "not_participant": "You are not a participant of this task.",
+            "already_reviewed": "You have already reviewed this task.",
+        }
         raise HTTPException(
             status_code=400,
-            detail="Cannot create review. Task may not be completed, you may not be a participant, or you may have already reviewed this task.",
+            detail=error_messages.get(result, result),
         )
+    db_review = result
     
     # 清除评价列表缓存，确保新评价立即显示
     try:
@@ -4392,9 +4417,18 @@ def cancel_task(
 
     # 如果任务状态是 'open'，直接取消
     if task.status == "open":
-        cancelled_task = crud.cancel_task(db, task_id, current_user.id)
-        if not cancelled_task:
-            raise HTTPException(status_code=400, detail="Task cannot be cancelled")
+        cancel_result = crud.cancel_task(db, task_id, current_user.id)
+        if isinstance(cancel_result, str):
+            error_messages = {
+                "task_not_found": "Task not found.",
+                "cancel_not_permitted": "You don't have permission to cancel this task.",
+                "not_participant": "Only task participants can cancel.",
+            }
+            raise HTTPException(
+                status_code=400,
+                detail=error_messages.get(cancel_result, cancel_result),
+            )
+        cancelled_task = cancel_result
         
         # ⚠️ 清除任务缓存，确保前端立即看到更新后的状态
         try:
@@ -4465,8 +4499,17 @@ def delete_cancelled_task(
 
     # 使用新的安全删除函数
     result = crud.delete_user_task(db, task_id, current_user.id)
-    if not result:
-        raise HTTPException(status_code=500, detail="Failed to delete task")
+    if isinstance(result, str):
+        error_messages = {
+            "task_not_found": "Task not found.",
+            "not_task_poster": "Only the task poster can delete this task.",
+            "task_not_cancelled": "Only cancelled tasks can be deleted.",
+            "delete_failed": "Failed to delete task, please try again.",
+        }
+        raise HTTPException(
+            status_code=400,
+            detail=error_messages.get(result, result),
+        )
 
     return result
 

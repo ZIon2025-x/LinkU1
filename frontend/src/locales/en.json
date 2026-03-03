@@ -469,6 +469,11 @@
         }
       }
     },
+    "milestonesSection": {
+      "title": "Our Journey",
+      "subtitle": "From founding to today, see the key moments that shaped Link²Ur.",
+      "button": "View Our Milestones"
+    },
     "contact": "Contact Us",
     "contactText": "Have questions or suggestions? We'd love to hear from you!",
     "email": "Email",
@@ -493,6 +498,7 @@
     "loginWithLink2ur": "Login with Link²Ur",
     "taskExperts": "Task Experts",
     "merchantCooperation": "Merchant Cooperation",
+    "milestones": "Our Journey",
     "contactUs": "Contact Us",
     "questionsOrSuggestions": "Questions or suggestions? Send email to",
     "businessCooperation": "Business cooperation, send email to",
@@ -1769,6 +1775,7 @@
     "forum": "Forum",
     "joinUs": "Join Us",
     "about": "About",
+    "milestones": "Our Journey",
     "myApplications": "My Applications",
     "myMessages": "My Messages",
     "myNotifications": "My Notifications",

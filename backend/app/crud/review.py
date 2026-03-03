@@ -87,11 +87,12 @@ def calculate_user_avg_rating(db: Session, user_id: str):
 def create_review(
     db: Session, user_id: str, task_id: int, review: schemas.ReviewCreate
 ):
+    """创建评价。成功返回 Review 对象，失败返回错误原因字符串。"""
     from app.models import Review, Task
 
     task = db.query(Task).filter(Task.id == task_id).first()
     if not task or task.status != "completed":
-        return None
+        return "task_not_completed"
 
     is_participant = False
     if task.poster_id == user_id or task.taker_id == user_id:
@@ -114,7 +115,7 @@ def create_review(
             is_participant = True
 
     if not is_participant:
-        return None
+        return "not_participant"
 
     existing_review = (
         db.query(Review)
@@ -122,7 +123,7 @@ def create_review(
         .first()
     )
     if existing_review:
-        return None
+        return "already_reviewed"
 
     cleaned_comment = None
     if review.comment:
