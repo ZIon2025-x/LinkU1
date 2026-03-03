@@ -2119,10 +2119,10 @@ async def negotiate_application(
                     detail=f"货币不一致：申请使用 {application.currency}，任务使用 {task.currency}"
                 )
         
-        # 更新议价价格
-        from decimal import Decimal
-        application.negotiated_price = Decimal(str(request.negotiated_price))
-        
+        # ⚠️ 不在此处更新 application.negotiated_price
+        # 只有当申请者通过 respond_negotiation 接受议价后才写入
+        # 防止发布者提议后直接批准，绕过申请者同意
+
         # 生成一次性签名token
         import secrets
         import time
@@ -2150,21 +2150,23 @@ async def negotiate_application(
                 "action": "accept",
                 "application_id": application_id,
                 "task_id": task_id,
+                "proposed_price": str(request.negotiated_price),
                 "nonce": nonce_accept,
                 "exp": expires_at,
                 "expires_at": format_iso_utc(datetime.fromtimestamp(expires_at, tz=timezone.utc))
             }
-            
+
             token_data_reject = {
                 "user_id": application.applicant_id,
                 "action": "reject",
                 "application_id": application_id,
                 "task_id": task_id,
+                "proposed_price": str(request.negotiated_price),
                 "nonce": nonce_reject,
                 "exp": expires_at,
                 "expires_at": format_iso_utc(datetime.fromtimestamp(expires_at, tz=timezone.utc))
             }
-            
+
             # 存储到Redis，24小时过期
             redis_client.setex(
                 f"negotiation_token:{token_accept}",
@@ -2183,7 +2185,7 @@ async def negotiate_application(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
                 detail="服务暂时不可用"
             )
-        
+
         # 创建系统通知
         current_time = get_utc_time()
         
@@ -2837,11 +2839,18 @@ async def respond_negotiation(
             locked_task.status = "pending_payment"
             locked_task.is_paid = 0  # 明确标记为未支付
             locked_task.payment_expires_at = get_utc_time() + timedelta(hours=24)  # 支付过期时间（24小时）
-            
-            # 如果申请包含议价，更新 agreed_reward
-            if application.negotiated_price is not None:
+
+            # 从 token 数据中读取提议价格，写入 application.negotiated_price
+            # （negotiate_application 不再提前覆写，只有接受时才写入）
+            proposed_price = token_data.get("proposed_price")
+            if proposed_price is not None:
+                from decimal import Decimal
+                application.negotiated_price = Decimal(str(proposed_price))
                 locked_task.agreed_reward = application.negotiated_price
-            
+            elif application.negotiated_price is not None:
+                # 兼容：申请者在申请时自己提出的议价（非发布者提议）
+                locked_task.agreed_reward = application.negotiated_price
+
             # 计算任务金额
             task_amount = float(application.negotiated_price) if application.negotiated_price is not None else float(locked_task.base_reward) if locked_task.base_reward is not None else 0.0
             
@@ -3174,11 +3183,9 @@ async def send_application_message(
                 detail="申请不存在"
             )
         
-        # 如果包含议价，更新申请的negotiated_price
+        # ⚠️ 不在此处更新 application.negotiated_price
+        # 只有当申请者通过 respond_negotiation 接受议价后才写入
         if request.negotiated_price is not None:
-            from decimal import Decimal
-            application.negotiated_price = Decimal(str(request.negotiated_price))
-            
             # 校验货币一致性
             if application.currency and task.currency:
                 if application.currency != task.currency:
@@ -3216,21 +3223,23 @@ async def send_application_message(
                     "action": "accept",
                     "application_id": application_id,
                     "task_id": task_id,
+                    "proposed_price": str(request.negotiated_price),
                     "nonce": nonce_accept,
                     "exp": expires_at,
                     "expires_at": format_iso_utc(datetime.fromtimestamp(expires_at, tz=timezone.utc))
                 }
-                
+
                 token_data_reject = {
                     "user_id": application.applicant_id,
                     "action": "reject",
                     "application_id": application_id,
                     "task_id": task_id,
+                    "proposed_price": str(request.negotiated_price),
                     "nonce": nonce_reject,
                     "exp": expires_at,
                     "expires_at": format_iso_utc(datetime.fromtimestamp(expires_at, tz=timezone.utc))
                 }
-                
+
                 redis_client.setex(
                     f"negotiation_token:{token_accept}",
                     86400,
@@ -3248,7 +3257,7 @@ async def send_application_message(
                     status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
                     detail="服务暂时不可用"
                 )
-        
+
         # 创建或更新系统通知
         current_time = get_utc_time()
         
