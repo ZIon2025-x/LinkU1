@@ -376,11 +376,11 @@ const CustomerService: React.FC = () => {
     [sessions]
   );
   const pendingCancelCount = useMemo(
-    () => pendingCancelCount,
+    () => cancelRequests.filter(req => req.status === 'pending').length,
     [cancelRequests]
   );
   const pendingAdminCount = useMemo(
-    () => pendingAdminCount,
+    () => adminRequests.filter(req => req.status === 'pending').length,
     [adminRequests]
   );
 
