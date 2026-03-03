@@ -3928,6 +3928,7 @@
   "actionCompletionConfirmed": "已确认完成",
   "actionConfirmFailed": "确认失败",
   "actionTaskCancelled": "任务已取消",
+  "actionCancelRequestSubmitted": "取消申请已提交，等待审核",
   "actionReviewSubmitted": "评价已提交",
   "actionReviewFailed": "评价失败",
   "actionRefundSubmitted": "退款申请已提交",

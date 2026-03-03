@@ -495,7 +495,8 @@ class TaskRepository {
   }
 
   /// 取消任务
-  Future<void> cancelTask(int taskId, {String? reason}) async {
+  /// Returns true if task was directly cancelled, false if cancel request was submitted for review
+  Future<bool> cancelTask(int taskId, {String? reason}) async {
     final response = await _apiService.post(
       ApiEndpoints.cancelTask(taskId),
       data: {
@@ -509,6 +510,13 @@ class TaskRepository {
 
     await _cache.invalidateTaskDetailCache(taskId);
     await _cache.invalidateAllTasksCache();
+
+    // Backend returns {message, request_id} for review requests
+    final data = response.data;
+    if (data is Map && data.containsKey('request_id')) {
+      return false; // Review request submitted
+    }
+    return true; // Directly cancelled
   }
 
   /// 删除任务

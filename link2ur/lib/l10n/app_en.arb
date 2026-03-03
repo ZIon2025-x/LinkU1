@@ -4010,6 +4010,7 @@
   "actionCompletionConfirmed": "Completion confirmed",
   "actionConfirmFailed": "Confirm failed",
   "actionTaskCancelled": "Task cancelled",
+  "actionCancelRequestSubmitted": "Cancel request submitted, awaiting review",
   "actionReviewSubmitted": "Review submitted",
   "actionReviewFailed": "Review failed",
   "actionRefundSubmitted": "Refund request submitted",

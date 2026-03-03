@@ -160,6 +160,7 @@ class _TaskDetailContent extends StatelessWidget {
             'completion_confirmed' => l10n.actionCompletionConfirmed,
             'confirm_failed' => l10n.actionConfirmFailed,
             'task_cancelled' => l10n.actionTaskCancelled,
+            'cancel_request_submitted' => l10n.actionCancelRequestSubmitted,
             'review_submitted' => l10n.actionReviewSubmitted,
             'review_failed' => l10n.actionReviewFailed,
             'refund_submitted' => l10n.actionRefundSubmitted,

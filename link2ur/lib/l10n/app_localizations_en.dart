@@ -8573,6 +8573,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get actionTaskCancelled => 'Task cancelled';
 
   @override
+  String get actionCancelRequestSubmitted =>
+      'Cancel request submitted, awaiting review';
+
+  @override
   String get actionReviewSubmitted => 'Review submitted';
 
   @override

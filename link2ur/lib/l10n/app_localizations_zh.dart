@@ -8242,6 +8242,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get actionTaskCancelled => '任务已取消';
 
   @override
+  String get actionCancelRequestSubmitted => '取消申请已提交，等待审核';
+
+  @override
   String get actionReviewSubmitted => '评价已提交';
 
   @override
@@ -17217,6 +17220,9 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get actionTaskCancelled => '任務已取消';
+
+  @override
+  String get actionCancelRequestSubmitted => '取消申請已提交，等待審核';
 
   @override
   String get actionReviewSubmitted => '評價已提交';

@@ -508,6 +508,43 @@ def cancel_task(
 
     task.status = "cancelled"
 
+    # Auto-refund for paid tasks cancelled via admin/CS review
+    # Full refund (including platform fee) — omit amount param to refund entire charge
+    if is_admin_review and getattr(task, 'is_paid', 0) == 1 and task.payment_intent_id:
+        try:
+            import stripe
+            import hashlib
+
+            if stripe.api_key:
+                charges = stripe.Charge.list(payment_intent=task.payment_intent_id, limit=1)
+                if charges.data:
+                    charge_id = charges.data[0].id
+                    idempotency_key = hashlib.sha256(
+                        f"cancel_refund_{task.id}_{charge_id}".encode()
+                    ).hexdigest()
+
+                    refund = stripe.Refund.create(
+                        charge=charge_id,
+                        reason="requested_by_customer",
+                        idempotency_key=idempotency_key,
+                        metadata={
+                            "task_id": str(task.id),
+                            "cancel_refund": "true",
+                            "poster_id": str(task.poster_id),
+                        }
+                    )
+                    task.is_paid = 0
+                    task.payment_intent_id = None
+                    task.escrow_amount = 0.0
+                    logger.info(f"Auto-refund on cancel: task={task.id}, refund={refund.id}, amount={refund.amount}p")
+                else:
+                    logger.warning(f"No charges found for PaymentIntent {task.payment_intent_id}, cannot refund")
+            else:
+                logger.warning(f"Stripe API key not configured, cannot auto-refund task {task.id}")
+        except Exception as e:
+            logger.error(f"Auto-refund failed for task {task.id}: {e}", exc_info=True)
+            # Do NOT block cancellation — admin can handle refund manually
+
     task_time_slot_relation = (
         db.query(TaskTimeSlotRelation)
         .filter(TaskTimeSlotRelation.task_id == task_id)

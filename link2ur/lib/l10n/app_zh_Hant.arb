@@ -3867,6 +3867,7 @@
   "actionCompletionConfirmed": "已確認完成",
   "actionConfirmFailed": "確認失敗",
   "actionTaskCancelled": "任務已取消",
+  "actionCancelRequestSubmitted": "取消申請已提交，等待審核",
   "actionReviewSubmitted": "評價已提交",
   "actionReviewFailed": "評價失敗",
   "actionRefundSubmitted": "退款申請已提交",

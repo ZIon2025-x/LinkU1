@@ -332,7 +332,7 @@ void main() {
           when(() => mockTaskRepository.cancelTask(
                 42,
                 reason: any(named: 'reason'),
-              )).thenAnswer((_) async {});
+              )).thenAnswer((_) async => true);
           when(() => mockTaskRepository.getTaskDetail(42))
               .thenAnswer((_) async => cancelledTask);
           return taskDetailBloc;
@@ -350,6 +350,32 @@ void main() {
               .having((s) => s.isSubmitting, 'isSubmitting', false)
               .having((s) => s.actionMessage, 'actionMessage', 'task_cancelled')
               .having((s) => s.task?.status, 'task.status', 'cancelled'),
+        ],
+      );
+
+      blocTest<TaskDetailBloc, TaskDetailState>(
+        'emits cancel_request_submitted when review is required',
+        build: () {
+          when(() => mockTaskRepository.cancelTask(
+                42,
+                reason: any(named: 'reason'),
+              )).thenAnswer((_) async => false);
+          when(() => mockTaskRepository.getTaskDetail(42))
+              .thenAnswer((_) async => testTask);
+          return taskDetailBloc;
+        },
+        seed: () => const TaskDetailState(
+          status: TaskDetailStatus.loaded,
+          task: testTask,
+        ),
+        act: (bloc) => bloc.add(const TaskDetailCancelRequested(
+          reason: 'Changed my mind',
+        )),
+        expect: () => [
+          isA<TaskDetailState>().having((s) => s.isSubmitting, 'isSubmitting', true),
+          isA<TaskDetailState>()
+              .having((s) => s.isSubmitting, 'isSubmitting', false)
+              .having((s) => s.actionMessage, 'actionMessage', 'cancel_request_submitted'),
         ],
       );
 

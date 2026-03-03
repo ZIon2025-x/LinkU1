@@ -15758,6 +15758,12 @@ abstract class AppLocalizations {
   /// **'Task cancelled'**
   String get actionTaskCancelled;
 
+  /// No description provided for @actionCancelRequestSubmitted.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel request submitted, awaiting review'**
+  String get actionCancelRequestSubmitted;
+
   /// No description provided for @actionReviewSubmitted.
   ///
   /// In en, this message translates to:

@@ -770,7 +770,7 @@ class TaskDetailBloc extends Bloc<TaskDetailEvent, TaskDetailState> {
     emit(state.copyWith(isSubmitting: true));
 
     try {
-      await _taskRepository.cancelTask(
+      final directlyCancelled = await _taskRepository.cancelTask(
         _taskId!,
         reason: event.reason,
       );
@@ -778,7 +778,7 @@ class TaskDetailBloc extends Bloc<TaskDetailEvent, TaskDetailState> {
       emit(state.copyWith(
         task: task,
         isSubmitting: false,
-        actionMessage: 'task_cancelled',
+        actionMessage: directlyCancelled ? 'task_cancelled' : 'cancel_request_submitted',
       ));
     } catch (e) {
       emit(state.copyWith(
