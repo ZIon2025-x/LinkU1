@@ -413,8 +413,8 @@ class TaskDetailBloc extends Bloc<TaskDetailEvent, TaskDetailState> {
     on<TaskDetailSubmitRebuttal>(_onSubmitRebuttal);
     on<TaskDetailSendApplicationMessage>(_onSendApplicationMessage);
     on<TaskDetailQuoteDesignatedPriceRequested>(_onQuoteDesignatedPrice, transformer: droppable());
-    on<TaskDetailSubmitCounterOfferRequested>(_onSubmitCounterOffer);
-    on<TaskDetailRespondCounterOfferRequested>(_onRespondCounterOffer);
+    on<TaskDetailSubmitCounterOfferRequested>(_onSubmitCounterOffer, transformer: droppable());
+    on<TaskDetailRespondCounterOfferRequested>(_onRespondCounterOffer, transformer: droppable());
     on<TaskDetailRespondNegotiationRequested>(_onRespondNegotiation, transformer: droppable());
   }
 
