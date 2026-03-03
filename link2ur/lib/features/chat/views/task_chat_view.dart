@@ -68,6 +68,12 @@ class _TaskChatContentState extends State<_TaskChatContent> {
   Future<Task?>? _taskFuture;
   bool _taskFutureInitialized = false;
 
+  /// 用于判断是否刚加载完成/刚发完/新消息到底，以便滚到底部
+  ChatStatus _prevStatus = ChatStatus.initial;
+  int _prevMessagesLength = 0;
+  bool _prevIsSending = false;
+  int? _prevLastMessageId;
+
   /// 字符限制 - 对齐iOS (500字符)
   static const int _maxCharacters = 500;
   static const int _showCounterThreshold = 400;
@@ -98,15 +104,24 @@ class _TaskChatContentState extends State<_TaskChatContent> {
     super.dispose();
   }
 
-  /// reverse 模式下，往上滚动（远离 0）= 查看历史消息
-  /// maxScrollExtent 方向是旧消息，接近 0 是最新消息
+  /// 列表为正序（旧在上、新在下），往上滑接近顶部时加载更早消息
   void _onScroll() {
     if (!mounted || !_scrollController.hasClients) return;
-
-    if (_scrollController.position.pixels >=
-        _scrollController.position.maxScrollExtent - 50) {
+    if (_scrollController.position.pixels <= 50) {
       context.read<ChatBloc>().add(const ChatLoadMore());
     }
+  }
+
+  void _scrollToBottom() {
+    if (!_scrollController.hasClients) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !_scrollController.hasClients) return;
+      _scrollController.animateTo(
+        _scrollController.position.maxScrollExtent,
+        duration: const Duration(milliseconds: 200),
+        curve: Curves.easeOut,
+      );
+    });
   }
 
   void _onTextChanged() {
@@ -133,7 +148,8 @@ class _TaskChatContentState extends State<_TaskChatContent> {
         );
     _messageController.clear();
     setState(() => _showActionMenu = false);
-    // reverse: true 模式下，新消息自动出现在底部（position 0），无需手动滚动
+    // 列表为正序（旧在上、新在下），发送后滚到底部
+    _scrollToBottom();
   }
 
 
@@ -193,15 +209,32 @@ class _TaskChatContentState extends State<_TaskChatContent> {
     return BlocConsumer<ChatBloc, ChatState>(
       listenWhen: (prev, curr) =>
           prev.status != curr.status ||
-          prev.errorMessage != curr.errorMessage,
+          prev.errorMessage != curr.errorMessage ||
+          prev.messages.length != curr.messages.length ||
+          prev.isSending != curr.isSending,
       listener: (context, state) {
-        // 加载更多失败时（列表非空）用 SnackBar 提示并清除 errorMessage
         if (state.errorMessage != null && state.messages.isNotEmpty) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text(context.localizeError(state.errorMessage))),
           );
           context.read<ChatBloc>().add(const ChatClearError());
         }
+        final justLoaded = _prevStatus != ChatStatus.loaded &&
+            state.status == ChatStatus.loaded &&
+            state.messages.isNotEmpty;
+        final justSent = _prevIsSending && !state.isSending;
+        final lastId = state.messages.isEmpty ? null : state.messages.last.id;
+        final newMessageAtEnd = state.messages.length > _prevMessagesLength &&
+            !state.isLoadingMore &&
+            lastId != null &&
+            lastId != _prevLastMessageId;
+        if (justLoaded || justSent || newMessageAtEnd) {
+          _scrollToBottom();
+        }
+        _prevStatus = state.status;
+        _prevMessagesLength = state.messages.length;
+        _prevIsSending = state.isSending;
+        _prevLastMessageId = lastId;
       },
       buildWhen: (prev, curr) =>
           prev.status != curr.status ||
@@ -467,26 +500,25 @@ class _TaskChatContentState extends State<_TaskChatContent> {
       );
     }
 
-    // 消息分组：state.messages 已是后端「最新在前」，groups[0]=最新
-    // reverse: true 时 index 0 在底部，故直接用 groups 即可：最新在底部，往上滑是更早的消息
+    // state.messages 为 旧→新，groups[0]=最旧、groups[last]=最新；不 reverse，旧在上、新在下
     final currentUserId = _currentUserId ?? StorageService.instance.getUserId();
     final groups = groupMessages(state.messages, currentUserId);
+    final showLoadMoreAtTop = state.isLoadingMore;
 
     return ListView.builder(
       controller: _scrollController,
-      reverse: true,
+      reverse: false,
       padding: const EdgeInsets.symmetric(vertical: 12),
       addAutomaticKeepAlives: false,
-      itemCount: groups.length + (state.isLoadingMore ? 1 : 0),
+      itemCount: (showLoadMoreAtTop ? 1 : 0) + groups.length,
       itemBuilder: (context, index) {
-        // 加载更多指示器（reverse 模式下 index 最大 = 视觉顶部）
-        if (state.isLoadingMore && index == groups.length) {
+        if (showLoadMoreAtTop && index == 0) {
           return const Padding(
             padding: EdgeInsets.all(8),
             child: Center(child: LoadingIndicator(size: 20)),
           );
         }
-        final group = groups[index];
+        final group = groups[showLoadMoreAtTop ? index - 1 : index];
         return MessageGroupBubbleView(
           group: group,
           onAvatarTap: () {
