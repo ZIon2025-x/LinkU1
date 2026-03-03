@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { message, Modal } from 'antd';
 import { API_BASE_URL, WS_BASE_URL, API_ENDPOINTS } from '../config';
@@ -32,12 +32,6 @@ import { TimeHandlerV2 } from '../utils/timeUtils';
 import LazyImage from '../components/LazyImage';
 import { formatImageUrl } from '../utils/imageUtils';
 import './CustomerService.css';
-
-// 时区检测和转换工具函数
-// 旧的时间处理函数已移除，现在使用 TimeHandlerV2 统一处理
-
-// 英国时间格式化工具函数（回退）
-// 旧的时间处理函数已移除，现在使用 TimeHandlerV2 统一处理
 
 // 英国日期格式化工具函数
 const formatUKDate = (dateString: string): string => {
@@ -138,6 +132,129 @@ interface UserSession {
   unread_count: number;  // 未读消息数量
 }
 
+// 客服回答模板 (moved outside component to avoid recreation on every render)
+const responseTemplates = [
+  {
+    id: 1,
+    category: '问候',
+    title: '欢迎语',
+    content: '👋 您好！欢迎使用 Link²Ur，我是 Link²Ur 的客服，很高兴为您服务。请问有什么可以帮助您的吗？'
+  },
+  {
+    id: 2,
+    category: '问候',
+    title: '感谢等待',
+    content: '🙏 感谢您的耐心等待，我已经收到您的消息，正在为您处理中。'
+  },
+  {
+    id: 3,
+    category: '问题处理',
+    title: '了解问题',
+    content: '👍 我理解您的问题了，让我为您详细解答一下。'
+  },
+  {
+    id: 4,
+    category: '问题处理',
+    title: '需要更多信息',
+    content: '📋 为了更好地帮助您，我需要了解一些详细信息。请问您能提供更多相关细节吗？'
+  },
+  {
+    id: 5,
+    category: '问题处理',
+    title: '转交处理',
+    content: '📝 您的问题我已经记录下来了，我会转交给相关部门处理，预计会在24小时内给您回复。'
+  },
+  {
+    id: 6,
+    category: '任务相关',
+    title: '任务状态查询',
+    content: '🔍 关于您询问的任务状态，我来为您查询一下，请稍等。'
+  },
+  {
+    id: 7,
+    category: '任务相关',
+    title: '任务取消说明',
+    content: '📋 关于任务取消的申请，我已经收到。根据平台规定，取消任务需要双方同意。我会尽快为您处理。'
+  },
+  {
+    id: 8,
+    category: '账户相关',
+    title: '账户问题',
+    content: '🔒 关于您的账户问题，我已经了解。为了确保账户安全，我需要验证一些信息。'
+  },
+  {
+    id: 9,
+    category: '账户相关',
+    title: '账户解封',
+    content: '✅ 关于账户解封的申请，我已经收到。我会尽快审核您的申请，审核结果会在3个工作日内通知您。'
+  },
+  {
+    id: 10,
+    category: '结束语',
+    title: '问题已解决',
+    content: '🎉 很高兴能帮助您解决问题。如果还有其他需要帮助的地方，请随时联系我们。祝您使用愉快！'
+  },
+  {
+    id: 11,
+    category: '结束语',
+    title: '稍后回复',
+    content: '⏳ 您的问题我已经记录，我会在稍后给您详细回复。感谢您的理解与支持！'
+  },
+  {
+    id: 15,
+    category: '结束语',
+    title: '继续帮助',
+    content: '😊 请问还有什么可以帮助您的呢？'
+  },
+  {
+    id: 12,
+    category: '其他',
+    title: '道歉',
+    content: '😔 非常抱歉给您带来了不便，我们会尽快处理您的问题。'
+  },
+  {
+    id: 13,
+    category: '其他',
+    title: '确认信息',
+    content: '✅ 为了确保信息准确，请您确认一下：{信息内容}。'
+  },
+  {
+    id: 14,
+    category: '其他',
+    title: '提供帮助',
+    content: '💪 如果您在使用过程中遇到任何问题，随时可以联系我，我会尽力为您提供帮助。'
+  }
+];
+
+// 按分类分组模板 (moved outside component)
+const templatesByCategory = responseTemplates.reduce((acc, template) => {
+  if (!acc[template.category]) {
+    acc[template.category] = [];
+  }
+  acc[template.category].push(template);
+  return acc;
+}, {} as Record<string, typeof responseTemplates>);
+
+// 解析任务卡片消息的辅助函数
+const parseTaskCardMessage = (msg: any): { isTaskCard: boolean; taskId?: number } => {
+  const isTaskCard = msg.message_type === 'task_card' ||
+                    (msg.content && msg.content.startsWith('[TASK_CARD:') && msg.content.endsWith(']'));
+  let taskId: number | undefined;
+
+  if (isTaskCard) {
+    if (msg.task_id) {
+      taskId = msg.task_id;
+    } else if (msg.content && msg.content.startsWith('[TASK_CARD:')) {
+      const match = msg.content.match(/\[TASK_CARD:(\d+)\]/);
+      if (match) {
+        taskId = parseInt(match[1], 10);
+      }
+    }
+  }
+
+  return { isTaskCard, taskId };
+};
+
 const CustomerService: React.FC = () => {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -152,7 +269,7 @@ const CustomerService: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [timezoneInfo, setTimezoneInfo] = useState<any>(null);
   const [userTimezone, setUserTimezone] = useState<string>('');
-  
+
   // 后台管理请求相关状态
   const [adminRequests, setAdminRequests] = useState<any[]>([]);
   const [selectedRequestType, setSelectedRequestType] = useState('');
@@ -166,11 +283,11 @@ const CustomerService: React.FC = () => {
   // 移除回复相关状态
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState('all');
-  
+
   // 任务搜索相关状态
   const [taskSearchTerm, setTaskSearchTerm] = useState('');
   const [filteredTasks, setFilteredTasks] = useState<Task[]>([]);
-  
+
   // 提醒相关状态
   const [showNotificationModal, setShowNotificationModal] = useState(false);
   const notificationBellRef = useRef<NotificationBellRef>(null);
@@ -190,36 +307,33 @@ const CustomerService: React.FC = () => {
   const [inputMessage, setInputMessage] = useState('');
   const [ws, setWs] = useState<WebSocket | null>(null);
   const [wsConnectionStatus, setWsConnectionStatus] = useState<'connecting' | 'connected' | 'disconnected' | 'error'>('disconnected');
-  
+
   // WebSocket连接测试函数
   const testWebSocketConnection = () => {
     // 客服使用Cookie认证，无需检查token
     const testUrl = `${WS_BASE_URL}/ws/chat/${currentUser?.id}`;
-    
+
     const testSocket = new WebSocket(testUrl);
-    
+
     testSocket.onopen = () => {
       message.success('WebSocket连接测试成功！');
       testSocket.close();
     };
-    
+
     testSocket.onerror = (error) => {
       message.error('WebSocket连接测试失败，请检查网络设置');
     };
-    
+
     testSocket.onclose = (event) => {
       // 测试连接关闭
     };
   };
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  
+
   // 新用户连接弹窗状态
   const [showNewUserNotification, setShowNewUserNotification] = useState(false);
   const [newUserInfo, setNewUserInfo] = useState<{name: string, id: string} | null>(null);
-  
-  // 客服通知WebSocket连接
-  const [notificationWs, setNotificationWs] = useState<WebSocket | null>(null);
-  
+
   // 超时相关状态
   const [chatTimeoutStatus, setChatTimeoutStatus] = useState<{
     is_ended: boolean;
@@ -228,121 +342,15 @@ const CustomerService: React.FC = () => {
     time_since_last_message?: number;
   } | null>(null);
   const [timeoutCheckInterval, setTimeoutCheckInterval] = useState<ReturnType<typeof setInterval> | null>(null);
-  
+
   // 模板相关状态
   const [showTemplateModal, setShowTemplateModal] = useState(false);
-  
+
   // 任务卡片相关状态
   const [selectedTaskId, setSelectedTaskId] = useState<number | null>(null);
   const [selectedTask, setSelectedTask] = useState<any>(null);
   const [showTaskDetailModal, setShowTaskDetailModal] = useState(false);
   const [loadingTaskDetail, setLoadingTaskDetail] = useState(false);
-  
-  // 计算总的未读消息数量
-  const totalUnreadCount = sessions.reduce((total, session) => total + session.unread_count, 0);
-  
-  // 客服回答模板
-  const responseTemplates = [
-    {
-      id: 1,
-      category: '问候',
-      title: '欢迎语',
-      content: '👋 您好！欢迎使用 Link²Ur，我是 Link²Ur 的客服，很高兴为您服务。请问有什么可以帮助您的吗？'
-    },
-    {
-      id: 2,
-      category: '问候',
-      title: '感谢等待',
-      content: '🙏 感谢您的耐心等待，我已经收到您的消息，正在为您处理中。'
-    },
-    {
-      id: 3,
-      category: '问题处理',
-      title: '了解问题',
-      content: '👍 我理解您的问题了，让我为您详细解答一下。'
-    },
-    {
-      id: 4,
-      category: '问题处理',
-      title: '需要更多信息',
-      content: '📋 为了更好地帮助您，我需要了解一些详细信息。请问您能提供更多相关细节吗？'
-    },
-    {
-      id: 5,
-      category: '问题处理',
-      title: '转交处理',
-      content: '📝 您的问题我已经记录下来了，我会转交给相关部门处理，预计会在24小时内给您回复。'
-    },
-    {
-      id: 6,
-      category: '任务相关',
-      title: '任务状态查询',
-      content: '🔍 关于您询问的任务状态，我来为您查询一下，请稍等。'
-    },
-    {
-      id: 7,
-      category: '任务相关',
-      title: '任务取消说明',
-      content: '📋 关于任务取消的申请，我已经收到。根据平台规定，取消任务需要双方同意。我会尽快为您处理。'
-    },
-    {
-      id: 8,
-      category: '账户相关',
-      title: '账户问题',
-      content: '🔒 关于您的账户问题，我已经了解。为了确保账户安全，我需要验证一些信息。'
-    },
-    {
-      id: 9,
-      category: '账户相关',
-      title: '账户解封',
-      content: '✅ 关于账户解封的申请，我已经收到。我会尽快审核您的申请，审核结果会在3个工作日内通知您。'
-    },
-    {
-      id: 10,
-      category: '结束语',
-      title: '问题已解决',
-      content: '🎉 很高兴能帮助您解决问题。如果还有其他需要帮助的地方，请随时联系我们。祝您使用愉快！'
-    },
-    {
-      id: 11,
-      category: '结束语',
-      title: '稍后回复',
-      content: '⏳ 您的问题我已经记录，我会在稍后给您详细回复。感谢您的理解与支持！'
-    },
-    {
-      id: 15,
-      category: '结束语',
-      title: '继续帮助',
-      content: '😊 请问还有什么可以帮助您的呢？'
-    },
-    {
-      id: 12,
-      category: '其他',
-      title: '道歉',
-      content: '😔 非常抱歉给您带来了不便，我们会尽快处理您的问题。'
-    },
-    {
-      id: 13,
-      category: '其他',
-      title: '确认信息',
-      content: '✅ 为了确保信息准确，请您确认一下：{信息内容}。'
-    },
-    {
-      id: 14,
-      category: '其他',
-      title: '提供帮助',
-      content: '💪 如果您在使用过程中遇到任何问题，随时可以联系我，我会尽力为您提供帮助。'
-    }
-  ];
-  
-  // 按分类分组模板
-  const templatesByCategory = responseTemplates.reduce((acc, template) => {
-    if (!acc[template.category]) {
-      acc[template.category] = [];
-    }
-    acc[template.category].push(template);
-    return acc;
-  }, {} as Record<string, typeof responseTemplates>);
 
   // 统计数据
   const [stats, setStats] = useState({
@@ -353,6 +361,28 @@ const CustomerService: React.FC = () => {
     totalRevenue: 0,
     avgRating: 0
   });
+
+  // Memoized derived state
+  const totalUnreadCount = useMemo(
+    () => sessions.reduce((total, session) => total + session.unread_count, 0),
+    [sessions]
+  );
+  const activeSessions = useMemo(
+    () => sessions.filter(s => s.is_ended === 0),
+    [sessions]
+  );
+  const endedSessions = useMemo(
+    () => sessions.filter(s => s.is_ended === 1),
+    [sessions]
+  );
+  const pendingCancelCount = useMemo(
+    () => pendingCancelCount,
+    [cancelRequests]
+  );
+  const pendingAdminCount = useMemo(
+    () => pendingAdminCount,
+    [adminRequests]
+  );
 
   useEffect(() => {
     checkAdminStatus();
@@ -411,28 +441,6 @@ const CustomerService: React.FC = () => {
     }
   };
 
-  const calculateStats = (usersData: User[], tasksData: Task[]) => {
-    const totalUsers = usersData.length;
-    const totalTasks = tasksData.length;
-    const activeTasks = tasksData.filter(task => task.status === 'open' || task.status === 'taken').length;
-    const completedTasks = tasksData.filter(task => task.status === 'completed').length;
-    const totalRevenue = tasksData
-      .filter(task => task.status === 'completed')
-      .reduce((sum, task) => sum + task.reward, 0);
-    const avgRating = usersData.length > 0 
-      ? usersData.reduce((sum, user) => sum + user.avg_rating, 0) / usersData.length 
-      : 0;
-
-    setStats({
-      totalUsers,
-      totalTasks,
-      activeTasks,
-      completedTasks,
-      totalRevenue,
-      avgRating
-    });
-  };
-
   const sendAnnouncement = async () => {
     if (!announcement.trim()) {
       message.warning('请输入公告内容');
@@ -469,14 +477,8 @@ const CustomerService: React.FC = () => {
         ws.close();
         setWs(null);
       }
-      
-      // 5. 关闭通知WebSocket连接
-      if (notificationWs) {
-        notificationWs.close();
-        setNotificationWs(null);
-      }
-      
-      // 6. 清理超时检查
+
+      // 5. 清理超时检查
       if (timeoutCheckInterval) {
         clearInterval(timeoutCheckInterval);
         setTimeoutCheckInterval(null);
@@ -558,18 +560,18 @@ const CustomerService: React.FC = () => {
   };
 
 
-  const filteredUsers = users.filter(user => {
+  const filteredUsers = useMemo(() => users.filter(user => {
     const matchesSearch = user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          user.email.toLowerCase().includes(searchTerm.toLowerCase());
-    
+
     if (filterType === 'all') return matchesSearch;
     if (filterType === 'banned') return matchesSearch && user.is_banned === 1;
     if (filterType === 'suspended') return matchesSearch && user.is_suspended === 1;
     if (filterType === 'vip') return matchesSearch && user.user_level === 'vip';
     if (filterType === 'super') return matchesSearch && user.user_level === 'super';
-    
+
     return matchesSearch;
-  });
+  }), [users, searchTerm, filterType]);
 
   useEffect(() => {
     if (currentUser?.id) {
@@ -578,129 +580,6 @@ const CustomerService: React.FC = () => {
       return () => clearInterval(interval);
     }
   }, [currentUser?.id]); // 只在用户ID改变时重新加载会话
-
-  // 建立客服通知WebSocket连接
-  useEffect(() => {
-    if (!currentUser) return;
-    
-    // 客服使用Cookie认证，无需token
-    const notificationSocket = new WebSocket(`${WS_BASE_URL}/ws/chat/${currentUser.id}`);
-    
-    notificationSocket.onopen = () => {
-      // 通知WebSocket连接已建立
-    };
-    
-    notificationSocket.onmessage = (event) => {
-      try {
-        const msg = JSON.parse(event.data);
-        
-        // 处理心跳消息
-        if (msg.type === 'heartbeat') {
-          return;
-        }
-        
-        // 检查是否是用户连接通知
-        if (msg.type === 'user_connected' && msg.user_info) {
-          setNewUserInfo({
-            name: msg.user_info.name,
-            id: msg.user_info.id
-          });
-          setShowNewUserNotification(true);
-          
-          // 3秒后自动关闭弹窗
-          setTimeout(() => {
-            setShowNewUserNotification(false);
-            setNewUserInfo(null);
-          }, 3000);
-        }
-        
-        // 实时处理聊天消息
-        if (msg.from && msg.receiver_id === currentUser.id && msg.from !== currentUser.id) {
-          
-          // 如果当前选中的会话是发送消息的用户，立即更新聊天记录
-          if (selectedSession && selectedSession.user_id === msg.from) {
-            // 检查是否是任务卡片消息
-            const isTaskCard = msg.message_type === 'task_card' || 
-                              (msg.content && msg.content.startsWith('[TASK_CARD:') && msg.content.endsWith(']'));
-            let taskId: number | undefined;
-            
-            if (isTaskCard) {
-              // 从消息内容或字段中提取任务ID
-              if (msg.task_id) {
-                taskId = msg.task_id;
-              } else if (msg.content && msg.content.startsWith('[TASK_CARD:')) {
-                const match = msg.content.match(/\[TASK_CARD:(\d+)\]/);
-                if (match) {
-                  taskId = parseInt(match[1], 10);
-                }
-              }
-            }
-            
-            const newMessage: Message = {
-              id: msg.id || Date.now(),
-              sender_id: msg.from,
-              receiver_id: currentUser.id,
-              content: isTaskCard ? '任务卡片' : msg.content,
-              created_at: msg.created_at || new Date().toISOString(),
-              is_read: 0,
-              is_admin_msg: 0,
-              sender_type: 'user',
-              message_type: isTaskCard ? 'task_card' : 'text',
-              task_id: taskId
-            };
-            
-            setChatMessages(prev => {
-              // 检查消息是否已存在，避免重复
-              const exists = prev.some(m => m.id === newMessage.id);
-              if (!exists) {
-                return [...prev, newMessage];
-              }
-              return prev;
-            });
-            
-            // 滚动到底部
-            setTimeout(() => {
-              if (messagesEndRef.current) {
-                messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
-              }
-            }, 100);
-            
-            // 如果正在查看该对话，立即标记为已读，不增加未读数量
-            if (selectedSession.chat_id) {
-              markCustomerServiceMessagesRead(selectedSession.chat_id).catch(err => {
-                              });
-            }
-          } else {
-            // 如果不在查看该对话，才增加未读数量
-            setSessions(prev => prev.map(session => {
-              if (session.user_id === msg.from) {
-                return {
-                  ...session,
-                  unread_count: (session.unread_count || 0) + 1
-                };
-              }
-              return session;
-            }));
-          }
-        }
-      } catch (error) {
-              }
-    };
-    
-    notificationSocket.onerror = (error) => {
-      // 静默处理WebSocket错误
-    };
-    
-    notificationSocket.onclose = () => {
-      // 通知WebSocket连接已关闭
-    };
-    
-    setNotificationWs(notificationSocket);
-    
-    return () => {
-      notificationSocket.close();
-    };
-  }, [currentUser?.id]); // 只在用户ID改变时重新建立通知WebSocket连接
 
   // 定期刷新客服状态和评分数据
   useEffect(() => {
@@ -760,19 +639,6 @@ const CustomerService: React.FC = () => {
 
   const handleReviewCancelRequest = async (requestId: number, status: 'approved' | 'rejected') => {
     try {
-      // 准备请求体，确保数据格式正确
-      const requestBody: { status: string; admin_comment?: string | null } = {
-        status: status
-      };
-      
-      // 只有当 adminComment 不为空时才添加该字段
-      // 如果为空字符串，不包含该字段（让后端使用默认值 None）
-      if (adminComment && adminComment.trim()) {
-        requestBody.admin_comment = adminComment.trim();
-      }
-      // 如果 adminComment 为空，不包含该字段，让后端使用默认值 None
-      
-      // 使用统一的 API 函数
       await reviewCancelRequest(requestId, status, adminComment.trim() || '');
       
       setSelectedCancelRequest(null);
@@ -863,25 +729,8 @@ const CustomerService: React.FC = () => {
       
       // 确保 messagesData 是数组
       if (Array.isArray(messagesData)) {
-        // 处理消息，识别任务卡片
         const processedMessages = messagesData.map((msg: any) => {
-          // 检查是否是任务卡片消息
-          const isTaskCard = msg.message_type === 'task_card' || 
-                            (msg.content && msg.content.startsWith('[TASK_CARD:') && msg.content.endsWith(']'));
-          let taskId: number | undefined;
-          
-          if (isTaskCard) {
-            // 从消息内容或字段中提取任务ID
-            if (msg.task_id) {
-              taskId = msg.task_id;
-            } else if (msg.content && msg.content.startsWith('[TASK_CARD:')) {
-              const match = msg.content.match(/\[TASK_CARD:(\d+)\]/);
-              if (match) {
-                taskId = parseInt(match[1], 10);
-              }
-            }
-          }
-          
+          const { isTaskCard, taskId } = parseTaskCardMessage(msg);
           return {
             ...msg,
             message_type: isTaskCard ? 'task_card' : (msg.message_type || 'text'),
@@ -1185,7 +1034,7 @@ const CustomerService: React.FC = () => {
     selectedSessionRef.current = selectedSession;
   }, [selectedSession]);
 
-  // WebSocket 连接 - 只在currentUser改变时重新连接
+  // 单一WebSocket连接 — 合并了原通知WS和主WS
   useEffect(() => {
     if (currentUser) {
       // 清理现有连接
@@ -1200,146 +1049,117 @@ const CustomerService: React.FC = () => {
       const reconnectDelay = 3000; // 3秒
 
       const connectWebSocket = () => {
-        // 使用Cookie认证，无需在URL中传递token
         const wsUrl = `${WS_BASE_URL}/ws/chat/${currentUser.id}`;
         socket = new WebSocket(wsUrl);
         setWsConnectionStatus('connecting');
-        
-        socket.onopen = (event) => {
+
+        socket.onopen = () => {
           setWsConnectionStatus('connected');
           setWs(socket);
-          reconnectAttempts = 0; // 重置重连次数
+          reconnectAttempts = 0;
         };
-        
+
         socket.onmessage = (event) => {
           try {
             const msg = JSON.parse(event.data);
-            
-            
+
             if (msg.error) {
               return;
             }
-            
-            // 处理心跳消息
-            if (msg.type === 'heartbeat') {
+
+            // 心跳：回复 pong 防止服务端超时断连
+            if (msg.type === 'heartbeat' || msg.type === 'ping') {
+              if (socket && socket.readyState === WebSocket.OPEN) {
+                socket.send(JSON.stringify({ type: 'pong' }));
+              }
               return;
             }
-            
-            // 使用 ref 获取最新的 selectedSession
-            const latestSelectedSession = selectedSessionRef.current;
-            
-            // 处理客服对话消息
-            if (msg.chat_id && latestSelectedSession && msg.chat_id === latestSelectedSession.chat_id) {
-              // 只处理接收到的消息，不处理自己发送的消息（避免重复显示）
-              if (msg.from !== currentUser.id && msg.content && msg.content.trim()) {
-                // 检查是否是任务卡片消息
-                const isTaskCard = msg.message_type === 'task_card' || 
-                                  (msg.content && msg.content.startsWith('[TASK_CARD:') && msg.content.endsWith(']'));
-                let taskId: number | undefined;
-                
-                if (isTaskCard) {
-                  // 从消息内容或字段中提取任务ID
-                  if (msg.task_id) {
-                    taskId = msg.task_id;
-                  } else if (msg.content && msg.content.startsWith('[TASK_CARD:')) {
-                    const match = msg.content.match(/\[TASK_CARD:(\d+)\]/);
-                    if (match) {
-                      taskId = parseInt(match[1], 10);
-                    }
-                  }
-                }
-                
-                setChatMessages(prev => [...prev, {
-                  id: Date.now(), // 临时ID
-                  sender_id: msg.from,
-                  receiver_id: msg.receiver_id,
-                  content: isTaskCard ? '任务卡片' : msg.content.trim(),
-                  created_at: msg.created_at || new Date().toISOString(), // 确保有有效的时间
-                  is_read: 0,
-                  is_admin_msg: 0,
-                  sender_type: msg.sender_type || 'user',
-                  message_type: isTaskCard ? 'task_card' : 'text',
-                  task_id: taskId
-                }]);
-                
-                // 滚动到底部
-                setTimeout(() => {
-                  if (messagesEndRef.current) {
-                    messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
-                  }
-                }, 100);
-              }
+
+            // 用户连接通知（原 notification WS 逻辑）
+            if (msg.type === 'user_connected' && msg.user_info) {
+              setNewUserInfo({
+                name: msg.user_info.name,
+                id: msg.user_info.id
+              });
+              setShowNewUserNotification(true);
+              setTimeout(() => {
+                setShowNewUserNotification(false);
+                setNewUserInfo(null);
+              }, 3000);
+              return;
             }
-            // 兼容旧的普通消息格式
-            else if (latestSelectedSession && (
-              (msg.from === latestSelectedSession.user_id && msg.receiver_id === currentUser.id) ||
-              (msg.from === currentUser.id && msg.receiver_id === latestSelectedSession.user_id)
-            )) {
-              // 只处理接收到的消息，不处理自己发送的消息（避免重复显示）
-              if (msg.from !== currentUser.id && msg.content && msg.content.trim()) {
-                // 检查是否是任务卡片消息
-                const isTaskCard = msg.message_type === 'task_card' || 
-                                  (msg.content && msg.content.startsWith('[TASK_CARD:') && msg.content.endsWith(']'));
-                let taskId: number | undefined;
-                
-                if (isTaskCard) {
-                  // 从消息内容或字段中提取任务ID
-                  if (msg.task_id) {
-                    taskId = msg.task_id;
-                  } else if (msg.content && msg.content.startsWith('[TASK_CARD:')) {
-                    const match = msg.content.match(/\[TASK_CARD:(\d+)\]/);
-                    if (match) {
-                      taskId = parseInt(match[1], 10);
-                    }
-                  }
-                }
-                
-                setChatMessages(prev => [...prev, {
-                  id: Date.now(), // 临时ID
-                  sender_id: msg.from,
-                  receiver_id: msg.receiver_id,
-                  content: isTaskCard ? '任务卡片' : msg.content.trim(),
-                  created_at: msg.created_at || new Date().toISOString(), // 确保有有效的时间
-                  is_read: 0,
-                  is_admin_msg: 0,
-                  sender_type: msg.sender_type || 'user',
-                  message_type: isTaskCard ? 'task_card' : 'text',
-                  task_id: taskId
-                }]);
-                
-                // 滚动到底部
-                setTimeout(() => {
-                  if (messagesEndRef.current) {
-                    messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
-                  }
-                }, 100);
+
+            // 使用 ref 获取最新的 selectedSession（避免闭包过期）
+            const latestSelectedSession = selectedSessionRef.current;
+
+            // 跳过自己发送的消息
+            if (msg.from === currentUser.id) {
+              return;
+            }
+
+            // 判断消息是否属于当前选中的会话
+            const belongsToCurrentSession = latestSelectedSession && (
+              (msg.chat_id && msg.chat_id === latestSelectedSession.chat_id) ||
+              (msg.from === latestSelectedSession.user_id && msg.receiver_id === currentUser.id)
+            );
+
+            if (belongsToCurrentSession && msg.content && msg.content.trim()) {
+              const { isTaskCard, taskId } = parseTaskCardMessage(msg);
+
+              const newMessage: Message = {
+                id: msg.id || Date.now(),
+                sender_id: msg.from,
+                receiver_id: msg.receiver_id || currentUser.id,
+                content: isTaskCard ? '任务卡片' : msg.content.trim(),
+                created_at: msg.created_at || new Date().toISOString(),
+                is_read: 0,
+                is_admin_msg: 0,
+                sender_type: msg.sender_type || 'user',
+                message_type: isTaskCard ? 'task_card' : 'text',
+                task_id: taskId
+              };
+
+              // 按 id 去重，防止轮询 + WS 双显
+              setChatMessages(prev =>
+                prev.some(m => m.id === newMessage.id) ? prev : [...prev, newMessage]
+              );
+
+              setTimeout(() => {
+                messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+              }, 100);
+
+              // 正在查看该对话时立即标记已读
+              if (latestSelectedSession!.chat_id) {
+                markCustomerServiceMessagesRead(latestSelectedSession!.chat_id).catch(() => {});
               }
+            } else if (msg.from && msg.receiver_id === currentUser.id) {
+              // 不在查看该对话，增加未读数量
+              setSessions(prev => prev.map(session =>
+                session.user_id === msg.from
+                  ? { ...session, unread_count: (session.unread_count || 0) + 1 }
+                  : session
+              ));
             }
           } catch (error) {
-                      }
+            // 静默处理解析错误
+          }
         };
-        
-        socket.onerror = (error) => {
+
+        socket.onerror = () => {
           setWsConnectionStatus('error');
         };
-        
+
         socket.onclose = (event) => {
           setWsConnectionStatus('disconnected');
-          
-          // 只在异常关闭时重连（代码1000是正常关闭）
           if (event.code !== 1000 && reconnectAttempts < maxReconnectAttempts) {
             reconnectAttempts++;
-            setTimeout(() => {
-              connectWebSocket();
-            }, reconnectDelay);
-          } else if (event.code !== 1000) {
-                      }
+            setTimeout(connectWebSocket, reconnectDelay);
+          }
         };
       };
 
-      // 初始连接
       connectWebSocket();
-      
+
       return () => {
         if (socket) {
           socket.close();
@@ -1347,7 +1167,7 @@ const CustomerService: React.FC = () => {
         setWs(null);
       };
     }
-  }, [currentUser?.id]); // 只在用户ID改变时重新连接WebSocket
+  }, [currentUser?.id]);
 
   // 当选择会话时，加载聊天消息
   useEffect(() => {
@@ -1370,21 +1190,6 @@ const CustomerService: React.FC = () => {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [chatMessages]);
-
-  // 组件卸载时清理所有WebSocket连接和定时器
-  useEffect(() => {
-    return () => {
-      if (ws) {
-        ws.close();
-      }
-      if (notificationWs) {
-        notificationWs.close();
-      }
-      if (timeoutCheckInterval) {
-        clearInterval(timeoutCheckInterval);
-      }
-    };
-  }, []);
 
   const loadCustomerServiceStatus = async () => {
     try {
@@ -1765,7 +1570,7 @@ const CustomerService: React.FC = () => {
             }}>
               用户会话 ({sessions.length})
             </div>
-            {sessions.filter(session => session.is_ended === 1).length > 50 && (
+            {endedSessions.length > 50 && (
               <button
                 onClick={async () => {
                   Modal.confirm({
@@ -1811,7 +1616,7 @@ const CustomerService: React.FC = () => {
           ) : (
             <>
               {/* 进行中的对话 */}
-              {sessions.filter(session => session.is_ended === 0).length > 0 && (
+              {activeSessions.length > 0 && (
                 <>
                   <div style={{
                     padding: '10px 20px',
@@ -1821,9 +1626,9 @@ const CustomerService: React.FC = () => {
                     color: '#1890ff',
                     fontWeight: 'bold'
                   }}>
-                    进行中的对话 ({sessions.filter(session => session.is_ended === 0).length})
+                    进行中的对话 ({activeSessions.length})
                   </div>
-                  {sessions.filter(session => session.is_ended === 0).map(session => (
+                  {activeSessions.map(session => (
                     <div
                       key={session.chat_id}
                       onClick={() => selectSession(session)}
@@ -1904,7 +1709,7 @@ const CustomerService: React.FC = () => {
               )}
               
               {/* 已结束的对话 */}
-              {sessions.filter(session => session.is_ended === 1).length > 0 && (
+              {endedSessions.length > 0 && (
                 <>
                   <div style={{
                     padding: '10px 20px',
@@ -1914,9 +1719,9 @@ const CustomerService: React.FC = () => {
                     color: '#999',
                     fontWeight: 'bold'
                   }}>
-                    已结束的对话 ({sessions.filter(session => session.is_ended === 1).length})
+                    已结束的对话 ({endedSessions.length})
                   </div>
-                  {sessions.filter(session => session.is_ended === 1).map(session => (
+                  {endedSessions.map(session => (
                     <div
                       key={session.chat_id}
                       onClick={() => selectSession(session)}
@@ -2106,7 +1911,7 @@ const CustomerService: React.FC = () => {
                   // 如果是任务卡片消息，渲染任务卡片
                   if (msg.message_type === 'task_card' && msg.task_id) {
                     return (
-                      <div key={idx} style={{ 
+                      <div key={msg.id} style={{ 
                         marginBottom: 16, 
                         textAlign: 'left',
                         display: 'flex',
@@ -2192,7 +1997,7 @@ const CustomerService: React.FC = () => {
                   
                   // 普通文本消息
                   return (
-                    <div key={idx} style={{ 
+                    <div key={msg.id} style={{ 
                       marginBottom: 16, 
                       textAlign: msg.sender_type === 'customer_service' ? 'right' : 'left',
                       display: 'flex',
@@ -2442,7 +2247,7 @@ const CustomerService: React.FC = () => {
               onChange={(e) => setNewAdminMessage(e.target.value)}
               placeholder="输入消息..."
               style={{ flex: 1, padding: '8px 12px', border: '1px solid #d9d9d9', borderRadius: 6 }}
-              onKeyPress={(e) => e.key === 'Enter' && sendAdminMessage()}
+              onKeyDown={(e) => e.key === 'Enter' && sendAdminMessage()}
             />
             <button
               onClick={sendAdminMessage}
@@ -2785,7 +2590,7 @@ const CustomerService: React.FC = () => {
         >
           取消请求
           {/* 待审核取消请求红点提示 */}
-          {cancelRequests.filter(req => req.status === 'pending').length > 0 && (
+          {pendingCancelCount > 0 && (
             <div style={{
               position: 'absolute',
               top: 5,
@@ -2804,7 +2609,7 @@ const CustomerService: React.FC = () => {
               boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
               animation: 'pulse 2s infinite'
             }}>
-              {cancelRequests.filter(req => req.status === 'pending').length}
+              {pendingCancelCount}
             </div>
           )}
         </button>
@@ -2815,7 +2620,7 @@ const CustomerService: React.FC = () => {
         >
           后台管理
           {/* 待处理管理请求红点提示 */}
-          {adminRequests.filter(req => req.status === 'pending').length > 0 && (
+          {pendingAdminCount > 0 && (
             <div style={{
               position: 'absolute',
               top: 5,
@@ -2834,7 +2639,7 @@ const CustomerService: React.FC = () => {
               boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
               animation: 'pulse 2s infinite'
             }}>
-              {adminRequests.filter(req => req.status === 'pending').length}
+              {pendingAdminCount}
             </div>
           )}
         </button>

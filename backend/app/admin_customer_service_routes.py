@@ -33,9 +33,9 @@ def admin_get_customer_service_users(
     query = db.query(models.User).filter(models.User.is_customer_service == True)
     
     if status == "active":
-        query = query.filter(models.User.is_active == True)
+        query = query.filter(models.User.is_active == 1)
     elif status == "inactive":
-        query = query.filter(models.User.is_active == False)
+        query = query.filter(models.User.is_active == 0)
     
     total = query.count()
     users = query.order_by(models.User.created_at.desc()).offset(skip).limit(size).all()
@@ -147,7 +147,7 @@ def admin_get_customer_service_stats(
     # 活跃客服数
     active_cs = db.query(func.count(models.User.id)).filter(
         models.User.is_customer_service == True,
-        models.User.is_active == True
+        models.User.is_active == 1
     ).scalar() or 0
     
     # 今日处理的消息数（如果有消息统计表）

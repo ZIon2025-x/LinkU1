@@ -55,7 +55,7 @@ def admin_send_notification(
         sent_count = len(user_ids)
     else:
         # 发送给所有用户
-        users = db.query(models.User).filter(models.User.is_active == True).all()
+        users = db.query(models.User).filter(models.User.is_active == 1).all()
         for user in users:
             crud.create_notification(
                 db=db,
@@ -114,9 +114,9 @@ def admin_send_staff_notification(
 
     # 获取所有客服和管理员用户
     staff_users = db.query(models.User).filter(
-        (models.User.is_customer_service == True) | 
+        (models.User.is_customer_service == True) |
         (models.User.is_admin == True)
-    ).filter(models.User.is_active == True).all()
+    ).filter(models.User.is_active == 1).all()
 
     for user in staff_users:
         crud.create_notification(
