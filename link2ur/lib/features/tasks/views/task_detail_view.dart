@@ -671,6 +671,74 @@ class _TaskDetailContent extends StatelessWidget {
       );
     }
 
+    // 发布方 + 反报价 pending → 显示接受/拒绝
+    if (isPoster &&
+        task.status == AppConstants.taskStatusPendingAcceptance &&
+        task.hasCounterOfferPending &&
+        task.counterOfferPrice != null) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(AppSpacing.md),
+            decoration: BoxDecoration(
+              color: AppColors.warning.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(AppRadius.medium),
+              border: Border.all(color: AppColors.warning.withValues(alpha: 0.3)),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  context.l10n.taskDetailPosterCounterOfferTitle,
+                  style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  '${context.l10n.taskDetailPosterCounterOfferPrice}: '
+                  '£${task.counterOfferPrice!.toStringAsFixed(2)}',
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.warning,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: AppSpacing.md),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: state.isSubmitting
+                      ? null
+                      : () => context.read<TaskDetailBloc>().add(
+                            const TaskDetailRespondCounterOfferRequested(action: 'reject'),
+                          ),
+                  style: OutlinedButton.styleFrom(foregroundColor: AppColors.error),
+                  child: Text(context.l10n.taskDetailRejectCounterOffer),
+                ),
+              ),
+              AppSpacing.hMd,
+              Expanded(
+                child: PrimaryButton(
+                  text: context.l10n.taskDetailAcceptCounterOffer,
+                  isLoading: state.isSubmitting,
+                  onPressed: state.isSubmitting
+                      ? null
+                      : () => context.read<TaskDetailBloc>().add(
+                            const TaskDetailRespondCounterOfferRequested(action: 'accept'),
+                          ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      );
+    }
+
     // 发布者 + 待支付 → 支付按钮
     if (isPoster && task.status == AppConstants.taskStatusPendingPayment) {
       return PrimaryButton(
@@ -714,6 +782,29 @@ class _TaskDetailContent extends StatelessWidget {
           onPressed: () => _showQuoteDesignatedPriceSheet(context, task),
         );
       } else {
+        // 若有 pending 反报价，显示等待状态
+        if (task.hasCounterOfferPending) {
+          return Container(
+            padding: const EdgeInsets.all(AppSpacing.md),
+            decoration: BoxDecoration(
+              color: AppColors.primary.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(AppRadius.medium),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.hourglass_top, color: AppColors.primary, size: 18),
+                AppSpacing.hSm,
+                Expanded(
+                  child: Text(
+                    context.l10n.taskDetailCounterOfferSent,
+                    style: const TextStyle(color: AppColors.primary, fontSize: 13),
+                  ),
+                ),
+              ],
+            ),
+          );
+        }
+        // 正常三按钮布局
         return Row(
           children: [
             Expanded(
@@ -723,7 +814,14 @@ class _TaskDetailContent extends StatelessWidget {
                 child: Text(context.l10n.taskDetailDeclineDesignated),
               ),
             ),
-            AppSpacing.hMd,
+            AppSpacing.hSm,
+            Expanded(
+              child: OutlinedButton(
+                onPressed: () => _showCounterOfferSheet(context, task),
+                child: Text(context.l10n.taskDetailCounterOffer),
+              ),
+            ),
+            AppSpacing.hSm,
             Expanded(
               child: PrimaryButton(
                 text: context.l10n.taskDetailAcceptDesignated,
@@ -806,10 +904,13 @@ class _TaskDetailContent extends StatelessWidget {
         task.status == AppConstants.taskStatusPendingConfirmation) {
       return PrimaryButton(
         text: context.l10n.actionsConfirmComplete,
-        onPressed: () {
-          context.read<TaskDetailBloc>().add(
-              const TaskDetailConfirmCompletionRequested());
-        },
+        isLoading: state.isSubmitting,
+        onPressed: state.isSubmitting
+            ? null
+            : () {
+                context.read<TaskDetailBloc>().add(
+                    const TaskDetailConfirmCompletionRequested());
+              },
         gradient: LinearGradient(
           colors: [AppColors.success, AppColors.success.withValues(alpha: 0.8)],
         ),
@@ -957,6 +1058,42 @@ class _TaskDetailContent extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  void _showCounterOfferSheet(BuildContext context, Task task) {
+    final controller = TextEditingController();
+    showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(context.l10n.taskDetailCounterOffer),
+        content: TextField(
+          controller: controller,
+          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+          decoration: InputDecoration(
+            hintText: context.l10n.taskDetailCounterOfferHint,
+            prefixText: '£ ',
+          ),
+          autofocus: true,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: Text(context.l10n.actionsCancel),
+          ),
+          TextButton(
+            onPressed: () {
+              final price = double.tryParse(controller.text.trim());
+              if (price == null || price <= 0) return;
+              Navigator.of(dialogContext).pop();
+              context.read<TaskDetailBloc>().add(
+                TaskDetailSubmitCounterOfferRequested(price: price),
+              );
+            },
+            child: Text(context.l10n.actionsConfirm),
+          ),
+        ],
+      ),
+    ).whenComplete(() => controller.dispose());
   }
 
   void _showDeclineDesignatedTaskConfirm(BuildContext context) {
@@ -2437,7 +2574,10 @@ class _CompleteTaskSheetContentState extends State<_CompleteTaskSheetContent> {
       if (mounted) {
         setState(() => _isSubmitting = false);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('$e'), backgroundColor: Colors.red),
+          SnackBar(
+            content: Text(context.localizeError(e.toString())),
+            backgroundColor: Colors.red,
+          ),
         );
       }
     }
