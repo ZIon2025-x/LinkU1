@@ -2341,6 +2341,163 @@ async def taker_counter_offer(
         )
 
 
+class RespondTakerCounterOfferRequest(BaseModel):
+    action: str = Field(..., description="'accept' 或 'reject'")
+
+
+@task_chat_router.post("/tasks/{task_id}/respond-taker-counter-offer")
+async def respond_taker_counter_offer(
+    task_id: int,
+    request: RespondTakerCounterOfferRequest,
+    current_user: models.User = Depends(get_current_user_secure_async_csrf),
+    db: AsyncSession = Depends(get_async_db_dependency),
+):
+    """
+    发布方响应接单方提交的反报价（accept 或 reject）。
+    仅当 counter_offer_status == 'pending' 时可操作。
+    """
+    try:
+        # 1. 校验 action 参数
+        if request.action not in ("accept", "reject"):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="action 必须为 'accept' 或 'reject'"
+            )
+
+        # 2. 查询任务（加行锁防止并发冲突）
+        result = await db.execute(
+            select(models.Task).where(models.Task.id == task_id).with_for_update()
+        )
+        task = result.scalar_one_or_none()
+
+        # 3. 404 如果任务不存在
+        if task is None:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="任务不存在")
+
+        # 4. 403 如果不是发布方
+        if task.poster_id != current_user.id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="只有任务发布方才能响应反报价"
+            )
+
+        # 5. 400 如果没有待处理的反报价
+        if task.counter_offer_status != "pending" or task.counter_offer_price is None:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="当前没有待处理的反报价"
+            )
+
+        # 6. 存储接单方 ID，供后续通知使用
+        taker_id = task.counter_offer_user_id
+
+        current_time = get_utc_time()
+
+        if request.action == "accept":
+            # 7a. 接受反报价
+            task.base_reward = task.counter_offer_price
+            task.agreed_reward = task.counter_offer_price
+            task.taker_id = taker_id
+            task.status = "in_progress"
+            task.accepted_at = current_time
+            task.counter_offer_status = "accepted"
+
+            content = f"发布方已接受您对任务「{task.title}」的反报价：£{float(task.agreed_reward):.2f}"
+            content_en = f"The poster accepted your counter offer for task「{task.title}」: £{float(task.agreed_reward):.2f}"
+            new_notification = models.Notification(
+                user_id=taker_id,
+                type="task_counter_offer_accepted",
+                title="反报价已被接受",
+                title_en="Counter offer accepted",
+                content=content,
+                content_en=content_en,
+                related_id=task_id,
+                related_type="task_id",
+                created_at=current_time,
+            )
+            db.add(new_notification)
+            await db.commit()
+
+            # 发送推送通知
+            try:
+                send_push_notification_async_safe(
+                    async_db=db,
+                    user_id=taker_id,
+                    title=None,
+                    body=None,
+                    notification_type="task_counter_offer_accepted",
+                    data={"task_id": task_id},
+                    template_vars={
+                        "task_title": task.title,
+                        "task_id": task_id,
+                        "agreed_price": float(task.agreed_reward),
+                    },
+                )
+            except Exception as e:
+                logger.warning(f"发送反报价接受推送通知失败: {e}")
+
+            return {
+                "message": "已接受反报价，任务进入进行中",
+                "task_status": task.status,
+                "agreed_price": float(task.agreed_reward),
+            }
+
+        else:
+            # 7b. 拒绝反报价
+            task.counter_offer_status = "rejected"
+            task.counter_offer_price = None
+            task.counter_offer_user_id = None
+
+            content = f"发布方已拒绝您对任务「{task.title}」的反报价"
+            content_en = f"The poster rejected your counter offer for task「{task.title}」"
+            new_notification = models.Notification(
+                user_id=taker_id,
+                type="task_counter_offer_rejected",
+                title="反报价已被拒绝",
+                title_en="Counter offer rejected",
+                content=content,
+                content_en=content_en,
+                related_id=task_id,
+                related_type="task_id",
+                created_at=current_time,
+            )
+            db.add(new_notification)
+            await db.commit()
+
+            # 发送推送通知
+            try:
+                send_push_notification_async_safe(
+                    async_db=db,
+                    user_id=taker_id,
+                    title=None,
+                    body=None,
+                    notification_type="task_counter_offer_rejected",
+                    data={"task_id": task_id},
+                    template_vars={
+                        "task_title": task.title,
+                        "task_id": task_id,
+                    },
+                )
+            except Exception as e:
+                logger.warning(f"发送反报价拒绝推送通知失败: {e}")
+
+            return {
+                "message": "已拒绝反报价，任务保持待接受状态",
+                "task_status": task.status,
+            }
+
+    except HTTPException:
+        await db.rollback()
+        raise
+    except Exception as e:
+        await db.rollback()
+        logger.error(f"响应反报价失败: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"响应反报价失败: {str(e)}"
+        )
+
+
 @task_chat_router.get("/notifications/{notification_id}/negotiation-tokens")
 async def get_negotiation_tokens(
     notification_id: int,
