@@ -646,6 +646,9 @@ class TaskOut(TaskBase):
             "user_application_status": getattr(obj, 'user_application_status', None),
             "completion_evidence": getattr(obj, 'completion_evidence', None),  # 任务完成证据（由详情接口在 setattr 后填充）
             "reward_to_be_quoted": getattr(obj, 'reward_to_be_quoted', False),
+            "counter_offer_price": float(obj.counter_offer_price) if obj.counter_offer_price is not None else None,
+            "counter_offer_status": getattr(obj, 'counter_offer_status', None),
+            "counter_offer_user_id": getattr(obj, 'counter_offer_user_id', None),
         }
         # 平台服务费展示（比例 + 金额，按任务来源/类型计算）
         from app.utils.fee_calculator import get_platform_fee_display
