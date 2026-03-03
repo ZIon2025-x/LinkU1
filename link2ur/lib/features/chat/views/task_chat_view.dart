@@ -104,24 +104,37 @@ class _TaskChatContentState extends State<_TaskChatContent> {
     super.dispose();
   }
 
-  /// 列表为正序（旧在上、新在下），往上滑接近顶部时加载更早消息
+  /// reverse:true 时列表新→旧，底部=最新；往上滑接近顶部（maxScrollExtent）时加载更早
   void _onScroll() {
     if (!mounted || !_scrollController.hasClients) return;
-    if (_scrollController.position.pixels <= 50) {
+    final pos = _scrollController.position;
+    if (pos.pixels >= pos.maxScrollExtent - 50) {
       context.read<ChatBloc>().add(const ChatLoadMore());
     }
   }
 
+  /// 滚到底部（最新消息）。首次进入时列表可能尚未布局，多等几帧直到 maxScrollExtent 可用。
   void _scrollToBottom() {
-    if (!_scrollController.hasClients) return;
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted || !_scrollController.hasClients) return;
+    void tryScroll([int frameCount = 0]) {
+      if (!mounted) return;
+      if (!_scrollController.hasClients) {
+        if (frameCount < 8) {
+          WidgetsBinding.instance.addPostFrameCallback((_) => tryScroll(frameCount + 1));
+        }
+        return;
+      }
+      final max = _scrollController.position.maxScrollExtent;
+      if (max <= 0 && frameCount < 8) {
+        WidgetsBinding.instance.addPostFrameCallback((_) => tryScroll(frameCount + 1));
+        return;
+      }
       _scrollController.animateTo(
-        _scrollController.position.maxScrollExtent,
+        max,
         duration: const Duration(milliseconds: 200),
         curve: Curves.easeOut,
       );
-    });
+    }
+    WidgetsBinding.instance.addPostFrameCallback((_) => tryScroll(0));
   }
 
   void _onTextChanged() {
@@ -148,8 +161,7 @@ class _TaskChatContentState extends State<_TaskChatContent> {
         );
     _messageController.clear();
     setState(() => _showActionMenu = false);
-    // 列表为正序（旧在上、新在下），发送后滚到底部
-    _scrollToBottom();
+    // 任务聊天 reverse+新→旧 新消息已插头，无需滚；私聊不在此页
   }
 
 
@@ -228,7 +240,8 @@ class _TaskChatContentState extends State<_TaskChatContent> {
             !state.isLoadingMore &&
             lastId != null &&
             lastId != _prevLastMessageId;
-        if (justLoaded || justSent || newMessageAtEnd) {
+        // 任务聊天用 reverse:true + 新→旧，视口已在底部，无需滚动
+        if ((justLoaded || justSent || newMessageAtEnd) && !state.isTaskChat) {
           _scrollToBottom();
         }
         _prevStatus = state.status;
@@ -500,25 +513,26 @@ class _TaskChatContentState extends State<_TaskChatContent> {
       );
     }
 
-    // state.messages 为 旧→新，groups[0]=最旧、groups[last]=最新；不 reverse，旧在上、新在下
+    // state.messages 为 新→旧，reverse:true 故视口初始在底部（最新）；加载更多在列表末尾（顶部）
     final currentUserId = _currentUserId ?? StorageService.instance.getUserId();
     final groups = groupMessages(state.messages, currentUserId);
-    final showLoadMoreAtTop = state.isLoadingMore;
+    final showLoadMore = state.isLoadingMore;
+    final groupCount = groups.length;
 
     return ListView.builder(
       controller: _scrollController,
-      reverse: false,
+      reverse: true,
       padding: const EdgeInsets.symmetric(vertical: 12),
       addAutomaticKeepAlives: false,
-      itemCount: (showLoadMoreAtTop ? 1 : 0) + groups.length,
+      itemCount: groupCount + (showLoadMore ? 1 : 0),
       itemBuilder: (context, index) {
-        if (showLoadMoreAtTop && index == 0) {
+        if (showLoadMore && index == groupCount) {
           return const Padding(
             padding: EdgeInsets.all(8),
             child: Center(child: LoadingIndicator(size: 20)),
           );
         }
-        final group = groups[showLoadMoreAtTop ? index - 1 : index];
+        final group = groups[index];
         return MessageGroupBubbleView(
           group: group,
           onAvatarTap: () {

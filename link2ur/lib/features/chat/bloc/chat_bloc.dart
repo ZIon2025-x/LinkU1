@@ -262,16 +262,13 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
 
     try {
       if (event.taskId != null) {
-        // 任务聊天：后端返回 新→旧，转为 旧→新 并按时序排序，保证旧在上、新在下
+        // 任务聊天：保持后端顺序 新→旧，配合 ListView reverse:true 一进入即视口在底部
         final result = await _messageRepository.getTaskChatMessages(
           event.taskId!,
         );
-        final chronological = result.messages.reversed.toList();
-        chronological.sort((a, b) =>
-            (a.createdAt ?? DateTime(0)).compareTo(b.createdAt ?? DateTime(0)));
         emit(state.copyWith(
           status: ChatStatus.loaded,
-          messages: chronological,
+          messages: result.messages,
           page: 1,
           hasMore: result.hasMore,
           nextCursor: result.nextCursor,
@@ -320,12 +317,9 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
           state.taskId!,
           cursor: state.nextCursor,
         );
-        // 更早的一批后端返回 新→旧，反转为 旧→新 后 prepend 到列表头部
-        final olderChronological = result.messages.reversed.toList();
-        olderChronological.sort((a, b) =>
-            (a.createdAt ?? DateTime(0)).compareTo(b.createdAt ?? DateTime(0)));
+        // 更早的一批后端仍为 新→旧，append 到列表末尾（reverse 时在视口顶部）
         emit(state.copyWith(
-          messages: [...olderChronological, ...state.messages],
+          messages: [...state.messages, ...result.messages],
           hasMore: result.hasMore,
           nextCursor: result.nextCursor,
           taskStatus: result.taskStatus ?? state.taskStatus,
@@ -375,8 +369,10 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
         imageUrl: event.imageUrl,
         createdAt: DateTime.now().toUtc(),
       );
-      // 任务聊天与私聊统一：新消息都追加到末尾，列表底部显示最新
-      final newMessages = [...state.messages, pendingMessage];
+      // 任务聊天：新→旧，新消息插到头部；私聊：旧→新，追加到末尾
+      final newMessages = state.isTaskChat
+          ? [pendingMessage, ...state.messages]
+          : [...state.messages, pendingMessage];
       emit(state.copyWith(messages: newMessages, isSending: true));
     } else {
       emit(state.copyWith(isSending: true));
@@ -409,9 +405,11 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
             .toList();
         emit(state.copyWith(messages: list, isSending: false));
       } else {
-        // 统一追加到末尾，新消息在底部
+        // 任务聊天插头，私聊追加尾
         emit(state.copyWith(
-          messages: [...state.messages, message],
+          messages: state.isTaskChat
+              ? [message, ...state.messages]
+              : [...state.messages, message],
           isSending: false,
         ));
       }
@@ -458,9 +456,11 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
           imageUrl: imageUrl,
           createdAt: DateTime.now().toUtc(),
         );
-        // 统一追加到末尾，新消息在底部
+        // 任务聊天插头，私聊追加尾
         emit(state.copyWith(
-          messages: [...state.messages, pendingMessage],
+          messages: state.isTaskChat
+              ? [pendingMessage, ...state.messages]
+              : [...state.messages, pendingMessage],
         ));
       }
 
@@ -498,7 +498,9 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
         emit(state.copyWith(messages: list, isSending: false));
       } else {
         emit(state.copyWith(
-          messages: [...state.messages, message],
+          messages: state.isTaskChat
+              ? [message, ...state.messages]
+              : [...state.messages, message],
           isSending: false,
         ));
       }
@@ -532,10 +534,10 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     }
 
     if (state.isTaskChat) {
-      // 任务聊天：state.messages 为 旧→新，新消息追加到末尾（显示在列表底部）
+      // 任务聊天：state.messages 为 新→旧，新消息插到头部（reverse 时在底部）
       if (message.taskId == state.taskId) {
         emit(state.copyWith(
-          messages: [...state.messages, message],
+          messages: [message, ...state.messages],
         ));
         // 自动标记已读
         add(const ChatMarkAsRead());
