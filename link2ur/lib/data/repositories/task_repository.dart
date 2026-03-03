@@ -427,7 +427,7 @@ class TaskRepository {
       data: {'price': price},
     );
     if (!response.isSuccess) {
-      throw TaskException(response.message ?? 'counter_offer_submit_failed');
+      throw TaskException(response.message ?? '提交反报价失败');
     }
   }
 
@@ -441,7 +441,7 @@ class TaskRepository {
       data: {'action': action},
     );
     if (!response.isSuccess) {
-      throw TaskException(response.message ?? 'counter_offer_respond_failed');
+      throw TaskException(response.message ?? '回复反报价失败');
     }
   }
 
