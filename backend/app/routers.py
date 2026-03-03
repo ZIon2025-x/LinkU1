@@ -4760,11 +4760,26 @@ def user_profile(
         for t in tasks
         if t.taker_id == user_id and t.is_public == 1 and t.status == "completed"
     ]
-    
+    # 该用户发布的进行中/开放任务（他人可见「发布的任务请求」）
+    open_posted = (
+        db.query(Task)
+        .filter(Task.poster_id == user_id, Task.status == "open")
+        .order_by(Task.created_at.desc())
+        .limit(5)
+        .all()
+    )
+
     # 任务双语标题已从任务表列加载；缺失时后台触发预取
     all_display_tasks = posted_tasks + taken_tasks
+    # 近期任务 = 开放中的发布任务 + 已完成公开任务，按时间取最近 5 条
+    all_for_recent = list(open_posted) + all_display_tasks
+    all_for_recent.sort(
+        key=lambda t: (t.created_at is None, -(t.created_at.timestamp() if t.created_at else 0)),
+        reverse=True,
+    )
+    recent_tasks_source = all_for_recent[:5]
     missing_task_ids = [
-        t.id for t in all_display_tasks
+        t.id for t in recent_tasks_source
         if not getattr(t, "title_en", None) or not getattr(t, "title_zh", None)
     ]
     if missing_task_ids:
@@ -4863,16 +4878,14 @@ def user_profile(
             {
                 "id": t.id,
                 "title": t.title,
-                "title_en": getattr(t, 'title_en', None),
-                "title_zh": getattr(t, 'title_zh', None),
+                "title_en": getattr(t, "title_en", None),
+                "title_zh": getattr(t, "title_zh", None),
                 "status": t.status,
                 "created_at": t.created_at,
                 "reward": float(t.agreed_reward) if t.agreed_reward is not None else float(t.base_reward) if t.base_reward is not None else 0.0,
                 "task_type": t.task_type,
             }
-            for t in (posted_tasks + taken_tasks)[
-                :5
-            ]  # 最近5个任务（基于过滤后的任务列表）
+            for t in recent_tasks_source
         ],
         "reviews": [
             {

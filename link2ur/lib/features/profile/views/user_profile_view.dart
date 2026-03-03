@@ -454,6 +454,7 @@ class _UserProfileViewState extends State<UserProfileView> {
     );
     String selectedTaskType = AppConstants.taskTypes.first;
     DateTime? selectedDeadline;
+    bool rewardToBeQuoted = false; // 待报价：由指定用户同意后报价/议价
     bool isSubmitting = false;
 
     SheetAdaptation.showAdaptiveModalBottomSheet(
@@ -517,18 +518,20 @@ class _UserProfileViewState extends State<UserProfileView> {
                     ),
                     const SizedBox(height: AppSpacing.md),
 
-                    // 价格 + 地点（一行两列）
+                    // 价格 + 地点（一行两列）；待报价时不填金额
                     Row(
                       children: [
                         Expanded(
                           child: TextField(
                             controller: priceController,
+                            enabled: !rewardToBeQuoted,
                             keyboardType:
                                 const TextInputType.numberWithOptions(
                                     decimal: true),
                             decoration: InputDecoration(
                               labelText: l10n.profileDirectRequestHintPrice,
-                              prefixText: '£ ',
+                              prefixText: rewardToBeQuoted ? null : '£ ',
+                              hintText: rewardToBeQuoted ? l10n.taskRewardToBeQuoted : null,
                               border: OutlineInputBorder(
                                 borderRadius:
                                     BorderRadius.circular(AppRadius.medium),
@@ -554,11 +557,22 @@ class _UserProfileViewState extends State<UserProfileView> {
                         ),
                       ],
                     ),
+                    // 待报价：指定用户同意后再报价/议价
+                    CheckboxListTile(
+                      value: rewardToBeQuoted,
+                      onChanged: (v) => setSheetState(() => rewardToBeQuoted = v ?? false),
+                      title: Text(
+                        l10n.createTaskRewardToBeQuoted,
+                        style: const TextStyle(fontSize: 14),
+                      ),
+                      contentPadding: EdgeInsets.zero,
+                      controlAffinity: ListTileControlAffinity.leading,
+                    ),
                     const SizedBox(height: AppSpacing.md),
 
                     // 任务类型
                     DropdownButtonFormField<String>(
-                      initialValue: selectedTaskType,
+                      value: selectedTaskType,
                       decoration: InputDecoration(
                         labelText: l10n.profileDirectRequestHintTaskType,
                         border: OutlineInputBorder(
@@ -636,10 +650,17 @@ class _UserProfileViewState extends State<UserProfileView> {
                             : () async {
                                 final title = titleController.text.trim();
                                 final price = double.tryParse(
-                                    priceController.text.trim());
-                                if (title.isEmpty ||
-                                    price == null ||
-                                    price < 1) {
+                                    priceController.text.trim().replaceAll(',', ''));
+                                final bool needPrice = !rewardToBeQuoted;
+                                if (title.isEmpty) {
+                                  ScaffoldMessenger.of(ctx).showSnackBar(
+                                    SnackBar(
+                                        content: Text(l10n
+                                            .profileDirectRequestValidation)),
+                                  );
+                                  return;
+                                }
+                                if (needPrice && (price == null || price < 1)) {
                                   ScaffoldMessenger.of(ctx).showSnackBar(
                                     SnackBar(
                                         content: Text(l10n
@@ -667,7 +688,7 @@ class _UserProfileViewState extends State<UserProfileView> {
                                       taskType: selectedTaskType,
                                       location:
                                           loc.isNotEmpty ? loc : 'Online',
-                                      reward: price,
+                                      reward: rewardToBeQuoted ? null : price,
                                       deadline: selectedDeadline,
                                       isPublic: 0,
                                       taskSource: 'user_profile',

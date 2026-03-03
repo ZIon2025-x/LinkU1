@@ -28,6 +28,7 @@ def create_notification(
                 "task_cancelled",
                 "task_reward_paid",
                 "application_accepted",
+                "task_direct_request",
             ]:
                 related_type = "task_id"
             elif type in [

@@ -330,22 +330,24 @@ class AsyncTaskCRUD:
 
             if designated_taker_id:
                 try:
+                    from decimal import Decimal as Dec
                     task_application = models.TaskApplication(
                         task_id=db_task.id,
                         applicant_id=designated_taker_id,
                         status="pending",
                         message="来自用户资料页的任务请求",
-                        negotiated_price=task.reward,
+                        negotiated_price=Dec(str(task.reward)) if task.reward is not None else None,
                         currency=getattr(task, "currency", "GBP") or "GBP",
                     )
                     db.add(task_application)
                     await db.commit()
-                    await async_crud.async_notification_crud.create_notification(
+                    content_suffix = "待报价" if reward_to_be_quoted else f"£{task.reward}"
+                    await async_notification_crud.create_notification(
                         db,
                         user_id=designated_taker_id,
                         notification_type="task_direct_request",
                         title="有用户向你发送了任务请求",
-                        content=f"「{task.title}」- £{task.reward}",
+                        content=f"「{task.title}」- {content_suffix}",
                         related_id=str(db_task.id),
                     )
                 except Exception as e:

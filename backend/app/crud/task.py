@@ -235,6 +235,26 @@ def create_task(db: Session, user_id: str, task: schemas.TaskCreate):
                 related_id=str(db_task.id),
                 related_type="task_id",
             )
+            try:
+                from app.push_notification_service import send_push_notification
+                task_title = getattr(db_task, "title_zh", None) or getattr(db_task, "title_en", None) or db_task.title
+                reward_text_zh = "（待报价）" if reward_to_be_quoted else f"（£{task.reward}）"
+                reward_text_en = "(Price to be quoted)" if reward_to_be_quoted else f"(£{task.reward})"
+                send_push_notification(
+                    db,
+                    user_id=designated_taker_id,
+                    title=None,
+                    body=None,
+                    notification_type="task_direct_request",
+                    data={"task_id": str(db_task.id), "type": "task_direct_request"},
+                    template_vars={
+                        "task_title": task_title,
+                        "reward_text_zh": reward_text_zh,
+                        "reward_text_en": reward_text_en,
+                    },
+                )
+            except Exception as push_err:
+                logger.warning(f"指定任务请求推送失败: {push_err}")
         except Exception as e:
             logger.warning(f"创建指定任务申请/通知失败: {e}")
 
@@ -383,8 +403,28 @@ def accept_task(db: Session, task_id: int, taker_id: str):
                 )
                 return None
 
+        is_designated_accept = task.status == "pending_acceptance"
         task.taker_id = str(taker_id)
         task.status = "taken"
+        # 指定用户接受时：从申请中的议价金额或任务基础金额设定 agreed_reward
+        if is_designated_accept:
+            from app.models import TaskApplication
+            app = (
+                db.query(TaskApplication)
+                .filter(
+                    TaskApplication.task_id == task_id,
+                    TaskApplication.applicant_id == taker_id,
+                )
+                .first()
+            )
+            if app and app.negotiated_price is not None and float(app.negotiated_price) > 0:
+                task.agreed_reward = app.negotiated_price
+                if getattr(task, "reward_to_be_quoted", False):
+                    task.reward_to_be_quoted = False
+            elif task.base_reward is not None and float(task.base_reward) > 0:
+                task.agreed_reward = task.base_reward
+                if getattr(task, "reward_to_be_quoted", False):
+                    task.reward_to_be_quoted = False
         if not safe_commit(db, f"接受任务 {task_id}"):
             return None
         db.refresh(task)

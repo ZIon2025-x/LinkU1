@@ -11,6 +11,18 @@ logger = logging.getLogger(__name__)
 # 格式: {notification_type: {language: {"title": "...", "body": "..."}}}
 # 注意：使用简洁友好的表达，适当使用表情符号增强视觉效果
 PUSH_NOTIFICATION_TEMPLATES = {
+    # 指定用户任务请求（用户资料页发给指定用户，需对方同意或议价）
+    "task_direct_request": {
+        "en": {
+            "title": "📩 Task Request",
+            "body_template": "Someone sent you a task request. Tap to accept or negotiate:「{task_title}」{reward_text_en}"
+        },
+        "zh": {
+            "title": "📩 任务请求",
+            "body_template": "有人向您发送了任务请求，请同意或议价：「{task_title}」{reward_text_zh}"
+        }
+    },
+
     # 任务申请
     "task_application": {
         "en": {

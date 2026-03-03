@@ -313,7 +313,7 @@ class MessageRepository {
     String? taskStatus,
   })> getTaskChatMessages(
     int taskId, {
-    int limit = 50,
+    int limit = 20,
     String? cursor,
   }) async {
     final cacheKey = CacheManager.buildKey(
