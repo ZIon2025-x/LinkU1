@@ -232,6 +232,13 @@ class _NotificationListViewContentState
           context.push('/activities/$relatedId');
         }
         break;
+      case 'negotiation_offer':
+      case 'application_message':
+        final nId = taskId ?? relatedId;
+        if (nId != null) {
+          context.safePush('/tasks/$nId', extra: notification.id);
+        }
+        break;
       default:
         break;
     }
@@ -350,6 +357,9 @@ class _NotificationCard extends StatelessWidget {
       if (type == 'leaderboard_like') return Icons.thumb_up;
       return Icons.leaderboard;
     }
+    // 谈判/申请类型
+    if (type == 'negotiation_offer') return Icons.price_change;
+    if (type == 'application_message') return Icons.message_outlined;
     // 任务类型
     if (type == 'task_direct_request') return Icons.person_add;
     if (type.startsWith('task_')) return Icons.assignment;
@@ -381,6 +391,8 @@ class _NotificationCard extends StatelessWidget {
     }
     // 排行榜互动类型 - 橙色系
     if (type.startsWith('leaderboard_')) return Colors.orange;
+    // 谈判/申请类型
+    if (type == 'negotiation_offer') return AppColors.warning;
     // 任务类型
     if (type.startsWith('task_')) return AppColors.primary;
     // 其他系统类型

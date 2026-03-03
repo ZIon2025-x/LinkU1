@@ -219,6 +219,9 @@ class Task extends Equatable {
   bool get isExpertActivityTask =>
       taskSource == AppConstants.taskSourceExpertActivity;
 
+  /// 是否是指定给当前用户的任务（来自用户资料页发送）
+  bool get isDesignatedTask => taskSource == 'user_profile';
+
   /// 是否有特殊来源 (非普通任务)
   bool get hasSpecialSource =>
       isFleaMarketTask || isExpertServiceTask || isExpertActivityTask;
