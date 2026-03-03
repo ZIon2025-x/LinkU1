@@ -59,6 +59,9 @@ class Task extends Equatable {
     this.platformFeeRate,
     this.platformFeeAmount,
     this.rewardToBeQuoted = false,
+    this.counterOfferPrice,
+    this.counterOfferStatus,
+    this.counterOfferUserId,
   });
 
   final int id;
@@ -116,6 +119,9 @@ class Task extends Equatable {
   final double? platformFeeAmount;
   /// 是否待报价（发布时未填金额，由接单者报价）
   final bool rewardToBeQuoted;
+  final double? counterOfferPrice;
+  final String? counterOfferStatus;
+  final String? counterOfferUserId;
 
   /// 模糊距离（500m 为一个区间）
   /// 返回区间上限值（用于排序），如 500, 1000, 1500, ...
@@ -242,6 +248,8 @@ class Task extends Equatable {
 
   /// 实际显示金额 (协商价 > 基础价 > 奖励)；待报价且未议定价格时为 0
   double get displayReward => agreedReward ?? baseReward ?? reward;
+
+  bool get hasCounterOfferPending => counterOfferStatus == 'pending';
 
   /// 是否仍处于「待报价」状态（发布时为待报价且尚未有议定金额时为 true；批准后已有 agreedReward 则为 false）
   bool get isPriceToBeQuoted =>
@@ -402,6 +410,9 @@ class Task extends Equatable {
       platformFeeRate: (json['platform_fee_rate'] as num?)?.toDouble(),
       platformFeeAmount: (json['platform_fee_amount'] as num?)?.toDouble(),
       rewardToBeQuoted: json['reward_to_be_quoted'] as bool? ?? false,
+      counterOfferPrice: (json['counter_offer_price'] as num?)?.toDouble(),
+      counterOfferStatus: json['counter_offer_status'] as String?,
+      counterOfferUserId: json['counter_offer_user_id'] as String?,
     );
   }
 
@@ -504,6 +515,9 @@ class Task extends Equatable {
     double? platformFeeRate,
     double? platformFeeAmount,
     bool? rewardToBeQuoted,
+    double? counterOfferPrice,
+    String? counterOfferStatus,
+    String? counterOfferUserId,
   }) {
     return Task(
       id: id ?? this.id,
@@ -555,6 +569,9 @@ class Task extends Equatable {
       platformFeeRate: platformFeeRate ?? this.platformFeeRate,
       platformFeeAmount: platformFeeAmount ?? this.platformFeeAmount,
       rewardToBeQuoted: rewardToBeQuoted ?? this.rewardToBeQuoted,
+      counterOfferPrice: counterOfferPrice ?? this.counterOfferPrice,
+      counterOfferStatus: counterOfferStatus ?? this.counterOfferStatus,
+      counterOfferUserId: counterOfferUserId ?? this.counterOfferUserId,
     );
   }
 
@@ -562,6 +579,7 @@ class Task extends Equatable {
   List<Object?> get props => [
         id, title, status, reward, currency, hasApplied,
         userApplicationStatus, takerId, hasReviewed, updatedAt,
+        counterOfferPrice, counterOfferStatus, counterOfferUserId,
       ];
 }
 
@@ -641,15 +659,15 @@ class CreateTaskRequest {
   Map<String, dynamic> toJson() {
     return {
       'title': title,
-      if (description != null) 'description': description,
+      'description': description ?? '',
       'task_type': taskType,
-      if (location != null) 'location': location,
+      'location': location ?? 'Online',
       if (latitude != null) 'latitude': latitude,
       if (longitude != null) 'longitude': longitude,
       if (reward != null) 'reward': reward,
       'currency': currency,
       'images': images,
-      if (deadline != null) 'deadline': deadline!.toIso8601String(),
+      if (deadline != null) 'deadline': deadline!.toUtc().toIso8601String(),
       'is_multi_participant': isMultiParticipant,
       'max_participants': maxParticipants,
       'is_public': isPublic,

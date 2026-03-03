@@ -420,6 +420,31 @@ class TaskRepository {
     }
   }
 
+  /// 被指定方提交反报价
+  Future<void> submitTakerCounterOffer(int taskId, {required double price}) async {
+    final response = await _apiService.post(
+      ApiEndpoints.takerCounterOffer(taskId),
+      data: {'price': price},
+    );
+    if (!response.isSuccess) {
+      throw TaskException(response.message ?? 'counter_offer_submit_failed');
+    }
+  }
+
+  /// 发布方响应被指定方的反报价
+  Future<void> respondTakerCounterOffer(
+    int taskId, {
+    required String action,
+  }) async {
+    final response = await _apiService.post(
+      ApiEndpoints.respondTakerCounterOffer(taskId),
+      data: {'action': action},
+    );
+    if (!response.isSuccess) {
+      throw TaskException(response.message ?? 'counter_offer_respond_failed');
+    }
+  }
+
   /// 完成任务
   Future<void> completeTask(
     int taskId, {

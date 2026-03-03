@@ -108,6 +108,10 @@ class ApiEndpoints {
       '/api/tasks/$taskId/applications/$applicationId/negotiate';
   static String respondNegotiation(int taskId, int applicationId) =>
       '/api/tasks/$taskId/applications/$applicationId/respond-negotiation';
+  static String takerCounterOffer(int taskId) =>
+      '/api/tasks/$taskId/taker-counter-offer';
+  static String respondTakerCounterOffer(int taskId) =>
+      '/api/tasks/$taskId/respond-taker-counter-offer';
   static String sendApplicationMessage(int taskId, int applicationId) =>
       '/api/tasks/$taskId/applications/$applicationId/send-message';
   static String replyApplicationMessage(int taskId, int applicationId) =>
