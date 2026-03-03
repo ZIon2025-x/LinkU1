@@ -17137,6 +17137,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Reject'**
   String get taskDetailRejectCounterOffer;
+
+  /// No description provided for @taskDetailCounterOfferAccepted.
+  ///
+  /// In en, this message translates to:
+  /// **'Counter-offer accepted'**
+  String get taskDetailCounterOfferAccepted;
+
+  /// No description provided for @taskDetailCounterOfferRejected.
+  ///
+  /// In en, this message translates to:
+  /// **'Counter-offer rejected'**
+  String get taskDetailCounterOfferRejected;
 }
 
 class _AppLocalizationsDelegate

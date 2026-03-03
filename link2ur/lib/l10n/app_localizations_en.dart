@@ -9308,4 +9308,10 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get taskDetailRejectCounterOffer => 'Reject';
+
+  @override
+  String get taskDetailCounterOfferAccepted => 'Counter-offer accepted';
+
+  @override
+  String get taskDetailCounterOfferRejected => 'Counter-offer rejected';
 }

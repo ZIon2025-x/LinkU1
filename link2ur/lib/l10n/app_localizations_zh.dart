@@ -8953,6 +8953,12 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get taskDetailRejectCounterOffer => '拒绝';
+
+  @override
+  String get taskDetailCounterOfferAccepted => '已接受反报价';
+
+  @override
+  String get taskDetailCounterOfferRejected => '已拒绝反报价';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -17904,4 +17910,10 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get taskDetailRejectCounterOffer => '拒絕';
+
+  @override
+  String get taskDetailCounterOfferAccepted => '已接受反報價';
+
+  @override
+  String get taskDetailCounterOfferRejected => '已拒絕反報價';
 }

@@ -4173,5 +4173,7 @@
   "taskDetailPosterCounterOfferTitle": "對方提出了反報價",
   "taskDetailPosterCounterOfferPrice": "對方報價",
   "taskDetailAcceptCounterOffer": "同意報價",
-  "taskDetailRejectCounterOffer": "拒絕"
+  "taskDetailRejectCounterOffer": "拒絕",
+  "taskDetailCounterOfferAccepted": "已接受反報價",
+  "taskDetailCounterOfferRejected": "已拒絕反報價"
 }

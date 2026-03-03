@@ -4234,5 +4234,7 @@
   "taskDetailPosterCounterOfferTitle": "对方提出了反报价",
   "taskDetailPosterCounterOfferPrice": "对方报价",
   "taskDetailAcceptCounterOffer": "同意报价",
-  "taskDetailRejectCounterOffer": "拒绝"
+  "taskDetailRejectCounterOffer": "拒绝",
+  "taskDetailCounterOfferAccepted": "已接受反报价",
+  "taskDetailCounterOfferRejected": "已拒绝反报价"
 }

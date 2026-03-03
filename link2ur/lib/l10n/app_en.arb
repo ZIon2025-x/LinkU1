@@ -4326,5 +4326,7 @@
   "taskDetailPosterCounterOfferTitle": "Taker proposed a counter-offer",
   "taskDetailPosterCounterOfferPrice": "Proposed price",
   "taskDetailAcceptCounterOffer": "Accept Price",
-  "taskDetailRejectCounterOffer": "Reject"
+  "taskDetailRejectCounterOffer": "Reject",
+  "taskDetailCounterOfferAccepted": "Counter-offer accepted",
+  "taskDetailCounterOfferRejected": "Counter-offer rejected"
 }

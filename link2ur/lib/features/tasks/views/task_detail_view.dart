@@ -176,8 +176,8 @@ class _TaskDetailContent extends StatelessWidget {
             'application_message_failed' => l10n.actionApplicationMessageFailed,
             'counter_offer_submitted' => l10n.taskDetailCounterOfferSent,
             'counter_offer_submit_failed' => l10n.actionOperationFailed,
-            'counter_offer_accepted' => l10n.taskDetailAcceptCounterOffer,
-            'counter_offer_rejected' => l10n.taskDetailRejectCounterOffer,
+            'counter_offer_accepted' => l10n.taskDetailCounterOfferAccepted,
+            'counter_offer_rejected' => l10n.taskDetailCounterOfferRejected,
             'counter_offer_respond_failed' => l10n.actionOperationFailed,
             _ => state.actionMessage ?? '',
           };
