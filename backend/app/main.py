@@ -1850,8 +1850,9 @@ async def websocket_chat(
                         f"Determined receiver_id: {receiver_id} (is_customer_service: {is_customer_service})"
                     )
 
-                    # 构建消息响应
+                    # 构建消息响应（含 id 便于前端去重，避免轮询时同一条消息显示两次）
                     message_response = {
+                        "id": message["id"],
                         "from": user_id,
                         "receiver_id": receiver_id,
                         "content": msg["content"],
