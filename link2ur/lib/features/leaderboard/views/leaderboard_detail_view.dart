@@ -238,13 +238,12 @@ class _LeaderboardDetailContentState
           context,
           icon: Icons.more_vert,
           onTap: () {
-            final RenderBox button = context.findRenderObject() as RenderBox;
-            final position = button.localToGlobal(Offset.zero);
+            final mq = MediaQuery.of(context);
             showMenu<String>(
               context: context,
               position: RelativeRect.fromLTRB(
-                position.dx + button.size.width,
-                position.dy + kToolbarHeight,
+                mq.size.width - 160,
+                mq.padding.top + kToolbarHeight,
                 0,
                 0,
               ),
@@ -446,8 +445,12 @@ class _LeaderboardDetailContentState
                     if (index == items.length) {
                       if (state.itemsHasMore) {
                         if (!state.itemsLoadingMore) {
-                          context.read<LeaderboardBloc>().add(
-                              LeaderboardLoadMoreItems(leaderboardId));
+                          WidgetsBinding.instance.addPostFrameCallback((_) {
+                            if (context.mounted) {
+                              context.read<LeaderboardBloc>().add(
+                                  LeaderboardLoadMoreItems(leaderboardId));
+                            }
+                          });
                         }
                         return Padding(
                           padding: const EdgeInsets.symmetric(
@@ -509,6 +512,7 @@ class _SortFilterRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final sorts = [
       ('vote_score', context.l10n.leaderboardSortComprehensive),
       ('net_votes', context.l10n.leaderboardSortNetVotes),
@@ -545,7 +549,8 @@ class _SortFilterRow extends StatelessWidget {
                   border: Border.all(
                     color: isActive
                         ? AppColors.primary
-                        : AppColors.textTertiaryLight.withValues(alpha: 0.3),
+                        : (isDark ? AppColors.textTertiaryDark : AppColors.textTertiaryLight)
+                            .withValues(alpha: 0.3),
                   ),
                 ),
                 child: Text(
@@ -556,7 +561,9 @@ class _SortFilterRow extends StatelessWidget {
                         isActive ? FontWeight.w600 : FontWeight.normal,
                     color: isActive
                         ? AppColors.primary
-                        : AppColors.textSecondaryLight,
+                        : (isDark
+                            ? AppColors.textSecondaryDark
+                            : AppColors.textSecondaryLight),
                   ),
                 ),
               ),
@@ -727,8 +734,11 @@ class _StatColumn extends StatelessWidget {
         const SizedBox(height: 2),
         Text(
           label,
-          style: AppTypography.caption
-              .copyWith(color: AppColors.textSecondaryLight),
+          style: AppTypography.caption.copyWith(
+            color: Theme.of(context).brightness == Brightness.dark
+                ? AppColors.textSecondaryDark
+                : AppColors.textSecondaryLight,
+          ),
         ),
       ],
     );
@@ -850,7 +860,7 @@ class _RankItemCard extends StatelessWidget {
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       )
-                    : SelectableText(
+                    : Text(
                         item.name,
                         style: AppTypography.bodyBold.copyWith(
                           color: isDark

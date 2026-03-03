@@ -192,32 +192,47 @@ class MessageGroupBubbleView extends StatelessWidget {
                       ),
                     ),
 
-                  // 消息气泡
-                  ...List.generate(group.messages.length, (index) {
-                    final message = group.messages[index];
-                    final position =
-                        _piecePosition(index, group.messages.length);
-                    return _GroupBubbleItem(
-                      message: message,
-                      position: position,
-                      direction: group.direction,
-                      onImageTap: onImageTap,
-                    );
-                  }),
+                  // 消息气泡：组内按时间正序（最早在上、最新在下）
+                  ...() {
+                    final sorted = List<Message>.from(group.messages)
+                      ..sort((a, b) =>
+                          (a.createdAt ?? DateTime(0))
+                              .compareTo(b.createdAt ?? DateTime(0)));
+                    return List.generate(sorted.length, (index) {
+                      final message = sorted[index];
+                      final position =
+                          _piecePosition(index, sorted.length);
+                      return _GroupBubbleItem(
+                        message: message,
+                        position: position,
+                        direction: group.direction,
+                        onImageTap: onImageTap,
+                      );
+                    });
+                  }(),
 
-                  // 时间戳（仅最后一条显示）
-                  if (group.messages.last.createdAt != null)
-                    Padding(
-                      padding:
-                          const EdgeInsets.only(top: 2, left: 4, right: 4),
-                      child: Text(
-                        DateFormatter.formatMessageTime(
-                            group.messages.last.createdAt!),
-                        style: const TextStyle(
-                          fontSize: 10,
-                          color: AppColors.textTertiaryLight,
-                        ),
-                      ),
+                  // 时间戳（显示组内最新一条的时间）
+                  if (group.messages.isNotEmpty)
+                    Builder(
+                      builder: (context) {
+                        final latest = group.messages.reduce((a, b) =>
+                            (a.createdAt ?? DateTime(0))
+                                .isAfter(b.createdAt ?? DateTime(0))
+                                ? a
+                                : b);
+                        if (latest.createdAt == null) return const SizedBox.shrink();
+                        return Padding(
+                          padding:
+                              const EdgeInsets.only(top: 2, left: 4, right: 4),
+                          child: Text(
+                            DateFormatter.formatMessageTime(latest.createdAt!),
+                            style: const TextStyle(
+                              fontSize: 10,
+                              color: AppColors.textTertiaryLight,
+                            ),
+                          ),
+                        );
+                      },
                     ),
                 ],
               ),

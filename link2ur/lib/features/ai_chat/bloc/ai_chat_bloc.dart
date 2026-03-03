@@ -208,6 +208,8 @@ class AIChatState extends Equatable {
         streamingContent,
         activeToolCall,
         errorMessage,
+        csAvailableSignal,
+        csContactEmail,
         taskDraft,
         lastToolName,
       ];
