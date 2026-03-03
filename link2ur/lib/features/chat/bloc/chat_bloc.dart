@@ -593,7 +593,9 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     ChatPeerTypingReceived event,
     Emitter<ChatState> emit,
   ) {
-    if (event.senderId != state.userId) return;
+    // 任务聊天：WebSocket 已按 taskId 过滤，接受任何参与者的打字状态
+    // 私聊：仅接受对方（state.userId）的打字状态
+    if (!state.isTaskChat && event.senderId != state.userId) return;
     emit(state.copyWith(peerIsTyping: true));
     _typingTimer?.cancel();
     _typingTimer = Timer(const Duration(seconds: 3), () {
@@ -605,13 +607,24 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     ChatReadReceiptReceived event,
     Emitter<ChatState> emit,
   ) {
-    if (event.senderId != state.userId) return;
-    final updated = state.messages.map((m) {
-      if (!m.isRead && m.senderId == state.userId) return m;
-      if (m.isRead) return m;
-      return m.copyWith(isRead: true);
-    }).toList();
-    emit(state.copyWith(messages: updated));
+    if (state.isTaskChat) {
+      // 任务聊天：回执发送者已读 → 标记非其本人发送的未读消息为已读
+      final updated = state.messages.map((m) {
+        if (m.isRead) return m;
+        if (m.senderId == event.senderId) return m; // 回执发送者自己的消息无需标记
+        return m.copyWith(isRead: true);
+      }).toList();
+      emit(state.copyWith(messages: updated));
+    } else {
+      // 私聊：仅当回执来自对方时，标记自己发出的未读消息为已读
+      if (event.senderId != state.userId) return;
+      final updated = state.messages.map((m) {
+        if (m.isRead) return m;
+        if (m.senderId == state.userId) return m; // 对方发的消息不标记
+        return m.copyWith(isRead: true);
+      }).toList();
+      emit(state.copyWith(messages: updated));
+    }
   }
 
   @override

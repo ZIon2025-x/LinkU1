@@ -3248,6 +3248,15 @@
   "chatUnpinnedHint": "已取消置顶",
   "chatTaskDetailLabel": "任务详情",
   "chatAddressLabel": "详细地址",
+  "chatGroupChat": "群聊",
+  "chatParticipantCount": "{count}人参与",
+  "@chatParticipantCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "tasksSortLatest": "最新发布",
   "tasksSortHighestPay": "报酬最高",
   "tasksSortDeadline": "即将截止",

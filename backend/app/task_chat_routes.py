@@ -64,6 +64,40 @@ async def get_current_user_secure_async_csrf(
     )
 
 
+def _build_participants(
+    task, task_participants_dict: dict, users_dict: dict, current_user_id: str
+) -> list:
+    """构建任务参与者列表（排除当前用户），用于聊天列表显示头像/名字"""
+    seen_ids = set()
+    participants = []
+
+    # 收集所有相关用户ID（poster + taker + expert_creator + TaskParticipants）
+    candidate_ids = []
+    if task.poster_id:
+        candidate_ids.append(task.poster_id)
+    if task.taker_id:
+        candidate_ids.append(task.taker_id)
+    if hasattr(task, 'expert_creator_id') and task.expert_creator_id:
+        candidate_ids.append(task.expert_creator_id)
+    # 多人任务参与者
+    for uid in task_participants_dict.get(task.id, []):
+        candidate_ids.append(uid)
+
+    for uid in candidate_ids:
+        if uid == current_user_id or uid in seen_ids:
+            continue
+        seen_ids.add(uid)
+        user = users_dict.get(uid)
+        if user:
+            participants.append({
+                "id": user.id,
+                "name": user.name,
+                "avatar": user.avatar,
+            })
+
+    return participants
+
+
 @task_chat_router.get("/messages/tasks")
 async def get_task_chat_list(
     limit: int = Query(20, ge=1, le=100),
@@ -231,16 +265,46 @@ async def get_task_chat_list(
             if row.sender_id:
                 sender_ids_for_last_messages.add(row.sender_id)
         
-        # 批量查询发送者信息
-        if sender_ids_for_last_messages:
-            senders_query = select(models.User).where(
-                models.User.id.in_(list(sender_ids_for_last_messages))
+        # 收集所有需要查询的用户ID（发送者 + 参与者）
+        all_user_ids = set(sender_ids_for_last_messages)
+
+        # 收集任务的 poster/taker/expert_creator ID
+        for task in tasks:
+            if task.poster_id:
+                all_user_ids.add(task.poster_id)
+            if task.taker_id:
+                all_user_ids.add(task.taker_id)
+            if hasattr(task, 'expert_creator_id') and task.expert_creator_id:
+                all_user_ids.add(task.expert_creator_id)
+
+        # 批量查询多人任务的 TaskParticipant
+        multi_task_ids = [t.id for t in tasks if getattr(t, 'is_multi_participant', False)]
+        task_participants_dict = {}  # task_id -> [user_id, ...]
+        if multi_task_ids:
+            tp_query = select(
+                models.TaskParticipant.task_id,
+                models.TaskParticipant.user_id
+            ).where(
+                and_(
+                    models.TaskParticipant.task_id.in_(multi_task_ids),
+                    models.TaskParticipant.status.in_(["accepted", "in_progress", "completed"])
+                )
             )
-            senders_result = await db.execute(senders_query)
-            senders_dict = {s.id: s for s in senders_result.scalars().all()}
+            tp_result = await db.execute(tp_query)
+            for row in tp_result.all():
+                task_participants_dict.setdefault(row.task_id, []).append(row.user_id)
+                all_user_ids.add(row.user_id)
+
+        # 一次查询所有用户信息
+        if all_user_ids:
+            users_query = select(models.User).where(
+                models.User.id.in_(list(all_user_ids))
+            )
+            users_result = await db.execute(users_query)
+            senders_dict = {u.id: u for u in users_result.scalars().all()}
         else:
             senders_dict = {}
-        
+
         # 为每个任务计算未读数和最后消息
         task_list = []
         for task in tasks:
@@ -332,7 +396,11 @@ async def get_task_chat_list(
                 "is_multi_participant": bool(task.is_multi_participant) if hasattr(task, 'is_multi_participant') else False,
                 "expert_creator_id": task.expert_creator_id if hasattr(task, 'expert_creator_id') else None,
                 "created_by_expert": bool(task.created_by_expert) if hasattr(task, 'created_by_expert') else False,
-                "task_source": getattr(task, 'task_source', 'normal')  # 任务来源
+                "task_source": getattr(task, 'task_source', 'normal'),  # 任务来源
+                # 参与者信息（排除当前用户自己）
+                "participants": _build_participants(
+                    task, task_participants_dict, senders_dict, current_user.id
+                ),
             }
             task_list.append(task_data)
         

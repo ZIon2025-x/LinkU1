@@ -68,12 +68,6 @@ class _TaskChatContentState extends State<_TaskChatContent> {
   Future<Task?>? _taskFuture;
   bool _taskFutureInitialized = false;
 
-  /// 用于判断是否刚加载完成/刚发完/新消息到底，以便滚到底部
-  ChatStatus _prevStatus = ChatStatus.initial;
-  int _prevMessagesLength = 0;
-  bool _prevIsSending = false;
-  int? _prevLastMessageId;
-
   /// 字符限制 - 对齐iOS (500字符)
   static const int _maxCharacters = 500;
   static const int _showCounterThreshold = 400;
@@ -83,7 +77,6 @@ class _TaskChatContentState extends State<_TaskChatContent> {
     super.initState();
     _currentUserId = StorageService.instance.getUserId();
     _scrollController.addListener(_onScroll);
-    _messageController.addListener(_onTextChanged);
   }
 
   @override
@@ -98,7 +91,6 @@ class _TaskChatContentState extends State<_TaskChatContent> {
   @override
   void dispose() {
     _scrollController.removeListener(_onScroll);
-    _messageController.removeListener(_onTextChanged);
     _messageController.dispose();
     _scrollController.dispose();
     super.dispose();
@@ -111,42 +103,6 @@ class _TaskChatContentState extends State<_TaskChatContent> {
     if (pos.pixels >= pos.maxScrollExtent - 50) {
       context.read<ChatBloc>().add(const ChatLoadMore());
     }
-  }
-
-  /// 滚到底部（最新消息）。首次进入时列表可能尚未布局，多等几帧直到 maxScrollExtent 可用。
-  void _scrollToBottom() {
-    void tryScroll([int frameCount = 0]) {
-      if (!mounted) return;
-      if (!_scrollController.hasClients) {
-        if (frameCount < 8) {
-          WidgetsBinding.instance.addPostFrameCallback((_) => tryScroll(frameCount + 1));
-        }
-        return;
-      }
-      final max = _scrollController.position.maxScrollExtent;
-      if (max <= 0 && frameCount < 8) {
-        WidgetsBinding.instance.addPostFrameCallback((_) => tryScroll(frameCount + 1));
-        return;
-      }
-      _scrollController.animateTo(
-        max,
-        duration: const Duration(milliseconds: 200),
-        curve: Curves.easeOut,
-      );
-    }
-    WidgetsBinding.instance.addPostFrameCallback((_) => tryScroll(0));
-  }
-
-  void _onTextChanged() {
-    // 强制限制字符数
-    if (_messageController.text.length > _maxCharacters) {
-      _messageController.text =
-          _messageController.text.substring(0, _maxCharacters);
-      _messageController.selection = TextSelection.fromPosition(
-        const TextPosition(offset: _maxCharacters),
-      );
-    }
-    // setState(() {}); // 刷新字符计数器
   }
 
   void _sendMessage() {
@@ -219,11 +175,7 @@ class _TaskChatContentState extends State<_TaskChatContent> {
   @override
   Widget build(BuildContext context) {
     return BlocConsumer<ChatBloc, ChatState>(
-      listenWhen: (prev, curr) =>
-          prev.status != curr.status ||
-          prev.errorMessage != curr.errorMessage ||
-          prev.messages.length != curr.messages.length ||
-          prev.isSending != curr.isSending,
+      listenWhen: (prev, curr) => prev.errorMessage != curr.errorMessage,
       listener: (context, state) {
         if (state.errorMessage != null && state.messages.isNotEmpty) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -231,23 +183,6 @@ class _TaskChatContentState extends State<_TaskChatContent> {
           );
           context.read<ChatBloc>().add(const ChatClearError());
         }
-        final justLoaded = _prevStatus != ChatStatus.loaded &&
-            state.status == ChatStatus.loaded &&
-            state.messages.isNotEmpty;
-        final justSent = _prevIsSending && !state.isSending;
-        final lastId = state.messages.isEmpty ? null : state.messages.last.id;
-        final newMessageAtEnd = state.messages.length > _prevMessagesLength &&
-            !state.isLoadingMore &&
-            lastId != null &&
-            lastId != _prevLastMessageId;
-        // 任务聊天用 reverse:true + 新→旧，视口已在底部，无需滚动
-        if ((justLoaded || justSent || newMessageAtEnd) && !state.isTaskChat) {
-          _scrollToBottom();
-        }
-        _prevStatus = state.status;
-        _prevMessagesLength = state.messages.length;
-        _prevIsSending = state.isSending;
-        _prevLastMessageId = lastId;
       },
       buildWhen: (prev, curr) =>
           prev.status != curr.status ||
@@ -343,49 +278,62 @@ class _TaskChatContentState extends State<_TaskChatContent> {
           bottom: BorderSide(color: AppColors.dividerLight),
         ),
       ),
-      child: Row(
-        children: [
-          FutureBuilder<Task?>(
-            future: _taskFuture,
-            builder: (context, snapshot) {
-              final icon = _taskCardIcon(snapshot.data);
-              return Container(
+      child: FutureBuilder<Task?>(
+        future: _taskFuture,
+        builder: (context, snapshot) {
+          final task = snapshot.data;
+          final icon = _taskCardIcon(task);
+          final isGroup = task?.isMultiParticipant ?? false;
+          final participantCount = task?.currentParticipants ?? 0;
+
+          // 群聊时用 groups 图标覆盖默认图标
+          final displayIcon = isGroup ? Icons.groups : icon;
+          final iconColor = isGroup ? Colors.teal : AppColors.primary;
+
+          // 状态文本：群聊时追加参与人数
+          final displayStatus = isGroup && participantCount > 0
+              ? '$statusText · ${context.l10n.chatParticipantCount(participantCount)}'
+              : statusText;
+
+          return Row(
+            children: [
+              Container(
                 width: 40,
                 height: 40,
                 decoration: BoxDecoration(
-                  color: AppColors.primary.withValues(alpha: 0.15),
+                  color: iconColor.withValues(alpha: 0.15),
                   borderRadius: AppRadius.allSmall,
                 ),
-                child: Icon(icon, color: AppColors.primary, size: 20),
-              );
-            },
-          ),
-          AppSpacing.hMd,
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  context.l10n.chatTaskTitle(widget.taskId),
-                  style: const TextStyle(fontWeight: FontWeight.w600),
-                  overflow: TextOverflow.ellipsis,
-                  maxLines: 1,
+                child: Icon(displayIcon, color: iconColor, size: 20),
+              ),
+              AppSpacing.hMd,
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      context.l10n.chatTaskTitle(widget.taskId),
+                      style: const TextStyle(fontWeight: FontWeight.w600),
+                      overflow: TextOverflow.ellipsis,
+                      maxLines: 1,
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      displayStatus,
+                      style: TextStyle(fontSize: 12, color: statusColor),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 2),
-                Text(
-                  statusText,
-                  style: TextStyle(fontSize: 12, color: statusColor),
-                ),
-              ],
-            ),
-          ),
-          SmallActionButton(
-            text: context.l10n.chatViewDetail,
-            onPressed: () {
-              context.safePush('/tasks/${widget.taskId}');
-            },
-          ),
-        ],
+              ),
+              SmallActionButton(
+                text: context.l10n.chatViewDetail,
+                onPressed: () {
+                  context.safePush('/tasks/${widget.taskId}');
+                },
+              ),
+            ],
+          );
+        },
       ),
     );
   }

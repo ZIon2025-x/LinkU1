@@ -12500,6 +12500,18 @@ abstract class AppLocalizations {
   /// **'Address'**
   String get chatAddressLabel;
 
+  /// No description provided for @chatGroupChat.
+  ///
+  /// In en, this message translates to:
+  /// **'Group Chat'**
+  String get chatGroupChat;
+
+  /// No description provided for @chatParticipantCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} participants'**
+  String chatParticipantCount(int count);
+
   /// No description provided for @tasksSortLatest.
   ///
   /// In en, this message translates to:

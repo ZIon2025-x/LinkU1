@@ -3258,6 +3258,15 @@
   "chatUnpinnedHint": "Chat unpinned",
   "chatTaskDetailLabel": "Task Details",
   "chatAddressLabel": "Address",
+  "chatGroupChat": "Group Chat",
+  "chatParticipantCount": "{count} participants",
+  "@chatParticipantCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "tasksSortLatest": "Latest",
   "tasksSortHighestPay": "Highest Pay",
   "tasksSortDeadline": "Ending Soon",

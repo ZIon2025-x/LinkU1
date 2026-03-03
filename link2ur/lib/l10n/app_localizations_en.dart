@@ -6832,6 +6832,14 @@ class AppLocalizationsEn extends AppLocalizations {
   String get chatAddressLabel => 'Address';
 
   @override
+  String get chatGroupChat => 'Group Chat';
+
+  @override
+  String chatParticipantCount(int count) {
+    return '$count participants';
+  }
+
+  @override
   String get tasksSortLatest => 'Latest';
 
   @override

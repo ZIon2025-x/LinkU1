@@ -6545,6 +6545,14 @@ class AppLocalizationsZh extends AppLocalizations {
   String get chatAddressLabel => '详细地址';
 
   @override
+  String get chatGroupChat => '群聊';
+
+  @override
+  String chatParticipantCount(int count) {
+    return '$count人参与';
+  }
+
+  @override
   String get tasksSortLatest => '最新发布';
 
   @override
@@ -15512,6 +15520,14 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get chatAddressLabel => '詳細地址';
+
+  @override
+  String get chatGroupChat => '群聊';
+
+  @override
+  String chatParticipantCount(int count) {
+    return '$count人參與';
+  }
 
   @override
   String get tasksSortLatest => '最新發佈';

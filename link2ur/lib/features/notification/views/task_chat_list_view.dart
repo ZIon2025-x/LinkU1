@@ -43,8 +43,9 @@ class _TaskChatListViewContent extends StatelessWidget {
       body: BlocBuilder<MessageBloc, MessageState>(
         buildWhen: (previous, current) =>
             previous.status != current.status ||
-            previous.displayTaskChats != current.displayTaskChats ||
-            previous.pinnedTaskIds != current.pinnedTaskIds,
+            previous.taskChats != current.taskChats ||
+            previous.pinnedTaskIds != current.pinnedTaskIds ||
+            previous.hiddenTaskChats != current.hiddenTaskChats,
         builder: (context, state) {
           return _buildBody(context, state);
         },
@@ -193,10 +194,22 @@ class _TaskChatRow extends StatelessWidget {
     return DateFormatter.formatSmart(dateTime);
   }
 
+  /// 构建最后一条消息的显示文本
+  /// 群聊时前缀发送人名字
+  String _lastMessageDisplay(BuildContext context) {
+    if (chat.lastMessage == null || chat.lastMessage!.isEmpty) return '';
+    if (chat.isMultiParticipant && chat.lastMessageObj?.senderName != null) {
+      final name = chat.lastMessageObj!.senderName!;
+      return '$name: ${chat.lastMessage}';
+    }
+    return chat.lastMessage!;
+  }
+
   @override
   Widget build(BuildContext context) {
     final otherUser =
         chat.participants.isNotEmpty ? chat.participants.first : null;
+    final isGroup = chat.isMultiParticipant;
 
     return ListTile(
       onTap: onTap,
@@ -211,7 +224,7 @@ class _TaskChatRow extends StatelessWidget {
             name: otherUser?.name ?? context.l10n.homeDefaultUser,
             size: 48,
           ),
-          // 任务图标角标
+          // 角标：群聊用 groups 图标，单人用 task_alt
           Positioned(
             right: 0,
             bottom: 0,
@@ -219,11 +232,15 @@ class _TaskChatRow extends StatelessWidget {
               width: 18,
               height: 18,
               decoration: BoxDecoration(
-                color: AppColors.primary,
+                color: isGroup ? Colors.teal : AppColors.primary,
                 shape: BoxShape.circle,
                 border: Border.all(color: Colors.white, width: 1.5),
               ),
-              child: const Icon(Icons.task_alt, size: 10, color: Colors.white),
+              child: Icon(
+                isGroup ? Icons.groups : Icons.task_alt,
+                size: 10,
+                color: Colors.white,
+              ),
             ),
           ),
         ],
@@ -260,7 +277,7 @@ class _TaskChatRow extends StatelessWidget {
         children: [
           Expanded(
             child: Text(
-              chat.lastMessage ?? '',
+              _lastMessageDisplay(context),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: const TextStyle(
@@ -269,6 +286,17 @@ class _TaskChatRow extends StatelessWidget {
               ),
             ),
           ),
+          if (isGroup && chat.participants.length > 1) ...[
+            const SizedBox(width: 4),
+            Text(
+              context.l10n.chatParticipantCount(chat.participants.length),
+              style: TextStyle(
+                fontSize: 11,
+                color: AppColors.textTertiaryLight.withValues(alpha: 0.8),
+              ),
+            ),
+            const SizedBox(width: 4),
+          ],
           if (chat.unreadCount > 0)
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
