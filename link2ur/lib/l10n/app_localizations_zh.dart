@@ -4166,6 +4166,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get taskStatusDisputed => '争议中';
 
   @override
+  String get taskStatusPendingAcceptance => '待接受';
+
+  @override
   String get myPostsTitle => '我的帖子';
 
   @override
@@ -13058,6 +13061,9 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get taskStatusDisputed => '爭議中';
+
+  @override
+  String get taskStatusPendingAcceptance => '待接受';
 
   @override
   String get myPostsTitle => '我的帖子';

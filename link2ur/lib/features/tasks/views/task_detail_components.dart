@@ -3183,10 +3183,7 @@ class _QuoteDesignatedPriceSheetState
 
   String? _validate() {
     final amount = double.tryParse(_amountController.text.trim());
-    if (amount == null || amount <= 0) {
-      return context.l10n.fleaMarketNegotiatePriceTooLow;
-    }
-    if (amount <= 1.0) {
+    if (amount == null || amount <= 1.0) {
       return context.l10n.taskApplyQuoteAmountMin;
     }
     return null;
@@ -3273,6 +3270,9 @@ class _QuoteDesignatedPriceSheetState
                     border: const OutlineInputBorder(),
                     errorText: _errorMessage,
                   ),
+                  onChanged: (_) {
+                    if (_errorMessage != null) setState(() => _errorMessage = null);
+                  },
                   onSubmitted: (_) => _submit(),
                 ),
                 const SizedBox(height: 16),

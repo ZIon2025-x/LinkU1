@@ -22,6 +22,8 @@ class TaskStatusHelper {
         return l10n.taskStatusCancelled;
       case AppConstants.taskStatusDisputed:
         return l10n.taskStatusDisputed;
+      case AppConstants.taskStatusPendingAcceptance:
+        return l10n.taskStatusPendingAcceptance;
       default:
         return status;
     }

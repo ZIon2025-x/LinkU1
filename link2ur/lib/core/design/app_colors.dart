@@ -257,6 +257,8 @@ class AppColors {
       case 'assigned':
       case AppConstants.taskStatusInProgress:
         return primary;
+      case AppConstants.taskStatusPendingAcceptance:
+        return warning;
       case AppConstants.taskStatusPendingConfirmation:
         return warning;
       case AppConstants.taskStatusPendingPayment:

@@ -8025,6 +8025,12 @@ abstract class AppLocalizations {
   /// **'Disputed'**
   String get taskStatusDisputed;
 
+  /// No description provided for @taskStatusPendingAcceptance.
+  ///
+  /// In en, this message translates to:
+  /// **'Pending Acceptance'**
+  String get taskStatusPendingAcceptance;
+
   /// No description provided for @myPostsTitle.
   ///
   /// In en, this message translates to:

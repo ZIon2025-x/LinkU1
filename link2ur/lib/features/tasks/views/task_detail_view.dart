@@ -741,8 +741,11 @@ class _TaskDetailContent extends StatelessWidget {
       }
     }
 
-    // 议价回应 (接单方 + 来自议价通知)
-    if (!isPoster && notificationId != null) {
+    // 议价回应 (接单方 + 来自议价通知 + 任务仍处于可响应状态)
+    if (!isPoster &&
+        notificationId != null &&
+        task.status == AppConstants.taskStatusOpen &&
+        state.userApplication?.status == 'pending') {
       return Row(
         children: [
           Expanded(
@@ -977,7 +980,7 @@ class _TaskDetailContent extends StatelessWidget {
       ),
     ).then((confirmed) {
       if (!context.mounted || confirmed != true) return;
-      context.read<TaskDetailBloc>().add(const TaskDetailCancelRequested());
+      context.read<TaskDetailBloc>().add(const TaskDetailCancelApplicationRequested());
     });
   }
 }

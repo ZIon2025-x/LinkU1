@@ -1977,6 +1977,7 @@
   "taskStatusPendingConfirmation": "Pending Confirmation",
   "taskStatusPendingPayment": "Pending Payment",
   "taskStatusDisputed": "Disputed",
+  "taskStatusPendingAcceptance": "Pending Acceptance",
   "myPostsTitle": "My Items",
   "taskLocationAddress": "Task Address",
   "taskLocationCoordinates": "Coordinates",

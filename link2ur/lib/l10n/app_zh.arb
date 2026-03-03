@@ -2310,6 +2310,7 @@
   "taskStatusPendingConfirmation": "待确认",
   "taskStatusPendingPayment": "待支付",
   "taskStatusDisputed": "争议中",
+  "taskStatusPendingAcceptance": "待接受",
   "myPostsTitle": "我的闲置",
   "taskLocationAddress": "任务地址",
   "taskLocationCoordinates": "坐标",

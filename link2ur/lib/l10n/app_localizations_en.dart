@@ -4331,6 +4331,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get taskStatusDisputed => 'Disputed';
 
   @override
+  String get taskStatusPendingAcceptance => 'Pending Acceptance';
+
+  @override
   String get myPostsTitle => 'My Posts';
 
   @override
