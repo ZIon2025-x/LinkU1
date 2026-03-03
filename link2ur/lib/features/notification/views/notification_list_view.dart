@@ -177,66 +177,124 @@ class _NotificationListViewContentState
     final relatedId = notification.relatedId;
     final taskId = notification.taskId;
 
-    // 论坛相关 - 跳转到帖子详情
+    // ==================== 论坛 ====================
     if (type.startsWith('forum_')) {
-      final postId = relatedId;
-      if (postId != null) {
-        context.safePush('/forum/posts/$postId');
+      // forum_category_* 的 related_id 是分类 id，不能当帖子 id 使用
+      if (type == 'forum_category_approved') {
+        context.safePush('/forum');
+        return;
       }
+      if (type == 'forum_category_rejected') return;
+      // 其余 forum_* 类型：related_id 是帖子 id
+      if (relatedId != null) context.safePush('/forum/posts/$relatedId');
       return;
     }
 
-    // 排行榜相关 - 跳转到排行榜项目详情
+    // ==================== 排行榜 ====================
     if (type.startsWith('leaderboard_')) {
-      final itemId = relatedId;
-      if (itemId != null) {
-        context.push('/leaderboard/$itemId');
+      if (relatedId == null) return;
+      // leaderboard_approved/rejected：related_id 是大赛 id，跳大赛详情
+      if (type == 'leaderboard_approved' || type == 'leaderboard_rejected') {
+        context.safePush('/leaderboard/$relatedId');
+      } else {
+        // leaderboard_vote/comment/like 等：related_id 是条目 id，跳条目详情
+        context.goToLeaderboardItemDetail(relatedId);
       }
       return;
     }
 
-    // 任务相关
+    // ==================== 跳蚤市场 ====================
+    // 用 startsWith('flea_market') 同时覆盖旧 'flea_market' 与新 'flea_market_*' 类型
+    if (type.startsWith('flea_market')) {
+      // 这两个类型的 related_id 是 task_id（申请被接受后已创建任务）
+      if (type == 'flea_market_purchase_accepted' ||
+          type == 'flea_market_direct_purchase') {
+        final id = taskId ?? relatedId;
+        if (id != null) context.safePush('/tasks/$id');
+      } else {
+        // flea_market / flea_market_purchase_request / flea_market_sold /
+        // flea_market_seller_counter_offer / flea_market_purchase_rejected：
+        // related_id 是商品 id
+        if (relatedId != null) context.safePush('/flea-market/$relatedId');
+      }
+      return;
+    }
+
+    // ==================== 任务 ====================
     if (type.startsWith('task_')) {
-      if (type == 'task_chat') {
-        if (taskId != null) {
-          context.push('/task-chat/$taskId');
-        }
+      if (type == 'task_chat' || type == 'task_message') {
+        if (taskId != null) context.push('/task-chat/$taskId');
       } else {
         final id = taskId ?? relatedId;
-        if (id != null) {
-          context.safePush('/tasks/$id');
-        }
+        if (id != null) context.safePush('/tasks/$id');
       }
       return;
     }
 
-    // 其他系统类型
+    // ==================== 活动奖励 ====================
+    if (type.startsWith('activity_reward_') || type == 'official_activity_won') {
+      if (relatedId != null) context.push('/activities/$relatedId');
+      return;
+    }
+
+    // ==================== 达人服务 ====================
+    // 达人身份审核结果（related_id 为 null）→ 去服务申请列表
+    if (type == 'expert_application_approved' ||
+        type == 'expert_application_rejected') {
+      context.push('/my-service-applications');
+      return;
+    }
+    // 服务申请 / 议价类：related_id 是 service_id
+    if (type == 'service_application' ||
+        type == 'service_application_rejected' ||
+        type == 'service_application_cancelled' ||
+        type == 'counter_offer' ||
+        type == 'counter_offer_accepted' ||
+        type == 'counter_offer_accepted_to_applicant' ||
+        type == 'counter_offer_rejected') {
+      if (relatedId != null) context.safePush('/service/$relatedId');
+      return;
+    }
+
+    // ==================== 其他系统类型 ====================
     switch (type) {
       case 'message':
-        if (taskId != null) {
-          context.push('/task-chat/$taskId');
-        }
+        if (taskId != null) context.push('/task-chat/$taskId');
         break;
       case 'payment':
       case 'payment_success':
       case 'payment_failed':
         context.push('/wallet');
         break;
-      case 'flea_market':
-        if (relatedId != null) {
-          context.safePush('/flea-market/$relatedId');
-        }
-        break;
       case 'activity':
-        if (relatedId != null) {
-          context.push('/activities/$relatedId');
-        }
+        if (relatedId != null) context.push('/activities/$relatedId');
         break;
       case 'negotiation_offer':
       case 'application_message':
         final nId = taskId ?? relatedId;
-        if (nId != null) {
-          context.safePush('/tasks/$nId', extra: notification.id);
+        if (nId != null) context.safePush('/tasks/$nId', extra: notification.id);
+        break;
+      // 申请状态类：related_id 是 application_id，必须用 taskId 跳任务详情
+      case 'application_accepted':
+      case 'application_rejected':
+      case 'application_withdrawn':
+      case 'negotiation_rejected':
+      case 'application_message_reply':
+        if (taskId != null) context.safePush('/tasks/$taskId');
+        break;
+      // 服务 / 支付 / 提醒类任务跳转
+      case 'service_application_approved':
+      case 'payment_reminder':
+      // 任务提醒（这些类型 taskId 可能为 null，用 relatedId 作为 task_id 备用）
+      case 'confirmation_reminder':
+      case 'deadline_reminder':
+      case 'auto_transfer_reminder':
+      case 'auto_confirm_transfer':
+      case 'cancel_request_approved':
+      case 'cancel_request_rejected':
+        {
+          final id = taskId ?? relatedId;
+          if (id != null) context.safePush('/tasks/$id');
         }
         break;
       default:

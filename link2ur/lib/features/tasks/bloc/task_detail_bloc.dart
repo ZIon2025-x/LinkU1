@@ -940,6 +940,7 @@ class TaskDetailBloc extends Bloc<TaskDetailEvent, TaskDetailState> {
         _taskId!,
         negotiatedPrice: event.price,
       );
+      await _taskRepository.acceptTask(_taskId!);
       final task = await _refreshTask();
       emit(state.copyWith(
         task: task,

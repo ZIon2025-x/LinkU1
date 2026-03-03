@@ -678,13 +678,8 @@ class _UserProfileViewState extends State<UserProfileView> {
                                   await taskRepo.createTask(
                                     CreateTaskRequest(
                                       title: title,
-                                      description: descriptionController
-                                              .text
-                                              .trim()
-                                              .isNotEmpty
-                                          ? descriptionController.text
-                                              .trim()
-                                          : null,
+                                      description:
+                                          descriptionController.text.trim(),
                                       taskType: selectedTaskType,
                                       location:
                                           loc.isNotEmpty ? loc : 'Online',
