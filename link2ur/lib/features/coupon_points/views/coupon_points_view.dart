@@ -78,7 +78,9 @@ class _CouponPointsContentState extends State<_CouponPointsContent>
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return BlocListener<CouponPointsBloc, CouponPointsState>(
-      listenWhen: (prev, curr) => curr.actionMessage != null,
+      listenWhen: (prev, curr) =>
+          curr.actionMessage != null &&
+          curr.actionMessage != prev.actionMessage,
       listener: (context, state) {
         if (state.actionMessage != null) {
           final isError = state.actionMessage!.contains('failed');
@@ -145,10 +147,12 @@ class _CouponPointsContentState extends State<_CouponPointsContent>
 
             return TabBarView(
               controller: _tabController,
-              children: const [
-                _PointsTab(),
-                _CouponsTab(),
-                _CheckInTab(),
+              children: [
+                _PointsTab(
+                  onGoToCoupons: () => _tabController.animateTo(1),
+                ),
+                const _CouponsTab(),
+                const _CheckInTab(),
               ],
             );
           },
@@ -160,7 +164,9 @@ class _CouponPointsContentState extends State<_CouponPointsContent>
 
 /// 积分页签
 class _PointsTab extends StatelessWidget {
-  const _PointsTab();
+  const _PointsTab({this.onGoToCoupons});
+
+  final VoidCallback? onGoToCoupons;
 
   @override
   Widget build(BuildContext context) {
@@ -227,6 +233,7 @@ class _PointsTab extends StatelessWidget {
                                 context
                                     .read<CouponPointsBloc>()
                                     .add(const CouponPointsLoadAvailableCoupons());
+                                onGoToCoupons?.call();
                               },
                             ),
                             AppSpacing.hMd,
@@ -736,10 +743,14 @@ class _CheckInTab extends StatelessWidget {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                         children: List.generate(7, (index) {
+                          final cycleDay = state.consecutiveDays % 7;
+                          // 7 的整数倍时表示一轮已完成，全部格子显示已完成
+                          final isFullCycle =
+                              state.consecutiveDays > 0 && cycleDay == 0;
                           final isCompleted =
-                              index < state.consecutiveDays % 7;
+                              isFullCycle || index < cycleDay;
                           final isCurrent =
-                              index == state.consecutiveDays % 7;
+                              !isFullCycle && index == cycleDay;
 
                           return Column(
                             children: [

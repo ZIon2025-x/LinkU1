@@ -345,14 +345,7 @@ class ApiEndpoints {
   static const String availableCoupons = '/api/coupon-points/coupons/available';
   static const String myCoupons = '/api/coupon-points/coupons/my';
   static const String claimCoupon = '/api/coupon-points/coupons/claim';
-  static const String validateCoupon = '/api/coupon-points/coupons/validate';
-  static const String useCoupon = '/api/coupon-points/coupons/use';
   static const String validateInvitationCode =
-      '/api/coupon-points/invitation-codes/validate';
-  // NOTE: 后端没有独立的"使用邀请码"接口——邀请码在注册时自动使用。
-  // 以下两个端点保留但实际不可用，调用方应使用 validateInvitationCode 验证后在注册时传入。
-  static const String useInvitationCode = '/api/coupon-points/invitation-codes/validate';
-  static const String invitationStatus =
       '/api/coupon-points/invitation-codes/validate';
 
   // --- 签到 ---

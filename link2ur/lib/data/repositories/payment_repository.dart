@@ -144,20 +144,6 @@ class PaymentRepository {
   // 后端通过 Stripe Webhook 接收 payment_intent.succeeded 事件处理。
   // 无需手动调用后端确认端点。
 
-  /// 获取支付方式列表
-  Future<List<Map<String, dynamic>>> getPaymentMethods() async {
-    final response = await _apiService.get<Map<String, dynamic>>(
-      ApiEndpoints.stripeConnectExternalAccounts,
-    );
-
-    if (!response.isSuccess || response.data == null) {
-      throw PaymentException(response.message ?? 'Failed to load payment methods');
-    }
-
-    final items = response.data!['items'] as List<dynamic>? ?? [];
-    return items.map((e) => e as Map<String, dynamic>).toList();
-  }
-
   /// 获取 Connect 收款记录
   Future<List<Map<String, dynamic>>> getConnectPayments({
     int page = 1,

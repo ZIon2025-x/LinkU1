@@ -100,6 +100,7 @@ class CouponPointsState extends Equatable {
     this.transactions = const [],
     this.transactionPage = 1,
     this.hasMoreTransactions = true,
+    this.currentTransactionType,
     this.availableCoupons = const [],
     this.myCoupons = const [],
     this.checkInStatus,
@@ -116,6 +117,8 @@ class CouponPointsState extends Equatable {
   final List<PointsTransaction> transactions;
   final int transactionPage;
   final bool hasMoreTransactions;
+  /// 当前交易记录的类型过滤器（null 表示全部）
+  final String? currentTransactionType;
   final List<Coupon> availableCoupons;
   final List<UserCoupon> myCoupons;
   final Map<String, dynamic>? checkInStatus;
@@ -134,6 +137,7 @@ class CouponPointsState extends Equatable {
     List<PointsTransaction>? transactions,
     int? transactionPage,
     bool? hasMoreTransactions,
+    String? currentTransactionType,
     List<Coupon>? availableCoupons,
     List<UserCoupon>? myCoupons,
     Map<String, dynamic>? checkInStatus,
@@ -150,6 +154,7 @@ class CouponPointsState extends Equatable {
       transactions: transactions ?? this.transactions,
       transactionPage: transactionPage ?? this.transactionPage,
       hasMoreTransactions: hasMoreTransactions ?? this.hasMoreTransactions,
+      currentTransactionType: currentTransactionType ?? this.currentTransactionType,
       availableCoupons: availableCoupons ?? this.availableCoupons,
       myCoupons: myCoupons ?? this.myCoupons,
       checkInStatus: checkInStatus ?? this.checkInStatus,
@@ -169,6 +174,7 @@ class CouponPointsState extends Equatable {
         transactions,
         transactionPage,
         hasMoreTransactions,
+        currentTransactionType,
         availableCoupons,
         myCoupons,
         checkInStatus,
@@ -250,6 +256,7 @@ class CouponPointsBloc extends Bloc<CouponPointsEvent, CouponPointsState> {
         transactions: transactions,
         transactionPage: 1,
         hasMoreTransactions: transactions.length >= 20,
+        currentTransactionType: event.type,
       ));
     } catch (e) {
       AppLogger.error('Failed to load transactions', e);
@@ -267,6 +274,7 @@ class CouponPointsBloc extends Bloc<CouponPointsEvent, CouponPointsState> {
       final nextPage = state.transactionPage + 1;
       final transactions = await _repository.getPointsTransactions(
         page: nextPage,
+        type: state.currentTransactionType,
       );
 
       emit(state.copyWith(
@@ -403,12 +411,16 @@ class CouponPointsBloc extends Bloc<CouponPointsEvent, CouponPointsState> {
 
     try {
       await _repository.redeemCoupon(event.couponId);
+      // 刷新积分账户
+      final account = await _repository.getPointsAccount();
       emit(state.copyWith(
         isSubmitting: false,
         actionMessage: 'coupon_redeemed',
+        pointsAccount: account,
       ));
-      // 刷新数据
-      add(const CouponPointsLoadRequested());
+      // 刷新优惠券列表（不全页重载，避免短暂 loading 状态）
+      add(const CouponPointsLoadMyCoupons());
+      add(const CouponPointsLoadAvailableCoupons());
     } catch (e) {
       final errMsg = e.toString().replaceAll('CouponPointsException: ', '');
       emit(state.copyWith(
@@ -430,14 +442,14 @@ class CouponPointsBloc extends Bloc<CouponPointsEvent, CouponPointsState> {
       await _repository.claimCouponByCode(event.code);
       emit(state.copyWith(
         isSubmitting: false,
-        actionMessage: 'coupon_claimed',
+        actionMessage: 'invite_code_used',
       ));
       add(const CouponPointsLoadRequested());
     } catch (e) {
       final errMsg = e.toString().replaceAll('CouponPointsException: ', '');
       emit(state.copyWith(
         isSubmitting: false,
-        actionMessage: 'claim_failed',
+        actionMessage: 'invite_code_failed',
         errorMessage: errMsg,
       ));
     }

@@ -427,9 +427,9 @@ def claim_coupon(
         idempotency_key=idempotency_key
     )
     db.add(user_coupon)
-    db.commit()
+    db.flush()
     db.refresh(user_coupon)
-    
+
     return user_coupon, None
 
 
@@ -536,7 +536,10 @@ def use_coupon(
     is_valid, error_msg, discount_amount = validate_coupon_usage(
         db, user_id, user_coupon.coupon_id, order_amount, task_location, task_type, task_date
     )
-    
+
+    if not is_valid:
+        return None, error_msg
+
     # 更新用户优惠券状态
     user_coupon.status = "used"
     user_coupon.used_at = get_utc_time()
@@ -738,7 +741,7 @@ def check_in(
             check_in.coupon_id = reward_config.coupon_id
     
     db.add(check_in)
-    
+
     # 如果奖励是积分，添加到积分账户
     if check_in.reward_type == "points" and check_in.points_reward:
         add_points_transaction(
@@ -750,16 +753,23 @@ def check_in(
             description=f"签到奖励（连续{consecutive_days}天）",
             idempotency_key=f"checkin_{user_id}_{today}" if not idempotency_key else None
         )
-    
+
     # 如果奖励是优惠券，创建用户优惠券
     if check_in.reward_type == "coupon" and check_in.coupon_id:
         _uc, _err = claim_coupon(db, user_id, check_in.coupon_id)
         if _err:
             logger.warning("Check-in coupon claim failed for user %s: %s", user_id, _err)
-    
-    db.commit()
+
+    try:
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        # 并发签到时 UniqueConstraint 冲突，返回友好提示
+        if "unique" in str(e).lower() or "duplicate" in str(e).lower():
+            return None, "今天已经签到过了"
+        raise
     db.refresh(check_in)
-    
+
     return check_in, None
 
 

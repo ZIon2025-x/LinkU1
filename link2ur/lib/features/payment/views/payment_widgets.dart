@@ -2,9 +2,11 @@ part of 'payment_view.dart';
 
 /// 优惠券选择底部弹窗
 class _CouponSelectorSheet extends StatefulWidget {
-  const _CouponSelectorSheet({this.selectedCouponId});
+  const _CouponSelectorSheet({this.selectedCouponId, this.orderAmountPence});
 
   final int? selectedCouponId;
+  /// 订单金额（便士），用于过滤不满足最低使用金额的优惠券
+  final int? orderAmountPence;
 
   @override
   State<_CouponSelectorSheet> createState() => _CouponSelectorSheetState();
@@ -25,8 +27,12 @@ class _CouponSelectorSheetState extends State<_CouponSelectorSheet> {
       final repo = context.read<CouponPointsRepository>();
       final result = await repo.getMyCoupons(status: 'unused');
       if (mounted) {
+        final orderAmount = widget.orderAmountPence;
         setState(() {
           _coupons = result
+              .where((c) =>
+                  c.isUsable && // 过滤已过期但 status 未更新的优惠券
+                  (orderAmount == null || c.coupon.minAmount <= orderAmount)) // 过滤不满足最低金额的
               .map((c) => {
                     'id': c.id,
                     'name': c.coupon.name,

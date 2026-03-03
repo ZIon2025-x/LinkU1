@@ -173,8 +173,8 @@ def redeem_coupon(
         raise HTTPException(status_code=404, detail="优惠券不存在")
     
     # 2. 检查优惠券是否可以用积分兑换
-    usage_conditions = coupon.usage_conditions or {}
-    points_required = usage_conditions.get("points_required", 0)
+    # points_required 是 Coupon 模型的直接列，不在 usage_conditions JSONB 里
+    points_required = coupon.points_required or 0
     
     if points_required <= 0:
         raise HTTPException(status_code=400, detail="该优惠券不支持积分兑换")
@@ -352,10 +352,12 @@ def claim_coupon_api(
         promotion_code_id=promotion_code_id,
         idempotency_key=request.idempotency_key
     )
-    
+
     if not user_coupon:
         raise HTTPException(status_code=400, detail=claim_error or "领取失败，请检查优惠券是否可用或已达到领取限制")
-    
+
+    db.commit()
+
     # 获取优惠券详情用于返回
     coupon = get_coupon_by_id(db, coupon_id)
     
@@ -2111,8 +2113,21 @@ def get_check_in_status(
         if last_check_in.check_in_date < today - timedelta(days=1):
             consecutive_days = 0
     
-    # TODO: 获取最近7天签到记录
-    check_in_history = []
+    # 获取最近 7 天签到记录
+    seven_days_ago = today - timedelta(days=6)
+    recent_records = db.query(models.CheckIn).filter(
+        models.CheckIn.user_id == current_user.id,
+        models.CheckIn.check_in_date >= seven_days_ago,
+        models.CheckIn.check_in_date <= today,
+    ).order_by(models.CheckIn.check_in_date).all()
+    check_in_history = [
+        {
+            "date": r.check_in_date.isoformat(),
+            "consecutive_days": r.consecutive_days,
+            "reward_type": r.reward_type,
+        }
+        for r in recent_records
+    ]
     
     return {
         "today_checked": today_check_in is not None,
@@ -2137,7 +2152,7 @@ def get_check_in_rewards(
         reward_data = {
             "consecutive_days": r.consecutive_days,
             "reward_type": r.reward_type,
-            "description": r.reward_description or f"连续签到{r.consecutive_days}天奖励"
+            "reward_description": r.reward_description or f"连续签到{r.consecutive_days}天奖励"
         }
         
         if r.reward_type == "points" and r.points_reward:

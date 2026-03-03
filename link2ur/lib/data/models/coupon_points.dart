@@ -44,7 +44,8 @@ class PointsAccount extends Equatable {
   }
 
   @override
-  List<Object?> get props => [balance, totalEarned, totalSpent];
+  List<Object?> get props =>
+      [balance, balanceDisplay, currency, totalEarned, totalSpent];
 
   static const empty = PointsAccount();
 }
@@ -82,7 +83,7 @@ class PointsTransaction extends Equatable {
   bool get isIncome => type == 'earn' || type == 'refund';
 
   /// 是否是支出
-  bool get isExpense => type == 'spend' || type == 'coupon_redeem';
+  bool get isExpense => type == 'spend' || type == 'coupon_redeem' || type == 'expire';
 
   /// 类型标识（需要在 View 层通过 l10n 映射为本地化文本）
   String get typeKey {
@@ -169,11 +170,15 @@ class Coupon extends Equatable {
     }
   }
 
-  /// 格式化后的折扣显示（根据类型区分：percentage 为 8%，fixed_amount 为 £8.00）
-  /// discountValue: percentage 时为基点(800=8%)，fixed_amount 时为便士(800=£8)
+  /// 格式化后的折扣显示（根据类型区分：percentage 为 8%/8.5%，fixed_amount 为 £8.00）
+  /// discountValue: percentage 时为基点(800=8%, 850=8.5%)，fixed_amount 时为便士(800=£8)
   String get discountDisplayFormatted {
     if (type == 'percentage') {
-      return '${discountValue ~/ 100}%';
+      final pct = discountValue / 100;
+      // 整数百分比不显示小数点（8.0% → 8%），非整数保留一位（8.5% → 8.5%）
+      return pct == pct.roundToDouble()
+          ? '${pct.round()}%'
+          : '${pct.toStringAsFixed(1)}%';
     } else {
       return '£${(discountValue / 100).toStringAsFixed(2)}';
     }
@@ -199,7 +204,8 @@ class Coupon extends Equatable {
   }
 
   @override
-  List<Object?> get props => [id, code, name, type];
+  List<Object?> get props =>
+      [id, code, name, type, discountValue, minAmount, validUntil];
 }
 
 /// 用户优惠券模型

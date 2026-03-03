@@ -50,6 +50,7 @@ class _ApprovalPaymentPageState extends State<ApprovalPaymentPage> {
   List<UserCoupon>? _availableCoupons;
   bool _loadingCoupons = false;
   UserCoupon? _selectedUserCoupon;
+  bool _isApplyingCoupon = false;
   // 选券/取消选券后由 createTaskPayment 更新，用于展示金额与调起支付
   String? _effectiveClientSecret;
   String? _effectiveCustomerId;
@@ -180,8 +181,14 @@ class _ApprovalPaymentPageState extends State<ApprovalPaymentPage> {
     setState(() => _loadingCoupons = true);
     context.read<CouponPointsRepository>().getMyCoupons(status: 'unused').then((list) {
       if (mounted) {
+        // 过滤掉已过期（status 未同步）和不满足最低金额的优惠券
+        final orderAmount = _paymentResponse?.originalAmount;
         setState(() {
-          _availableCoupons = list;
+          _availableCoupons = list
+              .where((c) =>
+                  c.isUsable &&
+                  (orderAmount == null || c.coupon.minAmount <= orderAmount))
+              .toList();
           _loadingCoupons = false;
         });
       }
@@ -196,9 +203,11 @@ class _ApprovalPaymentPageState extends State<ApprovalPaymentPage> {
   }
 
   Future<void> _applyCoupon(UserCoupon? coupon) async {
+    if (_isApplyingCoupon) return; // 防止并发选券
     final taskId = widget.paymentData.taskId;
     final previous = _selectedUserCoupon;
     setState(() {
+      _isApplyingCoupon = true;
       _selectedUserCoupon = coupon;
       _errorMessage = null;
     });
@@ -211,6 +220,7 @@ class _ApprovalPaymentPageState extends State<ApprovalPaymentPage> {
       );
       if (!mounted) return;
       setState(() {
+        _isApplyingCoupon = false;
         _paymentResponse = response;
         _effectiveClientSecret = response.clientSecret;
         _effectiveCustomerId = response.customerId;
@@ -224,6 +234,7 @@ class _ApprovalPaymentPageState extends State<ApprovalPaymentPage> {
     } catch (e) {
       if (!mounted) return;
       setState(() {
+        _isApplyingCoupon = false;
         _selectedUserCoupon = previous;
         _errorMessage = e.toString().replaceAll('PaymentException: ', '');
       });
@@ -547,8 +558,12 @@ class _ApprovalPaymentPageState extends State<ApprovalPaymentPage> {
         ),
       );
     } finally {
-      _paymentPollTimer?.cancel();
-      _paymentPollTimer = null;
+      // 仅在非成功路径清理 poll timer（成功路径由 _handlePaymentSuccess 处理，
+      // 错误/超时路径已在各自 catch 块中取消）
+      if (!_paymentSuccessFromPolling && !_showPaymentSuccess) {
+        _paymentPollTimer?.cancel();
+        _paymentPollTimer = null;
+      }
     }
   }
 
