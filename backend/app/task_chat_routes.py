@@ -2862,7 +2862,7 @@ async def send_application_message(
             token_reject = secrets.token_urlsafe(32)
             
             current_timestamp = int(time.time())
-            expires_at = current_timestamp + 300  # 5分钟后过期
+            expires_at = current_timestamp + 86400  # 24小时后过期
             
             nonce_accept = secrets.token_urlsafe(16)
             nonce_reject = secrets.token_urlsafe(16)
@@ -2894,13 +2894,13 @@ async def send_application_message(
                 
                 redis_client.setex(
                     f"negotiation_token:{token_accept}",
-                    300,
+                    86400,
                     json.dumps(token_data_accept)
                 )
-                
+
                 redis_client.setex(
                     f"negotiation_token:{token_reject}",
-                    300,
+                    86400,
                     json.dumps(token_data_reject)
                 )
             else:
@@ -3026,22 +3026,22 @@ async def send_application_message(
                     token_data_accept["notification_id"] = notification_id
                     redis_client.setex(
                         f"negotiation_token:{token_accept}",
-                        300,
+                        86400,
                         json.dumps(token_data_accept)
                     )
-                
+
                 if token_data_reject:
                     token_data_reject["notification_id"] = notification_id
                     redis_client.setex(
                         f"negotiation_token:{token_reject}",
-                        300,
+                        86400,
                         json.dumps(token_data_reject)
                     )
-                
+
                 # ⚠️ 额外存储 notification_id -> tokens 映射，方便前端通过 notification_id 获取 token
                 redis_client.setex(
                     f"negotiation_tokens_by_notification:{notification_id}",
-                    300,  # 5分钟
+                    86400,  # 24小时
                     json.dumps({
                         "token_accept": token_accept,
                         "token_reject": token_reject,
