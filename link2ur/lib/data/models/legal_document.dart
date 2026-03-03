@@ -11,7 +11,7 @@ class LegalDocument extends Equatable {
     this.contentJson,
   });
 
-  final String type; // "terms", "privacy", "cookie"
+  final String type; // "terms", "privacy", "cookie", "community_guidelines"
   final String lang;
   final String? version;
   final String? effectiveAt;
@@ -80,7 +80,15 @@ class LegalDocument extends Equatable {
           'paymentAndRefund', 'prohibitedTasks', 'userBehavior',
           'userResponsibilities', 'intellectualProperty', 'privacyData',
           'disclaimer', 'termination', 'disputes', 'forumTerms',
-          'fleaMarketTerms', 'consumerAppendix', 'importantNotice',
+          'fleaMarketTerms', 'consumerAppendix', 'expertTerms',
+          'aiServiceTerms', 'vipSubscriptionTerms', 'accountDeletion',
+          'studentVerificationTerms', 'importantNotice',
+        ];
+      case 'community_guidelines':
+        return [
+          'title', 'version', 'effectiveDate', 'intro', 'contentStandards',
+          'forumRules', 'taskAndMarketRules', 'moderation', 'reporting',
+          'enforcement', 'appeals', 'updates', 'contactUs',
         ];
       case 'privacy':
         return [

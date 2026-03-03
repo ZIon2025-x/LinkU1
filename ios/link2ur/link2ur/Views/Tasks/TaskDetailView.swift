@@ -59,7 +59,7 @@ struct TaskDetailView: View {
     @State private var showDisputeTimeline = false // 显示争议详情页面
     @State private var showSuccessOverlay = false
     @State private var successOverlayMessage: String = ""
-    /// 成功类型，用于 onDismiss 分支：apply | confirmCompletion | review | completeTask | refundRequest | refundRebuttal
+    /// 成功类型，用于 onDismiss 分支：apply | confirmCompletion | review | completeTask | refundRequest | refundRebuttal | cancelTask
     @State private var successOverlayKind: String = ""
     @State private var showConfirmCompletionLoading = false
     @State private var interactionCancellables = Set<AnyCancellable>()  // 用于交互记录的 cancellables
@@ -288,7 +288,7 @@ struct TaskDetailView: View {
                         autoDismissSeconds: 1.5,
                         onDismiss: {
                             switch successOverlayKind {
-                            case "apply", "confirmCompletion":
+                            case "apply", "confirmCompletion", "cancelTask":
                                 break
                             case "review":
                                 showReviewModal = false
@@ -612,9 +612,11 @@ struct TaskDetailView: View {
             actionLoading = true
             viewModel.cancelTask(taskId: taskId, reason: cancelReason.isEmpty ? nil : cancelReason) { success in
                 actionLoading = false
+                cancelReason = ""
                 if success {
-                    cancelReason = ""
-                    viewModel.loadTask(taskId: taskId)
+                    successOverlayMessage = LocalizationKey.taskDetailCancelTaskSuccess.localized
+                    successOverlayKind = "cancelTask"
+                    showSuccessOverlay = true
                 }
             }
         }

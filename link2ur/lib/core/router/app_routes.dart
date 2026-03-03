@@ -106,6 +106,7 @@ class AppRoutes {
   static const String faq = '/faq';
   static const String terms = '/terms';
   static const String privacy = '/privacy';
+  static const String communityGuidelines = '/community-guidelines';
   static const String about = '/about';
   static const String vip = '/vip';
   static const String vipPurchase = '/vip/purchase';

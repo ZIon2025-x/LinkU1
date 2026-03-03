@@ -695,6 +695,8 @@
 "task_detail.share" = "Share";
 "task_detail.cancel_task" = "Cancel Task";
 "task_detail.cancel_task_confirm" = "Are you sure you want to cancel this task?";
+"task_detail.cancel_task_success" = "Task Cancelled";
+"task_detail.cancel_task_failed" = "Failed to cancel task";
 "task_detail.no_task_images" = "No task images";
 "task_detail.vip_task" = "VIP Task";
 "task_detail.super_task" = "Super Task";

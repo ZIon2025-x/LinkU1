@@ -255,7 +255,9 @@ class TaskDetailViewModel: ObservableObject {
     func cancelTask(taskId: Int, reason: String?, completion: @escaping (Bool) -> Void) {
         apiService.cancelTask(taskId: taskId, reason: reason)
             .sink(receiveCompletion: { [weak self] result in
-                if case .failure = result {
+                if case .failure(let error) = result {
+                    ErrorHandler.shared.handle(error, context: "取消任务")
+                    self?.errorMessage = error.userFriendlyMessage
                     completion(false)
                 } else {
                     completion(true)

@@ -283,6 +283,19 @@ class CookiePolicyView extends StatelessWidget {
   }
 }
 
+/// 社区准则
+class CommunityGuidelinesView extends StatelessWidget {
+  const CommunityGuidelinesView({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return LegalDocumentView(
+      title: context.l10n.infoCommunityGuidelinesTitle,
+      content: context.l10n.infoCommunityGuidelinesContent,
+    );
+  }
+}
+
 // ==================== 关于 ====================
 
 /// 关于视图
@@ -387,6 +400,11 @@ class _AboutViewState extends State<AboutView> {
                 title: context.l10n.infoCookieTitle,
                 icon: Icons.cookie,
                 onTap: () => pushWithSwipeBack(context, const CookiePolicyView()),
+              ),
+              _AboutListItem(
+                title: context.l10n.infoCommunityGuidelinesTitle,
+                icon: Icons.groups_outlined,
+                onTap: () => pushWithSwipeBack(context, const CommunityGuidelinesView()),
               ),
               _AboutListItem(
                 title: context.l10n.infoFAQTitle,

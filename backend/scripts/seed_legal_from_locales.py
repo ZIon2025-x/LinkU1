@@ -20,8 +20,8 @@ frontend_locales = backend_dir.parent / "frontend" / "src" / "locales"
 zh_path = frontend_locales / "zh.json"
 en_path = frontend_locales / "en.json"
 
-LEGAL_KEYS = ("privacyPolicy", "termsOfService", "cookiePolicy")
-TYPE_MAP = {"privacyPolicy": "privacy", "termsOfService": "terms", "cookiePolicy": "cookie"}
+LEGAL_KEYS = ("privacyPolicy", "termsOfService", "cookiePolicy", "communityGuidelines")
+TYPE_MAP = {"privacyPolicy": "privacy", "termsOfService": "terms", "cookiePolicy": "cookie", "communityGuidelines": "community_guidelines"}
 
 
 def load_locale(path: Path) -> dict:

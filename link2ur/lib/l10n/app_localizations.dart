@@ -12782,6 +12782,12 @@ abstract class AppLocalizations {
   /// **'Cookie Policy'**
   String get settingsCookiePolicy;
 
+  /// No description provided for @settingsCommunityGuidelines.
+  ///
+  /// In en, this message translates to:
+  /// **'Community Guidelines'**
+  String get settingsCommunityGuidelines;
+
   /// No description provided for @settingsEmail.
   ///
   /// In en, this message translates to:
@@ -13123,6 +13129,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Cookie Policy'**
   String get infoCookieTitle;
+
+  /// No description provided for @infoCommunityGuidelinesTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Community Guidelines'**
+  String get infoCommunityGuidelinesTitle;
 
   /// No description provided for @infoVipCenter.
   ///
@@ -15139,6 +15151,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Link²Ur Cookie Policy\n\nWe use cookies and similar technologies to improve your experience.\n\n1. What are Cookies\nCookies are small text files stored on your device.\n\n2. How We Use Cookies\n- Essential Cookies: Maintain login status\n- Functional Cookies: Remember preferences\n- Analytics Cookies: Improve service quality\n\n3. Managing Cookies\nYou can manage cookie preferences in your device settings.'**
   String get infoCookieContent;
+
+  /// No description provided for @infoCommunityGuidelinesContent.
+  ///
+  /// In en, this message translates to:
+  /// **'Link²Ur Community Guidelines\n\nEffective Date: March 2026\n\n1. Content Standards\n- Respectful Communication: No personal attacks, insults, or discriminatory speech\n- Truthfulness: No false, misleading, or fraudulent information\n- Legal Compliance: No illegal or infringing content\n- Safety: No content endangering user safety\n\n2. Forum Conduct Rules\n- Post in the appropriate school section\n- Replies should be relevant; no spamming\n- No commercial ads or academic dishonesty content\n\n3. Task and Transaction Rules\n- Task descriptions must be clear and accurate\n- Reviews must be based on genuine experiences\n- No fake positive or malicious negative reviews\n\n4. Reporting and Appeals\n- Click \'Report\' to report violating content\n- Appeal penalties within 14 days\n\n5. Enforcement\nReminder/Warning → Content Removal → Temporary Restriction → Account Suspension → Permanent Ban\n\nFor questions contact: info@link2ur.com'**
+  String get infoCommunityGuidelinesContent;
 
   /// No description provided for @serviceNegotiatePrice.
   ///

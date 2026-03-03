@@ -78,6 +78,7 @@ const TermsOfService = lazyWithRetry(() => import('./pages/TermsOfService'));
 const FAQ = lazyWithRetry(() => import('./pages/FAQ'));
 const PrivacyPolicy = lazyWithRetry(() => import('./pages/PrivacyPolicy'));
 const CookiePolicy = lazyWithRetry(() => import('./pages/CookiePolicy'));
+const CommunityGuidelines = lazyWithRetry(() => import('./pages/CommunityGuidelines'));
 const Support = lazyWithRetry(() => import('./pages/Support'));
 const Partners = lazyWithRetry(() => import('./pages/Partners'));
 const LoginWithLink2ur = lazyWithRetry(() => import('./pages/LoginWithLink2ur'));
@@ -210,6 +211,7 @@ const LanguageRoutes: React.FC = () => {
           <Route path={`/${lang}/terms`} element={<TermsOfService />} />
           <Route path={`/${lang}/privacy`} element={<PrivacyPolicy />} />
           <Route path={`/${lang}/cookie-policy`} element={<CookiePolicy />} />
+          <Route path={`/${lang}/community-guidelines`} element={<CommunityGuidelines />} />
           <Route path={`/${lang}/support`} element={<Support />} />
           <Route path={`/${lang}/partners`} element={<Partners />} />
           <Route path={`/${lang}/login-with-link2ur`} element={<LoginWithLink2ur />} />
@@ -299,6 +301,7 @@ const LanguageRoutes: React.FC = () => {
       <Route path="/terms" element={<Navigate to={`/${DEFAULT_LANGUAGE}/terms`} replace />} />
       <Route path="/privacy" element={<Navigate to={`/${DEFAULT_LANGUAGE}/privacy`} replace />} />
       <Route path="/cookie-policy" element={<Navigate to={`/${DEFAULT_LANGUAGE}/cookie-policy`} replace />} />
+      <Route path="/community-guidelines" element={<Navigate to={`/${DEFAULT_LANGUAGE}/community-guidelines`} replace />} />
       <Route path="/support" element={<Navigate to={`/${DEFAULT_LANGUAGE}/support`} replace />} />
       <Route path="/partners" element={<Navigate to={`/${DEFAULT_LANGUAGE}/partners`} replace />} />
       <Route path="/merchant-cooperation" element={<Navigate to={`/${DEFAULT_LANGUAGE}/merchant-cooperation`} replace />} />

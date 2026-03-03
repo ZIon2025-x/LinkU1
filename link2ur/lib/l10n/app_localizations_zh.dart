@@ -6688,6 +6688,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settingsCookiePolicy => 'Cookie 政策';
 
   @override
+  String get settingsCommunityGuidelines => '社区准则';
+
+  @override
   String get settingsEmail => '邮箱';
 
   @override
@@ -6857,6 +6860,9 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get infoCookieTitle => 'Cookie 政策';
+
+  @override
+  String get infoCommunityGuidelinesTitle => '社区准则';
 
   @override
   String get infoVipCenter => '会员中心';
@@ -7906,6 +7912,10 @@ class AppLocalizationsZh extends AppLocalizations {
   @override
   String get infoCookieContent =>
       'Link²Ur Cookie 政策\n\n我们使用 Cookie 和类似技术来改善您的使用体验。\n\n1. 什么是 Cookie\nCookie 是存储在您设备上的小型文本文件。\n\n2. 我们如何使用 Cookie\n- 必要 Cookie：保持登录状态\n- 功能 Cookie：记住偏好设置\n- 分析 Cookie：改善服务质量\n\n3. 管理 Cookie\n您可以在设备设置中管理 Cookie 偏好。';
+
+  @override
+  String get infoCommunityGuidelinesContent =>
+      'Link²Ur 社区准则\n\n生效日期：2026年3月\n\n1. 内容标准\n- 尊重他人：禁止人身攻击、侮辱、歧视性言论\n- 真实可信：禁止虚假、误导或欺诈性信息\n- 合法合规：禁止违法内容、侵权内容\n- 安全健康：禁止危害用户安全的内容\n\n2. 论坛行为规范\n- 帖子应发布在相应学校分区\n- 回复应与主题相关，禁止刷屏\n- 禁止商业广告、学术不诚信内容\n\n3. 任务与交易规范\n- 任务描述应清晰准确\n- 评价应基于真实体验\n- 禁止虚假好评或恶意差评\n\n4. 举报与申诉\n- 点击「举报」按钮举报违规内容\n- 对处罚有异议可在14天内申诉\n\n5. 违规处理\n提醒/警告 → 内容删除 → 临时限制 → 账户暂停 → 永久封禁\n\n如有疑问请联系：info@link2ur.com';
 
   @override
   String get serviceNegotiatePrice => '价格议价';
@@ -15668,6 +15678,9 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get settingsCookiePolicy => 'Cookie 政策';
 
   @override
+  String get settingsCommunityGuidelines => '社區準則';
+
+  @override
   String get settingsEmail => '電子郵件';
 
   @override
@@ -15837,6 +15850,9 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get infoCookieTitle => 'Cookie 政策';
+
+  @override
+  String get infoCommunityGuidelinesTitle => '社區準則';
 
   @override
   String get infoVipCenter => '會員中心';
@@ -16886,6 +16902,10 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   @override
   String get infoCookieContent =>
       'Link²Ur Cookie 政策\n\n我們使用 Cookie 和類似技術來改善您的使用體驗。\n\n1. 什麼是 Cookie\nCookie 是儲存在您設備上的小型文字檔案。\n\n2. 我們如何使用 Cookie\n- 必要 Cookie：保持登入狀態\n- 功能 Cookie：記住偏好設定\n- 分析 Cookie：改善服務品質\n\n3. 管理 Cookie\n您可以在設備設定中管理 Cookie 偏好。';
+
+  @override
+  String get infoCommunityGuidelinesContent =>
+      'Link²Ur 社區準則\n\n生效日期：2026年3月\n\n1. 內容標準\n- 尊重他人：禁止人身攻擊、侮辱、歧視性言論\n- 真實可信：禁止虛假、誤導或詐騙性資訊\n- 合法合規：禁止違法內容、侵權內容\n- 安全健康：禁止危害用戶安全的內容\n\n2. 論壇行為規範\n- 帖子應發佈在相應學校分區\n- 回覆應與主題相關，禁止刷屏\n- 禁止商業廣告、學術不誠信內容\n\n3. 任務與交易規範\n- 任務描述應清晰準確\n- 評價應基於真實體驗\n- 禁止虛假好評或惡意差評\n\n4. 舉報與申訴\n- 點擊「舉報」按鈕舉報違規內容\n- 對處罰有異議可在14天內申訴\n\n5. 違規處理\n提醒/警告 → 內容刪除 → 臨時限制 → 帳戶暫停 → 永久封禁\n\n如有疑問請聯繫：info@link2ur.com';
 
   @override
   String get serviceNegotiatePrice => '價格議價';

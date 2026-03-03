@@ -30,6 +30,11 @@ List<RouteBase> get infoRoutes => [
         builder: (context, state) => const PrivacyView(),
       ),
       GoRoute(
+        path: AppRoutes.communityGuidelines,
+        name: 'communityGuidelines',
+        builder: (context, state) => const CommunityGuidelinesView(),
+      ),
+      GoRoute(
         path: AppRoutes.about,
         name: 'about',
         builder: (context, state) => const AboutView(),

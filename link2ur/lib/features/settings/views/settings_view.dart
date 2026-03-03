@@ -355,6 +355,15 @@ class _SettingsViewState extends State<SettingsView> {
                             context.l10n.settingsCookiePolicy,
                           ),
                         ),
+                        _settingsDivider(isDark),
+                        _SettingsNavRow(
+                          icon: Icons.groups_outlined,
+                          title: context.l10n.settingsCommunityGuidelines,
+                          onTap: () => _openInAppWebView(
+                            'https://link2ur.com/community-guidelines',
+                            context.l10n.settingsCommunityGuidelines,
+                          ),
+                        ),
                       ],
                     ),
                     AppSpacing.vMd,

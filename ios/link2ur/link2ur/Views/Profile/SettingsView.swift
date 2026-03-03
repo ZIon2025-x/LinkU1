@@ -96,6 +96,14 @@ struct SettingsView: View {
                             Text("Cookie Policy")
                         }
                     }
+
+                    NavigationLink(destination: CommunityGuidelinesView()) {
+                        HStack {
+                            Image(systemName: "person.3.fill")
+                                .foregroundColor(AppColors.primary)
+                            Text("Community Guidelines")
+                        }
+                    }
                 }
                 
                 // 关于

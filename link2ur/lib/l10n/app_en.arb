@@ -3317,6 +3317,7 @@
   "settingsExpenseManagement": "Expense Management",
   "settingsPaymentHistory": "Payment History",
   "settingsCookiePolicy": "Cookie Policy",
+  "settingsCommunityGuidelines": "Community Guidelines",
   "settingsEmail": "Email",
   "settingsOther": "Other",
   "settingsClearCache": "Clear Cache",
@@ -3398,6 +3399,7 @@
   "infoTermsTitle": "Terms of Service",
   "infoPrivacyTitle": "Privacy Policy",
   "infoCookieTitle": "Cookie Policy",
+  "infoCommunityGuidelinesTitle": "Community Guidelines",
   "infoVipCenter": "VIP Center",
   "infoVipPriority": "Priority Orders",
   "infoVipBadge": "VIP Badge",
@@ -3807,6 +3809,7 @@
   "infoTermsContent": "Link²Ur Terms of Service\n\nLast updated: January 1, 2024\n\n1. Service Overview\nLink²Ur is a campus mutual-aid platform designed to help users publish and accept various life service tasks.\n\n2. User Responsibilities\n- Users must provide truthful and accurate personal information\n- Users must comply with platform rules and applicable laws\n- Users are responsible for the content they publish\n\n3. Platform Responsibilities\n- The platform provides information intermediary services\n- The platform implements escrow protection for transaction funds\n- The platform reserves the right to take action against violations\n\n4. Payment & Settlement\n- All payments are processed through third-party payment platforms\n- Tasks are automatically settled upon completion\n- The platform charges reasonable service fees\n\n5. Privacy Protection\nPlease refer to our Privacy Policy for detailed information.\n\n6. Disclaimer\nAs an information intermediary, the platform does not bear direct responsibility for transactions between users.\n\nIf you have any questions, please contact our customer service team.",
   "infoPrivacyContent": "Link²Ur Privacy Policy\n\nLast updated: January 1, 2024\n\n1. Information Collection\nWe collect the following types of information:\n- Registration information (name, email, etc.)\n- Location information (for nearby task recommendations)\n- Device information (for push notifications)\n\n2. Information Usage\nWe use your information to:\n- Provide and improve services\n- Personalized recommendations\n- Ensure transaction security\n\n3. Information Storage & Protection\n- Data is stored on secure servers\n- Encryption technology is used to protect data transmission\n- Regular security audits are conducted\n\n4. Information Sharing\nWe do not sell your personal information. We only share in the following cases:\n- With your consent\n- Legal requirements\n- Necessary for service provision\n\n5. Cookie Policy\nWe use cookies to improve user experience.\n\n6. Your Rights\n- Access and modify personal information\n- Delete account\n- Unsubscribe from notifications\n\nFor privacy-related questions, please contact privacy@link2ur.com",
   "infoCookieContent": "Link²Ur Cookie Policy\n\nWe use cookies and similar technologies to improve your experience.\n\n1. What are Cookies\nCookies are small text files stored on your device.\n\n2. How We Use Cookies\n- Essential Cookies: Maintain login status\n- Functional Cookies: Remember preferences\n- Analytics Cookies: Improve service quality\n\n3. Managing Cookies\nYou can manage cookie preferences in your device settings.",
+  "infoCommunityGuidelinesContent": "Link²Ur Community Guidelines\n\nEffective Date: March 2026\n\n1. Content Standards\n- Respectful Communication: No personal attacks, insults, or discriminatory speech\n- Truthfulness: No false, misleading, or fraudulent information\n- Legal Compliance: No illegal or infringing content\n- Safety: No content endangering user safety\n\n2. Forum Conduct Rules\n- Post in the appropriate school section\n- Replies should be relevant; no spamming\n- No commercial ads or academic dishonesty content\n\n3. Task and Transaction Rules\n- Task descriptions must be clear and accurate\n- Reviews must be based on genuine experiences\n- No fake positive or malicious negative reviews\n\n4. Reporting and Appeals\n- Click 'Report' to report violating content\n- Appeal penalties within 14 days\n\n5. Enforcement\nReminder/Warning → Content Removal → Temporary Restriction → Account Suspension → Permanent Ban\n\nFor questions contact: info@link2ur.com",
 
   "settingsUnknown": "Unknown",
 
