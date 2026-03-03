@@ -3449,6 +3449,15 @@ class AppLocalizationsEn extends AppLocalizations {
       'Only verified students can post campus life tasks';
 
   @override
+  String get createTaskPublicTask => 'Public Task';
+
+  @override
+  String get createTaskPublicDesc => 'Visible to everyone';
+
+  @override
+  String get createTaskPrivateDesc => 'Only visible to you';
+
+  @override
   String get taskExpertBecomeExpert => 'Become Expert';
 
   @override
@@ -5289,6 +5298,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get fleaMarketCategoryBeauty => 'Beauty & Skincare';
 
   @override
+  String get fleaMarketCategoryAccessories => 'Accessories';
+
+  @override
+  String get fleaMarketCategoryToysGames => 'Toys & Games';
+
+  @override
   String get fleaMarketCategoryOther => 'Other';
 
   @override
@@ -5394,6 +5409,21 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get fleaMarketCounterOfferRejected => 'Counter offer declined';
+
+  @override
+  String get fleaMarketApproveSuccess => 'Purchase request approved';
+
+  @override
+  String get fleaMarketApproveFailed => 'Failed to approve purchase request';
+
+  @override
+  String get fleaMarketRejectSuccess => 'Purchase request rejected';
+
+  @override
+  String get fleaMarketRejectFailed => 'Failed to reject purchase request';
+
+  @override
+  String get fleaMarketCounterOfferFailed => 'Counter offer failed';
 
   @override
   String get applePayNotSupported => 'Your device does not support Apple Pay';
@@ -8645,8 +8675,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get profileDirectRequestHintTitle => 'Task title';
 
   @override
-  String get profileDirectRequestHintDescription =>
-      'Task description (optional)';
+  String get profileDirectRequestHintDescription => 'Task description';
 
   @override
   String get profileDirectRequestHintPrice => 'Price';
@@ -9253,4 +9282,30 @@ class AppLocalizationsEn extends AppLocalizations {
   String locationOpenMapsFailed(String provider) {
     return 'Cannot open $provider Maps';
   }
+
+  @override
+  String get taskDetailCounterOffer => 'Counter-Offer';
+
+  @override
+  String get taskDetailCounterOfferHint => 'Enter your proposed price (GBP)';
+
+  @override
+  String get taskDetailCounterOfferSent =>
+      'Counter-offer sent, waiting for response';
+
+  @override
+  String get taskDetailCounterOfferPending => 'Counter-offer pending';
+
+  @override
+  String get taskDetailPosterCounterOfferTitle =>
+      'Taker proposed a counter-offer';
+
+  @override
+  String get taskDetailPosterCounterOfferPrice => 'Proposed price';
+
+  @override
+  String get taskDetailAcceptCounterOffer => 'Accept Price';
+
+  @override
+  String get taskDetailRejectCounterOffer => 'Reject';
 }

@@ -6411,6 +6411,24 @@ abstract class AppLocalizations {
   /// **'Only verified students can post campus life tasks'**
   String get createTaskStudentVerificationRequired;
 
+  /// No description provided for @createTaskPublicTask.
+  ///
+  /// In en, this message translates to:
+  /// **'Public Task'**
+  String get createTaskPublicTask;
+
+  /// No description provided for @createTaskPublicDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Visible to everyone'**
+  String get createTaskPublicDesc;
+
+  /// No description provided for @createTaskPrivateDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Only visible to you'**
+  String get createTaskPrivateDesc;
+
   /// No description provided for @taskExpertBecomeExpert.
   ///
   /// In en, this message translates to:
@@ -9734,6 +9752,18 @@ abstract class AppLocalizations {
   /// **'Beauty & Skincare'**
   String get fleaMarketCategoryBeauty;
 
+  /// No description provided for @fleaMarketCategoryAccessories.
+  ///
+  /// In en, this message translates to:
+  /// **'Accessories'**
+  String get fleaMarketCategoryAccessories;
+
+  /// No description provided for @fleaMarketCategoryToysGames.
+  ///
+  /// In en, this message translates to:
+  /// **'Toys & Games'**
+  String get fleaMarketCategoryToysGames;
+
   /// No description provided for @fleaMarketCategoryOther.
   ///
   /// In en, this message translates to:
@@ -9913,6 +9943,36 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Counter offer declined'**
   String get fleaMarketCounterOfferRejected;
+
+  /// No description provided for @fleaMarketApproveSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Purchase request approved'**
+  String get fleaMarketApproveSuccess;
+
+  /// No description provided for @fleaMarketApproveFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to approve purchase request'**
+  String get fleaMarketApproveFailed;
+
+  /// No description provided for @fleaMarketRejectSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Purchase request rejected'**
+  String get fleaMarketRejectSuccess;
+
+  /// No description provided for @fleaMarketRejectFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to reject purchase request'**
+  String get fleaMarketRejectFailed;
+
+  /// No description provided for @fleaMarketCounterOfferFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Counter offer failed'**
+  String get fleaMarketCounterOfferFailed;
 
   /// No description provided for @applePayNotSupported.
   ///
@@ -15911,7 +15971,7 @@ abstract class AppLocalizations {
   /// No description provided for @profileDirectRequestHintDescription.
   ///
   /// In en, this message translates to:
-  /// **'Task description (optional)'**
+  /// **'Task description'**
   String get profileDirectRequestHintDescription;
 
   /// No description provided for @profileDirectRequestHintPrice.
@@ -17029,6 +17089,54 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Cannot open {provider} Maps'**
   String locationOpenMapsFailed(String provider);
+
+  /// No description provided for @taskDetailCounterOffer.
+  ///
+  /// In en, this message translates to:
+  /// **'Counter-Offer'**
+  String get taskDetailCounterOffer;
+
+  /// No description provided for @taskDetailCounterOfferHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter your proposed price (GBP)'**
+  String get taskDetailCounterOfferHint;
+
+  /// No description provided for @taskDetailCounterOfferSent.
+  ///
+  /// In en, this message translates to:
+  /// **'Counter-offer sent, waiting for response'**
+  String get taskDetailCounterOfferSent;
+
+  /// No description provided for @taskDetailCounterOfferPending.
+  ///
+  /// In en, this message translates to:
+  /// **'Counter-offer pending'**
+  String get taskDetailCounterOfferPending;
+
+  /// No description provided for @taskDetailPosterCounterOfferTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Taker proposed a counter-offer'**
+  String get taskDetailPosterCounterOfferTitle;
+
+  /// No description provided for @taskDetailPosterCounterOfferPrice.
+  ///
+  /// In en, this message translates to:
+  /// **'Proposed price'**
+  String get taskDetailPosterCounterOfferPrice;
+
+  /// No description provided for @taskDetailAcceptCounterOffer.
+  ///
+  /// In en, this message translates to:
+  /// **'Accept Price'**
+  String get taskDetailAcceptCounterOffer;
+
+  /// No description provided for @taskDetailRejectCounterOffer.
+  ///
+  /// In en, this message translates to:
+  /// **'Reject'**
+  String get taskDetailRejectCounterOffer;
 }
 
 class _AppLocalizationsDelegate

@@ -3320,6 +3320,15 @@ class AppLocalizationsZh extends AppLocalizations {
   String get createTaskStudentVerificationRequired => '只有已通过学生认证的用户才能发布校园生活任务';
 
   @override
+  String get createTaskPublicTask => '公开任务';
+
+  @override
+  String get createTaskPublicDesc => '所有人可见';
+
+  @override
+  String get createTaskPrivateDesc => '仅自己可见';
+
+  @override
   String get taskExpertBecomeExpert => '成为达人';
 
   @override
@@ -5071,6 +5080,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get fleaMarketCategoryBeauty => '美妆护肤';
 
   @override
+  String get fleaMarketCategoryAccessories => '配饰箱包';
+
+  @override
+  String get fleaMarketCategoryToysGames => '玩具游戏';
+
+  @override
   String get fleaMarketCategoryOther => '其他';
 
   @override
@@ -5167,6 +5182,21 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get fleaMarketCounterOfferRejected => '已拒绝还价';
+
+  @override
+  String get fleaMarketApproveSuccess => '已批准购买申请';
+
+  @override
+  String get fleaMarketApproveFailed => '批准购买申请失败';
+
+  @override
+  String get fleaMarketRejectSuccess => '已拒绝购买申请';
+
+  @override
+  String get fleaMarketRejectFailed => '拒绝购买申请失败';
+
+  @override
+  String get fleaMarketCounterOfferFailed => '还价失败';
 
   @override
   String get applePayNotSupported => '您的设备不支持 Apple Pay';
@@ -8315,7 +8345,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get profileDirectRequestHintTitle => '任务标题';
 
   @override
-  String get profileDirectRequestHintDescription => '任务描述（选填）';
+  String get profileDirectRequestHintDescription => '任务描述';
 
   @override
   String get profileDirectRequestHintPrice => '价格';
@@ -8899,6 +8929,30 @@ class AppLocalizationsZh extends AppLocalizations {
   String locationOpenMapsFailed(String provider) {
     return '无法打开$provider Maps';
   }
+
+  @override
+  String get taskDetailCounterOffer => '议价';
+
+  @override
+  String get taskDetailCounterOfferHint => '输入您的报价（GBP）';
+
+  @override
+  String get taskDetailCounterOfferSent => '反报价已发送，等待对方回应';
+
+  @override
+  String get taskDetailCounterOfferPending => '议价等待回应';
+
+  @override
+  String get taskDetailPosterCounterOfferTitle => '对方提出了反报价';
+
+  @override
+  String get taskDetailPosterCounterOfferPrice => '对方报价';
+
+  @override
+  String get taskDetailAcceptCounterOffer => '同意报价';
+
+  @override
+  String get taskDetailRejectCounterOffer => '拒绝';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -12217,6 +12271,15 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get createTaskStudentVerificationRequired => '只有已通過學生認證的用戶才能發布校園生活任務';
 
   @override
+  String get createTaskPublicTask => '公開任務';
+
+  @override
+  String get createTaskPublicDesc => '所有人可見';
+
+  @override
+  String get createTaskPrivateDesc => '僅自己可見';
+
+  @override
   String get taskExpertBecomeExpert => '成爲達人';
 
   @override
@@ -13968,6 +14031,12 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get fleaMarketCategoryBeauty => '美妝護膚';
 
   @override
+  String get fleaMarketCategoryAccessories => '配飾箱包';
+
+  @override
+  String get fleaMarketCategoryToysGames => '玩具遊戲';
+
+  @override
   String get fleaMarketCategoryOther => '其他';
 
   @override
@@ -14064,6 +14133,21 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get fleaMarketCounterOfferRejected => '已拒絕還價';
+
+  @override
+  String get fleaMarketApproveSuccess => '已批准購買申請';
+
+  @override
+  String get fleaMarketApproveFailed => '批准購買申請失敗';
+
+  @override
+  String get fleaMarketRejectSuccess => '已拒絕購買申請';
+
+  @override
+  String get fleaMarketRejectFailed => '拒絕購買申請失敗';
+
+  @override
+  String get fleaMarketCounterOfferFailed => '還價失敗';
 
   @override
   String get applePayNotSupported => '您的設備不支持 Apple Pay';
@@ -17212,7 +17296,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get profileDirectRequestHintTitle => '任務標題';
 
   @override
-  String get profileDirectRequestHintDescription => '任務描述（選填）';
+  String get profileDirectRequestHintDescription => '任務描述';
 
   @override
   String get profileDirectRequestHintPrice => '價格';
@@ -17796,4 +17880,28 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String locationOpenMapsFailed(String provider) {
     return '無法開啟$provider Maps';
   }
+
+  @override
+  String get taskDetailCounterOffer => '議價';
+
+  @override
+  String get taskDetailCounterOfferHint => '輸入您的報價（GBP）';
+
+  @override
+  String get taskDetailCounterOfferSent => '反報價已發送，等待對方回應';
+
+  @override
+  String get taskDetailCounterOfferPending => '議價等待回應';
+
+  @override
+  String get taskDetailPosterCounterOfferTitle => '對方提出了反報價';
+
+  @override
+  String get taskDetailPosterCounterOfferPrice => '對方報價';
+
+  @override
+  String get taskDetailAcceptCounterOffer => '同意報價';
+
+  @override
+  String get taskDetailRejectCounterOffer => '拒絕';
 }

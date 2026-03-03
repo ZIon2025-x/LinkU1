@@ -1790,6 +1790,9 @@
   "createTaskFillAllRequired": "請填寫所有必填項",
   "createTaskImageUploadFailed": "部分圖片上傳失敗，請重試",
   "createTaskStudentVerificationRequired": "只有已通過學生認證的用戶才能發布校園生活任務",
+  "createTaskPublicTask": "公開任務",
+  "createTaskPublicDesc": "所有人可見",
+  "createTaskPrivateDesc": "僅自己可見",
   "taskExpertBecomeExpert": "成爲達人",
   "taskExpertBecomeExpertTitle": "成爲任務達人",
   "taskExpertShowcaseSkills": "展示您的專業技能，獲得更多任務機會",
@@ -2436,6 +2439,8 @@
   "fleaMarketCategoryBooks": "圖書文具",
   "fleaMarketCategorySports": "運動戶外",
   "fleaMarketCategoryBeauty": "美妝護膚",
+  "fleaMarketCategoryAccessories": "配飾箱包",
+  "fleaMarketCategoryToysGames": "玩具遊戲",
   "fleaMarketCategoryOther": "其他",
   "fleaMarketPartialUploadFailed": "部分圖片上傳失敗，請重試",
   "fleaMarketUploadTimeout": "圖片上傳逾時，請重試",
@@ -2490,6 +2495,11 @@
   "fleaMarketRejectCounterOfferConfirmMessage": "確定要拒絕賣家的還價嗎？",
   "fleaMarketCounterOfferAccepted": "已接受還價",
   "fleaMarketCounterOfferRejected": "已拒絕還價",
+  "fleaMarketApproveSuccess": "已批准購買申請",
+  "fleaMarketApproveFailed": "批准購買申請失敗",
+  "fleaMarketRejectSuccess": "已拒絕購買申請",
+  "fleaMarketRejectFailed": "拒絕購買申請失敗",
+  "fleaMarketCounterOfferFailed": "還價失敗",
   "applePayNotSupported": "您的設備不支持 Apple Pay",
   "applePayUseOtherMethod": "請使用其他支付方式",
   "applePayTitle": "Apple Pay 支付",
@@ -3892,7 +3902,7 @@
   "profileDirectRequestTitle": "發送任務請求",
   "profileDirectRequestSuccess": "任務請求已發送",
   "profileDirectRequestHintTitle": "任務標題",
-  "profileDirectRequestHintDescription": "任務描述（選填）",
+  "profileDirectRequestHintDescription": "任務描述",
   "profileDirectRequestHintPrice": "價格",
   "profileDirectRequestHintTaskType": "任務類型",
   "profileDirectRequestSubmit": "發送請求",
@@ -4155,4 +4165,13 @@
       "provider": { "type": "String" }
     }
   }
+,
+  "taskDetailCounterOffer": "議價",
+  "taskDetailCounterOfferHint": "輸入您的報價（GBP）",
+  "taskDetailCounterOfferSent": "反報價已發送，等待對方回應",
+  "taskDetailCounterOfferPending": "議價等待回應",
+  "taskDetailPosterCounterOfferTitle": "對方提出了反報價",
+  "taskDetailPosterCounterOfferPrice": "對方報價",
+  "taskDetailAcceptCounterOffer": "同意報價",
+  "taskDetailRejectCounterOffer": "拒絕"
 }

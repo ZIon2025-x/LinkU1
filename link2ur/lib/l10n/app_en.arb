@@ -1582,6 +1582,9 @@
   "createTaskFillAllRequired": "Please fill in all required fields",
   "createTaskImageUploadFailed": "Some images failed to upload, please try again",
   "createTaskStudentVerificationRequired": "Only verified students can post campus life tasks",
+  "createTaskPublicTask": "Public Task",
+  "createTaskPublicDesc": "Visible to everyone",
+  "createTaskPrivateDesc": "Only visible to you",
   "taskExpertBecomeExpert": "Become Expert",
   "taskExpertBecomeExpertTitle": "Become a Task Expert",
   "taskExpertShowcaseSkills": "Showcase your professional skills and get more task opportunities",
@@ -2436,6 +2439,8 @@
   "fleaMarketCategoryBooks": "Books & Stationery",
   "fleaMarketCategorySports": "Sports & Outdoors",
   "fleaMarketCategoryBeauty": "Beauty & Skincare",
+  "fleaMarketCategoryAccessories": "Accessories",
+  "fleaMarketCategoryToysGames": "Toys & Games",
   "fleaMarketCategoryOther": "Other",
   "fleaMarketPartialUploadFailed": "Some images failed to upload, please try again",
   "fleaMarketUploadTimeout": "Image upload timed out, please try again",
@@ -2490,6 +2495,11 @@
   "fleaMarketRejectCounterOfferConfirmMessage": "Are you sure you want to decline the seller's counter offer?",
   "fleaMarketCounterOfferAccepted": "Counter offer accepted",
   "fleaMarketCounterOfferRejected": "Counter offer declined",
+  "fleaMarketApproveSuccess": "Purchase request approved",
+  "fleaMarketApproveFailed": "Failed to approve purchase request",
+  "fleaMarketRejectSuccess": "Purchase request rejected",
+  "fleaMarketRejectFailed": "Failed to reject purchase request",
+  "fleaMarketCounterOfferFailed": "Counter offer failed",
   "applePayNotSupported": "Your device does not support Apple Pay",
   "applePayUseOtherMethod": "Please use another payment method",
   "applePayTitle": "Apple Pay",
@@ -4035,7 +4045,7 @@
   "profileDirectRequestTitle": "Send Task Request",
   "profileDirectRequestSuccess": "Task request sent successfully",
   "profileDirectRequestHintTitle": "Task title",
-  "profileDirectRequestHintDescription": "Task description (optional)",
+  "profileDirectRequestHintDescription": "Task description",
   "profileDirectRequestHintPrice": "Price",
   "profileDirectRequestHintTaskType": "Task type",
   "profileDirectRequestSubmit": "Send Request",
@@ -4308,5 +4318,13 @@
     "placeholders": {
       "provider": { "type": "String" }
     }
-  }
+  },
+  "taskDetailCounterOffer": "Counter-Offer",
+  "taskDetailCounterOfferHint": "Enter your proposed price (GBP)",
+  "taskDetailCounterOfferSent": "Counter-offer sent, waiting for response",
+  "taskDetailCounterOfferPending": "Counter-offer pending",
+  "taskDetailPosterCounterOfferTitle": "Taker proposed a counter-offer",
+  "taskDetailPosterCounterOfferPrice": "Proposed price",
+  "taskDetailAcceptCounterOffer": "Accept Price",
+  "taskDetailRejectCounterOffer": "Reject"
 }

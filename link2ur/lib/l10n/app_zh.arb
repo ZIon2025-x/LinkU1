@@ -1790,6 +1790,9 @@
   "createTaskFillAllRequired": "请填写所有必填项",
   "createTaskImageUploadFailed": "部分图片上传失败，请重试",
   "createTaskStudentVerificationRequired": "只有已通过学生认证的用户才能发布校园生活任务",
+  "createTaskPublicTask": "公开任务",
+  "createTaskPublicDesc": "所有人可见",
+  "createTaskPrivateDesc": "仅自己可见",
   "taskExpertBecomeExpert": "成为达人",
   "taskExpertBecomeExpertTitle": "成为任务达人",
   "taskExpertShowcaseSkills": "展示您的专业技能，获得更多任务机会",
@@ -2436,6 +2439,8 @@
   "fleaMarketCategoryBooks": "图书文具",
   "fleaMarketCategorySports": "运动户外",
   "fleaMarketCategoryBeauty": "美妆护肤",
+  "fleaMarketCategoryAccessories": "配饰箱包",
+  "fleaMarketCategoryToysGames": "玩具游戏",
   "fleaMarketCategoryOther": "其他",
   "fleaMarketPartialUploadFailed": "部分图片上传失败，请重试",
   "fleaMarketUploadTimeout": "图片上传超时，请重试",
@@ -2490,6 +2495,11 @@
   "fleaMarketRejectCounterOfferConfirmMessage": "确定要拒绝卖家的还价吗？",
   "fleaMarketCounterOfferAccepted": "已接受还价",
   "fleaMarketCounterOfferRejected": "已拒绝还价",
+  "fleaMarketApproveSuccess": "已批准购买申请",
+  "fleaMarketApproveFailed": "批准购买申请失败",
+  "fleaMarketRejectSuccess": "已拒绝购买申请",
+  "fleaMarketRejectFailed": "拒绝购买申请失败",
+  "fleaMarketCounterOfferFailed": "还价失败",
   "applePayNotSupported": "您的设备不支持 Apple Pay",
   "applePayUseOtherMethod": "请使用其他支付方式",
   "applePayTitle": "Apple Pay 支付",
@@ -3953,7 +3963,7 @@
   "profileDirectRequestTitle": "发送任务请求",
   "profileDirectRequestSuccess": "任务请求已发送",
   "profileDirectRequestHintTitle": "任务标题",
-  "profileDirectRequestHintDescription": "任务描述（选填）",
+  "profileDirectRequestHintDescription": "任务描述",
   "profileDirectRequestHintPrice": "价格",
   "profileDirectRequestHintTaskType": "任务类型",
   "profileDirectRequestSubmit": "发送请求",
@@ -4216,4 +4226,13 @@
       "provider": { "type": "String" }
     }
   }
+,
+  "taskDetailCounterOffer": "议价",
+  "taskDetailCounterOfferHint": "输入您的报价（GBP）",
+  "taskDetailCounterOfferSent": "反报价已发送，等待对方回应",
+  "taskDetailCounterOfferPending": "议价等待回应",
+  "taskDetailPosterCounterOfferTitle": "对方提出了反报价",
+  "taskDetailPosterCounterOfferPrice": "对方报价",
+  "taskDetailAcceptCounterOffer": "同意报价",
+  "taskDetailRejectCounterOffer": "拒绝"
 }
