@@ -2126,12 +2126,21 @@ async def negotiate_application(
             content_parts.append(f"留言：{request.message}")
         content_parts.append(f"议价金额：£{float(request.negotiated_price):.2f} {task.currency or 'GBP'}")
         content = "\n".join(content_parts)
-        
+
+        # 英文版本
+        content_parts_en = [f"The publisher of task「{task.title}」proposed a negotiation"]
+        if request.message:
+            content_parts_en.append(f"Message: {request.message}")
+        content_parts_en.append(f"Negotiated price: £{float(request.negotiated_price):.2f} {task.currency or 'GBP'}")
+        content_en = "\n".join(content_parts_en)
+
         new_notification = models.Notification(
             user_id=application.applicant_id,
             type="negotiation_offer",
             title="新的议价提议",
+            title_en="New Price Offer",
             content=content,  # 直接使用文本，不存储 JSON
+            content_en=content_en,
             related_id=application_id,
             related_type="application_id",  # related_id 是 application_id
             created_at=current_time
