@@ -151,6 +151,14 @@ class _ForumPostDetailViewState extends State<ForumPostDetailView> {
             },
             child: BlocListener<ForumBloc, ForumState>(
               listenWhen: (prev, curr) =>
+                  curr.replies.length < prev.replies.length,
+              listener: (context, state) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text(context.l10n.forumReplyDeleted)),
+                );
+              },
+            child: BlocListener<ForumBloc, ForumState>(
+              listenWhen: (prev, curr) =>
                   !prev.reportSuccess && curr.reportSuccess ||
                   prev.errorMessage != curr.errorMessage && curr.errorMessage != null ||
                   (prev.selectedPost?.id == widget.postId && curr.selectedPost == null),
@@ -511,6 +519,7 @@ class _ForumPostDetailViewState extends State<ForumPostDetailView> {
         // 底部回复栏 - 对标iOS bottomReplyBar with ultraThinMaterial
         bottomNavigationBar: _buildBottomReplyBar(context),
             ),
+          ),
           ),
         );
         },
@@ -1227,10 +1236,6 @@ class _ReplyCard extends StatelessWidget {
                                             ForumDeleteReply(reply.id,
                                                 postId: postId));
                                       Navigator.pop(d);
-                                      ScaffoldMessenger.of(ctx)
-                                          .showSnackBar(SnackBar(
-                                              content: Text(ctx.l10n
-                                                  .forumReplyDeleted)));
                                     },
                                     child: Text(ctx.l10n.commonDelete),
                                   ),

@@ -610,12 +610,14 @@ class ForumRepository {
   Future<void> requestCategory({
     required String name,
     required String description,
+    String? icon,
   }) async {
     final response = await _apiService.post(
       ApiEndpoints.forumCategoryRequest,
       data: {
         'name': name,
         'description': description,
+        if (icon != null && icon.isNotEmpty) 'icon': icon,
       },
     );
 

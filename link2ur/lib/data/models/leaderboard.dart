@@ -292,6 +292,7 @@ class LeaderboardItem extends Equatable {
     String? userVote,
     String? userVoteComment,
     bool? userVoteIsAnonymous,
+    bool clearUserVote = false,
   }) {
     return LeaderboardItem(
       id: id,
@@ -311,7 +312,7 @@ class LeaderboardItem extends Equatable {
       downvotes: downvotes ?? this.downvotes,
       netVotes: netVotes ?? this.netVotes,
       voteScore: voteScore ?? this.voteScore,
-      userVote: userVote ?? this.userVote,
+      userVote: clearUserVote ? null : (userVote ?? this.userVote),
       userVoteComment: userVoteComment ?? this.userVoteComment,
       userVoteIsAnonymous: userVoteIsAnonymous ?? this.userVoteIsAnonymous,
       displayComment: displayComment,

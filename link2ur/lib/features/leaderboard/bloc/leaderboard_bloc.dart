@@ -684,64 +684,25 @@ class LeaderboardBloc extends Bloc<LeaderboardEvent, LeaderboardState> {
 
     if (previousVote == voteType) {
       // 取消投票（再次点同类型 = toggle off）— userVote 置 null
-      return LeaderboardItem(
-        id: item.id,
-        leaderboardId: item.leaderboardId,
-        name: item.name,
-        description: item.description,
-        address: item.address,
-        phone: item.phone,
-        website: item.website,
-        images: item.images,
-        submittedBy: item.submittedBy,
-        submitterName: item.submitterName,
-        submitterAvatar: item.submitterAvatar,
-        submitterId: item.submitterId,
-        status: item.status,
+      return item.copyWith(
+        clearUserVote: true,
         upvotes: voteType == 'upvote' ? item.upvotes - 1 : item.upvotes,
         downvotes:
             voteType == 'downvote' ? item.downvotes - 1 : item.downvotes,
         netVotes: voteType == 'upvote'
             ? item.netVotes - 1
             : item.netVotes + 1,
-        voteScore: item.voteScore,
-        displayComment: item.displayComment,
-        displayCommentType: item.displayCommentType,
-        displayCommentInfo: item.displayCommentInfo,
-        rank: item.rank,
-        createdAt: item.createdAt,
-        updatedAt: item.updatedAt,
       );
     } else if (previousVote != null) {
       // 切换投票方向（例 upvote → downvote）
-      return LeaderboardItem(
-        id: item.id,
-        leaderboardId: item.leaderboardId,
-        name: item.name,
-        description: item.description,
-        address: item.address,
-        phone: item.phone,
-        website: item.website,
-        images: item.images,
-        submittedBy: item.submittedBy,
-        submitterName: item.submitterName,
-        submitterAvatar: item.submitterAvatar,
-        submitterId: item.submitterId,
-        status: item.status,
+      return item.copyWith(
+        userVote: voteType,
         upvotes: voteType == 'upvote' ? item.upvotes + 1 : item.upvotes - 1,
         downvotes:
             voteType == 'downvote' ? item.downvotes + 1 : item.downvotes - 1,
         netVotes: voteType == 'upvote'
             ? item.netVotes + 2
             : item.netVotes - 2,
-        voteScore: item.voteScore,
-        userVote: voteType,
-        displayComment: item.displayComment,
-        displayCommentType: item.displayCommentType,
-        displayCommentInfo: item.displayCommentInfo,
-        rank: item.rank,
-        createdAt: item.createdAt,
-        updatedAt: item.updatedAt,
       );
     } else {
       // 新增投票

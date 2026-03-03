@@ -505,6 +505,24 @@ class ForumReply extends Equatable {
   /// 是否是子回复
   bool get isSubReply => parentReplyId != null;
 
+  ForumReply copyWith({
+    int? likeCount,
+    bool? isLiked,
+  }) {
+    return ForumReply(
+      id: id,
+      postId: postId,
+      content: content,
+      authorId: authorId,
+      author: author,
+      parentReplyId: parentReplyId,
+      parentReplyAuthor: parentReplyAuthor,
+      likeCount: likeCount ?? this.likeCount,
+      isLiked: isLiked ?? this.isLiked,
+      createdAt: createdAt,
+    );
+  }
+
   factory ForumReply.fromJson(Map<String, dynamic> json) {
     return ForumReply(
       id: _parseInt(json['id']),

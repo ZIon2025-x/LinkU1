@@ -136,7 +136,7 @@ class LeaderboardRepository {
   }) async {
     final response = await _apiService.post<Map<String, dynamic>>(
       ApiEndpoints.leaderboardItemVote(itemId),
-      queryParameters: {
+      data: {
         'vote_type': voteType,
         if (comment != null) 'comment': comment,
         'is_anonymous': isAnonymous,

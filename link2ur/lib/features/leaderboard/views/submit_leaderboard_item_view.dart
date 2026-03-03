@@ -1,5 +1,3 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:image_picker/image_picker.dart';
@@ -10,6 +8,7 @@ import '../../../core/design/app_radius.dart';
 import '../../../core/design/app_typography.dart';
 import '../../../core/utils/error_localizer.dart';
 import '../../../core/utils/l10n_extension.dart';
+import '../../../core/widgets/cross_platform_image.dart';
 import '../../../data/repositories/leaderboard_repository.dart';
 import '../bloc/leaderboard_bloc.dart';
 
@@ -283,11 +282,10 @@ class _SubmitLeaderboardItemContentState
                                     ClipRRect(
                                       borderRadius: BorderRadius.circular(
                                           AppRadius.medium),
-                                      child: Image.file(
-                                        File(img.path),
+                                      child: CrossPlatformImage(
+                                        xFile: img,
                                         width: 90,
                                         height: 90,
-                                        fit: BoxFit.cover,
                                       ),
                                     ),
                                     Positioned(

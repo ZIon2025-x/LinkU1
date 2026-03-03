@@ -954,17 +954,9 @@ class ForumBloc extends Bloc<ForumEvent, ForumState> {
     final updatedReplies = state.replies.map((r) {
       if (r.id == event.replyId) {
         final nowLiked = !r.isLiked;
-        return ForumReply(
-          id: r.id,
-          postId: r.postId,
-          content: r.content,
-          authorId: r.authorId,
-          author: r.author,
-          parentReplyId: r.parentReplyId,
-          parentReplyAuthor: r.parentReplyAuthor,
+        return r.copyWith(
           likeCount: r.likeCount + (nowLiked ? 1 : -1),
           isLiked: nowLiked,
-          createdAt: r.createdAt,
         );
       }
       return r;

@@ -9,6 +9,7 @@ import '../../../core/design/app_radius.dart';
 import '../../../core/design/app_typography.dart';
 import '../../../core/utils/l10n_extension.dart';
 import '../../../data/repositories/forum_repository.dart';
+import '../../../l10n/app_localizations.dart';
 
 /// 申请新建论坛版块页面
 /// 参考 iOS ForumCategoryRequestView
@@ -102,6 +103,9 @@ class _ForumCategoryRequestViewState extends State<ForumCategoryRequestView> {
       await context.read<ForumRepository>().requestCategory(
             name: trimmedName,
             description: _descriptionController.text.trim(),
+            icon: _iconController.text.trim().isNotEmpty
+                ? _iconController.text.trim()
+                : null,
           );
 
       if (!mounted) return;
@@ -185,7 +189,7 @@ class _ForumCategoryRequestViewState extends State<ForumCategoryRequestView> {
     );
   }
 
-  Widget _buildInstructionCard(bool isDark, dynamic l10n) {
+  Widget _buildInstructionCard(bool isDark, AppLocalizations l10n) {
     return Container(
       padding: const EdgeInsets.all(AppSpacing.md),
       decoration: BoxDecoration(
@@ -226,7 +230,7 @@ class _ForumCategoryRequestViewState extends State<ForumCategoryRequestView> {
     );
   }
 
-  Widget _buildNameField(bool isDark, dynamic l10n) {
+  Widget _buildNameField(bool isDark, AppLocalizations l10n) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -282,7 +286,7 @@ class _ForumCategoryRequestViewState extends State<ForumCategoryRequestView> {
     );
   }
 
-  Widget _buildDescriptionField(bool isDark, dynamic l10n) {
+  Widget _buildDescriptionField(bool isDark, AppLocalizations l10n) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -333,7 +337,7 @@ class _ForumCategoryRequestViewState extends State<ForumCategoryRequestView> {
     );
   }
 
-  Widget _buildIconField(bool isDark, dynamic l10n) {
+  Widget _buildIconField(bool isDark, AppLocalizations l10n) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -421,7 +425,7 @@ class _ForumCategoryRequestViewState extends State<ForumCategoryRequestView> {
     );
   }
 
-  Widget _buildSubmitButton(dynamic l10n) {
+  Widget _buildSubmitButton(AppLocalizations l10n) {
     return SizedBox(
       height: 52,
       child: ElevatedButton(
