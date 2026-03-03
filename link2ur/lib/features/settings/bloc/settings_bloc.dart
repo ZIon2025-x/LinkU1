@@ -330,6 +330,7 @@ class SettingsBloc extends Bloc<SettingsEvent, SettingsState> {
     SettingsDeleteAccount event,
     Emitter<SettingsState> emit,
   ) async {
+    if (state.isDeletingAccount) return;
     try {
       emit(state.copyWith(isDeletingAccount: true));
 

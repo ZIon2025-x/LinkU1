@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -32,9 +34,11 @@ class _ForgotPasswordViewState extends State<ForgotPasswordView> {
   bool _obscurePassword = true;
   bool _obscureConfirm = true;
   int _countdown = 0;
+  Timer? _countdownTimer;
 
   @override
   void dispose() {
+    _countdownTimer?.cancel();
     _emailController.dispose();
     _codeController.dispose();
     _passwordController.dispose();
@@ -61,20 +65,25 @@ class _ForgotPasswordViewState extends State<ForgotPasswordView> {
   }
 
   void _startCountdown() {
-    Future.doWhile(() async {
-      await Future.delayed(const Duration(seconds: 1));
-      if (!mounted) return false;
+    _countdownTimer?.cancel();
+    _countdownTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (!mounted || _countdown <= 0) {
+        timer.cancel();
+        return;
+      }
       setState(() => _countdown--);
-      return _countdown > 0;
     });
   }
 
   @override
   Widget build(BuildContext context) {
     return BlocListener<AuthBloc, AuthState>(
+      listenWhen: (prev, curr) =>
+          prev.codeSendStatus != curr.codeSendStatus ||
+          prev.resetPasswordStatus != curr.resetPasswordStatus,
       listener: (context, state) {
-        // 验证码发送成功
-        if (state.codeSendStatus == CodeSendStatus.sent && !_codeSent) {
+        // 验证码发送成功（首次或重发）
+        if (state.codeSendStatus == CodeSendStatus.sent) {
           setState(() {
             _codeSent = true;
             _countdown = 60;

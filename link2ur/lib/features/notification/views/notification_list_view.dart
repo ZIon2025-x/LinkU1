@@ -5,9 +5,11 @@ import 'package:go_router/go_router.dart';
 import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_radius.dart';
+import '../../../core/utils/error_localizer.dart';
 import '../../../core/utils/l10n_extension.dart';
 import '../../../core/router/app_router.dart';
 import '../../../core/widgets/skeleton_view.dart';
+import '../../../core/widgets/error_state_view.dart';
 import '../../../core/widgets/empty_state_view.dart';
 import '../../../data/models/notification.dart' as model;
 import '../bloc/notification_bloc.dart';
@@ -109,6 +111,13 @@ class _NotificationListViewContentState
           ),
           body: state.isLoading && notifications.isEmpty
               ? const SkeletonList(imageSize: 44)
+              : state.status == NotificationStatus.error && notifications.isEmpty
+                  ? ErrorStateView(
+                      message: context.localizeError(state.errorMessage),
+                      onRetry: () => context.read<NotificationBloc>().add(
+                            NotificationLoadRequested(type: widget.type),
+                          ),
+                    )
               : notifications.isEmpty
                   ? EmptyStateView(
                       icon: Icons.notifications_none,

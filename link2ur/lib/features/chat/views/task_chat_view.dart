@@ -423,6 +423,8 @@ class _TaskChatContentState extends State<_TaskChatContent> {
         return l10n.taskStatusOpen;
       case AppConstants.taskStatusInProgress:
         return l10n.taskStatusInProgress;
+      case AppConstants.taskStatusPendingAcceptance:
+        return l10n.taskStatusPendingAcceptance;
       case AppConstants.taskStatusCompleted:
         return l10n.taskStatusCompleted;
       case AppConstants.taskStatusCancelled:

@@ -241,7 +241,7 @@ void main() {
             transactions: testTransactions,
             transactionPage: 1,
             hasMoreTransactions: true,
-            errorMessage: 'Exception: Network error',
+            errorMessage: 'wallet_load_more_failed',
           ),
         ],
       );

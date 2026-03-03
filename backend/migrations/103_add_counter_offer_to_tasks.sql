@@ -8,10 +8,18 @@ ALTER TABLE tasks
     ADD COLUMN IF NOT EXISTS counter_offer_status  VARCHAR(20)    DEFAULT NULL,
     ADD COLUMN IF NOT EXISTS counter_offer_user_id VARCHAR(8)     DEFAULT NULL;
 
--- 外键：被指定方用户 ID（用户删除时置空）
-ALTER TABLE tasks
-    ADD CONSTRAINT IF NOT EXISTS fk_tasks_counter_offer_user
-    FOREIGN KEY (counter_offer_user_id) REFERENCES users(id) ON DELETE SET NULL;
+-- 外键：被指定方用户 ID（用户删除时置空）（PostgreSQL 不支持 ADD CONSTRAINT IF NOT EXISTS，用 DO 块）
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint
+        WHERE conname = 'fk_tasks_counter_offer_user'
+    ) THEN
+        ALTER TABLE tasks
+            ADD CONSTRAINT fk_tasks_counter_offer_user
+            FOREIGN KEY (counter_offer_user_id) REFERENCES users(id) ON DELETE SET NULL;
+    END IF;
+END $$;
 
 -- 注释
 COMMENT ON COLUMN tasks.counter_offer_price   IS '被指定方提出的反报价金额（英镑）';

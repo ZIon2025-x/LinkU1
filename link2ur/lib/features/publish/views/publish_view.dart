@@ -531,7 +531,7 @@ class _PublishContentState extends State<_PublishContent>
       } catch (e) {
         if (mounted) {
           setState(() => _postUploading = false);
-          AppFeedback.showError(context, e.toString());
+          AppFeedback.showError(context, context.localizeError(e.toString()));
         }
         return;
       }
@@ -612,7 +612,7 @@ class _PublishContentState extends State<_PublishContent>
         });
       }
     } catch (e) {
-      if (mounted) AppFeedback.showError(context, e.toString());
+      if (mounted) AppFeedback.showError(context, context.localizeError(e.toString()));
     }
   }
 

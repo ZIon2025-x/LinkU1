@@ -7,6 +7,7 @@ import '../../../core/config/app_config.dart';
 import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_radius.dart';
+import '../../../core/utils/error_localizer.dart';
 import '../../../core/utils/l10n_extension.dart';
 import '../../../core/widgets/buttons.dart';
 import '../../../core/widgets/loading_view.dart';
@@ -78,7 +79,7 @@ class _StripeConnectOnboardingViewState
       if (!mounted) return;
       setState(() {
         _viewState = _ViewState.error;
-        _error = _extractErrorMessage(e.toString());
+        _error = context.localizeError(e.toString());
       });
     }
   }
@@ -99,7 +100,7 @@ class _StripeConnectOnboardingViewState
       if (!mounted) return;
       setState(() {
         _viewState = _ViewState.error;
-        _error = _extractErrorMessage(e.toString());
+        _error = context.localizeError(e.toString());
       });
     }
   }
@@ -132,7 +133,7 @@ class _StripeConnectOnboardingViewState
       if (!mounted) return;
       setState(() {
         _viewState = _ViewState.error;
-        _error = _extractErrorMessage(e.toString());
+        _error = context.localizeError(e.toString());
       });
     }
   }
@@ -152,7 +153,7 @@ class _StripeConnectOnboardingViewState
         if (mounted) {
           setState(() {
             _viewState = _ViewState.error;
-            _error = 'Stripe publishable key not configured. Please rebuild with --dart-define.';
+            _error = context.l10n.stripeConnectKeyNotConfigured;
           });
         }
         return;
@@ -187,7 +188,7 @@ class _StripeConnectOnboardingViewState
       if (!mounted) return;
       setState(() {
         _viewState = _ViewState.error;
-        _error = _extractErrorMessage(e.toString());
+        _error = context.localizeError(e.toString());
       });
     }
   }
@@ -212,14 +213,6 @@ class _StripeConnectOnboardingViewState
       // 详情加载失败仍显示完成状态，只是没有详情
       setState(() => _viewState = _ViewState.completed);
     }
-  }
-
-  String _extractErrorMessage(String message) {
-    final colonIndex = message.indexOf(': ');
-    if (colonIndex > 0 && colonIndex < 30) {
-      return message.substring(colonIndex + 2);
-    }
-    return message;
   }
 
   @override

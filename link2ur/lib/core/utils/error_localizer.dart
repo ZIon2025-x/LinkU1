@@ -86,6 +86,10 @@ class ErrorLocalizer {
         return context.l10n.leaderboardSubmitFailed;
       case 'vote_failed':
         return context.l10n.leaderboardVoteFailed;
+      case 'wallet_load_failed':
+        return context.l10n.errorRequestFailedGeneric;
+      case 'wallet_load_more_failed':
+        return context.l10n.errorRequestFailedGeneric;
       default:
         // 服务端返回的已翻译消息，直接使用
         return errorMessage;

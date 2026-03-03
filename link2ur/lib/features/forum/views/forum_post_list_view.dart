@@ -7,6 +7,7 @@ import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_radius.dart';
 import '../../../core/utils/debouncer.dart';
 import '../../../core/utils/haptic_feedback.dart';
+import '../../../core/utils/error_localizer.dart';
 import '../../../core/utils/helpers.dart';
 import '../../../core/utils/l10n_extension.dart';
 import '../../../core/widgets/loading_view.dart';
@@ -166,7 +167,7 @@ class _ForumPostListViewContentState
                 }
                 if (errorMessage != null && posts.isEmpty) {
                   return ErrorStateView(
-                    message: errorMessage,
+                    message: context.localizeError(errorMessage),
                     onRetry: () => context.read<ForumBloc>().add(
                         ForumLoadPosts(categoryId: widget.category?.id)),
                   );

@@ -148,7 +148,7 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
       AppLogger.error('Failed to load wallet', e);
       emit(state.copyWith(
         status: WalletStatus.error,
-        errorMessage: e.toString(),
+        errorMessage: 'wallet_load_failed',
       ));
     }
   }
@@ -175,7 +175,7 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
     } catch (e) {
       AppLogger.error('Failed to load more transactions', e);
       emit(state.copyWith(
-        errorMessage: e.toString(),
+        errorMessage: 'wallet_load_more_failed',
       ));
     }
   }

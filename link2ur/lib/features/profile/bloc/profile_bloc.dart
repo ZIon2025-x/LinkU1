@@ -362,6 +362,7 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
     ProfileUpdateRequested event,
     Emitter<ProfileState> emit,
   ) async {
+    if (state.isUpdating) return;
     emit(state.copyWith(isUpdating: true));
 
     try {
@@ -386,7 +387,7 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
       AppLogger.error('Failed to update profile', e);
       emit(state.copyWith(
         isUpdating: false,
-        actionMessage: e.toString(),
+        actionMessage: 'update_failed',
         errorMessage: e.toString(),
       ));
     }
@@ -396,6 +397,7 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
     ProfileUploadAvatar event,
     Emitter<ProfileState> emit,
   ) async {
+    if (state.isUpdating) return;
     emit(state.copyWith(isUpdating: true));
 
     try {

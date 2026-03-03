@@ -696,6 +696,8 @@ class _PaymentContentState extends State<_PaymentContent> {
         return l10n.paymentNetworkConnectionFailed;
       case 'error_network_timeout':
         return l10n.paymentRequestTimeout;
+      case 'error_payment_generic':
+        return l10n.paymentGenericError;
       default:
         return key;
     }

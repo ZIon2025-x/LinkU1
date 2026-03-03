@@ -2991,6 +2991,18 @@ abstract class AppLocalizations {
   /// **'Unable to create payout setup session, please try again'**
   String get stripeOnboardingCreateFailed;
 
+  /// No description provided for @stripeConnectKeyNotConfigured.
+  ///
+  /// In en, this message translates to:
+  /// **'Payment configuration is missing. Please contact support.'**
+  String get stripeConnectKeyNotConfigured;
+
+  /// No description provided for @paymentGenericError.
+  ///
+  /// In en, this message translates to:
+  /// **'Payment failed. Please try again.'**
+  String get paymentGenericError;
+
   /// No description provided for @uploadNetworkErrorWithReason.
   ///
   /// In en, this message translates to:
@@ -7766,6 +7778,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Are you sure you want to delete your account? This action cannot be undone. All your data will be permanently deleted.'**
   String get settingsDeleteAccountMessage;
+
+  /// No description provided for @settingsDeleteAccountFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to delete account. Please try again.'**
+  String get settingsDeleteAccountFailed;
+
+  /// No description provided for @settingsTraditionalChinese.
+  ///
+  /// In en, this message translates to:
+  /// **'Traditional Chinese'**
+  String get settingsTraditionalChinese;
 
   /// No description provided for @themeSystem.
   ///

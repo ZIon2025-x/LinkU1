@@ -585,6 +585,7 @@ class FleaMarketBloc extends Bloc<FleaMarketEvent, FleaMarketState> {
     FleaMarketCreateItem event,
     Emitter<FleaMarketState> emit,
   ) async {
+    if (state.isSubmitting) return;
     emit(state.copyWith(isSubmitting: true));
 
     try {

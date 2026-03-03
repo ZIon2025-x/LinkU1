@@ -86,7 +86,7 @@ void main() {
           const PaymentState(status: PaymentStatus.loading),
           const PaymentState(
             status: PaymentStatus.error,
-            errorMessage: 'Payment intent creation failed',
+            errorMessage: 'error_payment_generic',
           ),
         ],
       );

@@ -471,6 +471,8 @@ class _TaskChatItem extends StatelessWidget {
       case AppConstants.taskStatusInProgress:
       case 'assigned':
         return l10n.taskStatusInProgress;
+      case AppConstants.taskStatusPendingAcceptance:
+        return l10n.taskStatusPendingAcceptance;
       case AppConstants.taskStatusCompleted:
         return l10n.taskStatusCompleted;
       case AppConstants.taskStatusCancelled:
@@ -479,6 +481,8 @@ class _TaskChatItem extends StatelessWidget {
         return l10n.taskStatusPendingConfirmation;
       case AppConstants.taskStatusPendingPayment:
         return l10n.taskStatusPendingPayment;
+      case AppConstants.taskStatusDisputed:
+        return l10n.taskStatusDisputed;
       default:
         return taskChat.taskStatus ?? '';
     }

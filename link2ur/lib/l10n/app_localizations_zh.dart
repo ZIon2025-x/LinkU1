@@ -1502,6 +1502,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get stripeOnboardingCreateFailed => '无法创建收款设置会话，请重试';
 
   @override
+  String get stripeConnectKeyNotConfigured => '支付配置缺失，请联系客服。';
+
+  @override
+  String get paymentGenericError => '支付失败，请重试。';
+
+  @override
   String uploadNetworkErrorWithReason(String param1) {
     return '网络错误：$param1';
   }
@@ -4035,6 +4041,12 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get settingsDeleteAccountMessage => '确定要删除您的账户吗？此操作无法撤销。您的所有数据将被永久删除。';
+
+  @override
+  String get settingsDeleteAccountFailed => '删除账户失败，请重试。';
+
+  @override
+  String get settingsTraditionalChinese => '繁体中文';
 
   @override
   String get themeSystem => '跟随系统';
@@ -10459,6 +10471,12 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get stripeOnboardingCreateFailed => '無法創建收款設置會話，請重試';
 
   @override
+  String get stripeConnectKeyNotConfigured => '支付配置缺失，請聯繫客服。';
+
+  @override
+  String get paymentGenericError => '支付失敗，請重試。';
+
+  @override
   String uploadNetworkErrorWithReason(String param1) {
     return '網絡錯誤：$param1';
   }
@@ -12992,6 +13010,12 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get settingsDeleteAccountMessage => '確定要刪除您的賬戶嗎？此操作無法撤銷。您的所有數據將被永久刪除。';
+
+  @override
+  String get settingsDeleteAccountFailed => '刪除賬戶失敗，請重試。';
+
+  @override
+  String get settingsTraditionalChinese => '繁體中文';
 
   @override
   String get themeSystem => '跟隨系統';

@@ -186,7 +186,7 @@ class _CreatePostViewState extends State<CreatePostView> {
     } catch (e) {
       if (!mounted) return;
       setState(() => _isUploading = false);
-      AppFeedback.showError(this.context, e.toString());
+      AppFeedback.showError(this.context, this.context.localizeError(e.toString()));
       return;
     }
 

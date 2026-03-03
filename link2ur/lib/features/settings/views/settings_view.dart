@@ -69,11 +69,8 @@ class _SettingsViewState extends State<SettingsView> {
           TextButton(
             onPressed: () {
               Navigator.pop(ctx);
-              // 发送删除账户事件
+              // 发送删除账户事件，BlocListener 监听结果后再登出
               context.read<SettingsBloc>().add(const SettingsDeleteAccount());
-              // 监听状态 —— 成功后退出登录
-              context.read<AuthBloc>().add(AuthLogoutRequested());
-              context.go('/login');
             },
             style: TextButton.styleFrom(foregroundColor: AppColors.error),
             child: Text(context.l10n.settingsDeleteAccount),
@@ -87,7 +84,21 @@ class _SettingsViewState extends State<SettingsView> {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    return Scaffold(
+    return BlocListener<SettingsBloc, SettingsState>(
+      listenWhen: (prev, curr) =>
+          prev.isDeletingAccount && !curr.isDeletingAccount,
+      listener: (context, state) {
+        if (state.deleteAccountError != null) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(context.l10n.settingsDeleteAccountFailed)),
+          );
+        } else {
+          // 删除成功，登出并跳转
+          context.read<AuthBloc>().add(AuthLogoutRequested());
+          context.go('/login');
+        }
+      },
+      child: Scaffold(
       appBar: AppBar(
         title: Text(context.l10n.profileSettings),
       ),
@@ -212,7 +223,9 @@ class _SettingsViewState extends State<SettingsView> {
                             settingsState.locale == 'zh' ||
                                     settingsState.locale == 'zh-CN'
                                 ? context.l10n.settingsChinese
-                                : 'English',
+                                : settingsState.locale == 'zh_Hant'
+                                    ? context.l10n.settingsTraditionalChinese
+                                    : 'English',
                             style: TextStyle(
                               color: isDark
                                   ? AppColors.textSecondaryDark
@@ -221,8 +234,10 @@ class _SettingsViewState extends State<SettingsView> {
                             ),
                           ),
                           onTap: () {
-                            final isZh = settingsState.locale == 'zh' ||
-                                settingsState.locale == 'zh-CN';
+                            final locale = settingsState.locale;
+                            final isZh = locale == 'zh' ||
+                                locale == 'zh-CN' ||
+                                locale == 'zh_Hant';
                             context.read<SettingsBloc>().add(
                                   SettingsLanguageChanged(
                                     isZh ? 'en' : 'zh-CN',
@@ -435,6 +450,7 @@ class _SettingsViewState extends State<SettingsView> {
           );
         },
       ),
+    ),
     );
   }
 

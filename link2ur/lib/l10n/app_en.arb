@@ -635,6 +635,8 @@
   "stripeConnectOpenDashboard": "Open Stripe Dashboard",
   "stripeConnectDashboardUnavailable": "Unable to open Stripe dashboard",
   "stripeOnboardingCreateFailed": "Unable to create payout setup session, please try again",
+  "stripeConnectKeyNotConfigured": "Payment configuration is missing. Please contact support.",
+  "paymentGenericError": "Payment failed. Please try again.",
   "uploadNetworkErrorWithReason": "Network error: {param1}",
   "@uploadNetworkErrorWithReason": {
     "placeholders": {
@@ -1934,6 +1936,8 @@
   "settingsUserId": "User ID",
   "settingsDeleteAccount": "Delete Account",
   "settingsDeleteAccountMessage": "Are you sure you want to delete your account? This action cannot be undone. All your data will be permanently deleted.",
+  "settingsDeleteAccountFailed": "Failed to delete account. Please try again.",
+  "settingsTraditionalChinese": "Traditional Chinese",
   "themeSystem": "Follow System",
   "themeLight": "Light",
   "themeDark": "Dark",

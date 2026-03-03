@@ -244,6 +244,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         errorMessage: e.message,
       ));
     } catch (e) {
+      AppLogger.error('Send email code failed', e);
       emit(state.copyWith(
         codeSendStatus: CodeSendStatus.error,
         errorMessage: 'auth_error_send_code_failed',
@@ -269,6 +270,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         errorMessage: e.message,
       ));
     } catch (e) {
+      AppLogger.error('Send phone code failed', e);
       emit(state.copyWith(
         codeSendStatus: CodeSendStatus.error,
         errorMessage: 'auth_error_send_code_failed',

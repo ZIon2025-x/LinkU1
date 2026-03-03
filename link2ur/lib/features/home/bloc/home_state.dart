@@ -100,7 +100,7 @@ class HomeState extends Equatable {
       hasMoreNearby: hasMoreNearby ?? this.hasMoreNearby,
       recommendedPage: recommendedPage ?? this.recommendedPage,
       nearbyPage: nearbyPage ?? this.nearbyPage,
-      errorMessage: errorMessage ?? this.errorMessage,
+      errorMessage: errorMessage,
       isRefreshing: isRefreshing ?? this.isRefreshing,
       refreshError: clearRefreshError ? null : (refreshError ?? this.refreshError),
       discoveryItems: discoveryItems ?? this.discoveryItems,

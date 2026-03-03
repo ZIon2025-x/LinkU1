@@ -43,7 +43,17 @@ class _WalletContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<WalletBloc, WalletState>(
+    return BlocListener<WalletBloc, WalletState>(
+      listenWhen: (prev, curr) =>
+          prev.errorMessage != curr.errorMessage &&
+          curr.errorMessage != null &&
+          curr.pointsAccount != null,
+      listener: (context, state) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(context.localizeError(state.errorMessage))),
+        );
+      },
+      child: BlocBuilder<WalletBloc, WalletState>(
         buildWhen: (previous, current) =>
             previous.isLoading != current.isLoading ||
             previous.pointsAccount != current.pointsAccount ||
@@ -103,6 +113,7 @@ class _WalletContent extends StatelessWidget {
                       ),
           );
         },
+      ),
       );
   }
 }

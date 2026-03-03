@@ -381,8 +381,6 @@ class PaymentBloc extends Bloc<PaymentEvent, PaymentState> {
     } else if (msg.contains('timeout') || msg.contains('TimeoutException')) {
       return 'error_network_timeout';
     }
-    return msg
-        .replaceAll('PaymentException: ', '')
-        .replaceAll('Exception: ', '');
+    return 'error_payment_generic';
   }
 }

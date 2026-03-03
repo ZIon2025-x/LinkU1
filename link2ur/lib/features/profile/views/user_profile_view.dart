@@ -4,6 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_radius.dart';
+import '../../../core/utils/error_localizer.dart';
 import '../../../core/utils/helpers.dart';
 import '../../../core/utils/l10n_extension.dart';
 import '../../../core/utils/sheet_adaptation.dart';
@@ -704,7 +705,7 @@ class _UserProfileViewState extends State<UserProfileView> {
                                   if (ctx.mounted) {
                                     ScaffoldMessenger.of(ctx).showSnackBar(
                                       SnackBar(
-                                          content: Text(e.toString())),
+                                          content: Text(ctx.localizeError(e.toString()))),
                                     );
                                   }
                                 }

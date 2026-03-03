@@ -1605,6 +1605,8 @@
   "stripeConnectOpenDashboard": "進入 Stripe 子賬戶",
   "stripeConnectDashboardUnavailable": "暫無法打開 Stripe 子賬戶頁面",
   "stripeOnboardingCreateFailed": "無法創建收款設置會話，請重試",
+  "stripeConnectKeyNotConfigured": "支付配置缺失，請聯繫客服。",
+  "paymentGenericError": "支付失敗，請重試。",
   "uploadNetworkErrorWithReason": "網絡錯誤：{param1}",
   "@uploadNetworkErrorWithReason": {
     "placeholders": {
@@ -2162,6 +2164,8 @@
   "settingsUserId": "用戶ID",
   "settingsDeleteAccount": "刪除賬戶",
   "settingsDeleteAccountMessage": "確定要刪除您的賬戶嗎？此操作無法撤銷。您的所有數據將被永久刪除。",
+  "settingsDeleteAccountFailed": "刪除賬戶失敗，請重試。",
+  "settingsTraditionalChinese": "繁體中文",
   "themeSystem": "跟隨系統",
   "themeLight": "淺色",
   "themeDark": "深色",

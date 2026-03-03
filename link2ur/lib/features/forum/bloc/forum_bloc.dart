@@ -745,6 +745,7 @@ class ForumBloc extends Bloc<ForumEvent, ForumState> {
     ForumCreatePost event,
     Emitter<ForumState> emit,
   ) async {
+    if (state.isCreatingPost) return;
     emit(state.copyWith(isCreatingPost: true, createPostSuccess: false));
 
     try {
@@ -768,6 +769,7 @@ class ForumBloc extends Bloc<ForumEvent, ForumState> {
     ForumReplyPost event,
     Emitter<ForumState> emit,
   ) async {
+    if (state.isReplying) return;
     emit(state.copyWith(isReplying: true));
 
     try {

@@ -1584,6 +1584,13 @@ class AppLocalizationsEn extends AppLocalizations {
       'Unable to create payout setup session, please try again';
 
   @override
+  String get stripeConnectKeyNotConfigured =>
+      'Payment configuration is missing. Please contact support.';
+
+  @override
+  String get paymentGenericError => 'Payment failed. Please try again.';
+
+  @override
   String uploadNetworkErrorWithReason(String param1) {
     return 'Network error: $param1';
   }
@@ -4197,6 +4204,13 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get settingsDeleteAccountMessage =>
       'Are you sure you want to delete your account? This action cannot be undone. All your data will be permanently deleted.';
+
+  @override
+  String get settingsDeleteAccountFailed =>
+      'Failed to delete account. Please try again.';
+
+  @override
+  String get settingsTraditionalChinese => 'Traditional Chinese';
 
   @override
   String get themeSystem => 'Follow System';
