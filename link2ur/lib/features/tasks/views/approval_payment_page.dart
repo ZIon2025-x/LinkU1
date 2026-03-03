@@ -123,7 +123,9 @@ class _ApprovalPaymentPageState extends State<ApprovalPaymentPage> {
           Navigator.of(context).pop(true);
         });
       }
-    } catch (_) { /* 忽略，按未支付处理 */ }
+    } catch (e) {
+      AppLogger.warning('Failed to check if already paid, treating as unpaid: $e');
+    }
   }
 
   /// 选择支付宝时懒加载 Alipay PaymentIntent
@@ -483,7 +485,9 @@ class _ApprovalPaymentPageState extends State<ApprovalPaymentPage> {
       bool success = false;
       if (_selectedMethod == _PaymentMethod.applePay) {
         final amountPence = _paymentResponse?.finalAmount
-            ?? ((double.tryParse(widget.paymentData.amountDisplay ?? '') ?? 0) * 100).round();
+            ?? ((double.tryParse(
+                    (widget.paymentData.amountDisplay ?? '').replaceAll(RegExp(r'[^0-9.]'), ''),
+                ) ?? 0) * 100).round();
         success = await PaymentService.instance.presentApplePay(
           clientSecret: clientSecret,
           amount: amountPence.round(),

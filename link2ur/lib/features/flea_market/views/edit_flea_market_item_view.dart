@@ -63,14 +63,18 @@ class _EditFleaMarketItemViewContentState
   List<String> _existingImageUrls = [];
   final List<XFile> _newImages = [];
 
-  /// 与创建页一致：使用本地化 (key, label)，保证与接口存的值（如「其他」）一致
+  /// API key 使用固定英文常量（对齐后端 FLEA_MARKET_CATEGORIES），显示名使用本地化
   List<(String, String)> _getCategories(BuildContext context) => [
-    (context.l10n.fleaMarketCategoryKeyElectronics, context.l10n.fleaMarketCategoryElectronics),
-    (context.l10n.fleaMarketCategoryKeyBooks, context.l10n.fleaMarketCategoryBooks),
-    (context.l10n.fleaMarketCategoryKeyDaily, context.l10n.fleaMarketCategoryDailyUse),
-    (context.l10n.fleaMarketCategoryKeyClothing, context.l10n.fleaMarketCategoryClothing),
-    (context.l10n.fleaMarketCategoryKeySports, context.l10n.fleaMarketCategorySports),
-    (context.l10n.fleaMarketCategoryKeyOther, context.l10n.fleaMarketCategoryOther),
+    ('Electronics', context.l10n.fleaMarketCategoryElectronics),
+    ('Books', context.l10n.fleaMarketCategoryBooks),
+    ('Home & Living', context.l10n.fleaMarketCategoryDailyUse),
+    ('Clothing', context.l10n.fleaMarketCategoryClothing),
+    ('Sports', context.l10n.fleaMarketCategorySports),
+    ('Furniture', context.l10n.fleaMarketCategoryFurniture),
+    ('Accessories', context.l10n.fleaMarketCategoryAccessories),
+    ('Beauty & Personal', context.l10n.fleaMarketCategoryBeauty),
+    ('Toys & Games', context.l10n.fleaMarketCategoryToysGames),
+    ('Other', context.l10n.fleaMarketCategoryOther),
   ];
 
   @override
@@ -153,10 +157,34 @@ class _EditFleaMarketItemViewContentState
   }
 
   Future<void> _saveChanges() async {
-    if (_titleController.text.isEmpty || _priceController.text.isEmpty) {
+    final title = _titleController.text.trim();
+    final priceText = _priceController.text.trim();
+
+    if (title.isEmpty || priceText.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(context.l10n.fleaMarketFillRequired),
+          backgroundColor: AppColors.error,
+        ),
+      );
+      return;
+    }
+
+    if (title.length < 2) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(context.l10n.fleaMarketTitleMinLength),
+          backgroundColor: AppColors.error,
+        ),
+      );
+      return;
+    }
+
+    final price = double.tryParse(priceText);
+    if (price == null || price < 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(context.l10n.fleaMarketInvalidPrice),
           backgroundColor: AppColors.error,
         ),
       );
@@ -175,9 +203,9 @@ class _EditFleaMarketItemViewContentState
     // 使用 bloc 内串行「上传 + 更新」，避免 stream 竞态导致 PUT 未发送
     bloc.add(FleaMarketUploadImagesAndUpdateItem(
       itemId: widget.itemId,
-      title: _titleController.text,
-      description: _descriptionController.text,
-      price: double.tryParse(_priceController.text) ?? 0,
+      title: title,
+      description: _descriptionController.text.trim(),
+      price: price,
       category: _selectedCategory,
       existingImageUrls: _existingImageUrls,
       newImagesToUpload: newImagesToUpload,

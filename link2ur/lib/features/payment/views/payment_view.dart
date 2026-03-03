@@ -102,6 +102,7 @@ class _PaymentContent extends StatefulWidget {
 class _PaymentContentState extends State<_PaymentContent> {
   // 仅保留 UI 本地状态（支付方式选择 & 倒计时），其余状态由 BLoC 管理
   PaymentMethod _selectedPaymentMethod = PaymentMethod.card;
+  PaymentMethod? _methodBeforeSwitch;
   bool _alreadyPaid = false;
   Timer? _countdownTimer;
   Duration? _remainingTime;
@@ -183,7 +184,10 @@ class _PaymentContentState extends State<_PaymentContent> {
   /// - wechatPay → 不需要 PaymentIntent（走 Checkout Session）
   void _onPaymentMethodChanged(PaymentMethod newMethod) {
     final oldMethod = _selectedPaymentMethod;
-    setState(() => _selectedPaymentMethod = newMethod);
+    setState(() {
+      _selectedPaymentMethod = newMethod;
+      _methodBeforeSwitch = oldMethod;
+    });
 
     // 判断是否需要重建 PaymentIntent
     final oldApiMethod = _preferredPaymentMethodForAPI(oldMethod);
@@ -534,6 +538,7 @@ class _PaymentContentState extends State<_PaymentContent> {
     return BlocListener<PaymentBloc, PaymentState>(
       listenWhen: (prev, curr) =>
           prev.status != curr.status ||
+          (prev.isMethodSwitching && !curr.isMethodSwitching) ||
           (prev.weChatCheckoutUrl == null && curr.weChatCheckoutUrl != null),
       listener: (context, state) {
         if (state.status == PaymentStatus.success) {
@@ -544,6 +549,17 @@ class _PaymentContentState extends State<_PaymentContent> {
             if (!mounted) return;
             _showPaymentSuccess();
           });
+        }
+        // Method switch failed — revert local selection to previous method
+        if (!state.isMethodSwitching &&
+            state.errorMessage != null &&
+            _methodBeforeSwitch != null) {
+          setState(() {
+            _selectedPaymentMethod = _methodBeforeSwitch!;
+            _methodBeforeSwitch = null;
+          });
+        } else if (!state.isMethodSwitching) {
+          _methodBeforeSwitch = null;
         }
         if (state.weChatCheckoutUrl != null &&
             state.status == PaymentStatus.ready) {

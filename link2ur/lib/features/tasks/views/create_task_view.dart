@@ -17,6 +17,7 @@ import '../../../core/widgets/location_picker.dart';
 import '../../../core/utils/validators.dart';
 import '../../../data/models/task.dart';
 import '../../../data/repositories/task_repository.dart';
+import '../../auth/bloc/auth_bloc.dart';
 import '../bloc/create_task_bloc.dart';
 
 /// 任务草稿预填数据（从 AI 助手生成）
@@ -125,18 +126,21 @@ class _CreateTaskContentState extends State<_CreateTaskContent> {
     }
   }
 
-  List<Map<String, String>> _getCategories(BuildContext context) {
+  /// 返回 (key, label, enabled)，对齐 publish_view 逻辑
+  List<(String, String, bool)> _getCategories(BuildContext context) {
+    final user = context.read<AuthBloc>().state.user;
+    final isStudent = user?.isStudentVerified ?? false;
     return [
-      {'key': 'Housekeeping', 'label': context.l10n.taskTypeHousekeeping},
-      {'key': 'Campus Life', 'label': context.l10n.taskTypeCampusLife},
-      {'key': 'Second-hand & Rental', 'label': context.l10n.taskTypeSecondHandRental},
-      {'key': 'Errand Running', 'label': context.l10n.taskTypeErrandRunning},
-      {'key': 'Skill Service', 'label': context.l10n.taskTypeSkillService},
-      {'key': 'Social Help', 'label': context.l10n.taskTypeSocialHelp},
-      {'key': 'Transportation', 'label': context.l10n.taskTypeTransportation},
-      {'key': 'Pet Care', 'label': context.l10n.taskTypePetCare},
-      {'key': 'Life Convenience', 'label': context.l10n.taskTypeLifeConvenience},
-      {'key': 'Other', 'label': context.l10n.taskTypeOther},
+      ('Housekeeping', context.l10n.taskTypeHousekeeping, true),
+      ('Campus Life', context.l10n.taskTypeCampusLife, isStudent),
+      ('Second-hand & Rental', context.l10n.taskTypeSecondHandRental, true),
+      ('Errand Running', context.l10n.taskTypeErrandRunning, true),
+      ('Skill Service', context.l10n.taskTypeSkillService, true),
+      ('Social Help', context.l10n.taskTypeSocialHelp, true),
+      ('Transportation', context.l10n.taskTypeTransportation, true),
+      ('Pet Care', context.l10n.taskTypePetCare, true),
+      ('Life Convenience', context.l10n.taskTypeLifeConvenience, true),
+      ('Other', context.l10n.taskTypeOther, true),
     ];
   }
 
@@ -213,7 +217,7 @@ class _CreateTaskContentState extends State<_CreateTaskContent> {
         if (mounted) {
           setState(() => _isUploadingImages = false);
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('图片上传失败: $e'), backgroundColor: Colors.red),
+            SnackBar(content: Text(context.l10n.createTaskImageUploadFailed), backgroundColor: Colors.red),
           );
         }
         return;
@@ -399,9 +403,9 @@ class _CreateTaskContentState extends State<_CreateTaskContent> {
 
                 SwitchListTile(
                   contentPadding: EdgeInsets.zero,
-                  title: const Text('公开任务', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
+                  title: Text(context.l10n.createTaskPublicTask, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
                   subtitle: Text(
-                    _isPublic ? '所有人可见' : '仅自己可见',
+                    _isPublic ? context.l10n.createTaskPublicDesc : context.l10n.createTaskPrivateDesc,
                     style: const TextStyle(fontSize: 13, color: AppColors.textSecondaryLight),
                   ),
                   value: _isPublic,
@@ -438,29 +442,35 @@ class _CreateTaskContentState extends State<_CreateTaskContent> {
       spacing: 8,
       runSpacing: 8,
       children: _getCategories(context).map((category) {
-        final isSelected = _selectedCategory == category['key'];
+        final (key, label, enabled) = category;
+        final isSelected = _selectedCategory == key;
         return GestureDetector(
-          onTap: () => setState(() => _selectedCategory = category['key']!),
-          child: Container(
-            padding:
-                const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            decoration: BoxDecoration(
-              color: isSelected ? AppColors.primary : Colors.transparent,
-              borderRadius: AppRadius.allSmall,
-              border: Border.all(
-                color: isSelected
-                    ? AppColors.primary
-                    : AppColors.dividerLight,
+          onTap: enabled
+              ? () => setState(() => _selectedCategory = key)
+              : null,
+          child: Opacity(
+            opacity: enabled ? 1.0 : 0.4,
+            child: Container(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              decoration: BoxDecoration(
+                color: isSelected ? AppColors.primary : Colors.transparent,
+                borderRadius: AppRadius.allSmall,
+                border: Border.all(
+                  color: isSelected
+                      ? AppColors.primary
+                      : AppColors.dividerLight,
+                ),
               ),
-            ),
-            child: Text(
-              category['label']!,
-              style: TextStyle(
-                color: isSelected
-                    ? Colors.white
-                    : AppColors.textSecondaryLight,
-                fontWeight:
-                    isSelected ? FontWeight.w500 : FontWeight.normal,
+              child: Text(
+                label,
+                style: TextStyle(
+                  color: isSelected
+                      ? Colors.white
+                      : AppColors.textSecondaryLight,
+                  fontWeight:
+                      isSelected ? FontWeight.w500 : FontWeight.normal,
+                ),
               ),
             ),
           ),

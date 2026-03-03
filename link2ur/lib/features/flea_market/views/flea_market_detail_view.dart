@@ -116,6 +116,12 @@ class _FleaMarketDetailContent extends StatelessWidget {
             'refresh_failed' => l10n.actionRefreshFailed,
             'counter_offer_accepted' => l10n.fleaMarketCounterOfferAccepted,
             'counter_offer_rejected' => l10n.fleaMarketCounterOfferRejected,
+            'approve_success' => l10n.fleaMarketApproveSuccess,
+            'approve_failed' => l10n.fleaMarketApproveFailed,
+            'reject_success' => l10n.fleaMarketRejectSuccess,
+            'reject_failed' => l10n.fleaMarketRejectFailed,
+            'counter_offer_failed' => l10n.fleaMarketCounterOfferFailed,
+            'counter_offer_respond_failed' => l10n.fleaMarketCounterOfferFailed,
             _ => state.actionMessage ?? '',
           };
           final displayMessage = state.errorMessage != null
@@ -126,6 +132,8 @@ class _FleaMarketDetailContent extends StatelessWidget {
               state.actionMessage == 'negotiate_request_sent' ||
               state.actionMessage == 'item_updated' ||
               state.actionMessage == 'refresh_success' ||
+              state.actionMessage == 'approve_success' ||
+              state.actionMessage == 'reject_success' ||
               state.actionMessage == 'counter_offer_accepted' ||
               state.actionMessage == 'counter_offer_rejected';
           ScaffoldMessenger.of(context).showSnackBar(
@@ -580,43 +588,7 @@ class _FleaMarketDetailContent extends StatelessWidget {
 
     return Row(
       children: [
-        // 聊天按钮 - 对标iOS 小按钮
-        GestureDetector(
-          onTap: () {
-            AppHaptics.selection();
-            context.push('/chat/${item.sellerId}');
-          },
-          child: Container(
-            height: 50,
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [
-                  Colors.orange,
-                  Colors.orange.withValues(alpha: 0.8),
-                ],
-              ),
-              borderRadius: BorderRadius.circular(25),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.orange.withValues(alpha: 0.4),
-                  blurRadius: 8,
-                  offset: const Offset(0, 4),
-                ),
-              ],
-            ),
-            child: Row(
-              children: [
-                const Icon(Icons.chat_bubble, size: 18, color: Colors.white),
-                const SizedBox(width: 6),
-                Text(context.l10n.fleaMarketChat,
-                    style:
-                        AppTypography.bodyBold.copyWith(color: Colors.white)),
-              ],
-            ),
-          ),
-        ),
-        const SizedBox(width: 12),
+        // 私聊入口已隐藏，仅保留主操作按钮
         // 主操作按钮：继续支付 / 立即购买 / 已被预留 或 已售出
         Expanded(
           child: isUnavailable

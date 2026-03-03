@@ -221,6 +221,7 @@ class ForumState extends Equatable {
     this.selectedPost,
     this.replies = const [],
     this.isCreatingPost = false,
+    this.createPostSuccess = false,
     this.isReplying = false,
     this.myPosts = const [],
     this.favoritedPosts = const [],
@@ -246,6 +247,7 @@ class ForumState extends Equatable {
   final ForumPost? selectedPost;
   final List<ForumReply> replies;
   final bool isCreatingPost;
+  final bool createPostSuccess;
   final bool isReplying;
   final List<ForumPost> myPosts;
   final List<ForumPost> favoritedPosts;
@@ -272,6 +274,7 @@ class ForumState extends Equatable {
     ForumPost? selectedPost,
     List<ForumReply>? replies,
     bool? isCreatingPost,
+    bool? createPostSuccess,
     bool? isReplying,
     List<ForumPost>? myPosts,
     List<ForumPost>? favoritedPosts,
@@ -296,6 +299,7 @@ class ForumState extends Equatable {
       selectedPost: selectedPost ?? this.selectedPost,
       replies: replies ?? this.replies,
       isCreatingPost: isCreatingPost ?? this.isCreatingPost,
+      createPostSuccess: createPostSuccess ?? false,
       isReplying: isReplying ?? this.isReplying,
       myPosts: myPosts ?? this.myPosts,
       favoritedPosts: favoritedPosts ?? this.favoritedPosts,
@@ -323,6 +327,7 @@ class ForumState extends Equatable {
         selectedPost,
         replies,
         isCreatingPost,
+        createPostSuccess,
         isReplying,
         myPosts,
         favoritedPosts,
@@ -740,18 +745,20 @@ class ForumBloc extends Bloc<ForumEvent, ForumState> {
     ForumCreatePost event,
     Emitter<ForumState> emit,
   ) async {
-    emit(state.copyWith(isCreatingPost: true));
+    emit(state.copyWith(isCreatingPost: true, createPostSuccess: false));
 
     try {
       final post = await _forumRepository.createPost(event.request);
       emit(state.copyWith(
         isCreatingPost: false,
+        createPostSuccess: true,
         posts: [post, ...state.posts],
       ));
     } catch (e) {
       AppLogger.error('Failed to create post', e);
       emit(state.copyWith(
         isCreatingPost: false,
+        createPostSuccess: false,
         errorMessage: e.toString(),
       ));
     }

@@ -220,12 +220,22 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
         final data = wsMessage.data!;
 
         if (wsMessage.isReadReceipt) {
+          // Filter by taskId for task chats to avoid cross-chat interference
+          if (state.isTaskChat) {
+            final receiptTaskId = data['task_id'];
+            if (receiptTaskId != null && receiptTaskId != state.taskId) return;
+          }
           final senderId = data['sender_id']?.toString() ?? '';
           if (senderId.isNotEmpty) add(ChatReadReceiptReceived(senderId));
           return;
         }
 
         if (wsMessage.isTyping) {
+          // Filter typing by context: task chat checks taskId, private chat checks userId
+          if (state.isTaskChat) {
+            final typingTaskId = data['task_id'];
+            if (typingTaskId != null && typingTaskId != state.taskId) return;
+          }
           final senderId = data['sender_id']?.toString() ??
               data['receiver_id']?.toString() ?? '';
           if (senderId.isNotEmpty) add(ChatPeerTypingReceived(senderId));
@@ -597,7 +607,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
   ) {
     if (event.senderId != state.userId) return;
     final updated = state.messages.map((m) {
-      if (!m.isRead && m.senderId != state.userId) return m;
+      if (!m.isRead && m.senderId == state.userId) return m;
       if (m.isRead) return m;
       return m.copyWith(isRead: true);
     }).toList();

@@ -133,9 +133,24 @@ class _CreatePostViewState extends State<CreatePostView> {
   }
 
   Future<void> _submit(BuildContext context) async {
-    if (_titleController.text.trim().isEmpty ||
-        _contentController.text.trim().isEmpty) {
+    final title = _titleController.text.trim();
+    final content = _contentController.text.trim();
+
+    if (title.isEmpty || content.isEmpty) {
       AppFeedback.showWarning(context, context.l10n.feedbackFillTitleAndContent);
+      return;
+    }
+
+    if (title.length > 200) {
+      AppFeedback.showWarning(context, context.l10n.validatorFieldMaxLength(context.l10n.forumEnterTitle, 200));
+      return;
+    }
+
+    if (content.length < 10) {
+      AppFeedback.showWarning(
+        context,
+        context.l10n.validatorFieldMinLength(context.l10n.forumShareThoughts, 10),
+      );
       return;
     }
 
@@ -144,7 +159,9 @@ class _CreatePostViewState extends State<CreatePostView> {
       return;
     }
 
+    // 在 await 之前捕获 bloc 和 repo 引用，避免 async gap 后 context 失效
     final repo = context.read<ForumRepository>();
+    final bloc = context.read<ForumBloc>();
     final List<String> imageUrls = [];
     final List<ForumPostAttachment> uploadedAttachments = [];
 
@@ -167,21 +184,20 @@ class _CreatePostViewState extends State<CreatePostView> {
         }
       }
     } catch (e) {
-      if (!context.mounted) return;
+      if (!mounted) return;
       setState(() => _isUploading = false);
-      AppFeedback.showError(context, e.toString());
+      AppFeedback.showError(this.context, e.toString());
       return;
     }
 
-    if (mounted) setState(() => _isUploading = false);
-    if (!context.mounted) return;
+    if (!mounted) return;
+    setState(() => _isUploading = false);
 
-    final bloc = context.read<ForumBloc>();
     bloc.add(
       ForumCreatePost(
         CreatePostRequest(
-          title: _titleController.text.trim(),
-          content: _contentController.text.trim(),
+          title: title,
+          content: content,
           categoryId: _selectedCategoryId!,
           images: imageUrls,
           attachments: uploadedAttachments,
@@ -199,12 +215,14 @@ class _CreatePostViewState extends State<CreatePostView> {
         forumRepository: context.read<ForumRepository>(),
       )..add(const ForumLoadCategories()),
       child: BlocConsumer<ForumBloc, ForumState>(
+        listenWhen: (prev, curr) =>
+            prev.isCreatingPost != curr.isCreatingPost ||
+            prev.createPostSuccess != curr.createPostSuccess ||
+            prev.errorMessage != curr.errorMessage,
         listener: (context, state) {
-          if (state.isCreatingPost == false && state.errorMessage != null) {
+          if (!state.isCreatingPost && state.errorMessage != null) {
             AppFeedback.showError(context, context.localizeError(state.errorMessage));
-          } else if (state.isCreatingPost == false &&
-              state.posts.isNotEmpty &&
-              state.posts.first.title == _titleController.text.trim()) {
+          } else if (state.createPostSuccess) {
             AppFeedback.showSuccess(
                 context, context.l10n.feedbackPostPublishSuccess);
             context.pop();
@@ -294,7 +312,7 @@ class _CreatePostViewState extends State<CreatePostView> {
                 AppSpacing.vSm,
                 _buildImagePicker(isDark),
                 AppSpacing.vMd,
-                // 文件附件（选填，最多 5 个）
+                // 文件附件（选填，最多 1 个）
                 Text(
                   context.l10n.forumFileAttachmentCount('${_selectedFiles.length}', '$_kMaxFiles'),
                   style: TextStyle(

@@ -158,7 +158,7 @@ class PaymentState extends Equatable {
           ? null
           : (weChatCheckoutUrl ?? this.weChatCheckoutUrl),
       errorMessage: clearError ? null : (errorMessage ?? this.errorMessage),
-      isMethodSwitching: isMethodSwitching ?? false,
+      isMethodSwitching: isMethodSwitching ?? this.isMethodSwitching,
     );
   }
 

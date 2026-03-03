@@ -568,6 +568,7 @@ class TaskExpertBloc extends Bloc<TaskExpertEvent, TaskExpertState> {
     TaskExpertApplyService event,
     Emitter<TaskExpertState> emit,
   ) async {
+    if (state.isSubmitting) return;
     emit(state.copyWith(isSubmitting: true));
 
     try {
@@ -749,6 +750,7 @@ class TaskExpertBloc extends Bloc<TaskExpertEvent, TaskExpertState> {
     TaskExpertApplyServiceEnhanced event,
     Emitter<TaskExpertState> emit,
   ) async {
+    if (state.isSubmitting) return;
     emit(state.copyWith(isSubmitting: true));
     try {
       await _taskExpertRepository.applyService(

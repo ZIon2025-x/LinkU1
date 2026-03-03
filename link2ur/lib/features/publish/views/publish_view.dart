@@ -268,6 +268,7 @@ class _PublishContentState extends State<_PublishContent>
   final ValueNotifier<String?> _taskCategoryNotifier = ValueNotifier(null);
   final String _taskCurrency = 'GBP';
   bool _taskRewardToBeQuoted = false;
+  bool _taskIsPublic = true;
   DateTime? _taskDeadline;
   final List<XFile> _taskImages = [];
   static const int _kTaskMaxImages = 5;
@@ -406,14 +407,18 @@ class _PublishContentState extends State<_PublishContent>
     ];
   }
 
-  // ==================== 闲置类别列表 ====================
+  // ==================== 闲置类别列表（对齐后端 FLEA_MARKET_CATEGORIES） ====================
   List<(String, String)> _getFleaCategories(BuildContext context) => [
-        (context.l10n.fleaMarketCategoryKeyElectronics, context.l10n.fleaMarketCategoryElectronics),
-        (context.l10n.fleaMarketCategoryKeyBooks, context.l10n.fleaMarketCategoryBooks),
-        (context.l10n.fleaMarketCategoryKeyDaily, context.l10n.fleaMarketCategoryDailyUse),
-        (context.l10n.fleaMarketCategoryKeyClothing, context.l10n.fleaMarketCategoryClothing),
-        (context.l10n.fleaMarketCategoryKeySports, context.l10n.fleaMarketCategorySports),
-        (context.l10n.fleaMarketCategoryKeyOther, context.l10n.fleaMarketCategoryOther),
+        ('Electronics', context.l10n.fleaMarketCategoryElectronics),
+        ('Books', context.l10n.fleaMarketCategoryBooks),
+        ('Home & Living', context.l10n.fleaMarketCategoryDailyUse),
+        ('Clothing', context.l10n.fleaMarketCategoryClothing),
+        ('Sports', context.l10n.fleaMarketCategorySports),
+        ('Furniture', context.l10n.fleaMarketCategoryFurniture),
+        ('Accessories', context.l10n.fleaMarketCategoryAccessories),
+        ('Beauty & Personal', context.l10n.fleaMarketCategoryBeauty),
+        ('Toys & Games', context.l10n.fleaMarketCategoryToysGames),
+        ('Other', context.l10n.fleaMarketCategoryOther),
       ];
 
   // ==================== 提交 ====================
@@ -460,6 +465,7 @@ class _PublishContentState extends State<_PublishContent>
       longitude: _taskLongitude,
       deadline: _taskDeadline,
       images: imageUrls,
+      isPublic: _taskIsPublic ? 1 : 0,
     );
     context.read<CreateTaskBloc>().add(CreateTaskSubmitted(request));
   }
@@ -745,13 +751,12 @@ class _PublishContentState extends State<_PublishContent>
         BlocListener<ForumBloc, ForumState>(
           listenWhen: (prev, curr) =>
               prev.isCreatingPost != curr.isCreatingPost ||
+              prev.createPostSuccess != curr.createPostSuccess ||
               prev.errorMessage != curr.errorMessage,
           listener: (context, state) {
             if (!state.isCreatingPost && state.errorMessage != null) {
               AppFeedback.showError(context, context.localizeError(state.errorMessage));
-            } else if (!state.isCreatingPost &&
-                state.posts.isNotEmpty &&
-                state.posts.first.title == _postTitleCtrl.text.trim()) {
+            } else if (state.createPostSuccess) {
               AppFeedback.showSuccess(context, context.l10n.feedbackPostPublishSuccess);
               context.pop();
             }
@@ -1433,6 +1438,24 @@ class _PublishContentState extends State<_PublishContent>
                 ],
               ),
             ),
+          ),
+          AppSpacing.vLg,
+
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            title: Text(
+              context.l10n.createTaskPublicTask,
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+            ),
+            subtitle: Text(
+              _taskIsPublic ? context.l10n.createTaskPublicDesc : context.l10n.createTaskPrivateDesc,
+              style: TextStyle(
+                fontSize: 13,
+                color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+              ),
+            ),
+            value: _taskIsPublic,
+            onChanged: (v) => setState(() => _taskIsPublic = v),
           ),
         ],
       ),

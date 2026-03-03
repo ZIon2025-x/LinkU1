@@ -82,7 +82,7 @@ void main() {
       act: (b) => b.add(const ForumCreatePost(createRequest)),
       expect: () => [
         const ForumState(isCreatingPost: true),
-        ForumState(posts: [testPost]),
+        ForumState(posts: [testPost], createPostSuccess: true),
       ],
     );
 
@@ -112,7 +112,7 @@ void main() {
       act: (b) => b.add(const ForumCreatePost(createRequestWithPdf)),
       expect: () => [
         const ForumState(isCreatingPost: true),
-        ForumState(posts: [testPostWithPdf]),
+        ForumState(posts: [testPostWithPdf], createPostSuccess: true),
       ],
       verify: (_) {
         final captured =

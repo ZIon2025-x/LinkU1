@@ -624,7 +624,8 @@ class _ActivityDetailViewContent extends StatelessWidget {
         // ── 先到先得 ──
         if (act.isFirstCome) {
           final remaining =
-              (act.prizeCount ?? 0) - (act.currentApplicants ?? 0);
+              ((act.prizeCount ?? 0) - (act.currentApplicants ?? 0))
+                  .clamp(0, act.prizeCount ?? 0);
           if (act.hasApplied == true ||
               state.officialApplyStatus == OfficialApplyStatus.applied) {
             return _buildDisabledButton(context.l10n.activityAlreadyRegistered);
@@ -855,8 +856,8 @@ class _OfficialPrizeInfoCard extends StatelessWidget {
                       ],
                       if (activity.isFirstCome) ...[
                         () {
-                          final remaining = (activity.prizeCount ?? 0) -
-                              (activity.currentApplicants ?? 0);
+                          final remaining = ((activity.prizeCount ?? 0) -
+                              (activity.currentApplicants ?? 0)).clamp(0, activity.prizeCount ?? 0);
                           return Container(
                             padding: const EdgeInsets.symmetric(
                                 horizontal: 8, vertical: 3),
@@ -1426,8 +1427,8 @@ class _ActivityStatsBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final remaining =
-        activity.maxParticipants - (activity.currentParticipants ?? 0);
+    final remaining = (activity.maxParticipants - (activity.currentParticipants ?? 0))
+        .clamp(0, activity.maxParticipants);
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
@@ -2050,10 +2051,11 @@ class _ActivityApplySheetState extends State<ActivityApplySheet> {
           curr.actionMessage != null &&
           prev.actionMessage != curr.actionMessage,
       listener: (context, state) {
-        if (state.actionMessage != null) {
-          Navigator.of(context).pop(); // 关闭弹窗
+        if (state.actionMessage == 'registration_success') {
+          Navigator.of(context).pop(); // 仅成功时关闭弹窗
           // snackbar 由外层 listener 处理
         }
+        // registration_failed: stay open so user can retry
       },
       builder: (context, state) {
         return DraggableScrollableSheet(
@@ -2454,7 +2456,12 @@ class _ActivityApplySheetState extends State<ActivityApplySheet> {
             widget.activityId,
             preferredDeadline: _isFlexibleTime
                 ? null
-                : _preferredDate.toUtc().toIso8601String(),
+                : DateTime(
+                    _preferredDate.year,
+                    _preferredDate.month,
+                    _preferredDate.day,
+                    23, 59, 59,
+                  ).toUtc().toIso8601String(),
             isFlexibleTime: _isFlexibleTime,
           ));
     }
@@ -2481,7 +2488,9 @@ class _ActivityApplySheetState extends State<ActivityApplySheet> {
       final date = DateTime.parse(isoDatetime).toLocal();
       return DateFormat('yyyy-MM-dd').format(date);
     } catch (_) {
-      return isoDatetime.substring(0, 10);
+      return isoDatetime.length >= 10
+          ? isoDatetime.substring(0, 10)
+          : isoDatetime;
     }
   }
 

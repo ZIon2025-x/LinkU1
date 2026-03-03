@@ -1026,6 +1026,11 @@ class FleaMarketBloc extends Bloc<FleaMarketEvent, FleaMarketState> {
   ) async {
     emit(state.copyWith(isSubmitting: true));
     try {
+      final requestId = int.tryParse(event.requestId);
+      if (requestId == null) {
+        emit(state.copyWith(isSubmitting: false, actionMessage: 'approve_failed'));
+        return;
+      }
       final result = await _fleaMarketRepository.approvePurchaseRequest(event.requestId);
       final paymentData = _parseDirectPurchasePaymentData(
         result,
@@ -1041,7 +1046,8 @@ class FleaMarketBloc extends Bloc<FleaMarketEvent, FleaMarketState> {
       AppLogger.error('Failed to approve purchase request', e);
       emit(state.copyWith(
         isSubmitting: false,
-        actionMessage: e.toString(),
+        actionMessage: 'approve_failed',
+        errorMessage: e.toString(),
       ));
     }
   }
@@ -1071,7 +1077,8 @@ class FleaMarketBloc extends Bloc<FleaMarketEvent, FleaMarketState> {
       AppLogger.error('Failed to reject purchase request', e);
       emit(state.copyWith(
         isSubmitting: false,
-        actionMessage: e.toString(),
+        actionMessage: 'reject_failed',
+        errorMessage: e.toString(),
       ));
     }
   }
@@ -1097,7 +1104,8 @@ class FleaMarketBloc extends Bloc<FleaMarketEvent, FleaMarketState> {
       AppLogger.error('Failed to counter offer', e);
       emit(state.copyWith(
         isSubmitting: false,
-        actionMessage: e.toString(),
+        actionMessage: 'counter_offer_failed',
+        errorMessage: e.toString(),
       ));
     }
   }
@@ -1125,7 +1133,7 @@ class FleaMarketBloc extends Bloc<FleaMarketEvent, FleaMarketState> {
       AppLogger.error('Failed to respond to counter offer', e);
       emit(state.copyWith(
         isSubmitting: false,
-        actionMessage: e.toString(),
+        actionMessage: 'counter_offer_respond_failed',
         errorMessage: e.toString(),
       ));
     }

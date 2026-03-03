@@ -9,6 +9,7 @@ import '../../../core/utils/l10n_extension.dart';
 import '../../../core/router/app_router.dart';
 import '../../../core/utils/haptic_feedback.dart';
 import '../../../core/widgets/skeleton_view.dart';
+import '../../../core/utils/error_localizer.dart';
 import '../../../core/widgets/error_state_view.dart';
 import '../../../core/widgets/empty_state_view.dart';
 import '../../../core/widgets/animated_list_item.dart';
@@ -224,7 +225,7 @@ class _MyPostsViewState extends State<MyPostsView>
 
     if (error != null && items.isEmpty) {
       return ErrorStateView(
-        message: error,
+        message: context.localizeError(error),
         onRetry: () { _loadAllRelated(); if (category == _MyItemsCategory.favorites) _loadFavorites(); },
       );
     }

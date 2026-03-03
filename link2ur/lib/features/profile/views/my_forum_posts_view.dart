@@ -7,7 +7,9 @@ import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_radius.dart';
 import '../../../core/utils/helpers.dart';
 import '../../../core/utils/l10n_extension.dart';
+import '../../../core/utils/error_localizer.dart';
 import '../../../core/widgets/skeleton_view.dart';
+import '../../../core/widgets/error_state_view.dart';
 import '../../../core/widgets/empty_state_view.dart';
 import '../../../data/models/forum.dart';
 import '../../../data/repositories/forum_repository.dart';
@@ -120,6 +122,7 @@ class _MyForumPostsViewState extends State<MyForumPostsView>
                   state.myForumPosts.isEmpty && state.status == ProfileStatus.loading,
                   l10n.forumMyPostsEmptyPosted,
                   'posts',
+                  errorMessage: state.status == ProfileStatus.error ? state.errorMessage : null,
                 ),
                 _buildPostList(
                   context,
@@ -127,6 +130,7 @@ class _MyForumPostsViewState extends State<MyForumPostsView>
                   state.favoritedPosts.isEmpty && state.status == ProfileStatus.loading,
                   l10n.forumMyPostsEmptyFavorited,
                   'favorited',
+                  errorMessage: state.status == ProfileStatus.error ? state.errorMessage : null,
                 ),
                 _buildPostList(
                   context,
@@ -134,6 +138,7 @@ class _MyForumPostsViewState extends State<MyForumPostsView>
                   state.likedPosts.isEmpty && state.status == ProfileStatus.loading,
                   l10n.forumMyPostsEmptyLiked,
                   'liked',
+                  errorMessage: state.status == ProfileStatus.error ? state.errorMessage : null,
                 ),
               ],
             ),
@@ -148,9 +153,20 @@ class _MyForumPostsViewState extends State<MyForumPostsView>
     List<ForumPost> posts,
     bool isLoading,
     String emptyMessage,
-    String type,
-  ) {
+    String type, {
+    String? errorMessage,
+  }) {
     if (isLoading && posts.isEmpty) return const SkeletonList();
+    if (errorMessage != null && posts.isEmpty) {
+      return ErrorStateView(
+        message: context.localizeError(errorMessage),
+        onRetry: () {
+          context.read<ProfileBloc>().add(
+                ProfileLoadMyForumActivity(type: type),
+              );
+        },
+      );
+    }
     if (posts.isEmpty) {
       return EmptyStateView(
         icon: Icons.article_outlined,

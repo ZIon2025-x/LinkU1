@@ -485,7 +485,7 @@ class _ApplicationCard extends StatelessWidget {
           ),
         ],
       ),
-    );
+    ).whenComplete(() => reasonController.dispose());
   }
 
   void _showCounterOfferDialog(BuildContext context) {
@@ -533,7 +533,12 @@ class _ApplicationCard extends StatelessWidget {
           FilledButton(
             onPressed: () {
               final price = double.tryParse(priceController.text.trim());
-              if (price == null || price <= 0) return;
+              if (price == null || price <= 0) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text(l10n.fleaMarketNegotiatePriceTooLow)),
+                );
+                return;
+              }
               Navigator.of(dialogContext).pop();
               context.read<TaskExpertBloc>().add(
                     TaskExpertCounterOffer(
@@ -549,7 +554,10 @@ class _ApplicationCard extends StatelessWidget {
           ),
         ],
       ),
-    );
+    ).whenComplete(() {
+      priceController.dispose();
+      messageController.dispose();
+    });
   }
 }
 

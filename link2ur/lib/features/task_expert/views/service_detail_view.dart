@@ -852,7 +852,7 @@ class _TimeSlotCard extends StatelessWidget {
 
   String _formatDateTime(String dateStr) {
     try {
-      final date = DateTime.parse(dateStr);
+      final date = DateTime.parse(dateStr).toLocal();
       return DateFormat('yyyy-MM-dd HH:mm').format(date);
     } catch (_) {
       return dateStr;
@@ -1338,43 +1338,55 @@ class _ApplyServiceSheetState extends State<_ApplyServiceSheet> {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    return DraggableScrollableSheet(
-      initialChildSize: 0.7,
-      maxChildSize: 0.9,
-      minChildSize: 0.5,
-      builder: (context, scrollController) {
-        return Container(
-          decoration: BoxDecoration(
-            color: isDark ? AppColors.cardBackgroundDark : Colors.white,
-            borderRadius:
-                const BorderRadius.vertical(top: Radius.circular(24)),
-          ),
-          child: Column(
-            children: [
-              // 不在此处再画拖拽条：主题已设置 showDragHandle: true，ModalBottomSheet 会自带一条
-              Padding(
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 20, vertical: 12),
-                child: Row(
-                  children: [
-                    Text(
-                      context.l10n.serviceApplyTitle,
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: isDark
-                            ? AppColors.textPrimaryDark
-                            : AppColors.textPrimaryLight,
+    return BlocListener<TaskExpertBloc, TaskExpertState>(
+      listenWhen: (prev, curr) =>
+          curr.actionMessage != null &&
+          prev.actionMessage != curr.actionMessage,
+      listener: (context, state) {
+        if (state.actionMessage == 'application_submitted') {
+          Navigator.of(context).pop();
+        }
+        if (state.actionMessage == 'application_failed') {
+          // Stay open so user can retry; snackbar handled by parent listener
+        }
+      },
+      child: DraggableScrollableSheet(
+        initialChildSize: 0.7,
+        maxChildSize: 0.9,
+        minChildSize: 0.5,
+        builder: (context, scrollController) {
+          return Container(
+            decoration: BoxDecoration(
+              color: isDark ? AppColors.cardBackgroundDark : Colors.white,
+              borderRadius:
+                  const BorderRadius.vertical(top: Radius.circular(24)),
+            ),
+            child: Column(
+              children: [
+                // 不在此处再画拖拽条：主题已设置 showDragHandle: true，ModalBottomSheet 会自带一条
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 20, vertical: 12),
+                  child: Row(
+                    children: [
+                      Text(
+                        context.l10n.serviceApplyTitle,
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: isDark
+                              ? AppColors.textPrimaryDark
+                              : AppColors.textPrimaryLight,
+                        ),
                       ),
-                    ),
-                    const Spacer(),
-                    IconButton(
-                      icon: const Icon(Icons.close),
-                      onPressed: () => Navigator.of(context).pop(),
-                    ),
-                  ],
+                      const Spacer(),
+                      IconButton(
+                        icon: const Icon(Icons.close),
+                        onPressed: () => Navigator.of(context).pop(),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
               Divider(
                   height: 1,
                   color: isDark
@@ -1700,6 +1712,7 @@ class _ApplyServiceSheetState extends State<_ApplyServiceSheet> {
           ),
         );
       },
+      ),
     );
   }
 
@@ -1756,11 +1769,26 @@ class _ApplyServiceSheetState extends State<_ApplyServiceSheet> {
     double? counterPrice;
     if (_showCounterPrice && _counterPriceController.text.isNotEmpty) {
       counterPrice = double.tryParse(_counterPriceController.text);
+      if (counterPrice == null || counterPrice <= 0) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(context.l10n.fleaMarketNegotiatePriceTooLow)),
+        );
+        return;
+      }
+      // Round to 2 decimal places to avoid floating point precision issues
+      counterPrice = double.parse(counterPrice.toStringAsFixed(2));
     }
 
     String? deadline;
     if (!_isFlexibleTime && _selectedDeadline != null) {
-      deadline = DateFormat('yyyy-MM-dd').format(_selectedDeadline!);
+      // Set to end-of-day (23:59:59) local time, then convert to UTC ISO 8601
+      final endOfDay = DateTime(
+        _selectedDeadline!.year,
+        _selectedDeadline!.month,
+        _selectedDeadline!.day,
+        23, 59, 59,
+      );
+      deadline = endOfDay.toUtc().toIso8601String();
     }
 
     context.read<TaskExpertBloc>().add(
@@ -1777,7 +1805,5 @@ class _ApplyServiceSheetState extends State<_ApplyServiceSheet> {
                 widget.service.hasTimeSlots ? null : deadline,
           ),
         );
-
-    Navigator.of(context).pop();
   }
 }

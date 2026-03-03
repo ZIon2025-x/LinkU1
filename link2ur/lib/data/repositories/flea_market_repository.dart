@@ -141,7 +141,8 @@ class FleaMarketRepository {
   }
 
   /// 发布商品
-  Future<FleaMarketItem> createItem(CreateFleaMarketRequest request) async {
+  /// 后端 POST 只返回 { id }，不返回完整对象
+  Future<String> createItem(CreateFleaMarketRequest request) async {
     final response = await _apiService.post<Map<String, dynamic>>(
       ApiEndpoints.fleaMarketItems,
       data: request.toJson(),
@@ -155,7 +156,7 @@ class FleaMarketRepository {
     await _cache.invalidateFleaMarketCache();
     await _cache.invalidateMyFleaMarketCache();
 
-    return FleaMarketItem.fromJson(response.data!);
+    return response.data!['id']?.toString() ?? '';
   }
 
   /// 直接购买商品

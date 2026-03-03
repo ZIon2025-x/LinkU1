@@ -212,6 +212,8 @@ void main() {
               .thenAnswer((_) async => null);
           when(() => mockTaskRepository.getTaskDetail(42))
               .thenAnswer((_) async => inProgressTask);
+          when(() => mockTaskRepository.getTaskApplications(42))
+              .thenAnswer((_) async => <Map<String, dynamic>>[]);
           return taskDetailBloc;
         },
         seed: () => const TaskDetailState(

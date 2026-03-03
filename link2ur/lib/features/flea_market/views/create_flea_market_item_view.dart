@@ -53,13 +53,18 @@ class _CreateFleaMarketItemContentState
   final _imagePicker = ImagePicker();
   bool _isUploadingImages = false;
 
+  /// API key 使用固定英文常量（对齐后端 FLEA_MARKET_CATEGORIES），显示名使用本地化
   List<(String, String)> _getCategories(BuildContext context) => [
-    (context.l10n.fleaMarketCategoryKeyElectronics, context.l10n.fleaMarketCategoryElectronics),
-    (context.l10n.fleaMarketCategoryKeyBooks, context.l10n.fleaMarketCategoryBooks),
-    (context.l10n.fleaMarketCategoryKeyDaily, context.l10n.fleaMarketCategoryDailyUse),
-    (context.l10n.fleaMarketCategoryKeyClothing, context.l10n.fleaMarketCategoryClothing),
-    (context.l10n.fleaMarketCategoryKeySports, context.l10n.fleaMarketCategorySports),
-    (context.l10n.fleaMarketCategoryKeyOther, context.l10n.fleaMarketCategoryOther),
+    ('Electronics', context.l10n.fleaMarketCategoryElectronics),
+    ('Books', context.l10n.fleaMarketCategoryBooks),
+    ('Home & Living', context.l10n.fleaMarketCategoryDailyUse),
+    ('Clothing', context.l10n.fleaMarketCategoryClothing),
+    ('Sports', context.l10n.fleaMarketCategorySports),
+    ('Furniture', context.l10n.fleaMarketCategoryFurniture),
+    ('Accessories', context.l10n.fleaMarketCategoryAccessories),
+    ('Beauty & Personal', context.l10n.fleaMarketCategoryBeauty),
+    ('Toys & Games', context.l10n.fleaMarketCategoryToysGames),
+    ('Other', context.l10n.fleaMarketCategoryOther),
   ];
 
   @override

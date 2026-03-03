@@ -361,12 +361,10 @@ class PushNotificationService {
       case 'message':
       case 'task_chat':
         final taskId = data['task_id'];
-        final userId = data['user_id'] ?? data['sender_id'];
         if (taskId != null) {
           _router!.push('/task-chat/$taskId');
-        } else if (userId != null) {
-          _router!.push('/chat/${userId.toString()}');
         } else {
+          // 私聊已隐藏：无 taskId 时仅进入消息 Tab，不打开私聊页
           _router!.go('/messages-tab');
         }
         break;

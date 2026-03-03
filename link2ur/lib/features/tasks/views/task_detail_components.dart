@@ -7,6 +7,7 @@ import '../../../core/utils/haptic_feedback.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../core/constants/app_constants.dart';
+import '../../../core/utils/error_localizer.dart';
 import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_typography.dart';
@@ -1545,13 +1546,21 @@ class TaskActionButtonsView extends StatelessWidget {
                 children: [
                   Expanded(
                     child: OutlinedButton(
-                      onPressed: () {
-                        context.read<TaskDetailBloc>().add(
-                            TaskDetailCancelRefund(
-                                state.refundRequest!.id));
-                      },
-                      child: Text(
-                          context.l10n.refundWithdrawApply),
+                      onPressed: state.isSubmitting
+                          ? null
+                          : () {
+                              context.read<TaskDetailBloc>().add(
+                                  TaskDetailCancelRefund(
+                                      state.refundRequest!.id));
+                            },
+                      child: state.isSubmitting
+                          ? const SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(
+                                  strokeWidth: 2),
+                            )
+                          : Text(context.l10n.refundWithdrawApply),
                     ),
                   ),
                   const SizedBox(width: AppSpacing.sm),
@@ -2230,32 +2239,41 @@ class _RefundRequestSheetState extends State<RefundRequestSheet> {
           refundAmount: _refundType == 'partial' ? amount : null,
           refundPercentage: _refundType == 'partial' ? pct : null,
         ));
-
-    // 等待 BLoC 处理结果
-    await Future.delayed(const Duration(milliseconds: 300));
-    if (mounted) Navigator.of(context).pop(true);
+    // BlocListener in build() handles pop on success
   }
 
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    return Container(
-      constraints: BoxConstraints(
-        maxHeight: MediaQuery.sizeOf(context).height * 0.85,
-      ),
-      padding: EdgeInsets.only(
-        left: 20,
-        right: 20,
-        top: 16,
-        bottom: MediaQuery.of(context).viewInsets.bottom + 20,
-      ),
-      child: SingleChildScrollView(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // 拖拽指示器
+    return BlocListener<TaskDetailBloc, TaskDetailState>(
+      listenWhen: (prev, curr) =>
+          curr.actionMessage != null &&
+          prev.actionMessage != curr.actionMessage,
+      listener: (context, state) {
+        if (state.actionMessage == 'refund_submitted') {
+          Navigator.of(context).pop(true);
+        }
+        if (state.actionMessage == 'refund_failed') {
+          setState(() => _isSubmitting = false);
+        }
+      },
+      child: Container(
+        constraints: BoxConstraints(
+          maxHeight: MediaQuery.sizeOf(context).height * 0.85,
+        ),
+        padding: EdgeInsets.only(
+          left: 20,
+          right: 20,
+          top: 16,
+          bottom: MediaQuery.of(context).viewInsets.bottom + 20,
+        ),
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // 拖拽指示器
             Center(
               child: Container(
                 width: 40,
@@ -2481,6 +2499,7 @@ class _RefundRequestSheetState extends State<RefundRequestSheet> {
             ),
           ],
         ),
+      ),
       ),
     );
   }
@@ -2879,19 +2898,29 @@ class _RefundRebuttalSheetState extends State<RefundRebuttalSheet> {
           refundId: widget.refundId,
           content: text,
         ));
-
-    await Future.delayed(const Duration(milliseconds: 300));
-    if (mounted) Navigator.of(context).pop(true);
+    // BlocListener in build() handles pop on success
   }
 
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    return Container(
-      constraints: BoxConstraints(
-        maxHeight: MediaQuery.sizeOf(context).height * 0.75,
-      ),
+    return BlocListener<TaskDetailBloc, TaskDetailState>(
+      listenWhen: (prev, curr) =>
+          curr.actionMessage != null &&
+          prev.actionMessage != curr.actionMessage,
+      listener: (context, state) {
+        if (state.actionMessage == 'dispute_submitted') {
+          Navigator.of(context).pop(true);
+        }
+        if (state.actionMessage == 'dispute_failed') {
+          setState(() => _isSubmitting = false);
+        }
+      },
+      child: Container(
+        constraints: BoxConstraints(
+          maxHeight: MediaQuery.sizeOf(context).height * 0.75,
+        ),
       padding: EdgeInsets.only(
         left: 20,
         right: 20,
@@ -2996,6 +3025,7 @@ class _RefundRebuttalSheetState extends State<RefundRebuttalSheet> {
           ],
         ),
       ),
+      ),
     );
   }
 }
@@ -3057,7 +3087,10 @@ class _EvidenceCollectionSheetState extends State<_EvidenceCollectionSheet> {
       if (mounted) {
         setState(() => _isSubmitting = false);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('$e'), backgroundColor: Colors.red),
+          SnackBar(
+            content: Text(context.localizeError(e.toString())),
+            backgroundColor: Colors.red,
+          ),
         );
       }
     }
