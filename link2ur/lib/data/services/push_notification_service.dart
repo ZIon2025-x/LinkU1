@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/services.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:go_router/go_router.dart';
 import 'package:device_info_plus/device_info_plus.dart';
@@ -14,9 +15,17 @@ import 'api_service.dart';
 /// 推送通知服务
 /// 使用原生 APNs (iOS) / FCM (Android) + 本地通知
 /// 通过 MethodChannel 与原生端通信获取推送 Token 和消息
-class PushNotificationService {
+class PushNotificationService with WidgetsBindingObserver {
   PushNotificationService._();
   static final PushNotificationService instance = PushNotificationService._();
+
+  /// App 是否在前台（用于决定是否显示本地通知）
+  bool _appInForeground = true;
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    _appInForeground = state == AppLifecycleState.resumed;
+  }
 
   final FlutterLocalNotificationsPlugin _localNotifications =
       FlutterLocalNotificationsPlugin();
@@ -47,6 +56,9 @@ class PushNotificationService {
       AppLogger.info('PushNotificationService: Skipped on Web');
       return;
     }
+
+    // 监听 App 生命周期，用于前台判断
+    WidgetsBinding.instance.addObserver(this);
 
     // 初始化本地通知
     await _initLocalNotifications();
@@ -183,15 +195,17 @@ class PushNotificationService {
   static final Map<String, int> _lastShownPayloadKeys = {};
   static const _dedupeWindowMs = 35000;
 
-  /// 处理远程推送消息（前台收到时显示本地通知）
-  /// - iOS：原生 willPresent 已用 completionHandler 展示系统 banner，此处不再重复展示本地通知，避免一条消息推两次/无限重复
-  /// - Android：前台需本地展示，对同一条消息做短时去重
+  /// 处理远程推送消息
+  /// - 前台：不弹通知，用户通过 App 内红点/未读数感知
+  /// - 后台（Android）：显示本地通知，对同一条消息做短时去重
   /// 支持双语 payload：后端可在 custom.localized 中发送多语言内容
   void _handleRemoteMessage(Map<String, dynamic> data) {
     AppLogger.info('Remote message received');
 
-    // iOS 前台：系统已展示，不再发本地通知
-    if (!kIsWeb && ApiConfig.platformId == 'ios') {
+    // 前台时不弹本地通知：用户在 App 内可通过红点/未读数感知新消息
+    // iOS: willPresent 已改为仅更新 badge，此处无需再展示
+    // Android: 跳过本地通知显示
+    if (_appInForeground) {
       return;
     }
 

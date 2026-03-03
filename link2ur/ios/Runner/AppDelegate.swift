@@ -160,7 +160,9 @@ import SwiftUI
 
   // MARK: - UNUserNotificationCenterDelegate
 
-  /// 前台收到通知 —— 显示 banner + sound + badge
+  /// 前台收到通知 —— 仅更新角标，不弹横幅/声音
+  /// 用户在 App 内时可通过红点、未读数等 UI 指示感知新通知，无需系统横幅打断操作。
+  /// 后台/锁屏时由 iOS 系统自动展示横幅，不经过此回调。
   override func userNotificationCenter(
     _ center: UNUserNotificationCenter,
     willPresent notification: UNNotification,
@@ -168,7 +170,7 @@ import SwiftUI
   ) {
     let userInfo = notification.request.content.userInfo
 
-    // 通知 Dart 层收到前台消息
+    // 通知 Dart 层收到前台消息（用于刷新未读数等）
     var messageData: [String: Any] = [:]
     messageData["title"] = notification.request.content.title
     messageData["body"] = notification.request.content.body
@@ -182,12 +184,8 @@ import SwiftUI
 
     pushChannel?.invokeMethod("onRemoteMessage", arguments: messageData)
 
-    // 显示系统通知（banner、声音、角标）
-    if #available(iOS 14.0, *) {
-      completionHandler([.banner, .sound, .badge])
-    } else {
-      completionHandler([.alert, .sound, .badge])
-    }
+    // 前台：仅更新角标，不弹横幅和声音
+    completionHandler([.badge])
   }
 
   /// 用户点击通知
