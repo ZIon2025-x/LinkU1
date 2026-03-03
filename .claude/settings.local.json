@@ -31,7 +31,8 @@
       "Bash(git -C:*)",
       "Bash(python3:*)",
       "Bash(export PATH=\"F:/flutter/bin:$PATH\")",
-      "Bash(export PUB_CACHE=\"F:/DevCache/.pub-cache\")"
+      "Bash(export PUB_CACHE=\"F:/DevCache/.pub-cache\")",
+      "Bash(powershell:*)"
     ]
   }
 }

@@ -10508,6 +10508,42 @@ abstract class AppLocalizations {
   /// **'Waiting for poster to confirm'**
   String get taskDetailWaitingPosterConfirm;
 
+  /// No description provided for @taskDetailSubmitQuote.
+  ///
+  /// In en, this message translates to:
+  /// **'Submit Quote'**
+  String get taskDetailSubmitQuote;
+
+  /// No description provided for @taskDetailAcceptDesignated.
+  ///
+  /// In en, this message translates to:
+  /// **'Accept Task'**
+  String get taskDetailAcceptDesignated;
+
+  /// No description provided for @taskDetailDeclineDesignated.
+  ///
+  /// In en, this message translates to:
+  /// **'Decline'**
+  String get taskDetailDeclineDesignated;
+
+  /// No description provided for @taskDetailDeclineDesignatedConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Are you sure you want to decline this designated task?'**
+  String get taskDetailDeclineDesignatedConfirm;
+
+  /// No description provided for @taskDetailAcceptNegotiation.
+  ///
+  /// In en, this message translates to:
+  /// **'Accept'**
+  String get taskDetailAcceptNegotiation;
+
+  /// No description provided for @taskDetailDeclineNegotiation.
+  ///
+  /// In en, this message translates to:
+  /// **'Decline'**
+  String get taskDetailDeclineNegotiation;
+
   /// No description provided for @taskDetailAutoConfirmOnExpiry.
   ///
   /// In en, this message translates to:
@@ -15667,6 +15703,42 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Dispute submission failed'**
   String get actionDisputeFailed;
+
+  /// No description provided for @actionQuoteSubmitted.
+  ///
+  /// In en, this message translates to:
+  /// **'Quote submitted'**
+  String get actionQuoteSubmitted;
+
+  /// No description provided for @actionQuoteFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Quote submission failed'**
+  String get actionQuoteFailed;
+
+  /// No description provided for @actionNegotiationAccepted.
+  ///
+  /// In en, this message translates to:
+  /// **'Negotiation accepted'**
+  String get actionNegotiationAccepted;
+
+  /// No description provided for @actionNegotiationRejected.
+  ///
+  /// In en, this message translates to:
+  /// **'Negotiation declined'**
+  String get actionNegotiationRejected;
+
+  /// No description provided for @actionApplicationMessageSent.
+  ///
+  /// In en, this message translates to:
+  /// **'Message sent'**
+  String get actionApplicationMessageSent;
+
+  /// No description provided for @actionApplicationMessageFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to send message'**
+  String get actionApplicationMessageFailed;
 
   /// No description provided for @actionCheckInSuccess.
   ///

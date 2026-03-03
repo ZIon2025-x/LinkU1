@@ -34,6 +34,7 @@ class AppConstants {
   static const String taskStatusCompleted = 'completed';
   static const String taskStatusCancelled = 'cancelled';
   static const String taskStatusDisputed = 'disputed';
+  static const String taskStatusPendingAcceptance = 'pending_acceptance';
 
   /// 任务来源
   static const String taskSourceNormal = 'normal';

@@ -168,6 +168,12 @@ class _TaskDetailContent extends StatelessWidget {
             'revoke_failed' => l10n.actionRevokeFailed,
             'dispute_submitted' => l10n.actionDisputeSubmitted,
             'dispute_failed' => l10n.actionDisputeFailed,
+            'quote_submitted' => l10n.actionQuoteSubmitted,
+            'quote_failed' => l10n.actionQuoteFailed,
+            'negotiation_accepted' => l10n.actionNegotiationAccepted,
+            'negotiation_rejected' => l10n.actionNegotiationRejected,
+            'application_message_sent' => l10n.actionApplicationMessageSent,
+            'application_message_failed' => l10n.actionApplicationMessageFailed,
             _ => state.actionMessage ?? '',
           };
           final isError = state.actionMessage!.contains('failed') ||
@@ -700,6 +706,80 @@ class _TaskDetailContent extends StatelessWidget {
       );
     }
 
+    // 指定任务接单方 + 待接受
+    if (isTaker && task.status == AppConstants.taskStatusPendingAcceptance) {
+      if (task.rewardToBeQuoted) {
+        return PrimaryButton(
+          text: context.l10n.taskDetailSubmitQuote,
+          onPressed: () => _showQuoteDesignatedPriceSheet(context, task),
+        );
+      } else {
+        return Row(
+          children: [
+            Expanded(
+              child: OutlinedButton(
+                onPressed: () => _showDeclineDesignatedTaskConfirm(context),
+                style: OutlinedButton.styleFrom(foregroundColor: AppColors.error),
+                child: Text(context.l10n.taskDetailDeclineDesignated),
+              ),
+            ),
+            AppSpacing.hMd,
+            Expanded(
+              child: PrimaryButton(
+                text: context.l10n.taskDetailAcceptDesignated,
+                onPressed: () {
+                  context.read<TaskDetailBloc>().add(
+                    TaskDetailQuoteDesignatedPriceRequested(
+                      price: task.baseReward ?? task.reward,
+                    ),
+                  );
+                },
+              ),
+            ),
+          ],
+        );
+      }
+    }
+
+    // 议价回应 (接单方 + 来自议价通知)
+    if (!isPoster && notificationId != null) {
+      return Row(
+        children: [
+          Expanded(
+            child: OutlinedButton(
+              onPressed: () {
+                context.read<TaskDetailBloc>().add(
+                  TaskDetailRespondNegotiationRequested(
+                    action: 'reject',
+                    notificationId: notificationId!,
+                  ),
+                );
+              },
+              style: OutlinedButton.styleFrom(foregroundColor: AppColors.error),
+              child: Text(context.l10n.taskDetailDeclineNegotiation),
+            ),
+          ),
+          AppSpacing.hMd,
+          Expanded(
+            child: PrimaryButton(
+              text: context.l10n.taskDetailAcceptNegotiation,
+              onPressed: () {
+                context.read<TaskDetailBloc>().add(
+                  TaskDetailRespondNegotiationRequested(
+                    action: 'accept',
+                    notificationId: notificationId!,
+                  ),
+                );
+              },
+              gradient: LinearGradient(
+                colors: [AppColors.success, AppColors.success.withValues(alpha: 0.8)],
+              ),
+            ),
+          ),
+        ],
+      );
+    }
+
     // 非发布者 + 已申请 (pending)
     if (!isPoster && task.hasApplied && task.userApplicationStatus == 'pending') {
       return PrimaryButton(
@@ -856,6 +936,49 @@ class _TaskDetailContent extends StatelessWidget {
         },
       ),
     );
+  }
+
+  void _showQuoteDesignatedPriceSheet(BuildContext context, Task task) {
+    final bloc = context.read<TaskDetailBloc>();
+    SheetAdaptation.showAdaptiveModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => BlocProvider.value(
+        value: bloc,
+        child: BlocListener<TaskDetailBloc, TaskDetailState>(
+          listenWhen: (prev, cur) =>
+              cur.actionMessage == 'quote_submitted',
+          listener: (c, _) => Navigator.of(c).pop(),
+          child: QuoteDesignatedPriceSheet(currency: task.currency),
+        ),
+      ),
+    );
+  }
+
+  void _showDeclineDesignatedTaskConfirm(BuildContext context) {
+    final l10n = context.l10n;
+    SheetAdaptation.showAdaptiveDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(l10n.taskDetailDeclineDesignated),
+        content: Text(l10n.taskDetailDeclineDesignatedConfirm),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: Text(l10n.actionsCancel),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            style: FilledButton.styleFrom(backgroundColor: AppColors.error),
+            child: Text(l10n.taskDetailDeclineDesignated),
+          ),
+        ],
+      ),
+    ).then((confirmed) {
+      if (!context.mounted || confirmed != true) return;
+      context.read<TaskDetailBloc>().add(const TaskDetailCancelRequested());
+    });
   }
 }
 

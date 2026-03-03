@@ -3154,3 +3154,141 @@ class _EvidenceCollectionSheetState extends State<_EvidenceCollectionSheet> {
     );
   }
 }
+
+// ============================================================
+// 指定任务报价单 (designated task quote sheet)
+// ============================================================
+
+class QuoteDesignatedPriceSheet extends StatefulWidget {
+  const QuoteDesignatedPriceSheet({super.key, this.currency});
+
+  final String? currency;
+
+  @override
+  State<QuoteDesignatedPriceSheet> createState() =>
+      _QuoteDesignatedPriceSheetState();
+}
+
+class _QuoteDesignatedPriceSheetState
+    extends State<QuoteDesignatedPriceSheet> {
+  final _amountController = TextEditingController();
+  bool _isSubmitting = false;
+  String? _errorMessage;
+
+  @override
+  void dispose() {
+    _amountController.dispose();
+    super.dispose();
+  }
+
+  String? _validate() {
+    final amount = double.tryParse(_amountController.text.trim());
+    if (amount == null || amount <= 0) {
+      return context.l10n.fleaMarketNegotiatePriceTooLow;
+    }
+    if (amount <= 1.0) {
+      return context.l10n.taskApplyQuoteAmountMin;
+    }
+    return null;
+  }
+
+  void _submit() {
+    final error = _validate();
+    if (error != null) {
+      setState(() => _errorMessage = error);
+      return;
+    }
+    setState(() {
+      _isSubmitting = true;
+      _errorMessage = null;
+    });
+    final amount = double.parse(_amountController.text.trim());
+    context.read<TaskDetailBloc>().add(
+      TaskDetailQuoteDesignatedPriceRequested(price: amount),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final currencySymbol =
+        (widget.currency ?? 'GBP') == 'GBP' ? '£' : (widget.currency ?? '');
+
+    return BlocListener<TaskDetailBloc, TaskDetailState>(
+      listenWhen: (prev, cur) =>
+          cur.actionMessage == 'quote_failed' &&
+          cur.actionMessage != prev.actionMessage,
+      listener: (_, state) {
+        if (mounted) setState(() => _isSubmitting = false);
+      },
+      child: Padding(
+        padding:
+            EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+        child: Container(
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+          decoration: BoxDecoration(
+            color: isDark
+                ? AppColors.cardBackgroundDark
+                : Colors.white,
+            borderRadius:
+                const BorderRadius.vertical(top: Radius.circular(20)),
+          ),
+          child: SafeArea(
+            top: false,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // 拖拽条
+                Center(
+                  child: Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: isDark
+                          ? AppColors.textTertiaryDark
+                          : AppColors.textTertiaryLight,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  l10n.taskDetailSubmitQuote,
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: _amountController,
+                  keyboardType:
+                      const TextInputType.numberWithOptions(decimal: true),
+                  decoration: InputDecoration(
+                    labelText: l10n.taskApplyQuoteAmountLabel,
+                    hintText: l10n.taskApplyQuoteAmountHint,
+                    prefixText: '$currencySymbol ',
+                    border: const OutlineInputBorder(),
+                    errorText: _errorMessage,
+                  ),
+                  onSubmitted: (_) => _submit(),
+                ),
+                const SizedBox(height: 16),
+                SizedBox(
+                  width: double.infinity,
+                  child: PrimaryButton(
+                    text: l10n.taskDetailSubmitQuote,
+                    isLoading: _isSubmitting,
+                    onPressed: _isSubmitting ? null : _submit,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}

@@ -5486,6 +5486,24 @@ class AppLocalizationsZh extends AppLocalizations {
   String get taskDetailWaitingPosterConfirm => '等待发布者确认';
 
   @override
+  String get taskDetailSubmitQuote => '提交报价';
+
+  @override
+  String get taskDetailAcceptDesignated => '接受任务';
+
+  @override
+  String get taskDetailDeclineDesignated => '拒绝';
+
+  @override
+  String get taskDetailDeclineDesignatedConfirm => '确定要拒绝这个指定任务吗？';
+
+  @override
+  String get taskDetailAcceptNegotiation => '接受';
+
+  @override
+  String get taskDetailDeclineNegotiation => '拒绝';
+
+  @override
   String get taskDetailAutoConfirmOnExpiry => '（到期将自动确认）';
 
   @override
@@ -8193,6 +8211,24 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get actionDisputeFailed => '提交反驳失败';
+
+  @override
+  String get actionQuoteSubmitted => '报价已提交';
+
+  @override
+  String get actionQuoteFailed => '报价提交失败';
+
+  @override
+  String get actionNegotiationAccepted => '已接受议价';
+
+  @override
+  String get actionNegotiationRejected => '已拒绝议价';
+
+  @override
+  String get actionApplicationMessageSent => '消息已发送';
+
+  @override
+  String get actionApplicationMessageFailed => '消息发送失败';
 
   @override
   String get actionCheckInSuccess => '签到成功！';
@@ -14344,6 +14380,24 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get taskDetailWaitingPosterConfirm => '等待發布者確認';
 
   @override
+  String get taskDetailSubmitQuote => '提交報價';
+
+  @override
+  String get taskDetailAcceptDesignated => '接受任務';
+
+  @override
+  String get taskDetailDeclineDesignated => '拒絕';
+
+  @override
+  String get taskDetailDeclineDesignatedConfirm => '確定要拒絕這個指定任務嗎？';
+
+  @override
+  String get taskDetailAcceptNegotiation => '接受';
+
+  @override
+  String get taskDetailDeclineNegotiation => '拒絕';
+
+  @override
   String get taskDetailAutoConfirmOnExpiry => '（到期將自動確認）';
 
   @override
@@ -17051,6 +17105,24 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get actionDisputeFailed => '提交反駁失敗';
+
+  @override
+  String get actionQuoteSubmitted => '報價已提交';
+
+  @override
+  String get actionQuoteFailed => '報價提交失敗';
+
+  @override
+  String get actionNegotiationAccepted => '已接受議價';
+
+  @override
+  String get actionNegotiationRejected => '已拒絕議價';
+
+  @override
+  String get actionApplicationMessageSent => '訊息已發送';
+
+  @override
+  String get actionApplicationMessageFailed => '訊息發送失敗';
 
   @override
   String get actionCheckInSuccess => '簽到成功！';

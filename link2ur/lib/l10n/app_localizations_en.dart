@@ -5726,6 +5726,25 @@ class AppLocalizationsEn extends AppLocalizations {
   String get taskDetailWaitingPosterConfirm => 'Waiting for poster to confirm';
 
   @override
+  String get taskDetailSubmitQuote => 'Submit Quote';
+
+  @override
+  String get taskDetailAcceptDesignated => 'Accept Task';
+
+  @override
+  String get taskDetailDeclineDesignated => 'Decline';
+
+  @override
+  String get taskDetailDeclineDesignatedConfirm =>
+      'Are you sure you want to decline this designated task?';
+
+  @override
+  String get taskDetailAcceptNegotiation => 'Accept';
+
+  @override
+  String get taskDetailDeclineNegotiation => 'Decline';
+
+  @override
   String get taskDetailAutoConfirmOnExpiry => '(Will auto-confirm on expiry)';
 
   @override
@@ -8521,6 +8540,24 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get actionDisputeFailed => 'Dispute submission failed';
+
+  @override
+  String get actionQuoteSubmitted => 'Quote submitted';
+
+  @override
+  String get actionQuoteFailed => 'Quote submission failed';
+
+  @override
+  String get actionNegotiationAccepted => 'Negotiation accepted';
+
+  @override
+  String get actionNegotiationRejected => 'Negotiation declined';
+
+  @override
+  String get actionApplicationMessageSent => 'Message sent';
+
+  @override
+  String get actionApplicationMessageFailed => 'Failed to send message';
 
   @override
   String get actionCheckInSuccess => 'Check-in successful!';
