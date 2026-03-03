@@ -240,6 +240,22 @@ class TaskDetailQuoteDesignatedPriceRequested extends TaskDetailEvent {
   List<Object?> get props => [price];
 }
 
+/// 被指定方提交反报价
+class TaskDetailSubmitCounterOfferRequested extends TaskDetailEvent {
+  const TaskDetailSubmitCounterOfferRequested({required this.price});
+  final double price;
+  @override
+  List<Object?> get props => [price];
+}
+
+/// 发布方响应被指定方的反报价
+class TaskDetailRespondCounterOfferRequested extends TaskDetailEvent {
+  const TaskDetailRespondCounterOfferRequested({required this.action});
+  final String action; // 'accept' or 'reject'
+  @override
+  List<Object?> get props => [action];
+}
+
 /// 接单方回应议价通知（接受/拒绝）
 class TaskDetailRespondNegotiationRequested extends TaskDetailEvent {
   const TaskDetailRespondNegotiationRequested({
@@ -397,6 +413,8 @@ class TaskDetailBloc extends Bloc<TaskDetailEvent, TaskDetailState> {
     on<TaskDetailSubmitRebuttal>(_onSubmitRebuttal);
     on<TaskDetailSendApplicationMessage>(_onSendApplicationMessage);
     on<TaskDetailQuoteDesignatedPriceRequested>(_onQuoteDesignatedPrice, transformer: droppable());
+    on<TaskDetailSubmitCounterOfferRequested>(_onSubmitCounterOffer);
+    on<TaskDetailRespondCounterOfferRequested>(_onRespondCounterOffer);
     on<TaskDetailRespondNegotiationRequested>(_onRespondNegotiation, transformer: droppable());
   }
 
@@ -569,9 +587,11 @@ class TaskDetailBloc extends Bloc<TaskDetailEvent, TaskDetailState> {
         clearUserApplication: true,
       ));
     } catch (e) {
+      AppLogger.error('Failed to cancel application', e);
       emit(state.copyWith(
         isSubmitting: false,
         actionMessage: 'cancel_failed',
+        errorMessage: e.toString(),
       ));
     }
   }
@@ -620,17 +640,26 @@ class TaskDetailBloc extends Bloc<TaskDetailEvent, TaskDetailState> {
           ),
         ));
       } else {
-        final task = await _refreshTask();
+        final results = await Future.wait([
+          _refreshTask(),
+          _taskRepository.getTaskApplications(_taskId!),
+        ]);
+        final task = results[0] as Task;
+        final raw = results[1] as List<Map<String, dynamic>>;
+        final apps = raw.map((e) => TaskApplication.fromJson(e)).toList();
         emit(state.copyWith(
           task: task,
+          applications: apps,
           isSubmitting: false,
           actionMessage: 'application_accepted',
         ));
       }
     } catch (e) {
+      AppLogger.error('Failed to accept applicant', e);
       emit(state.copyWith(
         isSubmitting: false,
         actionMessage: 'operation_failed',
+        errorMessage: e.toString(),
       ));
     }
   }
@@ -666,9 +695,11 @@ class TaskDetailBloc extends Bloc<TaskDetailEvent, TaskDetailState> {
         actionMessage: 'application_rejected',
       ));
     } catch (e) {
+      AppLogger.error('Failed to reject applicant', e);
       emit(state.copyWith(
         isSubmitting: false,
         actionMessage: 'operation_failed',
+        errorMessage: e.toString(),
       ));
     }
   }
@@ -693,6 +724,7 @@ class TaskDetailBloc extends Bloc<TaskDetailEvent, TaskDetailState> {
         actionMessage: 'task_completed',
       ));
     } catch (e) {
+      AppLogger.error('Failed to complete task', e);
       emit(state.copyWith(
         isSubmitting: false,
         actionMessage: 'submit_failed',
@@ -721,6 +753,7 @@ class TaskDetailBloc extends Bloc<TaskDetailEvent, TaskDetailState> {
         actionMessage: 'completion_confirmed',
       ));
     } catch (e) {
+      AppLogger.error('Failed to confirm completion', e);
       emit(state.copyWith(
         isSubmitting: false,
         actionMessage: 'confirm_failed',
@@ -815,6 +848,7 @@ class TaskDetailBloc extends Bloc<TaskDetailEvent, TaskDetailState> {
         actionMessage: 'refund_submitted',
       ));
     } catch (e) {
+      AppLogger.error('Failed to request refund', e);
       emit(state.copyWith(
         isSubmitting: false,
         actionMessage: 'refund_failed',
@@ -864,9 +898,11 @@ class TaskDetailBloc extends Bloc<TaskDetailEvent, TaskDetailState> {
         actionMessage: 'refund_revoked',
       ));
     } catch (e) {
+      AppLogger.error('Failed to cancel refund', e);
       emit(state.copyWith(
         isSubmitting: false,
         actionMessage: 'revoke_failed',
+        errorMessage: e.toString(),
       ));
     }
   }
@@ -894,9 +930,11 @@ class TaskDetailBloc extends Bloc<TaskDetailEvent, TaskDetailState> {
         actionMessage: 'dispute_submitted',
       ));
     } catch (e) {
+      AppLogger.error('Failed to submit rebuttal', e);
       emit(state.copyWith(
         isSubmitting: false,
         actionMessage: 'dispute_failed',
+        errorMessage: e.toString(),
       ));
     }
   }
@@ -935,11 +973,13 @@ class TaskDetailBloc extends Bloc<TaskDetailEvent, TaskDetailState> {
   ) async {
     if (_taskId == null || state.isSubmitting) return;
     emit(state.copyWith(isSubmitting: true));
+    bool applied = false;
     try {
       await _taskRepository.applyTask(
         _taskId!,
         negotiatedPrice: event.price,
       );
+      applied = true;
       await _taskRepository.acceptTask(_taskId!);
       final task = await _refreshTask();
       emit(state.copyWith(
@@ -949,9 +989,66 @@ class TaskDetailBloc extends Bloc<TaskDetailEvent, TaskDetailState> {
       ));
     } catch (e) {
       AppLogger.error('Failed to submit designated task quote', e);
+      // If applyTask succeeded but acceptTask failed, refresh to reflect actual state
+      if (applied) {
+        try {
+          final task = await _refreshTask();
+          emit(state.copyWith(task: task));
+        } catch (_) {}
+      }
       emit(state.copyWith(
         isSubmitting: false,
         actionMessage: 'quote_failed',
+        errorMessage: e.toString(),
+      ));
+    }
+  }
+
+  Future<void> _onSubmitCounterOffer(
+    TaskDetailSubmitCounterOfferRequested event,
+    Emitter<TaskDetailState> emit,
+  ) async {
+    if (_taskId == null || state.isSubmitting) return;
+    emit(state.copyWith(isSubmitting: true));
+    try {
+      await _taskRepository.submitTakerCounterOffer(_taskId!, price: event.price);
+      final task = await _refreshTask();
+      emit(state.copyWith(
+        task: task,
+        isSubmitting: false,
+        actionMessage: 'counter_offer_submitted',
+      ));
+    } catch (e) {
+      AppLogger.error('Failed to submit counter offer', e);
+      emit(state.copyWith(
+        isSubmitting: false,
+        actionMessage: 'counter_offer_submit_failed',
+        errorMessage: e.toString(),
+      ));
+    }
+  }
+
+  Future<void> _onRespondCounterOffer(
+    TaskDetailRespondCounterOfferRequested event,
+    Emitter<TaskDetailState> emit,
+  ) async {
+    if (_taskId == null || state.isSubmitting) return;
+    emit(state.copyWith(isSubmitting: true));
+    try {
+      await _taskRepository.respondTakerCounterOffer(_taskId!, action: event.action);
+      final task = await _refreshTask();
+      emit(state.copyWith(
+        task: task,
+        isSubmitting: false,
+        actionMessage: event.action == 'accept'
+            ? 'counter_offer_accepted'
+            : 'counter_offer_rejected',
+      ));
+    } catch (e) {
+      AppLogger.error('Failed to respond to counter offer', e);
+      emit(state.copyWith(
+        isSubmitting: false,
+        actionMessage: 'counter_offer_respond_failed',
         errorMessage: e.toString(),
       ));
     }
