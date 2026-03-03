@@ -694,7 +694,7 @@ class _TaskDetailContent extends StatelessWidget {
                   context.l10n.taskDetailPosterCounterOfferTitle,
                   style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
                 ),
-                const SizedBox(height: 4),
+                const SizedBox(height: AppSpacing.xs),
                 Text(
                   '${context.l10n.taskDetailPosterCounterOfferPrice}: '
                   '£${task.counterOfferPrice!.toStringAsFixed(2)}',
@@ -712,11 +712,9 @@ class _TaskDetailContent extends StatelessWidget {
             children: [
               Expanded(
                 child: OutlinedButton(
-                  onPressed: state.isSubmitting
-                      ? null
-                      : () => context.read<TaskDetailBloc>().add(
-                            const TaskDetailRespondCounterOfferRequested(action: 'reject'),
-                          ),
+                  onPressed: () => context.read<TaskDetailBloc>().add(
+                        const TaskDetailRespondCounterOfferRequested(action: 'reject'),
+                      ),
                   style: OutlinedButton.styleFrom(foregroundColor: AppColors.error),
                   child: Text(context.l10n.taskDetailRejectCounterOffer),
                 ),
@@ -725,12 +723,9 @@ class _TaskDetailContent extends StatelessWidget {
               Expanded(
                 child: PrimaryButton(
                   text: context.l10n.taskDetailAcceptCounterOffer,
-                  isLoading: state.isSubmitting,
-                  onPressed: state.isSubmitting
-                      ? null
-                      : () => context.read<TaskDetailBloc>().add(
-                            const TaskDetailRespondCounterOfferRequested(action: 'accept'),
-                          ),
+                  onPressed: () => context.read<TaskDetailBloc>().add(
+                        const TaskDetailRespondCounterOfferRequested(action: 'accept'),
+                      ),
                 ),
               ),
             ],
