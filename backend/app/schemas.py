@@ -432,6 +432,10 @@ class TaskOut(TaskBase):
     completion_evidence: Optional[List[Dict[str, Any]]] = None
     # 是否待报价（发布时未填金额，由接单者报价/议价）
     reward_to_be_quoted: Optional[bool] = False
+    # 被指定方反报价
+    counter_offer_price: Optional[float] = None
+    counter_offer_status: Optional[str] = None
+    counter_offer_user_id: Optional[str] = None
 
     @validator('images', pre=True)
     def parse_images(cls, v):

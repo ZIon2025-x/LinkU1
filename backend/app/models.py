@@ -249,7 +249,11 @@ class Task(Base):
     task_source = Column(String(20), default="normal", nullable=False)
     view_count = Column(Integer, default=0, nullable=False)  # 浏览量（仅存库，不展示）
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=get_utc_time)
-    
+    # 被指定方反报价
+    counter_offer_price = Column(DECIMAL(12, 2), nullable=True)
+    counter_offer_status = Column(String(20), nullable=True)   # None / 'pending' / 'accepted' / 'rejected'
+    counter_offer_user_id = Column(String(8), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+
     # 关系
     poster = relationship(
         "User", back_populates="tasks_posted", foreign_keys=[poster_id]
