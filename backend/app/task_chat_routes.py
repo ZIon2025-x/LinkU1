@@ -2382,7 +2382,7 @@ async def respond_taker_counter_offer(
             )
 
         # 5. 400 如果没有待处理的反报价
-        if task.counter_offer_status != "pending" or task.counter_offer_price is None:
+        if task.counter_offer_status != "pending" or task.counter_offer_price is None or task.counter_offer_user_id is None:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="当前没有待处理的反报价"
