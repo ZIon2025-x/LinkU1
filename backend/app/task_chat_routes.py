@@ -2065,7 +2065,7 @@ async def negotiate_application(
         
         # 获取当前时间戳
         current_timestamp = int(time.time())
-        expires_at = current_timestamp + 300  # 5分钟后过期
+        expires_at = current_timestamp + 86400  # 24小时后过期
         
         # 生成nonce（防重放）
         nonce_accept = secrets.token_urlsafe(16)
@@ -2299,12 +2299,12 @@ async def get_negotiation_tokens(
                 except:
                     pass
         
-        # 如果没有从token中获取到，基于创建时间+5分钟计算
+        # 如果没有从token中获取到，基于创建时间+24小时计算
         if not expires_at:
             notification_created = notification.created_at
             if notification_created:
                 from datetime import timedelta
-                expires_at_dt = notification_created + timedelta(seconds=300)  # 5分钟
+                expires_at_dt = notification_created + timedelta(seconds=86400)  # 24小时
                 expires_at = format_iso_utc(expires_at_dt)
         
         # 优化：获取任务状态，如果任务已进入进行中或更后面的状态，议价应该显示为已过期
