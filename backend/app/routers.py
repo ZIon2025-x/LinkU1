@@ -1293,7 +1293,17 @@ def get_task_detail(
         setattr(task, "completion_evidence", None)
         task.taker_id = None
         task.poster_id = None
-        return schemas.TaskOut.from_orm(task)
+        return schemas.TaskOut.from_orm(task, full_location_access=False)
+
+    # 判断当前用户是否为任务相关人（发布者/接单者/参与者/申请者），决定是否返回完整地址和坐标
+    _full_location_access = False
+    if current_user:
+        _uid = str(current_user.id)
+        if task.status == "open":
+            _full_location_access = task.poster_id is not None and str(task.poster_id) == _uid
+        else:
+            # 非 open 状态：复用上面已判断的变量
+            _full_location_access = is_poster or is_taker or is_participant or is_applicant
     
     # view_count + 用户行为记录 移到后台任务，不阻塞响应
     user_id_for_bg = current_user.id if current_user else None
@@ -1485,7 +1495,7 @@ def get_task_detail(
     setattr(task, "completion_evidence", completion_evidence if completion_evidence else None)
     
     # 使用 TaskOut.from_orm 确保所有字段（包括 task_source）都被正确序列化
-    return schemas.TaskOut.from_orm(task)
+    return schemas.TaskOut.from_orm(task, full_location_access=_full_location_access)
 
 
 @router.get("/recommendations")
@@ -1544,11 +1554,12 @@ def get_recommendations(
             )
 
         result = []
+        from app.utils.location_utils import obfuscate_location
         for item in recommendations:
             task = item["task"]
             title_en = getattr(task, "title_en", None)
             title_zh = getattr(task, "title_zh", None)
-            
+
             # 解析图片字段
             images_list = []
             if task.images:
@@ -1560,7 +1571,7 @@ def get_recommendations(
                         images_list = task.images
                 except (json.JSONDecodeError, TypeError):
                     images_list = []
-            
+
             result.append({
                 "id": task.id,
                 "task_id": task.id,
@@ -1569,7 +1580,7 @@ def get_recommendations(
                 "title_zh": title_zh,
                 "description": task.description,
                 "task_type": task.task_type,
-                "location": task.location,
+                "location": obfuscate_location(task.location),
                 "reward": float(task.agreed_reward) if task.agreed_reward is not None else float(task.base_reward) if task.base_reward is not None else (float(task.reward) if task.reward else 0.0),
                 "base_reward": float(task.base_reward) if task.base_reward else None,
                 "agreed_reward": float(task.agreed_reward) if task.agreed_reward else None,

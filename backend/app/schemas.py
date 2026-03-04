@@ -488,6 +488,13 @@ class TaskOut(TaskBase):
         )
     
     @staticmethod
+    def _obfuscate_coord(value) -> Optional[float]:
+        """将单个坐标值模糊化到2位小数（约 ±1.1km）"""
+        if value is None:
+            return None
+        return round(float(value), 2)
+
+    @staticmethod
     def _calculate_current_participants(obj):
         """计算当前参与者数量（占坑数，与触发器 trg_update_task_participants_count 口径一致）"""
         # 如果不是多人任务，返回数据库字段值
@@ -502,8 +509,14 @@ class TaskOut(TaskBase):
         return getattr(obj, 'current_participants', 0) or 0
     
     @classmethod
-    def from_orm(cls, obj):
-        """自定义ORM转换，处理时间字段和images字段"""
+    def from_orm(cls, obj, full_location_access: bool = False):
+        """自定义ORM转换，处理时间字段和images字段
+
+        Args:
+            obj: Task ORM 对象
+            full_location_access: True 时返回完整地址和精确坐标（仅限任务相关人）；
+                                  False 时返回模糊化地址和低精度坐标（默认，保护隐私）
+        """
         from datetime import time
         import json
         
@@ -624,9 +637,11 @@ class TaskOut(TaskBase):
             "base_reward": float(obj.base_reward) if obj.base_reward else None,
             "agreed_reward": float(obj.agreed_reward) if obj.agreed_reward else None,
             "currency": obj.currency,
-            "location": cls._obfuscate_location(obj),  # 使用模糊化的位置
-            "latitude": float(obj.latitude) if obj.latitude is not None else None,
-            "longitude": float(obj.longitude) if obj.longitude is not None else None,
+            "location": obj.location if full_location_access else cls._obfuscate_location(obj),
+            "latitude": (float(obj.latitude) if obj.latitude is not None else None) if full_location_access
+                        else cls._obfuscate_coord(obj.latitude),
+            "longitude": (float(obj.longitude) if obj.longitude is not None else None) if full_location_access
+                         else cls._obfuscate_coord(obj.longitude),
             "task_type": obj.task_type,
             "is_multi_participant": getattr(obj, 'is_multi_participant', False),
             "expert_creator_id": getattr(obj, 'expert_creator_id', None),

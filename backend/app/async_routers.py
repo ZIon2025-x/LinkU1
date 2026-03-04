@@ -169,12 +169,16 @@ async def get_tasks(
                 except (json.JSONDecodeError, TypeError):
                     images_list = []
             
-            # 使用 obfuscate_location 模糊化位置信息
-            from app.utils.location_utils import obfuscate_location
+            # 使用 obfuscate_location / obfuscate_coordinates 模糊化位置信息，保护隐私
+            from app.utils.location_utils import obfuscate_location, obfuscate_coordinates
             obfuscated_location = obfuscate_location(
                 task.location,
                 float(task.latitude) if task.latitude is not None else None,
                 float(task.longitude) if task.longitude is not None else None
+            )
+            obf_lat, obf_lng = obfuscate_coordinates(
+                float(task.latitude) if task.latitude is not None else None,
+                float(task.longitude) if task.longitude is not None else None,
             )
             
             # 双语标题从任务表列读取
@@ -194,8 +198,8 @@ async def get_tasks(
             "reward_to_be_quoted": getattr(task, "reward_to_be_quoted", False),
             "currency": task.currency or "GBP",
             "location": obfuscated_location,  # 使用模糊化的位置
-                "latitude": float(task.latitude) if task.latitude is not None else None,
-                "longitude": float(task.longitude) if task.longitude is not None else None,
+                "latitude": obf_lat,
+                "longitude": obf_lng,
                 "task_type": task.task_type,
                 "poster_id": task.poster_id,
                 "taker_id": task.taker_id,
@@ -288,6 +292,13 @@ async def get_tasks(
         # 双语标题从任务表列读取
         title_en = getattr(task, "title_en", None)
         title_zh = getattr(task, "title_zh", None)
+        # 模糊化位置和坐标
+        from app.utils.location_utils import obfuscate_location, obfuscate_coordinates
+        _obf_location = obfuscate_location(task.location)
+        _obf_lat, _obf_lng = obfuscate_coordinates(
+            float(task.latitude) if task.latitude is not None else None,
+            float(task.longitude) if task.longitude is not None else None,
+        )
         task_data = {
             "id": task.id,
             "title": task.title,
@@ -301,9 +312,9 @@ async def get_tasks(
             "agreed_reward": float(task.agreed_reward) if task.agreed_reward else None,
             "reward_to_be_quoted": getattr(task, "reward_to_be_quoted", False),
             "currency": task.currency or "GBP",
-            "location": task.location,
-            "latitude": float(task.latitude) if task.latitude is not None else None,
-            "longitude": float(task.longitude) if task.longitude is not None else None,
+            "location": _obf_location,
+            "latitude": _obf_lat,
+            "longitude": _obf_lng,
             "task_type": task.task_type,
             "poster_id": task.poster_id,
             "taker_id": task.taker_id,

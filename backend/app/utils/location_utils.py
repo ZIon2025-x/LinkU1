@@ -39,8 +39,16 @@ def obfuscate_location(location_text: Optional[str], latitude: Optional[float] =
     # 按逗号分隔
     components = [c.strip() for c in trimmed.split(',')]
     
-    # 如果只有一个部分，直接返回
+    # 如果只有一个部分（无逗号），尝试中文地址模糊化
     if len(components) <= 1:
+        # 中文地址：提取到市/省/州 + 区/县/镇 级别，隐藏街道门牌
+        cn_match = re.match(r'^(.+?[市省州])?(.+?[区县镇])', trimmed)
+        if cn_match:
+            return cn_match.group(0)
+        # 非中文、较长地址：截取前50%并加***
+        if len(trimmed) > 6:
+            half = len(trimmed) // 2
+            return trimmed[:half] + "***"
         return trimmed
     
     # 邮编格式检测（英国邮编格式：字母数字混合，如 B16 9NS, SW1A 1AA）
@@ -87,6 +95,23 @@ def obfuscate_location(location_text: Optional[str], latitude: Optional[float] =
     
     # 如果所有部分都被过滤掉了，返回原始内容
     return trimmed
+
+
+def obfuscate_coordinates(
+    latitude: Optional[float],
+    longitude: Optional[float],
+    precision: int = 2,
+) -> Tuple[Optional[float], Optional[float]]:
+    """
+    模糊化坐标，降低精度以保护隐私。
+    precision=2 约 ±1.1km，precision=1 约 ±11km。
+
+    Returns:
+        (模糊化纬度, 模糊化经度)，若输入为 None 则返回 (None, None)
+    """
+    if latitude is None or longitude is None:
+        return None, None
+    return round(float(latitude), precision), round(float(longitude), precision)
 
 
 def validate_coordinates(latitude: Optional[float], longitude: Optional[float]) -> Tuple[bool, Optional[str]]:
