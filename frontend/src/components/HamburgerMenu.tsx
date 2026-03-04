@@ -135,14 +135,6 @@ const HamburgerMenu: React.FC<HamburgerMenuProps> = ({
                   <span className="menu-icon">ℹ️</span>
                   {t('hamburgerMenu.about')}
                 </button>
-
-                <button
-                  className="menu-item"
-                  onClick={() => handleNavigation('/milestones')}
-                >
-                  <span className="menu-icon">🏆</span>
-                  {t('hamburgerMenu.milestones')}
-                </button>
               </div>
 
               {/* 分割线 */}
