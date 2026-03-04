@@ -22,9 +22,17 @@ export const WS_BASE_URL = isProduction
   ? process.env.REACT_APP_WS_URL || 'wss://api.link2ur.com'
   : process.env.REACT_APP_WS_URL || getDevWsUrl();
 
-/** App Store 链接（用于「在 App 内打开」条中，未安装时跳转的下载页）。可通过环境变量 REACT_APP_APP_STORE_URL 覆盖。 */
+/** App Store 链接。可通过环境变量 REACT_APP_APP_STORE_URL 覆盖。 */
 export const APP_STORE_URL =
   process.env.REACT_APP_APP_STORE_URL || 'https://apps.apple.com/app/link-ur/id6758051985';
+
+/** Google Play 链接。可通过环境变量 REACT_APP_GOOGLE_PLAY_URL 覆盖。 */
+export const GOOGLE_PLAY_URL =
+  process.env.REACT_APP_GOOGLE_PLAY_URL || 'https://play.google.com/store/apps/details?id=com.link2ur.app';
+
+/** Huawei AppGallery 链接。可通过环境变量 REACT_APP_APP_GALLERY_URL 覆盖。 */
+export const APP_GALLERY_URL =
+  process.env.REACT_APP_APP_GALLERY_URL || 'https://appgallery.huawei.com/app/C12345678';
 
 // 调试信息
 

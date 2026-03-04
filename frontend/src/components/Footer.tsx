@@ -1,9 +1,52 @@
 import React, { useState } from 'react';
+import { message } from 'antd';
 import { useLanguage } from '../contexts/LanguageContext';
 import LocalizedLink from './LocalizedLink';
 import LazyImage from './LazyImage';
+import { APP_STORE_URL, GOOGLE_PLAY_URL, APP_GALLERY_URL } from '../config';
 
-const APP_STORE_URL = 'https://apps.apple.com/gh/app/link-ur/id6758051985';
+const storeBadgeHeight = 52;
+
+const StoreBadge: React.FC<{
+  href: string;
+  src: string;
+  alt: string;
+  title: string;
+  comingSoon?: boolean;
+  comingSoonMessage?: string;
+}> = ({ href, src, alt, title, comingSoon, comingSoonMessage }) => {
+  const handleClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
+    if (comingSoon) {
+      e.preventDefault();
+      message.info(comingSoonMessage ?? '测试中，马上上线');
+    }
+  };
+  return (
+    <a
+      href={href}
+      target={comingSoon ? undefined : '_blank'}
+      rel={comingSoon ? undefined : 'noopener noreferrer'}
+      title={title}
+      style={{
+        display: 'inline-block',
+        height: storeBadgeHeight,
+        transition: 'opacity 0.2s ease',
+        flexShrink: 0,
+        cursor: comingSoon ? 'pointer' : undefined,
+      }}
+      onClick={handleClick}
+      onMouseEnter={(e) => { e.currentTarget.style.opacity = '0.9'; }}
+      onMouseLeave={(e) => { e.currentTarget.style.opacity = '1'; }}
+    >
+      <img
+        src={src}
+        alt={alt}
+        title={title}
+        style={{ height: '100%', width: 'auto', display: 'block', borderRadius: 6 }}
+      />
+    </a>
+  );
+};
 
 const Footer: React.FC = () => {
   const { t } = useLanguage();
@@ -38,10 +81,35 @@ const Footer: React.FC = () => {
               fontSize: '16px',
               color: 'rgba(255,255,255,0.8)',
               lineHeight: '1.6',
-              marginBottom: '20px'
+              marginBottom: '16px'
             }}>
               {t('footer.description')}
             </p>
+            {/* 下载 App - 三应用商店按钮（官方图） */}
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', alignItems: 'center' }}>
+              <StoreBadge
+                href={APP_STORE_URL}
+                src="/static/download-on-the-app-store-flat-badge-seeklogo.png"
+                alt="Download on the App Store"
+                title="Download on the App Store"
+              />
+              <StoreBadge
+                href={GOOGLE_PLAY_URL}
+                src="/static/get-it-on-google-play-badge-seeklogo.png"
+                alt="Get it on Google Play"
+                title="Get it on Google Play"
+                comingSoon
+                comingSoonMessage="测试中，马上上线"
+              />
+              <StoreBadge
+                href={APP_GALLERY_URL}
+                src="/static/huawei-appgallery-seeklogo.png"
+                alt="Explore it on AppGallery"
+                title="Explore it on AppGallery"
+                comingSoon
+                comingSoonMessage="测试中，马上上线"
+              />
+            </div>
           </div>
           
           {/* 中列 - 链接导航 */}
@@ -319,41 +387,13 @@ const Footer: React.FC = () => {
             {t('footer.copyrightText')}
           </div>
           
-          {/* 右侧 - 社交媒体与下载 */}
+          {/* 右侧 - 社交媒体 */}
           <div className="footer-social" style={{
             display: 'flex',
-            gap: '16px',
+            gap: '12px',
             alignItems: 'center',
             flexWrap: 'wrap'
           }}>
-            <a
-              href={APP_STORE_URL}
-              target="_blank"
-              rel="noopener noreferrer"
-              title="Download on the App Store"
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '6px',
-                height: '32px',
-                paddingLeft: '10px',
-                paddingRight: '12px',
-                background: '#000',
-                color: '#fff',
-                borderRadius: '6px',
-                textDecoration: 'none',
-                fontSize: '11px',
-                fontWeight: '600',
-                transition: 'opacity 0.2s ease'
-              }}
-              onMouseEnter={(e) => { e.currentTarget.style.opacity = '0.85'; }}
-              onMouseLeave={(e) => { e.currentTarget.style.opacity = '1'; }}
-            >
-              <svg width="14" height="17" viewBox="0 0 14 17" fill="currentColor" aria-hidden="true">
-                <path d="M11.7 8.9c-.02-1.7 1.4-2.5 1.45-2.53-.8-1.16-2.04-1.32-2.48-1.34-1.06-.1-2.07.62-2.6.62-.54 0-1.09-.36-1.67-.35-1.72.03-3.3 1-4.2 2.54-1.8 3.1-.46 7.7 1.28 10.22.85 1.24 1.84 2.63 3.16 2.58 1.3-.05 1.79-.84 3.36-.84 1.57 0 2 .84 3.37.81 1.39-.02 2.28-1.24 3.1-2.5.96-1.4 1.36-2.75 1.38-2.82-.03-.01-2.66-1.02-2.69-4.05zM9.27 2.45c.7-.85 1.18-2.03 1.05-3.2-1.02.04-2.26.68-3 1.55-.65.74-1.21 1.93-1.06 3.07 1.14.09 2.3-.59 3.01-1.42z"/>
-              </svg>
-              <span>App Store</span>
-            </a>
             <a href="#" style={{
               width: '32px',
               height: '32px',
